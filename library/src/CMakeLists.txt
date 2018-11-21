@@ -1,5 +1,5 @@
 add_library(ursatz
-    placeholder.c
+    ursatz.c
 )
 
 target_include_directories(ursatz PUBLIC
