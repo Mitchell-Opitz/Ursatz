@@ -17,3 +17,7 @@ add_test(NAME version_model COMMAND test_version_model)
 add_executable(test_schema_version test_schema_version.c)
 target_link_libraries(test_schema_version PRIVATE ursatz)
 add_test(NAME schema_version COMMAND test_schema_version)
+
+add_executable(test_architecture_identity test_architecture_identity.c)
+add_test(NAME architecture_identity COMMAND test_architecture_identity
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
