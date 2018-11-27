@@ -1,4 +1,5 @@
 #include "identity/version_model.h"
+#include <stddef.h>
 
 bool version_model_is_valid_revision(const Version *source, const Version *candidate) {
     if (source == NULL || candidate == NULL) {
