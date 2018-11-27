@@ -13,3 +13,7 @@ add_test(NAME version COMMAND test_version)
 add_executable(test_version_model test_version_model.c)
 target_link_libraries(test_version_model PRIVATE ursatz)
 add_test(NAME version_model COMMAND test_version_model)
+
+add_executable(test_schema_version test_schema_version.c)
+target_link_libraries(test_schema_version PRIVATE ursatz)
+add_test(NAME schema_version COMMAND test_schema_version)
