@@ -108,6 +108,26 @@ static void test_identity_stable_across_revision(void) {
     version_destroy(v2);
 }
 
+static void test_round_trip(void) {
+    EntityID *id = NULL;
+    entity_id_create("motif-1", &id);
+
+    Version *original = NULL;
+    version_create(id, 3, &original);
+
+    const EntityID *serialized_entity_id = version_entity_id(original);
+    unsigned long serialized_revision = version_revision(original);
+
+    Version *restored = NULL;
+    version_create(serialized_entity_id, serialized_revision, &restored);
+
+    assert(version_equals(original, restored));
+
+    entity_id_destroy(id);
+    version_destroy(original);
+    version_destroy(restored);
+}
+
 int main(void) {
     test_create_rejects_null_entity_id();
     test_create_rejects_zero_revision();
@@ -116,5 +136,6 @@ int main(void) {
     test_equals_different_revision();
     test_equals_different_entity_id();
     test_identity_stable_across_revision();
+    test_round_trip();
     return 0;
 }
