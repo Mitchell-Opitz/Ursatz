@@ -43,14 +43,14 @@ static int check_file(const char *path) {
 
 int main(void) {
     const char *files[] = {
-        "../src/identity/entity_id.h",
-        "../src/identity/entity_id.c",
-        "../src/identity/version.h",
-        "../src/identity/version.c",
-        "../src/identity/version_model.h",
-        "../src/identity/version_model.c",
-        "../src/identity/schema_version.h",
-        "../src/identity/schema_version.c"
+        "../../src/identity/entity_id.h",
+        "../../src/identity/entity_id.c",
+        "../../src/identity/version.h",
+        "../../src/identity/version.c",
+        "../../src/identity/version_model.h",
+        "../../src/identity/version_model.c",
+        "../../src/identity/schema_version.h",
+        "../../src/identity/schema_version.c"
     };
     size_t count = sizeof(files) / sizeof(files[0]);
     int total_violations = 0;
