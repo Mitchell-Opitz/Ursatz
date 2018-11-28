@@ -2,6 +2,7 @@
 #include "identity/version.h"
 
 #include <assert.h>
+#include <stddef.h>
 
 static void test_create_rejects_null_entity_id(void) {
     Version *v = NULL;

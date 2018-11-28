@@ -1,6 +1,7 @@
 #include "identity/schema_version.h"
 
 #include <assert.h>
+#include <stddef.h>
 
 static void test_create_rejects_zero(void) {
     SchemaVersion *v = NULL;

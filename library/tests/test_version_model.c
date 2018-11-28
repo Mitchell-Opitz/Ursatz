@@ -3,6 +3,7 @@
 #include "identity/version_model.h"
 
 #include <assert.h>
+#include <stddef.h>
 
 static void test_revision_valid_when_same_entity_and_incremented(void) {
     EntityID *id = NULL;
