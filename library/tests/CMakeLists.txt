@@ -3,3 +3,4 @@ target_link_libraries(test_ursatz PRIVATE ursatz)
 add_test(NAME ursatz_bootstrap COMMAND test_ursatz)
 
 add_subdirectory(identity)
+add_subdirectory(core)
