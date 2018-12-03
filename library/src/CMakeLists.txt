@@ -6,6 +6,7 @@ add_library(ursatz
     identity/schema_version.c
     core/entity.c
     core/value.c
+    core/occurrence.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
