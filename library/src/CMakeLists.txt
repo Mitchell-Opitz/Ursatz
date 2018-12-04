@@ -7,6 +7,7 @@ add_library(ursatz
     core/entity.c
     core/value.c
     core/occurrence.c
+    core/equality.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
