@@ -4,6 +4,13 @@ add_library(ursatz
     identity/version.c
     identity/version_model.c
     identity/schema_version.c
+    core/entity.c
+    core/value.c
+    core/occurrence.c
+    core/equality.c
+    core/voice_reference.c
+    core/relationship_reference.c
+    core/provenance_reference.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
