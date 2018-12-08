@@ -14,6 +14,10 @@ add_executable(test_equality test_equality.c)
 target_link_libraries(test_equality PRIVATE ursatz)
 add_test(NAME equality COMMAND test_equality)
 
+add_executable(test_references test_references.c)
+target_link_libraries(test_references PRIVATE ursatz)
+add_test(NAME references COMMAND test_references)
+
 add_executable(test_architecture_core test_architecture_core.c)
 add_test(NAME architecture_core COMMAND test_architecture_core
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
