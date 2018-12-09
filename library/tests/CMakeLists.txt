@@ -4,3 +4,4 @@ add_test(NAME ursatz_bootstrap COMMAND test_ursatz)
 
 add_subdirectory(identity)
 add_subdirectory(core)
+add_subdirectory(time)
