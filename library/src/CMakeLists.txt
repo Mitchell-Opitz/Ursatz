@@ -11,6 +11,7 @@ add_library(ursatz
     core/voice_reference.c
     core/relationship_reference.c
     core/provenance_reference.c
+    time/duration.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
