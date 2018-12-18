@@ -13,6 +13,7 @@ add_library(ursatz
     core/provenance_reference.c
     time/duration.c
     time/musical_time.c
+    time/time_span.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
