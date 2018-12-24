@@ -15,6 +15,7 @@ add_library(ursatz
     time/musical_time.c
     time/time_span.c
     time/time_instant.c
+    pitch/pitch_identity.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
