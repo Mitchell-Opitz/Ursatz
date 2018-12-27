@@ -11,6 +11,12 @@ add_library(ursatz
     core/voice_reference.c
     core/relationship_reference.c
     core/provenance_reference.c
+    time/duration.c
+    time/musical_time.c
+    time/time_span.c
+    time/time_instant.c
+    pitch/pitch_identity.c
+    pitch/pitch_spelling.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
