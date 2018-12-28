@@ -15,6 +15,7 @@ add_library(ursatz
     time/musical_time.c
     time/time_span.c
     time/time_instant.c
+    time/temporal_anchor.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
 )

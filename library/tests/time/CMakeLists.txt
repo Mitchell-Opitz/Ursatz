@@ -14,6 +14,10 @@ add_executable(test_time_instant test_time_instant.c)
 target_link_libraries(test_time_instant PRIVATE ursatz)
 add_test(NAME time_instant COMMAND test_time_instant)
 
+add_executable(test_temporal_anchor test_temporal_anchor.c)
+target_link_libraries(test_temporal_anchor PRIVATE ursatz)
+add_test(NAME temporal_anchor COMMAND test_temporal_anchor)
+
 add_executable(test_architecture_time test_architecture_time.c)
 add_test(NAME architecture_time COMMAND test_architecture_time
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

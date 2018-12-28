@@ -77,6 +77,13 @@ A few things worth knowing before building on top of it:
 - `MusicalTime` has no lower bound enforced at this layer: negative
   positions (e.g. pickup measures) are legal here. Semantics for what a
   negative position means are deferred to a later spec.
+- `TemporalAnchor` wraps a `MusicalTime` and situates a higher-layer
+  object at that position, so callers building on `Occurrence` (L1) gain
+  a temporal position without embedding position semantics in `Occurrence`
+  itself, and without reimplementing `MusicalTime`'s rational
+  representation outside `music-time`. Added as an L2 prerequisite for L3
+  `music-events`' `Event` type; it carries no fields beyond the wrapped
+  `MusicalTime`.
 
 ## music-pitch notes
 
