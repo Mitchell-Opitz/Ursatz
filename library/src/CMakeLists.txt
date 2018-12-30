@@ -18,6 +18,7 @@ add_library(ursatz
     time/temporal_anchor.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
+    events/event.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
