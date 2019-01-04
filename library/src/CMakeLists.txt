@@ -20,6 +20,7 @@ add_library(ursatz
     pitch/pitch_spelling.c
     events/event.c
     events/note_event.c
+    events/rest_event.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
