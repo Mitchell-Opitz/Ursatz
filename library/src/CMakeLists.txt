@@ -22,6 +22,7 @@ add_library(ursatz
     events/note_event.c
     events/rest_event.c
     events/control_event.c
+    events/tie.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

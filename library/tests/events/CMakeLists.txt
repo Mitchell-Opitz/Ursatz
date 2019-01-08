@@ -14,6 +14,10 @@ add_executable(test_control_event test_control_event.c)
 target_link_libraries(test_control_event PRIVATE ursatz)
 add_test(NAME control_event COMMAND test_control_event)
 
+add_executable(test_tie test_tie.c)
+target_link_libraries(test_tie PRIVATE ursatz)
+add_test(NAME tie COMMAND test_tie)
+
 add_executable(test_architecture_events test_architecture_events.c)
 add_test(NAME architecture_events COMMAND test_architecture_events
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
