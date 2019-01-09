@@ -12,12 +12,19 @@ with its tests mirrored under `tests/<module>/`.
   `time` (music-time) and `pitch` (music-pitch), each depending on
   `identity` and `core` only. `time` and `pitch` are siblings and do not
   depend on each other.
+- **L3** - may depend only on L0/L1/L2, never sideways or upward.
+  Currently: `events` (music-events), depending on `identity`, `core`,
+  `time`, and `pitch`. `events` MUST NOT depend on `music-containers`
+  (L4, not yet built) -- where a lower object needs to reference Voice
+  (L4), it uses `VoiceReference` (L1, `music-core`) instead of a
+  resolved Voice object or a `music-containers` import.
 
 A module must not import anything outside its own layer's allowed
 dependencies. Each module has an architecture test enforcing this
 (e.g. `tests/identity/test_architecture_identity.c`,
 `tests/core/test_architecture_core.c`, `tests/time/test_architecture_time.c`,
-`tests/pitch/test_architecture_pitch.c`).
+`tests/pitch/test_architecture_pitch.c`,
+`tests/events/test_architecture_events.c`).
 
 ## Modules
 
@@ -27,6 +34,7 @@ dependencies. Each module has an architecture test enforcing this
 | core       | L1    | `src/core/`      | `tests/core/`         |
 | time       | L2    | `src/time/`      | `tests/time/`         |
 | pitch      | L2    | `src/pitch/`     | `tests/pitch/`        |
+| events     | L3    | `src/events/`    | `tests/events/`       |
 
 ## music-core notes
 
@@ -109,3 +117,56 @@ A few things worth knowing before building on top of it:
 - `PitchClass`, `PitchRealization`, `TuningSystem`, `WrittenPitch`, and
   `SoundingPitch` are Phase 2/3 (Deliverable D) and are out of scope for
   this module's initial pass.
+
+## music-events notes
+
+`music-events` provides `Event` (base type composing `Occurrence` (L1)
+with `TemporalAnchor` (L2)), `NoteEvent`, `RestEvent`, `ControlEvent`
+(the three Phase-1 event kinds), and `Tie` (a relationship connecting
+two `NoteEvent`s by id).
+
+A few things worth knowing before building on top of it:
+
+- STATUS FLAG, carried forward, not resolved here: `NoteEvent`'s
+  category (Entity vs Event vs pure Occurrence) is UNRESOLVED upstream
+  (Domain Spec §9, §16.1). `NoteEvent` is implemented under the current
+  provisional "Event" treatment and is deliberately not built on top of
+  `core/entity.h`'s `Entity` type, since doing so would itself assume a
+  resolution. Code built on `NoteEvent` should do the same.
+- `NoteEvent`'s `optional_voice` field is typed as `VoiceReference*`
+  (L1). There is no C type representing a resolved Voice (L4) anywhere
+  in this codebase, so the L3/L4 non-dependency cannot be violated
+  through that constructor -- and
+  `tests/events/test_architecture_events.c` independently confirms no
+  `containers/` include exists anywhere under `src/events/`.
+- `NoteEvent` has two separate equality functions, not one:
+  `note_event_equals_by_id` (IdentityEquality, same id regardless of
+  other fields) and `note_event_equals_by_value` (StructuralEquality,
+  same content independent of id). Value-equal does NOT imply the same
+  event -- two independently constructed `NoteEvent`s can carry
+  identical content under different ids.
+- `NoteEvent` has no mutator. A revision is a new `NoteEvent` with a new
+  id and/or provenance; constructing that from an old one needs an
+  Activity/Transformation, which does not exist yet at this layer and is
+  out of scope here.
+- `NoteEvent`'s `provenance` field must always be an explicit
+  `ProvenanceReference` (present or absent) -- never `NULL`. Hand-authored
+  `NoteEvent`s may use `state=absent`; nothing yet enforces
+  `state=present` for Activity-produced `NoteEvent`s, since no Activity/
+  Transformation exists at this layer to produce that case.
+- `Tie` references its two `NoteEvent`s by `EntityID` only, never by
+  embedded `NoteEvent` instances -- constructing a `Tie` does not alter
+  either referenced `NoteEvent`'s own fields.
+- `ControlEvent`'s payload is generic/opaque at this layer, the same
+  treatment `PitchIdentity` gives its token (`pitch/pitch_identity.h`).
+  Protocol-specific meaning (MIDI, OSC, MusicXML, ...) is an adapter
+  concern (L9+), not this module's job.
+- Deferred, not implemented in this pass: `Slur`, `Articulation`,
+  `Dynamics` (Registry Phase 2). `Instrument`, `InstrumentCapability`
+  (Registry Phase "1+", provisional placement, property list explicitly
+  flagged illustrative/non-normative) are also skipped this pass.
+- Out of scope for `music-events` entirely, not missing: `Voice` itself
+  (L4, `music-containers` -- only `VoiceReference` is used here),
+  `Interval`, `Sonority`, `PerformanceEvent` (later layers, referenced
+  only in `NoteEvent`'s relationships documentation), and any
+  Transformation/Activity-driven provenance enforcement.
