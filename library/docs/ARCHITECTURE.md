@@ -15,26 +15,32 @@ with its tests mirrored under `tests/<module>/`.
 - **L3** - may depend only on L0/L1/L2, never sideways or upward.
   Currently: `events` (music-events), depending on `identity`, `core`,
   `time`, and `pitch`. `events` MUST NOT depend on `music-containers`
-  (L4, not yet built) -- where a lower object needs to reference Voice
-  (L4), it uses `VoiceReference` (L1, `music-core`) instead of a
-  resolved Voice object or a `music-containers` import.
+  (L4) -- where a lower object needs to reference Voice (L4), it uses
+  `VoiceReference` (L1, `music-core`) instead of a resolved Voice
+  object or a `music-containers` import.
+- **L4** - may depend only on L0/L1/L2/L3, never sideways or upward.
+  Currently: `containers` (music-containers), depending on `identity`,
+  `core`, `time`, `pitch`, and `events`. `containers` MUST NOT depend on
+  anything L5+.
 
 A module must not import anything outside its own layer's allowed
 dependencies. Each module has an architecture test enforcing this
 (e.g. `tests/identity/test_architecture_identity.c`,
 `tests/core/test_architecture_core.c`, `tests/time/test_architecture_time.c`,
 `tests/pitch/test_architecture_pitch.c`,
-`tests/events/test_architecture_events.c`).
+`tests/events/test_architecture_events.c`,
+`tests/containers/test_architecture_containers.c`).
 
 ## Modules
 
-| Module     | Layer | Path             | Tests                |
-|------------|-------|------------------|-----------------------|
-| identity   | L0    | `src/identity/`  | `tests/identity/`     |
-| core       | L1    | `src/core/`      | `tests/core/`         |
-| time       | L2    | `src/time/`      | `tests/time/`         |
-| pitch      | L2    | `src/pitch/`     | `tests/pitch/`        |
-| events     | L3    | `src/events/`    | `tests/events/`       |
+| Module     | Layer | Path              | Tests                 |
+|------------|-------|-------------------|------------------------|
+| identity   | L0    | `src/identity/`   | `tests/identity/`      |
+| core       | L1    | `src/core/`       | `tests/core/`          |
+| time       | L2    | `src/time/`       | `tests/time/`          |
+| pitch      | L2    | `src/pitch/`      | `tests/pitch/`         |
+| events     | L3    | `src/events/`     | `tests/events/`        |
+| containers | L4    | `src/containers/` | `tests/containers/`    |
 
 ## music-core notes
 
@@ -170,3 +176,41 @@ A few things worth knowing before building on top of it:
   `Interval`, `Sonority`, `PerformanceEvent` (later layers, referenced
   only in `NoteEvent`'s relationships documentation), and any
   Transformation/Activity-driven provenance enforcement.
+
+## music-containers notes
+
+`music-containers` provides `Container` (a pure grouping base
+category, no fields of its own) and `Voice` (Container), the only
+Phase-1 concrete container type.
+
+A few things worth knowing before building on top of it:
+
+- `Voice`'s schema is `{id}` only (Domain Spec §10). It has no
+  membership field -- no owned/mutable list of notes or events. The
+  mechanism by which a Voice's membership is represented is deferred
+  to a later Container/Structure spec that does not exist yet.
+- A `Voice` MUST NOT be assumed to map 1:1 to an Instrument, Staff, or
+  Part. A `Voice` MAY appear on multiple staves; a Staff MAY contain
+  multiple voices -- semantic notes only, since `Staff` does not exist
+  this pass.
+- `Voice` has no mutator: a revision is a new `Voice` construction, not
+  an in-place field change (Law C2).
+- `Voice`'s identity equality (`voice_identity_equals`) compares by
+  `EntityID` only, the same pattern `Entity` (`core/entity.h`) uses,
+  reduced to the one field `Voice` actually has -- `Voice` carries no
+  separate schema/version field to compare.
+- This is also the layer where `VoiceReference` (built at L1 back in
+  the `music-core` pass) gets a real resolution target. No code change
+  was needed to `VoiceReference` itself; nothing in `music-containers`
+  redefines or duplicates what it already does.
+- Deferred, not implemented in this pass: `Layer`, `Staff`, `Part`,
+  `Measure` (Registry Phase 2); `Phrase` (container use), `Section`,
+  `Movement`, `Work`, `Edition`, `Arrangement`, `Revision`,
+  `SourceVariant` (Registry Phase 5, several marked "Reference
+  Concept" / non-normative).
+- Out of scope for `music-containers` entirely, not missing:
+  resolution logic that takes a `VoiceReference` and looks up the
+  actual `Voice` (a repository/registry pattern is an application/
+  query-layer, L9, concern), and any `Voice`<->`Instrument`,
+  `Voice`<->`Staff`, or `Voice`<->`Part` relationship (deferred to
+  `music-relationship`, L6, or later container work).
