@@ -25,6 +25,7 @@ add_library(ursatz
     events/tie.c
     containers/voice.c
     structure/structure.c
+    structure/motif.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
