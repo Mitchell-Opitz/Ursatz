@@ -22,6 +22,10 @@ with its tests mirrored under `tests/<module>/`.
   Currently: `containers` (music-containers), depending on `identity`,
   `core`, `time`, `pitch`, and `events`. `containers` MUST NOT depend on
   anything L5+.
+- **L5** - may depend only on L0/L1/L2/L3/L4, never sideways or upward.
+  Currently: `structure` (music-structure), depending on `identity`,
+  `core`, `time`, `pitch`, `events`, and `containers`. `structure` MUST
+  NOT depend on anything L6+.
 
 A module must not import anything outside its own layer's allowed
 dependencies. Each module has an architecture test enforcing this
@@ -29,7 +33,8 @@ dependencies. Each module has an architecture test enforcing this
 `tests/core/test_architecture_core.c`, `tests/time/test_architecture_time.c`,
 `tests/pitch/test_architecture_pitch.c`,
 `tests/events/test_architecture_events.c`,
-`tests/containers/test_architecture_containers.c`).
+`tests/containers/test_architecture_containers.c`,
+`tests/structure/test_architecture_structure.c`).
 
 ## Modules
 
@@ -41,6 +46,7 @@ dependencies. Each module has an architecture test enforcing this
 | pitch      | L2    | `src/pitch/`      | `tests/pitch/`         |
 | events     | L3    | `src/events/`     | `tests/events/`        |
 | containers | L4    | `src/containers/` | `tests/containers/`    |
+| structure  | L5    | `src/structure/`  | `tests/structure/`     |
 
 ## music-core notes
 
@@ -214,3 +220,53 @@ A few things worth knowing before building on top of it:
   query-layer, L9, concern), and any `Voice`<->`Instrument`,
   `Voice`<->`Staff`, or `Voice`<->`Part` relationship (deferred to
   `music-relationship`, L6, or later container work).
+
+## music-structure notes
+
+`music-structure` provides `Structure` (base category composing an
+`Entity` (L1) with non-duplicating event refs), `Motif` (Structure),
+`MotifOccurrence` (built on `Occurrence`, L1), and `Cadence` (Structure).
+
+A few things worth knowing before building on top of it:
+
+- `Structure` itself is a real, constructible base type, not a pure
+  marker like `Container` (`music-containers`) -- the Registry requires
+  an invariant test at this layer confirming referenced events are
+  never duplicated, which means `Structure` needs actual event-ref
+  state to test against.
+- `Motif`, `MotifOccurrence`, and `Cadence` do not embed `Structure`'s
+  or `Entity`'s wrapper structs directly. Each flattens to its own
+  fields (a bare `EntityID` id plus `EntityID` event refs), the same
+  approach `NoteEvent` takes relative to `Event` and `Voice` takes
+  relative to `Container` elsewhere in this codebase -- concrete types
+  reimplement the base type's field shape rather than composing the
+  wrapper struct itself.
+- `MotifOccurrence` is the one exception that does embed its L1 base
+  type directly: it composes `Occurrence` (own id plus the target
+  Motif's id) the same way `Event` composes `Occurrence` with a
+  `TemporalAnchor` -- both are the object built immediately on top of
+  `Occurrence`, so both embed it rather than flattening past it.
+- No hierarchy is assumed among `Structure` subtypes (TDD §57). A
+  Structure graph is not required to follow Motif -> Phrase -> Theme ->
+  Section as a universal shape, and nothing in `music-structure` hard-
+  codes that shape.
+- `Cadence` is a Phase-5 structural shell only (System Registry: "Yes
+  (explicit Phase 5/8 deliverable)"). Its `optional_harmonic_context`
+  field is an opaque, nullable `Value` (`core/value.h`) -- the same
+  opaque-token treatment `PitchIdentity` and `ControlEvent`'s payload
+  use. Full harmonic-context semantics are an L6+/L7 concern and are
+  not built here; construction never requires that machinery.
+  Cadence DETECTION -- recognizing that a region of events forms a
+  cadence -- is Phase 8 (`music-analysis`) work and is out of scope for
+  this module.
+- Deferred, not implemented in this pass (Registry Normative = No,
+  "example only" / "naming-pattern example"): `Figure`; `Theme`,
+  `ThemeOccurrence`; `PhraseOccurrence` (`Phrase` itself is L4
+  container-side, deferred there too, not built here either).
+- Out of scope for `music-structure` entirely, not missing:
+  `SimilarityResult`, Motif Detection, Phrase Segmentation, Cadence
+  Detection -- Phase 8 (`music-analysis`) procedures that PRODUCE
+  `Motif`/`MotifOccurrence`/`Cadence` instances, not data shapes this
+  layer defines. Also out of scope: `Section`, `Movement`, `Work` (L4
+  containers, deferred there too, not L5 structures), and any harmonic-
+  context resolution (L6/L7).
