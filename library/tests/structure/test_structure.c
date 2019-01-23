@@ -19,7 +19,7 @@ static Entity *make_entity(const char *id_value) {
     EntityID *id;
     assert(entity_id_create(id_value, &id) == ENTITY_ID_OK);
     SchemaVersion *schema_version;
-    assert(schema_version_create(1, 0, 0, &schema_version) == SCHEMA_VERSION_OK);
+    assert(schema_version_create(1, &schema_version) == SCHEMA_VERSION_OK);
 
     Entity *entity;
     assert(entity_create(id, "structure", schema_version, NULL, &entity) == ENTITY_OK);
