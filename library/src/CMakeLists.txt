@@ -28,6 +28,7 @@ add_library(ursatz
     structure/motif.c
     structure/motif_occurrence.c
     structure/cadence.c
+    context/context.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
