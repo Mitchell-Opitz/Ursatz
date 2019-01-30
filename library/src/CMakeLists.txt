@@ -30,6 +30,7 @@ add_library(ursatz
     structure/cadence.c
     context/context.c
     semantics/interval.c
+    semantics/sonority.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
