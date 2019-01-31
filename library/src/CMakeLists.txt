@@ -31,6 +31,7 @@ add_library(ursatz
     context/context.c
     semantics/interval.c
     semantics/sonority.c
+    semantics/rhythmic_pattern.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
