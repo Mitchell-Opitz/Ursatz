@@ -32,6 +32,7 @@ add_library(ursatz
     semantics/interval.c
     semantics/sonority.c
     semantics/rhythmic_pattern.c
+    relationship/relationship.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
