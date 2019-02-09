@@ -2,6 +2,10 @@ add_executable(test_relationship test_relationship.c)
 target_link_libraries(test_relationship PRIVATE ursatz)
 add_test(NAME relationship COMMAND test_relationship)
 
+add_executable(test_predicate_definition test_predicate_definition.c)
+target_link_libraries(test_predicate_definition PRIVATE ursatz)
+add_test(NAME predicate_definition COMMAND test_predicate_definition)
+
 add_executable(test_architecture_relationship test_architecture_relationship.c)
 add_test(NAME architecture_relationship COMMAND test_architecture_relationship
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

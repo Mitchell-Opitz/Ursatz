@@ -33,6 +33,7 @@ add_library(ursatz
     semantics/sonority.c
     semantics/rhythmic_pattern.c
     relationship/relationship.c
+    relationship/predicate_definition.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
