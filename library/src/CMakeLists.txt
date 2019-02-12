@@ -34,6 +34,7 @@ add_library(ursatz
     semantics/rhythmic_pattern.c
     relationship/relationship.c
     relationship/predicate_definition.c
+    interpretation/uncertainty.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
