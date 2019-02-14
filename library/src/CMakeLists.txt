@@ -35,6 +35,7 @@ add_library(ursatz
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
+    interpretation/evidence.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
