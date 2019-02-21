@@ -37,6 +37,7 @@ add_library(ursatz
     interpretation/uncertainty.c
     interpretation/evidence.c
     interpretation/assertion.c
+    interpretation/observation.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

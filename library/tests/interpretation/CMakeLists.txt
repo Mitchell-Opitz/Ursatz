@@ -10,6 +10,10 @@ add_executable(test_assertion test_assertion.c)
 target_link_libraries(test_assertion PRIVATE ursatz)
 add_test(NAME assertion COMMAND test_assertion)
 
+add_executable(test_observation test_observation.c)
+target_link_libraries(test_observation PRIVATE ursatz)
+add_test(NAME observation COMMAND test_observation)
+
 add_executable(test_architecture_interpretation test_architecture_interpretation.c)
 add_test(NAME architecture_interpretation COMMAND test_architecture_interpretation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
