@@ -18,6 +18,10 @@ add_executable(test_hypothesis test_hypothesis.c)
 target_link_libraries(test_hypothesis PRIVATE ursatz)
 add_test(NAME hypothesis COMMAND test_hypothesis)
 
+add_executable(test_interpretation test_interpretation.c)
+target_link_libraries(test_interpretation PRIVATE ursatz)
+add_test(NAME interpretation COMMAND test_interpretation)
+
 add_executable(test_architecture_interpretation test_architecture_interpretation.c)
 add_test(NAME architecture_interpretation COMMAND test_architecture_interpretation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
