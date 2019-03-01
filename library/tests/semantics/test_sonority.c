@@ -20,6 +20,12 @@ static TimeSpan *make_window(void) {
 
     TimeSpan *span;
     assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_CLOSED, &span) == TIME_SPAN_OK);
+
+    /* time_span_create copies start/end rather than taking ownership
+       (time/time_span.c) -- the caller (here) still owns the originals. */
+    musical_time_destroy(start);
+    musical_time_destroy(end);
+
     return span;
 }
 
