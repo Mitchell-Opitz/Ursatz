@@ -26,6 +26,18 @@ with its tests mirrored under `tests/<module>/`.
   Currently: `structure` (music-structure), depending on `identity`,
   `core`, `time`, `pitch`, `events`, and `containers`. `structure` MUST
   NOT depend on anything L6+.
+- **L6** - may depend only on L0/L1/L2/L3/L4/L5, never sideways or
+  upward. Currently: `context` (music-context), `semantics`
+  (music-semantics), `relationship` (music-relationship), and
+  `interpretation` (music-interpretation), each depending on
+  `identity`, `core`, `time`, `pitch`, `events`, `containers`, and
+  `structure` only. All four MUST NOT depend on `music-theory` or
+  `music-rules` (L7) or anything above -- AND, being siblings at the
+  same layer, MUST NOT depend on each other either (no
+  `context`<->`semantics`<->`relationship`<->`interpretation` imports
+  in any direction). Cross-module references at L6 go through opaque
+  `EntityID` (L0) only, never a direct header dependency on a sibling
+  L6 module.
 
 A module must not import anything outside its own layer's allowed
 dependencies. Each module has an architecture test enforcing this
@@ -34,19 +46,27 @@ dependencies. Each module has an architecture test enforcing this
 `tests/pitch/test_architecture_pitch.c`,
 `tests/events/test_architecture_events.c`,
 `tests/containers/test_architecture_containers.c`,
-`tests/structure/test_architecture_structure.c`).
+`tests/structure/test_architecture_structure.c`,
+`tests/context/test_architecture_context.c`,
+`tests/semantics/test_architecture_semantics.c`,
+`tests/relationship/test_architecture_relationship.c`,
+`tests/interpretation/test_architecture_interpretation.c`).
 
 ## Modules
 
-| Module     | Layer | Path              | Tests                 |
-|------------|-------|-------------------|------------------------|
-| identity   | L0    | `src/identity/`   | `tests/identity/`      |
-| core       | L1    | `src/core/`       | `tests/core/`          |
-| time       | L2    | `src/time/`       | `tests/time/`          |
-| pitch      | L2    | `src/pitch/`      | `tests/pitch/`         |
-| events     | L3    | `src/events/`     | `tests/events/`        |
-| containers | L4    | `src/containers/` | `tests/containers/`    |
-| structure  | L5    | `src/structure/`  | `tests/structure/`     |
+| Module         | Layer | Path                   | Tests                      |
+|----------------|-------|------------------------|-----------------------------|
+| identity       | L0    | `src/identity/`        | `tests/identity/`           |
+| core           | L1    | `src/core/`            | `tests/core/`               |
+| time           | L2    | `src/time/`            | `tests/time/`               |
+| pitch          | L2    | `src/pitch/`           | `tests/pitch/`              |
+| events         | L3    | `src/events/`          | `tests/events/`             |
+| containers     | L4    | `src/containers/`      | `tests/containers/`         |
+| structure      | L5    | `src/structure/`       | `tests/structure/`          |
+| context        | L6    | `src/context/`         | `tests/context/`            |
+| semantics      | L6    | `src/semantics/`       | `tests/semantics/`          |
+| relationship   | L6    | `src/relationship/`    | `tests/relationship/`       |
+| interpretation | L6    | `src/interpretation/`  | `tests/interpretation/`     |
 
 ## music-core notes
 
@@ -270,3 +290,115 @@ A few things worth knowing before building on top of it:
   layer defines. Also out of scope: `Section`, `Movement`, `Work` (L4
   containers, deferred there too, not L5 structures), and any harmonic-
   context resolution (L6/L7).
+
+## L6: music-context, music-semantics, music-relationship, music-interpretation notes
+
+L6 is four sibling modules, built together against Dependency & Layer
+Spec v2 §2-§3: `context` (`Context`), `semantics` (`Interval`,
+`Sonority`, `RhythmicPattern`), `relationship` (`Relationship`,
+`PredicateDefinition`), and `interpretation` (`Uncertainty`,
+`Evidence`, `Assertion`, `Observation`, `Hypothesis`,
+`Interpretation`).
+
+IMPORTANT CONTRADICTION FLAG (same shape as the Canonical IR issue at
+L1, and carried forward from this pass's task brief -- do not resolve
+this silently if revisiting it): the System Registry's "Depends On"
+column for `Interpretation`, `ScaleDegree`, `Chord`, and `Key` lists
+"Framework" (L7, `music-theory`) as a dependency. A literal import
+would violate the layer rule the same way the Canonical IR row did at
+L1. `ScaleDegree`, `Chord`, and `Key` sit at Registry Phase 3/8 or 8,
+not 6, and are deferred whole (see below), so this pass only had to
+resolve it for `Interpretation` itself:
+
+- `Interpretation` (`interpretation/interpretation.h`) has NO resolved
+  `framework` field. It is omitted entirely -- not even an opaque
+  placeholder -- flagged as a follow-up once `music-theory` exists to
+  define what that field should hold.
+
+A few more things worth knowing before building on top of L6:
+
+- **No sideways L6 imports.** `context`, `semantics`, `relationship`,
+  and `interpretation` never import each other's headers. Every
+  cross-module reference at this layer is an opaque `EntityID` (L0):
+  `Relationship`'s `context_id`/`evidence_id`
+  (`relationship/relationship.h`), `Interpretation`'s
+  `context_id`/`evidence_id` (`interpretation/interpretation.h`), and
+  `Relationship`'s `predicate_name` (correlated to a
+  `PredicateDefinition` by name string, not by object reference) all
+  follow this. Each module's architecture test only allowlists L0-L5
+  plus its own directory -- none allowlist a sibling L6 module.
+- **Not-yet-built dependencies get the opaque-Value placeholder
+  treatment**, the same pattern `Cadence`'s `optional_harmonic_context`
+  established at L5 (`structure/cadence.h`): `Relationship`'s
+  `uncertainty` field is an opaque, nullable `Value` (`core/value.h`),
+  since it was built (commit 8) before `Uncertainty`
+  (`interpretation/uncertainty.h`, commit 11) existed. `Assertion`'s
+  and `Interpretation`'s `author` fields are opaque agent-identifier
+  strings, since `ProvenanceAgent` does not exist yet at the
+  cross-cutting Provenance module. `Observation`'s `timestamp` is an
+  opaque, nullable `Value` -- it is real-world wall-clock time, not a
+  musical position, and `TimeInstant` (`time/time_instant.h`) is the
+  wrong domain for it; no wall-clock timestamp type exists yet.
+- **`Interval` and `Sonority` do not depend on `PitchClass`.**
+  `PitchClass`, `PitchRealization`, and `TuningSystem` are Phase 3
+  Deliverable D and are not built yet. `Interval`
+  (`semantics/interval.h`) computes nothing itself -- since
+  `PitchIdentity` (`pitch/pitch_identity.h`) is an opaque token with no
+  numeric semantics, each of `Interval`'s three dimensions (directed,
+  undirected, chromatic distance) is supplied by the caller as an
+  independently-optional field, never defaulted to zero when unknown.
+  Diatonic distance (the fourth TDD §67 dimension) is not represented
+  at all, since it needs `PitchClass`.
+- **`Sonority` is not a `Chord`.** `sonority.h` carries no chord-
+  identification logic (root, quality, inversion); that is `Chord`
+  (Phase 8, depends on Framework/L7, deferred below).
+- **`RhythmicPattern` has no pitch fields.** `rhythmic_pattern.h` takes
+  no dependency on `pitch/pitch_identity.h` or `pitch/pitch_spelling.h`
+  -- a rhythmic query never needs pitch information.
+- **`PredicateDefinition`'s vocabulary is open, not a fixed enum.** The
+  System Registry marks the initial predicate vocabulary (TDD §77:
+  `contains`, `precedes`, `derived_from`, `realizes`, `resembles`,
+  `interpreted_as`, etc.) "explicitly extensible, not fixed" --
+  `predicate_definition.h` is a registrable metadata type with an open
+  `name` string, not a closed set of predicate constants.
+- **`Uncertainty` is a small tagged/variant type, not a scalar.** TDD
+  §84-86 names eight distinct uncertainty shapes; this pass implements
+  three (`UNCERTAINTY_KIND_UNKNOWN`, `_SCALAR_CONFIDENCE`,
+  `_CANDIDATE_SET`) and documents the rest (interval estimate,
+  probability distribution, credible interval, qualitative
+  uncertainty) as future `UncertaintyKind` variants, not something to
+  force into the existing three. Confidence and candidate weights are
+  exact rational fractions, never float/double (Law 19).
+- **`Evidence`'s strength/relevance/reliability never collapse to one
+  score.** Each is its own rational-fraction field
+  (`evidence/*_numerator`/`*_denominator` accessor pairs); there is no
+  single "evidence score" anywhere in `evidence.h`.
+- **`Hypothesis` supports multiple candidates by construction.**
+  `hypothesis_create` takes a `HypothesisCandidate` array
+  (`candidate_count >= 1`, uncapped), not a single value plus a
+  confidence score. Multiple `Hypothesis` instances may reference the
+  same `Observation` id without conflict -- `observation_ids` is a
+  reference list, never an ownership claim.
+- **`Interpretation` never mutates its target, and never enforces
+  uniqueness on it.** `target_id` is an opaque `EntityID` reference
+  (Law 8: no accessor resolves it to a mutable object). Multiple
+  competing `Interpretation`s pointing at the same `target_id` are
+  always valid to construct (TDD §89) -- nothing in this module tracks
+  "the" `Interpretation` for a given target.
+- Deferred, not implemented in this pass (wrong phase and/or
+  non-normative and/or blocked on `Framework`, which does not exist
+  yet): `Scale` (Registry Normative = No, reference concept only),
+  `ScaleDegree` (depends on Framework, Phase 3/8), `Contour` (Registry
+  Normative = No, descriptive examples only), `Chord` and `Key` (Phase
+  8, depend on Framework), `Annotation` and `ScholarlyAnnotation`
+  ("post kernel" / partial-normative, soft "shall eventually support"
+  requirement), and `PitchClass`/`PitchRealization`/`TuningSystem`
+  (Phase 3 Deliverable D, not yet spec'd).
+- Out of scope for L6 entirely, not missing: `Framework`, `Rule`,
+  `Constraint`, `Preference`, `Heuristic`, `Tendency`,
+  `StatisticalModel`, `Procedure`, `RuleEvaluation` (all L7,
+  `music-theory`/`music-rules`); any actual harmonic/theoretical
+  analysis -- chord ID, key estimation, Roman numeral analysis, cadence
+  detection (Phase 8, `music-analysis`); and full
+  `ProvenanceAgent`/`ProvenanceActivity`/`Derivation` objects (Phase 6
+  cross-cutting Provenance module, separate from this pass).
