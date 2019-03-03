@@ -40,6 +40,7 @@ add_library(ursatz
     interpretation/observation.c
     interpretation/hypothesis.c
     interpretation/interpretation.c
+    theory/framework.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
