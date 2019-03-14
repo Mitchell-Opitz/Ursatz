@@ -43,6 +43,7 @@ add_library(ursatz
     theory/framework.c
     rules/rule.c
     rules/constraint.c
+    rules/preference.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

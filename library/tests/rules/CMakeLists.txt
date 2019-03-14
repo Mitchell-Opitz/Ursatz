@@ -6,6 +6,10 @@ add_executable(test_constraint test_constraint.c)
 target_link_libraries(test_constraint PRIVATE ursatz)
 add_test(NAME constraint COMMAND test_constraint)
 
+add_executable(test_preference test_preference.c)
+target_link_libraries(test_preference PRIVATE ursatz)
+add_test(NAME preference COMMAND test_preference)
+
 add_executable(test_architecture_rules test_architecture_rules.c)
 add_test(NAME architecture_rules COMMAND test_architecture_rules
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
