@@ -45,6 +45,7 @@ add_library(ursatz
     rules/constraint.c
     rules/preference.c
     theory/heuristic.c
+    theory/tendency.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
