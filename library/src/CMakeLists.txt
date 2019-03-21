@@ -47,6 +47,7 @@ add_library(ursatz
     theory/heuristic.c
     theory/tendency.c
     theory/statistical_model.c
+    theory/style_model.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
