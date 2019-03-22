@@ -6,18 +6,20 @@
 /*
  * Architecture test: music-rules (L7) may depend on music-identity
  * (L0), music-core (L1), music-time, music-pitch (L2), music-events
- * (L3), music-containers (L4), music-structure (L5), and
- * music-context, music-semantics, music-relationship,
- * music-interpretation (L6) only. It MUST NOT depend on music-corpus
- * (L9) or music-analysis/music-generation/music-transform (L8).
+ * (L3), music-containers (L4), music-structure (L5), music-context,
+ * music-semantics, music-relationship, music-interpretation (L6), and
+ * music-theory (L7, sibling -- rules/rule.h, rules/constraint.h, and
+ * rules/preference.h each hold a direct Framework reference) only. It
+ * MUST NOT depend on music-corpus (L9) or
+ * music-analysis/music-generation/music-transform (L8).
  * Dependency & Layer Spec v2 §2, §3.
  *
  * Scans every .h/.c file under src/rules/ and flags any local
  * include ("...") that does not point into identity/, core/, time/,
  * pitch/, events/, containers/, structure/, context/, semantics/,
- * relationship/, interpretation/, or rules/ itself. The scan is
- * directory-driven rather than a fixed file list, so this test does
- * not need editing as rules/ grows.
+ * relationship/, interpretation/, theory/, or rules/ itself. The scan
+ * is directory-driven rather than a fixed file list, so this test
+ * does not need editing as rules/ grows.
  */
 
 static int check_file(const char *path) {
@@ -49,11 +51,12 @@ static int check_file(const char *path) {
             strncmp(start, "events/", 7) != 0 && strncmp(start, "containers/", 11) != 0 &&
             strncmp(start, "structure/", 10) != 0 && strncmp(start, "context/", 8) != 0 &&
             strncmp(start, "semantics/", 10) != 0 && strncmp(start, "relationship/", 13) != 0 &&
-            strncmp(start, "interpretation/", 15) != 0 && strncmp(start, "rules/", 6) != 0) {
+            strncmp(start, "interpretation/", 15) != 0 && strncmp(start, "theory/", 7) != 0 &&
+            strncmp(start, "rules/", 6) != 0) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "or rules/)\n",
+                    "theory/, or rules/)\n",
                     path, start);
             violations++;
         }
