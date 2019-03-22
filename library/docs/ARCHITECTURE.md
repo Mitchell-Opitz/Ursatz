@@ -38,6 +38,19 @@ with its tests mirrored under `tests/<module>/`.
   in any direction). Cross-module references at L6 go through opaque
   `EntityID` (L0) only, never a direct header dependency on a sibling
   L6 module.
+- **L7** - may depend only on L0/L1/L2/L3/L4/L5/L6, never sideways or
+  upward. Currently: `theory` (music-theory: `Framework`, `Heuristic`,
+  `Tendency`, `StatisticalModel`, `StyleModel`) and `rules`
+  (music-rules: `Rule`, `Constraint`, `Preference`), each depending on
+  `identity`, `core`, `time`, `pitch`, `events`, `containers`,
+  `structure`, `context`, `semantics`, `relationship`, and
+  `interpretation` only. Both MUST NOT depend on `music-corpus` (L9)
+  or `music-analysis`/`music-generation`/`music-transform` (L8) --
+  see the OPEN ISSUE in the L7 module notes below. Unlike L6,
+  `theory` and `rules` are not mutually sideways-restricted:
+  `rules` depends directly on `theory` (`Rule`, `Constraint`, and
+  `Preference` each hold a direct, unowned `Framework` reference), but
+  `theory` never depends back on `rules`.
 
 A module must not import anything outside its own layer's allowed
 dependencies. Each module has an architecture test enforcing this
@@ -50,7 +63,9 @@ dependencies. Each module has an architecture test enforcing this
 `tests/context/test_architecture_context.c`,
 `tests/semantics/test_architecture_semantics.c`,
 `tests/relationship/test_architecture_relationship.c`,
-`tests/interpretation/test_architecture_interpretation.c`).
+`tests/interpretation/test_architecture_interpretation.c`,
+`tests/theory/test_architecture_theory.c`,
+`tests/rules/test_architecture_rules.c`).
 
 ## Modules
 
@@ -67,6 +82,8 @@ dependencies. Each module has an architecture test enforcing this
 | semantics      | L6    | `src/semantics/`       | `tests/semantics/`          |
 | relationship   | L6    | `src/relationship/`    | `tests/relationship/`       |
 | interpretation | L6    | `src/interpretation/`  | `tests/interpretation/`     |
+| theory         | L7    | `src/theory/`          | `tests/theory/`             |
+| rules          | L7    | `src/rules/`           | `tests/rules/`              |
 
 ## music-core notes
 
@@ -402,3 +419,101 @@ A few more things worth knowing before building on top of L6:
   detection (Phase 8, `music-analysis`); and full
   `ProvenanceAgent`/`ProvenanceActivity`/`Derivation` objects (Phase 6
   cross-cutting Provenance module, separate from this pass).
+
+## L7: music-theory, music-rules notes
+
+L7 is two modules built together against Dependency & Layer Spec v2
+§2-§3: `theory` (`Framework`, `Heuristic`, `Tendency`,
+`StatisticalModel`, `StyleModel`) and `rules` (`Rule`, `Constraint`,
+`Preference`). Unlike L6's four mutually-restricted siblings, `rules`
+depends directly on `theory` -- `Rule`, `Constraint`, and `Preference`
+each hold a direct, unowned `Framework` reference (the same
+reference-only pattern `Context` uses for its own parent field,
+`context/context.h`) -- while `theory` never depends back on `rules`.
+
+OPEN ISSUE, GUARDRAIL, NOT RESOLVED (Dependency Spec §7.2): the System
+Registry lists `Tendency`, `StatisticalModel`, and `StyleModel` as
+depending on `Corpus` (L9, `music-corpus`). This pass does not
+implement that dependency -- the spec is explicit that no
+implementation may establish the Theory -> Corpus dependency until the
+resolution is recorded in the Domain Ontology Specification and the
+System Registry is updated. `Tendency`, `StatisticalModel`, and
+`StyleModel` each accept corpus-derived statistics only as an opaque,
+already-computed `Value` (`core/value.h`) supplied by the caller --
+none of the three, nor any other file under `src/theory/` or
+`src/rules/`, includes a `music-corpus` header. `tests/theory/
+test_architecture_theory.c` and `tests/rules/test_architecture_rules.c`
+enforce this the same way the per-module L6 tests enforce their own
+layer boundary: by allowlisting only L0-L6 directories.
+
+This also resolves the other side of the L6 Interpretation<->Framework
+open issue flagged above (Dependency Spec §7.1): `Framework`
+(`theory/framework.h`) holds no reference back into
+`music-interpretation`, and carries no forward reference to any of its
+own siblings (`Rule`, `Constraint`, `Preference`, `Heuristic`,
+`Tendency`, `StatisticalModel`, `StyleModel`) either -- it is the
+thing an L6+ consumer resolves a reference against, never the thing
+that reaches back out. `Interpretation` itself still has no `framework`
+field; that remains unresolved from the L6 side, unchanged in this
+pass.
+
+A few more things worth knowing before building on top of L7:
+
+- **`Constraint`'s type is a tagged type, not a boolean.**
+  `ConstraintType` (`rules/constraint.h`) has five variants (`_HARD`,
+  `_SOFT`, `_WEIGHTED`, `_CONDITIONAL`, `_CONTEXTUAL`, TDD §96), not a
+  single `is_hard` flag. Only `CONSTRAINT_TYPE_WEIGHTED` uses the
+  weight numerator/denominator fields; every other type ignores them.
+  `constraint_evaluate` is a stub -- it validates its arguments and
+  reports `CONSTRAINT_EVAL_NOT_IMPLEMENTED`, never actually deciding
+  whether a candidate satisfies the constraint. Wiring real evaluation
+  logic into a generation pipeline is `music-generation` (L8) work, out
+  of scope here.
+- **`Preference` cannot reject a candidate.** `preference_rank`
+  (`rules/preference.h`) is structurally distinct from
+  `constraint_evaluate`: its result type has no PASS/FAIL/invalid
+  variant, only "computed" or "not implemented" -- there is no code
+  path anywhere in `preference.h` through which a `Preference` could
+  invalidate a candidate the way a `Constraint` can.
+- **`Tendency`'s frequency is not a Rule/Constraint verdict.**
+  `TendencyResult` (`theory/tendency.h`) is a disjoint enum from
+  `RuleResult` and `ConstraintResult`/`ConstraintEvalResult` -- no
+  function converts a `Tendency` into either, and no function in
+  `rule.h`/`constraint.h` accepts a `Tendency`. An observed frequency
+  (TDD §99) never automatically becomes a must/must-not/valid/invalid
+  claim.
+- **`StatisticalModel`'s output cannot be silently promoted to a
+  `Rule`.** `theory/statistical_model.h` does not include
+  `rules/rule.h`, and no function anywhere converts a
+  `StatisticalModel` into a `Rule`. `training_corpus` is a plain
+  string label (TDD §100), never a `music-corpus` object reference.
+- **`Heuristic` exposes no evaluate/pass-fail API at all.**
+  `theory/heuristic.h` is identity plus a label only (TDD §98) -- it
+  cannot be treated as authoritative because there is nothing on the
+  type that could be evaluated as true/false in the first place.
+- **`StyleModel` is shape only, same as `Tendency` and
+  `StatisticalModel`.** `style_features` is an opaque `Value`,
+  `training_corpus` is a plain label string, and there is no fitting or
+  comparison logic in this pass -- construction/shape tests only.
+- Deferred, flagged for project-owner confirmation before building
+  (Registry-First Dependency Rule, Dependency Spec §6): `RuleEvaluation`
+  -- `Rule` depends on it, but no distinct Registry row/shape was found
+  for it in this pass; do not invent its field shape from TDD §102
+  alone without that confirmation.
+- Deferred, wrong module for this pass (not `music-theory`/`music-rules`):
+  `Procedure` -- despite appearing near Phase 9 material in the TDD,
+  its Registry module is `music-analysis`/`music-generation` (L8).
+- Deferred, explicitly out of this pass as independent extension
+  modules (TDD §244-245, "No kernel changes should be permitted merely
+  for convenience"): species-counterpoint frameworks (First-Fifth
+  Species, TDD Phase 10) and common-practice harmony (Roman numeral
+  analysis, harmonic function, voice leading, cadence, tonicization,
+  modulation, TDD Phase 11). Both are built as extensions on top of
+  `Framework`/`Rule`/`Constraint` after this pass, never as changes to
+  the L7 kernel itself.
+- Out of scope for L7 entirely, not missing: any actual
+  constraint-solving, generation, or analysis pipeline that USES
+  `Rule`/`Constraint`/`Preference`/`Heuristic` (`music-analysis`,
+  `music-generation`, `music-transform`, L8); and corpus ingestion,
+  normalization, or indexing itself (`music-corpus`, L9 -- blocked from
+  being imported here regardless, per the OPEN ISSUE above).
