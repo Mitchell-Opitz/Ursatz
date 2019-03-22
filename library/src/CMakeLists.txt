@@ -40,6 +40,14 @@ add_library(ursatz
     interpretation/observation.c
     interpretation/hypothesis.c
     interpretation/interpretation.c
+    theory/framework.c
+    rules/rule.c
+    rules/constraint.c
+    rules/preference.c
+    theory/heuristic.c
+    theory/tendency.c
+    theory/statistical_model.c
+    theory/style_model.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
