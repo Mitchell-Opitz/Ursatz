@@ -49,6 +49,7 @@ add_library(ursatz
     theory/statistical_model.c
     theory/style_model.c
     transform/transformation.c
+    transform/transposition.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
