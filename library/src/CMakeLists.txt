@@ -50,6 +50,7 @@ add_library(ursatz
     theory/style_model.c
     transform/transformation.c
     transform/transposition.c
+    transform/inversion.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
