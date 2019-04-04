@@ -51,6 +51,7 @@ add_library(ursatz
     transform/transformation.c
     transform/transposition.c
     transform/inversion.c
+    transform/retrograde.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
