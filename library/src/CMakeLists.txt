@@ -54,6 +54,7 @@ add_library(ursatz
     transform/retrograde.c
     transform/retrograde_inversion.c
     transform/augmentation.c
+    transform/diminution.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
