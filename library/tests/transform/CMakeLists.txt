@@ -26,6 +26,10 @@ add_executable(test_diminution test_diminution.c)
 target_link_libraries(test_diminution PRIVATE ursatz)
 add_test(NAME diminution COMMAND test_diminution)
 
+add_executable(test_fragmentation test_fragmentation.c)
+target_link_libraries(test_fragmentation PRIVATE ursatz)
+add_test(NAME fragmentation COMMAND test_fragmentation)
+
 add_executable(test_architecture_transform test_architecture_transform.c)
 add_test(NAME architecture_transform COMMAND test_architecture_transform
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
