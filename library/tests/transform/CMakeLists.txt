@@ -38,6 +38,10 @@ add_executable(test_contraction test_contraction.c)
 target_link_libraries(test_contraction PRIVATE ursatz)
 add_test(NAME contraction COMMAND test_contraction)
 
+add_executable(test_displacement test_displacement.c)
+target_link_libraries(test_displacement PRIVATE ursatz)
+add_test(NAME displacement COMMAND test_displacement)
+
 add_executable(test_architecture_transform test_architecture_transform.c)
 add_test(NAME architecture_transform COMMAND test_architecture_transform
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
