@@ -59,6 +59,7 @@ add_library(ursatz
     transform/expansion.c
     transform/contraction.c
     transform/displacement.c
+    transform/ornamentation.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
