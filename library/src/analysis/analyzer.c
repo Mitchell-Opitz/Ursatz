@@ -4,34 +4,56 @@
 
 struct AnalysisResult {
     EntityID *id;
-    EntityID **interpretation_ids;
-    size_t interpretation_id_count;
+    Interpretation **interpretations;
+    size_t interpretation_count;
+    Evidence **evidences;
+    size_t evidence_count;
     ProvenanceReference *provenance;
 };
 
-static void destroy_interpretation_ids(EntityID **interpretation_ids, size_t count) {
-    if (interpretation_ids == NULL) {
+static void destroy_interpretations(Interpretation **interpretations, size_t count) {
+    if (interpretations == NULL) {
         return;
     }
     for (size_t i = 0; i < count; i++) {
-        entity_id_destroy(interpretation_ids[i]);
+        interpretation_destroy(interpretations[i]);
     }
-    free(interpretation_ids);
+    free(interpretations);
 }
 
-AnalysisResultResult analysis_result_create(EntityID *id, EntityID **interpretation_ids,
-                                             size_t interpretation_id_count, ProvenanceReference *provenance,
-                                             AnalysisResult **out) {
+static void destroy_evidences(Evidence **evidences, size_t count) {
+    if (evidences == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        evidence_destroy(evidences[i]);
+    }
+    free(evidences);
+}
+
+AnalysisResultResult analysis_result_create(EntityID *id, Interpretation **interpretations,
+                                             size_t interpretation_count, Evidence **evidences, size_t evidence_count,
+                                             ProvenanceReference *provenance, AnalysisResult **out) {
     if (id == NULL) {
         return ANALYSIS_RESULT_ERR_NULL_ID;
     }
-    if (interpretation_id_count > 0) {
-        if (interpretation_ids == NULL) {
-            return ANALYSIS_RESULT_ERR_NULL_INTERPRETATION_ID;
+    if (interpretation_count > 0) {
+        if (interpretations == NULL) {
+            return ANALYSIS_RESULT_ERR_NULL_INTERPRETATION;
         }
-        for (size_t i = 0; i < interpretation_id_count; i++) {
-            if (interpretation_ids[i] == NULL) {
-                return ANALYSIS_RESULT_ERR_NULL_INTERPRETATION_ID;
+        for (size_t i = 0; i < interpretation_count; i++) {
+            if (interpretations[i] == NULL) {
+                return ANALYSIS_RESULT_ERR_NULL_INTERPRETATION;
+            }
+        }
+    }
+    if (evidence_count > 0) {
+        if (evidences == NULL) {
+            return ANALYSIS_RESULT_ERR_NULL_EVIDENCE;
+        }
+        for (size_t i = 0; i < evidence_count; i++) {
+            if (evidences[i] == NULL) {
+                return ANALYSIS_RESULT_ERR_NULL_EVIDENCE;
             }
         }
     }
@@ -44,21 +66,36 @@ AnalysisResultResult analysis_result_create(EntityID *id, EntityID **interpretat
         return ANALYSIS_RESULT_ERR_ALLOC;
     }
 
-    EntityID **copied_ids = NULL;
-    if (interpretation_id_count > 0) {
-        copied_ids = (EntityID **)malloc(sizeof(EntityID *) * interpretation_id_count);
-        if (copied_ids == NULL) {
+    Interpretation **copied_interpretations = NULL;
+    if (interpretation_count > 0) {
+        copied_interpretations = (Interpretation **)malloc(sizeof(Interpretation *) * interpretation_count);
+        if (copied_interpretations == NULL) {
             free(result);
             return ANALYSIS_RESULT_ERR_ALLOC;
         }
-        for (size_t i = 0; i < interpretation_id_count; i++) {
-            copied_ids[i] = interpretation_ids[i];
+        for (size_t i = 0; i < interpretation_count; i++) {
+            copied_interpretations[i] = interpretations[i];
+        }
+    }
+
+    Evidence **copied_evidences = NULL;
+    if (evidence_count > 0) {
+        copied_evidences = (Evidence **)malloc(sizeof(Evidence *) * evidence_count);
+        if (copied_evidences == NULL) {
+            free(copied_interpretations);
+            free(result);
+            return ANALYSIS_RESULT_ERR_ALLOC;
+        }
+        for (size_t i = 0; i < evidence_count; i++) {
+            copied_evidences[i] = evidences[i];
         }
     }
 
     result->id = id;
-    result->interpretation_ids = copied_ids;
-    result->interpretation_id_count = interpretation_id_count;
+    result->interpretations = copied_interpretations;
+    result->interpretation_count = interpretation_count;
+    result->evidences = copied_evidences;
+    result->evidence_count = evidence_count;
     result->provenance = provenance;
 
     *out = result;
@@ -70,7 +107,8 @@ void analysis_result_destroy(AnalysisResult *result) {
         return;
     }
     entity_id_destroy(result->id);
-    destroy_interpretation_ids(result->interpretation_ids, result->interpretation_id_count);
+    destroy_interpretations(result->interpretations, result->interpretation_count);
+    destroy_evidences(result->evidences, result->evidence_count);
     provenance_reference_destroy(result->provenance);
     free(result);
 }
@@ -79,12 +117,20 @@ const EntityID *analysis_result_id(const AnalysisResult *result) {
     return result->id;
 }
 
-size_t analysis_result_interpretation_id_count(const AnalysisResult *result) {
-    return result->interpretation_id_count;
+size_t analysis_result_interpretation_count(const AnalysisResult *result) {
+    return result->interpretation_count;
 }
 
-const EntityID *analysis_result_interpretation_id_at(const AnalysisResult *result, size_t index) {
-    return result->interpretation_ids[index];
+const Interpretation *analysis_result_interpretation_at(const AnalysisResult *result, size_t index) {
+    return result->interpretations[index];
+}
+
+size_t analysis_result_evidence_count(const AnalysisResult *result) {
+    return result->evidence_count;
+}
+
+const Evidence *analysis_result_evidence_at(const AnalysisResult *result, size_t index) {
+    return result->evidences[index];
 }
 
 const ProvenanceReference *analysis_result_provenance(const AnalysisResult *result) {
