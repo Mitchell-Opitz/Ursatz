@@ -63,6 +63,9 @@ add_library(ursatz
     analysis/analyzer.c
     analysis/analyzer.c
     analysis/feature_extraction.c
+    analysis/analyzer.c
+    analysis/feature_extraction.c
+    analysis/interval_analysis.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
