@@ -14,6 +14,10 @@ add_executable(test_scale_analysis test_scale_analysis.c)
 target_link_libraries(test_scale_analysis PRIVATE ursatz)
 add_test(NAME scale_analysis COMMAND test_scale_analysis)
 
+add_executable(test_chord_identification test_chord_identification.c)
+target_link_libraries(test_chord_identification PRIVATE ursatz)
+add_test(NAME chord_identification COMMAND test_chord_identification)
+
 add_executable(test_architecture_analysis test_architecture_analysis.c)
 add_test(NAME architecture_analysis COMMAND test_architecture_analysis
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
