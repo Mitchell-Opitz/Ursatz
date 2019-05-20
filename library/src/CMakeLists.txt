@@ -65,6 +65,7 @@ add_library(ursatz
     analysis/interval_analysis.c
     analysis/scale_analysis.c
     analysis/chord_identification.c
+    analysis/key_estimation.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
