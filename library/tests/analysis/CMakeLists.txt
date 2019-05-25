@@ -22,6 +22,10 @@ add_executable(test_key_estimation test_key_estimation.c)
 target_link_libraries(test_key_estimation PRIVATE ursatz)
 add_test(NAME key_estimation COMMAND test_key_estimation)
 
+add_executable(test_voice_leading_analysis test_voice_leading_analysis.c)
+target_link_libraries(test_voice_leading_analysis PRIVATE ursatz)
+add_test(NAME voice_leading_analysis COMMAND test_voice_leading_analysis)
+
 add_executable(test_architecture_analysis test_architecture_analysis.c)
 add_test(NAME architecture_analysis COMMAND test_architecture_analysis
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
