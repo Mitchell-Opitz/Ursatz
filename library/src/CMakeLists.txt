@@ -67,6 +67,7 @@ add_library(ursatz
     analysis/chord_identification.c
     analysis/key_estimation.c
     analysis/voice_leading_analysis.c
+    analysis/cadence_detection.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

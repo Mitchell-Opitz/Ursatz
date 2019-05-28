@@ -26,6 +26,10 @@ add_executable(test_voice_leading_analysis test_voice_leading_analysis.c)
 target_link_libraries(test_voice_leading_analysis PRIVATE ursatz)
 add_test(NAME voice_leading_analysis COMMAND test_voice_leading_analysis)
 
+add_executable(test_cadence_detection test_cadence_detection.c)
+target_link_libraries(test_cadence_detection PRIVATE ursatz)
+add_test(NAME cadence_detection COMMAND test_cadence_detection)
+
 add_executable(test_architecture_analysis test_architecture_analysis.c)
 add_test(NAME architecture_analysis COMMAND test_architecture_analysis
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
