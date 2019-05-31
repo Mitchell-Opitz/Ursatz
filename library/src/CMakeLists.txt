@@ -68,6 +68,7 @@ add_library(ursatz
     analysis/key_estimation.c
     analysis/voice_leading_analysis.c
     analysis/cadence_detection.c
+    analysis/motif_detection.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
