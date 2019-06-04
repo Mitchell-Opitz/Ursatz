@@ -34,6 +34,10 @@ add_executable(test_motif_detection test_motif_detection.c)
 target_link_libraries(test_motif_detection PRIVATE ursatz)
 add_test(NAME motif_detection COMMAND test_motif_detection)
 
+add_executable(test_phrase_segmentation test_phrase_segmentation.c)
+target_link_libraries(test_phrase_segmentation PRIVATE ursatz)
+add_test(NAME phrase_segmentation COMMAND test_phrase_segmentation)
+
 add_executable(test_architecture_analysis test_architecture_analysis.c)
 add_test(NAME architecture_analysis COMMAND test_architecture_analysis
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
