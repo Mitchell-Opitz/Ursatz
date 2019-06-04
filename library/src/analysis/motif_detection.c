@@ -81,6 +81,9 @@ static bool validate_and_capture_occurrence_id(const Motif *motif, const MotifDe
         occurrence_destroy(base_occurrence);
         return false;
     }
+    /* motif_occurrence_create copies region_event_ids' entries into its own internally-owned
+       array rather than taking the array pointer itself -- the outer array is still ours to free. */
+    free(region_event_ids);
 
     bool copied = copy_id(motif_occurrence_id(motif_occurrence), out);
     motif_occurrence_destroy(motif_occurrence);
