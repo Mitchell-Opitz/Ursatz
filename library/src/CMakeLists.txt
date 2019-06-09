@@ -70,6 +70,7 @@ add_library(ursatz
     analysis/cadence_detection.c
     analysis/motif_detection.c
     analysis/phrase_segmentation.c
+    generation/intent.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
