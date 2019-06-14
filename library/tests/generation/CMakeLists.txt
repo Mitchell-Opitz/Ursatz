@@ -10,6 +10,10 @@ add_executable(test_constraint_extraction test_constraint_extraction.c)
 target_link_libraries(test_constraint_extraction PRIVATE ursatz)
 add_test(NAME constraint_extraction COMMAND test_constraint_extraction)
 
+add_executable(test_conflict_detection test_conflict_detection.c)
+target_link_libraries(test_conflict_detection PRIVATE ursatz)
+add_test(NAME conflict_detection COMMAND test_conflict_detection)
+
 add_executable(test_architecture_generation test_architecture_generation.c)
 add_test(NAME architecture_generation COMMAND test_architecture_generation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
