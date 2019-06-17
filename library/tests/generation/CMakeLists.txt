@@ -18,6 +18,10 @@ add_executable(test_generation_plan test_generation_plan.c)
 target_link_libraries(test_generation_plan PRIVATE ursatz)
 add_test(NAME generation_plan COMMAND test_generation_plan)
 
+add_executable(test_generator test_generator.c)
+target_link_libraries(test_generator PRIVATE ursatz)
+add_test(NAME generator COMMAND test_generator)
+
 add_executable(test_architecture_generation test_architecture_generation.c)
 add_test(NAME architecture_generation COMMAND test_architecture_generation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
