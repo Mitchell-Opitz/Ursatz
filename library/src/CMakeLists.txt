@@ -74,6 +74,7 @@ add_library(ursatz
     generation/constraint_extraction.c
     generation/conflict_detection.c
     generation/generation_plan.c
+    generation/candidate.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
