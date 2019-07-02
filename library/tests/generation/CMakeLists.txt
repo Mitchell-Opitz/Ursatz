@@ -30,6 +30,10 @@ add_executable(test_candidate_evaluator test_candidate_evaluator.c)
 target_link_libraries(test_candidate_evaluator PRIVATE ursatz)
 add_test(NAME candidate_evaluator COMMAND test_candidate_evaluator)
 
+add_executable(test_generation_record test_generation_record.c)
+target_link_libraries(test_generation_record PRIVATE ursatz)
+add_test(NAME generation_record COMMAND test_generation_record)
+
 add_executable(test_architecture_generation test_architecture_generation.c)
 add_test(NAME architecture_generation COMMAND test_architecture_generation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

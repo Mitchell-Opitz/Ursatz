@@ -76,6 +76,7 @@ add_library(ursatz
     generation/generation_plan.c
     generation/candidate.c
     generation/candidate_evaluator.c
+    generation/generation_record.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
