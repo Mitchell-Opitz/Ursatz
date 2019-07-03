@@ -51,6 +51,22 @@ with its tests mirrored under `tests/<module>/`.
   `rules` depends directly on `theory` (`Rule`, `Constraint`, and
   `Preference` each hold a direct, unowned `Framework` reference), but
   `theory` never depends back on `rules`.
+- **L8** - may depend only on L0/L1/L2/L3/L4/L5/L6/L7, never sideways
+  or upward. Currently: `transform` (music-transform: `Transformation`
+  and its eleven concrete subtypes), `analysis` (music-analysis:
+  `Analyzer`, `AnalysisResult`, `FeatureExtraction`, and eight concrete
+  analyzers), and `generation` (music-generation: `Intent` through
+  `GenerationRecord`), each depending on `identity`, `core`, `time`,
+  `pitch`, `events`, `containers`, `structure`, `context`, `semantics`,
+  `relationship`, `interpretation`, `theory`, and `rules` only. All
+  three MUST NOT depend on `music-corpus`/`music-io`/`music-notation`/
+  `music-performance` (L9) -- AND, being siblings at the same layer,
+  MUST NOT depend on each other either (no
+  `transform`<->`analysis`<->`generation` imports in any direction).
+  This is why `generation/candidate_evaluator.h`'s `CandidateEvaluation`
+  cannot reuse `analysis/analyzer.h`'s `AnalysisResult` even though both
+  hold the identical Interpretation/Evidence shape -- see the L8 module
+  notes below.
 
 A module must not import anything outside its own layer's allowed
 dependencies. Each module has an architecture test enforcing this
@@ -65,7 +81,10 @@ dependencies. Each module has an architecture test enforcing this
 `tests/relationship/test_architecture_relationship.c`,
 `tests/interpretation/test_architecture_interpretation.c`,
 `tests/theory/test_architecture_theory.c`,
-`tests/rules/test_architecture_rules.c`).
+`tests/rules/test_architecture_rules.c`,
+`tests/transform/test_architecture_transform.c`,
+`tests/analysis/test_architecture_analysis.c`,
+`tests/generation/test_architecture_generation.c`).
 
 ## Modules
 
@@ -84,6 +103,9 @@ dependencies. Each module has an architecture test enforcing this
 | interpretation | L6    | `src/interpretation/`  | `tests/interpretation/`     |
 | theory         | L7    | `src/theory/`          | `tests/theory/`             |
 | rules          | L7    | `src/rules/`           | `tests/rules/`              |
+| transform      | L8    | `src/transform/`       | `tests/transform/`          |
+| analysis       | L8    | `src/analysis/`        | `tests/analysis/`           |
+| generation     | L8    | `src/generation/`      | `tests/generation/`         |
 
 ## music-core notes
 
@@ -517,3 +539,128 @@ A few more things worth knowing before building on top of L7:
   `music-generation`, `music-transform`, L8); and corpus ingestion,
   normalization, or indexing itself (`music-corpus`, L9 -- blocked from
   being imported here regardless, per the OPEN ISSUE above).
+
+## L8: music-transform, music-analysis, music-generation notes
+
+L8 is three sibling modules, built together against Dependency & Layer
+Spec v2 §2-§3: `transform` (`Transformation` and its eleven concrete
+subtypes: `Transposition`, `Inversion`, `Retrograde`,
+`RetrogradeInversion`, `Augmentation`, `Diminution`, `Fragmentation`,
+`Expansion`, `Contraction`, `Displacement`, `Ornamentation`),
+`analysis` (`Analyzer`, `AnalysisResult`, `FeatureExtraction`, and
+eight concrete analyzers: `IntervalAnalysis`, `ScaleAnalysis`,
+`ChordIdentification`, `KeyEstimation`, `VoiceLeadingAnalysis`,
+`CadenceDetection`, `MotifDetection`, `PhraseSegmentation`), and
+`generation` (`Intent`, `IntentCompiler`, `ConstraintExtraction`,
+`ConflictDetection`, `GenerationPlan`, `Generator`, `Candidate`/
+`CandidateSet`, `CandidateEvaluator`/`CandidateEvaluation`,
+`GenerationRecord`). Like L7's `theory`/`rules` split but stricter: all
+three L8 modules are mutually sideways-restricted the same way L6's
+four siblings are (no `transform`<->`analysis`<->`generation` imports
+in any direction) -- each depends on L0-L7 only, never on a sibling.
+Each module's architecture test enforces this by allowlisting only
+L0-L7 directories plus its own.
+
+DEFERRED, FLAGGED RATHER THAN BUILT (Registry: `Chord` and `Key`
+belong to `music-interpretation`, L6, not L8): `ChordIdentification`
+and `KeyEstimation` (`analysis/chord_identification.h`,
+`analysis/key_estimation.h`) identify a chord/key and report it as a
+framework-relative `Interpretation`, but neither constructs a `Chord`
+or `Key` object -- there is nothing at L6 yet to construct. This
+mirrors `CadenceDetection` not constructing a `Cadence` and
+`MotifDetection` not persisting the `MotifOccurrence` it validates
+(both report by `Interpretation` and let a downstream caller build the
+real L5/L6 object from the claim). Building `Chord`/`Key` themselves is
+L6 follow-up work, not part of this L8 branch.
+
+A few more things worth knowing before building on top of L8:
+
+- **`transform`'s Transformation base-type composition pattern.**
+  Every concrete subtype (`Transposition`, `Inversion`, ...) owns one
+  `Transformation` (`transform/transformation.h`) built internally at
+  construction time, rather than a caller assembling the base type
+  itself -- `<subtype>_id`/`<subtype>_provenance` forward to the owned
+  Transformation rather than duplicating identity/provenance on the
+  subtype. `Fragmentation`/`Expansion`/`Contraction` share one
+  array-of-`EntityID`-references-plus-count shape (extract/append/drop
+  by reference, never by copying `NoteEvent` payloads); `Ornamentation`
+  is the one subtype the Registry calls out as needing Provenance most,
+  since its one-to-many fan-out (one source event to several derived
+  events) is the trickiest case to get right, though every subtype
+  carries provenance via the base contract regardless.
+  Referentially transparent throughout (TDD §140): no subtype has a
+  mutator or a reference back into an input object it could alter.
+- **`analysis`'s Analyzer/AnalysisResult explainability pattern.** An
+  `Analyzer` (`analysis/analyzer.h`) never returns a bare conclusion --
+  it derives owned `Interpretation`/`Evidence` objects (L6) into an
+  `AnalysisResult`, which OWNS them (there is nowhere else for them to
+  live once `analyze()` returns). Every concrete analyzer follows the
+  same "caller supplies the already-measured dimension, the analyzer
+  packages it" division: `PitchIdentity` (`pitch/pitch_identity.h`)
+  carries no tuning-system semantics, so none of the eight analyzers
+  can derive their own measurements (semitone displacement, scale/
+  chord/key fit, motion classification, boundary confidence) from raw
+  pitch tokens -- each takes that dimension as an already-computed
+  input field and reports it through the Interpretation/Evidence/
+  Uncertainty architecture.
+- **`generation`'s Intent-only entry point.** Natural language MUST NOT
+  directly manipulate the IR (TDD §154) -- `Intent`
+  (`generation/intent.h`) is the only type a natural-language request
+  compiles into (via `IntentCompiler`, a contract-only interface with
+  no NLP implementation in this pass), and every downstream module
+  (`ConstraintExtraction`, `GenerationPlan`, `Generator`, ...) consumes
+  `Intent`, never raw text.
+- **`ConflictDetection` never silently drops a conflict (TDD §156).**
+  `generation/conflict_detection.h` requires at least two conflicting
+  ids per record (a conflict cannot be reported about a single
+  requirement) and keeps `priority`/`severity`/`weight` as three
+  distinct fields, not synonyms (TDD §157): a rank, a fixed-vocabulary
+  category, and an exact-rational magnitude, independently settable.
+- **`Generator`/`CandidateSet` forward-declaration, resolved in the
+  same module.** `generation/generator.h` forward-declares
+  `CandidateSet` as an opaque `struct CandidateSet` (Generator's own
+  contract -- what it declares about itself, TDD §160 -- does not
+  depend on CandidateSet's layout); `generation/candidate.h` supplies
+  the real definition under the identical struct tag.
+  `tests/generation/test_candidate.c` exercises both headers together
+  to confirm they resolve to one type, not two conflicting ones.
+- **`CandidateEvaluator` reuses `Interpretation`, not `AnalysisResult`
+  (TDD §159).** `CandidateEvaluation` (`generation/candidate_evaluator.h`)
+  holds the identical evaluations/violations-as-`Interpretation`-arrays
+  shape `AnalysisResult` gives its own findings, but is defined
+  independently in `generation/` rather than importing
+  `analysis/analyzer.h` -- the L8 sideways-restriction above forbids
+  that import regardless of the shape being identical.
+- **`GenerationRecord` is distinct from `CandidateSet`'s and
+  `Generator`'s own seed/version fields (TDD §163).**
+  `generation/generation_record.h` is the durable, standalone log entry
+  that a generation run happened -- `CandidateSet` carries the same
+  reproducibility bundle (seed, `generator_version`, `configuration`,
+  `input_ids`, `framework_version`) scoped to the one `generate()` call
+  that produced it, and `Generator`'s own `version` field is a declared
+  capability, present whether or not the generator was ever invoked.
+- **`framework_version` is a KNOWN GAP, not fabricated.** TDD §163
+  requires it on `CandidateSet` and `GenerationRecord`, but `Framework`
+  (`theory/framework.h`, L7) carries no version field of its own yet --
+  the same unresolved-dependency treatment the L7 notes above give
+  `Interpretation`'s missing `framework` field. Both types keep it as
+  an optional, opaque string (`NULL` when not available) rather than
+  block on that gap.
+- Deferred, explicitly out of this pass (Registry Normative = No,
+  "Phase-list mention only, no dedicated contract" / reference concept
+  only): `ConstraintSolver`, `Search`/`Optimizer`.
+- Deferred, wrong phase for this pass (Registry Phase 13, not 12):
+  Hierarchical Generators (`ThemeGenerator`, `PhraseGenerator`,
+  `BasicIdeaGenerator`).
+- Deferred, wrong layer for this pass (`music-io`/`music-notation`/
+  `music-performance`/`music-corpus`, L9 Applications, not L8):
+  `PracticeRequest`/`PracticeGenerator`, `DifficultyModel`.
+- Out of scope for L8 entirely, not missing: actual I/O format adapters
+  (MIDI/MusicXML/MEI/ABC, L9); corpus ingestion/statistics itself (L9,
+  and separately blocked from being imported here regardless, per the
+  L7 OPEN ISSUE above -- `CandidateEvaluator` consuming a
+  `StatisticalModel` is fine, that is L8 -> L7, legal; nothing in L8
+  reaches past L7 into `music-corpus` directly); and species
+  counterpoint / common-practice harmony frameworks (Phase 10/11 --
+  these consume `Framework`/`Rule`/`Constraint` as extension modules,
+  not part of L8's own build).
