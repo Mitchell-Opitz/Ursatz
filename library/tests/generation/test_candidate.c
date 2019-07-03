@@ -103,11 +103,13 @@ int main(void) {
     /* Rejects a zero score denominator. */
     EntityID *bad_score_id = make_id("candidate-rejects-zero-score-denominator");
     EntityID *bad_score_material_id = make_id("structure-bad-score");
+    ProvenanceReference *bad_score_provenance = make_absent_provenance();
     Candidate *rejected_score;
-    assert(candidate_create(bad_score_id, bad_score_material_id, NULL, 0, NULL, 0, 1, 0, make_absent_provenance(),
+    assert(candidate_create(bad_score_id, bad_score_material_id, NULL, 0, NULL, 0, 1, 0, bad_score_provenance,
                              &rejected_score) == CANDIDATE_ERR_NON_POSITIVE_SCORE_DENOMINATOR);
     entity_id_destroy(bad_score_id);
     entity_id_destroy(bad_score_material_id);
+    provenance_reference_destroy(bad_score_provenance);
 
     /* CandidateSet: construction, accessors, TDD Sec163 reproducibility fields. */
     Candidate *set_candidates[1] = {make_candidate("candidate-in-set")};
@@ -132,10 +134,12 @@ int main(void) {
 
     /* Rejects a missing generator_version. */
     EntityID *no_version_id = make_id("candidate-set-rejects-no-version");
+    ProvenanceReference *no_version_provenance = make_absent_provenance();
     CandidateSet *rejected_no_version;
-    assert(candidate_set_create(no_version_id, NULL, 0, 0, NULL, NULL, NULL, 0, NULL, make_absent_provenance(),
+    assert(candidate_set_create(no_version_id, NULL, 0, 0, NULL, NULL, NULL, 0, NULL, no_version_provenance,
                                  &rejected_no_version) == CANDIDATE_SET_ERR_NULL_GENERATOR_VERSION);
     entity_id_destroy(no_version_id);
+    provenance_reference_destroy(no_version_provenance);
 
     /* Generator integration: generator.h's forward-declared CandidateSet resolves to this same type. */
     Generator mock = {"mock-generator", "GenerationPlan", "CandidateSet", "none", "none", false, "1.0.0",

@@ -74,19 +74,23 @@ int main(void) {
 
     EntityID *no_intent_id = make_id("generation-plan-rejects-no-intent");
     ConstraintExtraction *no_intent_constraints = make_constraints(framework);
+    ProvenanceReference *no_intent_provenance = make_absent_provenance();
     GenerationPlan *rejected_no_intent;
-    assert(generation_plan_create(no_intent_id, NULL, no_intent_constraints, make_absent_provenance(),
+    assert(generation_plan_create(no_intent_id, NULL, no_intent_constraints, no_intent_provenance,
                                    &rejected_no_intent) == GENERATION_PLAN_ERR_NULL_INTENT);
     entity_id_destroy(no_intent_id);
     constraint_extraction_destroy(no_intent_constraints);
+    provenance_reference_destroy(no_intent_provenance);
 
     EntityID *no_constraints_id = make_id("generation-plan-rejects-no-constraints");
     Intent *no_constraints_intent = make_intent("intent-rejected");
+    ProvenanceReference *no_constraints_provenance = make_absent_provenance();
     GenerationPlan *rejected_no_constraints;
-    assert(generation_plan_create(no_constraints_id, no_constraints_intent, NULL, make_absent_provenance(),
+    assert(generation_plan_create(no_constraints_id, no_constraints_intent, NULL, no_constraints_provenance,
                                    &rejected_no_constraints) == GENERATION_PLAN_ERR_NULL_CONSTRAINTS);
     entity_id_destroy(no_constraints_id);
     intent_destroy(no_constraints_intent);
+    provenance_reference_destroy(no_constraints_provenance);
 
     generation_plan_destroy(plan);
     generation_plan_destroy(other);

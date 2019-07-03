@@ -60,10 +60,12 @@ int main(void) {
 
     /* Rejects a missing generator_version. */
     EntityID *no_version_id = make_id("generation-record-rejects-no-version");
+    ProvenanceReference *no_version_provenance = make_absent_provenance();
     GenerationRecord *rejected;
-    assert(generation_record_create(no_version_id, 0, NULL, NULL, NULL, make_absent_provenance(), &rejected) ==
+    assert(generation_record_create(no_version_id, 0, NULL, NULL, NULL, no_version_provenance, &rejected) ==
            GENERATION_RECORD_ERR_NULL_GENERATOR_VERSION);
     entity_id_destroy(no_version_id);
+    provenance_reference_destroy(no_version_provenance);
 
     generation_record_destroy(record);
     generation_record_destroy(minimal);

@@ -117,9 +117,11 @@ int main(void) {
     assert(candidate_evaluation_violation_count(empty) == 0);
 
     /* Rejects a zero score denominator. */
+    ProvenanceReference *rejected_provenance = make_absent_provenance();
     CandidateEvaluation *rejected;
-    assert(candidate_evaluation_create(NULL, 0, NULL, 0, 1, 0, make_absent_provenance(), &rejected) ==
+    assert(candidate_evaluation_create(NULL, 0, NULL, 0, 1, 0, rejected_provenance, &rejected) ==
            CANDIDATE_EVALUATION_ERR_NON_POSITIVE_SCORE_DENOMINATOR);
+    provenance_reference_destroy(rejected_provenance);
 
     /* CandidateEvaluator interface contract: a concrete evaluator is name + CandidateEvaluatorFn. */
     CandidateEvaluator mock = {"mock-evaluator", mock_evaluate};

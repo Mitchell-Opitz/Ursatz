@@ -73,24 +73,30 @@ int main(void) {
     assert(!intent_identity_equals(intent, minimal));
 
     EntityID *no_purpose_id = make_id("intent-rejects-no-purpose");
+    ProvenanceReference *no_purpose_provenance = make_absent_provenance();
     Intent *no_purpose;
     assert(intent_create(no_purpose_id, NULL, "target", NULL, NULL, NULL, NULL, NULL, 0, NULL, 0, NULL,
-                          make_absent_provenance(), &no_purpose) == INTENT_ERR_NULL_PURPOSE);
+                          no_purpose_provenance, &no_purpose) == INTENT_ERR_NULL_PURPOSE);
     entity_id_destroy(no_purpose_id);
+    provenance_reference_destroy(no_purpose_provenance);
 
     EntityID *no_target_id = make_id("intent-rejects-no-target");
+    ProvenanceReference *no_target_provenance = make_absent_provenance();
     Intent *no_target;
     assert(intent_create(no_target_id, "purpose", NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0, NULL,
-                          make_absent_provenance(), &no_target) == INTENT_ERR_NULL_TARGET);
+                          no_target_provenance, &no_target) == INTENT_ERR_NULL_TARGET);
     entity_id_destroy(no_target_id);
+    provenance_reference_destroy(no_target_provenance);
 
     EntityID *null_entry_id = make_id("intent-rejects-null-constraint-entry");
     Value *bad_constraints[2] = {make_constraint("ok"), NULL};
+    ProvenanceReference *null_entry_provenance = make_absent_provenance();
     Intent *null_entry;
     assert(intent_create(null_entry_id, "purpose", "target", NULL, NULL, NULL, NULL, bad_constraints, 2, NULL, 0,
-                          NULL, make_absent_provenance(), &null_entry) == INTENT_ERR_NULL_CONSTRAINT);
+                          NULL, null_entry_provenance, &null_entry) == INTENT_ERR_NULL_CONSTRAINT);
     entity_id_destroy(null_entry_id);
     value_destroy(bad_constraints[0]);
+    provenance_reference_destroy(null_entry_provenance);
 
     intent_destroy(intent);
     intent_destroy(minimal);
