@@ -48,6 +48,35 @@ add_library(ursatz
     theory/tendency.c
     theory/statistical_model.c
     theory/style_model.c
+    transform/transformation.c
+    transform/transposition.c
+    transform/inversion.c
+    transform/retrograde.c
+    transform/retrograde_inversion.c
+    transform/augmentation.c
+    transform/diminution.c
+    transform/fragmentation.c
+    transform/expansion.c
+    transform/contraction.c
+    transform/displacement.c
+    transform/ornamentation.c
+    analysis/analyzer.c
+    analysis/feature_extraction.c
+    analysis/interval_analysis.c
+    analysis/scale_analysis.c
+    analysis/chord_identification.c
+    analysis/key_estimation.c
+    analysis/voice_leading_analysis.c
+    analysis/cadence_detection.c
+    analysis/motif_detection.c
+    analysis/phrase_segmentation.c
+    generation/intent.c
+    generation/constraint_extraction.c
+    generation/conflict_detection.c
+    generation/generation_plan.c
+    generation/candidate.c
+    generation/candidate_evaluator.c
+    generation/generation_record.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
