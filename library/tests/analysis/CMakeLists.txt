@@ -1,43 +1,11 @@
-add_executable(test_analyzer test_analyzer.c)
-target_link_libraries(test_analyzer PRIVATE ursatz)
-add_test(NAME analyzer COMMAND test_analyzer)
-
-add_executable(test_feature_extraction test_feature_extraction.c)
-target_link_libraries(test_feature_extraction PRIVATE ursatz)
-add_test(NAME feature_extraction COMMAND test_feature_extraction)
-
-add_executable(test_interval_analysis test_interval_analysis.c)
-target_link_libraries(test_interval_analysis PRIVATE ursatz)
-add_test(NAME interval_analysis COMMAND test_interval_analysis)
-
-add_executable(test_scale_analysis test_scale_analysis.c)
-target_link_libraries(test_scale_analysis PRIVATE ursatz)
-add_test(NAME scale_analysis COMMAND test_scale_analysis)
-
-add_executable(test_chord_identification test_chord_identification.c)
-target_link_libraries(test_chord_identification PRIVATE ursatz)
-add_test(NAME chord_identification COMMAND test_chord_identification)
-
-add_executable(test_key_estimation test_key_estimation.c)
-target_link_libraries(test_key_estimation PRIVATE ursatz)
-add_test(NAME key_estimation COMMAND test_key_estimation)
-
-add_executable(test_voice_leading_analysis test_voice_leading_analysis.c)
-target_link_libraries(test_voice_leading_analysis PRIVATE ursatz)
-add_test(NAME voice_leading_analysis COMMAND test_voice_leading_analysis)
-
-add_executable(test_cadence_detection test_cadence_detection.c)
-target_link_libraries(test_cadence_detection PRIVATE ursatz)
-add_test(NAME cadence_detection COMMAND test_cadence_detection)
-
-add_executable(test_motif_detection test_motif_detection.c)
-target_link_libraries(test_motif_detection PRIVATE ursatz)
-add_test(NAME motif_detection COMMAND test_motif_detection)
-
-add_executable(test_phrase_segmentation test_phrase_segmentation.c)
-target_link_libraries(test_phrase_segmentation PRIVATE ursatz)
-add_test(NAME phrase_segmentation COMMAND test_phrase_segmentation)
-
-add_executable(test_architecture_analysis test_architecture_analysis.c)
-add_test(NAME architecture_analysis COMMAND test_architecture_analysis
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_ursatz_test(analyzer)
+add_ursatz_test(feature_extraction)
+add_ursatz_test(interval_analysis)
+add_ursatz_test(scale_analysis)
+add_ursatz_test(chord_identification)
+add_ursatz_test(key_estimation)
+add_ursatz_test(voice_leading_analysis)
+add_ursatz_test(cadence_detection)
+add_ursatz_test(motif_detection)
+add_ursatz_test(phrase_segmentation)
+add_ursatz_architecture_test(analysis)

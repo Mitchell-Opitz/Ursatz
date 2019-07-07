@@ -1,3 +1,15 @@
+function(add_ursatz_test name)
+  add_executable(test_${name} test_${name}.c)
+  target_link_libraries(test_${name} PRIVATE ursatz)
+  add_test(NAME ${name} COMMAND test_${name})
+endfunction()
+
+function(add_ursatz_architecture_test module)
+  add_executable(test_architecture_${module} test_architecture_${module}.c)
+  add_test(NAME architecture_${module} COMMAND test_architecture_${module}
+           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endfunction()
+
 add_executable(test_ursatz test_ursatz.c)
 target_link_libraries(test_ursatz PRIVATE ursatz)
 add_test(NAME ursatz_bootstrap COMMAND test_ursatz)

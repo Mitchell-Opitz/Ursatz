@@ -1,39 +1,10 @@
-add_executable(test_intent test_intent.c)
-target_link_libraries(test_intent PRIVATE ursatz)
-add_test(NAME intent COMMAND test_intent)
-
-add_executable(test_intent_compiler test_intent_compiler.c)
-target_link_libraries(test_intent_compiler PRIVATE ursatz)
-add_test(NAME intent_compiler COMMAND test_intent_compiler)
-
-add_executable(test_constraint_extraction test_constraint_extraction.c)
-target_link_libraries(test_constraint_extraction PRIVATE ursatz)
-add_test(NAME constraint_extraction COMMAND test_constraint_extraction)
-
-add_executable(test_conflict_detection test_conflict_detection.c)
-target_link_libraries(test_conflict_detection PRIVATE ursatz)
-add_test(NAME conflict_detection COMMAND test_conflict_detection)
-
-add_executable(test_generation_plan test_generation_plan.c)
-target_link_libraries(test_generation_plan PRIVATE ursatz)
-add_test(NAME generation_plan COMMAND test_generation_plan)
-
-add_executable(test_generator test_generator.c)
-target_link_libraries(test_generator PRIVATE ursatz)
-add_test(NAME generator COMMAND test_generator)
-
-add_executable(test_candidate test_candidate.c)
-target_link_libraries(test_candidate PRIVATE ursatz)
-add_test(NAME candidate COMMAND test_candidate)
-
-add_executable(test_candidate_evaluator test_candidate_evaluator.c)
-target_link_libraries(test_candidate_evaluator PRIVATE ursatz)
-add_test(NAME candidate_evaluator COMMAND test_candidate_evaluator)
-
-add_executable(test_generation_record test_generation_record.c)
-target_link_libraries(test_generation_record PRIVATE ursatz)
-add_test(NAME generation_record COMMAND test_generation_record)
-
-add_executable(test_architecture_generation test_architecture_generation.c)
-add_test(NAME architecture_generation COMMAND test_architecture_generation
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_ursatz_test(intent)
+add_ursatz_test(intent_compiler)
+add_ursatz_test(constraint_extraction)
+add_ursatz_test(conflict_detection)
+add_ursatz_test(generation_plan)
+add_ursatz_test(generator)
+add_ursatz_test(candidate)
+add_ursatz_test(candidate_evaluator)
+add_ursatz_test(generation_record)
+add_ursatz_architecture_test(generation)
