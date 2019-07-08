@@ -58,7 +58,6 @@ DisplacementResult displacement_create(EntityID *id, DisplacementDirection direc
 void displacement_destroy(Displacement *displacement);
 
 const EntityID *displacement_id(const Displacement *displacement);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *displacement_transformation(const Displacement *displacement);
 DisplacementDirection displacement_direction(const Displacement *displacement);
 const Duration *displacement_magnitude(const Displacement *displacement);

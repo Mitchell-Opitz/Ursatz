@@ -73,7 +73,6 @@ TranspositionResult transposition_create(EntityID *id, long semitones, const cha
 void transposition_destroy(Transposition *transposition);
 
 const EntityID *transposition_id(const Transposition *transposition);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *transposition_transformation(const Transposition *transposition);
 long transposition_semitones(const Transposition *transposition);
 const char *transposition_spelling_behavior(const Transposition *transposition);

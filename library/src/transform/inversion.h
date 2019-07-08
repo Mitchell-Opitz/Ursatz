@@ -70,7 +70,6 @@ InversionResult inversion_create(EntityID *id, PitchIdentity *axis, const char *
 void inversion_destroy(Inversion *inversion);
 
 const EntityID *inversion_id(const Inversion *inversion);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *inversion_transformation(const Inversion *inversion);
 const PitchIdentity *inversion_axis(const Inversion *inversion);
 const char *inversion_pitch_space(const Inversion *inversion);

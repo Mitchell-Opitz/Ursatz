@@ -68,7 +68,6 @@ AugmentationResult augmentation_create(EntityID *id, AugmentationDimension dimen
 void augmentation_destroy(Augmentation *augmentation);
 
 const EntityID *augmentation_id(const Augmentation *augmentation);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *augmentation_transformation(const Augmentation *augmentation);
 AugmentationDimension augmentation_dimension(const Augmentation *augmentation);
 unsigned long augmentation_scale_numerator(const Augmentation *augmentation);

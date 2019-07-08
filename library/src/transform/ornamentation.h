@@ -81,7 +81,6 @@ OrnamentationResult ornamentation_create(EntityID *id, EntityID *source_event_id
 void ornamentation_destroy(Ornamentation *ornamentation);
 
 const EntityID *ornamentation_id(const Ornamentation *ornamentation);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *ornamentation_transformation(const Ornamentation *ornamentation);
 const EntityID *ornamentation_source_event_id(const Ornamentation *ornamentation);
 size_t ornamentation_derived_event_count(const Ornamentation *ornamentation);

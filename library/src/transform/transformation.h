@@ -50,6 +50,11 @@
  * reference back to an input object to mutate -- a Transformation
  * describes an operation's contract, it does not hold or alter the
  * object it was run on.
+ *
+ * Each concrete transformation module exposes its owned base
+ * Transformation (the fields above -- input/output type, dimensions,
+ * mapping behavior, determinism, provenance) via a `<module>_transformation()`
+ * accessor.
  */
 
 typedef struct Transformation Transformation;

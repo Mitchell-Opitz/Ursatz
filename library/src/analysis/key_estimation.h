@@ -72,7 +72,6 @@ typedef struct {
 AnalyzerResult key_estimation_analyze(const void *input, const Context *context, const Value *config,
                                        AnalysisResult **out);
 
-/* The Analyzer value pluggable wherever an Analyzer is expected. */
 extern const Analyzer KEY_ESTIMATION_ANALYZER;
 
 #endif

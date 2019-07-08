@@ -88,7 +88,6 @@ typedef struct {
 AnalyzerResult motif_detection_analyze(const void *input, const Context *context, const Value *config,
                                         AnalysisResult **out);
 
-/* The Analyzer value pluggable wherever an Analyzer is expected. */
 extern const Analyzer MOTIF_DETECTION_ANALYZER;
 
 #endif
