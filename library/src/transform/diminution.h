@@ -58,7 +58,6 @@ DiminutionResult diminution_create(EntityID *id, AugmentationDimension dimension
 void diminution_destroy(Diminution *diminution);
 
 const EntityID *diminution_id(const Diminution *diminution);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *diminution_transformation(const Diminution *diminution);
 AugmentationDimension diminution_dimension(const Diminution *diminution);
 unsigned long diminution_scale_numerator(const Diminution *diminution);

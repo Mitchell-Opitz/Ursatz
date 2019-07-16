@@ -57,7 +57,6 @@ FragmentationResult fragmentation_create(EntityID *id, EntityID *source_structur
 void fragmentation_destroy(Fragmentation *fragmentation);
 
 const EntityID *fragmentation_id(const Fragmentation *fragmentation);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *fragmentation_transformation(const Fragmentation *fragmentation);
 const EntityID *fragmentation_source_structure_id(const Fragmentation *fragmentation);
 size_t fragmentation_extracted_event_id_count(const Fragmentation *fragmentation);

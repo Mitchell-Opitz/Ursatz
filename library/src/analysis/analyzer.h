@@ -113,6 +113,11 @@ typedef enum {
 typedef AnalyzerResult (*AnalyzerFn)(const void *input, const Context *context, const Value *config,
                                      AnalysisResult **out);
 
+/*
+ * Each concrete analyzer module exposes its Analyzer as
+ * `extern const Analyzer <MODULE>_ANALYZER;`, pluggable wherever an
+ * Analyzer is expected.
+ */
 typedef struct {
     const char *name;
     AnalyzerFn analyze;

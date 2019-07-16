@@ -60,7 +60,6 @@ ContractionResult contraction_create(EntityID *id, EntityID *source_structure_id
 void contraction_destroy(Contraction *contraction);
 
 const EntityID *contraction_id(const Contraction *contraction);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *contraction_transformation(const Contraction *contraction);
 const EntityID *contraction_source_structure_id(const Contraction *contraction);
 size_t contraction_removed_event_id_count(const Contraction *contraction);

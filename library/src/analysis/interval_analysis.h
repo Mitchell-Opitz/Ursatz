@@ -59,7 +59,6 @@ typedef struct {
 AnalyzerResult interval_analysis_analyze(const void *input, const Context *context, const Value *config,
                                           AnalysisResult **out);
 
-/* The Analyzer value pluggable wherever an Analyzer is expected. */
 extern const Analyzer INTERVAL_ANALYSIS_ANALYZER;
 
 #endif

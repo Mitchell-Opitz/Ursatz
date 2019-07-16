@@ -60,7 +60,6 @@ ExpansionResult expansion_create(EntityID *id, EntityID *source_structure_id, En
 void expansion_destroy(Expansion *expansion);
 
 const EntityID *expansion_id(const Expansion *expansion);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *expansion_transformation(const Expansion *expansion);
 const EntityID *expansion_source_structure_id(const Expansion *expansion);
 size_t expansion_appended_event_id_count(const Expansion *expansion);

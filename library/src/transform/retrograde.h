@@ -68,7 +68,6 @@ RetrogradeResult retrograde_create(EntityID *id, unsigned reversed_dimensions, P
 void retrograde_destroy(Retrograde *retrograde);
 
 const EntityID *retrograde_id(const Retrograde *retrograde);
-/* The owned base Transformation -- input/output type, dimensions, mapping behavior, determinism, provenance. */
 const Transformation *retrograde_transformation(const Retrograde *retrograde);
 unsigned retrograde_reversed_dimensions(const Retrograde *retrograde);
 
