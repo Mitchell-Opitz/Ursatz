@@ -11,6 +11,7 @@ add_library(ursatz
     core/voice_reference.c
     core/relationship_reference.c
     core/provenance_reference.c
+    core/framework_reference.c
     time/duration.c
     time/musical_time.c
     time/time_span.c
