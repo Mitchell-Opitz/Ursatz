@@ -25,10 +25,13 @@ Every module has an architecture test enforcing this by allowlisting only the di
 
 ## Open issues
 
-Two forward-dependency contradictions between the layer model and the System Registry are tracked but not resolved. Neither is implemented; each guardrail is enforced by the relevant architecture tests.
+One forward-dependency contradiction between the layer model and the System Registry is tracked but not resolved. It is not implemented; the guardrail is enforced by the relevant architecture tests.
 
-- **Interpretation-family to Framework** (Dependency Spec §7.1). The Registry lists `Interpretation`, `ScaleDegree`, `Chord`, and `Key` (L6) as depending on `Framework` (L7). `ScaleDegree`, `Chord`, and `Key` are deferred whole; `Interpretation` itself has no `framework` field. Detail in `docs/modules/l6-notes.md`.
 - **Theory to Corpus** (Dependency Spec §7.2). The Registry lists `Tendency`, `StatisticalModel`, and `StyleModel` (L7) as depending on `Corpus` (L9, not yet implemented). All three accept corpus-derived data only as an opaque, already-computed value. Detail in `docs/modules/theory.md`.
+
+## Resolved issues
+
+- **Interpretation-family to Framework** (Dependency Spec §7.1, closed). The Registry lists `Interpretation`, `ScaleDegree`, `Chord`, and `Key` (L6) as depending on `Framework` (L7). Per System Registry v3, `ScaleDegree`, `Chord`, and `Key` remain deferred whole (they do not exist in this codebase); `Interpretation` now carries an optional `FrameworkReference` (`core`, L1) rather than a live `Framework` reference. Detail in `docs/modules/l6-notes.md`.
 
 ## Reference-type Registry synchronization gap
 
