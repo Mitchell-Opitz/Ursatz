@@ -229,7 +229,7 @@ AnalyzerResult motif_detection_analyze(const void *input, const Context *context
         }
 
         Interpretation *interpretation;
-        if (interpretation_create(interpretation_id, target_id, claim, NULL, evidence_ref_id, uncertainty,
+        if (interpretation_create(interpretation_id, target_id, claim, NULL, evidence_ref_id, NULL, uncertainty,
                                    "MotifDetection", "motif-occurrence pattern matching",
                                    INTERPRETATION_STATUS_MACHINE_GENERATED, provenance,
                                    &interpretation) != INTERPRETATION_OK) {
