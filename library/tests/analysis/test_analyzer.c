@@ -69,7 +69,7 @@ static AnalyzerResult mock_analyze(const void *input, const Context *context, co
     assert(provenance_reference_create_absent(&interpretation_provenance) == PROVENANCE_REFERENCE_OK);
 
     Interpretation *interpretation;
-    if (interpretation_create(interpretation_id, target_id, claim, NULL, evidence_ref_id, uncertainty,
+    if (interpretation_create(interpretation_id, target_id, claim, NULL, evidence_ref_id, NULL, uncertainty,
                                "mock-analyzer", "mock-method", INTERPRETATION_STATUS_MACHINE_GENERATED,
                                interpretation_provenance, &interpretation) != INTERPRETATION_OK) {
         evidence_destroy(evidence);

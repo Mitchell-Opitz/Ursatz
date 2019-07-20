@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/framework_reference.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
@@ -47,9 +48,9 @@ int main(void) {
 
     Interpretation *interpretation_a;
     InterpretationResult result_a =
-        interpretation_create(interpretation_a_id, target_ref_a, make_claim("V7"), NULL, NULL, make_uncertainty(),
-                               "analyst-jane", "roman-numeral-analysis", INTERPRETATION_STATUS_PROPOSED,
-                               provenance_a, &interpretation_a);
+        interpretation_create(interpretation_a_id, target_ref_a, make_claim("V7"), NULL, NULL, NULL,
+                               make_uncertainty(), "analyst-jane", "roman-numeral-analysis",
+                               INTERPRETATION_STATUS_PROPOSED, provenance_a, &interpretation_a);
     assert(result_a == INTERPRETATION_OK);
 
     EntityID *interpretation_b_id;
@@ -61,7 +62,7 @@ int main(void) {
 
     Interpretation *interpretation_b;
     InterpretationResult result_b = interpretation_create(
-        interpretation_b_id, target_ref_b, make_claim("passing-tone-cluster"), NULL, NULL, make_uncertainty(),
+        interpretation_b_id, target_ref_b, make_claim("passing-tone-cluster"), NULL, NULL, NULL, make_uncertainty(),
         "analyst-marcus", "voice-leading-analysis", INTERPRETATION_STATUS_DISPUTED, provenance_b,
         &interpretation_b);
     assert(result_b == INTERPRETATION_OK);
@@ -86,9 +87,42 @@ int main(void) {
     const void *claim_b_content = value_content(interpretation_claim(interpretation_b), &claim_b_size);
     assert(strcmp((const char *)claim_b_content, "passing-tone-cluster") == 0);
 
+    /* framework_reference is optional: neither interpretation_a nor
+       interpretation_b supplied one, so both come back NULL rather than
+       a resolved or default Framework. */
+    assert(interpretation_framework_reference(interpretation_a) == NULL);
+    assert(interpretation_framework_reference(interpretation_b) == NULL);
+
     interpretation_destroy(interpretation_a);
     interpretation_destroy(interpretation_b);
     entity_id_destroy(target_id);
+
+    /* When a FrameworkReference is supplied, Interpretation holds and
+       returns exactly that instance -- not a copy, not a resolved
+       Framework. */
+    EntityID *interpretation_c_id;
+    assert(entity_id_create("interpretation-c", &interpretation_c_id) == ENTITY_ID_OK);
+    EntityID *target_ref_c;
+    assert(entity_id_create("sonority-2", &target_ref_c) == ENTITY_ID_OK);
+    EntityID *framework_id;
+    assert(entity_id_create("framework-common-practice", &framework_id) == ENTITY_ID_OK);
+    FrameworkReference *framework_reference;
+    assert(framework_reference_create(framework_id, &framework_reference) == FRAMEWORK_REFERENCE_OK);
+    ProvenanceReference *provenance_c;
+    assert(provenance_reference_create_absent(&provenance_c) == PROVENANCE_REFERENCE_OK);
+
+    Interpretation *interpretation_c;
+    InterpretationResult result_c = interpretation_create(
+        interpretation_c_id, target_ref_c, make_claim("ii-V-I"), NULL, NULL, framework_reference,
+        make_uncertainty(), "analyst-jane", "roman-numeral-analysis", INTERPRETATION_STATUS_PROPOSED, provenance_c,
+        &interpretation_c);
+    assert(result_c == INTERPRETATION_OK);
+
+    assert(interpretation_framework_reference(interpretation_c) == framework_reference);
+    assert(entity_id_equals(framework_reference_target_id(interpretation_framework_reference(interpretation_c)),
+                             framework_id));
+
+    interpretation_destroy(interpretation_c);
 
     printf("test_interpretation: ok\n");
     return 0;

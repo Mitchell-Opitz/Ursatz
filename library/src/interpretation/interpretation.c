@@ -9,6 +9,7 @@ struct Interpretation {
     Value *claim;
     EntityID *context_id;
     EntityID *evidence_id;
+    FrameworkReference *framework_reference;
     Uncertainty *uncertainty;
     char *author;
     char *method;
@@ -26,9 +27,10 @@ static char *copy_string(const char *value) {
 }
 
 InterpretationResult interpretation_create(EntityID *id, EntityID *target_id, Value *claim, EntityID *context_id,
-                                            EntityID *evidence_id, Uncertainty *uncertainty, const char *author,
-                                            const char *method, InterpretationStatus status,
-                                            ProvenanceReference *provenance, Interpretation **out) {
+                                            EntityID *evidence_id, FrameworkReference *framework_reference,
+                                            Uncertainty *uncertainty, const char *author, const char *method,
+                                            InterpretationStatus status, ProvenanceReference *provenance,
+                                            Interpretation **out) {
     if (id == NULL) {
         return INTERPRETATION_ERR_NULL_ID;
     }
@@ -74,6 +76,7 @@ InterpretationResult interpretation_create(EntityID *id, EntityID *target_id, Va
     interpretation->claim = claim;
     interpretation->context_id = context_id;
     interpretation->evidence_id = evidence_id;
+    interpretation->framework_reference = framework_reference;
     interpretation->uncertainty = uncertainty;
     interpretation->status = status;
     interpretation->provenance = provenance;
@@ -91,6 +94,7 @@ void interpretation_destroy(Interpretation *interpretation) {
     value_destroy(interpretation->claim);
     entity_id_destroy(interpretation->context_id);
     entity_id_destroy(interpretation->evidence_id);
+    framework_reference_destroy(interpretation->framework_reference);
     uncertainty_destroy(interpretation->uncertainty);
     free(interpretation->author);
     free(interpretation->method);
@@ -116,6 +120,10 @@ const EntityID *interpretation_context_id(const Interpretation *interpretation) 
 
 const EntityID *interpretation_evidence_id(const Interpretation *interpretation) {
     return interpretation->evidence_id;
+}
+
+const FrameworkReference *interpretation_framework_reference(const Interpretation *interpretation) {
+    return interpretation->framework_reference;
 }
 
 const Uncertainty *interpretation_uncertainty(const Interpretation *interpretation) {

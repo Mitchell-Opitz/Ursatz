@@ -13,6 +13,13 @@
  * music-semantics, music-relationship) either. Dependency & Layer
  * Spec v2 §2, §3.
  *
+ * This also enforces the resolution of Dependency Spec Open Issue §7.1
+ * (Interpretation-family <-> Framework ordering): Interpretation holds
+ * a FrameworkReference (core/framework_reference.h, allowed under
+ * core/) rather than a live music-theory reference, so this scan
+ * passing confirms no music-theory or music-rules import was
+ * introduced to support that field.
+ *
  * Scans every .h/.c file under src/interpretation/ and flags any
  * local include ("...") that does not point into identity/, core/,
  * time/, pitch/, events/, containers/, structure/, or interpretation/

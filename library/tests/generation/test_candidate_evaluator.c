@@ -47,7 +47,7 @@ static Interpretation *make_interpretation(const char *id_value, const char *cla
     Uncertainty *uncertainty;
     assert(uncertainty_create_unknown(&uncertainty) == UNCERTAINTY_OK);
     Interpretation *interpretation;
-    assert(interpretation_create(make_id(id_value), make_id("target-mock"), claim, NULL, NULL, uncertainty,
+    assert(interpretation_create(make_id(id_value), make_id("target-mock"), claim, NULL, NULL, NULL, uncertainty,
                                   "mock-evaluator", "mock-method", INTERPRETATION_STATUS_MACHINE_GENERATED,
                                   make_absent_provenance(), &interpretation) == INTERPRETATION_OK);
     return interpretation;
