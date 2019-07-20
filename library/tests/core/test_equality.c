@@ -12,8 +12,11 @@ static Entity *make_entity(const char *id_value, unsigned long schema_value, con
     SchemaVersion *version = NULL;
     schema_version_create(schema_value, &version);
 
+    ProvenanceReference *provenance = NULL;
+    provenance_reference_create_absent(&provenance);
+
     Entity *entity = NULL;
-    entity_create(id, type, version, metadata, &entity);
+    entity_create(id, type, version, metadata, provenance, &entity);
     return entity;
 }
 
