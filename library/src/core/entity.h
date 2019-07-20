@@ -19,9 +19,9 @@
  *
  * provenance_reference is listed as a standard Entity field in the
  * System Registry but is intentionally not implemented here.
- * ProvenanceReference is a proposed L1 reference type not yet added to
- * the Registry (see the music-core plan's action item) — it is deferred
- * until that is resolved.
+ * ProvenanceReference itself is fully implemented and Registry-approved
+ * (v3) — see core/provenance_reference.h — but it has not yet been wired
+ * into the Entity struct as a field. Deferred until that wiring is done.
  */
 
 typedef struct Entity Entity;
