@@ -40,8 +40,11 @@ static EntityID *make_id(const char *value) {
 static Structure *make_region(const char *id_value, const char *event_id_value) {
     SchemaVersion *schema_version;
     assert(schema_version_create(1, &schema_version) == SCHEMA_VERSION_OK);
+    ProvenanceReference *provenance;
+    assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
+
     Entity *entity;
-    assert(entity_create(make_id(id_value), "Structure", schema_version, NULL, &entity) == ENTITY_OK);
+    assert(entity_create(make_id(id_value), "Structure", schema_version, NULL, provenance, &entity) == ENTITY_OK);
 
     EntityID *event_ids[1] = {make_id(event_id_value)};
     Structure *structure;

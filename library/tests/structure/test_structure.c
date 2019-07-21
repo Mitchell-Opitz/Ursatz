@@ -21,8 +21,11 @@ static Entity *make_entity(const char *id_value) {
     SchemaVersion *schema_version;
     assert(schema_version_create(1, &schema_version) == SCHEMA_VERSION_OK);
 
+    ProvenanceReference *provenance;
+    assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
+
     Entity *entity;
-    assert(entity_create(id, "structure", schema_version, NULL, &entity) == ENTITY_OK);
+    assert(entity_create(id, "structure", schema_version, NULL, provenance, &entity) == ENTITY_OK);
     return entity;
 }
 
