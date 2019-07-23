@@ -19,6 +19,7 @@ add_library(ursatz
     time/temporal_anchor.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
+    pitch/tuning_system.c
     events/event.c
     events/note_event.c
     events/rest_event.c

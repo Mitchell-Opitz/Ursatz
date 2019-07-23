@@ -1,3 +1,4 @@
 add_ursatz_test(pitch_identity)
 add_ursatz_test(pitch_spelling)
+add_ursatz_test(tuning_system)
 add_ursatz_architecture_test(pitch)
