@@ -22,6 +22,7 @@ add_library(ursatz
     pitch/tuning_system.c
     pitch/pitch_class.c
     pitch/pitch_realization.c
+    pitch/written_pitch.c
     events/event.c
     events/note_event.c
     events/rest_event.c
