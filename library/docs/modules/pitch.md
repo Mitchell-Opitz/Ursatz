@@ -8,7 +8,7 @@ Layer L2 (`music-pitch`). Path `src/pitch/`, tests `tests/pitch/`. Depends on `i
 
 ## Notes
 
-- `PitchIdentity`'s equality is a placeholder, value equality on the raw token bytes. The true equivalence relation is deferred to Deliverable D, which does not exist yet. Expect this to be revised.
+- `PitchIdentity`'s equality is RESOLVED, not deferred: it is strict identity (value equality on the raw token bytes) by design, permanently. This answers "is this the same token," a different question from theory-relative equivalence (octave equivalence, enharmonic equivalence under some tuning, etc.), which is `PitchClass`'s job (`pitch/pitch_class.h`) -- `PitchClass` wraps a `PitchIdentity` together with a caller-supplied equivalence relation, so no particular theory is hard-coded into either type. `PitchIdentity` itself will not gain a second equality notion.
 - `PitchIdentity`'s token is intentionally opaque and is not an `EntityID`. Its constructor takes a raw byte buffer, not an `EntityID*`, so there is no path to construct one from an EntityID-typed value.
 - `PitchIdentity` construction takes no tuning-system parameters. No 12-TET, no A440, no MIDI note number. None should be added before Deliverable D exists.
 - `PitchSpelling`'s `accidental` field is treated opaquely (an integer offset); its exact model is also deferred to Deliverable D. Enharmonic equivalents (C# and Db, for example) are intentionally not value-equal, even though they may sound identical under some tunings.
