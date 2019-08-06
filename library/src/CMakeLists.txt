@@ -29,6 +29,7 @@ add_library(ursatz
     events/rest_event.c
     events/control_event.c
     events/tie.c
+    events/slur.c
     containers/voice.c
     structure/structure.c
     structure/motif.c
