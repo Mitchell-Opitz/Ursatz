@@ -32,6 +32,7 @@ add_library(ursatz
     events/slur.c
     events/articulation.c
     events/dynamics.c
+    events/instrument.c
     containers/voice.c
     structure/structure.c
     structure/motif.c
