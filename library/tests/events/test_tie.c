@@ -41,18 +41,31 @@ static NoteEvent *make_note_event(const char *id_value) {
     return note_event;
 }
 
+/* Both failure paths below return before tie_create takes ownership of
+   anything, so the valid co-argument in each call is still owned by the
+   caller and must be destroyed here (same pattern as
+   tests/events/test_note_event.c). */
+
 static void test_create_rejects_null_first_id(void) {
+    EntityID *second_id = make_id("note-2");
+
     Tie *tie = NULL;
-    TieResult r = tie_create(NULL, make_id("note-2"), &tie);
+    TieResult r = tie_create(NULL, second_id, &tie);
     assert(r == TIE_ERR_NULL_FIRST_NOTE_EVENT_ID);
     assert(tie == NULL);
+
+    entity_id_destroy(second_id);
 }
 
 static void test_create_rejects_null_second_id(void) {
+    EntityID *first_id = make_id("note-1");
+
     Tie *tie = NULL;
-    TieResult r = tie_create(make_id("note-1"), NULL, &tie);
+    TieResult r = tie_create(first_id, NULL, &tie);
     assert(r == TIE_ERR_NULL_SECOND_NOTE_EVENT_ID);
     assert(tie == NULL);
+
+    entity_id_destroy(first_id);
 }
 
 static void test_create_accepts_valid(void) {

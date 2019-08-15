@@ -42,47 +42,100 @@ static NoteEvent *make_minimal_note_event(const char *id_value) {
     return note_event;
 }
 
+/* Every failure path below returns before note_event_create takes
+   ownership of anything (src/events/note_event.c validates id,
+   temporal_anchor, duration, pitch, provenance in that order before any
+   assignment), so every argument that WAS successfully constructed for
+   a given call -- even ones that are not the null one under test -- is
+   still owned by the caller and must be destroyed here. */
+
 static void test_create_rejects_null_id(void) {
+    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
+    Duration *duration = make_duration(1, 4);
+    PitchIdentity *pitch = make_pitch("pitch-a");
+    ProvenanceReference *provenance = make_absent_provenance();
+
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(NULL, make_temporal_anchor(1, 4), make_duration(1, 4),
-                                           make_pitch("pitch-a"), NULL, NULL, make_absent_provenance(), &note_event);
+    NoteEventResult r =
+        note_event_create(NULL, temporal_anchor, duration, pitch, NULL, NULL, provenance, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_ID);
     assert(note_event == NULL);
+
+    temporal_anchor_destroy(temporal_anchor);
+    duration_destroy(duration);
+    pitch_identity_destroy(pitch);
+    provenance_reference_destroy(provenance);
 }
 
 static void test_create_rejects_null_temporal_anchor(void) {
+    EntityID *id = make_id("note-1");
+    Duration *duration = make_duration(1, 4);
+    PitchIdentity *pitch = make_pitch("pitch-a");
+    ProvenanceReference *provenance = make_absent_provenance();
+
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(make_id("note-1"), NULL, make_duration(1, 4), make_pitch("pitch-a"), NULL,
-                                           NULL, make_absent_provenance(), &note_event);
+    NoteEventResult r = note_event_create(id, NULL, duration, pitch, NULL, NULL, provenance, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_TEMPORAL_ANCHOR);
     assert(note_event == NULL);
+
+    entity_id_destroy(id);
+    duration_destroy(duration);
+    pitch_identity_destroy(pitch);
+    provenance_reference_destroy(provenance);
 }
 
 static void test_create_rejects_null_duration(void) {
+    EntityID *id = make_id("note-1");
+    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
+    PitchIdentity *pitch = make_pitch("pitch-a");
+    ProvenanceReference *provenance = make_absent_provenance();
+
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(make_id("note-1"), make_temporal_anchor(1, 4), NULL, make_pitch("pitch-a"),
-                                           NULL, NULL, make_absent_provenance(), &note_event);
+    NoteEventResult r = note_event_create(id, temporal_anchor, NULL, pitch, NULL, NULL, provenance, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_DURATION);
     assert(note_event == NULL);
+
+    entity_id_destroy(id);
+    temporal_anchor_destroy(temporal_anchor);
+    pitch_identity_destroy(pitch);
+    provenance_reference_destroy(provenance);
 }
 
 static void test_create_rejects_null_pitch(void) {
+    EntityID *id = make_id("note-1");
+    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
+    Duration *duration = make_duration(1, 4);
+    ProvenanceReference *provenance = make_absent_provenance();
+
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(make_id("note-1"), make_temporal_anchor(1, 4), make_duration(1, 4), NULL,
-                                           NULL, NULL, make_absent_provenance(), &note_event);
+    NoteEventResult r = note_event_create(id, temporal_anchor, duration, NULL, NULL, NULL, provenance, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_PITCH);
     assert(note_event == NULL);
+
+    entity_id_destroy(id);
+    temporal_anchor_destroy(temporal_anchor);
+    duration_destroy(duration);
+    provenance_reference_destroy(provenance);
 }
 
 /* Provenance state must be explicitly present or absent -- never silently
    omitted (C6). A hand-authored NoteEvent may use state=absent, but the
    provenance argument itself is never optional. */
 static void test_create_rejects_null_provenance(void) {
+    EntityID *id = make_id("note-1");
+    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
+    Duration *duration = make_duration(1, 4);
+    PitchIdentity *pitch = make_pitch("pitch-a");
+
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(make_id("note-1"), make_temporal_anchor(1, 4), make_duration(1, 4),
-                                           make_pitch("pitch-a"), NULL, NULL, NULL, &note_event);
+    NoteEventResult r = note_event_create(id, temporal_anchor, duration, pitch, NULL, NULL, NULL, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_PROVENANCE);
     assert(note_event == NULL);
+
+    entity_id_destroy(id);
+    temporal_anchor_destroy(temporal_anchor);
+    duration_destroy(duration);
+    pitch_identity_destroy(pitch);
 }
 
 static void test_create_accepts_minimal_valid(void) {
