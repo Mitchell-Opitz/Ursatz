@@ -1,3 +1,4 @@
 add_ursatz_test(container)
 add_ursatz_test(voice)
+add_ursatz_test(layer)
 add_ursatz_architecture_test(containers)

@@ -29,12 +29,8 @@ add_library(ursatz
     events/rest_event.c
     events/control_event.c
     events/tie.c
-    events/slur.c
-    events/articulation.c
-    events/dynamics.c
-    events/instrument.c
-    events/instrument_capability.c
     containers/voice.c
+    containers/layer.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
