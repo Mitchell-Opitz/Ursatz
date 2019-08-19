@@ -31,6 +31,7 @@ add_library(ursatz
     events/tie.c
     containers/voice.c
     containers/layer.c
+    containers/staff.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
