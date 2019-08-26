@@ -32,6 +32,7 @@ add_library(ursatz
     containers/voice.c
     containers/layer.c
     containers/staff.c
+    containers/part.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
