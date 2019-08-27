@@ -33,6 +33,7 @@ add_library(ursatz
     containers/layer.c
     containers/staff.c
     containers/part.c
+    containers/measure.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
