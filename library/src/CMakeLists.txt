@@ -37,6 +37,7 @@ add_library(ursatz
     containers/phrase.c
     containers/section.c
     containers/movement.c
+    containers/work.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
