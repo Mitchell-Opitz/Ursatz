@@ -39,6 +39,7 @@ add_library(ursatz
     containers/movement.c
     containers/work.c
     containers/edition.c
+    containers/arrangement.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
