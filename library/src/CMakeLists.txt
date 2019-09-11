@@ -40,6 +40,7 @@ add_library(ursatz
     containers/work.c
     containers/edition.c
     containers/arrangement.c
+    containers/revision.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
