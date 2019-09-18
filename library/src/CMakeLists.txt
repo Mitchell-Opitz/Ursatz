@@ -53,6 +53,7 @@ add_library(ursatz
     structure/cadence.c
     structure/figure.c
     structure/theme.c
+    structure/theme_occurrence.c
     context/context.c
     semantics/interval.c
     semantics/sonority.c
