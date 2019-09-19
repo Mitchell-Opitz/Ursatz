@@ -54,6 +54,7 @@ add_library(ursatz
     structure/figure.c
     structure/theme.c
     structure/theme_occurrence.c
+    structure/phrase_occurrence.c
     context/context.c
     semantics/interval.c
     semantics/sonority.c
