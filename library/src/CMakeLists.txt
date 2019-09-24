@@ -60,6 +60,7 @@ add_library(ursatz
     semantics/sonority.c
     semantics/rhythmic_pattern.c
     semantics/scale.c
+    semantics/contour.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
