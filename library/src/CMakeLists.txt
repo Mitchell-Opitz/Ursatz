@@ -69,6 +69,7 @@ add_library(ursatz
     interpretation/observation.c
     interpretation/hypothesis.c
     interpretation/interpretation.c
+    interpretation/chord.c
     theory/framework.c
     rules/rule.c
     rules/constraint.c
