@@ -71,6 +71,7 @@ add_library(ursatz
     interpretation/interpretation.c
     interpretation/chord.c
     interpretation/key.c
+    interpretation/scale_degree.c
     theory/framework.c
     rules/rule.c
     rules/constraint.c
