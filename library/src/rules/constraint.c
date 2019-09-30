@@ -92,7 +92,8 @@ bool constraint_identity_equals(const Constraint *a, const Constraint *b) {
     return entity_id_equals(a->id, b->id);
 }
 
-ConstraintEvalResult constraint_evaluate(const Constraint *constraint, const Value *candidate) {
+ConstraintEvalResult constraint_evaluate(const Constraint *constraint, const Value *candidate, const Context *context) {
+    (void)context;
     if (constraint == NULL || candidate == NULL) {
         return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
     }

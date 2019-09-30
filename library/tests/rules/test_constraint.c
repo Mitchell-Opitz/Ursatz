@@ -47,11 +47,11 @@ int main(void) {
     assert(constraint_identity_equals(hard, hard));
     assert(!constraint_identity_equals(hard, weighted));
 
-    assert(constraint_evaluate(hard, NULL) == CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
+    assert(constraint_evaluate(hard, NULL, NULL) == CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
 
     Value *candidate;
     assert(value_create("stub-candidate", "x", 1, &candidate) == VALUE_OK);
-    assert(constraint_evaluate(hard, candidate) == CONSTRAINT_EVAL_NOT_IMPLEMENTED);
+    assert(constraint_evaluate(hard, candidate, NULL) == CONSTRAINT_EVAL_NOT_IMPLEMENTED);
 
     value_destroy(candidate);
     constraint_destroy(hard);
