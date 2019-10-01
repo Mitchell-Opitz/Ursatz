@@ -76,6 +76,7 @@ add_library(ursatz
     rules/rule.c
     rules/constraint.c
     rules/preference.c
+    rules/rule_evaluation.c
     theory/heuristic.c
     theory/tendency.c
     theory/statistical_model.c
