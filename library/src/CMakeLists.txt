@@ -83,6 +83,7 @@ add_library(ursatz
     theory/statistical_model.c
     theory/style_model.c
     transform/transformation.c
+    transform/transform_result.c
     transform/transposition.c
     transform/inversion.c
     transform/retrograde.c

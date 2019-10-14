@@ -1,4 +1,5 @@
 add_ursatz_test(transformation)
+add_ursatz_test(transform_result)
 add_ursatz_test(transposition)
 add_ursatz_test(inversion)
 add_ursatz_test(retrograde)

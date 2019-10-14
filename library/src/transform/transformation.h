@@ -46,10 +46,36 @@
  * behavior of its own, since evaluation is defined per concrete
  * subtype.
  *
+ * Apply-dispatch contract: each concrete subtype exposes its own
+ * `<type>_apply(...)` function rather than this base type defining one
+ * shared function-pointer signature -- concrete inputs vary too much
+ * (a single NoteEvent for Transposition/Inversion/Augmentation/
+ * Diminution/Displacement; a NoteEvent sequence for Retrograde/
+ * Fragmentation/Expansion/Contraction; a source NoteEvent plus a
+ * derivation rule for Ornamentation) for one uniform call shape to fit,
+ * unlike e.g. CandidateEvaluatorFn (generation/candidate_evaluator.h),
+ * where every evaluator's input genuinely is the same shape. What IS
+ * shared and mandatory across every `<type>_apply`:
+ *   - it returns a TransformResult (transform/transform_result.h), the
+ *     one shared output shape (an owned NoteEvent array, count may be
+ *     0) every subtype uses rather than inventing its own;
+ *   - it never mutates its input NoteEvent(s)/sequence -- every event
+ *     in the returned TransformResult is newly constructed, never a
+ *     pointer aliasing an input event (referential transparency, see
+ *     below);
+ *   - every output NoteEvent carries a real, populated
+ *     ProvenanceReference pointing back to what it was derived from
+ *     (events/note_event.h already gives NoteEvent this field --
+ *     TransformResult does not duplicate it at the wrapper level);
+ *   - when deterministic is true, the same input/parameters MUST
+ *     produce output that compares equal via note_event_equals_by_value
+ *     (ids may differ; content must not).
+ *
  * Referential transparency (TDD §140): this type has no mutator and no
  * reference back to an input object to mutate -- a Transformation
  * describes an operation's contract, it does not hold or alter the
- * object it was run on.
+ * object it was run on. Every concrete subtype's apply function follows
+ * the same rule for its own input.
  *
  * Each concrete transformation module exposes its owned base
  * Transformation (the fields above -- input/output type, dimensions,
