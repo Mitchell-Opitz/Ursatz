@@ -4,8 +4,10 @@
 #include <stdbool.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "transform/augmentation.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -64,5 +66,29 @@ unsigned long diminution_scale_numerator(const Diminution *diminution);
 unsigned long diminution_scale_denominator(const Diminution *diminution);
 
 bool diminution_identity_equals(const Diminution *a, const Diminution *b);
+
+typedef enum {
+    DIMINUTION_APPLY_OK = 0,
+    DIMINUTION_APPLY_ERR_NULL_DIMINUTION,
+    DIMINUTION_APPLY_ERR_NULL_EVENT,
+    DIMINUTION_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED,
+    DIMINUTION_APPLY_ERR_ALLOC
+} DiminutionApplyResult;
+
+/*
+ * Applies diminution to event (a borrowed NoteEvent): only
+ * AUGMENTATION_DIMENSION_DURATIONS has real logic in this pass -- the
+ * event's Duration is scaled by scale_numerator/scale_denominator,
+ * exact rational multiplication, reduced to lowest terms (Law 19).
+ * Every other field is copied unchanged onto the output event. The
+ * other four dimension values fail with
+ * DIMINUTION_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED, for the same reason
+ * documented on augmentation_apply (transform/augmentation.h) -- this
+ * type shares that reasoning along with the dimension vocabulary.
+ *
+ * event is never mutated; *out's event carries a real
+ * ProvenanceReference pointing back to event.
+ */
+DiminutionApplyResult diminution_apply(const Diminution *diminution, const NoteEvent *event, TransformResult **out);
 
 #endif

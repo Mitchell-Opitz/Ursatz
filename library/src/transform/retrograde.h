@@ -2,9 +2,12 @@
 #define MUSIC_TRANSFORM_RETROGRADE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -72,5 +75,41 @@ const Transformation *retrograde_transformation(const Retrograde *retrograde);
 unsigned retrograde_reversed_dimensions(const Retrograde *retrograde);
 
 bool retrograde_identity_equals(const Retrograde *a, const Retrograde *b);
+
+typedef enum {
+    RETROGRADE_APPLY_OK = 0,
+    RETROGRADE_APPLY_ERR_NULL_RETROGRADE,
+    RETROGRADE_APPLY_ERR_NULL_EVENTS,
+    RETROGRADE_APPLY_ERR_EMPTY,
+    RETROGRADE_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED,
+    RETROGRADE_APPLY_ERR_ALLOC
+} RetrogradeApplyResult;
+
+/*
+ * Applies retrograde to events (a borrowed array of event_count borrowed
+ * NoteEvent pointers -- not required to already be sorted by onset).
+ * Only RETROGRADE_DIMENSION_EVENT_ORDER has real logic in this pass:
+ * each output event's onset is reflected about the sequence's own
+ * [earliest onset, latest end] span (new_onset = earliest_onset +
+ * latest_end - old_onset - old_duration, exact rational), so the first
+ * event becomes last and vice versa, while every other field (pitch,
+ * duration, spelling, voice) is copied unchanged onto each new event.
+ *
+ * If reversed_dimensions carries any bit besides
+ * RETROGRADE_DIMENSION_EVENT_ORDER, this returns
+ * RETROGRADE_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED -- reversing pitch,
+ * rhythm, or articulation is not a well-defined mechanical operation
+ * without additional theory-level context this layer does not have
+ * (e.g. what axis a pitch reversal would reflect about), so this pass
+ * does not guess at one rather than silently only reversing order while
+ * claiming to have honored the caller's full requested dimension set.
+ *
+ * Input events are never mutated (referential transparency); every
+ * output event in *out is newly constructed with a real
+ * ProvenanceReference pointing back to the input event it was derived
+ * from.
+ */
+RetrogradeApplyResult retrograde_apply(const Retrograde *retrograde, NoteEvent **events, size_t event_count,
+                                        TransformResult **out);
 
 #endif

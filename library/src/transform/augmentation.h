@@ -4,7 +4,9 @@
 #include <stdbool.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -74,5 +76,37 @@ unsigned long augmentation_scale_numerator(const Augmentation *augmentation);
 unsigned long augmentation_scale_denominator(const Augmentation *augmentation);
 
 bool augmentation_identity_equals(const Augmentation *a, const Augmentation *b);
+
+typedef enum {
+    AUGMENTATION_APPLY_OK = 0,
+    AUGMENTATION_APPLY_ERR_NULL_AUGMENTATION,
+    AUGMENTATION_APPLY_ERR_NULL_EVENT,
+    AUGMENTATION_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED,
+    AUGMENTATION_APPLY_ERR_ALLOC
+} AugmentationApplyResult;
+
+/*
+ * Applies augmentation to event (a borrowed NoteEvent): only
+ * AUGMENTATION_DIMENSION_DURATIONS has real logic in this pass -- the
+ * event's Duration is scaled by scale_numerator/scale_denominator,
+ * exact rational multiplication, reduced to lowest terms (Law 19).
+ * Every other field (pitch, temporal position, spelling, voice) is
+ * copied unchanged onto the output event.
+ *
+ * The other four AugmentationDimension values (inter-onset intervals,
+ * structural timing, notation values, performance timing) fail with
+ * AUGMENTATION_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED: each names a
+ * sequence-level or notation-level concept this single-NoteEvent apply
+ * has no material to act on (an inter-onset interval needs a neighbor
+ * event; notation values need a time-signature/notation context this
+ * layer does not have) -- this pass does not guess at a scope for them
+ * rather than silently only scaling duration while claiming to have
+ * honored the caller's chosen dimension.
+ *
+ * event is never mutated; *out's event carries a real
+ * ProvenanceReference pointing back to event.
+ */
+AugmentationApplyResult augmentation_apply(const Augmentation *augmentation, const NoteEvent *event,
+                                            TransformResult **out);
 
 #endif
