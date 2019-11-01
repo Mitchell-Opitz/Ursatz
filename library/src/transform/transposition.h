@@ -4,7 +4,10 @@
 #include <stdbool.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
+#include "pitch/pitch_numeric_value.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -81,5 +84,44 @@ bool transposition_has_range_policy(const Transposition *transposition);
 bool transposition_has_instrument_context(const Transposition *transposition);
 
 bool transposition_identity_equals(const Transposition *a, const Transposition *b);
+
+typedef enum {
+    TRANSPOSITION_APPLY_OK = 0,
+    TRANSPOSITION_APPLY_ERR_NULL_TRANSPOSITION,
+    TRANSPOSITION_APPLY_ERR_NULL_EVENT,
+    TRANSPOSITION_APPLY_ERR_NULL_PITCH_VALUE,
+    TRANSPOSITION_APPLY_ERR_ALLOC
+} TranspositionApplyResult;
+
+/*
+ * Applies transposition to event (a borrowed NoteEvent): shifts pitch by
+ * transposition_semitones() using PitchNumericValue arithmetic
+ * (pitch/pitch_numeric_value.h) -- add_interval(event_pitch_value,
+ * semitones, 1), then pitch_numeric_value_to_identity packages the
+ * result into the output NoteEvent's pitch. Every other field (temporal
+ * position, duration, spelling, voice) is copied unchanged.
+ *
+ * event_pitch_value is the CALLER-SUPPLIED numeric resolution of
+ * event's PitchIdentity under whatever TuningSystem the caller is
+ * working in. This layer cannot derive it: PitchIdentity is opaque by
+ * design (pitch/pitch_identity.h) and pitch_numeric_value.h deliberately
+ * provides no generic "PitchIdentity -> PitchNumericValue" decoder (see
+ * that file's header) -- the caller must already know how event's pitch
+ * resolves numerically. transposition_apply does not check that
+ * event_pitch_value actually corresponds to note_event_pitch(event);
+ * that correspondence is the caller's responsibility to establish.
+ *
+ * has_tuning_behavior/has_range_policy/has_instrument_context are
+ * always false on any successfully-constructed Transposition (see
+ * transposition_create) -- there is nothing yet to check against for
+ * range/tuning/instrument policy, so this apply performs pure
+ * interval arithmetic only, exactly as the base contract's validation
+ * string already states.
+ *
+ * event is never mutated; *out's event carries a real
+ * ProvenanceReference pointing back to event.
+ */
+TranspositionApplyResult transposition_apply(const Transposition *transposition, const NoteEvent *event,
+                                              const PitchNumericValue *event_pitch_value, TransformResult **out);
 
 #endif
