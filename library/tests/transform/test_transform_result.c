@@ -20,6 +20,9 @@
  * Invariant test: an empty TransformResult (count == 0) is valid, not
  * an error (a transformation can legitimately produce no output
  * events). A non-empty array with a NULL entry is rejected.
+ *
+ * take_event_at test: releases ownership of one event to the caller
+ * and leaves the vacated slot safely destroyable (NULL).
  */
 
 static EntityID *make_id(const char *value) {
@@ -117,11 +120,34 @@ static void test_events_carry_their_own_provenance(void) {
     transform_result_destroy(result);
 }
 
+static void test_take_event_at_releases_ownership(void) {
+    NoteEvent *events[2];
+    events[0] = make_note_event("note-1", "source-note");
+    events[1] = make_note_event("note-2", "source-note");
+
+    TransformResult *result = NULL;
+    transform_result_create(events, 2, &result);
+
+    NoteEvent *taken = transform_result_take_event_at(result, 0);
+    assert(taken == events[0]);
+    assert(transform_result_event_at(result, 0) == NULL);
+    /* The other slot is untouched. */
+    assert(transform_result_event_at(result, 1) == events[1]);
+
+    /* Taking the same slot again is safe and returns NULL -- nothing left to give. */
+    assert(transform_result_take_event_at(result, 0) == NULL);
+
+    note_event_destroy(taken);
+    /* Destroying the result skips the NULL slot and only frees index 1. */
+    transform_result_destroy(result);
+}
+
 int main(void) {
     test_create_with_events();
     test_create_empty_is_valid();
     test_create_rejects_null_entry();
     test_events_carry_their_own_provenance();
+    test_take_event_at_releases_ownership();
     printf("test_transform_result: ok\n");
     return 0;
 }

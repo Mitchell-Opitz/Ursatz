@@ -41,6 +41,16 @@
  * either (TDD §140 referential transparency, the same rule Analyzer and
  * CandidateEvaluator follow) -- every event in a TransformResult is a
  * newly constructed NoteEvent, never a pointer aliasing an input event.
+ *
+ * transform_result_take_event_at exists for COMPOSING transformations
+ * (e.g. RetrogradeInversion, transform/retrograde_inversion.h, calling
+ * retrograde_apply then feeding each resulting event into
+ * inversion_apply): it releases ownership of one event back to the
+ * caller, who becomes responsible for destroying it, and the vacated
+ * slot is set to NULL so transform_result_destroy safely skips it
+ * (note_event_destroy(NULL) is a no-op). This lets a composing
+ * Transformation reuse a component's real output object directly,
+ * rather than re-deriving it or duplicating the component's logic.
  */
 
 typedef struct TransformResult TransformResult;
@@ -62,5 +72,13 @@ void transform_result_destroy(TransformResult *result);
 
 size_t transform_result_event_count(const TransformResult *result);
 const NoteEvent *transform_result_event_at(const TransformResult *result, size_t index);
+
+/*
+ * Releases ownership of the event at index back to the caller (who must
+ * destroy it) and sets that slot to NULL. Calling this twice on the
+ * same index returns NULL the second time -- the slot has nothing left
+ * to give. See the file header for why this exists.
+ */
+NoteEvent *transform_result_take_event_at(TransformResult *result, size_t index);
 
 #endif

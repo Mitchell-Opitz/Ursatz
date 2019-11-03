@@ -167,3 +167,78 @@ bool retrograde_inversion_identity_equals(const RetrogradeInversion *a, const Re
     }
     return transformation_identity_equals(a->transformation, b->transformation);
 }
+
+RetrogradeInversionApplyResult retrograde_inversion_apply(const RetrogradeInversion *retrograde_inversion,
+                                                           NoteEvent **events,
+                                                           const PitchNumericValue **event_pitch_values,
+                                                           size_t event_count, const PitchNumericValue *axis_value,
+                                                           TransformResult **out) {
+    if (retrograde_inversion == NULL) {
+        return RETROGRADE_INVERSION_APPLY_ERR_NULL_RETROGRADE_INVERSION;
+    }
+    if (events == NULL) {
+        return RETROGRADE_INVERSION_APPLY_ERR_NULL_EVENTS;
+    }
+    if (event_count == 0) {
+        return RETROGRADE_INVERSION_APPLY_ERR_EMPTY;
+    }
+    if (event_pitch_values == NULL) {
+        return RETROGRADE_INVERSION_APPLY_ERR_NULL_PITCH_VALUES;
+    }
+    if (axis_value == NULL) {
+        return RETROGRADE_INVERSION_APPLY_ERR_NULL_AXIS_VALUE;
+    }
+
+    TransformResult *retrograded = NULL;
+    RetrogradeApplyResult retrograde_result =
+        retrograde_apply(retrograde_inversion->retrograde, events, event_count, &retrograded);
+    if (retrograde_result == RETROGRADE_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED) {
+        return RETROGRADE_INVERSION_APPLY_ERR_DIMENSION_NOT_IMPLEMENTED;
+    }
+    if (retrograde_result != RETROGRADE_APPLY_OK) {
+        return RETROGRADE_INVERSION_APPLY_ERR_ALLOC;
+    }
+
+    NoteEvent **derived = (NoteEvent **)malloc(sizeof(NoteEvent *) * event_count);
+    if (derived == NULL) {
+        transform_result_destroy(retrograded);
+        return RETROGRADE_INVERSION_APPLY_ERR_ALLOC;
+    }
+
+    for (size_t i = 0; i < event_count; i++) {
+        NoteEvent *reordered_event = transform_result_take_event_at(retrograded, i);
+
+        TransformResult *inverted = NULL;
+        InversionApplyResult inversion_result = inversion_apply(retrograde_inversion->inversion, reordered_event,
+                                                                  event_pitch_values[i], axis_value, &inverted);
+        note_event_destroy(reordered_event);
+
+        if (inversion_result != INVERSION_APPLY_OK) {
+            for (size_t j = 0; j < i; j++) {
+                note_event_destroy(derived[j]);
+            }
+            free(derived);
+            transform_result_destroy(retrograded);
+            if (inversion_result == INVERSION_APPLY_ERR_TUNING_SYSTEM_MISMATCH) {
+                return RETROGRADE_INVERSION_APPLY_ERR_TUNING_SYSTEM_MISMATCH;
+            }
+            return RETROGRADE_INVERSION_APPLY_ERR_ALLOC;
+        }
+
+        derived[i] = transform_result_take_event_at(inverted, 0);
+        transform_result_destroy(inverted);
+    }
+
+    transform_result_destroy(retrograded);
+
+    TransformResultResult result = transform_result_create(derived, event_count, out);
+    if (result != TRANSFORM_RESULT_OK) {
+        for (size_t i = 0; i < event_count; i++) {
+            note_event_destroy(derived[i]);
+        }
+        free(derived);
+        return RETROGRADE_INVERSION_APPLY_ERR_ALLOC;
+    }
+    free(derived);
+    return RETROGRADE_INVERSION_APPLY_OK;
+}

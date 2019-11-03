@@ -75,3 +75,9 @@ size_t transform_result_event_count(const TransformResult *result) {
 const NoteEvent *transform_result_event_at(const TransformResult *result, size_t index) {
     return result->events[index];
 }
+
+NoteEvent *transform_result_take_event_at(TransformResult *result, size_t index) {
+    NoteEvent *event = result->events[index];
+    result->events[index] = NULL;
+    return event;
+}
