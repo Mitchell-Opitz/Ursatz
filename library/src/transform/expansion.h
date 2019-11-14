@@ -5,7 +5,9 @@
 #include <stddef.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -66,5 +68,45 @@ size_t expansion_appended_event_id_count(const Expansion *expansion);
 const EntityID *expansion_appended_event_id_at(const Expansion *expansion, size_t index);
 
 bool expansion_identity_equals(const Expansion *a, const Expansion *b);
+
+typedef enum {
+    EXPANSION_APPLY_OK = 0,
+    EXPANSION_APPLY_ERR_NULL_EXPANSION,
+    EXPANSION_APPLY_ERR_NULL_SOURCE_EVENTS,
+    EXPANSION_APPLY_ERR_NULL_APPENDED_EVENTS,
+    EXPANSION_APPLY_ERR_APPENDED_EVENT_COUNT_MISMATCH,
+    EXPANSION_APPLY_ERR_APPENDED_EVENT_ID_MISMATCH,
+    EXPANSION_APPLY_ERR_POSITION_OUT_OF_RANGE,
+    EXPANSION_APPLY_ERR_ALLOC
+} ExpansionApplyResult;
+
+/*
+ * Applies expansion to source_events (a borrowed array of
+ * source_event_count borrowed NoteEvent pointers -- the full sequence
+ * expansion_source_structure_id names), inserting appended_events (a
+ * borrowed array the caller supplies, one real NoteEvent for each of
+ * this Expansion's declared appended_event_ids, same order) at position
+ * (0 = before every source event, source_event_count = after all of
+ * them). This is the "append at a declared position" scoping decided
+ * for this pass: Expansion's Registry description names extending a
+ * Structure with new material by reference but does not specify an
+ * insertion point, so this apply requires the caller to declare one
+ * explicitly rather than guessing "always at the end."
+ *
+ * appended_events must have exactly appended_event_id_count entries,
+ * and appended_events[i]'s id must equal
+ * expansion_appended_event_id_at(expansion, i) -- Expansion's
+ * constructor only stores id references, not NoteEvent payloads, so the
+ * actual new material has to be supplied here, at apply time, and this
+ * checks it against what was declared at construction rather than
+ * trusting it blindly.
+ *
+ * Neither array is mutated; every event in *out carries a real
+ * ProvenanceReference pointing back to whichever source or appended
+ * event it was cloned from.
+ */
+ExpansionApplyResult expansion_apply(const Expansion *expansion, NoteEvent **source_events,
+                                      size_t source_event_count, NoteEvent **appended_events,
+                                      size_t appended_event_count, size_t position, TransformResult **out);
 
 #endif
