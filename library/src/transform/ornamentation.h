@@ -5,7 +5,11 @@
 #include <stddef.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
+#include "pitch/pitch_identity.h"
+#include "time/duration.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -89,5 +93,68 @@ const ProvenanceReference *ornamentation_derived_event_provenance_at(const Ornam
                                                                       size_t index);
 
 bool ornamentation_identity_equals(const Ornamentation *a, const Ornamentation *b);
+
+/*
+ * OrnamentEventSpec: the concrete content for one derived event,
+ * supplied by the caller at apply time -- this IS "the derivation
+ * rule" for this pass. Ornamentation itself hardcodes no ornament
+ * vocabulary (no built-in notion of a trill, turn, or mordent): it only
+ * knows how to mechanically place derived_event_count events once told
+ * where each one goes. A future Framework-aware caller (e.g. a
+ * common-practice-ornamentation extension) decides what a "trill"
+ * concretely means and supplies one spec per declared derived event;
+ * this layer stays theory-neutral.
+ *
+ * offset is the exact rational Duration (Law 19) after source_event's
+ * own onset at which this derived event begins -- added via
+ * musical_time_add (time/musical_time.h), the same exact-rational
+ * primitive Displacement's forward shift uses. duration is this
+ * derived event's own exact rational Duration. pitch is this derived
+ * event's PitchIdentity. All three are borrowed -- ornamentation_apply
+ * clones them, so the caller retains ownership and destroys its own
+ * spec fields as usual.
+ */
+typedef struct {
+    const Duration *offset;
+    const Duration *duration;
+    const PitchIdentity *pitch;
+} OrnamentEventSpec;
+
+typedef enum {
+    ORNAMENTATION_APPLY_OK = 0,
+    ORNAMENTATION_APPLY_ERR_NULL_ORNAMENTATION,
+    ORNAMENTATION_APPLY_ERR_NULL_SOURCE_EVENT,
+    ORNAMENTATION_APPLY_ERR_NULL_SPECS,
+    ORNAMENTATION_APPLY_ERR_SPEC_COUNT_MISMATCH,
+    ORNAMENTATION_APPLY_ERR_NULL_SPEC_FIELD,
+    ORNAMENTATION_APPLY_ERR_ALLOC
+} OrnamentationApplyResult;
+
+/*
+ * Applies ornamentation to source_event (a borrowed NoteEvent), given
+ * specs (a borrowed array of spec_count borrowed OrnamentEventSpec
+ * values, same order as this Ornamentation's own declared
+ * derived_event_ids/derived_event_provenances). spec_count MUST equal
+ * ornamentation_derived_event_count(ornamentation).
+ *
+ * For each i, builds one derived NoteEvent: onset =
+ * source_event's onset + specs[i].offset (exact rational,
+ * musical_time_add), duration = specs[i].duration, pitch =
+ * specs[i].pitch, spelling/voice inherited unchanged from source_event.
+ * Crucially, the derived event's id and ProvenanceReference are NOT
+ * newly minted here -- they are copies of
+ * ornamentation_derived_event_id_at(ornamentation, i) and
+ * ornamentation_derived_event_provenance_at(ornamentation, i), which
+ * ornamentation_create already validated as PRESENT and targeting
+ * source_event's id. This apply only fills in the musical content
+ * (pitch/timing) for the one-to-many mapping ornamentation_create
+ * already committed to; it does not re-decide that mapping.
+ *
+ * source_event and specs are never mutated; every event in *out carries
+ * the real, pre-validated ProvenanceReference described above.
+ */
+OrnamentationApplyResult ornamentation_apply(const Ornamentation *ornamentation, const NoteEvent *source_event,
+                                              const OrnamentEventSpec *specs, size_t spec_count,
+                                              TransformResult **out);
 
 #endif
