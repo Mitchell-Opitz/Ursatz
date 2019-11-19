@@ -8,10 +8,11 @@ struct Entity {
     char *type;
     SchemaVersion *schema_version;
     char *metadata;
+    ProvenanceReference *provenance_reference;
 };
 
 EntityResult entity_create(EntityID *id, const char *type, SchemaVersion *schema_version,
-                            const char *metadata, Entity **out) {
+                            const char *metadata, ProvenanceReference *provenance, Entity **out) {
     if (id == NULL) {
         return ENTITY_ERR_NULL_ID;
     }
@@ -20,6 +21,9 @@ EntityResult entity_create(EntityID *id, const char *type, SchemaVersion *schema
     }
     if (schema_version == NULL) {
         return ENTITY_ERR_NULL_SCHEMA_VERSION;
+    }
+    if (provenance == NULL) {
+        return ENTITY_ERR_NULL_PROVENANCE;
     }
 
     Entity *entity = (Entity *)malloc(sizeof(Entity));
@@ -50,6 +54,7 @@ EntityResult entity_create(EntityID *id, const char *type, SchemaVersion *schema
 
     entity->id = id;
     entity->schema_version = schema_version;
+    entity->provenance_reference = provenance;
 
     *out = entity;
     return ENTITY_OK;
@@ -63,6 +68,7 @@ void entity_destroy(Entity *entity) {
     schema_version_destroy(entity->schema_version);
     free(entity->type);
     free(entity->metadata);
+    provenance_reference_destroy(entity->provenance_reference);
     free(entity);
 }
 
@@ -80,6 +86,10 @@ const SchemaVersion *entity_schema_version(const Entity *entity) {
 
 const char *entity_metadata(const Entity *entity) {
     return entity->metadata;
+}
+
+const ProvenanceReference *entity_provenance_reference(const Entity *entity) {
+    return entity->provenance_reference;
 }
 
 bool entity_identity_equals(const Entity *a, const Entity *b) {

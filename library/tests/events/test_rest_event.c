@@ -17,18 +17,31 @@ static Duration *make_duration(long numerator, unsigned long denominator) {
     return duration;
 }
 
+/* Both failure paths below return before rest_event_create takes
+   ownership of anything, so the valid co-argument in each call is still
+   owned by the caller and must be destroyed here (same pattern as
+   tests/events/test_note_event.c). */
+
 static void test_create_rejects_null_temporal_anchor(void) {
+    Duration *duration = make_duration(1, 4);
+
     RestEvent *rest_event = NULL;
-    RestEventResult r = rest_event_create(NULL, make_duration(1, 4), &rest_event);
+    RestEventResult r = rest_event_create(NULL, duration, &rest_event);
     assert(r == REST_EVENT_ERR_NULL_TEMPORAL_ANCHOR);
     assert(rest_event == NULL);
+
+    duration_destroy(duration);
 }
 
 static void test_create_rejects_null_duration(void) {
+    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
+
     RestEvent *rest_event = NULL;
-    RestEventResult r = rest_event_create(make_temporal_anchor(1, 4), NULL, &rest_event);
+    RestEventResult r = rest_event_create(temporal_anchor, NULL, &rest_event);
     assert(r == REST_EVENT_ERR_NULL_DURATION);
     assert(rest_event == NULL);
+
+    temporal_anchor_destroy(temporal_anchor);
 }
 
 static void test_create_accepts_valid(void) {

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include "context/context.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
 #include "theory/framework.h"
@@ -37,6 +38,16 @@
  * and is out of scope for this pass -- this stub exists so an L8
  * consumer has a stable call shape to wire up against, not to perform
  * evaluation itself.
+ *
+ * constraint_evaluate takes an optional context (context/context.h),
+ * widened now rather than as a later breaking change: CONDITIONAL and
+ * CONTEXTUAL constraints need ambient context to decide whether their
+ * condition even applies, and no real callers exist yet to break.
+ * context is a reference only, not owned. CONSTRAINT_EVAL_NOT_APPLICABLE
+ * is the result reserved for a CONDITIONAL/CONTEXTUAL constraint whose
+ * condition does not hold for the given candidate/context -- kept
+ * distinct from CONSTRAINT_EVAL_FAIL so a caller aggregating scores
+ * downstream never conflates "did not apply" with "failed."
  */
 
 typedef struct Constraint Constraint;
@@ -61,6 +72,7 @@ typedef enum {
 typedef enum {
     CONSTRAINT_EVAL_PASS = 0,
     CONSTRAINT_EVAL_FAIL,
+    CONSTRAINT_EVAL_NOT_APPLICABLE,
     CONSTRAINT_EVAL_ERR_NULL_CANDIDATE,
     CONSTRAINT_EVAL_NOT_IMPLEMENTED
 } ConstraintEvalResult;
@@ -89,7 +101,10 @@ const Value *constraint_condition(const Constraint *constraint);
 
 bool constraint_identity_equals(const Constraint *a, const Constraint *b);
 
-/* Stub -- see file header. Never performs evaluation logic in this pass. */
-ConstraintEvalResult constraint_evaluate(const Constraint *constraint, const Value *candidate);
+/*
+ * Stub -- see file header. Never performs evaluation logic in this
+ * pass. context is optional -- pass NULL if not supplied.
+ */
+ConstraintEvalResult constraint_evaluate(const Constraint *constraint, const Value *candidate, const Context *context);
 
 #endif

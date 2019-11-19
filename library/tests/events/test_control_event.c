@@ -21,11 +21,19 @@ static void test_create_rejects_null_temporal_anchor(void) {
     assert(control_event == NULL);
 }
 
+/* control_event_create validates temporal_anchor before payload and
+   returns before taking ownership of anything, so the valid
+   temporal_anchor here is still owned by the caller and must be
+   destroyed (same pattern as tests/events/test_note_event.c). */
 static void test_create_rejects_null_payload(void) {
+    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
+
     ControlEvent *control_event = NULL;
-    ControlEventResult r = control_event_create(make_temporal_anchor(1, 4), NULL, 0, &control_event);
+    ControlEventResult r = control_event_create(temporal_anchor, NULL, 0, &control_event);
     assert(r == CONTROL_EVENT_ERR_NULL_PAYLOAD);
     assert(control_event == NULL);
+
+    temporal_anchor_destroy(temporal_anchor);
 }
 
 static void test_create_accepts_valid(void) {

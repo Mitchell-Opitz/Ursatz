@@ -14,9 +14,13 @@
  * -2 = double flat, -1 = flat, 0 = natural, 1 = sharp, 2 = double sharp)
  * and compares it by value, without interpreting it further.
  *
- * There is no sounding-pitch representation at this layer
- * (PitchRealization is L3+/Deliverable D) -- letter/accidental/octave are
- * always explicit and MUST NOT be reconstructed from one on deserialize.
+ * PitchSpelling itself carries no sounding-pitch representation.
+ * PitchRealization (pitch/pitch_realization.h) is the sounding/physical
+ * counterpart -- same layer (L2, music-pitch), not a later one -- but
+ * the two are kept deliberately separate (see WrittenPitch/SoundingPitch,
+ * pitch/written_pitch.h and pitch/sounding_pitch.h): letter/accidental/
+ * octave are always explicit and MUST NOT be reconstructed from a
+ * PitchRealization on deserialize.
  */
 
 typedef enum {

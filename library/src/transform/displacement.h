@@ -4,8 +4,10 @@
 #include <stdbool.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "time/duration.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -63,5 +65,27 @@ DisplacementDirection displacement_direction(const Displacement *displacement);
 const Duration *displacement_magnitude(const Displacement *displacement);
 
 bool displacement_identity_equals(const Displacement *a, const Displacement *b);
+
+typedef enum {
+    DISPLACEMENT_APPLY_OK = 0,
+    DISPLACEMENT_APPLY_ERR_NULL_DISPLACEMENT,
+    DISPLACEMENT_APPLY_ERR_NULL_EVENT,
+    DISPLACEMENT_APPLY_ERR_ALLOC
+} DisplacementApplyResult;
+
+/*
+ * Applies displacement to event (a borrowed NoteEvent): shifts only its
+ * TemporalAnchor, forward via musical_time_add (time/musical_time.h) or
+ * backward via exact rational subtraction of magnitude from the
+ * event's onset (MusicalTime allows a negative result -- see file
+ * header on why no musical_time "subtract a Duration" API exists to
+ * call directly for BACKWARD). Every other field (pitch, duration,
+ * spelling, voice) is copied unchanged onto the output event.
+ *
+ * event is never mutated; *out's event carries a real
+ * ProvenanceReference pointing back to event.
+ */
+DisplacementApplyResult displacement_apply(const Displacement *displacement, const NoteEvent *event,
+                                            TransformResult **out);
 
 #endif

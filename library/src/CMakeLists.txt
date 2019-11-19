@@ -19,20 +19,49 @@ add_library(ursatz
     time/temporal_anchor.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
+    pitch/tuning_system.c
+    pitch/pitch_class.c
+    pitch/pitch_realization.c
+    pitch/pitch_numeric_value.c
+    pitch/written_pitch.c
+    pitch/sounding_pitch.c
     events/event.c
     events/note_event.c
     events/rest_event.c
     events/control_event.c
     events/tie.c
+    events/slur.c
+    events/articulation.c
+    events/dynamics.c
+    events/instrument.c
+    events/instrument_capability.c
     containers/voice.c
+    containers/layer.c
+    containers/staff.c
+    containers/part.c
+    containers/measure.c
+    containers/phrase.c
+    containers/section.c
+    containers/movement.c
+    containers/work.c
+    containers/edition.c
+    containers/arrangement.c
+    containers/revision.c
+    containers/source_variant.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
     structure/cadence.c
+    structure/figure.c
+    structure/theme.c
+    structure/theme_occurrence.c
+    structure/phrase_occurrence.c
     context/context.c
     semantics/interval.c
     semantics/sonority.c
     semantics/rhythmic_pattern.c
+    semantics/scale.c
+    semantics/contour.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
@@ -41,15 +70,20 @@ add_library(ursatz
     interpretation/observation.c
     interpretation/hypothesis.c
     interpretation/interpretation.c
+    interpretation/chord.c
+    interpretation/key.c
+    interpretation/scale_degree.c
     theory/framework.c
     rules/rule.c
     rules/constraint.c
     rules/preference.c
+    rules/rule_evaluation.c
     theory/heuristic.c
     theory/tendency.c
     theory/statistical_model.c
     theory/style_model.c
     transform/transformation.c
+    transform/transform_result.c
     transform/transposition.c
     transform/inversion.c
     transform/retrograde.c

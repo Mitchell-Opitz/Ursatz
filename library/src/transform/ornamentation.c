@@ -1,6 +1,12 @@
 #include "transform/ornamentation.h"
 
 #include <stdlib.h>
+#include <string.h>
+
+#include "core/voice_reference.h"
+#include "pitch/pitch_spelling.h"
+#include "time/musical_time.h"
+#include "time/temporal_anchor.h"
 
 struct Ornamentation {
     Transformation *transformation;
@@ -141,4 +147,191 @@ bool ornamentation_identity_equals(const Ornamentation *a, const Ornamentation *
         return false;
     }
     return transformation_identity_equals(a->transformation, b->transformation);
+}
+
+static EntityID *copy_entity_id(const EntityID *source) {
+    EntityID *copy = NULL;
+    if (entity_id_create(entity_id_value(source), &copy) != ENTITY_ID_OK) {
+        return NULL;
+    }
+    return copy;
+}
+
+static ProvenanceReference *copy_provenance_reference(const ProvenanceReference *source) {
+    if (provenance_reference_state(source) == PROVENANCE_REFERENCE_ABSENT) {
+        ProvenanceReference *copy = NULL;
+        if (provenance_reference_create_absent(&copy) != PROVENANCE_REFERENCE_OK) {
+            return NULL;
+        }
+        return copy;
+    }
+    EntityID *target_copy = copy_entity_id(provenance_reference_target_id(source));
+    if (target_copy == NULL) {
+        return NULL;
+    }
+    ProvenanceReference *copy = NULL;
+    if (provenance_reference_create_present(target_copy, &copy) != PROVENANCE_REFERENCE_OK) {
+        entity_id_destroy(target_copy);
+        return NULL;
+    }
+    return copy;
+}
+
+static PitchIdentity *clone_pitch_identity(const PitchIdentity *source) {
+    size_t size = 0;
+    const void *token = pitch_identity_token(source, &size);
+    PitchIdentity *clone = NULL;
+    if (pitch_identity_create(token, size, &clone) != PITCH_IDENTITY_OK) {
+        return NULL;
+    }
+    return clone;
+}
+
+static bool clone_pitch_spelling_or_null(const PitchSpelling *source, PitchSpelling **out) {
+    if (source == NULL) {
+        *out = NULL;
+        return true;
+    }
+    return pitch_spelling_create(pitch_spelling_letter(source), pitch_spelling_accidental(source),
+                                  pitch_spelling_octave(source), out) == PITCH_SPELLING_OK;
+}
+
+static bool clone_voice_reference_or_null(const VoiceReference *source, VoiceReference **out) {
+    if (source == NULL) {
+        *out = NULL;
+        return true;
+    }
+    EntityID *target_copy = copy_entity_id(voice_reference_target_id(source));
+    if (target_copy == NULL) {
+        return false;
+    }
+    if (voice_reference_create(target_copy, out) != VOICE_REFERENCE_OK) {
+        entity_id_destroy(target_copy);
+        return false;
+    }
+    return true;
+}
+
+/* Builds one derived NoteEvent for spec, using id/provenance already
+   declared (and validated) by ornamentation_create at index i, rather
+   than minting new ones. Returns NULL on any allocation failure. */
+static NoteEvent *build_derived_event(const Ornamentation *ornamentation, const NoteEvent *source_event,
+                                       const OrnamentEventSpec *spec, size_t index) {
+    const MusicalTime *source_position = temporal_anchor_position(note_event_temporal_anchor(source_event));
+    MusicalTime *new_position = NULL;
+    if (musical_time_add(source_position, spec->offset, &new_position) != MUSICAL_TIME_OK) {
+        return NULL;
+    }
+    TemporalAnchor *anchor = NULL;
+    if (temporal_anchor_create(new_position, &anchor) != TEMPORAL_ANCHOR_OK) {
+        musical_time_destroy(new_position);
+        return NULL;
+    }
+
+    Duration *duration = NULL;
+    if (duration_create(duration_numerator(spec->duration), duration_denominator(spec->duration), &duration) !=
+        DURATION_OK) {
+        temporal_anchor_destroy(anchor);
+        return NULL;
+    }
+
+    PitchIdentity *pitch = clone_pitch_identity(spec->pitch);
+    if (pitch == NULL) {
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        return NULL;
+    }
+
+    PitchSpelling *spelling = NULL;
+    if (!clone_pitch_spelling_or_null(note_event_optional_pitch_spelling(source_event), &spelling)) {
+        pitch_identity_destroy(pitch);
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        return NULL;
+    }
+
+    VoiceReference *voice = NULL;
+    if (!clone_voice_reference_or_null(note_event_optional_voice(source_event), &voice)) {
+        pitch_spelling_destroy(spelling);
+        pitch_identity_destroy(pitch);
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        return NULL;
+    }
+
+    EntityID *id = copy_entity_id(ornamentation->derived_event_ids[index]);
+    if (id == NULL) {
+        voice_reference_destroy(voice);
+        pitch_spelling_destroy(spelling);
+        pitch_identity_destroy(pitch);
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        return NULL;
+    }
+
+    ProvenanceReference *provenance = copy_provenance_reference(ornamentation->derived_event_provenances[index]);
+    if (provenance == NULL) {
+        entity_id_destroy(id);
+        voice_reference_destroy(voice);
+        pitch_spelling_destroy(spelling);
+        pitch_identity_destroy(pitch);
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        return NULL;
+    }
+
+    NoteEvent *derived = NULL;
+    if (note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, &derived) != NOTE_EVENT_OK) {
+        return NULL;
+    }
+    return derived;
+}
+
+OrnamentationApplyResult ornamentation_apply(const Ornamentation *ornamentation, const NoteEvent *source_event,
+                                              const OrnamentEventSpec *specs, size_t spec_count,
+                                              TransformResult **out) {
+    if (ornamentation == NULL) {
+        return ORNAMENTATION_APPLY_ERR_NULL_ORNAMENTATION;
+    }
+    if (source_event == NULL) {
+        return ORNAMENTATION_APPLY_ERR_NULL_SOURCE_EVENT;
+    }
+    if (specs == NULL) {
+        return ORNAMENTATION_APPLY_ERR_NULL_SPECS;
+    }
+    if (spec_count != ornamentation->derived_event_count) {
+        return ORNAMENTATION_APPLY_ERR_SPEC_COUNT_MISMATCH;
+    }
+    for (size_t i = 0; i < spec_count; i++) {
+        if (specs[i].offset == NULL || specs[i].duration == NULL || specs[i].pitch == NULL) {
+            return ORNAMENTATION_APPLY_ERR_NULL_SPEC_FIELD;
+        }
+    }
+
+    NoteEvent **derived = (NoteEvent **)malloc(sizeof(NoteEvent *) * spec_count);
+    if (derived == NULL) {
+        return ORNAMENTATION_APPLY_ERR_ALLOC;
+    }
+
+    for (size_t i = 0; i < spec_count; i++) {
+        derived[i] = build_derived_event(ornamentation, source_event, &specs[i], i);
+        if (derived[i] == NULL) {
+            for (size_t k = 0; k < i; k++) {
+                note_event_destroy(derived[k]);
+            }
+            free(derived);
+            return ORNAMENTATION_APPLY_ERR_ALLOC;
+        }
+    }
+
+    TransformResultResult result = transform_result_create(derived, spec_count, out);
+    if (result != TRANSFORM_RESULT_OK) {
+        for (size_t k = 0; k < spec_count; k++) {
+            note_event_destroy(derived[k]);
+        }
+        free(derived);
+        return ORNAMENTATION_APPLY_ERR_ALLOC;
+    }
+    free(derived);
+    return ORNAMENTATION_APPLY_OK;
 }

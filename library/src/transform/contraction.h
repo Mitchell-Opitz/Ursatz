@@ -5,7 +5,9 @@
 #include <stddef.h>
 
 #include "core/provenance_reference.h"
+#include "events/note_event.h"
 #include "identity/entity_id.h"
+#include "transform/transform_result.h"
 #include "transform/transformation.h"
 
 /*
@@ -66,5 +68,44 @@ size_t contraction_removed_event_id_count(const Contraction *contraction);
 const EntityID *contraction_removed_event_id_at(const Contraction *contraction, size_t index);
 
 bool contraction_identity_equals(const Contraction *a, const Contraction *b);
+
+typedef enum {
+    CONTRACTION_APPLY_OK = 0,
+    CONTRACTION_APPLY_ERR_NULL_CONTRACTION,
+    CONTRACTION_APPLY_ERR_NULL_SOURCE_EVENTS,
+    CONTRACTION_APPLY_ERR_EVENT_NOT_FOUND,
+    CONTRACTION_APPLY_ERR_ALLOC
+} ContractionApplyResult;
+
+/*
+ * Applies contraction to source_events (a borrowed array of
+ * source_event_count borrowed NoteEvent pointers -- the full sequence
+ * contraction_source_structure_id names): clones every source event
+ * whose id is NOT one of this Contraction's declared removed_event_ids
+ * into *out, preserving source_events' own relative order (the
+ * remaining events, not the removed ones). *out may legitimately end up
+ * empty if every source event was declared removed.
+ *
+ * JUDGMENT CALL: "remove a declared sub-range" (this pass's scoping
+ * decision for Contraction) is implemented as "remove the declared
+ * subset by id," matching the shape contraction_create already commits
+ * to (removed_event_ids is an arbitrary id set, not a contiguous
+ * start/end index pair) -- reinterpreting it as a literal contiguous
+ * index range would contradict that existing, already-built
+ * constructor shape. If a literal contiguous-range removal is what was
+ * actually wanted, that is a different type shape and needs its own
+ * decision, not a silent reinterpretation here.
+ *
+ * If any declared removed_event_id has no matching id in source_events,
+ * this fails with CONTRACTION_APPLY_ERR_EVENT_NOT_FOUND -- a declared
+ * removal target that does not exist in the named source is a real
+ * error, not something to skip silently.
+ *
+ * source_events is never mutated; every event in *out carries a real
+ * ProvenanceReference pointing back to the source event it was cloned
+ * from.
+ */
+ContractionApplyResult contraction_apply(const Contraction *contraction, NoteEvent **source_events,
+                                          size_t source_event_count, TransformResult **out);
 
 #endif
