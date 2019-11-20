@@ -1,0 +1,7 @@
+add_executable(test_common_practice_minimal_framework test_framework.c)
+target_link_libraries(test_common_practice_minimal_framework PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_framework COMMAND test_common_practice_minimal_framework)
+
+add_executable(test_architecture_common_practice_minimal test_architecture_common_practice_minimal.c)
+add_test(NAME architecture_common_practice_minimal COMMAND test_architecture_common_practice_minimal
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
