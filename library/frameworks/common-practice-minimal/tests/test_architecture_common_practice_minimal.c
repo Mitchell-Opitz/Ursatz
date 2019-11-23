@@ -8,12 +8,14 @@
  * module, physically separate from src/) may depend only on the same
  * canonical L0-L6 interfaces Framework itself is allowed to touch --
  * identity, core, time, pitch, events, containers, structure, context,
- * semantics, relationship, interpretation, and theory/framework.h
- * itself (to obtain the Framework type it wraps). It MUST NOT depend on
- * music-rules, music-analysis, music-generation, music-transform, or
- * music-corpus, and MUST NOT depend on any theory/ header other than
- * framework.h (Heuristic/Tendency/StatisticalModel/StyleModel are
- * Framework's own siblings, not something an extension module needs).
+ * semantics, relationship, interpretation -- plus theory/framework.h,
+ * rules/rule.h, and rules/constraint.h specifically, the three L7 types
+ * this extension is explicitly built on top of. It MUST NOT depend on
+ * music-analysis, music-generation, music-transform, or music-corpus,
+ * and MUST NOT depend on any other theory/ or rules/ header
+ * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference,
+ * RuleEvaluation are not needed by this extension; constraint_evaluate
+ * itself is never called here -- see chord_vocabulary.c).
  *
  * Scans every .h/.c file directly under frameworks/common-practice-minimal/
  * (not its tests/ subdirectory) and flags any local include ("...")
@@ -46,7 +48,9 @@ static int check_file(const char *path) {
         }
         *end = '\0';
 
-        if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0) {
+        if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0 ||
+            strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
+            strcmp(start, "chord_vocabulary.h") == 0) {
             continue;
         }
 
@@ -59,7 +63,7 @@ static int check_file(const char *path) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "or theory/framework.h)\n",
+                    "theory/framework.h, rules/rule.h, or rules/constraint.h)\n",
                     path, start);
             violations++;
         }
