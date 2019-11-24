@@ -1,6 +1,7 @@
 add_library(common_practice_minimal
     framework.c
     chord_vocabulary.c
+    key_vocabulary.c
 )
 target_include_directories(common_practice_minimal PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
