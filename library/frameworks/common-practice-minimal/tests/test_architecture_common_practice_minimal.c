@@ -50,7 +50,8 @@ static int check_file(const char *path) {
 
         if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0 ||
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
-            strcmp(start, "chord_vocabulary.h") == 0 || strcmp(start, "key_vocabulary.h") == 0) {
+            strcmp(start, "chord_vocabulary.h") == 0 || strcmp(start, "key_vocabulary.h") == 0 ||
+            strcmp(start, "triad_identification.h") == 0) {
             continue;
         }
 
