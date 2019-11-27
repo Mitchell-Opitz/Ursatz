@@ -75,6 +75,17 @@ int main(void) {
     assert(chord_create(no_framework, "V7", &rejected) == CHORD_ERR_NULL_FRAMEWORK_REFERENCE);
     interpretation_destroy(no_framework);
 
+    /* chord_take_interpretation destroys only the Chord shell and hands
+       back the embedded Interpretation, still valid and unaffected. */
+    Interpretation *taken_source = make_interpretation("interpretation-3", "sonority-3", "framework-common-practice");
+    Chord *taken_chord;
+    assert(chord_create(taken_source, "ii", &taken_chord) == CHORD_OK);
+    Interpretation *taken = chord_take_interpretation(taken_chord);
+    assert(taken == taken_source);
+    size_t claim_size;
+    assert(strcmp((const char *)value_content(interpretation_claim(taken), &claim_size), "V7") == 0);
+    interpretation_destroy(taken);
+
     printf("test_chord: ok\n");
     return 0;
 }

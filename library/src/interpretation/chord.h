@@ -61,4 +61,16 @@ void chord_destroy(Chord *chord);
 const Interpretation *chord_interpretation(const Chord *chord);
 const char *chord_label(const Chord *chord);
 
+/*
+ * Ownership-transferring unwrap: destroys only the Chord shell (its
+ * owned label) and hands back the embedded Interpretation with
+ * ownership transferred to the caller (the caller must eventually
+ * interpretation_destroy it). Use this when a caller needs the
+ * Interpretation on its own -- e.g. to place it into an AnalysisResult
+ * (analysis/analyzer.h), which holds bare Interpretation objects, not
+ * Chord wrappers -- without losing everything chord_create validated.
+ * chord must be non-NULL.
+ */
+Interpretation *chord_take_interpretation(Chord *chord);
+
 #endif

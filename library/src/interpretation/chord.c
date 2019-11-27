@@ -54,3 +54,10 @@ const Interpretation *chord_interpretation(const Chord *chord) {
 const char *chord_label(const Chord *chord) {
     return chord->label;
 }
+
+Interpretation *chord_take_interpretation(Chord *chord) {
+    Interpretation *interpretation = chord->interpretation;
+    free(chord->label);
+    free(chord);
+    return interpretation;
+}

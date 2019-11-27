@@ -54,3 +54,10 @@ const Interpretation *key_interpretation(const Key *key) {
 const char *key_label(const Key *key) {
     return key->label;
 }
+
+Interpretation *key_take_interpretation(Key *key) {
+    Interpretation *interpretation = key->interpretation;
+    free(key->label);
+    free(key);
+    return interpretation;
+}
