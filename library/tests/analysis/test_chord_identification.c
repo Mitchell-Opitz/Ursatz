@@ -3,12 +3,10 @@
 #include <string.h>
 
 #include "analysis/chord_identification.h"
-#include "core/provenance_reference.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
 #include "interpretation/evidence.h"
 #include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
 #include "semantics/sonority.h"
 #include "theory/framework.h"
 #include "time/musical_time.h"
@@ -17,20 +15,15 @@
 /*
  * Behavioral-contract test: ChordIdentification conforms to the
  * Analyzer interface (analysis/analyzer.h) -- NULL input, a NULL
- * sonority, a NULL framework, and an empty candidate set are all
- * rejected without touching *out -- and its output carries the
- * Interpretation/Evidence/Uncertainty architecture TDD Sec242
- * requires: a claim naming the best-fit candidate, an Uncertainty
- * holding the full candidate set (chord identification is ambiguous,
- * same as scale identification), and a referenced Evidence whose
- * source names the Framework the identification was made under.
+ * sonority, a NULL framework, and an empty scale-degree set are all
+ * rejected without touching *out.
  *
- * Analysis-regression test: a fixed two-candidate set ("C major triad"
- * 3/4, "A minor 6th (1st inv.)" 1/4) under a fixed Framework
- * ("common-practice-tonal-harmony") always yields the same top pick,
- * the same Evidence strength/source, and the same full candidate set
- * on the Interpretation's Uncertainty -- pinning ChordIdentification's
- * behavior against a future refactor.
+ * Identification tests: each of common-practice-minimal-v1's seven
+ * diatonic triads, given real scale degrees, resolves to a real Chord
+ * (via frameworks/common-practice-minimal/triad_identification.h)
+ * carried as this analyzer's Interpretation. A degree set matching none
+ * of the seven reports ANALYZER_ERR_ANALYSIS_FAILED rather than a
+ * forced guess.
  */
 
 static EntityID *make_id(const char *value) {
@@ -56,43 +49,10 @@ static Sonority *make_sonority(const char *event_id_value) {
     return sonority;
 }
 
-int main(void) {
-    /* Behavioral contract: NULL input is rejected without touching *out. */
-    AnalysisResult *untouched = (AnalysisResult *)0x1;
-    assert(CHORD_IDENTIFICATION_ANALYZER.analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
-    assert(untouched == (AnalysisResult *)0x1);
-    assert(strcmp(CHORD_IDENTIFICATION_ANALYZER.name, "ChordIdentification") == 0);
-
-    Sonority *sonority = make_sonority("note-c4-e4-g4");
-    Framework *framework;
-    assert(framework_create(make_id("framework-common-practice-tonal-harmony"),
-                             "common-practice-tonal-harmony", &framework) == FRAMEWORK_OK);
-
-    UncertaintyCandidate candidates[2] = {
-        {"C major triad", 3, 4},
-        {"A minor 6th (1st inv.)", 1, 4},
-    };
-
-    /* Behavioral contract: a NULL sonority is rejected. */
-    ChordIdentificationInput no_sonority_input = {NULL, framework, candidates, 2};
-    AnalysisResult *no_sonority_result;
-    assert(chord_identification_analyze(&no_sonority_input, NULL, NULL, &no_sonority_result) ==
-           ANALYZER_ERR_NULL_INPUT);
-
-    /* Behavioral contract: a NULL framework is rejected. */
-    ChordIdentificationInput no_framework_input = {sonority, NULL, candidates, 2};
-    AnalysisResult *no_framework_result;
-    assert(chord_identification_analyze(&no_framework_input, NULL, NULL, &no_framework_result) ==
-           ANALYZER_ERR_NULL_INPUT);
-
-    /* Behavioral contract: an empty candidate set is rejected. */
-    ChordIdentificationInput no_candidates_input = {sonority, framework, NULL, 0};
-    AnalysisResult *no_candidates_result;
-    assert(chord_identification_analyze(&no_candidates_input, NULL, NULL, &no_candidates_result) ==
-           ANALYZER_ERR_NULL_INPUT);
-
-    /* Analysis-regression: "C major triad" (3/4) beats "A minor 6th (1st inv.)" (1/4). */
-    ChordIdentificationInput input = {sonority, framework, candidates, 2};
+static void check_triad(Framework *framework, const int *degrees, size_t degree_count, const char *expected_label,
+                         const char *sonority_event_id) {
+    Sonority *sonority = make_sonority(sonority_event_id);
+    ChordIdentificationInput input = {sonority, framework, degrees, degree_count};
 
     AnalysisResult *result;
     assert(CHORD_IDENTIFICATION_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
@@ -100,31 +60,77 @@ int main(void) {
     assert(analysis_result_evidence_count(result) == 1);
 
     const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "note-c4-e4-g4") == 0);
-    assert(interpretation_status(interpretation) == INTERPRETATION_STATUS_MACHINE_GENERATED);
+    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), sonority_event_id) == 0);
+    assert(interpretation_framework_reference(interpretation) != NULL);
 
     size_t claim_size;
     const char *claim_content = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-    assert(claim_size == strlen("C major triad") + 1);
-    assert(strcmp(claim_content, "C major triad") == 0);
-
-    const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
-    assert(uncertainty_kind(uncertainty) == UNCERTAINTY_KIND_CANDIDATE_SET);
-    assert(uncertainty_candidate_count(uncertainty) == 2);
-    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 0), "C major triad") == 0);
-    assert(uncertainty_candidate_weight_numerator_at(uncertainty, 0) == 3);
-    assert(uncertainty_candidate_weight_denominator_at(uncertainty, 0) == 4);
-    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 1), "A minor 6th (1st inv.)") == 0);
-
-    const Evidence *evidence = analysis_result_evidence_at(result, 0);
-    assert(strcmp(evidence_method(evidence), "framework-relative chord matching") == 0);
-    assert(strcmp(evidence_source(evidence), "common-practice-tonal-harmony") == 0);
-    assert(evidence_strength_numerator(evidence) == 3);
-    assert(evidence_strength_denominator(evidence) == 4);
+    assert(strcmp(claim_content, expected_label) == 0);
 
     analysis_result_destroy(result);
-    framework_destroy(framework);
     sonority_destroy(sonority);
+}
+
+int main(void) {
+    /* Behavioral contract: NULL input is rejected without touching *out. */
+    AnalysisResult *untouched = (AnalysisResult *)0x1;
+    assert(CHORD_IDENTIFICATION_ANALYZER.analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
+    assert(untouched == (AnalysisResult *)0x1);
+    assert(strcmp(CHORD_IDENTIFICATION_ANALYZER.name, "ChordIdentification") == 0);
+
+    Framework *framework;
+    assert(framework_create(make_id("framework-common-practice-minimal"), "common-practice-minimal-v1",
+                             &framework) == FRAMEWORK_OK);
+
+    Sonority *sonority = make_sonority("note-c4-e4-g4");
+    int degrees[] = {1, 3, 5};
+
+    /* Behavioral contract: a NULL sonority is rejected. */
+    ChordIdentificationInput no_sonority_input = {NULL, framework, degrees, 3};
+    AnalysisResult *no_sonority_result;
+    assert(chord_identification_analyze(&no_sonority_input, NULL, NULL, &no_sonority_result) ==
+           ANALYZER_ERR_NULL_INPUT);
+
+    /* Behavioral contract: a NULL framework is rejected. */
+    ChordIdentificationInput no_framework_input = {sonority, NULL, degrees, 3};
+    AnalysisResult *no_framework_result;
+    assert(chord_identification_analyze(&no_framework_input, NULL, NULL, &no_framework_result) ==
+           ANALYZER_ERR_NULL_INPUT);
+
+    /* Behavioral contract: an empty scale-degree set is rejected. */
+    ChordIdentificationInput no_degrees_input = {sonority, framework, NULL, 0};
+    AnalysisResult *no_degrees_result;
+    assert(chord_identification_analyze(&no_degrees_input, NULL, NULL, &no_degrees_result) == ANALYZER_ERR_NULL_INPUT);
+
+    sonority_destroy(sonority);
+
+    /* Identification: each of the seven diatonic triads. */
+    int degrees_i[] = {1, 3, 5};
+    check_triad(framework, degrees_i, 3, "I", "sonority-I");
+    int degrees_ii[] = {2, 4, 6};
+    check_triad(framework, degrees_ii, 3, "ii", "sonority-ii");
+    int degrees_iii[] = {3, 5, 7};
+    check_triad(framework, degrees_iii, 3, "iii", "sonority-iii");
+    int degrees_iv[] = {4, 6, 1};
+    check_triad(framework, degrees_iv, 3, "IV", "sonority-IV");
+    int degrees_v[] = {5, 7, 2};
+    check_triad(framework, degrees_v, 3, "V", "sonority-V");
+    int degrees_vi[] = {6, 1, 3};
+    check_triad(framework, degrees_vi, 3, "vi", "sonority-vi");
+    int degrees_vii[] = {7, 2, 4};
+    check_triad(framework, degrees_vii, 3, "vii\xC2\xB0", "sonority-vii-dim");
+
+    /* No match: not one of the seven diatonic triads -- reported as a
+       failed analysis, never a forced guess. */
+    Sonority *no_match_sonority = make_sonority("sonority-no-match");
+    int no_match_degrees[] = {1, 2, 4};
+    ChordIdentificationInput no_match_input = {no_match_sonority, framework, no_match_degrees, 3};
+    AnalysisResult *no_match_result;
+    assert(chord_identification_analyze(&no_match_input, NULL, NULL, &no_match_result) ==
+           ANALYZER_ERR_ANALYSIS_FAILED);
+    sonority_destroy(no_match_sonority);
+
+    framework_destroy(framework);
 
     printf("test_chord_identification: ok\n");
     return 0;
