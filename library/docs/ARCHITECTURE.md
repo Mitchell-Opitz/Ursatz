@@ -15,7 +15,7 @@ Ursatz is organized into layered modules, each living under `src/<module>/` with
 | L6 | `context`, `semantics`, `relationship`, `interpretation` (four mutually-restricted siblings) |
 | L7 | `theory`, `rules` (`rules` depends on `theory`; `theory` never depends back) |
 | L8 | `transform`, `analysis`, `generation` (three mutually-restricted siblings) |
-| L9 | not yet implemented |
+| L9 | `io` (partial: `MIDIImporter` only, other L9 concepts not yet implemented) |
 
 ## Dependency rule
 
@@ -57,6 +57,7 @@ Domain Ontology Specification v0.2 marks three L1 reference types, `VoiceReferen
 | transform | L8 | Implemented | `docs/modules/transform.md` |
 | analysis | L8 | Implemented | `docs/modules/analysis.md` |
 | generation | L8 | Implemented (partial, see doc) | `docs/modules/generation.md` |
+| io | L9 | In progress (partial, see doc) | `docs/modules/io.md` |
 
 "Partial" means some types from the module's Registry row are implemented and some are explicitly deferred; the module's own doc lists which.
 

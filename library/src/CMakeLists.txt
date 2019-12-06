@@ -115,6 +115,7 @@ add_library(ursatz
     generation/candidate.c
     generation/candidate_evaluator.c
     generation/generation_record.c
+    io/midi_importer.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
