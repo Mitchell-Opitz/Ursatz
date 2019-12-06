@@ -1,0 +1,58 @@
+#ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_IDENTIFICATION_H
+#define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_IDENTIFICATION_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "identity/entity_id.h"
+#include "interpretation/key.h"
+#include "key_vocabulary.h"
+
+/*
+ * Deterministic, single-answer key identification for
+ * common-practice-minimal-v1.
+ *
+ * Input shape: the same caller-supplies-the-dimension pattern
+ * triad_identification.h uses. PitchIdentity carries no numeric
+ * semantics yet, so this module does not derive intervals from a
+ * Sonority/Context itself -- the caller supplies each note's interval
+ * in semitones (0-11) from a candidate tonic, already measured by
+ * whoever has the tuning-system knowledge to do so. common_practice_
+ * build_key (key_vocabulary.h) only labels a tonic/mode the caller
+ * already knows; this module is the piece that actually decides mode
+ * from raw pitch content.
+ *
+ * Matching is by unordered pitch-class-SET membership only, against
+ * exactly the two collections common-practice-minimal-v1 knows: major
+ * and natural minor (see README.md -- harmonic/melodic minor variants
+ * are deliberately excluded, same restraint as the rest of this
+ * framework). A collection must match one of the two exactly (all 7
+ * of that collection's pitch classes present, no others) to identify;
+ * the two collections never share their full 7-element set, so no
+ * input can validly match both.
+ */
+
+/*
+ * Returns true and sets *out to the matching mode when
+ * tonic_relative_pitch_classes (each 0-11, duplicates ignored, order
+ * irrelevant) matches exactly the major or natural-minor pitch-class
+ * collection relative to the candidate tonic. Returns false (out
+ * untouched) when no match exists -- e.g. fewer than 7 distinct pitch
+ * classes, a value outside 0-11, or a collection this framework does
+ * not define as major or natural minor.
+ */
+bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
+                                        CommonPracticeKeyMode *out);
+
+/*
+ * Convenience: identifies the mode per common_practice_identify_key_mode
+ * and, on a match, builds the real Key for it via common_practice_
+ * build_key (see key_vocabulary.h for ownership rules on
+ * context_target_id and tonic_name requirements). Returns false with
+ * *out_key untouched when no mode matches; context_target_id ownership
+ * is unaffected by a no-match return (caller still owns it).
+ */
+bool common_practice_identify_key(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
+                                   const char *tonic_name, EntityID *context_target_id, Key **out_key);
+
+#endif

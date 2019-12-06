@@ -8,29 +8,21 @@
 #include "core/value.h"
 #include "identity/entity_id.h"
 #include "identity/schema_version.h"
-#include "interpretation/evidence.h"
 #include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
 #include "structure/structure.h"
 #include "theory/framework.h"
 
 /*
  * Behavioral-contract test: KeyEstimation conforms to the Analyzer
  * interface (analysis/analyzer.h) -- NULL input, a NULL region, a NULL
- * framework, and an empty candidate set are all rejected without
- * touching *out -- and its output carries the Interpretation/Evidence/
- * Uncertainty architecture TDD Sec242 requires: a claim naming the
- * best-fit candidate key, an Uncertainty holding the full candidate set
- * (key estimation is ambiguous, same as scale/chord identification),
- * and a referenced Evidence whose source names the Framework the
- * estimate was made under.
+ * framework, a missing tonic name, and an empty pitch-class set are all
+ * rejected without touching *out.
  *
- * Analysis-regression test: a fixed two-candidate set ("C major" 3/4,
- * "A natural minor" 1/4) under a fixed Framework
- * ("common-practice-tonal-harmony") always yields the same top pick,
- * the same Evidence strength/source, and the same full candidate set
- * on the Interpretation's Uncertainty -- pinning KeyEstimation's
- * behavior against a future refactor.
+ * Identification tests: a real major-key and a real minor-key pitch
+ * collection each resolve to a real Key (via frameworks/common-
+ * practice-minimal/key_identification.h) carried as this analyzer's
+ * Interpretation. A collection matching neither reports
+ * ANALYZER_ERR_ANALYSIS_FAILED rather than a forced guess.
  */
 
 static EntityID *make_id(const char *value) {
@@ -61,66 +53,83 @@ int main(void) {
     assert(untouched == (AnalysisResult *)0x1);
     assert(strcmp(KEY_ESTIMATION_ANALYZER.name, "KeyEstimation") == 0);
 
-    Structure *region = make_region("structure-section-1", "note-c4");
     Framework *framework;
-    assert(framework_create(make_id("framework-common-practice-tonal-harmony"),
-                             "common-practice-tonal-harmony", &framework) == FRAMEWORK_OK);
+    assert(framework_create(make_id("framework-common-practice-minimal"), "common-practice-minimal-v1", &framework) ==
+           FRAMEWORK_OK);
 
-    UncertaintyCandidate candidates[2] = {
-        {"C major", 3, 4},
-        {"A natural minor", 1, 4},
-    };
+    int c_major[] = {0, 2, 4, 5, 7, 9, 11};
+
+    Structure *no_region_check_region = make_region("structure-unused", "note-unused");
 
     /* Behavioral contract: a NULL region is rejected. */
-    KeyEstimationInput no_region_input = {NULL, framework, candidates, 2};
+    KeyEstimationInput no_region_input = {NULL, framework, "C", c_major, 7};
     AnalysisResult *no_region_result;
     assert(key_estimation_analyze(&no_region_input, NULL, NULL, &no_region_result) == ANALYZER_ERR_NULL_INPUT);
 
     /* Behavioral contract: a NULL framework is rejected. */
-    KeyEstimationInput no_framework_input = {region, NULL, candidates, 2};
+    KeyEstimationInput no_framework_input = {no_region_check_region, NULL, "C", c_major, 7};
     AnalysisResult *no_framework_result;
     assert(key_estimation_analyze(&no_framework_input, NULL, NULL, &no_framework_result) == ANALYZER_ERR_NULL_INPUT);
 
-    /* Behavioral contract: an empty candidate set is rejected. */
-    KeyEstimationInput no_candidates_input = {region, framework, NULL, 0};
-    AnalysisResult *no_candidates_result;
-    assert(key_estimation_analyze(&no_candidates_input, NULL, NULL, &no_candidates_result) ==
+    /* Behavioral contract: a missing tonic name is rejected. */
+    KeyEstimationInput no_tonic_input = {no_region_check_region, framework, NULL, c_major, 7};
+    AnalysisResult *no_tonic_result;
+    assert(key_estimation_analyze(&no_tonic_input, NULL, NULL, &no_tonic_result) == ANALYZER_ERR_NULL_INPUT);
+
+    /* Behavioral contract: an empty pitch-class set is rejected. */
+    KeyEstimationInput no_pitch_classes_input = {no_region_check_region, framework, "C", NULL, 0};
+    AnalysisResult *no_pitch_classes_result;
+    assert(key_estimation_analyze(&no_pitch_classes_input, NULL, NULL, &no_pitch_classes_result) ==
            ANALYZER_ERR_NULL_INPUT);
 
-    /* Analysis-regression: "C major" (3/4) beats "A natural minor" (1/4). */
-    KeyEstimationInput input = {region, framework, candidates, 2};
+    structure_destroy(no_region_check_region);
 
-    AnalysisResult *result;
-    assert(KEY_ESTIMATION_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
-    assert(analysis_result_interpretation_count(result) == 1);
-    assert(analysis_result_evidence_count(result) == 1);
+    /* Identification: a real major key. */
+    Structure *major_region = make_region("structure-c-major", "note-c-major-1");
+    KeyEstimationInput major_input = {major_region, framework, "C", c_major, 7};
+    AnalysisResult *major_result;
+    assert(KEY_ESTIMATION_ANALYZER.analyze(&major_input, NULL, NULL, &major_result) == ANALYZER_OK);
+    assert(analysis_result_interpretation_count(major_result) == 1);
+    assert(analysis_result_evidence_count(major_result) == 1);
 
-    const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "structure-section-1") == 0);
-    assert(interpretation_status(interpretation) == INTERPRETATION_STATUS_MACHINE_GENERATED);
+    const Interpretation *major_interpretation = analysis_result_interpretation_at(major_result, 0);
+    assert(strcmp(entity_id_value(interpretation_target_id(major_interpretation)), "structure-c-major") == 0);
+    assert(interpretation_framework_reference(major_interpretation) != NULL);
 
-    size_t claim_size;
-    const char *claim_content = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-    assert(claim_size == strlen("C major") + 1);
-    assert(strcmp(claim_content, "C major") == 0);
+    size_t major_claim_size;
+    const char *major_claim_content =
+        (const char *)value_content(interpretation_claim(major_interpretation), &major_claim_size);
+    assert(strcmp(major_claim_content, "C major") == 0);
 
-    const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
-    assert(uncertainty_kind(uncertainty) == UNCERTAINTY_KIND_CANDIDATE_SET);
-    assert(uncertainty_candidate_count(uncertainty) == 2);
-    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 0), "C major") == 0);
-    assert(uncertainty_candidate_weight_numerator_at(uncertainty, 0) == 3);
-    assert(uncertainty_candidate_weight_denominator_at(uncertainty, 0) == 4);
-    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 1), "A natural minor") == 0);
+    analysis_result_destroy(major_result);
+    structure_destroy(major_region);
 
-    const Evidence *evidence = analysis_result_evidence_at(result, 0);
-    assert(strcmp(evidence_method(evidence), "framework-relative key estimation") == 0);
-    assert(strcmp(evidence_source(evidence), "common-practice-tonal-harmony") == 0);
-    assert(evidence_strength_numerator(evidence) == 3);
-    assert(evidence_strength_denominator(evidence) == 4);
+    /* Identification: a real minor key. */
+    int a_minor[] = {0, 2, 3, 5, 7, 8, 10};
+    Structure *minor_region = make_region("structure-a-minor", "note-a-minor-1");
+    KeyEstimationInput minor_input = {minor_region, framework, "A", a_minor, 7};
+    AnalysisResult *minor_result;
+    assert(KEY_ESTIMATION_ANALYZER.analyze(&minor_input, NULL, NULL, &minor_result) == ANALYZER_OK);
 
-    analysis_result_destroy(result);
+    const Interpretation *minor_interpretation = analysis_result_interpretation_at(minor_result, 0);
+    size_t minor_claim_size;
+    const char *minor_claim_content =
+        (const char *)value_content(interpretation_claim(minor_interpretation), &minor_claim_size);
+    assert(strcmp(minor_claim_content, "A minor") == 0);
+
+    analysis_result_destroy(minor_result);
+    structure_destroy(minor_region);
+
+    /* No match: neither major nor natural minor -- reported as a failed
+       analysis, never a forced guess. */
+    int chromatic_cluster[] = {0, 1, 2, 3, 4, 5, 6};
+    Structure *no_match_region = make_region("structure-no-match", "note-no-match-1");
+    KeyEstimationInput no_match_input = {no_match_region, framework, "C", chromatic_cluster, 7};
+    AnalysisResult *no_match_result;
+    assert(key_estimation_analyze(&no_match_input, NULL, NULL, &no_match_result) == ANALYZER_ERR_ANALYSIS_FAILED);
+    structure_destroy(no_match_region);
+
     framework_destroy(framework);
-    structure_destroy(region);
 
     printf("test_key_estimation: ok\n");
     return 0;

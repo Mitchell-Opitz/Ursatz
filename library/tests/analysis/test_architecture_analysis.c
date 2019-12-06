@@ -13,13 +13,42 @@
  * L8 siblings music-transform/music-generation.
  * Dependency & Layer Spec v2 §2, §3.
  *
+ * ChordIdentification and KeyEstimation are also legitimately compiled
+ * into frameworks/common-practice-minimal/ (see the comment in
+ * src/CMakeLists.txt on why -- a circular library dependency otherwise)
+ * and so include that module's own flat, prefix-less headers directly
+ * (e.g. "triad_identification.h", not "frameworks/.../triad_
+ * identification.h"). COMMON_PRACTICE_MINIMAL_HEADERS below is an exact
+ * allowlist of those specific filenames -- not a directory prefix --
+ * so this does not open the door to depending on any other
+ * framework-shaped module beyond what's explicitly named here.
+ *
  * Scans every .h/.c file under src/analysis/ and flags any local
  * include ("...") that does not point into identity/, core/, time/,
  * pitch/, events/, containers/, structure/, context/, semantics/,
  * relationship/, interpretation/, theory/, rules/, or analysis/
- * itself. The scan is directory-driven rather than a fixed file
- * list, so this test does not need editing as analysis/ grows.
+ * itself, and is not one of COMMON_PRACTICE_MINIMAL_HEADERS. The scan
+ * is directory-driven rather than a fixed file list, so this test does
+ * not need editing as analysis/ grows.
  */
+
+static const char *COMMON_PRACTICE_MINIMAL_HEADERS[] = {
+    "chord_vocabulary.h",
+    "key_vocabulary.h",
+    "triad_identification.h",
+    "key_identification.h",
+};
+#define COMMON_PRACTICE_MINIMAL_HEADER_COUNT \
+    (sizeof(COMMON_PRACTICE_MINIMAL_HEADERS) / sizeof(COMMON_PRACTICE_MINIMAL_HEADERS[0]))
+
+static int is_common_practice_minimal_header(const char *include_path) {
+    for (size_t i = 0; i < COMMON_PRACTICE_MINIMAL_HEADER_COUNT; i++) {
+        if (strcmp(include_path, COMMON_PRACTICE_MINIMAL_HEADERS[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 static int check_file(const char *path) {
     FILE *f = fopen(path, "r");
@@ -51,11 +80,12 @@ static int check_file(const char *path) {
             strncmp(start, "structure/", 10) != 0 && strncmp(start, "context/", 8) != 0 &&
             strncmp(start, "semantics/", 10) != 0 && strncmp(start, "relationship/", 13) != 0 &&
             strncmp(start, "interpretation/", 15) != 0 && strncmp(start, "theory/", 7) != 0 &&
-            strncmp(start, "rules/", 6) != 0 && strncmp(start, "analysis/", 9) != 0) {
+            strncmp(start, "rules/", 6) != 0 && strncmp(start, "analysis/", 9) != 0 &&
+            !is_common_practice_minimal_header(start)) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "theory/, rules/, or analysis/)\n",
+                    "theory/, rules/, analysis/, or the common-practice-minimal header allowlist)\n",
                     path, start);
             violations++;
         }
