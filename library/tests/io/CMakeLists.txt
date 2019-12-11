@@ -1,1 +1,2 @@
+add_ursatz_test(smf_reader)
 add_ursatz_architecture_test(io)
