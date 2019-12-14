@@ -116,6 +116,7 @@ add_library(ursatz
     generation/candidate_evaluator.c
     generation/generation_record.c
     io/midi_importer.c
+    io/midi_event_decoder.c
     io/smf_reader.c
 )
 target_include_directories(ursatz PUBLIC
