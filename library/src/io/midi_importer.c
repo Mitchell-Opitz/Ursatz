@@ -1,14 +1,320 @@
 #include "io/midi_importer.h"
 
-/* Populated by later commits in this module. Present now so the
-   library target and architecture-gate test have something to build
-   against from the first commit. */
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "core/provenance_reference.h"
+#include "identity/entity_id.h"
+#include "io/midi_event_decoder.h"
+#include "io/smf_reader.h"
+#include "pitch/pitch_identity.h"
+#include "pitch/pitch_numeric_value.h"
+#include "pitch/tuning_system.h"
+#include "time/duration.h"
+#include "time/musical_time.h"
+#include "time/temporal_anchor.h"
+
+/*
+ * MIDIImporter: see midi_importer.h and docs/modules/io.md for scope.
+ *
+ * Fixed-tempo assumption: this importer does not read tempo meta-events
+ * (out of scope, see docs/modules/io.md). MusicalTime/Duration are
+ * produced in seconds, computed under a fixed assumed tempo of 120 BPM
+ * -- the MIDI spec's own default when no tempo meta-event is present --
+ * combined with the header's ticks-per-quarter-note (PPQN) division
+ * field: seconds_per_tick = 60 / (120 * PPQN) = 1 / (2 * PPQN). This is
+ * an exact rational (Law 19 compliant): position/duration in ticks
+ * becomes numerator = ticks, denominator = 2 * PPQN.
+ *
+ * The provenance entity id "midi-importer-v1" identifies this importer
+ * as the source of every NoteEvent it produces. No ProvenanceActivity/
+ * ProvenanceAgent type exists in this codebase yet (deliberately not
+ * added in this pass); every NoteEvent's ProvenanceReference points at
+ * this one stable EntityID instead.
+ */
+
+#define MIDI_IMPORTER_PROVENANCE_ID "midi-importer-v1"
+
+typedef struct {
+    uint32_t start_tick;
+    uint32_t duration_ticks;
+    uint8_t note;
+    size_t order;
+} MatchedNote;
+
+static int matched_note_compare(const void *a, const void *b) {
+    const MatchedNote *ma = a;
+    const MatchedNote *mb = b;
+    if (ma->start_tick != mb->start_tick) {
+        return (ma->start_tick < mb->start_tick) ? -1 : 1;
+    }
+    if (ma->order != mb->order) {
+        return (ma->order < mb->order) ? -1 : 1;
+    }
+    return 0;
+}
+
+/* Pairs note-on/note-off events (matched by channel+note, earliest
+   unmatched note-on to earliest following note-off, per channel+note)
+   within one track's already-decoded event list. Returns 0 on success
+   (an unmatched note-on at end of track is a malformed-file condition)
+   and writes *out_count matched notes into a newly malloc'd array. */
+static int pair_notes(const MidiNoteEvent *events, size_t event_count, MatchedNote **out_matched,
+                       size_t *out_count) {
+    unsigned char *used = calloc(event_count, sizeof(unsigned char));
+    if (used == NULL && event_count > 0) {
+        return -1;
+    }
+
+    MatchedNote *matched = malloc(sizeof(MatchedNote) * (event_count / 2 + 1));
+    if (matched == NULL) {
+        free(used);
+        return -1;
+    }
+    size_t matched_count = 0;
+
+    for (size_t i = 0; i < event_count; i++) {
+        if (events[i].kind != MIDI_NOTE_ON || used[i]) {
+            continue;
+        }
+        used[i] = 1;
+
+        size_t off_index = event_count;
+        for (size_t j = i + 1; j < event_count; j++) {
+            if (used[j]) {
+                continue;
+            }
+            if (events[j].kind == MIDI_NOTE_OFF && events[j].channel == events[i].channel &&
+                events[j].note == events[i].note) {
+                off_index = j;
+                break;
+            }
+        }
+
+        if (off_index == event_count) {
+            /* Unmatched note-on: malformed for this importer's scope. */
+            free(used);
+            free(matched);
+            return -1;
+        }
+        used[off_index] = 1;
+
+        matched[matched_count].start_tick = events[i].tick;
+        matched[matched_count].duration_ticks = events[off_index].tick - events[i].tick;
+        matched[matched_count].note = events[i].note;
+        matched[matched_count].order = i;
+        matched_count++;
+    }
+
+    free(used);
+    *out_matched = matched;
+    *out_count = matched_count;
+    return 0;
+}
+
+static void destroy_note_events(NoteEvent **events, size_t count) {
+    if (events == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+    }
+    free(events);
+}
+
+static NoteEventResult build_note_event(const MatchedNote *matched, unsigned long ticks_denominator,
+                                         const TuningSystem *tuning_system, size_t sequence_number,
+                                         NoteEvent **out) {
+    char id_buf[32];
+    snprintf(id_buf, sizeof(id_buf), "midi-note-%zu", sequence_number);
+
+    EntityID *id = NULL;
+    if (entity_id_create(id_buf, &id) != ENTITY_ID_OK) {
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    MusicalTime *position = NULL;
+    if (musical_time_create((long)matched->start_tick, ticks_denominator, &position) != MUSICAL_TIME_OK) {
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    TemporalAnchor *anchor = NULL;
+    if (temporal_anchor_create(position, &anchor) != TEMPORAL_ANCHOR_OK) {
+        musical_time_destroy(position);
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    Duration *duration = NULL;
+    if (duration_create((long)matched->duration_ticks, ticks_denominator, &duration) != DURATION_OK) {
+        temporal_anchor_destroy(anchor);
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    PitchNumericValue *numeric = NULL;
+    if (pitch_numeric_value_create(tuning_system, matched->note, 1, &numeric) != PITCH_NUMERIC_VALUE_OK) {
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    PitchIdentity *pitch = NULL;
+    PitchNumericValueToIdentityResult to_identity_result = pitch_numeric_value_to_identity(numeric, &pitch);
+    pitch_numeric_value_destroy(numeric);
+    if (to_identity_result != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK) {
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    EntityID *provenance_id = NULL;
+    if (entity_id_create(MIDI_IMPORTER_PROVENANCE_ID, &provenance_id) != ENTITY_ID_OK) {
+        pitch_identity_destroy(pitch);
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    ProvenanceReference *provenance = NULL;
+    if (provenance_reference_create_present(provenance_id, &provenance) != PROVENANCE_REFERENCE_OK) {
+        entity_id_destroy(provenance_id);
+        pitch_identity_destroy(pitch);
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
+    return note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, out);
+}
 
 MidiImportResult midi_importer_import(const unsigned char *data, size_t size, NoteEvent ***out_events,
                                        size_t *out_count) {
-    (void)data;
-    (void)size;
-    (void)out_events;
-    (void)out_count;
-    return MIDI_IMPORT_ERR_ALLOC;
+    if (data == NULL || out_events == NULL || out_count == NULL) {
+        return MIDI_IMPORT_ERR_NULL_BUFFER;
+    }
+
+    SmfHeader header;
+    SmfTrack *tracks = NULL;
+    size_t track_count = 0;
+    SmfReaderResult smf_result = smf_reader_parse(data, size, &header, &tracks, &track_count);
+    if (smf_result != SMF_READER_OK) {
+        switch (smf_result) {
+        case SMF_READER_ERR_NULL_BUFFER:
+            return MIDI_IMPORT_ERR_NULL_BUFFER;
+        case SMF_READER_ERR_TRUNCATED:
+            return MIDI_IMPORT_ERR_TRUNCATED;
+        case SMF_READER_ERR_UNSUPPORTED_FORMAT:
+            return MIDI_IMPORT_ERR_UNSUPPORTED_FORMAT;
+        case SMF_READER_ERR_UNSUPPORTED_DIVISION:
+            return MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION;
+        case SMF_READER_ERR_BAD_TRACK:
+            return MIDI_IMPORT_ERR_BAD_TRACK;
+        case SMF_READER_ERR_BAD_HEADER:
+        default:
+            return MIDI_IMPORT_ERR_BAD_HEADER;
+        }
+    }
+
+    unsigned long ticks_denominator = 2UL * (unsigned long)header.division;
+
+    EntityID *tuning_id = NULL;
+    if (entity_id_create("midi-note-number", &tuning_id) != ENTITY_ID_OK) {
+        free(tracks);
+        return MIDI_IMPORT_ERR_ALLOC;
+    }
+    TuningSystem *tuning_system = NULL;
+    if (tuning_system_create(tuning_id, "MIDI note number", &tuning_system) != TUNING_SYSTEM_OK) {
+        entity_id_destroy(tuning_id);
+        free(tracks);
+        return MIDI_IMPORT_ERR_ALLOC;
+    }
+
+    MatchedNote *all_matched = NULL;
+    size_t all_matched_count = 0;
+    size_t all_matched_capacity = 0;
+    MidiImportResult failure = MIDI_IMPORT_OK;
+
+    for (size_t t = 0; t < track_count && failure == MIDI_IMPORT_OK; t++) {
+        MidiNoteEvent *events = NULL;
+        size_t event_count = 0;
+        MidiEventDecoderResult decode_result =
+            midi_event_decoder_decode(tracks[t].data, tracks[t].size, &events, &event_count);
+        if (decode_result != MIDI_EVENT_DECODER_OK) {
+            failure = MIDI_IMPORT_ERR_BAD_TRACK;
+            break;
+        }
+
+        MatchedNote *matched = NULL;
+        size_t matched_count = 0;
+        int pair_result = pair_notes(events, event_count, &matched, &matched_count);
+        free(events);
+        if (pair_result != 0) {
+            failure = MIDI_IMPORT_ERR_BAD_TRACK;
+            break;
+        }
+
+        if (all_matched_count + matched_count > all_matched_capacity) {
+            size_t new_capacity = all_matched_count + matched_count;
+            MatchedNote *grown = realloc(all_matched, sizeof(MatchedNote) * new_capacity);
+            if (grown == NULL) {
+                free(matched);
+                failure = MIDI_IMPORT_ERR_ALLOC;
+                break;
+            }
+            all_matched = grown;
+            all_matched_capacity = new_capacity;
+        }
+        for (size_t i = 0; i < matched_count; i++) {
+            matched[i].order = all_matched_count + i;
+            all_matched[all_matched_count + i] = matched[i];
+        }
+        all_matched_count += matched_count;
+        free(matched);
+    }
+
+    free(tracks);
+
+    if (failure != MIDI_IMPORT_OK) {
+        free(all_matched);
+        tuning_system_destroy(tuning_system);
+        return failure;
+    }
+
+    qsort(all_matched, all_matched_count, sizeof(MatchedNote), matched_note_compare);
+
+    NoteEvent **note_events = NULL;
+    if (all_matched_count > 0) {
+        note_events = malloc(sizeof(NoteEvent *) * all_matched_count);
+        if (note_events == NULL) {
+            free(all_matched);
+            tuning_system_destroy(tuning_system);
+            return MIDI_IMPORT_ERR_ALLOC;
+        }
+    }
+
+    size_t built_count = 0;
+    for (size_t i = 0; i < all_matched_count; i++) {
+        NoteEvent *note_event = NULL;
+        NoteEventResult r = build_note_event(&all_matched[i], ticks_denominator, tuning_system, i, &note_event);
+        if (r != NOTE_EVENT_OK) {
+            destroy_note_events(note_events, built_count);
+            free(all_matched);
+            tuning_system_destroy(tuning_system);
+            return MIDI_IMPORT_ERR_ALLOC;
+        }
+        note_events[built_count++] = note_event;
+    }
+
+    free(all_matched);
+    tuning_system_destroy(tuning_system);
+
+    *out_events = note_events;
+    *out_count = built_count;
+    return MIDI_IMPORT_OK;
 }
