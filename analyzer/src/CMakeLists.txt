@@ -4,6 +4,8 @@ add_library(ursatz_analyzer_pipeline
     pipeline/pitch_class_util.c
     pipeline/key_pipeline.c
     pipeline/chord_pipeline.c
+    pipeline/analysis_report.c
+    pipeline/analysis_pipeline.c
 )
 target_include_directories(ursatz_analyzer_pipeline PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz_analyzer_pipeline PUBLIC ursatz common_practice_minimal)
