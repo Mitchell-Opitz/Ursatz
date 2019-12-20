@@ -1,0 +1,3 @@
+add_executable(test_analysis_pipeline test_analysis_pipeline.c)
+target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer_pipeline)
+add_test(NAME test_analysis_pipeline COMMAND test_analysis_pipeline)
