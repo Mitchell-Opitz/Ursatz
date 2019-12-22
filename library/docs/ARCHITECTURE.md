@@ -57,7 +57,7 @@ Domain Ontology Specification v0.2 marks three L1 reference types, `VoiceReferen
 | transform | L8 | Implemented | `docs/modules/transform.md` |
 | analysis | L8 | Implemented | `docs/modules/analysis.md` |
 | generation | L8 | Implemented (partial, see doc) | `docs/modules/generation.md` |
-| io | L9 | In progress (partial, see doc) | `docs/modules/io.md` |
+| io | L9 | Implemented (partial, see doc) | `docs/modules/io.md` |
 
 "Partial" means some types from the module's Registry row are implemented and some are explicitly deferred; the module's own doc lists which.
 
