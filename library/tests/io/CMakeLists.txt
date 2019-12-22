@@ -1,3 +1,4 @@
 add_ursatz_test(smf_reader)
 add_ursatz_test(midi_event_decoder)
+add_ursatz_test(midi_importer)
 add_ursatz_architecture_test(io)
