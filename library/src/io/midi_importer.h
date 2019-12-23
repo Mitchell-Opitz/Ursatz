@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "events/note_event.h"
+#include "pitch/pitch_numeric_value.h"
 
 /*
  * MIDIImporter (L9, music-io): parses a Standard MIDI File (SMF) type 0
@@ -31,11 +32,23 @@ typedef enum {
  * order). Caller owns the array and every NoteEvent in it (destroy each
  * with note_event_destroy, then free the array).
  *
- * Fails cleanly (no partial *out_events, no crash) on anything not a
- * well-formed SMF 0/1 file: bad/truncated header, SMF type 2, SMPTE-
- * format division, truncated track data, or malformed event bytes.
+ * *out_pitch_values receives a second newly allocated array, also
+ * *out_count entries, index-paired with *out_events: out_pitch_values[i]
+ * is the PitchNumericValue this importer computed for out_events[i]'s
+ * pitch before converting it into the opaque PitchIdentity stored on the
+ * NoteEvent (the conversion is one-directional and does not support
+ * recovering this value from the NoteEvent afterward). Caller owns the
+ * array and every PitchNumericValue in it (destroy each with
+ * pitch_numeric_value_destroy, then free the array). This does not
+ * change PitchIdentity's own guarantees; it only exposes a value this
+ * importer already had on hand.
+ *
+ * Fails cleanly (no partial *out_events, no partial *out_pitch_values,
+ * no crash) on anything not a well-formed SMF 0/1 file: bad/truncated
+ * header, SMF type 2, SMPTE-format division, truncated track data, or
+ * malformed event bytes.
  */
 MidiImportResult midi_importer_import(const unsigned char *data, size_t size, NoteEvent ***out_events,
-                                       size_t *out_count);
+                                       PitchNumericValue ***out_pitch_values, size_t *out_count);
 
 #endif

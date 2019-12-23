@@ -114,8 +114,9 @@ static void test_sequence_of_notes(void) {
     size_t size = build_smf_type0(buf, 96, track, sizeof(track));
 
     NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &count);
+    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
 
     assert(r == MIDI_IMPORT_OK);
     assert(count == 2);
@@ -125,16 +126,22 @@ static void test_sequence_of_notes(void) {
     assert_duration(events[0], 96, 192);
     assert_pitch(events[0], 0x3C);
     assert_provenance(events[0]);
+    assert(pitch_numeric_value_position_numerator(pitch_values[0]) == 0x3C);
+    assert(pitch_numeric_value_position_denominator(pitch_values[0]) == 1);
 
     assert_position(events[1], 96, 192);
     assert_duration(events[1], 96, 192);
     assert_pitch(events[1], 0x3E);
     assert_provenance(events[1]);
+    assert(pitch_numeric_value_position_numerator(pitch_values[1]) == 0x3E);
+    assert(pitch_numeric_value_position_denominator(pitch_values[1]) == 1);
 
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
     }
     free(events);
+    free(pitch_values);
 }
 
 static void test_simultaneous_chord(void) {
@@ -153,8 +160,9 @@ static void test_simultaneous_chord(void) {
     size_t size = build_smf_type0(buf, 96, track, sizeof(track));
 
     NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &count);
+    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
 
     assert(r == MIDI_IMPORT_OK);
     assert(count == 3);
@@ -170,10 +178,13 @@ static void test_simultaneous_chord(void) {
         PitchIdentity *p67 = make_expected_pitch(0x43);
         if (pitch_identity_equals(note_event_pitch(events[i]), p60)) {
             seen_60 = 1;
+            assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x3C);
         } else if (pitch_identity_equals(note_event_pitch(events[i]), p64)) {
             seen_64 = 1;
+            assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x40);
         } else if (pitch_identity_equals(note_event_pitch(events[i]), p67)) {
             seen_67 = 1;
+            assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x43);
         }
         pitch_identity_destroy(p60);
         pitch_identity_destroy(p64);
@@ -183,8 +194,10 @@ static void test_simultaneous_chord(void) {
 
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
     }
     free(events);
+    free(pitch_values);
 }
 
 static void test_rejects_truncated_file(void) {
@@ -195,17 +208,20 @@ static void test_rejects_truncated_file(void) {
     memcpy(buf + 4, len, 4);
 
     NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, sizeof(buf), &events, &count);
+    MidiImportResult r = midi_importer_import(buf, sizeof(buf), &events, &pitch_values, &count);
 
     assert(r == MIDI_IMPORT_ERR_TRUNCATED);
     assert(events == NULL);
+    assert(pitch_values == NULL);
 }
 
 static void test_rejects_null_buffer(void) {
     NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(NULL, 0, &events, &count);
+    MidiImportResult r = midi_importer_import(NULL, 0, &events, &pitch_values, &count);
     assert(r == MIDI_IMPORT_ERR_NULL_BUFFER);
 }
 
