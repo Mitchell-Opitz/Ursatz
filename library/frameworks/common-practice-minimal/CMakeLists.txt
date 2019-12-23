@@ -4,12 +4,12 @@ add_library(common_practice_minimal
     key_vocabulary.c
     triad_identification.c
     key_identification.c
-    ${CMAKE_SOURCE_DIR}/src/analysis/chord_identification.c
-    ${CMAKE_SOURCE_DIR}/src/analysis/key_estimation.c
+    ${PROJECT_SOURCE_DIR}/src/analysis/chord_identification.c
+    ${PROJECT_SOURCE_DIR}/src/analysis/key_estimation.c
 )
 target_include_directories(common_practice_minimal PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
 )
 target_link_libraries(common_practice_minimal PUBLIC ursatz)
 

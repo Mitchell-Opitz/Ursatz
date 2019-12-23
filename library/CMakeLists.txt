@@ -4,8 +4,10 @@ project(Ursatz C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-enable_testing()
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 add_subdirectory(src)
-add_subdirectory(tests)
 add_subdirectory(frameworks)
