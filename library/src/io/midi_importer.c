@@ -122,9 +122,19 @@ static void destroy_note_events(NoteEvent **events, size_t count) {
     free(events);
 }
 
+static void destroy_pitch_values(PitchNumericValue **values, size_t count) {
+    if (values == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        pitch_numeric_value_destroy(values[i]);
+    }
+    free(values);
+}
+
 static NoteEventResult build_note_event(const MatchedNote *matched, unsigned long ticks_denominator,
-                                         const TuningSystem *tuning_system, size_t sequence_number,
-                                         NoteEvent **out) {
+                                         const TuningSystem *tuning_system, size_t sequence_number, NoteEvent **out,
+                                         PitchNumericValue **out_pitch_value) {
     char id_buf[32];
     snprintf(id_buf, sizeof(id_buf), "midi-note-%zu", sequence_number);
 
@@ -163,8 +173,8 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
 
     PitchIdentity *pitch = NULL;
     PitchNumericValueToIdentityResult to_identity_result = pitch_numeric_value_to_identity(numeric, &pitch);
-    pitch_numeric_value_destroy(numeric);
     if (to_identity_result != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK) {
+        pitch_numeric_value_destroy(numeric);
         duration_destroy(duration);
         temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
@@ -173,6 +183,7 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
 
     EntityID *provenance_id = NULL;
     if (entity_id_create(MIDI_IMPORTER_PROVENANCE_ID, &provenance_id) != ENTITY_ID_OK) {
+        pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
         duration_destroy(duration);
         temporal_anchor_destroy(anchor);
@@ -183,6 +194,7 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     ProvenanceReference *provenance = NULL;
     if (provenance_reference_create_present(provenance_id, &provenance) != PROVENANCE_REFERENCE_OK) {
         entity_id_destroy(provenance_id);
+        pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
         duration_destroy(duration);
         temporal_anchor_destroy(anchor);
@@ -190,12 +202,19 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         return NOTE_EVENT_ERR_ALLOC;
     }
 
-    return note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, out);
+    NoteEventResult result = note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, out);
+    if (result != NOTE_EVENT_OK) {
+        pitch_numeric_value_destroy(numeric);
+        return result;
+    }
+
+    *out_pitch_value = numeric;
+    return NOTE_EVENT_OK;
 }
 
 MidiImportResult midi_importer_import(const unsigned char *data, size_t size, NoteEvent ***out_events,
-                                       size_t *out_count) {
-    if (data == NULL || out_events == NULL || out_count == NULL) {
+                                       PitchNumericValue ***out_pitch_values, size_t *out_count) {
+    if (data == NULL || out_events == NULL || out_pitch_values == NULL || out_count == NULL) {
         return MIDI_IMPORT_ERR_NULL_BUFFER;
     }
 
@@ -289,9 +308,13 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
     qsort(all_matched, all_matched_count, sizeof(MatchedNote), matched_note_compare);
 
     NoteEvent **note_events = NULL;
+    PitchNumericValue **pitch_values = NULL;
     if (all_matched_count > 0) {
         note_events = malloc(sizeof(NoteEvent *) * all_matched_count);
-        if (note_events == NULL) {
+        pitch_values = malloc(sizeof(PitchNumericValue *) * all_matched_count);
+        if (note_events == NULL || pitch_values == NULL) {
+            free(note_events);
+            free(pitch_values);
             free(all_matched);
             tuning_system_destroy(tuning_system);
             return MIDI_IMPORT_ERR_ALLOC;
@@ -301,20 +324,26 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
     size_t built_count = 0;
     for (size_t i = 0; i < all_matched_count; i++) {
         NoteEvent *note_event = NULL;
-        NoteEventResult r = build_note_event(&all_matched[i], ticks_denominator, tuning_system, i, &note_event);
+        PitchNumericValue *pitch_value = NULL;
+        NoteEventResult r =
+            build_note_event(&all_matched[i], ticks_denominator, tuning_system, i, &note_event, &pitch_value);
         if (r != NOTE_EVENT_OK) {
             destroy_note_events(note_events, built_count);
+            destroy_pitch_values(pitch_values, built_count);
             free(all_matched);
             tuning_system_destroy(tuning_system);
             return MIDI_IMPORT_ERR_ALLOC;
         }
-        note_events[built_count++] = note_event;
+        note_events[built_count] = note_event;
+        pitch_values[built_count] = pitch_value;
+        built_count++;
     }
 
     free(all_matched);
     tuning_system_destroy(tuning_system);
 
     *out_events = note_events;
+    *out_pitch_values = pitch_values;
     *out_count = built_count;
     return MIDI_IMPORT_OK;
 }
