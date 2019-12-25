@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.URSATZ_SUBMODULE_TOKEN }}
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.URSATZ_SUBMODULE_TOKEN }}@github.com/Mitchell-Opitz/Ursatz".insteadOf "https://github.com/Mitchell-Opitz/Ursatz"
+          git submodule update --init --recursive
       - name: Configure
         run: cmake -S . -B build
       - name: Build
