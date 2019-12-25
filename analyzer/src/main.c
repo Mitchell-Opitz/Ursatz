@@ -1,7 +1,11 @@
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "pipeline/analysis_pipeline.h"
+#include "pipeline/markdown_report.h"
 #include "pipeline/midi_pipeline.h"
+#include "pipeline/report_writer.h"
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -15,9 +19,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Received file: %s\n", path);
-    printf("Imported %zu note events\n", notes.count);
-
     AnalysisReport report;
     if (!run_analysis_pipeline(&notes, &report)) {
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
@@ -25,14 +26,31 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Analyzed %zu chord regions, %d key regions\n", report.entry_count, report.key_found ? 1 : 0);
-    for (size_t i = 0; i < report.entry_count; i++) {
-        const AnalysisReportEntry *entry = &report.entries[i];
-        printf("  time=%ld/%lu chord=%s key=%s\n", entry->time_numerator, entry->time_denominator,
-               entry->chord_label, entry->key_label);
+    char *markdown = markdown_report_render(path, &report);
+    if (!markdown) {
+        fprintf(stderr, "Error: out of memory while rendering report for '%s'\n", path);
+        analysis_report_destroy(&report);
+        imported_notes_destroy(&notes);
+        return 1;
     }
 
+    char *output_path = derive_report_path(path);
+    if (!output_path) {
+        fprintf(stderr, "Error: out of memory while deriving report path for '%s'\n", path);
+        free(markdown);
+        analysis_report_destroy(&report);
+        imported_notes_destroy(&notes);
+        return 1;
+    }
+
+    bool wrote = write_report_file(output_path, markdown);
+    if (wrote) {
+        printf("Report written to %s\n", output_path);
+    }
+
+    free(output_path);
+    free(markdown);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
-    return 0;
+    return wrote ? 0 : 1;
 }
