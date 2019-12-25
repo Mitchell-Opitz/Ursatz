@@ -12,6 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          token: ${{ secrets.URSATZ_SUBMODULE_TOKEN }}
       - name: Configure
         run: cmake -S . -B build
       - name: Build
