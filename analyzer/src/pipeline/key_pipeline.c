@@ -1,5 +1,6 @@
 #include "pipeline/key_pipeline.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -66,9 +67,38 @@ static Structure *build_whole_piece_region(NoteEvent *const *events, size_t coun
     return region;
 }
 
-KeyEstimate estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count) {
+/* Major-key tonic pitch class for each sharps/flats count 0-7, per the
+   circle of fifths (index 0 = C, no accidentals). The minor tonic
+   pitch class for the same count is always 9 semitones above the
+   major tonic (the relative minor), regardless of sharps/flats sign. */
+static const int SHARPS_MAJOR_TONIC[8] = {0, 7, 2, 9, 4, 11, 6, 1};  /* C G D A E B F# C# */
+static const int FLATS_MAJOR_TONIC[8] = {0, 5, 10, 3, 8, 1, 6, 11};  /* C F Bb Eb Ab Db Gb Cb */
+
+static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyEstimate *out) {
+    if (!key_signature.found || key_signature.sharps_flats < -7 || key_signature.sharps_flats > 7) {
+        return false;
+    }
+
+    int abs_count = key_signature.sharps_flats < 0 ? -key_signature.sharps_flats : key_signature.sharps_flats;
+    int major_tonic = key_signature.sharps_flats >= 0 ? SHARPS_MAJOR_TONIC[abs_count] : FLATS_MAJOR_TONIC[abs_count];
+    int tonic = key_signature.is_minor ? (major_tonic + 9) % 12 : major_tonic;
+
+    snprintf(out->label, sizeof(out->label), "%s %s", PITCH_CLASS_NAMES[tonic],
+             key_signature.is_minor ? "minor" : "major");
+    out->tonic_pitch_class = tonic;
+    out->is_major = !key_signature.is_minor;
+    out->found = true;
+    return true;
+}
+
+KeyEstimate estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
+                                 MidiKeySignature key_signature) {
     KeyEstimate estimate = {false, "", 0, false};
     if (count == 0) {
+        return estimate;
+    }
+
+    if (key_estimate_from_key_signature(key_signature, &estimate)) {
         return estimate;
     }
 

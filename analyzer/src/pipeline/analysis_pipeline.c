@@ -28,7 +28,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         return false;
     }
 
-    KeyEstimate key = estimate_global_key(notes->events, notes->pitch_values, notes->count);
+    KeyEstimate key = estimate_global_key(notes->events, notes->pitch_values, notes->count, notes->key_signature);
 
     AnalysisReportEntry *entries = malloc(sizeof(AnalysisReportEntry) * grouping.group_count);
     if (!entries) {
