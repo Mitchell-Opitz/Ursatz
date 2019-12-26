@@ -52,9 +52,6 @@ bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, 
 
     int distinct[12];
     size_t distinct_count = count_distinct(tonic_relative_pitch_classes, pitch_class_count, distinct, 12);
-    if (distinct_count != KEY_PITCH_CLASS_COUNT) {
-        return false;
-    }
 
     if (matches_collection(distinct, distinct_count, MAJOR_PITCH_CLASSES)) {
         *out = COMMON_PRACTICE_KEY_MAJOR;
