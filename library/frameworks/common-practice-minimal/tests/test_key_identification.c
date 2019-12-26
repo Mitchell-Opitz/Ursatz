@@ -53,6 +53,13 @@ int main(void) {
     int chromatic_cluster[] = {0, 1, 2, 3, 4, 5, 6};
     assert(!common_practice_identify_key_mode(chromatic_cluster, 7, &unused_mode));
 
+    /* Real-world case: all 7 diatonic pitch classes plus one extra
+       chromatic tone (e.g. a passing/neighbor tone) still identifies --
+       extras beyond the required 7 do not block the match. */
+    int c_major_with_passing_tone[] = {0, 1, 2, 4, 5, 7, 9, 11};
+    check_identification(c_major_with_passing_tone, 8, COMMON_PRACTICE_KEY_MAJOR, "C", "C major",
+                         "context-identify-c-major-with-passing-tone");
+
     printf("test_key_identification: ok\n");
     return 0;
 }
