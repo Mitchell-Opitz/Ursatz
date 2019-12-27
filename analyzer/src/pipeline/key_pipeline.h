@@ -28,14 +28,23 @@ typedef struct {
  * source; a malformed/out-of-range key signature is treated the same
  * as key_signature.found == false.
  *
- * Otherwise, this function falls back to a brute-force search: it does
- * not search candidate tonics itself per analysis/key_estimation.h (the
- * caller supplies the candidate), so it tries each of the 12 pitch
- * classes as candidate tonic in order (C, C#, D, ...) and reports the
- * first one whose relative pitch-class collection KeyEstimation
- * recognizes as major or natural minor. If none match, found is false.
+ * Otherwise, priority_tonics (priority_tonic_count entries, each 0-11,
+ * duplicates allowed) is tried next, in order -- meant for the bass
+ * pitch class of the piece's first and last chord, the caller's best
+ * guess at the tonic when no key signature is present. The first
+ * priority tonic whose relative pitch-class collection KeyEstimation
+ * recognizes as major or natural minor wins.
+ *
+ * Only if every priority tonic misses does this function fall back to
+ * a brute-force search: it does not search candidate tonics itself per
+ * analysis/key_estimation.h (the caller supplies the candidate), so it
+ * tries each of the 12 pitch classes as candidate tonic in order (C,
+ * C#, D, ...) and reports the first one whose relative pitch-class
+ * collection KeyEstimation recognizes as major or natural minor. If
+ * none match, found is false.
  */
 KeyEstimate estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                 MidiKeySignature key_signature);
+                                 MidiKeySignature key_signature, const int *priority_tonics,
+                                 size_t priority_tonic_count);
 
 #endif

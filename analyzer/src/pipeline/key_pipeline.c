@@ -91,8 +91,41 @@ static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyE
     return true;
 }
 
+/* Tries one candidate tonic against KeyEstimation (via the same Structure
+   region/relative-pitch-class buffer every candidate reuses) and, on a
+   match, fills *estimate and returns true. relative must have room for
+   count entries; it is overwritten on every call regardless of outcome. */
+static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *const *events,
+                       PitchNumericValue *const *pitch_values, size_t count, int *relative, int tonic,
+                       KeyEstimate *estimate) {
+    (void)events;
+    for (size_t i = 0; i < count; i++) {
+        long note_number = pitch_numeric_value_position_numerator(pitch_values[i]);
+        int pitch_class = pitch_class_of(note_number);
+        relative[i] = ((pitch_class - tonic) % 12 + 12) % 12;
+    }
+
+    KeyEstimationInput input = {region, framework, PITCH_CLASS_NAMES[tonic], relative, count};
+    AnalysisResult *result = NULL;
+    if (key_estimation_analyze(&input, NULL, NULL, &result) != ANALYZER_OK) {
+        return false;
+    }
+
+    const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
+    size_t claim_size;
+    const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
+    strncpy(estimate->label, claim, sizeof(estimate->label) - 1);
+    estimate->label[sizeof(estimate->label) - 1] = '\0';
+    estimate->tonic_pitch_class = tonic;
+    estimate->is_major = (strstr(claim, "major") != NULL);
+    estimate->found = true;
+    analysis_result_destroy(result);
+    return true;
+}
+
 KeyEstimate estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                 MidiKeySignature key_signature) {
+                                 MidiKeySignature key_signature, const int *priority_tonics,
+                                 size_t priority_tonic_count) {
     KeyEstimate estimate = {false, "", 0, false};
     if (count == 0) {
         return estimate;
@@ -119,26 +152,16 @@ KeyEstimate estimate_global_key(NoteEvent *const *events, PitchNumericValue *con
         return estimate;
     }
 
-    for (int tonic = 0; tonic < 12 && !estimate.found; tonic++) {
-        for (size_t i = 0; i < count; i++) {
-            long note_number = pitch_numeric_value_position_numerator(pitch_values[i]);
-            int pitch_class = pitch_class_of(note_number);
-            relative[i] = ((pitch_class - tonic) % 12 + 12) % 12;
+    for (size_t p = 0; p < priority_tonic_count && !estimate.found; p++) {
+        int tonic = priority_tonics[p];
+        if (tonic < 0 || tonic > 11) {
+            continue;
         }
+        try_tonic(region, framework, events, pitch_values, count, relative, tonic, &estimate);
+    }
 
-        KeyEstimationInput input = {region, framework, PITCH_CLASS_NAMES[tonic], relative, count};
-        AnalysisResult *result = NULL;
-        if (key_estimation_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
-            const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
-            size_t claim_size;
-            const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-            strncpy(estimate.label, claim, sizeof(estimate.label) - 1);
-            estimate.label[sizeof(estimate.label) - 1] = '\0';
-            estimate.tonic_pitch_class = tonic;
-            estimate.is_major = (strstr(claim, "major") != NULL);
-            estimate.found = true;
-            analysis_result_destroy(result);
-        }
+    for (int tonic = 0; tonic < 12 && !estimate.found; tonic++) {
+        try_tonic(region, framework, events, pitch_values, count, relative, tonic, &estimate);
     }
 
     free(relative);
