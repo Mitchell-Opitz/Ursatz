@@ -83,7 +83,7 @@ static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyE
     int major_tonic = key_signature.sharps_flats >= 0 ? SHARPS_MAJOR_TONIC[abs_count] : FLATS_MAJOR_TONIC[abs_count];
     int tonic = key_signature.is_minor ? (major_tonic + 9) % 12 : major_tonic;
 
-    snprintf(out->label, sizeof(out->label), "%s %s", PITCH_CLASS_NAMES[tonic],
+    snprintf(out->label, sizeof(out->label), "%s %s", pitch_class_name(tonic, key_signature.sharps_flats < 0),
              key_signature.is_minor ? "minor" : "major");
     out->tonic_pitch_class = tonic;
     out->is_major = !key_signature.is_minor;
