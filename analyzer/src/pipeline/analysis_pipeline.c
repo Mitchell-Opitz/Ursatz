@@ -18,7 +18,10 @@ static void copy_label(char *dest, size_t dest_size, const char *src) {
 /* Bass pitch class of a SonorityGroup: the pitch class of its lowest
    MIDI note number. Used as a tonic guess -- the first and last chord
    of a piece is very often the tonic triad in root position, i.e. the
-   bass note is the tonic. */
+   bass note is the tonic. The closing chord is the more reliable of
+   the two (a piece almost always ends on its tonic; it can just as
+   easily open on an anacrusis, a pickup, or a non-tonic harmony), so
+   callers should try it before the opening chord. */
 static int bass_pitch_class(const SonorityGroup *group, PitchNumericValue *const *pitch_values) {
     long lowest_note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[0]]);
     for (size_t i = 1; i < group->note_index_count; i++) {
@@ -46,10 +49,10 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
 
     int priority_tonics[2];
     size_t priority_tonic_count = 0;
-    priority_tonics[priority_tonic_count++] = bass_pitch_class(&grouping.groups[0], notes->pitch_values);
+    priority_tonics[priority_tonic_count++] =
+        bass_pitch_class(&grouping.groups[grouping.group_count - 1], notes->pitch_values);
     if (grouping.group_count > 1) {
-        priority_tonics[priority_tonic_count++] =
-            bass_pitch_class(&grouping.groups[grouping.group_count - 1], notes->pitch_values);
+        priority_tonics[priority_tonic_count++] = bass_pitch_class(&grouping.groups[0], notes->pitch_values);
     }
 
     KeyEstimate key = estimate_global_key(notes->events, notes->pitch_values, notes->count, notes->key_signature,
