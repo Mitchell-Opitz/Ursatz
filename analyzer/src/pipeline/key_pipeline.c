@@ -74,6 +74,43 @@ static Structure *build_whole_piece_region(NoteEvent *const *events, size_t coun
 static const int SHARPS_MAJOR_TONIC[8] = {0, 7, 2, 9, 4, 11, 6, 1};  /* C G D A E B F# C# */
 static const int FLATS_MAJOR_TONIC[8] = {0, 5, 10, 3, 8, 1, 6, 11};  /* C F Bb Eb Ab Db Gb Cb */
 
+/* Reverse lookups of SHARPS_MAJOR_TONIC/FLATS_MAJOR_TONIC: for a given
+   tonic pitch class, how many sharps (or flats) its major key needs,
+   or NO_ACCIDENTAL_COUNT if that pitch class has no representation
+   within the practical 0-7 range on that side (i.e. it would require a
+   double sharp/flat). Built once from the two source tables above. */
+#define NO_ACCIDENTAL_COUNT 99
+
+static int sharps_needed_for_tonic(int tonic_pitch_class) {
+    for (int count = 0; count < 8; count++) {
+        if (SHARPS_MAJOR_TONIC[count] == tonic_pitch_class) {
+            return count;
+        }
+    }
+    return NO_ACCIDENTAL_COUNT;
+}
+
+static int flats_needed_for_tonic(int tonic_pitch_class) {
+    for (int count = 0; count < 8; count++) {
+        if (FLATS_MAJOR_TONIC[count] == tonic_pitch_class) {
+            return count;
+        }
+    }
+    return NO_ACCIDENTAL_COUNT;
+}
+
+/* Whether tonic_pitch_class reads more naturally in flats than sharps,
+   absent any other signal (e.g. no key signature to defer to): true
+   when its flat-side circle-of-fifths count is strictly lower than its
+   sharp-side count -- the spelling that avoids double sharps/flats.
+   Natural-letter tonics (C, D, E, F, G, A, B) have identical sharp and
+   flat spellings, so the tie there is harmless either way. The one
+   real tie, F#/Gb (6 of each), defaults to sharp (F#) per common
+   notation convention. */
+static bool prefers_flat_spelling(int tonic_pitch_class) {
+    return flats_needed_for_tonic(tonic_pitch_class) < sharps_needed_for_tonic(tonic_pitch_class);
+}
+
 static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyEstimate *out) {
     if (!key_signature.found || key_signature.sharps_flats < -7 || key_signature.sharps_flats > 7) {
         return false;
@@ -105,7 +142,8 @@ static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *
         relative[i] = ((pitch_class - tonic) % 12 + 12) % 12;
     }
 
-    KeyEstimationInput input = {region, framework, PITCH_CLASS_NAMES[tonic], relative, count};
+    KeyEstimationInput input = {region, framework, pitch_class_name(tonic, prefers_flat_spelling(tonic)), relative,
+                                 count};
     AnalysisResult *result = NULL;
     if (key_estimation_analyze(&input, NULL, NULL, &result) != ANALYZER_OK) {
         return false;
