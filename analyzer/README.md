@@ -1,11 +1,68 @@
 # Ursatz-Analyzer
 
+A small C11 command-line tool that turns a MIDI file into a Markdown report: the piece's
+global key, and the most likely chord for each group of notes that start together. It is a
+thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library and its
+`common-practice-minimal` framework.
+
+## Build
+
+Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
+`external/ursatz`.
+
+```sh
+git submodule update --init --recursive
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Three tests run: `test_analysis_pipeline`, `test_report_output`, and
+`test_corpus_key_estimation` (checks the reported key of six reference pieces).
+
+## Usage
+
+```sh
+ursatz-analyzer <midi-file-path>
+```
+
+Writes `<stem>.report.md` next to the input file. Exits 1 with a message on bad input,
+allocation failure, or write failure.
+
+## Pipeline
+
+`main.c` runs `midi_pipeline` (MIDI import through Ursatz), then `analysis_pipeline`:
+
+1. `segmentation`: groups notes whose onsets are exactly equal.
+2. `key_pipeline`: estimates one key for the whole piece.
+3. `chord_pipeline`: per group, maps pitch classes to scale degrees and identifies a chord.
+
+Then `markdown_report` renders and `report_writer` writes the file.
+
 ## Key estimation
 
-`estimate_global_key` (`src/pipeline/key_pipeline.c`) picks a piece's global tonic and mode in this order, stopping at the first one that succeeds:
+`estimate_global_key` (`src/pipeline/key_pipeline.c`) stops at the first source that succeeds:
 
-1. **MIDI key signature meta-event.** If the imported file carries a Key Signature meta-event (`0xFF 0x59`, read by `midi_key_signature_scan` in the `Ursatz` submodule), its sharps/flats count and major/minor flag are decoded directly via a circle-of-fifths table. No pitch-class scanning happens on this path.
-2. **First/last-chord bass note.** When no key signature is present, the bass pitch class of the piece's first and last onset-grouped chord is tried as a tonic candidate -- the first and last chord of a piece is very often the tonic triad in root position.
-3. **Brute-force pitch-class scan.** If neither of the above yields a match, every pitch class 0-11 is tried in order (C, C#, D, ...) against `KeyEstimation`'s major/natural-minor collections, and the first match wins.
+1. **MIDI key signature meta-event** (`0xFF 0x59`, read by Ursatz's `midi_key_signature_scan`).
+   Its sharps/flats count and major/minor flag are decoded through a circle-of-fifths table.
+   It wins silently, even if the music later modulates.
+2. **Closing chord, then opening chord.** The bass pitch class of the last onset group is tried
+   as the tonic first, then the first group's. The closing chord is the more reliable one,
+   since a piece can open on a pickup or a dominant.
+3. **Brute-force scan.** Every pitch class 0 to 11 is tried in order against `KeyEstimation`'s
+   major and natural-minor collections; the first match wins.
 
-Flat spelling (`Db`, `Eb`, ... via `PITCH_CLASS_NAMES_FLAT` in `pipeline/pitch_class_util.c`) is used for a key label only when the key signature that produced it has a negative (flats) sharps/flats count. Every other label -- the brute-force scan, chord/note spelling elsewhere in the report -- stays on the sharp-only spelling used throughout the rest of this codebase.
+Key labels use flat spelling (`Eb`, `Db`) when the key signature has flats, or, for a key found
+by steps 2 or 3, when the tonic needs fewer flats than sharps. Chord and note spelling elsewhere
+in the report always uses sharps.
+
+## Known limits
+
+- One key for the whole piece; no modulation tracking.
+- Sonority grouping needs exactly equal onsets, so a held or staggered note lands in its own
+  group.
+- Chord identification inherits Ursatz's matching. At the pinned submodule (Ursatz PR #47) a
+  group with any extra diatonic tone fails to match (non-diatonic notes are dropped first).
+  Ursatz PR #48 relaxes that to one non-chord tone; bumping the submodule picks it up.
+- Labels are fixed 32-byte buffers and are truncated silently past 31 characters.
+- SMPTE-division MIDI files are rejected.
