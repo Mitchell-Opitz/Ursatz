@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "io/midi_importer.h"
+#include "io/midi_key_signature.h"
 
 static const char *midi_import_error_message(MidiImportResult result) {
     switch (result) {
@@ -66,6 +67,16 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiImportResult import_result = midi_importer_import(buffer, (size_t)size, &events, &pitch_values, &count);
+
+    MidiKeySignature key_signature = {false, 0, false};
+    if (import_result == MIDI_IMPORT_OK) {
+        /* A malformed key signature meta-event doesn't fail an
+           otherwise-valid import -- it just means no key signature is
+           reported, same as a file that never had one. */
+        if (midi_key_signature_scan(buffer, (size_t)size, &key_signature) != MIDI_KEY_SIGNATURE_OK) {
+            key_signature = (MidiKeySignature){false, 0, false};
+        }
+    }
     free(buffer);
 
     if (import_result != MIDI_IMPORT_OK) {
@@ -76,6 +87,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     out->events = events;
     out->pitch_values = pitch_values;
     out->count = count;
+    out->key_signature = key_signature;
     return MIDI_PIPELINE_OK;
 }
 
