@@ -107,7 +107,8 @@ int main(void) {
     }
 
     /* Ursatz PR #48 subset matching: the extra diatonic D is ignored. */
-    assert(report.entries[5].time_numerator == 480);
+    assert(report.entries[5].time_numerator == 5);
+    assert(report.entries[5].time_denominator == 4);
     assert(strcmp(report.entries[5].chord_label, "I") == 0);
     assert(strcmp(report.entries[5].key_label, "C major") == 0);
 
