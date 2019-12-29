@@ -8,7 +8,7 @@ thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library 
 ## Build
 
 Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
-`external/ursatz`.
+`external/ursatz`, pinned to Ursatz main at PR #97 (`090695c`).
 
 ```sh
 git submodule update --init --recursive
@@ -61,8 +61,8 @@ in the report always uses sharps.
 - One key for the whole piece; no modulation tracking.
 - Sonority grouping needs exactly equal onsets, so a held or staggered note lands in its own
   group.
-- Chord identification inherits Ursatz's matching. At the pinned submodule (Ursatz PR #47) a
-  group with any extra diatonic tone fails to match (non-diatonic notes are dropped first).
-  Ursatz PR #48 relaxes that to one non-chord tone; bumping the submodule picks it up.
+- Chord identification inherits Ursatz's matching. The pinned submodule (Ursatz PR #97) uses
+  subset matching: one extra diatonic tone is tolerated and the first match wins
+  (non-diatonic notes are dropped first). Two or more non-chord tones per beat still fail.
 - Labels are fixed 32-byte buffers and are truncated silently past 31 characters.
 - SMPTE-division MIDI files are rejected.
