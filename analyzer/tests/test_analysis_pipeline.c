@@ -19,7 +19,7 @@
  * to "C major"; the opening chord's scale degrees (1, 3, 5) resolve to
  * "I". The single melody notes each have only one scale degree, which
  * cannot match any of the seven diatonic triads, so they report
- * "no match".
+ * "no match". A closing C-E-G-D group (tick 480) resolves to "I".
  */
 
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
@@ -68,6 +68,14 @@ int main(void) {
         0x60, 0x80, 0x45, 0x40, /* delta96 note-off A4 */
         0x00, 0x90, 0x47, 0x64, /* delta0  note-on  B4 (71) */
         0x60, 0x80, 0x47, 0x40, /* delta96 note-off B4 */
+        0x00, 0x90, 0x3C, 0x64, /* delta0  note-on  C4 (60) */
+        0x00, 0x90, 0x40, 0x64, /* delta0  note-on  E4 (64) */
+        0x00, 0x90, 0x43, 0x64, /* delta0  note-on  G4 (67) */
+        0x00, 0x90, 0x4A, 0x64, /* delta0  note-on  D5 (74) */
+        0x60, 0x80, 0x3C, 0x40, /* delta96 note-off C4 */
+        0x00, 0x80, 0x40, 0x40, /* delta0  note-off E4 */
+        0x00, 0x80, 0x43, 0x40, /* delta0  note-off G4 */
+        0x00, 0x80, 0x4A, 0x40, /* delta0  note-off D5 */
         0x00, 0xFF, 0x2F, 0x00  /* end of track */
     };
 
@@ -82,21 +90,26 @@ int main(void) {
 
     ImportedNotes notes;
     assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
-    assert(notes.count == 7);
+    assert(notes.count == 11);
 
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
     assert(report.key_found);
-    assert(report.entry_count == 5);
+    assert(report.entry_count == 6);
 
     assert(report.entries[0].time_numerator == 0);
     assert(strcmp(report.entries[0].chord_label, "I") == 0);
     assert(strcmp(report.entries[0].key_label, "C major") == 0);
 
-    for (size_t i = 1; i < report.entry_count; i++) {
+    for (size_t i = 1; i < 5; i++) {
         assert(strcmp(report.entries[i].chord_label, "no match") == 0);
         assert(strcmp(report.entries[i].key_label, "C major") == 0);
     }
+
+    /* Ursatz PR #48 subset matching: the extra diatonic D is ignored. */
+    assert(report.entries[5].time_numerator == 480);
+    assert(strcmp(report.entries[5].chord_label, "I") == 0);
+    assert(strcmp(report.entries[5].key_label, "C major") == 0);
 
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
