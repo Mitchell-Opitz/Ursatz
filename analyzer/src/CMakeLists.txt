@@ -21,4 +21,4 @@ target_include_directories(ursatz_analyzer_pipeline INTERFACE ${CMAKE_CURRENT_SO
 target_link_libraries(ursatz_analyzer_pipeline INTERFACE ursatz_analyzer)
 
 add_executable(ursatz-analyzer main.c)
-target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer_pipeline)
+target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer)
