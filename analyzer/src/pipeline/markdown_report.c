@@ -1,4 +1,4 @@
-#include "pipeline/markdown_report.h"
+#include <ursatz_analyzer/markdown_report.h>
 
 #include <stdarg.h>
 #include <stdbool.h>
