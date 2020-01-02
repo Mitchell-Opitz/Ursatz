@@ -72,18 +72,19 @@ static Sonority *build_sonority(const SonorityGroup *group, NoteEvent *const *ev
     return sonority;
 }
 
-ChordEstimate identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
-                                        PitchNumericValue *const *pitch_values, const KeyEstimate *key) {
-    ChordEstimate estimate = {false, ""};
+bool identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
+                              PitchNumericValue *const *pitch_values, const KeyEstimate *key, ChordEstimate *out) {
+    *out = (ChordEstimate){false, NULL};
+    bool out_of_memory = false;
     if (!key || !key->found) {
-        return estimate;
+        return true;
     }
 
     const int *degree_table = key->is_major ? MAJOR_DEGREE_BY_OFFSET : MINOR_DEGREE_BY_OFFSET;
 
     int *degrees = malloc(sizeof(int) * group->note_index_count);
     if (!degrees) {
-        return estimate;
+        return true;
     }
     size_t degree_count = 0;
     for (size_t i = 0; i < group->note_index_count; i++) {
@@ -98,13 +99,13 @@ ChordEstimate identify_chord_for_group(const SonorityGroup *group, NoteEvent *co
 
     if (degree_count == 0) {
         free(degrees);
-        return estimate;
+        return true;
     }
 
     Sonority *sonority = build_sonority(group, events);
     if (!sonority) {
         free(degrees);
-        return estimate;
+        return true;
     }
 
     const Framework *framework = common_practice_minimal_framework();
@@ -115,14 +116,23 @@ ChordEstimate identify_chord_for_group(const SonorityGroup *group, NoteEvent *co
             const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
             size_t claim_size;
             const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-            strncpy(estimate.label, claim, sizeof(estimate.label) - 1);
-            estimate.label[sizeof(estimate.label) - 1] = '\0';
-            estimate.found = true;
+            out->label = strdup(claim);
+            out->found = out->label != NULL;
+            out_of_memory = out->label == NULL;
             analysis_result_destroy(result);
         }
     }
 
     sonority_destroy(sonority);
     free(degrees);
-    return estimate;
+    return !out_of_memory;
+}
+
+void chord_estimate_destroy(ChordEstimate *estimate) {
+    if (!estimate) {
+        return;
+    }
+    free(estimate->label);
+    estimate->label = NULL;
+    estimate->found = false;
 }

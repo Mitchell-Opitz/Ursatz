@@ -10,7 +10,7 @@
 
 typedef struct {
     bool found;
-    char label[32]; /* e.g. "C major", copied out of KeyEstimation's claim */
+    char *label; /* owned; e.g. "C major", copied out of KeyEstimation's claim; NULL unless found */
     int tonic_pitch_class; /* 0-11, valid only when found */
     bool is_major;         /* valid only when found */
 } KeyEstimate;
@@ -42,9 +42,14 @@ typedef struct {
  * C#, D, ...) and reports the first one whose relative pitch-class
  * collection KeyEstimation recognizes as major or natural minor. If
  * none match, found is false.
+ *
+ * Fills *out and returns true; returns false only when the label could
+ * not be allocated. Release *out with key_estimate_destroy.
  */
-KeyEstimate estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                 MidiKeySignature key_signature, const int *priority_tonics,
-                                 size_t priority_tonic_count);
+bool estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
+                         MidiKeySignature key_signature, const int *priority_tonics, size_t priority_tonic_count,
+                         KeyEstimate *out);
+
+void key_estimate_destroy(KeyEstimate *estimate);
 
 #endif

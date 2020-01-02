@@ -7,8 +7,8 @@
 typedef struct {
     long time_numerator;
     unsigned long time_denominator;
-    char chord_label[32]; /* "no match" when nothing was identified */
-    char key_label[32];   /* "no match" when nothing was identified */
+    char *chord_label; /* owned; "no match" when nothing was identified */
+    char *key_label;   /* owned; "no match" when nothing was identified */
 } AnalysisReportEntry;
 
 typedef struct {
@@ -17,6 +17,7 @@ typedef struct {
     bool key_found;
 } AnalysisReport;
 
+/* Frees every entry's labels and the entries array. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

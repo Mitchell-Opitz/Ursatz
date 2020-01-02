@@ -10,11 +10,6 @@
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 
-static void copy_label(char *dest, size_t dest_size, const char *src) {
-    strncpy(dest, src, dest_size - 1);
-    dest[dest_size - 1] = '\0';
-}
-
 /* Bass pitch class of a SonorityGroup: the pitch class of its lowest
    MIDI note number. Used as a tonic guess -- the first and last chord
    of a piece is very often the tonic triad in root position, i.e. the
@@ -55,11 +50,16 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         priority_tonics[priority_tonic_count++] = bass_pitch_class(&grouping.groups[0], notes->pitch_values);
     }
 
-    KeyEstimate key = estimate_global_key(notes->events, notes->pitch_values, notes->count, notes->key_signature,
-                                           priority_tonics, priority_tonic_count);
+    KeyEstimate key;
+    if (!estimate_global_key(notes->events, notes->pitch_values, notes->count, notes->key_signature,
+                             priority_tonics, priority_tonic_count, &key)) {
+        sonority_grouping_destroy(&grouping);
+        return false;
+    }
 
-    AnalysisReportEntry *entries = malloc(sizeof(AnalysisReportEntry) * grouping.group_count);
+    AnalysisReportEntry *entries = calloc(grouping.group_count, sizeof(AnalysisReportEntry));
     if (!entries) {
+        key_estimate_destroy(&key);
         sonority_grouping_destroy(&grouping);
         return false;
     }
@@ -73,10 +73,21 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         entry->time_numerator = musical_time_numerator(onset);
         entry->time_denominator = musical_time_denominator(onset);
 
-        copy_label(entry->key_label, sizeof(entry->key_label), key.found ? key.label : "no match");
+        entry->key_label = strdup(key.found ? key.label : "no match");
 
-        ChordEstimate chord = identify_chord_for_group(group, notes->events, notes->pitch_values, &key);
-        copy_label(entry->chord_label, sizeof(entry->chord_label), chord.found ? chord.label : "no match");
+        ChordEstimate chord;
+        if (identify_chord_for_group(group, notes->events, notes->pitch_values, &key, &chord)) {
+            entry->chord_label = strdup(chord.found ? chord.label : "no match");
+            chord_estimate_destroy(&chord);
+        }
+
+        if (!entry->key_label || !entry->chord_label) {
+            AnalysisReport partial = {entries, i + 1, false};
+            analysis_report_destroy(&partial);
+            key_estimate_destroy(&key);
+            sonority_grouping_destroy(&grouping);
+            return false;
+        }
     }
 
     size_t group_count = grouping.group_count;
@@ -85,5 +96,6 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entries = entries;
     report->entry_count = group_count;
     report->key_found = key.found;
+    key_estimate_destroy(&key);
     return true;
 }
