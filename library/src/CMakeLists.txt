@@ -119,6 +119,7 @@ add_library(ursatz
     io/midi_event_decoder.c
     io/smf_reader.c
     persistence/persistence.c
+    persistence/persistence_note_events.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
