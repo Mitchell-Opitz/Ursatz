@@ -1,4 +1,4 @@
-#include "pipeline/midi_pipeline.h"
+#include <ursatz_analyzer/midi_pipeline.h>
 
 #include <stdio.h>
 #include <stdlib.h>

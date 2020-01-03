@@ -17,8 +17,9 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Three tests run: `test_analysis_pipeline`, `test_report_output`, and
-`test_corpus_key_estimation` (checks the reported key of six reference pieces).
+Four tests run: `test_analysis_pipeline`, `test_report_output`,
+`test_corpus_key_estimation` (checks the reported key of six reference pieces), and
+`test_long_labels` (labels past 31 characters render intact).
 
 ## Usage
 
@@ -28,6 +29,30 @@ ursatz-analyzer <midi-file-path>
 
 Writes `<stem>.report.md` next to the input file. Exits 1 with a message on bad input,
 allocation failure, or write failure.
+
+## Library
+
+The pipeline builds as the `ursatz_analyzer` static library. The CLI and the tests link it.
+Its public include directory is `include/`, and consumers include headers as
+`<ursatz_analyzer/xxx.h>`. Everything under `src/` is private.
+
+| Header | Purpose |
+| --- | --- |
+| `midi_pipeline.h` | Imports a MIDI file into `ImportedNotes`; `imported_notes_destroy` frees it. |
+| `analysis_pipeline.h` | `run_analysis_pipeline` turns `ImportedNotes` into an `AnalysisReport`. |
+| `analysis_report.h` | `AnalysisReport` and its entries (onset, chord label, key label). |
+| `markdown_report.h` | Renders an `AnalysisReport` as a Markdown string. |
+| `report_writer.h` | Derives the `<stem>.report.md` path and writes the file. |
+
+Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
+which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
+marks a group or key that was not identified. Strings returned by `markdown_report_render` and
+`derive_report_path` are freed by the caller with `free`.
+
+```cmake
+add_subdirectory(external/ursatz-analyzer)
+target_link_libraries(my_app PRIVATE ursatz_analyzer)
+```
 
 ## Pipeline
 
@@ -64,5 +89,4 @@ in the report always uses sharps.
 - Chord identification inherits Ursatz's matching. The pinned submodule (Ursatz PR #97) uses
   subset matching: one extra diatonic tone is tolerated and the first match wins
   (non-diatonic notes are dropped first). Two or more non-chord tones per beat still fail.
-- Labels are fixed 32-byte buffers and are truncated silently past 31 characters.
 - SMPTE-division MIDI files are rejected.

@@ -1,4 +1,4 @@
-#include "pipeline/report_writer.h"
+#include <ursatz_analyzer/report_writer.h>
 
 #include <stdio.h>
 #include <stdlib.h>

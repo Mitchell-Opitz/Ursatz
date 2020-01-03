@@ -1,7 +1,7 @@
 #ifndef URSATZ_ANALYZER_MARKDOWN_REPORT_H
 #define URSATZ_ANALYZER_MARKDOWN_REPORT_H
 
-#include "pipeline/analysis_report.h"
+#include <ursatz_analyzer/analysis_report.h>
 
 /*
  * Renders report as a readable Markdown document titled after

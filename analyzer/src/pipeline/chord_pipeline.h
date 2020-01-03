@@ -10,7 +10,7 @@
 
 typedef struct {
     bool found;
-    char label[32];
+    char *label; /* owned; NULL unless found */
 } ChordEstimate;
 
 /*
@@ -27,8 +27,13 @@ typedef struct {
  *
  * If key is NULL or not found, no scale degrees can be computed and
  * this returns found = false without calling the analyzer.
+ *
+ * Fills *out and returns true; returns false only when the label could
+ * not be allocated. Release *out with chord_estimate_destroy.
  */
-ChordEstimate identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
-                                        PitchNumericValue *const *pitch_values, const KeyEstimate *key);
+bool identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
+                              PitchNumericValue *const *pitch_values, const KeyEstimate *key, ChordEstimate *out);
+
+void chord_estimate_destroy(ChordEstimate *estimate);
 
 #endif

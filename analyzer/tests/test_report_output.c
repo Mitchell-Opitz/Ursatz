@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pipeline/analysis_pipeline.h"
-#include "pipeline/markdown_report.h"
-#include "pipeline/midi_pipeline.h"
-#include "pipeline/report_writer.h"
+#include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/markdown_report.h>
+#include <ursatz_analyzer/midi_pipeline.h>
+#include <ursatz_analyzer/report_writer.h>
 
 /*
  * End-to-end test: runs the same real MIDI fixture used by

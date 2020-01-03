@@ -111,7 +111,10 @@ static bool prefers_flat_spelling(int tonic_pitch_class) {
     return flats_needed_for_tonic(tonic_pitch_class) < sharps_needed_for_tonic(tonic_pitch_class);
 }
 
-static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyEstimate *out) {
+/* Returns true when the key signature decides the key (including when
+   its label could not be allocated, reported via *out_of_memory). */
+static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyEstimate *out,
+                                            bool *out_of_memory) {
     if (!key_signature.found || key_signature.sharps_flats < -7 || key_signature.sharps_flats > 7) {
         return false;
     }
@@ -120,8 +123,17 @@ static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyE
     int major_tonic = key_signature.sharps_flats >= 0 ? SHARPS_MAJOR_TONIC[abs_count] : FLATS_MAJOR_TONIC[abs_count];
     int tonic = key_signature.is_minor ? (major_tonic + 9) % 12 : major_tonic;
 
-    snprintf(out->label, sizeof(out->label), "%s %s", pitch_class_name(tonic, key_signature.sharps_flats < 0),
-             key_signature.is_minor ? "minor" : "major");
+    const char *tonic_name = pitch_class_name(tonic, key_signature.sharps_flats < 0);
+    const char *mode_name = key_signature.is_minor ? "minor" : "major";
+    size_t label_size = (size_t)snprintf(NULL, 0, "%s %s", tonic_name, mode_name) + 1;
+    char *label = malloc(label_size);
+    if (!label) {
+        *out_of_memory = true;
+        return true;
+    }
+    snprintf(label, label_size, "%s %s", tonic_name, mode_name);
+
+    out->label = label;
     out->tonic_pitch_class = tonic;
     out->is_major = !key_signature.is_minor;
     out->found = true;
@@ -131,10 +143,11 @@ static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyE
 /* Tries one candidate tonic against KeyEstimation (via the same Structure
    region/relative-pitch-class buffer every candidate reuses) and, on a
    match, fills *estimate and returns true. relative must have room for
-   count entries; it is overwritten on every call regardless of outcome. */
+   count entries; it is overwritten on every call regardless of outcome.
+   A match whose label cannot be allocated sets *out_of_memory instead. */
 static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *const *events,
                        PitchNumericValue *const *pitch_values, size_t count, int *relative, int tonic,
-                       KeyEstimate *estimate) {
+                       KeyEstimate *estimate, bool *out_of_memory) {
     (void)events;
     for (size_t i = 0; i < count; i++) {
         long note_number = pitch_numeric_value_position_numerator(pitch_values[i]);
@@ -152,8 +165,13 @@ static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *
     const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
     size_t claim_size;
     const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-    strncpy(estimate->label, claim, sizeof(estimate->label) - 1);
-    estimate->label[sizeof(estimate->label) - 1] = '\0';
+    char *label = strdup(claim);
+    if (!label) {
+        *out_of_memory = true;
+        analysis_result_destroy(result);
+        return false;
+    }
+    estimate->label = label;
     estimate->tonic_pitch_class = tonic;
     estimate->is_major = (strstr(claim, "major") != NULL);
     estimate->found = true;
@@ -161,48 +179,58 @@ static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *
     return true;
 }
 
-KeyEstimate estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                 MidiKeySignature key_signature, const int *priority_tonics,
-                                 size_t priority_tonic_count) {
-    KeyEstimate estimate = {false, "", 0, false};
+bool estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
+                         MidiKeySignature key_signature, const int *priority_tonics, size_t priority_tonic_count,
+                         KeyEstimate *out) {
+    *out = (KeyEstimate){false, NULL, 0, false};
+    bool out_of_memory = false;
     if (count == 0) {
-        return estimate;
+        return true;
     }
 
-    if (key_estimate_from_key_signature(key_signature, &estimate)) {
-        return estimate;
+    if (key_estimate_from_key_signature(key_signature, out, &out_of_memory)) {
+        return !out_of_memory;
     }
 
     Structure *region = build_whole_piece_region(events, count);
     if (!region) {
-        return estimate;
+        return true;
     }
 
     const Framework *framework = common_practice_minimal_framework();
     if (!framework) {
         structure_destroy(region);
-        return estimate;
+        return true;
     }
 
     int *relative = malloc(sizeof(int) * count);
     if (!relative) {
         structure_destroy(region);
-        return estimate;
+        return true;
     }
 
-    for (size_t p = 0; p < priority_tonic_count && !estimate.found; p++) {
+    for (size_t p = 0; p < priority_tonic_count && !out->found && !out_of_memory; p++) {
         int tonic = priority_tonics[p];
         if (tonic < 0 || tonic > 11) {
             continue;
         }
-        try_tonic(region, framework, events, pitch_values, count, relative, tonic, &estimate);
+        try_tonic(region, framework, events, pitch_values, count, relative, tonic, out, &out_of_memory);
     }
 
-    for (int tonic = 0; tonic < 12 && !estimate.found; tonic++) {
-        try_tonic(region, framework, events, pitch_values, count, relative, tonic, &estimate);
+    for (int tonic = 0; tonic < 12 && !out->found && !out_of_memory; tonic++) {
+        try_tonic(region, framework, events, pitch_values, count, relative, tonic, out, &out_of_memory);
     }
 
     free(relative);
     structure_destroy(region);
-    return estimate;
+    return !out_of_memory;
+}
+
+void key_estimate_destroy(KeyEstimate *estimate) {
+    if (!estimate) {
+        return;
+    }
+    free(estimate->label);
+    estimate->label = NULL;
+    estimate->found = false;
 }

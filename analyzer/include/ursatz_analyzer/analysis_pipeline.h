@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#include "pipeline/analysis_report.h"
-#include "pipeline/midi_pipeline.h"
+#include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/midi_pipeline.h>
 
 /*
  * Runs KeyEstimation once over the whole imported sequence and
