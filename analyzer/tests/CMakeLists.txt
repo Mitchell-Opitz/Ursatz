@@ -1,12 +1,12 @@
 add_executable(test_analysis_pipeline test_analysis_pipeline.c)
-target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer_pipeline)
+target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer)
 add_test(NAME test_analysis_pipeline COMMAND test_analysis_pipeline)
 
 add_executable(test_report_output test_report_output.c)
-target_link_libraries(test_report_output PRIVATE ursatz_analyzer_pipeline)
+target_link_libraries(test_report_output PRIVATE ursatz_analyzer)
 add_test(NAME test_report_output COMMAND test_report_output)
 
 add_executable(test_corpus_key_estimation test_corpus_key_estimation.c)
-target_link_libraries(test_corpus_key_estimation PRIVATE ursatz_analyzer_pipeline)
+target_link_libraries(test_corpus_key_estimation PRIVATE ursatz_analyzer)
 add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

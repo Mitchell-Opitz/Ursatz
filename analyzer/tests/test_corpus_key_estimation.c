@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pipeline/analysis_pipeline.h"
-#include "pipeline/midi_pipeline.h"
+#include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/midi_pipeline.h>
 
 /*
  * Regression coverage over the real-world corpus fixtures that exposed
