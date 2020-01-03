@@ -10,3 +10,7 @@ add_executable(test_corpus_key_estimation test_corpus_key_estimation.c)
 target_link_libraries(test_corpus_key_estimation PRIVATE ursatz_analyzer)
 add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_long_labels test_long_labels.c)
+target_link_libraries(test_long_labels PRIVATE ursatz_analyzer)
+add_test(NAME test_long_labels COMMAND test_long_labels)
