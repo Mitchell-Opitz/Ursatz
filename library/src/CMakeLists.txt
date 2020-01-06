@@ -120,6 +120,7 @@ add_library(ursatz
     io/smf_reader.c
     persistence/persistence.c
     persistence/persistence_note_events.c
+    persistence/persistence_uncertainty.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
