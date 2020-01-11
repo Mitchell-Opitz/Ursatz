@@ -121,6 +121,9 @@ add_library(ursatz
     persistence/persistence.c
     persistence/persistence_note_events.c
     persistence/persistence_uncertainty.c
+    persistence/persistence_interpretation.c
+    persistence/persistence_chord.c
+    persistence/persistence_key.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
