@@ -118,7 +118,17 @@ add_library(ursatz
     io/midi_importer.c
     io/midi_event_decoder.c
     io/smf_reader.c
+    persistence/persistence.c
+    persistence/persistence_note_events.c
+    persistence/persistence_uncertainty.c
+    persistence/persistence_interpretation.c
+    persistence/persistence_chord.c
+    persistence/persistence_key.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
+target_link_libraries(ursatz PUBLIC PkgConfig::SQLITE3)
