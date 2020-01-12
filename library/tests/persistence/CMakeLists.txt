@@ -11,6 +11,8 @@ add_executable(test_persistence_chord_key test_persistence_chord_key.c)
 target_link_libraries(test_persistence_chord_key PRIVATE common_practice_minimal)
 add_test(NAME persistence_chord_key COMMAND test_persistence_chord_key)
 
+add_ursatz_architecture_test(persistence)
+
 # Scoped memcheck coverage for this module's own test binaries only
 # (not a repo-wide valgrind mechanism -- see docs/modules/io.md's own
 # comment for the same pattern). Skips silently if valgrind isn't
