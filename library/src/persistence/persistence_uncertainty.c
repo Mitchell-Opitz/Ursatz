@@ -1,6 +1,7 @@
 #include "persistence/persistence_uncertainty.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 static PersistenceUncertaintyResult store_scalar_confidence(sqlite3 *db, const Uncertainty *uncertainty,
                                                               sqlite3_int64 *out_uncertainty_id) {
@@ -141,7 +142,16 @@ static PersistenceUncertaintyResult load_candidate_set(sqlite3 *db, sqlite3_int6
             }
             candidates = resized;
         }
-        candidates[count].label = (char *)sqlite3_column_text(stmt, 0);
+        /* sqlite3_column_text's buffer is only valid until the next
+           sqlite3_step/finalize call, so each label must be copied out
+           now rather than pointed to directly. */
+        const unsigned char *label_text = sqlite3_column_text(stmt, 0);
+        char *label_copy = label_text != NULL ? strdup((const char *)label_text) : NULL;
+        if (label_copy == NULL) {
+            result = PERSISTENCE_UNCERTAINTY_ERR_ALLOC;
+            break;
+        }
+        candidates[count].label = label_copy;
         candidates[count].weight_numerator = (unsigned long)sqlite3_column_int64(stmt, 1);
         candidates[count].weight_denominator = (unsigned long)sqlite3_column_int64(stmt, 2);
         count++;
@@ -157,6 +167,9 @@ static PersistenceUncertaintyResult load_candidate_set(sqlite3 *db, sqlite3_int6
         }
     }
 
+    for (size_t i = 0; i < count; i++) {
+        free(candidates[i].label);
+    }
     free(candidates);
     sqlite3_finalize(stmt);
     return result;
