@@ -124,6 +124,9 @@ add_library(ursatz
     persistence/persistence_interpretation.c
     persistence/persistence_chord.c
     persistence/persistence_key.c
+    corpus/corpus.c
+    corpus/persistence_corpus.c
+    corpus/persistence_corpus_membership.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

@@ -1,0 +1,5 @@
+add_ursatz_test(corpus)
+add_ursatz_test(persistence_corpus)
+add_ursatz_test(persistence_corpus_membership)
+
+add_ursatz_architecture_test(corpus)
