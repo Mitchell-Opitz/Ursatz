@@ -15,6 +15,14 @@
  * Scans every .h/.c file under src/corpus/ and flags any local include
  * ("...") that does not point into identity/, persistence/, or
  * corpus/ itself.
+ *
+ * Also scans every .h/.c file under src/ outside src/corpus/ and flags
+ * any local include of a corpus/ internal header (corpus.h,
+ * persistence_corpus.h, persistence_corpus_membership.h) -- corpus_api.h
+ * is the only public surface of music-corpus; nothing outside corpus/
+ * may reach past it. Vacuous today (no consumer of corpus/ exists yet
+ * in this repo) -- a regression guard for when Analyzer/Generator/GUI
+ * start linking against this module.
  */
 
 static int check_file(const char *path) {
@@ -53,6 +61,43 @@ static int check_file(const char *path) {
     return violations;
 }
 
+static int check_file_external(const char *path) {
+    FILE *f = fopen(path, "r");
+    if (f == NULL) {
+        fprintf(stderr, "could not open %s\n", path);
+        return 1;
+    }
+
+    char line[1024];
+    int violations = 0;
+
+    while (fgets(line, sizeof(line), f) != NULL) {
+        const char *marker = "#include \"";
+        char *start = strstr(line, marker);
+        if (start == NULL) {
+            continue;
+        }
+        start += strlen(marker);
+
+        char *end = strchr(start, '"');
+        if (end == NULL) {
+            continue;
+        }
+        *end = '\0';
+
+        if (strncmp(start, "corpus/", 7) == 0 && strcmp(start, "corpus/corpus_api.h") != 0) {
+            fprintf(stderr,
+                    "violation: %s includes \"%s\" (only corpus/corpus_api.h may be included from outside "
+                    "corpus/)\n",
+                    path, start);
+            violations++;
+        }
+    }
+
+    fclose(f);
+    return violations;
+}
+
 static int has_suffix(const char *name, const char *suffix) {
     size_t name_len = strlen(name);
     size_t suffix_len = strlen(suffix);
@@ -60,6 +105,41 @@ static int has_suffix(const char *name, const char *suffix) {
         return 0;
     }
     return strcmp(name + (name_len - suffix_len), suffix) == 0;
+}
+
+static int scan_external_dir(const char *dir_path, int *files_checked) {
+    DIR *d = opendir(dir_path);
+    if (d == NULL) {
+        return 0;
+    }
+
+    int violations = 0;
+    struct dirent *entry;
+
+    while ((entry = readdir(d)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
+            strcmp(entry->d_name, "corpus") == 0) {
+            continue;
+        }
+
+        char path[512];
+        snprintf(path, sizeof(path), "%s/%s", dir_path, entry->d_name);
+
+        if (has_suffix(entry->d_name, ".h") || has_suffix(entry->d_name, ".c")) {
+            violations += check_file_external(path);
+            (*files_checked)++;
+            continue;
+        }
+
+        DIR *subdir = opendir(path);
+        if (subdir != NULL) {
+            closedir(subdir);
+            violations += scan_external_dir(path, files_checked);
+        }
+    }
+
+    closedir(d);
+    return violations;
 }
 
 int main(void) {
@@ -86,6 +166,11 @@ int main(void) {
     }
 
     closedir(d);
+
+    const char *src_dir = "../../src";
+    int external_files_checked = 0;
+    total_violations += scan_external_dir(src_dir, &external_files_checked);
+    files_checked += external_files_checked;
 
     if (total_violations > 0) {
         fprintf(stderr, "%d architecture violation(s) found in music-corpus\n", total_violations);

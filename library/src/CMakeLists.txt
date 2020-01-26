@@ -127,6 +127,7 @@ add_library(ursatz
     corpus/corpus.c
     corpus/persistence_corpus.c
     corpus/persistence_corpus_membership.c
+    corpus/corpus_api.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
