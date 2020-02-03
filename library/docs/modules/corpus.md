@@ -42,7 +42,7 @@ Both tables are created on demand (`CREATE TABLE IF NOT EXISTS`) by `corpus/pers
 
 Deliberate scope cuts for this pass, not gaps to be filled incidentally:
 
-- Statistics, feature extraction, or any cross-piece computation over a Corpus's membership -- a later pass (`feat/corpus-stats-minimal`).
+- Statistics, feature extraction, or any cross-piece computation over a Corpus's membership -- built as a separate module, `corpus_stats` (see `docs/modules/corpus_stats.md`), rather than added here; `corpus/` itself stays exactly as documented above (identity + persistence only).
 - Actual wiring of `ursatz-gui` or Generator against `corpus_api.h` -- later passes (`feat/corpus-tool`, Generator integration); this module only exposes the API surface.
 - Provenance of Corpus membership (who added what, when).
 - Tags, labels, or "feeling" metadata on Corpus entries.
