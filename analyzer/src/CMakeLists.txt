@@ -13,7 +13,10 @@ target_include_directories(ursatz_analyzer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
-target_link_libraries(ursatz_analyzer PUBLIC ursatz common_practice_minimal)
+target_link_libraries(ursatz_analyzer
+    PUBLIC ursatz common_practice_minimal
+    PRIVATE cjson
+)
 
 add_executable(ursatz-analyzer main.c)
 target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer)

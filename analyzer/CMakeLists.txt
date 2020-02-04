@@ -7,5 +7,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 enable_testing()
 
 add_subdirectory(external/ursatz)
+add_subdirectory(external/cjson)
 add_subdirectory(src)
 add_subdirectory(tests)
