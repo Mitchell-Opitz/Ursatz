@@ -48,6 +48,21 @@ Deliberate scope cuts for this pass, not gaps to be filled incidentally:
 - Tags, labels, or "feeling" metadata on Corpus entries.
 - Existence validation of `piece_ref` against Persistence's own tables -- a reference to a piece that was never actually stored, or was since deleted, is not detected here.
 
+## Framework v1 reference corpus
+
+`tests/fixtures/framework-v1-corpus/` is the drop-in location for the fixed,
+bounded MIDI test corpus Framework v1's later regression tests (Cadence
+Detection, Motif Detection, Phrase Segmentation) run against. The actual
+`.mid` files are added separately, outside this module.
+
+`tests/corpus/test_corpus_regression_framework_v1.c` is the CorpusRegression
+covering it: it creates a Corpus named `framework-v1-reference-set`, scans
+`tests/fixtures/framework-v1-corpus/` for `.mid` files at test-run time, adds
+one piece_ref per filename found, and asserts the Corpus's piece_ref set
+matches exactly. It is not hardcoded to any specific file count -- an empty
+fixture directory (the state before the real files land) is expected, not a
+failure.
+
 ## Dependencies
 
 Depends on `identity` (L0, for `EntityID`) and `persistence` (L9, for `PersistenceHandle`/`persistence_open`/`persistence_db`) only.
