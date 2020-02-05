@@ -3,4 +3,9 @@ add_ursatz_test(persistence_corpus)
 add_ursatz_test(persistence_corpus_membership)
 add_ursatz_test(corpus_api)
 
+add_executable(test_corpus_regression_framework_v1 test_corpus_regression_framework_v1.c)
+target_link_libraries(test_corpus_regression_framework_v1 PRIVATE ursatz)
+add_test(NAME corpus_regression_framework_v1 COMMAND test_corpus_regression_framework_v1
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_ursatz_architecture_test(corpus)
