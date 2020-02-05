@@ -50,10 +50,10 @@ Deliberate scope cuts for this pass, not gaps to be filled incidentally:
 
 ## Framework v1 reference corpus
 
-`tests/fixtures/framework-v1-corpus/` is the drop-in location for the fixed,
-bounded MIDI test corpus Framework v1's later regression tests (Cadence
-Detection, Motif Detection, Phrase Segmentation) run against. The actual
-`.mid` files are added separately, outside this module.
+`tests/fixtures/framework-v1-corpus/` holds the fixed, bounded MIDI test
+corpus Framework v1's later regression tests (Cadence Detection, Motif
+Detection, Phrase Segmentation) run against. The `.mid` files themselves
+were added separately, outside this module.
 
 `tests/corpus/test_corpus_regression_framework_v1.c` is the CorpusRegression
 covering it: it creates a Corpus named `framework-v1-reference-set`, scans
