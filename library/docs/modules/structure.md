@@ -16,9 +16,11 @@ Layer L5 (`music-structure`). Path `src/structure/`, tests `tests/structure/`. D
 - `Figure` and `Theme` are Registry-flagged "No (example only)": minimal, non-normative scaffolding consistent with `Motif`'s existing pattern, not a claim of a finished, authoritative design. `ThemeOccurrence` and `PhraseOccurrence` carry the same non-normative, low-priority status, built to close out the Registry's known-gaps list rather than as settled design.
 - `Theme` references `containers/phrase.h`'s L4 container-layer `Phrase` by id, not this module's own occurrence-based sense of the word (`PhraseOccurrence`). `PhraseOccurrence` is likewise an occurrence of that same L4 container `Phrase` -- see `containers/phrase.h`'s header comment for the same disambiguation from its side.
 
+- Motif/Cadence/Theme/PhraseOccurrence stay L5 structural shells; they are not reimplemented as L6 `Interpretation`-shaped types. When Cadence Detection, Motif Detection, or Phrase Segmentation (Phase 8 `analysis`, later branches) produce a framework-relative claim about one of these L5 instances, that claim is expressed as an existing generic `Interpretation` (L6, the same pattern `Chord`/`Key` already use -- see `docs/modules/interpretation.md`) with `target_id` set to the L5 instance's `EntityID`. No new named L6 type is introduced for Motif/Cadence/Theme/PhraseOccurrence claims.
+
 ## Deferred
 
-Out of scope entirely, not missing. `SimilarityResult`, Motif Detection, Phrase Segmentation, Cadence Detection (Phase 8 `analysis` procedures that produce `Motif`/`MotifOccurrence`/`Cadence` instances, not data shapes this layer defines). Also out of scope, `Section`, `Movement`, `Work` (L4 containers, deferred there too), and any harmonic-context resolution (L6/L7).
+Out of scope entirely, not missing. `SimilarityResult`, Motif Detection, Phrase Segmentation, Cadence Detection (Phase 8 `analysis` procedures that produce `Motif`/`MotifOccurrence`/`Cadence` instances, and generic `Interpretation` claims about them, not data shapes this layer defines). Also out of scope, `Section`, `Movement`, `Work` (L4 containers, deferred there too), and any harmonic-context resolution (L6/L7).
 
 ## Dependencies
 
