@@ -1,8 +1,10 @@
 add_library(common_practice_minimal
     framework.c
     chord_vocabulary.c
+    chord_vocabulary_seventh.c
     key_vocabulary.c
     triad_identification.c
+    seventh_identification.c
     key_identification.c
     ${PROJECT_SOURCE_DIR}/src/analysis/chord_identification.c
     ${PROJECT_SOURCE_DIR}/src/analysis/key_estimation.c
