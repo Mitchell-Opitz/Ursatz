@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
@@ -56,13 +57,36 @@ static bool write_analysis_document(const char *path, const ImportedNotes *notes
     return wrote;
 }
 
+static void print_usage(const char *program) {
+    fprintf(stderr, "Usage: %s [--json] [--markdown] <midi-file-path>\n", program);
+}
+
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <midi-file-path>\n", argv[0]);
+    const char *path = NULL;
+    bool want_json = false;
+    bool want_markdown = false;
+    for (int i = 1; i < argc; i++) {
+        const char *arg = argv[i];
+        if (strcmp(arg, "--json") == 0) {
+            want_json = true;
+        } else if (strcmp(arg, "--markdown") == 0) {
+            want_markdown = true;
+        } else if (arg[0] == '-' || path) {
+            print_usage(argv[0]);
+            return 1;
+        } else {
+            path = arg;
+        }
+    }
+    if (!path) {
+        print_usage(argv[0]);
         return 1;
     }
+    if (!want_json && !want_markdown) {
+        want_json = true;
+        want_markdown = true;
+    }
 
-    const char *path = argv[1];
     ImportedNotes notes;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK) {
         return 1;
@@ -75,7 +99,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    bool ok = write_markdown_report(path, &report) && write_analysis_document(path, &notes, &report);
+    bool ok = (!want_markdown || write_markdown_report(path, &report)) &&
+              (!want_json || write_analysis_document(path, &notes, &report));
 
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
