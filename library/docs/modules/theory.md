@@ -22,7 +22,7 @@ The System Registry lists `Tendency`, `StatisticalModel`, and `StyleModel` as de
 
 Species-counterpoint frameworks (TDD Phase 10) and common-practice harmony (Roman numeral analysis, harmonic function, voice leading, cadence, tonicization, modulation, TDD Phase 11) are built as extensions on top of `Framework`/`Rule`/`Constraint` after this module, never as changes to the L7 kernel itself.
 
-The first such extension, `common-practice-minimal-v1`, is now built at `frameworks/common-practice-minimal/` (physically outside `src/`, its own architecture-gate test at the same L0-L6-plus-`Framework`/`Rule`/`Constraint` dependency ceiling `Framework` itself carries). It covers only the seven diatonic triads and major/natural-minor keys; see that module's own `README.md` for its exact scope and exclusions. This establishes the `frameworks/<name>/` location as the pattern future extensions (jazz harmony, species counterpoint, etc.) are expected to follow.
+The first such extension, `common-practice-minimal-v1`, is now built at `frameworks/common-practice-minimal/` (physically outside `src/`, its own architecture-gate test at the same L0-L6-plus-`Framework`/`Rule`/`Constraint` dependency ceiling `Framework` itself carries). It covers the seven diatonic triads, four diatonic seventh-chord qualities (dominant7, major7, minor7, half-diminished7), and major/natural-minor keys; see that module's own `README.md` for its exact scope and exclusions. This establishes the `frameworks/<name>/` location as the pattern future extensions (jazz harmony, species counterpoint, etc.) are expected to follow.
 
 ## Dependencies
 

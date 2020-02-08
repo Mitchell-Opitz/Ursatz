@@ -23,6 +23,21 @@ covers exactly:
   `Chord` (`interpretation/chord.h`) labeled with its roman numeral, and
   each has a backing `Rule`/`Constraint` pair referencing this
   Framework.
+- **Four diatonic seventh-chord qualities**: dominant7, major7, minor7,
+  half-diminished7 -- the seventh chords that occur naturally within a
+  major or natural-minor key. Unlike the triads above, seventh-chord
+  identification (`seventh_identification.h`) is quality-keyed rather
+  than degree-keyed: matching is against each chord tone's root-relative
+  semitone interval (0-11), not scale-degree position, because which
+  degree a seventh chord sits on does not by itself determine its
+  quality (e.g. scale degree 1 is major7 in a major key but minor7 in
+  natural minor). Each quality resolves to a real `Chord` labeled with
+  its quality name (e.g. "dominant7"), with its own backing
+  `Rule`/`Constraint` pair (`chord_vocabulary_seventh.h`), mirroring the
+  triads' construction shape but as a separate table/code path.
+  Fully-diminished7 is deliberately excluded -- it requires the raised
+  leading tone of harmonic minor, which this pass does not cover (see
+  below).
 - **Major and natural minor keys only.** Each resolves to a real `Key`
   (`interpretation/key.h`) labeled with its name (e.g. "C major", "A
   minor").
@@ -36,13 +51,16 @@ covers exactly:
 
 ## Deliberately out of scope (not omitted by oversight)
 
-- Jazz extensions (sevenths, ninths, altered chords, etc.)
+- Ninths and other extensions beyond sevenths, and altered chords
+- Fully-diminished7 specifically (needs harmonic minor's raised leading
+  tone -- planned alongside harmonic minor support, not before)
 - Modal interchange / borrowed chords
-- Secondary dominants and other tonicization
+- Secondary dominants and other tonicization (including chromatic
+  seventh chords such as secondary-dominant sevenths)
 - Harmonic minor and melodic minor (natural minor only, this pass)
-- Chord inversion identification (a triad in any inversion is matched
-  to its root-position label; which degree is in the bass is not
-  reported)
+- Chord inversion identification (a triad or seventh chord in any
+  inversion is matched to its root-position label; which tone is in the
+  bass is not reported)
 - True multi-candidate / confidence-weighted analysis: this pass
   returns a single best match by the documented tie-break rule
   (unordered scale-degree-set membership) rather than a weighted
@@ -57,6 +75,19 @@ covers exactly:
 All of the above are planned for later passes, either within this
 Framework's own versioning (`common-practice-minimal-v2`+) or as
 separate `frameworks/<name>/` extensions.
+
+## Known gap: exact-cardinality matching
+
+Both `triad_identification.c` and `seventh_identification.c` require an
+exact count of distinct degrees/intervals (3 for a triad, 4 for a
+seventh chord) before checking set containment -- a sonority carrying
+any extra tone beyond that exact count fails to match rather than
+matching with the extras tolerated. `key_identification.c` does not
+have this problem (it already matches by pure containment, extras
+allowed). This is a disclosed, not-yet-fixed gap in the chord-region
+matching code path generally; seventh-chord identification inherits it
+by construction (same mechanism as the triads) rather than introducing
+a new instance of it. Fixing it is out of scope for this pass.
 
 ## Boundary with `rules/constraint_evaluate`
 
