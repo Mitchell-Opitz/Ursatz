@@ -18,7 +18,7 @@
  * src/CMakeLists.txt on why -- a circular library dependency otherwise)
  * and so include that module's own flat, prefix-less headers directly
  * (e.g. "triad_identification.h", not "frameworks/.../triad_
- * identification.h"). COMMON_PRACTICE_MINIMAL_HEADERS below is an exact
+ * identification.h", "seventh_identification.h"). COMMON_PRACTICE_MINIMAL_HEADERS below is an exact
  * allowlist of those specific filenames -- not a directory prefix --
  * so this does not open the door to depending on any other
  * framework-shaped module beyond what's explicitly named here.
@@ -34,8 +34,10 @@
 
 static const char *COMMON_PRACTICE_MINIMAL_HEADERS[] = {
     "chord_vocabulary.h",
+    "chord_vocabulary_seventh.h",
     "key_vocabulary.h",
     "triad_identification.h",
+    "seventh_identification.h",
     "key_identification.h",
 };
 #define COMMON_PRACTICE_MINIMAL_HEADER_COUNT \
