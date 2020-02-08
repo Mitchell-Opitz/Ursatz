@@ -52,7 +52,29 @@ static Sonority *make_sonority(const char *event_id_value) {
 static void check_triad(Framework *framework, const int *degrees, size_t degree_count, const char *expected_label,
                          const char *sonority_event_id) {
     Sonority *sonority = make_sonority(sonority_event_id);
-    ChordIdentificationInput input = {sonority, framework, degrees, degree_count};
+    ChordIdentificationInput input = {sonority, framework, degrees, degree_count, NULL, 0};
+
+    AnalysisResult *result;
+    assert(CHORD_IDENTIFICATION_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
+    assert(analysis_result_interpretation_count(result) == 1);
+    assert(analysis_result_evidence_count(result) == 1);
+
+    const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
+    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), sonority_event_id) == 0);
+    assert(interpretation_framework_reference(interpretation) != NULL);
+
+    size_t claim_size;
+    const char *claim_content = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
+    assert(strcmp(claim_content, expected_label) == 0);
+
+    analysis_result_destroy(result);
+    sonority_destroy(sonority);
+}
+
+static void check_seventh(Framework *framework, const int *intervals, size_t interval_count,
+                           const char *expected_label, const char *sonority_event_id) {
+    Sonority *sonority = make_sonority(sonority_event_id);
+    ChordIdentificationInput input = {sonority, framework, NULL, 0, intervals, interval_count};
 
     AnalysisResult *result;
     assert(CHORD_IDENTIFICATION_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
@@ -124,11 +146,33 @@ int main(void) {
        failed analysis, never a forced guess. */
     Sonority *no_match_sonority = make_sonority("sonority-no-match");
     int no_match_degrees[] = {1, 2, 4};
-    ChordIdentificationInput no_match_input = {no_match_sonority, framework, no_match_degrees, 3};
+    ChordIdentificationInput no_match_input = {no_match_sonority, framework, no_match_degrees, 3, NULL, 0};
     AnalysisResult *no_match_result;
     assert(chord_identification_analyze(&no_match_input, NULL, NULL, &no_match_result) ==
            ANALYZER_ERR_ANALYSIS_FAILED);
     sonority_destroy(no_match_sonority);
+
+    /* Identification: each of the four diatonic seventh-chord qualities. */
+    int dominant7[] = {0, 4, 7, 10};
+    check_seventh(framework, dominant7, 4, "dominant7", "sonority-dominant7");
+    int major7[] = {0, 4, 7, 11};
+    check_seventh(framework, major7, 4, "major7", "sonority-major7");
+    int minor7[] = {0, 3, 7, 10};
+    check_seventh(framework, minor7, 4, "minor7", "sonority-minor7");
+    int half_diminished7[] = {0, 3, 6, 10};
+    check_seventh(framework, half_diminished7, 4, "half-diminished7", "sonority-half-diminished7");
+
+    /* No match: fully-diminished7 is not one of the four qualities this
+       framework knows -- reported as a failed analysis, never a forced
+       guess. */
+    Sonority *no_seventh_match_sonority = make_sonority("sonority-no-seventh-match");
+    int no_seventh_match_intervals[] = {0, 3, 6, 9};
+    ChordIdentificationInput no_seventh_match_input = {
+        no_seventh_match_sonority, framework, NULL, 0, no_seventh_match_intervals, 4};
+    AnalysisResult *no_seventh_match_result;
+    assert(chord_identification_analyze(&no_seventh_match_input, NULL, NULL, &no_seventh_match_result) ==
+           ANALYZER_ERR_ANALYSIS_FAILED);
+    sonority_destroy(no_seventh_match_sonority);
 
     framework_destroy(framework);
 

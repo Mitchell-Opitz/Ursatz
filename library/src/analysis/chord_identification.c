@@ -1,5 +1,6 @@
 #include "analysis/chord_identification.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -8,6 +9,7 @@
 #include "interpretation/chord.h"
 #include "interpretation/evidence.h"
 #include "interpretation/interpretation.h"
+#include "seventh_identification.h"
 #include "triad_identification.h"
 
 AnalyzerResult chord_identification_analyze(const void *input, const Context *context, const Value *config,
@@ -23,8 +25,10 @@ AnalyzerResult chord_identification_analyze(const void *input, const Context *co
     }
 
     const ChordIdentificationInput *analysis_input = (const ChordIdentificationInput *)input;
+    bool has_scale_degrees = analysis_input->scale_degrees != NULL && analysis_input->scale_degree_count != 0;
+    bool has_intervals = analysis_input->root_relative_intervals != NULL && analysis_input->interval_count != 0;
     if (analysis_input->sonority == NULL || analysis_input->framework == NULL ||
-        analysis_input->scale_degrees == NULL || analysis_input->scale_degree_count == 0) {
+        (!has_scale_degrees && !has_intervals)) {
         return ANALYZER_ERR_NULL_INPUT;
     }
 
@@ -36,9 +40,16 @@ AnalyzerResult chord_identification_analyze(const void *input, const Context *co
         return ANALYZER_ERR_ALLOC;
     }
 
-    Chord *chord;
-    if (!common_practice_identify_triad_chord(analysis_input->scale_degrees, analysis_input->scale_degree_count,
-                                               sonority_target_id, &chord)) {
+    Chord *chord = NULL;
+    if (has_scale_degrees) {
+        common_practice_identify_triad_chord(analysis_input->scale_degrees, analysis_input->scale_degree_count,
+                                              sonority_target_id, &chord);
+    }
+    if (chord == NULL && has_intervals) {
+        common_practice_identify_seventh_chord(analysis_input->root_relative_intervals,
+                                                analysis_input->interval_count, sonority_target_id, &chord);
+    }
+    if (chord == NULL) {
         entity_id_destroy(sonority_target_id);
         return ANALYZER_ERR_ANALYSIS_FAILED;
     }

@@ -45,6 +45,15 @@
  * -- the same caller-supplies-the-dimension pattern
  * triad_identification.h documents.
  *
+ * Seventh-chord quality (frameworks/common-practice-minimal/
+ * seventh_identification.h) cannot be resolved from scale degree alone,
+ * so root_relative_intervals is a second, independent caller-supplied
+ * dimension: each chord tone's semitone interval (0-11) relative to the
+ * chord's own candidate root. When scale_degrees matches one of the
+ * seven diatonic triads, that match wins; root_relative_intervals is
+ * tried only when scale_degrees is absent or does not match a triad. At
+ * least one of the two dimensions must be supplied.
+ *
  * Interpretation's target_id is a single reference, but a Sonority is a
  * set of simultaneous events with no identity of its own (semantics/
  * sonority.h documents it as a Value): ChordIdentification anchors its
@@ -60,27 +69,32 @@ typedef struct {
     const Framework *framework;
     const int *scale_degrees;
     size_t scale_degree_count;
+    const int *root_relative_intervals;
+    size_t interval_count;
 } ChordIdentificationInput;
 
 /*
  * Conforms to AnalyzerFn (analysis/analyzer.h): input MUST point to a
  * ChordIdentificationInput with a non-NULL sonority, a non-NULL
- * framework, and at least one scale degree; context and config are
- * accepted per the interface but unused (chord matching needs neither
- * yet).
+ * framework, and at least one of (scale_degrees, scale_degree_count) or
+ * (root_relative_intervals, interval_count) populated; context and
+ * config are accepted per the interface but unused (chord matching
+ * needs neither yet).
  *
  * On a match, produces exactly one Interpretation and one backing
  * Evidence: the Interpretation's target is sonority's first event id,
- * its claim is the matched triad's label, its framework_reference names
- * framework. The backing Evidence's strength is 1/1 (this pass's
- * matching is a hard yes/no, not a weighted fit); relevance/reliability
- * have no dimension to source them from yet and are fixed at 1/1 (the
- * same placeholder-fraction treatment ScaleAnalysis uses); source is
- * framework's name.
+ * its claim is the matched triad's or seventh-chord quality's label,
+ * its framework_reference names framework. The backing Evidence's
+ * strength is 1/1 (this pass's matching is a hard yes/no, not a
+ * weighted fit); relevance/reliability have no dimension to source them
+ * from yet and are fixed at 1/1 (the same placeholder-fraction
+ * treatment ScaleAnalysis uses); source is framework's name.
  *
  * Returns ANALYZER_ERR_ANALYSIS_FAILED (leaving *out untouched) when
  * scale_degrees does not match any of common-practice-minimal-v1's
- * seven diatonic triads -- this analyzer does not force a bad match.
+ * seven diatonic triads AND root_relative_intervals (if supplied) does
+ * not match any of its four diatonic seventh-chord qualities -- this
+ * analyzer does not force a bad match.
  */
 AnalyzerResult chord_identification_analyze(const void *input, const Context *context, const Value *config,
                                              AnalysisResult **out);
