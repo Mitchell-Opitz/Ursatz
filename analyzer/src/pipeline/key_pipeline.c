@@ -11,6 +11,7 @@
 #include "framework.h"
 #include "identity/entity_id.h"
 #include "identity/schema_version.h"
+#include "pipeline/interpretation_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "structure/structure.h"
 
@@ -136,6 +137,7 @@ static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyE
     out->label = label;
     out->tonic_pitch_class = tonic;
     out->is_major = !key_signature.is_minor;
+    out->method = ANALYSIS_KEY_METHOD_KEY_SIGNATURE;
     out->found = true;
     return true;
 }
@@ -174,6 +176,7 @@ static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *
     estimate->label = label;
     estimate->tonic_pitch_class = tonic;
     estimate->is_major = (strstr(claim, "major") != NULL);
+    estimate->confidence = interpretation_confidence(interpretation);
     estimate->found = true;
     analysis_result_destroy(result);
     return true;
@@ -182,7 +185,7 @@ static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *
 bool estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
                          MidiKeySignature key_signature, const int *priority_tonics, size_t priority_tonic_count,
                          KeyEstimate *out) {
-    *out = (KeyEstimate){false, NULL, 0, false};
+    *out = (KeyEstimate){false, NULL, 0, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
     bool out_of_memory = false;
     if (count == 0) {
         return true;
@@ -214,11 +217,15 @@ bool estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pit
         if (tonic < 0 || tonic > 11) {
             continue;
         }
-        try_tonic(region, framework, events, pitch_values, count, relative, tonic, out, &out_of_memory);
+        if (try_tonic(region, framework, events, pitch_values, count, relative, tonic, out, &out_of_memory)) {
+            out->method = ANALYSIS_KEY_METHOD_BASS_FALLBACK;
+        }
     }
 
     for (int tonic = 0; tonic < 12 && !out->found && !out_of_memory; tonic++) {
-        try_tonic(region, framework, events, pitch_values, count, relative, tonic, out, &out_of_memory);
+        if (try_tonic(region, framework, events, pitch_values, count, relative, tonic, out, &out_of_memory)) {
+            out->method = ANALYSIS_KEY_METHOD_PITCH_CLASS_SCAN;
+        }
     }
 
     free(relative);
@@ -233,4 +240,5 @@ void key_estimate_destroy(KeyEstimate *estimate) {
     free(estimate->label);
     estimate->label = NULL;
     estimate->found = false;
+    estimate->method = ANALYSIS_KEY_METHOD_NONE;
 }

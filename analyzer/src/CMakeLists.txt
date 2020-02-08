@@ -8,6 +8,8 @@ add_library(ursatz_analyzer STATIC
     pipeline/analysis_pipeline.c
     pipeline/markdown_report.c
     pipeline/report_writer.c
+    pipeline/path_util.c
+    pipeline/analysis_document.c
 )
 target_include_directories(ursatz_analyzer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
@@ -16,6 +18,10 @@ target_include_directories(ursatz_analyzer
 target_link_libraries(ursatz_analyzer
     PUBLIC ursatz common_practice_minimal
     PRIVATE cjson
+)
+target_compile_definitions(ursatz_analyzer PRIVATE
+    URSATZ_ANALYZER_VERSION="${PROJECT_VERSION}"
+    URSATZ_ANALYZER_URSATZ_COMMIT="${URSATZ_ANALYZER_URSATZ_COMMIT}"
 )
 
 add_executable(ursatz-analyzer main.c)

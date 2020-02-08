@@ -5,6 +5,7 @@
 
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
+#include "io/smf_reader.h"
 
 static const char *midi_import_error_message(MidiImportResult result) {
     switch (result) {
@@ -69,7 +70,16 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     MidiImportResult import_result = midi_importer_import(buffer, (size_t)size, &events, &pitch_values, &count);
 
     MidiKeySignature key_signature = {false, 0, false};
+    unsigned ticks_per_quarter = 0;
     if (import_result == MIDI_IMPORT_OK) {
+        SmfHeader header;
+        SmfTrack *tracks = NULL;
+        size_t track_count = 0;
+        if (smf_reader_parse(buffer, (size_t)size, &header, &tracks, &track_count) == SMF_READER_OK) {
+            ticks_per_quarter = header.division;
+            free(tracks);
+        }
+
         /* A malformed key signature meta-event doesn't fail an
            otherwise-valid import -- it just means no key signature is
            reported, same as a file that never had one. */
@@ -88,6 +98,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     out->pitch_values = pitch_values;
     out->count = count;
     out->key_signature = key_signature;
+    out->ticks_per_quarter = ticks_per_quarter;
     return MIDI_PIPELINE_OK;
 }
 
@@ -104,4 +115,5 @@ void imported_notes_destroy(ImportedNotes *notes) {
     notes->events = NULL;
     notes->pitch_values = NULL;
     notes->count = 0;
+    notes->ticks_per_quarter = 0;
 }

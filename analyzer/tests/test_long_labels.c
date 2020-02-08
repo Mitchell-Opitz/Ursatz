@@ -28,7 +28,7 @@ int main(void) {
     assert(strlen(chord_label) > 31);
 
     AnalysisReport report;
-    report.entries = malloc(sizeof(AnalysisReportEntry));
+    report.entries = calloc(1, sizeof(AnalysisReportEntry));
     assert(report.entries != NULL);
     report.entry_count = 1;
     report.key_found = true;

@@ -6,6 +6,7 @@
 #include "analysis/chord_identification.h"
 #include "framework.h"
 #include "identity/entity_id.h"
+#include "pipeline/interpretation_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "semantics/sonority.h"
 #include "time/musical_time.h"
@@ -74,7 +75,7 @@ static Sonority *build_sonority(const SonorityGroup *group, NoteEvent *const *ev
 
 bool identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
                               PitchNumericValue *const *pitch_values, const KeyEstimate *key, ChordEstimate *out) {
-    *out = (ChordEstimate){false, NULL};
+    *out = (ChordEstimate){false, NULL, {false, 0, 0}};
     bool out_of_memory = false;
     if (!key || !key->found) {
         return true;
@@ -117,6 +118,7 @@ bool identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *even
             size_t claim_size;
             const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
             out->label = strdup(claim);
+            out->confidence = interpretation_confidence(interpretation);
             out->found = out->label != NULL;
             out_of_memory = out->label == NULL;
             analysis_result_destroy(result);

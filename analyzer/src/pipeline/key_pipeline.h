@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_analyzer/analysis_report.h>
+
 #include "events/note_event.h"
 #include "io/midi_key_signature.h"
 #include "pitch/pitch_numeric_value.h"
@@ -13,6 +15,8 @@ typedef struct {
     char *label; /* owned; e.g. "C major", copied out of KeyEstimation's claim; NULL unless found */
     int tonic_pitch_class; /* 0-11, valid only when found */
     bool is_major;         /* valid only when found */
+    AnalysisKeyMethod method;      /* step that found the key; NONE unless found */
+    AnalysisConfidence confidence; /* from KeyEstimation's Interpretation; absent for a key signature */
 } KeyEstimate;
 
 /*
