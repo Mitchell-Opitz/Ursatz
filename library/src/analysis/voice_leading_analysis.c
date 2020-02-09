@@ -112,7 +112,7 @@ AnalyzerResult voice_leading_analysis_analyze(const void *input, const Context *
             return ANALYZER_ERR_ALLOC;
         }
 
-        VoiceLeadingClaim claim_content = {pair->motion, pair->resulting_interval_is_perfect};
+        VoiceLeadingClaim claim_content = {pair->motion, pair->resulting_interval_is_perfect, pair->bass_motion};
         Value *claim;
         if (value_create("voice-leading-analysis-claim", &claim_content, sizeof(claim_content), &claim) !=
             VALUE_OK) {
