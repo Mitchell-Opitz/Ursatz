@@ -52,11 +52,24 @@ typedef enum {
     VOICE_LEADING_MOTION_OBLIQUE
 } VoiceLeadingMotion;
 
+/*
+ * Bass motion between two consecutive sonorities' lowest-sounding voice.
+ * Like VoiceLeadingMotion, this is a caller-supplied dimension: PitchIdentity
+ * carries no numeric semantics, so this analyzer cannot itself determine
+ * whether the bass moved by step, by leap, or stayed on the same pitch.
+ */
+typedef enum {
+    VOICE_LEADING_BASS_MOTION_STEP,
+    VOICE_LEADING_BASS_MOTION_LEAP,
+    VOICE_LEADING_BASS_MOTION_SAME
+} VoiceLeadingBassMotion;
+
 typedef struct {
     const NoteEvent *voice_a_to;
     const NoteEvent *voice_b_to;
     VoiceLeadingMotion motion;
     bool resulting_interval_is_perfect;
+    VoiceLeadingBassMotion bass_motion;
 } VoiceLeadingAnalysisPair;
 
 typedef struct {
@@ -68,6 +81,7 @@ typedef struct {
 typedef struct {
     VoiceLeadingMotion motion;
     bool resulting_interval_is_perfect;
+    VoiceLeadingBassMotion bass_motion;
 } VoiceLeadingClaim;
 
 /*
@@ -80,7 +94,7 @@ typedef struct {
  * pair, in input order: interpretation N's target is pair N's
  * voice_a_to NoteEvent (by id reference), its claim is a
  * VoiceLeadingClaim copy of pair N's motion/resulting_interval_is_
- * perfect, and its uncertainty is a scalar confidence of 1/1 (the
+ * perfect/bass_motion, and its uncertainty is a scalar confidence of 1/1 (the
  * classification was supplied already determined, not estimated).
  * pair_count == 0 is valid and yields an empty AnalysisResult.
  */
