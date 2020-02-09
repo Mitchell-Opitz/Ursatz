@@ -19,7 +19,7 @@ Both build their real `Chord`/`Key` via the framework, then unwrap it with `chor
 
 **Still placeholder/deferred (not touched by the common-practice-minimal wiring):**
 
-- `MotifDetection`, `PhraseSegmentation`, `VoiceLeadingAnalysis`, `ScaleAnalysis` -- unchanged; still report caller-supplied candidate sets rather than a framework-derived answer.
+- `MotifDetection`, `PhraseSegmentation`, `VoiceLeadingAnalysis`, `ScaleAnalysis` -- unchanged; still report caller-supplied candidate sets rather than a framework-derived answer. `VoiceLeadingAnalysis` specifically has AnalysisRegression coverage pinning this packaging for parallel-fifth/parallel-octave motion and step/leap/same bass-motion shapes (`tests/analysis/test_voice_leading_analysis.c`) -- the classification itself is still caller-supplied, not derived.
 - `CadenceDetection` -- deferred. Producing a real `Cadence` (L5 structural shell, `structure/cadence.h`) from `ChordIdentification`/`KeyEstimation` output needs harmonic-motion pattern logic (e.g. recognizing a V-I motion as an authentic cadence, IV-I as plagal, V-vi as deceptive) that common-practice-minimal-v1 does not yet define -- meaningfully more than a direct consequence of the Chord/Key wiring above, so it stays out of scope for this pass.
 - Multi-candidate/confidence-weighted output for `ChordIdentification`/`KeyEstimation` -- deliberately out of scope for this pass; both analyzers are single-answer/deterministic today, matching the framework's own deterministic behavior. Planned as a later, separate refinement.
 
