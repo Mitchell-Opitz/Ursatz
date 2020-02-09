@@ -14,3 +14,7 @@ add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation
 add_executable(test_long_labels test_long_labels.c)
 target_link_libraries(test_long_labels PRIVATE ursatz_analyzer)
 add_test(NAME test_long_labels COMMAND test_long_labels)
+
+add_executable(test_analysis_document test_analysis_document.c)
+target_link_libraries(test_analysis_document PRIVATE ursatz_analyzer cjson)
+add_test(NAME test_analysis_document COMMAND test_analysis_document)
