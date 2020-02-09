@@ -88,7 +88,7 @@ int main(void) {
     NoteEvent *alto_to = make_note_event("note-alto-2", "G4");
 
     VoiceLeadingAnalysisPair pairs[1] = {
-        {soprano_to, alto_to, VOICE_LEADING_MOTION_PARALLEL, true},
+        {soprano_to, alto_to, VOICE_LEADING_MOTION_PARALLEL, true, VOICE_LEADING_BASS_MOTION_STEP},
     };
     VoiceLeadingAnalysisInput input = {pairs, 1};
 
@@ -107,6 +107,7 @@ int main(void) {
     assert(claim_size == sizeof(VoiceLeadingClaim));
     assert(claim->motion == VOICE_LEADING_MOTION_PARALLEL);
     assert(claim->resulting_interval_is_perfect);
+    assert(claim->bass_motion == VOICE_LEADING_BASS_MOTION_STEP);
 
     const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
     assert(uncertainty_kind(uncertainty) == UNCERTAINTY_KIND_SCALAR_CONFIDENCE);
@@ -119,14 +120,59 @@ int main(void) {
 
     analysis_result_destroy(result);
 
+    /* Analysis-regression: tenor and bass move in parallel into a perfect octave. */
+    NoteEvent *tenor_to = make_note_event("note-tenor-2", "C4");
+    NoteEvent *bass_to = make_note_event("note-bass-2", "C3");
+
+    VoiceLeadingAnalysisPair octave_pairs[1] = {
+        {tenor_to, bass_to, VOICE_LEADING_MOTION_PARALLEL, true, VOICE_LEADING_BASS_MOTION_LEAP},
+    };
+    VoiceLeadingAnalysisInput octave_input = {octave_pairs, 1};
+
+    AnalysisResult *octave_result;
+    assert(VOICE_LEADING_ANALYSIS_ANALYZER.analyze(&octave_input, NULL, NULL, &octave_result) == ANALYZER_OK);
+    const Interpretation *octave_interpretation = analysis_result_interpretation_at(octave_result, 0);
+    size_t octave_claim_size;
+    const VoiceLeadingClaim *octave_claim = (const VoiceLeadingClaim *)value_content(
+        interpretation_claim(octave_interpretation), &octave_claim_size);
+    assert(octave_claim_size == sizeof(VoiceLeadingClaim));
+    assert(octave_claim->motion == VOICE_LEADING_MOTION_PARALLEL);
+    assert(octave_claim->resulting_interval_is_perfect);
+    assert(octave_claim->bass_motion == VOICE_LEADING_BASS_MOTION_LEAP);
+    analysis_result_destroy(octave_result);
+
+    /* Analysis-regression: bass-motion classification is packaged as supplied,
+     * independent of the voice-pair motion/interval dimensions -- step, leap, and
+     * same are each exercised. */
+    VoiceLeadingBassMotion bass_motions[] = {VOICE_LEADING_BASS_MOTION_STEP, VOICE_LEADING_BASS_MOTION_LEAP,
+                                              VOICE_LEADING_BASS_MOTION_SAME};
+    for (size_t i = 0; i < 3; i++) {
+        VoiceLeadingAnalysisPair bass_motion_pairs[1] = {
+            {soprano_to, alto_to, VOICE_LEADING_MOTION_OBLIQUE, false, bass_motions[i]},
+        };
+        VoiceLeadingAnalysisInput bass_motion_input = {bass_motion_pairs, 1};
+        AnalysisResult *bass_motion_result;
+        assert(voice_leading_analysis_analyze(&bass_motion_input, NULL, NULL, &bass_motion_result) == ANALYZER_OK);
+        const Interpretation *bass_motion_interpretation = analysis_result_interpretation_at(bass_motion_result, 0);
+        size_t bass_motion_claim_size;
+        const VoiceLeadingClaim *bass_motion_claim = (const VoiceLeadingClaim *)value_content(
+            interpretation_claim(bass_motion_interpretation), &bass_motion_claim_size);
+        assert(bass_motion_claim_size == sizeof(VoiceLeadingClaim));
+        assert(bass_motion_claim->bass_motion == bass_motions[i]);
+        analysis_result_destroy(bass_motion_result);
+    }
+
     /* Behavioral contract: a pair with a NULL event is rejected. */
-    VoiceLeadingAnalysisPair bad_pairs[1] = {{soprano_to, NULL, VOICE_LEADING_MOTION_OBLIQUE, false}};
+    VoiceLeadingAnalysisPair bad_pairs[1] = {
+        {soprano_to, NULL, VOICE_LEADING_MOTION_OBLIQUE, false, VOICE_LEADING_BASS_MOTION_SAME}};
     VoiceLeadingAnalysisInput bad_input = {bad_pairs, 1};
     AnalysisResult *bad_result;
     assert(voice_leading_analysis_analyze(&bad_input, NULL, NULL, &bad_result) == ANALYZER_ERR_NULL_INPUT);
 
     note_event_destroy(soprano_to);
     note_event_destroy(alto_to);
+    note_event_destroy(tenor_to);
+    note_event_destroy(bass_to);
 
     printf("test_voice_leading_analysis: ok\n");
     return 0;
