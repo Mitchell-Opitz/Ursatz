@@ -18,3 +18,10 @@ add_test(NAME test_long_labels COMMAND test_long_labels)
 add_executable(test_analysis_document test_analysis_document.c)
 target_link_libraries(test_analysis_document PRIVATE ursatz_analyzer cjson)
 add_test(NAME test_analysis_document COMMAND test_analysis_document)
+
+add_test(NAME test_cli_output_flags
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DFIXTURE=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
