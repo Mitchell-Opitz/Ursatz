@@ -106,6 +106,7 @@ add_library(ursatz
     # circular library dependency.
     analysis/voice_leading_analysis.c
     analysis/cadence_detection.c
+    analysis/cadence_classification.c
     analysis/motif_detection.c
     analysis/phrase_segmentation.c
     generation/intent.c
