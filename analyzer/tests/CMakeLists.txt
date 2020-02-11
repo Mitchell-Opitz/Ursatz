@@ -25,3 +25,29 @@ add_test(NAME test_cli_output_flags
                  -DFIXTURE=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
+
+# Optional: schema validation needs python3 with the jsonschema module.
+find_package(Python3 COMPONENTS Interpreter QUIET)
+set(URSATZ_ANALYZER_HAVE_JSONSCHEMA FALSE)
+if(Python3_Interpreter_FOUND)
+    execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema"
+                    RESULT_VARIABLE jsonschema_result OUTPUT_QUIET ERROR_QUIET)
+    if(jsonschema_result EQUAL 0)
+        set(URSATZ_ANALYZER_HAVE_JSONSCHEMA TRUE)
+    endif()
+endif()
+if(NOT URSATZ_ANALYZER_HAVE_JSONSCHEMA)
+    message(STATUS "python3 with jsonschema not found: test_analysis_document_schema will be skipped")
+endif()
+
+add_test(NAME test_analysis_document_schema
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DPYTHON=${Python3_EXECUTABLE}
+                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v1.schema.json
+                 -DFIXTURE_DIR=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
+set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
