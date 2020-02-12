@@ -17,6 +17,7 @@ add_test(NAME key_estimation COMMAND test_key_estimation)
 
 add_ursatz_test(voice_leading_analysis)
 add_ursatz_test(cadence_detection)
+add_ursatz_test(cadence_classification)
 add_ursatz_test(motif_detection)
 add_ursatz_test(phrase_segmentation)
 add_ursatz_architecture_test(analysis)

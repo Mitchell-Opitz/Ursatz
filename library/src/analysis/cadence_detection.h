@@ -6,6 +6,7 @@
 #include "analysis/analyzer.h"
 #include "interpretation/uncertainty.h"
 #include "structure/structure.h"
+#include "theory/framework.h"
 
 /*
  * CadenceDetection (Procedure -> Analyzer implementation, Registry
@@ -46,12 +47,23 @@
  * region is a borrowed (not owned) Structure identifying the analyzed
  * span by its own Entity id, the same target pattern ScaleAnalysis
  * uses.
+ *
+ * framework is an OPTIONAL borrowed (not owned) Framework: when
+ * supplied, the resulting Interpretation's framework_reference names it
+ * (the same entity_id_value(framework_id(framework)) ->
+ * framework_reference_create pattern chord_vocabulary.c/
+ * key_vocabulary.c use), signaling that the candidate labels are
+ * relative to that Framework's vocabulary (e.g. common-practice-
+ * minimal's cadence types). When NULL, the Interpretation's
+ * framework_reference stays unset, the existing framework-neutral
+ * behavior.
  */
 
 typedef struct {
     const Structure *region;
     const UncertaintyCandidate *candidates;
     size_t candidate_count;
+    const Framework *framework;
 } CadenceDetectionInput;
 
 /*

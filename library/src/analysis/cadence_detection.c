@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "core/entity.h"
+#include "core/framework_reference.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
@@ -120,11 +121,41 @@ AnalyzerResult cadence_detection_analyze(const void *input, const Context *conte
         return ANALYZER_ERR_ALLOC;
     }
 
+    FrameworkReference *framework_reference = NULL;
+    if (analysis_input->framework != NULL) {
+        EntityID *framework_target_id;
+        if (entity_id_create(entity_id_value(framework_id(analysis_input->framework)), &framework_target_id) !=
+            ENTITY_ID_OK) {
+            provenance_reference_destroy(provenance);
+            uncertainty_destroy(uncertainty);
+            value_destroy(claim);
+            entity_id_destroy(evidence_ref_id);
+            entity_id_destroy(target_id);
+            entity_id_destroy(interpretation_id);
+            evidence_destroy(evidence);
+            return ANALYZER_ERR_ALLOC;
+        }
+        if (framework_reference_create(framework_target_id, &framework_reference) != FRAMEWORK_REFERENCE_OK) {
+            entity_id_destroy(framework_target_id);
+            provenance_reference_destroy(provenance);
+            uncertainty_destroy(uncertainty);
+            value_destroy(claim);
+            entity_id_destroy(evidence_ref_id);
+            entity_id_destroy(target_id);
+            entity_id_destroy(interpretation_id);
+            evidence_destroy(evidence);
+            return ANALYZER_ERR_ALLOC;
+        }
+    }
+
     Interpretation *interpretation;
-    if (interpretation_create(interpretation_id, target_id, claim, NULL, evidence_ref_id, NULL, uncertainty,
-                               "CadenceDetection", "candidate-cadence-type matching",
+    if (interpretation_create(interpretation_id, target_id, claim, NULL, evidence_ref_id, framework_reference,
+                               uncertainty, "CadenceDetection", "candidate-cadence-type matching",
                                INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation) !=
         INTERPRETATION_OK) {
+        if (framework_reference != NULL) {
+            framework_reference_destroy(framework_reference);
+        }
         evidence_destroy(evidence);
         return ANALYZER_ERR_ANALYSIS_FAILED;
     }

@@ -4,6 +4,7 @@
 
 #include "analysis/cadence_detection.h"
 #include "core/entity.h"
+#include "core/framework_reference.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
@@ -12,6 +13,7 @@
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
 #include "structure/structure.h"
+#include "theory/framework.h"
 
 /*
  * Behavioral-contract test: CadenceDetection conforms to the Analyzer
@@ -76,7 +78,7 @@ int main(void) {
         {"authentic (PAC)", 3, 4},
         {"deceptive", 1, 4},
     };
-    CadenceDetectionInput input = {region, candidates, 2};
+    CadenceDetectionInput input = {region, candidates, 2, NULL};
 
     AnalysisResult *result;
     assert(CADENCE_DETECTION_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
@@ -106,7 +108,25 @@ int main(void) {
     assert(evidence_strength_numerator(evidence) == 3);
     assert(evidence_strength_denominator(evidence) == 4);
 
+    assert(interpretation_framework_reference(interpretation) == NULL);
+
     analysis_result_destroy(result);
+
+    /* Regression: when a Framework is supplied, framework_reference names it. */
+    Framework *framework;
+    assert(framework_create(make_id("framework-common-practice-minimal"), "common-practice-minimal", &framework) ==
+           FRAMEWORK_OK);
+    CadenceDetectionInput framework_input = {region, candidates, 2, framework};
+    AnalysisResult *framework_result;
+    assert(CADENCE_DETECTION_ANALYZER.analyze(&framework_input, NULL, NULL, &framework_result) == ANALYZER_OK);
+    const Interpretation *framework_interpretation = analysis_result_interpretation_at(framework_result, 0);
+    const FrameworkReference *framework_reference = interpretation_framework_reference(framework_interpretation);
+    assert(framework_reference != NULL);
+    assert(strcmp(entity_id_value(framework_reference_target_id(framework_reference)),
+                   "framework-common-practice-minimal") == 0);
+
+    analysis_result_destroy(framework_result);
+    framework_destroy(framework);
     structure_destroy(region);
 
     printf("test_cadence_detection: ok\n");
