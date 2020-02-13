@@ -4,34 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *find_last_path_separator(const char *path) {
-    const char *slash = strrchr(path, '/');
-    const char *backslash = strrchr(path, '\\');
-    if (slash && backslash) {
-        return slash > backslash ? slash : backslash;
-    }
-    return slash ? slash : backslash;
-}
+#include "pipeline/path_util.h"
 
 char *derive_report_path(const char *input_path) {
-    size_t input_len = strlen(input_path);
-
-    const char *last_segment_start = find_last_path_separator(input_path);
-    last_segment_start = last_segment_start ? last_segment_start + 1 : input_path;
-
-    const char *dot = strrchr(last_segment_start, '.');
-    size_t stem_len = dot ? (size_t)(dot - input_path) : input_len;
-
-    static const char SUFFIX[] = ".report.md";
-    size_t total_len = stem_len + sizeof(SUFFIX) - 1;
-
-    char *result = malloc(total_len + 1);
-    if (!result) {
-        return NULL;
-    }
-    memcpy(result, input_path, stem_len);
-    memcpy(result + stem_len, SUFFIX, sizeof(SUFFIX));
-    return result;
+    return path_with_suffix(input_path, ".report.md");
 }
 
 bool write_report_file(const char *path, const char *markdown) {

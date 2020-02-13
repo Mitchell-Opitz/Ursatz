@@ -11,6 +11,7 @@
 typedef struct {
     bool found;
     char *label; /* owned; NULL unless found */
+    AnalysisConfidence confidence; /* from ChordIdentification's Interpretation */
 } ChordEstimate;
 
 /*

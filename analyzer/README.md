@@ -1,7 +1,8 @@
 # Ursatz-Analyzer
 
-A small C11 command-line tool that turns a MIDI file into a Markdown report: the piece's
-global key, and the most likely chord for each group of notes that start together. It is a
+A small C11 command-line tool that turns a MIDI file into a Markdown report and a JSON analysis
+document: the piece's global key, and the most likely chord for each group of notes that start
+together. It is a
 thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library and its
 `common-practice-minimal` framework.
 
@@ -17,18 +18,33 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Four tests run: `test_analysis_pipeline`, `test_report_output`,
-`test_corpus_key_estimation` (checks the reported key of six reference pieces), and
-`test_long_labels` (labels past 31 characters render intact).
+Tests:
+
+- `test_analysis_pipeline`, `test_report_output`: end-to-end pipeline and report file.
+- `test_corpus_key_estimation`: the reported key of six reference pieces.
+- `test_long_labels`: labels past 31 characters render intact.
+- `test_analysis_document`: the analysis document's sections, claims and values.
+- `test_cli_output_flags`: which files each output flag writes.
+- `test_analysis_document_schema`: validates the documents for the corpus pieces against the
+  schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
+  reported as skipped otherwise.
 
 ## Usage
 
 ```sh
-ursatz-analyzer <midi-file-path>
+ursatz-analyzer [--json] [--markdown] <midi-file-path>
 ```
 
-Writes `<stem>.report.md` next to the input file. Exits 1 with a message on bad input,
-allocation failure, or write failure.
+Writes two files next to the input file:
+
+- `<stem>.report.md`: the Markdown report.
+- `<stem>.analysis.json`: the analysis document. See
+  [docs/analysis-document.md](docs/analysis-document.md) and the
+  [schema](schema/analysis-document.v1.schema.json).
+
+`--markdown` writes only the report, `--json` writes only the analysis document. No flag, or both,
+writes both. Flags can come before or after the path. Exits 1 with a message on an unknown flag, a
+missing path, bad input, allocation failure, or write failure.
 
 ## Library
 
@@ -43,11 +59,13 @@ Its public include directory is `include/`, and consumers include headers as
 | `analysis_report.h` | `AnalysisReport` and its entries (onset, chord label, key label). |
 | `markdown_report.h` | Renders an `AnalysisReport` as a Markdown string. |
 | `report_writer.h` | Derives the `<stem>.report.md` path and writes the file. |
+| `analysis_document.h` | Renders the analysis document JSON and derives `<stem>.analysis.json`. |
 
 Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
-marks a group or key that was not identified. Strings returned by `markdown_report_render` and
-`derive_report_path` are freed by the caller with `free`.
+marks a group or key that was not identified. It also frees each entry's `note_ids`. Strings returned by
+`markdown_report_render`, `derive_report_path`, `analysis_document_render` and
+`derive_analysis_document_path` are freed by the caller with `free`.
 
 ```cmake
 add_subdirectory(external/ursatz-analyzer)

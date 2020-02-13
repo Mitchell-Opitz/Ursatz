@@ -29,6 +29,7 @@ typedef struct {
     PitchNumericValue **pitch_values;
     size_t count;
     MidiKeySignature key_signature;
+    unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */
 } ImportedNotes;
 
 /*

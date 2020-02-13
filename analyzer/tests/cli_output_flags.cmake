@@ -1,0 +1,51 @@
+# Checks which files each CLI output flag writes. Run with cmake -P and
+# -DCLI=<ursatz-analyzer> -DFIXTURE=<midi file> -DWORK_DIR=<scratch dir>.
+
+foreach(var CLI FIXTURE WORK_DIR)
+    if(NOT DEFINED ${var})
+        message(FATAL_ERROR "${var} is not set")
+    endif()
+endforeach()
+
+set(INPUT "${WORK_DIR}/piece.mid")
+set(REPORT "${WORK_DIR}/piece.report.md")
+set(DOCUMENT "${WORK_DIR}/piece.analysis.json")
+
+# check_case(<label> <expected exit code> <report expected> <document expected> <cli args>...)
+function(check_case label expected_exit expect_report expect_document)
+    file(REMOVE_RECURSE "${WORK_DIR}")
+    file(MAKE_DIRECTORY "${WORK_DIR}")
+    configure_file("${FIXTURE}" "${INPUT}" COPYONLY)
+
+    execute_process(COMMAND "${CLI}" ${ARGN} RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
+    if(NOT result EQUAL expected_exit)
+        message(FATAL_ERROR "${label}: expected exit ${expected_exit}, got ${result}")
+    endif()
+
+    foreach(kind report document)
+        if(kind STREQUAL "report")
+            set(output "${REPORT}")
+            set(expected ${expect_report})
+        else()
+            set(output "${DOCUMENT}")
+            set(expected ${expect_document})
+        endif()
+        if(expected AND NOT EXISTS "${output}")
+            message(FATAL_ERROR "${label}: expected ${output} to be written")
+        elseif(NOT expected AND EXISTS "${output}")
+            message(FATAL_ERROR "${label}: expected no ${output}")
+        endif()
+    endforeach()
+    message(STATUS "${label}: ok")
+endfunction()
+
+check_case("default" 0 TRUE TRUE "${INPUT}")
+check_case("--json" 0 FALSE TRUE --json "${INPUT}")
+check_case("--markdown" 0 TRUE FALSE --markdown "${INPUT}")
+check_case("--json --markdown" 0 TRUE TRUE --json --markdown "${INPUT}")
+check_case("flag after path" 0 FALSE TRUE "${INPUT}" --json)
+check_case("unknown flag" 1 FALSE FALSE --bogus "${INPUT}")
+check_case("missing path" 1 FALSE FALSE --json)
+check_case("two paths" 1 FALSE FALSE "${INPUT}" "${INPUT}")
+
+file(REMOVE_RECURSE "${WORK_DIR}")

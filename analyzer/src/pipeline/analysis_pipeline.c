@@ -32,6 +32,8 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entries = NULL;
     report->entry_count = 0;
     report->key_found = false;
+    report->key_method = ANALYSIS_KEY_METHOD_NONE;
+    report->key_confidence = (AnalysisConfidence){false, 0, 0};
 
     if (notes->count == 0) {
         return true;
@@ -75,14 +77,21 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
 
         entry->key_label = strdup(key.found ? key.label : "no match");
 
+        entry->note_ids = malloc(sizeof(size_t) * group->note_index_count);
+        if (entry->note_ids) {
+            memcpy(entry->note_ids, group->note_indices, sizeof(size_t) * group->note_index_count);
+            entry->note_id_count = group->note_index_count;
+        }
+
         ChordEstimate chord;
         if (identify_chord_for_group(group, notes->events, notes->pitch_values, &key, &chord)) {
             entry->chord_label = strdup(chord.found ? chord.label : "no match");
+            entry->chord_confidence = chord.confidence;
             chord_estimate_destroy(&chord);
         }
 
-        if (!entry->key_label || !entry->chord_label) {
-            AnalysisReport partial = {entries, i + 1, false};
+        if (!entry->key_label || !entry->chord_label || !entry->note_ids) {
+            AnalysisReport partial = {entries, i + 1, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
             analysis_report_destroy(&partial);
             key_estimate_destroy(&key);
             sonority_grouping_destroy(&grouping);
@@ -96,6 +105,8 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entries = entries;
     report->entry_count = group_count;
     report->key_found = key.found;
+    report->key_method = key.method;
+    report->key_confidence = key.confidence;
     key_estimate_destroy(&key);
     return true;
 }
