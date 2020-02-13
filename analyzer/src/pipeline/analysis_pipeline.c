@@ -91,7 +91,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         }
 
         if (!entry->key_label || !entry->chord_label || !entry->note_ids) {
-            AnalysisReport partial = {entries, i + 1, false};
+            AnalysisReport partial = {entries, i + 1, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
             analysis_report_destroy(&partial);
             key_estimate_destroy(&key);
             sonority_grouping_destroy(&grouping);
