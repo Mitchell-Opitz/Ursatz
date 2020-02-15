@@ -114,7 +114,7 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
         }
         const cJSON *start = cJSON_GetObjectItemCaseSensitive(
             cJSON_GetObjectItemCaseSensitive(chord, "span"), "start");
-        double beats = 2.0 * number_member(start, "num") / number_member(start, "den");
+        double beats = 4.0 * number_member(start, "num") / number_member(start, "den");
         const char *label = string_member(chord, "label");
         ok = sb_appendf(sb, "- Beat %.2f: %s\n", beats, label ? label : "");
     }
