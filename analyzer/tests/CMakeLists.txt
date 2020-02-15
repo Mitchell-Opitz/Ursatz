@@ -13,6 +13,8 @@ add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation
 
 add_executable(test_long_labels test_long_labels.c)
 target_link_libraries(test_long_labels PRIVATE ursatz_analyzer)
+target_compile_definitions(test_long_labels PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_long_labels COMMAND test_long_labels)
 
 add_executable(test_analysis_document test_analysis_document.c)

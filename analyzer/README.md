@@ -57,15 +57,17 @@ Its public include directory is `include/`, and consumers include headers as
 | `midi_pipeline.h` | Imports a MIDI file into `ImportedNotes`; `imported_notes_destroy` frees it. |
 | `analysis_pipeline.h` | `run_analysis_pipeline` turns `ImportedNotes` into an `AnalysisReport`. |
 | `analysis_report.h` | `AnalysisReport` and its entries (onset, chord label, key label). |
-| `markdown_report.h` | Renders an `AnalysisReport` as a Markdown string. |
+| `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalysisReport`, serializes it as JSON, and derives `<stem>.analysis.json`. |
+| `markdown_report.h` | Renders an `AnalysisDocument` as the Markdown report, section by section. |
 | `report_writer.h` | Derives the `<stem>.report.md` path and writes the file. |
-| `analysis_document.h` | Renders the analysis document JSON and derives `<stem>.analysis.json`. |
 
 Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
-marks a group or key that was not identified. It also frees each entry's `note_ids`. Strings returned by
-`markdown_report_render`, `derive_report_path`, `analysis_document_render` and
-`derive_analysis_document_path` are freed by the caller with `free`.
+marks a group or key that was not identified. It also frees each entry's `note_ids`. The caller
+frees an `AnalysisDocument` with `analysis_document_destroy`; it keeps no reference to the notes
+or the report, so those can be destroyed as soon as it is built. Strings returned by
+`markdown_report_render`, `analysis_document_to_json`, `analysis_document_render`,
+`derive_report_path` and `derive_analysis_document_path` are freed by the caller with `free`.
 
 ```cmake
 add_subdirectory(external/ursatz-analyzer)
@@ -80,7 +82,9 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
 2. `key_pipeline`: estimates one key for the whole piece.
 3. `chord_pipeline`: per group, maps pitch classes to scale degrees and identifies a chord.
 
-Then `markdown_report` renders and `report_writer` writes the file.
+`analysis_document` then builds the analysis document once. It is the single source of truth:
+the JSON file is its serialization, and `markdown_report` renders the report from it, never from
+the pipeline directly. `report_writer` writes each file.
 
 ## Key estimation
 

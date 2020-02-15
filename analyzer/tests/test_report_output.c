@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
@@ -98,8 +99,11 @@ int main(void) {
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
 
-    char *markdown = markdown_report_render(input_path, &report);
+    AnalysisDocument *document = analysis_document_build(input_path, &notes, &report);
+    assert(document != NULL);
+    char *markdown = markdown_report_render(document);
     assert(markdown != NULL);
+    analysis_document_destroy(document);
 
     char *output_path = derive_report_path(input_path);
     assert(output_path != NULL);
