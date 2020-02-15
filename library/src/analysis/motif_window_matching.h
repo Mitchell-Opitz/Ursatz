@@ -1,0 +1,88 @@
+#ifndef MUSIC_ANALYSIS_MOTIF_WINDOW_MATCHING_H
+#define MUSIC_ANALYSIS_MOTIF_WINDOW_MATCHING_H
+
+#include <stddef.h>
+
+#include "analysis/motif_detection.h"
+#include "identity/entity_id.h"
+#include "semantics/contour.h"
+#include "semantics/rhythmic_pattern.h"
+
+/*
+ * MotifWindowMatching (Procedure, feeds MotifDetection's
+ * MotifDetectionInput, Registry #20): finds candidate-motif windows
+ * that repeat elsewhere in a piece by comparing each window's Contour
+ * direction sequence (semantics/contour.h) and RhythmicPattern
+ * duration sequence (semantics/rhythmic_pattern.h) for exact equality.
+ *
+ * Scope boundary (same one IntervalAnalysis/VoiceLeadingAnalysis/
+ * CadenceClassification already hit): PitchIdentity carries no numeric
+ * semantics, so this module cannot compute pitch direction or interval
+ * distance itself. It takes windows whose Contour/RhythmicPattern have
+ * already been built by the caller (from real pitch/duration data
+ * under whatever tuning/notation the caller has) and compares those
+ * already-observed sequences. Cutting a NoteEvent stream into
+ * candidate windows is likewise the caller's job -- this module has no
+ * opinion on window size or boundary placement, only on whether two
+ * given windows match.
+ *
+ * Match rule (v1, deliberately narrow -- exact match only, no
+ * inversion/retrograde/fragmentation, no pitch-interval math):
+ * two windows match iff their Contour direction sequences are equal
+ * element-for-element (contour_direction_at) AND their RhythmicPattern
+ * duration sequences are equal element-for-element (duration_equals).
+ * Equal Contour directions is transposition-invariant by construction
+ * (a transposition preserves relative up/down/same), so this single
+ * rule covers both exact repetition and transposition without any
+ * numeric pitch math -- direction and rhythm equality are both
+ * required, so same-rhythm-different-shape or same-shape-different-
+ * rhythm windows are correctly rejected.
+ *
+ * Design default (flagged, not a Registry-settled rule): a motif
+ * requires at least two occurrences by definition, so a window with no
+ * match anywhere else in the input produces no occurrence at all. This
+ * module does not attempt to distinguish "coincidental" repeats from
+ * intentional ones beyond that -- any two-or-more-window exact match
+ * is reported, at confidence 1/1 (an exact match under this rule has no
+ * partial-credit dimension to score).
+ */
+
+typedef struct {
+    const Contour *contour;
+    const RhythmicPattern *rhythm;
+    const EntityID *const *event_ids;
+    size_t event_id_count;
+} MotifWindow;
+
+typedef enum {
+    MOTIF_WINDOW_MATCHING_OK = 0,
+    MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOWS,
+    MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW,
+    MOTIF_WINDOW_MATCHING_ERR_ALLOC
+} MotifWindowMatchingResult;
+
+/*
+ * windows/window_count MUST be non-NULL/non-zero if window_count > 0;
+ * window_count == 0 is valid and yields *out_occurrences = NULL,
+ * *out_occurrence_count = 0. No entry of windows may have a NULL
+ * contour, rhythm, or event_ids, or a zero event_id_count.
+ *
+ * On success, *out_occurrences is a freshly allocated array (caller
+ * frees with motif_window_matching_destroy_occurrences) of one
+ * MotifDetectionOccurrence per window that matched at least one other
+ * window, in input order; each occurrence's matched_event_ids/
+ * matched_event_id_count borrow directly from the corresponding
+ * window's event_ids (no copy), and confidence is fixed at 1/1.
+ * *out_occurrence_count may be 0 (no window matched any other) with
+ * *out_occurrences left NULL.
+ */
+MotifWindowMatchingResult motif_window_matching_find(const MotifWindow *windows, size_t window_count,
+                                                       MotifDetectionOccurrence **out_occurrences,
+                                                       size_t *out_occurrence_count);
+
+/* Frees the array returned by motif_window_matching_find. Does not touch the
+   borrowed event_ids each occurrence points at -- those remain owned by
+   whatever owns the original MotifWindow array. */
+void motif_window_matching_destroy_occurrences(MotifDetectionOccurrence *occurrences);
+
+#endif

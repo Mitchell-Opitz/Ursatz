@@ -1,0 +1,103 @@
+#include "analysis/motif_window_matching.h"
+
+#include <stdbool.h>
+#include <stdlib.h>
+
+static bool windows_match(const MotifWindow *a, const MotifWindow *b) {
+    size_t direction_count = contour_direction_count(a->contour);
+    if (direction_count != contour_direction_count(b->contour)) {
+        return false;
+    }
+    for (size_t i = 0; i < direction_count; i++) {
+        if (contour_direction_at(a->contour, i) != contour_direction_at(b->contour, i)) {
+            return false;
+        }
+    }
+
+    size_t duration_count = rhythmic_pattern_duration_count(a->rhythm);
+    if (duration_count != rhythmic_pattern_duration_count(b->rhythm)) {
+        return false;
+    }
+    for (size_t i = 0; i < duration_count; i++) {
+        if (!duration_equals(rhythmic_pattern_duration_at(a->rhythm, i), rhythmic_pattern_duration_at(b->rhythm, i))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+MotifWindowMatchingResult motif_window_matching_find(const MotifWindow *windows, size_t window_count,
+                                                       MotifDetectionOccurrence **out_occurrences,
+                                                       size_t *out_occurrence_count) {
+    if (window_count > 0 && windows == NULL) {
+        return MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOWS;
+    }
+    for (size_t i = 0; i < window_count; i++) {
+        if (windows[i].contour == NULL || windows[i].rhythm == NULL || windows[i].event_ids == NULL ||
+            windows[i].event_id_count == 0) {
+            return MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW;
+        }
+    }
+
+    if (window_count == 0) {
+        *out_occurrences = NULL;
+        *out_occurrence_count = 0;
+        return MOTIF_WINDOW_MATCHING_OK;
+    }
+
+    bool *has_match = (bool *)calloc(window_count, sizeof(bool));
+    if (has_match == NULL) {
+        return MOTIF_WINDOW_MATCHING_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < window_count; i++) {
+        for (size_t j = 0; j < window_count; j++) {
+            if (i == j || has_match[i]) {
+                continue;
+            }
+            if (windows_match(&windows[i], &windows[j])) {
+                has_match[i] = true;
+            }
+        }
+    }
+
+    size_t matched_count = 0;
+    for (size_t i = 0; i < window_count; i++) {
+        if (has_match[i]) {
+            matched_count++;
+        }
+    }
+
+    if (matched_count == 0) {
+        free(has_match);
+        *out_occurrences = NULL;
+        *out_occurrence_count = 0;
+        return MOTIF_WINDOW_MATCHING_OK;
+    }
+
+    MotifDetectionOccurrence *occurrences =
+        (MotifDetectionOccurrence *)calloc(matched_count, sizeof(MotifDetectionOccurrence));
+    if (occurrences == NULL) {
+        free(has_match);
+        return MOTIF_WINDOW_MATCHING_ERR_ALLOC;
+    }
+
+    size_t out_index = 0;
+    for (size_t i = 0; i < window_count; i++) {
+        if (!has_match[i]) {
+            continue;
+        }
+        occurrences[out_index].matched_event_ids = windows[i].event_ids;
+        occurrences[out_index].matched_event_id_count = windows[i].event_id_count;
+        occurrences[out_index].confidence_numerator = 1;
+        occurrences[out_index].confidence_denominator = 1;
+        out_index++;
+    }
+
+    free(has_match);
+    *out_occurrences = occurrences;
+    *out_occurrence_count = matched_count;
+    return MOTIF_WINDOW_MATCHING_OK;
+}
+
+void motif_window_matching_destroy_occurrences(MotifDetectionOccurrence *occurrences) { free(occurrences); }

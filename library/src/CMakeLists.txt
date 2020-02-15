@@ -108,6 +108,7 @@ add_library(ursatz
     analysis/cadence_detection.c
     analysis/cadence_classification.c
     analysis/motif_detection.c
+    analysis/motif_window_matching.c
     analysis/phrase_segmentation.c
     generation/intent.c
     generation/constraint_extraction.c
