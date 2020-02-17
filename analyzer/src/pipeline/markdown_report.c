@@ -97,6 +97,120 @@ static bool render_title(StringBuilder *sb, const cJSON *document, const cJSON *
     return sb_appendf(sb, "# Analysis Report: %s\n\n", source_file ? source_file : "");
 }
 
+/* How the key was found, in plain words, from keys[].method. */
+static const char *key_method_phrase(const char *method) {
+    if (method && strcmp(method, "key_signature") == 0) {
+        return "read from the key signature";
+    }
+    if (method && strcmp(method, "bass_fallback") == 0) {
+        return "inferred from the bass of the closing or opening chord";
+    }
+    if (method && strcmp(method, "pitch_class_scan") == 0) {
+        return "inferred from the overall pitch content";
+    }
+    return "found by an unrecorded method";
+}
+
+typedef struct {
+    const char *label;
+    size_t count;
+} LabelCount;
+
+/* Higher count first, then label order, so ties are deterministic. */
+static int compare_label_counts(const void *a, const void *b) {
+    const LabelCount *left = a;
+    const LabelCount *right = b;
+    if (left->count != right->count) {
+        return left->count > right->count ? -1 : 1;
+    }
+    return strcmp(left->label, right->label);
+}
+
+static const char *plural(size_t count, const char *singular, const char *plural_form) {
+    return count == 1 ? singular : plural_form;
+}
+
+/* Matched chord labels ("no match" excluded) with their counts, sorted
+   by compare_label_counts. *out_counts is NULL when there are none. */
+static bool count_chord_labels(const cJSON *chords, LabelCount **out_counts, size_t *out_count) {
+    *out_counts = NULL;
+    *out_count = 0;
+    size_t chord_count = (size_t)cJSON_GetArraySize(chords);
+    if (chord_count == 0) {
+        return true;
+    }
+    LabelCount *counts = malloc(sizeof(LabelCount) * chord_count);
+    if (!counts) {
+        return false;
+    }
+    size_t distinct = 0;
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        const char *label = string_member(chord, "label");
+        if (!label || strcmp(label, "no match") == 0) {
+            continue;
+        }
+        size_t i = 0;
+        while (i < distinct && strcmp(counts[i].label, label) != 0) {
+            i++;
+        }
+        if (i == distinct) {
+            counts[distinct++] = (LabelCount){label, 0};
+        }
+        counts[i].count++;
+    }
+    qsort(counts, distinct, sizeof(LabelCount), compare_label_counts);
+    *out_counts = counts;
+    *out_count = distinct;
+    return true;
+}
+
+/* A few plain-language lines for a composer: the piece, its key, how
+   much of it resolved to chords, and the chords it leans on most. */
+static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON *metadata) {
+    size_t note_count = (size_t)number_member(metadata, "note_count");
+    const char *source_file = string_member(metadata, "source_file");
+    bool ok = sb_append(sb, "## Summary\n\n") &&
+              sb_appendf(sb, "- **File:** %s, %zu %s.\n", source_file ? source_file : "", note_count,
+                         plural(note_count, "note", "notes"));
+
+    const cJSON *key = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "keys"), 0);
+    const char *key_label = string_member(key, "label");
+    if (key_label) {
+        ok = ok && sb_appendf(sb, "- **Key:** %s, %s.\n", key_label,
+                              key_method_phrase(string_member(key, "method")));
+    } else {
+        ok = ok && sb_append(sb, "- **Key:** No key was found.\n");
+    }
+
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(document, "chords");
+    size_t chord_count = (size_t)cJSON_GetArraySize(chords);
+    LabelCount *counts = NULL;
+    size_t distinct = 0;
+    ok = ok && count_chord_labels(chords, &counts, &distinct);
+    if (ok && chord_count == 0) {
+        ok = sb_append(sb, "- **Chords:** No chord events were found.\n");
+    } else if (ok) {
+        size_t matched = 0;
+        for (size_t i = 0; i < distinct; i++) {
+            matched += counts[i].count;
+        }
+        size_t percent = (matched * 100 + chord_count / 2) / chord_count;
+        ok = sb_appendf(sb, "- **Chords:** %zu chord %s; %zu matched a chord (%zu%%), %zu did not.\n",
+                        chord_count, plural(chord_count, "event", "events"), matched, percent,
+                        chord_count - matched);
+    }
+    if (ok && distinct > 0) {
+        ok = sb_append(sb, "- **Most frequent chords:** ");
+        for (size_t i = 0; i < distinct && i < 3 && ok; i++) {
+            ok = sb_appendf(sb, "%s%s (%zu)", i > 0 ? ", " : "", counts[i].label, counts[i].count);
+        }
+        ok = ok && sb_append(sb, ".\n");
+    }
+    free(counts);
+    return ok && sb_append(sb, "\n");
+}
+
 static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *keys) {
     (void)document;
     const char *label = string_member(cJSON_GetArrayItem(keys, 0), "label");
@@ -128,6 +242,7 @@ static const struct {
     SectionRenderer render;
 } SECTIONS[] = {
     {"metadata", render_title},
+    {"metadata", render_summary},
     {"keys", render_key},
     {"chords", render_chords},
 };
