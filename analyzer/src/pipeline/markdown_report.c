@@ -195,9 +195,18 @@ static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON
         for (size_t i = 0; i < distinct; i++) {
             matched += counts[i].count;
         }
+        /* Whole percent, but never "0%" for some matches or "100%" for some misses. */
         size_t percent = (matched * 100 + chord_count / 2) / chord_count;
-        ok = sb_appendf(sb, "- **Chords:** %zu chord %s; %zu matched a chord (%zu%%), %zu did not.\n",
-                        chord_count, plural(chord_count, "event", "events"), matched, percent,
+        char percent_text[8];
+        if (matched > 0 && percent == 0) {
+            snprintf(percent_text, sizeof(percent_text), "<1%%");
+        } else if (matched < chord_count && percent == 100) {
+            snprintf(percent_text, sizeof(percent_text), ">99%%");
+        } else {
+            snprintf(percent_text, sizeof(percent_text), "%zu%%", percent);
+        }
+        ok = sb_appendf(sb, "- **Chords:** %zu chord %s; %zu matched a chord (%s), %zu did not.\n",
+                        chord_count, plural(chord_count, "event", "events"), matched, percent_text,
                         chord_count - matched);
     }
     if (ok && distinct > 0) {
