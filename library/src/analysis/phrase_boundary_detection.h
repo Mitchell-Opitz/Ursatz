@@ -7,6 +7,7 @@
 #include "analysis/analyzer.h"
 #include "analysis/phrase_segmentation.h"
 #include "events/note_event.h"
+#include "structure/phrase_occurrence.h"
 
 /*
  * PhraseBoundaryDetection (Procedure -> Analyzer implementation, built
@@ -140,5 +141,45 @@ AnalyzerResult phrase_boundary_detection_signal_analyze(const void *input, const
                                                          const Value *config, AnalysisResult **out);
 
 extern const Analyzer PHRASE_BOUNDARY_DETECTION_SIGNAL_ANALYZER;
+
+typedef enum {
+    PHRASE_BOUNDARY_DETECTION_OCC_OK = 0,
+    PHRASE_BOUNDARY_DETECTION_OCC_ERR_NULL_POINTS,
+    PHRASE_BOUNDARY_DETECTION_OCC_ERR_NULL_POINT,
+    PHRASE_BOUNDARY_DETECTION_OCC_ERR_ALLOC
+} PhraseBoundaryDetectionOccurrenceResult;
+
+/*
+ * Groups points into phrases using the same is_boundary computation
+ * phrase_boundary_detection_analyze uses (a boundary point closes the
+ * phrase it ends, inclusive), and constructs one PhraseOccurrence
+ * (structure/phrase_occurrence.h, L5) per phrase spanning that phrase's
+ * event range. A fresh Phrase (containers/phrase.h, L4) is constructed
+ * per phrase purely to obtain the id PhraseOccurrence's Occurrence
+ * targets -- the same transient-construct-then-capture-id pattern
+ * MotifDetection uses for MotifOccurrence (analysis/motif_detection.c)
+ * -- then destroyed; PhraseOccurrence's own region_event_ids are
+ * separate owned copies, not shared with the transient Phrase.
+ *
+ * Design default (flagged, not Registry-settled): a trailing run of
+ * points after the last boundary, with no boundary signal to close it,
+ * still becomes a final PhraseOccurrence (the piece's material must
+ * end up in some phrase). Same treatment as MotifWindowMatching
+ * flagging its own two-occurrences-minimum default.
+ *
+ * points/point_count validation matches phrase_boundary_detection_analyze.
+ * point_count == 0 is valid and yields *out_occurrences = NULL,
+ * *out_occurrence_count = 0.
+ *
+ * On success, *out_occurrences is a freshly allocated array (caller
+ * frees with phrase_boundary_detection_destroy_occurrences) of
+ * PhraseOccurrence pointers, one per phrase, in input order.
+ */
+PhraseBoundaryDetectionOccurrenceResult phrase_boundary_detection_build_occurrences(
+    const PhraseBoundaryDetectionPoint *points, size_t point_count, size_t max_length_without_cadence,
+    PhraseOccurrence ***out_occurrences, size_t *out_occurrence_count);
+
+/* Destroys each PhraseOccurrence in occurrences and the array itself. */
+void phrase_boundary_detection_destroy_occurrences(PhraseOccurrence **occurrences, size_t occurrence_count);
 
 #endif

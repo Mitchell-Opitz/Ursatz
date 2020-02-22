@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "containers/phrase.h"
+#include "core/occurrence.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
@@ -353,3 +355,174 @@ AnalyzerResult phrase_boundary_detection_signal_analyze(const void *input, const
 
 const Analyzer PHRASE_BOUNDARY_DETECTION_SIGNAL_ANALYZER = {"PhraseBoundaryDetectionSignal",
                                                               phrase_boundary_detection_signal_analyze};
+
+static void destroy_id_array(EntityID **ids, size_t count) {
+    if (ids == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        entity_id_destroy(ids[i]);
+    }
+    free(ids);
+}
+
+static bool copy_id_array(const EntityID *const *source, size_t count, EntityID ***out) {
+    EntityID **copy = (EntityID **)malloc(sizeof(EntityID *) * count);
+    if (copy == NULL) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (entity_id_create(entity_id_value(source[i]), &copy[i]) != ENTITY_ID_OK) {
+            destroy_id_array(copy, i);
+            return false;
+        }
+    }
+    *out = copy;
+    return true;
+}
+
+static bool build_phrase_occurrence(size_t phrase_index, const EntityID *const *event_ids, size_t event_id_count,
+                                     PhraseOccurrence **out) {
+    char index_buffer[32];
+    snprintf(index_buffer, sizeof(index_buffer), "%zu", phrase_index);
+
+    EntityID *phrase_own_id;
+    if (!make_id("phrase-phrase-boundary-detection", index_buffer, &phrase_own_id)) {
+        return false;
+    }
+    EntityID **phrase_event_ids;
+    if (!copy_id_array(event_ids, event_id_count, &phrase_event_ids)) {
+        entity_id_destroy(phrase_own_id);
+        return false;
+    }
+    Phrase *phrase;
+    if (phrase_create(phrase_own_id, phrase_event_ids, event_id_count, &phrase) != PHRASE_OK) {
+        destroy_id_array(phrase_event_ids, event_id_count);
+        entity_id_destroy(phrase_own_id);
+        return false;
+    }
+
+    EntityID *occurrence_own_id;
+    if (!make_id("occurrence-phrase-boundary-detection", index_buffer, &occurrence_own_id)) {
+        phrase_destroy(phrase);
+        return false;
+    }
+    EntityID *target_id;
+    if (entity_id_create(entity_id_value(phrase_id(phrase)), &target_id) != ENTITY_ID_OK) {
+        entity_id_destroy(occurrence_own_id);
+        phrase_destroy(phrase);
+        return false;
+    }
+    phrase_destroy(phrase);
+
+    Occurrence *occurrence;
+    if (occurrence_create(occurrence_own_id, target_id, &occurrence) != OCCURRENCE_OK) {
+        entity_id_destroy(target_id);
+        entity_id_destroy(occurrence_own_id);
+        return false;
+    }
+
+    EntityID **region_event_ids;
+    if (!copy_id_array(event_ids, event_id_count, &region_event_ids)) {
+        occurrence_destroy(occurrence);
+        return false;
+    }
+
+    PhraseOccurrence *phrase_occurrence;
+    if (phrase_occurrence_create(occurrence, region_event_ids, event_id_count, &phrase_occurrence) !=
+        PHRASE_OCCURRENCE_OK) {
+        destroy_id_array(region_event_ids, event_id_count);
+        occurrence_destroy(occurrence);
+        return false;
+    }
+
+    *out = phrase_occurrence;
+    return true;
+}
+
+PhraseBoundaryDetectionOccurrenceResult phrase_boundary_detection_build_occurrences(
+    const PhraseBoundaryDetectionPoint *points, size_t point_count, size_t max_length_without_cadence,
+    PhraseOccurrence ***out_occurrences, size_t *out_occurrence_count) {
+    if (point_count > 0 && points == NULL) {
+        return PHRASE_BOUNDARY_DETECTION_OCC_ERR_NULL_POINTS;
+    }
+    for (size_t i = 0; i < point_count; i++) {
+        if (points[i].event == NULL) {
+            return PHRASE_BOUNDARY_DETECTION_OCC_ERR_NULL_POINT;
+        }
+    }
+
+    if (point_count == 0) {
+        *out_occurrences = NULL;
+        *out_occurrence_count = 0;
+        return PHRASE_BOUNDARY_DETECTION_OCC_OK;
+    }
+
+    bool *is_boundary = (bool *)calloc(point_count, sizeof(bool));
+    if (is_boundary == NULL) {
+        return PHRASE_BOUNDARY_DETECTION_OCC_ERR_ALLOC;
+    }
+    compute_boundaries(points, point_count, max_length_without_cadence, is_boundary, NULL);
+
+    /* Upper bound: at most one phrase per point. */
+    PhraseOccurrence **occurrences = (PhraseOccurrence **)calloc(point_count, sizeof(PhraseOccurrence *));
+    const EntityID **group_event_ids = (const EntityID **)calloc(point_count, sizeof(EntityID *));
+    if (occurrences == NULL || group_event_ids == NULL) {
+        free(is_boundary);
+        free(occurrences);
+        free((void *)group_event_ids);
+        return PHRASE_BOUNDARY_DETECTION_OCC_ERR_ALLOC;
+    }
+
+    size_t phrase_count = 0;
+    size_t group_size = 0;
+    for (size_t i = 0; i < point_count; i++) {
+        group_event_ids[group_size] = note_event_id(points[i].event);
+        group_size++;
+
+        if (is_boundary[i]) {
+            if (!build_phrase_occurrence(phrase_count, group_event_ids, group_size, &occurrences[phrase_count])) {
+                for (size_t j = 0; j < phrase_count; j++) {
+                    phrase_occurrence_destroy(occurrences[j]);
+                }
+                free(is_boundary);
+                free(occurrences);
+                free((void *)group_event_ids);
+                return PHRASE_BOUNDARY_DETECTION_OCC_ERR_ALLOC;
+            }
+            phrase_count++;
+            group_size = 0;
+        }
+    }
+    /* Trailing partial phrase (no closing boundary signal) -- flagged design default,
+       see phrase_boundary_detection_build_occurrences's header comment. */
+    if (group_size > 0) {
+        if (!build_phrase_occurrence(phrase_count, group_event_ids, group_size, &occurrences[phrase_count])) {
+            for (size_t j = 0; j < phrase_count; j++) {
+                phrase_occurrence_destroy(occurrences[j]);
+            }
+            free(is_boundary);
+            free(occurrences);
+            free((void *)group_event_ids);
+            return PHRASE_BOUNDARY_DETECTION_OCC_ERR_ALLOC;
+        }
+        phrase_count++;
+    }
+
+    free(is_boundary);
+    free((void *)group_event_ids);
+
+    *out_occurrences = occurrences;
+    *out_occurrence_count = phrase_count;
+    return PHRASE_BOUNDARY_DETECTION_OCC_OK;
+}
+
+void phrase_boundary_detection_destroy_occurrences(PhraseOccurrence **occurrences, size_t occurrence_count) {
+    if (occurrences == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < occurrence_count; i++) {
+        phrase_occurrence_destroy(occurrences[i]);
+    }
+    free(occurrences);
+}
