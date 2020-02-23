@@ -4,7 +4,7 @@ Layer L8 (`music-analysis`). Path `src/analysis/`, tests `tests/analysis/`. One 
 
 ## Provides
 
-`Analyzer`, `AnalysisResult`, `FeatureExtraction`, and nine concrete analyzers (`IntervalAnalysis`, `ScaleAnalysis`, `ChordIdentification`, `KeyEstimation`, `VoiceLeadingAnalysis`, `CadenceDetection`, `CadenceClassification`, `MotifDetection`, `PhraseSegmentation`).
+`Analyzer`, `AnalysisResult`, `FeatureExtraction`, and ten concrete analyzers (`IntervalAnalysis`, `ScaleAnalysis`, `ChordIdentification`, `KeyEstimation`, `VoiceLeadingAnalysis`, `CadenceDetection`, `CadenceClassification`, `MotifDetection`, `PhraseSegmentation`, `PhraseBoundaryDetection`).
 
 ## Notes
 
@@ -35,12 +35,26 @@ What's REAL vs. CALLER-SUPPLIED-REFINEMENT vs. UNCLASSIFIED, the same transparen
 - Optional caller-supplied refinement (never required): `from_is_dominant_seventh` and Voice Leading's bass-motion classification (`analysis/voice_leading_analysis.h`) each only adjust the winning candidate's confidence tier within the authentic-cadence rule -- a caller with no Voice Leading data still gets a classification, just a lower-confidence one.
 - Optional caller-supplied refinement that changes the LABEL, not just its weight: `soprano_resolves_to_tonic`, distinguishing PAC from IAC. This genuinely cannot be derived today -- no `PitchClass`/`TuningSystem` (`docs/modules/l8-notes.md`) means no real soprano-resolution computation exists anywhere in this codebase. When absent, the authentic-cadence candidate is reported as `"authentic (unclassified: PAC/IAC)"` rather than guessing PAC or IAC.
 
+**`PhraseBoundaryDetection` -- real cadence-primary/contour-rhythm-secondary boundary signal, built on `PhraseSegmentation`:**
+
+`PhraseSegmentation` (`analysis/phrase_segmentation.h`) is unchanged and still just packages an already-determined `is_boundary` per point into an `Interpretation` targeting that point's event -- the same generic-Interpretation, caller-supplies-the-classification role `CadenceDetection` had before `CadenceClassification` was added on top of it.
+
+`PhraseBoundaryDetection` (`analysis/phrase_boundary_detection.h`) is the real signal computation on top, the same delegation relationship `CadenceClassification` has to `CadenceDetection`: given a `NoteEvent` sequence annotated per point with `CadenceDetection`/`CadenceClassification` output (`has_cadence` + the winning candidate label as `cadence_type`, including `"unclassified"` as a legitimate value, not a gap) and Contour/RhythmicPattern discontinuity observations (`has_discontinuity`, e.g. a rest or a clear directional/rhythmic break -- still caller-supplied, the same scope boundary `MotifWindowMatching` hits), it derives real `is_boundary` values:
+
+- Primary signal: any detected cadence at a point is a boundary, whatever its type.
+- Secondary signal: a contour/rhythm discontinuity only counts as a boundary once `max_length_without_cadence` points (default `PHRASE_BOUNDARY_DETECTION_DEFAULT_MAX_LENGTH` = 8, flagged, not a Registry-settled rule) have elapsed since the last boundary with no cadence among them.
+
+It then packages those `is_boundary` values into a `PhraseSegmentationPoint` array and delegates entirely to `phrase_segmentation_analyze` for that plain boundary `Interpretation` -- `phrase_segmentation.c` is not modified. Because `PhraseSegmentationClaim` has no room for which signal fired or which cadence type applied, `PhraseBoundaryDetection` reports that as a SEPARATE `Interpretation` (`phrase_boundary_detection_signal_analyze`, its own `PhraseBoundaryDetectionSignalClaim`: signal kind + cadence type when applicable), targeting the same event -- both Interpretations coexisting on the same target, the same competing/complementary-Interpretations principle `Chord`/`Key` already use, not a workaround.
+
+Finally, `phrase_boundary_detection_build_occurrences` groups points between boundaries (boundary-inclusive) and constructs one `PhraseOccurrence` (L5, `structure/phrase_occurrence.h`) per phrase, spanning that phrase's event range -- a fresh `Phrase` (L4, `containers/phrase.h`) is constructed transiently per phrase purely to obtain the id `PhraseOccurrence`'s `Occurrence` targets, then destroyed, the same transient-construct-then-capture-id pattern `MotifDetection` uses for `MotifOccurrence`. Flagged design default: a trailing run of points with no closing boundary signal still becomes a final `PhraseOccurrence` (all material ends up in some phrase).
+
+Out of scope for this branch (unchanged): Period/Sentence detection (a separate, later branch consuming `PhraseOccurrence`), any pitch/interval math beyond what Contour/RhythmicPattern already provide, and any L9 query infrastructure (`PatternMatching`/`SimilarityModel`/`SearchResult`).
+
 **Still placeholder/deferred (not touched by the common-practice-minimal wiring):**
 
-- `PhraseSegmentation`, `VoiceLeadingAnalysis`, `ScaleAnalysis` -- unchanged; still report caller-supplied candidate sets rather than a framework-derived answer. `VoiceLeadingAnalysis` specifically has AnalysisRegression coverage pinning this packaging for parallel-fifth/parallel-octave motion and step/leap/same bass-motion shapes (`tests/analysis/test_voice_leading_analysis.c`) -- the classification itself is still caller-supplied, not derived.
+- `VoiceLeadingAnalysis`, `ScaleAnalysis` -- unchanged; still report caller-supplied candidate sets rather than a framework-derived answer. `VoiceLeadingAnalysis` specifically has AnalysisRegression coverage pinning this packaging for parallel-fifth/parallel-octave motion and step/leap/same bass-motion shapes (`tests/analysis/test_voice_leading_analysis.c`) -- the classification itself is still caller-supplied, not derived.
 - `MotifDetection` itself still just packages an already-determined `MotifDetectionOccurrence` set into `Interpretation`s (`analysis/motif_detection.h`), but its match-finding step (`analysis/motif_window_matching.h`) is now real, not caller-supplied: given caller-supplied `MotifWindow`s (each a `Contour` + `RhythmicPattern` + event-id list -- window construction and segmentation stay the caller's job, same boundary Contour/RhythmicPattern themselves already draw), it finds matches by exact equality of Contour direction sequence AND RhythmicPattern duration sequence. Matching on direction alone is transposition-invariant by construction, so this one rule covers both exact repetition and transposition without any pitch-interval math -- still blocked on `PitchClass`/`TuningSystem` (`docs/modules/l8-notes.md`) for anything beyond that. Two judgment calls flagged, not Registry-settled: a match is reported only when a window matches at least one other (a motif needs >=2 occurrences by definition), and every match is reported at a fixed 1/1 confidence (an exact match has no partial-credit dimension to score in v1). Inversion, retrograde, and fragmentation matching remain deferred entirely.
 - Multi-candidate/confidence-weighted output for `ChordIdentification`/`KeyEstimation` -- deliberately out of scope for this pass; both analyzers are single-answer/deterministic today, matching the framework's own deterministic behavior. Planned as a later, separate refinement.
-- Phrase Segmentation consuming `CadenceClassification`'s output to find phrase boundaries -- a separate, later branch.
 
 ## Dependencies
 
