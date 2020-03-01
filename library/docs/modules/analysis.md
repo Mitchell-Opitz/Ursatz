@@ -4,7 +4,7 @@ Layer L8 (`music-analysis`). Path `src/analysis/`, tests `tests/analysis/`. One 
 
 ## Provides
 
-`Analyzer`, `AnalysisResult`, `FeatureExtraction`, and ten concrete analyzers (`IntervalAnalysis`, `ScaleAnalysis`, `ChordIdentification`, `KeyEstimation`, `VoiceLeadingAnalysis`, `CadenceDetection`, `CadenceClassification`, `MotifDetection`, `PhraseSegmentation`, `PhraseBoundaryDetection`).
+`Analyzer`, `AnalysisResult`, `FeatureExtraction`, and eleven concrete analyzers (`IntervalAnalysis`, `ScaleAnalysis`, `ChordIdentification`, `KeyEstimation`, `VoiceLeadingAnalysis`, `CadenceDetection`, `CadenceClassification`, `MotifDetection`, `PhraseSegmentation`, `PhraseBoundaryDetection`, `PeriodDetection`).
 
 ## Notes
 
@@ -49,6 +49,14 @@ It then packages those `is_boundary` values into a `PhraseSegmentationPoint` arr
 Finally, `phrase_boundary_detection_build_occurrences` groups points between boundaries (boundary-inclusive) and constructs one `PhraseOccurrence` (L5, `structure/phrase_occurrence.h`) per phrase, spanning that phrase's event range -- a fresh `Phrase` (L4, `containers/phrase.h`) is constructed transiently per phrase purely to obtain the id `PhraseOccurrence`'s `Occurrence` targets, then destroyed, the same transient-construct-then-capture-id pattern `MotifDetection` uses for `MotifOccurrence`. Flagged design default: a trailing run of points with no closing boundary signal still becomes a final `PhraseOccurrence` (all material ends up in some phrase).
 
 Out of scope for this branch (unchanged): Period/Sentence detection (a separate, later branch consuming `PhraseOccurrence`), any pitch/interval math beyond what Contour/RhythmicPattern already provide, and any L9 query infrastructure (`PatternMatching`/`SimilarityModel`/`SearchResult`).
+
+**`PeriodDetection` -- real cadence-strength antecedent/consequent pairing over consecutive `PhraseOccurrence`s, no new Structure/Occurrence type:**
+
+Period/Sentence structures have no named type anywhere in the System Registry -- the TDD's only reference frames this as a plain `Interpretation` example (measures 1-8 = antecedent, framework = sentence-period theory), not a new `Structure`/`Occurrence` type. `PeriodDetection` (`analysis/period_detection.h`) follows that: no new named type, just a generic `Interpretation` whose claim describes the antecedent/consequent relationship, the same "no new named type" treatment `CadenceDetection`/`PhraseSegmentation` give their own generic Interpretations.
+
+Given an ordered sequence of `PhraseOccurrence`s, each annotated with the cadence type that triggered its boundary (`PhraseBoundaryDetection`'s signal Interpretation label, `analysis/phrase_boundary_detection.h` -- one of `CadenceClassification`'s exact strings, including `"unclassified"` as a legitimate value), `PeriodDetection` identifies a period pair between two consecutive phrases when the first's cadence ranks strictly weaker than the second's, under a flagged, not-Registry-settled common-practice default ordering (weakest to strongest): `"half cadence (HC)"` < `"deceptive"` < `"plagal"` < `"authentic (unclassified: PAC/IAC)"` < `"authentic (IAC)"` < `"authentic (PAC)"`. A pair where either phrase's cadence type is absent, empty, or `"unclassified"` is skipped entirely -- no Interpretation, no guess -- the same unknown-vs-low-confidence discipline `PhraseBoundaryDetection`/`CadenceClassification` already use.
+
+Linking mechanism (the real design fork this branch had to resolve, not guess at): an `Interpretation`'s `target` is a single `EntityID`, but a period pair is two `PhraseOccurrence`s. `Relationship` (L6, `relationship/relationship.h`, `music-relationship`) is the TDD-documented device for a two-object link and, despite the System Registry marking it "Not Started," is fully implemented in code -- the same Registry-status-vs-code gap every analysis branch this session has found. `period_detection_build_relationships` builds one `Relationship` per identified pair (`source_id` = antecedent `PhraseOccurrence` id, `predicate_name` `"precedes"` -- in `PredicateDefinition`'s documented vocabulary, TDD §77 -- `target_id` = consequent `PhraseOccurrence` id). `period_detection_analyze` then emits one `Interpretation` per pair targeting that `Relationship`'s id (deterministically derived from the same phrase-id pair, so the two calls agree without one constructing the other's output), with a `PeriodDetectionClaim` (both phrase ids and cadence types, for convenience) and a 1/1 scalar-confidence `Uncertainty`. This is the first analysis-layer use of `Relationship`; `music-analysis` already depends on all four L6 modules, so no new dependency was introduced.
 
 **Still placeholder/deferred (not touched by the common-practice-minimal wiring):**
 
