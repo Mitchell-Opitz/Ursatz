@@ -123,8 +123,6 @@ AnalyzerResult sentence_detection_analyze(const void *input, const Context *cont
         snprintf(claim_content.continuation_occurrence_id, sizeof(claim_content.continuation_occurrence_id), "%s",
                   continuation_value);
 
-        entity_id_destroy(continuation_id);
-
         /* Link 1: repetition transformed_from statement. Link 2: continuation transformed_from repetition. */
         bool failed = false;
         for (size_t link = 0; link < 2 && !failed; link++) {
@@ -183,6 +181,8 @@ AnalyzerResult sentence_detection_analyze(const void *input, const Context *cont
             interpretations[out_index] = interpretation;
             out_index++;
         }
+
+        entity_id_destroy(continuation_id);
 
         if (failed) {
             destroy_partial_interpretations(interpretations, out_index);
