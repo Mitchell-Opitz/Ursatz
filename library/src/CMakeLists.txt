@@ -112,6 +112,8 @@ add_library(ursatz
     analysis/phrase_segmentation.c
     analysis/phrase_boundary_detection.c
     analysis/period_detection.c
+    analysis/sentence_continuation_matching.c
+    analysis/sentence_detection.c
     generation/intent.c
     generation/constraint_extraction.c
     generation/conflict_detection.c
