@@ -114,6 +114,8 @@ add_library(ursatz
     analysis/period_detection.c
     analysis/sentence_continuation_matching.c
     analysis/sentence_detection.c
+    analysis/form_structure_detection.c
+    analysis/thematic_return_detection.c
     generation/intent.c
     generation/constraint_extraction.c
     generation/conflict_detection.c
