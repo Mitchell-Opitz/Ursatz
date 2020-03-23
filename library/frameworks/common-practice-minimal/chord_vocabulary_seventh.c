@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "core/framework_reference.h"
@@ -102,8 +103,12 @@ ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, E
         return CHORD_ERR_ALLOC;
     }
 
+    char interpretation_id_value[256];
+    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "%s-%s",
+             DESCRIPTORS[seventh].chord_interpretation_id_prefix, entity_id_value(sonority_target_id));
+
     EntityID *interpretation_id;
-    if (entity_id_create(DESCRIPTORS[seventh].chord_interpretation_id_prefix, &interpretation_id) != ENTITY_ID_OK) {
+    if (entity_id_create(interpretation_id_value, &interpretation_id) != ENTITY_ID_OK) {
         return CHORD_ERR_ALLOC;
     }
 
