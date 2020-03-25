@@ -30,6 +30,32 @@ static void check_identification(const int *intervals, size_t interval_count, co
     chord_destroy(chord);
 }
 
+/*
+ * Regression: two distinct Sonority occurrences of the same seventh-chord
+ * quality must produce two distinct, independently-persisted
+ * Interpretation ids (see chord_vocabulary_seventh.c history -- the id
+ * used to be derived only from the quality type, so every repeated
+ * occurrence collided on one id).
+ */
+static void check_distinct_occurrences_get_distinct_ids(const int *intervals, size_t interval_count) {
+    EntityID *sonority_id_a;
+    assert(entity_id_create("sonority-occurrence-a", &sonority_id_a) == ENTITY_ID_OK);
+    EntityID *sonority_id_b;
+    assert(entity_id_create("sonority-occurrence-b", &sonority_id_b) == ENTITY_ID_OK);
+
+    Chord *chord_a;
+    assert(common_practice_identify_seventh_chord(intervals, interval_count, sonority_id_a, &chord_a));
+    Chord *chord_b;
+    assert(common_practice_identify_seventh_chord(intervals, interval_count, sonority_id_b, &chord_b));
+
+    const EntityID *interpretation_id_a = interpretation_id(chord_interpretation(chord_a));
+    const EntityID *interpretation_id_b = interpretation_id(chord_interpretation(chord_b));
+    assert(!entity_id_equals(interpretation_id_a, interpretation_id_b));
+
+    chord_destroy(chord_a);
+    chord_destroy(chord_b);
+}
+
 int main(void) {
     int dominant7[] = {0, 4, 7, 10};
     check_identification(dominant7, 4, "dominant7", "sonority-identify-dominant7");
@@ -57,6 +83,8 @@ int main(void) {
     /* No match: fully-diminished7 is not a diatonic quality this framework knows. */
     int fully_diminished7[] = {0, 3, 6, 9};
     assert(!common_practice_identify_seventh(fully_diminished7, 4, &unused_seventh));
+
+    check_distinct_occurrences_get_distinct_ids(dominant7, 4);
 
     printf("test_seventh_identification: ok\n");
     return 0;
