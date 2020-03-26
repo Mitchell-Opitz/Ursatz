@@ -61,6 +61,19 @@
  * Where no two ThemeOccurrence windows match, this module produces no
  * output at all -- no detected thematic return is a legitimate outcome,
  * never forced (requirement 4).
+ *
+ * Minimum window length (framework-v1-reference-set triage, Bach BWV
+ * Anh. 114): reusing MotifWindowMatching's exact comparison rule
+ * unchanged at Theme granularity, with no minimum-length floor, was
+ * confirmed to produce near-total pairwise "resembles" matches --
+ * short/generic ThemeOccurrence windows (e.g. a 3-event stepwise run)
+ * exact-match across unrelated occurrences even though they are not a
+ * genuine recurring theme. This module now excludes any window below
+ * THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH (4 events) from matching
+ * entirely, local to this module -- MotifWindowMatching's own behavior
+ * at Motif granularity is unchanged (out of this branch's scope). 4 is
+ * a stated default, not Registry-settled, and is expected to move once
+ * more of the corpus is checked.
  */
 
 typedef struct {

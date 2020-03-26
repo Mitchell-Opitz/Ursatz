@@ -14,11 +14,33 @@
 
 #define THEMATIC_RETURN_DETECTION_ID_MINT_BUFFER_SIZE 288
 
+/* Root-cause fix (framework-v1-reference-set triage, Bach BWV Anh. 114): MotifWindowMatching's
+   exact comparison rule has no minimum-length/distinctiveness floor, which is safe at Motif
+   granularity (callers already hand it short, curated candidate windows) but is too permissive
+   reused unchanged at Theme granularity, where short/generic ThemeOccurrence windows (e.g. a
+   3-event stepwise run) exact-match across unrelated occurrences and produce near-total
+   pairwise "resembles" links instead of genuine recurring-material matches. A window below this
+   length is too short/generic to count as a genuine thematic return and is excluded from
+   matching entirely. 4 is a stated default, not Registry-settled: Sentence Detection already
+   treats 2-event material as a legitimate (if minimal) continuation, so 2 does not separate
+   "genuine theme" from "incidental fragment" one level up; 4 gives real separation without a
+   corpus-derived number to justify going higher. Expect this to move once more of the corpus is
+   checked. */
+#define THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH 4
+
+static bool window_meets_min_length(const MotifWindow *window) {
+    return window->event_id_count >= THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH;
+}
+
 /* Reuses MotifWindowMatching's exact comparison rule (contour direction equality AND
    rhythmic duration equality, element for element) -- see this module's header comment
    for why the pairwise bookkeeping is reimplemented rather than calling
    motif_window_matching_find directly. */
 static bool windows_match(const MotifWindow *a, const MotifWindow *b) {
+    if (!window_meets_min_length(a) || !window_meets_min_length(b)) {
+        return false;
+    }
+
     size_t direction_count = contour_direction_count(a->contour);
     if (direction_count != contour_direction_count(b->contour)) {
         return false;
