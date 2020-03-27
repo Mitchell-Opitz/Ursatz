@@ -11,6 +11,7 @@
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"
+#include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
@@ -91,6 +92,64 @@ static void assert_pitch(const NoteEvent *note, uint8_t midi_note) {
     PitchIdentity *expected = make_expected_pitch(midi_note);
     assert(pitch_identity_equals(note_event_pitch(note), expected));
     pitch_identity_destroy(expected);
+}
+
+static void assert_spelling(const NoteEvent *note, PitchLetter letter, int accidental, int octave) {
+    const PitchSpelling *spelling = note_event_optional_pitch_spelling(note);
+    assert(spelling != NULL);
+    assert(pitch_spelling_letter(spelling) == letter);
+    assert(pitch_spelling_accidental(spelling) == accidental);
+    assert(pitch_spelling_octave(spelling) == octave);
+}
+
+static void test_spells_chromatic_scale_sharps_only(void) {
+    /* PPQN 4: MIDI notes 60..72 (C4 through C5), one tick each, back to
+       back -- covers every pitch class plus the octave boundary. */
+    unsigned char track[13 * 8 + 4];
+    size_t pos = 0;
+    for (int note = 60; note <= 72; note++) {
+        unsigned char on[4] = {0x00, 0x90, (unsigned char)note, 0x64};
+        unsigned char off[4] = {0x01, 0x80, (unsigned char)note, 0x40};
+        memcpy(track + pos, on, 4);
+        pos += 4;
+        memcpy(track + pos, off, 4);
+        pos += 4;
+    }
+    unsigned char eot[4] = {0x00, 0xFF, 0x2F, 0x00};
+    memcpy(track + pos, eot, 4);
+    pos += 4;
+    assert(pos == sizeof(track));
+
+    unsigned char buf[256];
+    size_t size = build_smf_type0(buf, 4, track, pos);
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    assert(r == MIDI_IMPORT_OK);
+    assert(count == 13);
+
+    assert_spelling(events[0], PITCH_LETTER_C, 0, 4);  /* 60: C4 */
+    assert_spelling(events[1], PITCH_LETTER_C, 1, 4);  /* 61: C#4 */
+    assert_spelling(events[2], PITCH_LETTER_D, 0, 4);  /* 62: D4 */
+    assert_spelling(events[3], PITCH_LETTER_D, 1, 4);  /* 63: D#4 */
+    assert_spelling(events[4], PITCH_LETTER_E, 0, 4);  /* 64: E4 */
+    assert_spelling(events[5], PITCH_LETTER_F, 0, 4);  /* 65: F4 */
+    assert_spelling(events[6], PITCH_LETTER_F, 1, 4);  /* 66: F#4 */
+    assert_spelling(events[7], PITCH_LETTER_G, 0, 4);  /* 67: G4 */
+    assert_spelling(events[8], PITCH_LETTER_G, 1, 4);  /* 68: G#4 */
+    assert_spelling(events[9], PITCH_LETTER_A, 0, 4);  /* 69: A4 */
+    assert_spelling(events[10], PITCH_LETTER_A, 1, 4); /* 70: A#4 */
+    assert_spelling(events[11], PITCH_LETTER_B, 0, 4); /* 71: B4 */
+    assert_spelling(events[12], PITCH_LETTER_C, 0, 5); /* 72: C5 -- octave boundary */
+
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
 }
 
 static void assert_provenance(const NoteEvent *note) {
@@ -228,6 +287,7 @@ static void test_rejects_null_buffer(void) {
 int main(void) {
     test_sequence_of_notes();
     test_simultaneous_chord();
+    test_spells_chromatic_scale_sharps_only();
     test_rejects_truncated_file();
     test_rejects_null_buffer();
     printf("test_midi_importer: ok\n");
