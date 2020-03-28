@@ -7,14 +7,14 @@ Layer L9 (`music-persistence`). Path `src/persistence/`, tests `tests/persistenc
 SQLite-backed storage for a NoteEvent sequence plus the Chord/Key interpretations produced by analyzing it. This is deliberately NOT the full L9 `EntityRepository`/`RelationshipRepository`/`StructureRepository` contract from the System Registry -- just enough for a personal-scale tool to save and reload an analyzed piece, byte-for-byte equivalent (same values, not necessarily same pointers).
 
 - `persistence_open`/`persistence_close` (`persistence.h`): lifecycle. Fail-fast on a bad path, permission error, or corrupt file -- no partial handle is ever returned.
-- `persistence_store_note_events`/`persistence_load_note_events` (`persistence_note_events.h`): a time-ordered `NoteEvent` sequence, preserving id, exact-rational `TemporalAnchor` and `Duration`, pitch identity token, optional voice reference, and provenance reference.
+- `persistence_store_note_events`/`persistence_load_note_events` (`persistence_note_events.h`): a time-ordered `NoteEvent` sequence, preserving id, exact-rational `TemporalAnchor` and `Duration`, pitch identity token, optional pitch spelling, optional voice reference, and provenance reference.
 - `persistence_store_uncertainty`/`persistence_load_uncertainty` (`persistence_uncertainty.h`): the three implemented `Uncertainty` kinds (unknown, scalar confidence, candidate set), writing/reading only the columns/child rows valid for the given kind.
 - `persistence_store_interpretation`/`persistence_load_interpretation` (`persistence_interpretation.h`): a full `Interpretation`, including its embedded `Uncertainty`. `claim` (a `Value`) is opaque by design -- its type string and content bytes are persisted verbatim and never decoded.
 - `persistence_store_chord`/`persistence_load_chord` and `persistence_store_key`/`persistence_load_key` (`persistence_chord.h`, `persistence_key.h`): thin wrappers over `persistence_interpretation` for `Chord`/`Key`'s embedded `Interpretation`, plus their own `label`.
 
 ## Schema
 
-- `note_events` -- one row per `NoteEvent`, with an explicit `sequence_order` column (not row id) preserving original order.
+- `note_events` -- one row per `NoteEvent`, with an explicit `sequence_order` column (not row id) preserving original order. `pitch_spelling_letter`/`pitch_spelling_accidental`/`pitch_spelling_octave` are nullable and always NULL together, matching `optional_pitch_spelling`'s absent case -- there is no separate presence flag.
 - `uncertainties` / `uncertainty_candidates` -- one `uncertainties` row per `Uncertainty`; `uncertainty_candidates` child rows only when `kind` is `CANDIDATE_SET`.
 - `interpretations` -- one row per `Interpretation`, FK'd to its `uncertainties` row. `claim_value_type`/`claim_value_content`/`claim_value_content_size` hold the opaque `Value` verbatim.
 - `chords` / `keys` -- thin FK'd wrappers over `interpretations`, adding only `label`. Neither `Chord` nor `Key` exposes an id of its own beyond its embedded `Interpretation`'s id, so that same `EntityID` value is used as both the `interpretations` row key and the `chords`/`keys` row key, rather than inventing a second identifier neither type has.
@@ -22,7 +22,7 @@ SQLite-backed storage for a NoteEvent sequence plus the Chord/Key interpretation
 ## Notes
 
 - No float/double conversion anywhere in the storage path (Law 19): every rational field (`TemporalAnchor`/`MusicalTime`, `Duration`, `Uncertainty`'s confidence and candidate weights) round-trips as exact `numerator`/`denominator` integer columns.
-- `optional_pitch_spelling` on `NoteEvent` is out of scope for this pass: no producer in this codebase populates it yet (the MIDI importer never sets it), so there is nothing real to round-trip.
+- `optional_pitch_spelling` on `NoteEvent` round-trips exactly like every other field. Backfilling it for already-persisted rows from an earlier schema version is out of scope: `pitch_token`'s `PitchIdentity` bytes are opaque by design (`pitch/pitch_identity.h`), with no decoder anywhere in this codebase, so a spelling cannot be recovered from an already-stored row after the fact -- only a re-import from the original source file can populate it for old data.
 - `Value` (claim) is opaque per `core/value.h`'s own design -- persistence stores type + content bytes + size and never interprets content, matching how every other consumer of `Value` treats it.
 
 ## Deferred

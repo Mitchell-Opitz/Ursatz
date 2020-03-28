@@ -9,6 +9,7 @@
 #include "io/smf_reader.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"
+#include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
@@ -31,7 +32,25 @@
  * ProvenanceAgent type exists in this codebase yet (deliberately not
  * added in this pass); every NoteEvent's ProvenanceReference points at
  * this one stable EntityID instead.
+ *
+ * Spelling convention: a MIDI note number carries no key context, so
+ * this importer always spells the 5 black-key pitch classes as the
+ * sharp of the natural letter below (accidental = 1) rather than the
+ * flat of the letter above -- e.g. MIDI 61 is spelled C#, never Db.
+ * Octave follows the standard MIDI convention (note 60 = C4):
+ * octave = note / 12 - 1.
  */
+
+static const PitchLetter SHARPS_ONLY_LETTER[12] = {
+    PITCH_LETTER_C, PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F,
+    PITCH_LETTER_F, PITCH_LETTER_G, PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
+static const int SHARPS_ONLY_ACCIDENTAL[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+
+static PitchSpellingResult spell_midi_note(uint8_t midi_note, PitchSpelling **out) {
+    int pitch_class = midi_note % 12;
+    int octave = midi_note / 12 - 1;
+    return pitch_spelling_create(SHARPS_ONLY_LETTER[pitch_class], SHARPS_ONLY_ACCIDENTAL[pitch_class], octave, out);
+}
 
 #define MIDI_IMPORTER_PROVENANCE_ID "midi-importer-v1"
 
@@ -181,8 +200,19 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         return NOTE_EVENT_ERR_ALLOC;
     }
 
+    PitchSpelling *spelling = NULL;
+    if (spell_midi_note(matched->note, &spelling) != PITCH_SPELLING_OK) {
+        pitch_numeric_value_destroy(numeric);
+        pitch_identity_destroy(pitch);
+        duration_destroy(duration);
+        temporal_anchor_destroy(anchor);
+        entity_id_destroy(id);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+
     EntityID *provenance_id = NULL;
     if (entity_id_create(MIDI_IMPORTER_PROVENANCE_ID, &provenance_id) != ENTITY_ID_OK) {
+        pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
         duration_destroy(duration);
@@ -194,6 +224,7 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     ProvenanceReference *provenance = NULL;
     if (provenance_reference_create_present(provenance_id, &provenance) != PROVENANCE_REFERENCE_OK) {
         entity_id_destroy(provenance_id);
+        pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
         duration_destroy(duration);
@@ -202,8 +233,9 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         return NOTE_EVENT_ERR_ALLOC;
     }
 
-    NoteEventResult result = note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, out);
+    NoteEventResult result = note_event_create(id, anchor, duration, pitch, spelling, NULL, provenance, out);
     if (result != NOTE_EVENT_OK) {
+        pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         return result;
     }

@@ -6,6 +6,7 @@
 #include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
+#include "pitch/pitch_spelling.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
@@ -19,6 +20,7 @@ static PersistenceNoteEventsResult store_one(sqlite3_stmt *stmt, const NoteEvent
     const MusicalTime *position = temporal_anchor_position(anchor);
     const Duration *duration = note_event_duration(event);
     const PitchIdentity *pitch = note_event_pitch(event);
+    const PitchSpelling *spelling = note_event_optional_pitch_spelling(event);
     const VoiceReference *voice = note_event_optional_voice(event);
     const ProvenanceReference *provenance = note_event_provenance(event);
 
@@ -34,18 +36,28 @@ static PersistenceNoteEventsResult store_one(sqlite3_stmt *stmt, const NoteEvent
     sqlite3_bind_blob(stmt, 7, token, (int)token_size, SQLITE_TRANSIENT);
     sqlite3_bind_int64(stmt, 8, (sqlite3_int64)token_size);
 
-    if (voice != NULL) {
-        sqlite3_bind_text(stmt, 9, entity_id_value(voice_reference_target_id(voice)), -1, SQLITE_TRANSIENT);
+    if (spelling != NULL) {
+        sqlite3_bind_int(stmt, 9, (int)pitch_spelling_letter(spelling));
+        sqlite3_bind_int(stmt, 10, pitch_spelling_accidental(spelling));
+        sqlite3_bind_int(stmt, 11, pitch_spelling_octave(spelling));
     } else {
         sqlite3_bind_null(stmt, 9);
+        sqlite3_bind_null(stmt, 10);
+        sqlite3_bind_null(stmt, 11);
     }
 
-    sqlite3_bind_int(stmt, 10, (int)provenance_reference_state(provenance));
+    if (voice != NULL) {
+        sqlite3_bind_text(stmt, 12, entity_id_value(voice_reference_target_id(voice)), -1, SQLITE_TRANSIENT);
+    } else {
+        sqlite3_bind_null(stmt, 12);
+    }
+
+    sqlite3_bind_int(stmt, 13, (int)provenance_reference_state(provenance));
     if (provenance_reference_state(provenance) == PROVENANCE_REFERENCE_PRESENT) {
-        sqlite3_bind_text(stmt, 11, entity_id_value(provenance_reference_target_id(provenance)), -1,
+        sqlite3_bind_text(stmt, 14, entity_id_value(provenance_reference_target_id(provenance)), -1,
                            SQLITE_TRANSIENT);
     } else {
-        sqlite3_bind_null(stmt, 11);
+        sqlite3_bind_null(stmt, 14);
     }
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
@@ -64,8 +76,9 @@ PersistenceNoteEventsResult persistence_store_note_events(PersistenceHandle *han
     const char *sql = "INSERT INTO note_events "
                        "(id, sequence_order, anchor_numerator, anchor_denominator, "
                        " duration_numerator, duration_denominator, pitch_token, pitch_token_size, "
+                       " pitch_spelling_letter, pitch_spelling_accidental, pitch_spelling_octave, "
                        " voice_reference_id, provenance_state, provenance_id) "
-                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -92,15 +105,20 @@ static PersistenceNoteEventsResult load_one(sqlite3_stmt *stmt, NoteEvent **out_
     sqlite3_int64 duration_den = sqlite3_column_int64(stmt, 4);
     const void *token = sqlite3_column_blob(stmt, 5);
     sqlite3_int64 token_size = sqlite3_column_int64(stmt, 6);
-    const unsigned char *voice_id_text = sqlite3_column_text(stmt, 7);
-    int provenance_state = sqlite3_column_int(stmt, 8);
-    const unsigned char *provenance_id_text = sqlite3_column_text(stmt, 9);
+    int has_spelling = sqlite3_column_type(stmt, 7) != SQLITE_NULL;
+    int spelling_letter = sqlite3_column_int(stmt, 7);
+    int spelling_accidental = sqlite3_column_int(stmt, 8);
+    int spelling_octave = sqlite3_column_int(stmt, 9);
+    const unsigned char *voice_id_text = sqlite3_column_text(stmt, 10);
+    int provenance_state = sqlite3_column_int(stmt, 11);
+    const unsigned char *provenance_id_text = sqlite3_column_text(stmt, 12);
 
     EntityID *id = NULL;
     TemporalAnchor *anchor = NULL;
     MusicalTime *position = NULL;
     Duration *duration = NULL;
     PitchIdentity *pitch = NULL;
+    PitchSpelling *spelling = NULL;
     VoiceReference *voice = NULL;
     ProvenanceReference *provenance = NULL;
     NoteEvent *event = NULL;
@@ -120,6 +138,13 @@ static PersistenceNoteEventsResult load_one(sqlite3_stmt *stmt, NoteEvent **out_
     }
     if (pitch_identity_create(token, (size_t)token_size, &pitch) != PITCH_IDENTITY_OK) {
         goto fail;
+    }
+
+    if (has_spelling) {
+        if (pitch_spelling_create((PitchLetter)spelling_letter, spelling_accidental, spelling_octave, &spelling) !=
+            PITCH_SPELLING_OK) {
+            goto fail;
+        }
     }
 
     if (voice_id_text != NULL) {
@@ -148,7 +173,7 @@ static PersistenceNoteEventsResult load_one(sqlite3_stmt *stmt, NoteEvent **out_
         }
     }
 
-    if (note_event_create(id, anchor, duration, pitch, NULL, voice, provenance, &event) != NOTE_EVENT_OK) {
+    if (note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, &event) != NOTE_EVENT_OK) {
         goto fail;
     }
 
@@ -168,6 +193,9 @@ fail:
     if (pitch != NULL) {
         pitch_identity_destroy(pitch);
     }
+    if (spelling != NULL) {
+        pitch_spelling_destroy(spelling);
+    }
     if (voice != NULL) {
         voice_reference_destroy(voice);
     }
@@ -186,6 +214,7 @@ PersistenceNoteEventsResult persistence_load_note_events(PersistenceHandle *hand
     sqlite3 *db = persistence_db(handle);
     const char *sql = "SELECT id, anchor_numerator, anchor_denominator, "
                        "duration_numerator, duration_denominator, pitch_token, pitch_token_size, "
+                       "pitch_spelling_letter, pitch_spelling_accidental, pitch_spelling_octave, "
                        "voice_reference_id, provenance_state, provenance_id "
                        "FROM note_events ORDER BY sequence_order ASC";
 

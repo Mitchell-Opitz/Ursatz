@@ -10,7 +10,9 @@
 #include "identity/entity_id.h"
 #include "io/midi_importer.h"
 #include "persistence/persistence.h"
+#include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"
+#include "pitch/pitch_spelling.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
@@ -90,6 +92,14 @@ static void test_round_trip(void) {
         assert(strcmp(entity_id_value(note_event_id(events[i])), entity_id_value(note_event_id(reloaded[i]))) == 0);
         assert(note_event_equals_by_value(events[i], reloaded[i]));
 
+        const PitchSpelling *original_spelling = note_event_optional_pitch_spelling(events[i]);
+        const PitchSpelling *reloaded_spelling = note_event_optional_pitch_spelling(reloaded[i]);
+        assert(original_spelling != NULL);
+        assert(reloaded_spelling != NULL);
+        assert(pitch_spelling_letter(original_spelling) == pitch_spelling_letter(reloaded_spelling));
+        assert(pitch_spelling_accidental(original_spelling) == pitch_spelling_accidental(reloaded_spelling));
+        assert(pitch_spelling_octave(original_spelling) == pitch_spelling_octave(reloaded_spelling));
+
         const TemporalAnchor *original_anchor = note_event_temporal_anchor(events[i]);
         const TemporalAnchor *reloaded_anchor = note_event_temporal_anchor(reloaded[i]);
         const MusicalTime *original_position = temporal_anchor_position(original_anchor);
@@ -122,8 +132,52 @@ static void test_round_trip(void) {
     remove(path);
 }
 
+static void test_absent_spelling_round_trip(void) {
+    /* A NoteEvent with no PitchSpelling (e.g. hand-constructed, not
+       MIDI-imported) must round-trip with NULL, not a fabricated one. */
+    EntityID *id = NULL;
+    entity_id_create("no-spelling-note", &id);
+    MusicalTime *position = NULL;
+    musical_time_create(0, 1, &position);
+    TemporalAnchor *anchor = NULL;
+    temporal_anchor_create(position, &anchor);
+    Duration *duration = NULL;
+    duration_create(1, 4, &duration);
+    PitchIdentity *pitch = NULL;
+    unsigned char token[1] = {60};
+    pitch_identity_create(token, sizeof(token), &pitch);
+    ProvenanceReference *provenance = NULL;
+    provenance_reference_create_absent(&provenance);
+
+    NoteEvent *event = NULL;
+    assert(note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, &event) == NOTE_EVENT_OK);
+
+    const char *path = "test_persistence_note_events_absent_spelling.sqlite";
+    remove(path);
+
+    PersistenceHandle *handle = NULL;
+    assert(persistence_open(path, &handle) == PERSISTENCE_OK);
+
+    NoteEvent *events[1] = {event};
+    assert(persistence_store_note_events(handle, events, 1) == PERSISTENCE_NOTE_EVENTS_OK);
+
+    NoteEvent **reloaded = NULL;
+    size_t reloaded_count = 0;
+    assert(persistence_load_note_events(handle, &reloaded, &reloaded_count) == PERSISTENCE_NOTE_EVENTS_OK);
+    assert(reloaded_count == 1);
+    assert(note_event_optional_pitch_spelling(reloaded[0]) == NULL);
+    assert(note_event_equals_by_value(event, reloaded[0]));
+
+    note_event_destroy(event);
+    note_event_destroy(reloaded[0]);
+    free(reloaded);
+    persistence_close(handle);
+    remove(path);
+}
+
 int main(void) {
     test_round_trip();
+    test_absent_spelling_round_trip();
     printf("persistence note_events: all tests passed\n");
     return 0;
 }
