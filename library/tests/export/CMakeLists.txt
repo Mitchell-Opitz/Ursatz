@@ -1,0 +1,2 @@
+add_ursatz_test(musicxml_export)
+add_ursatz_architecture_test(export)
