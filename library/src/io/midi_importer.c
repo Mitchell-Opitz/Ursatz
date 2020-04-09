@@ -18,14 +18,17 @@
 /*
  * MIDIImporter: see midi_importer.h and docs/modules/io.md for scope.
  *
- * Fixed-tempo assumption: this importer does not read tempo meta-events
- * (out of scope, see docs/modules/io.md). MusicalTime/Duration are
- * produced in seconds, computed under a fixed assumed tempo of 120 BPM
- * -- the MIDI spec's own default when no tempo meta-event is present --
- * combined with the header's ticks-per-quarter-note (PPQN) division
- * field: seconds_per_tick = 60 / (120 * PPQN) = 1 / (2 * PPQN). This is
- * an exact rational (Law 19 compliant): position/duration in ticks
- * becomes numerator = ticks, denominator = 2 * PPQN.
+ * Tempo-independent units: this importer does not read tempo meta-events
+ * (out of scope, see docs/modules/io.md), and does not assume one --
+ * MusicalTime/Duration are produced as an exact whole-note fraction
+ * derived from tick counts and the header's ticks-per-quarter-note
+ * (PPQN) division field alone: a quarter note is PPQN ticks, a whole
+ * note is 4 * PPQN ticks, so position/duration in ticks becomes
+ * numerator = ticks, denominator = 4 * PPQN (Law 19 compliant exact
+ * rational). No BPM/seconds conversion is performed; the same tick
+ * count always yields the same Duration regardless of tempo, since PPQN
+ * is fixed per file and MIDI ticks carry no tempo information of their
+ * own until combined with a tempo meta-event (not read here).
  *
  * The provenance entity id "midi-importer-v1" identifies this importer
  * as the source of every NoteEvent it produces. No ProvenanceActivity/
@@ -272,7 +275,7 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
         }
     }
 
-    unsigned long ticks_denominator = 2UL * (unsigned long)header.division;
+    unsigned long ticks_denominator = 4UL * (unsigned long)header.division;
 
     EntityID *tuning_id = NULL;
     if (entity_id_create("midi-note-number", &tuning_id) != ENTITY_ID_OK) {
