@@ -110,6 +110,11 @@ static void test_pitch_and_duration_and_cosmetic_flag(void) {
     assert(strstr(xml, "<duration>768</duration>") != NULL);
     /* No <tie> anywhere: neither note crosses the synthetic barline. */
     assert(strstr(xml, "<tie") == NULL);
+    /* MIDIImporter assigns sequential ids "midi-note-<n>"; both pass
+       through xml_id_from_entity unchanged since they're already valid
+       XML ID tokens. */
+    assert(strstr(xml, "<note xml:id=\"midi-note-0\">") != NULL);
+    assert(strstr(xml, "<note xml:id=\"midi-note-1\">") != NULL);
 
     free(xml);
     for (size_t i = 0; i < count; i++) {
@@ -156,6 +161,15 @@ static void test_synthetic_measure_tie_split(void) {
     assert(strstr(xml, "<rest/>") != NULL);
     assert(strstr(xml, "<tie type=\"start\"/>") != NULL);
     assert(strstr(xml, "<tie type=\"stop\"/>") != NULL);
+    /* The single NoteEvent (id "midi-note-0") is split into two tied
+       fragments -- each must carry a distinct id tracing back to the
+       source note, not a duplicated xml:id. */
+    assert(strstr(xml, "<note xml:id=\"midi-note-0_a\">") != NULL);
+    assert(strstr(xml, "<note xml:id=\"midi-note-0_b\">") != NULL);
+    assert(strstr(xml, "<note xml:id=\"midi-note-0\">") == NULL);
+    /* The leading rest (a synthetic gap-filler, not backed by a
+       NoteEvent) must carry no xml:id at all. */
+    assert(strstr(xml, "<note>\n        <rest/>") != NULL);
 
     free(xml);
     for (size_t i = 0; i < count; i++) {
@@ -230,6 +244,29 @@ static void test_overlapping_notes_fail(void) {
     remove(path);
 }
 
+static void test_id_sanitization_for_invalid_entity_ids(void) {
+    /* "3rd-note" starts with a digit (invalid XML ID start) and contains
+       a space (invalid XML ID character) -- both must be sanitized:
+       prefix 'n', replace the space with '_'. */
+    NoteEvent *event = make_note("3rd note", 0, 1, 1, 4, true);
+
+    const char *path = "test_musicxml_export_sanitized_id.sqlite";
+    PersistenceHandle *handle = open_fresh(path);
+    NoteEvent *events[1] = {event};
+    assert(persistence_store_note_events(handle, events, 1) == PERSISTENCE_NOTE_EVENTS_OK);
+
+    char *xml = NULL;
+    assert(musicxml_export_write(handle, &xml) == MUSICXML_EXPORT_OK);
+    assert(xml != NULL);
+
+    assert(strstr(xml, "<note xml:id=\"n3rd_note\">") != NULL);
+
+    free(xml);
+    note_event_destroy(event);
+    persistence_close(handle);
+    remove(path);
+}
+
 static void test_empty_piece_is_valid(void) {
     const char *path = "test_musicxml_export_empty.sqlite";
     PersistenceHandle *handle = open_fresh(path);
@@ -261,6 +298,7 @@ int main(void) {
     test_pitch_and_duration_and_cosmetic_flag();
     test_synthetic_measure_tie_split();
     test_missing_spelling_fails_fast();
+    test_id_sanitization_for_invalid_entity_ids();
     test_overlapping_notes_fail();
     test_empty_piece_is_valid();
     test_null_args_rejected();
