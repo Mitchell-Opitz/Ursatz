@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "events/note_event.h"
+#include "identity/entity_id.h"
 #include "persistence/persistence_note_events.h"
 #include "pitch/pitch_spelling.h"
 #include "time/duration.h"
@@ -31,6 +32,30 @@
 static const long long TICKS_PER_WHOLE_NOTE = 3072;
 
 static const char *const PITCH_STEP_NAMES[7] = {"A", "B", "C", "D", "E", "F", "G"};
+
+/*
+ * Derives a valid XML ID (NCName) token from a NoteEvent's EntityID
+ * value: prefixes with 'n' if the value doesn't already start with a
+ * letter or underscore (XML IDs can't start with a digit or most other
+ * characters), and replaces any character outside [A-Za-z0-9_.-] with
+ * '_'. Deterministic and reversible-enough for debugging -- most
+ * existing EntityID values (e.g. "midi-note-3") pass through unchanged.
+ * Writes into out (must be at least len(raw) + 2 bytes).
+ */
+static void xml_id_from_entity(const char *raw, char *out, size_t out_size) {
+    size_t pos = 0;
+    bool needs_prefix = !((raw[0] >= 'A' && raw[0] <= 'Z') || (raw[0] >= 'a' && raw[0] <= 'z') || raw[0] == '_');
+    if (needs_prefix && pos + 1 < out_size) {
+        out[pos++] = 'n';
+    }
+    for (size_t i = 0; raw[i] != '\0' && pos + 1 < out_size; i++) {
+        char c = raw[i];
+        bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' ||
+                  c == '.' || c == '-';
+        out[pos++] = ok ? c : '_';
+    }
+    out[pos] = '\0';
+}
 
 typedef struct {
     char *data;
@@ -151,9 +176,13 @@ static long long rational_ticks(Rational r, long long ticks_per_whole) {
     return (r.num * ticks_per_whole) / r.den;
 }
 
-static void xml_append_note_or_rest(XmlBuf *buf, bool is_rest, PitchLetter letter, int accidental, int octave,
-                                     long long duration_ticks, bool tie_start, bool tie_stop) {
-    xmlbuf_append(buf, "      <note>\n");
+static void xml_append_note_or_rest(XmlBuf *buf, const char *xml_id, bool is_rest, PitchLetter letter, int accidental,
+                                     int octave, long long duration_ticks, bool tie_start, bool tie_stop) {
+    if (xml_id != NULL) {
+        xmlbuf_append(buf, "      <note xml:id=\"%s\">\n", xml_id);
+    } else {
+        xmlbuf_append(buf, "      <note>\n");
+    }
     if (is_rest) {
         xmlbuf_append(buf, "        <rest/>\n");
     } else {
@@ -183,9 +212,11 @@ static void xml_append_note_or_rest(XmlBuf *buf, bool is_rest, PitchLetter lette
  * closes <measure> elements on *open_measure_idx as the synthetic grid
  * is crossed.
  */
-static void write_run(XmlBuf *buf, Rational *cursor, Rational length, bool is_rest, PitchLetter letter,
-                       int accidental, int octave, long long ticks_per_whole, long long *open_measure_idx) {
+static void write_run(XmlBuf *buf, Rational *cursor, Rational length, const char *base_xml_id, bool is_rest,
+                       PitchLetter letter, int accidental, int octave, long long ticks_per_whole,
+                       long long *open_measure_idx) {
     bool first_fragment = true;
+    int fragment_index = 0;
 
     while (length.num > 0) {
         long long idx = rational_floor(*cursor);
@@ -216,12 +247,24 @@ static void write_run(XmlBuf *buf, Rational *cursor, Rational length, bool is_re
         bool tie_start = !is_rest && remaining_after.num > 0;
         bool tie_stop = !is_rest && !first_fragment;
 
-        xml_append_note_or_rest(buf, is_rest, letter, accidental, octave, rational_ticks(chunk, ticks_per_whole),
-                                 tie_start, tie_stop);
+        char fragment_id[64];
+        const char *xml_id = NULL;
+        if (base_xml_id != NULL) {
+            if (tie_start || tie_stop) {
+                snprintf(fragment_id, sizeof(fragment_id), "%s_%c", base_xml_id, 'a' + fragment_index);
+                xml_id = fragment_id;
+            } else {
+                xml_id = base_xml_id;
+            }
+        }
+
+        xml_append_note_or_rest(buf, xml_id, is_rest, letter, accidental, octave,
+                                 rational_ticks(chunk, ticks_per_whole), tie_start, tie_stop);
 
         *cursor = rational_add(*cursor, chunk);
         length = remaining_after;
         first_fragment = false;
+        fragment_index++;
     }
 }
 
@@ -290,14 +333,18 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
 
         Rational gap = rational_sub(start, cursor);
         if (gap.num > 0) {
-            write_run(&buf, &cursor, gap, true, PITCH_LETTER_A, 0, 0, TICKS_PER_WHOLE_NOTE, &open_measure_idx);
+            write_run(&buf, &cursor, gap, NULL, true, PITCH_LETTER_A, 0, 0, TICKS_PER_WHOLE_NOTE, &open_measure_idx);
         }
 
         const Duration *duration = note_event_duration(events[i]);
         Rational length = rational_make(duration_numerator(duration), (long long)duration_denominator(duration));
 
-        write_run(&buf, &cursor, length, false, pitch_spelling_letter(spelling), pitch_spelling_accidental(spelling),
-                  pitch_spelling_octave(spelling), TICKS_PER_WHOLE_NOTE, &open_measure_idx);
+        char xml_id[64];
+        xml_id_from_entity(entity_id_value(note_event_id(events[i])), xml_id, sizeof(xml_id));
+
+        write_run(&buf, &cursor, length, xml_id, false, pitch_spelling_letter(spelling),
+                  pitch_spelling_accidental(spelling), pitch_spelling_octave(spelling), TICKS_PER_WHOLE_NOTE,
+                  &open_measure_idx);
     }
 
     if (result == MUSICXML_EXPORT_OK) {
