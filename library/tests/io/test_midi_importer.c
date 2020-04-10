@@ -180,16 +180,16 @@ static void test_sequence_of_notes(void) {
     assert(r == MIDI_IMPORT_OK);
     assert(count == 2);
 
-    /* denominator = 2 * PPQN = 192 under the fixed 120 BPM assumption. */
-    assert_position(events[0], 0, 192);
-    assert_duration(events[0], 96, 192);
+    /* denominator = 4 * PPQN = 384 (whole-note fraction, tempo-independent). */
+    assert_position(events[0], 0, 384);
+    assert_duration(events[0], 96, 384);
     assert_pitch(events[0], 0x3C);
     assert_provenance(events[0]);
     assert(pitch_numeric_value_position_numerator(pitch_values[0]) == 0x3C);
     assert(pitch_numeric_value_position_denominator(pitch_values[0]) == 1);
 
-    assert_position(events[1], 96, 192);
-    assert_duration(events[1], 96, 192);
+    assert_position(events[1], 96, 384);
+    assert_duration(events[1], 96, 384);
     assert_pitch(events[1], 0x3E);
     assert_provenance(events[1]);
     assert(pitch_numeric_value_position_numerator(pitch_values[1]) == 0x3E);
@@ -228,8 +228,8 @@ static void test_simultaneous_chord(void) {
 
     int seen_60 = 0, seen_64 = 0, seen_67 = 0;
     for (size_t i = 0; i < count; i++) {
-        assert_position(events[i], 0, 192);
-        assert_duration(events[i], 96, 192);
+        assert_position(events[i], 0, 384);
+        assert_duration(events[i], 96, 384);
         assert_provenance(events[i]);
 
         PitchIdentity *p60 = make_expected_pitch(0x3C);
