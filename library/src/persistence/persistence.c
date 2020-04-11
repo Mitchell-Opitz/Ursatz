@@ -82,6 +82,18 @@ PersistenceResult persistence_open(const char *path, PersistenceHandle **out) {
         return PERSISTENCE_ERR_OPEN_FAILED;
     }
 
+    /*
+     * Without a busy timeout, a second handle opened against the same
+     * .db file while another handle holds a lock (e.g. two concurrent
+     * requests on the same piece) gets SQLITE_BUSY immediately instead
+     * of waiting. 5s gives concurrent opens/reads room to succeed
+     * without a request hanging too long. This does not cover sustained
+     * writer-vs-writer contention, which still serializes under
+     * SQLite's own locking and can still time out under heavy write
+     * load -- a separate concern from this fix.
+     */
+    sqlite3_busy_timeout(db, 5000);
+
     char *errmsg = NULL;
     rc = sqlite3_exec(db, PERSISTENCE_SCHEMA, NULL, NULL, &errmsg);
     if (rc != SQLITE_OK) {
