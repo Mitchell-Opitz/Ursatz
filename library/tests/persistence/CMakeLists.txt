@@ -2,6 +2,10 @@ add_ursatz_test(persistence_lifecycle)
 add_ursatz_test(persistence_note_events)
 add_ursatz_test(persistence_uncertainty)
 
+find_package(Threads REQUIRED)
+add_ursatz_test(persistence_concurrency)
+target_link_libraries(test_persistence_concurrency PRIVATE Threads::Threads)
+
 # persistence_chord_key needs real Chord/Key construction helpers from
 # common-practice-minimal (frameworks/common-practice-minimal), not just
 # ursatz -- add_ursatz_test only links ursatz, so this one is wired
