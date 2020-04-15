@@ -6,7 +6,14 @@
 /*
  * MusicXmlExport (music-export): serializes a piece's persisted
  * NoteEvent sequence -- pitch (via PitchSpelling) and duration -- into
- * a single-part, single-voice MusicXML 3.1 document.
+ * a single-part MusicXML 3.1 document. NoteEvents sharing the same
+ * optional_voice (a VoiceReference is an opaque EntityID token here --
+ * see core/voice_reference.h -- carrying no musical/analytical meaning
+ * at this layer, only an export-grouping label) are emitted into the
+ * same MusicXML <voice>; NoteEvents with no voice reference all share
+ * one implicit voice. Distinct voices within a measure are interleaved
+ * via <backup> elements so simultaneous notes across voices can be
+ * represented in one <part>.
  *
  * This module takes an already-open PersistenceHandle rather than a
  * "piece id": Persistence itself has no piece-id/lookup concept (one
@@ -56,9 +63,11 @@ typedef enum {
  * or omitting its pitch.
  *
  * Fails with MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES if any NoteEvent
- * starts before the previous one ends -- this module emits a single
- * voice/part only (multi-voice/chord output is out of scope), so
- * simultaneous notes cannot be represented.
+ * starts before the previous NoteEvent in the same voice ends --
+ * overlap is checked per voice group, not across the whole piece, so
+ * simultaneous NoteEvents in different voices are not an error; two
+ * NoteEvents sharing a voice (or both lacking one) that overlap in time
+ * still cannot be represented and fail.
  *
  * A piece with zero NoteEvents is not an error: *out_xml is a valid
  * MusicXML document with one empty part.
