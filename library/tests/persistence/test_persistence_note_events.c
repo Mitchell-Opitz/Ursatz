@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "core/provenance_reference.h"
+#include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "io/midi_importer.h"
 #include "persistence/persistence.h"
@@ -116,7 +117,12 @@ static void test_round_trip(void) {
         const ProvenanceReference *reloaded_provenance = note_event_provenance(reloaded[i]);
         assert(provenance_reference_equals(original_provenance, reloaded_provenance));
 
-        assert(note_event_optional_voice(reloaded[i]) == NULL);
+        /* Single-track/single-channel MIDI import now assigns every
+           NoteEvent a voice (see midi_importer.c); both notes here land
+           in the same slot 0 since they don't overlap. */
+        const VoiceReference *reloaded_voice = note_event_optional_voice(reloaded[i]);
+        assert(reloaded_voice != NULL);
+        assert(strcmp(entity_id_value(voice_reference_target_id(reloaded_voice)), "midi-voice-0") == 0);
     }
 
     for (size_t i = 0; i < count; i++) {
