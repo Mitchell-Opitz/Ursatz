@@ -54,10 +54,14 @@
  * interval-graph coloring by timing: processing notes in start-time
  * order, a note is assigned the lowest-numbered voice slot not occupied
  * by a still-sounding note at its start time, opening a new slot only
- * when every existing slot is occupied. Multi-track or multi-channel
- * imports are left with optional_voice == NULL -- voice separation
- * there is a track/channel-mapping decision for a future pass, not this
- * one.
+ * when every existing slot is occupied. "Single-track" here means every
+ * matched (paired) note came from the same MTrk chunk -- a type-1 file's
+ * other tracks (e.g. a conductor track carrying only tempo/time-
+ * signature meta-events, no notes) don't by themselves disqualify a
+ * file. Imports whose matched notes span more than one track, or more
+ * than one channel, are left with optional_voice == NULL -- voice
+ * separation there is a track/channel-mapping decision for a future
+ * pass, not this one.
  */
 
 static const PitchLetter SHARPS_ONLY_LETTER[12] = {
@@ -79,6 +83,7 @@ typedef struct {
     uint8_t note;
     uint8_t channel;
     size_t order;
+    size_t track_index;
     int voice_slot; /* -1 when no voice assigned (multi-track/multi-channel import) */
 } MatchedNote;
 
@@ -407,6 +412,7 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
         }
         for (size_t i = 0; i < matched_count; i++) {
             matched[i].order = all_matched_count + i;
+            matched[i].track_index = t;
             all_matched[all_matched_count + i] = matched[i];
         }
         all_matched_count += matched_count;
@@ -424,13 +430,16 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
     qsort(all_matched, all_matched_count, sizeof(MatchedNote), matched_note_compare);
 
     bool single_channel = true;
+    bool single_track = true;
     for (size_t i = 1; i < all_matched_count; i++) {
         if (all_matched[i].channel != all_matched[0].channel) {
             single_channel = false;
-            break;
+        }
+        if (all_matched[i].track_index != all_matched[0].track_index) {
+            single_track = false;
         }
     }
-    if (track_count == 1 && single_channel) {
+    if (single_track && single_channel) {
         if (assign_voice_slots(all_matched, all_matched_count) != 0) {
             free(all_matched);
             tuning_system_destroy(tuning_system);
