@@ -1,9 +1,11 @@
 #include "io/midi_importer.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "core/provenance_reference.h"
+#include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "io/midi_event_decoder.h"
 #include "io/smf_reader.h"
@@ -42,6 +44,24 @@
  * flat of the letter above -- e.g. MIDI 61 is spelled C#, never Db.
  * Octave follows the standard MIDI convention (note 60 = C4):
  * octave = note / 12 - 1.
+ *
+ * Voice assignment (MusicXML-export-grouping only, no musical/analytical
+ * meaning -- a placeholder pending Deliverable F): a single-track,
+ * single-channel MIDI import may still contain temporally overlapping
+ * notes (e.g. two-handed piano recorded onto one track/channel).
+ * MusicXML cannot represent simultaneous notes in one voice, so such
+ * imports get each NoteEvent's optional_voice assigned via greedy
+ * interval-graph coloring by timing: processing notes in start-time
+ * order, a note is assigned the lowest-numbered voice slot not occupied
+ * by a still-sounding note at its start time, opening a new slot only
+ * when every existing slot is occupied. "Single-track" here means every
+ * matched (paired) note came from the same MTrk chunk -- a type-1 file's
+ * other tracks (e.g. a conductor track carrying only tempo/time-
+ * signature meta-events, no notes) don't by themselves disqualify a
+ * file. Imports whose matched notes span more than one track, or more
+ * than one channel, are left with optional_voice == NULL -- voice
+ * separation there is a track/channel-mapping decision for a future
+ * pass, not this one.
  */
 
 static const PitchLetter SHARPS_ONLY_LETTER[12] = {
@@ -61,7 +81,10 @@ typedef struct {
     uint32_t start_tick;
     uint32_t duration_ticks;
     uint8_t note;
+    uint8_t channel;
     size_t order;
+    size_t track_index;
+    int voice_slot; /* -1 when no voice assigned (multi-track/multi-channel import) */
 } MatchedNote;
 
 static int matched_note_compare(const void *a, const void *b) {
@@ -124,13 +147,49 @@ static int pair_notes(const MidiNoteEvent *events, size_t event_count, MatchedNo
         matched[matched_count].start_tick = events[i].tick;
         matched[matched_count].duration_ticks = events[off_index].tick - events[i].tick;
         matched[matched_count].note = events[i].note;
+        matched[matched_count].channel = events[i].channel;
         matched[matched_count].order = i;
+        matched[matched_count].voice_slot = -1;
         matched_count++;
     }
 
     free(used);
     *out_matched = matched;
     *out_count = matched_count;
+    return 0;
+}
+
+/* Greedy interval-graph coloring by timing: matched must already be
+   sorted by start_tick (ties by order). Assigns each entry's voice_slot
+   to the lowest-numbered slot whose previously assigned note has
+   already finished sounding by this note's start, opening a new slot
+   otherwise. */
+static int assign_voice_slots(MatchedNote *matched, size_t count) {
+    if (count == 0) {
+        return 0;
+    }
+    uint32_t *slot_end_tick = malloc(sizeof(uint32_t) * count);
+    if (slot_end_tick == NULL) {
+        return -1;
+    }
+    size_t slot_count = 0;
+
+    for (size_t i = 0; i < count; i++) {
+        size_t chosen = slot_count;
+        for (size_t s = 0; s < slot_count; s++) {
+            if (slot_end_tick[s] <= matched[i].start_tick) {
+                chosen = s;
+                break;
+            }
+        }
+        if (chosen == slot_count) {
+            slot_count++;
+        }
+        matched[i].voice_slot = (int)chosen;
+        slot_end_tick[chosen] = matched[i].start_tick + matched[i].duration_ticks;
+    }
+
+    free(slot_end_tick);
     return 0;
 }
 
@@ -236,8 +295,35 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         return NOTE_EVENT_ERR_ALLOC;
     }
 
-    NoteEventResult result = note_event_create(id, anchor, duration, pitch, spelling, NULL, provenance, out);
+    VoiceReference *voice = NULL;
+    if (matched->voice_slot >= 0) {
+        char voice_id_buf[32];
+        snprintf(voice_id_buf, sizeof(voice_id_buf), "midi-voice-%d", matched->voice_slot);
+        EntityID *voice_id = NULL;
+        if (entity_id_create(voice_id_buf, &voice_id) != ENTITY_ID_OK) {
+            pitch_spelling_destroy(spelling);
+            pitch_numeric_value_destroy(numeric);
+            pitch_identity_destroy(pitch);
+            duration_destroy(duration);
+            temporal_anchor_destroy(anchor);
+            entity_id_destroy(id);
+            return NOTE_EVENT_ERR_ALLOC;
+        }
+        if (voice_reference_create(voice_id, &voice) != VOICE_REFERENCE_OK) {
+            entity_id_destroy(voice_id);
+            pitch_spelling_destroy(spelling);
+            pitch_numeric_value_destroy(numeric);
+            pitch_identity_destroy(pitch);
+            duration_destroy(duration);
+            temporal_anchor_destroy(anchor);
+            entity_id_destroy(id);
+            return NOTE_EVENT_ERR_ALLOC;
+        }
+    }
+
+    NoteEventResult result = note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, out);
     if (result != NOTE_EVENT_OK) {
+        voice_reference_destroy(voice);
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         return result;
@@ -326,6 +412,7 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
         }
         for (size_t i = 0; i < matched_count; i++) {
             matched[i].order = all_matched_count + i;
+            matched[i].track_index = t;
             all_matched[all_matched_count + i] = matched[i];
         }
         all_matched_count += matched_count;
@@ -341,6 +428,24 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
     }
 
     qsort(all_matched, all_matched_count, sizeof(MatchedNote), matched_note_compare);
+
+    bool single_channel = true;
+    bool single_track = true;
+    for (size_t i = 1; i < all_matched_count; i++) {
+        if (all_matched[i].channel != all_matched[0].channel) {
+            single_channel = false;
+        }
+        if (all_matched[i].track_index != all_matched[0].track_index) {
+            single_track = false;
+        }
+    }
+    if (single_track && single_channel) {
+        if (assign_voice_slots(all_matched, all_matched_count) != 0) {
+            free(all_matched);
+            tuning_system_destroy(tuning_system);
+            return MIDI_IMPORT_ERR_ALLOC;
+        }
+    }
 
     NoteEvent **note_events = NULL;
     PitchNumericValue **pitch_values = NULL;

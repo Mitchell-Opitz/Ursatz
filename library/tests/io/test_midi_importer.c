@@ -1,6 +1,7 @@
 #include "io/midi_importer.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,6 +9,7 @@
 #include <string.h>
 
 #include "core/provenance_reference.h"
+#include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"
@@ -259,6 +261,102 @@ static void test_simultaneous_chord(void) {
     free(pitch_values);
 }
 
+static const char *voice_id_of(const NoteEvent *note) {
+    const VoiceReference *voice = note_event_optional_voice(note);
+    assert(voice != NULL);
+    return entity_id_value(voice_reference_target_id(voice));
+}
+
+static const NoteEvent *find_by_pitch(NoteEvent **events, size_t count, uint8_t midi_note) {
+    for (size_t i = 0; i < count; i++) {
+        PitchIdentity *expected = make_expected_pitch(midi_note);
+        bool match = pitch_identity_equals(note_event_pitch(events[i]), expected);
+        pitch_identity_destroy(expected);
+        if (match) {
+            return events[i];
+        }
+    }
+    assert(0 && "pitch not found");
+    return NULL;
+}
+
+static void test_single_track_overlap_gets_interval_graph_colored_voices(void) {
+    /* PPQN 96, one track/channel: note 60 [0,192), note 64 [96,288)
+       overlaps it (needs a second voice slot), note 67 [200,300) starts
+       after 60 has finished but while 64 is still sounding -- must reuse
+       60's freed slot rather than opening a third one. */
+    unsigned char track[] = {
+        0x00, 0x90, 0x3C, 0x64, /* delta 0,   note-on  60 (t=0)   */
+        0x60, 0x90, 0x40, 0x64, /* delta 96,  note-on  64 (t=96)  */
+        0x60, 0x80, 0x3C, 0x40, /* delta 96,  note-off 60 (t=192) */
+        0x08, 0x90, 0x43, 0x64, /* delta 8,   note-on  67 (t=200) */
+        0x58, 0x80, 0x40, 0x40, /* delta 88,  note-off 64 (t=288) */
+        0x0C, 0x80, 0x43, 0x40, /* delta 12,  note-off 67 (t=300) */
+        0x00, 0xFF, 0x2F, 0x00  /* end of track */
+    };
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 96, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    assert(r == MIDI_IMPORT_OK);
+    assert(count == 3);
+
+    const NoteEvent *note60 = find_by_pitch(events, count, 0x3C);
+    const NoteEvent *note64 = find_by_pitch(events, count, 0x40);
+    const NoteEvent *note67 = find_by_pitch(events, count, 0x43);
+
+    const char *voice60 = voice_id_of(note60);
+    const char *voice64 = voice_id_of(note64);
+    const char *voice67 = voice_id_of(note67);
+
+    assert(strcmp(voice60, voice64) != 0);
+    assert(strcmp(voice60, voice67) == 0);
+
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
+}
+
+static void test_multi_channel_import_gets_no_voice(void) {
+    /* PPQN 96, one track, two channels: note 60 on channel 0 and note 64
+       on channel 1 overlap -- multi-channel imports are left with
+       optional_voice == NULL (out of scope: track/channel-mapping is a
+       future pass, not this one). */
+    unsigned char track[] = {
+        0x00, 0x90, 0x3C, 0x64, /* delta 0,  channel 0 note-on  60 */
+        0x00, 0x91, 0x40, 0x64, /* delta 0,  channel 1 note-on  64 */
+        0x60, 0x80, 0x3C, 0x40, /* delta 96, channel 0 note-off 60 */
+        0x00, 0x81, 0x40, 0x40, /* delta 0,  channel 1 note-off 64 */
+        0x00, 0xFF, 0x2F, 0x00  /* end of track */
+    };
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 96, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    assert(r == MIDI_IMPORT_OK);
+    assert(count == 2);
+
+    for (size_t i = 0; i < count; i++) {
+        assert(note_event_optional_voice(events[i]) == NULL);
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
+}
+
 static void test_rejects_truncated_file(void) {
     unsigned char buf[8];
     memcpy(buf, "MThd", 4);
@@ -288,6 +386,8 @@ int main(void) {
     test_sequence_of_notes();
     test_simultaneous_chord();
     test_spells_chromatic_scale_sharps_only();
+    test_single_track_overlap_gets_interval_graph_colored_voices();
+    test_multi_channel_import_gets_no_voice();
     test_rejects_truncated_file();
     test_rejects_null_buffer();
     printf("test_midi_importer: ok\n");

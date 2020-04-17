@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "core/provenance_reference.h"
+#include "core/voice_reference.h"
 #include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "io/midi_importer.h"
@@ -207,6 +208,83 @@ static NoteEvent *make_note(const char *id_value, long start_num, unsigned long 
     return event;
 }
 
+static NoteEvent *make_note_with_voice(const char *id_value, long start_num, unsigned long start_den, long dur_num,
+                                        unsigned long dur_den, const char *voice_id_value) {
+    EntityID *id = NULL;
+    entity_id_create(id_value, &id);
+    MusicalTime *position = NULL;
+    musical_time_create(start_num, start_den, &position);
+    TemporalAnchor *anchor = NULL;
+    temporal_anchor_create(position, &anchor);
+    Duration *duration = NULL;
+    duration_create(dur_num, dur_den, &duration);
+    PitchIdentity *pitch = NULL;
+    unsigned char token[1] = {60};
+    pitch_identity_create(token, sizeof(token), &pitch);
+    ProvenanceReference *provenance = NULL;
+    provenance_reference_create_absent(&provenance);
+    PitchSpelling *spelling = NULL;
+    pitch_spelling_create(PITCH_LETTER_C, 0, 4, &spelling);
+
+    EntityID *voice_id = NULL;
+    entity_id_create(voice_id_value, &voice_id);
+    VoiceReference *voice = NULL;
+    assert(voice_reference_create(voice_id, &voice) == VOICE_REFERENCE_OK);
+
+    NoteEvent *event = NULL;
+    assert(note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK);
+    return event;
+}
+
+static void test_multi_voice_overlap_export_succeeds(void) {
+    /* A: [0, 1/2) in voice-1. B: [1/4, 3/4) in voice-2 -- overlaps A in
+       time, but they're different voices, so this must succeed with
+       distinct <voice> tags and a <backup> separating them. */
+    NoteEvent *a = make_note_with_voice("note-a", 0, 1, 1, 2, "voice-1");
+    NoteEvent *b = make_note_with_voice("note-b", 1, 4, 1, 2, "voice-2");
+
+    const char *path = "test_musicxml_export_multi_voice.sqlite";
+    PersistenceHandle *handle = open_fresh(path);
+    NoteEvent *events[2] = {a, b};
+    assert(persistence_store_note_events(handle, events, 2) == PERSISTENCE_NOTE_EVENTS_OK);
+
+    char *xml = NULL;
+    assert(musicxml_export_write(handle, &xml) == MUSICXML_EXPORT_OK);
+    assert(xml != NULL);
+
+    assert(strstr(xml, "<voice>1</voice>") != NULL);
+    assert(strstr(xml, "<voice>2</voice>") != NULL);
+    assert(strstr(xml, "<backup>") != NULL);
+
+    free(xml);
+    note_event_destroy(a);
+    note_event_destroy(b);
+    persistence_close(handle);
+    remove(path);
+}
+
+static void test_overlapping_notes_in_same_voice_still_fail(void) {
+    /* Both in voice-1: A [0, 1/2), B starts at 1/4, inside A -- still an
+       overlap since per-voice grouping doesn't excuse same-voice
+       overlap. */
+    NoteEvent *a = make_note_with_voice("note-a", 0, 1, 1, 2, "voice-1");
+    NoteEvent *b = make_note_with_voice("note-b", 1, 4, 1, 4, "voice-1");
+
+    const char *path = "test_musicxml_export_same_voice_overlap.sqlite";
+    PersistenceHandle *handle = open_fresh(path);
+    NoteEvent *events[2] = {a, b};
+    assert(persistence_store_note_events(handle, events, 2) == PERSISTENCE_NOTE_EVENTS_OK);
+
+    char *xml = NULL;
+    assert(musicxml_export_write(handle, &xml) == MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES);
+    assert(xml == NULL);
+
+    note_event_destroy(a);
+    note_event_destroy(b);
+    persistence_close(handle);
+    remove(path);
+}
+
 static void test_missing_spelling_fails_fast(void) {
     NoteEvent *event = make_note("no-spelling", 0, 1, 1, 4, false);
 
@@ -300,6 +378,8 @@ int main(void) {
     test_missing_spelling_fails_fast();
     test_id_sanitization_for_invalid_entity_ids();
     test_overlapping_notes_fail();
+    test_multi_voice_overlap_export_succeeds();
+    test_overlapping_notes_in_same_voice_still_fail();
     test_empty_piece_is_valid();
     test_null_args_rejected();
     printf("musicxml_export: all tests passed\n");
