@@ -27,4 +27,9 @@ add_ursatz_test(sentence_continuation_matching)
 add_ursatz_test(sentence_detection)
 add_ursatz_test(form_structure_detection)
 add_ursatz_test(thematic_return_detection)
+add_executable(test_bach_prelude_arpeggiated_chords test_bach_prelude_arpeggiated_chords.c)
+target_link_libraries(test_bach_prelude_arpeggiated_chords PRIVATE ursatz)
+add_test(NAME bach_prelude_arpeggiated_chords COMMAND test_bach_prelude_arpeggiated_chords
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_ursatz_architecture_test(analysis)
