@@ -59,6 +59,7 @@ add_library(ursatz
     context/context.c
     semantics/interval.c
     semantics/sonority.c
+    semantics/sonority_builder.c
     semantics/rhythmic_pattern.c
     semantics/scale.c
     semantics/contour.c
