@@ -1,5 +1,6 @@
 add_ursatz_test(interval)
 add_ursatz_test(sonority)
+add_ursatz_test(sonority_builder)
 add_ursatz_test(rhythmic_pattern)
 add_ursatz_test(scale)
 add_ursatz_test(contour)
