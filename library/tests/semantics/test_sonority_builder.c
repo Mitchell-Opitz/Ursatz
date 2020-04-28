@@ -2,6 +2,8 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/provenance_reference.h"
 #include "events/note_event.h"
@@ -123,8 +125,83 @@ static void test_overlapping_notes(void) {
     note_event_destroy(note_b);
 }
 
+static void assert_sonority_ids(const Sonority *sonority, const char *const *expected_ids, size_t expected_count) {
+    assert(sonority_event_id_count(sonority) == expected_count);
+    for (size_t i = 0; i < expected_count; i++) {
+        assert(strcmp(entity_id_value(sonority_event_id_at(sonority, i)), expected_ids[i]) == 0);
+    }
+}
+
+/*
+ * Arpeggiated single-line input (the target texture for this branch,
+ * matching tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid's
+ * shape): three notes with staggered, overlapping onset/release
+ * intervals produce one Sonority per beat-grid sample point where at
+ * least one note is active, each carrying exactly the notes active at
+ * that beat --
+ *
+ *   note-a: [0/4, 2/4)   note-b: [1/4, 3/4)   note-c: [2/4, 3/4)
+ *
+ *   beat 0/4: {note-a}
+ *   beat 1/4: {note-a, note-b}
+ *   beat 2/4: {note-b, note-c}
+ */
+static void test_build_from_notes_arpeggiated(void) {
+    NoteEvent *note_a = make_note("note-a", 0, 2);
+    NoteEvent *note_b = make_note("note-b", 1, 2);
+    NoteEvent *note_c = make_note("note-c", 2, 1);
+    NoteEvent *notes[3] = {note_a, note_b, note_c};
+
+    Sonority **sonorities;
+    size_t sonority_count;
+    assert(sonority_builder_build_from_notes(notes, 3, &sonorities, &sonority_count) == SONORITY_BUILDER_OK);
+    assert(sonority_count == 3);
+
+    const char *beat0[] = {"note-a"};
+    assert_sonority_ids(sonorities[0], beat0, 1);
+
+    const char *beat1[] = {"note-a", "note-b"};
+    assert_sonority_ids(sonorities[1], beat1, 2);
+
+    const char *beat2[] = {"note-b", "note-c"};
+    assert_sonority_ids(sonorities[2], beat2, 2);
+
+    for (size_t i = 0; i < sonority_count; i++) {
+        sonority_destroy(sonorities[i]);
+    }
+    free(sonorities);
+    note_event_destroy(note_a);
+    note_event_destroy(note_b);
+    note_event_destroy(note_c);
+}
+
+/*
+ * A note active only from beat 2/4 onward produces exactly one Sonority
+ * (for beat 2/4) -- the earlier, silent grid points (0/4, 1/4) are
+ * skipped entirely, not emitted as empty Sonorities (Sonority requires
+ * event_id_count > 0, semantics/sonority.h).
+ */
+static void test_empty_sample_points_produce_no_sonority(void) {
+    NoteEvent *note = make_note("note-only", 2, 1);
+    NoteEvent *notes[1] = {note};
+
+    Sonority **sonorities;
+    size_t sonority_count;
+    assert(sonority_builder_build_from_notes(notes, 1, &sonorities, &sonority_count) == SONORITY_BUILDER_OK);
+    assert(sonority_count == 1);
+
+    const char *beat2[] = {"note-only"};
+    assert_sonority_ids(sonorities[0], beat2, 1);
+
+    sonority_destroy(sonorities[0]);
+    free(sonorities);
+    note_event_destroy(note);
+}
+
 int main(void) {
     test_note_active_at_boundaries();
     test_overlapping_notes();
+    test_build_from_notes_arpeggiated();
+    test_empty_sample_points_produce_no_sonority();
     return 0;
 }
