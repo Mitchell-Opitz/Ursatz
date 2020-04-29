@@ -53,3 +53,10 @@ add_test(NAME test_analysis_document_schema
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
 set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
+
+add_executable(test_report_snapshots test_report_snapshots.c)
+target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer)
+target_compile_definitions(test_report_snapshots PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
