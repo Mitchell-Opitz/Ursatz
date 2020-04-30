@@ -4,7 +4,16 @@ project(UrsatzAnalyzer VERSION 0.1.0 LANGUAGES C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-enable_testing()
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(URSATZ_ANALYZER_TESTS_DEFAULT ON)
+else()
+    set(URSATZ_ANALYZER_TESTS_DEFAULT OFF)
+endif()
+option(URSATZ_ANALYZER_BUILD_TESTS "Build and register analyzer tests" ${URSATZ_ANALYZER_TESTS_DEFAULT})
+
+if(URSATZ_ANALYZER_BUILD_TESTS)
+    enable_testing()
+endif()
 
 # Ursatz submodule commit, recorded in every analysis document's metadata.
 set(URSATZ_ANALYZER_URSATZ_COMMIT "unknown")
@@ -23,7 +32,12 @@ if(GIT_FOUND)
     endif()
 endif()
 
-add_subdirectory(external/ursatz)
+# A parent project that already provides Ursatz supplies the ursatz target itself.
+if(NOT TARGET ursatz)
+    add_subdirectory(external/ursatz)
+endif()
 add_subdirectory(external/cjson)
 add_subdirectory(src)
-add_subdirectory(tests)
+if(URSATZ_ANALYZER_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
