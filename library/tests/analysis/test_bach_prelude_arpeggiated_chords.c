@@ -14,53 +14,24 @@
 #include "semantics/sonority.h"
 #include "semantics/sonority_builder.h"
 #include "theory/framework.h"
-#include "time/duration.h"
 #include "time/musical_time.h"
-#include "time/temporal_anchor.h"
 #include "time/time_span.h"
 
 /*
- * Regression check for arpeggiated chord grouping: no production code
- * path in this repo currently groups sequential (non-simultaneous)
- * notes into a Sonority before chord identification -- see
- * src/semantics/sonority.h/.c, which only accepts an already-selected
- * set of simultaneous event ids, and src/analysis/chord_identification.c,
- * which requires that Sonority (or a pre-computed scale-degree/interval
- * set) as input. There is no code path anywhere that derives one from
- * raw NoteEvents by time-windowing.
- *
- * This test is a placeholder acceptance check, not an integration of
- * that missing step: it does its OWN naive per-measure pitch-class
- * grouping (measure = one whole note in 4/4, matching this fixture),
- * and checks the result against the known-correct harmonic analysis of
- * the fixture's first 8 measures. It intentionally ignores inversions,
- * octave, and any 7th/extension tones -- only whether the notated root
- * triad's pitch classes are all present in the measure.
- *
- * Once real chord-identification grouping exists, this test's grouping
- * helper should be deleted in favor of calling that code directly; the
- * expected-chord table below is the part worth keeping.
+ * Regression check for arpeggiated chord grouping: sonority_builder
+ * (src/semantics/sonority_builder.h) derives Sonority objects from this
+ * fixture's raw NoteEvents by onset/release activity tracking, sampled
+ * at a fixed quarter-note beat grid, and each is fed unmodified into
+ * chord_identification (src/analysis/chord_identification.h). Checks
+ * the result against the known-correct harmonic analysis of the
+ * fixture's first 8 measures. See sonority_builder.h and
+ * docs/modules/semantics.md for why the beat grid is fixed rather than
+ * adaptive (Registry Problem A, not Problem B/harmonic-rhythm
+ * detection) and out of scope for non-chord-tone tolerance.
  */
 
 #define FIXTURE_PATH "../fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid"
 #define MEASURE_COUNT_CHECKED 8
-
-typedef struct {
-    const char *name;
-    int pitch_classes[3];
-} ExpectedTriad;
-
-/* C Dm G C Am D(secondary dominant, i.e. V/V - D major, not D minor) G C */
-static const ExpectedTriad EXPECTED[MEASURE_COUNT_CHECKED] = {
-    {"C major", {0, 4, 7}},
-    {"D minor", {2, 5, 9}},
-    {"G major", {7, 11, 2}},
-    {"C major", {0, 4, 7}},
-    {"A minor", {9, 0, 4}},
-    {"D major (V/V)", {2, 6, 9}},
-    {"G major", {7, 11, 2}},
-    {"C major", {0, 4, 7}},
-};
 
 /* Deliberately does not rely on assert() for the fopen/fseek/fread
  * calls themselves: assert() is compiled out under -DNDEBUG (this
@@ -101,37 +72,21 @@ static unsigned char *read_fixture(const char *path, size_t *out_size) {
     return buf;
 }
 
-static bool measure_contains_triad(const bool *pitch_class_present, const ExpectedTriad *triad) {
-    for (int i = 0; i < 3; i++) {
-        if (!pitch_class_present[triad->pitch_classes[i]]) {
-            return false;
-        }
-    }
-    return true;
-}
-
 /*
- * Real pipeline: sonority_builder (src/semantics/sonority_builder.h)
- * derives Sonority objects from raw onset/release note activity sampled
- * on the fixed quarter-note beat grid, then chord_identification
- * (src/analysis/chord_identification.h) is called against each,
- * unmodified -- this is the requirement 3/4 validation the naive
- * pitch-class check above stands in for until this point.
- *
  * common-practice-minimal-v1's diatonic scale degrees are caller-
  * supplied (chord_identification.h documents this: PitchIdentity has no
  * numeric semantics for the analyzer to derive them itself). This
- * fixture is known (by the Registry-approved expected-chord table
- * above) to stay in C major for the checked measures, so scale degree
- * is computed directly from MIDI pitch class under a fixed C-major
- * mapping -- not a general key-aware scale-degree computation, valid
- * only because the key is already known here, same as every other
- * caller-supplies-the-dimension boundary this codebase already draws.
- * A pitch class outside the C-major diatonic collection (e.g. the D
- * major secondary dominant's F#) maps to the sentinel 0, which cannot
- * match any of common-practice-minimal-v1's seven diatonic triads (all
- * degrees 1-7) -- so that measure is expected to fail identification,
- * not to be forced into a wrong triad.
+ * fixture is known to stay in C major for the checked measures (C Dm G
+ * C Am D-major-as-V/V G C), so scale degree is computed directly from
+ * MIDI pitch class under a fixed C-major mapping -- not a general
+ * key-aware scale-degree computation, valid only because the key is
+ * already known here, same as every other caller-supplies-the-dimension
+ * boundary this codebase already draws. A pitch class outside the
+ * C-major diatonic collection (e.g. the D major secondary dominant's
+ * F#) maps to the sentinel 0, which cannot match any of
+ * common-practice-minimal-v1's seven diatonic triads (all degrees 1-7)
+ * -- so that measure is expected to fail identification, not to be
+ * forced into a wrong triad.
  */
 static const char *EXPECTED_ROMAN[MEASURE_COUNT_CHECKED] = {
     "I", "ii", "V", "I", "vi", NULL /* D major (V/V): not diatonic to C major, no match expected */, "V", "I",
@@ -270,37 +225,7 @@ int main(void) {
         return 1;
     }
 
-    /* One measure == one whole note in 4/4: MusicalTime position is an
-     * exact fraction (in lowest terms, so the denominator varies note
-     * to note) of a whole note, so a position's measure index is just
-     * floor(numerator / denominator). */
-    bool pitch_class_present[MEASURE_COUNT_CHECKED][12];
-    memset(pitch_class_present, 0, sizeof(pitch_class_present));
-
-    for (size_t i = 0; i < count; i++) {
-        const MusicalTime *pos = temporal_anchor_position(note_event_temporal_anchor(events[i]));
-        long numerator = musical_time_numerator(pos);
-        unsigned long denominator = musical_time_denominator(pos);
-
-        long measure_index = numerator / (long)denominator;
-        if (measure_index < 0 || measure_index >= MEASURE_COUNT_CHECKED) {
-            continue;
-        }
-
-        long midi_note = pitch_numeric_value_position_numerator(pitch_values[i]);
-        int pitch_class = (int)(((midi_note % 12) + 12) % 12);
-        pitch_class_present[measure_index][pitch_class] = true;
-    }
-
     int failures = 0;
-    for (int m = 0; m < MEASURE_COUNT_CHECKED; m++) {
-        bool ok = measure_contains_triad(pitch_class_present[m], &EXPECTED[m]);
-        printf("measure %d: expected %-16s %s\n", m + 1, EXPECTED[m].name, ok ? "OK" : "MISMATCH");
-        if (!ok) {
-            failures++;
-        }
-    }
-
     run_chord_identification_pipeline(events, pitch_values, count, &failures);
 
     for (size_t i = 0; i < count; i++) {
