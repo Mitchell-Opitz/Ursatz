@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cJSON.h"
+#include "pipeline/analysis_document_internal.h"
+
 typedef struct {
     char *data;
     size_t length;
@@ -43,40 +46,235 @@ static bool sb_append(StringBuilder *sb, const char *text) {
     return true;
 }
 
+/* Formats into the builder, sized by a first vsnprintf pass so no line
+   is ever truncated. */
 static bool sb_appendf(StringBuilder *sb, const char *format, ...) {
-    char buffer[256];
     va_list args;
     va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_list sizing_args;
+    va_copy(sizing_args, args);
+    int length = vsnprintf(NULL, 0, format, sizing_args);
+    va_end(sizing_args);
+    if (length < 0) {
+        va_end(args);
+        return false;
+    }
+
+    char *text = malloc((size_t)length + 1);
+    if (!text) {
+        va_end(args);
+        return false;
+    }
+    vsnprintf(text, (size_t)length + 1, format, args);
     va_end(args);
-    return sb_append(sb, buffer);
+
+    bool ok = sb_append(sb, text);
+    free(text);
+    return ok;
 }
 
-char *markdown_report_render(const char *source_filename, const AnalysisReport *report) {
+/* ---- Document access ---- */
+
+static const char *string_member(const cJSON *object, const char *key) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    return cJSON_IsString(item) ? item->valuestring : NULL;
+}
+
+static double number_member(const cJSON *object, const char *key) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    return cJSON_IsNumber(item) ? item->valuedouble : 0.0;
+}
+
+/* ---- Sections ---- */
+
+/* Renders one report section from the whole document and that
+   section's own data (never NULL, null, or empty). */
+typedef bool (*SectionRenderer)(StringBuilder *sb, const cJSON *document, const cJSON *section);
+
+static bool render_title(StringBuilder *sb, const cJSON *document, const cJSON *metadata) {
+    (void)document;
+    const char *source_file = string_member(metadata, "source_file");
+    return sb_appendf(sb, "# Analysis Report: %s\n\n", source_file ? source_file : "");
+}
+
+/* How the key was found, in plain words, from keys[].method. */
+static const char *key_method_phrase(const char *method) {
+    if (method && strcmp(method, "key_signature") == 0) {
+        return "read from the key signature";
+    }
+    if (method && strcmp(method, "bass_fallback") == 0) {
+        return "inferred from the bass of the closing or opening chord";
+    }
+    if (method && strcmp(method, "pitch_class_scan") == 0) {
+        return "inferred from the overall pitch content";
+    }
+    return "found by an unrecorded method";
+}
+
+typedef struct {
+    const char *label;
+    size_t count;
+} LabelCount;
+
+/* Higher count first, then label order, so ties are deterministic. */
+static int compare_label_counts(const void *a, const void *b) {
+    const LabelCount *left = a;
+    const LabelCount *right = b;
+    if (left->count != right->count) {
+        return left->count > right->count ? -1 : 1;
+    }
+    return strcmp(left->label, right->label);
+}
+
+static const char *plural(size_t count, const char *singular, const char *plural_form) {
+    return count == 1 ? singular : plural_form;
+}
+
+/* Matched chord labels ("no match" excluded) with their counts, sorted
+   by compare_label_counts. *out_counts is NULL when there are none. */
+static bool count_chord_labels(const cJSON *chords, LabelCount **out_counts, size_t *out_count) {
+    *out_counts = NULL;
+    *out_count = 0;
+    size_t chord_count = (size_t)cJSON_GetArraySize(chords);
+    if (chord_count == 0) {
+        return true;
+    }
+    LabelCount *counts = malloc(sizeof(LabelCount) * chord_count);
+    if (!counts) {
+        return false;
+    }
+    size_t distinct = 0;
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        const char *label = string_member(chord, "label");
+        if (!label || strcmp(label, "no match") == 0) {
+            continue;
+        }
+        size_t i = 0;
+        while (i < distinct && strcmp(counts[i].label, label) != 0) {
+            i++;
+        }
+        if (i == distinct) {
+            counts[distinct++] = (LabelCount){label, 0};
+        }
+        counts[i].count++;
+    }
+    qsort(counts, distinct, sizeof(LabelCount), compare_label_counts);
+    *out_counts = counts;
+    *out_count = distinct;
+    return true;
+}
+
+/* A few plain-language lines for a composer: the piece, its key, how
+   much of it resolved to chords, and the chords it leans on most. */
+static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON *metadata) {
+    size_t note_count = (size_t)number_member(metadata, "note_count");
+    const char *source_file = string_member(metadata, "source_file");
+    bool ok = sb_append(sb, "## Summary\n\n") &&
+              sb_appendf(sb, "- **File:** %s, %zu %s.\n", source_file ? source_file : "", note_count,
+                         plural(note_count, "note", "notes"));
+
+    const cJSON *key = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "keys"), 0);
+    const char *key_label = string_member(key, "label");
+    if (key_label) {
+        ok = ok && sb_appendf(sb, "- **Key:** %s, %s.\n", key_label,
+                              key_method_phrase(string_member(key, "method")));
+    } else {
+        ok = ok && sb_append(sb, "- **Key:** No key was found.\n");
+    }
+
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(document, "chords");
+    size_t chord_count = (size_t)cJSON_GetArraySize(chords);
+    LabelCount *counts = NULL;
+    size_t distinct = 0;
+    ok = ok && count_chord_labels(chords, &counts, &distinct);
+    if (ok && chord_count == 0) {
+        ok = sb_append(sb, "- **Chords:** No chord events were found.\n");
+    } else if (ok) {
+        size_t matched = 0;
+        for (size_t i = 0; i < distinct; i++) {
+            matched += counts[i].count;
+        }
+        /* Whole percent, but never "0%" for some matches or "100%" for some misses. */
+        size_t percent = (matched * 100 + chord_count / 2) / chord_count;
+        char percent_text[8];
+        if (matched > 0 && percent == 0) {
+            snprintf(percent_text, sizeof(percent_text), "<1%%");
+        } else if (matched < chord_count && percent == 100) {
+            snprintf(percent_text, sizeof(percent_text), ">99%%");
+        } else {
+            snprintf(percent_text, sizeof(percent_text), "%zu%%", percent);
+        }
+        ok = sb_appendf(sb, "- **Chords:** %zu chord %s; %zu matched a chord (%s), %zu did not.\n",
+                        chord_count, plural(chord_count, "event", "events"), matched, percent_text,
+                        chord_count - matched);
+    }
+    if (ok && distinct > 0) {
+        ok = sb_append(sb, "- **Most frequent chords:** ");
+        for (size_t i = 0; i < distinct && i < 3 && ok; i++) {
+            ok = sb_appendf(sb, "%s%s (%zu)", i > 0 ? ", " : "", counts[i].label, counts[i].count);
+        }
+        ok = ok && sb_append(sb, ".\n");
+    }
+    free(counts);
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *keys) {
+    (void)document;
+    const char *label = string_member(cJSON_GetArrayItem(keys, 0), "label");
+    return sb_appendf(sb, "**Detected key:** %s\n\n", label ? label : "");
+}
+
+static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON *chords) {
+    (void)document;
+    bool ok = sb_append(sb, "## Chord Regions\n\n") &&
+              sb_append(sb, "Times are beats from the start of the file.\n\n");
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *start = cJSON_GetObjectItemCaseSensitive(
+            cJSON_GetObjectItemCaseSensitive(chord, "span"), "start");
+        double beats = 4.0 * number_member(start, "num") / number_member(start, "den");
+        const char *label = string_member(chord, "label");
+        ok = sb_appendf(sb, "- Beat %.2f: %s\n", beats, label ? label : "");
+    }
+    return ok;
+}
+
+/* Report sections in document section order. Adding a section means
+   adding one row and one render function. */
+static const struct {
+    const char *document_key;
+    SectionRenderer render;
+} SECTIONS[] = {
+    {"metadata", render_title},
+    {"metadata", render_summary},
+    {"keys", render_key},
+    {"chords", render_chords},
+};
+
+static bool section_is_empty(const cJSON *section) {
+    if (!section || cJSON_IsNull(section)) {
+        return true;
+    }
+    return (cJSON_IsArray(section) || cJSON_IsObject(section)) && section->child == NULL;
+}
+
+char *markdown_report_render(const AnalysisDocument *document) {
     StringBuilder sb;
     if (!sb_init(&sb)) {
         return NULL;
     }
 
+    const cJSON *root = document->root;
     bool ok = true;
-    ok = ok && sb_appendf(&sb, "# Analysis Report: %s\n\n", source_filename);
-
-    if (report->key_found && report->entry_count > 0) {
-        ok = ok && sb_appendf(&sb, "**Detected key:** %s\n\n", report->entries[0].key_label);
-    } else {
-        ok = ok && sb_append(&sb, "**Detected key:** No key detected\n\n");
-    }
-
-    ok = ok && sb_append(&sb, "## Chord Regions\n\n");
-    ok = ok && sb_append(&sb, "Times are beats from the start of the file.\n\n");
-
-    if (report->entry_count == 0) {
-        ok = ok && sb_append(&sb, "No chord regions were identified.\n");
-    } else {
-        for (size_t i = 0; i < report->entry_count && ok; i++) {
-            const AnalysisReportEntry *entry = &report->entries[i];
-            double beats = (double)(2 * entry->time_numerator) / (double)entry->time_denominator;
-            ok = sb_appendf(&sb, "- Beat %.2f: %s\n", beats, entry->chord_label);
+    for (size_t i = 0; i < sizeof(SECTIONS) / sizeof(SECTIONS[0]) && ok; i++) {
+        const cJSON *section = cJSON_GetObjectItemCaseSensitive(root, SECTIONS[i].document_key);
+        if (!section_is_empty(section)) {
+            ok = SECTIONS[i].render(&sb, root, section);
         }
     }
 

@@ -6,6 +6,7 @@
 
 #include "cJSON.h"
 #include "framework.h"
+#include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
 #include "theory/framework.h"
 #include "time/duration.h"
@@ -374,20 +375,45 @@ static bool print_value(Buffer *buffer, const cJSON *item, int depth) {
     return buffer_indent(buffer, depth) && buffer_append(buffer, close);
 }
 
-char *analysis_document_render(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
-    cJSON *document = document_json(input_path, notes, report);
+AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes,
+                                          const AnalysisReport *report) {
+    AnalysisDocument *document = malloc(sizeof(AnalysisDocument));
     if (!document) {
         return NULL;
     }
+    document->root = document_json(input_path, notes, report);
+    if (!document->root) {
+        free(document);
+        return NULL;
+    }
+    return document;
+}
 
+char *analysis_document_to_json(const AnalysisDocument *document) {
     Buffer buffer = {NULL, 0, 0};
-    bool ok = print_value(&buffer, document, 0) && buffer_append(&buffer, "\n");
-    cJSON_Delete(document);
-    if (!ok) {
+    if (!print_value(&buffer, document->root, 0) || !buffer_append(&buffer, "\n")) {
         free(buffer.data);
         return NULL;
     }
     return buffer.data;
+}
+
+void analysis_document_destroy(AnalysisDocument *document) {
+    if (!document) {
+        return;
+    }
+    cJSON_Delete(document->root);
+    free(document);
+}
+
+char *analysis_document_render(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
+    AnalysisDocument *document = analysis_document_build(input_path, notes, report);
+    if (!document) {
+        return NULL;
+    }
+    char *json = analysis_document_to_json(document);
+    analysis_document_destroy(document);
+    return json;
 }
 
 char *derive_analysis_document_path(const char *input_path) {

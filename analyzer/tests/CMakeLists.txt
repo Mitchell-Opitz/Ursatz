@@ -13,6 +13,8 @@ add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation
 
 add_executable(test_long_labels test_long_labels.c)
 target_link_libraries(test_long_labels PRIVATE ursatz_analyzer)
+target_compile_definitions(test_long_labels PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_long_labels COMMAND test_long_labels)
 
 add_executable(test_analysis_document test_analysis_document.c)
@@ -51,3 +53,10 @@ add_test(NAME test_analysis_document_schema
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
 set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
+
+add_executable(test_report_snapshots test_report_snapshots.c)
+target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer)
+target_compile_definitions(test_report_snapshots PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_report_snapshots COMMAND test_report_snapshots)

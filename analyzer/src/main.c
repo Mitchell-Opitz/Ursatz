@@ -9,8 +9,8 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 #include <ursatz_analyzer/report_writer.h>
 
-static bool write_markdown_report(const char *path, const AnalysisReport *report) {
-    char *markdown = markdown_report_render(path, report);
+static bool write_markdown_report(const char *path, const AnalysisDocument *document) {
+    char *markdown = markdown_report_render(document);
     if (!markdown) {
         fprintf(stderr, "Error: out of memory while rendering report for '%s'\n", path);
         return false;
@@ -33,8 +33,8 @@ static bool write_markdown_report(const char *path, const AnalysisReport *report
     return wrote;
 }
 
-static bool write_analysis_document(const char *path, const ImportedNotes *notes, const AnalysisReport *report) {
-    char *document = analysis_document_render(path, notes, report);
+static bool write_analysis_document(const char *path, const AnalysisDocument *analysis_document) {
+    char *document = analysis_document_to_json(analysis_document);
     if (!document) {
         fprintf(stderr, "Error: out of memory while rendering analysis document for '%s'\n", path);
         return false;
@@ -99,10 +99,17 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    bool ok = (!want_markdown || write_markdown_report(path, &report)) &&
-              (!want_json || write_analysis_document(path, &notes, &report));
-
+    AnalysisDocument *document = analysis_document_build(path, &notes, &report);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
+    if (!document) {
+        fprintf(stderr, "Error: out of memory while building analysis document for '%s'\n", path);
+        return 1;
+    }
+
+    bool ok = (!want_markdown || write_markdown_report(path, document)) &&
+              (!want_json || write_analysis_document(path, document));
+
+    analysis_document_destroy(document);
     return ok ? 0 : 1;
 }
