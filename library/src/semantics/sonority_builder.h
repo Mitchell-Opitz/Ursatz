@@ -17,15 +17,25 @@
  * SCOPE (System Registry, Problem A only): each NoteEvent is modeled as
  * active over the interval [onset, onset + duration) -- left-closed,
  * right-open, the same boundary treatment TIME_SPAN_BOUNDARY_LEFT_CLOSED
- * already uses elsewhere in this codebase -- and that activity is
- * sampled at a FIXED one-sample-per-beat grid, beat hardcoded to a
- * quarter note (MusicalTime 1/4, whole-note-relative, matching this
- * codebase's existing whole-note-per-measure MusicalTime convention).
- * This is a stated v1 default, not a general/adaptive harmonic-rhythm
- * detector: it does not infer chord-change points, does not vary its
- * grid by texture or tempo, and the beat unit is not a parameter -- see
- * docs/modules/semantics.md. A different beat unit is new scope, to be
- * added when a real use case demands it, not now.
+ * already uses elsewhere in this codebase (queryable via
+ * sonority_builder_note_active_at below) -- and the grid this builder
+ * samples groups notes by ATTACK: each beat's Sonority is formed from
+ * every note whose onset falls within that beat's half-open span [beat,
+ * beat + 1/4) (fixed to a quarter note, MusicalTime 1/4, whole-note-
+ * relative, matching this codebase's existing whole-note-per-measure
+ * MusicalTime convention). A note still ringing (per its own onset-
+ * release interval) into a LATER beat is not carried forward into that
+ * later beat's Sonority: in practice a note's duration commonly exceeds
+ * one beat (e.g. a held bass tone under faster-moving upper voices), and
+ * doing so would accumulate it into every later beat for as long as it
+ * rings, contaminating each with a stale tone instead of that beat's own
+ * attack content -- attack-grouping is what lets chord identification
+ * read off each beat's own harmony. This is a stated v1 default, not a
+ * general/adaptive harmonic-rhythm detector: it does not infer
+ * chord-change points, does not vary its grid by texture or tempo, and
+ * the beat unit is not a parameter -- see docs/modules/semantics.md. A
+ * different beat unit is new scope, to be added when a real use case
+ * demands it, not now.
  *
  * OUT OF SCOPE (Problem B, deferred): non-chord-tone tolerance and
  * multi-voice/dense-texture handling. A note active at a sample point
@@ -55,7 +65,7 @@ bool sonority_builder_note_active_at(const NoteEvent *note, const MusicalTime *a
 /*
  * Builds one Sonority per non-empty fixed-beat-grid sample point covering
  * notes[0..note_count), each carrying (as event_ids) a fresh EntityID
- * clone of every NoteEvent active at that sample point, an unrestricted
+ * clone of every NoteEvent onsetting within that beat, an unrestricted
  * voice set (voice_id_count == 0 -- this builder does not consume
  * NoteEvent's optional_voice), and SONORITY_EVENT_DOMAIN_SOUNDING (notes
  * are treated as already-realized/sounding activity, matching a

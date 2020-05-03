@@ -56,20 +56,44 @@ static EntityID *clone_entity_id(const EntityID *id) {
 }
 
 /*
- * Collects a fresh EntityID clone of every notes[i] active at `at` into a
- * newly allocated array. *out_count may legitimately be 0 (no note
- * active at this sample point) -- that is not an error, the caller skips
- * emitting a Sonority for it. On allocation failure, any clones already
- * made are destroyed and SONORITY_BUILDER_ERR_ALLOC is returned.
+ * True iff note's onset falls within the half-open beat window
+ * [window_start, window_end) -- each note is sampled into exactly the
+ * one beat it is struck in. A note that is still sounding (per
+ * sonority_builder_note_active_at's onset-release interval) into a
+ * LATER beat is deliberately not re-included in that later beat's
+ * Sonority: in an arpeggiated texture a note's own duration commonly
+ * exceeds one beat (e.g. a held bass tone under faster-moving upper
+ * voices), and carrying it forward by sustain would accumulate it into
+ * every later beat's Sonority for as long as it rings, contaminating
+ * each with a stale tone rather than that beat's own attack content.
+ * Grouping by onset keeps each Sonority to what is actually STRUCK on
+ * that beat, which is what chord identification needs to read off the
+ * beat's own harmony.
  */
-static SonorityBuilderResult collect_active_ids_at(NoteEvent *const *notes, size_t note_count, const MusicalTime *at,
-                                                     EntityID ***out_ids, size_t *out_count) {
+static bool note_onset_in_window(const NoteEvent *note, const MusicalTime *window_start,
+                                  const MusicalTime *window_end) {
+    const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(note));
+    return musical_time_compare(onset, window_start) >= 0 && musical_time_compare(onset, window_end) < 0;
+}
+
+/*
+ * Collects a fresh EntityID clone of every notes[i] whose onset falls in
+ * [window_start, window_end) into a newly allocated array. *out_count
+ * may legitimately be 0 (no note struck in this beat) -- that is not an
+ * error, the caller skips emitting a Sonority for it. On allocation
+ * failure, any clones already made are destroyed and
+ * SONORITY_BUILDER_ERR_ALLOC is returned.
+ */
+static SonorityBuilderResult collect_active_ids_in_window(NoteEvent *const *notes, size_t note_count,
+                                                            const MusicalTime *window_start,
+                                                            const MusicalTime *window_end, EntityID ***out_ids,
+                                                            size_t *out_count) {
     EntityID **ids = NULL;
     size_t count = 0;
     size_t capacity = 0;
 
     for (size_t i = 0; i < note_count; i++) {
-        if (!sonority_builder_note_active_at(notes[i], at)) {
+        if (!note_onset_in_window(notes[i], window_start, window_end)) {
             continue;
         }
         if (count == capacity) {
@@ -102,40 +126,19 @@ static SonorityBuilderResult collect_active_ids_at(NoteEvent *const *notes, size
 }
 
 /*
- * Builds the Sonority for one non-empty sample point at grid_time,
- * taking ownership of active_ids (the array itself is freed here either
- * way; each EntityID it holds is either handed to the new Sonority or,
- * on failure, destroyed).
+ * Builds the Sonority for one non-empty beat window [window_start,
+ * window_end), taking ownership of active_ids (the array itself is
+ * freed here either way; each EntityID it holds is either handed to the
+ * new Sonority or, on failure, destroyed).
  */
-static SonorityBuilderResult make_sonority_at(const MusicalTime *grid_time, EntityID **active_ids,
-                                               size_t active_count, Sonority **out) {
-    Duration *beat_duration;
-    if (duration_create(SONORITY_BUILDER_BEAT_NUMERATOR, SONORITY_BUILDER_BEAT_DENOMINATOR, &beat_duration) !=
-        DURATION_OK) {
-        for (size_t i = 0; i < active_count; i++) {
-            entity_id_destroy(active_ids[i]);
-        }
-        free(active_ids);
-        return SONORITY_BUILDER_ERR_ALLOC;
-    }
-
-    MusicalTime *window_end;
-    MusicalTimeResult add_result = musical_time_add(grid_time, beat_duration, &window_end);
-    duration_destroy(beat_duration);
-    if (add_result != MUSICAL_TIME_OK) {
-        for (size_t i = 0; i < active_count; i++) {
-            entity_id_destroy(active_ids[i]);
-        }
-        free(active_ids);
-        return SONORITY_BUILDER_ERR_ALLOC;
-    }
-
+static SonorityBuilderResult make_sonority_for_window(const MusicalTime *window_start, const MusicalTime *window_end,
+                                                        EntityID **active_ids, size_t active_count, Sonority **out) {
     /* time_span_create copies start/end rather than taking ownership
-     * (time/time_span.c) -- grid_time and window_end are destroyed by
-     * the caller/here regardless of what time_span_create does. */
+     * (time/time_span.c) -- window_start and window_end stay owned by
+     * the caller either way. */
     TimeSpan *window;
-    TimeSpanResult span_result = time_span_create(grid_time, window_end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window);
-    musical_time_destroy(window_end);
+    TimeSpanResult span_result =
+        time_span_create(window_start, window_end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window);
     if (span_result != TIME_SPAN_OK) {
         for (size_t i = 0; i < active_count; i++) {
             entity_id_destroy(active_ids[i]);
@@ -188,14 +191,22 @@ SonorityBuilderResult sonority_builder_build_from_notes(NoteEvent *const *notes,
         }
     }
 
+    Duration *beat_duration;
+    if (duration_create(SONORITY_BUILDER_BEAT_NUMERATOR, SONORITY_BUILDER_BEAT_DENOMINATOR, &beat_duration) !=
+        DURATION_OK) {
+        musical_time_destroy(max_release);
+        return SONORITY_BUILDER_ERR_ALLOC;
+    }
+
     Sonority **sonorities = NULL;
     size_t sonority_count = 0;
     size_t sonority_capacity = 0;
 
     for (long k = 0;; k++) {
-        MusicalTime *grid_time;
+        MusicalTime *window_start;
         if (musical_time_create(k * SONORITY_BUILDER_BEAT_NUMERATOR, SONORITY_BUILDER_BEAT_DENOMINATOR,
-                                 &grid_time) != MUSICAL_TIME_OK) {
+                                 &window_start) != MUSICAL_TIME_OK) {
+            duration_destroy(beat_duration);
             musical_time_destroy(max_release);
             for (size_t i = 0; i < sonority_count; i++) {
                 sonority_destroy(sonorities[i]);
@@ -203,17 +214,31 @@ SonorityBuilderResult sonority_builder_build_from_notes(NoteEvent *const *notes,
             free(sonorities);
             return SONORITY_BUILDER_ERR_ALLOC;
         }
-        if (musical_time_compare(grid_time, max_release) >= 0) {
-            musical_time_destroy(grid_time);
+        if (musical_time_compare(window_start, max_release) >= 0) {
+            musical_time_destroy(window_start);
             break;
+        }
+
+        MusicalTime *window_end;
+        if (musical_time_add(window_start, beat_duration, &window_end) != MUSICAL_TIME_OK) {
+            musical_time_destroy(window_start);
+            duration_destroy(beat_duration);
+            musical_time_destroy(max_release);
+            for (size_t i = 0; i < sonority_count; i++) {
+                sonority_destroy(sonorities[i]);
+            }
+            free(sonorities);
+            return SONORITY_BUILDER_ERR_ALLOC;
         }
 
         EntityID **active_ids;
         size_t active_count;
         SonorityBuilderResult collect_result =
-            collect_active_ids_at(notes, note_count, grid_time, &active_ids, &active_count);
+            collect_active_ids_in_window(notes, note_count, window_start, window_end, &active_ids, &active_count);
         if (collect_result != SONORITY_BUILDER_OK) {
-            musical_time_destroy(grid_time);
+            musical_time_destroy(window_start);
+            musical_time_destroy(window_end);
+            duration_destroy(beat_duration);
             musical_time_destroy(max_release);
             for (size_t i = 0; i < sonority_count; i++) {
                 sonority_destroy(sonorities[i]);
@@ -223,14 +248,18 @@ SonorityBuilderResult sonority_builder_build_from_notes(NoteEvent *const *notes,
         }
 
         if (active_count == 0) {
-            musical_time_destroy(grid_time);
+            musical_time_destroy(window_start);
+            musical_time_destroy(window_end);
             continue;
         }
 
         Sonority *sonority;
-        SonorityBuilderResult make_result = make_sonority_at(grid_time, active_ids, active_count, &sonority);
-        musical_time_destroy(grid_time);
+        SonorityBuilderResult make_result =
+            make_sonority_for_window(window_start, window_end, active_ids, active_count, &sonority);
+        musical_time_destroy(window_start);
+        musical_time_destroy(window_end);
         if (make_result != SONORITY_BUILDER_OK) {
+            duration_destroy(beat_duration);
             musical_time_destroy(max_release);
             for (size_t i = 0; i < sonority_count; i++) {
                 sonority_destroy(sonorities[i]);
@@ -244,6 +273,7 @@ SonorityBuilderResult sonority_builder_build_from_notes(NoteEvent *const *notes,
             Sonority **grown = (Sonority **)realloc(sonorities, sizeof(Sonority *) * new_capacity);
             if (grown == NULL) {
                 sonority_destroy(sonority);
+                duration_destroy(beat_duration);
                 musical_time_destroy(max_release);
                 for (size_t i = 0; i < sonority_count; i++) {
                     sonority_destroy(sonorities[i]);
@@ -257,6 +287,7 @@ SonorityBuilderResult sonority_builder_build_from_notes(NoteEvent *const *notes,
         sonorities[sonority_count++] = sonority;
     }
 
+    duration_destroy(beat_duration);
     musical_time_destroy(max_release);
     *out_sonorities = sonorities;
     *out_sonority_count = sonority_count;

@@ -135,20 +135,25 @@ static void assert_sonority_ids(const Sonority *sonority, const char *const *exp
 /*
  * Arpeggiated single-line input (the target texture for this branch,
  * matching tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid's
- * shape): three notes with staggered, overlapping onset/release
- * intervals produce one Sonority per beat-grid sample point where at
- * least one note is active, each carrying exactly the notes active at
- * that beat --
+ * shape): three notes, one of them (note-a) held across all three
+ * beats, produce one Sonority per beat-grid sample point, each carrying
+ * exactly the notes ONSETTING in that beat --
  *
- *   note-a: [0/4, 2/4)   note-b: [1/4, 3/4)   note-c: [2/4, 3/4)
+ *   note-a: onset 0/4, held through [0/4, 3/4)
+ *   note-b: onset 1/4   note-c: onset 2/4
  *
  *   beat 0/4: {note-a}
- *   beat 1/4: {note-a, note-b}
- *   beat 2/4: {note-b, note-c}
+ *   beat 1/4: {note-b}     -- note-a is still sounding here, but its
+ *   beat 2/4: {note-c}        onset was in the earlier beat, not this one
+ *
+ * (sonority_builder_note_active_at, tested separately above, confirms
+ * note-a genuinely is active at 1/4 and 2/4 -- build_from_notes simply
+ * does not carry a sustained note forward into a later beat's Sonority;
+ * see the grouping-by-attack rationale in sonority_builder.h).
  */
 static void test_build_from_notes_arpeggiated(void) {
-    NoteEvent *note_a = make_note("note-a", 0, 2);
-    NoteEvent *note_b = make_note("note-b", 1, 2);
+    NoteEvent *note_a = make_note("note-a", 0, 3);
+    NoteEvent *note_b = make_note("note-b", 1, 1);
     NoteEvent *note_c = make_note("note-c", 2, 1);
     NoteEvent *notes[3] = {note_a, note_b, note_c};
 
@@ -160,11 +165,11 @@ static void test_build_from_notes_arpeggiated(void) {
     const char *beat0[] = {"note-a"};
     assert_sonority_ids(sonorities[0], beat0, 1);
 
-    const char *beat1[] = {"note-a", "note-b"};
-    assert_sonority_ids(sonorities[1], beat1, 2);
+    const char *beat1[] = {"note-b"};
+    assert_sonority_ids(sonorities[1], beat1, 1);
 
-    const char *beat2[] = {"note-b", "note-c"};
-    assert_sonority_ids(sonorities[2], beat2, 2);
+    const char *beat2[] = {"note-c"};
+    assert_sonority_ids(sonorities[2], beat2, 1);
 
     for (size_t i = 0; i < sonority_count; i++) {
         sonority_destroy(sonorities[i]);
