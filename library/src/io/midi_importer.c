@@ -46,22 +46,21 @@
  * octave = note / 12 - 1.
  *
  * Voice assignment (MusicXML-export-grouping only, no musical/analytical
- * meaning -- a placeholder pending Deliverable F): a single-track,
- * single-channel MIDI import may still contain temporally overlapping
- * notes (e.g. two-handed piano recorded onto one track/channel).
- * MusicXML cannot represent simultaneous notes in one voice, so such
- * imports get each NoteEvent's optional_voice assigned via greedy
- * interval-graph coloring by timing: processing notes in start-time
- * order, a note is assigned the lowest-numbered voice slot not occupied
- * by a still-sounding note at its start time, opening a new slot only
- * when every existing slot is occupied. "Single-track" here means every
- * matched (paired) note came from the same MTrk chunk -- a type-1 file's
- * other tracks (e.g. a conductor track carrying only tempo/time-
- * signature meta-events, no notes) don't by themselves disqualify a
- * file. Imports whose matched notes span more than one track, or more
- * than one channel, are left with optional_voice == NULL -- voice
- * separation there is a track/channel-mapping decision for a future
- * pass, not this one.
+ * meaning -- a placeholder pending Deliverable F): a single-channel
+ * MIDI import may still contain temporally overlapping notes (e.g. a
+ * two-staff piano piece with RH/LH on separate tracks, or two-handed
+ * piano recorded onto one track). MusicXML cannot represent simultaneous
+ * notes in one voice, so such imports get each NoteEvent's optional_voice
+ * assigned via greedy interval-graph coloring by timing, scoped per
+ * source MTrk chunk: within each track, processing its notes in
+ * start-time order, a note is assigned the lowest-numbered voice slot
+ * not occupied by a still-sounding note (from that same track) at its
+ * start time, opening a new slot only when every existing slot for that
+ * track is occupied. Voice slots are numbered independently per track --
+ * a single-track file is simply the one-track case of this. Imports
+ * whose matched notes span more than one channel are left with
+ * optional_voice == NULL -- multi-channel voice separation is a
+ * channel-mapping decision for a future pass, not this one.
  */
 
 static const PitchLetter SHARPS_ONLY_LETTER[12] = {
@@ -159,11 +158,11 @@ static int pair_notes(const MidiNoteEvent *events, size_t event_count, MatchedNo
     return 0;
 }
 
-/* Greedy interval-graph coloring by timing: matched must already be
-   sorted by start_tick (ties by order). Assigns each entry's voice_slot
-   to the lowest-numbered slot whose previously assigned note has
-   already finished sounding by this note's start, opening a new slot
-   otherwise. */
+/* Greedy interval-graph coloring by timing over a single group of notes:
+   matched must already be sorted by start_tick (ties by order). Assigns
+   each entry's voice_slot to the lowest-numbered slot whose previously
+   assigned note has already finished sounding by this note's start,
+   opening a new slot otherwise. Voice slots are local to this group. */
 static int assign_voice_slots(MatchedNote *matched, size_t count) {
     if (count == 0) {
         return 0;
@@ -191,6 +190,63 @@ static int assign_voice_slots(MatchedNote *matched, size_t count) {
 
     free(slot_end_tick);
     return 0;
+}
+
+/* Runs assign_voice_slots independently within each source track, so
+   voice slots are colored per-track rather than across the whole file.
+   all_matched must already be sorted by start_tick (ties by order);
+   that order is preserved within each per-track subset. */
+static int assign_voice_slots_per_track(MatchedNote *all_matched, size_t all_matched_count) {
+    if (all_matched_count == 0) {
+        return 0;
+    }
+
+    MatchedNote *subset = malloc(sizeof(MatchedNote) * all_matched_count);
+    if (subset == NULL) {
+        return -1;
+    }
+
+    size_t *subset_index = malloc(sizeof(size_t) * all_matched_count);
+    if (subset_index == NULL) {
+        free(subset);
+        return -1;
+    }
+
+    bool *done = calloc(all_matched_count, sizeof(bool));
+    if (done == NULL) {
+        free(subset);
+        free(subset_index);
+        return -1;
+    }
+
+    int result = 0;
+    for (size_t i = 0; i < all_matched_count; i++) {
+        if (done[i]) {
+            continue;
+        }
+        size_t track_index = all_matched[i].track_index;
+        size_t subset_count = 0;
+        for (size_t j = i; j < all_matched_count; j++) {
+            if (all_matched[j].track_index == track_index) {
+                subset[subset_count] = all_matched[j];
+                subset_index[subset_count] = j;
+                subset_count++;
+                done[j] = true;
+            }
+        }
+        if (assign_voice_slots(subset, subset_count) != 0) {
+            result = -1;
+            break;
+        }
+        for (size_t k = 0; k < subset_count; k++) {
+            all_matched[subset_index[k]].voice_slot = subset[k].voice_slot;
+        }
+    }
+
+    free(subset);
+    free(subset_index);
+    free(done);
+    return result;
 }
 
 static void destroy_note_events(NoteEvent **events, size_t count) {
@@ -297,8 +353,8 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
 
     VoiceReference *voice = NULL;
     if (matched->voice_slot >= 0) {
-        char voice_id_buf[32];
-        snprintf(voice_id_buf, sizeof(voice_id_buf), "midi-voice-%d", matched->voice_slot);
+        char voice_id_buf[48];
+        snprintf(voice_id_buf, sizeof(voice_id_buf), "midi-voice-%zu-%d", matched->track_index, matched->voice_slot);
         EntityID *voice_id = NULL;
         if (entity_id_create(voice_id_buf, &voice_id) != ENTITY_ID_OK) {
             pitch_spelling_destroy(spelling);
@@ -430,17 +486,13 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
     qsort(all_matched, all_matched_count, sizeof(MatchedNote), matched_note_compare);
 
     bool single_channel = true;
-    bool single_track = true;
     for (size_t i = 1; i < all_matched_count; i++) {
         if (all_matched[i].channel != all_matched[0].channel) {
             single_channel = false;
         }
-        if (all_matched[i].track_index != all_matched[0].track_index) {
-            single_track = false;
-        }
     }
-    if (single_track && single_channel) {
-        if (assign_voice_slots(all_matched, all_matched_count) != 0) {
+    if (single_channel) {
+        if (assign_voice_slots_per_track(all_matched, all_matched_count) != 0) {
             free(all_matched);
             tuning_system_destroy(tuning_system);
             return MIDI_IMPORT_ERR_ALLOC;

@@ -357,6 +357,85 @@ static void test_multi_channel_import_gets_no_voice(void) {
     free(pitch_values);
 }
 
+static size_t build_smf_type1_two_tracks(unsigned char *buf, uint16_t division, const unsigned char *track0_body,
+                                          size_t track0_size, const unsigned char *track1_body,
+                                          size_t track1_size) {
+    size_t pos = 0;
+    append_bytes(buf, &pos, "MThd", 4);
+    append_u32(buf, &pos, 6);
+    append_u16(buf, &pos, 1);
+    append_u16(buf, &pos, 2);
+    append_u16(buf, &pos, division);
+    append_bytes(buf, &pos, "MTrk", 4);
+    append_u32(buf, &pos, (uint32_t)track0_size);
+    append_bytes(buf, &pos, track0_body, track0_size);
+    append_bytes(buf, &pos, "MTrk", 4);
+    append_u32(buf, &pos, (uint32_t)track1_size);
+    append_bytes(buf, &pos, track1_body, track1_size);
+    return pos;
+}
+
+static void test_multi_track_single_channel_gets_per_track_voices(void) {
+    /* PPQN 96, type-1, two note-bearing tracks on the same channel --
+       a two-staff piano piece with RH (track 0) and LH (track 1). Each
+       track's two notes overlap within itself (needs 2 voice slots per
+       track), and RH/LH also overlap each other across tracks. Before
+       per-track voice assignment this was skipped entirely (single_track
+       was false), leaving every note's optional_voice == NULL. */
+    unsigned char rh_track[] = {
+        0x00, 0x90, 0x48, 0x64, /* delta 0,  RH note-on  72 (t=0)   */
+        0x30, 0x90, 0x4C, 0x64, /* delta 48, RH note-on  76 (t=48)  */
+        0x30, 0x80, 0x48, 0x40, /* delta 48, RH note-off 72 (t=96)  */
+        0x30, 0x80, 0x4C, 0x40, /* delta 48, RH note-off 76 (t=144) */
+        0x00, 0xFF, 0x2F, 0x00  /* end of track */
+    };
+    unsigned char lh_track[] = {
+        0x00, 0x90, 0x30, 0x64, /* delta 0,  LH note-on  48 (t=0)   */
+        0x30, 0x90, 0x34, 0x64, /* delta 48, LH note-on  52 (t=48)  */
+        0x30, 0x80, 0x30, 0x40, /* delta 48, LH note-off 48 (t=96)  */
+        0x30, 0x80, 0x34, 0x40, /* delta 48, LH note-off 52 (t=144) */
+        0x00, 0xFF, 0x2F, 0x00  /* end of track */
+    };
+    unsigned char buf[256];
+    size_t size = build_smf_type1_two_tracks(buf, 96, rh_track, sizeof(rh_track), lh_track, sizeof(lh_track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    assert(r == MIDI_IMPORT_OK);
+    assert(count == 4);
+
+    const NoteEvent *rh72 = find_by_pitch(events, count, 0x48);
+    const NoteEvent *rh76 = find_by_pitch(events, count, 0x4C);
+    const NoteEvent *lh48 = find_by_pitch(events, count, 0x30);
+    const NoteEvent *lh52 = find_by_pitch(events, count, 0x34);
+
+    const char *voice_rh72 = voice_id_of(rh72);
+    const char *voice_rh76 = voice_id_of(rh76);
+    const char *voice_lh48 = voice_id_of(lh48);
+    const char *voice_lh52 = voice_id_of(lh52);
+
+    /* Within each track, the overlap forces two distinct voice slots. */
+    assert(strcmp(voice_rh72, voice_rh76) != 0);
+    assert(strcmp(voice_lh48, voice_lh52) != 0);
+
+    /* Across tracks, RH and LH never share a voice (even where both
+       tracks independently land on local slot 0), since that would
+       recreate the overlapping-notes bug this fix addresses. */
+    assert(strcmp(voice_rh72, voice_lh48) != 0);
+    assert(strcmp(voice_rh72, voice_lh52) != 0);
+    assert(strcmp(voice_rh76, voice_lh48) != 0);
+    assert(strcmp(voice_rh76, voice_lh52) != 0);
+
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
+}
+
 static void test_rejects_truncated_file(void) {
     unsigned char buf[8];
     memcpy(buf, "MThd", 4);
@@ -387,6 +466,7 @@ int main(void) {
     test_simultaneous_chord();
     test_spells_chromatic_scale_sharps_only();
     test_single_track_overlap_gets_interval_graph_colored_voices();
+    test_multi_track_single_channel_gets_per_track_voices();
     test_multi_channel_import_gets_no_voice();
     test_rejects_truncated_file();
     test_rejects_null_buffer();
