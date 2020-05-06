@@ -122,7 +122,7 @@ static void test_round_trip(void) {
            in the same slot 0 since they don't overlap. */
         const VoiceReference *reloaded_voice = note_event_optional_voice(reloaded[i]);
         assert(reloaded_voice != NULL);
-        assert(strcmp(entity_id_value(voice_reference_target_id(reloaded_voice)), "midi-voice-0") == 0);
+        assert(strcmp(entity_id_value(voice_reference_target_id(reloaded_voice)), "midi-voice-0-0") == 0);
     }
 
     for (size_t i = 0; i < count; i++) {
