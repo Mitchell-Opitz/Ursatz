@@ -3,7 +3,7 @@
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v1.schema.json`](../schema/analysis-document.v1.schema.json)
+[`schema/analysis-document.v2.schema.json`](../schema/analysis-document.v2.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render` from
 `<ursatz_analyzer/analysis_document.h>`.
 
@@ -12,11 +12,11 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v1 content |
+| Key | Type | v2 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `1`. |
+| `schema_version` | integer | Always `2`. |
 | `metadata` | object | Filled. See below. |
-| `meter` | object or null | Placeholder: `null`. |
+| `meter` | meter claim | Filled. See below. |
 | `keys` | array of key claims | Filled. |
 | `chords` | array of chord claims | Filled. |
 | `cadences` | array | Placeholder: `[]`. |
@@ -30,7 +30,7 @@ newline. The same input and build always give the same bytes.
 | `schemas` | array | Placeholder: `[]`. |
 
 Every key is always present, so consumers can read any section without checking for it first.
-Singular sections (`meter`, `form`) are `null` until filled; the rest are empty arrays.
+The singular section `form` is `null` until filled; the rest are empty arrays.
 
 ## metadata
 
@@ -42,6 +42,28 @@ Singular sections (`meter`, `form`) are `null` until filled; the rest are empty 
 | `note_count` | integer | Number of imported notes. |
 | `ticks_per_quarter` | integer or null | The MIDI header's ticks per quarter note, or `null` when unavailable. |
 | `key_found` | boolean | Whether a key was found. |
+
+## meter
+
+`meter` is one claim (the shared claim fields below) for the whole piece. It is always present for
+a successfully imported file, even one with no notes.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `framework` | string | `"midi-time-signature"` when the file declares a time signature; `"ursatz-default-meter"` when it declares none. |
+| `span`, `note_ids` | | As for every claim: the extent of all the notes. |
+| `label` | string | The time signature, e.g. `"3/4"`. |
+| `uncertainty` | null | Always `null`: the library supplies no confidence for a declared or defaulted meter. Use `source` to tell them apart. |
+| `source` | `"file"` or `"inferred"` | `"file"` when the file declares at least one time signature. `"inferred"` when it declares none and the library's default 4/4 is used. An inferred meter is an assumption, not a fact about the piece. |
+| `time_signature` | object | `{"numerator", "denominator"}` of the first full measure. |
+| `measure_count` | integer | Measures that start before the last note ends, a pickup included (the library's count). `0` for a file with no notes. |
+| `last_measure` | integer or null | The number of the last measure (see numbering below), or `null` when there are no measures. |
+| `pickup` | object or null | `null` when the piece has no pickup. Otherwise `{"length", "beats"}`: `length` is a rational in whole notes; `beats` is the same length in beats of the signature the pickup is read in, a rational, or `null` when that signature has no beat grid. |
+| `changes` | array | One entry per later time signature: `{"measure", "start", "time_signature", "inferred"}`. `measure` is the number of the first measure in the new signature; `start` is a rational time in whole notes. Empty when the signature never changes. |
+
+A pickup is detected by the library from what the file says (a partial first measure ended by a
+later time signature, or a short leading signature such as 1/8 before 12/8), never from note
+content.
 
 ## Claims
 
@@ -83,7 +105,14 @@ Every entry in `keys` and `chords` is a claim. A claim mirrors the library's Int
 ## Versioning
 
 - `schema_version` changes only for breaking changes: removing or renaming a field, changing a
-  field's type or meaning, or removing a section.
+  field's type or meaning, removing a section, or making a field required that an earlier version
+  did not require.
 - Additive changes keep the version: new optional fields, new fields inside a claim, new `method`
   values, or filling a placeholder section.
 - Consumers should ignore fields they do not recognize.
+
+### Version history
+
+- **2**: `meter` is filled (it was `null`). The `meter` claim and its fields are required. v1
+  documents had `"meter": null`.
+- **1**: First version.

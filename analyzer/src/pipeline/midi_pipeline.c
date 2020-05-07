@@ -67,7 +67,9 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult import_result = midi_importer_import(buffer, (size_t)size, &events, &pitch_values, &count);
+    MidiMeterImport meter = {NULL, NULL, NULL, 0};
+    MidiImportResult import_result =
+        midi_importer_import_with_meter(buffer, (size_t)size, &events, &pitch_values, &count, &meter);
 
     MidiKeySignature key_signature = {false, 0, false};
     unsigned ticks_per_quarter = 0;
@@ -99,6 +101,11 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     out->count = count;
     out->key_signature = key_signature;
     out->ticks_per_quarter = ticks_per_quarter;
+    out->meter = meter;
+    for (size_t i = 0; i < meter.conflict_count; i++) {
+        fprintf(stderr, "Warning: '%s' declares different time signatures at tick %llu; the last one is used\n",
+                path, (unsigned long long)meter.conflict_ticks[i]);
+    }
     return MIDI_PIPELINE_OK;
 }
 
@@ -112,6 +119,8 @@ void imported_notes_destroy(ImportedNotes *notes) {
     }
     free(notes->events);
     free(notes->pitch_values);
+    midi_meter_import_destroy(&notes->meter);
+    notes->meter = (MidiMeterImport){NULL, NULL, NULL, 0};
     notes->events = NULL;
     notes->pitch_values = NULL;
     notes->count = 0;

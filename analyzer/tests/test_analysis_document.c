@@ -136,7 +136,7 @@ int main(void) {
 
     char *json = analysis_document_render(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 1,\n", 25) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 2,\n", 25) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = analysis_document_render(path, &notes, &report);
@@ -151,7 +151,7 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 1);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 2);
 
     const cJSON *metadata = member(document, "metadata");
     assert(cJSON_IsObject(metadata));
@@ -162,7 +162,17 @@ int main(void) {
     assert(number(metadata, "ticks_per_quarter") == 96);
     assert(cJSON_IsTrue(member(metadata, "key_found")));
 
-    assert(cJSON_IsNull(member(document, "meter")));
+    /* The fixture has no time signature event: the library's 4/4 is
+       reported, marked inferred. */
+    const cJSON *meter = member(document, "meter");
+    assert(cJSON_IsObject(meter));
+    assert(strcmp(string(meter, "source"), "inferred") == 0);
+    assert(strcmp(string(meter, "framework"), "ursatz-default-meter") == 0);
+    assert(strcmp(string(meter, "label"), "4/4") == 0);
+    assert(number(member(meter, "time_signature"), "numerator") == 4);
+    assert(number(member(meter, "time_signature"), "denominator") == 4);
+    assert(cJSON_IsNull(member(meter, "pickup")));
+    assert(cJSON_GetArraySize(member(meter, "changes")) == 0);
     assert(cJSON_IsNull(member(document, "form")));
     static const char *const EMPTY_SECTIONS[] = {"cadences", "phrases", "motives", "melody",
                                                  "rhythm",   "texture", "voice_leading", "schemas"};
