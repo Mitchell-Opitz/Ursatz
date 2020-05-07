@@ -126,6 +126,7 @@ add_library(ursatz
     generation/generation_record.c
     io/midi_importer.c
     io/midi_event_decoder.c
+    io/midi_key_signature.c
     io/smf_reader.c
     persistence/persistence.c
     persistence/persistence_note_events.c
