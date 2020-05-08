@@ -193,6 +193,13 @@ int main(void) {
     assert(strcmp(string(key, "method"), "bass_fallback") == 0);
     check_rational(member(member(key, "span"), "start"), 0, 1);
     check_rational(member(member(key, "span"), "end"), 3, 2);
+    /* Six quarter-note beats in 4/4: the key ends on beat 3 of measure 2. */
+    const cJSON *key_location = member(key, "location");
+    assert(number(member(key_location, "start"), "measure") == 1);
+    assert(number(member(key_location, "start"), "beat") == 1);
+    check_rational(member(member(key_location, "start"), "subdivision"), 0, 1);
+    assert(number(member(key_location, "end"), "measure") == 2);
+    assert(number(member(key_location, "end"), "beat") == 3);
 
     /* Chords: one claim per report entry, matching test_analysis_pipeline. */
     const cJSON *chords = member(document, "chords");

@@ -294,20 +294,45 @@ static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *ke
     return sb_appendf(sb, "**Detected key:** %s\n\n", label ? label : "");
 }
 
+/* "m. 3, beat 2.5": the beat is the 1-based beat plus its fraction,
+   shown to at most two places. A position that could not be read shows
+   as "unknown position". */
+static bool append_position(StringBuilder *sb, const cJSON *position) {
+    if (!cJSON_IsObject(position)) {
+        return sb_append(sb, "unknown position");
+    }
+    const cJSON *subdivision = cJSON_GetObjectItemCaseSensitive(position, "subdivision");
+    double beat = number_member(position, "beat") +
+                  number_member(subdivision, "num") / number_member(subdivision, "den");
+    char beat_text[32];
+    snprintf(beat_text, sizeof(beat_text), "%.2f", beat);
+    size_t length = strlen(beat_text);
+    while (length > 0 && beat_text[length - 1] == '0') {
+        beat_text[--length] = '\0';
+    }
+    if (length > 0 && beat_text[length - 1] == '.') {
+        beat_text[--length] = '\0';
+    }
+    return sb_appendf(sb, "m. %d, beat %s", (int)number_member(position, "measure"), beat_text);
+}
+
 static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON *chords) {
-    (void)document;
-    bool ok = sb_append(sb, "## Chord Regions\n\n") &&
-              sb_append(sb, "Times are beats from the start of the file.\n\n");
+    bool ok = sb_append(sb, "## Chord Regions\n\n") && sb_append(sb, "Positions are measure and beat.");
+    if (ok && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(
+                  cJSON_GetObjectItemCaseSensitive(document, "meter"), "pickup"))) {
+        ok = sb_append(sb, " The pickup is measure 0.");
+    }
+    ok = ok && sb_append(sb, "\n\n");
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
         if (!ok) {
             break;
         }
-        const cJSON *start = cJSON_GetObjectItemCaseSensitive(
-            cJSON_GetObjectItemCaseSensitive(chord, "span"), "start");
-        double beats = 4.0 * number_member(start, "num") / number_member(start, "den");
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
         const char *label = string_member(chord, "label");
-        ok = sb_appendf(sb, "- Beat %.2f: %s\n", beats, label ? label : "");
+        ok = sb_append(sb, "- ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+             sb_appendf(sb, ": %s\n", label ? label : "");
     }
     return ok;
 }

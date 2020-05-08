@@ -89,12 +89,30 @@
         "end": { "$ref": "#/$defs/rational" }
       }
     },
+    "position": {
+      "type": ["object", "null"],
+      "required": ["measure", "beat", "subdivision"],
+      "properties": {
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "integer", "minimum": 1 },
+        "subdivision": { "$ref": "#/$defs/rational" }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      }
+    },
     "claim": {
       "type": "object",
-      "required": ["framework", "span", "note_ids", "label", "uncertainty"],
+      "required": ["framework", "span", "location", "note_ids", "label", "uncertainty"],
       "properties": {
         "framework": { "type": "string" },
         "span": { "$ref": "#/$defs/span" },
+        "location": { "$ref": "#/$defs/location" },
         "note_ids": {
           "type": "array",
           "items": { "type": "integer", "minimum": 0 }

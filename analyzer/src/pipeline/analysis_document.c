@@ -8,6 +8,7 @@
 #include "beat_grid.h"
 #include "cJSON.h"
 #include "framework.h"
+#include "metric_position_rules.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
 #include "theory/framework.h"
@@ -162,6 +163,59 @@ static cJSON *uncertainty_json(AnalysisConfidence confidence) {
     return cJSON_CreateNumber((double)confidence.numerator / (double)confidence.denominator);
 }
 
+/* Measure and beat of one time on the piece's measure grid:
+   {"measure", "beat", "subdivision"}. Measures are numbered as the
+   library numbers them (the first full measure is 1, a pickup is 0).
+   "beat" is 1-based; "subdivision" is the exact fraction of that beat
+   past its start, as a rational (0/1 on the beat). Null when the
+   position cannot be read, e.g. a signature with no beat grid. */
+static cJSON *position_json(const MeterMap *map, Rational time) {
+    MusicalTime *musical_time = NULL;
+    if (musical_time_create((long)time.num, (unsigned long)time.den, &musical_time) != MUSICAL_TIME_OK) {
+        return cJSON_CreateNull();
+    }
+    MetricalPosition *position = NULL;
+    MetricalPositionResult result = metrical_position_from_time(map, musical_time, &position);
+    musical_time_destroy(musical_time);
+    if (result != METRICAL_POSITION_OK) {
+        return cJSON_CreateNull();
+    }
+
+    int measure = metrical_position_measure(position);
+    const TimeSignature *reading = NULL;
+    StandardMeterBeatPosition beat;
+    bool readable = metrical_position_reading_signature(map, measure, &reading) == METRICAL_POSITION_OK &&
+                    standard_meter_beat_position(reading, position, &beat);
+    metrical_position_destroy(position);
+    if (!readable) {
+        return cJSON_CreateNull();
+    }
+
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "measure", cJSON_CreateNumber((double)measure)) &&
+          add(object, "beat", cJSON_CreateNumber((double)beat.beat)) &&
+          add(object, "subdivision",
+              rational_json(rational_make(beat.subdivision_numerator, beat.subdivision_denominator))))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* Where a span starts and ends on the measure grid. The end is the
+   position of the span's (exclusive) end time, so a span that ends on a
+   barline ends at beat 1 of the next measure. */
+static cJSON *location_json(const MeterMap *map, Rational start, Rational end) {
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "start", position_json(map, start)) && add(object, "end", position_json(map, end)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* The shared claim fields, in schema order. ids NULL means every
    imported note. */
 static cJSON *claim_json(const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
@@ -173,6 +227,7 @@ static cJSON *claim_json(const char *framework, const ImportedNotes *notes, cons
     cJSON *claim = cJSON_CreateObject();
     if (claim && !(add(claim, "framework", cJSON_CreateString(framework)) &&
                    add(claim, "span", span_json(start, end)) &&
+                   add(claim, "location", location_json(notes->meter.meter_map, start, end)) &&
                    add(claim, "note_ids", note_ids_json(ids, id_count)) &&
                    add(claim, "label", cJSON_CreateString(label)) &&
                    add(claim, "uncertainty", uncertainty_json(confidence)))) {

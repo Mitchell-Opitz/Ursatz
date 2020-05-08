@@ -73,9 +73,39 @@ Every entry in `keys` and `chords` is a claim. A claim mirrors the library's Int
 | --- | --- | --- |
 | `framework` | string | Id of the source that made the claim, e.g. `"common-practice-minimal-v1"`. |
 | `span` | object | `{"start": {"num", "den"}, "end": {"num", "den"}}`: rational times in whole notes from the start of the piece, in lowest terms, matching `time_numerator`/`time_denominator` in `AnalysisReport`. |
+| `location` | object | `{"start", "end"}`: where the span starts and ends on the measure grid, as positions (see below). |
 | `note_ids` | array of integers | The notes the claim covers, as indices into the imported notes. Index `N` is the note Ursatz names `midi-note-N`. |
 | `label` | string | The claim's label. |
 | `uncertainty` | number or null | The Interpretation's scalar confidence in [0, 1], or `null` when the library supplies none (unknown, or a candidate set at v1). |
+
+### Measure and beat positions
+
+`location.start` and `location.end` are positions, derived from `span` and the library's measure
+grid (the same grid that the `meter` section reports). A position is an object, or `null` when it
+cannot be read (a time signature with no beat grid):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `measure` | integer | The measure number. |
+| `beat` | integer | The 1-based beat in that measure. |
+| `subdivision` | rational | The exact fraction of that beat past its start, `0/1` on the beat. |
+
+The report writes a position as `m. N, beat B`, with the subdivision added to the beat (`beat 2.5`).
+
+Conventions:
+
+- **Measure numbers follow the score, as the library numbers them.** The first full measure is 1.
+  A pickup (anacrusis) is measure 0, so the music after it starts at measure 1. A piece with no
+  pickup has no measure 0.
+- **A pickup sits at the end of an imagined measure.** A one-quarter pickup in 4/4 starts at beat 4
+  of measure 0.
+- **A beat is the signature's beat.** In 4/4 and 3/4 it is the quarter note; in 6/8 and 12/8 it is
+  the dotted quarter.
+- **`end` is the position of the span's exclusive end.** A span that ends on a barline ends at
+  beat 1 of the next measure, not at the last beat of its own measure.
+- **A barline belongs to the following measure.**
+- The `meter` claim and the key claim cover the whole piece, so their positions run from the first
+  note to the end of the last.
 
 ### Key claims
 
@@ -113,6 +143,6 @@ Every entry in `keys` and `chords` is a claim. A claim mirrors the library's Int
 
 ### Version history
 
-- **2**: `meter` is filled (it was `null`). The `meter` claim and its fields are required. v1
-  documents had `"meter": null`.
+- **2**: `meter` is filled (it was `null`). Every claim has a required `location`. v1 documents had
+  `"meter": null` and no `location`.
 - **1**: First version.
