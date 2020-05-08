@@ -1,6 +1,7 @@
 add_ursatz_test(smf_reader)
 add_ursatz_test(midi_event_decoder)
 add_ursatz_test(midi_importer)
+add_ursatz_test(midi_key_signature)
 add_ursatz_architecture_test(io)
 
 # Scoped memcheck coverage for this module's own test binaries only
@@ -8,7 +9,7 @@ add_ursatz_architecture_test(io)
 # silently if valgrind isn't installed.
 find_program(URSATZ_IO_VALGRIND valgrind)
 if(URSATZ_IO_VALGRIND)
-  foreach(io_test_name smf_reader midi_event_decoder midi_importer)
+  foreach(io_test_name smf_reader midi_event_decoder midi_importer midi_key_signature)
     add_test(NAME ${io_test_name}_valgrind
              COMMAND ${URSATZ_IO_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${io_test_name}>)
