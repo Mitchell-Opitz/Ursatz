@@ -1,8 +1,8 @@
 # Ursatz-Analyzer
 
 A small C11 command-line tool that turns a MIDI file into a Markdown report and a JSON analysis
-document: the piece's global key, and the most likely chord for each group of notes that start
-together. It is a
+document: the piece's time signature, measure count and pickup, its global key, and the most
+likely chord for each group of notes that start together, each located by measure and beat. It is a
 thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library and its
 `common-practice-minimal` framework.
 
@@ -24,6 +24,9 @@ Tests:
 - `test_corpus_key_estimation`: the reported key of six reference pieces.
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_analysis_document`: the analysis document's sections, claims and values.
+- `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
+  and beat of chosen chords, for the five reference pieces and two constructed files (a pickup and
+  a file with no time signature).
 - `test_cli_output_flags`: which files each output flag writes.
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
@@ -86,6 +89,27 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
 the JSON file is its serialization, and `markdown_report` renders the report from it, never from
 the pipeline directly. `report_writer` writes each file.
 
+## Meter and measure numbers
+
+The meter comes from the file's time signature events, read by Ursatz's `MeterMap`. The report's
+Meter section gives the time signature, the number of measures, a pickup if there is one, and any
+later change of signature. The analysis document's `meter` section carries the same, and every
+claim in the document has a `location` with the measure and beat where it starts and ends. The
+report writes these as `m. N, beat B`.
+
+- The first full measure is measure 1. A pickup (anacrusis) is measure 0, so the music after it
+  starts at measure 1. A piece with no pickup has no measure 0. A pickup is found from what the file
+  says (a partial first measure ended by a later time signature, or a short leading signature such
+  as 1/8 before 12/8), never from the notes: a leading rest is a rest, not a pickup.
+- A beat is the signature's beat: a quarter note in 4/4, 3/4 and 2/4, a dotted quarter in 6/8 and
+  12/8. Beats count from 1. A fractional beat is shown as a decimal (`beat 2.5`); the document
+  keeps the exact fraction.
+- A file with no time signature event gets the library's default 4/4. The report and the document
+  mark it as inferred, an assumption and not a fact about the piece.
+- The measure and beat are the file's: the analyzer does not check them against a printed score.
+
+See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
+
 ## Key estimation
 
 `estimate_global_key` (`src/pipeline/key_pipeline.c`) stops at the first source that succeeds:
@@ -112,3 +136,5 @@ in the report always uses sharps.
   subset matching: one extra diatonic tone is tolerated and the first match wins
   (non-diatonic notes are dropped first). Two or more non-chord tones per beat still fail.
 - SMPTE-division MIDI files are rejected.
+- Measure and beat follow the file's time signature events. A file that declares the wrong meter
+  (for example, a minuet marked 4/4) is reported as declared.
