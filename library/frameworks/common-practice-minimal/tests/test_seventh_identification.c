@@ -84,6 +84,24 @@ int main(void) {
     int fully_diminished7[] = {0, 3, 6, 9};
     assert(!common_practice_identify_seventh(fully_diminished7, 4, &unused_seventh));
 
+    /* Subset match: a dominant7 with one extra (non-chord-tone) interval
+     * still resolves to dominant7 -- the stopgap this branch adds for
+     * arpeggiated/multi-voice textures (see seventh_identification.h). */
+    int dominant7_plus_passing_tone[] = {0, 4, 7, 10, 2};
+    CommonPracticeSeventh subset_seventh;
+    assert(common_practice_identify_seventh(dominant7_plus_passing_tone, 5, &subset_seventh));
+    assert(strcmp(common_practice_seventh_label(subset_seventh), "dominant7") == 0);
+
+    /* Ambiguous subset match: {0,4,7,10,11} satisfies both dominant7
+     * {0,4,7,10} and major7 {0,4,7,11}. Documented scan-order tie-break
+     * picks whichever comes first in SEVENTH_INTERVALS (dominant7), and
+     * only logs the ambiguity to stderr -- not surfaced through the
+     * return value (known limitation). */
+    int ambiguous[] = {0, 4, 7, 10, 11};
+    CommonPracticeSeventh ambiguous_seventh;
+    assert(common_practice_identify_seventh(ambiguous, 5, &ambiguous_seventh));
+    assert(strcmp(common_practice_seventh_label(ambiguous_seventh), "dominant7") == 0);
+
     check_distinct_occurrences_get_distinct_ids(dominant7, 4);
 
     printf("test_seventh_identification: ok\n");
