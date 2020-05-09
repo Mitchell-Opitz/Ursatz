@@ -60,3 +60,9 @@ target_compile_definitions(test_report_snapshots PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
+
+add_executable(test_measure_locations test_measure_locations.c)
+target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_measure_locations PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_measure_locations COMMAND test_measure_locations)
