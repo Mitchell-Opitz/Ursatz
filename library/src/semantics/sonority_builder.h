@@ -37,12 +37,26 @@
  * different beat unit is new scope, to be added when a real use case
  * demands it, not now.
  *
- * OUT OF SCOPE (Problem B, deferred): non-chord-tone tolerance and
- * multi-voice/dense-texture handling. A note active at a sample point
- * that is actually a passing/neighbor tone is not filtered out -- every
- * note active at the sample point is included as-is. Built and
- * validated against solo/monophonic-texture writing only
- * (tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid).
+ * PARTIALLY HANDLED (Problem B, was deferred): non-chord-tone tolerance.
+ * This builder itself still does no filtering -- every note active at
+ * the sample point is included as-is, passing/neighbor tones included.
+ * The tolerance instead lives one layer up, in
+ * frameworks/common-practice-minimal/triad_identification.c and
+ * seventh_identification.c: those now match by subset containment
+ * rather than exact degree/interval-set equality, so a single extra
+ * non-chord-tone degree in a beat's Sonority no longer blocks
+ * identification of the underlying triad/seventh. This is a stopgap,
+ * not real non-chord-tone filtering (see Known_Gaps.md): it only
+ * tolerates one simultaneous non-chord degree, ties are resolved by
+ * naive scan order and only logged (not surfaced) when a beat's degree
+ * set satisfies more than one candidate, and dense multi-voice textures
+ * (melody + accompaniment together) still frequently produce no match
+ * at all -- see tests/analysis/test_framework_v1_corpus_subset_match_report.c
+ * for real per-beat results against the wider corpus. Built and
+ * validated against solo/monophonic-texture writing
+ * (tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid);
+ * the subset-match stopgap was added for the denser Field 1 fixture
+ * (tests/fixtures/framework-v1-corpus/Field 1.mid).
  *
  * A sample point with zero active notes produces no Sonority (Sonority
  * requires event_id_count > 0, semantics/sonority.h) -- silence between
