@@ -32,4 +32,9 @@ target_link_libraries(test_bach_prelude_arpeggiated_chords PRIVATE common_practi
 add_test(NAME bach_prelude_arpeggiated_chords COMMAND test_bach_prelude_arpeggiated_chords
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_executable(test_framework_v1_corpus_subset_match_report test_framework_v1_corpus_subset_match_report.c)
+target_link_libraries(test_framework_v1_corpus_subset_match_report PRIVATE common_practice_minimal)
+add_test(NAME framework_v1_corpus_subset_match_report COMMAND test_framework_v1_corpus_subset_match_report
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_ursatz_architecture_test(analysis)
