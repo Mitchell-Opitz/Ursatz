@@ -25,18 +25,28 @@
  * by whoever has the tuning-system knowledge to do so. The Sonority's
  * own EntityID is still what the resulting Chord's target_id points to.
  *
- * Matching is by unordered interval-SET membership, exact cardinality
- * required (see seventh_identification.c): a match requires exactly 4
- * distinct root-relative intervals equal to one of the four diatonic
- * seventh-chord quality patterns this framework knows (dominant7,
- * major7, minor7, half-diminished7 -- chord_vocabulary_seventh.h).
- * Fully-diminished7 is not one of them (see that header). This is the
- * same exact-cardinality mechanism triad_identification.c uses, so it
- * inherits the same known rigidity: a sonority with any extra tone
- * beyond the required 4 fails to match rather than matching with the
- * extras tolerated. That rigidity is a disclosed, not-yet-fixed gap in
- * the chord-matching code path generally (see README.md); it is not
- * fixed or worsened here.
+ * Matching is by unordered interval-SET SUBSET containment (see
+ * seventh_identification.c): a match requires that one of the four
+ * diatonic seventh-chord quality patterns this framework knows
+ * (dominant7, major7, minor7, half-diminished7 --
+ * chord_vocabulary_seventh.h) has all 4 of its intervals present among
+ * the input's distinct intervals, even when extra (non-chord-tone)
+ * intervals are also present. Fully-diminished7 is not one of the four
+ * (see that header). This mirrors triad_identification.c's subset-match
+ * stopgap for arpeggiated/multi-voice textures (see Known_Gaps.md); it
+ * does not tolerate more than one simultaneous non-chord interval in
+ * practice, since a second extra interval can complete an unrelated
+ * quality (see below).
+ *
+ * Because of subset matching, an input interval set CAN validly satisfy
+ * more than one of the four qualities -- this replaces the exact-match
+ * version's guarantee that at most one quality could ever match. When
+ * that happens, the first match found in SEVENTH_INTERVALS scan order
+ * (dominant7, major7, minor7, half-diminished7) wins, and the ambiguity
+ * is only logged to stderr (see seventh_identification.c), not surfaced
+ * through this function's return value -- known limitation, not fixed
+ * here. A real confidence-weighted or duration-weighted tie-break is
+ * out of scope for this pass, planned for later.
  *
  * Tie-break rule: matching is by interval-set only, never by which
  * tone is in the bass -- a seventh chord supplied in any inversion
@@ -47,11 +57,11 @@
 /*
  * Returns true and sets *out to the matching quality when
  * root_relative_intervals (each 0-11, duplicates ignored, order
- * irrelevant) matches exactly one of the four diatonic seventh-chord
- * quality interval sets. Returns false (out untouched) when no match
- * exists -- e.g. fewer than 4 distinct intervals, a value outside 0-11,
- * or a combination this framework does not define as one of its four
- * qualities.
+ * irrelevant) contains all 4 intervals of at least one of the four
+ * diatonic seventh-chord quality interval sets (see subset-match note
+ * above). Returns false (out untouched) when no match exists -- e.g.
+ * fewer than 4 distinct intervals, or a combination that does not
+ * contain any of this framework's four qualities.
  */
 bool common_practice_identify_seventh(const int *root_relative_intervals, size_t interval_count,
                                        CommonPracticeSeventh *out);

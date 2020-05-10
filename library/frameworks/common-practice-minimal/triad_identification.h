@@ -23,29 +23,41 @@
  * key) rather than deriving them from a Sonority itself. The Sonority's
  * own EntityID is still what the resulting Chord's target_id points to.
  *
- * Tie-break rule (the one required by this pass's deliberately
- * single-answer scope): matching is by unordered scale-degree-SET
- * membership only, never by which degree is in the bass. A chord
- * supplied in any inversion (e.g. degrees {3, 5, 1} instead of {1, 3,
- * 5}) still resolves to its root-position triad label -- this
- * framework does not identify inversions in this pass. Root-position
- * preference is therefore not actually needed to break a tie in
- * practice: each of the seven diatonic triads' three-degree sets is
- * distinct from every other's within one diatonic collection, so no
- * input scale-degree set can validly match more than one of the seven
- * -- true multi-candidate/confidence-weighted analysis (e.g. resolving
- * a set that also happens to work under a different framework, or
- * partial/four-note sonorities) is deliberately out of scope for this
- * pass, planned for later.
+ * Tie-break rule: matching is by unordered scale-degree-SET membership
+ * only, never by which degree is in the bass. A chord supplied in any
+ * inversion (e.g. degrees {3, 5, 1} instead of {1, 3, 5}) still
+ * resolves to its root-position triad label -- this framework does not
+ * identify inversions in this pass.
+ *
+ * Matching is by SUBSET containment, not exact equality: a triad
+ * matches if its 3 degrees are present among the input's distinct
+ * degrees, even when extra (non-chord-tone) degrees are also present.
+ * This is a deliberate stopgap for arpeggiated/multi-voice textures
+ * where a beat's Sonority commonly includes a passing or neighbor tone
+ * alongside the underlying triad (see sonority_builder.h and
+ * Known_Gaps.md) -- not general non-chord-tone filtering, and it does
+ * not tolerate more than one simultaneous non-chord degree in practice
+ * (a second extra degree can complete an unrelated triad, see below).
+ *
+ * Because of subset matching, an input degree set CAN validly satisfy
+ * more than one of the seven diatonic triads (e.g. {1, 3, 5, 6} fits
+ * both I {1,3,5} and vi {6,1,3}) -- this replaces the exact-match
+ * version's guarantee that at most one triad could ever match. When
+ * that happens, the first match found in TRIAD_DEGREES scan order
+ * (I, ii, iii, IV, V, vi, vii dim) wins, and the ambiguity is only
+ * logged to stderr (see triad_identification.c), not surfaced through
+ * this function's return value -- known limitation, not fixed here.
+ * A real confidence-weighted or duration-weighted tie-break is out of
+ * scope for this pass, planned for later.
  */
 
 /*
  * Returns true and sets *out to the matching triad when scale_degrees
- * (each 1-7, duplicates ignored, order irrelevant) matches exactly one
- * of the seven diatonic triads' degree sets. Returns false (out
- * untouched) when no match exists -- e.g. fewer than 3 distinct degrees,
- * a degree outside 1-7, or a combination this framework does not
- * define as one of its seven triads.
+ * (each 1-7, duplicates ignored, order irrelevant) contains all 3
+ * degrees of at least one of the seven diatonic triads (see subset-match
+ * note above). Returns false (out untouched) when no match exists --
+ * e.g. fewer than 3 distinct degrees, or a combination that does not
+ * contain any of this framework's seven triads.
  */
 bool common_practice_identify_triad(const int *scale_degrees, size_t scale_degree_count, CommonPracticeTriad *out);
 

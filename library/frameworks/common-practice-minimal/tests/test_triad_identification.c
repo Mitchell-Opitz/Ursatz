@@ -63,6 +63,23 @@ int main(void) {
     CommonPracticeTriad unused_triad;
     assert(!common_practice_identify_triad(degrees_incomplete, 2, &unused_triad));
 
+    /* Subset match: a I triad with one extra (non-chord-tone) degree still
+     * resolves to I -- the stopgap this branch adds for arpeggiated/
+     * multi-voice textures (see triad_identification.h). */
+    int degrees_i_plus_passing_tone[] = {1, 3, 5, 4};
+    CommonPracticeTriad subset_triad;
+    assert(common_practice_identify_triad(degrees_i_plus_passing_tone, 4, &subset_triad));
+    assert(strcmp(common_practice_triad_label(subset_triad), "I") == 0);
+
+    /* Ambiguous subset match: {1,3,5,6} satisfies both I {1,3,5} and
+     * vi {6,1,3}. Documented scan-order tie-break picks whichever comes
+     * first in TRIAD_DEGREES (I), and only logs the ambiguity to stderr
+     * -- not surfaced through the return value (known limitation). */
+    int degrees_ambiguous[] = {1, 3, 5, 6};
+    CommonPracticeTriad ambiguous_triad;
+    assert(common_practice_identify_triad(degrees_ambiguous, 4, &ambiguous_triad));
+    assert(strcmp(common_practice_triad_label(ambiguous_triad), "I") == 0);
+
     printf("test_triad_identification: ok\n");
     return 0;
 }
