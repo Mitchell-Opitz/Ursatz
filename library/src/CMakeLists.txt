@@ -24,6 +24,7 @@ add_library(ursatz
     pitch/pitch_realization.c
     pitch/pitch_numeric_value.c
     pitch/written_pitch.c
+    pitch/clef.c
     pitch/sounding_pitch.c
     events/event.c
     events/note_event.c
