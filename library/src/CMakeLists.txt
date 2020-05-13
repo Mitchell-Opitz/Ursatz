@@ -26,6 +26,7 @@ add_library(ursatz
     pitch/written_pitch.c
     pitch/clef.c
     pitch/staff_position.c
+    pitch/clef_resolution.c
     pitch/sounding_pitch.c
     events/event.c
     events/note_event.c
