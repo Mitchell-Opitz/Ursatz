@@ -1,0 +1,9 @@
+add_library(standard_notation
+    framework.c
+    rule_pair.c
+)
+target_include_directories(standard_notation PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/src
+)
+target_link_libraries(standard_notation PUBLIC ursatz)
