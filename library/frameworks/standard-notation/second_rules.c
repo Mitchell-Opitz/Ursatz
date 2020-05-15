@@ -1,0 +1,49 @@
+#include "second_rules.h"
+
+#include "rule_pair.h"
+
+static const char *const NAMES[STANDARD_NOTATION_SECOND_RULE_COUNT] = {"second-lower-note-left"};
+
+static StandardNotationRulePair g_pairs[STANDARD_NOTATION_SECOND_RULE_COUNT];
+static bool g_built[STANDARD_NOTATION_SECOND_RULE_COUNT];
+
+static bool valid_rule(StandardNotationSecondRule which) {
+    return which >= 0 && which < STANDARD_NOTATION_SECOND_RULE_COUNT;
+}
+
+static void ensure_built(StandardNotationSecondRule which) {
+    if (!valid_rule(which) || g_built[which]) {
+        return;
+    }
+    g_built[which] = true;
+    standard_notation_build_rule_pair(NAMES[which], &g_pairs[which]);
+}
+
+const Rule *standard_notation_second_rule(StandardNotationSecondRule which) {
+    ensure_built(which);
+    return valid_rule(which) ? g_pairs[which].rule : NULL;
+}
+
+const Constraint *standard_notation_second_constraint(StandardNotationSecondRule which) {
+    ensure_built(which);
+    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+}
+
+bool standard_notation_is_second(const StaffPosition *a, const StaffPosition *b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+    int difference = staff_position_steps(a) - staff_position_steps(b);
+    return difference == 1 || difference == -1;
+}
+
+bool standard_notation_second_displacement_valid(const StaffPosition *lower, NoteheadSide lower_side,
+                                                 const StaffPosition *upper, NoteheadSide upper_side) {
+    if (lower == NULL || upper == NULL) {
+        return false;
+    }
+    if (!standard_notation_is_second(lower, upper) || staff_position_steps(lower) > staff_position_steps(upper)) {
+        return true;
+    }
+    return lower_side == NOTEHEAD_SIDE_LEFT && upper_side == NOTEHEAD_SIDE_RIGHT;
+}
