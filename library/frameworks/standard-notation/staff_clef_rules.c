@@ -43,19 +43,15 @@ bool standard_notation_clef_places_reference(const Clef *clef, const StaffPositi
     return staff_position_steps(position) == clef_reference_steps(clef);
 }
 
-/* Absolute diatonic number of the pitch written at position under clef. */
+/* Absolute diatonic number (octave * 7 + letter index, C = 0 ... B = 6) of
+   the pitch written at position under clef. */
 static int written_rank(const Clef *clef, const StaffPosition *position) {
+    static const int LETTER_INDEX[] = {5, 6, 0, 1, 2, 3, 4}; /* indexed by PitchLetter A..G */
+
     PitchLetter letter;
     int octave;
     clef_pitch_at_position(clef, position, &letter, &octave);
-
-    StaffPosition *round_trip = NULL;
-    if (clef_position_for_pitch(clef, letter, octave, &round_trip) != STAFF_POSITION_OK) {
-        return 0;
-    }
-    int rank = staff_position_steps(round_trip);
-    staff_position_destroy(round_trip);
-    return rank;
+    return octave * 7 + LETTER_INDEX[letter];
 }
 
 bool standard_notation_pitch_height_respected(const Clef *clef, const StaffPosition *lower,
