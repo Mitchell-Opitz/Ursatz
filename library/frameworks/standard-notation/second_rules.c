@@ -42,8 +42,11 @@ bool standard_notation_second_displacement_valid(const StaffPosition *lower, Not
     if (lower == NULL || upper == NULL) {
         return false;
     }
-    if (!standard_notation_is_second(lower, upper) || staff_position_steps(lower) > staff_position_steps(upper)) {
+    if (!standard_notation_is_second(lower, upper)) {
         return true;
+    }
+    if (staff_position_steps(lower) > staff_position_steps(upper)) {
+        return false; /* arguments swapped: "lower" is not the lower note */
     }
     return lower_side == NOTEHEAD_SIDE_LEFT && upper_side == NOTEHEAD_SIDE_RIGHT;
 }
