@@ -27,3 +27,5 @@ The first such extension, `common-practice-minimal-v1`, is now built at `framewo
 ## Dependencies
 
 Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5), and all four L6 modules only.
+
+A second extension, `standard-notation-v1`, is built at `frameworks/standard-notation/` with the same shape and dependency ceiling. It covers the conventions of Western staff notation: the five-line staff, clef-to-pitch assignment, ledger lines, stem direction, and the drawing of seconds. Its rules are built on the `Clef` and `StaffPosition` value types in `src/pitch/`; see that module's `README.md` for scope and exclusions.
