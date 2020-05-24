@@ -11,3 +11,8 @@ target_include_directories(standard_notation PUBLIC
     ${PROJECT_SOURCE_DIR}/src
 )
 target_link_libraries(standard_notation PUBLIC ursatz)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
