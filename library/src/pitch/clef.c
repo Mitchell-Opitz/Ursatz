@@ -60,6 +60,18 @@ ClefResult clef_create_shifted(ClefSign sign, int line, int octave_shift, Clef *
     return create_from_content(&content, out);
 }
 
+ClefResult clef_create_soprano(Clef **out) {
+    return clef_create(CLEF_SIGN_C, 1, out);
+}
+
+ClefResult clef_create_mezzo_soprano(Clef **out) {
+    return clef_create(CLEF_SIGN_C, 2, out);
+}
+
+ClefResult clef_create_baritone(Clef **out) {
+    return clef_create(CLEF_SIGN_C, 5, out);
+}
+
 ClefResult clef_create_neutral(Clef **out) {
     ClefContent content = {CLEF_SIGN_NEUTRAL, 0, 0};
     return create_from_content(&content, out);

@@ -14,10 +14,13 @@
  *   G sign -> G4,  F sign -> F3,  C sign -> C4
  *
  * line counts staff lines from the bottom, 1 (bottom) through 5 (top).
- * The four clefs in common use are provided as presets:
+ * The four clefs in common use are provided as presets, along with the
+ * three other C clefs common in the Renaissance:
  *
- *   treble = G sign on line 2    bass  = F sign on line 4
- *   alto   = C sign on line 3    tenor = C sign on line 4
+ *   treble        = G sign on line 2    bass     = F sign on line 4
+ *   alto          = C sign on line 3    tenor    = C sign on line 4
+ *   soprano       = C sign on line 1    baritone = C sign on line 5
+ *   mezzo-soprano = C sign on line 2
  *
  * octave_shift is the number of octaves the music SOUNDS relative to the
  * pitch written under the clef: 0 for an ordinary clef, -1 for an octave
@@ -72,6 +75,9 @@ ClefResult clef_create_treble(Clef **out);
 ClefResult clef_create_bass(Clef **out);
 ClefResult clef_create_alto(Clef **out);
 ClefResult clef_create_tenor(Clef **out);
+ClefResult clef_create_soprano(Clef **out);
+ClefResult clef_create_mezzo_soprano(Clef **out);
+ClefResult clef_create_baritone(Clef **out);
 ClefResult clef_create_neutral(Clef **out);
 void clef_destroy(Clef *clef);
 
