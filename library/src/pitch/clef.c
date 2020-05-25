@@ -11,6 +11,7 @@ struct Clef {
 typedef struct {
     ClefSign sign;
     int line;
+    int octave_shift;
 } ClefContent;
 
 static bool sign_is_valid(ClefSign sign) {
@@ -18,11 +19,18 @@ static bool sign_is_valid(ClefSign sign) {
 }
 
 ClefResult clef_create(ClefSign sign, int line, Clef **out) {
+    return clef_create_shifted(sign, line, 0, out);
+}
+
+ClefResult clef_create_shifted(ClefSign sign, int line, int octave_shift, Clef **out) {
     if (!sign_is_valid(sign)) {
         return CLEF_ERR_INVALID_SIGN;
     }
     if (line < CLEF_MIN_LINE || line > CLEF_MAX_LINE) {
         return CLEF_ERR_INVALID_LINE;
+    }
+    if (octave_shift < CLEF_MIN_OCTAVE_SHIFT || octave_shift > CLEF_MAX_OCTAVE_SHIFT) {
+        return CLEF_ERR_INVALID_OCTAVE_SHIFT;
     }
 
     /* memset first: value_equals compares raw bytes, so struct padding
@@ -31,6 +39,7 @@ ClefResult clef_create(ClefSign sign, int line, Clef **out) {
     memset(&content, 0, sizeof(content));
     content.sign = sign;
     content.line = line;
+    content.octave_shift = octave_shift;
 
     Clef *clef = (Clef *)malloc(sizeof(Clef));
     if (clef == NULL) {
@@ -80,6 +89,10 @@ ClefSign clef_sign(const Clef *clef) {
 
 int clef_line(const Clef *clef) {
     return clef_content(clef)->line;
+}
+
+int clef_octave_shift(const Clef *clef) {
+    return clef_content(clef)->octave_shift;
 }
 
 PitchLetter clef_reference_letter(const Clef *clef) {
