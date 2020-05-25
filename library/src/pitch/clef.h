@@ -27,6 +27,14 @@
  * the glyph difference is presentation, not meaning, so it is not
  * modeled separately.
  *
+ * A neutral clef marks an unpitched staff: its lines and spaces do not
+ * stand for letter names (they may stand for different instruments), so
+ * it has no line, no reference pitch, and no octave shift. It is built
+ * only with clef_create_neutral, never with clef_create/_shifted
+ * (CLEF_ERR_INVALID_SIGN). Callers must check clef_is_pitched before
+ * using the reference accessors; pitch resolution refuses unpitched clefs
+ * (pitch/clef_resolution.h).
+ *
  * Clef is a value type: immutable, value equality on (sign, line, octave_shift). It is
  * deliberately not attached to Staff or Instrument -- a clef may change
  * mid-staff, so placing a Clef within a staff is a later concern.
@@ -37,7 +45,8 @@
 typedef enum {
     CLEF_SIGN_G,
     CLEF_SIGN_F,
-    CLEF_SIGN_C
+    CLEF_SIGN_C,
+    CLEF_SIGN_NEUTRAL /* unpitched ("percussion") clef: no reference pitch */
 } ClefSign;
 
 typedef struct Clef Clef;
@@ -63,13 +72,18 @@ ClefResult clef_create_treble(Clef **out);
 ClefResult clef_create_bass(Clef **out);
 ClefResult clef_create_alto(Clef **out);
 ClefResult clef_create_tenor(Clef **out);
+ClefResult clef_create_neutral(Clef **out);
 void clef_destroy(Clef *clef);
 
 ClefSign clef_sign(const Clef *clef);
 int clef_line(const Clef *clef);
 int clef_octave_shift(const Clef *clef);
 
-/* Letter and octave of the pitch the sign names (G4, F3, or C4). */
+/* False only for a neutral clef. */
+bool clef_is_pitched(const Clef *clef);
+
+/* Letter and octave of the pitch the sign names (G4, F3, or C4). Only
+   meaningful when clef_is_pitched; a neutral clef reports C4. */
 PitchLetter clef_reference_letter(const Clef *clef);
 int clef_reference_octave(const Clef *clef);
 
