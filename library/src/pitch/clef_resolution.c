@@ -36,14 +36,24 @@ static int diatonic_number(PitchLetter letter, int octave) {
     return octave * LETTERS_PER_OCTAVE + letter_index(letter);
 }
 
-int clef_reference_steps(const Clef *clef) {
-    return 2 * (clef_line(clef) - 1);
+ClefResolutionResult clef_reference_steps(const Clef *clef, int *out_steps) {
+    if (!clef_is_pitched(clef)) {
+        return CLEF_RESOLUTION_ERR_UNPITCHED;
+    }
+    *out_steps = 2 * (clef_line(clef) - 1);
+    return CLEF_RESOLUTION_OK;
 }
 
-void clef_pitch_at_position(const Clef *clef, const StaffPosition *position, PitchLetter *out_letter,
-                            int *out_octave) {
+ClefResolutionResult clef_pitch_at_position(const Clef *clef, const StaffPosition *position,
+                                            PitchLetter *out_letter, int *out_octave) {
+    int reference_steps;
+    ClefResolutionResult result = clef_reference_steps(clef, &reference_steps);
+    if (result != CLEF_RESOLUTION_OK) {
+        return result;
+    }
+
     int number = diatonic_number(clef_reference_letter(clef), clef_reference_octave(clef)) +
-                 (staff_position_steps(position) - clef_reference_steps(clef));
+                 (staff_position_steps(position) - reference_steps);
 
     /* Floor division/modulo so negative octaves resolve correctly. */
     int octave = number / LETTERS_PER_OCTAVE;
@@ -55,12 +65,21 @@ void clef_pitch_at_position(const Clef *clef, const StaffPosition *position, Pit
 
     *out_letter = index_letter(index);
     *out_octave = octave;
+    return CLEF_RESOLUTION_OK;
 }
 
-StaffPositionResult clef_position_for_pitch(const Clef *clef, PitchLetter letter, int octave,
-                                            StaffPosition **out) {
-    int steps = clef_reference_steps(clef) +
-                (diatonic_number(letter, octave) -
-                 diatonic_number(clef_reference_letter(clef), clef_reference_octave(clef)));
-    return staff_position_create(steps, out);
+ClefResolutionResult clef_position_for_pitch(const Clef *clef, PitchLetter letter, int octave,
+                                             StaffPosition **out) {
+    int reference_steps;
+    ClefResolutionResult result = clef_reference_steps(clef, &reference_steps);
+    if (result != CLEF_RESOLUTION_OK) {
+        return result;
+    }
+
+    int steps = reference_steps + (diatonic_number(letter, octave) -
+                                   diatonic_number(clef_reference_letter(clef), clef_reference_octave(clef)));
+    if (staff_position_create(steps, out) != STAFF_POSITION_OK) {
+        return CLEF_RESOLUTION_ERR_ALLOC;
+    }
+    return CLEF_RESOLUTION_OK;
 }

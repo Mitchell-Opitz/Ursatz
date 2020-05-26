@@ -9,12 +9,12 @@ static void expect_pitch(const Clef *clef, int steps, PitchLetter letter, int oc
 
     PitchLetter got_letter;
     int got_octave;
-    clef_pitch_at_position(clef, position, &got_letter, &got_octave);
+    assert(clef_pitch_at_position(clef, position, &got_letter, &got_octave) == CLEF_RESOLUTION_OK);
     assert(got_letter == letter);
     assert(got_octave == octave);
 
     StaffPosition *back = NULL;
-    assert(clef_position_for_pitch(clef, letter, octave, &back) == STAFF_POSITION_OK);
+    assert(clef_position_for_pitch(clef, letter, octave, &back) == CLEF_RESOLUTION_OK);
     assert(staff_position_equals(position, back));
 
     staff_position_destroy(position);
@@ -24,7 +24,9 @@ static void expect_pitch(const Clef *clef, int steps, PitchLetter letter, int oc
 static void test_treble(void) {
     Clef *clef = NULL;
     assert(clef_create_treble(&clef) == CLEF_OK);
-    assert(clef_reference_steps(clef) == 2);
+    int reference_steps = 0;
+    assert(clef_reference_steps(clef, &reference_steps) == CLEF_RESOLUTION_OK);
+    assert(reference_steps == 2);
     expect_pitch(clef, 0, PITCH_LETTER_E, 4); /* bottom line */
     expect_pitch(clef, 2, PITCH_LETTER_G, 4);
     expect_pitch(clef, 8, PITCH_LETTER_F, 5); /* top line */
@@ -65,8 +67,8 @@ static void test_same_position_differs_by_clef(void) {
     assert(staff_position_create(4, &position) == STAFF_POSITION_OK);
     PitchLetter letter_a, letter_b;
     int octave_a, octave_b;
-    clef_pitch_at_position(treble, position, &letter_a, &octave_a);
-    clef_pitch_at_position(bass, position, &letter_b, &octave_b);
+    assert(clef_pitch_at_position(treble, position, &letter_a, &octave_a) == CLEF_RESOLUTION_OK);
+    assert(clef_pitch_at_position(bass, position, &letter_b, &octave_b) == CLEF_RESOLUTION_OK);
     assert(letter_a == PITCH_LETTER_B && octave_a == 4);
     assert(letter_b == PITCH_LETTER_D && octave_b == 3);
 

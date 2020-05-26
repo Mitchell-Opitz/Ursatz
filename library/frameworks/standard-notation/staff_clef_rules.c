@@ -40,18 +40,25 @@ bool standard_notation_clef_places_reference(const Clef *clef, const StaffPositi
     if (clef == NULL || position == NULL) {
         return false;
     }
-    return staff_position_steps(position) == clef_reference_steps(clef);
+    int reference_steps;
+    if (clef_reference_steps(clef, &reference_steps) != CLEF_RESOLUTION_OK) {
+        return false;
+    }
+    return staff_position_steps(position) == reference_steps;
 }
 
 /* Absolute diatonic number (octave * 7 + letter index, C = 0 ... B = 6) of
    the pitch written at position under clef. */
-static int written_rank(const Clef *clef, const StaffPosition *position) {
+static bool written_rank(const Clef *clef, const StaffPosition *position, int *out_rank) {
     static const int LETTER_INDEX[] = {5, 6, 0, 1, 2, 3, 4}; /* indexed by PitchLetter A..G */
 
     PitchLetter letter;
     int octave;
-    clef_pitch_at_position(clef, position, &letter, &octave);
-    return octave * 7 + LETTER_INDEX[letter];
+    if (clef_pitch_at_position(clef, position, &letter, &octave) != CLEF_RESOLUTION_OK) {
+        return false;
+    }
+    *out_rank = octave * 7 + LETTER_INDEX[letter];
+    return true;
 }
 
 bool standard_notation_pitch_height_respected(const Clef *clef, const StaffPosition *lower,
@@ -61,8 +68,10 @@ bool standard_notation_pitch_height_respected(const Clef *clef, const StaffPosit
     }
     int lower_steps = staff_position_steps(lower);
     int higher_steps = staff_position_steps(higher);
-    int lower_rank = written_rank(clef, lower);
-    int higher_rank = written_rank(clef, higher);
+    int lower_rank, higher_rank;
+    if (!written_rank(clef, lower, &lower_rank) || !written_rank(clef, higher, &higher_rank)) {
+        return false; /* unpitched clef: no pitch order to respect */
+    }
 
     if (higher_steps > lower_steps) {
         return higher_rank > lower_rank;

@@ -14,17 +14,26 @@
  *
  * Accidentals are not part of staff placement and play no role here --
  * letter and octave only. The two functions are exact inverses.
+ *
+ * Every function refuses an unpitched (neutral) clef with
+ * CLEF_RESOLUTION_ERR_UNPITCHED and leaves its outputs untouched.
  */
 
+typedef enum {
+    CLEF_RESOLUTION_OK = 0,
+    CLEF_RESOLUTION_ERR_UNPITCHED, /* neutral clef: no pitches to resolve */
+    CLEF_RESOLUTION_ERR_ALLOC
+} ClefResolutionResult;
+
 /* Position the clef's sign is anchored on: step 2*(line-1). */
-int clef_reference_steps(const Clef *clef);
+ClefResolutionResult clef_reference_steps(const Clef *clef, int *out_steps);
 
 /* Letter and octave written at position under clef. */
-void clef_pitch_at_position(const Clef *clef, const StaffPosition *position, PitchLetter *out_letter,
-                            int *out_octave);
+ClefResolutionResult clef_pitch_at_position(const Clef *clef, const StaffPosition *position,
+                                            PitchLetter *out_letter, int *out_octave);
 
 /* Staff position at which letter/octave is written under clef. */
-StaffPositionResult clef_position_for_pitch(const Clef *clef, PitchLetter letter, int octave,
-                                            StaffPosition **out);
+ClefResolutionResult clef_position_for_pitch(const Clef *clef, PitchLetter letter, int octave,
+                                             StaffPosition **out);
 
 #endif
