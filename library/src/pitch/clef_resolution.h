@@ -32,6 +32,16 @@ ClefResolutionResult clef_reference_steps(const Clef *clef, int *out_steps);
 ClefResolutionResult clef_pitch_at_position(const Clef *clef, const StaffPosition *position,
                                             PitchLetter *out_letter, int *out_octave);
 
+/*
+ * Letter and octave that SOUND for the note written at position: the
+ * written pitch moved by the clef's octave shift (an octave treble clef
+ * with an "8" below sounds an octave lower than written). Letter is
+ * unchanged. Instrument-level conventions such as piccolo always sounding
+ * an octave higher are not applied -- those belong to Instrument.
+ */
+ClefResolutionResult clef_sounding_pitch_at_position(const Clef *clef, const StaffPosition *position,
+                                                     PitchLetter *out_letter, int *out_octave);
+
 /* Staff position at which letter/octave is written under clef. */
 ClefResolutionResult clef_position_for_pitch(const Clef *clef, PitchLetter letter, int octave,
                                              StaffPosition **out);

@@ -68,6 +68,19 @@ ClefResolutionResult clef_pitch_at_position(const Clef *clef, const StaffPositio
     return CLEF_RESOLUTION_OK;
 }
 
+ClefResolutionResult clef_sounding_pitch_at_position(const Clef *clef, const StaffPosition *position,
+                                                     PitchLetter *out_letter, int *out_octave) {
+    PitchLetter letter;
+    int octave;
+    ClefResolutionResult result = clef_pitch_at_position(clef, position, &letter, &octave);
+    if (result != CLEF_RESOLUTION_OK) {
+        return result;
+    }
+    *out_letter = letter;
+    *out_octave = octave + clef_octave_shift(clef);
+    return CLEF_RESOLUTION_OK;
+}
+
 ClefResolutionResult clef_position_for_pitch(const Clef *clef, PitchLetter letter, int octave,
                                              StaffPosition **out) {
     int reference_steps;
