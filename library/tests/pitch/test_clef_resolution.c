@@ -87,11 +87,82 @@ static void test_octave_wrap(void) {
     clef_destroy(treble);
 }
 
+/* Letter-name tables for the other C clefs: the C sits on its anchor line. */
+static void test_other_c_clefs(void) {
+    Clef *soprano = NULL, *mezzo = NULL, *baritone = NULL;
+    assert(clef_create_soprano(&soprano) == CLEF_OK);
+    assert(clef_create_mezzo_soprano(&mezzo) == CLEF_OK);
+    assert(clef_create_baritone(&baritone) == CLEF_OK);
+    expect_pitch(soprano, 0, PITCH_LETTER_C, 4);
+    expect_pitch(mezzo, 2, PITCH_LETTER_C, 4);
+    expect_pitch(baritone, 8, PITCH_LETTER_C, 4);
+    expect_pitch(baritone, 0, PITCH_LETTER_E, 2);
+    clef_destroy(soprano);
+    clef_destroy(mezzo);
+    clef_destroy(baritone);
+}
+
+/* Octave shift changes what sounds, never what is written. */
+static void test_sounding_pitch(void) {
+    Clef *plain = NULL, *down = NULL, *up = NULL;
+    assert(clef_create_treble(&plain) == CLEF_OK);
+    assert(clef_create_shifted(CLEF_SIGN_G, 2, -1, &down) == CLEF_OK);
+    assert(clef_create_shifted(CLEF_SIGN_G, 2, 1, &up) == CLEF_OK);
+
+    StaffPosition *position = NULL;
+    assert(staff_position_create(2, &position) == STAFF_POSITION_OK); /* G line */
+
+    PitchLetter letter;
+    int octave;
+    assert(clef_pitch_at_position(down, position, &letter, &octave) == CLEF_RESOLUTION_OK);
+    assert(letter == PITCH_LETTER_G && octave == 4); /* written G4 regardless of shift */
+
+    assert(clef_sounding_pitch_at_position(plain, position, &letter, &octave) == CLEF_RESOLUTION_OK);
+    assert(letter == PITCH_LETTER_G && octave == 4);
+    assert(clef_sounding_pitch_at_position(down, position, &letter, &octave) == CLEF_RESOLUTION_OK);
+    assert(letter == PITCH_LETTER_G && octave == 3);
+    assert(clef_sounding_pitch_at_position(up, position, &letter, &octave) == CLEF_RESOLUTION_OK);
+    assert(letter == PITCH_LETTER_G && octave == 5);
+
+    staff_position_destroy(position);
+    clef_destroy(plain);
+    clef_destroy(down);
+    clef_destroy(up);
+}
+
+/* Neutral clefs resolve no pitches, and leave outputs untouched. */
+static void test_unpitched_refused(void) {
+    Clef *neutral = NULL;
+    assert(clef_create_neutral(&neutral) == CLEF_OK);
+
+    StaffPosition *position = NULL;
+    assert(staff_position_create(2, &position) == STAFF_POSITION_OK);
+
+    int steps = 99;
+    PitchLetter letter = PITCH_LETTER_A;
+    int octave = 99;
+    StaffPosition *out = NULL;
+    assert(clef_reference_steps(neutral, &steps) == CLEF_RESOLUTION_ERR_UNPITCHED);
+    assert(steps == 99);
+    assert(clef_pitch_at_position(neutral, position, &letter, &octave) == CLEF_RESOLUTION_ERR_UNPITCHED);
+    assert(clef_sounding_pitch_at_position(neutral, position, &letter, &octave) ==
+           CLEF_RESOLUTION_ERR_UNPITCHED);
+    assert(letter == PITCH_LETTER_A && octave == 99);
+    assert(clef_position_for_pitch(neutral, PITCH_LETTER_C, 4, &out) == CLEF_RESOLUTION_ERR_UNPITCHED);
+    assert(out == NULL);
+
+    staff_position_destroy(position);
+    clef_destroy(neutral);
+}
+
 int main(void) {
     test_treble();
     test_bass();
     test_alto_and_tenor();
     test_same_position_differs_by_clef();
     test_octave_wrap();
+    test_other_c_clefs();
+    test_sounding_pitch();
+    test_unpitched_refused();
     return 0;
 }
