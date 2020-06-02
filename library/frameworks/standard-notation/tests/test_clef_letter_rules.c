@@ -86,7 +86,7 @@ static void test_other_c_clef_letters(void) {
     assert(clef_create_baritone(&baritone) == CLEF_OK);
 
     expect_names(soprano, "CEGBD", "DFAC");
-    expect_names(mezzo, "EGBDF", "FACE");
+    expect_names(mezzo, "ACEGB", "BDFA");
     expect_names(baritone, "BDFAC", "CEGB");
 
     clef_destroy(soprano);
