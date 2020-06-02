@@ -96,7 +96,7 @@ static void test_other_c_clefs(void) {
     expect_pitch(soprano, 0, PITCH_LETTER_C, 4);
     expect_pitch(mezzo, 2, PITCH_LETTER_C, 4);
     expect_pitch(baritone, 8, PITCH_LETTER_C, 4);
-    expect_pitch(baritone, 0, PITCH_LETTER_E, 2);
+    expect_pitch(baritone, 0, PITCH_LETTER_B, 2);
     clef_destroy(soprano);
     clef_destroy(mezzo);
     clef_destroy(baritone);
