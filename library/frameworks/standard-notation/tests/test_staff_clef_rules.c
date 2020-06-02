@@ -75,11 +75,26 @@ static void test_pitch_height(void) {
     }
 }
 
+/* A neutral clef assigns no reference pitch and orders no pitches. */
+static void test_neutral_clef(void) {
+    Clef *neutral = NULL;
+    assert(clef_create_neutral(&neutral) == CLEF_OK);
+
+    StaffPosition *a = position(2), *b = position(4);
+    assert(!standard_notation_clef_places_reference(neutral, a));
+    assert(!standard_notation_pitch_height_respected(neutral, a, b));
+
+    staff_position_destroy(a);
+    staff_position_destroy(b);
+    clef_destroy(neutral);
+}
+
 int main(void) {
     test_rules_reference_framework();
     test_five_lines();
     test_clef_reference();
     test_pitch_height();
+    test_neutral_clef();
     printf("test_staff_clef_rules (standard-notation): ok\n");
     return 0;
 }
