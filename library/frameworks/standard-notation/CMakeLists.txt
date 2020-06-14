@@ -9,6 +9,7 @@ add_library(standard_notation
     clef_letter_rules.c
     semitone.c
     step_rules.c
+    accidental_rules.c
 )
 target_include_directories(standard_notation PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
