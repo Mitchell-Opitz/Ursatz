@@ -7,6 +7,11 @@ add_library(standard_notation
     second_rules.c
     octave_equivalence_rules.c
     clef_letter_rules.c
+    semitone.c
+    step_rules.c
+    accidental_rules.c
+    accidental_placement_rules.c
+    enharmonic_rules.c
 )
 target_include_directories(standard_notation PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

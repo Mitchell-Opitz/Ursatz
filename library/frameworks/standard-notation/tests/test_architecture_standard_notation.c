@@ -53,7 +53,9 @@ static int check_file(const char *path) {
             strcmp(start, "rule_pair.h") == 0 || strcmp(start, "staff_clef_rules.h") == 0 ||
             strcmp(start, "ledger_line_rules.h") == 0 || strcmp(start, "stem_rules.h") == 0 ||
             strcmp(start, "second_rules.h") == 0 || strcmp(start, "octave_equivalence_rules.h") == 0 ||
-            strcmp(start, "clef_letter_rules.h") == 0) {
+            strcmp(start, "clef_letter_rules.h") == 0 || strcmp(start, "semitone.h") == 0 ||
+            strcmp(start, "step_rules.h") == 0 || strcmp(start, "accidental_rules.h") == 0 ||
+            strcmp(start, "accidental_placement_rules.h") == 0 || strcmp(start, "enharmonic_rules.h") == 0) {
             continue;
         }
 
