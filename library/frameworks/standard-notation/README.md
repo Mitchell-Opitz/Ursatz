@@ -20,6 +20,17 @@ Rules about where and how notation is placed on a staff:
 - **Octave equivalence**: letters A-G repeat in a loop; pitches an octave
   apart share a letter. This is this framework's assumption, not a
   universal one -- a framework for another system can assert otherwise.
+- **Half steps and whole steps**: a half step is one semitone (the
+  adjacent key), a whole step is two; of the white-key neighbors only
+  E-F and B-C are half steps.
+- **Accidentals**: a sharp raises a half step, a flat lowers a half step,
+  a natural cancels a previous accidental, double sharp and double flat
+  move a whole step. An accidental sets the alteration absolutely rather
+  than accumulating. Placement: to the left of the note, directly across
+  its line or space, and each accidental applies to its own note.
+- **Enharmonic equivalence**: notes spelled differently that sound the
+  same (C-sharp and D-flat; B-sharp and C, which crosses an octave
+  number). Strict `PitchSpelling` equality still tells them apart.
 - **Ledger lines**: notes beyond the staff extend it with ledger lines,
   and a note takes exactly the ledger lines between it and the staff --
   never an extra one.
@@ -35,11 +46,20 @@ called here.
 ## Not covered
 
 Engraving craft (clef drawing steps, notehead shape/size/tilt, stem
-length, beam thickness), rhythm and beaming, accidentals, key and time
+length, beam thickness), rhythm and beaming, key and time
 signatures, single-line (percussion) staves, instrument clef conventions.
 
 Neutral (unpitched) clefs assign no letters, so every letter and
 reference-pitch rule treats them as not applicable.
 
-Value types (`Clef`, `StaffPosition`) live in `src/pitch/`; this module
+Value types (`Clef`, `StaffPosition`, `Accidental`) live in `src/pitch/`; this module
 holds only the rules built on them.
+
+## 12-TET assumption
+
+The semitone arithmetic (`semitone.h`) assumes twelve-tone equal
+temperament: twelve semitones to the octave, the piano keyboard layout.
+`src/pitch/` takes no such assumption, so it lives here. It is isolated
+in `semitone.{c,h}` so it can be lifted into a shared module if another
+framework needs the same numbering; frameworks may not depend on each
+other, so that extraction waits for a second consumer.
