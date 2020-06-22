@@ -1,5 +1,7 @@
 #include "semitone.h"
 
+#include <stddef.h>
+
 int standard_notation_letter_semitone(PitchLetter letter) {
     switch (letter) {
         case PITCH_LETTER_C:

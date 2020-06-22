@@ -1,5 +1,7 @@
 #include "accidental_placement_rules.h"
 
+#include <stddef.h>
+
 #include "accidental_rules.h"
 #include "rule_pair.h"
 

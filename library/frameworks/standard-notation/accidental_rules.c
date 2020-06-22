@@ -1,5 +1,7 @@
 #include "accidental_rules.h"
 
+#include <stddef.h>
+
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_NOTATION_ACCIDENTAL_RULE_COUNT] = {

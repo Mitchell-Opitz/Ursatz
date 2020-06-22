@@ -3,6 +3,7 @@
 
 #include "framework.h"
 #include "spelling_test_util.h"
+#include "semitone.h"
 #include "step_rules.h"
 
 static void test_rules_reference_framework(void) {

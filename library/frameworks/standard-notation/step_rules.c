@@ -1,5 +1,7 @@
 #include "step_rules.h"
 
+#include <stddef.h>
+
 #include "rule_pair.h"
 #include "semitone.h"
 
