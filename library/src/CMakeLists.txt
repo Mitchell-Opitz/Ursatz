@@ -39,6 +39,7 @@ add_library(ursatz
     events/slur.c
     events/articulation.c
     events/dynamics.c
+    events/tempo_marking.c
     events/instrument.c
     events/instrument_capability.c
     containers/voice.c
