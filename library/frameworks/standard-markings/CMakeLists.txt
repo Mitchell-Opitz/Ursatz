@@ -1,6 +1,7 @@
 add_library(standard_markings
     framework.c
     rule_pair.c
+    dynamics_rules.c
 )
 target_include_directories(standard_markings PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
