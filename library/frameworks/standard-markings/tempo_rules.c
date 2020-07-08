@@ -112,19 +112,31 @@ bool standard_markings_tempo_text_rank(const char *text, int *out_rank) {
         return false;
     }
 
-    char *saveptr = NULL;
-    char *token = strtok_r(buffer, " ", &saveptr);
-    if (token == NULL) {
-        return false;
-    }
-    int rank;
-    if (!standard_markings_tempo_word_rank(token, &rank)) {
-        return false;
-    }
-    while ((token = strtok_r(NULL, " ", &saveptr)) != NULL) {
-        if (!standard_markings_is_tempo_modifier(token)) {
+    /* Split on single spaces in place: the first token is the tempo word,
+       every later one must be a modifier. */
+    int rank = 0;
+    bool first = true;
+    char *token = buffer;
+    while (token != NULL && *token != '\0') {
+        char *space = strchr(token, ' ');
+        if (space != NULL) {
+            *space = '\0';
+        }
+        if (first) {
+            if (!standard_markings_tempo_word_rank(token, &rank)) {
+                return false;
+            }
+            first = false;
+        } else if (!standard_markings_is_tempo_modifier(token)) {
             return false;
         }
+        token = space != NULL ? space + 1 : NULL;
+        while (token != NULL && *token == ' ') {
+            token++;
+        }
+    }
+    if (first) {
+        return false;
     }
     *out_rank = rank;
     return true;
