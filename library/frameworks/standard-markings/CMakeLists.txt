@@ -5,6 +5,7 @@ add_library(standard_markings
     articulation_rules.c
     tempo_rules.c
     structural_rules.c
+    repeat_navigation.c
 )
 target_include_directories(standard_markings PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
