@@ -17,6 +17,8 @@ add_library(ursatz
     time/time_span.c
     time/time_instant.c
     time/temporal_anchor.c
+    time/metronome_marking.c
+    time/historical_period.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
     pitch/tuning_system.c
@@ -37,6 +39,8 @@ add_library(ursatz
     events/slur.c
     events/articulation.c
     events/dynamics.c
+    events/tempo_marking.c
+    events/structural_marker.c
     events/instrument.c
     events/instrument_capability.c
     containers/voice.c
