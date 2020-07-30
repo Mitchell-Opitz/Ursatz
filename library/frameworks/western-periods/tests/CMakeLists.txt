@@ -1,0 +1,11 @@
+add_executable(test_western_periods_framework test_framework.c)
+target_link_libraries(test_western_periods_framework PRIVATE western_periods)
+add_test(NAME western_periods_framework COMMAND test_western_periods_framework)
+
+add_executable(test_western_periods_periods test_periods.c)
+target_link_libraries(test_western_periods_periods PRIVATE western_periods)
+add_test(NAME western_periods_periods COMMAND test_western_periods_periods)
+
+add_executable(test_architecture_western_periods test_architecture_western_periods.c)
+add_test(NAME architecture_western_periods COMMAND test_architecture_western_periods
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
