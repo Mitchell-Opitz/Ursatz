@@ -263,7 +263,9 @@ NavigationResult standard_markings_playback_order(const NavigationMarker *marker
 
 static bool source_of(const NavigationMarker *markers, size_t count, size_t measure, size_t depth,
                       size_t *out_source) {
-    if (depth > measure + 1) {
+    /* Each hop consumes one measure repeat sign, so a longer chain than there
+       are markers cannot be well founded. */
+    if (depth > count) {
         return false;
     }
     for (size_t i = 0; i < count; i++) {
