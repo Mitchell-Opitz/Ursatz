@@ -6,6 +6,9 @@ Layer L2 (`music-time`). Path `src/time/`, tests `tests/time/`. Depends on `iden
 
 `Duration` (magnitude), `MusicalTime` (position), `TimeSpan` (a positioned interval between two `MusicalTime`s), `TimeInstant` (a zero-duration point wrapping `MusicalTime`), and `TemporalAnchor` (wraps a `MusicalTime`, situates a higher-layer object at that position). All rational quantities are exact, never float or double (Law 19).
 
+
+`MetronomeMarking` (a beat unit plus beats per minute, both exact rationals) and `HistoricalPeriod` (a named stretch of calendar years, optionally open-ended) are also provided.
+
 ## Notes
 
 - `Duration` and `MusicalTime` are structurally identical (numerator/denominator, reduced to lowest terms) but are separate, non-convertible types. One is a magnitude, the other a position. There is no conversion between them, and none should be added.
@@ -17,3 +20,6 @@ Layer L2 (`music-time`). Path `src/time/`, tests `tests/time/`. Depends on `iden
 ## Dependencies
 
 Depends on `identity` (L0) and `core` (L1) only.
+
+- `MetronomeMarking` derives seconds from the marking (one beat unit lasts 60/bpm seconds) as an exact rational, never float/double (Law 19). Textual tempo words are not metronome markings; they live in `events/tempo_marking.h` and `frameworks/standard-markings/`.
+- `HistoricalPeriod` is historical time, not musical time, and has nothing to do with `MusicalTime`/`Duration`. Years are inclusive on both ends, the end year is optional so a period still going never needs updating, and periods may overlap -- nothing here resolves that. The conventional periods themselves are `frameworks/western-periods/`.
