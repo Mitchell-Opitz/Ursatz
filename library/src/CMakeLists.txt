@@ -19,6 +19,7 @@ add_library(ursatz
     time/temporal_anchor.c
     time/metronome_marking.c
     time/historical_period.c
+    time/note_value.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
     pitch/tuning_system.c
