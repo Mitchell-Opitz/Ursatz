@@ -4,6 +4,7 @@ add_library(standard_rhythm
     name_rules.c
     hierarchy_rules.c
     notehead_rules.c
+    rest_rules.c
 )
 target_include_directories(standard_rhythm PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
