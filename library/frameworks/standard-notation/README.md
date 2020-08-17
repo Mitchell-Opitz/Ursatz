@@ -46,8 +46,10 @@ called here.
 ## Not covered
 
 Engraving craft (clef drawing steps, notehead shape/size/tilt, stem
-length, beam thickness), rhythm and beaming, key and time
+length, beam thickness), beaming, key and time
 signatures, single-line (percussion) staves, instrument clef conventions.
+
+Rhythm (note and rest values, dots, ties) is `frameworks/standard-rhythm/`.
 
 Neutral (unpitched) clefs assign no letters, so every letter and
 reference-pitch rule treats them as not applicable.
