@@ -49,6 +49,14 @@ unsigned time_signature_beat_unit_number(const TimeSignature *time_signature) {
     return 1u << time_signature->beat_unit_exponent;
 }
 
+DurationResult time_signature_beat_duration(const TimeSignature *time_signature, Duration **out) {
+    return duration_create(1, 1UL << time_signature->beat_unit_exponent, out);
+}
+
+DurationResult time_signature_measure_duration(const TimeSignature *time_signature, Duration **out) {
+    return duration_create((long)time_signature->beats, 1UL << time_signature->beat_unit_exponent, out);
+}
+
 bool time_signature_equals(const TimeSignature *a, const TimeSignature *b) {
     if (a == NULL || b == NULL) {
         return false;

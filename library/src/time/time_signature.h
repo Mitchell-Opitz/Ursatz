@@ -54,6 +54,14 @@ int time_signature_beat_unit_exponent(const TimeSignature *time_signature);
 /* The bottom number: 1, 2, 4, 8, or 16. */
 unsigned time_signature_beat_unit_number(const TimeSignature *time_signature);
 
+/* The exact length of one beat: the beat unit's own Duration. */
+DurationResult time_signature_beat_duration(const TimeSignature *time_signature, Duration **out);
+
+/* The exact length of one measure: beats times the beat duration. 4/4 and
+   2/2 are both 1; 3/4 is 3/4; 6/8 as written here (six eighth-note beats)
+   is 3/4. */
+DurationResult time_signature_measure_duration(const TimeSignature *time_signature, Duration **out);
+
 bool time_signature_equals(const TimeSignature *a, const TimeSignature *b);
 
 #endif
