@@ -1,0 +1,7 @@
+add_executable(test_standard_meter_framework test_framework.c)
+target_link_libraries(test_standard_meter_framework PRIVATE standard_meter)
+add_test(NAME standard_meter_framework COMMAND test_standard_meter_framework)
+
+add_executable(test_architecture_standard_meter test_architecture_standard_meter.c)
+add_test(NAME architecture_standard_meter COMMAND test_architecture_standard_meter
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
