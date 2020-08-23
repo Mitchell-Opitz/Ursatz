@@ -1,6 +1,7 @@
 add_library(standard_meter
     framework.c
     rule_pair.c
+    grouping_rules.c
 )
 target_include_directories(standard_meter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
