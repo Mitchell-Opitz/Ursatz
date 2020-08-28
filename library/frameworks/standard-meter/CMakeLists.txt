@@ -4,6 +4,7 @@ add_library(standard_meter
     grouping_rules.c
     time_signature_rules.c
     measure_rules.c
+    anacrusis_rules.c
 )
 target_include_directories(standard_meter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
