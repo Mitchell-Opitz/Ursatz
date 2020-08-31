@@ -7,6 +7,7 @@ add_library(standard_meter
     anacrusis_rules.c
     counting_rules.c
     beaming_rules.c
+    beat_tie_rules.c
 )
 target_include_directories(standard_meter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
