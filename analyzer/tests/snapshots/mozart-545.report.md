@@ -7,3816 +7,3823 @@
 - **Chords:** 3807 chord events; 78 matched a chord (2%), 3729 did not.
 - **Most frequent chords:** vi (30), V (19), I (14).
 
+## Meter
+
+- **Time signature:** 4/4
+- **Measures:** 338 measures.
+- **Pickup:** None.
+- **Meter changes:** 3/4 at m. 149, 1/4 at m. 256, 2/4 at m. 257.
+
 **Detected key:** C major
 
 ## Chord Regions
 
-Times are beats from the start of the file.
+Positions are measure and beat.
 
-- Beat 0.00: no match
-- Beat 0.50: no match
-- Beat 1.00: no match
-- Beat 1.50: no match
-- Beat 2.00: no match
-- Beat 2.50: no match
-- Beat 3.00: no match
-- Beat 3.50: no match
-- Beat 4.00: no match
-- Beat 4.50: no match
-- Beat 5.00: no match
-- Beat 5.50: no match
-- Beat 5.75: no match
-- Beat 6.00: no match
-- Beat 6.50: no match
-- Beat 7.00: no match
-- Beat 7.50: no match
-- Beat 8.00: no match
-- Beat 8.50: no match
-- Beat 9.00: no match
-- Beat 9.50: no match
-- Beat 10.00: no match
-- Beat 10.50: no match
-- Beat 11.00: no match
-- Beat 11.50: no match
-- Beat 12.00: no match
-- Beat 12.50: no match
-- Beat 13.00: no match
-- Beat 13.16: no match
-- Beat 13.33: no match
-- Beat 13.50: no match
-- Beat 13.75: no match
-- Beat 14.00: no match
-- Beat 14.50: no match
-- Beat 15.00: no match
-- Beat 15.50: no match
-- Beat 16.00: no match
-- Beat 16.50: no match
-- Beat 16.75: no match
-- Beat 17.00: no match
-- Beat 17.25: no match
-- Beat 17.50: no match
-- Beat 17.75: no match
-- Beat 18.00: no match
-- Beat 18.25: no match
-- Beat 18.50: no match
-- Beat 18.75: no match
-- Beat 19.00: no match
-- Beat 19.25: no match
-- Beat 19.50: no match
-- Beat 19.75: no match
-- Beat 20.00: I
-- Beat 20.50: no match
-- Beat 20.75: no match
-- Beat 21.00: no match
-- Beat 21.25: no match
-- Beat 21.50: no match
-- Beat 21.75: no match
-- Beat 22.00: no match
-- Beat 22.25: no match
-- Beat 22.50: no match
-- Beat 22.75: no match
-- Beat 23.00: no match
-- Beat 23.25: no match
-- Beat 23.50: no match
-- Beat 23.75: no match
-- Beat 24.00: no match
-- Beat 24.50: no match
-- Beat 24.75: no match
-- Beat 25.00: no match
-- Beat 25.25: no match
-- Beat 25.50: no match
-- Beat 25.75: no match
-- Beat 26.00: no match
-- Beat 26.25: no match
-- Beat 26.50: no match
-- Beat 26.75: no match
-- Beat 27.00: no match
-- Beat 27.25: no match
-- Beat 27.50: no match
-- Beat 27.75: no match
-- Beat 28.00: no match
-- Beat 28.50: no match
-- Beat 28.75: no match
-- Beat 29.00: no match
-- Beat 29.25: no match
-- Beat 29.50: no match
-- Beat 29.75: no match
-- Beat 30.00: no match
-- Beat 30.25: no match
-- Beat 30.50: no match
-- Beat 30.75: no match
-- Beat 31.00: vi
-- Beat 31.25: no match
-- Beat 31.50: no match
-- Beat 31.75: no match
-- Beat 32.00: ii
-- Beat 32.50: no match
-- Beat 32.75: no match
-- Beat 33.00: no match
-- Beat 33.25: no match
-- Beat 33.50: no match
-- Beat 33.75: no match
-- Beat 34.00: no match
-- Beat 34.25: no match
-- Beat 34.50: no match
-- Beat 34.75: no match
-- Beat 35.00: no match
-- Beat 35.25: no match
-- Beat 35.50: no match
-- Beat 35.75: no match
-- Beat 36.00: no match
-- Beat 36.25: no match
-- Beat 36.50: no match
-- Beat 36.75: no match
-- Beat 37.00: no match
-- Beat 37.25: no match
-- Beat 37.50: no match
-- Beat 37.75: no match
-- Beat 38.00: no match
-- Beat 38.25: no match
-- Beat 38.50: no match
-- Beat 38.75: no match
-- Beat 39.00: no match
-- Beat 39.25: no match
-- Beat 39.50: no match
-- Beat 39.75: no match
-- Beat 40.00: no match
-- Beat 40.25: no match
-- Beat 40.50: no match
-- Beat 40.75: no match
-- Beat 41.00: no match
-- Beat 41.25: no match
-- Beat 41.50: no match
-- Beat 41.75: no match
-- Beat 42.00: no match
-- Beat 42.25: no match
-- Beat 42.50: no match
-- Beat 42.75: no match
-- Beat 43.00: no match
-- Beat 43.25: no match
-- Beat 43.50: no match
-- Beat 43.75: no match
-- Beat 44.00: no match
-- Beat 45.00: V
-- Beat 46.00: no match
-- Beat 48.00: no match
-- Beat 48.25: no match
-- Beat 48.50: no match
-- Beat 48.75: no match
-- Beat 49.00: no match
-- Beat 49.25: no match
-- Beat 49.50: no match
-- Beat 49.75: no match
-- Beat 50.00: no match
-- Beat 50.25: no match
-- Beat 50.50: no match
-- Beat 50.75: no match
-- Beat 51.00: no match
-- Beat 51.25: no match
-- Beat 51.50: no match
-- Beat 51.75: no match
-- Beat 52.00: no match
-- Beat 52.25: no match
-- Beat 52.50: no match
-- Beat 52.75: no match
-- Beat 53.00: no match
-- Beat 53.25: no match
-- Beat 53.50: no match
-- Beat 53.75: no match
-- Beat 54.00: no match
-- Beat 54.25: no match
-- Beat 54.50: no match
-- Beat 54.75: no match
-- Beat 55.00: no match
-- Beat 55.25: no match
-- Beat 55.50: no match
-- Beat 55.75: no match
-- Beat 56.00: no match
-- Beat 56.12: no match
-- Beat 56.25: no match
-- Beat 56.38: no match
-- Beat 56.50: no match
-- Beat 56.62: no match
-- Beat 56.75: no match
-- Beat 57.00: no match
-- Beat 57.25: no match
-- Beat 57.50: no match
-- Beat 57.75: no match
-- Beat 58.00: no match
-- Beat 58.25: no match
-- Beat 58.50: no match
-- Beat 58.75: no match
-- Beat 59.00: no match
-- Beat 59.25: no match
-- Beat 59.50: no match
-- Beat 59.75: no match
-- Beat 60.00: no match
-- Beat 60.25: no match
-- Beat 60.50: no match
-- Beat 60.75: no match
-- Beat 61.00: no match
-- Beat 61.25: no match
-- Beat 61.50: no match
-- Beat 61.75: no match
-- Beat 62.00: no match
-- Beat 62.25: no match
-- Beat 62.50: no match
-- Beat 62.75: no match
-- Beat 63.00: no match
-- Beat 63.25: no match
-- Beat 63.50: no match
-- Beat 63.75: no match
-- Beat 64.00: no match
-- Beat 64.12: no match
-- Beat 64.25: no match
-- Beat 64.38: no match
-- Beat 64.50: no match
-- Beat 64.62: no match
-- Beat 64.75: no match
-- Beat 65.00: no match
-- Beat 65.25: no match
-- Beat 65.50: no match
-- Beat 65.75: no match
-- Beat 66.00: no match
-- Beat 66.25: no match
-- Beat 66.50: no match
-- Beat 66.75: no match
-- Beat 67.00: no match
-- Beat 67.25: no match
-- Beat 67.50: no match
-- Beat 67.75: no match
-- Beat 68.00: no match
-- Beat 68.25: no match
-- Beat 68.50: no match
-- Beat 68.75: no match
-- Beat 69.00: no match
-- Beat 69.25: no match
-- Beat 69.50: no match
-- Beat 69.75: no match
-- Beat 70.00: no match
-- Beat 70.25: no match
-- Beat 70.50: no match
-- Beat 70.75: no match
-- Beat 71.00: no match
-- Beat 71.25: no match
-- Beat 71.50: no match
-- Beat 71.75: no match
-- Beat 72.00: no match
-- Beat 72.25: no match
-- Beat 72.50: no match
-- Beat 72.75: no match
-- Beat 73.00: no match
-- Beat 73.25: no match
-- Beat 73.50: no match
-- Beat 73.75: no match
-- Beat 74.00: no match
-- Beat 74.25: no match
-- Beat 74.50: no match
-- Beat 74.75: no match
-- Beat 75.00: no match
-- Beat 75.25: no match
-- Beat 75.50: no match
-- Beat 75.75: no match
-- Beat 76.00: no match
-- Beat 76.25: no match
-- Beat 76.50: no match
-- Beat 76.75: no match
-- Beat 77.00: no match
-- Beat 77.25: no match
-- Beat 77.50: no match
-- Beat 77.75: no match
-- Beat 78.00: no match
-- Beat 78.25: no match
-- Beat 78.50: no match
-- Beat 78.75: no match
-- Beat 79.00: no match
-- Beat 79.25: no match
-- Beat 79.50: no match
-- Beat 79.75: no match
-- Beat 80.00: no match
-- Beat 80.25: no match
-- Beat 80.50: no match
-- Beat 80.75: no match
-- Beat 81.00: no match
-- Beat 81.25: no match
-- Beat 81.50: no match
-- Beat 81.75: no match
-- Beat 82.00: no match
-- Beat 82.25: no match
-- Beat 82.50: no match
-- Beat 82.75: no match
-- Beat 83.00: no match
-- Beat 83.25: no match
-- Beat 83.50: no match
-- Beat 83.75: no match
-- Beat 84.00: vi
-- Beat 84.50: no match
-- Beat 85.00: no match
-- Beat 85.50: no match
-- Beat 86.00: no match
-- Beat 86.12: no match
-- Beat 86.50: no match
-- Beat 87.00: no match
-- Beat 87.12: no match
-- Beat 87.50: no match
-- Beat 88.00: no match
-- Beat 88.12: no match
-- Beat 88.50: no match
-- Beat 89.00: no match
-- Beat 89.50: no match
-- Beat 89.62: no match
-- Beat 89.75: no match
-- Beat 89.88: no match
-- Beat 90.00: no match
-- Beat 90.50: vi
-- Beat 91.00: no match
-- Beat 91.50: vi
-- Beat 92.00: no match
-- Beat 92.25: no match
-- Beat 92.50: no match
-- Beat 92.75: no match
-- Beat 93.00: no match
-- Beat 93.25: no match
-- Beat 93.50: no match
-- Beat 93.75: no match
-- Beat 94.00: no match
-- Beat 94.25: no match
-- Beat 94.50: no match
-- Beat 94.75: no match
-- Beat 95.00: no match
-- Beat 95.25: no match
-- Beat 95.50: no match
-- Beat 95.75: no match
-- Beat 96.00: no match
-- Beat 96.12: no match
-- Beat 96.25: no match
-- Beat 96.38: no match
-- Beat 96.50: no match
-- Beat 96.62: no match
-- Beat 96.75: no match
-- Beat 96.88: no match
-- Beat 97.00: no match
-- Beat 97.12: no match
-- Beat 97.25: no match
-- Beat 97.38: no match
-- Beat 97.50: no match
-- Beat 97.62: no match
-- Beat 97.75: no match
-- Beat 97.88: no match
-- Beat 98.00: no match
-- Beat 98.12: no match
-- Beat 98.25: no match
-- Beat 98.38: no match
-- Beat 98.50: no match
-- Beat 98.62: no match
-- Beat 98.75: no match
-- Beat 98.88: no match
-- Beat 99.00: no match
-- Beat 99.12: no match
-- Beat 99.25: no match
-- Beat 99.38: no match
-- Beat 99.50: no match
-- Beat 99.62: no match
-- Beat 99.75: no match
-- Beat 99.88: no match
-- Beat 100.00: no match
-- Beat 101.00: no match
-- Beat 101.25: no match
-- Beat 101.50: no match
-- Beat 101.75: no match
-- Beat 102.00: no match
-- Beat 102.25: no match
-- Beat 102.50: no match
-- Beat 102.75: no match
-- Beat 103.00: no match
-- Beat 103.25: no match
-- Beat 103.50: no match
-- Beat 103.75: no match
-- Beat 104.00: no match
-- Beat 105.00: no match
-- Beat 105.25: no match
-- Beat 105.50: no match
-- Beat 105.75: no match
-- Beat 106.00: no match
-- Beat 106.25: no match
-- Beat 106.50: no match
-- Beat 106.75: no match
-- Beat 107.00: no match
-- Beat 107.25: no match
-- Beat 107.50: no match
-- Beat 107.75: no match
-- Beat 108.00: no match
-- Beat 109.00: V
-- Beat 110.00: no match
-- Beat 112.00: no match
-- Beat 112.50: no match
-- Beat 113.00: no match
-- Beat 113.50: no match
-- Beat 114.00: no match
-- Beat 114.50: no match
-- Beat 115.00: no match
-- Beat 115.50: no match
-- Beat 116.00: no match
-- Beat 116.50: no match
-- Beat 117.00: no match
-- Beat 117.50: no match
-- Beat 117.75: no match
-- Beat 118.00: no match
-- Beat 118.50: no match
-- Beat 119.00: no match
-- Beat 119.50: no match
-- Beat 120.00: no match
-- Beat 120.50: no match
-- Beat 121.00: no match
-- Beat 121.50: no match
-- Beat 122.00: no match
-- Beat 122.50: no match
-- Beat 123.00: no match
-- Beat 123.50: no match
-- Beat 124.00: no match
-- Beat 124.50: no match
-- Beat 125.00: no match
-- Beat 125.16: no match
-- Beat 125.33: no match
-- Beat 125.50: no match
-- Beat 125.75: no match
-- Beat 126.00: no match
-- Beat 126.50: no match
-- Beat 127.00: no match
-- Beat 127.50: no match
-- Beat 128.00: no match
-- Beat 128.50: no match
-- Beat 128.75: no match
-- Beat 129.00: no match
-- Beat 129.25: no match
-- Beat 129.50: no match
-- Beat 129.75: no match
-- Beat 130.00: no match
-- Beat 130.25: no match
-- Beat 130.50: no match
-- Beat 130.75: no match
-- Beat 131.00: no match
-- Beat 131.25: no match
-- Beat 131.50: no match
-- Beat 131.75: no match
-- Beat 132.00: I
-- Beat 132.50: no match
-- Beat 132.75: no match
-- Beat 133.00: no match
-- Beat 133.25: no match
-- Beat 133.50: no match
-- Beat 133.75: no match
-- Beat 134.00: no match
-- Beat 134.25: no match
-- Beat 134.50: no match
-- Beat 134.75: no match
-- Beat 135.00: no match
-- Beat 135.25: no match
-- Beat 135.50: no match
-- Beat 135.75: no match
-- Beat 136.00: no match
-- Beat 136.50: no match
-- Beat 136.75: no match
-- Beat 137.00: no match
-- Beat 137.25: no match
-- Beat 137.50: no match
-- Beat 137.75: no match
-- Beat 138.00: no match
-- Beat 138.25: no match
-- Beat 138.50: no match
-- Beat 138.75: no match
-- Beat 139.00: no match
-- Beat 139.25: no match
-- Beat 139.50: no match
-- Beat 139.75: no match
-- Beat 140.00: no match
-- Beat 140.50: no match
-- Beat 140.75: no match
-- Beat 141.00: no match
-- Beat 141.25: no match
-- Beat 141.50: no match
-- Beat 141.75: no match
-- Beat 142.00: no match
-- Beat 142.25: no match
-- Beat 142.50: no match
-- Beat 142.75: no match
-- Beat 143.00: vi
-- Beat 143.25: no match
-- Beat 143.50: no match
-- Beat 143.75: no match
-- Beat 144.00: ii
-- Beat 144.50: no match
-- Beat 144.75: no match
-- Beat 145.00: no match
-- Beat 145.25: no match
-- Beat 145.50: no match
-- Beat 145.75: no match
-- Beat 146.00: no match
-- Beat 146.25: no match
-- Beat 146.50: no match
-- Beat 146.75: no match
-- Beat 147.00: no match
-- Beat 147.25: no match
-- Beat 147.50: no match
-- Beat 147.75: no match
-- Beat 148.00: no match
-- Beat 148.25: no match
-- Beat 148.50: no match
-- Beat 148.75: no match
-- Beat 149.00: no match
-- Beat 149.25: no match
-- Beat 149.50: no match
-- Beat 149.75: no match
-- Beat 150.00: no match
-- Beat 150.25: no match
-- Beat 150.50: no match
-- Beat 150.75: no match
-- Beat 151.00: no match
-- Beat 151.25: no match
-- Beat 151.50: no match
-- Beat 151.75: no match
-- Beat 152.00: no match
-- Beat 152.25: no match
-- Beat 152.50: no match
-- Beat 152.75: no match
-- Beat 153.00: no match
-- Beat 153.25: no match
-- Beat 153.50: no match
-- Beat 153.75: no match
-- Beat 154.00: no match
-- Beat 154.25: no match
-- Beat 154.50: no match
-- Beat 154.75: no match
-- Beat 155.00: no match
-- Beat 155.25: no match
-- Beat 155.50: no match
-- Beat 155.75: no match
-- Beat 156.00: no match
-- Beat 157.00: V
-- Beat 158.00: no match
-- Beat 160.00: no match
-- Beat 160.25: no match
-- Beat 160.50: no match
-- Beat 160.75: no match
-- Beat 161.00: no match
-- Beat 161.25: no match
-- Beat 161.50: no match
-- Beat 161.75: no match
-- Beat 162.00: no match
-- Beat 162.25: no match
-- Beat 162.50: no match
-- Beat 162.75: no match
-- Beat 163.00: no match
-- Beat 163.25: no match
-- Beat 163.50: no match
-- Beat 163.75: no match
-- Beat 164.00: no match
-- Beat 164.25: no match
-- Beat 164.50: no match
-- Beat 164.75: no match
-- Beat 165.00: no match
-- Beat 165.25: no match
-- Beat 165.50: no match
-- Beat 165.75: no match
-- Beat 166.00: no match
-- Beat 166.25: no match
-- Beat 166.50: no match
-- Beat 166.75: no match
-- Beat 167.00: no match
-- Beat 167.25: no match
-- Beat 167.50: no match
-- Beat 167.75: no match
-- Beat 168.00: no match
-- Beat 168.12: no match
-- Beat 168.25: no match
-- Beat 168.38: no match
-- Beat 168.50: no match
-- Beat 168.62: no match
-- Beat 168.75: no match
-- Beat 169.00: no match
-- Beat 169.25: no match
-- Beat 169.50: no match
-- Beat 169.75: no match
-- Beat 170.00: no match
-- Beat 170.25: no match
-- Beat 170.50: no match
-- Beat 170.75: no match
-- Beat 171.00: no match
-- Beat 171.25: no match
-- Beat 171.50: no match
-- Beat 171.75: no match
-- Beat 172.00: no match
-- Beat 172.25: no match
-- Beat 172.50: no match
-- Beat 172.75: no match
-- Beat 173.00: no match
-- Beat 173.25: no match
-- Beat 173.50: no match
-- Beat 173.75: no match
-- Beat 174.00: no match
-- Beat 174.25: no match
-- Beat 174.50: no match
-- Beat 174.75: no match
-- Beat 175.00: no match
-- Beat 175.25: no match
-- Beat 175.50: no match
-- Beat 175.75: no match
-- Beat 176.00: no match
-- Beat 176.12: no match
-- Beat 176.25: no match
-- Beat 176.38: no match
-- Beat 176.50: no match
-- Beat 176.62: no match
-- Beat 176.75: no match
-- Beat 177.00: no match
-- Beat 177.25: no match
-- Beat 177.50: no match
-- Beat 177.75: no match
-- Beat 178.00: no match
-- Beat 178.25: no match
-- Beat 178.50: no match
-- Beat 178.75: no match
-- Beat 179.00: no match
-- Beat 179.25: no match
-- Beat 179.50: no match
-- Beat 179.75: no match
-- Beat 180.00: no match
-- Beat 180.25: no match
-- Beat 180.50: no match
-- Beat 180.75: no match
-- Beat 181.00: no match
-- Beat 181.25: no match
-- Beat 181.50: no match
-- Beat 181.75: no match
-- Beat 182.00: no match
-- Beat 182.25: no match
-- Beat 182.50: no match
-- Beat 182.75: no match
-- Beat 183.00: no match
-- Beat 183.25: no match
-- Beat 183.50: no match
-- Beat 183.75: no match
-- Beat 184.00: no match
-- Beat 184.25: no match
-- Beat 184.50: no match
-- Beat 184.75: no match
-- Beat 185.00: no match
-- Beat 185.25: no match
-- Beat 185.50: no match
-- Beat 185.75: no match
-- Beat 186.00: no match
-- Beat 186.25: no match
-- Beat 186.50: no match
-- Beat 186.75: no match
-- Beat 187.00: no match
-- Beat 187.25: no match
-- Beat 187.50: no match
-- Beat 187.75: no match
-- Beat 188.00: no match
-- Beat 188.25: no match
-- Beat 188.50: no match
-- Beat 188.75: no match
-- Beat 189.00: no match
-- Beat 189.25: no match
-- Beat 189.50: no match
-- Beat 189.75: no match
-- Beat 190.00: no match
-- Beat 190.25: no match
-- Beat 190.50: no match
-- Beat 190.75: no match
-- Beat 191.00: no match
-- Beat 191.25: no match
-- Beat 191.50: no match
-- Beat 191.75: no match
-- Beat 192.00: no match
-- Beat 192.25: no match
-- Beat 192.50: no match
-- Beat 192.75: no match
-- Beat 193.00: no match
-- Beat 193.25: no match
-- Beat 193.50: no match
-- Beat 193.75: no match
-- Beat 194.00: no match
-- Beat 194.25: no match
-- Beat 194.50: no match
-- Beat 194.75: no match
-- Beat 195.00: no match
-- Beat 195.25: no match
-- Beat 195.50: no match
-- Beat 195.75: no match
-- Beat 196.00: vi
-- Beat 196.50: no match
-- Beat 197.00: no match
-- Beat 197.50: no match
-- Beat 198.00: no match
-- Beat 198.12: no match
-- Beat 198.50: no match
-- Beat 199.00: no match
-- Beat 199.12: no match
-- Beat 199.50: no match
-- Beat 200.00: no match
-- Beat 200.12: no match
-- Beat 200.50: no match
-- Beat 201.00: no match
-- Beat 201.50: no match
-- Beat 201.62: no match
-- Beat 201.75: no match
-- Beat 201.88: no match
-- Beat 202.00: no match
-- Beat 202.50: vi
-- Beat 203.00: no match
-- Beat 203.50: vi
-- Beat 204.00: no match
-- Beat 204.25: no match
-- Beat 204.50: no match
-- Beat 204.75: no match
-- Beat 205.00: no match
-- Beat 205.25: no match
-- Beat 205.50: no match
-- Beat 205.75: no match
-- Beat 206.00: no match
-- Beat 206.25: no match
-- Beat 206.50: no match
-- Beat 206.75: no match
-- Beat 207.00: no match
-- Beat 207.25: no match
-- Beat 207.50: no match
-- Beat 207.75: no match
-- Beat 208.00: no match
-- Beat 208.12: no match
-- Beat 208.25: no match
-- Beat 208.38: no match
-- Beat 208.50: no match
-- Beat 208.62: no match
-- Beat 208.75: no match
-- Beat 208.88: no match
-- Beat 209.00: no match
-- Beat 209.12: no match
-- Beat 209.25: no match
-- Beat 209.38: no match
-- Beat 209.50: no match
-- Beat 209.62: no match
-- Beat 209.75: no match
-- Beat 209.88: no match
-- Beat 210.00: no match
-- Beat 210.12: no match
-- Beat 210.25: no match
-- Beat 210.38: no match
-- Beat 210.50: no match
-- Beat 210.62: no match
-- Beat 210.75: no match
-- Beat 210.88: no match
-- Beat 211.00: no match
-- Beat 211.12: no match
-- Beat 211.25: no match
-- Beat 211.38: no match
-- Beat 211.50: no match
-- Beat 211.62: no match
-- Beat 211.75: no match
-- Beat 211.88: no match
-- Beat 212.00: no match
-- Beat 213.00: no match
-- Beat 213.25: no match
-- Beat 213.50: no match
-- Beat 213.75: no match
-- Beat 214.00: no match
-- Beat 214.25: no match
-- Beat 214.50: no match
-- Beat 214.75: no match
-- Beat 215.00: no match
-- Beat 215.25: no match
-- Beat 215.50: no match
-- Beat 215.75: no match
-- Beat 216.00: no match
-- Beat 217.00: no match
-- Beat 217.25: no match
-- Beat 217.50: no match
-- Beat 217.75: no match
-- Beat 218.00: no match
-- Beat 218.25: no match
-- Beat 218.50: no match
-- Beat 218.75: no match
-- Beat 219.00: no match
-- Beat 219.25: no match
-- Beat 219.50: no match
-- Beat 219.75: no match
-- Beat 220.00: no match
-- Beat 221.00: V
-- Beat 222.00: no match
-- Beat 224.00: no match
-- Beat 225.00: no match
-- Beat 225.25: no match
-- Beat 225.50: no match
-- Beat 225.75: no match
-- Beat 226.00: no match
-- Beat 226.25: no match
-- Beat 226.50: no match
-- Beat 226.75: no match
-- Beat 227.00: no match
-- Beat 227.25: no match
-- Beat 227.50: no match
-- Beat 227.75: no match
-- Beat 228.00: no match
-- Beat 229.00: no match
-- Beat 229.25: no match
-- Beat 229.50: no match
-- Beat 229.75: no match
-- Beat 230.00: no match
-- Beat 230.25: no match
-- Beat 230.50: no match
-- Beat 230.75: no match
-- Beat 231.00: no match
-- Beat 231.25: no match
-- Beat 231.50: no match
-- Beat 231.75: no match
-- Beat 232.00: no match
-- Beat 232.25: no match
-- Beat 232.50: no match
-- Beat 232.75: no match
-- Beat 233.00: no match
-- Beat 233.25: no match
-- Beat 233.50: no match
-- Beat 233.75: no match
-- Beat 234.00: no match
-- Beat 234.25: no match
-- Beat 234.50: no match
-- Beat 234.75: no match
-- Beat 235.00: no match
-- Beat 235.25: no match
-- Beat 235.50: no match
-- Beat 235.75: no match
-- Beat 236.00: no match
-- Beat 236.25: no match
-- Beat 236.50: no match
-- Beat 236.75: no match
-- Beat 237.00: no match
-- Beat 237.25: no match
-- Beat 237.50: no match
-- Beat 237.75: no match
-- Beat 238.00: no match
-- Beat 238.25: no match
-- Beat 238.50: no match
-- Beat 238.75: no match
-- Beat 239.00: no match
-- Beat 239.25: no match
-- Beat 239.50: no match
-- Beat 239.75: no match
-- Beat 240.00: no match
-- Beat 241.00: no match
-- Beat 241.25: no match
-- Beat 241.50: no match
-- Beat 241.75: no match
-- Beat 242.00: no match
-- Beat 242.25: no match
-- Beat 242.50: no match
-- Beat 242.75: no match
-- Beat 243.00: no match
-- Beat 243.25: no match
-- Beat 243.50: no match
-- Beat 243.75: no match
-- Beat 244.00: no match
-- Beat 245.00: no match
-- Beat 245.25: no match
-- Beat 245.50: no match
-- Beat 245.75: no match
-- Beat 246.00: no match
-- Beat 246.25: no match
-- Beat 246.50: no match
-- Beat 246.75: no match
-- Beat 247.00: no match
-- Beat 247.25: no match
-- Beat 247.50: no match
-- Beat 247.75: no match
-- Beat 248.00: no match
-- Beat 248.25: no match
-- Beat 248.50: no match
-- Beat 248.75: no match
-- Beat 249.00: no match
-- Beat 249.25: no match
-- Beat 249.50: no match
-- Beat 249.75: no match
-- Beat 250.00: no match
-- Beat 250.25: no match
-- Beat 250.50: no match
-- Beat 250.75: no match
-- Beat 251.00: no match
-- Beat 251.25: no match
-- Beat 251.50: no match
-- Beat 251.75: no match
-- Beat 252.00: no match
-- Beat 252.25: no match
-- Beat 252.50: no match
-- Beat 252.75: no match
-- Beat 253.00: no match
-- Beat 253.25: no match
-- Beat 253.50: no match
-- Beat 253.75: no match
-- Beat 254.00: no match
-- Beat 254.25: no match
-- Beat 254.50: no match
-- Beat 254.75: no match
-- Beat 255.00: no match
-- Beat 255.25: no match
-- Beat 255.50: no match
-- Beat 255.75: no match
-- Beat 256.00: no match
-- Beat 256.25: no match
-- Beat 256.50: no match
-- Beat 256.75: no match
-- Beat 257.00: no match
-- Beat 257.25: no match
-- Beat 257.50: no match
-- Beat 257.75: no match
-- Beat 258.00: no match
-- Beat 258.25: no match
-- Beat 258.50: no match
-- Beat 258.75: no match
-- Beat 259.00: no match
-- Beat 259.25: no match
-- Beat 259.50: no match
-- Beat 259.75: no match
-- Beat 260.00: no match
-- Beat 260.25: no match
-- Beat 260.50: no match
-- Beat 260.75: no match
-- Beat 261.00: no match
-- Beat 261.25: no match
-- Beat 261.50: no match
-- Beat 261.75: no match
-- Beat 262.00: no match
-- Beat 262.25: no match
-- Beat 262.50: no match
-- Beat 262.75: no match
-- Beat 263.00: no match
-- Beat 263.25: no match
-- Beat 263.50: no match
-- Beat 263.75: no match
-- Beat 264.00: no match
-- Beat 264.25: no match
-- Beat 264.50: no match
-- Beat 264.75: no match
-- Beat 265.00: no match
-- Beat 265.25: no match
-- Beat 265.50: no match
-- Beat 265.75: no match
-- Beat 266.00: no match
-- Beat 266.25: no match
-- Beat 266.50: no match
-- Beat 266.75: no match
-- Beat 267.00: no match
-- Beat 267.25: no match
-- Beat 267.50: no match
-- Beat 267.75: no match
-- Beat 268.00: no match
-- Beat 268.25: no match
-- Beat 268.50: no match
-- Beat 268.75: no match
-- Beat 269.00: no match
-- Beat 269.25: no match
-- Beat 269.50: no match
-- Beat 269.75: no match
-- Beat 270.00: no match
-- Beat 270.25: no match
-- Beat 270.50: no match
-- Beat 270.75: no match
-- Beat 271.00: no match
-- Beat 271.25: no match
-- Beat 271.50: no match
-- Beat 271.75: no match
-- Beat 272.00: no match
-- Beat 272.25: no match
-- Beat 272.50: no match
-- Beat 272.75: no match
-- Beat 273.00: no match
-- Beat 273.25: no match
-- Beat 273.50: no match
-- Beat 273.75: no match
-- Beat 274.00: I
-- Beat 274.25: no match
-- Beat 274.50: no match
-- Beat 274.75: no match
-- Beat 275.00: no match
-- Beat 275.25: no match
-- Beat 275.50: no match
-- Beat 275.75: no match
-- Beat 276.00: no match
-- Beat 276.50: no match
-- Beat 277.00: no match
-- Beat 277.50: no match
-- Beat 278.00: no match
-- Beat 278.50: no match
-- Beat 279.00: no match
-- Beat 279.50: no match
-- Beat 280.00: no match
-- Beat 280.50: no match
-- Beat 281.00: no match
-- Beat 281.50: no match
-- Beat 281.75: no match
-- Beat 282.00: no match
-- Beat 282.50: no match
-- Beat 283.00: no match
-- Beat 283.50: no match
-- Beat 284.00: no match
-- Beat 284.50: no match
-- Beat 285.00: no match
-- Beat 285.50: no match
-- Beat 286.00: no match
-- Beat 286.50: no match
-- Beat 287.00: no match
-- Beat 287.50: no match
-- Beat 288.00: no match
-- Beat 288.50: no match
-- Beat 289.00: no match
-- Beat 289.16: no match
-- Beat 289.33: no match
-- Beat 289.50: no match
-- Beat 289.75: no match
-- Beat 290.00: no match
-- Beat 290.50: no match
-- Beat 291.00: no match
-- Beat 291.50: no match
-- Beat 292.00: no match
-- Beat 292.50: no match
-- Beat 292.75: no match
-- Beat 293.00: no match
-- Beat 293.25: no match
-- Beat 293.50: no match
-- Beat 293.75: no match
-- Beat 294.00: no match
-- Beat 294.25: no match
-- Beat 294.50: no match
-- Beat 294.75: no match
-- Beat 295.00: no match
-- Beat 295.25: no match
-- Beat 295.50: no match
-- Beat 295.75: no match
-- Beat 296.00: IV
-- Beat 296.50: no match
-- Beat 296.75: no match
-- Beat 297.00: no match
-- Beat 297.25: no match
-- Beat 297.50: no match
-- Beat 297.75: no match
-- Beat 298.00: no match
-- Beat 298.25: no match
-- Beat 298.50: no match
-- Beat 298.75: no match
-- Beat 299.00: no match
-- Beat 299.25: no match
-- Beat 299.50: no match
-- Beat 299.75: no match
-- Beat 300.00: no match
-- Beat 300.50: no match
-- Beat 300.75: no match
-- Beat 301.00: no match
-- Beat 301.25: no match
-- Beat 301.50: no match
-- Beat 301.75: no match
-- Beat 302.00: no match
-- Beat 302.25: no match
-- Beat 302.50: no match
-- Beat 302.75: no match
-- Beat 303.00: no match
-- Beat 303.25: no match
-- Beat 303.50: no match
-- Beat 303.75: no match
-- Beat 304.00: no match
-- Beat 304.50: no match
-- Beat 304.75: no match
-- Beat 305.00: no match
-- Beat 305.25: no match
-- Beat 305.50: no match
-- Beat 305.75: no match
-- Beat 306.00: no match
-- Beat 306.25: no match
-- Beat 306.50: no match
-- Beat 306.75: no match
-- Beat 307.00: no match
-- Beat 307.25: no match
-- Beat 307.50: no match
-- Beat 307.75: no match
-- Beat 308.00: no match
-- Beat 308.50: no match
-- Beat 308.75: no match
-- Beat 309.00: no match
-- Beat 309.25: no match
-- Beat 309.50: no match
-- Beat 309.75: no match
-- Beat 310.00: no match
-- Beat 310.25: no match
-- Beat 310.50: no match
-- Beat 310.75: no match
-- Beat 311.00: no match
-- Beat 311.25: no match
-- Beat 311.50: no match
-- Beat 311.75: no match
-- Beat 312.00: I
-- Beat 312.50: no match
-- Beat 312.75: no match
-- Beat 313.00: no match
-- Beat 313.25: no match
-- Beat 313.50: no match
-- Beat 313.75: no match
-- Beat 314.00: no match
-- Beat 314.25: no match
-- Beat 314.50: no match
-- Beat 314.75: no match
-- Beat 315.00: no match
-- Beat 315.25: no match
-- Beat 315.50: no match
-- Beat 315.75: no match
-- Beat 316.00: no match
-- Beat 316.50: no match
-- Beat 316.75: no match
-- Beat 317.00: no match
-- Beat 317.25: no match
-- Beat 317.50: no match
-- Beat 317.75: no match
-- Beat 318.00: no match
-- Beat 318.25: no match
-- Beat 318.50: no match
-- Beat 318.75: no match
-- Beat 319.00: no match
-- Beat 319.25: no match
-- Beat 319.50: no match
-- Beat 319.75: no match
-- Beat 320.00: no match
-- Beat 320.50: no match
-- Beat 320.75: no match
-- Beat 321.00: no match
-- Beat 321.25: no match
-- Beat 321.50: no match
-- Beat 321.75: no match
-- Beat 322.00: no match
-- Beat 322.25: no match
-- Beat 322.50: no match
-- Beat 322.75: no match
-- Beat 323.00: no match
-- Beat 323.25: no match
-- Beat 323.50: no match
-- Beat 323.75: no match
-- Beat 324.00: ii
-- Beat 324.25: no match
-- Beat 324.50: no match
-- Beat 324.75: no match
-- Beat 325.00: no match
-- Beat 325.25: no match
-- Beat 325.50: no match
-- Beat 325.75: no match
-- Beat 326.00: no match
-- Beat 326.25: no match
-- Beat 326.50: no match
-- Beat 326.75: no match
-- Beat 327.00: no match
-- Beat 327.25: no match
-- Beat 327.50: no match
-- Beat 327.75: no match
-- Beat 328.00: no match
-- Beat 328.25: no match
-- Beat 328.50: no match
-- Beat 328.75: no match
-- Beat 329.00: no match
-- Beat 329.25: no match
-- Beat 329.50: no match
-- Beat 329.75: no match
-- Beat 330.00: no match
-- Beat 330.25: no match
-- Beat 330.50: no match
-- Beat 330.75: no match
-- Beat 331.00: no match
-- Beat 331.25: no match
-- Beat 331.50: no match
-- Beat 331.75: no match
-- Beat 332.00: no match
-- Beat 332.25: no match
-- Beat 332.50: no match
-- Beat 332.75: no match
-- Beat 333.00: no match
-- Beat 333.25: no match
-- Beat 333.50: no match
-- Beat 333.75: no match
-- Beat 334.00: no match
-- Beat 334.25: no match
-- Beat 334.50: no match
-- Beat 334.75: no match
-- Beat 335.00: no match
-- Beat 335.25: no match
-- Beat 335.50: no match
-- Beat 335.75: no match
-- Beat 336.00: no match
-- Beat 337.00: V
-- Beat 338.00: no match
-- Beat 340.00: no match
-- Beat 340.25: no match
-- Beat 340.50: no match
-- Beat 340.75: no match
-- Beat 341.00: no match
-- Beat 341.25: no match
-- Beat 341.50: no match
-- Beat 341.75: no match
-- Beat 342.00: no match
-- Beat 342.25: no match
-- Beat 342.50: no match
-- Beat 342.75: no match
-- Beat 343.00: no match
-- Beat 343.25: no match
-- Beat 343.50: no match
-- Beat 343.75: no match
-- Beat 344.00: no match
-- Beat 344.25: no match
-- Beat 344.50: no match
-- Beat 344.75: no match
-- Beat 345.00: no match
-- Beat 345.25: no match
-- Beat 345.50: no match
-- Beat 345.75: no match
-- Beat 346.00: no match
-- Beat 346.25: no match
-- Beat 346.50: no match
-- Beat 346.75: no match
-- Beat 347.00: no match
-- Beat 347.25: no match
-- Beat 347.50: no match
-- Beat 347.75: no match
-- Beat 348.00: no match
-- Beat 348.12: no match
-- Beat 348.25: no match
-- Beat 348.38: no match
-- Beat 348.50: no match
-- Beat 348.62: no match
-- Beat 348.75: no match
-- Beat 349.00: no match
-- Beat 349.25: no match
-- Beat 349.50: no match
-- Beat 349.75: no match
-- Beat 350.00: no match
-- Beat 350.25: no match
-- Beat 350.50: no match
-- Beat 350.75: no match
-- Beat 351.00: no match
-- Beat 351.25: no match
-- Beat 351.50: no match
-- Beat 351.75: no match
-- Beat 352.00: no match
-- Beat 352.25: no match
-- Beat 352.50: no match
-- Beat 352.75: no match
-- Beat 353.00: no match
-- Beat 353.25: no match
-- Beat 353.50: no match
-- Beat 353.75: no match
-- Beat 354.00: no match
-- Beat 354.25: no match
-- Beat 354.50: no match
-- Beat 354.75: no match
-- Beat 355.00: no match
-- Beat 355.25: no match
-- Beat 355.50: no match
-- Beat 355.75: no match
-- Beat 356.00: no match
-- Beat 356.12: no match
-- Beat 356.25: no match
-- Beat 356.38: no match
-- Beat 356.50: no match
-- Beat 356.62: no match
-- Beat 356.75: no match
-- Beat 357.00: no match
-- Beat 357.25: no match
-- Beat 357.50: no match
-- Beat 357.75: no match
-- Beat 358.00: no match
-- Beat 358.25: no match
-- Beat 358.50: no match
-- Beat 358.75: no match
-- Beat 359.00: no match
-- Beat 359.25: no match
-- Beat 359.50: no match
-- Beat 359.75: no match
-- Beat 360.00: no match
-- Beat 360.25: no match
-- Beat 360.50: no match
-- Beat 360.75: no match
-- Beat 361.00: no match
-- Beat 361.25: no match
-- Beat 361.50: no match
-- Beat 361.75: no match
-- Beat 362.00: no match
-- Beat 362.25: no match
-- Beat 362.50: no match
-- Beat 362.75: no match
-- Beat 363.00: no match
-- Beat 363.25: no match
-- Beat 363.50: no match
-- Beat 363.75: no match
-- Beat 364.00: no match
-- Beat 364.25: no match
-- Beat 364.50: no match
-- Beat 364.75: no match
-- Beat 365.00: no match
-- Beat 365.25: no match
-- Beat 365.50: no match
-- Beat 365.75: no match
-- Beat 366.00: no match
-- Beat 366.25: no match
-- Beat 366.50: no match
-- Beat 366.75: no match
-- Beat 367.00: no match
-- Beat 367.25: no match
-- Beat 367.50: no match
-- Beat 367.75: no match
-- Beat 368.00: no match
-- Beat 368.25: no match
-- Beat 368.50: no match
-- Beat 368.75: no match
-- Beat 369.00: no match
-- Beat 369.25: no match
-- Beat 369.50: no match
-- Beat 369.75: no match
-- Beat 370.00: no match
-- Beat 370.25: no match
-- Beat 370.50: no match
-- Beat 370.75: no match
-- Beat 371.00: no match
-- Beat 371.25: no match
-- Beat 371.50: no match
-- Beat 371.75: no match
-- Beat 372.00: no match
-- Beat 372.25: no match
-- Beat 372.50: no match
-- Beat 372.75: no match
-- Beat 373.00: no match
-- Beat 373.25: no match
-- Beat 373.50: no match
-- Beat 373.75: no match
-- Beat 374.00: no match
-- Beat 374.25: no match
-- Beat 374.50: no match
-- Beat 374.75: no match
-- Beat 375.00: no match
-- Beat 375.25: no match
-- Beat 375.50: no match
-- Beat 375.75: no match
-- Beat 376.00: no match
-- Beat 376.50: no match
-- Beat 377.00: no match
-- Beat 377.50: no match
-- Beat 378.00: no match
-- Beat 378.12: no match
-- Beat 378.50: no match
-- Beat 379.00: no match
-- Beat 379.12: no match
-- Beat 379.50: no match
-- Beat 380.00: no match
-- Beat 380.50: no match
-- Beat 381.00: no match
-- Beat 381.50: no match
-- Beat 382.00: no match
-- Beat 382.12: no match
-- Beat 382.50: no match
-- Beat 383.00: no match
-- Beat 383.12: no match
-- Beat 383.50: no match
-- Beat 384.00: no match
-- Beat 384.25: no match
-- Beat 384.50: no match
-- Beat 384.75: no match
-- Beat 385.00: no match
-- Beat 385.25: no match
-- Beat 385.50: no match
-- Beat 385.75: no match
-- Beat 386.00: no match
-- Beat 386.25: no match
-- Beat 386.50: no match
-- Beat 386.75: no match
-- Beat 387.00: no match
-- Beat 387.25: no match
-- Beat 387.50: no match
-- Beat 387.75: no match
-- Beat 388.00: no match
-- Beat 388.12: no match
-- Beat 388.25: no match
-- Beat 388.38: no match
-- Beat 388.50: no match
-- Beat 388.62: no match
-- Beat 388.75: no match
-- Beat 388.88: no match
-- Beat 389.00: no match
-- Beat 389.12: no match
-- Beat 389.25: no match
-- Beat 389.38: no match
-- Beat 389.50: no match
-- Beat 389.62: no match
-- Beat 389.75: no match
-- Beat 389.88: no match
-- Beat 390.00: no match
-- Beat 390.12: no match
-- Beat 390.25: no match
-- Beat 390.38: no match
-- Beat 390.50: no match
-- Beat 390.62: no match
-- Beat 390.75: no match
-- Beat 390.88: no match
-- Beat 391.00: no match
-- Beat 391.12: no match
-- Beat 391.25: no match
-- Beat 391.38: no match
-- Beat 391.50: no match
-- Beat 391.62: no match
-- Beat 391.75: no match
-- Beat 391.88: no match
-- Beat 392.00: no match
-- Beat 393.00: no match
-- Beat 393.25: no match
-- Beat 393.50: no match
-- Beat 393.75: no match
-- Beat 394.00: no match
-- Beat 394.25: no match
-- Beat 394.50: no match
-- Beat 394.75: no match
-- Beat 395.00: no match
-- Beat 395.25: no match
-- Beat 395.50: no match
-- Beat 395.75: no match
-- Beat 396.00: no match
-- Beat 397.00: no match
-- Beat 397.25: no match
-- Beat 397.50: no match
-- Beat 397.75: no match
-- Beat 398.00: no match
-- Beat 398.25: no match
-- Beat 398.50: no match
-- Beat 398.75: no match
-- Beat 399.00: no match
-- Beat 399.25: no match
-- Beat 399.50: no match
-- Beat 399.75: no match
-- Beat 400.00: no match
-- Beat 401.00: I
-- Beat 402.00: no match
-- Beat 404.00: no match
-- Beat 405.00: no match
-- Beat 405.25: no match
-- Beat 405.50: no match
-- Beat 405.75: no match
-- Beat 406.00: no match
-- Beat 406.25: no match
-- Beat 406.50: no match
-- Beat 406.75: no match
-- Beat 407.00: no match
-- Beat 407.25: no match
-- Beat 407.50: no match
-- Beat 407.75: no match
-- Beat 408.00: no match
-- Beat 409.00: no match
-- Beat 409.25: no match
-- Beat 409.50: no match
-- Beat 409.75: no match
-- Beat 410.00: no match
-- Beat 410.25: no match
-- Beat 410.50: no match
-- Beat 410.75: no match
-- Beat 411.00: no match
-- Beat 411.25: no match
-- Beat 411.50: no match
-- Beat 411.75: no match
-- Beat 412.00: no match
-- Beat 412.25: no match
-- Beat 412.50: no match
-- Beat 412.75: no match
-- Beat 413.00: no match
-- Beat 413.25: no match
-- Beat 413.50: no match
-- Beat 413.75: no match
-- Beat 414.00: no match
-- Beat 414.25: no match
-- Beat 414.50: no match
-- Beat 414.75: no match
-- Beat 415.00: no match
-- Beat 415.25: no match
-- Beat 415.50: no match
-- Beat 415.75: no match
-- Beat 416.00: no match
-- Beat 416.25: no match
-- Beat 416.50: no match
-- Beat 416.75: no match
-- Beat 417.00: no match
-- Beat 417.25: no match
-- Beat 417.50: no match
-- Beat 417.75: no match
-- Beat 418.00: no match
-- Beat 418.25: no match
-- Beat 418.50: no match
-- Beat 418.75: no match
-- Beat 419.00: no match
-- Beat 419.25: no match
-- Beat 419.50: no match
-- Beat 419.75: no match
-- Beat 420.00: no match
-- Beat 421.00: no match
-- Beat 421.25: no match
-- Beat 421.50: no match
-- Beat 421.75: no match
-- Beat 422.00: no match
-- Beat 422.25: no match
-- Beat 422.50: no match
-- Beat 422.75: no match
-- Beat 423.00: no match
-- Beat 423.25: no match
-- Beat 423.50: no match
-- Beat 423.75: no match
-- Beat 424.00: no match
-- Beat 425.00: no match
-- Beat 425.25: no match
-- Beat 425.50: no match
-- Beat 425.75: no match
-- Beat 426.00: no match
-- Beat 426.25: no match
-- Beat 426.50: no match
-- Beat 426.75: no match
-- Beat 427.00: no match
-- Beat 427.25: no match
-- Beat 427.50: no match
-- Beat 427.75: no match
-- Beat 428.00: no match
-- Beat 428.25: no match
-- Beat 428.50: no match
-- Beat 428.75: no match
-- Beat 429.00: no match
-- Beat 429.25: no match
-- Beat 429.50: no match
-- Beat 429.75: no match
-- Beat 430.00: no match
-- Beat 430.25: no match
-- Beat 430.50: no match
-- Beat 430.75: no match
-- Beat 431.00: no match
-- Beat 431.25: no match
-- Beat 431.50: no match
-- Beat 431.75: no match
-- Beat 432.00: no match
-- Beat 432.25: no match
-- Beat 432.50: no match
-- Beat 432.75: no match
-- Beat 433.00: no match
-- Beat 433.25: no match
-- Beat 433.50: no match
-- Beat 433.75: no match
-- Beat 434.00: no match
-- Beat 434.25: no match
-- Beat 434.50: no match
-- Beat 434.75: no match
-- Beat 435.00: no match
-- Beat 435.25: no match
-- Beat 435.50: no match
-- Beat 435.75: no match
-- Beat 436.00: no match
-- Beat 436.25: no match
-- Beat 436.50: no match
-- Beat 436.75: no match
-- Beat 437.00: no match
-- Beat 437.25: no match
-- Beat 437.50: no match
-- Beat 437.75: no match
-- Beat 438.00: no match
-- Beat 438.25: no match
-- Beat 438.50: no match
-- Beat 438.75: no match
-- Beat 439.00: no match
-- Beat 439.25: no match
-- Beat 439.50: no match
-- Beat 439.75: no match
-- Beat 440.00: no match
-- Beat 440.25: no match
-- Beat 440.50: no match
-- Beat 440.75: no match
-- Beat 441.00: no match
-- Beat 441.25: no match
-- Beat 441.50: no match
-- Beat 441.75: no match
-- Beat 442.00: no match
-- Beat 442.25: no match
-- Beat 442.50: no match
-- Beat 442.75: no match
-- Beat 443.00: no match
-- Beat 443.25: no match
-- Beat 443.50: no match
-- Beat 443.75: no match
-- Beat 444.00: no match
-- Beat 444.25: no match
-- Beat 444.50: no match
-- Beat 444.75: no match
-- Beat 445.00: no match
-- Beat 445.25: no match
-- Beat 445.50: no match
-- Beat 445.75: no match
-- Beat 446.00: no match
-- Beat 446.25: no match
-- Beat 446.50: no match
-- Beat 446.75: no match
-- Beat 447.00: no match
-- Beat 447.25: no match
-- Beat 447.50: no match
-- Beat 447.75: no match
-- Beat 448.00: no match
-- Beat 448.25: no match
-- Beat 448.50: no match
-- Beat 448.75: no match
-- Beat 449.00: no match
-- Beat 449.25: no match
-- Beat 449.50: no match
-- Beat 449.75: no match
-- Beat 450.00: no match
-- Beat 450.25: no match
-- Beat 450.50: no match
-- Beat 450.75: no match
-- Beat 451.00: no match
-- Beat 451.25: no match
-- Beat 451.50: no match
-- Beat 451.75: no match
-- Beat 452.00: no match
-- Beat 452.25: no match
-- Beat 452.50: no match
-- Beat 452.75: no match
-- Beat 453.00: no match
-- Beat 453.25: no match
-- Beat 453.50: no match
-- Beat 453.75: no match
-- Beat 454.00: I
-- Beat 454.25: no match
-- Beat 454.50: no match
-- Beat 454.75: no match
-- Beat 455.00: no match
-- Beat 455.25: no match
-- Beat 455.50: no match
-- Beat 455.75: no match
-- Beat 456.00: no match
-- Beat 456.50: no match
-- Beat 457.00: no match
-- Beat 457.50: no match
-- Beat 458.00: no match
-- Beat 458.50: no match
-- Beat 459.00: no match
-- Beat 459.50: no match
-- Beat 460.00: no match
-- Beat 460.50: no match
-- Beat 461.00: no match
-- Beat 461.50: no match
-- Beat 461.75: no match
-- Beat 462.00: no match
-- Beat 462.50: no match
-- Beat 463.00: no match
-- Beat 463.50: no match
-- Beat 464.00: no match
-- Beat 464.50: no match
-- Beat 465.00: no match
-- Beat 465.50: no match
-- Beat 466.00: no match
-- Beat 466.50: no match
-- Beat 467.00: no match
-- Beat 467.50: no match
-- Beat 468.00: no match
-- Beat 468.50: no match
-- Beat 469.00: no match
-- Beat 469.16: no match
-- Beat 469.33: no match
-- Beat 469.50: no match
-- Beat 469.75: no match
-- Beat 470.00: no match
-- Beat 470.50: no match
-- Beat 471.00: no match
-- Beat 471.50: no match
-- Beat 472.00: no match
-- Beat 472.50: no match
-- Beat 472.75: no match
-- Beat 473.00: no match
-- Beat 473.25: no match
-- Beat 473.50: no match
-- Beat 473.75: no match
-- Beat 474.00: no match
-- Beat 474.25: no match
-- Beat 474.50: no match
-- Beat 474.75: no match
-- Beat 475.00: no match
-- Beat 475.25: no match
-- Beat 475.50: no match
-- Beat 475.75: no match
-- Beat 476.00: IV
-- Beat 476.50: no match
-- Beat 476.75: no match
-- Beat 477.00: no match
-- Beat 477.25: no match
-- Beat 477.50: no match
-- Beat 477.75: no match
-- Beat 478.00: no match
-- Beat 478.25: no match
-- Beat 478.50: no match
-- Beat 478.75: no match
-- Beat 479.00: no match
-- Beat 479.25: no match
-- Beat 479.50: no match
-- Beat 479.75: no match
-- Beat 480.00: no match
-- Beat 480.50: no match
-- Beat 480.75: no match
-- Beat 481.00: no match
-- Beat 481.25: no match
-- Beat 481.50: no match
-- Beat 481.75: no match
-- Beat 482.00: no match
-- Beat 482.25: no match
-- Beat 482.50: no match
-- Beat 482.75: no match
-- Beat 483.00: no match
-- Beat 483.25: no match
-- Beat 483.50: no match
-- Beat 483.75: no match
-- Beat 484.00: no match
-- Beat 484.50: no match
-- Beat 484.75: no match
-- Beat 485.00: no match
-- Beat 485.25: no match
-- Beat 485.50: no match
-- Beat 485.75: no match
-- Beat 486.00: no match
-- Beat 486.25: no match
-- Beat 486.50: no match
-- Beat 486.75: no match
-- Beat 487.00: no match
-- Beat 487.25: no match
-- Beat 487.50: no match
-- Beat 487.75: no match
-- Beat 488.00: no match
-- Beat 488.50: no match
-- Beat 488.75: no match
-- Beat 489.00: no match
-- Beat 489.25: no match
-- Beat 489.50: no match
-- Beat 489.75: no match
-- Beat 490.00: no match
-- Beat 490.25: no match
-- Beat 490.50: no match
-- Beat 490.75: no match
-- Beat 491.00: no match
-- Beat 491.25: no match
-- Beat 491.50: no match
-- Beat 491.75: no match
-- Beat 492.00: I
-- Beat 492.50: no match
-- Beat 492.75: no match
-- Beat 493.00: no match
-- Beat 493.25: no match
-- Beat 493.50: no match
-- Beat 493.75: no match
-- Beat 494.00: no match
-- Beat 494.25: no match
-- Beat 494.50: no match
-- Beat 494.75: no match
-- Beat 495.00: no match
-- Beat 495.25: no match
-- Beat 495.50: no match
-- Beat 495.75: no match
-- Beat 496.00: no match
-- Beat 496.50: no match
-- Beat 496.75: no match
-- Beat 497.00: no match
-- Beat 497.25: no match
-- Beat 497.50: no match
-- Beat 497.75: no match
-- Beat 498.00: no match
-- Beat 498.25: no match
-- Beat 498.50: no match
-- Beat 498.75: no match
-- Beat 499.00: no match
-- Beat 499.25: no match
-- Beat 499.50: no match
-- Beat 499.75: no match
-- Beat 500.00: no match
-- Beat 500.50: no match
-- Beat 500.75: no match
-- Beat 501.00: no match
-- Beat 501.25: no match
-- Beat 501.50: no match
-- Beat 501.75: no match
-- Beat 502.00: no match
-- Beat 502.25: no match
-- Beat 502.50: no match
-- Beat 502.75: no match
-- Beat 503.00: no match
-- Beat 503.25: no match
-- Beat 503.50: no match
-- Beat 503.75: no match
-- Beat 504.00: ii
-- Beat 504.25: no match
-- Beat 504.50: no match
-- Beat 504.75: no match
-- Beat 505.00: no match
-- Beat 505.25: no match
-- Beat 505.50: no match
-- Beat 505.75: no match
-- Beat 506.00: no match
-- Beat 506.25: no match
-- Beat 506.50: no match
-- Beat 506.75: no match
-- Beat 507.00: no match
-- Beat 507.25: no match
-- Beat 507.50: no match
-- Beat 507.75: no match
-- Beat 508.00: no match
-- Beat 508.25: no match
-- Beat 508.50: no match
-- Beat 508.75: no match
-- Beat 509.00: no match
-- Beat 509.25: no match
-- Beat 509.50: no match
-- Beat 509.75: no match
-- Beat 510.00: no match
-- Beat 510.25: no match
-- Beat 510.50: no match
-- Beat 510.75: no match
-- Beat 511.00: no match
-- Beat 511.25: no match
-- Beat 511.50: no match
-- Beat 511.75: no match
-- Beat 512.00: no match
-- Beat 512.25: no match
-- Beat 512.50: no match
-- Beat 512.75: no match
-- Beat 513.00: no match
-- Beat 513.25: no match
-- Beat 513.50: no match
-- Beat 513.75: no match
-- Beat 514.00: no match
-- Beat 514.25: no match
-- Beat 514.50: no match
-- Beat 514.75: no match
-- Beat 515.00: no match
-- Beat 515.25: no match
-- Beat 515.50: no match
-- Beat 515.75: no match
-- Beat 516.00: no match
-- Beat 517.00: V
-- Beat 518.00: no match
-- Beat 520.00: no match
-- Beat 520.25: no match
-- Beat 520.50: no match
-- Beat 520.75: no match
-- Beat 521.00: no match
-- Beat 521.25: no match
-- Beat 521.50: no match
-- Beat 521.75: no match
-- Beat 522.00: no match
-- Beat 522.25: no match
-- Beat 522.50: no match
-- Beat 522.75: no match
-- Beat 523.00: no match
-- Beat 523.25: no match
-- Beat 523.50: no match
-- Beat 523.75: no match
-- Beat 524.00: no match
-- Beat 524.25: no match
-- Beat 524.50: no match
-- Beat 524.75: no match
-- Beat 525.00: no match
-- Beat 525.25: no match
-- Beat 525.50: no match
-- Beat 525.75: no match
-- Beat 526.00: no match
-- Beat 526.25: no match
-- Beat 526.50: no match
-- Beat 526.75: no match
-- Beat 527.00: no match
-- Beat 527.25: no match
-- Beat 527.50: no match
-- Beat 527.75: no match
-- Beat 528.00: no match
-- Beat 528.12: no match
-- Beat 528.25: no match
-- Beat 528.38: no match
-- Beat 528.50: no match
-- Beat 528.62: no match
-- Beat 528.75: no match
-- Beat 529.00: no match
-- Beat 529.25: no match
-- Beat 529.50: no match
-- Beat 529.75: no match
-- Beat 530.00: no match
-- Beat 530.25: no match
-- Beat 530.50: no match
-- Beat 530.75: no match
-- Beat 531.00: no match
-- Beat 531.25: no match
-- Beat 531.50: no match
-- Beat 531.75: no match
-- Beat 532.00: no match
-- Beat 532.25: no match
-- Beat 532.50: no match
-- Beat 532.75: no match
-- Beat 533.00: no match
-- Beat 533.25: no match
-- Beat 533.50: no match
-- Beat 533.75: no match
-- Beat 534.00: no match
-- Beat 534.25: no match
-- Beat 534.50: no match
-- Beat 534.75: no match
-- Beat 535.00: no match
-- Beat 535.25: no match
-- Beat 535.50: no match
-- Beat 535.75: no match
-- Beat 536.00: no match
-- Beat 536.12: no match
-- Beat 536.25: no match
-- Beat 536.38: no match
-- Beat 536.50: no match
-- Beat 536.62: no match
-- Beat 536.75: no match
-- Beat 537.00: no match
-- Beat 537.25: no match
-- Beat 537.50: no match
-- Beat 537.75: no match
-- Beat 538.00: no match
-- Beat 538.25: no match
-- Beat 538.50: no match
-- Beat 538.75: no match
-- Beat 539.00: no match
-- Beat 539.25: no match
-- Beat 539.50: no match
-- Beat 539.75: no match
-- Beat 540.00: no match
-- Beat 540.25: no match
-- Beat 540.50: no match
-- Beat 540.75: no match
-- Beat 541.00: no match
-- Beat 541.25: no match
-- Beat 541.50: no match
-- Beat 541.75: no match
-- Beat 542.00: no match
-- Beat 542.25: no match
-- Beat 542.50: no match
-- Beat 542.75: no match
-- Beat 543.00: no match
-- Beat 543.25: no match
-- Beat 543.50: no match
-- Beat 543.75: no match
-- Beat 544.00: no match
-- Beat 544.25: no match
-- Beat 544.50: no match
-- Beat 544.75: no match
-- Beat 545.00: no match
-- Beat 545.25: no match
-- Beat 545.50: no match
-- Beat 545.75: no match
-- Beat 546.00: no match
-- Beat 546.25: no match
-- Beat 546.50: no match
-- Beat 546.75: no match
-- Beat 547.00: no match
-- Beat 547.25: no match
-- Beat 547.50: no match
-- Beat 547.75: no match
-- Beat 548.00: no match
-- Beat 548.25: no match
-- Beat 548.50: no match
-- Beat 548.75: no match
-- Beat 549.00: no match
-- Beat 549.25: no match
-- Beat 549.50: no match
-- Beat 549.75: no match
-- Beat 550.00: no match
-- Beat 550.25: no match
-- Beat 550.50: no match
-- Beat 550.75: no match
-- Beat 551.00: no match
-- Beat 551.25: no match
-- Beat 551.50: no match
-- Beat 551.75: no match
-- Beat 552.00: no match
-- Beat 552.25: no match
-- Beat 552.50: no match
-- Beat 552.75: no match
-- Beat 553.00: no match
-- Beat 553.25: no match
-- Beat 553.50: no match
-- Beat 553.75: no match
-- Beat 554.00: no match
-- Beat 554.25: no match
-- Beat 554.50: no match
-- Beat 554.75: no match
-- Beat 555.00: no match
-- Beat 555.25: no match
-- Beat 555.50: no match
-- Beat 555.75: no match
-- Beat 556.00: no match
-- Beat 556.50: no match
-- Beat 557.00: no match
-- Beat 557.50: no match
-- Beat 558.00: no match
-- Beat 558.12: no match
-- Beat 558.50: no match
-- Beat 559.00: no match
-- Beat 559.12: no match
-- Beat 559.50: no match
-- Beat 560.00: no match
-- Beat 560.50: no match
-- Beat 561.00: no match
-- Beat 561.50: no match
-- Beat 562.00: no match
-- Beat 562.12: no match
-- Beat 562.50: no match
-- Beat 563.00: no match
-- Beat 563.12: no match
-- Beat 563.50: no match
-- Beat 564.00: no match
-- Beat 564.25: no match
-- Beat 564.50: no match
-- Beat 564.75: no match
-- Beat 565.00: no match
-- Beat 565.25: no match
-- Beat 565.50: no match
-- Beat 565.75: no match
-- Beat 566.00: no match
-- Beat 566.25: no match
-- Beat 566.50: no match
-- Beat 566.75: no match
-- Beat 567.00: no match
-- Beat 567.25: no match
-- Beat 567.50: no match
-- Beat 567.75: no match
-- Beat 568.00: no match
-- Beat 568.12: no match
-- Beat 568.25: no match
-- Beat 568.38: no match
-- Beat 568.50: no match
-- Beat 568.62: no match
-- Beat 568.75: no match
-- Beat 568.88: no match
-- Beat 569.00: no match
-- Beat 569.12: no match
-- Beat 569.25: no match
-- Beat 569.38: no match
-- Beat 569.50: no match
-- Beat 569.62: no match
-- Beat 569.75: no match
-- Beat 569.88: no match
-- Beat 570.00: no match
-- Beat 570.12: no match
-- Beat 570.25: no match
-- Beat 570.38: no match
-- Beat 570.50: no match
-- Beat 570.62: no match
-- Beat 570.75: no match
-- Beat 570.88: no match
-- Beat 571.00: no match
-- Beat 571.12: no match
-- Beat 571.25: no match
-- Beat 571.38: no match
-- Beat 571.50: no match
-- Beat 571.62: no match
-- Beat 571.75: no match
-- Beat 571.88: no match
-- Beat 572.00: no match
-- Beat 573.00: no match
-- Beat 573.25: no match
-- Beat 573.50: no match
-- Beat 573.75: no match
-- Beat 574.00: no match
-- Beat 574.25: no match
-- Beat 574.50: no match
-- Beat 574.75: no match
-- Beat 575.00: no match
-- Beat 575.25: no match
-- Beat 575.50: no match
-- Beat 575.75: no match
-- Beat 576.00: no match
-- Beat 577.00: no match
-- Beat 577.25: no match
-- Beat 577.50: no match
-- Beat 577.75: no match
-- Beat 578.00: no match
-- Beat 578.25: no match
-- Beat 578.50: no match
-- Beat 578.75: no match
-- Beat 579.00: no match
-- Beat 579.25: no match
-- Beat 579.50: no match
-- Beat 579.75: no match
-- Beat 580.00: no match
-- Beat 581.00: I
-- Beat 582.00: no match
-- Beat 592.00: no match
-- Beat 592.25: no match
-- Beat 592.50: no match
-- Beat 592.75: no match
-- Beat 593.00: no match
-- Beat 593.25: no match
-- Beat 593.50: no match
-- Beat 593.75: no match
-- Beat 594.00: no match
-- Beat 594.25: no match
-- Beat 594.50: no match
-- Beat 594.75: no match
-- Beat 595.00: no match
-- Beat 595.25: no match
-- Beat 595.50: no match
-- Beat 595.75: no match
-- Beat 596.00: no match
-- Beat 596.25: no match
-- Beat 596.50: no match
-- Beat 596.75: no match
-- Beat 597.00: no match
-- Beat 597.25: no match
-- Beat 597.50: no match
-- Beat 597.75: no match
-- Beat 598.00: no match
-- Beat 598.25: no match
-- Beat 598.50: no match
-- Beat 598.75: no match
-- Beat 599.00: no match
-- Beat 599.25: no match
-- Beat 599.50: no match
-- Beat 599.75: no match
-- Beat 600.00: no match
-- Beat 600.25: no match
-- Beat 600.50: no match
-- Beat 600.75: no match
-- Beat 601.00: no match
-- Beat 601.25: no match
-- Beat 601.50: no match
-- Beat 601.75: no match
-- Beat 602.00: no match
-- Beat 602.25: no match
-- Beat 602.50: no match
-- Beat 602.75: no match
-- Beat 603.00: no match
-- Beat 603.25: no match
-- Beat 603.50: no match
-- Beat 603.75: no match
-- Beat 604.00: no match
-- Beat 604.25: no match
-- Beat 604.50: no match
-- Beat 604.75: no match
-- Beat 605.00: no match
-- Beat 605.25: no match
-- Beat 605.50: no match
-- Beat 605.75: no match
-- Beat 606.00: no match
-- Beat 606.25: no match
-- Beat 606.50: no match
-- Beat 606.75: no match
-- Beat 607.00: no match
-- Beat 607.25: no match
-- Beat 607.50: no match
-- Beat 607.75: no match
-- Beat 608.00: no match
-- Beat 608.25: no match
-- Beat 608.50: no match
-- Beat 608.75: no match
-- Beat 609.00: no match
-- Beat 609.25: no match
-- Beat 609.50: no match
-- Beat 609.75: no match
-- Beat 610.00: vi
-- Beat 610.25: no match
-- Beat 610.50: no match
-- Beat 610.75: no match
-- Beat 611.00: no match
-- Beat 611.25: no match
-- Beat 611.50: no match
-- Beat 611.75: no match
-- Beat 612.00: no match
-- Beat 612.25: no match
-- Beat 612.50: no match
-- Beat 612.75: no match
-- Beat 613.00: V
-- Beat 613.75: no match
-- Beat 613.88: no match
-- Beat 614.00: no match
-- Beat 614.50: no match
-- Beat 615.00: no match
-- Beat 615.50: no match
-- Beat 616.00: no match
-- Beat 616.25: no match
-- Beat 616.50: no match
-- Beat 616.75: no match
-- Beat 617.00: no match
-- Beat 617.25: no match
-- Beat 617.50: no match
-- Beat 617.75: no match
-- Beat 618.00: no match
-- Beat 618.25: no match
-- Beat 618.50: no match
-- Beat 618.75: no match
-- Beat 619.00: no match
-- Beat 619.25: no match
-- Beat 619.50: no match
-- Beat 619.75: no match
-- Beat 620.00: no match
-- Beat 620.25: no match
-- Beat 620.50: no match
-- Beat 620.75: no match
-- Beat 621.00: no match
-- Beat 621.25: no match
-- Beat 621.50: no match
-- Beat 621.75: no match
-- Beat 622.00: no match
-- Beat 622.25: no match
-- Beat 622.50: no match
-- Beat 622.75: no match
-- Beat 623.00: no match
-- Beat 623.25: no match
-- Beat 623.50: no match
-- Beat 623.75: no match
-- Beat 624.00: no match
-- Beat 624.25: no match
-- Beat 624.50: no match
-- Beat 624.75: no match
-- Beat 625.00: no match
-- Beat 625.25: no match
-- Beat 625.50: no match
-- Beat 625.75: no match
-- Beat 626.00: no match
-- Beat 626.25: no match
-- Beat 626.50: no match
-- Beat 626.75: no match
-- Beat 627.00: no match
-- Beat 627.25: no match
-- Beat 627.50: no match
-- Beat 627.75: no match
-- Beat 628.00: no match
-- Beat 628.25: no match
-- Beat 628.50: no match
-- Beat 628.75: no match
-- Beat 629.00: no match
-- Beat 629.25: no match
-- Beat 629.50: no match
-- Beat 629.75: no match
-- Beat 630.00: no match
-- Beat 630.25: no match
-- Beat 630.50: no match
-- Beat 630.75: no match
-- Beat 631.00: no match
-- Beat 631.25: no match
-- Beat 631.50: no match
-- Beat 631.75: no match
-- Beat 632.00: no match
-- Beat 632.25: no match
-- Beat 632.50: no match
-- Beat 632.75: no match
-- Beat 633.00: no match
-- Beat 633.25: no match
-- Beat 633.50: no match
-- Beat 633.75: no match
-- Beat 634.00: no match
-- Beat 634.25: no match
-- Beat 634.50: no match
-- Beat 634.75: no match
-- Beat 635.00: no match
-- Beat 635.25: no match
-- Beat 635.50: no match
-- Beat 635.75: no match
-- Beat 636.00: no match
-- Beat 636.25: no match
-- Beat 636.50: no match
-- Beat 636.75: no match
-- Beat 637.00: no match
-- Beat 638.00: no match
-- Beat 640.00: no match
-- Beat 640.25: no match
-- Beat 640.50: no match
-- Beat 640.75: no match
-- Beat 641.00: no match
-- Beat 641.25: no match
-- Beat 641.50: no match
-- Beat 641.75: no match
-- Beat 642.00: no match
-- Beat 642.25: no match
-- Beat 642.50: no match
-- Beat 642.75: no match
-- Beat 643.00: no match
-- Beat 643.25: no match
-- Beat 643.50: no match
-- Beat 643.75: no match
-- Beat 644.00: no match
-- Beat 644.25: no match
-- Beat 644.50: no match
-- Beat 644.75: no match
-- Beat 645.00: no match
-- Beat 645.25: no match
-- Beat 645.50: no match
-- Beat 645.75: no match
-- Beat 646.00: no match
-- Beat 646.25: no match
-- Beat 646.50: no match
-- Beat 646.75: no match
-- Beat 647.00: no match
-- Beat 647.25: no match
-- Beat 647.50: no match
-- Beat 647.75: no match
-- Beat 648.00: no match
-- Beat 648.25: no match
-- Beat 648.50: no match
-- Beat 648.75: no match
-- Beat 649.00: no match
-- Beat 649.25: no match
-- Beat 649.50: no match
-- Beat 649.75: no match
-- Beat 650.00: no match
-- Beat 650.25: no match
-- Beat 650.50: no match
-- Beat 650.75: no match
-- Beat 651.00: no match
-- Beat 651.25: no match
-- Beat 651.50: no match
-- Beat 651.75: no match
-- Beat 652.00: no match
-- Beat 652.25: no match
-- Beat 652.50: no match
-- Beat 652.75: no match
-- Beat 653.00: no match
-- Beat 653.25: no match
-- Beat 653.50: no match
-- Beat 653.75: no match
-- Beat 654.00: no match
-- Beat 654.25: no match
-- Beat 654.50: no match
-- Beat 654.75: no match
-- Beat 655.00: no match
-- Beat 655.25: no match
-- Beat 655.50: no match
-- Beat 655.75: no match
-- Beat 656.00: no match
-- Beat 656.25: no match
-- Beat 656.50: no match
-- Beat 656.75: no match
-- Beat 657.00: no match
-- Beat 657.25: no match
-- Beat 657.50: no match
-- Beat 657.75: no match
-- Beat 658.00: vi
-- Beat 658.25: no match
-- Beat 658.50: no match
-- Beat 658.75: no match
-- Beat 659.00: no match
-- Beat 659.25: no match
-- Beat 659.50: no match
-- Beat 659.75: no match
-- Beat 660.00: no match
-- Beat 660.25: no match
-- Beat 660.50: no match
-- Beat 660.75: no match
-- Beat 661.00: V
-- Beat 661.75: no match
-- Beat 661.88: no match
-- Beat 662.00: no match
-- Beat 662.50: no match
-- Beat 663.00: no match
-- Beat 663.50: no match
-- Beat 664.00: no match
-- Beat 664.25: no match
-- Beat 664.50: no match
-- Beat 664.75: no match
-- Beat 665.00: no match
-- Beat 665.25: no match
-- Beat 665.50: no match
-- Beat 665.75: no match
-- Beat 666.00: no match
-- Beat 666.25: no match
-- Beat 666.50: no match
-- Beat 666.75: no match
-- Beat 667.00: no match
-- Beat 667.25: no match
-- Beat 667.50: no match
-- Beat 667.75: no match
-- Beat 668.00: no match
-- Beat 668.25: no match
-- Beat 668.50: no match
-- Beat 668.75: no match
-- Beat 669.00: no match
-- Beat 669.25: no match
-- Beat 669.50: no match
-- Beat 669.75: no match
-- Beat 670.00: no match
-- Beat 670.25: no match
-- Beat 670.50: no match
-- Beat 670.75: no match
-- Beat 671.00: no match
-- Beat 671.25: no match
-- Beat 671.50: no match
-- Beat 671.75: no match
-- Beat 672.00: no match
-- Beat 672.25: no match
-- Beat 672.50: no match
-- Beat 672.75: no match
-- Beat 673.00: no match
-- Beat 673.25: no match
-- Beat 673.50: no match
-- Beat 673.75: no match
-- Beat 674.00: no match
-- Beat 674.25: no match
-- Beat 674.50: no match
-- Beat 674.75: no match
-- Beat 675.00: no match
-- Beat 675.25: no match
-- Beat 675.50: no match
-- Beat 675.75: no match
-- Beat 676.00: no match
-- Beat 676.25: no match
-- Beat 676.50: no match
-- Beat 676.75: no match
-- Beat 677.00: no match
-- Beat 677.25: no match
-- Beat 677.50: no match
-- Beat 677.75: no match
-- Beat 678.00: no match
-- Beat 678.25: no match
-- Beat 678.50: no match
-- Beat 678.75: no match
-- Beat 679.00: no match
-- Beat 679.25: no match
-- Beat 679.50: no match
-- Beat 679.75: no match
-- Beat 680.00: no match
-- Beat 680.25: no match
-- Beat 680.50: no match
-- Beat 680.75: no match
-- Beat 681.00: no match
-- Beat 681.25: no match
-- Beat 681.50: no match
-- Beat 681.75: no match
-- Beat 682.00: no match
-- Beat 682.25: no match
-- Beat 682.50: no match
-- Beat 682.75: no match
-- Beat 683.00: no match
-- Beat 683.25: no match
-- Beat 683.50: no match
-- Beat 683.75: no match
-- Beat 684.00: no match
-- Beat 684.25: no match
-- Beat 684.50: no match
-- Beat 684.75: no match
-- Beat 685.00: no match
-- Beat 686.00: no match
-- Beat 688.00: no match
-- Beat 688.25: no match
-- Beat 688.50: no match
-- Beat 688.75: no match
-- Beat 689.00: no match
-- Beat 689.25: no match
-- Beat 689.50: no match
-- Beat 689.75: no match
-- Beat 690.00: no match
-- Beat 690.25: no match
-- Beat 690.50: no match
-- Beat 690.75: no match
-- Beat 691.00: no match
-- Beat 691.25: no match
-- Beat 691.50: no match
-- Beat 691.75: no match
-- Beat 692.00: no match
-- Beat 692.25: no match
-- Beat 692.50: no match
-- Beat 692.75: no match
-- Beat 693.00: no match
-- Beat 693.25: no match
-- Beat 693.50: no match
-- Beat 693.75: no match
-- Beat 694.00: no match
-- Beat 694.25: no match
-- Beat 694.50: no match
-- Beat 694.75: no match
-- Beat 695.00: no match
-- Beat 695.25: no match
-- Beat 695.50: no match
-- Beat 695.75: no match
-- Beat 696.00: no match
-- Beat 696.25: no match
-- Beat 696.50: no match
-- Beat 696.75: no match
-- Beat 697.00: no match
-- Beat 697.25: no match
-- Beat 697.50: no match
-- Beat 697.75: no match
-- Beat 698.00: no match
-- Beat 698.25: no match
-- Beat 698.50: no match
-- Beat 698.75: no match
-- Beat 699.00: no match
-- Beat 699.25: no match
-- Beat 699.50: no match
-- Beat 699.75: no match
-- Beat 700.00: no match
-- Beat 700.25: no match
-- Beat 700.50: no match
-- Beat 700.75: no match
-- Beat 701.00: no match
-- Beat 701.25: no match
-- Beat 701.50: no match
-- Beat 701.75: no match
-- Beat 702.00: no match
-- Beat 702.25: no match
-- Beat 702.50: no match
-- Beat 702.75: no match
-- Beat 703.00: no match
-- Beat 703.25: no match
-- Beat 703.50: no match
-- Beat 703.75: no match
-- Beat 704.00: no match
-- Beat 704.25: no match
-- Beat 704.50: no match
-- Beat 704.75: no match
-- Beat 705.00: no match
-- Beat 705.25: no match
-- Beat 705.50: no match
-- Beat 705.75: no match
-- Beat 706.00: no match
-- Beat 706.25: no match
-- Beat 706.50: no match
-- Beat 706.75: no match
-- Beat 707.00: no match
-- Beat 707.25: no match
-- Beat 707.50: no match
-- Beat 707.75: no match
-- Beat 708.00: no match
-- Beat 708.25: no match
-- Beat 708.50: no match
-- Beat 708.75: no match
-- Beat 709.00: no match
-- Beat 710.00: no match
-- Beat 710.25: no match
-- Beat 710.50: no match
-- Beat 710.75: no match
-- Beat 711.00: no match
-- Beat 711.25: no match
-- Beat 711.50: no match
-- Beat 711.75: no match
-- Beat 712.00: no match
-- Beat 712.25: no match
-- Beat 712.50: no match
-- Beat 712.75: no match
-- Beat 713.00: no match
-- Beat 713.25: no match
-- Beat 713.50: no match
-- Beat 713.75: no match
-- Beat 714.00: no match
-- Beat 714.25: no match
-- Beat 714.50: no match
-- Beat 714.75: no match
-- Beat 715.00: no match
-- Beat 715.25: no match
-- Beat 715.50: no match
-- Beat 715.75: no match
-- Beat 716.00: no match
-- Beat 716.25: no match
-- Beat 716.50: no match
-- Beat 716.75: no match
-- Beat 717.00: no match
-- Beat 717.25: no match
-- Beat 717.50: no match
-- Beat 717.75: no match
-- Beat 718.00: no match
-- Beat 718.25: no match
-- Beat 718.50: no match
-- Beat 718.75: no match
-- Beat 719.00: no match
-- Beat 719.25: no match
-- Beat 719.50: no match
-- Beat 719.75: no match
-- Beat 720.00: no match
-- Beat 720.25: no match
-- Beat 720.50: no match
-- Beat 720.75: no match
-- Beat 721.00: no match
-- Beat 721.25: no match
-- Beat 721.50: no match
-- Beat 721.75: no match
-- Beat 722.00: no match
-- Beat 722.25: no match
-- Beat 722.50: no match
-- Beat 722.75: no match
-- Beat 723.00: no match
-- Beat 723.25: no match
-- Beat 723.50: no match
-- Beat 723.75: no match
-- Beat 724.00: no match
-- Beat 724.25: no match
-- Beat 724.50: no match
-- Beat 724.75: no match
-- Beat 725.00: no match
-- Beat 725.25: no match
-- Beat 725.50: no match
-- Beat 725.75: no match
-- Beat 726.00: no match
-- Beat 726.25: no match
-- Beat 726.50: no match
-- Beat 726.75: no match
-- Beat 727.00: no match
-- Beat 727.25: no match
-- Beat 727.50: no match
-- Beat 727.75: no match
-- Beat 728.00: no match
-- Beat 728.25: no match
-- Beat 728.50: no match
-- Beat 728.75: no match
-- Beat 729.00: no match
-- Beat 729.25: no match
-- Beat 729.50: no match
-- Beat 729.75: no match
-- Beat 730.00: no match
-- Beat 730.25: no match
-- Beat 730.50: no match
-- Beat 730.75: no match
-- Beat 731.00: no match
-- Beat 731.25: no match
-- Beat 731.50: no match
-- Beat 731.75: no match
-- Beat 732.00: no match
-- Beat 732.25: no match
-- Beat 732.50: no match
-- Beat 732.75: no match
-- Beat 733.00: no match
-- Beat 734.00: no match
-- Beat 736.00: no match
-- Beat 736.25: no match
-- Beat 736.50: no match
-- Beat 736.75: no match
-- Beat 737.00: no match
-- Beat 737.25: no match
-- Beat 737.50: no match
-- Beat 737.75: no match
-- Beat 738.00: no match
-- Beat 738.25: no match
-- Beat 738.50: no match
-- Beat 738.75: no match
-- Beat 739.00: no match
-- Beat 739.25: no match
-- Beat 739.50: no match
-- Beat 739.75: no match
-- Beat 740.00: no match
-- Beat 740.25: no match
-- Beat 740.50: no match
-- Beat 740.75: no match
-- Beat 741.00: no match
-- Beat 741.25: no match
-- Beat 741.50: no match
-- Beat 741.75: no match
-- Beat 742.00: no match
-- Beat 742.25: no match
-- Beat 742.50: no match
-- Beat 742.75: no match
-- Beat 743.00: no match
-- Beat 743.25: no match
-- Beat 743.50: no match
-- Beat 743.75: no match
-- Beat 744.00: no match
-- Beat 744.25: no match
-- Beat 744.50: no match
-- Beat 744.75: no match
-- Beat 745.00: no match
-- Beat 745.25: no match
-- Beat 745.50: no match
-- Beat 745.75: no match
-- Beat 746.00: no match
-- Beat 746.25: no match
-- Beat 746.50: no match
-- Beat 746.75: no match
-- Beat 747.00: no match
-- Beat 747.25: no match
-- Beat 747.50: no match
-- Beat 747.75: no match
-- Beat 748.00: no match
-- Beat 748.25: no match
-- Beat 748.50: no match
-- Beat 748.75: no match
-- Beat 749.00: no match
-- Beat 749.25: no match
-- Beat 749.50: no match
-- Beat 749.75: no match
-- Beat 750.00: no match
-- Beat 750.25: no match
-- Beat 750.50: no match
-- Beat 750.75: no match
-- Beat 751.00: no match
-- Beat 751.25: no match
-- Beat 751.50: no match
-- Beat 751.75: no match
-- Beat 752.00: no match
-- Beat 752.25: no match
-- Beat 752.50: no match
-- Beat 752.75: no match
-- Beat 753.00: no match
-- Beat 753.25: no match
-- Beat 753.50: no match
-- Beat 753.75: no match
-- Beat 754.00: no match
-- Beat 754.25: no match
-- Beat 754.50: no match
-- Beat 754.75: no match
-- Beat 755.00: no match
-- Beat 755.25: no match
-- Beat 755.50: no match
-- Beat 755.75: no match
-- Beat 756.00: no match
-- Beat 756.25: no match
-- Beat 756.50: no match
-- Beat 756.75: no match
-- Beat 757.00: no match
-- Beat 758.00: no match
-- Beat 758.25: no match
-- Beat 758.50: no match
-- Beat 758.75: no match
-- Beat 759.00: no match
-- Beat 759.25: no match
-- Beat 759.50: no match
-- Beat 759.75: no match
-- Beat 760.00: no match
-- Beat 760.25: no match
-- Beat 760.50: no match
-- Beat 760.75: no match
-- Beat 761.00: no match
-- Beat 761.25: no match
-- Beat 761.50: no match
-- Beat 761.75: no match
-- Beat 762.00: no match
-- Beat 762.25: no match
-- Beat 762.50: no match
-- Beat 762.75: no match
-- Beat 763.00: no match
-- Beat 763.25: no match
-- Beat 763.50: no match
-- Beat 763.75: no match
-- Beat 764.00: no match
-- Beat 764.25: no match
-- Beat 764.50: no match
-- Beat 764.75: no match
-- Beat 765.00: no match
-- Beat 765.25: no match
-- Beat 765.50: no match
-- Beat 765.75: no match
-- Beat 766.00: no match
-- Beat 766.25: no match
-- Beat 766.50: no match
-- Beat 766.75: no match
-- Beat 767.00: no match
-- Beat 767.25: no match
-- Beat 767.50: no match
-- Beat 767.75: no match
-- Beat 768.00: no match
-- Beat 768.25: no match
-- Beat 768.50: no match
-- Beat 768.75: no match
-- Beat 769.00: no match
-- Beat 769.25: no match
-- Beat 769.50: no match
-- Beat 769.75: no match
-- Beat 770.00: no match
-- Beat 770.25: no match
-- Beat 770.50: no match
-- Beat 770.75: no match
-- Beat 771.00: no match
-- Beat 771.25: no match
-- Beat 771.50: no match
-- Beat 771.75: no match
-- Beat 772.00: no match
-- Beat 772.25: no match
-- Beat 772.50: no match
-- Beat 772.75: no match
-- Beat 773.00: no match
-- Beat 773.25: no match
-- Beat 773.50: no match
-- Beat 773.75: no match
-- Beat 774.00: no match
-- Beat 774.25: no match
-- Beat 774.50: no match
-- Beat 774.75: no match
-- Beat 775.00: no match
-- Beat 775.25: no match
-- Beat 775.50: no match
-- Beat 775.75: no match
-- Beat 776.00: no match
-- Beat 776.25: no match
-- Beat 776.50: no match
-- Beat 776.75: no match
-- Beat 777.00: no match
-- Beat 777.25: no match
-- Beat 777.50: no match
-- Beat 777.75: no match
-- Beat 778.00: no match
-- Beat 778.25: no match
-- Beat 778.50: no match
-- Beat 778.75: no match
-- Beat 779.00: no match
-- Beat 779.25: no match
-- Beat 779.50: no match
-- Beat 779.75: no match
-- Beat 780.00: no match
-- Beat 780.25: no match
-- Beat 780.50: no match
-- Beat 780.75: no match
-- Beat 781.00: no match
-- Beat 782.00: no match
-- Beat 784.00: no match
-- Beat 784.25: no match
-- Beat 784.50: no match
-- Beat 784.75: no match
-- Beat 785.00: no match
-- Beat 785.25: no match
-- Beat 785.50: no match
-- Beat 785.75: no match
-- Beat 786.00: no match
-- Beat 786.25: no match
-- Beat 786.50: no match
-- Beat 786.75: no match
-- Beat 787.00: no match
-- Beat 787.25: no match
-- Beat 787.50: no match
-- Beat 787.75: no match
-- Beat 788.00: no match
-- Beat 788.25: no match
-- Beat 788.50: no match
-- Beat 788.75: no match
-- Beat 789.00: no match
-- Beat 789.25: no match
-- Beat 789.50: no match
-- Beat 789.75: no match
-- Beat 790.00: no match
-- Beat 790.25: no match
-- Beat 790.50: no match
-- Beat 790.75: no match
-- Beat 791.00: no match
-- Beat 791.25: no match
-- Beat 791.50: no match
-- Beat 791.75: no match
-- Beat 792.00: no match
-- Beat 792.25: no match
-- Beat 792.50: no match
-- Beat 792.75: no match
-- Beat 793.00: no match
-- Beat 793.25: no match
-- Beat 793.50: no match
-- Beat 793.75: no match
-- Beat 794.00: no match
-- Beat 794.25: no match
-- Beat 794.50: no match
-- Beat 794.75: no match
-- Beat 795.00: no match
-- Beat 795.25: no match
-- Beat 795.50: no match
-- Beat 795.75: no match
-- Beat 796.00: no match
-- Beat 796.25: no match
-- Beat 796.50: no match
-- Beat 796.75: no match
-- Beat 797.00: no match
-- Beat 797.25: no match
-- Beat 797.50: no match
-- Beat 797.75: no match
-- Beat 798.00: no match
-- Beat 798.25: no match
-- Beat 798.50: no match
-- Beat 798.75: no match
-- Beat 799.00: no match
-- Beat 799.25: no match
-- Beat 799.50: no match
-- Beat 799.75: no match
-- Beat 800.00: no match
-- Beat 800.25: no match
-- Beat 800.50: no match
-- Beat 800.75: no match
-- Beat 801.00: no match
-- Beat 801.25: no match
-- Beat 801.50: no match
-- Beat 801.75: no match
-- Beat 802.00: no match
-- Beat 802.25: no match
-- Beat 802.50: no match
-- Beat 802.75: no match
-- Beat 803.00: no match
-- Beat 803.25: no match
-- Beat 803.50: no match
-- Beat 803.75: no match
-- Beat 804.00: no match
-- Beat 804.25: no match
-- Beat 804.50: no match
-- Beat 804.75: no match
-- Beat 805.00: no match
-- Beat 806.00: no match
-- Beat 806.25: no match
-- Beat 806.50: no match
-- Beat 806.75: no match
-- Beat 807.00: no match
-- Beat 807.25: no match
-- Beat 807.50: no match
-- Beat 807.75: no match
-- Beat 808.00: no match
-- Beat 808.25: no match
-- Beat 808.50: no match
-- Beat 808.75: no match
-- Beat 809.00: no match
-- Beat 809.25: no match
-- Beat 809.50: no match
-- Beat 809.75: no match
-- Beat 810.00: no match
-- Beat 810.25: no match
-- Beat 810.50: no match
-- Beat 810.75: no match
-- Beat 811.00: no match
-- Beat 811.25: no match
-- Beat 811.50: no match
-- Beat 811.75: no match
-- Beat 812.00: no match
-- Beat 812.25: no match
-- Beat 812.50: no match
-- Beat 812.75: no match
-- Beat 813.00: no match
-- Beat 813.25: no match
-- Beat 813.50: no match
-- Beat 813.75: no match
-- Beat 814.00: no match
-- Beat 814.25: no match
-- Beat 814.50: no match
-- Beat 814.75: no match
-- Beat 815.00: no match
-- Beat 815.25: no match
-- Beat 815.50: no match
-- Beat 815.75: no match
-- Beat 816.00: no match
-- Beat 816.25: no match
-- Beat 816.50: no match
-- Beat 816.75: no match
-- Beat 817.00: no match
-- Beat 817.25: no match
-- Beat 817.50: no match
-- Beat 817.75: no match
-- Beat 818.00: no match
-- Beat 818.25: no match
-- Beat 818.50: no match
-- Beat 818.75: no match
-- Beat 819.00: no match
-- Beat 819.25: no match
-- Beat 819.50: no match
-- Beat 819.75: no match
-- Beat 820.00: no match
-- Beat 820.25: no match
-- Beat 820.50: no match
-- Beat 820.75: no match
-- Beat 821.00: no match
-- Beat 821.25: no match
-- Beat 821.50: no match
-- Beat 821.75: no match
-- Beat 822.00: no match
-- Beat 822.25: no match
-- Beat 822.50: no match
-- Beat 822.75: no match
-- Beat 823.00: no match
-- Beat 823.25: no match
-- Beat 823.50: no match
-- Beat 823.75: no match
-- Beat 824.00: no match
-- Beat 824.25: no match
-- Beat 824.50: no match
-- Beat 824.75: no match
-- Beat 825.00: no match
-- Beat 825.25: no match
-- Beat 825.50: no match
-- Beat 825.75: no match
-- Beat 826.00: no match
-- Beat 826.25: no match
-- Beat 826.50: no match
-- Beat 826.75: no match
-- Beat 827.00: no match
-- Beat 827.25: no match
-- Beat 827.50: no match
-- Beat 827.75: no match
-- Beat 828.00: no match
-- Beat 828.25: no match
-- Beat 828.50: no match
-- Beat 828.75: no match
-- Beat 829.00: no match
-- Beat 830.00: no match
-- Beat 830.25: no match
-- Beat 830.50: no match
-- Beat 830.75: no match
-- Beat 831.00: no match
-- Beat 831.25: no match
-- Beat 831.50: no match
-- Beat 831.75: no match
-- Beat 832.00: no match
-- Beat 832.25: no match
-- Beat 832.50: no match
-- Beat 832.75: no match
-- Beat 833.00: no match
-- Beat 833.25: no match
-- Beat 833.50: no match
-- Beat 833.75: no match
-- Beat 834.00: no match
-- Beat 834.25: no match
-- Beat 834.50: no match
-- Beat 834.75: no match
-- Beat 835.00: no match
-- Beat 835.25: no match
-- Beat 835.50: no match
-- Beat 835.75: no match
-- Beat 836.00: no match
-- Beat 836.25: no match
-- Beat 836.50: no match
-- Beat 836.75: no match
-- Beat 837.00: no match
-- Beat 837.25: no match
-- Beat 837.50: no match
-- Beat 837.75: no match
-- Beat 838.00: no match
-- Beat 838.25: no match
-- Beat 838.50: no match
-- Beat 838.75: no match
-- Beat 839.00: no match
-- Beat 839.25: no match
-- Beat 839.50: no match
-- Beat 839.75: no match
-- Beat 840.00: no match
-- Beat 840.25: no match
-- Beat 840.50: no match
-- Beat 840.75: no match
-- Beat 841.00: no match
-- Beat 841.25: no match
-- Beat 841.50: no match
-- Beat 841.75: no match
-- Beat 842.00: no match
-- Beat 842.25: no match
-- Beat 842.50: no match
-- Beat 842.75: no match
-- Beat 843.00: no match
-- Beat 843.25: no match
-- Beat 843.50: no match
-- Beat 843.75: no match
-- Beat 844.00: no match
-- Beat 844.25: no match
-- Beat 844.50: no match
-- Beat 844.75: no match
-- Beat 845.00: no match
-- Beat 845.25: no match
-- Beat 845.50: no match
-- Beat 845.75: no match
-- Beat 846.00: no match
-- Beat 846.25: no match
-- Beat 846.50: no match
-- Beat 846.75: no match
-- Beat 847.00: no match
-- Beat 847.25: no match
-- Beat 847.50: no match
-- Beat 847.75: no match
-- Beat 848.00: no match
-- Beat 848.25: no match
-- Beat 848.50: no match
-- Beat 848.75: no match
-- Beat 849.00: no match
-- Beat 849.25: no match
-- Beat 849.50: no match
-- Beat 849.75: no match
-- Beat 850.00: vi
-- Beat 850.25: no match
-- Beat 850.50: no match
-- Beat 850.75: no match
-- Beat 851.00: no match
-- Beat 851.25: no match
-- Beat 851.50: no match
-- Beat 851.75: no match
-- Beat 852.00: no match
-- Beat 852.25: no match
-- Beat 852.50: no match
-- Beat 852.75: no match
-- Beat 853.00: V
-- Beat 853.75: no match
-- Beat 853.88: no match
-- Beat 854.00: no match
-- Beat 854.50: no match
-- Beat 855.00: no match
-- Beat 855.50: no match
-- Beat 856.00: no match
-- Beat 856.25: no match
-- Beat 856.50: no match
-- Beat 856.75: no match
-- Beat 857.00: no match
-- Beat 857.25: no match
-- Beat 857.50: no match
-- Beat 857.75: no match
-- Beat 858.00: no match
-- Beat 858.25: no match
-- Beat 858.50: no match
-- Beat 858.75: no match
-- Beat 859.00: no match
-- Beat 859.25: no match
-- Beat 859.50: no match
-- Beat 859.75: no match
-- Beat 860.00: no match
-- Beat 860.25: no match
-- Beat 860.50: no match
-- Beat 860.75: no match
-- Beat 861.00: no match
-- Beat 861.25: no match
-- Beat 861.50: no match
-- Beat 861.75: no match
-- Beat 862.00: no match
-- Beat 862.25: no match
-- Beat 862.50: no match
-- Beat 862.75: no match
-- Beat 863.00: no match
-- Beat 863.25: no match
-- Beat 863.50: no match
-- Beat 863.75: no match
-- Beat 864.00: no match
-- Beat 864.25: no match
-- Beat 864.50: no match
-- Beat 864.75: no match
-- Beat 865.00: no match
-- Beat 865.25: no match
-- Beat 865.50: no match
-- Beat 865.75: no match
-- Beat 866.00: no match
-- Beat 866.25: no match
-- Beat 866.50: no match
-- Beat 866.75: no match
-- Beat 867.00: no match
-- Beat 867.25: no match
-- Beat 867.50: no match
-- Beat 867.75: no match
-- Beat 868.00: no match
-- Beat 868.25: no match
-- Beat 868.50: no match
-- Beat 868.75: no match
-- Beat 869.00: no match
-- Beat 869.25: no match
-- Beat 869.50: no match
-- Beat 869.75: no match
-- Beat 870.00: no match
-- Beat 870.25: no match
-- Beat 870.50: no match
-- Beat 870.75: no match
-- Beat 871.00: no match
-- Beat 871.25: no match
-- Beat 871.50: no match
-- Beat 871.75: no match
-- Beat 872.00: no match
-- Beat 872.25: no match
-- Beat 872.50: no match
-- Beat 872.75: no match
-- Beat 873.00: no match
-- Beat 873.25: no match
-- Beat 873.50: no match
-- Beat 873.75: no match
-- Beat 874.00: no match
-- Beat 874.25: no match
-- Beat 874.50: no match
-- Beat 874.75: no match
-- Beat 875.00: no match
-- Beat 875.25: no match
-- Beat 875.50: no match
-- Beat 875.75: no match
-- Beat 876.00: no match
-- Beat 876.25: no match
-- Beat 876.50: no match
-- Beat 876.75: no match
-- Beat 877.00: no match
-- Beat 877.25: no match
-- Beat 877.50: no match
-- Beat 877.75: no match
-- Beat 878.00: no match
-- Beat 878.25: no match
-- Beat 878.50: no match
-- Beat 878.75: no match
-- Beat 879.00: no match
-- Beat 879.25: no match
-- Beat 879.50: no match
-- Beat 879.75: no match
-- Beat 880.00: no match
-- Beat 880.25: no match
-- Beat 880.50: no match
-- Beat 880.75: no match
-- Beat 881.00: no match
-- Beat 881.25: no match
-- Beat 881.50: no match
-- Beat 881.75: no match
-- Beat 882.00: no match
-- Beat 882.25: no match
-- Beat 882.50: no match
-- Beat 882.75: no match
-- Beat 883.00: no match
-- Beat 883.25: no match
-- Beat 883.50: no match
-- Beat 883.75: no match
-- Beat 884.00: no match
-- Beat 884.25: no match
-- Beat 884.50: no match
-- Beat 884.75: no match
-- Beat 885.00: no match
-- Beat 885.25: no match
-- Beat 885.50: no match
-- Beat 885.75: no match
-- Beat 886.00: no match
-- Beat 886.25: no match
-- Beat 886.50: no match
-- Beat 886.75: no match
-- Beat 887.00: no match
-- Beat 887.25: no match
-- Beat 887.50: no match
-- Beat 887.75: no match
-- Beat 888.00: no match
-- Beat 888.25: no match
-- Beat 888.50: no match
-- Beat 888.75: no match
-- Beat 889.00: no match
-- Beat 889.25: no match
-- Beat 889.50: no match
-- Beat 889.75: no match
-- Beat 890.00: no match
-- Beat 890.25: no match
-- Beat 890.50: no match
-- Beat 890.75: no match
-- Beat 891.00: no match
-- Beat 891.25: no match
-- Beat 891.50: no match
-- Beat 891.75: no match
-- Beat 892.00: no match
-- Beat 892.25: no match
-- Beat 892.50: no match
-- Beat 892.75: no match
-- Beat 893.00: no match
-- Beat 893.25: no match
-- Beat 893.50: no match
-- Beat 893.75: no match
-- Beat 894.00: no match
-- Beat 894.25: no match
-- Beat 894.50: no match
-- Beat 894.75: no match
-- Beat 895.00: no match
-- Beat 895.25: no match
-- Beat 895.50: no match
-- Beat 895.75: no match
-- Beat 896.00: no match
-- Beat 896.25: no match
-- Beat 896.50: no match
-- Beat 896.75: no match
-- Beat 897.00: no match
-- Beat 897.25: no match
-- Beat 897.50: no match
-- Beat 897.75: no match
-- Beat 898.00: no match
-- Beat 898.25: no match
-- Beat 898.50: no match
-- Beat 898.75: no match
-- Beat 899.00: no match
-- Beat 899.25: no match
-- Beat 899.50: no match
-- Beat 899.62: no match
-- Beat 899.75: no match
-- Beat 899.88: no match
-- Beat 900.00: no match
-- Beat 900.25: no match
-- Beat 900.50: no match
-- Beat 900.75: no match
-- Beat 901.00: no match
-- Beat 901.25: no match
-- Beat 901.50: no match
-- Beat 901.75: no match
-- Beat 902.00: no match
-- Beat 902.25: no match
-- Beat 902.50: no match
-- Beat 902.75: no match
-- Beat 903.00: no match
-- Beat 903.25: no match
-- Beat 903.50: no match
-- Beat 903.75: no match
-- Beat 904.00: no match
-- Beat 904.25: no match
-- Beat 904.50: no match
-- Beat 904.75: no match
-- Beat 905.00: no match
-- Beat 905.25: no match
-- Beat 905.50: no match
-- Beat 905.75: no match
-- Beat 906.00: no match
-- Beat 906.25: no match
-- Beat 906.50: no match
-- Beat 906.75: no match
-- Beat 907.00: no match
-- Beat 908.00: no match
-- Beat 913.00: no match
-- Beat 913.50: no match
-- Beat 914.00: vi
-- Beat 914.50: no match
-- Beat 915.00: ii
-- Beat 915.50: no match
-- Beat 916.00: V
-- Beat 916.50: no match
-- Beat 917.00: I
-- Beat 917.25: no match
-- Beat 917.50: no match
-- Beat 917.75: no match
-- Beat 918.00: no match
-- Beat 918.25: no match
-- Beat 918.50: no match
-- Beat 918.75: no match
-- Beat 919.00: no match
-- Beat 919.25: no match
-- Beat 919.50: no match
-- Beat 919.75: no match
-- Beat 920.00: no match
-- Beat 920.25: no match
-- Beat 920.50: no match
-- Beat 920.75: no match
-- Beat 921.00: no match
-- Beat 921.50: no match
-- Beat 922.00: vi
-- Beat 922.50: no match
-- Beat 923.00: ii
-- Beat 923.50: no match
-- Beat 924.00: V
-- Beat 924.50: no match
-- Beat 925.00: vi
-- Beat 925.25: no match
-- Beat 925.50: no match
-- Beat 925.75: no match
-- Beat 926.00: no match
-- Beat 926.25: no match
-- Beat 926.50: no match
-- Beat 926.75: no match
-- Beat 927.00: no match
-- Beat 927.25: no match
-- Beat 927.50: no match
-- Beat 927.75: no match
-- Beat 928.00: no match
-- Beat 928.50: no match
-- Beat 929.00: no match
-- Beat 929.50: no match
-- Beat 930.00: vi
-- Beat 930.50: no match
-- Beat 931.00: ii
-- Beat 931.50: no match
-- Beat 932.00: V
-- Beat 932.50: no match
-- Beat 933.00: I
-- Beat 933.25: no match
-- Beat 933.50: no match
-- Beat 933.75: no match
-- Beat 934.00: no match
-- Beat 934.25: no match
-- Beat 934.50: no match
-- Beat 934.75: no match
-- Beat 935.00: no match
-- Beat 935.25: no match
-- Beat 935.50: no match
-- Beat 935.75: no match
-- Beat 936.00: no match
-- Beat 936.25: no match
-- Beat 936.50: no match
-- Beat 936.75: no match
-- Beat 937.00: no match
-- Beat 937.50: no match
-- Beat 938.00: vi
-- Beat 938.50: no match
-- Beat 939.00: ii
-- Beat 939.50: no match
-- Beat 940.00: V
-- Beat 940.50: no match
-- Beat 941.00: vi
-- Beat 941.25: no match
-- Beat 941.50: no match
-- Beat 941.75: no match
-- Beat 942.00: no match
-- Beat 942.25: no match
-- Beat 942.50: no match
-- Beat 942.75: no match
-- Beat 943.00: no match
-- Beat 943.25: no match
-- Beat 943.50: no match
-- Beat 943.75: no match
-- Beat 944.00: no match
-- Beat 944.50: no match
-- Beat 945.00: no match
-- Beat 945.25: no match
-- Beat 945.50: no match
-- Beat 945.75: no match
-- Beat 946.00: no match
-- Beat 946.25: no match
-- Beat 946.50: no match
-- Beat 946.75: no match
-- Beat 947.00: no match
-- Beat 947.25: no match
-- Beat 947.50: no match
-- Beat 947.75: no match
-- Beat 948.00: no match
-- Beat 948.25: no match
-- Beat 948.50: no match
-- Beat 948.75: no match
-- Beat 949.00: no match
-- Beat 949.25: no match
-- Beat 949.50: no match
-- Beat 949.75: no match
-- Beat 950.00: no match
-- Beat 950.25: no match
-- Beat 950.50: no match
-- Beat 950.75: no match
-- Beat 951.00: no match
-- Beat 951.25: no match
-- Beat 951.50: no match
-- Beat 951.75: no match
-- Beat 952.00: no match
-- Beat 952.25: no match
-- Beat 952.50: no match
-- Beat 952.75: no match
-- Beat 953.00: no match
-- Beat 953.50: no match
-- Beat 954.00: iii
-- Beat 954.50: no match
-- Beat 955.00: vi
-- Beat 955.50: no match
-- Beat 956.00: no match
-- Beat 956.50: no match
-- Beat 957.00: V
-- Beat 957.25: no match
-- Beat 957.50: no match
-- Beat 957.75: no match
-- Beat 958.00: no match
-- Beat 958.25: no match
-- Beat 958.50: no match
-- Beat 958.75: no match
-- Beat 959.00: no match
-- Beat 959.25: no match
-- Beat 959.50: no match
-- Beat 959.75: no match
-- Beat 960.00: no match
-- Beat 960.50: no match
-- Beat 961.00: no match
-- Beat 961.25: no match
-- Beat 961.50: no match
-- Beat 961.75: no match
-- Beat 962.00: V
-- Beat 962.50: no match
-- Beat 963.00: no match
-- Beat 963.25: no match
-- Beat 963.50: no match
-- Beat 963.75: no match
-- Beat 964.00: no match
-- Beat 964.50: no match
-- Beat 965.00: no match
-- Beat 965.25: no match
-- Beat 965.50: no match
-- Beat 965.75: no match
-- Beat 966.00: no match
-- Beat 966.50: no match
-- Beat 967.00: no match
-- Beat 967.50: no match
-- Beat 968.00: no match
-- Beat 969.00: no match
-- Beat 969.50: no match
-- Beat 970.00: vi
-- Beat 970.50: no match
-- Beat 971.00: ii
-- Beat 971.50: no match
-- Beat 972.00: V
-- Beat 972.50: no match
-- Beat 973.00: I
-- Beat 973.25: no match
-- Beat 973.50: no match
-- Beat 973.75: no match
-- Beat 974.00: no match
-- Beat 974.25: no match
-- Beat 974.50: no match
-- Beat 974.75: no match
-- Beat 975.00: no match
-- Beat 975.25: no match
-- Beat 975.50: no match
-- Beat 975.75: no match
-- Beat 976.00: no match
-- Beat 976.25: no match
-- Beat 976.50: no match
-- Beat 976.75: no match
-- Beat 977.00: no match
-- Beat 977.50: no match
-- Beat 978.00: vi
-- Beat 978.50: no match
-- Beat 979.00: ii
-- Beat 979.50: no match
-- Beat 980.00: V
-- Beat 980.50: no match
-- Beat 981.00: vi
-- Beat 981.25: no match
-- Beat 981.50: no match
-- Beat 981.75: no match
-- Beat 982.00: no match
-- Beat 982.25: no match
-- Beat 982.50: no match
-- Beat 982.75: no match
-- Beat 983.00: no match
-- Beat 983.25: no match
-- Beat 983.50: no match
-- Beat 983.75: no match
-- Beat 984.00: no match
-- Beat 984.50: no match
-- Beat 985.00: no match
-- Beat 985.50: no match
-- Beat 986.00: vi
-- Beat 986.25: no match
-- Beat 986.50: no match
-- Beat 986.75: no match
-- Beat 987.00: no match
-- Beat 987.50: no match
-- Beat 988.00: no match
-- Beat 988.25: no match
-- Beat 988.50: no match
-- Beat 988.75: no match
-- Beat 989.00: no match
-- Beat 989.50: no match
-- Beat 990.00: vi
-- Beat 990.25: no match
-- Beat 990.50: no match
-- Beat 990.75: no match
-- Beat 991.00: no match
-- Beat 991.50: no match
-- Beat 992.00: no match
-- Beat 992.25: no match
-- Beat 992.50: no match
-- Beat 992.75: no match
-- Beat 993.00: vi
-- Beat 993.25: no match
-- Beat 993.50: no match
-- Beat 993.75: no match
-- Beat 994.00: no match
-- Beat 994.25: no match
-- Beat 994.50: no match
-- Beat 994.75: no match
-- Beat 995.00: no match
-- Beat 995.25: no match
-- Beat 995.50: no match
-- Beat 995.75: no match
-- Beat 996.00: no match
-- Beat 996.25: no match
-- Beat 996.50: no match
-- Beat 996.75: no match
-- Beat 997.00: no match
-- Beat 997.25: no match
-- Beat 997.50: no match
-- Beat 997.75: no match
-- Beat 998.00: no match
-- Beat 998.25: no match
-- Beat 998.50: no match
-- Beat 999.00: no match
-- Beat 999.50: no match
-- Beat 1000.00: no match
-- Beat 1000.25: no match
-- Beat 1000.50: no match
-- Beat 1000.75: no match
-- Beat 1001.00: no match
-- Beat 1001.25: no match
-- Beat 1001.50: no match
-- Beat 1001.75: no match
-- Beat 1002.00: no match
-- Beat 1002.25: no match
-- Beat 1002.50: no match
-- Beat 1002.75: no match
-- Beat 1003.00: no match
-- Beat 1003.25: no match
-- Beat 1003.50: no match
-- Beat 1003.75: no match
-- Beat 1004.00: no match
-- Beat 1004.25: no match
-- Beat 1004.50: no match
-- Beat 1004.75: no match
-- Beat 1005.00: no match
-- Beat 1005.25: no match
-- Beat 1005.50: no match
-- Beat 1005.75: no match
-- Beat 1006.00: no match
-- Beat 1006.25: no match
-- Beat 1006.50: no match
-- Beat 1006.75: no match
-- Beat 1007.00: no match
-- Beat 1007.25: no match
-- Beat 1007.50: no match
-- Beat 1007.75: no match
-- Beat 1008.00: no match
-- Beat 1009.00: no match
-- Beat 1009.50: no match
-- Beat 1010.00: vi
-- Beat 1010.25: no match
-- Beat 1010.50: no match
-- Beat 1010.75: no match
-- Beat 1011.00: no match
-- Beat 1011.50: no match
-- Beat 1012.00: no match
-- Beat 1012.25: no match
-- Beat 1012.50: no match
-- Beat 1012.75: no match
-- Beat 1013.00: no match
-- Beat 1013.50: no match
-- Beat 1014.00: vi
-- Beat 1014.25: no match
-- Beat 1014.50: no match
-- Beat 1014.75: no match
-- Beat 1015.00: no match
-- Beat 1015.50: no match
-- Beat 1016.00: no match
-- Beat 1016.25: no match
-- Beat 1016.50: no match
-- Beat 1016.75: no match
-- Beat 1017.00: no match
-- Beat 1017.25: no match
-- Beat 1017.50: no match
-- Beat 1017.75: no match
-- Beat 1018.00: no match
-- Beat 1018.25: no match
-- Beat 1018.50: no match
-- Beat 1018.75: no match
-- Beat 1019.00: no match
-- Beat 1019.25: no match
-- Beat 1019.50: no match
-- Beat 1019.75: no match
-- Beat 1020.00: no match
-- Beat 1020.25: no match
-- Beat 1020.50: no match
-- Beat 1020.75: no match
-- Beat 1021.00: no match
-- Beat 1021.25: no match
-- Beat 1021.50: no match
-- Beat 1021.75: no match
-- Beat 1022.00: no match
-- Beat 1022.25: no match
-- Beat 1022.50: no match
-- Beat 1022.75: no match
-- Beat 1023.00: vi
-- Beat 1023.50: no match
-- Beat 1024.00: no match
-- Beat 1024.25: no match
-- Beat 1024.50: no match
-- Beat 1024.75: no match
-- Beat 1025.00: no match
-- Beat 1025.25: no match
-- Beat 1025.50: no match
-- Beat 1025.75: no match
-- Beat 1026.00: no match
-- Beat 1026.25: no match
-- Beat 1026.50: no match
-- Beat 1026.75: no match
-- Beat 1027.00: no match
-- Beat 1027.25: no match
-- Beat 1027.50: no match
-- Beat 1027.75: no match
-- Beat 1028.00: no match
-- Beat 1028.25: no match
-- Beat 1028.50: no match
-- Beat 1028.75: no match
-- Beat 1029.00: no match
-- Beat 1029.25: no match
-- Beat 1029.50: no match
-- Beat 1029.75: no match
-- Beat 1030.00: no match
-- Beat 1030.25: no match
-- Beat 1030.50: no match
-- Beat 1030.75: no match
-- Beat 1031.00: no match
-- Beat 1031.25: no match
-- Beat 1031.50: no match
-- Beat 1031.75: no match
-- Beat 1035.00: no match
-- Beat 1035.50: no match
-- Beat 1036.00: vi
-- Beat 1036.50: no match
-- Beat 1037.00: ii
-- Beat 1037.50: no match
-- Beat 1038.00: V
-- Beat 1038.50: no match
-- Beat 1039.00: I
-- Beat 1039.25: no match
-- Beat 1039.50: no match
-- Beat 1039.75: no match
-- Beat 1040.00: no match
-- Beat 1040.25: no match
-- Beat 1040.50: no match
-- Beat 1040.75: no match
-- Beat 1041.00: no match
-- Beat 1041.25: no match
-- Beat 1041.50: no match
-- Beat 1041.75: no match
-- Beat 1042.00: no match
-- Beat 1042.25: no match
-- Beat 1042.50: no match
-- Beat 1042.75: no match
-- Beat 1043.00: no match
-- Beat 1043.50: no match
-- Beat 1044.00: vi
-- Beat 1044.50: no match
-- Beat 1045.00: ii
-- Beat 1045.50: no match
-- Beat 1046.00: V
-- Beat 1046.50: no match
-- Beat 1047.00: vi
-- Beat 1047.25: no match
-- Beat 1047.50: no match
-- Beat 1047.75: no match
-- Beat 1048.00: no match
-- Beat 1048.25: no match
-- Beat 1048.50: no match
-- Beat 1048.75: no match
-- Beat 1049.00: no match
-- Beat 1049.25: no match
-- Beat 1049.50: no match
-- Beat 1049.75: no match
-- Beat 1050.00: no match
-- Beat 1050.50: no match
-- Beat 1051.00: no match
-- Beat 1051.25: no match
-- Beat 1051.50: no match
-- Beat 1051.75: no match
-- Beat 1052.00: no match
-- Beat 1052.25: no match
-- Beat 1052.50: no match
-- Beat 1052.75: no match
-- Beat 1053.00: no match
-- Beat 1053.25: no match
-- Beat 1053.50: no match
-- Beat 1053.75: no match
-- Beat 1054.00: no match
-- Beat 1054.25: no match
-- Beat 1054.50: no match
-- Beat 1054.75: no match
-- Beat 1055.00: no match
-- Beat 1055.25: no match
-- Beat 1055.50: no match
-- Beat 1055.75: no match
-- Beat 1056.00: no match
-- Beat 1056.25: no match
-- Beat 1056.50: no match
-- Beat 1056.75: no match
-- Beat 1057.00: no match
-- Beat 1057.25: no match
-- Beat 1057.50: no match
-- Beat 1057.75: no match
-- Beat 1058.00: no match
-- Beat 1058.25: no match
-- Beat 1058.50: no match
-- Beat 1058.75: no match
-- Beat 1059.00: no match
-- Beat 1059.25: no match
-- Beat 1059.50: no match
-- Beat 1059.75: no match
-- Beat 1060.00: no match
-- Beat 1060.25: no match
-- Beat 1060.50: no match
-- Beat 1060.75: no match
-- Beat 1061.00: no match
-- Beat 1061.25: no match
-- Beat 1061.50: no match
-- Beat 1061.75: no match
-- Beat 1062.00: no match
-- Beat 1062.25: no match
-- Beat 1062.50: no match
-- Beat 1062.75: no match
-- Beat 1063.00: no match
-- Beat 1063.25: no match
-- Beat 1063.50: no match
-- Beat 1063.75: no match
-- Beat 1064.00: no match
-- Beat 1064.25: no match
-- Beat 1064.50: no match
-- Beat 1064.75: no match
-- Beat 1065.00: no match
-- Beat 1065.25: no match
-- Beat 1065.50: no match
-- Beat 1065.75: no match
-- Beat 1066.00: no match
-- Beat 1066.25: no match
-- Beat 1066.50: no match
-- Beat 1066.75: no match
-- Beat 1067.00: no match
-- Beat 1067.25: no match
-- Beat 1067.50: no match
-- Beat 1067.75: no match
-- Beat 1068.00: no match
-- Beat 1068.25: no match
-- Beat 1068.50: no match
-- Beat 1068.75: no match
-- Beat 1069.00: no match
-- Beat 1069.25: no match
-- Beat 1069.50: no match
-- Beat 1069.75: no match
-- Beat 1070.00: no match
-- Beat 1070.25: no match
-- Beat 1070.50: no match
-- Beat 1070.75: no match
-- Beat 1071.00: no match
-- Beat 1071.25: no match
-- Beat 1071.50: no match
-- Beat 1071.75: no match
-- Beat 1072.00: no match
-- Beat 1072.25: no match
-- Beat 1072.50: no match
-- Beat 1072.75: no match
-- Beat 1073.00: no match
-- Beat 1073.25: no match
-- Beat 1073.50: no match
-- Beat 1073.75: no match
-- Beat 1074.00: no match
-- Beat 1074.50: I
-- Beat 1075.00: I
-- Beat 1075.50: no match
-- Beat 1076.00: no match
+- m. 1, beat 1 to m. 1, beat 3: no match
+- m. 1, beat 1.5 to m. 1, beat 2: no match
+- m. 1, beat 2 to m. 1, beat 2.5: no match
+- m. 1, beat 2.5 to m. 1, beat 3: no match
+- m. 1, beat 3 to m. 1, beat 4: no match
+- m. 1, beat 3.5 to m. 1, beat 4: no match
+- m. 1, beat 4 to m. 2, beat 1: no match
+- m. 1, beat 4.5 to m. 2, beat 1: no match
+- m. 2, beat 1 to m. 2, beat 2.5: no match
+- m. 2, beat 1.5 to m. 2, beat 2: no match
+- m. 2, beat 2 to m. 2, beat 2.5: no match
+- m. 2, beat 2.5 to m. 2, beat 3: no match
+- m. 2, beat 2.75 to m. 2, beat 3: no match
+- m. 2, beat 3 to m. 3, beat 1: no match
+- m. 2, beat 3.5 to m. 2, beat 4: no match
+- m. 2, beat 4 to m. 2, beat 4.5: no match
+- m. 2, beat 4.5 to m. 3, beat 1: no match
+- m. 3, beat 1 to m. 3, beat 3: no match
+- m. 3, beat 1.5 to m. 3, beat 2: no match
+- m. 3, beat 2 to m. 3, beat 2.5: no match
+- m. 3, beat 2.5 to m. 3, beat 3: no match
+- m. 3, beat 3 to m. 3, beat 4: no match
+- m. 3, beat 3.5 to m. 3, beat 4: no match
+- m. 3, beat 4 to m. 4, beat 1: no match
+- m. 3, beat 4.5 to m. 4, beat 1: no match
+- m. 4, beat 1 to m. 4, beat 2: no match
+- m. 4, beat 1.5 to m. 4, beat 2: no match
+- m. 4, beat 2 to m. 4, beat 2.5: no match
+- m. 4, beat 2.16 to m. 4, beat 2.33: no match
+- m. 4, beat 2.33 to m. 4, beat 2.5: no match
+- m. 4, beat 2.5 to m. 4, beat 3: no match
+- m. 4, beat 2.75 to m. 4, beat 3: no match
+- m. 4, beat 3 to m. 4, beat 4: no match
+- m. 4, beat 3.5 to m. 4, beat 4: no match
+- m. 4, beat 4 to m. 4, beat 4.5: no match
+- m. 4, beat 4.5 to m. 5, beat 1: no match
+- m. 5, beat 1 to m. 5, beat 2: no match
+- m. 5, beat 1.5 to m. 5, beat 1.75: no match
+- m. 5, beat 1.75 to m. 5, beat 2: no match
+- m. 5, beat 2 to m. 5, beat 2.25: no match
+- m. 5, beat 2.25 to m. 5, beat 2.5: no match
+- m. 5, beat 2.5 to m. 5, beat 2.75: no match
+- m. 5, beat 2.75 to m. 5, beat 3: no match
+- m. 5, beat 3 to m. 5, beat 3.25: no match
+- m. 5, beat 3.25 to m. 5, beat 3.5: no match
+- m. 5, beat 3.5 to m. 5, beat 3.75: no match
+- m. 5, beat 3.75 to m. 5, beat 4: no match
+- m. 5, beat 4 to m. 6, beat 1: no match
+- m. 5, beat 4.25 to m. 5, beat 4.5: no match
+- m. 5, beat 4.5 to m. 5, beat 4.75: no match
+- m. 5, beat 4.75 to m. 6, beat 1: no match
+- m. 6, beat 1 to m. 6, beat 2: I
+- m. 6, beat 1.5 to m. 6, beat 1.75: no match
+- m. 6, beat 1.75 to m. 6, beat 2: no match
+- m. 6, beat 2 to m. 6, beat 2.25: no match
+- m. 6, beat 2.25 to m. 6, beat 2.5: no match
+- m. 6, beat 2.5 to m. 6, beat 2.75: no match
+- m. 6, beat 2.75 to m. 6, beat 3: no match
+- m. 6, beat 3 to m. 6, beat 3.25: no match
+- m. 6, beat 3.25 to m. 6, beat 3.5: no match
+- m. 6, beat 3.5 to m. 6, beat 3.75: no match
+- m. 6, beat 3.75 to m. 6, beat 4: no match
+- m. 6, beat 4 to m. 7, beat 1: no match
+- m. 6, beat 4.25 to m. 6, beat 4.5: no match
+- m. 6, beat 4.5 to m. 6, beat 4.75: no match
+- m. 6, beat 4.75 to m. 7, beat 1: no match
+- m. 7, beat 1 to m. 7, beat 2: no match
+- m. 7, beat 1.5 to m. 7, beat 1.75: no match
+- m. 7, beat 1.75 to m. 7, beat 2: no match
+- m. 7, beat 2 to m. 7, beat 2.25: no match
+- m. 7, beat 2.25 to m. 7, beat 2.5: no match
+- m. 7, beat 2.5 to m. 7, beat 2.75: no match
+- m. 7, beat 2.75 to m. 7, beat 3: no match
+- m. 7, beat 3 to m. 7, beat 3.25: no match
+- m. 7, beat 3.25 to m. 7, beat 3.5: no match
+- m. 7, beat 3.5 to m. 7, beat 3.75: no match
+- m. 7, beat 3.75 to m. 7, beat 4: no match
+- m. 7, beat 4 to m. 8, beat 1: no match
+- m. 7, beat 4.25 to m. 7, beat 4.5: no match
+- m. 7, beat 4.5 to m. 7, beat 4.75: no match
+- m. 7, beat 4.75 to m. 8, beat 1: no match
+- m. 8, beat 1 to m. 8, beat 2: no match
+- m. 8, beat 1.5 to m. 8, beat 1.75: no match
+- m. 8, beat 1.75 to m. 8, beat 2: no match
+- m. 8, beat 2 to m. 8, beat 2.25: no match
+- m. 8, beat 2.25 to m. 8, beat 2.5: no match
+- m. 8, beat 2.5 to m. 8, beat 2.75: no match
+- m. 8, beat 2.75 to m. 8, beat 3: no match
+- m. 8, beat 3 to m. 8, beat 3.25: no match
+- m. 8, beat 3.25 to m. 8, beat 3.5: no match
+- m. 8, beat 3.5 to m. 8, beat 3.75: no match
+- m. 8, beat 3.75 to m. 8, beat 4: no match
+- m. 8, beat 4 to m. 9, beat 1: vi
+- m. 8, beat 4.25 to m. 8, beat 4.5: no match
+- m. 8, beat 4.5 to m. 8, beat 4.75: no match
+- m. 8, beat 4.75 to m. 9, beat 1: no match
+- m. 9, beat 1 to m. 10, beat 1: ii
+- m. 9, beat 1.5 to m. 9, beat 1.75: no match
+- m. 9, beat 1.75 to m. 9, beat 2: no match
+- m. 9, beat 2 to m. 9, beat 2.25: no match
+- m. 9, beat 2.25 to m. 9, beat 2.5: no match
+- m. 9, beat 2.5 to m. 9, beat 2.75: no match
+- m. 9, beat 2.75 to m. 9, beat 3: no match
+- m. 9, beat 3 to m. 9, beat 3.25: no match
+- m. 9, beat 3.25 to m. 9, beat 3.5: no match
+- m. 9, beat 3.5 to m. 9, beat 3.75: no match
+- m. 9, beat 3.75 to m. 9, beat 4: no match
+- m. 9, beat 4 to m. 9, beat 4.25: no match
+- m. 9, beat 4.25 to m. 9, beat 4.5: no match
+- m. 9, beat 4.5 to m. 9, beat 4.75: no match
+- m. 9, beat 4.75 to m. 10, beat 1: no match
+- m. 10, beat 1 to m. 10, beat 2.5: no match
+- m. 10, beat 1.25 to m. 10, beat 1.5: no match
+- m. 10, beat 1.5 to m. 10, beat 1.75: no match
+- m. 10, beat 1.75 to m. 10, beat 2: no match
+- m. 10, beat 2 to m. 10, beat 2.25: no match
+- m. 10, beat 2.25 to m. 10, beat 2.5: no match
+- m. 10, beat 2.5 to m. 10, beat 3: no match
+- m. 10, beat 2.75 to m. 10, beat 3: no match
+- m. 10, beat 3 to m. 10, beat 4: no match
+- m. 10, beat 3.25 to m. 10, beat 3.5: no match
+- m. 10, beat 3.5 to m. 10, beat 3.75: no match
+- m. 10, beat 3.75 to m. 10, beat 4: no match
+- m. 10, beat 4 to m. 11, beat 1: no match
+- m. 10, beat 4.25 to m. 10, beat 4.5: no match
+- m. 10, beat 4.5 to m. 10, beat 4.75: no match
+- m. 10, beat 4.75 to m. 11, beat 1: no match
+- m. 11, beat 1 to m. 11, beat 1.5: no match
+- m. 11, beat 1.25 to m. 11, beat 1.5: no match
+- m. 11, beat 1.5 to m. 11, beat 2: no match
+- m. 11, beat 1.75 to m. 11, beat 2: no match
+- m. 11, beat 2 to m. 11, beat 2.38: no match
+- m. 11, beat 2.25 to m. 11, beat 2.5: no match
+- m. 11, beat 2.5 to m. 11, beat 2.88: no match
+- m. 11, beat 2.75 to m. 11, beat 3: no match
+- m. 11, beat 3 to m. 11, beat 3.5: no match
+- m. 11, beat 3.25 to m. 11, beat 3.5: no match
+- m. 11, beat 3.5 to m. 11, beat 4: no match
+- m. 11, beat 3.75 to m. 11, beat 4: no match
+- m. 11, beat 4 to m. 11, beat 4.38: no match
+- m. 11, beat 4.25 to m. 11, beat 4.5: no match
+- m. 11, beat 4.5 to m. 11, beat 4.88: no match
+- m. 11, beat 4.75 to m. 12, beat 1: no match
+- m. 12, beat 1 to m. 12, beat 1.8: no match
+- m. 12, beat 2 to m. 12, beat 2.8: V
+- m. 12, beat 3 to m. 12, beat 3.8: no match
+- m. 13, beat 1 to m. 13, beat 1.25: no match
+- m. 13, beat 1.25 to m. 13, beat 1.5: no match
+- m. 13, beat 1.5 to m. 13, beat 1.75: no match
+- m. 13, beat 1.75 to m. 13, beat 2: no match
+- m. 13, beat 2 to m. 13, beat 2.25: no match
+- m. 13, beat 2.25 to m. 13, beat 2.5: no match
+- m. 13, beat 2.5 to m. 13, beat 2.75: no match
+- m. 13, beat 2.75 to m. 13, beat 3: no match
+- m. 13, beat 3 to m. 13, beat 3.25: no match
+- m. 13, beat 3.25 to m. 13, beat 3.5: no match
+- m. 13, beat 3.5 to m. 13, beat 3.75: no match
+- m. 13, beat 3.75 to m. 13, beat 4: no match
+- m. 13, beat 4 to m. 13, beat 4.25: no match
+- m. 13, beat 4.25 to m. 13, beat 4.5: no match
+- m. 13, beat 4.5 to m. 13, beat 4.75: no match
+- m. 13, beat 4.75 to m. 14, beat 1: no match
+- m. 14, beat 1 to m. 14, beat 1.5: no match
+- m. 14, beat 1.25 to m. 14, beat 1.5: no match
+- m. 14, beat 1.5 to m. 14, beat 2: no match
+- m. 14, beat 1.75 to m. 14, beat 2: no match
+- m. 14, beat 2 to m. 14, beat 3.5: no match
+- m. 14, beat 2.25 to m. 14, beat 2.5: no match
+- m. 14, beat 2.5 to m. 14, beat 2.75: no match
+- m. 14, beat 2.75 to m. 14, beat 3: no match
+- m. 14, beat 3 to m. 14, beat 3.25: no match
+- m. 14, beat 3.25 to m. 14, beat 3.5: no match
+- m. 14, beat 3.5 to m. 14, beat 3.75: no match
+- m. 14, beat 3.75 to m. 14, beat 4: no match
+- m. 14, beat 4 to m. 14, beat 4.5: no match
+- m. 14, beat 4.25 to m. 14, beat 4.5: no match
+- m. 14, beat 4.5 to m. 15, beat 1: no match
+- m. 14, beat 4.75 to m. 15, beat 1: no match
+- m. 15, beat 1 to m. 15, beat 1.25: no match
+- m. 15, beat 1.12 to m. 15, beat 1.25: no match
+- m. 15, beat 1.25 to m. 15, beat 1.5: no match
+- m. 15, beat 1.38 to m. 15, beat 1.5: no match
+- m. 15, beat 1.5 to m. 15, beat 1.75: no match
+- m. 15, beat 1.62 to m. 15, beat 1.75: no match
+- m. 15, beat 1.75 to m. 15, beat 2: no match
+- m. 15, beat 2 to m. 15, beat 3: no match
+- m. 15, beat 2.25 to m. 15, beat 2.5: no match
+- m. 15, beat 2.5 to m. 15, beat 2.75: no match
+- m. 15, beat 2.75 to m. 15, beat 3: no match
+- m. 15, beat 3 to m. 15, beat 3.25: no match
+- m. 15, beat 3.25 to m. 15, beat 3.5: no match
+- m. 15, beat 3.5 to m. 15, beat 3.75: no match
+- m. 15, beat 3.75 to m. 15, beat 4: no match
+- m. 15, beat 4 to m. 15, beat 4.25: no match
+- m. 15, beat 4.25 to m. 15, beat 4.5: no match
+- m. 15, beat 4.5 to m. 15, beat 4.75: no match
+- m. 15, beat 4.75 to m. 16, beat 1: no match
+- m. 16, beat 1 to m. 16, beat 1.5: no match
+- m. 16, beat 1.25 to m. 16, beat 1.5: no match
+- m. 16, beat 1.5 to m. 16, beat 2: no match
+- m. 16, beat 1.75 to m. 16, beat 2: no match
+- m. 16, beat 2 to m. 16, beat 3.5: no match
+- m. 16, beat 2.25 to m. 16, beat 2.5: no match
+- m. 16, beat 2.5 to m. 16, beat 2.75: no match
+- m. 16, beat 2.75 to m. 16, beat 3: no match
+- m. 16, beat 3 to m. 16, beat 3.25: no match
+- m. 16, beat 3.25 to m. 16, beat 3.5: no match
+- m. 16, beat 3.5 to m. 16, beat 3.75: no match
+- m. 16, beat 3.75 to m. 16, beat 4: no match
+- m. 16, beat 4 to m. 16, beat 4.5: no match
+- m. 16, beat 4.25 to m. 16, beat 4.5: no match
+- m. 16, beat 4.5 to m. 17, beat 1: no match
+- m. 16, beat 4.75 to m. 17, beat 1: no match
+- m. 17, beat 1 to m. 17, beat 1.25: no match
+- m. 17, beat 1.12 to m. 17, beat 1.25: no match
+- m. 17, beat 1.25 to m. 17, beat 1.5: no match
+- m. 17, beat 1.38 to m. 17, beat 1.5: no match
+- m. 17, beat 1.5 to m. 17, beat 1.75: no match
+- m. 17, beat 1.62 to m. 17, beat 1.75: no match
+- m. 17, beat 1.75 to m. 17, beat 2: no match
+- m. 17, beat 2 to m. 17, beat 3: no match
+- m. 17, beat 2.25 to m. 17, beat 2.5: no match
+- m. 17, beat 2.5 to m. 17, beat 2.75: no match
+- m. 17, beat 2.75 to m. 17, beat 3: no match
+- m. 17, beat 3 to m. 17, beat 3.25: no match
+- m. 17, beat 3.25 to m. 17, beat 3.5: no match
+- m. 17, beat 3.5 to m. 17, beat 3.75: no match
+- m. 17, beat 3.75 to m. 17, beat 4: no match
+- m. 17, beat 4 to m. 17, beat 4.25: no match
+- m. 17, beat 4.25 to m. 17, beat 4.5: no match
+- m. 17, beat 4.5 to m. 17, beat 4.75: no match
+- m. 17, beat 4.75 to m. 18, beat 1: no match
+- m. 18, beat 1 to m. 18, beat 2: no match
+- m. 18, beat 1.25 to m. 18, beat 1.5: no match
+- m. 18, beat 1.5 to m. 18, beat 1.75: no match
+- m. 18, beat 1.75 to m. 18, beat 2: no match
+- m. 18, beat 2 to m. 18, beat 3: no match
+- m. 18, beat 2.25 to m. 18, beat 2.5: no match
+- m. 18, beat 2.5 to m. 18, beat 2.75: no match
+- m. 18, beat 2.75 to m. 18, beat 3: no match
+- m. 18, beat 3 to m. 18, beat 4: no match
+- m. 18, beat 3.25 to m. 18, beat 3.5: no match
+- m. 18, beat 3.5 to m. 18, beat 3.75: no match
+- m. 18, beat 3.75 to m. 18, beat 4: no match
+- m. 18, beat 4 to m. 19, beat 1: no match
+- m. 18, beat 4.25 to m. 18, beat 4.5: no match
+- m. 18, beat 4.5 to m. 18, beat 4.75: no match
+- m. 18, beat 4.75 to m. 19, beat 1: no match
+- m. 19, beat 1 to m. 19, beat 2: no match
+- m. 19, beat 1.25 to m. 19, beat 1.5: no match
+- m. 19, beat 1.5 to m. 19, beat 1.75: no match
+- m. 19, beat 1.75 to m. 19, beat 2: no match
+- m. 19, beat 2 to m. 19, beat 3: no match
+- m. 19, beat 2.25 to m. 19, beat 2.5: no match
+- m. 19, beat 2.5 to m. 19, beat 2.75: no match
+- m. 19, beat 2.75 to m. 19, beat 3: no match
+- m. 19, beat 3 to m. 19, beat 4: no match
+- m. 19, beat 3.25 to m. 19, beat 3.5: no match
+- m. 19, beat 3.5 to m. 19, beat 3.75: no match
+- m. 19, beat 3.75 to m. 19, beat 4: no match
+- m. 19, beat 4 to m. 20, beat 1: no match
+- m. 19, beat 4.25 to m. 19, beat 4.5: no match
+- m. 19, beat 4.5 to m. 19, beat 4.75: no match
+- m. 19, beat 4.75 to m. 20, beat 1: no match
+- m. 20, beat 1 to m. 20, beat 2: no match
+- m. 20, beat 1.25 to m. 20, beat 1.5: no match
+- m. 20, beat 1.5 to m. 20, beat 1.75: no match
+- m. 20, beat 1.75 to m. 20, beat 2: no match
+- m. 20, beat 2 to m. 20, beat 3: no match
+- m. 20, beat 2.25 to m. 20, beat 2.5: no match
+- m. 20, beat 2.5 to m. 20, beat 2.75: no match
+- m. 20, beat 2.75 to m. 20, beat 3: no match
+- m. 20, beat 3 to m. 20, beat 4: no match
+- m. 20, beat 3.25 to m. 20, beat 3.5: no match
+- m. 20, beat 3.5 to m. 20, beat 3.75: no match
+- m. 20, beat 3.75 to m. 20, beat 4: no match
+- m. 20, beat 4 to m. 21, beat 1: no match
+- m. 20, beat 4.25 to m. 20, beat 4.5: no match
+- m. 20, beat 4.5 to m. 20, beat 4.75: no match
+- m. 20, beat 4.75 to m. 21, beat 1: no match
+- m. 21, beat 1 to m. 21, beat 2: no match
+- m. 21, beat 1.25 to m. 21, beat 1.5: no match
+- m. 21, beat 1.5 to m. 21, beat 1.75: no match
+- m. 21, beat 1.75 to m. 21, beat 2: no match
+- m. 21, beat 2 to m. 21, beat 3: no match
+- m. 21, beat 2.25 to m. 21, beat 2.5: no match
+- m. 21, beat 2.5 to m. 21, beat 2.75: no match
+- m. 21, beat 2.75 to m. 21, beat 3: no match
+- m. 21, beat 3 to m. 21, beat 4: no match
+- m. 21, beat 3.25 to m. 21, beat 3.5: no match
+- m. 21, beat 3.5 to m. 21, beat 3.75: no match
+- m. 21, beat 3.75 to m. 21, beat 4: no match
+- m. 21, beat 4 to m. 22, beat 1: no match
+- m. 21, beat 4.25 to m. 21, beat 4.5: no match
+- m. 21, beat 4.5 to m. 21, beat 4.75: no match
+- m. 21, beat 4.75 to m. 22, beat 1: no match
+- m. 22, beat 1 to m. 22, beat 3: vi
+- m. 22, beat 1.5 to m. 22, beat 1.9: no match
+- m. 22, beat 2 to m. 22, beat 2.4: no match
+- m. 22, beat 2.5 to m. 22, beat 2.9: no match
+- m. 22, beat 3 to m. 22, beat 3.4: no match
+- m. 22, beat 3.12 to m. 22, beat 4: no match
+- m. 22, beat 3.5 to m. 22, beat 3.9: no match
+- m. 22, beat 4 to m. 22, beat 4.4: no match
+- m. 22, beat 4.12 to m. 23, beat 1: no match
+- m. 22, beat 4.5 to m. 22, beat 4.9: no match
+- m. 23, beat 1 to m. 23, beat 1.4: no match
+- m. 23, beat 1.12 to m. 23, beat 2.5: no match
+- m. 23, beat 1.5 to m. 23, beat 1.9: no match
+- m. 23, beat 2 to m. 23, beat 2.4: no match
+- m. 23, beat 2.5 to m. 23, beat 2.9: no match
+- m. 23, beat 2.62 to m. 23, beat 2.75: no match
+- m. 23, beat 2.75 to m. 23, beat 2.88: no match
+- m. 23, beat 2.88 to m. 23, beat 3: no match
+- m. 23, beat 3 to m. 23, beat 3.5: no match
+- m. 23, beat 3.5 to m. 23, beat 4: vi
+- m. 23, beat 4 to m. 23, beat 4.5: no match
+- m. 23, beat 4.5 to m. 24, beat 1: vi
+- m. 24, beat 1 to m. 24, beat 1.5: no match
+- m. 24, beat 1.25 to m. 24, beat 1.5: no match
+- m. 24, beat 1.5 to m. 24, beat 2: no match
+- m. 24, beat 1.75 to m. 24, beat 2: no match
+- m. 24, beat 2 to m. 24, beat 4: no match
+- m. 24, beat 2.25 to m. 24, beat 2.5: no match
+- m. 24, beat 2.5 to m. 24, beat 2.75: no match
+- m. 24, beat 2.75 to m. 24, beat 3: no match
+- m. 24, beat 3 to m. 24, beat 3.25: no match
+- m. 24, beat 3.25 to m. 24, beat 3.5: no match
+- m. 24, beat 3.5 to m. 24, beat 3.75: no match
+- m. 24, beat 3.75 to m. 24, beat 4: no match
+- m. 24, beat 4 to m. 24, beat 4.25: no match
+- m. 24, beat 4.25 to m. 24, beat 4.5: no match
+- m. 24, beat 4.5 to m. 24, beat 4.75: no match
+- m. 24, beat 4.75 to m. 25, beat 1: no match
+- m. 25, beat 1 to m. 25, beat 1.25: no match
+- m. 25, beat 1.12 to m. 25, beat 1.26: no match
+- m. 25, beat 1.25 to m. 25, beat 1.52: no match
+- m. 25, beat 1.38 to m. 25, beat 1.51: no match
+- m. 25, beat 1.5 to m. 25, beat 1.77: no match
+- m. 25, beat 1.62 to m. 25, beat 1.76: no match
+- m. 25, beat 1.75 to m. 25, beat 2.02: no match
+- m. 25, beat 1.88 to m. 25, beat 2.01: no match
+- m. 25, beat 2 to m. 25, beat 2.27: no match
+- m. 25, beat 2.12 to m. 25, beat 2.26: no match
+- m. 25, beat 2.25 to m. 25, beat 2.52: no match
+- m. 25, beat 2.38 to m. 25, beat 2.51: no match
+- m. 25, beat 2.5 to m. 25, beat 2.77: no match
+- m. 25, beat 2.62 to m. 25, beat 2.76: no match
+- m. 25, beat 2.75 to m. 25, beat 3.02: no match
+- m. 25, beat 2.88 to m. 25, beat 3.01: no match
+- m. 25, beat 3 to m. 25, beat 3.27: no match
+- m. 25, beat 3.12 to m. 25, beat 3.26: no match
+- m. 25, beat 3.25 to m. 25, beat 3.52: no match
+- m. 25, beat 3.38 to m. 25, beat 3.51: no match
+- m. 25, beat 3.5 to m. 25, beat 3.77: no match
+- m. 25, beat 3.62 to m. 25, beat 3.76: no match
+- m. 25, beat 3.75 to m. 25, beat 4.03: no match
+- m. 25, beat 3.88 to m. 25, beat 4.01: no match
+- m. 25, beat 4 to m. 25, beat 4.28: no match
+- m. 25, beat 4.12 to m. 25, beat 4.26: no match
+- m. 25, beat 4.25 to m. 25, beat 4.53: no match
+- m. 25, beat 4.38 to m. 25, beat 4.51: no match
+- m. 25, beat 4.5 to m. 25, beat 4.78: no match
+- m. 25, beat 4.62 to m. 25, beat 4.76: no match
+- m. 25, beat 4.75 to m. 26, beat 1: no match
+- m. 25, beat 4.88 to m. 26, beat 1: no match
+- m. 26, beat 1 to m. 26, beat 2: no match
+- m. 26, beat 2 to m. 26, beat 2.25: no match
+- m. 26, beat 2.25 to m. 26, beat 2.5: no match
+- m. 26, beat 2.5 to m. 26, beat 2.75: no match
+- m. 26, beat 2.75 to m. 26, beat 3: no match
+- m. 26, beat 3 to m. 26, beat 3.25: no match
+- m. 26, beat 3.25 to m. 26, beat 3.5: no match
+- m. 26, beat 3.5 to m. 26, beat 3.75: no match
+- m. 26, beat 3.75 to m. 26, beat 4: no match
+- m. 26, beat 4 to m. 27, beat 1: no match
+- m. 26, beat 4.25 to m. 26, beat 4.5: no match
+- m. 26, beat 4.5 to m. 26, beat 4.75: no match
+- m. 26, beat 4.75 to m. 27, beat 1: no match
+- m. 27, beat 1 to m. 27, beat 2: no match
+- m. 27, beat 2 to m. 27, beat 2.25: no match
+- m. 27, beat 2.25 to m. 27, beat 2.5: no match
+- m. 27, beat 2.5 to m. 27, beat 2.75: no match
+- m. 27, beat 2.75 to m. 27, beat 3: no match
+- m. 27, beat 3 to m. 27, beat 3.25: no match
+- m. 27, beat 3.25 to m. 27, beat 3.5: no match
+- m. 27, beat 3.5 to m. 27, beat 3.75: no match
+- m. 27, beat 3.75 to m. 27, beat 4: no match
+- m. 27, beat 4 to m. 28, beat 1: no match
+- m. 27, beat 4.25 to m. 27, beat 4.5: no match
+- m. 27, beat 4.5 to m. 27, beat 4.75: no match
+- m. 27, beat 4.75 to m. 28, beat 1: no match
+- m. 28, beat 1 to m. 28, beat 1.8: no match
+- m. 28, beat 2 to m. 28, beat 2.8: V
+- m. 28, beat 3 to m. 28, beat 3.8: no match
+- m. 29, beat 1 to m. 29, beat 3: no match
+- m. 29, beat 1.5 to m. 29, beat 2: no match
+- m. 29, beat 2 to m. 29, beat 2.5: no match
+- m. 29, beat 2.5 to m. 29, beat 3: no match
+- m. 29, beat 3 to m. 29, beat 4: no match
+- m. 29, beat 3.5 to m. 29, beat 4: no match
+- m. 29, beat 4 to m. 30, beat 1: no match
+- m. 29, beat 4.5 to m. 30, beat 1: no match
+- m. 30, beat 1 to m. 30, beat 2.5: no match
+- m. 30, beat 1.5 to m. 30, beat 2: no match
+- m. 30, beat 2 to m. 30, beat 2.5: no match
+- m. 30, beat 2.5 to m. 30, beat 3: no match
+- m. 30, beat 2.75 to m. 30, beat 3: no match
+- m. 30, beat 3 to m. 31, beat 1: no match
+- m. 30, beat 3.5 to m. 30, beat 4: no match
+- m. 30, beat 4 to m. 30, beat 4.5: no match
+- m. 30, beat 4.5 to m. 31, beat 1: no match
+- m. 31, beat 1 to m. 31, beat 3: no match
+- m. 31, beat 1.5 to m. 31, beat 2: no match
+- m. 31, beat 2 to m. 31, beat 2.5: no match
+- m. 31, beat 2.5 to m. 31, beat 3: no match
+- m. 31, beat 3 to m. 31, beat 4: no match
+- m. 31, beat 3.5 to m. 31, beat 4: no match
+- m. 31, beat 4 to m. 32, beat 1: no match
+- m. 31, beat 4.5 to m. 32, beat 1: no match
+- m. 32, beat 1 to m. 32, beat 2: no match
+- m. 32, beat 1.5 to m. 32, beat 2: no match
+- m. 32, beat 2 to m. 32, beat 2.5: no match
+- m. 32, beat 2.16 to m. 32, beat 2.33: no match
+- m. 32, beat 2.33 to m. 32, beat 2.5: no match
+- m. 32, beat 2.5 to m. 32, beat 3: no match
+- m. 32, beat 2.75 to m. 32, beat 3: no match
+- m. 32, beat 3 to m. 32, beat 4: no match
+- m. 32, beat 3.5 to m. 32, beat 4: no match
+- m. 32, beat 4 to m. 32, beat 4.5: no match
+- m. 32, beat 4.5 to m. 33, beat 1: no match
+- m. 33, beat 1 to m. 33, beat 2: no match
+- m. 33, beat 1.5 to m. 33, beat 1.75: no match
+- m. 33, beat 1.75 to m. 33, beat 2: no match
+- m. 33, beat 2 to m. 33, beat 2.25: no match
+- m. 33, beat 2.25 to m. 33, beat 2.5: no match
+- m. 33, beat 2.5 to m. 33, beat 2.75: no match
+- m. 33, beat 2.75 to m. 33, beat 3: no match
+- m. 33, beat 3 to m. 33, beat 3.25: no match
+- m. 33, beat 3.25 to m. 33, beat 3.5: no match
+- m. 33, beat 3.5 to m. 33, beat 3.75: no match
+- m. 33, beat 3.75 to m. 33, beat 4: no match
+- m. 33, beat 4 to m. 34, beat 1: no match
+- m. 33, beat 4.25 to m. 33, beat 4.5: no match
+- m. 33, beat 4.5 to m. 33, beat 4.75: no match
+- m. 33, beat 4.75 to m. 34, beat 1: no match
+- m. 34, beat 1 to m. 34, beat 2: I
+- m. 34, beat 1.5 to m. 34, beat 1.75: no match
+- m. 34, beat 1.75 to m. 34, beat 2: no match
+- m. 34, beat 2 to m. 34, beat 2.25: no match
+- m. 34, beat 2.25 to m. 34, beat 2.5: no match
+- m. 34, beat 2.5 to m. 34, beat 2.75: no match
+- m. 34, beat 2.75 to m. 34, beat 3: no match
+- m. 34, beat 3 to m. 34, beat 3.25: no match
+- m. 34, beat 3.25 to m. 34, beat 3.5: no match
+- m. 34, beat 3.5 to m. 34, beat 3.75: no match
+- m. 34, beat 3.75 to m. 34, beat 4: no match
+- m. 34, beat 4 to m. 35, beat 1: no match
+- m. 34, beat 4.25 to m. 34, beat 4.5: no match
+- m. 34, beat 4.5 to m. 34, beat 4.75: no match
+- m. 34, beat 4.75 to m. 35, beat 1: no match
+- m. 35, beat 1 to m. 35, beat 2: no match
+- m. 35, beat 1.5 to m. 35, beat 1.75: no match
+- m. 35, beat 1.75 to m. 35, beat 2: no match
+- m. 35, beat 2 to m. 35, beat 2.25: no match
+- m. 35, beat 2.25 to m. 35, beat 2.5: no match
+- m. 35, beat 2.5 to m. 35, beat 2.75: no match
+- m. 35, beat 2.75 to m. 35, beat 3: no match
+- m. 35, beat 3 to m. 35, beat 3.25: no match
+- m. 35, beat 3.25 to m. 35, beat 3.5: no match
+- m. 35, beat 3.5 to m. 35, beat 3.75: no match
+- m. 35, beat 3.75 to m. 35, beat 4: no match
+- m. 35, beat 4 to m. 36, beat 1: no match
+- m. 35, beat 4.25 to m. 35, beat 4.5: no match
+- m. 35, beat 4.5 to m. 35, beat 4.75: no match
+- m. 35, beat 4.75 to m. 36, beat 1: no match
+- m. 36, beat 1 to m. 36, beat 2: no match
+- m. 36, beat 1.5 to m. 36, beat 1.75: no match
+- m. 36, beat 1.75 to m. 36, beat 2: no match
+- m. 36, beat 2 to m. 36, beat 2.25: no match
+- m. 36, beat 2.25 to m. 36, beat 2.5: no match
+- m. 36, beat 2.5 to m. 36, beat 2.75: no match
+- m. 36, beat 2.75 to m. 36, beat 3: no match
+- m. 36, beat 3 to m. 36, beat 3.25: no match
+- m. 36, beat 3.25 to m. 36, beat 3.5: no match
+- m. 36, beat 3.5 to m. 36, beat 3.75: no match
+- m. 36, beat 3.75 to m. 36, beat 4: no match
+- m. 36, beat 4 to m. 37, beat 1: vi
+- m. 36, beat 4.25 to m. 36, beat 4.5: no match
+- m. 36, beat 4.5 to m. 36, beat 4.75: no match
+- m. 36, beat 4.75 to m. 37, beat 1: no match
+- m. 37, beat 1 to m. 38, beat 1: ii
+- m. 37, beat 1.5 to m. 37, beat 1.75: no match
+- m. 37, beat 1.75 to m. 37, beat 2: no match
+- m. 37, beat 2 to m. 37, beat 2.25: no match
+- m. 37, beat 2.25 to m. 37, beat 2.5: no match
+- m. 37, beat 2.5 to m. 37, beat 2.75: no match
+- m. 37, beat 2.75 to m. 37, beat 3: no match
+- m. 37, beat 3 to m. 37, beat 3.25: no match
+- m. 37, beat 3.25 to m. 37, beat 3.5: no match
+- m. 37, beat 3.5 to m. 37, beat 3.75: no match
+- m. 37, beat 3.75 to m. 37, beat 4: no match
+- m. 37, beat 4 to m. 37, beat 4.25: no match
+- m. 37, beat 4.25 to m. 37, beat 4.5: no match
+- m. 37, beat 4.5 to m. 37, beat 4.75: no match
+- m. 37, beat 4.75 to m. 38, beat 1: no match
+- m. 38, beat 1 to m. 38, beat 2.5: no match
+- m. 38, beat 1.25 to m. 38, beat 1.5: no match
+- m. 38, beat 1.5 to m. 38, beat 1.75: no match
+- m. 38, beat 1.75 to m. 38, beat 2: no match
+- m. 38, beat 2 to m. 38, beat 2.25: no match
+- m. 38, beat 2.25 to m. 38, beat 2.5: no match
+- m. 38, beat 2.5 to m. 38, beat 3: no match
+- m. 38, beat 2.75 to m. 38, beat 3: no match
+- m. 38, beat 3 to m. 38, beat 4: no match
+- m. 38, beat 3.25 to m. 38, beat 3.5: no match
+- m. 38, beat 3.5 to m. 38, beat 3.75: no match
+- m. 38, beat 3.75 to m. 38, beat 4: no match
+- m. 38, beat 4 to m. 39, beat 1: no match
+- m. 38, beat 4.25 to m. 38, beat 4.5: no match
+- m. 38, beat 4.5 to m. 38, beat 4.75: no match
+- m. 38, beat 4.75 to m. 39, beat 1: no match
+- m. 39, beat 1 to m. 39, beat 1.5: no match
+- m. 39, beat 1.25 to m. 39, beat 1.5: no match
+- m. 39, beat 1.5 to m. 39, beat 2: no match
+- m. 39, beat 1.75 to m. 39, beat 2: no match
+- m. 39, beat 2 to m. 39, beat 2.38: no match
+- m. 39, beat 2.25 to m. 39, beat 2.5: no match
+- m. 39, beat 2.5 to m. 39, beat 2.88: no match
+- m. 39, beat 2.75 to m. 39, beat 3: no match
+- m. 39, beat 3 to m. 39, beat 3.5: no match
+- m. 39, beat 3.25 to m. 39, beat 3.5: no match
+- m. 39, beat 3.5 to m. 39, beat 4: no match
+- m. 39, beat 3.75 to m. 39, beat 4: no match
+- m. 39, beat 4 to m. 39, beat 4.38: no match
+- m. 39, beat 4.25 to m. 39, beat 4.5: no match
+- m. 39, beat 4.5 to m. 39, beat 4.88: no match
+- m. 39, beat 4.75 to m. 40, beat 1: no match
+- m. 40, beat 1 to m. 40, beat 1.8: no match
+- m. 40, beat 2 to m. 40, beat 2.8: V
+- m. 40, beat 3 to m. 40, beat 3.8: no match
+- m. 41, beat 1 to m. 41, beat 1.25: no match
+- m. 41, beat 1.25 to m. 41, beat 1.5: no match
+- m. 41, beat 1.5 to m. 41, beat 1.75: no match
+- m. 41, beat 1.75 to m. 41, beat 2: no match
+- m. 41, beat 2 to m. 41, beat 2.25: no match
+- m. 41, beat 2.25 to m. 41, beat 2.5: no match
+- m. 41, beat 2.5 to m. 41, beat 2.75: no match
+- m. 41, beat 2.75 to m. 41, beat 3: no match
+- m. 41, beat 3 to m. 41, beat 3.25: no match
+- m. 41, beat 3.25 to m. 41, beat 3.5: no match
+- m. 41, beat 3.5 to m. 41, beat 3.75: no match
+- m. 41, beat 3.75 to m. 41, beat 4: no match
+- m. 41, beat 4 to m. 41, beat 4.25: no match
+- m. 41, beat 4.25 to m. 41, beat 4.5: no match
+- m. 41, beat 4.5 to m. 41, beat 4.75: no match
+- m. 41, beat 4.75 to m. 42, beat 1: no match
+- m. 42, beat 1 to m. 42, beat 1.5: no match
+- m. 42, beat 1.25 to m. 42, beat 1.5: no match
+- m. 42, beat 1.5 to m. 42, beat 2: no match
+- m. 42, beat 1.75 to m. 42, beat 2: no match
+- m. 42, beat 2 to m. 42, beat 3.5: no match
+- m. 42, beat 2.25 to m. 42, beat 2.5: no match
+- m. 42, beat 2.5 to m. 42, beat 2.75: no match
+- m. 42, beat 2.75 to m. 42, beat 3: no match
+- m. 42, beat 3 to m. 42, beat 3.25: no match
+- m. 42, beat 3.25 to m. 42, beat 3.5: no match
+- m. 42, beat 3.5 to m. 42, beat 3.75: no match
+- m. 42, beat 3.75 to m. 42, beat 4: no match
+- m. 42, beat 4 to m. 42, beat 4.5: no match
+- m. 42, beat 4.25 to m. 42, beat 4.5: no match
+- m. 42, beat 4.5 to m. 43, beat 1: no match
+- m. 42, beat 4.75 to m. 43, beat 1: no match
+- m. 43, beat 1 to m. 43, beat 1.25: no match
+- m. 43, beat 1.12 to m. 43, beat 1.25: no match
+- m. 43, beat 1.25 to m. 43, beat 1.5: no match
+- m. 43, beat 1.38 to m. 43, beat 1.5: no match
+- m. 43, beat 1.5 to m. 43, beat 1.75: no match
+- m. 43, beat 1.62 to m. 43, beat 1.75: no match
+- m. 43, beat 1.75 to m. 43, beat 2: no match
+- m. 43, beat 2 to m. 43, beat 3: no match
+- m. 43, beat 2.25 to m. 43, beat 2.5: no match
+- m. 43, beat 2.5 to m. 43, beat 2.75: no match
+- m. 43, beat 2.75 to m. 43, beat 3: no match
+- m. 43, beat 3 to m. 43, beat 3.25: no match
+- m. 43, beat 3.25 to m. 43, beat 3.5: no match
+- m. 43, beat 3.5 to m. 43, beat 3.75: no match
+- m. 43, beat 3.75 to m. 43, beat 4: no match
+- m. 43, beat 4 to m. 43, beat 4.25: no match
+- m. 43, beat 4.25 to m. 43, beat 4.5: no match
+- m. 43, beat 4.5 to m. 43, beat 4.75: no match
+- m. 43, beat 4.75 to m. 44, beat 1: no match
+- m. 44, beat 1 to m. 44, beat 1.5: no match
+- m. 44, beat 1.25 to m. 44, beat 1.5: no match
+- m. 44, beat 1.5 to m. 44, beat 2: no match
+- m. 44, beat 1.75 to m. 44, beat 2: no match
+- m. 44, beat 2 to m. 44, beat 3.5: no match
+- m. 44, beat 2.25 to m. 44, beat 2.5: no match
+- m. 44, beat 2.5 to m. 44, beat 2.75: no match
+- m. 44, beat 2.75 to m. 44, beat 3: no match
+- m. 44, beat 3 to m. 44, beat 3.25: no match
+- m. 44, beat 3.25 to m. 44, beat 3.5: no match
+- m. 44, beat 3.5 to m. 44, beat 3.75: no match
+- m. 44, beat 3.75 to m. 44, beat 4: no match
+- m. 44, beat 4 to m. 44, beat 4.5: no match
+- m. 44, beat 4.25 to m. 44, beat 4.5: no match
+- m. 44, beat 4.5 to m. 45, beat 1: no match
+- m. 44, beat 4.75 to m. 45, beat 1: no match
+- m. 45, beat 1 to m. 45, beat 1.25: no match
+- m. 45, beat 1.12 to m. 45, beat 1.25: no match
+- m. 45, beat 1.25 to m. 45, beat 1.5: no match
+- m. 45, beat 1.38 to m. 45, beat 1.5: no match
+- m. 45, beat 1.5 to m. 45, beat 1.75: no match
+- m. 45, beat 1.62 to m. 45, beat 1.75: no match
+- m. 45, beat 1.75 to m. 45, beat 2: no match
+- m. 45, beat 2 to m. 45, beat 3: no match
+- m. 45, beat 2.25 to m. 45, beat 2.5: no match
+- m. 45, beat 2.5 to m. 45, beat 2.75: no match
+- m. 45, beat 2.75 to m. 45, beat 3: no match
+- m. 45, beat 3 to m. 45, beat 3.25: no match
+- m. 45, beat 3.25 to m. 45, beat 3.5: no match
+- m. 45, beat 3.5 to m. 45, beat 3.75: no match
+- m. 45, beat 3.75 to m. 45, beat 4: no match
+- m. 45, beat 4 to m. 45, beat 4.25: no match
+- m. 45, beat 4.25 to m. 45, beat 4.5: no match
+- m. 45, beat 4.5 to m. 45, beat 4.75: no match
+- m. 45, beat 4.75 to m. 46, beat 1: no match
+- m. 46, beat 1 to m. 46, beat 2: no match
+- m. 46, beat 1.25 to m. 46, beat 1.5: no match
+- m. 46, beat 1.5 to m. 46, beat 1.75: no match
+- m. 46, beat 1.75 to m. 46, beat 2: no match
+- m. 46, beat 2 to m. 46, beat 3: no match
+- m. 46, beat 2.25 to m. 46, beat 2.5: no match
+- m. 46, beat 2.5 to m. 46, beat 2.75: no match
+- m. 46, beat 2.75 to m. 46, beat 3: no match
+- m. 46, beat 3 to m. 46, beat 4: no match
+- m. 46, beat 3.25 to m. 46, beat 3.5: no match
+- m. 46, beat 3.5 to m. 46, beat 3.75: no match
+- m. 46, beat 3.75 to m. 46, beat 4: no match
+- m. 46, beat 4 to m. 47, beat 1: no match
+- m. 46, beat 4.25 to m. 46, beat 4.5: no match
+- m. 46, beat 4.5 to m. 46, beat 4.75: no match
+- m. 46, beat 4.75 to m. 47, beat 1: no match
+- m. 47, beat 1 to m. 47, beat 2: no match
+- m. 47, beat 1.25 to m. 47, beat 1.5: no match
+- m. 47, beat 1.5 to m. 47, beat 1.75: no match
+- m. 47, beat 1.75 to m. 47, beat 2: no match
+- m. 47, beat 2 to m. 47, beat 3: no match
+- m. 47, beat 2.25 to m. 47, beat 2.5: no match
+- m. 47, beat 2.5 to m. 47, beat 2.75: no match
+- m. 47, beat 2.75 to m. 47, beat 3: no match
+- m. 47, beat 3 to m. 47, beat 4: no match
+- m. 47, beat 3.25 to m. 47, beat 3.5: no match
+- m. 47, beat 3.5 to m. 47, beat 3.75: no match
+- m. 47, beat 3.75 to m. 47, beat 4: no match
+- m. 47, beat 4 to m. 48, beat 1: no match
+- m. 47, beat 4.25 to m. 47, beat 4.5: no match
+- m. 47, beat 4.5 to m. 47, beat 4.75: no match
+- m. 47, beat 4.75 to m. 48, beat 1: no match
+- m. 48, beat 1 to m. 48, beat 2: no match
+- m. 48, beat 1.25 to m. 48, beat 1.5: no match
+- m. 48, beat 1.5 to m. 48, beat 1.75: no match
+- m. 48, beat 1.75 to m. 48, beat 2: no match
+- m. 48, beat 2 to m. 48, beat 3: no match
+- m. 48, beat 2.25 to m. 48, beat 2.5: no match
+- m. 48, beat 2.5 to m. 48, beat 2.75: no match
+- m. 48, beat 2.75 to m. 48, beat 3: no match
+- m. 48, beat 3 to m. 48, beat 4: no match
+- m. 48, beat 3.25 to m. 48, beat 3.5: no match
+- m. 48, beat 3.5 to m. 48, beat 3.75: no match
+- m. 48, beat 3.75 to m. 48, beat 4: no match
+- m. 48, beat 4 to m. 49, beat 1: no match
+- m. 48, beat 4.25 to m. 48, beat 4.5: no match
+- m. 48, beat 4.5 to m. 48, beat 4.75: no match
+- m. 48, beat 4.75 to m. 49, beat 1: no match
+- m. 49, beat 1 to m. 49, beat 2: no match
+- m. 49, beat 1.25 to m. 49, beat 1.5: no match
+- m. 49, beat 1.5 to m. 49, beat 1.75: no match
+- m. 49, beat 1.75 to m. 49, beat 2: no match
+- m. 49, beat 2 to m. 49, beat 3: no match
+- m. 49, beat 2.25 to m. 49, beat 2.5: no match
+- m. 49, beat 2.5 to m. 49, beat 2.75: no match
+- m. 49, beat 2.75 to m. 49, beat 3: no match
+- m. 49, beat 3 to m. 49, beat 4: no match
+- m. 49, beat 3.25 to m. 49, beat 3.5: no match
+- m. 49, beat 3.5 to m. 49, beat 3.75: no match
+- m. 49, beat 3.75 to m. 49, beat 4: no match
+- m. 49, beat 4 to m. 50, beat 1: no match
+- m. 49, beat 4.25 to m. 49, beat 4.5: no match
+- m. 49, beat 4.5 to m. 49, beat 4.75: no match
+- m. 49, beat 4.75 to m. 50, beat 1: no match
+- m. 50, beat 1 to m. 50, beat 3: vi
+- m. 50, beat 1.5 to m. 50, beat 1.9: no match
+- m. 50, beat 2 to m. 50, beat 2.4: no match
+- m. 50, beat 2.5 to m. 50, beat 2.9: no match
+- m. 50, beat 3 to m. 50, beat 3.4: no match
+- m. 50, beat 3.12 to m. 50, beat 4: no match
+- m. 50, beat 3.5 to m. 50, beat 3.9: no match
+- m. 50, beat 4 to m. 50, beat 4.4: no match
+- m. 50, beat 4.12 to m. 51, beat 1: no match
+- m. 50, beat 4.5 to m. 50, beat 4.9: no match
+- m. 51, beat 1 to m. 51, beat 1.4: no match
+- m. 51, beat 1.12 to m. 51, beat 2.5: no match
+- m. 51, beat 1.5 to m. 51, beat 1.9: no match
+- m. 51, beat 2 to m. 51, beat 2.4: no match
+- m. 51, beat 2.5 to m. 51, beat 2.9: no match
+- m. 51, beat 2.62 to m. 51, beat 2.75: no match
+- m. 51, beat 2.75 to m. 51, beat 2.88: no match
+- m. 51, beat 2.88 to m. 51, beat 3: no match
+- m. 51, beat 3 to m. 51, beat 3.5: no match
+- m. 51, beat 3.5 to m. 51, beat 4: vi
+- m. 51, beat 4 to m. 51, beat 4.5: no match
+- m. 51, beat 4.5 to m. 52, beat 1: vi
+- m. 52, beat 1 to m. 52, beat 1.5: no match
+- m. 52, beat 1.25 to m. 52, beat 1.5: no match
+- m. 52, beat 1.5 to m. 52, beat 2: no match
+- m. 52, beat 1.75 to m. 52, beat 2: no match
+- m. 52, beat 2 to m. 52, beat 4: no match
+- m. 52, beat 2.25 to m. 52, beat 2.5: no match
+- m. 52, beat 2.5 to m. 52, beat 2.75: no match
+- m. 52, beat 2.75 to m. 52, beat 3: no match
+- m. 52, beat 3 to m. 52, beat 3.25: no match
+- m. 52, beat 3.25 to m. 52, beat 3.5: no match
+- m. 52, beat 3.5 to m. 52, beat 3.75: no match
+- m. 52, beat 3.75 to m. 52, beat 4: no match
+- m. 52, beat 4 to m. 52, beat 4.25: no match
+- m. 52, beat 4.25 to m. 52, beat 4.5: no match
+- m. 52, beat 4.5 to m. 52, beat 4.75: no match
+- m. 52, beat 4.75 to m. 53, beat 1: no match
+- m. 53, beat 1 to m. 53, beat 1.25: no match
+- m. 53, beat 1.12 to m. 53, beat 1.26: no match
+- m. 53, beat 1.25 to m. 53, beat 1.52: no match
+- m. 53, beat 1.38 to m. 53, beat 1.51: no match
+- m. 53, beat 1.5 to m. 53, beat 1.77: no match
+- m. 53, beat 1.62 to m. 53, beat 1.76: no match
+- m. 53, beat 1.75 to m. 53, beat 2.02: no match
+- m. 53, beat 1.88 to m. 53, beat 2.01: no match
+- m. 53, beat 2 to m. 53, beat 2.27: no match
+- m. 53, beat 2.12 to m. 53, beat 2.26: no match
+- m. 53, beat 2.25 to m. 53, beat 2.52: no match
+- m. 53, beat 2.38 to m. 53, beat 2.51: no match
+- m. 53, beat 2.5 to m. 53, beat 2.77: no match
+- m. 53, beat 2.62 to m. 53, beat 2.76: no match
+- m. 53, beat 2.75 to m. 53, beat 3.02: no match
+- m. 53, beat 2.88 to m. 53, beat 3.01: no match
+- m. 53, beat 3 to m. 53, beat 3.27: no match
+- m. 53, beat 3.12 to m. 53, beat 3.26: no match
+- m. 53, beat 3.25 to m. 53, beat 3.52: no match
+- m. 53, beat 3.38 to m. 53, beat 3.51: no match
+- m. 53, beat 3.5 to m. 53, beat 3.77: no match
+- m. 53, beat 3.62 to m. 53, beat 3.76: no match
+- m. 53, beat 3.75 to m. 53, beat 4.03: no match
+- m. 53, beat 3.88 to m. 53, beat 4.01: no match
+- m. 53, beat 4 to m. 53, beat 4.28: no match
+- m. 53, beat 4.12 to m. 53, beat 4.26: no match
+- m. 53, beat 4.25 to m. 53, beat 4.53: no match
+- m. 53, beat 4.38 to m. 53, beat 4.51: no match
+- m. 53, beat 4.5 to m. 53, beat 4.78: no match
+- m. 53, beat 4.62 to m. 53, beat 4.76: no match
+- m. 53, beat 4.75 to m. 54, beat 1: no match
+- m. 53, beat 4.88 to m. 54, beat 1: no match
+- m. 54, beat 1 to m. 54, beat 2: no match
+- m. 54, beat 2 to m. 54, beat 2.25: no match
+- m. 54, beat 2.25 to m. 54, beat 2.5: no match
+- m. 54, beat 2.5 to m. 54, beat 2.75: no match
+- m. 54, beat 2.75 to m. 54, beat 3: no match
+- m. 54, beat 3 to m. 54, beat 3.25: no match
+- m. 54, beat 3.25 to m. 54, beat 3.5: no match
+- m. 54, beat 3.5 to m. 54, beat 3.75: no match
+- m. 54, beat 3.75 to m. 54, beat 4: no match
+- m. 54, beat 4 to m. 55, beat 1: no match
+- m. 54, beat 4.25 to m. 54, beat 4.5: no match
+- m. 54, beat 4.5 to m. 54, beat 4.75: no match
+- m. 54, beat 4.75 to m. 55, beat 1: no match
+- m. 55, beat 1 to m. 55, beat 2: no match
+- m. 55, beat 2 to m. 55, beat 2.25: no match
+- m. 55, beat 2.25 to m. 55, beat 2.5: no match
+- m. 55, beat 2.5 to m. 55, beat 2.75: no match
+- m. 55, beat 2.75 to m. 55, beat 3: no match
+- m. 55, beat 3 to m. 55, beat 3.25: no match
+- m. 55, beat 3.25 to m. 55, beat 3.5: no match
+- m. 55, beat 3.5 to m. 55, beat 3.75: no match
+- m. 55, beat 3.75 to m. 55, beat 4: no match
+- m. 55, beat 4 to m. 56, beat 1: no match
+- m. 55, beat 4.25 to m. 55, beat 4.5: no match
+- m. 55, beat 4.5 to m. 55, beat 4.75: no match
+- m. 55, beat 4.75 to m. 56, beat 1: no match
+- m. 56, beat 1 to m. 56, beat 1.8: no match
+- m. 56, beat 2 to m. 56, beat 2.8: V
+- m. 56, beat 3 to m. 56, beat 3.8: no match
+- m. 57, beat 1 to m. 57, beat 2: no match
+- m. 57, beat 2 to m. 57, beat 2.25: no match
+- m. 57, beat 2.25 to m. 57, beat 2.5: no match
+- m. 57, beat 2.5 to m. 57, beat 2.75: no match
+- m. 57, beat 2.75 to m. 57, beat 3: no match
+- m. 57, beat 3 to m. 57, beat 3.25: no match
+- m. 57, beat 3.25 to m. 57, beat 3.5: no match
+- m. 57, beat 3.5 to m. 57, beat 3.75: no match
+- m. 57, beat 3.75 to m. 57, beat 4: no match
+- m. 57, beat 4 to m. 58, beat 1: no match
+- m. 57, beat 4.25 to m. 57, beat 4.5: no match
+- m. 57, beat 4.5 to m. 57, beat 4.75: no match
+- m. 57, beat 4.75 to m. 58, beat 1: no match
+- m. 58, beat 1 to m. 58, beat 2: no match
+- m. 58, beat 2 to m. 58, beat 2.25: no match
+- m. 58, beat 2.25 to m. 58, beat 2.5: no match
+- m. 58, beat 2.5 to m. 58, beat 2.75: no match
+- m. 58, beat 2.75 to m. 58, beat 3: no match
+- m. 58, beat 3 to m. 58, beat 3.25: no match
+- m. 58, beat 3.25 to m. 58, beat 3.5: no match
+- m. 58, beat 3.5 to m. 58, beat 3.75: no match
+- m. 58, beat 3.75 to m. 58, beat 4: no match
+- m. 58, beat 4 to m. 59, beat 1: no match
+- m. 58, beat 4.25 to m. 58, beat 4.5: no match
+- m. 58, beat 4.5 to m. 58, beat 4.75: no match
+- m. 58, beat 4.75 to m. 59, beat 1: no match
+- m. 59, beat 1 to m. 59, beat 2: no match
+- m. 59, beat 1.25 to m. 59, beat 1.5: no match
+- m. 59, beat 1.5 to m. 59, beat 1.75: no match
+- m. 59, beat 1.75 to m. 59, beat 2: no match
+- m. 59, beat 2 to m. 59, beat 2.25: no match
+- m. 59, beat 2.25 to m. 59, beat 2.5: no match
+- m. 59, beat 2.5 to m. 59, beat 2.75: no match
+- m. 59, beat 2.75 to m. 59, beat 3: no match
+- m. 59, beat 3 to m. 59, beat 4: no match
+- m. 59, beat 3.25 to m. 59, beat 3.5: no match
+- m. 59, beat 3.5 to m. 59, beat 3.75: no match
+- m. 59, beat 3.75 to m. 59, beat 4: no match
+- m. 59, beat 4 to m. 59, beat 4.25: no match
+- m. 59, beat 4.25 to m. 59, beat 4.5: no match
+- m. 59, beat 4.5 to m. 59, beat 4.75: no match
+- m. 59, beat 4.75 to m. 60, beat 1: no match
+- m. 60, beat 1 to m. 60, beat 2: no match
+- m. 60, beat 1.25 to m. 60, beat 1.5: no match
+- m. 60, beat 1.5 to m. 60, beat 1.75: no match
+- m. 60, beat 1.75 to m. 60, beat 2: no match
+- m. 60, beat 2 to m. 60, beat 2.25: no match
+- m. 60, beat 2.25 to m. 60, beat 2.5: no match
+- m. 60, beat 2.5 to m. 60, beat 2.75: no match
+- m. 60, beat 2.75 to m. 60, beat 3: no match
+- m. 60, beat 3 to m. 60, beat 4: no match
+- m. 60, beat 3.25 to m. 60, beat 3.5: no match
+- m. 60, beat 3.5 to m. 60, beat 3.75: no match
+- m. 60, beat 3.75 to m. 60, beat 4: no match
+- m. 60, beat 4 to m. 60, beat 4.25: no match
+- m. 60, beat 4.25 to m. 60, beat 4.5: no match
+- m. 60, beat 4.5 to m. 60, beat 4.75: no match
+- m. 60, beat 4.75 to m. 61, beat 1: no match
+- m. 61, beat 1 to m. 61, beat 2: no match
+- m. 61, beat 2 to m. 61, beat 2.25: no match
+- m. 61, beat 2.25 to m. 61, beat 2.5: no match
+- m. 61, beat 2.5 to m. 61, beat 2.75: no match
+- m. 61, beat 2.75 to m. 61, beat 3: no match
+- m. 61, beat 3 to m. 61, beat 3.25: no match
+- m. 61, beat 3.25 to m. 61, beat 3.5: no match
+- m. 61, beat 3.5 to m. 61, beat 3.75: no match
+- m. 61, beat 3.75 to m. 61, beat 4: no match
+- m. 61, beat 4 to m. 62, beat 1: no match
+- m. 61, beat 4.25 to m. 61, beat 4.5: no match
+- m. 61, beat 4.5 to m. 61, beat 4.75: no match
+- m. 61, beat 4.75 to m. 62, beat 1: no match
+- m. 62, beat 1 to m. 62, beat 2: no match
+- m. 62, beat 2 to m. 62, beat 2.25: no match
+- m. 62, beat 2.25 to m. 62, beat 2.5: no match
+- m. 62, beat 2.5 to m. 62, beat 2.75: no match
+- m. 62, beat 2.75 to m. 62, beat 3: no match
+- m. 62, beat 3 to m. 62, beat 3.25: no match
+- m. 62, beat 3.25 to m. 62, beat 3.5: no match
+- m. 62, beat 3.5 to m. 62, beat 3.75: no match
+- m. 62, beat 3.75 to m. 62, beat 4: no match
+- m. 62, beat 4 to m. 63, beat 1: no match
+- m. 62, beat 4.25 to m. 62, beat 4.5: no match
+- m. 62, beat 4.5 to m. 62, beat 4.75: no match
+- m. 62, beat 4.75 to m. 63, beat 1: no match
+- m. 63, beat 1 to m. 63, beat 2: no match
+- m. 63, beat 1.25 to m. 63, beat 1.5: no match
+- m. 63, beat 1.5 to m. 63, beat 1.75: no match
+- m. 63, beat 1.75 to m. 63, beat 2: no match
+- m. 63, beat 2 to m. 63, beat 2.25: no match
+- m. 63, beat 2.25 to m. 63, beat 2.5: no match
+- m. 63, beat 2.5 to m. 63, beat 2.75: no match
+- m. 63, beat 2.75 to m. 63, beat 3: no match
+- m. 63, beat 3 to m. 63, beat 4: no match
+- m. 63, beat 3.25 to m. 63, beat 3.5: no match
+- m. 63, beat 3.5 to m. 63, beat 3.75: no match
+- m. 63, beat 3.75 to m. 63, beat 4: no match
+- m. 63, beat 4 to m. 63, beat 4.25: no match
+- m. 63, beat 4.25 to m. 63, beat 4.5: no match
+- m. 63, beat 4.5 to m. 63, beat 4.75: no match
+- m. 63, beat 4.75 to m. 64, beat 1: no match
+- m. 64, beat 1 to m. 64, beat 2: no match
+- m. 64, beat 1.25 to m. 64, beat 1.5: no match
+- m. 64, beat 1.5 to m. 64, beat 1.75: no match
+- m. 64, beat 1.75 to m. 64, beat 2: no match
+- m. 64, beat 2 to m. 64, beat 2.25: no match
+- m. 64, beat 2.25 to m. 64, beat 2.5: no match
+- m. 64, beat 2.5 to m. 64, beat 2.75: no match
+- m. 64, beat 2.75 to m. 64, beat 3: no match
+- m. 64, beat 3 to m. 64, beat 4: no match
+- m. 64, beat 3.25 to m. 64, beat 3.5: no match
+- m. 64, beat 3.5 to m. 64, beat 3.75: no match
+- m. 64, beat 3.75 to m. 64, beat 4: no match
+- m. 64, beat 4 to m. 64, beat 4.25: no match
+- m. 64, beat 4.25 to m. 64, beat 4.5: no match
+- m. 64, beat 4.5 to m. 64, beat 4.75: no match
+- m. 64, beat 4.75 to m. 65, beat 1: no match
+- m. 65, beat 1 to m. 65, beat 2: no match
+- m. 65, beat 1.25 to m. 65, beat 1.5: no match
+- m. 65, beat 1.5 to m. 65, beat 1.75: no match
+- m. 65, beat 1.75 to m. 65, beat 2: no match
+- m. 65, beat 2 to m. 65, beat 2.25: no match
+- m. 65, beat 2.25 to m. 65, beat 2.5: no match
+- m. 65, beat 2.5 to m. 65, beat 2.75: no match
+- m. 65, beat 2.75 to m. 65, beat 3: no match
+- m. 65, beat 3 to m. 65, beat 4: no match
+- m. 65, beat 3.25 to m. 65, beat 3.5: no match
+- m. 65, beat 3.5 to m. 65, beat 3.75: no match
+- m. 65, beat 3.75 to m. 65, beat 4: no match
+- m. 65, beat 4 to m. 65, beat 4.25: no match
+- m. 65, beat 4.25 to m. 65, beat 4.5: no match
+- m. 65, beat 4.5 to m. 65, beat 4.75: no match
+- m. 65, beat 4.75 to m. 66, beat 1: no match
+- m. 66, beat 1 to m. 66, beat 2: no match
+- m. 66, beat 1.25 to m. 66, beat 1.5: no match
+- m. 66, beat 1.5 to m. 66, beat 1.75: no match
+- m. 66, beat 1.75 to m. 66, beat 2: no match
+- m. 66, beat 2 to m. 66, beat 2.25: no match
+- m. 66, beat 2.25 to m. 66, beat 2.5: no match
+- m. 66, beat 2.5 to m. 66, beat 2.75: no match
+- m. 66, beat 2.75 to m. 66, beat 3: no match
+- m. 66, beat 3 to m. 66, beat 4: no match
+- m. 66, beat 3.25 to m. 66, beat 3.5: no match
+- m. 66, beat 3.5 to m. 66, beat 3.75: no match
+- m. 66, beat 3.75 to m. 66, beat 4: no match
+- m. 66, beat 4 to m. 66, beat 4.25: no match
+- m. 66, beat 4.25 to m. 66, beat 4.5: no match
+- m. 66, beat 4.5 to m. 66, beat 4.75: no match
+- m. 66, beat 4.75 to m. 67, beat 1: no match
+- m. 67, beat 1 to m. 67, beat 2: no match
+- m. 67, beat 1.25 to m. 67, beat 1.5: no match
+- m. 67, beat 1.5 to m. 67, beat 1.75: no match
+- m. 67, beat 1.75 to m. 67, beat 2: no match
+- m. 67, beat 2 to m. 67, beat 2.25: no match
+- m. 67, beat 2.25 to m. 67, beat 2.5: no match
+- m. 67, beat 2.5 to m. 67, beat 2.75: no match
+- m. 67, beat 2.75 to m. 67, beat 3: no match
+- m. 67, beat 3 to m. 67, beat 4: no match
+- m. 67, beat 3.25 to m. 67, beat 3.5: no match
+- m. 67, beat 3.5 to m. 67, beat 3.75: no match
+- m. 67, beat 3.75 to m. 67, beat 4: no match
+- m. 67, beat 4 to m. 67, beat 4.25: no match
+- m. 67, beat 4.25 to m. 67, beat 4.5: no match
+- m. 67, beat 4.5 to m. 67, beat 4.75: no match
+- m. 67, beat 4.75 to m. 68, beat 1: no match
+- m. 68, beat 1 to m. 68, beat 2: no match
+- m. 68, beat 1.25 to m. 68, beat 1.5: no match
+- m. 68, beat 1.5 to m. 68, beat 1.75: no match
+- m. 68, beat 1.75 to m. 68, beat 2: no match
+- m. 68, beat 2 to m. 68, beat 2.25: no match
+- m. 68, beat 2.25 to m. 68, beat 2.5: no match
+- m. 68, beat 2.5 to m. 68, beat 2.75: no match
+- m. 68, beat 2.75 to m. 68, beat 3: no match
+- m. 68, beat 3 to m. 68, beat 4: no match
+- m. 68, beat 3.25 to m. 68, beat 3.5: no match
+- m. 68, beat 3.5 to m. 68, beat 3.75: no match
+- m. 68, beat 3.75 to m. 68, beat 4: no match
+- m. 68, beat 4 to m. 68, beat 4.25: no match
+- m. 68, beat 4.25 to m. 68, beat 4.5: no match
+- m. 68, beat 4.5 to m. 68, beat 4.75: no match
+- m. 68, beat 4.75 to m. 69, beat 1: no match
+- m. 69, beat 1 to m. 69, beat 3: no match
+- m. 69, beat 1.25 to m. 69, beat 1.5: no match
+- m. 69, beat 1.5 to m. 69, beat 1.75: no match
+- m. 69, beat 1.75 to m. 69, beat 2: no match
+- m. 69, beat 2 to m. 69, beat 2.25: no match
+- m. 69, beat 2.25 to m. 69, beat 2.5: no match
+- m. 69, beat 2.5 to m. 69, beat 2.75: no match
+- m. 69, beat 2.75 to m. 69, beat 3: no match
+- m. 69, beat 3 to m. 70, beat 1: I
+- m. 69, beat 3.25 to m. 69, beat 3.5: no match
+- m. 69, beat 3.5 to m. 69, beat 3.75: no match
+- m. 69, beat 3.75 to m. 69, beat 4: no match
+- m. 69, beat 4 to m. 69, beat 4.25: no match
+- m. 69, beat 4.25 to m. 69, beat 4.5: no match
+- m. 69, beat 4.5 to m. 69, beat 4.75: no match
+- m. 69, beat 4.75 to m. 70, beat 1: no match
+- m. 70, beat 1 to m. 70, beat 3: no match
+- m. 70, beat 1.5 to m. 70, beat 2: no match
+- m. 70, beat 2 to m. 70, beat 2.5: no match
+- m. 70, beat 2.5 to m. 70, beat 3: no match
+- m. 70, beat 3 to m. 70, beat 4: no match
+- m. 70, beat 3.5 to m. 70, beat 4: no match
+- m. 70, beat 4 to m. 71, beat 1: no match
+- m. 70, beat 4.5 to m. 71, beat 1: no match
+- m. 71, beat 1 to m. 71, beat 2.5: no match
+- m. 71, beat 1.5 to m. 71, beat 2: no match
+- m. 71, beat 2 to m. 71, beat 2.5: no match
+- m. 71, beat 2.5 to m. 71, beat 3: no match
+- m. 71, beat 2.75 to m. 71, beat 3: no match
+- m. 71, beat 3 to m. 72, beat 1: no match
+- m. 71, beat 3.5 to m. 71, beat 4: no match
+- m. 71, beat 4 to m. 71, beat 4.5: no match
+- m. 71, beat 4.5 to m. 72, beat 1: no match
+- m. 72, beat 1 to m. 72, beat 3: no match
+- m. 72, beat 1.5 to m. 72, beat 2: no match
+- m. 72, beat 2 to m. 72, beat 2.5: no match
+- m. 72, beat 2.5 to m. 72, beat 3: no match
+- m. 72, beat 3 to m. 72, beat 4: no match
+- m. 72, beat 3.5 to m. 72, beat 4: no match
+- m. 72, beat 4 to m. 73, beat 1: no match
+- m. 72, beat 4.5 to m. 73, beat 1: no match
+- m. 73, beat 1 to m. 73, beat 2: no match
+- m. 73, beat 1.5 to m. 73, beat 2: no match
+- m. 73, beat 2 to m. 73, beat 2.5: no match
+- m. 73, beat 2.16 to m. 73, beat 2.33: no match
+- m. 73, beat 2.33 to m. 73, beat 2.5: no match
+- m. 73, beat 2.5 to m. 73, beat 3: no match
+- m. 73, beat 2.75 to m. 73, beat 3: no match
+- m. 73, beat 3 to m. 73, beat 4: no match
+- m. 73, beat 3.5 to m. 73, beat 4: no match
+- m. 73, beat 4 to m. 73, beat 4.5: no match
+- m. 73, beat 4.5 to m. 74, beat 1: no match
+- m. 74, beat 1 to m. 74, beat 2: no match
+- m. 74, beat 1.5 to m. 74, beat 1.75: no match
+- m. 74, beat 1.75 to m. 74, beat 2: no match
+- m. 74, beat 2 to m. 74, beat 2.25: no match
+- m. 74, beat 2.25 to m. 74, beat 2.5: no match
+- m. 74, beat 2.5 to m. 74, beat 2.75: no match
+- m. 74, beat 2.75 to m. 74, beat 3: no match
+- m. 74, beat 3 to m. 74, beat 3.25: no match
+- m. 74, beat 3.25 to m. 74, beat 3.5: no match
+- m. 74, beat 3.5 to m. 74, beat 3.75: no match
+- m. 74, beat 3.75 to m. 74, beat 4: no match
+- m. 74, beat 4 to m. 75, beat 1: no match
+- m. 74, beat 4.25 to m. 74, beat 4.5: no match
+- m. 74, beat 4.5 to m. 74, beat 4.75: no match
+- m. 74, beat 4.75 to m. 75, beat 1: no match
+- m. 75, beat 1 to m. 75, beat 2: IV
+- m. 75, beat 1.5 to m. 75, beat 1.75: no match
+- m. 75, beat 1.75 to m. 75, beat 2: no match
+- m. 75, beat 2 to m. 75, beat 2.25: no match
+- m. 75, beat 2.25 to m. 75, beat 2.5: no match
+- m. 75, beat 2.5 to m. 75, beat 2.75: no match
+- m. 75, beat 2.75 to m. 75, beat 3: no match
+- m. 75, beat 3 to m. 75, beat 3.25: no match
+- m. 75, beat 3.25 to m. 75, beat 3.5: no match
+- m. 75, beat 3.5 to m. 75, beat 3.75: no match
+- m. 75, beat 3.75 to m. 75, beat 4: no match
+- m. 75, beat 4 to m. 76, beat 1: no match
+- m. 75, beat 4.25 to m. 75, beat 4.5: no match
+- m. 75, beat 4.5 to m. 75, beat 4.75: no match
+- m. 75, beat 4.75 to m. 76, beat 1: no match
+- m. 76, beat 1 to m. 76, beat 2: no match
+- m. 76, beat 1.5 to m. 76, beat 1.75: no match
+- m. 76, beat 1.75 to m. 76, beat 2: no match
+- m. 76, beat 2 to m. 76, beat 2.25: no match
+- m. 76, beat 2.25 to m. 76, beat 2.5: no match
+- m. 76, beat 2.5 to m. 76, beat 2.75: no match
+- m. 76, beat 2.75 to m. 76, beat 3: no match
+- m. 76, beat 3 to m. 76, beat 3.25: no match
+- m. 76, beat 3.25 to m. 76, beat 3.5: no match
+- m. 76, beat 3.5 to m. 76, beat 3.75: no match
+- m. 76, beat 3.75 to m. 76, beat 4: no match
+- m. 76, beat 4 to m. 77, beat 1: no match
+- m. 76, beat 4.25 to m. 76, beat 4.5: no match
+- m. 76, beat 4.5 to m. 76, beat 4.75: no match
+- m. 76, beat 4.75 to m. 77, beat 1: no match
+- m. 77, beat 1 to m. 77, beat 2: no match
+- m. 77, beat 1.5 to m. 77, beat 1.75: no match
+- m. 77, beat 1.75 to m. 77, beat 2: no match
+- m. 77, beat 2 to m. 77, beat 2.25: no match
+- m. 77, beat 2.25 to m. 77, beat 2.5: no match
+- m. 77, beat 2.5 to m. 77, beat 2.75: no match
+- m. 77, beat 2.75 to m. 77, beat 3: no match
+- m. 77, beat 3 to m. 77, beat 3.25: no match
+- m. 77, beat 3.25 to m. 77, beat 3.5: no match
+- m. 77, beat 3.5 to m. 77, beat 3.75: no match
+- m. 77, beat 3.75 to m. 77, beat 4: no match
+- m. 77, beat 4 to m. 77, beat 4.25: no match
+- m. 77, beat 4.25 to m. 77, beat 4.5: no match
+- m. 77, beat 4.5 to m. 77, beat 4.75: no match
+- m. 77, beat 4.75 to m. 78, beat 1: no match
+- m. 78, beat 1 to m. 78, beat 2: no match
+- m. 78, beat 1.5 to m. 78, beat 1.75: no match
+- m. 78, beat 1.75 to m. 78, beat 2: no match
+- m. 78, beat 2 to m. 78, beat 2.25: no match
+- m. 78, beat 2.25 to m. 78, beat 2.5: no match
+- m. 78, beat 2.5 to m. 78, beat 2.75: no match
+- m. 78, beat 2.75 to m. 78, beat 3: no match
+- m. 78, beat 3 to m. 78, beat 3.25: no match
+- m. 78, beat 3.25 to m. 78, beat 3.5: no match
+- m. 78, beat 3.5 to m. 78, beat 3.75: no match
+- m. 78, beat 3.75 to m. 78, beat 4: no match
+- m. 78, beat 4 to m. 79, beat 1: no match
+- m. 78, beat 4.25 to m. 78, beat 4.5: no match
+- m. 78, beat 4.5 to m. 78, beat 4.75: no match
+- m. 78, beat 4.75 to m. 79, beat 1: no match
+- m. 79, beat 1 to m. 79, beat 2: I
+- m. 79, beat 1.5 to m. 79, beat 1.75: no match
+- m. 79, beat 1.75 to m. 79, beat 2: no match
+- m. 79, beat 2 to m. 79, beat 2.25: no match
+- m. 79, beat 2.25 to m. 79, beat 2.5: no match
+- m. 79, beat 2.5 to m. 79, beat 2.75: no match
+- m. 79, beat 2.75 to m. 79, beat 3: no match
+- m. 79, beat 3 to m. 79, beat 3.25: no match
+- m. 79, beat 3.25 to m. 79, beat 3.5: no match
+- m. 79, beat 3.5 to m. 79, beat 3.75: no match
+- m. 79, beat 3.75 to m. 79, beat 4: no match
+- m. 79, beat 4 to m. 80, beat 1: no match
+- m. 79, beat 4.25 to m. 79, beat 4.5: no match
+- m. 79, beat 4.5 to m. 79, beat 4.75: no match
+- m. 79, beat 4.75 to m. 80, beat 1: no match
+- m. 80, beat 1 to m. 80, beat 2: no match
+- m. 80, beat 1.5 to m. 80, beat 1.75: no match
+- m. 80, beat 1.75 to m. 80, beat 2: no match
+- m. 80, beat 2 to m. 80, beat 2.25: no match
+- m. 80, beat 2.25 to m. 80, beat 2.5: no match
+- m. 80, beat 2.5 to m. 80, beat 2.75: no match
+- m. 80, beat 2.75 to m. 80, beat 3: no match
+- m. 80, beat 3 to m. 80, beat 3.25: no match
+- m. 80, beat 3.25 to m. 80, beat 3.5: no match
+- m. 80, beat 3.5 to m. 80, beat 3.75: no match
+- m. 80, beat 3.75 to m. 80, beat 4: no match
+- m. 80, beat 4 to m. 81, beat 1: no match
+- m. 80, beat 4.25 to m. 80, beat 4.5: no match
+- m. 80, beat 4.5 to m. 80, beat 4.75: no match
+- m. 80, beat 4.75 to m. 81, beat 1: no match
+- m. 81, beat 1 to m. 81, beat 2: no match
+- m. 81, beat 1.5 to m. 81, beat 1.75: no match
+- m. 81, beat 1.75 to m. 81, beat 2: no match
+- m. 81, beat 2 to m. 81, beat 2.25: no match
+- m. 81, beat 2.25 to m. 81, beat 2.5: no match
+- m. 81, beat 2.5 to m. 81, beat 2.75: no match
+- m. 81, beat 2.75 to m. 81, beat 3: no match
+- m. 81, beat 3 to m. 81, beat 3.25: no match
+- m. 81, beat 3.25 to m. 81, beat 3.5: no match
+- m. 81, beat 3.5 to m. 81, beat 3.75: no match
+- m. 81, beat 3.75 to m. 81, beat 4: no match
+- m. 81, beat 4 to m. 82, beat 1: no match
+- m. 81, beat 4.25 to m. 81, beat 4.5: no match
+- m. 81, beat 4.5 to m. 81, beat 4.75: no match
+- m. 81, beat 4.75 to m. 82, beat 1: no match
+- m. 82, beat 1 to m. 83, beat 1: ii
+- m. 82, beat 1.25 to m. 82, beat 1.5: no match
+- m. 82, beat 1.5 to m. 82, beat 1.75: no match
+- m. 82, beat 1.75 to m. 82, beat 2: no match
+- m. 82, beat 2 to m. 82, beat 2.25: no match
+- m. 82, beat 2.25 to m. 82, beat 2.5: no match
+- m. 82, beat 2.5 to m. 82, beat 2.75: no match
+- m. 82, beat 2.75 to m. 82, beat 3: no match
+- m. 82, beat 3 to m. 82, beat 3.25: no match
+- m. 82, beat 3.25 to m. 82, beat 3.5: no match
+- m. 82, beat 3.5 to m. 82, beat 3.75: no match
+- m. 82, beat 3.75 to m. 82, beat 4: no match
+- m. 82, beat 4 to m. 82, beat 4.25: no match
+- m. 82, beat 4.25 to m. 82, beat 4.5: no match
+- m. 82, beat 4.5 to m. 82, beat 4.75: no match
+- m. 82, beat 4.75 to m. 83, beat 1: no match
+- m. 83, beat 1 to m. 83, beat 2.5: no match
+- m. 83, beat 1.25 to m. 83, beat 1.5: no match
+- m. 83, beat 1.5 to m. 83, beat 1.75: no match
+- m. 83, beat 1.75 to m. 83, beat 2: no match
+- m. 83, beat 2 to m. 83, beat 2.25: no match
+- m. 83, beat 2.25 to m. 83, beat 2.5: no match
+- m. 83, beat 2.5 to m. 83, beat 3: no match
+- m. 83, beat 2.75 to m. 83, beat 3: no match
+- m. 83, beat 3 to m. 83, beat 4.5: no match
+- m. 83, beat 3.25 to m. 83, beat 3.5: no match
+- m. 83, beat 3.5 to m. 83, beat 3.75: no match
+- m. 83, beat 3.75 to m. 83, beat 4: no match
+- m. 83, beat 4 to m. 83, beat 4.25: no match
+- m. 83, beat 4.25 to m. 83, beat 4.5: no match
+- m. 83, beat 4.5 to m. 84, beat 1: no match
+- m. 83, beat 4.75 to m. 84, beat 1: no match
+- m. 84, beat 1 to m. 84, beat 1.5: no match
+- m. 84, beat 1.25 to m. 84, beat 1.5: no match
+- m. 84, beat 1.5 to m. 84, beat 2: no match
+- m. 84, beat 1.75 to m. 84, beat 2: no match
+- m. 84, beat 2 to m. 84, beat 2.5: no match
+- m. 84, beat 2.25 to m. 84, beat 2.5: no match
+- m. 84, beat 2.5 to m. 84, beat 3: no match
+- m. 84, beat 2.75 to m. 84, beat 3: no match
+- m. 84, beat 3 to m. 84, beat 3.5: no match
+- m. 84, beat 3.25 to m. 84, beat 3.5: no match
+- m. 84, beat 3.5 to m. 84, beat 4: no match
+- m. 84, beat 3.75 to m. 84, beat 4: no match
+- m. 84, beat 4 to m. 84, beat 4.5: no match
+- m. 84, beat 4.25 to m. 84, beat 4.5: no match
+- m. 84, beat 4.5 to m. 85, beat 1: no match
+- m. 84, beat 4.75 to m. 85, beat 1: no match
+- m. 85, beat 1 to m. 85, beat 2: no match
+- m. 85, beat 2 to m. 85, beat 3: V
+- m. 85, beat 3 to m. 85, beat 4: no match
+- m. 86, beat 1 to m. 86, beat 1.25: no match
+- m. 86, beat 1.25 to m. 86, beat 1.5: no match
+- m. 86, beat 1.5 to m. 86, beat 1.75: no match
+- m. 86, beat 1.75 to m. 86, beat 2: no match
+- m. 86, beat 2 to m. 86, beat 2.25: no match
+- m. 86, beat 2.25 to m. 86, beat 2.5: no match
+- m. 86, beat 2.5 to m. 86, beat 2.75: no match
+- m. 86, beat 2.75 to m. 86, beat 3: no match
+- m. 86, beat 3 to m. 86, beat 3.25: no match
+- m. 86, beat 3.25 to m. 86, beat 3.5: no match
+- m. 86, beat 3.5 to m. 86, beat 3.75: no match
+- m. 86, beat 3.75 to m. 86, beat 4: no match
+- m. 86, beat 4 to m. 86, beat 4.25: no match
+- m. 86, beat 4.25 to m. 86, beat 4.5: no match
+- m. 86, beat 4.5 to m. 86, beat 4.75: no match
+- m. 86, beat 4.75 to m. 87, beat 1: no match
+- m. 87, beat 1 to m. 87, beat 1.5: no match
+- m. 87, beat 1.25 to m. 87, beat 1.5: no match
+- m. 87, beat 1.5 to m. 87, beat 2: no match
+- m. 87, beat 1.75 to m. 87, beat 2: no match
+- m. 87, beat 2 to m. 87, beat 3.5: no match
+- m. 87, beat 2.25 to m. 87, beat 2.5: no match
+- m. 87, beat 2.5 to m. 87, beat 2.75: no match
+- m. 87, beat 2.75 to m. 87, beat 3: no match
+- m. 87, beat 3 to m. 87, beat 3.25: no match
+- m. 87, beat 3.25 to m. 87, beat 3.5: no match
+- m. 87, beat 3.5 to m. 87, beat 3.75: no match
+- m. 87, beat 3.75 to m. 87, beat 4: no match
+- m. 87, beat 4 to m. 87, beat 4.5: no match
+- m. 87, beat 4.25 to m. 87, beat 4.5: no match
+- m. 87, beat 4.5 to m. 88, beat 1: no match
+- m. 87, beat 4.75 to m. 88, beat 1: no match
+- m. 88, beat 1 to m. 88, beat 1.25: no match
+- m. 88, beat 1.12 to m. 88, beat 1.25: no match
+- m. 88, beat 1.25 to m. 88, beat 1.5: no match
+- m. 88, beat 1.38 to m. 88, beat 1.5: no match
+- m. 88, beat 1.5 to m. 88, beat 1.75: no match
+- m. 88, beat 1.62 to m. 88, beat 1.75: no match
+- m. 88, beat 1.75 to m. 88, beat 2: no match
+- m. 88, beat 2 to m. 89, beat 1: no match
+- m. 88, beat 2.25 to m. 88, beat 2.5: no match
+- m. 88, beat 2.5 to m. 88, beat 2.75: no match
+- m. 88, beat 2.75 to m. 88, beat 3: no match
+- m. 88, beat 3 to m. 88, beat 3.25: no match
+- m. 88, beat 3.25 to m. 88, beat 3.5: no match
+- m. 88, beat 3.5 to m. 88, beat 3.75: no match
+- m. 88, beat 3.75 to m. 88, beat 4: no match
+- m. 88, beat 4 to m. 88, beat 4.25: no match
+- m. 88, beat 4.25 to m. 88, beat 4.5: no match
+- m. 88, beat 4.5 to m. 88, beat 4.75: no match
+- m. 88, beat 4.75 to m. 89, beat 1: no match
+- m. 89, beat 1 to m. 89, beat 1.5: no match
+- m. 89, beat 1.25 to m. 89, beat 1.5: no match
+- m. 89, beat 1.5 to m. 89, beat 2: no match
+- m. 89, beat 1.75 to m. 89, beat 2: no match
+- m. 89, beat 2 to m. 89, beat 3.5: no match
+- m. 89, beat 2.25 to m. 89, beat 2.5: no match
+- m. 89, beat 2.5 to m. 89, beat 2.75: no match
+- m. 89, beat 2.75 to m. 89, beat 3: no match
+- m. 89, beat 3 to m. 89, beat 3.25: no match
+- m. 89, beat 3.25 to m. 89, beat 3.5: no match
+- m. 89, beat 3.5 to m. 89, beat 3.75: no match
+- m. 89, beat 3.75 to m. 89, beat 4: no match
+- m. 89, beat 4 to m. 89, beat 4.5: no match
+- m. 89, beat 4.25 to m. 89, beat 4.5: no match
+- m. 89, beat 4.5 to m. 90, beat 1: no match
+- m. 89, beat 4.75 to m. 90, beat 1: no match
+- m. 90, beat 1 to m. 90, beat 1.25: no match
+- m. 90, beat 1.12 to m. 90, beat 1.25: no match
+- m. 90, beat 1.25 to m. 90, beat 1.5: no match
+- m. 90, beat 1.38 to m. 90, beat 1.5: no match
+- m. 90, beat 1.5 to m. 90, beat 1.75: no match
+- m. 90, beat 1.62 to m. 90, beat 1.75: no match
+- m. 90, beat 1.75 to m. 90, beat 2: no match
+- m. 90, beat 2 to m. 90, beat 4: no match
+- m. 90, beat 2.25 to m. 90, beat 2.5: no match
+- m. 90, beat 2.5 to m. 90, beat 2.75: no match
+- m. 90, beat 2.75 to m. 90, beat 3: no match
+- m. 90, beat 3 to m. 90, beat 3.25: no match
+- m. 90, beat 3.25 to m. 90, beat 3.5: no match
+- m. 90, beat 3.5 to m. 90, beat 3.75: no match
+- m. 90, beat 3.75 to m. 90, beat 4: no match
+- m. 90, beat 4 to m. 90, beat 4.25: no match
+- m. 90, beat 4.25 to m. 90, beat 4.5: no match
+- m. 90, beat 4.5 to m. 90, beat 4.75: no match
+- m. 90, beat 4.75 to m. 91, beat 1: no match
+- m. 91, beat 1 to m. 91, beat 2: no match
+- m. 91, beat 1.25 to m. 91, beat 1.5: no match
+- m. 91, beat 1.5 to m. 91, beat 1.75: no match
+- m. 91, beat 1.75 to m. 91, beat 2: no match
+- m. 91, beat 2 to m. 91, beat 3: no match
+- m. 91, beat 2.25 to m. 91, beat 2.5: no match
+- m. 91, beat 2.5 to m. 91, beat 2.75: no match
+- m. 91, beat 2.75 to m. 91, beat 3: no match
+- m. 91, beat 3 to m. 91, beat 4: no match
+- m. 91, beat 3.25 to m. 91, beat 3.5: no match
+- m. 91, beat 3.5 to m. 91, beat 3.75: no match
+- m. 91, beat 3.75 to m. 91, beat 4: no match
+- m. 91, beat 4 to m. 92, beat 1: no match
+- m. 91, beat 4.25 to m. 91, beat 4.5: no match
+- m. 91, beat 4.5 to m. 91, beat 4.75: no match
+- m. 91, beat 4.75 to m. 92, beat 1: no match
+- m. 92, beat 1 to m. 92, beat 2: no match
+- m. 92, beat 1.25 to m. 92, beat 1.5: no match
+- m. 92, beat 1.5 to m. 92, beat 1.75: no match
+- m. 92, beat 1.75 to m. 92, beat 2: no match
+- m. 92, beat 2 to m. 92, beat 3: no match
+- m. 92, beat 2.25 to m. 92, beat 2.5: no match
+- m. 92, beat 2.5 to m. 92, beat 2.75: no match
+- m. 92, beat 2.75 to m. 92, beat 3: no match
+- m. 92, beat 3 to m. 92, beat 4: no match
+- m. 92, beat 3.25 to m. 92, beat 3.5: no match
+- m. 92, beat 3.5 to m. 92, beat 3.75: no match
+- m. 92, beat 3.75 to m. 92, beat 4: no match
+- m. 92, beat 4 to m. 93, beat 1: no match
+- m. 92, beat 4.25 to m. 92, beat 4.5: no match
+- m. 92, beat 4.5 to m. 92, beat 4.75: no match
+- m. 92, beat 4.75 to m. 93, beat 1: no match
+- m. 93, beat 1 to m. 93, beat 2: no match
+- m. 93, beat 1.25 to m. 93, beat 1.5: no match
+- m. 93, beat 1.5 to m. 93, beat 1.75: no match
+- m. 93, beat 1.75 to m. 93, beat 2: no match
+- m. 93, beat 2 to m. 93, beat 3: no match
+- m. 93, beat 2.25 to m. 93, beat 2.5: no match
+- m. 93, beat 2.5 to m. 93, beat 2.75: no match
+- m. 93, beat 2.75 to m. 93, beat 3: no match
+- m. 93, beat 3 to m. 93, beat 4: no match
+- m. 93, beat 3.25 to m. 93, beat 3.5: no match
+- m. 93, beat 3.5 to m. 93, beat 3.75: no match
+- m. 93, beat 3.75 to m. 93, beat 4: no match
+- m. 93, beat 4 to m. 94, beat 1: no match
+- m. 93, beat 4.25 to m. 93, beat 4.5: no match
+- m. 93, beat 4.5 to m. 93, beat 4.75: no match
+- m. 93, beat 4.75 to m. 94, beat 1: no match
+- m. 94, beat 1 to m. 94, beat 2: no match
+- m. 94, beat 1.25 to m. 94, beat 1.5: no match
+- m. 94, beat 1.5 to m. 94, beat 1.75: no match
+- m. 94, beat 1.75 to m. 94, beat 2: no match
+- m. 94, beat 2 to m. 94, beat 3: no match
+- m. 94, beat 2.25 to m. 94, beat 2.5: no match
+- m. 94, beat 2.5 to m. 94, beat 2.75: no match
+- m. 94, beat 2.75 to m. 94, beat 3: no match
+- m. 94, beat 3 to m. 94, beat 4: no match
+- m. 94, beat 3.25 to m. 94, beat 3.5: no match
+- m. 94, beat 3.5 to m. 94, beat 3.75: no match
+- m. 94, beat 3.75 to m. 94, beat 4: no match
+- m. 94, beat 4 to m. 95, beat 1: no match
+- m. 94, beat 4.25 to m. 94, beat 4.5: no match
+- m. 94, beat 4.5 to m. 94, beat 4.75: no match
+- m. 94, beat 4.75 to m. 95, beat 1: no match
+- m. 95, beat 1 to m. 95, beat 2.96: no match
+- m. 95, beat 1.5 to m. 95, beat 1.9: no match
+- m. 95, beat 2 to m. 95, beat 2.4: no match
+- m. 95, beat 2.5 to m. 95, beat 2.9: no match
+- m. 95, beat 3 to m. 95, beat 3.4: no match
+- m. 95, beat 3.12 to m. 95, beat 4: no match
+- m. 95, beat 3.5 to m. 95, beat 3.9: no match
+- m. 95, beat 4 to m. 95, beat 4.4: no match
+- m. 95, beat 4.12 to m. 96, beat 1: no match
+- m. 95, beat 4.5 to m. 95, beat 4.9: no match
+- m. 96, beat 1 to m. 96, beat 2.96: no match
+- m. 96, beat 1.5 to m. 96, beat 1.9: no match
+- m. 96, beat 2 to m. 96, beat 2.4: no match
+- m. 96, beat 2.5 to m. 96, beat 2.9: no match
+- m. 96, beat 3 to m. 96, beat 3.4: no match
+- m. 96, beat 3.12 to m. 96, beat 4: no match
+- m. 96, beat 3.5 to m. 96, beat 3.9: no match
+- m. 96, beat 4 to m. 96, beat 4.4: no match
+- m. 96, beat 4.12 to m. 97, beat 1: no match
+- m. 96, beat 4.5 to m. 96, beat 4.9: no match
+- m. 97, beat 1 to m. 97, beat 1.5: no match
+- m. 97, beat 1.25 to m. 97, beat 1.5: no match
+- m. 97, beat 1.5 to m. 97, beat 1.75: no match
+- m. 97, beat 1.75 to m. 97, beat 2: no match
+- m. 97, beat 2 to m. 97, beat 2.25: no match
+- m. 97, beat 2.25 to m. 97, beat 2.5: no match
+- m. 97, beat 2.5 to m. 97, beat 2.75: no match
+- m. 97, beat 2.75 to m. 97, beat 3: no match
+- m. 97, beat 3 to m. 97, beat 3.25: no match
+- m. 97, beat 3.25 to m. 97, beat 3.5: no match
+- m. 97, beat 3.5 to m. 97, beat 3.75: no match
+- m. 97, beat 3.75 to m. 97, beat 4: no match
+- m. 97, beat 4 to m. 97, beat 4.25: no match
+- m. 97, beat 4.25 to m. 97, beat 4.5: no match
+- m. 97, beat 4.5 to m. 97, beat 4.75: no match
+- m. 97, beat 4.75 to m. 98, beat 1: no match
+- m. 98, beat 1 to m. 98, beat 1.25: no match
+- m. 98, beat 1.12 to m. 98, beat 1.25: no match
+- m. 98, beat 1.25 to m. 98, beat 1.5: no match
+- m. 98, beat 1.38 to m. 98, beat 1.5: no match
+- m. 98, beat 1.5 to m. 98, beat 1.75: no match
+- m. 98, beat 1.62 to m. 98, beat 1.75: no match
+- m. 98, beat 1.75 to m. 98, beat 2: no match
+- m. 98, beat 1.88 to m. 98, beat 2: no match
+- m. 98, beat 2 to m. 98, beat 2.25: no match
+- m. 98, beat 2.12 to m. 98, beat 2.25: no match
+- m. 98, beat 2.25 to m. 98, beat 2.5: no match
+- m. 98, beat 2.38 to m. 98, beat 2.5: no match
+- m. 98, beat 2.5 to m. 98, beat 2.75: no match
+- m. 98, beat 2.62 to m. 98, beat 2.75: no match
+- m. 98, beat 2.75 to m. 98, beat 3: no match
+- m. 98, beat 2.88 to m. 98, beat 3: no match
+- m. 98, beat 3 to m. 98, beat 3.25: no match
+- m. 98, beat 3.12 to m. 98, beat 3.25: no match
+- m. 98, beat 3.25 to m. 98, beat 3.5: no match
+- m. 98, beat 3.38 to m. 98, beat 3.5: no match
+- m. 98, beat 3.5 to m. 98, beat 3.75: no match
+- m. 98, beat 3.62 to m. 98, beat 3.75: no match
+- m. 98, beat 3.75 to m. 98, beat 4: no match
+- m. 98, beat 3.88 to m. 98, beat 4: no match
+- m. 98, beat 4 to m. 98, beat 4.25: no match
+- m. 98, beat 4.12 to m. 98, beat 4.25: no match
+- m. 98, beat 4.25 to m. 98, beat 4.5: no match
+- m. 98, beat 4.38 to m. 98, beat 4.5: no match
+- m. 98, beat 4.5 to m. 98, beat 4.75: no match
+- m. 98, beat 4.62 to m. 98, beat 4.75: no match
+- m. 98, beat 4.75 to m. 99, beat 1: no match
+- m. 98, beat 4.88 to m. 99, beat 1: no match
+- m. 99, beat 1 to m. 99, beat 2: no match
+- m. 99, beat 2 to m. 99, beat 2.25: no match
+- m. 99, beat 2.25 to m. 99, beat 2.5: no match
+- m. 99, beat 2.5 to m. 99, beat 2.75: no match
+- m. 99, beat 2.75 to m. 99, beat 3: no match
+- m. 99, beat 3 to m. 99, beat 3.25: no match
+- m. 99, beat 3.25 to m. 99, beat 3.5: no match
+- m. 99, beat 3.5 to m. 99, beat 3.75: no match
+- m. 99, beat 3.75 to m. 99, beat 4: no match
+- m. 99, beat 4 to m. 100, beat 1: no match
+- m. 99, beat 4.25 to m. 99, beat 4.5: no match
+- m. 99, beat 4.5 to m. 99, beat 4.75: no match
+- m. 99, beat 4.75 to m. 100, beat 1: no match
+- m. 100, beat 1 to m. 100, beat 2: no match
+- m. 100, beat 2 to m. 100, beat 2.25: no match
+- m. 100, beat 2.25 to m. 100, beat 2.5: no match
+- m. 100, beat 2.5 to m. 100, beat 2.75: no match
+- m. 100, beat 2.75 to m. 100, beat 3: no match
+- m. 100, beat 3 to m. 100, beat 3.25: no match
+- m. 100, beat 3.25 to m. 100, beat 3.5: no match
+- m. 100, beat 3.5 to m. 100, beat 3.75: no match
+- m. 100, beat 3.75 to m. 100, beat 4: no match
+- m. 100, beat 4 to m. 101, beat 1: no match
+- m. 100, beat 4.25 to m. 100, beat 4.5: no match
+- m. 100, beat 4.5 to m. 100, beat 4.75: no match
+- m. 100, beat 4.75 to m. 101, beat 1: no match
+- m. 101, beat 1 to m. 101, beat 1.8: no match
+- m. 101, beat 2 to m. 101, beat 3: I
+- m. 101, beat 3 to m. 101, beat 4: no match
+- m. 102, beat 1 to m. 102, beat 2: no match
+- m. 102, beat 2 to m. 102, beat 2.25: no match
+- m. 102, beat 2.25 to m. 102, beat 2.5: no match
+- m. 102, beat 2.5 to m. 102, beat 2.75: no match
+- m. 102, beat 2.75 to m. 102, beat 3: no match
+- m. 102, beat 3 to m. 102, beat 3.25: no match
+- m. 102, beat 3.25 to m. 102, beat 3.5: no match
+- m. 102, beat 3.5 to m. 102, beat 3.75: no match
+- m. 102, beat 3.75 to m. 102, beat 4: no match
+- m. 102, beat 4 to m. 103, beat 1: no match
+- m. 102, beat 4.25 to m. 102, beat 4.5: no match
+- m. 102, beat 4.5 to m. 102, beat 4.75: no match
+- m. 102, beat 4.75 to m. 103, beat 1: no match
+- m. 103, beat 1 to m. 103, beat 2: no match
+- m. 103, beat 2 to m. 103, beat 2.25: no match
+- m. 103, beat 2.25 to m. 103, beat 2.5: no match
+- m. 103, beat 2.5 to m. 103, beat 2.75: no match
+- m. 103, beat 2.75 to m. 103, beat 3: no match
+- m. 103, beat 3 to m. 103, beat 3.25: no match
+- m. 103, beat 3.25 to m. 103, beat 3.5: no match
+- m. 103, beat 3.5 to m. 103, beat 3.75: no match
+- m. 103, beat 3.75 to m. 103, beat 4: no match
+- m. 103, beat 4 to m. 104, beat 1: no match
+- m. 103, beat 4.25 to m. 103, beat 4.5: no match
+- m. 103, beat 4.5 to m. 103, beat 4.75: no match
+- m. 103, beat 4.75 to m. 104, beat 1: no match
+- m. 104, beat 1 to m. 104, beat 2: no match
+- m. 104, beat 1.25 to m. 104, beat 1.5: no match
+- m. 104, beat 1.5 to m. 104, beat 1.75: no match
+- m. 104, beat 1.75 to m. 104, beat 2: no match
+- m. 104, beat 2 to m. 104, beat 2.25: no match
+- m. 104, beat 2.25 to m. 104, beat 2.5: no match
+- m. 104, beat 2.5 to m. 104, beat 2.75: no match
+- m. 104, beat 2.75 to m. 104, beat 3: no match
+- m. 104, beat 3 to m. 104, beat 4: no match
+- m. 104, beat 3.25 to m. 104, beat 3.5: no match
+- m. 104, beat 3.5 to m. 104, beat 3.75: no match
+- m. 104, beat 3.75 to m. 104, beat 4: no match
+- m. 104, beat 4 to m. 104, beat 4.25: no match
+- m. 104, beat 4.25 to m. 104, beat 4.5: no match
+- m. 104, beat 4.5 to m. 104, beat 4.75: no match
+- m. 104, beat 4.75 to m. 105, beat 1: no match
+- m. 105, beat 1 to m. 105, beat 2: no match
+- m. 105, beat 1.25 to m. 105, beat 1.5: no match
+- m. 105, beat 1.5 to m. 105, beat 1.75: no match
+- m. 105, beat 1.75 to m. 105, beat 2: no match
+- m. 105, beat 2 to m. 105, beat 2.25: no match
+- m. 105, beat 2.25 to m. 105, beat 2.5: no match
+- m. 105, beat 2.5 to m. 105, beat 2.75: no match
+- m. 105, beat 2.75 to m. 105, beat 3: no match
+- m. 105, beat 3 to m. 105, beat 4: no match
+- m. 105, beat 3.25 to m. 105, beat 3.5: no match
+- m. 105, beat 3.5 to m. 105, beat 3.75: no match
+- m. 105, beat 3.75 to m. 105, beat 4: no match
+- m. 105, beat 4 to m. 105, beat 4.25: no match
+- m. 105, beat 4.25 to m. 105, beat 4.5: no match
+- m. 105, beat 4.5 to m. 105, beat 4.75: no match
+- m. 105, beat 4.75 to m. 106, beat 1: no match
+- m. 106, beat 1 to m. 106, beat 2: no match
+- m. 106, beat 2 to m. 106, beat 2.25: no match
+- m. 106, beat 2.25 to m. 106, beat 2.5: no match
+- m. 106, beat 2.5 to m. 106, beat 2.75: no match
+- m. 106, beat 2.75 to m. 106, beat 3: no match
+- m. 106, beat 3 to m. 106, beat 3.25: no match
+- m. 106, beat 3.25 to m. 106, beat 3.5: no match
+- m. 106, beat 3.5 to m. 106, beat 3.75: no match
+- m. 106, beat 3.75 to m. 106, beat 4: no match
+- m. 106, beat 4 to m. 107, beat 1: no match
+- m. 106, beat 4.25 to m. 106, beat 4.5: no match
+- m. 106, beat 4.5 to m. 106, beat 4.75: no match
+- m. 106, beat 4.75 to m. 107, beat 1: no match
+- m. 107, beat 1 to m. 107, beat 2: no match
+- m. 107, beat 2 to m. 107, beat 2.25: no match
+- m. 107, beat 2.25 to m. 107, beat 2.5: no match
+- m. 107, beat 2.5 to m. 107, beat 2.75: no match
+- m. 107, beat 2.75 to m. 107, beat 3: no match
+- m. 107, beat 3 to m. 107, beat 3.25: no match
+- m. 107, beat 3.25 to m. 107, beat 3.5: no match
+- m. 107, beat 3.5 to m. 107, beat 3.75: no match
+- m. 107, beat 3.75 to m. 107, beat 4: no match
+- m. 107, beat 4 to m. 108, beat 1: no match
+- m. 107, beat 4.25 to m. 107, beat 4.5: no match
+- m. 107, beat 4.5 to m. 107, beat 4.75: no match
+- m. 107, beat 4.75 to m. 108, beat 1: no match
+- m. 108, beat 1 to m. 108, beat 2: no match
+- m. 108, beat 1.25 to m. 108, beat 1.5: no match
+- m. 108, beat 1.5 to m. 108, beat 1.75: no match
+- m. 108, beat 1.75 to m. 108, beat 2: no match
+- m. 108, beat 2 to m. 108, beat 2.25: no match
+- m. 108, beat 2.25 to m. 108, beat 2.5: no match
+- m. 108, beat 2.5 to m. 108, beat 2.75: no match
+- m. 108, beat 2.75 to m. 108, beat 3: no match
+- m. 108, beat 3 to m. 108, beat 4: no match
+- m. 108, beat 3.25 to m. 108, beat 3.5: no match
+- m. 108, beat 3.5 to m. 108, beat 3.75: no match
+- m. 108, beat 3.75 to m. 108, beat 4: no match
+- m. 108, beat 4 to m. 108, beat 4.25: no match
+- m. 108, beat 4.25 to m. 108, beat 4.5: no match
+- m. 108, beat 4.5 to m. 108, beat 4.75: no match
+- m. 108, beat 4.75 to m. 109, beat 1: no match
+- m. 109, beat 1 to m. 109, beat 2: no match
+- m. 109, beat 1.25 to m. 109, beat 1.5: no match
+- m. 109, beat 1.5 to m. 109, beat 1.75: no match
+- m. 109, beat 1.75 to m. 109, beat 2: no match
+- m. 109, beat 2 to m. 109, beat 2.25: no match
+- m. 109, beat 2.25 to m. 109, beat 2.5: no match
+- m. 109, beat 2.5 to m. 109, beat 2.75: no match
+- m. 109, beat 2.75 to m. 109, beat 3: no match
+- m. 109, beat 3 to m. 109, beat 4: no match
+- m. 109, beat 3.25 to m. 109, beat 3.5: no match
+- m. 109, beat 3.5 to m. 109, beat 3.75: no match
+- m. 109, beat 3.75 to m. 109, beat 4: no match
+- m. 109, beat 4 to m. 109, beat 4.25: no match
+- m. 109, beat 4.25 to m. 109, beat 4.5: no match
+- m. 109, beat 4.5 to m. 109, beat 4.75: no match
+- m. 109, beat 4.75 to m. 110, beat 1: no match
+- m. 110, beat 1 to m. 110, beat 2: no match
+- m. 110, beat 1.25 to m. 110, beat 1.5: no match
+- m. 110, beat 1.5 to m. 110, beat 1.75: no match
+- m. 110, beat 1.75 to m. 110, beat 2: no match
+- m. 110, beat 2 to m. 110, beat 2.25: no match
+- m. 110, beat 2.25 to m. 110, beat 2.5: no match
+- m. 110, beat 2.5 to m. 110, beat 2.75: no match
+- m. 110, beat 2.75 to m. 110, beat 3: no match
+- m. 110, beat 3 to m. 110, beat 4: no match
+- m. 110, beat 3.25 to m. 110, beat 3.5: no match
+- m. 110, beat 3.5 to m. 110, beat 3.75: no match
+- m. 110, beat 3.75 to m. 110, beat 4: no match
+- m. 110, beat 4 to m. 110, beat 4.25: no match
+- m. 110, beat 4.25 to m. 110, beat 4.5: no match
+- m. 110, beat 4.5 to m. 110, beat 4.75: no match
+- m. 110, beat 4.75 to m. 111, beat 1: no match
+- m. 111, beat 1 to m. 111, beat 2: no match
+- m. 111, beat 1.25 to m. 111, beat 1.5: no match
+- m. 111, beat 1.5 to m. 111, beat 1.75: no match
+- m. 111, beat 1.75 to m. 111, beat 2: no match
+- m. 111, beat 2 to m. 111, beat 2.25: no match
+- m. 111, beat 2.25 to m. 111, beat 2.5: no match
+- m. 111, beat 2.5 to m. 111, beat 2.75: no match
+- m. 111, beat 2.75 to m. 111, beat 3: no match
+- m. 111, beat 3 to m. 111, beat 4: no match
+- m. 111, beat 3.25 to m. 111, beat 3.5: no match
+- m. 111, beat 3.5 to m. 111, beat 3.75: no match
+- m. 111, beat 3.75 to m. 111, beat 4: no match
+- m. 111, beat 4 to m. 111, beat 4.25: no match
+- m. 111, beat 4.25 to m. 111, beat 4.5: no match
+- m. 111, beat 4.5 to m. 111, beat 4.75: no match
+- m. 111, beat 4.75 to m. 112, beat 1: no match
+- m. 112, beat 1 to m. 112, beat 2: no match
+- m. 112, beat 1.25 to m. 112, beat 1.5: no match
+- m. 112, beat 1.5 to m. 112, beat 1.75: no match
+- m. 112, beat 1.75 to m. 112, beat 2: no match
+- m. 112, beat 2 to m. 112, beat 2.25: no match
+- m. 112, beat 2.25 to m. 112, beat 2.5: no match
+- m. 112, beat 2.5 to m. 112, beat 2.75: no match
+- m. 112, beat 2.75 to m. 112, beat 3: no match
+- m. 112, beat 3 to m. 112, beat 4: no match
+- m. 112, beat 3.25 to m. 112, beat 3.5: no match
+- m. 112, beat 3.5 to m. 112, beat 3.75: no match
+- m. 112, beat 3.75 to m. 112, beat 4: no match
+- m. 112, beat 4 to m. 112, beat 4.25: no match
+- m. 112, beat 4.25 to m. 112, beat 4.5: no match
+- m. 112, beat 4.5 to m. 112, beat 4.75: no match
+- m. 112, beat 4.75 to m. 113, beat 1: no match
+- m. 113, beat 1 to m. 113, beat 2: no match
+- m. 113, beat 1.25 to m. 113, beat 1.5: no match
+- m. 113, beat 1.5 to m. 113, beat 1.75: no match
+- m. 113, beat 1.75 to m. 113, beat 2: no match
+- m. 113, beat 2 to m. 113, beat 2.25: no match
+- m. 113, beat 2.25 to m. 113, beat 2.5: no match
+- m. 113, beat 2.5 to m. 113, beat 2.75: no match
+- m. 113, beat 2.75 to m. 113, beat 3: no match
+- m. 113, beat 3 to m. 113, beat 4: no match
+- m. 113, beat 3.25 to m. 113, beat 3.5: no match
+- m. 113, beat 3.5 to m. 113, beat 3.75: no match
+- m. 113, beat 3.75 to m. 113, beat 4: no match
+- m. 113, beat 4 to m. 113, beat 4.25: no match
+- m. 113, beat 4.25 to m. 113, beat 4.5: no match
+- m. 113, beat 4.5 to m. 113, beat 4.75: no match
+- m. 113, beat 4.75 to m. 114, beat 1: no match
+- m. 114, beat 1 to m. 114, beat 3: no match
+- m. 114, beat 1.25 to m. 114, beat 1.5: no match
+- m. 114, beat 1.5 to m. 114, beat 1.75: no match
+- m. 114, beat 1.75 to m. 114, beat 2: no match
+- m. 114, beat 2 to m. 114, beat 2.25: no match
+- m. 114, beat 2.25 to m. 114, beat 2.5: no match
+- m. 114, beat 2.5 to m. 114, beat 2.75: no match
+- m. 114, beat 2.75 to m. 114, beat 3: no match
+- m. 114, beat 3 to m. 115, beat 1: I
+- m. 114, beat 3.25 to m. 114, beat 3.5: no match
+- m. 114, beat 3.5 to m. 114, beat 3.75: no match
+- m. 114, beat 3.75 to m. 114, beat 4: no match
+- m. 114, beat 4 to m. 114, beat 4.25: no match
+- m. 114, beat 4.25 to m. 114, beat 4.5: no match
+- m. 114, beat 4.5 to m. 114, beat 4.75: no match
+- m. 114, beat 4.75 to m. 115, beat 1: no match
+- m. 115, beat 1 to m. 115, beat 3: no match
+- m. 115, beat 1.5 to m. 115, beat 2: no match
+- m. 115, beat 2 to m. 115, beat 2.5: no match
+- m. 115, beat 2.5 to m. 115, beat 3: no match
+- m. 115, beat 3 to m. 115, beat 4: no match
+- m. 115, beat 3.5 to m. 115, beat 4: no match
+- m. 115, beat 4 to m. 116, beat 1: no match
+- m. 115, beat 4.5 to m. 116, beat 1: no match
+- m. 116, beat 1 to m. 116, beat 2.5: no match
+- m. 116, beat 1.5 to m. 116, beat 2: no match
+- m. 116, beat 2 to m. 116, beat 2.5: no match
+- m. 116, beat 2.5 to m. 116, beat 3: no match
+- m. 116, beat 2.75 to m. 116, beat 3: no match
+- m. 116, beat 3 to m. 117, beat 1: no match
+- m. 116, beat 3.5 to m. 116, beat 4: no match
+- m. 116, beat 4 to m. 116, beat 4.5: no match
+- m. 116, beat 4.5 to m. 117, beat 1: no match
+- m. 117, beat 1 to m. 117, beat 3: no match
+- m. 117, beat 1.5 to m. 117, beat 2: no match
+- m. 117, beat 2 to m. 117, beat 2.5: no match
+- m. 117, beat 2.5 to m. 117, beat 3: no match
+- m. 117, beat 3 to m. 117, beat 4: no match
+- m. 117, beat 3.5 to m. 117, beat 4: no match
+- m. 117, beat 4 to m. 118, beat 1: no match
+- m. 117, beat 4.5 to m. 118, beat 1: no match
+- m. 118, beat 1 to m. 118, beat 2: no match
+- m. 118, beat 1.5 to m. 118, beat 2: no match
+- m. 118, beat 2 to m. 118, beat 2.5: no match
+- m. 118, beat 2.16 to m. 118, beat 2.33: no match
+- m. 118, beat 2.33 to m. 118, beat 2.5: no match
+- m. 118, beat 2.5 to m. 118, beat 3: no match
+- m. 118, beat 2.75 to m. 118, beat 3: no match
+- m. 118, beat 3 to m. 118, beat 4: no match
+- m. 118, beat 3.5 to m. 118, beat 4: no match
+- m. 118, beat 4 to m. 118, beat 4.5: no match
+- m. 118, beat 4.5 to m. 119, beat 1: no match
+- m. 119, beat 1 to m. 119, beat 2: no match
+- m. 119, beat 1.5 to m. 119, beat 1.75: no match
+- m. 119, beat 1.75 to m. 119, beat 2: no match
+- m. 119, beat 2 to m. 119, beat 2.25: no match
+- m. 119, beat 2.25 to m. 119, beat 2.5: no match
+- m. 119, beat 2.5 to m. 119, beat 2.75: no match
+- m. 119, beat 2.75 to m. 119, beat 3: no match
+- m. 119, beat 3 to m. 119, beat 3.25: no match
+- m. 119, beat 3.25 to m. 119, beat 3.5: no match
+- m. 119, beat 3.5 to m. 119, beat 3.75: no match
+- m. 119, beat 3.75 to m. 119, beat 4: no match
+- m. 119, beat 4 to m. 120, beat 1: no match
+- m. 119, beat 4.25 to m. 119, beat 4.5: no match
+- m. 119, beat 4.5 to m. 119, beat 4.75: no match
+- m. 119, beat 4.75 to m. 120, beat 1: no match
+- m. 120, beat 1 to m. 120, beat 2: IV
+- m. 120, beat 1.5 to m. 120, beat 1.75: no match
+- m. 120, beat 1.75 to m. 120, beat 2: no match
+- m. 120, beat 2 to m. 120, beat 2.25: no match
+- m. 120, beat 2.25 to m. 120, beat 2.5: no match
+- m. 120, beat 2.5 to m. 120, beat 2.75: no match
+- m. 120, beat 2.75 to m. 120, beat 3: no match
+- m. 120, beat 3 to m. 120, beat 3.25: no match
+- m. 120, beat 3.25 to m. 120, beat 3.5: no match
+- m. 120, beat 3.5 to m. 120, beat 3.75: no match
+- m. 120, beat 3.75 to m. 120, beat 4: no match
+- m. 120, beat 4 to m. 121, beat 1: no match
+- m. 120, beat 4.25 to m. 120, beat 4.5: no match
+- m. 120, beat 4.5 to m. 120, beat 4.75: no match
+- m. 120, beat 4.75 to m. 121, beat 1: no match
+- m. 121, beat 1 to m. 121, beat 2: no match
+- m. 121, beat 1.5 to m. 121, beat 1.75: no match
+- m. 121, beat 1.75 to m. 121, beat 2: no match
+- m. 121, beat 2 to m. 121, beat 2.25: no match
+- m. 121, beat 2.25 to m. 121, beat 2.5: no match
+- m. 121, beat 2.5 to m. 121, beat 2.75: no match
+- m. 121, beat 2.75 to m. 121, beat 3: no match
+- m. 121, beat 3 to m. 121, beat 3.25: no match
+- m. 121, beat 3.25 to m. 121, beat 3.5: no match
+- m. 121, beat 3.5 to m. 121, beat 3.75: no match
+- m. 121, beat 3.75 to m. 121, beat 4: no match
+- m. 121, beat 4 to m. 122, beat 1: no match
+- m. 121, beat 4.25 to m. 121, beat 4.5: no match
+- m. 121, beat 4.5 to m. 121, beat 4.75: no match
+- m. 121, beat 4.75 to m. 122, beat 1: no match
+- m. 122, beat 1 to m. 122, beat 2: no match
+- m. 122, beat 1.5 to m. 122, beat 1.75: no match
+- m. 122, beat 1.75 to m. 122, beat 2: no match
+- m. 122, beat 2 to m. 122, beat 2.25: no match
+- m. 122, beat 2.25 to m. 122, beat 2.5: no match
+- m. 122, beat 2.5 to m. 122, beat 2.75: no match
+- m. 122, beat 2.75 to m. 122, beat 3: no match
+- m. 122, beat 3 to m. 122, beat 3.25: no match
+- m. 122, beat 3.25 to m. 122, beat 3.5: no match
+- m. 122, beat 3.5 to m. 122, beat 3.75: no match
+- m. 122, beat 3.75 to m. 122, beat 4: no match
+- m. 122, beat 4 to m. 122, beat 4.25: no match
+- m. 122, beat 4.25 to m. 122, beat 4.5: no match
+- m. 122, beat 4.5 to m. 122, beat 4.75: no match
+- m. 122, beat 4.75 to m. 123, beat 1: no match
+- m. 123, beat 1 to m. 123, beat 2: no match
+- m. 123, beat 1.5 to m. 123, beat 1.75: no match
+- m. 123, beat 1.75 to m. 123, beat 2: no match
+- m. 123, beat 2 to m. 123, beat 2.25: no match
+- m. 123, beat 2.25 to m. 123, beat 2.5: no match
+- m. 123, beat 2.5 to m. 123, beat 2.75: no match
+- m. 123, beat 2.75 to m. 123, beat 3: no match
+- m. 123, beat 3 to m. 123, beat 3.25: no match
+- m. 123, beat 3.25 to m. 123, beat 3.5: no match
+- m. 123, beat 3.5 to m. 123, beat 3.75: no match
+- m. 123, beat 3.75 to m. 123, beat 4: no match
+- m. 123, beat 4 to m. 124, beat 1: no match
+- m. 123, beat 4.25 to m. 123, beat 4.5: no match
+- m. 123, beat 4.5 to m. 123, beat 4.75: no match
+- m. 123, beat 4.75 to m. 124, beat 1: no match
+- m. 124, beat 1 to m. 124, beat 2: I
+- m. 124, beat 1.5 to m. 124, beat 1.75: no match
+- m. 124, beat 1.75 to m. 124, beat 2: no match
+- m. 124, beat 2 to m. 124, beat 2.25: no match
+- m. 124, beat 2.25 to m. 124, beat 2.5: no match
+- m. 124, beat 2.5 to m. 124, beat 2.75: no match
+- m. 124, beat 2.75 to m. 124, beat 3: no match
+- m. 124, beat 3 to m. 124, beat 3.25: no match
+- m. 124, beat 3.25 to m. 124, beat 3.5: no match
+- m. 124, beat 3.5 to m. 124, beat 3.75: no match
+- m. 124, beat 3.75 to m. 124, beat 4: no match
+- m. 124, beat 4 to m. 125, beat 1: no match
+- m. 124, beat 4.25 to m. 124, beat 4.5: no match
+- m. 124, beat 4.5 to m. 124, beat 4.75: no match
+- m. 124, beat 4.75 to m. 125, beat 1: no match
+- m. 125, beat 1 to m. 125, beat 2: no match
+- m. 125, beat 1.5 to m. 125, beat 1.75: no match
+- m. 125, beat 1.75 to m. 125, beat 2: no match
+- m. 125, beat 2 to m. 125, beat 2.25: no match
+- m. 125, beat 2.25 to m. 125, beat 2.5: no match
+- m. 125, beat 2.5 to m. 125, beat 2.75: no match
+- m. 125, beat 2.75 to m. 125, beat 3: no match
+- m. 125, beat 3 to m. 125, beat 3.25: no match
+- m. 125, beat 3.25 to m. 125, beat 3.5: no match
+- m. 125, beat 3.5 to m. 125, beat 3.75: no match
+- m. 125, beat 3.75 to m. 125, beat 4: no match
+- m. 125, beat 4 to m. 126, beat 1: no match
+- m. 125, beat 4.25 to m. 125, beat 4.5: no match
+- m. 125, beat 4.5 to m. 125, beat 4.75: no match
+- m. 125, beat 4.75 to m. 126, beat 1: no match
+- m. 126, beat 1 to m. 126, beat 2: no match
+- m. 126, beat 1.5 to m. 126, beat 1.75: no match
+- m. 126, beat 1.75 to m. 126, beat 2: no match
+- m. 126, beat 2 to m. 126, beat 2.25: no match
+- m. 126, beat 2.25 to m. 126, beat 2.5: no match
+- m. 126, beat 2.5 to m. 126, beat 2.75: no match
+- m. 126, beat 2.75 to m. 126, beat 3: no match
+- m. 126, beat 3 to m. 126, beat 3.25: no match
+- m. 126, beat 3.25 to m. 126, beat 3.5: no match
+- m. 126, beat 3.5 to m. 126, beat 3.75: no match
+- m. 126, beat 3.75 to m. 126, beat 4: no match
+- m. 126, beat 4 to m. 127, beat 1: no match
+- m. 126, beat 4.25 to m. 126, beat 4.5: no match
+- m. 126, beat 4.5 to m. 126, beat 4.75: no match
+- m. 126, beat 4.75 to m. 127, beat 1: no match
+- m. 127, beat 1 to m. 128, beat 1: ii
+- m. 127, beat 1.25 to m. 127, beat 1.5: no match
+- m. 127, beat 1.5 to m. 127, beat 1.75: no match
+- m. 127, beat 1.75 to m. 127, beat 2: no match
+- m. 127, beat 2 to m. 127, beat 2.25: no match
+- m. 127, beat 2.25 to m. 127, beat 2.5: no match
+- m. 127, beat 2.5 to m. 127, beat 2.75: no match
+- m. 127, beat 2.75 to m. 127, beat 3: no match
+- m. 127, beat 3 to m. 127, beat 3.25: no match
+- m. 127, beat 3.25 to m. 127, beat 3.5: no match
+- m. 127, beat 3.5 to m. 127, beat 3.75: no match
+- m. 127, beat 3.75 to m. 127, beat 4: no match
+- m. 127, beat 4 to m. 127, beat 4.25: no match
+- m. 127, beat 4.25 to m. 127, beat 4.5: no match
+- m. 127, beat 4.5 to m. 127, beat 4.75: no match
+- m. 127, beat 4.75 to m. 128, beat 1: no match
+- m. 128, beat 1 to m. 128, beat 2.5: no match
+- m. 128, beat 1.25 to m. 128, beat 1.5: no match
+- m. 128, beat 1.5 to m. 128, beat 1.75: no match
+- m. 128, beat 1.75 to m. 128, beat 2: no match
+- m. 128, beat 2 to m. 128, beat 2.25: no match
+- m. 128, beat 2.25 to m. 128, beat 2.5: no match
+- m. 128, beat 2.5 to m. 128, beat 3: no match
+- m. 128, beat 2.75 to m. 128, beat 3: no match
+- m. 128, beat 3 to m. 128, beat 4.5: no match
+- m. 128, beat 3.25 to m. 128, beat 3.5: no match
+- m. 128, beat 3.5 to m. 128, beat 3.75: no match
+- m. 128, beat 3.75 to m. 128, beat 4: no match
+- m. 128, beat 4 to m. 128, beat 4.25: no match
+- m. 128, beat 4.25 to m. 128, beat 4.5: no match
+- m. 128, beat 4.5 to m. 129, beat 1: no match
+- m. 128, beat 4.75 to m. 129, beat 1: no match
+- m. 129, beat 1 to m. 129, beat 1.5: no match
+- m. 129, beat 1.25 to m. 129, beat 1.5: no match
+- m. 129, beat 1.5 to m. 129, beat 2: no match
+- m. 129, beat 1.75 to m. 129, beat 2: no match
+- m. 129, beat 2 to m. 129, beat 2.5: no match
+- m. 129, beat 2.25 to m. 129, beat 2.5: no match
+- m. 129, beat 2.5 to m. 129, beat 3: no match
+- m. 129, beat 2.75 to m. 129, beat 3: no match
+- m. 129, beat 3 to m. 129, beat 3.5: no match
+- m. 129, beat 3.25 to m. 129, beat 3.5: no match
+- m. 129, beat 3.5 to m. 129, beat 4: no match
+- m. 129, beat 3.75 to m. 129, beat 4: no match
+- m. 129, beat 4 to m. 129, beat 4.5: no match
+- m. 129, beat 4.25 to m. 129, beat 4.5: no match
+- m. 129, beat 4.5 to m. 130, beat 1: no match
+- m. 129, beat 4.75 to m. 130, beat 1: no match
+- m. 130, beat 1 to m. 130, beat 2: no match
+- m. 130, beat 2 to m. 130, beat 3: V
+- m. 130, beat 3 to m. 130, beat 4: no match
+- m. 131, beat 1 to m. 131, beat 1.25: no match
+- m. 131, beat 1.25 to m. 131, beat 1.5: no match
+- m. 131, beat 1.5 to m. 131, beat 1.75: no match
+- m. 131, beat 1.75 to m. 131, beat 2: no match
+- m. 131, beat 2 to m. 131, beat 2.25: no match
+- m. 131, beat 2.25 to m. 131, beat 2.5: no match
+- m. 131, beat 2.5 to m. 131, beat 2.75: no match
+- m. 131, beat 2.75 to m. 131, beat 3: no match
+- m. 131, beat 3 to m. 131, beat 3.25: no match
+- m. 131, beat 3.25 to m. 131, beat 3.5: no match
+- m. 131, beat 3.5 to m. 131, beat 3.75: no match
+- m. 131, beat 3.75 to m. 131, beat 4: no match
+- m. 131, beat 4 to m. 131, beat 4.25: no match
+- m. 131, beat 4.25 to m. 131, beat 4.5: no match
+- m. 131, beat 4.5 to m. 131, beat 4.75: no match
+- m. 131, beat 4.75 to m. 132, beat 1: no match
+- m. 132, beat 1 to m. 132, beat 1.5: no match
+- m. 132, beat 1.25 to m. 132, beat 1.5: no match
+- m. 132, beat 1.5 to m. 132, beat 2: no match
+- m. 132, beat 1.75 to m. 132, beat 2: no match
+- m. 132, beat 2 to m. 132, beat 3.5: no match
+- m. 132, beat 2.25 to m. 132, beat 2.5: no match
+- m. 132, beat 2.5 to m. 132, beat 2.75: no match
+- m. 132, beat 2.75 to m. 132, beat 3: no match
+- m. 132, beat 3 to m. 132, beat 3.25: no match
+- m. 132, beat 3.25 to m. 132, beat 3.5: no match
+- m. 132, beat 3.5 to m. 132, beat 3.75: no match
+- m. 132, beat 3.75 to m. 132, beat 4: no match
+- m. 132, beat 4 to m. 132, beat 4.5: no match
+- m. 132, beat 4.25 to m. 132, beat 4.5: no match
+- m. 132, beat 4.5 to m. 133, beat 1: no match
+- m. 132, beat 4.75 to m. 133, beat 1: no match
+- m. 133, beat 1 to m. 133, beat 1.25: no match
+- m. 133, beat 1.12 to m. 133, beat 1.25: no match
+- m. 133, beat 1.25 to m. 133, beat 1.5: no match
+- m. 133, beat 1.38 to m. 133, beat 1.5: no match
+- m. 133, beat 1.5 to m. 133, beat 1.75: no match
+- m. 133, beat 1.62 to m. 133, beat 1.75: no match
+- m. 133, beat 1.75 to m. 133, beat 2: no match
+- m. 133, beat 2 to m. 134, beat 1: no match
+- m. 133, beat 2.25 to m. 133, beat 2.5: no match
+- m. 133, beat 2.5 to m. 133, beat 2.75: no match
+- m. 133, beat 2.75 to m. 133, beat 3: no match
+- m. 133, beat 3 to m. 133, beat 3.25: no match
+- m. 133, beat 3.25 to m. 133, beat 3.5: no match
+- m. 133, beat 3.5 to m. 133, beat 3.75: no match
+- m. 133, beat 3.75 to m. 133, beat 4: no match
+- m. 133, beat 4 to m. 133, beat 4.25: no match
+- m. 133, beat 4.25 to m. 133, beat 4.5: no match
+- m. 133, beat 4.5 to m. 133, beat 4.75: no match
+- m. 133, beat 4.75 to m. 134, beat 1: no match
+- m. 134, beat 1 to m. 134, beat 1.5: no match
+- m. 134, beat 1.25 to m. 134, beat 1.5: no match
+- m. 134, beat 1.5 to m. 134, beat 2: no match
+- m. 134, beat 1.75 to m. 134, beat 2: no match
+- m. 134, beat 2 to m. 134, beat 3.5: no match
+- m. 134, beat 2.25 to m. 134, beat 2.5: no match
+- m. 134, beat 2.5 to m. 134, beat 2.75: no match
+- m. 134, beat 2.75 to m. 134, beat 3: no match
+- m. 134, beat 3 to m. 134, beat 3.25: no match
+- m. 134, beat 3.25 to m. 134, beat 3.5: no match
+- m. 134, beat 3.5 to m. 134, beat 3.75: no match
+- m. 134, beat 3.75 to m. 134, beat 4: no match
+- m. 134, beat 4 to m. 134, beat 4.5: no match
+- m. 134, beat 4.25 to m. 134, beat 4.5: no match
+- m. 134, beat 4.5 to m. 135, beat 1: no match
+- m. 134, beat 4.75 to m. 135, beat 1: no match
+- m. 135, beat 1 to m. 135, beat 1.25: no match
+- m. 135, beat 1.12 to m. 135, beat 1.25: no match
+- m. 135, beat 1.25 to m. 135, beat 1.5: no match
+- m. 135, beat 1.38 to m. 135, beat 1.5: no match
+- m. 135, beat 1.5 to m. 135, beat 1.75: no match
+- m. 135, beat 1.62 to m. 135, beat 1.75: no match
+- m. 135, beat 1.75 to m. 135, beat 2: no match
+- m. 135, beat 2 to m. 135, beat 4: no match
+- m. 135, beat 2.25 to m. 135, beat 2.5: no match
+- m. 135, beat 2.5 to m. 135, beat 2.75: no match
+- m. 135, beat 2.75 to m. 135, beat 3: no match
+- m. 135, beat 3 to m. 135, beat 3.25: no match
+- m. 135, beat 3.25 to m. 135, beat 3.5: no match
+- m. 135, beat 3.5 to m. 135, beat 3.75: no match
+- m. 135, beat 3.75 to m. 135, beat 4: no match
+- m. 135, beat 4 to m. 135, beat 4.25: no match
+- m. 135, beat 4.25 to m. 135, beat 4.5: no match
+- m. 135, beat 4.5 to m. 135, beat 4.75: no match
+- m. 135, beat 4.75 to m. 136, beat 1: no match
+- m. 136, beat 1 to m. 136, beat 2: no match
+- m. 136, beat 1.25 to m. 136, beat 1.5: no match
+- m. 136, beat 1.5 to m. 136, beat 1.75: no match
+- m. 136, beat 1.75 to m. 136, beat 2: no match
+- m. 136, beat 2 to m. 136, beat 3: no match
+- m. 136, beat 2.25 to m. 136, beat 2.5: no match
+- m. 136, beat 2.5 to m. 136, beat 2.75: no match
+- m. 136, beat 2.75 to m. 136, beat 3: no match
+- m. 136, beat 3 to m. 136, beat 4: no match
+- m. 136, beat 3.25 to m. 136, beat 3.5: no match
+- m. 136, beat 3.5 to m. 136, beat 3.75: no match
+- m. 136, beat 3.75 to m. 136, beat 4: no match
+- m. 136, beat 4 to m. 137, beat 1: no match
+- m. 136, beat 4.25 to m. 136, beat 4.5: no match
+- m. 136, beat 4.5 to m. 136, beat 4.75: no match
+- m. 136, beat 4.75 to m. 137, beat 1: no match
+- m. 137, beat 1 to m. 137, beat 2: no match
+- m. 137, beat 1.25 to m. 137, beat 1.5: no match
+- m. 137, beat 1.5 to m. 137, beat 1.75: no match
+- m. 137, beat 1.75 to m. 137, beat 2: no match
+- m. 137, beat 2 to m. 137, beat 3: no match
+- m. 137, beat 2.25 to m. 137, beat 2.5: no match
+- m. 137, beat 2.5 to m. 137, beat 2.75: no match
+- m. 137, beat 2.75 to m. 137, beat 3: no match
+- m. 137, beat 3 to m. 137, beat 4: no match
+- m. 137, beat 3.25 to m. 137, beat 3.5: no match
+- m. 137, beat 3.5 to m. 137, beat 3.75: no match
+- m. 137, beat 3.75 to m. 137, beat 4: no match
+- m. 137, beat 4 to m. 138, beat 1: no match
+- m. 137, beat 4.25 to m. 137, beat 4.5: no match
+- m. 137, beat 4.5 to m. 137, beat 4.75: no match
+- m. 137, beat 4.75 to m. 138, beat 1: no match
+- m. 138, beat 1 to m. 138, beat 2: no match
+- m. 138, beat 1.25 to m. 138, beat 1.5: no match
+- m. 138, beat 1.5 to m. 138, beat 1.75: no match
+- m. 138, beat 1.75 to m. 138, beat 2: no match
+- m. 138, beat 2 to m. 138, beat 3: no match
+- m. 138, beat 2.25 to m. 138, beat 2.5: no match
+- m. 138, beat 2.5 to m. 138, beat 2.75: no match
+- m. 138, beat 2.75 to m. 138, beat 3: no match
+- m. 138, beat 3 to m. 138, beat 4: no match
+- m. 138, beat 3.25 to m. 138, beat 3.5: no match
+- m. 138, beat 3.5 to m. 138, beat 3.75: no match
+- m. 138, beat 3.75 to m. 138, beat 4: no match
+- m. 138, beat 4 to m. 139, beat 1: no match
+- m. 138, beat 4.25 to m. 138, beat 4.5: no match
+- m. 138, beat 4.5 to m. 138, beat 4.75: no match
+- m. 138, beat 4.75 to m. 139, beat 1: no match
+- m. 139, beat 1 to m. 139, beat 2: no match
+- m. 139, beat 1.25 to m. 139, beat 1.5: no match
+- m. 139, beat 1.5 to m. 139, beat 1.75: no match
+- m. 139, beat 1.75 to m. 139, beat 2: no match
+- m. 139, beat 2 to m. 139, beat 3: no match
+- m. 139, beat 2.25 to m. 139, beat 2.5: no match
+- m. 139, beat 2.5 to m. 139, beat 2.75: no match
+- m. 139, beat 2.75 to m. 139, beat 3: no match
+- m. 139, beat 3 to m. 139, beat 4: no match
+- m. 139, beat 3.25 to m. 139, beat 3.5: no match
+- m. 139, beat 3.5 to m. 139, beat 3.75: no match
+- m. 139, beat 3.75 to m. 139, beat 4: no match
+- m. 139, beat 4 to m. 140, beat 1: no match
+- m. 139, beat 4.25 to m. 139, beat 4.5: no match
+- m. 139, beat 4.5 to m. 139, beat 4.75: no match
+- m. 139, beat 4.75 to m. 140, beat 1: no match
+- m. 140, beat 1 to m. 140, beat 2.96: no match
+- m. 140, beat 1.5 to m. 140, beat 1.9: no match
+- m. 140, beat 2 to m. 140, beat 2.4: no match
+- m. 140, beat 2.5 to m. 140, beat 2.9: no match
+- m. 140, beat 3 to m. 140, beat 3.4: no match
+- m. 140, beat 3.12 to m. 140, beat 4: no match
+- m. 140, beat 3.5 to m. 140, beat 3.9: no match
+- m. 140, beat 4 to m. 140, beat 4.4: no match
+- m. 140, beat 4.12 to m. 141, beat 1: no match
+- m. 140, beat 4.5 to m. 140, beat 4.9: no match
+- m. 141, beat 1 to m. 141, beat 2.96: no match
+- m. 141, beat 1.5 to m. 141, beat 1.9: no match
+- m. 141, beat 2 to m. 141, beat 2.4: no match
+- m. 141, beat 2.5 to m. 141, beat 2.9: no match
+- m. 141, beat 3 to m. 141, beat 3.4: no match
+- m. 141, beat 3.12 to m. 141, beat 4: no match
+- m. 141, beat 3.5 to m. 141, beat 3.9: no match
+- m. 141, beat 4 to m. 141, beat 4.4: no match
+- m. 141, beat 4.12 to m. 142, beat 1: no match
+- m. 141, beat 4.5 to m. 141, beat 4.9: no match
+- m. 142, beat 1 to m. 142, beat 1.5: no match
+- m. 142, beat 1.25 to m. 142, beat 1.5: no match
+- m. 142, beat 1.5 to m. 142, beat 1.75: no match
+- m. 142, beat 1.75 to m. 142, beat 2: no match
+- m. 142, beat 2 to m. 142, beat 2.25: no match
+- m. 142, beat 2.25 to m. 142, beat 2.5: no match
+- m. 142, beat 2.5 to m. 142, beat 2.75: no match
+- m. 142, beat 2.75 to m. 142, beat 3: no match
+- m. 142, beat 3 to m. 142, beat 3.25: no match
+- m. 142, beat 3.25 to m. 142, beat 3.5: no match
+- m. 142, beat 3.5 to m. 142, beat 3.75: no match
+- m. 142, beat 3.75 to m. 142, beat 4: no match
+- m. 142, beat 4 to m. 142, beat 4.25: no match
+- m. 142, beat 4.25 to m. 142, beat 4.5: no match
+- m. 142, beat 4.5 to m. 142, beat 4.75: no match
+- m. 142, beat 4.75 to m. 143, beat 1: no match
+- m. 143, beat 1 to m. 143, beat 1.25: no match
+- m. 143, beat 1.12 to m. 143, beat 1.25: no match
+- m. 143, beat 1.25 to m. 143, beat 1.5: no match
+- m. 143, beat 1.38 to m. 143, beat 1.5: no match
+- m. 143, beat 1.5 to m. 143, beat 1.75: no match
+- m. 143, beat 1.62 to m. 143, beat 1.75: no match
+- m. 143, beat 1.75 to m. 143, beat 2: no match
+- m. 143, beat 1.88 to m. 143, beat 2: no match
+- m. 143, beat 2 to m. 143, beat 2.25: no match
+- m. 143, beat 2.12 to m. 143, beat 2.25: no match
+- m. 143, beat 2.25 to m. 143, beat 2.5: no match
+- m. 143, beat 2.38 to m. 143, beat 2.5: no match
+- m. 143, beat 2.5 to m. 143, beat 2.75: no match
+- m. 143, beat 2.62 to m. 143, beat 2.75: no match
+- m. 143, beat 2.75 to m. 143, beat 3: no match
+- m. 143, beat 2.88 to m. 143, beat 3: no match
+- m. 143, beat 3 to m. 143, beat 3.25: no match
+- m. 143, beat 3.12 to m. 143, beat 3.25: no match
+- m. 143, beat 3.25 to m. 143, beat 3.5: no match
+- m. 143, beat 3.38 to m. 143, beat 3.5: no match
+- m. 143, beat 3.5 to m. 143, beat 3.75: no match
+- m. 143, beat 3.62 to m. 143, beat 3.75: no match
+- m. 143, beat 3.75 to m. 143, beat 4: no match
+- m. 143, beat 3.88 to m. 143, beat 4: no match
+- m. 143, beat 4 to m. 143, beat 4.25: no match
+- m. 143, beat 4.12 to m. 143, beat 4.25: no match
+- m. 143, beat 4.25 to m. 143, beat 4.5: no match
+- m. 143, beat 4.38 to m. 143, beat 4.5: no match
+- m. 143, beat 4.5 to m. 143, beat 4.75: no match
+- m. 143, beat 4.62 to m. 143, beat 4.75: no match
+- m. 143, beat 4.75 to m. 144, beat 1: no match
+- m. 143, beat 4.88 to m. 144, beat 1: no match
+- m. 144, beat 1 to m. 144, beat 2: no match
+- m. 144, beat 2 to m. 144, beat 2.25: no match
+- m. 144, beat 2.25 to m. 144, beat 2.5: no match
+- m. 144, beat 2.5 to m. 144, beat 2.75: no match
+- m. 144, beat 2.75 to m. 144, beat 3: no match
+- m. 144, beat 3 to m. 144, beat 3.25: no match
+- m. 144, beat 3.25 to m. 144, beat 3.5: no match
+- m. 144, beat 3.5 to m. 144, beat 3.75: no match
+- m. 144, beat 3.75 to m. 144, beat 4: no match
+- m. 144, beat 4 to m. 145, beat 1: no match
+- m. 144, beat 4.25 to m. 144, beat 4.5: no match
+- m. 144, beat 4.5 to m. 144, beat 4.75: no match
+- m. 144, beat 4.75 to m. 145, beat 1: no match
+- m. 145, beat 1 to m. 145, beat 2: no match
+- m. 145, beat 2 to m. 145, beat 2.25: no match
+- m. 145, beat 2.25 to m. 145, beat 2.5: no match
+- m. 145, beat 2.5 to m. 145, beat 2.75: no match
+- m. 145, beat 2.75 to m. 145, beat 3: no match
+- m. 145, beat 3 to m. 145, beat 3.25: no match
+- m. 145, beat 3.25 to m. 145, beat 3.5: no match
+- m. 145, beat 3.5 to m. 145, beat 3.75: no match
+- m. 145, beat 3.75 to m. 145, beat 4: no match
+- m. 145, beat 4 to m. 146, beat 1: no match
+- m. 145, beat 4.25 to m. 145, beat 4.5: no match
+- m. 145, beat 4.5 to m. 145, beat 4.75: no match
+- m. 145, beat 4.75 to m. 146, beat 1: no match
+- m. 146, beat 1 to m. 146, beat 1.8: no match
+- m. 146, beat 2 to m. 146, beat 3: I
+- m. 146, beat 3 to m. 146, beat 4: no match
+- m. 149, beat 1 to m. 149, beat 3: no match
+- m. 149, beat 1.25 to m. 149, beat 1.5: no match
+- m. 149, beat 1.5 to m. 149, beat 1.75: no match
+- m. 149, beat 1.75 to m. 149, beat 2: no match
+- m. 149, beat 2 to m. 149, beat 2.25: no match
+- m. 149, beat 2.25 to m. 149, beat 2.5: no match
+- m. 149, beat 2.5 to m. 149, beat 2.75: no match
+- m. 149, beat 2.75 to m. 149, beat 3: no match
+- m. 149, beat 3 to m. 149, beat 3.25: no match
+- m. 149, beat 3.25 to m. 149, beat 3.5: no match
+- m. 149, beat 3.5 to m. 149, beat 3.75: no match
+- m. 149, beat 3.75 to m. 150, beat 1: no match
+- m. 150, beat 1 to m. 150, beat 1.75: no match
+- m. 150, beat 1.25 to m. 150, beat 1.5: no match
+- m. 150, beat 1.5 to m. 150, beat 1.75: no match
+- m. 150, beat 1.75 to m. 150, beat 2: no match
+- m. 150, beat 2 to m. 150, beat 3: no match
+- m. 150, beat 2.25 to m. 150, beat 2.5: no match
+- m. 150, beat 2.5 to m. 150, beat 2.75: no match
+- m. 150, beat 2.75 to m. 150, beat 3: no match
+- m. 150, beat 3 to m. 150, beat 3.25: no match
+- m. 150, beat 3.25 to m. 150, beat 3.5: no match
+- m. 150, beat 3.5 to m. 150, beat 3.75: no match
+- m. 150, beat 3.75 to m. 151, beat 1: no match
+- m. 151, beat 1 to m. 151, beat 2.5: no match
+- m. 151, beat 1.25 to m. 151, beat 1.5: no match
+- m. 151, beat 1.5 to m. 151, beat 1.75: no match
+- m. 151, beat 1.75 to m. 151, beat 2: no match
+- m. 151, beat 2 to m. 151, beat 2.25: no match
+- m. 151, beat 2.25 to m. 151, beat 2.5: no match
+- m. 151, beat 2.5 to m. 151, beat 2.75: no match
+- m. 151, beat 2.75 to m. 151, beat 3: no match
+- m. 151, beat 3 to m. 151, beat 3.25: no match
+- m. 151, beat 3.25 to m. 151, beat 3.5: no match
+- m. 151, beat 3.5 to m. 151, beat 3.75: no match
+- m. 151, beat 3.75 to m. 152, beat 1: no match
+- m. 152, beat 1 to m. 152, beat 1.75: no match
+- m. 152, beat 1.25 to m. 152, beat 1.5: no match
+- m. 152, beat 1.5 to m. 152, beat 1.75: no match
+- m. 152, beat 1.75 to m. 152, beat 2: no match
+- m. 152, beat 2 to m. 152, beat 3: no match
+- m. 152, beat 2.25 to m. 152, beat 2.5: no match
+- m. 152, beat 2.5 to m. 152, beat 2.75: no match
+- m. 152, beat 2.75 to m. 152, beat 3: no match
+- m. 152, beat 3 to m. 152, beat 3.25: no match
+- m. 152, beat 3.25 to m. 152, beat 3.5: no match
+- m. 152, beat 3.5 to m. 152, beat 3.75: no match
+- m. 152, beat 3.75 to m. 153, beat 1: no match
+- m. 153, beat 1 to m. 153, beat 1.75: no match
+- m. 153, beat 1.25 to m. 153, beat 1.5: no match
+- m. 153, beat 1.5 to m. 153, beat 1.75: no match
+- m. 153, beat 1.75 to m. 153, beat 2: no match
+- m. 153, beat 2 to m. 153, beat 2.5: no match
+- m. 153, beat 2.25 to m. 153, beat 2.5: no match
+- m. 153, beat 2.5 to m. 153, beat 3: no match
+- m. 153, beat 2.75 to m. 153, beat 3: no match
+- m. 153, beat 3 to m. 153, beat 3.5: no match
+- m. 153, beat 3.25 to m. 153, beat 3.5: no match
+- m. 153, beat 3.5 to m. 154, beat 1: no match
+- m. 153, beat 3.75 to m. 154, beat 1: no match
+- m. 154, beat 1 to m. 154, beat 1.75: no match
+- m. 154, beat 1.25 to m. 154, beat 1.5: no match
+- m. 154, beat 1.5 to m. 154, beat 1.75: no match
+- m. 154, beat 1.75 to m. 154, beat 2: no match
+- m. 154, beat 2 to m. 154, beat 3: no match
+- m. 154, beat 2.25 to m. 154, beat 2.5: no match
+- m. 154, beat 2.5 to m. 154, beat 2.75: no match
+- m. 154, beat 2.75 to m. 154, beat 3: no match
+- m. 154, beat 3 to m. 154, beat 3.25: no match
+- m. 154, beat 3.25 to m. 154, beat 3.5: no match
+- m. 154, beat 3.5 to m. 154, beat 3.75: no match
+- m. 154, beat 3.75 to m. 155, beat 1: no match
+- m. 155, beat 1 to m. 155, beat 3: vi
+- m. 155, beat 1.25 to m. 155, beat 1.5: no match
+- m. 155, beat 1.5 to m. 155, beat 1.75: no match
+- m. 155, beat 1.75 to m. 155, beat 2: no match
+- m. 155, beat 2 to m. 156, beat 1: no match
+- m. 155, beat 2.25 to m. 155, beat 2.5: no match
+- m. 155, beat 2.5 to m. 155, beat 2.75: no match
+- m. 155, beat 2.75 to m. 155, beat 3: no match
+- m. 155, beat 3 to m. 156, beat 1: no match
+- m. 155, beat 3.25 to m. 155, beat 3.5: no match
+- m. 155, beat 3.5 to m. 155, beat 3.75: no match
+- m. 155, beat 3.75 to m. 156, beat 1: no match
+- m. 156, beat 1 to m. 156, beat 3: V
+- m. 156, beat 1.75 to m. 156, beat 1.88: no match
+- m. 156, beat 1.88 to m. 156, beat 2: no match
+- m. 156, beat 2 to m. 156, beat 3: no match
+- m. 156, beat 2.5 to m. 156, beat 3: no match
+- m. 156, beat 3 to m. 156, beat 3.5: no match
+- m. 156, beat 3.5 to m. 157, beat 1: no match
+- m. 157, beat 1 to m. 157, beat 2.25: no match
+- m. 157, beat 1.25 to m. 157, beat 1.5: no match
+- m. 157, beat 1.5 to m. 157, beat 1.75: no match
+- m. 157, beat 1.75 to m. 157, beat 2: no match
+- m. 157, beat 2 to m. 157, beat 2.25: no match
+- m. 157, beat 2.25 to m. 157, beat 2.5: no match
+- m. 157, beat 2.5 to m. 157, beat 2.75: no match
+- m. 157, beat 2.75 to m. 157, beat 3: no match
+- m. 157, beat 3 to m. 157, beat 3.25: no match
+- m. 157, beat 3.25 to m. 157, beat 3.5: no match
+- m. 157, beat 3.5 to m. 157, beat 3.75: no match
+- m. 157, beat 3.75 to m. 158, beat 1: no match
+- m. 158, beat 1 to m. 158, beat 1.75: no match
+- m. 158, beat 1.25 to m. 158, beat 1.5: no match
+- m. 158, beat 1.5 to m. 158, beat 1.75: no match
+- m. 158, beat 1.75 to m. 158, beat 2: no match
+- m. 158, beat 2 to m. 158, beat 2.25: no match
+- m. 158, beat 2.25 to m. 158, beat 2.5: no match
+- m. 158, beat 2.5 to m. 158, beat 2.75: no match
+- m. 158, beat 2.75 to m. 158, beat 3: no match
+- m. 158, beat 3 to m. 158, beat 3.25: no match
+- m. 158, beat 3.25 to m. 158, beat 3.5: no match
+- m. 158, beat 3.5 to m. 158, beat 3.75: no match
+- m. 158, beat 3.75 to m. 159, beat 1: no match
+- m. 159, beat 1 to m. 159, beat 1.25: no match
+- m. 159, beat 1.25 to m. 159, beat 1.5: no match
+- m. 159, beat 1.5 to m. 159, beat 1.75: no match
+- m. 159, beat 1.75 to m. 159, beat 2: no match
+- m. 159, beat 2 to m. 159, beat 2.25: no match
+- m. 159, beat 2.25 to m. 159, beat 2.5: no match
+- m. 159, beat 2.5 to m. 159, beat 2.75: no match
+- m. 159, beat 2.75 to m. 159, beat 3: no match
+- m. 159, beat 3 to m. 159, beat 3.25: no match
+- m. 159, beat 3.25 to m. 159, beat 3.5: no match
+- m. 159, beat 3.5 to m. 159, beat 3.75: no match
+- m. 159, beat 3.75 to m. 160, beat 1: no match
+- m. 160, beat 1 to m. 160, beat 1.25: no match
+- m. 160, beat 1.25 to m. 160, beat 1.5: no match
+- m. 160, beat 1.5 to m. 160, beat 1.75: no match
+- m. 160, beat 1.75 to m. 160, beat 2: no match
+- m. 160, beat 2 to m. 160, beat 3: no match
+- m. 160, beat 2.25 to m. 160, beat 2.5: no match
+- m. 160, beat 2.5 to m. 160, beat 2.75: no match
+- m. 160, beat 2.75 to m. 160, beat 3: no match
+- m. 160, beat 3 to m. 160, beat 3.25: no match
+- m. 160, beat 3.25 to m. 160, beat 3.5: no match
+- m. 160, beat 3.5 to m. 160, beat 3.75: no match
+- m. 160, beat 3.75 to m. 161, beat 1: no match
+- m. 161, beat 1 to m. 161, beat 1.25: no match
+- m. 161, beat 1.25 to m. 161, beat 1.5: no match
+- m. 161, beat 1.5 to m. 161, beat 1.75: no match
+- m. 161, beat 1.75 to m. 161, beat 2: no match
+- m. 161, beat 2 to m. 161, beat 2.25: no match
+- m. 161, beat 2.25 to m. 161, beat 2.5: no match
+- m. 161, beat 2.5 to m. 161, beat 2.75: no match
+- m. 161, beat 2.75 to m. 161, beat 3: no match
+- m. 161, beat 3 to m. 161, beat 3.25: no match
+- m. 161, beat 3.25 to m. 161, beat 3.5: no match
+- m. 161, beat 3.5 to m. 161, beat 3.75: no match
+- m. 161, beat 3.75 to m. 162, beat 1: no match
+- m. 162, beat 1 to m. 162, beat 1.25: no match
+- m. 162, beat 1.25 to m. 162, beat 1.5: no match
+- m. 162, beat 1.5 to m. 162, beat 1.75: no match
+- m. 162, beat 1.75 to m. 162, beat 2: no match
+- m. 162, beat 2 to m. 162, beat 3: no match
+- m. 162, beat 2.25 to m. 162, beat 2.5: no match
+- m. 162, beat 2.5 to m. 162, beat 2.75: no match
+- m. 162, beat 2.75 to m. 162, beat 3: no match
+- m. 162, beat 3 to m. 162, beat 3.25: no match
+- m. 162, beat 3.25 to m. 162, beat 3.5: no match
+- m. 162, beat 3.5 to m. 162, beat 3.75: no match
+- m. 162, beat 3.75 to m. 163, beat 1: no match
+- m. 163, beat 1 to m. 163, beat 1.25: no match
+- m. 163, beat 1.25 to m. 163, beat 1.5: no match
+- m. 163, beat 1.5 to m. 163, beat 1.75: no match
+- m. 163, beat 1.75 to m. 163, beat 2: no match
+- m. 163, beat 2 to m. 163, beat 2.75: no match
+- m. 163, beat 2.25 to m. 163, beat 2.5: no match
+- m. 163, beat 2.5 to m. 163, beat 2.75: no match
+- m. 163, beat 2.75 to m. 163, beat 3: no match
+- m. 163, beat 3 to m. 164, beat 1: no match
+- m. 163, beat 3.25 to m. 163, beat 3.5: no match
+- m. 163, beat 3.5 to m. 163, beat 3.75: no match
+- m. 163, beat 3.75 to m. 164, beat 1: no match
+- m. 164, beat 1 to m. 164, beat 3: no match
+- m. 164, beat 2 to m. 164, beat 3: no match
+- m. 165, beat 1 to m. 165, beat 3: no match
+- m. 165, beat 1.25 to m. 165, beat 1.5: no match
+- m. 165, beat 1.5 to m. 165, beat 1.75: no match
+- m. 165, beat 1.75 to m. 165, beat 2: no match
+- m. 165, beat 2 to m. 165, beat 2.25: no match
+- m. 165, beat 2.25 to m. 165, beat 2.5: no match
+- m. 165, beat 2.5 to m. 165, beat 2.75: no match
+- m. 165, beat 2.75 to m. 165, beat 3: no match
+- m. 165, beat 3 to m. 165, beat 3.25: no match
+- m. 165, beat 3.25 to m. 165, beat 3.5: no match
+- m. 165, beat 3.5 to m. 165, beat 3.75: no match
+- m. 165, beat 3.75 to m. 166, beat 1: no match
+- m. 166, beat 1 to m. 166, beat 1.75: no match
+- m. 166, beat 1.25 to m. 166, beat 1.5: no match
+- m. 166, beat 1.5 to m. 166, beat 1.75: no match
+- m. 166, beat 1.75 to m. 166, beat 2: no match
+- m. 166, beat 2 to m. 166, beat 3: no match
+- m. 166, beat 2.25 to m. 166, beat 2.5: no match
+- m. 166, beat 2.5 to m. 166, beat 2.75: no match
+- m. 166, beat 2.75 to m. 166, beat 3: no match
+- m. 166, beat 3 to m. 166, beat 3.25: no match
+- m. 166, beat 3.25 to m. 166, beat 3.5: no match
+- m. 166, beat 3.5 to m. 166, beat 3.75: no match
+- m. 166, beat 3.75 to m. 167, beat 1: no match
+- m. 167, beat 1 to m. 167, beat 2.5: no match
+- m. 167, beat 1.25 to m. 167, beat 1.5: no match
+- m. 167, beat 1.5 to m. 167, beat 1.75: no match
+- m. 167, beat 1.75 to m. 167, beat 2: no match
+- m. 167, beat 2 to m. 167, beat 2.25: no match
+- m. 167, beat 2.25 to m. 167, beat 2.5: no match
+- m. 167, beat 2.5 to m. 167, beat 2.75: no match
+- m. 167, beat 2.75 to m. 167, beat 3: no match
+- m. 167, beat 3 to m. 167, beat 3.25: no match
+- m. 167, beat 3.25 to m. 167, beat 3.5: no match
+- m. 167, beat 3.5 to m. 167, beat 3.75: no match
+- m. 167, beat 3.75 to m. 168, beat 1: no match
+- m. 168, beat 1 to m. 168, beat 1.75: no match
+- m. 168, beat 1.25 to m. 168, beat 1.5: no match
+- m. 168, beat 1.5 to m. 168, beat 1.75: no match
+- m. 168, beat 1.75 to m. 168, beat 2: no match
+- m. 168, beat 2 to m. 168, beat 3: no match
+- m. 168, beat 2.25 to m. 168, beat 2.5: no match
+- m. 168, beat 2.5 to m. 168, beat 2.75: no match
+- m. 168, beat 2.75 to m. 168, beat 3: no match
+- m. 168, beat 3 to m. 168, beat 3.25: no match
+- m. 168, beat 3.25 to m. 168, beat 3.5: no match
+- m. 168, beat 3.5 to m. 168, beat 3.75: no match
+- m. 168, beat 3.75 to m. 169, beat 1: no match
+- m. 169, beat 1 to m. 169, beat 1.75: no match
+- m. 169, beat 1.25 to m. 169, beat 1.5: no match
+- m. 169, beat 1.5 to m. 169, beat 1.75: no match
+- m. 169, beat 1.75 to m. 169, beat 2: no match
+- m. 169, beat 2 to m. 169, beat 2.5: no match
+- m. 169, beat 2.25 to m. 169, beat 2.5: no match
+- m. 169, beat 2.5 to m. 169, beat 3: no match
+- m. 169, beat 2.75 to m. 169, beat 3: no match
+- m. 169, beat 3 to m. 169, beat 3.5: no match
+- m. 169, beat 3.25 to m. 169, beat 3.5: no match
+- m. 169, beat 3.5 to m. 170, beat 1: no match
+- m. 169, beat 3.75 to m. 170, beat 1: no match
+- m. 170, beat 1 to m. 170, beat 1.75: no match
+- m. 170, beat 1.25 to m. 170, beat 1.5: no match
+- m. 170, beat 1.5 to m. 170, beat 1.75: no match
+- m. 170, beat 1.75 to m. 170, beat 2: no match
+- m. 170, beat 2 to m. 170, beat 3: no match
+- m. 170, beat 2.25 to m. 170, beat 2.5: no match
+- m. 170, beat 2.5 to m. 170, beat 2.75: no match
+- m. 170, beat 2.75 to m. 170, beat 3: no match
+- m. 170, beat 3 to m. 170, beat 3.25: no match
+- m. 170, beat 3.25 to m. 170, beat 3.5: no match
+- m. 170, beat 3.5 to m. 170, beat 3.75: no match
+- m. 170, beat 3.75 to m. 171, beat 1: no match
+- m. 171, beat 1 to m. 171, beat 3: vi
+- m. 171, beat 1.25 to m. 171, beat 1.5: no match
+- m. 171, beat 1.5 to m. 171, beat 1.75: no match
+- m. 171, beat 1.75 to m. 171, beat 2: no match
+- m. 171, beat 2 to m. 172, beat 1: no match
+- m. 171, beat 2.25 to m. 171, beat 2.5: no match
+- m. 171, beat 2.5 to m. 171, beat 2.75: no match
+- m. 171, beat 2.75 to m. 171, beat 3: no match
+- m. 171, beat 3 to m. 172, beat 1: no match
+- m. 171, beat 3.25 to m. 171, beat 3.5: no match
+- m. 171, beat 3.5 to m. 171, beat 3.75: no match
+- m. 171, beat 3.75 to m. 172, beat 1: no match
+- m. 172, beat 1 to m. 172, beat 3: V
+- m. 172, beat 1.75 to m. 172, beat 1.88: no match
+- m. 172, beat 1.88 to m. 172, beat 2: no match
+- m. 172, beat 2 to m. 172, beat 3: no match
+- m. 172, beat 2.5 to m. 172, beat 3: no match
+- m. 172, beat 3 to m. 172, beat 3.5: no match
+- m. 172, beat 3.5 to m. 173, beat 1: no match
+- m. 173, beat 1 to m. 173, beat 2.25: no match
+- m. 173, beat 1.25 to m. 173, beat 1.5: no match
+- m. 173, beat 1.5 to m. 173, beat 1.75: no match
+- m. 173, beat 1.75 to m. 173, beat 2: no match
+- m. 173, beat 2 to m. 173, beat 2.25: no match
+- m. 173, beat 2.25 to m. 173, beat 2.5: no match
+- m. 173, beat 2.5 to m. 173, beat 2.75: no match
+- m. 173, beat 2.75 to m. 173, beat 3: no match
+- m. 173, beat 3 to m. 173, beat 3.25: no match
+- m. 173, beat 3.25 to m. 173, beat 3.5: no match
+- m. 173, beat 3.5 to m. 173, beat 3.75: no match
+- m. 173, beat 3.75 to m. 174, beat 1: no match
+- m. 174, beat 1 to m. 174, beat 1.75: no match
+- m. 174, beat 1.25 to m. 174, beat 1.5: no match
+- m. 174, beat 1.5 to m. 174, beat 1.75: no match
+- m. 174, beat 1.75 to m. 174, beat 2: no match
+- m. 174, beat 2 to m. 174, beat 2.25: no match
+- m. 174, beat 2.25 to m. 174, beat 2.5: no match
+- m. 174, beat 2.5 to m. 174, beat 2.75: no match
+- m. 174, beat 2.75 to m. 174, beat 3: no match
+- m. 174, beat 3 to m. 174, beat 3.25: no match
+- m. 174, beat 3.25 to m. 174, beat 3.5: no match
+- m. 174, beat 3.5 to m. 174, beat 3.75: no match
+- m. 174, beat 3.75 to m. 175, beat 1: no match
+- m. 175, beat 1 to m. 175, beat 1.25: no match
+- m. 175, beat 1.25 to m. 175, beat 1.5: no match
+- m. 175, beat 1.5 to m. 175, beat 1.75: no match
+- m. 175, beat 1.75 to m. 175, beat 2: no match
+- m. 175, beat 2 to m. 175, beat 2.25: no match
+- m. 175, beat 2.25 to m. 175, beat 2.5: no match
+- m. 175, beat 2.5 to m. 175, beat 2.75: no match
+- m. 175, beat 2.75 to m. 175, beat 3: no match
+- m. 175, beat 3 to m. 175, beat 3.25: no match
+- m. 175, beat 3.25 to m. 175, beat 3.5: no match
+- m. 175, beat 3.5 to m. 175, beat 3.75: no match
+- m. 175, beat 3.75 to m. 176, beat 1: no match
+- m. 176, beat 1 to m. 176, beat 1.25: no match
+- m. 176, beat 1.25 to m. 176, beat 1.5: no match
+- m. 176, beat 1.5 to m. 176, beat 1.75: no match
+- m. 176, beat 1.75 to m. 176, beat 2: no match
+- m. 176, beat 2 to m. 176, beat 3: no match
+- m. 176, beat 2.25 to m. 176, beat 2.5: no match
+- m. 176, beat 2.5 to m. 176, beat 2.75: no match
+- m. 176, beat 2.75 to m. 176, beat 3: no match
+- m. 176, beat 3 to m. 176, beat 3.25: no match
+- m. 176, beat 3.25 to m. 176, beat 3.5: no match
+- m. 176, beat 3.5 to m. 176, beat 3.75: no match
+- m. 176, beat 3.75 to m. 177, beat 1: no match
+- m. 177, beat 1 to m. 177, beat 1.25: no match
+- m. 177, beat 1.25 to m. 177, beat 1.5: no match
+- m. 177, beat 1.5 to m. 177, beat 1.75: no match
+- m. 177, beat 1.75 to m. 177, beat 2: no match
+- m. 177, beat 2 to m. 177, beat 2.25: no match
+- m. 177, beat 2.25 to m. 177, beat 2.5: no match
+- m. 177, beat 2.5 to m. 177, beat 2.75: no match
+- m. 177, beat 2.75 to m. 177, beat 3: no match
+- m. 177, beat 3 to m. 177, beat 3.25: no match
+- m. 177, beat 3.25 to m. 177, beat 3.5: no match
+- m. 177, beat 3.5 to m. 177, beat 3.75: no match
+- m. 177, beat 3.75 to m. 178, beat 1: no match
+- m. 178, beat 1 to m. 178, beat 1.25: no match
+- m. 178, beat 1.25 to m. 178, beat 1.5: no match
+- m. 178, beat 1.5 to m. 178, beat 1.75: no match
+- m. 178, beat 1.75 to m. 178, beat 2: no match
+- m. 178, beat 2 to m. 178, beat 3: no match
+- m. 178, beat 2.25 to m. 178, beat 2.5: no match
+- m. 178, beat 2.5 to m. 178, beat 2.75: no match
+- m. 178, beat 2.75 to m. 178, beat 3: no match
+- m. 178, beat 3 to m. 178, beat 3.25: no match
+- m. 178, beat 3.25 to m. 178, beat 3.5: no match
+- m. 178, beat 3.5 to m. 178, beat 3.75: no match
+- m. 178, beat 3.75 to m. 179, beat 1: no match
+- m. 179, beat 1 to m. 179, beat 1.25: no match
+- m. 179, beat 1.25 to m. 179, beat 1.5: no match
+- m. 179, beat 1.5 to m. 179, beat 1.75: no match
+- m. 179, beat 1.75 to m. 179, beat 2: no match
+- m. 179, beat 2 to m. 179, beat 2.75: no match
+- m. 179, beat 2.25 to m. 179, beat 2.5: no match
+- m. 179, beat 2.5 to m. 179, beat 2.75: no match
+- m. 179, beat 2.75 to m. 179, beat 3: no match
+- m. 179, beat 3 to m. 180, beat 1: no match
+- m. 179, beat 3.25 to m. 179, beat 3.5: no match
+- m. 179, beat 3.5 to m. 179, beat 3.75: no match
+- m. 179, beat 3.75 to m. 180, beat 1: no match
+- m. 180, beat 1 to m. 180, beat 3: no match
+- m. 180, beat 2 to m. 180, beat 3: no match
+- m. 181, beat 1 to m. 181, beat 2.25: no match
+- m. 181, beat 1.25 to m. 181, beat 1.5: no match
+- m. 181, beat 1.5 to m. 181, beat 1.75: no match
+- m. 181, beat 1.75 to m. 181, beat 2: no match
+- m. 181, beat 2 to m. 181, beat 2.25: no match
+- m. 181, beat 2.25 to m. 181, beat 2.5: no match
+- m. 181, beat 2.5 to m. 181, beat 2.75: no match
+- m. 181, beat 2.75 to m. 181, beat 3: no match
+- m. 181, beat 3 to m. 181, beat 3.25: no match
+- m. 181, beat 3.25 to m. 181, beat 3.5: no match
+- m. 181, beat 3.5 to m. 181, beat 3.75: no match
+- m. 181, beat 3.75 to m. 182, beat 1: no match
+- m. 182, beat 1 to m. 182, beat 1.75: no match
+- m. 182, beat 1.25 to m. 182, beat 1.5: no match
+- m. 182, beat 1.5 to m. 182, beat 1.75: no match
+- m. 182, beat 1.75 to m. 182, beat 2: no match
+- m. 182, beat 2 to m. 182, beat 3: no match
+- m. 182, beat 2.25 to m. 182, beat 2.5: no match
+- m. 182, beat 2.5 to m. 182, beat 2.75: no match
+- m. 182, beat 2.75 to m. 182, beat 3: no match
+- m. 182, beat 3 to m. 182, beat 3.25: no match
+- m. 182, beat 3.25 to m. 182, beat 3.5: no match
+- m. 182, beat 3.5 to m. 182, beat 3.75: no match
+- m. 182, beat 3.75 to m. 183, beat 1: no match
+- m. 183, beat 1 to m. 183, beat 2.25: no match
+- m. 183, beat 1.25 to m. 183, beat 1.5: no match
+- m. 183, beat 1.5 to m. 183, beat 1.75: no match
+- m. 183, beat 1.75 to m. 183, beat 2: no match
+- m. 183, beat 2 to m. 183, beat 2.25: no match
+- m. 183, beat 2.25 to m. 183, beat 2.5: no match
+- m. 183, beat 2.5 to m. 183, beat 2.75: no match
+- m. 183, beat 2.75 to m. 183, beat 3: no match
+- m. 183, beat 3 to m. 183, beat 3.25: no match
+- m. 183, beat 3.25 to m. 183, beat 3.5: no match
+- m. 183, beat 3.5 to m. 183, beat 3.75: no match
+- m. 183, beat 3.75 to m. 184, beat 1: no match
+- m. 184, beat 1 to m. 184, beat 1.75: no match
+- m. 184, beat 1.25 to m. 184, beat 1.5: no match
+- m. 184, beat 1.5 to m. 184, beat 1.75: no match
+- m. 184, beat 1.75 to m. 184, beat 2: no match
+- m. 184, beat 2 to m. 184, beat 3: no match
+- m. 184, beat 2.25 to m. 184, beat 2.5: no match
+- m. 184, beat 2.5 to m. 184, beat 2.75: no match
+- m. 184, beat 2.75 to m. 184, beat 3: no match
+- m. 184, beat 3 to m. 184, beat 3.25: no match
+- m. 184, beat 3.25 to m. 184, beat 3.5: no match
+- m. 184, beat 3.5 to m. 184, beat 3.75: no match
+- m. 184, beat 3.75 to m. 185, beat 1: no match
+- m. 185, beat 1 to m. 185, beat 2.25: no match
+- m. 185, beat 1.25 to m. 185, beat 1.5: no match
+- m. 185, beat 1.5 to m. 185, beat 1.75: no match
+- m. 185, beat 1.75 to m. 185, beat 2: no match
+- m. 185, beat 2 to m. 185, beat 2.25: no match
+- m. 185, beat 2.25 to m. 185, beat 2.5: no match
+- m. 185, beat 2.5 to m. 185, beat 2.75: no match
+- m. 185, beat 2.75 to m. 185, beat 3: no match
+- m. 185, beat 3 to m. 185, beat 3.25: no match
+- m. 185, beat 3.25 to m. 185, beat 3.5: no match
+- m. 185, beat 3.5 to m. 185, beat 3.75: no match
+- m. 185, beat 3.75 to m. 186, beat 1: no match
+- m. 186, beat 1 to m. 186, beat 2.25: no match
+- m. 186, beat 1.25 to m. 186, beat 1.5: no match
+- m. 186, beat 1.5 to m. 186, beat 1.75: no match
+- m. 186, beat 1.75 to m. 186, beat 2: no match
+- m. 186, beat 2 to m. 186, beat 2.25: no match
+- m. 186, beat 2.25 to m. 186, beat 2.5: no match
+- m. 186, beat 2.5 to m. 186, beat 2.75: no match
+- m. 186, beat 2.75 to m. 186, beat 3: no match
+- m. 186, beat 3 to m. 186, beat 3.25: no match
+- m. 186, beat 3.25 to m. 186, beat 3.5: no match
+- m. 186, beat 3.5 to m. 186, beat 3.75: no match
+- m. 186, beat 3.75 to m. 187, beat 1: no match
+- m. 187, beat 1 to m. 187, beat 1.25: no match
+- m. 187, beat 1.25 to m. 187, beat 1.5: no match
+- m. 187, beat 1.5 to m. 187, beat 2.25: no match
+- m. 187, beat 1.75 to m. 187, beat 2: no match
+- m. 187, beat 2 to m. 187, beat 2.25: no match
+- m. 187, beat 2.25 to m. 187, beat 2.5: no match
+- m. 187, beat 2.5 to m. 187, beat 2.75: no match
+- m. 187, beat 2.75 to m. 187, beat 3: no match
+- m. 187, beat 3 to m. 188, beat 1: no match
+- m. 187, beat 3.25 to m. 187, beat 3.5: no match
+- m. 187, beat 3.5 to m. 187, beat 3.75: no match
+- m. 187, beat 3.75 to m. 188, beat 1: no match
+- m. 188, beat 1 to m. 188, beat 3: no match
+- m. 188, beat 2 to m. 188, beat 3: no match
+- m. 188, beat 2.25 to m. 188, beat 2.5: no match
+- m. 188, beat 2.5 to m. 188, beat 2.75: no match
+- m. 188, beat 2.75 to m. 188, beat 3: no match
+- m. 188, beat 3 to m. 188, beat 3.25: no match
+- m. 188, beat 3.25 to m. 188, beat 3.5: no match
+- m. 188, beat 3.5 to m. 188, beat 3.75: no match
+- m. 188, beat 3.75 to m. 189, beat 1: no match
+- m. 189, beat 1 to m. 189, beat 2.25: no match
+- m. 189, beat 1.25 to m. 189, beat 1.5: no match
+- m. 189, beat 1.5 to m. 189, beat 1.75: no match
+- m. 189, beat 1.75 to m. 189, beat 2: no match
+- m. 189, beat 2 to m. 189, beat 2.25: no match
+- m. 189, beat 2.25 to m. 189, beat 2.5: no match
+- m. 189, beat 2.5 to m. 189, beat 2.75: no match
+- m. 189, beat 2.75 to m. 189, beat 3: no match
+- m. 189, beat 3 to m. 189, beat 3.25: no match
+- m. 189, beat 3.25 to m. 189, beat 3.5: no match
+- m. 189, beat 3.5 to m. 189, beat 3.75: no match
+- m. 189, beat 3.75 to m. 190, beat 1: no match
+- m. 190, beat 1 to m. 190, beat 1.75: no match
+- m. 190, beat 1.25 to m. 190, beat 1.5: no match
+- m. 190, beat 1.5 to m. 190, beat 1.75: no match
+- m. 190, beat 1.75 to m. 190, beat 2: no match
+- m. 190, beat 2 to m. 190, beat 2.25: no match
+- m. 190, beat 2.25 to m. 190, beat 2.5: no match
+- m. 190, beat 2.5 to m. 190, beat 2.75: no match
+- m. 190, beat 2.75 to m. 190, beat 3: no match
+- m. 190, beat 3 to m. 190, beat 3.25: no match
+- m. 190, beat 3.25 to m. 190, beat 3.5: no match
+- m. 190, beat 3.5 to m. 190, beat 3.75: no match
+- m. 190, beat 3.75 to m. 191, beat 1: no match
+- m. 191, beat 1 to m. 191, beat 1.25: no match
+- m. 191, beat 1.25 to m. 191, beat 1.5: no match
+- m. 191, beat 1.5 to m. 191, beat 1.75: no match
+- m. 191, beat 1.75 to m. 191, beat 2: no match
+- m. 191, beat 2 to m. 191, beat 2.25: no match
+- m. 191, beat 2.25 to m. 191, beat 2.5: no match
+- m. 191, beat 2.5 to m. 191, beat 2.75: no match
+- m. 191, beat 2.75 to m. 191, beat 3: no match
+- m. 191, beat 3 to m. 191, beat 3.25: no match
+- m. 191, beat 3.25 to m. 191, beat 3.5: no match
+- m. 191, beat 3.5 to m. 191, beat 3.75: no match
+- m. 191, beat 3.75 to m. 192, beat 1: no match
+- m. 192, beat 1 to m. 192, beat 1.25: no match
+- m. 192, beat 1.25 to m. 192, beat 1.5: no match
+- m. 192, beat 1.5 to m. 192, beat 1.75: no match
+- m. 192, beat 1.75 to m. 192, beat 2: no match
+- m. 192, beat 2 to m. 192, beat 3: no match
+- m. 192, beat 2.25 to m. 192, beat 2.5: no match
+- m. 192, beat 2.5 to m. 192, beat 2.75: no match
+- m. 192, beat 2.75 to m. 192, beat 3: no match
+- m. 192, beat 3 to m. 192, beat 3.25: no match
+- m. 192, beat 3.25 to m. 192, beat 3.5: no match
+- m. 192, beat 3.5 to m. 192, beat 3.75: no match
+- m. 192, beat 3.75 to m. 193, beat 1: no match
+- m. 193, beat 1 to m. 193, beat 1.25: no match
+- m. 193, beat 1.25 to m. 193, beat 1.5: no match
+- m. 193, beat 1.5 to m. 193, beat 1.75: no match
+- m. 193, beat 1.75 to m. 193, beat 2: no match
+- m. 193, beat 2 to m. 193, beat 2.25: no match
+- m. 193, beat 2.25 to m. 193, beat 2.5: no match
+- m. 193, beat 2.5 to m. 193, beat 2.75: no match
+- m. 193, beat 2.75 to m. 193, beat 3: no match
+- m. 193, beat 3 to m. 193, beat 3.25: no match
+- m. 193, beat 3.25 to m. 193, beat 3.5: no match
+- m. 193, beat 3.5 to m. 193, beat 3.75: no match
+- m. 193, beat 3.75 to m. 194, beat 1: no match
+- m. 194, beat 1 to m. 194, beat 1.25: no match
+- m. 194, beat 1.25 to m. 194, beat 1.5: no match
+- m. 194, beat 1.5 to m. 194, beat 1.75: no match
+- m. 194, beat 1.75 to m. 194, beat 2: no match
+- m. 194, beat 2 to m. 194, beat 3: no match
+- m. 194, beat 2.25 to m. 194, beat 2.5: no match
+- m. 194, beat 2.5 to m. 194, beat 2.75: no match
+- m. 194, beat 2.75 to m. 194, beat 3: no match
+- m. 194, beat 3 to m. 194, beat 3.25: no match
+- m. 194, beat 3.25 to m. 194, beat 3.5: no match
+- m. 194, beat 3.5 to m. 194, beat 3.75: no match
+- m. 194, beat 3.75 to m. 195, beat 1: no match
+- m. 195, beat 1 to m. 195, beat 1.25: no match
+- m. 195, beat 1.25 to m. 195, beat 1.5: no match
+- m. 195, beat 1.5 to m. 195, beat 1.75: no match
+- m. 195, beat 1.75 to m. 195, beat 2: no match
+- m. 195, beat 2 to m. 195, beat 2.75: no match
+- m. 195, beat 2.25 to m. 195, beat 2.5: no match
+- m. 195, beat 2.5 to m. 195, beat 2.75: no match
+- m. 195, beat 2.75 to m. 195, beat 3: no match
+- m. 195, beat 3 to m. 196, beat 1: no match
+- m. 195, beat 3.25 to m. 195, beat 3.5: no match
+- m. 195, beat 3.5 to m. 195, beat 3.75: no match
+- m. 195, beat 3.75 to m. 196, beat 1: no match
+- m. 196, beat 1 to m. 196, beat 3: no match
+- m. 196, beat 2 to m. 196, beat 3: no match
+- m. 197, beat 1 to m. 197, beat 2.25: no match
+- m. 197, beat 1.25 to m. 197, beat 1.5: no match
+- m. 197, beat 1.5 to m. 197, beat 1.75: no match
+- m. 197, beat 1.75 to m. 197, beat 2: no match
+- m. 197, beat 2 to m. 197, beat 2.25: no match
+- m. 197, beat 2.25 to m. 197, beat 2.5: no match
+- m. 197, beat 2.5 to m. 197, beat 2.75: no match
+- m. 197, beat 2.75 to m. 197, beat 3: no match
+- m. 197, beat 3 to m. 197, beat 3.25: no match
+- m. 197, beat 3.25 to m. 197, beat 3.5: no match
+- m. 197, beat 3.5 to m. 197, beat 3.75: no match
+- m. 197, beat 3.75 to m. 198, beat 1: no match
+- m. 198, beat 1 to m. 198, beat 1.75: no match
+- m. 198, beat 1.25 to m. 198, beat 1.5: no match
+- m. 198, beat 1.5 to m. 198, beat 1.75: no match
+- m. 198, beat 1.75 to m. 198, beat 2: no match
+- m. 198, beat 2 to m. 198, beat 3: no match
+- m. 198, beat 2.25 to m. 198, beat 2.5: no match
+- m. 198, beat 2.5 to m. 198, beat 2.75: no match
+- m. 198, beat 2.75 to m. 198, beat 3: no match
+- m. 198, beat 3 to m. 198, beat 3.25: no match
+- m. 198, beat 3.25 to m. 198, beat 3.5: no match
+- m. 198, beat 3.5 to m. 198, beat 3.75: no match
+- m. 198, beat 3.75 to m. 199, beat 1: no match
+- m. 199, beat 1 to m. 199, beat 2.25: no match
+- m. 199, beat 1.25 to m. 199, beat 1.5: no match
+- m. 199, beat 1.5 to m. 199, beat 1.75: no match
+- m. 199, beat 1.75 to m. 199, beat 2: no match
+- m. 199, beat 2 to m. 199, beat 2.25: no match
+- m. 199, beat 2.25 to m. 199, beat 2.5: no match
+- m. 199, beat 2.5 to m. 199, beat 2.75: no match
+- m. 199, beat 2.75 to m. 199, beat 3: no match
+- m. 199, beat 3 to m. 199, beat 3.25: no match
+- m. 199, beat 3.25 to m. 199, beat 3.5: no match
+- m. 199, beat 3.5 to m. 199, beat 3.75: no match
+- m. 199, beat 3.75 to m. 200, beat 1: no match
+- m. 200, beat 1 to m. 200, beat 1.75: no match
+- m. 200, beat 1.25 to m. 200, beat 1.5: no match
+- m. 200, beat 1.5 to m. 200, beat 1.75: no match
+- m. 200, beat 1.75 to m. 200, beat 2: no match
+- m. 200, beat 2 to m. 200, beat 3: no match
+- m. 200, beat 2.25 to m. 200, beat 2.5: no match
+- m. 200, beat 2.5 to m. 200, beat 2.75: no match
+- m. 200, beat 2.75 to m. 200, beat 3: no match
+- m. 200, beat 3 to m. 200, beat 3.25: no match
+- m. 200, beat 3.25 to m. 200, beat 3.5: no match
+- m. 200, beat 3.5 to m. 200, beat 3.75: no match
+- m. 200, beat 3.75 to m. 201, beat 1: no match
+- m. 201, beat 1 to m. 201, beat 2.25: no match
+- m. 201, beat 1.25 to m. 201, beat 1.5: no match
+- m. 201, beat 1.5 to m. 201, beat 1.75: no match
+- m. 201, beat 1.75 to m. 201, beat 2: no match
+- m. 201, beat 2 to m. 201, beat 2.25: no match
+- m. 201, beat 2.25 to m. 201, beat 2.5: no match
+- m. 201, beat 2.5 to m. 201, beat 2.75: no match
+- m. 201, beat 2.75 to m. 201, beat 3: no match
+- m. 201, beat 3 to m. 201, beat 3.25: no match
+- m. 201, beat 3.25 to m. 201, beat 3.5: no match
+- m. 201, beat 3.5 to m. 201, beat 3.75: no match
+- m. 201, beat 3.75 to m. 202, beat 1: no match
+- m. 202, beat 1 to m. 202, beat 2.25: no match
+- m. 202, beat 1.25 to m. 202, beat 1.5: no match
+- m. 202, beat 1.5 to m. 202, beat 1.75: no match
+- m. 202, beat 1.75 to m. 202, beat 2: no match
+- m. 202, beat 2 to m. 202, beat 2.25: no match
+- m. 202, beat 2.25 to m. 202, beat 2.5: no match
+- m. 202, beat 2.5 to m. 202, beat 2.75: no match
+- m. 202, beat 2.75 to m. 202, beat 3: no match
+- m. 202, beat 3 to m. 202, beat 3.25: no match
+- m. 202, beat 3.25 to m. 202, beat 3.5: no match
+- m. 202, beat 3.5 to m. 202, beat 3.75: no match
+- m. 202, beat 3.75 to m. 203, beat 1: no match
+- m. 203, beat 1 to m. 203, beat 1.25: no match
+- m. 203, beat 1.25 to m. 203, beat 1.5: no match
+- m. 203, beat 1.5 to m. 203, beat 2.25: no match
+- m. 203, beat 1.75 to m. 203, beat 2: no match
+- m. 203, beat 2 to m. 203, beat 2.25: no match
+- m. 203, beat 2.25 to m. 203, beat 2.5: no match
+- m. 203, beat 2.5 to m. 203, beat 2.75: no match
+- m. 203, beat 2.75 to m. 203, beat 3: no match
+- m. 203, beat 3 to m. 204, beat 1: no match
+- m. 203, beat 3.25 to m. 203, beat 3.5: no match
+- m. 203, beat 3.5 to m. 203, beat 3.75: no match
+- m. 203, beat 3.75 to m. 204, beat 1: no match
+- m. 204, beat 1 to m. 204, beat 3: no match
+- m. 204, beat 2 to m. 204, beat 3: no match
+- m. 204, beat 2.25 to m. 204, beat 2.5: no match
+- m. 204, beat 2.5 to m. 204, beat 2.75: no match
+- m. 204, beat 2.75 to m. 204, beat 3: no match
+- m. 204, beat 3 to m. 204, beat 3.25: no match
+- m. 204, beat 3.25 to m. 204, beat 3.5: no match
+- m. 204, beat 3.5 to m. 204, beat 3.75: no match
+- m. 204, beat 3.75 to m. 205, beat 1: no match
+- m. 205, beat 1 to m. 205, beat 2.25: no match
+- m. 205, beat 1.25 to m. 205, beat 1.5: no match
+- m. 205, beat 1.5 to m. 205, beat 1.75: no match
+- m. 205, beat 1.75 to m. 205, beat 2: no match
+- m. 205, beat 2 to m. 205, beat 2.25: no match
+- m. 205, beat 2.25 to m. 205, beat 2.5: no match
+- m. 205, beat 2.5 to m. 205, beat 2.75: no match
+- m. 205, beat 2.75 to m. 205, beat 3: no match
+- m. 205, beat 3 to m. 205, beat 3.25: no match
+- m. 205, beat 3.25 to m. 205, beat 3.5: no match
+- m. 205, beat 3.5 to m. 205, beat 3.75: no match
+- m. 205, beat 3.75 to m. 206, beat 1: no match
+- m. 206, beat 1 to m. 206, beat 1.75: no match
+- m. 206, beat 1.25 to m. 206, beat 1.5: no match
+- m. 206, beat 1.5 to m. 206, beat 1.75: no match
+- m. 206, beat 1.75 to m. 206, beat 2: no match
+- m. 206, beat 2 to m. 206, beat 2.25: no match
+- m. 206, beat 2.25 to m. 206, beat 2.5: no match
+- m. 206, beat 2.5 to m. 206, beat 2.75: no match
+- m. 206, beat 2.75 to m. 206, beat 3: no match
+- m. 206, beat 3 to m. 206, beat 3.25: no match
+- m. 206, beat 3.25 to m. 206, beat 3.5: no match
+- m. 206, beat 3.5 to m. 206, beat 3.75: no match
+- m. 206, beat 3.75 to m. 207, beat 1: no match
+- m. 207, beat 1 to m. 207, beat 1.25: no match
+- m. 207, beat 1.25 to m. 207, beat 1.5: no match
+- m. 207, beat 1.5 to m. 207, beat 1.75: no match
+- m. 207, beat 1.75 to m. 207, beat 2: no match
+- m. 207, beat 2 to m. 207, beat 2.25: no match
+- m. 207, beat 2.25 to m. 207, beat 2.5: no match
+- m. 207, beat 2.5 to m. 207, beat 2.75: no match
+- m. 207, beat 2.75 to m. 207, beat 3: no match
+- m. 207, beat 3 to m. 207, beat 3.25: no match
+- m. 207, beat 3.25 to m. 207, beat 3.5: no match
+- m. 207, beat 3.5 to m. 207, beat 3.75: no match
+- m. 207, beat 3.75 to m. 208, beat 1: no match
+- m. 208, beat 1 to m. 208, beat 1.25: no match
+- m. 208, beat 1.25 to m. 208, beat 1.5: no match
+- m. 208, beat 1.5 to m. 208, beat 1.75: no match
+- m. 208, beat 1.75 to m. 208, beat 2: no match
+- m. 208, beat 2 to m. 208, beat 3: no match
+- m. 208, beat 2.25 to m. 208, beat 2.5: no match
+- m. 208, beat 2.5 to m. 208, beat 2.75: no match
+- m. 208, beat 2.75 to m. 208, beat 3: no match
+- m. 208, beat 3 to m. 208, beat 3.25: no match
+- m. 208, beat 3.25 to m. 208, beat 3.5: no match
+- m. 208, beat 3.5 to m. 208, beat 3.75: no match
+- m. 208, beat 3.75 to m. 209, beat 1: no match
+- m. 209, beat 1 to m. 209, beat 1.25: no match
+- m. 209, beat 1.25 to m. 209, beat 1.5: no match
+- m. 209, beat 1.5 to m. 209, beat 1.75: no match
+- m. 209, beat 1.75 to m. 209, beat 2: no match
+- m. 209, beat 2 to m. 209, beat 2.25: no match
+- m. 209, beat 2.25 to m. 209, beat 2.5: no match
+- m. 209, beat 2.5 to m. 209, beat 2.75: no match
+- m. 209, beat 2.75 to m. 209, beat 3: no match
+- m. 209, beat 3 to m. 209, beat 3.25: no match
+- m. 209, beat 3.25 to m. 209, beat 3.5: no match
+- m. 209, beat 3.5 to m. 209, beat 3.75: no match
+- m. 209, beat 3.75 to m. 210, beat 1: no match
+- m. 210, beat 1 to m. 210, beat 1.25: no match
+- m. 210, beat 1.25 to m. 210, beat 1.5: no match
+- m. 210, beat 1.5 to m. 210, beat 1.75: no match
+- m. 210, beat 1.75 to m. 210, beat 2: no match
+- m. 210, beat 2 to m. 210, beat 3: no match
+- m. 210, beat 2.25 to m. 210, beat 2.5: no match
+- m. 210, beat 2.5 to m. 210, beat 2.75: no match
+- m. 210, beat 2.75 to m. 210, beat 3: no match
+- m. 210, beat 3 to m. 210, beat 3.25: no match
+- m. 210, beat 3.25 to m. 210, beat 3.5: no match
+- m. 210, beat 3.5 to m. 210, beat 3.75: no match
+- m. 210, beat 3.75 to m. 211, beat 1: no match
+- m. 211, beat 1 to m. 211, beat 1.25: no match
+- m. 211, beat 1.25 to m. 211, beat 1.5: no match
+- m. 211, beat 1.5 to m. 211, beat 1.75: no match
+- m. 211, beat 1.75 to m. 211, beat 2: no match
+- m. 211, beat 2 to m. 211, beat 2.75: no match
+- m. 211, beat 2.25 to m. 211, beat 2.5: no match
+- m. 211, beat 2.5 to m. 211, beat 2.75: no match
+- m. 211, beat 2.75 to m. 211, beat 3: no match
+- m. 211, beat 3 to m. 212, beat 1: no match
+- m. 211, beat 3.25 to m. 211, beat 3.5: no match
+- m. 211, beat 3.5 to m. 211, beat 3.75: no match
+- m. 211, beat 3.75 to m. 212, beat 1: no match
+- m. 212, beat 1 to m. 212, beat 3: no match
+- m. 212, beat 2 to m. 212, beat 3: no match
+- m. 213, beat 1 to m. 213, beat 2.25: no match
+- m. 213, beat 1.25 to m. 213, beat 1.5: no match
+- m. 213, beat 1.5 to m. 213, beat 1.75: no match
+- m. 213, beat 1.75 to m. 213, beat 2: no match
+- m. 213, beat 2 to m. 213, beat 2.25: no match
+- m. 213, beat 2.25 to m. 213, beat 2.5: no match
+- m. 213, beat 2.5 to m. 213, beat 2.75: no match
+- m. 213, beat 2.75 to m. 213, beat 3: no match
+- m. 213, beat 3 to m. 213, beat 3.25: no match
+- m. 213, beat 3.25 to m. 213, beat 3.5: no match
+- m. 213, beat 3.5 to m. 213, beat 3.75: no match
+- m. 213, beat 3.75 to m. 214, beat 1: no match
+- m. 214, beat 1 to m. 214, beat 1.75: no match
+- m. 214, beat 1.25 to m. 214, beat 1.5: no match
+- m. 214, beat 1.5 to m. 214, beat 1.75: no match
+- m. 214, beat 1.75 to m. 214, beat 2: no match
+- m. 214, beat 2 to m. 214, beat 3: no match
+- m. 214, beat 2.25 to m. 214, beat 2.5: no match
+- m. 214, beat 2.5 to m. 214, beat 2.75: no match
+- m. 214, beat 2.75 to m. 214, beat 3: no match
+- m. 214, beat 3 to m. 214, beat 3.25: no match
+- m. 214, beat 3.25 to m. 214, beat 3.5: no match
+- m. 214, beat 3.5 to m. 214, beat 3.75: no match
+- m. 214, beat 3.75 to m. 215, beat 1: no match
+- m. 215, beat 1 to m. 215, beat 2.25: no match
+- m. 215, beat 1.25 to m. 215, beat 1.5: no match
+- m. 215, beat 1.5 to m. 215, beat 1.75: no match
+- m. 215, beat 1.75 to m. 215, beat 2: no match
+- m. 215, beat 2 to m. 215, beat 2.25: no match
+- m. 215, beat 2.25 to m. 215, beat 2.5: no match
+- m. 215, beat 2.5 to m. 215, beat 2.75: no match
+- m. 215, beat 2.75 to m. 215, beat 3: no match
+- m. 215, beat 3 to m. 215, beat 3.25: no match
+- m. 215, beat 3.25 to m. 215, beat 3.5: no match
+- m. 215, beat 3.5 to m. 215, beat 3.75: no match
+- m. 215, beat 3.75 to m. 216, beat 1: no match
+- m. 216, beat 1 to m. 216, beat 1.75: no match
+- m. 216, beat 1.25 to m. 216, beat 1.5: no match
+- m. 216, beat 1.5 to m. 216, beat 1.75: no match
+- m. 216, beat 1.75 to m. 216, beat 2: no match
+- m. 216, beat 2 to m. 216, beat 3: no match
+- m. 216, beat 2.25 to m. 216, beat 2.5: no match
+- m. 216, beat 2.5 to m. 216, beat 2.75: no match
+- m. 216, beat 2.75 to m. 216, beat 3: no match
+- m. 216, beat 3 to m. 216, beat 3.25: no match
+- m. 216, beat 3.25 to m. 216, beat 3.5: no match
+- m. 216, beat 3.5 to m. 216, beat 3.75: no match
+- m. 216, beat 3.75 to m. 217, beat 1: no match
+- m. 217, beat 1 to m. 217, beat 2.25: no match
+- m. 217, beat 1.25 to m. 217, beat 1.5: no match
+- m. 217, beat 1.5 to m. 217, beat 1.75: no match
+- m. 217, beat 1.75 to m. 217, beat 2: no match
+- m. 217, beat 2 to m. 217, beat 2.25: no match
+- m. 217, beat 2.25 to m. 217, beat 2.5: no match
+- m. 217, beat 2.5 to m. 217, beat 2.75: no match
+- m. 217, beat 2.75 to m. 217, beat 3: no match
+- m. 217, beat 3 to m. 217, beat 3.25: no match
+- m. 217, beat 3.25 to m. 217, beat 3.5: no match
+- m. 217, beat 3.5 to m. 217, beat 3.75: no match
+- m. 217, beat 3.75 to m. 218, beat 1: no match
+- m. 218, beat 1 to m. 218, beat 2.25: no match
+- m. 218, beat 1.25 to m. 218, beat 1.5: no match
+- m. 218, beat 1.5 to m. 218, beat 1.75: no match
+- m. 218, beat 1.75 to m. 218, beat 2: no match
+- m. 218, beat 2 to m. 218, beat 2.25: no match
+- m. 218, beat 2.25 to m. 218, beat 2.5: no match
+- m. 218, beat 2.5 to m. 218, beat 2.75: no match
+- m. 218, beat 2.75 to m. 218, beat 3: no match
+- m. 218, beat 3 to m. 218, beat 3.25: no match
+- m. 218, beat 3.25 to m. 218, beat 3.5: no match
+- m. 218, beat 3.5 to m. 218, beat 3.75: no match
+- m. 218, beat 3.75 to m. 219, beat 1: no match
+- m. 219, beat 1 to m. 219, beat 1.25: no match
+- m. 219, beat 1.25 to m. 219, beat 1.5: no match
+- m. 219, beat 1.5 to m. 219, beat 1.75: no match
+- m. 219, beat 1.75 to m. 219, beat 2: no match
+- m. 219, beat 2 to m. 219, beat 2.75: no match
+- m. 219, beat 2.25 to m. 219, beat 2.5: no match
+- m. 219, beat 2.5 to m. 219, beat 2.75: no match
+- m. 219, beat 2.75 to m. 219, beat 3: no match
+- m. 219, beat 3 to m. 219, beat 3.25: no match
+- m. 219, beat 3.25 to m. 219, beat 3.5: no match
+- m. 219, beat 3.5 to m. 219, beat 3.75: no match
+- m. 219, beat 3.75 to m. 220, beat 1: no match
+- m. 220, beat 1 to m. 220, beat 3: no match
+- m. 220, beat 2 to m. 220, beat 3: no match
+- m. 220, beat 2.25 to m. 220, beat 2.5: no match
+- m. 220, beat 2.5 to m. 220, beat 2.75: no match
+- m. 220, beat 2.75 to m. 220, beat 3: no match
+- m. 220, beat 3 to m. 220, beat 3.25: no match
+- m. 220, beat 3.25 to m. 220, beat 3.5: no match
+- m. 220, beat 3.5 to m. 220, beat 3.75: no match
+- m. 220, beat 3.75 to m. 221, beat 1: no match
+- m. 221, beat 1 to m. 221, beat 2.25: no match
+- m. 221, beat 1.25 to m. 221, beat 1.5: no match
+- m. 221, beat 1.5 to m. 221, beat 1.75: no match
+- m. 221, beat 1.75 to m. 221, beat 2: no match
+- m. 221, beat 2 to m. 221, beat 2.25: no match
+- m. 221, beat 2.25 to m. 221, beat 2.5: no match
+- m. 221, beat 2.5 to m. 221, beat 2.75: no match
+- m. 221, beat 2.75 to m. 221, beat 3: no match
+- m. 221, beat 3 to m. 221, beat 3.25: no match
+- m. 221, beat 3.25 to m. 221, beat 3.5: no match
+- m. 221, beat 3.5 to m. 221, beat 3.75: no match
+- m. 221, beat 3.75 to m. 222, beat 1: no match
+- m. 222, beat 1 to m. 222, beat 1.75: no match
+- m. 222, beat 1.25 to m. 222, beat 1.5: no match
+- m. 222, beat 1.5 to m. 222, beat 1.75: no match
+- m. 222, beat 1.75 to m. 222, beat 2: no match
+- m. 222, beat 2 to m. 222, beat 3: no match
+- m. 222, beat 2.25 to m. 222, beat 2.5: no match
+- m. 222, beat 2.5 to m. 222, beat 2.75: no match
+- m. 222, beat 2.75 to m. 222, beat 3: no match
+- m. 222, beat 3 to m. 222, beat 3.25: no match
+- m. 222, beat 3.25 to m. 222, beat 3.5: no match
+- m. 222, beat 3.5 to m. 222, beat 3.75: no match
+- m. 222, beat 3.75 to m. 223, beat 1: no match
+- m. 223, beat 1 to m. 223, beat 2.25: no match
+- m. 223, beat 1.25 to m. 223, beat 1.5: no match
+- m. 223, beat 1.5 to m. 223, beat 1.75: no match
+- m. 223, beat 1.75 to m. 223, beat 2: no match
+- m. 223, beat 2 to m. 223, beat 2.25: no match
+- m. 223, beat 2.25 to m. 223, beat 2.5: no match
+- m. 223, beat 2.5 to m. 223, beat 2.75: no match
+- m. 223, beat 2.75 to m. 223, beat 3: no match
+- m. 223, beat 3 to m. 223, beat 3.25: no match
+- m. 223, beat 3.25 to m. 223, beat 3.5: no match
+- m. 223, beat 3.5 to m. 223, beat 3.75: no match
+- m. 223, beat 3.75 to m. 224, beat 1: no match
+- m. 224, beat 1 to m. 224, beat 2: no match
+- m. 224, beat 1.25 to m. 224, beat 1.5: no match
+- m. 224, beat 1.5 to m. 224, beat 1.75: no match
+- m. 224, beat 1.75 to m. 224, beat 2: no match
+- m. 224, beat 2 to m. 224, beat 3: no match
+- m. 224, beat 2.25 to m. 224, beat 2.5: no match
+- m. 224, beat 2.5 to m. 224, beat 2.75: no match
+- m. 224, beat 2.75 to m. 224, beat 3: no match
+- m. 224, beat 3 to m. 224, beat 3.25: no match
+- m. 224, beat 3.25 to m. 224, beat 3.5: no match
+- m. 224, beat 3.5 to m. 224, beat 3.75: no match
+- m. 224, beat 3.75 to m. 225, beat 1: no match
+- m. 225, beat 1 to m. 225, beat 2.25: no match
+- m. 225, beat 1.25 to m. 225, beat 1.5: no match
+- m. 225, beat 1.5 to m. 225, beat 1.75: no match
+- m. 225, beat 1.75 to m. 225, beat 2: no match
+- m. 225, beat 2 to m. 225, beat 2.25: no match
+- m. 225, beat 2.25 to m. 225, beat 2.5: no match
+- m. 225, beat 2.5 to m. 225, beat 2.75: no match
+- m. 225, beat 2.75 to m. 225, beat 3: no match
+- m. 225, beat 3 to m. 225, beat 3.25: no match
+- m. 225, beat 3.25 to m. 225, beat 3.5: no match
+- m. 225, beat 3.5 to m. 225, beat 3.75: no match
+- m. 225, beat 3.75 to m. 226, beat 1: no match
+- m. 226, beat 1 to m. 226, beat 2.25: no match
+- m. 226, beat 1.25 to m. 226, beat 1.5: no match
+- m. 226, beat 1.5 to m. 226, beat 1.75: no match
+- m. 226, beat 1.75 to m. 226, beat 2: no match
+- m. 226, beat 2 to m. 226, beat 2.25: no match
+- m. 226, beat 2.25 to m. 226, beat 2.5: no match
+- m. 226, beat 2.5 to m. 226, beat 2.75: no match
+- m. 226, beat 2.75 to m. 226, beat 3: no match
+- m. 226, beat 3 to m. 226, beat 3.25: no match
+- m. 226, beat 3.25 to m. 226, beat 3.5: no match
+- m. 226, beat 3.5 to m. 226, beat 3.75: no match
+- m. 226, beat 3.75 to m. 227, beat 1: no match
+- m. 227, beat 1 to m. 227, beat 1.25: no match
+- m. 227, beat 1.25 to m. 227, beat 1.5: no match
+- m. 227, beat 1.5 to m. 227, beat 1.75: no match
+- m. 227, beat 1.75 to m. 227, beat 2: no match
+- m. 227, beat 2 to m. 227, beat 2.75: no match
+- m. 227, beat 2.25 to m. 227, beat 2.5: no match
+- m. 227, beat 2.5 to m. 227, beat 2.75: no match
+- m. 227, beat 2.75 to m. 227, beat 3: no match
+- m. 227, beat 3 to m. 227, beat 3.25: no match
+- m. 227, beat 3.25 to m. 227, beat 3.5: no match
+- m. 227, beat 3.5 to m. 227, beat 3.75: no match
+- m. 227, beat 3.75 to m. 228, beat 1: no match
+- m. 228, beat 1 to m. 228, beat 3: no match
+- m. 228, beat 2 to m. 228, beat 3: no match
+- m. 228, beat 2.25 to m. 228, beat 2.5: no match
+- m. 228, beat 2.5 to m. 228, beat 2.75: no match
+- m. 228, beat 2.75 to m. 228, beat 3: no match
+- m. 228, beat 3 to m. 228, beat 3.25: no match
+- m. 228, beat 3.25 to m. 228, beat 3.5: no match
+- m. 228, beat 3.5 to m. 228, beat 3.75: no match
+- m. 228, beat 3.75 to m. 229, beat 1: no match
+- m. 229, beat 1 to m. 229, beat 3: no match
+- m. 229, beat 1.25 to m. 229, beat 1.5: no match
+- m. 229, beat 1.5 to m. 229, beat 1.75: no match
+- m. 229, beat 1.75 to m. 229, beat 2: no match
+- m. 229, beat 2 to m. 229, beat 2.25: no match
+- m. 229, beat 2.25 to m. 229, beat 2.5: no match
+- m. 229, beat 2.5 to m. 229, beat 2.75: no match
+- m. 229, beat 2.75 to m. 229, beat 3: no match
+- m. 229, beat 3 to m. 229, beat 3.25: no match
+- m. 229, beat 3.25 to m. 229, beat 3.5: no match
+- m. 229, beat 3.5 to m. 229, beat 3.75: no match
+- m. 229, beat 3.75 to m. 230, beat 1: no match
+- m. 230, beat 1 to m. 230, beat 1.75: no match
+- m. 230, beat 1.25 to m. 230, beat 1.5: no match
+- m. 230, beat 1.5 to m. 230, beat 1.75: no match
+- m. 230, beat 1.75 to m. 230, beat 2: no match
+- m. 230, beat 2 to m. 230, beat 3: no match
+- m. 230, beat 2.25 to m. 230, beat 2.5: no match
+- m. 230, beat 2.5 to m. 230, beat 2.75: no match
+- m. 230, beat 2.75 to m. 230, beat 3: no match
+- m. 230, beat 3 to m. 230, beat 3.25: no match
+- m. 230, beat 3.25 to m. 230, beat 3.5: no match
+- m. 230, beat 3.5 to m. 230, beat 3.75: no match
+- m. 230, beat 3.75 to m. 231, beat 1: no match
+- m. 231, beat 1 to m. 231, beat 2.5: no match
+- m. 231, beat 1.25 to m. 231, beat 1.5: no match
+- m. 231, beat 1.5 to m. 231, beat 1.75: no match
+- m. 231, beat 1.75 to m. 231, beat 2: no match
+- m. 231, beat 2 to m. 231, beat 2.25: no match
+- m. 231, beat 2.25 to m. 231, beat 2.5: no match
+- m. 231, beat 2.5 to m. 231, beat 2.75: no match
+- m. 231, beat 2.75 to m. 231, beat 3: no match
+- m. 231, beat 3 to m. 231, beat 3.25: no match
+- m. 231, beat 3.25 to m. 231, beat 3.5: no match
+- m. 231, beat 3.5 to m. 231, beat 3.75: no match
+- m. 231, beat 3.75 to m. 232, beat 1: no match
+- m. 232, beat 1 to m. 232, beat 1.75: no match
+- m. 232, beat 1.25 to m. 232, beat 1.5: no match
+- m. 232, beat 1.5 to m. 232, beat 1.75: no match
+- m. 232, beat 1.75 to m. 232, beat 2: no match
+- m. 232, beat 2 to m. 232, beat 3: no match
+- m. 232, beat 2.25 to m. 232, beat 2.5: no match
+- m. 232, beat 2.5 to m. 232, beat 2.75: no match
+- m. 232, beat 2.75 to m. 232, beat 3: no match
+- m. 232, beat 3 to m. 232, beat 3.25: no match
+- m. 232, beat 3.25 to m. 232, beat 3.5: no match
+- m. 232, beat 3.5 to m. 232, beat 3.75: no match
+- m. 232, beat 3.75 to m. 233, beat 1: no match
+- m. 233, beat 1 to m. 233, beat 1.75: no match
+- m. 233, beat 1.25 to m. 233, beat 1.5: no match
+- m. 233, beat 1.5 to m. 233, beat 1.75: no match
+- m. 233, beat 1.75 to m. 233, beat 2: no match
+- m. 233, beat 2 to m. 233, beat 2.5: no match
+- m. 233, beat 2.25 to m. 233, beat 2.5: no match
+- m. 233, beat 2.5 to m. 233, beat 3: no match
+- m. 233, beat 2.75 to m. 233, beat 3: no match
+- m. 233, beat 3 to m. 233, beat 3.5: no match
+- m. 233, beat 3.25 to m. 233, beat 3.5: no match
+- m. 233, beat 3.5 to m. 234, beat 1: no match
+- m. 233, beat 3.75 to m. 234, beat 1: no match
+- m. 234, beat 1 to m. 234, beat 1.75: no match
+- m. 234, beat 1.25 to m. 234, beat 1.5: no match
+- m. 234, beat 1.5 to m. 234, beat 1.75: no match
+- m. 234, beat 1.75 to m. 234, beat 2: no match
+- m. 234, beat 2 to m. 234, beat 3: no match
+- m. 234, beat 2.25 to m. 234, beat 2.5: no match
+- m. 234, beat 2.5 to m. 234, beat 2.75: no match
+- m. 234, beat 2.75 to m. 234, beat 3: no match
+- m. 234, beat 3 to m. 234, beat 3.25: no match
+- m. 234, beat 3.25 to m. 234, beat 3.5: no match
+- m. 234, beat 3.5 to m. 234, beat 3.75: no match
+- m. 234, beat 3.75 to m. 235, beat 1: no match
+- m. 235, beat 1 to m. 235, beat 3: vi
+- m. 235, beat 1.25 to m. 235, beat 1.5: no match
+- m. 235, beat 1.5 to m. 235, beat 1.75: no match
+- m. 235, beat 1.75 to m. 235, beat 2: no match
+- m. 235, beat 2 to m. 236, beat 1: no match
+- m. 235, beat 2.25 to m. 235, beat 2.5: no match
+- m. 235, beat 2.5 to m. 235, beat 2.75: no match
+- m. 235, beat 2.75 to m. 235, beat 3: no match
+- m. 235, beat 3 to m. 236, beat 1: no match
+- m. 235, beat 3.25 to m. 235, beat 3.5: no match
+- m. 235, beat 3.5 to m. 235, beat 3.75: no match
+- m. 235, beat 3.75 to m. 236, beat 1: no match
+- m. 236, beat 1 to m. 236, beat 3: V
+- m. 236, beat 1.75 to m. 236, beat 1.88: no match
+- m. 236, beat 1.88 to m. 236, beat 2: no match
+- m. 236, beat 2 to m. 236, beat 3: no match
+- m. 236, beat 2.5 to m. 236, beat 3: no match
+- m. 236, beat 3 to m. 236, beat 3.5: no match
+- m. 236, beat 3.5 to m. 237, beat 1: no match
+- m. 237, beat 1 to m. 237, beat 2.25: no match
+- m. 237, beat 1.25 to m. 237, beat 1.5: no match
+- m. 237, beat 1.5 to m. 237, beat 1.75: no match
+- m. 237, beat 1.75 to m. 237, beat 2: no match
+- m. 237, beat 2 to m. 237, beat 2.25: no match
+- m. 237, beat 2.25 to m. 237, beat 2.5: no match
+- m. 237, beat 2.5 to m. 237, beat 2.75: no match
+- m. 237, beat 2.75 to m. 237, beat 3: no match
+- m. 237, beat 3 to m. 237, beat 3.25: no match
+- m. 237, beat 3.25 to m. 237, beat 3.5: no match
+- m. 237, beat 3.5 to m. 237, beat 3.75: no match
+- m. 237, beat 3.75 to m. 238, beat 1: no match
+- m. 238, beat 1 to m. 238, beat 1.75: no match
+- m. 238, beat 1.25 to m. 238, beat 1.5: no match
+- m. 238, beat 1.5 to m. 238, beat 1.75: no match
+- m. 238, beat 1.75 to m. 238, beat 2: no match
+- m. 238, beat 2 to m. 238, beat 2.25: no match
+- m. 238, beat 2.25 to m. 238, beat 2.5: no match
+- m. 238, beat 2.5 to m. 238, beat 2.75: no match
+- m. 238, beat 2.75 to m. 238, beat 3: no match
+- m. 238, beat 3 to m. 238, beat 3.25: no match
+- m. 238, beat 3.25 to m. 238, beat 3.5: no match
+- m. 238, beat 3.5 to m. 238, beat 3.75: no match
+- m. 238, beat 3.75 to m. 239, beat 1: no match
+- m. 239, beat 1 to m. 239, beat 1.25: no match
+- m. 239, beat 1.25 to m. 239, beat 1.5: no match
+- m. 239, beat 1.5 to m. 239, beat 1.75: no match
+- m. 239, beat 1.75 to m. 239, beat 2: no match
+- m. 239, beat 2 to m. 239, beat 2.25: no match
+- m. 239, beat 2.25 to m. 239, beat 2.5: no match
+- m. 239, beat 2.5 to m. 239, beat 2.75: no match
+- m. 239, beat 2.75 to m. 239, beat 3: no match
+- m. 239, beat 3 to m. 239, beat 3.25: no match
+- m. 239, beat 3.25 to m. 239, beat 3.5: no match
+- m. 239, beat 3.5 to m. 239, beat 3.75: no match
+- m. 239, beat 3.75 to m. 240, beat 1: no match
+- m. 240, beat 1 to m. 240, beat 1.25: no match
+- m. 240, beat 1.25 to m. 240, beat 1.5: no match
+- m. 240, beat 1.5 to m. 240, beat 1.75: no match
+- m. 240, beat 1.75 to m. 240, beat 2: no match
+- m. 240, beat 2 to m. 240, beat 3: no match
+- m. 240, beat 2.25 to m. 240, beat 2.5: no match
+- m. 240, beat 2.5 to m. 240, beat 2.75: no match
+- m. 240, beat 2.75 to m. 240, beat 3: no match
+- m. 240, beat 3 to m. 240, beat 3.25: no match
+- m. 240, beat 3.25 to m. 240, beat 3.5: no match
+- m. 240, beat 3.5 to m. 240, beat 3.75: no match
+- m. 240, beat 3.75 to m. 241, beat 1: no match
+- m. 241, beat 1 to m. 241, beat 1.25: no match
+- m. 241, beat 1.25 to m. 241, beat 1.5: no match
+- m. 241, beat 1.5 to m. 241, beat 1.75: no match
+- m. 241, beat 1.75 to m. 241, beat 2: no match
+- m. 241, beat 2 to m. 241, beat 2.25: no match
+- m. 241, beat 2.25 to m. 241, beat 2.5: no match
+- m. 241, beat 2.5 to m. 241, beat 2.75: no match
+- m. 241, beat 2.75 to m. 241, beat 3: no match
+- m. 241, beat 3 to m. 241, beat 3.25: no match
+- m. 241, beat 3.25 to m. 241, beat 3.5: no match
+- m. 241, beat 3.5 to m. 241, beat 3.75: no match
+- m. 241, beat 3.75 to m. 242, beat 1: no match
+- m. 242, beat 1 to m. 242, beat 1.25: no match
+- m. 242, beat 1.25 to m. 242, beat 1.5: no match
+- m. 242, beat 1.5 to m. 242, beat 1.75: no match
+- m. 242, beat 1.75 to m. 242, beat 2: no match
+- m. 242, beat 2 to m. 242, beat 3: no match
+- m. 242, beat 2.25 to m. 242, beat 2.5: no match
+- m. 242, beat 2.5 to m. 242, beat 2.75: no match
+- m. 242, beat 2.75 to m. 242, beat 3: no match
+- m. 242, beat 3 to m. 242, beat 3.25: no match
+- m. 242, beat 3.25 to m. 242, beat 3.5: no match
+- m. 242, beat 3.5 to m. 242, beat 3.75: no match
+- m. 242, beat 3.75 to m. 243, beat 1: no match
+- m. 243, beat 1 to m. 243, beat 1.25: no match
+- m. 243, beat 1.25 to m. 243, beat 1.5: no match
+- m. 243, beat 1.5 to m. 243, beat 1.75: no match
+- m. 243, beat 1.75 to m. 243, beat 2: no match
+- m. 243, beat 2 to m. 243, beat 2.75: no match
+- m. 243, beat 2.25 to m. 243, beat 2.5: no match
+- m. 243, beat 2.5 to m. 243, beat 2.75: no match
+- m. 243, beat 2.75 to m. 243, beat 3: no match
+- m. 243, beat 3 to m. 244, beat 1: no match
+- m. 243, beat 3.25 to m. 243, beat 3.5: no match
+- m. 243, beat 3.5 to m. 243, beat 3.75: no match
+- m. 243, beat 3.75 to m. 244, beat 1: no match
+- m. 244, beat 1 to m. 244, beat 2: no match
+- m. 244, beat 1.25 to m. 244, beat 1.5: no match
+- m. 244, beat 1.5 to m. 244, beat 1.75: no match
+- m. 244, beat 1.75 to m. 244, beat 2: no match
+- m. 244, beat 2 to m. 244, beat 2.25: no match
+- m. 244, beat 2.25 to m. 244, beat 2.5: no match
+- m. 244, beat 2.5 to m. 244, beat 2.75: no match
+- m. 244, beat 2.75 to m. 244, beat 3: no match
+- m. 244, beat 3 to m. 244, beat 3.25: no match
+- m. 244, beat 3.25 to m. 244, beat 3.5: no match
+- m. 244, beat 3.5 to m. 244, beat 3.75: no match
+- m. 244, beat 3.75 to m. 245, beat 1: no match
+- m. 245, beat 1 to m. 245, beat 2.5: no match
+- m. 245, beat 1.25 to m. 245, beat 1.5: no match
+- m. 245, beat 1.5 to m. 245, beat 1.75: no match
+- m. 245, beat 1.75 to m. 245, beat 2: no match
+- m. 245, beat 2 to m. 245, beat 2.25: no match
+- m. 245, beat 2.25 to m. 245, beat 2.5: no match
+- m. 245, beat 2.5 to m. 245, beat 2.75: no match
+- m. 245, beat 2.75 to m. 245, beat 3: no match
+- m. 245, beat 3 to m. 245, beat 3.25: no match
+- m. 245, beat 3.25 to m. 245, beat 3.5: no match
+- m. 245, beat 3.5 to m. 245, beat 3.75: no match
+- m. 245, beat 3.75 to m. 246, beat 1: no match
+- m. 246, beat 1 to m. 246, beat 2: no match
+- m. 246, beat 1.25 to m. 246, beat 1.5: no match
+- m. 246, beat 1.5 to m. 246, beat 1.75: no match
+- m. 246, beat 1.75 to m. 246, beat 2: no match
+- m. 246, beat 2 to m. 246, beat 3: no match
+- m. 246, beat 2.25 to m. 246, beat 2.5: no match
+- m. 246, beat 2.5 to m. 246, beat 2.75: no match
+- m. 246, beat 2.75 to m. 246, beat 3: no match
+- m. 246, beat 3 to m. 246, beat 3.25: no match
+- m. 246, beat 3.25 to m. 246, beat 3.5: no match
+- m. 246, beat 3.5 to m. 246, beat 3.75: no match
+- m. 246, beat 3.75 to m. 247, beat 1: no match
+- m. 247, beat 1 to m. 247, beat 1.25: no match
+- m. 247, beat 1.25 to m. 247, beat 1.5: no match
+- m. 247, beat 1.5 to m. 247, beat 1.75: no match
+- m. 247, beat 1.75 to m. 247, beat 2: no match
+- m. 247, beat 2 to m. 247, beat 2.75: no match
+- m. 247, beat 2.25 to m. 247, beat 2.5: no match
+- m. 247, beat 2.5 to m. 247, beat 2.75: no match
+- m. 247, beat 2.75 to m. 247, beat 3: no match
+- m. 247, beat 3 to m. 248, beat 1: no match
+- m. 247, beat 3.25 to m. 247, beat 3.5: no match
+- m. 247, beat 3.5 to m. 247, beat 3.75: no match
+- m. 247, beat 3.75 to m. 248, beat 1: no match
+- m. 248, beat 1 to m. 248, beat 2: no match
+- m. 248, beat 1.25 to m. 248, beat 1.5: no match
+- m. 248, beat 1.5 to m. 248, beat 1.75: no match
+- m. 248, beat 1.75 to m. 248, beat 2: no match
+- m. 248, beat 2 to m. 248, beat 2.25: no match
+- m. 248, beat 2.25 to m. 248, beat 2.5: no match
+- m. 248, beat 2.5 to m. 248, beat 2.75: no match
+- m. 248, beat 2.75 to m. 248, beat 3: no match
+- m. 248, beat 3 to m. 248, beat 3.25: no match
+- m. 248, beat 3.25 to m. 248, beat 3.5: no match
+- m. 248, beat 3.5 to m. 248, beat 3.75: no match
+- m. 248, beat 3.75 to m. 249, beat 1: no match
+- m. 249, beat 1 to m. 249, beat 2.5: no match
+- m. 249, beat 1.25 to m. 249, beat 1.5: no match
+- m. 249, beat 1.5 to m. 249, beat 1.75: no match
+- m. 249, beat 1.75 to m. 249, beat 2: no match
+- m. 249, beat 2 to m. 249, beat 2.25: no match
+- m. 249, beat 2.25 to m. 249, beat 2.5: no match
+- m. 249, beat 2.5 to m. 249, beat 2.75: no match
+- m. 249, beat 2.75 to m. 249, beat 3: no match
+- m. 249, beat 3 to m. 249, beat 3.25: no match
+- m. 249, beat 3.25 to m. 249, beat 3.5: no match
+- m. 249, beat 3.5 to m. 249, beat 3.75: no match
+- m. 249, beat 3.75 to m. 250, beat 1: no match
+- m. 250, beat 1 to m. 250, beat 2: no match
+- m. 250, beat 1.25 to m. 250, beat 1.5: no match
+- m. 250, beat 1.5 to m. 250, beat 1.75: no match
+- m. 250, beat 1.75 to m. 250, beat 2: no match
+- m. 250, beat 2 to m. 250, beat 3: no match
+- m. 250, beat 2.25 to m. 250, beat 2.5: no match
+- m. 250, beat 2.5 to m. 250, beat 2.75: no match
+- m. 250, beat 2.75 to m. 250, beat 3: no match
+- m. 250, beat 3 to m. 251, beat 1: no match
+- m. 250, beat 3.25 to m. 250, beat 3.5: no match
+- m. 250, beat 3.5 to m. 250, beat 3.75: no match
+- m. 250, beat 3.75 to m. 251, beat 1: no match
+- m. 251, beat 1 to m. 251, beat 2.5: no match
+- m. 251, beat 1.25 to m. 251, beat 1.5: no match
+- m. 251, beat 1.5 to m. 251, beat 1.75: no match
+- m. 251, beat 1.75 to m. 251, beat 2: no match
+- m. 251, beat 2 to m. 251, beat 2.25: no match
+- m. 251, beat 2.25 to m. 251, beat 2.5: no match
+- m. 251, beat 2.5 to m. 251, beat 2.75: no match
+- m. 251, beat 2.62 to m. 251, beat 2.75: no match
+- m. 251, beat 2.75 to m. 251, beat 3: no match
+- m. 251, beat 2.88 to m. 251, beat 3: no match
+- m. 251, beat 3 to m. 252, beat 1: no match
+- m. 251, beat 3.25 to m. 251, beat 3.5: no match
+- m. 251, beat 3.5 to m. 252, beat 1: no match
+- m. 251, beat 3.75 to m. 252, beat 1: no match
+- m. 252, beat 1 to m. 252, beat 2: no match
+- m. 252, beat 1.25 to m. 252, beat 1.5: no match
+- m. 252, beat 1.5 to m. 252, beat 1.75: no match
+- m. 252, beat 1.75 to m. 252, beat 2: no match
+- m. 252, beat 2 to m. 252, beat 2.25: no match
+- m. 252, beat 2.25 to m. 252, beat 2.5: no match
+- m. 252, beat 2.5 to m. 252, beat 2.75: no match
+- m. 252, beat 2.75 to m. 252, beat 3: no match
+- m. 252, beat 3 to m. 252, beat 3.25: no match
+- m. 252, beat 3.25 to m. 252, beat 3.5: no match
+- m. 252, beat 3.5 to m. 253, beat 1: no match
+- m. 252, beat 3.75 to m. 253, beat 1: no match
+- m. 253, beat 1 to m. 253, beat 2: no match
+- m. 253, beat 1.25 to m. 253, beat 1.5: no match
+- m. 253, beat 1.5 to m. 253, beat 1.75: no match
+- m. 253, beat 1.75 to m. 253, beat 2: no match
+- m. 253, beat 2 to m. 253, beat 2.25: no match
+- m. 253, beat 2.25 to m. 253, beat 2.5: no match
+- m. 253, beat 2.5 to m. 253, beat 2.75: no match
+- m. 253, beat 2.75 to m. 253, beat 3: no match
+- m. 253, beat 3 to m. 253, beat 3.25: no match
+- m. 253, beat 3.25 to m. 253, beat 3.5: no match
+- m. 253, beat 3.5 to m. 254, beat 1: no match
+- m. 253, beat 3.75 to m. 254, beat 1: no match
+- m. 254, beat 1 to m. 254, beat 1.5: no match
+- m. 254, beat 2 to m. 254, beat 2.66: no match
+- m. 256, beat 1 to m. 256, beat 1.38: no match
+- m. 256, beat 1.5 to m. 256, beat 1.88: no match
+- m. 257, beat 1 to m. 257, beat 1.38: vi
+- m. 257, beat 1.5 to m. 257, beat 1.88: no match
+- m. 257, beat 2 to m. 257, beat 2.38: ii
+- m. 257, beat 2.5 to m. 257, beat 2.88: no match
+- m. 258, beat 1 to m. 258, beat 1.38: V
+- m. 258, beat 1.5 to m. 258, beat 1.88: no match
+- m. 258, beat 2 to m. 258, beat 2.5: I
+- m. 258, beat 2.25 to m. 258, beat 2.5: no match
+- m. 258, beat 2.5 to m. 258, beat 2.75: no match
+- m. 258, beat 2.75 to m. 259, beat 1: no match
+- m. 259, beat 1 to m. 259, beat 2.5: no match
+- m. 259, beat 1.25 to m. 259, beat 1.5: no match
+- m. 259, beat 1.5 to m. 259, beat 1.75: no match
+- m. 259, beat 1.75 to m. 259, beat 2: no match
+- m. 259, beat 2 to m. 259, beat 2.25: no match
+- m. 259, beat 2.25 to m. 259, beat 2.5: no match
+- m. 259, beat 2.5 to m. 260, beat 1: no match
+- m. 259, beat 2.75 to m. 260, beat 1: no match
+- m. 260, beat 1 to m. 260, beat 1.5: no match
+- m. 260, beat 1.25 to m. 260, beat 1.5: no match
+- m. 260, beat 1.5 to m. 260, beat 1.75: no match
+- m. 260, beat 1.75 to m. 260, beat 2: no match
+- m. 260, beat 2 to m. 260, beat 2.38: no match
+- m. 260, beat 2.5 to m. 260, beat 2.88: no match
+- m. 261, beat 1 to m. 261, beat 1.38: vi
+- m. 261, beat 1.5 to m. 261, beat 1.88: no match
+- m. 261, beat 2 to m. 261, beat 2.38: ii
+- m. 261, beat 2.5 to m. 261, beat 2.88: no match
+- m. 262, beat 1 to m. 262, beat 1.38: V
+- m. 262, beat 1.5 to m. 262, beat 1.88: no match
+- m. 262, beat 2 to m. 262, beat 2.5: vi
+- m. 262, beat 2.25 to m. 262, beat 2.5: no match
+- m. 262, beat 2.5 to m. 262, beat 2.75: no match
+- m. 262, beat 2.75 to m. 263, beat 1: no match
+- m. 263, beat 1 to m. 263, beat 2.5: no match
+- m. 263, beat 1.25 to m. 263, beat 1.5: no match
+- m. 263, beat 1.5 to m. 263, beat 1.75: no match
+- m. 263, beat 1.75 to m. 263, beat 2: no match
+- m. 263, beat 2 to m. 263, beat 2.25: no match
+- m. 263, beat 2.25 to m. 263, beat 2.5: no match
+- m. 263, beat 2.5 to m. 264, beat 1: no match
+- m. 263, beat 2.75 to m. 264, beat 1: no match
+- m. 264, beat 1 to m. 264, beat 1.5: no match
+- m. 264, beat 1.5 to m. 264, beat 1.88: no match
+- m. 264, beat 2 to m. 264, beat 2.38: no match
+- m. 264, beat 2.5 to m. 264, beat 2.88: no match
+- m. 265, beat 1 to m. 265, beat 1.38: vi
+- m. 265, beat 1.5 to m. 265, beat 1.88: no match
+- m. 265, beat 2 to m. 265, beat 2.38: ii
+- m. 265, beat 2.5 to m. 265, beat 2.88: no match
+- m. 266, beat 1 to m. 266, beat 1.38: V
+- m. 266, beat 1.5 to m. 266, beat 1.88: no match
+- m. 266, beat 2 to m. 266, beat 2.5: I
+- m. 266, beat 2.25 to m. 266, beat 2.5: no match
+- m. 266, beat 2.5 to m. 266, beat 2.75: no match
+- m. 266, beat 2.75 to m. 267, beat 1: no match
+- m. 267, beat 1 to m. 267, beat 2.5: no match
+- m. 267, beat 1.25 to m. 267, beat 1.5: no match
+- m. 267, beat 1.5 to m. 267, beat 1.75: no match
+- m. 267, beat 1.75 to m. 267, beat 2: no match
+- m. 267, beat 2 to m. 267, beat 2.25: no match
+- m. 267, beat 2.25 to m. 267, beat 2.5: no match
+- m. 267, beat 2.5 to m. 268, beat 1: no match
+- m. 267, beat 2.75 to m. 268, beat 1: no match
+- m. 268, beat 1 to m. 268, beat 1.5: no match
+- m. 268, beat 1.25 to m. 268, beat 1.5: no match
+- m. 268, beat 1.5 to m. 268, beat 1.75: no match
+- m. 268, beat 1.75 to m. 268, beat 2: no match
+- m. 268, beat 2 to m. 268, beat 2.38: no match
+- m. 268, beat 2.5 to m. 268, beat 2.88: no match
+- m. 269, beat 1 to m. 269, beat 1.38: vi
+- m. 269, beat 1.5 to m. 269, beat 1.88: no match
+- m. 269, beat 2 to m. 269, beat 2.38: ii
+- m. 269, beat 2.5 to m. 269, beat 2.88: no match
+- m. 270, beat 1 to m. 270, beat 1.38: V
+- m. 270, beat 1.5 to m. 270, beat 1.88: no match
+- m. 270, beat 2 to m. 270, beat 2.5: vi
+- m. 270, beat 2.25 to m. 270, beat 2.5: no match
+- m. 270, beat 2.5 to m. 270, beat 2.75: no match
+- m. 270, beat 2.75 to m. 271, beat 1: no match
+- m. 271, beat 1 to m. 271, beat 2.5: no match
+- m. 271, beat 1.25 to m. 271, beat 1.5: no match
+- m. 271, beat 1.5 to m. 271, beat 1.75: no match
+- m. 271, beat 1.75 to m. 271, beat 2: no match
+- m. 271, beat 2 to m. 271, beat 2.25: no match
+- m. 271, beat 2.25 to m. 271, beat 2.5: no match
+- m. 271, beat 2.5 to m. 272, beat 1: no match
+- m. 271, beat 2.75 to m. 272, beat 1: no match
+- m. 272, beat 1 to m. 272, beat 1.5: no match
+- m. 272, beat 1.5 to m. 272, beat 1.88: no match
+- m. 272, beat 2 to m. 272, beat 2.25: no match
+- m. 272, beat 2.25 to m. 272, beat 2.5: no match
+- m. 272, beat 2.5 to m. 272, beat 2.75: no match
+- m. 272, beat 2.75 to m. 273, beat 1: no match
+- m. 273, beat 1 to m. 273, beat 1.25: no match
+- m. 273, beat 1.25 to m. 273, beat 1.5: no match
+- m. 273, beat 1.5 to m. 273, beat 1.75: no match
+- m. 273, beat 1.75 to m. 273, beat 2: no match
+- m. 273, beat 2 to m. 273, beat 2.25: no match
+- m. 273, beat 2.25 to m. 273, beat 2.5: no match
+- m. 273, beat 2.5 to m. 273, beat 2.75: no match
+- m. 273, beat 2.75 to m. 274, beat 1: no match
+- m. 274, beat 1 to m. 274, beat 1.25: no match
+- m. 274, beat 1.25 to m. 274, beat 1.5: no match
+- m. 274, beat 1.5 to m. 274, beat 1.75: no match
+- m. 274, beat 1.75 to m. 274, beat 2: no match
+- m. 274, beat 2 to m. 274, beat 2.25: no match
+- m. 274, beat 2.25 to m. 274, beat 2.5: no match
+- m. 274, beat 2.5 to m. 274, beat 2.75: no match
+- m. 274, beat 2.75 to m. 275, beat 1: no match
+- m. 275, beat 1 to m. 275, beat 1.25: no match
+- m. 275, beat 1.25 to m. 275, beat 1.5: no match
+- m. 275, beat 1.5 to m. 275, beat 1.75: no match
+- m. 275, beat 1.75 to m. 275, beat 2: no match
+- m. 275, beat 2 to m. 275, beat 2.25: no match
+- m. 275, beat 2.25 to m. 275, beat 2.5: no match
+- m. 275, beat 2.5 to m. 275, beat 2.75: no match
+- m. 275, beat 2.75 to m. 276, beat 1: no match
+- m. 276, beat 1 to m. 276, beat 1.5: no match
+- m. 276, beat 1.25 to m. 276, beat 1.5: no match
+- m. 276, beat 1.5 to m. 276, beat 1.75: no match
+- m. 276, beat 1.75 to m. 276, beat 2: no match
+- m. 276, beat 2 to m. 276, beat 2.38: no match
+- m. 276, beat 2.5 to m. 276, beat 2.88: no match
+- m. 277, beat 1 to m. 277, beat 1.75: iii
+- m. 277, beat 1.5 to m. 277, beat 1.88: no match
+- m. 277, beat 2 to m. 277, beat 2.38: vi
+- m. 277, beat 2.5 to m. 277, beat 2.88: no match
+- m. 278, beat 1 to m. 278, beat 1.75: no match
+- m. 278, beat 1.5 to m. 278, beat 1.88: no match
+- m. 278, beat 2 to m. 278, beat 2.5: V
+- m. 278, beat 2.25 to m. 278, beat 2.5: no match
+- m. 278, beat 2.5 to m. 278, beat 2.75: no match
+- m. 278, beat 2.75 to m. 279, beat 1: no match
+- m. 279, beat 1 to m. 279, beat 2.5: no match
+- m. 279, beat 1.25 to m. 279, beat 1.5: no match
+- m. 279, beat 1.5 to m. 279, beat 1.75: no match
+- m. 279, beat 1.75 to m. 279, beat 2: no match
+- m. 279, beat 2 to m. 280, beat 1: no match
+- m. 279, beat 2.25 to m. 279, beat 2.5: no match
+- m. 279, beat 2.5 to m. 280, beat 1: no match
+- m. 279, beat 2.75 to m. 280, beat 1: no match
+- m. 280, beat 1 to m. 280, beat 1.5: no match
+- m. 280, beat 1.5 to m. 280, beat 1.88: no match
+- m. 280, beat 2 to m. 280, beat 2.25: no match
+- m. 280, beat 2.25 to m. 280, beat 2.5: no match
+- m. 280, beat 2.5 to m. 280, beat 2.75: no match
+- m. 280, beat 2.75 to m. 281, beat 1: no match
+- m. 281, beat 1 to m. 281, beat 1.5: V
+- m. 281, beat 1.5 to m. 281, beat 1.88: no match
+- m. 281, beat 2 to m. 281, beat 2.25: no match
+- m. 281, beat 2.25 to m. 281, beat 2.5: no match
+- m. 281, beat 2.5 to m. 281, beat 2.75: no match
+- m. 281, beat 2.75 to m. 282, beat 1: no match
+- m. 282, beat 1 to m. 282, beat 1.5: no match
+- m. 282, beat 1.5 to m. 282, beat 1.88: no match
+- m. 282, beat 2 to m. 282, beat 2.25: no match
+- m. 282, beat 2.25 to m. 282, beat 2.5: no match
+- m. 282, beat 2.5 to m. 282, beat 2.75: no match
+- m. 282, beat 2.75 to m. 283, beat 1: no match
+- m. 283, beat 1 to m. 283, beat 1.5: no match
+- m. 283, beat 1.5 to m. 283, beat 2: no match
+- m. 283, beat 2 to m. 283, beat 2.5: no match
+- m. 283, beat 2.5 to m. 284, beat 1: no match
+- m. 284, beat 1 to m. 284, beat 1.5: no match
+- m. 284, beat 2 to m. 284, beat 2.38: no match
+- m. 284, beat 2.5 to m. 284, beat 2.88: no match
+- m. 285, beat 1 to m. 285, beat 1.38: vi
+- m. 285, beat 1.5 to m. 285, beat 1.88: no match
+- m. 285, beat 2 to m. 285, beat 2.38: ii
+- m. 285, beat 2.5 to m. 285, beat 2.88: no match
+- m. 286, beat 1 to m. 286, beat 1.38: V
+- m. 286, beat 1.5 to m. 286, beat 1.88: no match
+- m. 286, beat 2 to m. 286, beat 2.5: I
+- m. 286, beat 2.25 to m. 286, beat 2.5: no match
+- m. 286, beat 2.5 to m. 286, beat 2.75: no match
+- m. 286, beat 2.75 to m. 287, beat 1: no match
+- m. 287, beat 1 to m. 287, beat 2.5: no match
+- m. 287, beat 1.25 to m. 287, beat 1.5: no match
+- m. 287, beat 1.5 to m. 287, beat 1.75: no match
+- m. 287, beat 1.75 to m. 287, beat 2: no match
+- m. 287, beat 2 to m. 287, beat 2.25: no match
+- m. 287, beat 2.25 to m. 287, beat 2.5: no match
+- m. 287, beat 2.5 to m. 288, beat 1: no match
+- m. 287, beat 2.75 to m. 288, beat 1: no match
+- m. 288, beat 1 to m. 288, beat 1.5: no match
+- m. 288, beat 1.25 to m. 288, beat 1.5: no match
+- m. 288, beat 1.5 to m. 288, beat 1.75: no match
+- m. 288, beat 1.75 to m. 288, beat 2: no match
+- m. 288, beat 2 to m. 288, beat 2.38: no match
+- m. 288, beat 2.5 to m. 288, beat 2.88: no match
+- m. 289, beat 1 to m. 289, beat 1.38: vi
+- m. 289, beat 1.5 to m. 289, beat 1.88: no match
+- m. 289, beat 2 to m. 289, beat 2.38: ii
+- m. 289, beat 2.5 to m. 289, beat 2.88: no match
+- m. 290, beat 1 to m. 290, beat 1.38: V
+- m. 290, beat 1.5 to m. 290, beat 1.88: no match
+- m. 290, beat 2 to m. 290, beat 2.5: vi
+- m. 290, beat 2.25 to m. 290, beat 2.5: no match
+- m. 290, beat 2.5 to m. 290, beat 2.75: no match
+- m. 290, beat 2.75 to m. 291, beat 1: no match
+- m. 291, beat 1 to m. 291, beat 2.5: no match
+- m. 291, beat 1.25 to m. 291, beat 1.5: no match
+- m. 291, beat 1.5 to m. 291, beat 1.75: no match
+- m. 291, beat 1.75 to m. 291, beat 2: no match
+- m. 291, beat 2 to m. 291, beat 2.25: no match
+- m. 291, beat 2.25 to m. 291, beat 2.5: no match
+- m. 291, beat 2.5 to m. 292, beat 1: no match
+- m. 291, beat 2.75 to m. 292, beat 1: no match
+- m. 292, beat 1 to m. 292, beat 1.5: no match
+- m. 292, beat 1.5 to m. 292, beat 1.88: no match
+- m. 292, beat 2 to m. 292, beat 2.38: no match
+- m. 292, beat 2.5 to m. 292, beat 2.88: no match
+- m. 293, beat 1 to m. 293, beat 1.38: vi
+- m. 293, beat 1.25 to m. 293, beat 1.5: no match
+- m. 293, beat 1.5 to m. 293, beat 1.75: no match
+- m. 293, beat 1.75 to m. 293, beat 2: no match
+- m. 293, beat 2 to m. 293, beat 2.38: no match
+- m. 293, beat 2.5 to m. 293, beat 2.88: no match
+- m. 294, beat 1 to m. 294, beat 1.38: no match
+- m. 294, beat 1.25 to m. 294, beat 1.5: no match
+- m. 294, beat 1.5 to m. 294, beat 1.75: no match
+- m. 294, beat 1.75 to m. 294, beat 1.94: no match
+- m. 294, beat 2 to m. 294, beat 2.38: no match
+- m. 294, beat 2.5 to m. 294, beat 2.88: no match
+- m. 295, beat 1 to m. 295, beat 1.38: vi
+- m. 295, beat 1.25 to m. 295, beat 1.5: no match
+- m. 295, beat 1.5 to m. 295, beat 1.75: no match
+- m. 295, beat 1.75 to m. 295, beat 2: no match
+- m. 295, beat 2 to m. 295, beat 2.38: no match
+- m. 295, beat 2.5 to m. 295, beat 2.88: no match
+- m. 296, beat 1 to m. 296, beat 1.38: no match
+- m. 296, beat 1.25 to m. 296, beat 1.5: no match
+- m. 296, beat 1.5 to m. 296, beat 1.75: no match
+- m. 296, beat 1.75 to m. 296, beat 2: no match
+- m. 296, beat 2 to m. 297, beat 1: vi
+- m. 296, beat 2.25 to m. 296, beat 2.5: no match
+- m. 296, beat 2.5 to m. 296, beat 2.75: no match
+- m. 296, beat 2.75 to m. 297, beat 1: no match
+- m. 297, beat 1 to m. 297, beat 2: no match
+- m. 297, beat 1.25 to m. 297, beat 1.5: no match
+- m. 297, beat 1.5 to m. 297, beat 1.69: no match
+- m. 297, beat 1.75 to m. 297, beat 1.94: no match
+- m. 297, beat 2 to m. 298, beat 1: no match
+- m. 297, beat 2.25 to m. 297, beat 2.5: no match
+- m. 297, beat 2.5 to m. 297, beat 2.69: no match
+- m. 297, beat 2.75 to m. 297, beat 2.94: no match
+- m. 298, beat 1 to m. 299, beat 1: no match
+- m. 298, beat 1.25 to m. 298, beat 1.5: no match
+- m. 298, beat 1.5 to m. 298, beat 2: no match
+- m. 298, beat 1.75 to m. 298, beat 2: no match
+- m. 298, beat 2 to m. 298, beat 2.5: no match
+- m. 298, beat 2.25 to m. 298, beat 2.5: no match
+- m. 298, beat 2.5 to m. 299, beat 1: no match
+- m. 298, beat 2.75 to m. 299, beat 1: no match
+- m. 299, beat 1 to m. 299, beat 1.5: no match
+- m. 299, beat 1.25 to m. 299, beat 1.5: no match
+- m. 299, beat 1.5 to m. 299, beat 2.5: no match
+- m. 299, beat 2 to m. 299, beat 2.5: no match
+- m. 299, beat 2.5 to m. 300, beat 1: no match
+- m. 300, beat 1 to m. 300, beat 1.5: no match
+- m. 300, beat 1.25 to m. 300, beat 1.5: no match
+- m. 300, beat 1.5 to m. 300, beat 1.75: no match
+- m. 300, beat 1.75 to m. 300, beat 2: no match
+- m. 300, beat 2 to m. 300, beat 2.25: no match
+- m. 300, beat 2.25 to m. 300, beat 2.5: no match
+- m. 300, beat 2.5 to m. 300, beat 2.75: no match
+- m. 300, beat 2.75 to m. 301, beat 1: no match
+- m. 301, beat 1 to m. 301, beat 1.25: no match
+- m. 301, beat 1.25 to m. 301, beat 1.5: no match
+- m. 301, beat 1.5 to m. 301, beat 1.75: no match
+- m. 301, beat 1.75 to m. 301, beat 2: no match
+- m. 301, beat 2 to m. 301, beat 2.25: no match
+- m. 301, beat 2.25 to m. 301, beat 2.5: no match
+- m. 301, beat 2.5 to m. 301, beat 2.75: no match
+- m. 301, beat 2.75 to m. 302, beat 1: no match
+- m. 302, beat 1 to m. 302, beat 1.25: no match
+- m. 302, beat 1.25 to m. 302, beat 1.5: no match
+- m. 302, beat 1.5 to m. 302, beat 1.75: no match
+- m. 302, beat 1.75 to m. 302, beat 2: no match
+- m. 302, beat 2 to m. 302, beat 2.25: no match
+- m. 302, beat 2.25 to m. 302, beat 2.5: no match
+- m. 302, beat 2.5 to m. 302, beat 2.75: no match
+- m. 302, beat 2.75 to m. 303, beat 1: no match
+- m. 303, beat 1 to m. 303, beat 1.25: no match
+- m. 303, beat 1.25 to m. 303, beat 1.5: no match
+- m. 303, beat 1.5 to m. 303, beat 1.75: no match
+- m. 303, beat 1.75 to m. 303, beat 2: no match
+- m. 303, beat 2 to m. 303, beat 2.25: no match
+- m. 303, beat 2.25 to m. 303, beat 2.5: no match
+- m. 303, beat 2.5 to m. 303, beat 2.75: no match
+- m. 303, beat 2.75 to m. 304, beat 1: no match
+- m. 304, beat 1 to m. 304, beat 1.5: no match
+- m. 304, beat 2 to m. 304, beat 2.38: no match
+- m. 304, beat 2.5 to m. 304, beat 2.88: no match
+- m. 305, beat 1 to m. 305, beat 1.38: vi
+- m. 305, beat 1.25 to m. 305, beat 1.5: no match
+- m. 305, beat 1.5 to m. 305, beat 1.75: no match
+- m. 305, beat 1.75 to m. 305, beat 2: no match
+- m. 305, beat 2 to m. 305, beat 2.38: no match
+- m. 305, beat 2.5 to m. 305, beat 2.88: no match
+- m. 306, beat 1 to m. 306, beat 1.38: no match
+- m. 306, beat 1.25 to m. 306, beat 1.5: no match
+- m. 306, beat 1.5 to m. 306, beat 1.75: no match
+- m. 306, beat 1.75 to m. 306, beat 2: no match
+- m. 306, beat 2 to m. 306, beat 2.38: no match
+- m. 306, beat 2.5 to m. 306, beat 2.88: no match
+- m. 307, beat 1 to m. 307, beat 1.38: vi
+- m. 307, beat 1.25 to m. 307, beat 1.5: no match
+- m. 307, beat 1.5 to m. 307, beat 1.75: no match
+- m. 307, beat 1.75 to m. 307, beat 2: no match
+- m. 307, beat 2 to m. 307, beat 2.38: no match
+- m. 307, beat 2.5 to m. 307, beat 2.88: no match
+- m. 308, beat 1 to m. 308, beat 1.38: no match
+- m. 308, beat 1.25 to m. 308, beat 1.5: no match
+- m. 308, beat 1.5 to m. 308, beat 1.75: no match
+- m. 308, beat 1.75 to m. 308, beat 2: no match
+- m. 308, beat 2 to m. 309, beat 1: no match
+- m. 308, beat 2.25 to m. 308, beat 2.5: no match
+- m. 308, beat 2.5 to m. 308, beat 2.75: no match
+- m. 308, beat 2.75 to m. 309, beat 1: no match
+- m. 309, beat 1 to m. 309, beat 1.5: no match
+- m. 309, beat 1.25 to m. 309, beat 1.5: no match
+- m. 309, beat 1.5 to m. 309, beat 2: no match
+- m. 309, beat 1.75 to m. 309, beat 2: no match
+- m. 309, beat 2 to m. 310, beat 1: no match
+- m. 309, beat 2.25 to m. 309, beat 2.5: no match
+- m. 309, beat 2.5 to m. 310, beat 1: no match
+- m. 309, beat 2.75 to m. 310, beat 1: no match
+- m. 310, beat 1 to m. 311, beat 1: no match
+- m. 310, beat 1.25 to m. 310, beat 1.5: no match
+- m. 310, beat 1.5 to m. 310, beat 2: no match
+- m. 310, beat 1.75 to m. 310, beat 2: no match
+- m. 310, beat 2 to m. 310, beat 2.5: no match
+- m. 310, beat 2.25 to m. 310, beat 2.5: no match
+- m. 310, beat 2.5 to m. 311, beat 1: no match
+- m. 310, beat 2.75 to m. 311, beat 1: no match
+- m. 311, beat 1 to m. 311, beat 2: no match
+- m. 311, beat 1.25 to m. 311, beat 1.5: no match
+- m. 311, beat 1.5 to m. 311, beat 1.75: no match
+- m. 311, beat 1.75 to m. 311, beat 2: no match
+- m. 311, beat 2 to m. 312, beat 1: vi
+- m. 311, beat 2.5 to m. 312, beat 1: no match
+- m. 312, beat 1 to m. 312, beat 1.5: no match
+- m. 312, beat 1.25 to m. 312, beat 1.5: no match
+- m. 312, beat 1.5 to m. 312, beat 1.75: no match
+- m. 312, beat 1.75 to m. 312, beat 2: no match
+- m. 312, beat 2 to m. 312, beat 2.25: no match
+- m. 312, beat 2.25 to m. 312, beat 2.5: no match
+- m. 312, beat 2.5 to m. 312, beat 2.75: no match
+- m. 312, beat 2.75 to m. 313, beat 1: no match
+- m. 313, beat 1 to m. 313, beat 1.5: no match
+- m. 313, beat 1.25 to m. 313, beat 1.5: no match
+- m. 313, beat 1.5 to m. 313, beat 1.75: no match
+- m. 313, beat 1.75 to m. 313, beat 2: no match
+- m. 313, beat 2 to m. 313, beat 2.25: no match
+- m. 313, beat 2.25 to m. 313, beat 2.5: no match
+- m. 313, beat 2.5 to m. 313, beat 2.75: no match
+- m. 313, beat 2.75 to m. 314, beat 1: no match
+- m. 314, beat 1 to m. 314, beat 1.5: no match
+- m. 314, beat 1.25 to m. 314, beat 1.5: no match
+- m. 314, beat 1.5 to m. 314, beat 1.75: no match
+- m. 314, beat 1.75 to m. 314, beat 2: no match
+- m. 314, beat 2 to m. 314, beat 2.25: no match
+- m. 314, beat 2.25 to m. 314, beat 2.5: no match
+- m. 314, beat 2.5 to m. 314, beat 2.75: no match
+- m. 314, beat 2.75 to m. 315, beat 1: no match
+- m. 315, beat 1 to m. 315, beat 1.25: no match
+- m. 315, beat 1.25 to m. 315, beat 1.5: no match
+- m. 315, beat 1.5 to m. 315, beat 1.75: no match
+- m. 315, beat 1.75 to m. 315, beat 2: no match
+- m. 315, beat 2 to m. 315, beat 2.25: no match
+- m. 315, beat 2.25 to m. 315, beat 2.5: no match
+- m. 315, beat 2.5 to m. 315, beat 2.75: no match
+- m. 315, beat 2.75 to m. 316, beat 1: no match
+- m. 317, beat 2 to m. 317, beat 2.38: no match
+- m. 317, beat 2.5 to m. 317, beat 2.88: no match
+- m. 318, beat 1 to m. 318, beat 1.38: vi
+- m. 318, beat 1.5 to m. 318, beat 1.88: no match
+- m. 318, beat 2 to m. 318, beat 2.38: ii
+- m. 318, beat 2.5 to m. 318, beat 2.88: no match
+- m. 319, beat 1 to m. 319, beat 1.38: V
+- m. 319, beat 1.5 to m. 319, beat 1.88: no match
+- m. 319, beat 2 to m. 319, beat 2.5: I
+- m. 319, beat 2.25 to m. 319, beat 2.5: no match
+- m. 319, beat 2.5 to m. 319, beat 2.75: no match
+- m. 319, beat 2.75 to m. 320, beat 1: no match
+- m. 320, beat 1 to m. 320, beat 2.5: no match
+- m. 320, beat 1.25 to m. 320, beat 1.5: no match
+- m. 320, beat 1.5 to m. 320, beat 1.75: no match
+- m. 320, beat 1.75 to m. 320, beat 2: no match
+- m. 320, beat 2 to m. 320, beat 2.25: no match
+- m. 320, beat 2.25 to m. 320, beat 2.5: no match
+- m. 320, beat 2.5 to m. 321, beat 1: no match
+- m. 320, beat 2.75 to m. 321, beat 1: no match
+- m. 321, beat 1 to m. 321, beat 1.5: no match
+- m. 321, beat 1.25 to m. 321, beat 1.5: no match
+- m. 321, beat 1.5 to m. 321, beat 1.75: no match
+- m. 321, beat 1.75 to m. 321, beat 2: no match
+- m. 321, beat 2 to m. 321, beat 2.38: no match
+- m. 321, beat 2.5 to m. 321, beat 2.88: no match
+- m. 322, beat 1 to m. 322, beat 1.38: vi
+- m. 322, beat 1.5 to m. 322, beat 1.88: no match
+- m. 322, beat 2 to m. 322, beat 2.38: ii
+- m. 322, beat 2.5 to m. 322, beat 2.88: no match
+- m. 323, beat 1 to m. 323, beat 1.38: V
+- m. 323, beat 1.5 to m. 323, beat 1.88: no match
+- m. 323, beat 2 to m. 323, beat 2.5: vi
+- m. 323, beat 2.25 to m. 323, beat 2.5: no match
+- m. 323, beat 2.5 to m. 323, beat 2.75: no match
+- m. 323, beat 2.75 to m. 324, beat 1: no match
+- m. 324, beat 1 to m. 324, beat 2.5: no match
+- m. 324, beat 1.25 to m. 324, beat 1.5: no match
+- m. 324, beat 1.5 to m. 324, beat 1.75: no match
+- m. 324, beat 1.75 to m. 324, beat 2: no match
+- m. 324, beat 2 to m. 324, beat 2.25: no match
+- m. 324, beat 2.25 to m. 324, beat 2.5: no match
+- m. 324, beat 2.5 to m. 325, beat 1: no match
+- m. 324, beat 2.75 to m. 325, beat 1: no match
+- m. 325, beat 1 to m. 325, beat 1.5: no match
+- m. 325, beat 1.5 to m. 325, beat 1.88: no match
+- m. 325, beat 2 to m. 325, beat 2.25: no match
+- m. 325, beat 2.25 to m. 325, beat 2.5: no match
+- m. 325, beat 2.5 to m. 325, beat 2.75: no match
+- m. 325, beat 2.75 to m. 326, beat 1: no match
+- m. 326, beat 1 to m. 326, beat 1.25: no match
+- m. 326, beat 1.25 to m. 326, beat 1.5: no match
+- m. 326, beat 1.5 to m. 326, beat 1.75: no match
+- m. 326, beat 1.75 to m. 326, beat 2: no match
+- m. 326, beat 2 to m. 326, beat 2.25: no match
+- m. 326, beat 2.25 to m. 326, beat 2.5: no match
+- m. 326, beat 2.5 to m. 326, beat 2.75: no match
+- m. 326, beat 2.75 to m. 327, beat 1: no match
+- m. 327, beat 1 to m. 327, beat 1.25: no match
+- m. 327, beat 1.25 to m. 327, beat 1.5: no match
+- m. 327, beat 1.5 to m. 327, beat 1.75: no match
+- m. 327, beat 1.75 to m. 327, beat 2: no match
+- m. 327, beat 2 to m. 327, beat 2.25: no match
+- m. 327, beat 2.25 to m. 327, beat 2.5: no match
+- m. 327, beat 2.5 to m. 327, beat 2.75: no match
+- m. 327, beat 2.75 to m. 328, beat 1: no match
+- m. 328, beat 1 to m. 328, beat 1.25: no match
+- m. 328, beat 1.25 to m. 328, beat 1.5: no match
+- m. 328, beat 1.5 to m. 328, beat 1.75: no match
+- m. 328, beat 1.75 to m. 328, beat 2: no match
+- m. 328, beat 2 to m. 328, beat 2.25: no match
+- m. 328, beat 2.25 to m. 328, beat 2.5: no match
+- m. 328, beat 2.5 to m. 328, beat 2.75: no match
+- m. 328, beat 2.75 to m. 329, beat 1: no match
+- m. 329, beat 1 to m. 329, beat 1.5: no match
+- m. 329, beat 1.25 to m. 329, beat 1.5: no match
+- m. 329, beat 1.5 to m. 329, beat 2: no match
+- m. 329, beat 1.75 to m. 329, beat 2: no match
+- m. 329, beat 2 to m. 329, beat 2.25: no match
+- m. 329, beat 2.25 to m. 329, beat 2.5: no match
+- m. 329, beat 2.5 to m. 329, beat 2.75: no match
+- m. 329, beat 2.75 to m. 330, beat 1: no match
+- m. 330, beat 1 to m. 330, beat 1.25: no match
+- m. 330, beat 1.25 to m. 330, beat 1.5: no match
+- m. 330, beat 1.5 to m. 330, beat 1.75: no match
+- m. 330, beat 1.75 to m. 330, beat 2: no match
+- m. 330, beat 2 to m. 330, beat 2.25: no match
+- m. 330, beat 2.25 to m. 330, beat 2.5: no match
+- m. 330, beat 2.5 to m. 330, beat 2.75: no match
+- m. 330, beat 2.75 to m. 331, beat 1: no match
+- m. 331, beat 1 to m. 331, beat 1.25: no match
+- m. 331, beat 1.25 to m. 331, beat 1.5: no match
+- m. 331, beat 1.5 to m. 331, beat 1.75: no match
+- m. 331, beat 1.75 to m. 331, beat 2: no match
+- m. 331, beat 2 to m. 331, beat 2.25: no match
+- m. 331, beat 2.25 to m. 331, beat 2.5: no match
+- m. 331, beat 2.5 to m. 331, beat 2.75: no match
+- m. 331, beat 2.75 to m. 332, beat 1: no match
+- m. 332, beat 1 to m. 332, beat 1.25: no match
+- m. 332, beat 1.25 to m. 332, beat 1.5: no match
+- m. 332, beat 1.5 to m. 332, beat 1.75: no match
+- m. 332, beat 1.75 to m. 332, beat 2: no match
+- m. 332, beat 2 to m. 332, beat 2.25: no match
+- m. 332, beat 2.25 to m. 332, beat 2.5: no match
+- m. 332, beat 2.5 to m. 332, beat 2.75: no match
+- m. 332, beat 2.75 to m. 333, beat 1: no match
+- m. 333, beat 1 to m. 333, beat 1.25: no match
+- m. 333, beat 1.25 to m. 333, beat 1.5: no match
+- m. 333, beat 1.5 to m. 333, beat 1.75: no match
+- m. 333, beat 1.75 to m. 333, beat 2: no match
+- m. 333, beat 2 to m. 333, beat 2.25: no match
+- m. 333, beat 2.25 to m. 333, beat 2.5: no match
+- m. 333, beat 2.5 to m. 333, beat 2.75: no match
+- m. 333, beat 2.75 to m. 334, beat 1: no match
+- m. 334, beat 1 to m. 334, beat 1.38: no match
+- m. 334, beat 1.25 to m. 334, beat 1.5: no match
+- m. 334, beat 1.5 to m. 334, beat 1.75: no match
+- m. 334, beat 1.75 to m. 334, beat 2: no match
+- m. 334, beat 2 to m. 334, beat 2.38: no match
+- m. 334, beat 2.25 to m. 334, beat 2.5: no match
+- m. 334, beat 2.5 to m. 334, beat 2.75: no match
+- m. 334, beat 2.75 to m. 335, beat 1: no match
+- m. 335, beat 1 to m. 335, beat 1.25: no match
+- m. 335, beat 1.25 to m. 335, beat 1.5: no match
+- m. 335, beat 1.5 to m. 335, beat 1.75: no match
+- m. 335, beat 1.75 to m. 335, beat 2: no match
+- m. 335, beat 2 to m. 335, beat 2.25: no match
+- m. 335, beat 2.25 to m. 335, beat 2.5: no match
+- m. 335, beat 2.5 to m. 335, beat 2.75: no match
+- m. 335, beat 2.75 to m. 336, beat 1: no match
+- m. 336, beat 1 to m. 336, beat 1.38: no match
+- m. 336, beat 1.25 to m. 336, beat 1.5: no match
+- m. 336, beat 1.5 to m. 336, beat 1.75: no match
+- m. 336, beat 1.75 to m. 336, beat 2: no match
+- m. 336, beat 2 to m. 336, beat 2.38: no match
+- m. 336, beat 2.25 to m. 336, beat 2.5: no match
+- m. 336, beat 2.5 to m. 336, beat 2.75: no match
+- m. 336, beat 2.75 to m. 337, beat 1: no match
+- m. 337, beat 1 to m. 337, beat 1.5: no match
+- m. 337, beat 1.5 to m. 337, beat 2: I
+- m. 337, beat 2 to m. 337, beat 2.5: I
+- m. 337, beat 2.5 to m. 338, beat 1: no match
+- m. 338, beat 1 to m. 338, beat 2: no match
