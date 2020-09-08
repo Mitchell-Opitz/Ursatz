@@ -1,17 +1,23 @@
 #include <ursatz_analyzer/analysis_document.h>
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "beat_grid.h"
 #include "cJSON.h"
 #include "framework.h"
+#include "metric_position_rules.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
 #include "theory/framework.h"
 #include "time/duration.h"
+#include "time/meter_map.h"
+#include "time/metrical_position.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "time/time_signature.h"
 
 #ifndef URSATZ_ANALYZER_VERSION
 #define URSATZ_ANALYZER_VERSION "unknown"
@@ -23,6 +29,11 @@
 /* Source id for a key read from the MIDI key signature meta-event: no
    framework Interpretation is involved there. */
 static const char KEY_SIGNATURE_SOURCE[] = "midi-key-signature";
+
+/* Source ids for the meter: a time signature the MIDI file declares, and
+   the 4/4 the library assumes when it declares none. */
+static const char TIME_SIGNATURE_SOURCE[] = "midi-time-signature";
+static const char DEFAULT_METER_SOURCE[] = "ursatz-default-meter";
 
 /* ---- Rational time (whole notes) ---- */
 
@@ -152,6 +163,59 @@ static cJSON *uncertainty_json(AnalysisConfidence confidence) {
     return cJSON_CreateNumber((double)confidence.numerator / (double)confidence.denominator);
 }
 
+/* Measure and beat of one time on the piece's measure grid:
+   {"measure", "beat", "subdivision"}. Measures are numbered as the
+   library numbers them (the first full measure is 1, a pickup is 0).
+   "beat" is 1-based; "subdivision" is the exact fraction of that beat
+   past its start, as a rational (0/1 on the beat). Null when the
+   position cannot be read, e.g. a signature with no beat grid. */
+static cJSON *position_json(const MeterMap *map, Rational time) {
+    MusicalTime *musical_time = NULL;
+    if (musical_time_create((long)time.num, (unsigned long)time.den, &musical_time) != MUSICAL_TIME_OK) {
+        return cJSON_CreateNull();
+    }
+    MetricalPosition *position = NULL;
+    MetricalPositionResult result = metrical_position_from_time(map, musical_time, &position);
+    musical_time_destroy(musical_time);
+    if (result != METRICAL_POSITION_OK) {
+        return cJSON_CreateNull();
+    }
+
+    int measure = metrical_position_measure(position);
+    const TimeSignature *reading = NULL;
+    StandardMeterBeatPosition beat;
+    bool readable = metrical_position_reading_signature(map, measure, &reading) == METRICAL_POSITION_OK &&
+                    standard_meter_beat_position(reading, position, &beat);
+    metrical_position_destroy(position);
+    if (!readable) {
+        return cJSON_CreateNull();
+    }
+
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "measure", cJSON_CreateNumber((double)measure)) &&
+          add(object, "beat", cJSON_CreateNumber((double)beat.beat)) &&
+          add(object, "subdivision",
+              rational_json(rational_make(beat.subdivision_numerator, beat.subdivision_denominator))))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* Where a span starts and ends on the measure grid. The end is the
+   position of the span's (exclusive) end time, so a span that ends on a
+   barline ends at beat 1 of the next measure. */
+static cJSON *location_json(const MeterMap *map, Rational start, Rational end) {
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "start", position_json(map, start)) && add(object, "end", position_json(map, end)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* The shared claim fields, in schema order. ids NULL means every
    imported note. */
 static cJSON *claim_json(const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
@@ -163,6 +227,7 @@ static cJSON *claim_json(const char *framework, const ImportedNotes *notes, cons
     cJSON *claim = cJSON_CreateObject();
     if (claim && !(add(claim, "framework", cJSON_CreateString(framework)) &&
                    add(claim, "span", span_json(start, end)) &&
+                   add(claim, "location", location_json(notes->meter.meter_map, start, end)) &&
                    add(claim, "note_ids", note_ids_json(ids, id_count)) &&
                    add(claim, "label", cJSON_CreateString(label)) &&
                    add(claim, "uncertainty", uncertainty_json(confidence)))) {
@@ -170,6 +235,117 @@ static cJSON *claim_json(const char *framework, const ImportedNotes *notes, cons
         return NULL;
     }
     return claim;
+}
+
+static Rational time_rational(const MusicalTime *time) {
+    return rational_make(musical_time_numerator(time), musical_time_denominator(time));
+}
+
+static cJSON *time_signature_json(const TimeSignature *time_signature) {
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "numerator", cJSON_CreateNumber((double)time_signature_top_number(time_signature))) &&
+          add(object, "denominator", cJSON_CreateNumber((double)time_signature_bottom_number(time_signature))))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The pickup region's length in whole notes and in beats of the
+   signature its position is read in (null beats when that signature has
+   no beat grid). */
+static cJSON *pickup_json(const MeterMap *map) {
+    const MeterMapRegion *region = meter_map_region(map, 0);
+    const MusicalTime *end = meter_map_region_end(region);
+    const TimeSignature *reading = NULL;
+    if (!end || metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK) {
+        return NULL;
+    }
+    Rational length = time_rational(end);
+
+    cJSON *beats = NULL;
+    Duration *beat = NULL;
+    if (standard_meter_beat_start(reading, 1, &beat)) {
+        beats = rational_json(rational_make(length.num * (long long)duration_denominator(beat),
+                                            length.den * (unsigned long long)duration_numerator(beat)));
+        duration_destroy(beat);
+    } else {
+        beats = cJSON_CreateNull();
+    }
+
+    cJSON *pickup = cJSON_CreateObject();
+    if (pickup && !(add(pickup, "length", rational_json(length)) && add(pickup, "beats", beats))) {
+        cJSON_Delete(pickup);
+        return NULL;
+    }
+    if (!pickup) {
+        cJSON_Delete(beats);
+    }
+    return pickup;
+}
+
+/* Every region after the first full measure's, one entry per meter change. */
+static cJSON *meter_changes_json(const MeterMap *map, size_t first_index) {
+    cJSON *changes = cJSON_CreateArray();
+    if (!changes) {
+        return NULL;
+    }
+    for (size_t i = first_index; i < meter_map_region_count(map); i++) {
+        const MeterMapRegion *region = meter_map_region(map, i);
+        cJSON *change = cJSON_CreateObject();
+        if (!(change &&
+              add(change, "measure", cJSON_CreateNumber((double)meter_map_region_first_measure_number(region))) &&
+              add(change, "start", rational_json(time_rational(meter_map_region_start(region)))) &&
+              add(change, "time_signature", time_signature_json(meter_map_region_time_signature(region))) &&
+              add(change, "inferred", cJSON_CreateBool(meter_map_region_is_defaulted(region))))) {
+            cJSON_Delete(change);
+            cJSON_Delete(changes);
+            return NULL;
+        }
+        if (!append(changes, change)) {
+            cJSON_Delete(changes);
+            return NULL;
+        }
+    }
+    return changes;
+}
+
+/* The piece's meter claim. The time signature is that of the first full
+   measure; a pickup before it is reported separately, and later signature
+   changes under "changes". A file without a time signature gets the
+   library's 4/4 default, reported with source "inferred". */
+static cJSON *meter_json(const ImportedNotes *notes) {
+    const MeterMap *map = notes->meter.meter_map;
+    bool inferred = meter_map_is_defaulted(map);
+    bool has_pickup = meter_map_has_pickup(map);
+    size_t primary_index = has_pickup ? 1 : 0;
+    const TimeSignature *time_signature = meter_map_region_time_signature(meter_map_region(map, primary_index));
+
+    size_t measure_count = 0;
+    if (meter_map_measure_count(map, notes->meter.end_time, &measure_count) != METER_MAP_OK) {
+        return NULL;
+    }
+
+    char label[48];
+    snprintf(label, sizeof(label), "%u/%u", time_signature_top_number(time_signature),
+             time_signature_bottom_number(time_signature));
+
+    cJSON *meter = claim_json(inferred ? DEFAULT_METER_SOURCE : TIME_SIGNATURE_SOURCE, notes, NULL, notes->count,
+                              label, (AnalysisConfidence){false, 0, 0});
+    if (!(meter && add(meter, "source", cJSON_CreateString(inferred ? "inferred" : "file")) &&
+          add(meter, "time_signature", time_signature_json(time_signature)) &&
+          add(meter, "measure_count", cJSON_CreateNumber((double)measure_count)) &&
+          add(meter, "last_measure",
+              measure_count > 0 ? cJSON_CreateNumber((double)(meter_map_first_measure_number(map) +
+                                                              (int)measure_count - 1))
+                                : cJSON_CreateNull()) &&
+          add(meter, "pickup", has_pickup ? pickup_json(map) : cJSON_CreateNull()) &&
+          add(meter, "changes", meter_changes_json(map, primary_index + 1)))) {
+        cJSON_Delete(meter);
+        return NULL;
+    }
+    return meter;
 }
 
 static const char *library_framework_name(void) {
@@ -263,7 +439,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
     if (document &&
         !(add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
           add(document, "metadata", metadata_json(input_path, notes, report)) &&
-          add(document, "meter", cJSON_CreateNull()) && add(document, "keys", keys_json(notes, report)) &&
+          add(document, "meter", meter_json(notes)) && add(document, "keys", keys_json(notes, report)) &&
           add(document, "chords", chords_json(notes, report)) && add(document, "cadences", cJSON_CreateArray()) &&
           add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&

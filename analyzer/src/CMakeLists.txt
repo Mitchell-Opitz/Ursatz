@@ -16,7 +16,7 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz common_practice_minimal
+    PUBLIC ursatz common_practice_minimal standard_meter
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_analyzer PRIVATE

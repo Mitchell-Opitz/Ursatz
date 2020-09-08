@@ -220,26 +220,119 @@ static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON
     return ok && sb_append(sb, "\n");
 }
 
+/* "1/3" for a rational, "2" when it is whole. */
+static bool append_rational(StringBuilder *sb, const cJSON *rational) {
+    long long num = (long long)number_member(rational, "num");
+    long long den = (long long)number_member(rational, "den");
+    if (den <= 1) {
+        return sb_appendf(sb, "%lld", num);
+    }
+    return sb_appendf(sb, "%lld/%lld", num, den);
+}
+
+static bool append_time_signature(StringBuilder *sb, const cJSON *time_signature) {
+    return sb_appendf(sb, "%d/%d", (int)number_member(time_signature, "numerator"),
+                      (int)number_member(time_signature, "denominator"));
+}
+
+/* The time signature, how many measures there are, a pickup if the piece
+   has one, and any later change of signature. A meter the file does not
+   declare is shown as inferred. */
+static bool render_meter(StringBuilder *sb, const cJSON *document, const cJSON *meter) {
+    (void)document;
+    const cJSON *time_signature = cJSON_GetObjectItemCaseSensitive(meter, "time_signature");
+    const char *source = string_member(meter, "source");
+    bool inferred = source && strcmp(source, "inferred") == 0;
+
+    bool ok = sb_append(sb, "## Meter\n\n") && sb_append(sb, "- **Time signature:** ") &&
+              append_time_signature(sb, time_signature);
+    if (inferred) {
+        ok = ok && sb_append(sb, " (inferred: the file has no time signature, so 4/4 is assumed)");
+    }
+    ok = ok && sb_append(sb, "\n");
+
+    const cJSON *last_measure = cJSON_GetObjectItemCaseSensitive(meter, "last_measure");
+    if (ok && cJSON_IsNumber(last_measure) && last_measure->valuedouble >= 1) {
+        size_t measures = (size_t)last_measure->valuedouble;
+        ok = sb_appendf(sb, "- **Measures:** %zu %s.\n", measures, plural(measures, "measure", "measures"));
+    } else if (ok) {
+        ok = sb_append(sb, "- **Measures:** None.\n");
+    }
+
+    const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(meter, "pickup");
+    if (ok && cJSON_IsObject(pickup)) {
+        const cJSON *beats = cJSON_GetObjectItemCaseSensitive(pickup, "beats");
+        ok = sb_append(sb, "- **Pickup:** ");
+        if (ok && cJSON_IsObject(beats)) {
+            ok = append_rational(sb, beats) && sb_append(sb, " beat(s), numbered measure 0.\n");
+        } else if (ok) {
+            ok = sb_append(sb, "yes, numbered measure 0.\n");
+        }
+    } else if (ok) {
+        ok = sb_append(sb, "- **Pickup:** None.\n");
+    }
+
+    const cJSON *changes = cJSON_GetObjectItemCaseSensitive(meter, "changes");
+    if (ok && cJSON_GetArraySize(changes) > 0) {
+        ok = sb_append(sb, "- **Meter changes:** ");
+        const cJSON *change;
+        cJSON_ArrayForEach(change, changes) {
+            if (change != changes->child) {
+                ok = ok && sb_append(sb, ", ");
+            }
+            ok = ok && append_time_signature(sb, cJSON_GetObjectItemCaseSensitive(change, "time_signature")) &&
+                 sb_appendf(sb, " at m. %d", (int)number_member(change, "measure"));
+        }
+        ok = ok && sb_append(sb, ".\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *keys) {
     (void)document;
     const char *label = string_member(cJSON_GetArrayItem(keys, 0), "label");
     return sb_appendf(sb, "**Detected key:** %s\n\n", label ? label : "");
 }
 
+/* "m. 3, beat 2.5": the beat is the 1-based beat plus its fraction,
+   shown to at most two places. A position that could not be read shows
+   as "unknown position". */
+static bool append_position(StringBuilder *sb, const cJSON *position) {
+    if (!cJSON_IsObject(position)) {
+        return sb_append(sb, "unknown position");
+    }
+    const cJSON *subdivision = cJSON_GetObjectItemCaseSensitive(position, "subdivision");
+    double beat = number_member(position, "beat") +
+                  number_member(subdivision, "num") / number_member(subdivision, "den");
+    char beat_text[32];
+    snprintf(beat_text, sizeof(beat_text), "%.2f", beat);
+    size_t length = strlen(beat_text);
+    while (length > 0 && beat_text[length - 1] == '0') {
+        beat_text[--length] = '\0';
+    }
+    if (length > 0 && beat_text[length - 1] == '.') {
+        beat_text[--length] = '\0';
+    }
+    return sb_appendf(sb, "m. %d, beat %s", (int)number_member(position, "measure"), beat_text);
+}
+
 static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON *chords) {
-    (void)document;
-    bool ok = sb_append(sb, "## Chord Regions\n\n") &&
-              sb_append(sb, "Times are beats from the start of the file.\n\n");
+    bool ok = sb_append(sb, "## Chord Regions\n\n") && sb_append(sb, "Positions are measure and beat.");
+    if (ok && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(
+                  cJSON_GetObjectItemCaseSensitive(document, "meter"), "pickup"))) {
+        ok = sb_append(sb, " The pickup is measure 0.");
+    }
+    ok = ok && sb_append(sb, "\n\n");
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
         if (!ok) {
             break;
         }
-        const cJSON *start = cJSON_GetObjectItemCaseSensitive(
-            cJSON_GetObjectItemCaseSensitive(chord, "span"), "start");
-        double beats = 4.0 * number_member(start, "num") / number_member(start, "den");
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
         const char *label = string_member(chord, "label");
-        ok = sb_appendf(sb, "- Beat %.2f: %s\n", beats, label ? label : "");
+        ok = sb_append(sb, "- ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+             sb_appendf(sb, ": %s\n", label ? label : "");
     }
     return ok;
 }
@@ -252,6 +345,7 @@ static const struct {
 } SECTIONS[] = {
     {"metadata", render_title},
     {"metadata", render_summary},
+    {"meter", render_meter},
     {"keys", render_key},
     {"chords", render_chords},
 };

@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "events/note_event.h"
+#include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
 #include "pitch/pitch_numeric_value.h"
 
@@ -23,6 +24,12 @@ typedef enum {
  * (see io/midi_key_signature.h); key_signature.found is false when the
  * file carries none. A malformed key signature meta-event does not
  * fail the import -- see midi_pipeline_import_file.
+ *
+ * meter is the file's time signatures as a MeterMap, plus the end time
+ * of the last note (see io/midi_importer.h). A file with no time
+ * signature event gets a single 4/4 region marked defaulted
+ * (meter_map_is_defaulted), so meter.meter_map is never NULL after a
+ * successful import.
  */
 typedef struct {
     NoteEvent **events;
@@ -30,6 +37,7 @@ typedef struct {
     size_t count;
     MidiKeySignature key_signature;
     unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */
+    MidiMeterImport meter;
 } ImportedNotes;
 
 /*

@@ -6,12 +6,12 @@
 
 /*
  * The analysis document: the structured, versioned output described by
- * schema/analysis-document.v1.schema.json.
+ * schema/analysis-document.v2.schema.json.
  *
  * Value of the document's top-level "schema_version". Breaking changes
  * bump it; additive fields do not.
  */
-#define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 1
+#define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 2
 
 /* An in-memory analysis document. It is the single source of truth for
    every output: the JSON file and the Markdown report are both rendered
@@ -21,8 +21,8 @@ typedef struct AnalysisDocument AnalysisDocument;
 /*
  * Builds the analysis document for one piece from the imported notes
  * and the report run_analysis_pipeline produced for them. Fills
- * metadata, keys and chords; every other section is an empty array, or
- * null for meter and form. Only the basename of input_path is recorded.
+ * metadata, meter, keys and chords; every other section is an empty array, or
+ * null for form. Only the basename of input_path is recorded.
  *
  * Returns a document the caller releases with analysis_document_destroy,
  * or NULL on allocation failure. It does not reference notes or report
