@@ -14,10 +14,10 @@
  * beams, to make the metrical structure visible within a measure:
  *
  *   BEAT_SPLIT  a note that starts off the beat and runs past the next
- *               beat hides where that beat begins: an eighth note
- *               starting on the "+" of beat 1 and lasting a sixteenth
- *               past the start of beat 2 buries beat 2. Writing it as
- *               two notes tied across the beat boundary shows the beat.
+ *               beat hides where that beat begins: a quarter note
+ *               starting on the "+" of beat 1 buries the start of beat
+ *               2. Writing it as two eighth notes tied across the beat
+ *               boundary shows the beat.
  *
  * A note that starts on a beat is not split, however many beats it spans
  * (a half note on beat 1 of 4/4 is written as one note). This is a
