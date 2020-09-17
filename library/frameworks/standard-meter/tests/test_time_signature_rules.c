@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include "grouping_rules.h"
 #include "meter_test_util.h"
 #include "rule_check.h"
 #include "time_signature_rules.h"
