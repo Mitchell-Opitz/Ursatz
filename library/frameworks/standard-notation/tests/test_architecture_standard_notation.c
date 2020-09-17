@@ -51,7 +51,7 @@ static int check_file(const char *path) {
         if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0 ||
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
             strcmp(start, "rule_pair.h") == 0 || strcmp(start, "staff_clef_rules.h") == 0 ||
-            strcmp(start, "ledger_line_rules.h") == 0 || strcmp(start, "stem_rules.h") == 0 ||
+            strcmp(start, "ledger_line_rules.h") == 0 || strcmp(start, "stem_rules.h") == 0 || strcmp(start, "beam_stem_rules.h") == 0 || strcmp(start, "flag_rules.h") == 0 ||
             strcmp(start, "second_rules.h") == 0 || strcmp(start, "octave_equivalence_rules.h") == 0 ||
             strcmp(start, "clef_letter_rules.h") == 0 || strcmp(start, "semitone.h") == 0 ||
             strcmp(start, "step_rules.h") == 0 || strcmp(start, "accidental_rules.h") == 0 ||

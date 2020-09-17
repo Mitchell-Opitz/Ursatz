@@ -4,6 +4,8 @@ add_library(standard_notation
     staff_clef_rules.c
     ledger_line_rules.c
     stem_rules.c
+    beam_stem_rules.c
+    flag_rules.c
     second_rules.c
     octave_equivalence_rules.c
     clef_letter_rules.c

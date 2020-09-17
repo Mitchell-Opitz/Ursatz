@@ -36,6 +36,11 @@ Rules about where and how notation is placed on a staff:
   never an extra one.
 - **Stem direction**: stems point down above the middle line, up below
   it, and either way on it.
+- **Beamed stems**: notes joined by a beam share one direction, set by
+  the note farthest from the middle line (either way when the farthest
+  above and below are equally far).
+- **Flag direction**: a down-stem has an inward flag, an up-stem an
+  outward one, and a note on the middle line may be flagged either way.
 - **Seconds**: a harmonic second is drawn with the lower note on the
   left, whichever way the stem points.
 
@@ -46,10 +51,12 @@ called here.
 ## Not covered
 
 Engraving craft (clef drawing steps, notehead shape/size/tilt, stem
-length, beam thickness), beaming, key and time
-signatures, single-line (percussion) staves, instrument clef conventions.
+length, beam thickness), which notes are beamed (that is
+`frameworks/standard-meter/`), key signatures, single-line (percussion) staves, instrument clef conventions.
 
-Rhythm (note and rest values, dots, ties) is `frameworks/standard-rhythm/`.
+Rhythm (note and rest values, dots, ties) is `frameworks/standard-rhythm/`;
+meter, time signatures, counting, and beaming are
+`frameworks/standard-meter/`.
 
 Neutral (unpitched) clefs assign no letters, so every letter and
 reference-pitch rule treats them as not applicable.
