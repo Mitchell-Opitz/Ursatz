@@ -41,7 +41,7 @@ bool standard_meter_notes_per_beat(const TimeSignature *time_signature, const No
     if (time_signature == NULL || note_value == NULL || note_value_dots(note_value) != 0) {
         return false;
     }
-    int steps = note_value_exponent(note_value) - time_signature_beat_unit_exponent(time_signature);
+    int steps = note_value_exponent(note_value) - time_signature_bottom_unit_exponent(time_signature);
     if (steps < 0) {
         return false;
     }
@@ -57,9 +57,9 @@ bool standard_meter_beam_group_within_beat(const TimeSignature *time_signature, 
 
     /* beat k (0-based) spans [k, k + 1) / 2^e of a whole note; start is
        n/d, so k = floor(n * 2^e / d). */
-    unsigned long beat_scale = 1UL << time_signature_beat_unit_exponent(time_signature);
+    unsigned long beat_scale = 1UL << time_signature_bottom_unit_exponent(time_signature);
     unsigned long beat_index = ((unsigned long)duration_numerator(start) * beat_scale) / duration_denominator(start);
-    if (beat_index >= time_signature_beats(time_signature)) {
+    if (beat_index >= time_signature_top_number(time_signature)) {
         return false;
     }
 

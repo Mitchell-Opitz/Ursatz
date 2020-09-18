@@ -43,7 +43,7 @@ bool standard_meter_count(const TimeSignature *time_signature, const Duration *o
     /* offset is n/d of a whole note and a beat is 1/2^e of one, so the
        offset in eighths of a beat is n * 2^e * 8 / d. */
     unsigned long grid = (unsigned long)duration_numerator(offset) *
-                         (1UL << time_signature_beat_unit_exponent(time_signature)) * STANDARD_METER_COUNT_GRID;
+                         (1UL << time_signature_bottom_unit_exponent(time_signature)) * STANDARD_METER_COUNT_GRID;
     unsigned long denominator = duration_denominator(offset);
     if (grid % denominator != 0) {
         return false;
@@ -51,7 +51,7 @@ bool standard_meter_count(const TimeSignature *time_signature, const Duration *o
     unsigned long units = grid / denominator;
 
     unsigned long beat_index = units / STANDARD_METER_COUNT_GRID;
-    if (beat_index >= time_signature_beats(time_signature)) {
+    if (beat_index >= time_signature_top_number(time_signature)) {
         return false;
     }
 

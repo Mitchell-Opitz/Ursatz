@@ -36,11 +36,11 @@ bool standard_meter_beat_split(const TimeSignature *time_signature, const Durati
     }
 
     /* beat k (0-based) starts at k / 2^e of a whole note; start is n/d. */
-    unsigned long beat_scale = 1UL << time_signature_beat_unit_exponent(time_signature);
+    unsigned long beat_scale = 1UL << time_signature_bottom_unit_exponent(time_signature);
     unsigned long scaled = (unsigned long)duration_numerator(start) * beat_scale;
     unsigned long denominator = duration_denominator(start);
     unsigned long beat_index = scaled / denominator;
-    if (beat_index >= time_signature_beats(time_signature) || scaled % denominator == 0) {
+    if (beat_index >= time_signature_top_number(time_signature) || scaled % denominator == 0) {
         return false; /* outside the measure, or starting on a beat */
     }
 

@@ -40,7 +40,7 @@ MeterGrouping standard_meter_measure_grouping(const TimeSignature *time_signatur
     if (time_signature == NULL) {
         return METER_GROUPING_NONE;
     }
-    return standard_meter_grouping(time_signature_beats(time_signature));
+    return standard_meter_grouping(time_signature_top_number(time_signature));
 }
 
 bool standard_meter_multi_measure_rest_duration(const TimeSignature *time_signature, unsigned measures,
