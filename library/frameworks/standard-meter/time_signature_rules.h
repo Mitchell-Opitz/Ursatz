@@ -24,9 +24,10 @@
  *                    unit, not a ratio: 2/4 and 4/8 hold the same length
  *                    of music per measure but are different signatures
  *
- * Only simple meter is classified here; a signature that is not simple
- * (compound, or an irregular top number such as 5) is reported as not
- * simple, not as invalid -- TimeSignature itself allows it.
+ * These rules are about simple meter; a signature that is not simple is
+ * reported as not simple, not as invalid -- TimeSignature itself allows it.
+ * Compound meter, and classifying a signature as simple or compound, is
+ * meter_class_rules.h.
  */
 
 typedef enum {

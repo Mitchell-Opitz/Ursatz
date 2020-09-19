@@ -3,6 +3,7 @@ add_library(standard_meter
     rule_pair.c
     grouping_rules.c
     time_signature_rules.c
+    meter_class_rules.c
     measure_rules.c
     anacrusis_rules.c
     counting_rules.c
