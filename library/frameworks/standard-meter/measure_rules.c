@@ -1,5 +1,6 @@
 #include "measure_rules.h"
 
+#include "meter_class_rules.h"
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_METER_MEASURE_RULE_COUNT] = {"measure-group", "measure-multi-measure-rest"};
@@ -37,10 +38,7 @@ bool standard_meter_measure_duration(const TimeSignature *time_signature, Durati
 }
 
 MeterGrouping standard_meter_measure_grouping(const TimeSignature *time_signature) {
-    if (time_signature == NULL) {
-        return METER_GROUPING_NONE;
-    }
-    return standard_meter_grouping(time_signature_top_number(time_signature));
+    return standard_meter_classify(time_signature).grouping;
 }
 
 bool standard_meter_multi_measure_rest_duration(const TimeSignature *time_signature, unsigned measures,
