@@ -20,7 +20,9 @@
  *                    time signature: four sixteenth notes per beat when
  *                    the beat is a quarter note, two when it is an
  *                    eighth, so the same sixteenths beam in fours in
- *                    x/4 and in twos in x/8
+ *                    x/4 and in twos in x/8. In compound meter the beat
+ *                    is a dotted note, so six sixteenths make a beat in
+ *                    6/8 and three in 6/16.
  *   WITHIN_BEAT      a beam group stays inside one beat, so beaming
  *                    changes with the time signature; mixed values
  *                    (eighths with sixteenths) may share a beam when
@@ -46,9 +48,11 @@ const Constraint *standard_meter_beaming_constraint(StandardMeterBeamingRule whi
 bool standard_meter_value_beamable(const NoteValue *note_value);
 
 /*
- * NOTES_PER_BEAT: how many of this value fill one beat (2^(value
- * exponent - beat unit exponent)). False, leaving *out_count untouched,
- * when the value is dotted or longer than the beat.
+ * NOTES_PER_BEAT: how many of this value fill one beat (the beat's
+ * duration over the value's, which must come out whole). False, leaving
+ * *out_count untouched, when the value is dotted, longer than the beat,
+ * or does not divide it evenly (a quarter note in 6/8), or the signature
+ * is unclassified.
  */
 bool standard_meter_notes_per_beat(const TimeSignature *time_signature, const NoteValue *note_value,
                                    unsigned long *out_count);
@@ -57,7 +61,9 @@ bool standard_meter_notes_per_beat(const TimeSignature *time_signature, const No
  * WITHIN_BEAT: true when a group starting `start` into the measure and
  * lasting `length` (a non-zero Duration) lies inside a single beat of
  * the measure -- it may end exactly on the beat boundary but not cross
- * it. False when the start is outside the measure.
+ * it. Beats follow the meter class, so they are dotted in compound
+ * meter. False when the start is outside the measure or the signature is
+ * unclassified.
  */
 bool standard_meter_beam_group_within_beat(const TimeSignature *time_signature, const Duration *start,
                                            const Duration *length);

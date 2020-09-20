@@ -7,6 +7,7 @@ add_library(standard_meter
     measure_rules.c
     anacrusis_rules.c
     counting_rules.c
+    beat_grid.c
     beaming_rules.c
     beat_tie_rules.c
 )

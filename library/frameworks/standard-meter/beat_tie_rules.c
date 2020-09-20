@@ -1,5 +1,6 @@
 #include "beat_tie_rules.h"
 
+#include "beat_grid.h"
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_METER_BEAT_TIE_RULE_COUNT] = {"beat-tie-beat-split"};
@@ -35,12 +36,9 @@ bool standard_meter_beat_split(const TimeSignature *time_signature, const Durati
         return false;
     }
 
-    /* beat k (0-based) starts at k / 2^e of a whole note; start is n/d. */
-    unsigned long beat_scale = 1UL << time_signature_bottom_unit_exponent(time_signature);
-    unsigned long scaled = (unsigned long)duration_numerator(start) * beat_scale;
-    unsigned long denominator = duration_denominator(start);
-    unsigned long beat_index = scaled / denominator;
-    if (beat_index >= time_signature_top_number(time_signature) || scaled % denominator == 0) {
+    unsigned beat_index;
+    bool on_beat;
+    if (!standard_meter_beat_at(time_signature, start, &beat_index, &on_beat) || on_beat) {
         return false; /* outside the measure, or starting on a beat */
     }
 
@@ -49,7 +47,7 @@ bool standard_meter_beat_split(const TimeSignature *time_signature, const Durati
     Duration *first = NULL;
     bool split = false;
 
-    if (duration_create((long)(beat_index + 1), beat_scale, &next_beat) == DURATION_OK &&
+    if (standard_meter_beat_start(time_signature, beat_index + 1, &next_beat) &&
         duration_add(start, length, &end) == DURATION_OK) {
         /* runs past the boundary: end > next_beat */
         bool past = duration_numerator(end) * (long)duration_denominator(next_beat) >

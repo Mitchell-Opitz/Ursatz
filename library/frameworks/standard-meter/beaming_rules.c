@@ -1,5 +1,7 @@
 #include "beaming_rules.h"
 
+#include "beat_grid.h"
+#include "meter_class_rules.h"
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_METER_BEAMING_RULE_COUNT] = {"beaming-beamable", "beaming-notes-per-beat",
@@ -41,12 +43,24 @@ bool standard_meter_notes_per_beat(const TimeSignature *time_signature, const No
     if (time_signature == NULL || note_value == NULL || note_value_dots(note_value) != 0) {
         return false;
     }
-    int steps = note_value_exponent(note_value) - time_signature_bottom_unit_exponent(time_signature);
-    if (steps < 0) {
-        return false;
+    Duration *beat = NULL;
+    Duration *value = NULL;
+    bool ok = false;
+
+    if (standard_meter_beat_duration(time_signature, &beat) && note_value_duration(note_value, &value) == DURATION_OK) {
+        /* beat / value = (beat_n * value_d) / (beat_d * value_n); it must
+           come out as a whole number of values of at least one. */
+        unsigned long numerator = (unsigned long)duration_numerator(beat) * duration_denominator(value);
+        unsigned long denominator = duration_denominator(beat) * (unsigned long)duration_numerator(value);
+        if (numerator >= denominator && numerator % denominator == 0) {
+            *out_count = numerator / denominator;
+            ok = true;
+        }
     }
-    *out_count = 1UL << steps;
-    return true;
+
+    duration_destroy(beat);
+    duration_destroy(value);
+    return ok;
 }
 
 bool standard_meter_beam_group_within_beat(const TimeSignature *time_signature, const Duration *start,
@@ -55,22 +69,23 @@ bool standard_meter_beam_group_within_beat(const TimeSignature *time_signature, 
         return false;
     }
 
-    /* beat k (0-based) spans [k, k + 1) / 2^e of a whole note; start is
-       n/d, so k = floor(n * 2^e / d). */
-    unsigned long beat_scale = 1UL << time_signature_bottom_unit_exponent(time_signature);
-    unsigned long beat_index = ((unsigned long)duration_numerator(start) * beat_scale) / duration_denominator(start);
-    if (beat_index >= time_signature_top_number(time_signature)) {
+    unsigned beat_index;
+    bool on_beat;
+    if (!standard_meter_beat_at(time_signature, start, &beat_index, &on_beat)) {
         return false;
     }
 
+    /* the group must end by the start of the next beat */
     Duration *end = NULL;
-    if (duration_add(start, length, &end) != DURATION_OK) {
-        return false;
+    Duration *next_beat = NULL;
+    bool within = false;
+    if (duration_add(start, length, &end) == DURATION_OK &&
+        standard_meter_beat_start(time_signature, beat_index + 1, &next_beat)) {
+        within = duration_numerator(end) * (long)duration_denominator(next_beat) <=
+                 duration_numerator(next_beat) * (long)duration_denominator(end);
     }
 
-    /* end <= (k + 1) / 2^e  <=>  end_n * 2^e <= (k + 1) * end_d */
-    bool within = (unsigned long)duration_numerator(end) * beat_scale <=
-                  (beat_index + 1) * duration_denominator(end);
     duration_destroy(end);
+    duration_destroy(next_beat);
     return within;
 }
