@@ -5,7 +5,8 @@
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_METER_COUNTING_RULE_COUNT] = {
-    "counting-beats", "counting-divisions", "counting-subdivisions", "counting-finer", "counting-silent"};
+    "counting-beats",  "counting-divisions", "counting-subdivisions",
+    "counting-finer", "counting-silent",    "counting-dots"};
 
 static StandardMeterRulePair g_pairs[STANDARD_METER_COUNTING_RULE_COUNT];
 static bool g_built[STANDARD_METER_COUNTING_RULE_COUNT];
@@ -32,33 +33,49 @@ const Constraint *standard_meter_counting_constraint(StandardMeterCountingRule w
     return valid_rule(which) ? g_pairs[which].constraint : NULL;
 }
 
-/* American traditional counting, indexed by eighths of a beat. */
-static const char *const AMERICAN_SYLLABLES[STANDARD_METER_COUNT_GRID] = {NULL, "ta", "e", "ta", "+", "ta", "a", "ta"};
+/* American traditional counting, indexed by grid step within the beat. */
+static const char *const SIMPLE_SYLLABLES[STANDARD_METER_COUNT_GRID_SIMPLE] = {NULL, "ta", "e", "ta",
+                                                                              "+",  "ta", "a", "ta"};
+static const char *const COMPOUND_SYLLABLES[STANDARD_METER_COUNT_GRID_COMPOUND] = {NULL, "ta", "la",
+                                                                                  "ta",  "li", "ta"};
 
 bool standard_meter_count(const TimeSignature *time_signature, const Duration *offset, StandardMeterCount *out) {
     if (time_signature == NULL || offset == NULL) {
         return false;
     }
-
-    /* offset is n/d of a whole note and a beat is 1/2^e of one, so the
-       offset in eighths of a beat is n * 2^e * 8 / d. */
-    unsigned long grid = (unsigned long)duration_numerator(offset) *
-                         (1UL << time_signature_bottom_unit_exponent(time_signature)) * STANDARD_METER_COUNT_GRID;
-    unsigned long denominator = duration_denominator(offset);
-    if (grid % denominator != 0) {
+    MeterType type = standard_meter_type(time_signature);
+    unsigned beats;
+    Duration *beat = NULL;
+    if (type == METER_TYPE_UNCLASSIFIED || !standard_meter_beats_per_measure(time_signature, &beats) ||
+        !standard_meter_beat_duration(time_signature, &beat)) {
         return false;
     }
-    unsigned long units = grid / denominator;
+    unsigned parts = type == METER_TYPE_SIMPLE ? STANDARD_METER_COUNT_GRID_SIMPLE : STANDARD_METER_COUNT_GRID_COMPOUND;
 
-    unsigned long beat_index = units / STANDARD_METER_COUNT_GRID;
-    if (beat_index >= time_signature_top_number(time_signature)) {
+    /* offset in grid steps = offset / (beat / parts)
+                            = (offset_n * beat_d * parts) / (offset_d * beat_n) */
+    unsigned long numerator = (unsigned long)duration_numerator(offset) * duration_denominator(beat) * parts;
+    unsigned long denominator = duration_denominator(offset) * (unsigned long)duration_numerator(beat);
+    duration_destroy(beat);
+    if (numerator % denominator != 0) {
+        return false;
+    }
+    unsigned long units = numerator / denominator;
+
+    unsigned long beat_index = units / parts;
+    if (beat_index >= beats) {
         return false;
     }
 
     out->beat = (unsigned)beat_index + 1;
-    out->eighths = (unsigned)(units % STANDARD_METER_COUNT_GRID);
-    out->syllable = AMERICAN_SYLLABLES[out->eighths];
+    out->position = (unsigned)(units % parts);
+    out->parts = parts;
+    out->syllable = type == METER_TYPE_SIMPLE ? SIMPLE_SYLLABLES[out->position] : COMPOUND_SYLLABLES[out->position];
     return true;
+}
+
+bool standard_meter_dot_silences_beat(MeterType type) {
+    return type == METER_TYPE_SIMPLE;
 }
 
 bool standard_meter_count_text(const StandardMeterCount *count, bool articulated, char *buffer, size_t size) {
