@@ -20,7 +20,10 @@
  *               boundary shows the beat.
  *
  * A note that starts on a beat is not split, however many beats it spans
- * (a half note on beat 1 of 4/4 is written as one note). This is a
+ * (a half note on beat 1 of 4/4 is written as one note). Beats follow the
+ * meter class: in 6/8 a beat is a dotted quarter, so an eighth note
+ * starting on the second division and running a sixteenth into the next
+ * beat is split at the beat line. This is a
  * clarity convention, not an obligation: a tie across the beat is the
  * clearer way to write the rhythm, not the only legal one.
  */
@@ -40,8 +43,8 @@ const Constraint *standard_meter_beat_tie_constraint(StandardMeterBeatTieRule wh
  * the part up to that boundary (the second part is the rest). Returns
  * false, leaving *out_first untouched, when there is nothing to split
  * -- it starts on a beat, or ends by the next boundary -- when the start
- * is outside the measure, or on allocation failure. On success the
- * caller owns *out_first.
+ * is outside the measure, the signature is unclassified, or on
+ * allocation failure. On success the caller owns *out_first.
  */
 bool standard_meter_beat_split(const TimeSignature *time_signature, const Duration *start, const Duration *length,
                                Duration **out_first);

@@ -47,11 +47,11 @@ static void test_split_across_beat(void) {
     assert(n == 1 && d == 8);
     time_signature_destroy(four_four);
 
-    /* an eighth-note beat in 6/8-as-written (six eighth beats) */
-    TimeSignature *six_eight = make_signature(6, 3);
-    assert(split(six_eight, 1, 16, 1, 8, &n, &d));
+    /* an eighth-note beat in 3/8 */
+    TimeSignature *three_eight = make_signature(3, 3);
+    assert(split(three_eight, 1, 16, 1, 8, &n, &d));
     assert(n == 1 && d == 16);
-    time_signature_destroy(six_eight);
+    time_signature_destroy(three_eight);
 }
 
 /* Nothing to split: starts on a beat, or ends by the next boundary. */

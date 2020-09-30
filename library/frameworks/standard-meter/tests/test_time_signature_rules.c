@@ -64,7 +64,7 @@ static void test_common_and_cut_time(void) {
 
     assert(standard_meter_symbol_signature(TIME_SIGNATURE_SYMBOL_CUT, &from_symbol));
     assert(time_signature_equals(from_symbol, two_two));
-    assert(standard_meter_grouping(time_signature_beats(from_symbol)) == METER_GROUPING_DUPLE);
+    assert(standard_meter_grouping(time_signature_top_number(from_symbol)) == METER_GROUPING_DUPLE);
     time_signature_destroy(from_symbol);
 
     from_symbol = NULL;

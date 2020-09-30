@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "grouping_rules.h"
+#include "meter_class_rules.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
 #include "time/duration.h"
@@ -14,8 +14,10 @@
  * measures (bars):
  *
  *   MEASURE_GROUP       a measure is exactly one beat group (duple,
- *                       triple, or quadruple), so its length is the beat
- *                       count times the beat unit
+ *                       triple, or quadruple) in both simple and compound
+ *                       meter, so its length is the top number times the
+ *                       bottom unit (6/8 is 3/4, two dotted-quarter
+ *                       beats)
  *   MULTI_MEASURE_REST  a rest of several full measures is written as one
  *                       symbol with the number of measures; it lasts that
  *                       many times the measure length
@@ -38,8 +40,9 @@ const Constraint *standard_meter_measure_constraint(StandardMeterMeasureRule whi
    caller owns *out. */
 bool standard_meter_measure_duration(const TimeSignature *time_signature, Duration **out);
 
-/* MEASURE_GROUP: the beat grouping one measure of this signature forms
-   (METER_GROUPING_NONE for a beat count other than 2, 3, or 4). */
+/* MEASURE_GROUP: the beat grouping one measure of this signature forms,
+   read through its meter class (4/4 and 12/8 are both quadruple;
+   METER_GROUPING_NONE when unclassified). */
 MeterGrouping standard_meter_measure_grouping(const TimeSignature *time_signature);
 
 /* MULTI_MEASURE_REST: the length of a rest of `measures` full measures.

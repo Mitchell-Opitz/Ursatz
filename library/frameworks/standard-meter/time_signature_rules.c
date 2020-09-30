@@ -39,21 +39,21 @@ bool standard_meter_beat_unit_is_usual(const TimeSignature *time_signature) {
     if (time_signature == NULL) {
         return false;
     }
-    unsigned number = time_signature_beat_unit_number(time_signature);
+    unsigned number = time_signature_bottom_number(time_signature);
     return number == 2 || number == 4 || number == 8;
 }
 
 bool standard_meter_is_simple(const TimeSignature *time_signature) {
     /* Every TimeSignature bottom number is already 1, 2, 4, 8, or 16. */
-    return time_signature != NULL && standard_meter_beats_are_simple(time_signature_beats(time_signature));
+    return time_signature != NULL && standard_meter_beats_are_simple(time_signature_top_number(time_signature));
 }
 
 TimeSignatureSymbol standard_meter_signature_symbol(const TimeSignature *time_signature) {
     if (time_signature == NULL) {
         return TIME_SIGNATURE_SYMBOL_NONE;
     }
-    unsigned beats = time_signature_beats(time_signature);
-    unsigned number = time_signature_beat_unit_number(time_signature);
+    unsigned beats = time_signature_top_number(time_signature);
+    unsigned number = time_signature_bottom_number(time_signature);
     if (beats == 4 && number == 4) {
         return TIME_SIGNATURE_SYMBOL_COMMON;
     }
