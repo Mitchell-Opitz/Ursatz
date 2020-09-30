@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "time/duration.h"
+
 /*
  * Tuplet: a ratio that fits `actual` notes into the time normally taken
  * by `normal` notes of the same written value -- 3:2 is a triplet (three
@@ -43,6 +45,22 @@ unsigned tuplet_actual(const Tuplet *tuplet);
 
 /* How many notes of the same value they replace. */
 unsigned tuplet_normal(const Tuplet *tuplet);
+
+/*
+ * The exact length of each note in the group, given the length the same
+ * note would have outside it: nominal * normal / actual. Three eighth
+ * notes in a triplet are 1/8 * 2/3 = 1/12 each. Leaves *out untouched on
+ * failure.
+ */
+DurationResult tuplet_note_duration(const Tuplet *tuplet, const Duration *nominal, Duration **out);
+
+/*
+ * The exact length of the whole group: actual notes of the scaled length,
+ * which is normal times the nominal length. A triplet of eighth notes
+ * spans 2/8, one quarter note; a triplet of quarter notes spans one half
+ * note. Leaves *out untouched on failure.
+ */
+DurationResult tuplet_span(const Tuplet *tuplet, const Duration *nominal, Duration **out);
 
 bool tuplet_equals(const Tuplet *a, const Tuplet *b);
 
