@@ -10,8 +10,19 @@ on standard-rhythm.
 
 ## Scope
 
-Simple meter, built on `TimeSignature` (`src/time/time_signature.h`: a
-beat count and an undotted beat unit):
+Simple and compound meter, built on `TimeSignature`
+(`src/time/time_signature.h`: a top number and an undotted bottom unit --
+the two numbers and nothing more; this framework reads them):
+
+- **Meter class** (`meter_class_rules.h`): top 2, 3, 4 is simple and 6, 9,
+  12 is compound, each duple, triple, or quadruple (six categories). Any
+  other top number is unclassified, not invalid. A simple top counts
+  beats; a compound top counts divisions, three to a beat, so the beat is
+  a dotted note (a dotted quarter over 8, a dotted half over 4, a dotted
+  eighth over 16). A simple beat divides into 2 then 4, a compound beat
+  into 3 then 6. The usual compound bottom numbers are 4, 8, 16.
+- **Beat grid** (`beat_grid.h`): where beats fall in a measure, from the
+  meter class, so beaming, ties, and counting work for both.
 
 - **Beats and grouping** (`grouping_rules.h`): the beat divides into
   two, then four; 2, 3, 4 beats per group are duple, triple, quadruple;
@@ -26,11 +37,14 @@ beat count and an undotted beat unit):
   measure, is counted as the end of an imaginary measure, and shortens
   the final measure by its length.
 - **Counting** (`counting_rules.h`): American traditional counting by
-  position in the beat -- "1 e + a", with "ta" one level finer, and
-  parentheses for beats not said aloud.
+  position in the beat -- simple "1 e + a" with "ta" one level finer,
+  compound "1 ta la ta li ta" -- and parentheses for beats not said
+  aloud. A dot parenthesizes a beat in simple meter but not in compound,
+  where the dotted note is the beat.
 - **Beaming** (`beaming_rules.h`): only eighth notes and shorter are
   beamed; how many of a value make a beat depends on the time signature;
-  a beam group stays inside one beat.
+  a beam group stays inside one beat, so sixteenths beam in sixes in 6/8
+  and in threes in 6/16.
 - **Beat ties** (`beat_tie_rules.h`): a note starting off the beat that
   runs past the next beat is split and tied there to show the beat.
 
@@ -43,8 +57,10 @@ called here.
 
 ## Not covered
 
-Compound meter, meter changes, tuplets, `MeterMap`, partial beams for
-mixed groupings, the vocal-music beaming convention, conducting patterns,
+Irregular meters (5/8, 7/8), meter changes, tuplets, `MeterMap`, partial beams for
+mixed groupings (including the common partial-beam variations), the
+vocal-music beaming convention, conducting patterns (the same for simple
+and compound),
 and engraving craft. That simple quadruple can feel like two groups of two
 is a perceptual ambiguity and is not asserted as a rule. Counting is
 American only; the syllables are a table so another system can be added.
