@@ -75,7 +75,7 @@ static void test_other_signatures(void) {
 
 static void test_count_declines(void) {
     TimeSignature *four_four = make_signature(4, 2);
-    StandardMeterCount count = {99, 99, NULL};
+    StandardMeterCount count = {99, 99, 99, NULL};
 
     Duration *end = make_duration(1, 1); /* at or past the end of the measure */
     Duration *past = make_duration(5, 4);
