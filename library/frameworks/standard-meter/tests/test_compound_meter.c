@@ -72,12 +72,14 @@ static void test_counting_other_division_units(void) {
 static void test_counting_triple_and_quadruple(void) {
     TimeSignature *nine_eight = make_signature(9, 3);
     assert_count(nine_eight, 3, 4, "3", 3);
-    assert_count(nine_eight, 7, 8, "li", 3);
+    assert_count(nine_eight, 7, 8, "la", 3);
+    assert_count(nine_eight, 1, 1, "li", 3);
     time_signature_destroy(nine_eight);
 
     TimeSignature *twelve_eight = make_signature(12, 3);
     assert_count(twelve_eight, 9, 8, "4", 4);
-    assert_count(twelve_eight, 5, 4, "li", 4);
+    assert_count(twelve_eight, 5, 4, "la", 4);
+    assert_count(twelve_eight, 11, 8, "li", 4);
     time_signature_destroy(twelve_eight);
 }
 
