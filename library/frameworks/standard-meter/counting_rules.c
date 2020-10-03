@@ -6,7 +6,7 @@
 
 static const char *const NAMES[STANDARD_METER_COUNTING_RULE_COUNT] = {
     "counting-beats",  "counting-divisions", "counting-subdivisions",
-    "counting-finer", "counting-silent",    "counting-dots"};
+    "counting-finer", "counting-silent",    "counting-dots",  "counting-borrowed"};
 
 static StandardMeterRulePair g_pairs[STANDARD_METER_COUNTING_RULE_COUNT];
 static bool g_built[STANDARD_METER_COUNTING_RULE_COUNT];
@@ -72,6 +72,23 @@ bool standard_meter_count(const TimeSignature *time_signature, const Duration *o
     out->parts = parts;
     out->syllable = type == METER_TYPE_SIMPLE ? SIMPLE_SYLLABLES[out->position] : COMPOUND_SYLLABLES[out->position];
     return true;
+}
+
+bool standard_meter_tuplet_count_syllable(const Tuplet *tuplet, unsigned index, const char **out_syllable) {
+    if (tuplet == NULL || index >= tuplet_actual(tuplet)) {
+        return false;
+    }
+    if (tuplet_actual(tuplet) == 3 && tuplet_normal(tuplet) == 2) {
+        /* the compound division: the beat, then "la" and "li" */
+        *out_syllable = index == 0 ? NULL : COMPOUND_SYLLABLES[index == 1 ? 2 : 4];
+        return true;
+    }
+    if (tuplet_actual(tuplet) == 2 && tuplet_normal(tuplet) == 3) {
+        /* the simple division: the beat, then "+" */
+        *out_syllable = index == 0 ? NULL : SIMPLE_SYLLABLES[4];
+        return true;
+    }
+    return false;
 }
 
 bool standard_meter_dot_silences_beat(MeterType type) {
