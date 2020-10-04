@@ -8,6 +8,7 @@ add_library(standard_meter
     anacrusis_rules.c
     counting_rules.c
     borrowed_rules.c
+    hypermeter_rules.c
     beat_grid.c
     beaming_rules.c
     beat_tie_rules.c
