@@ -9,6 +9,7 @@ add_library(standard_meter
     counting_rules.c
     borrowed_rules.c
     hypermeter_rules.c
+    syncopation_rules.c
     beat_grid.c
     beaming_rules.c
     beat_tie_rules.c
