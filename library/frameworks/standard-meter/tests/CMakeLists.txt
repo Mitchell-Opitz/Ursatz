@@ -38,6 +38,10 @@ add_executable(test_standard_meter_compound_meter test_compound_meter.c)
 target_link_libraries(test_standard_meter_compound_meter PRIVATE standard_meter)
 add_test(NAME standard_meter_compound_meter COMMAND test_standard_meter_compound_meter)
 
+add_executable(test_standard_meter_borrowed_rules test_borrowed_rules.c)
+target_link_libraries(test_standard_meter_borrowed_rules PRIVATE standard_meter)
+add_test(NAME standard_meter_borrowed_rules COMMAND test_standard_meter_borrowed_rules)
+
 add_executable(test_architecture_standard_meter test_architecture_standard_meter.c)
 add_test(NAME architecture_standard_meter COMMAND test_architecture_standard_meter
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
