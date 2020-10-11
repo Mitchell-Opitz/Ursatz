@@ -42,6 +42,14 @@ add_executable(test_standard_meter_borrowed_rules test_borrowed_rules.c)
 target_link_libraries(test_standard_meter_borrowed_rules PRIVATE standard_meter)
 add_test(NAME standard_meter_borrowed_rules COMMAND test_standard_meter_borrowed_rules)
 
+add_executable(test_standard_meter_hypermeter_rules test_hypermeter_rules.c)
+target_link_libraries(test_standard_meter_hypermeter_rules PRIVATE standard_meter)
+add_test(NAME standard_meter_hypermeter_rules COMMAND test_standard_meter_hypermeter_rules)
+
+add_executable(test_standard_meter_syncopation_rules test_syncopation_rules.c)
+target_link_libraries(test_standard_meter_syncopation_rules PRIVATE standard_meter)
+add_test(NAME standard_meter_syncopation_rules COMMAND test_standard_meter_syncopation_rules)
+
 add_executable(test_architecture_standard_meter test_architecture_standard_meter.c)
 add_test(NAME architecture_standard_meter COMMAND test_architecture_standard_meter
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
