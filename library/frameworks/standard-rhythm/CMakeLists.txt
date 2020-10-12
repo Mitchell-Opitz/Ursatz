@@ -7,6 +7,7 @@ add_library(standard_rhythm
     rest_rules.c
     dot_rules.c
     tie_rules.c
+    tuplet_rules.c
 )
 target_include_directories(standard_rhythm PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

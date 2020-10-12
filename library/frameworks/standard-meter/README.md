@@ -45,6 +45,20 @@ the two numbers and nothing more; this framework reads them):
   beamed; how many of a value make a beat depends on the time signature;
   a beam group stays inside one beat, so sixteenths beam in sixes in 6/8
   and in threes in 6/16.
+- **Borrowed divisions** (`borrowed_rules.h`): a triplet in a simple
+  meter and a duplet in a compound meter divide the beat the other way,
+  "borrowed" from the other class. A tuplet's metric level (beat,
+  subdivision, multi-beat) comes from its span against the beat; triplets
+  are typical at any level and duplets at the beat or a subdivision, as a
+  description, not a prohibition. Counting borrows the other class's
+  syllables: a triplet is "1 la li", a duplet "1 +".
+- **Hypermeter** (`hypermeter_rules.h`): groups of measures counted like
+  beats (duple, triple, quadruple hypermeter); the first is accented, and
+  in quadruple the third also is. Pure counting on a measure index.
+- **Syncopation** (`syncopation_rules.h`): off-beat accents, made by a
+  note sustained from off the beat across the next beat line (ties and
+  dots), a rest on the beat with notes only off it, or an accent on an
+  off-beat note. Inputs are plain positions, lengths, and an accent flag.
 - **Beat ties** (`beat_tie_rules.h`): a note starting off the beat that
   runs past the next beat is split and tied there to show the beat.
 
@@ -57,7 +71,7 @@ called here.
 
 ## Not covered
 
-Irregular meters (5/8, 7/8), meter changes, tuplets, `MeterMap`, partial beams for
+Irregular meters (5/8, 7/8), meter changes, `MeterMap`, partial beams for
 mixed groupings (including the common partial-beam variations), the
 vocal-music beaming convention, conducting patterns (the same for simple
 and compound),

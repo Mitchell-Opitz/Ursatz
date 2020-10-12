@@ -9,6 +9,7 @@
 #include "rules/rule.h"
 #include "time/duration.h"
 #include "time/time_signature.h"
+#include "time/tuplet.h"
 
 /*
  * Counting rules for standard-meter-v1: American traditional counting,
@@ -37,6 +38,12 @@
  *                 dotted note IS the beat (the beat is dotted), so a dot
  *                 never puts a beat in parentheses
  *
+ *   BORROWED      a tuplet is counted with the borrowed meter's division
+ *                 syllables: a triplet (three-way division, borrowed
+ *                 from compound) is "1 la li", a duplet (two-way
+ *                 division, borrowed from simple) is "1 and", written
+ *                 "1 +". Only triplets and duplets are named.
+ *
  * Simple meter is counted on a grid of eighths of a beat, compound on a
  * grid of sixths; a position finer than the grid is not counted. The
  * counting syllables are held as a table per meter type so another system
@@ -50,6 +57,7 @@ typedef enum {
     STANDARD_METER_COUNTING_RULE_FINER,
     STANDARD_METER_COUNTING_RULE_SILENT,
     STANDARD_METER_COUNTING_RULE_DOTS,
+    STANDARD_METER_COUNTING_RULE_BORROWED,
     STANDARD_METER_COUNTING_RULE_COUNT
 } StandardMeterCountingRule;
 
@@ -76,6 +84,15 @@ const Constraint *standard_meter_counting_constraint(StandardMeterCountingRule w
  * beat.
  */
 bool standard_meter_count(const TimeSignature *time_signature, const Duration *offset, StandardMeterCount *out);
+
+/*
+ * BORROWED: the syllable said for note `index` (0-based) of a tuplet
+ * played across one beat: NULL for index 0 (the beat number is said),
+ * "la" and "li" for a triplet's second and third notes, "+" for a
+ * duplet's second. False, leaving *out_syllable untouched, for any
+ * other tuplet, a NULL tuplet, or an index past the tuplet's count.
+ */
+bool standard_meter_tuplet_count_syllable(const Tuplet *tuplet, unsigned index, const char **out_syllable);
 
 /* DOTS: true when a dot leaves a beat uncounted and so puts it in
    parentheses (simple meter); false for compound meter, where a dotted

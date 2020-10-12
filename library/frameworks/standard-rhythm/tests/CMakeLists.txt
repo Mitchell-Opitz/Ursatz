@@ -26,6 +26,10 @@ add_executable(test_standard_rhythm_tie_rules test_tie_rules.c)
 target_link_libraries(test_standard_rhythm_tie_rules PRIVATE standard_rhythm)
 add_test(NAME standard_rhythm_tie_rules COMMAND test_standard_rhythm_tie_rules)
 
+add_executable(test_standard_rhythm_tuplet_rules test_tuplet_rules.c)
+target_link_libraries(test_standard_rhythm_tuplet_rules PRIVATE standard_rhythm)
+add_test(NAME standard_rhythm_tuplet_rules COMMAND test_standard_rhythm_tuplet_rules)
+
 add_executable(test_architecture_standard_rhythm test_architecture_standard_rhythm.c)
 add_test(NAME architecture_standard_rhythm COMMAND test_architecture_standard_rhythm
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

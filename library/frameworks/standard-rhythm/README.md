@@ -31,6 +31,12 @@ Rules about note and rest values, built on `NoteValue`
 - **Ties** (`tie_rules.h`): a tie joins notes of the same pitch, never
   rests; a tied-to note is not rearticulated; tied durations add (a half
   tied to a quarter is a dotted half).
+- **Tuplets** (`tuplet_rules.h`): built on `Tuplet` (`src/time/tuplet.h`,
+  a ratio of notes played to notes replaced). Three in the time of two is
+  a triplet, two in the time of three a duplet, anything else is an
+  unnamed tuplet; the number written over the group is the number of
+  notes played; the group lasts as long as the notes it replaces (a
+  triplet of eighths is a quarter, of quarters a half).
 
 Each rule has a backing `Rule`/`Constraint` pair referencing this
 Framework, plus a pure check function. `constraint_evaluate` is never
@@ -39,7 +45,8 @@ called here.
 ## Not covered
 
 Engraving craft (where a rest sits on the staff, notehead shape, stem
-length), beams, meter and time signatures, tuplets, and slurs. The tie
+length), beams, meter and time signatures (`frameworks/standard-meter/`),
+and slurs. The tie
 rules take pitches and values as plain inputs because the `Tie` entity
 holds only two NoteEvent ids; resolving them is the caller's job. Pitch is
 compared as written (`PitchSpelling` equality), so enharmonic respellings
