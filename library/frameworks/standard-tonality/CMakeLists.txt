@@ -1,0 +1,14 @@
+add_library(standard_tonality
+    framework.c
+    rule_pair.c
+)
+target_include_directories(standard_tonality PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/src
+)
+target_link_libraries(standard_tonality PUBLIC ursatz)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
