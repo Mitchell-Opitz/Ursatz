@@ -1,6 +1,8 @@
 add_library(standard_tonality
     framework.c
     rule_pair.c
+    tonal_pitch.c
+    major_scale_rules.c
 )
 target_include_directories(standard_tonality PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
