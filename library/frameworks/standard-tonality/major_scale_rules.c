@@ -102,7 +102,11 @@ bool standard_tonality_build_major_scale(const PitchSpelling *tonic,
             target += STEPS[i - 1];
         }
         int natural = STANDARD_TONALITY_SEMITONES_PER_OCTAVE * letter_octave + standard_tonality_letter_semitone(letter);
-        if (pitch_spelling_create(letter, target - natural, letter_octave, &built[i]) != PITCH_SPELLING_OK) {
+        int accidental = target - natural;
+        if (accidental < -2 || accidental > 2) {
+            goto fail;
+        }
+        if (pitch_spelling_create(letter, accidental, letter_octave, &built[i]) != PITCH_SPELLING_OK) {
             goto fail;
         }
         created++;
