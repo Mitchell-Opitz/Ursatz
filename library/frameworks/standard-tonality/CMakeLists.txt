@@ -4,6 +4,7 @@ add_library(standard_tonality
     tonal_pitch.c
     major_scale_rules.c
     scale_degree_rules.c
+    key_signature_rules.c
 )
 target_include_directories(standard_tonality PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
