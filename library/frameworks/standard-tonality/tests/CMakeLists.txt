@@ -1,0 +1,7 @@
+add_executable(test_standard_tonality_framework test_framework.c)
+target_link_libraries(test_standard_tonality_framework PRIVATE standard_tonality)
+add_test(NAME standard_tonality_framework COMMAND test_standard_tonality_framework)
+
+add_executable(test_architecture_standard_tonality test_architecture_standard_tonality.c)
+add_test(NAME architecture_standard_tonality COMMAND test_architecture_standard_tonality
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
