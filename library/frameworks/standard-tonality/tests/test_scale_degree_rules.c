@@ -118,7 +118,7 @@ static void test_a_flat_major_degrees(void) {
     PitchSpelling *tonic = spell(PITCH_LETTER_A, -1, 3);
     PitchSpelling *d_flat = spell(PITCH_LETTER_D, -1, 4);
     PitchSpelling *e_flat = spell(PITCH_LETTER_E, -1, 4);
-    PitchSpelling *g = spell(PITCH_LETTER_G, 0, 4);
+    PitchSpelling *g = spell(PITCH_LETTER_G, 0, 3);
     assert(standard_tonality_scale_degree_of(tonic, d_flat) == 4); /* subdominant: a fifth below A-flat */
     assert(standard_tonality_scale_degree_of(tonic, e_flat) == 5); /* dominant: a fifth above A-flat */
     assert(standard_tonality_scale_degree_of(tonic, g) == 7);      /* leading tone */
