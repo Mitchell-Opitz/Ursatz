@@ -101,8 +101,8 @@ static void test_neighbors_are_inverse(void) {
 static void test_neighbor_rejects_beyond_double_accidentals(void) {
     PitchLetter letter = PITCH_LETTER_C;
     int accidental = 0;
-    /* A fifth above G double-sharp is D triple-sharp. */
-    assert(!standard_tonality_circle_neighbor(PITCH_LETTER_G, 2, true, &letter, &accidental));
+    /* A fifth above B double-sharp is F triple-sharp. */
+    assert(!standard_tonality_circle_neighbor(PITCH_LETTER_B, 2, true, &letter, &accidental));
     assert(letter == PITCH_LETTER_C && accidental == 0);
     assert(!standard_tonality_circle_neighbor(PITCH_LETTER_C, 0, true, NULL, &accidental));
     assert(!standard_tonality_circle_neighbor(PITCH_LETTER_C, 0, true, &letter, NULL));
