@@ -43,6 +43,11 @@ Rules about where and how notation is placed on a staff:
   outward one, and a note on the middle line may be flagged either way.
 - **Seconds**: a harmonic second is drawn with the lower note on the
   left, whichever way the stem points.
+- **Key signatures**: sharps are added in the order F C G D A E B, flats
+  in the reverse order (so the flat order is the sharp order reversed);
+  an accidental in the signature applies to every note of its letter in
+  every octave; a key signature follows the clef and precedes the time
+  signature. Built on `KeySignature` (`src/pitch/`).
 
 Each rule has a backing `Rule`/`Constraint` pair referencing this
 Framework, plus a pure check function. `constraint_evaluate` is never
@@ -52,7 +57,9 @@ called here.
 
 Engraving craft (clef drawing steps, notehead shape/size/tilt, stem
 length, beam thickness), which notes are beamed (that is
-`frameworks/standard-meter/`), key signatures, single-line (percussion) staves, instrument clef conventions.
+`frameworks/standard-meter/`), which key a key signature belongs to (that is
+`frameworks/standard-tonality/`), the staff positions of individual signature
+accidentals (the zig-zag layout, which varies by clef), single-line (percussion) staves, instrument clef conventions.
 
 Rhythm (note and rest values, dots, ties) is `frameworks/standard-rhythm/`;
 meter, time signatures, counting, and beaming are

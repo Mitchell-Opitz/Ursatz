@@ -33,6 +33,7 @@ add_library(ursatz
     pitch/staff_position.c
     pitch/clef_resolution.c
     pitch/accidental.c
+    pitch/key_signature.c
     pitch/sounding_pitch.c
     events/event.c
     events/note_event.c

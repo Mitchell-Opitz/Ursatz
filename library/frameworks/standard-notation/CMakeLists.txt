@@ -14,6 +14,7 @@ add_library(standard_notation
     accidental_rules.c
     accidental_placement_rules.c
     enharmonic_rules.c
+    key_signature_rules.c
 )
 target_include_directories(standard_notation PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
