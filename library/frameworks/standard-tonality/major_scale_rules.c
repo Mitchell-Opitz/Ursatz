@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "rule_pair.h"
-#include "tonal_pitch.h"
+#include "scale_pattern.h"
 
 static const char *const NAMES[STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT] = {"major-scale-step-pattern",
                                                                              "major-scale-named-by-tonic"};
@@ -40,27 +40,7 @@ int standard_tonality_major_scale_step(size_t index) {
 }
 
 bool standard_tonality_is_major_scale(const PitchSpelling *const *notes, size_t count) {
-    if (notes == NULL || count != STANDARD_TONALITY_MAJOR_SCALE_NOTE_COUNT) {
-        return false;
-    }
-    for (size_t i = 0; i < count; i++) {
-        if (notes[i] == NULL) {
-            return false;
-        }
-    }
-
-    PitchLetter letter = pitch_spelling_letter(notes[0]);
-    for (size_t i = 0; i < STANDARD_TONALITY_MAJOR_SCALE_STEP_COUNT; i++) {
-        letter = standard_tonality_next_letter(letter);
-        if (pitch_spelling_letter(notes[i + 1]) != letter) {
-            return false;
-        }
-        int distance = standard_tonality_semitone_number(notes[i + 1]) - standard_tonality_semitone_number(notes[i]);
-        if (distance != STEPS[i]) {
-            return false;
-        }
-    }
-    return true;
+    return standard_tonality_is_scale_pattern(STEPS, STANDARD_TONALITY_MAJOR_SCALE_STEP_COUNT, notes, count);
 }
 
 bool standard_tonality_scale_closes_on_tonic(const PitchSpelling *first, const PitchSpelling *last) {
@@ -82,44 +62,5 @@ bool standard_tonality_same_scale_name(const PitchSpelling *a, const PitchSpelli
 
 bool standard_tonality_build_major_scale(const PitchSpelling *tonic,
                                          PitchSpelling *out[STANDARD_TONALITY_MAJOR_SCALE_NOTE_COUNT]) {
-    if (tonic == NULL) {
-        return false;
-    }
-
-    PitchSpelling *built[STANDARD_TONALITY_MAJOR_SCALE_NOTE_COUNT];
-    PitchLetter letter = pitch_spelling_letter(tonic);
-    int letter_octave = pitch_spelling_octave(tonic);
-    int target = standard_tonality_semitone_number(tonic);
-    size_t created = 0;
-
-    for (size_t i = 0; i < STANDARD_TONALITY_MAJOR_SCALE_NOTE_COUNT; i++) {
-        if (i > 0) {
-            PitchLetter next = standard_tonality_next_letter(letter);
-            if (next == PITCH_LETTER_C) {
-                letter_octave++;
-            }
-            letter = next;
-            target += STEPS[i - 1];
-        }
-        int natural = STANDARD_TONALITY_SEMITONES_PER_OCTAVE * letter_octave + standard_tonality_letter_semitone(letter);
-        int accidental = target - natural;
-        if (accidental < -2 || accidental > 2) {
-            goto fail;
-        }
-        if (pitch_spelling_create(letter, accidental, letter_octave, &built[i]) != PITCH_SPELLING_OK) {
-            goto fail;
-        }
-        created++;
-    }
-
-    for (size_t i = 0; i < STANDARD_TONALITY_MAJOR_SCALE_NOTE_COUNT; i++) {
-        out[i] = built[i];
-    }
-    return true;
-
-fail:
-    for (size_t i = 0; i < created; i++) {
-        pitch_spelling_destroy(built[i]);
-    }
-    return false;
+    return standard_tonality_build_scale_pattern(STEPS, STANDARD_TONALITY_MAJOR_SCALE_STEP_COUNT, tonic, out);
 }

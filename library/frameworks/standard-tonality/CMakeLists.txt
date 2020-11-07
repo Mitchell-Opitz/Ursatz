@@ -2,6 +2,7 @@ add_library(standard_tonality
     framework.c
     rule_pair.c
     tonal_pitch.c
+    scale_pattern.c
     major_scale_rules.c
     scale_degree_rules.c
     key_signature_rules.c

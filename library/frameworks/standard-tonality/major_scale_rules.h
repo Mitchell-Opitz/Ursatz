@@ -23,11 +23,8 @@
  * measured in 12-TET semitones (tonal_pitch.h): half step 1, whole
  * step 2.
  *
- * ASSUMPTION: a spelled scale uses each letter once in turn (C D E F G A
- * B C), which is what makes F-flat major a scale of F-flat G-flat A-flat
- * B-double-flat ... rather than one spelled with sharps. The pattern
- * rule alone cannot tell the two apart; the check below requires the
- * letters.
+ * The pattern check and the builder are scale_pattern.h, shared with the
+ * minor scales; that file states the one-letter-per-degree assumption.
  */
 
 #define STANDARD_TONALITY_MAJOR_SCALE_STEP_COUNT 7
