@@ -136,13 +136,24 @@ ScaleDegreeResult standard_tonality_build_scale_degree(int degree, EntityID *sca
         return SCALE_DEGREE_ERR_NULL_LABEL;
     }
 
+    char interpretation_id_value[128];
+    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "standard-tonality-scale-degree-%d", degree);
+
+    return standard_tonality_build_labeled_scale_degree(label, interpretation_id_value, "major-scale-degree-vocabulary",
+                                                        scale_target_id, pitch, out);
+}
+
+ScaleDegreeResult standard_tonality_build_labeled_scale_degree(const char *label, const char *interpretation_id_value,
+                                                               const char *method, EntityID *scale_target_id,
+                                                               PitchIdentity *pitch, ScaleDegree **out) {
+    if (label == NULL || label[0] == '\0' || interpretation_id_value == NULL || method == NULL) {
+        return SCALE_DEGREE_ERR_NULL_LABEL;
+    }
+
     const Framework *framework = standard_tonality_framework();
     if (framework == NULL) {
         return SCALE_DEGREE_ERR_ALLOC;
     }
-
-    char interpretation_id_value[128];
-    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "standard-tonality-scale-degree-%d", degree);
 
     EntityID *interpretation_id;
     if (entity_id_create(interpretation_id_value, &interpretation_id) != ENTITY_ID_OK) {
@@ -188,7 +199,7 @@ ScaleDegreeResult standard_tonality_build_scale_degree(int degree, EntityID *sca
     Interpretation *interpretation;
     InterpretationResult interpretation_result =
         interpretation_create(interpretation_id, scale_target_id, claim, NULL, NULL, framework_reference,
-                               uncertainty, "standard-tonality-v1", "major-scale-degree-vocabulary",
+                               uncertainty, "standard-tonality-v1", method,
                                INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation);
     if (interpretation_result != INTERPRETATION_OK) {
         provenance_reference_destroy(provenance);
