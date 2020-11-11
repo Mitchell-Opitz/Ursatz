@@ -6,6 +6,7 @@ add_library(standard_tonality
     major_scale_rules.c
     minor_scale_rules.c
     scale_degree_rules.c
+    minor_scale_degree_rules.c
     key_signature_rules.c
     circle_of_fifths_rules.c
 )
