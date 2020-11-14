@@ -8,6 +8,7 @@ add_library(standard_tonality
     scale_degree_rules.c
     minor_scale_degree_rules.c
     key_relationship_rules.c
+    minor_key_rules.c
     key_signature_rules.c
     circle_of_fifths_rules.c
 )
