@@ -25,6 +25,12 @@
  *                 most 7 sharps or flats; if it would need a double
  *                 sharp or double flat it is "imaginary" (F-flat major
  *                 needs B double-flat)
+ *   MINOR_RING    minor keys sit inside the circle beside the major key
+ *                 with the same signature (A minor beside C major); the
+ *                 circle's neighbor and enharmonic rules apply to them
+ *                 too, so the bottom three signatures also pair G-sharp
+ *                 and A-flat minor, D-sharp and E-flat minor, A-sharp
+ *                 and B-flat minor
  *
  * A major key is named by its tonic: a letter and a semitone accidental
  * offset. The signed accidental count of a key is its place on the
@@ -37,6 +43,7 @@ typedef enum {
     STANDARD_TONALITY_CIRCLE_RULE_NEIGHBORS,
     STANDARD_TONALITY_CIRCLE_RULE_ENHARMONIC,
     STANDARD_TONALITY_CIRCLE_RULE_REAL_IMAGINARY,
+    STANDARD_TONALITY_CIRCLE_RULE_MINOR_RING,
     STANDARD_TONALITY_CIRCLE_RULE_COUNT
 } StandardTonalityCircleRule;
 
@@ -64,6 +71,13 @@ bool standard_tonality_circle_neighbor(PitchLetter letter, int accidental, bool 
 /* ENHARMONIC: true when both keys are real, their tonics sound the same
    (12-TET), and they are named differently. */
 bool standard_tonality_major_keys_enharmonic(PitchLetter letter_a, int accidental_a, PitchLetter letter_b,
+                                             int accidental_b);
+
+/* MINOR_RING / ENHARMONIC: true when both minor keys are real, their
+   tonics sound the same (12-TET), and they are named differently. The
+   fifth-neighbor step (standard_tonality_circle_neighbor) takes a minor
+   tonic as it takes a major one. */
+bool standard_tonality_minor_keys_enharmonic(PitchLetter letter_a, int accidental_a, PitchLetter letter_b,
                                              int accidental_b);
 
 /*
