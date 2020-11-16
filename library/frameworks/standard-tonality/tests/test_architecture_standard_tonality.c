@@ -54,7 +54,10 @@ static int check_file(const char *path) {
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
             strcmp(start, "rule_pair.h") == 0 || strcmp(start, "tonal_pitch.h") == 0 ||
             strcmp(start, "major_scale_rules.h") == 0 || strcmp(start, "scale_degree_rules.h") == 0 ||
-            strcmp(start, "key_signature_rules.h") == 0 || strcmp(start, "circle_of_fifths_rules.h") == 0) {
+            strcmp(start, "key_signature_rules.h") == 0 || strcmp(start, "circle_of_fifths_rules.h") == 0 ||
+            strcmp(start, "scale_pattern.h") == 0 || strcmp(start, "minor_scale_rules.h") == 0 ||
+            strcmp(start, "minor_scale_degree_rules.h") == 0 || strcmp(start, "key_relationship_rules.h") == 0 ||
+            strcmp(start, "minor_key_rules.h") == 0) {
             continue;
         }
 
