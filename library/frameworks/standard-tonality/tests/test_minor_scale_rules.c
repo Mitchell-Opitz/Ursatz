@@ -149,16 +149,22 @@ static void test_invalid_arguments(void) {
     pitch_spelling_destroy(tonic);
 }
 
-/* Beyond a double accidental: the harmonic minor on G double-sharp needs
-   F triple-sharp. */
+/* Beyond a double accidental: the natural minor on E double-sharp and the
+   harmonic minor on G double-sharp both need a triple sharp. */
 static void test_build_rejects_scales_beyond_double_accidentals(void) {
-    PitchSpelling *tonic = spell(PITCH_LETTER_G, 2, 4);
+    PitchSpelling *e_double_sharp = spell(PITCH_LETTER_E, 2, 4);
+    PitchSpelling *g_double_sharp = spell(PITCH_LETTER_G, 2, 4);
     PitchSpelling *scale[NOTES] = {NULL};
-    assert(!standard_tonality_build_minor_scale(STANDARD_TONALITY_MINOR_NATURAL, tonic, scale));
+    assert(!standard_tonality_build_minor_scale(STANDARD_TONALITY_MINOR_NATURAL, e_double_sharp, scale));
+    assert(!standard_tonality_build_minor_scale(STANDARD_TONALITY_MINOR_HARMONIC, g_double_sharp, scale));
     for (size_t i = 0; i < NOTES; i++) {
         assert(scale[i] == NULL);
     }
-    pitch_spelling_destroy(tonic);
+    /* G double-sharp natural minor still fits within double accidentals. */
+    assert(standard_tonality_build_minor_scale(STANDARD_TONALITY_MINOR_NATURAL, g_double_sharp, scale));
+    destroy_scale(scale, NOTES);
+    pitch_spelling_destroy(e_double_sharp);
+    pitch_spelling_destroy(g_double_sharp);
 }
 
 /* Property: a minor scale's third is a half step lower than the major
