@@ -34,6 +34,28 @@ Rules about how pitches relate within a key:
   versus imaginary keys (imaginary needs a double sharp or flat: F-flat
   major needs B double-flat).
 
+- **Minor scales** (`minor_scale_rules.h`): natural W-H-W-W-H-W-W,
+  harmonic W-H-W-W-H-3H-H, melodic ascending W-H-W-W-W-W-H and
+  descending W-W-H-W-W-H-W (natural minor). A minor scale's third is a
+  half step below the major scale's on the same tonic. Descending scales
+  are listed from the upper tonic. Spelling rules are shared with major
+  (`scale_pattern.h`).
+- **Minor scale degrees** (`minor_scale_degree_rules.h`): same numbers as
+  major; solfege me, le, te (natural), ti for harmonic, la ti for melodic
+  ascending; the subtonic (te, a whole step below the tonic) beside the
+  leading tone (ti); lowered degrees versus major (natural 3, harmonic 2,
+  melodic ascending 1); a minor `ScaleDegree` builder.
+- **Key relationships** (`key_relationship_rules.h`): parallel keys share
+  a tonic; relative keys share a signature, the minor tonic three half
+  steps below the major's and spelled so the signature matches (D-flat
+  major's relative is B-flat minor, not A-sharp minor).
+- **Minor keys** (`minor_key_rules.h`): minor keys and signatures rest on
+  natural minor; the minor key of a signature; real versus imaginary
+  minor keys; the major and minor candidates a signature allows.
+- **Circle of fifths, minor ring**: minor keys beside the majors with the
+  same signature, fifth neighbors, and the enharmonic minor pairs (G-sharp
+  / A-flat, D-sharp / E-flat, A-sharp / B-flat).
+
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
 (`src/pitch/`), `Scale`, `ScaleDegree`, and `Key` stay the entity types;
@@ -45,8 +67,9 @@ called here.
 
 ## Not covered
 
-Minor scales (natural, harmonic, melodic), modes, the subtonic, fixed-do
-solfege, and key identification from music (`common-practice-minimal`
+Modes, fixed-do solfege, and choosing between a signature's major and
+minor key from the first and last notes: that is a judgement, not a
+rule, and belongs with key identification (`common-practice-minimal`
 keeps its own major and natural-minor vocabulary; the two are not yet
 unified).
 
