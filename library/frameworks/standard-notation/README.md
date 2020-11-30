@@ -47,7 +47,8 @@ Rules about where and how notation is placed on a staff:
   in the reverse order (so the flat order is the sharp order reversed);
   an accidental in the signature applies to every note of its letter in
   every octave; a key signature follows the clef and precedes the time
-  signature. Built on `KeySignature` (`src/pitch/`).
+  signature; a minor key's signature is its relative major's, so the order
+  and placement are the same. Built on `KeySignature` (`src/pitch/`).
 
 Each rule has a backing `Rule`/`Constraint` pair referencing this
 Framework, plus a pure check function. `constraint_evaluate` is never

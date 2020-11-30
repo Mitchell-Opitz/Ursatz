@@ -6,7 +6,7 @@
 
 static const char *const NAMES[STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT] = {
     "key-signature-sharp-order", "key-signature-flat-order", "key-signature-order-palindrome",
-    "key-signature-all-octaves", "key-signature-placement"};
+    "key-signature-all-octaves", "key-signature-placement", "key-signature-minor-same-order"};
 
 static StandardNotationRulePair g_pairs[STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT];
 static bool g_built[STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT];
@@ -95,6 +95,10 @@ bool standard_notation_key_signature_follows_order(const KeySignature *key_signa
         }
     }
     return true;
+}
+
+bool standard_notation_minor_key_signature_follows_order(const KeySignature *key_signature) {
+    return standard_notation_key_signature_follows_order(key_signature);
 }
 
 int standard_notation_key_signature_alteration(const KeySignature *key_signature, PitchLetter letter) {

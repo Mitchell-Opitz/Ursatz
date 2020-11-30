@@ -22,6 +22,10 @@
  *                 of its letter, in every octave
  *   PLACEMENT     a key signature follows the clef and precedes the time
  *                 signature (clef, key, time -- alphabetical)
+ *   MINOR_SAME_ORDER
+ *                 a minor key signature is its relative major's, so
+ *                 sharps and flats come in the same order, on the same
+ *                 lines and spaces, as in major
  *
  * Which key a signature belongs to is a tonal question, answered by
  * standard-tonality, not here. The staff positions of individual
@@ -37,6 +41,7 @@ typedef enum {
     STANDARD_NOTATION_KEY_SIGNATURE_RULE_ORDER_PALINDROME,
     STANDARD_NOTATION_KEY_SIGNATURE_RULE_ALL_OCTAVES,
     STANDARD_NOTATION_KEY_SIGNATURE_RULE_PLACEMENT,
+    STANDARD_NOTATION_KEY_SIGNATURE_RULE_MINOR_SAME_ORDER,
     STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT
 } StandardNotationKeySignatureRule;
 
@@ -62,6 +67,13 @@ bool standard_notation_key_signature_is_flats(const KeySignature *key_signature)
    flats, other accidentals, and out-of-order letters are false. False
    for NULL. */
 bool standard_notation_key_signature_follows_order(const KeySignature *key_signature);
+
+/* MINOR_SAME_ORDER: true when the signature of a minor key follows the
+   same order as major -- the same check as
+   standard_notation_key_signature_follows_order, which does not depend
+   on the mode. Which minor key a signature belongs to is a tonal
+   question (standard-tonality). False for NULL. */
+bool standard_notation_minor_key_signature_follows_order(const KeySignature *key_signature);
 
 /* ALL_OCTAVES: the semitone offset the signature applies to every note
    of `letter` in any octave; 0 when the letter is not in the signature.

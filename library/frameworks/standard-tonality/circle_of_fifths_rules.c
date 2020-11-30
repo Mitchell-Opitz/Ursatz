@@ -2,12 +2,13 @@
 
 #include <stddef.h>
 
+#include "minor_key_rules.h"
 #include "rule_pair.h"
 #include "tonal_pitch.h"
 
 static const char *const NAMES[STANDARD_TONALITY_CIRCLE_RULE_COUNT] = {
     "circle-of-fifths-order", "circle-of-fifths-neighbors", "circle-of-fifths-enharmonic",
-    "circle-of-fifths-real-imaginary"};
+    "circle-of-fifths-real-imaginary", "circle-of-fifths-minor-ring"};
 
 static StandardTonalityRulePair g_pairs[STANDARD_TONALITY_CIRCLE_RULE_COUNT];
 static bool g_built[STANDARD_TONALITY_CIRCLE_RULE_COUNT];
@@ -112,6 +113,18 @@ bool standard_tonality_major_keys_enharmonic(PitchLetter letter_a, int accidenta
                                              int accidental_b) {
     if (!standard_tonality_major_key_is_real(letter_a, accidental_a) ||
         !standard_tonality_major_key_is_real(letter_b, accidental_b)) {
+        return false;
+    }
+    if (letter_a == letter_b && accidental_a == accidental_b) {
+        return false;
+    }
+    return pitch_class(letter_a, accidental_a) == pitch_class(letter_b, accidental_b);
+}
+
+bool standard_tonality_minor_keys_enharmonic(PitchLetter letter_a, int accidental_a, PitchLetter letter_b,
+                                             int accidental_b) {
+    if (!standard_tonality_minor_key_is_real(letter_a, accidental_a) ||
+        !standard_tonality_minor_key_is_real(letter_b, accidental_b)) {
         return false;
     }
     if (letter_a == letter_b && accidental_a == accidental_b) {

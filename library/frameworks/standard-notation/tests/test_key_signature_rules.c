@@ -143,6 +143,27 @@ static void test_placement(void) {
     assert(!standard_notation_key_signature_placement_valid(0, 2, 2)); /* key on the time signature */
 }
 
+/* MINOR_SAME_ORDER: minor signatures are their relative majors', so the
+   same order holds -- A minor has none, E minor F-sharp, D minor B-flat. */
+static void test_minor_signatures_follow_the_same_order(void) {
+    for (size_t count = 0; count <= 7; count++) {
+        KeySignature *sharps = make_standard(1, count);
+        KeySignature *flats = make_standard(-1, count);
+        assert(standard_notation_minor_key_signature_follows_order(sharps));
+        assert(standard_notation_minor_key_signature_follows_order(flats));
+        assert(standard_notation_minor_key_signature_follows_order(sharps) ==
+               standard_notation_key_signature_follows_order(sharps));
+        key_signature_destroy(sharps);
+        key_signature_destroy(flats);
+    }
+
+    KeySignatureEntry swapped[] = {{PITCH_LETTER_C, 1}, {PITCH_LETTER_F, 1}};
+    KeySignature *out_of_order = make_signature(swapped, 2);
+    assert(!standard_notation_minor_key_signature_follows_order(out_of_order));
+    assert(!standard_notation_minor_key_signature_follows_order(NULL));
+    key_signature_destroy(out_of_order);
+}
+
 int main(void) {
     test_rules_reference_framework();
     test_sharp_order();
@@ -153,6 +174,7 @@ int main(void) {
     test_out_of_order_signatures_are_rejected();
     test_signature_applies_in_every_octave();
     test_placement();
+    test_minor_signatures_follow_the_same_order();
     printf("test_key_signature_rules (standard-notation): ok\n");
     return 0;
 }

@@ -86,4 +86,16 @@ int standard_tonality_scale_degree_of(const PitchSpelling *tonic, const PitchSpe
 ScaleDegreeResult standard_tonality_build_scale_degree(int degree, EntityID *scale_target_id, PitchIdentity *pitch,
                                                        ScaleDegree **out);
 
+/*
+ * The shared builder behind standard_tonality_build_scale_degree and the
+ * minor scale degree builder: a populated ScaleDegree labeled `label`,
+ * whose Interpretation has id interpretation_id_value and method
+ * `method`, under standard-tonality-v1. label, interpretation_id_value
+ * and method are copied and required (non-empty label). Same ownership
+ * as standard_tonality_build_scale_degree.
+ */
+ScaleDegreeResult standard_tonality_build_labeled_scale_degree(const char *label, const char *interpretation_id_value,
+                                                               const char *method, EntityID *scale_target_id,
+                                                               PitchIdentity *pitch, ScaleDegree **out);
+
 #endif
