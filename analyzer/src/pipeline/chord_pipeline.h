@@ -2,38 +2,30 @@
 #define URSATZ_ANALYZER_CHORD_PIPELINE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
-#include "events/note_event.h"
 #include "pipeline/key_pipeline.h"
 #include "pipeline/segmentation.h"
-#include "pitch/pitch_numeric_value.h"
 
 typedef struct {
     bool found;
     char *label; /* owned; NULL unless found */
-    AnalysisConfidence confidence; /* from ChordIdentification's Interpretation */
+    AnalysisConfidence confidence; /* from the best Chord's Interpretation */
 } ChordEstimate;
 
 /*
- * Identifies the chord for one SonorityGroup, given the previously
- * estimated key -- ChordIdentification takes each note's scale degree
- * as input (analysis/chord_identification.h), it does not derive
- * degrees from raw pitch itself, so this function computes them from
- * the estimated key's tonic and mode.
+ * Identifies the chord of every segment with Ursatz's weighted chord
+ * identification (common_practice_identify_weighted_sequence), in the
+ * estimated key. On success *out is an array of segmentation->segment_count
+ * estimates, owned by the caller (release each with chord_estimate_destroy,
+ * then free the array). Returns false only on allocation failure.
  *
- * JUDGMENT CALL: a note whose pitch class is not diatonic in the
- * estimated key (e.g. a chromatic passing tone) has no scale degree
- * and is dropped from the set passed to ChordIdentification, rather
- * than failing the whole sonority over one non-diatonic note.
- *
- * If key is NULL or not found, no scale degrees can be computed and
- * this returns found = false without calling the analyzer.
- *
- * Fills *out and returns true; returns false only when the label could
- * not be allocated. Release *out with chord_estimate_destroy.
+ * The library's weighted vocabulary is the major-key set, so a minor key,
+ * or no key, leaves every segment unmatched rather than reading it in a
+ * key it cannot name chords for. A segment whose best score is below the
+ * library's minimum coverage is likewise unmatched.
  */
-bool identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
-                              PitchNumericValue *const *pitch_values, const KeyEstimate *key, ChordEstimate *out);
+bool identify_chords(const Segmentation *segmentation, const KeyEstimate *key, ChordEstimate **out);
 
 void chord_estimate_destroy(ChordEstimate *estimate);
 

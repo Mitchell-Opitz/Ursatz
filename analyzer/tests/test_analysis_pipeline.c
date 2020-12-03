@@ -16,10 +16,11 @@
  * Fixture: a C-E-G chord (tick 0), then D, F, A, B played one at a
  * time (ticks 96, 192, 288, 384). The full note collection spans
  * exactly the seven C-major pitch classes, so the global key resolves
- * to "C major"; the opening chord's scale degrees (1, 3, 5) resolve to
- * "I". The single melody notes each have only one scale degree, which
- * cannot match any of the seven diatonic triads, so they report
- * "no match". A closing C-E-G-D group (tick 480) resolves to "I".
+ * to "C major". Ursatz's adaptive segmentation cuts one segment per
+ * beat, and weighted chord identification reads each as the chord built
+ * on its sounding root: C-E-G is "I", the single melody notes D, F, A, B
+ * are "ii", "IV", "vi" and "vii\xC2\xB0", and the closing C-E-G-D group
+ * (tick 480) is "I" again, the extra D being a non-chord tone.
  */
 
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
@@ -101,12 +102,13 @@ int main(void) {
     assert(strcmp(report.entries[0].chord_label, "I") == 0);
     assert(strcmp(report.entries[0].key_label, "C major") == 0);
 
+    const char *const melody_labels[4] = {"ii", "IV", "vi", "vii\xC2\xB0"};
     for (size_t i = 1; i < 5; i++) {
-        assert(strcmp(report.entries[i].chord_label, "no match") == 0);
+        assert(strcmp(report.entries[i].chord_label, melody_labels[i - 1]) == 0);
         assert(strcmp(report.entries[i].key_label, "C major") == 0);
     }
 
-    /* Ursatz PR #48 subset matching: the extra diatonic D is ignored. */
+    /* The extra diatonic D is weighed against the C-E-G, not matched whole. */
     assert(report.entries[5].time_numerator == 5);
     assert(report.entries[5].time_denominator == 4);
     assert(strcmp(report.entries[5].chord_label, "I") == 0);

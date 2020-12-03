@@ -205,7 +205,7 @@ int main(void) {
     const cJSON *chords = member(document, "chords");
     assert(cJSON_IsArray(chords));
     assert(cJSON_GetArraySize(chords) == 6);
-    static const char *const CHORD_LABELS[] = {"I", "no match", "no match", "no match", "no match", "I"};
+    static const char *const CHORD_LABELS[] = {"I", "ii", "IV", "vi", "vii\xC2\xB0", "I"};
     static const int NOTE_COUNTS[] = {3, 1, 1, 1, 1, 4};
     for (int i = 0; i < 6; i++) {
         const cJSON *chord = cJSON_GetArrayItem(chords, i);

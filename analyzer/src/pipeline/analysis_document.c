@@ -218,12 +218,9 @@ static cJSON *location_json(const MeterMap *map, Rational start, Rational end) {
 
 /* The shared claim fields, in schema order. ids NULL means every
    imported note. */
-static cJSON *claim_json(const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
-                         const char *label, AnalysisConfidence confidence) {
-    Rational start;
-    Rational end;
-    notes_span(notes, ids, id_count, &start, &end);
-
+static cJSON *claim_json_at(const char *framework, const ImportedNotes *notes, const size_t *ids,
+                            size_t id_count, Rational start, Rational end, const char *label,
+                            AnalysisConfidence confidence) {
     cJSON *claim = cJSON_CreateObject();
     if (claim && !(add(claim, "framework", cJSON_CreateString(framework)) &&
                    add(claim, "span", span_json(start, end)) &&
@@ -235,6 +232,14 @@ static cJSON *claim_json(const char *framework, const ImportedNotes *notes, cons
         return NULL;
     }
     return claim;
+}
+
+static cJSON *claim_json(const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
+                         const char *label, AnalysisConfidence confidence) {
+    Rational start;
+    Rational end;
+    notes_span(notes, ids, id_count, &start, &end);
+    return claim_json_at(framework, notes, ids, id_count, start, end, label, confidence);
 }
 
 static Rational time_rational(const MusicalTime *time) {
@@ -419,8 +424,10 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
     const char *framework = library_framework_name();
     for (size_t i = 0; i < report->entry_count; i++) {
         const AnalysisReportEntry *entry = &report->entries[i];
-        cJSON *claim = claim_json(framework, notes, entry->note_ids, entry->note_id_count, entry->chord_label,
-                                  entry->chord_confidence);
+        cJSON *claim = claim_json_at(
+            framework, notes, entry->note_ids, entry->note_id_count,
+            rational_make(entry->time_numerator, entry->time_denominator),
+            rational_make(entry->end_numerator, entry->end_denominator), entry->chord_label, entry->chord_confidence);
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);

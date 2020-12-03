@@ -4,7 +4,8 @@
 
 - **File:** Field 1.mid, 1191 notes.
 - **Key:** Eb major, inferred from the bass of the closing or opening chord.
-- **Chords:** 1107 chord events; 0 matched a chord (0%), 1107 did not.
+- **Chords:** 268 chord events; 262 matched a chord (98%), 6 did not.
+- **Most frequent chords:** I (82), dominant7 (38), V (34).
 
 ## Meter
 
@@ -18,1110 +19,271 @@
 
 Positions are measure and beat.
 
-- m. 1, beat 4 to m. 2, beat 1: no match
-- m. 2, beat 1 to m. 2, beat 1.33: no match
-- m. 2, beat 1.03 to m. 2, beat 4.06: no match
-- m. 2, beat 1.33 to m. 2, beat 2: no match
-- m. 2, beat 1.67 to m. 2, beat 1.99: no match
-- m. 2, beat 2 to m. 2, beat 2.67: no match
-- m. 2, beat 2.33 to m. 2, beat 3: no match
-- m. 2, beat 2.67 to m. 2, beat 2.99: no match
-- m. 2, beat 3 to m. 2, beat 4: no match
-- m. 2, beat 3.33 to m. 2, beat 4: no match
-- m. 2, beat 3.67 to m. 2, beat 3.99: no match
-- m. 2, beat 4 to m. 2, beat 4.67: no match
-- m. 2, beat 4.02 to m. 2, beat 4.95: no match
-- m. 2, beat 4.33 to m. 2, beat 4.66: no match
-- m. 2, beat 4.67 to m. 2, beat 4.99: no match
-- m. 2, beat 4.91 to m. 3, beat 1.05: no match
-- m. 3, beat 1 to m. 3, beat 1.33: no match
-- m. 3, beat 1.03 to m. 3, beat 1.99: no match
-- m. 3, beat 1.33 to m. 3, beat 2: no match
-- m. 3, beat 1.67 to m. 3, beat 1.99: no match
-- m. 3, beat 1.97 to m. 3, beat 3.01: no match
-- m. 3, beat 2 to m. 3, beat 2.67: no match
-- m. 3, beat 2.33 to m. 3, beat 3: no match
-- m. 3, beat 2.67 to m. 3, beat 2.99: no match
-- m. 3, beat 2.98 to m. 3, beat 4.03: no match
-- m. 3, beat 3 to m. 3, beat 4: no match
-- m. 3, beat 3.33 to m. 3, beat 4: no match
-- m. 3, beat 3.67 to m. 3, beat 3.99: no match
-- m. 3, beat 4 to m. 3, beat 4.33: no match
-- m. 3, beat 4.02 to m. 4, beat 1.08: no match
-- m. 3, beat 4.33 to m. 3, beat 4.66: no match
-- m. 3, beat 4.67 to m. 3, beat 4.99: no match
-- m. 4, beat 1 to m. 4, beat 1.33: no match
-- m. 4, beat 1.05 to m. 4, beat 2.61: no match
-- m. 4, beat 1.33 to m. 4, beat 2: no match
-- m. 4, beat 1.67 to m. 4, beat 1.99: no match
-- m. 4, beat 2 to m. 4, beat 3: no match
-- m. 4, beat 2.33 to m. 4, beat 3: no match
-- m. 4, beat 2.67 to m. 4, beat 2.99: no match
-- m. 4, beat 3 to m. 5, beat 1.02: no match
-- m. 4, beat 3.33 to m. 4, beat 4: no match
-- m. 4, beat 3.67 to m. 4, beat 3.99: no match
-- m. 4, beat 4 to m. 4, beat 4.67: no match
-- m. 4, beat 4.33 to m. 4, beat 4.66: no match
-- m. 4, beat 4.67 to m. 4, beat 4.99: no match
-- m. 5, beat 1 to m. 5, beat 1.33: no match
-- m. 5, beat 1.01 to m. 5, beat 4.57: no match
-- m. 5, beat 1.33 to m. 5, beat 2: no match
-- m. 5, beat 1.67 to m. 5, beat 1.99: no match
-- m. 5, beat 2 to m. 5, beat 3: no match
-- m. 5, beat 2.33 to m. 5, beat 3: no match
-- m. 5, beat 2.67 to m. 5, beat 2.99: no match
-- m. 5, beat 3 to m. 5, beat 3.67: no match
-- m. 5, beat 3.33 to m. 5, beat 4: no match
-- m. 5, beat 3.67 to m. 5, beat 3.99: no match
-- m. 5, beat 4 to m. 5, beat 4.67: no match
-- m. 5, beat 4.33 to m. 5, beat 4.66: no match
-- m. 5, beat 4.67 to m. 5, beat 4.99: no match
-- m. 6, beat 1 to m. 6, beat 4.07: no match
-- m. 6, beat 1.33 to m. 6, beat 2: no match
-- m. 6, beat 1.67 to m. 6, beat 1.99: no match
-- m. 6, beat 2 to m. 6, beat 3: no match
-- m. 6, beat 2.33 to m. 6, beat 3: no match
-- m. 6, beat 2.67 to m. 6, beat 2.99: no match
-- m. 6, beat 3 to m. 6, beat 4: no match
-- m. 6, beat 3.33 to m. 6, beat 4: no match
-- m. 6, beat 3.67 to m. 6, beat 3.99: no match
-- m. 6, beat 4 to m. 6, beat 4.67: no match
-- m. 6, beat 4.01 to m. 6, beat 4.98: no match
-- m. 6, beat 4.33 to m. 6, beat 4.66: no match
-- m. 6, beat 4.67 to m. 6, beat 4.99: no match
-- m. 7, beat 1 to m. 7, beat 1.33: no match
-- m. 7, beat 1.03 to m. 7, beat 2.03: no match
-- m. 7, beat 1.33 to m. 7, beat 2: no match
-- m. 7, beat 1.67 to m. 7, beat 1.99: no match
-- m. 7, beat 1.97 to m. 7, beat 3: no match
-- m. 7, beat 2 to m. 7, beat 2.67: no match
-- m. 7, beat 2.33 to m. 7, beat 3: no match
-- m. 7, beat 2.67 to m. 7, beat 2.99: no match
-- m. 7, beat 2.96 to m. 7, beat 4.01: no match
-- m. 7, beat 3 to m. 7, beat 3.67: no match
-- m. 7, beat 3.33 to m. 7, beat 4: no match
-- m. 7, beat 3.67 to m. 7, beat 3.99: no match
-- m. 7, beat 3.99 to m. 8, beat 1.05: no match
-- m. 7, beat 4 to m. 7, beat 4.33: no match
-- m. 7, beat 4.33 to m. 7, beat 4.66: no match
-- m. 7, beat 4.67 to m. 7, beat 4.99: no match
-- m. 8, beat 1 to m. 8, beat 1.33: no match
-- m. 8, beat 1.01 to m. 9, beat 2.04: no match
-- m. 8, beat 1.33 to m. 8, beat 2: no match
-- m. 8, beat 1.67 to m. 8, beat 1.99: no match
-- m. 8, beat 2 to m. 8, beat 2.67: no match
-- m. 8, beat 2.33 to m. 8, beat 3: no match
-- m. 8, beat 2.67 to m. 8, beat 2.99: no match
-- m. 8, beat 3 to m. 8, beat 4: no match
-- m. 8, beat 3.33 to m. 8, beat 4: no match
-- m. 8, beat 3.67 to m. 8, beat 3.99: no match
-- m. 8, beat 4 to m. 8, beat 4.67: no match
-- m. 8, beat 4.33 to m. 8, beat 4.66: no match
-- m. 8, beat 4.67 to m. 8, beat 4.99: no match
-- m. 9, beat 1 to m. 9, beat 1.33: no match
-- m. 9, beat 1.33 to m. 9, beat 2: no match
-- m. 9, beat 1.67 to m. 9, beat 1.99: no match
-- m. 9, beat 2 to m. 9, beat 2.67: no match
-- m. 9, beat 2.33 to m. 9, beat 3: no match
-- m. 9, beat 2.67 to m. 9, beat 2.99: no match
-- m. 9, beat 2.99 to m. 9, beat 4.69: no match
-- m. 9, beat 3 to m. 9, beat 4: no match
-- m. 9, beat 3.33 to m. 9, beat 4: no match
-- m. 9, beat 3.67 to m. 9, beat 3.99: no match
-- m. 9, beat 4 to m. 9, beat 4.67: no match
-- m. 9, beat 4.33 to m. 9, beat 4.66: no match
-- m. 9, beat 4.66 to m. 9, beat 4.76: no match
-- m. 9, beat 4.67 to m. 9, beat 4.99: no match
-- m. 10, beat 1 to m. 10, beat 1.33: no match
-- m. 10, beat 1.08 to m. 10, beat 2.14: no match
-- m. 10, beat 1.33 to m. 10, beat 2: no match
-- m. 10, beat 1.67 to m. 10, beat 1.99: no match
-- m. 10, beat 2 to m. 10, beat 2.67: no match
-- m. 10, beat 2.02 to m. 10, beat 4.02: no match
-- m. 10, beat 2.33 to m. 10, beat 3: no match
-- m. 10, beat 2.67 to m. 10, beat 2.99: no match
-- m. 10, beat 3 to m. 10, beat 4: no match
-- m. 10, beat 3.33 to m. 10, beat 4: no match
-- m. 10, beat 3.67 to m. 10, beat 3.99: no match
-- m. 10, beat 4 to m. 10, beat 4.67: no match
-- m. 10, beat 4.02 to m. 11, beat 1.02: no match
-- m. 10, beat 4.33 to m. 10, beat 4.66: no match
-- m. 10, beat 4.67 to m. 10, beat 4.99: no match
-- m. 10, beat 4.98 to m. 11, beat 1.64: no match
-- m. 11, beat 1 to m. 11, beat 1.33: no match
-- m. 11, beat 1.33 to m. 11, beat 2: no match
-- m. 11, beat 1.63 to m. 11, beat 1.78: no match
-- m. 11, beat 1.67 to m. 11, beat 1.99: no match
-- m. 11, beat 1.74 to m. 11, beat 1.86: no match
-- m. 11, beat 1.87 to m. 11, beat 2.01: no match
-- m. 11, beat 1.99 to m. 11, beat 2.05: no match
-- m. 11, beat 2 to m. 11, beat 2.67: no match
-- m. 11, beat 2.16 to m. 11, beat 2.26: no match
-- m. 11, beat 2.33 to m. 11, beat 2.66: no match
-- m. 11, beat 2.67 to m. 11, beat 2.99: no match
-- m. 11, beat 3 to m. 11, beat 4: no match
-- m. 11, beat 3.33 to m. 11, beat 4: no match
-- m. 11, beat 3.67 to m. 11, beat 3.99: no match
-- m. 11, beat 3.98 to m. 12, beat 1.04: no match
-- m. 11, beat 4 to m. 12, beat 1: no match
-- m. 11, beat 4.33 to m. 11, beat 4.66: no match
-- m. 11, beat 4.67 to m. 11, beat 4.99: no match
-- m. 12, beat 1 to m. 12, beat 1.33: no match
-- m. 12, beat 1.01 to m. 12, beat 2.04: no match
-- m. 12, beat 1.33 to m. 12, beat 2: no match
-- m. 12, beat 1.67 to m. 12, beat 1.99: no match
-- m. 12, beat 2 to m. 12, beat 2.67: no match
-- m. 12, beat 2.01 to m. 13, beat 1.04: no match
-- m. 12, beat 2.33 to m. 12, beat 3: no match
-- m. 12, beat 2.67 to m. 12, beat 2.99: no match
-- m. 12, beat 3 to m. 12, beat 4: no match
-- m. 12, beat 3.33 to m. 12, beat 4: no match
-- m. 12, beat 3.67 to m. 12, beat 3.99: no match
-- m. 12, beat 4 to m. 12, beat 4.67: no match
-- m. 12, beat 4.33 to m. 12, beat 4.66: no match
-- m. 12, beat 4.67 to m. 12, beat 4.99: no match
-- m. 13, beat 1 to m. 13, beat 1.33: no match
-- m. 13, beat 1.03 to m. 13, beat 2.04: no match
-- m. 13, beat 1.33 to m. 13, beat 2: no match
-- m. 13, beat 1.67 to m. 13, beat 1.99: no match
-- m. 13, beat 2 to m. 13, beat 2.67: no match
-- m. 13, beat 2.01 to m. 13, beat 2.83: no match
-- m. 13, beat 2.33 to m. 13, beat 3: no match
-- m. 13, beat 2.67 to m. 13, beat 2.99: no match
-- m. 13, beat 3 to m. 13, beat 4: no match
-- m. 13, beat 3.03 to m. 13, beat 3.41: no match
-- m. 13, beat 3.33 to m. 13, beat 4: no match
-- m. 13, beat 3.36 to m. 13, beat 4.64: no match
-- m. 13, beat 3.67 to m. 13, beat 3.99: no match
-- m. 13, beat 4 to m. 13, beat 4.67: no match
-- m. 13, beat 4.33 to m. 13, beat 4.66: no match
-- m. 13, beat 4.62 to m. 13, beat 4.76: no match
-- m. 13, beat 4.67 to m. 13, beat 4.99: no match
-- m. 14, beat 1 to m. 14, beat 1.33: no match
-- m. 14, beat 1.03 to m. 14, beat 2.02: no match
-- m. 14, beat 1.33 to m. 14, beat 2: no match
-- m. 14, beat 1.67 to m. 14, beat 1.99: no match
-- m. 14, beat 1.98 to m. 14, beat 3.66: no match
-- m. 14, beat 2 to m. 14, beat 2.67: no match
-- m. 14, beat 2.33 to m. 14, beat 3: no match
-- m. 14, beat 2.67 to m. 14, beat 2.99: no match
-- m. 14, beat 3 to m. 14, beat 4: no match
-- m. 14, beat 3.33 to m. 14, beat 4: no match
-- m. 14, beat 3.67 to m. 14, beat 3.99: no match
-- m. 14, beat 4 to m. 14, beat 4.67: no match
-- m. 14, beat 4.01 to m. 14, beat 4.97: no match
-- m. 14, beat 4.33 to m. 14, beat 4.66: no match
-- m. 14, beat 4.67 to m. 14, beat 4.99: no match
-- m. 15, beat 1 to m. 15, beat 1.59: no match
-- m. 15, beat 1.33 to m. 15, beat 2: no match
-- m. 15, beat 1.58 to m. 15, beat 1.73: no match
-- m. 15, beat 1.67 to m. 15, beat 1.99: no match
-- m. 15, beat 1.71 to m. 15, beat 1.82: no match
-- m. 15, beat 1.83 to m. 15, beat 1.96: no match
-- m. 15, beat 1.94 to m. 15, beat 2.01: no match
-- m. 15, beat 2 to m. 15, beat 2.67: no match
-- m. 15, beat 2.15 to m. 15, beat 4.04: no match
-- m. 15, beat 2.33 to m. 15, beat 3: no match
-- m. 15, beat 2.67 to m. 15, beat 2.99: no match
-- m. 15, beat 3 to m. 15, beat 4: no match
-- m. 15, beat 3.33 to m. 15, beat 4: no match
-- m. 15, beat 3.67 to m. 15, beat 3.99: no match
-- m. 15, beat 4 to m. 15, beat 4.67: no match
-- m. 15, beat 4.04 to m. 16, beat 1.04: no match
-- m. 15, beat 4.33 to m. 15, beat 4.66: no match
-- m. 15, beat 4.67 to m. 15, beat 4.99: no match
-- m. 16, beat 1 to m. 16, beat 1.67: no match
-- m. 16, beat 1.02 to m. 16, beat 3.44: no match
-- m. 16, beat 1.33 to m. 16, beat 1.66: no match
-- m. 16, beat 1.67 to m. 16, beat 1.99: no match
-- m. 16, beat 2 to m. 16, beat 2.33: no match
-- m. 16, beat 2.33 to m. 16, beat 2.66: no match
-- m. 16, beat 2.67 to m. 16, beat 2.99: no match
-- m. 16, beat 3 to m. 16, beat 3.33: no match
-- m. 16, beat 3.33 to m. 16, beat 3.66: no match
-- m. 16, beat 3.67 to m. 16, beat 3.99: no match
-- m. 16, beat 4 to m. 16, beat 4.33: no match
-- m. 16, beat 4.01 to m. 16, beat 4.39: no match
-- m. 16, beat 4.33 to m. 16, beat 4.69: no match
-- m. 16, beat 4.64 to m. 17, beat 1.02: no match
-- m. 16, beat 4.67 to m. 16, beat 4.99: no match
-- m. 17, beat 1 to m. 17, beat 1.67: no match
-- m. 17, beat 1.02 to m. 17, beat 1.71: no match
-- m. 17, beat 1.33 to m. 17, beat 1.66: no match
-- m. 17, beat 1.67 to m. 17, beat 1.99: no match
-- m. 17, beat 1.71 to m. 17, beat 2.07: no match
-- m. 17, beat 2 to m. 17, beat 2.33: no match
-- m. 17, beat 2.03 to m. 17, beat 3.66: no match
-- m. 17, beat 2.33 to m. 17, beat 3: no match
-- m. 17, beat 2.67 to m. 17, beat 2.99: no match
-- m. 17, beat 3 to m. 17, beat 3.67: no match
-- m. 17, beat 3.33 to m. 17, beat 3.66: no match
-- m. 17, beat 3.65 to m. 17, beat 4.06: no match
-- m. 17, beat 3.67 to m. 17, beat 3.99: no match
-- m. 17, beat 4 to m. 17, beat 4.33: no match
-- m. 17, beat 4.04 to m. 17, beat 4.64: no match
-- m. 17, beat 4.33 to m. 17, beat 4.66: no match
-- m. 17, beat 4.65 to m. 18, beat 1.07: no match
-- m. 17, beat 4.67 to m. 17, beat 4.99: no match
-- m. 18, beat 1 to m. 18, beat 1.67: no match
-- m. 18, beat 1.02 to m. 18, beat 1.62: no match
-- m. 18, beat 1.33 to m. 18, beat 1.66: no match
-- m. 18, beat 1.62 to m. 18, beat 1.77: no match
-- m. 18, beat 1.67 to m. 18, beat 1.99: no match
-- m. 18, beat 1.73 to m. 18, beat 1.88: no match
-- m. 18, beat 1.88 to m. 18, beat 2.06: no match
-- m. 18, beat 2 to m. 18, beat 2.33: no match
-- m. 18, beat 2.03 to m. 18, beat 2.65: no match
-- m. 18, beat 2.33 to m. 18, beat 2.66: no match
-- m. 18, beat 2.64 to m. 18, beat 3.03: no match
-- m. 18, beat 2.67 to m. 18, beat 2.99: no match
-- m. 18, beat 3 to m. 18, beat 3.67: no match
-- m. 18, beat 3.02 to m. 18, beat 3.53: no match
-- m. 18, beat 3.33 to m. 18, beat 3.66: no match
-- m. 18, beat 3.67 to m. 18, beat 3.99: no match
-- m. 18, beat 4 to m. 18, beat 4.33: no match
-- m. 18, beat 4.01 to m. 18, beat 4.38: no match
-- m. 18, beat 4.33 to m. 18, beat 4.66: no match
-- m. 18, beat 4.34 to m. 18, beat 4.72: no match
-- m. 18, beat 4.67 to m. 18, beat 4.99: no match
-- m. 18, beat 4.68 to m. 19, beat 1.02: no match
-- m. 19, beat 1 to m. 19, beat 1.67: no match
-- m. 19, beat 1.03 to m. 19, beat 2.04: no match
-- m. 19, beat 1.33 to m. 19, beat 1.66: no match
-- m. 19, beat 1.67 to m. 19, beat 1.99: no match
-- m. 19, beat 2 to m. 19, beat 2.33: no match
-- m. 19, beat 2.01 to m. 19, beat 3.34: no match
-- m. 19, beat 2.33 to m. 19, beat 2.66: no match
-- m. 19, beat 2.67 to m. 19, beat 2.99: no match
-- m. 19, beat 3 to m. 19, beat 3.67: no match
-- m. 19, beat 3.33 to m. 19, beat 3.65: no match
-- m. 19, beat 3.33 to m. 19, beat 3.66: no match
-- m. 19, beat 3.65 to m. 19, beat 4.05: no match
-- m. 19, beat 3.67 to m. 19, beat 3.99: no match
-- m. 19, beat 4 to m. 19, beat 4.33: no match
-- m. 19, beat 4.01 to m. 19, beat 4.38: no match
-- m. 19, beat 4.33 to m. 19, beat 4.66: no match
-- m. 19, beat 4.34 to m. 19, beat 4.67: no match
-- m. 19, beat 4.67 to m. 20, beat 1.05: no match
-- m. 20, beat 1 to m. 20, beat 1.33: no match
-- m. 20, beat 1.01 to m. 20, beat 1.41: no match
-- m. 20, beat 1.33 to m. 20, beat 2: no match
-- m. 20, beat 1.67 to m. 20, beat 1.99: no match
-- m. 20, beat 2 to m. 20, beat 2.33: no match
-- m. 20, beat 2.33 to m. 20, beat 3.33: no match
-- m. 20, beat 2.67 to m. 20, beat 4: no match
-- m. 20, beat 3 to m. 20, beat 4: no match
-- m. 20, beat 3.98 to m. 20, beat 4.08: no match
-- m. 20, beat 4.04 to m. 20, beat 4.37: no match
-- m. 20, beat 4.37 to m. 20, beat 4.76: no match
-- m. 20, beat 4.71 to m. 21, beat 1.06: no match
-- m. 21, beat 1 to m. 21, beat 1.33: no match
-- m. 21, beat 1.02 to m. 21, beat 3.7: no match
-- m. 21, beat 1.33 to m. 21, beat 2: no match
-- m. 21, beat 1.67 to m. 21, beat 1.99: no match
-- m. 21, beat 2 to m. 21, beat 2.67: no match
-- m. 21, beat 2.33 to m. 21, beat 3: no match
-- m. 21, beat 2.67 to m. 21, beat 2.99: no match
-- m. 21, beat 3 to m. 21, beat 3.67: no match
-- m. 21, beat 3.33 to m. 21, beat 4: no match
-- m. 21, beat 3.67 to m. 21, beat 3.99: no match
-- m. 21, beat 4 to m. 21, beat 4.67: no match
-- m. 21, beat 4.01 to m. 21, beat 4.64: no match
-- m. 21, beat 4.33 to m. 21, beat 4.66: no match
-- m. 21, beat 4.67 to m. 21, beat 4.99: no match
-- m. 22, beat 1 to m. 22, beat 1.33: no match
-- m. 22, beat 1.02 to m. 22, beat 1.58: no match
-- m. 22, beat 1.33 to m. 22, beat 2: no match
-- m. 22, beat 1.59 to m. 22, beat 1.74: no match
-- m. 22, beat 1.67 to m. 22, beat 1.99: no match
-- m. 22, beat 1.72 to m. 22, beat 1.83: no match
-- m. 22, beat 1.82 to m. 22, beat 1.91: no match
-- m. 22, beat 1.92 to m. 22, beat 2.14: no match
-- m. 22, beat 2 to m. 22, beat 2.67: no match
-- m. 22, beat 2.09 to m. 22, beat 3.99: no match
-- m. 22, beat 2.33 to m. 22, beat 2.66: no match
-- m. 22, beat 2.67 to m. 22, beat 2.99: no match
-- m. 22, beat 3 to m. 22, beat 3.33: no match
-- m. 22, beat 3.33 to m. 22, beat 4: no match
-- m. 22, beat 3.67 to m. 22, beat 3.99: no match
-- m. 22, beat 3.97 to m. 23, beat 1.04: no match
-- m. 22, beat 4 to m. 22, beat 4.67: no match
-- m. 22, beat 4.33 to m. 22, beat 4.66: no match
-- m. 22, beat 4.67 to m. 22, beat 4.99: no match
-- m. 22, beat 4.99 to m. 23, beat 2.02: no match
-- m. 23, beat 1 to m. 23, beat 1.33: no match
-- m. 23, beat 1.33 to m. 23, beat 2: no match
-- m. 23, beat 1.67 to m. 23, beat 1.99: no match
-- m. 23, beat 1.97 to m. 23, beat 3.39: no match
-- m. 23, beat 2 to m. 23, beat 2.67: no match
-- m. 23, beat 2.33 to m. 23, beat 3: no match
-- m. 23, beat 2.67 to m. 23, beat 2.99: no match
-- m. 23, beat 3 to m. 23, beat 3.67: no match
-- m. 23, beat 3.33 to m. 23, beat 4: no match
-- m. 23, beat 3.37 to m. 23, beat 3.7: no match
-- m. 23, beat 3.67 to m. 23, beat 4.04: no match
-- m. 23, beat 4 to m. 23, beat 4.67: no match
-- m. 23, beat 4.02 to m. 23, beat 4.38: no match
-- m. 23, beat 4.33 to m. 23, beat 4.66: no match
-- m. 23, beat 4.64 to m. 24, beat 1.03: no match
-- m. 23, beat 4.67 to m. 23, beat 4.99: no match
-- m. 24, beat 1 to m. 24, beat 2: no match
-- m. 24, beat 1.33 to m. 24, beat 2: no match
-- m. 24, beat 1.67 to m. 24, beat 1.99: no match
-- m. 24, beat 1.97 to m. 24, beat 3.97: no match
-- m. 24, beat 2 to m. 24, beat 2.67: no match
-- m. 24, beat 2.33 to m. 24, beat 3: no match
-- m. 24, beat 2.67 to m. 24, beat 2.99: no match
-- m. 24, beat 3 to m. 24, beat 3.33: no match
-- m. 24, beat 3.33 to m. 24, beat 4: no match
-- m. 24, beat 3.67 to m. 24, beat 3.99: no match
-- m. 24, beat 3.98 to m. 24, beat 4.8: no match
-- m. 24, beat 4 to m. 24, beat 4.67: no match
-- m. 24, beat 4.33 to m. 24, beat 4.66: no match
-- m. 24, beat 4.67 to m. 24, beat 4.99: no match
-- m. 24, beat 4.79 to m. 25, beat 1.01: no match
-- m. 24, beat 4.98 to m. 25, beat 2.01: no match
-- m. 25, beat 1 to m. 25, beat 1.33: no match
-- m. 25, beat 1.33 to m. 25, beat 2: no match
-- m. 25, beat 1.67 to m. 25, beat 1.99: no match
-- m. 25, beat 1.98 to m. 25, beat 3.1: no match
-- m. 25, beat 2 to m. 25, beat 2.67: no match
-- m. 25, beat 2.33 to m. 25, beat 3: no match
-- m. 25, beat 2.67 to m. 25, beat 2.99: no match
-- m. 25, beat 3 to m. 25, beat 3.67: no match
-- m. 25, beat 3.32 to m. 25, beat 3.56: no match
-- m. 25, beat 3.33 to m. 25, beat 4: no match
-- m. 25, beat 3.64 to m. 25, beat 3.9: no match
-- m. 25, beat 3.67 to m. 25, beat 3.99: no match
-- m. 25, beat 4 to m. 25, beat 4.67: no match
-- m. 25, beat 4.01 to m. 25, beat 4.19: no match
-- m. 25, beat 4.33 to m. 25, beat 4.66: no match
-- m. 25, beat 4.36 to m. 25, beat 4.47: no match
-- m. 25, beat 4.66 to m. 25, beat 4.76: no match
-- m. 25, beat 4.67 to m. 25, beat 4.99: no match
-- m. 25, beat 4.99 to m. 26, beat 2.01: no match
-- m. 26, beat 1 to m. 26, beat 1.33: no match
-- m. 26, beat 1.33 to m. 26, beat 2: no match
-- m. 26, beat 1.67 to m. 26, beat 1.99: no match
-- m. 26, beat 2 to m. 26, beat 2.67: no match
-- m. 26, beat 2.01 to m. 26, beat 3.22: no match
-- m. 26, beat 2.33 to m. 26, beat 2.66: no match
-- m. 26, beat 2.67 to m. 26, beat 2.99: no match
-- m. 26, beat 3 to m. 26, beat 3.33: no match
-- m. 26, beat 3.02 to m. 26, beat 3.31: no match
-- m. 26, beat 3.33 to m. 26, beat 4: no match
-- m. 26, beat 3.34 to m. 26, beat 3.63: no match
-- m. 26, beat 3.67 to m. 26, beat 3.99: no match
-- m. 26, beat 4 to m. 26, beat 4.67: no match
-- m. 26, beat 4.33 to m. 26, beat 4.66: no match
-- m. 26, beat 4.63 to m. 26, beat 4.97: no match
-- m. 26, beat 4.67 to m. 26, beat 4.99: no match
-- m. 26, beat 4.96 to m. 27, beat 2.02: no match
-- m. 27, beat 1 to m. 27, beat 1.33: no match
-- m. 27, beat 1.33 to m. 27, beat 2: no match
-- m. 27, beat 1.67 to m. 27, beat 1.99: no match
-- m. 27, beat 2 to m. 27, beat 2.67: no match
-- m. 27, beat 2.01 to m. 27, beat 4.11: no match
-- m. 27, beat 2.33 to m. 27, beat 3: no match
-- m. 27, beat 2.67 to m. 27, beat 2.99: no match
-- m. 27, beat 3 to m. 27, beat 3.67: no match
-- m. 27, beat 3.33 to m. 27, beat 4: no match
-- m. 27, beat 3.67 to m. 27, beat 3.99: no match
-- m. 27, beat 4 to m. 27, beat 4.67: no match
-- m. 27, beat 4.33 to m. 27, beat 4.66: no match
-- m. 27, beat 4.67 to m. 27, beat 4.99: no match
-- m. 28, beat 1 to m. 28, beat 1.33: no match
-- m. 28, beat 1.33 to m. 28, beat 2: no match
-- m. 28, beat 1.67 to m. 28, beat 1.99: no match
-- m. 28, beat 1.98 to m. 28, beat 2.61: no match
-- m. 28, beat 2 to m. 28, beat 2.67: no match
-- m. 28, beat 2.33 to m. 28, beat 2.66: no match
-- m. 28, beat 2.67 to m. 28, beat 2.99: no match
-- m. 28, beat 3 to m. 28, beat 3.67: no match
-- m. 28, beat 3.33 to m. 28, beat 3.66: no match
-- m. 28, beat 3.67 to m. 28, beat 3.99: no match
-- m. 28, beat 4 to m. 28, beat 4.33: no match
-- m. 28, beat 4.01 to m. 28, beat 4.53: no match
-- m. 28, beat 4.33 to m. 28, beat 4.66: no match
-- m. 28, beat 4.67 to m. 28, beat 4.99: no match
-- m. 29, beat 1 to m. 29, beat 1.33: no match
-- m. 29, beat 1.02 to m. 29, beat 2.65: no match
-- m. 29, beat 1.33 to m. 29, beat 2: no match
-- m. 29, beat 1.67 to m. 29, beat 1.99: no match
-- m. 29, beat 2 to m. 29, beat 2.67: no match
-- m. 29, beat 2.33 to m. 29, beat 3: no match
-- m. 29, beat 2.67 to m. 29, beat 2.99: no match
-- m. 29, beat 3 to m. 29, beat 3.67: no match
-- m. 29, beat 3.01 to m. 29, beat 3.72: no match
-- m. 29, beat 3.33 to m. 29, beat 4: no match
-- m. 29, beat 3.67 to m. 29, beat 3.99: no match
-- m. 29, beat 3.99 to m. 29, beat 4.52: no match
-- m. 29, beat 4 to m. 29, beat 4.67: no match
-- m. 29, beat 4.33 to m. 29, beat 4.66: no match
-- m. 29, beat 4.67 to m. 29, beat 4.99: no match
-- m. 29, beat 4.83 to m. 29, beat 4.93: no match
-- m. 30, beat 1 to m. 30, beat 1.33: no match
-- m. 30, beat 1.03 to m. 30, beat 1.99: no match
-- m. 30, beat 1.33 to m. 30, beat 2: no match
-- m. 30, beat 1.67 to m. 30, beat 1.99: no match
-- m. 30, beat 1.98 to m. 30, beat 3.01: no match
-- m. 30, beat 2 to m. 30, beat 2.67: no match
-- m. 30, beat 2.33 to m. 30, beat 2.66: no match
-- m. 30, beat 2.67 to m. 30, beat 2.99: no match
-- m. 30, beat 2.98 to m. 30, beat 4.04: no match
-- m. 30, beat 3 to m. 30, beat 3.33: no match
-- m. 30, beat 3.33 to m. 30, beat 4: no match
-- m. 30, beat 3.67 to m. 30, beat 3.99: no match
-- m. 30, beat 4 to m. 30, beat 4.67: no match
-- m. 30, beat 4.01 to m. 31, beat 1.04: no match
-- m. 30, beat 4.33 to m. 30, beat 4.66: no match
-- m. 30, beat 4.67 to m. 30, beat 4.99: no match
-- m. 30, beat 4.99 to m. 31, beat 2.02: no match
-- m. 31, beat 1 to m. 31, beat 1.33: no match
-- m. 31, beat 1.33 to m. 31, beat 2: no match
-- m. 31, beat 1.67 to m. 31, beat 1.99: no match
-- m. 31, beat 1.99 to m. 31, beat 2.99: no match
-- m. 31, beat 2 to m. 31, beat 2.67: no match
-- m. 31, beat 2.33 to m. 31, beat 3: no match
-- m. 31, beat 2.67 to m. 31, beat 2.99: no match
-- m. 31, beat 3 to m. 31, beat 3.67: no match
-- m. 31, beat 3.33 to m. 31, beat 4: no match
-- m. 31, beat 3.67 to m. 31, beat 3.99: no match
-- m. 31, beat 4 to m. 31, beat 4.67: no match
-- m. 31, beat 4.33 to m. 31, beat 4.66: no match
-- m. 31, beat 4.67 to m. 31, beat 4.99: no match
-- m. 32, beat 1 to m. 32, beat 1.33: no match
-- m. 32, beat 1.33 to m. 32, beat 2: no match
-- m. 32, beat 1.67 to m. 32, beat 1.99: no match
-- m. 32, beat 2 to m. 32, beat 2.67: no match
-- m. 32, beat 2.33 to m. 32, beat 2.66: no match
-- m. 32, beat 2.67 to m. 32, beat 2.99: no match
-- m. 32, beat 3 to m. 32, beat 3.33: no match
-- m. 32, beat 3.02 to m. 32, beat 4.71: no match
-- m. 32, beat 3.33 to m. 32, beat 3.66: no match
-- m. 32, beat 3.67 to m. 32, beat 3.99: no match
-- m. 32, beat 4 to m. 32, beat 4.67: no match
-- m. 32, beat 4.33 to m. 32, beat 4.66: no match
-- m. 32, beat 4.67 to m. 33, beat 1.07: no match
-- m. 33, beat 1 to m. 33, beat 1.33: no match
-- m. 33, beat 1.05 to m. 33, beat 4.04: no match
-- m. 33, beat 1.33 to m. 33, beat 2: no match
-- m. 33, beat 1.67 to m. 33, beat 1.99: no match
-- m. 33, beat 2 to m. 33, beat 2.67: no match
-- m. 33, beat 2.33 to m. 33, beat 3: no match
-- m. 33, beat 2.67 to m. 33, beat 2.99: no match
-- m. 33, beat 3 to m. 33, beat 3.67: no match
-- m. 33, beat 3.33 to m. 33, beat 4: no match
-- m. 33, beat 3.67 to m. 33, beat 3.99: no match
-- m. 33, beat 4 to m. 33, beat 4.67: no match
-- m. 33, beat 4.01 to m. 34, beat 1.03: no match
-- m. 33, beat 4.33 to m. 33, beat 4.66: no match
-- m. 33, beat 4.67 to m. 33, beat 4.99: no match
-- m. 34, beat 1 to m. 34, beat 1.33: no match
-- m. 34, beat 1.04 to m. 34, beat 2.05: no match
-- m. 34, beat 1.33 to m. 34, beat 2: no match
-- m. 34, beat 1.67 to m. 34, beat 1.99: no match
-- m. 34, beat 2 to m. 34, beat 2.67: no match
-- m. 34, beat 2.01 to m. 34, beat 3.01: no match
-- m. 34, beat 2.33 to m. 34, beat 2.66: no match
-- m. 34, beat 2.67 to m. 34, beat 2.99: no match
-- m. 34, beat 3 to m. 34, beat 3.33: no match
-- m. 34, beat 3.01 to m. 34, beat 4.08: no match
-- m. 34, beat 3.33 to m. 34, beat 3.66: no match
-- m. 34, beat 3.67 to m. 34, beat 3.99: no match
-- m. 34, beat 4 to m. 34, beat 4.33: no match
-- m. 34, beat 4.04 to m. 35, beat 1.04: no match
-- m. 34, beat 4.33 to m. 34, beat 4.66: no match
-- m. 34, beat 4.67 to m. 34, beat 4.99: no match
-- m. 35, beat 1 to m. 35, beat 3.54: no match
-- m. 35, beat 1.33 to m. 35, beat 1.66: no match
-- m. 35, beat 1.67 to m. 35, beat 1.99: no match
-- m. 35, beat 2 to m. 35, beat 2.33: no match
-- m. 35, beat 2.33 to m. 35, beat 2.66: no match
-- m. 35, beat 2.67 to m. 35, beat 2.99: no match
-- m. 35, beat 3 to m. 35, beat 3.67: no match
-- m. 35, beat 3.33 to m. 35, beat 3.66: no match
-- m. 35, beat 3.67 to m. 35, beat 3.99: no match
-- m. 35, beat 4 to m. 35, beat 4.33: no match
-- m. 35, beat 4.03 to m. 35, beat 4.32: no match
-- m. 35, beat 4.33 to m. 35, beat 4.66: no match
-- m. 35, beat 4.34 to m. 35, beat 4.72: no match
-- m. 35, beat 4.67 to m. 35, beat 4.99: no match
-- m. 35, beat 4.7 to m. 36, beat 1.03: no match
-- m. 36, beat 1 to m. 36, beat 1.67: no match
-- m. 36, beat 1.01 to m. 36, beat 1.55: no match
-- m. 36, beat 1.33 to m. 36, beat 1.66: no match
-- m. 36, beat 1.67 to m. 36, beat 1.99: no match
-- m. 36, beat 1.99 to m. 36, beat 3.65: no match
-- m. 36, beat 2 to m. 36, beat 2.33: no match
-- m. 36, beat 2.33 to m. 36, beat 3: no match
-- m. 36, beat 2.67 to m. 36, beat 2.99: no match
-- m. 36, beat 3 to m. 36, beat 3.67: no match
-- m. 36, beat 3.33 to m. 36, beat 3.66: no match
-- m. 36, beat 3.67 to m. 36, beat 3.99: no match
-- m. 36, beat 3.94 to m. 36, beat 4.31: no match
-- m. 36, beat 4 to m. 36, beat 4.33: no match
-- m. 36, beat 4.32 to m. 36, beat 4.63: no match
-- m. 36, beat 4.33 to m. 36, beat 4.66: no match
-- m. 36, beat 4.63 to m. 36, beat 4.92: no match
-- m. 36, beat 4.67 to m. 36, beat 4.99: no match
-- m. 36, beat 4.97 to m. 37, beat 1.22: no match
-- m. 37, beat 1 to m. 37, beat 1.67: no match
-- m. 37, beat 1.33 to m. 37, beat 1.66: no match
-- m. 37, beat 1.67 to m. 37, beat 1.99: no match
-- m. 37, beat 1.99 to m. 37, beat 3.63: no match
-- m. 37, beat 2 to m. 37, beat 2.33: no match
-- m. 37, beat 2.33 to m. 37, beat 2.66: no match
-- m. 37, beat 2.67 to m. 37, beat 2.99: no match
-- m. 37, beat 3 to m. 37, beat 3.67: no match
-- m. 37, beat 3.33 to m. 37, beat 3.66: no match
-- m. 37, beat 3.67 to m. 37, beat 3.99: no match
-- m. 37, beat 4 to m. 37, beat 4.33: no match
-- m. 37, beat 4.04 to m. 37, beat 4.33: no match
-- m. 37, beat 4.33 to m. 37, beat 4.66: no match
-- m. 37, beat 4.37 to m. 37, beat 4.64: no match
-- m. 37, beat 4.67 to m. 37, beat 4.99: no match
-- m. 37, beat 4.67 to m. 37, beat 4.91: no match
-- m. 38, beat 1 to m. 38, beat 1.67: no match
-- m. 38, beat 1.33 to m. 38, beat 1.66: no match
-- m. 38, beat 1.34 to m. 38, beat 1.61: no match
-- m. 38, beat 1.67 to m. 38, beat 1.99: no match
-- m. 38, beat 1.68 to m. 38, beat 1.99: no match
-- m. 38, beat 1.98 to m. 38, beat 2.39: no match
-- m. 38, beat 2 to m. 38, beat 2.33: no match
-- m. 38, beat 2.33 to m. 38, beat 2.65: no match
-- m. 38, beat 2.33 to m. 38, beat 3: no match
-- m. 38, beat 2.66 to m. 38, beat 2.99: no match
-- m. 38, beat 2.67 to m. 38, beat 2.99: no match
-- m. 38, beat 2.97 to m. 38, beat 3.34: no match
-- m. 38, beat 3 to m. 38, beat 3.67: no match
-- m. 38, beat 3.31 to m. 38, beat 3.66: no match
-- m. 38, beat 3.33 to m. 38, beat 3.66: no match
-- m. 38, beat 3.66 to m. 38, beat 4.05: no match
-- m. 38, beat 3.67 to m. 38, beat 3.99: no match
-- m. 38, beat 4 to m. 38, beat 4.33: no match
-- m. 38, beat 4.01 to m. 38, beat 4.34: no match
-- m. 38, beat 4.33 to m. 38, beat 4.66: no match
-- m. 38, beat 4.64 to m. 39, beat 1.04: no match
-- m. 38, beat 4.67 to m. 38, beat 4.99: no match
-- m. 38, beat 4.99 to m. 39, beat 1.61: no match
-- m. 39, beat 1 to m. 39, beat 1.67: no match
-- m. 39, beat 1.33 to m. 39, beat 1.66: no match
-- m. 39, beat 1.6 to m. 39, beat 1.76: no match
-- m. 39, beat 1.67 to m. 39, beat 1.99: no match
-- m. 39, beat 1.73 to m. 39, beat 1.88: no match
-- m. 39, beat 1.88 to m. 39, beat 2.06: no match
-- m. 39, beat 2 to m. 39, beat 2.33: no match
-- m. 39, beat 2.01 to m. 39, beat 2.74: no match
-- m. 39, beat 2.33 to m. 39, beat 3: no match
-- m. 39, beat 2.67 to m. 39, beat 2.99: no match
-- m. 39, beat 2.74 to m. 39, beat 3.12: no match
-- m. 39, beat 3 to m. 39, beat 3.67: no match
-- m. 39, beat 3.13 to m. 39, beat 3.95: no match
-- m. 39, beat 3.33 to m. 39, beat 3.66: no match
-- m. 39, beat 3.67 to m. 39, beat 3.99: no match
-- m. 39, beat 4 to m. 39, beat 4.33: no match
-- m. 39, beat 4.09 to m. 39, beat 4.25: no match
-- m. 39, beat 4.17 to m. 39, beat 4.44: no match
-- m. 39, beat 4.33 to m. 39, beat 4.66: no match
-- m. 39, beat 4.44 to m. 39, beat 4.72: no match
-- m. 39, beat 4.67 to m. 39, beat 4.99: no match
-- m. 39, beat 4.69 to m. 40, beat 1.02: no match
-- m. 40, beat 1 to m. 40, beat 1.33: no match
-- m. 40, beat 1.02 to m. 40, beat 1.99: no match
-- m. 40, beat 1.33 to m. 40, beat 2: no match
-- m. 40, beat 1.67 to m. 40, beat 1.99: no match
-- m. 40, beat 1.98 to m. 40, beat 3.68: no match
-- m. 40, beat 2 to m. 40, beat 2.67: no match
-- m. 40, beat 2.29 to m. 40, beat 2.4: no match
-- m. 40, beat 2.33 to m. 40, beat 3: no match
-- m. 40, beat 2.67 to m. 40, beat 2.99: no match
-- m. 40, beat 3 to m. 40, beat 4: no match
-- m. 40, beat 3.33 to m. 40, beat 3.66: no match
-- m. 40, beat 3.67 to m. 40, beat 3.99: no match
-- m. 40, beat 3.89 to m. 40, beat 3.99: no match
-- m. 40, beat 3.97 to m. 40, beat 4.33: no match
-- m. 40, beat 4 to m. 40, beat 4.67: no match
-- m. 40, beat 4.33 to m. 40, beat 4.66: no match
-- m. 40, beat 4.61 to m. 40, beat 4.97: no match
-- m. 40, beat 4.67 to m. 40, beat 4.99: no match
-- m. 40, beat 4.99 to m. 41, beat 1.38: no match
-- m. 41, beat 1 to m. 41, beat 1.67: no match
-- m. 41, beat 1.33 to m. 41, beat 2: no match
-- m. 41, beat 1.67 to m. 41, beat 1.99: no match
-- m. 41, beat 2 to m. 41, beat 3.16: no match
-- m. 41, beat 2.33 to m. 41, beat 2.66: no match
-- m. 41, beat 2.67 to m. 41, beat 2.99: no match
-- m. 41, beat 3 to m. 41, beat 3.67: no match
-- m. 41, beat 3.07 to m. 41, beat 3.35: no match
-- m. 41, beat 3.33 to m. 41, beat 3.66: no match
-- m. 41, beat 3.37 to m. 41, beat 3.66: no match
-- m. 41, beat 3.64 to m. 41, beat 4.04: no match
-- m. 41, beat 3.66 to m. 41, beat 3.88: no match
-- m. 41, beat 3.67 to m. 41, beat 3.99: no match
-- m. 41, beat 3.96 to m. 41, beat 4.27: no match
-- m. 41, beat 4 to m. 41, beat 4.67: no match
-- m. 41, beat 4.28 to m. 41, beat 4.46: no match
-- m. 41, beat 4.29 to m. 41, beat 4.37: no match
-- m. 41, beat 4.33 to m. 42, beat 1: no match
-- m. 41, beat 4.66 to m. 41, beat 4.69: no match
-- m. 41, beat 4.67 to m. 41, beat 4.99: no match
-- m. 41, beat 4.99 to m. 42, beat 1.16: no match
-- m. 42, beat 1 to m. 42, beat 1.33: no match
-- m. 42, beat 1.01 to m. 42, beat 1.26: no match
-- m. 42, beat 1.07 to m. 42, beat 1.34: no match
-- m. 42, beat 1.33 to m. 42, beat 2: no match
-- m. 42, beat 1.63 to m. 42, beat 2.01: no match
-- m. 42, beat 1.67 to m. 42, beat 1.99: no match
-- m. 42, beat 1.99 to m. 42, beat 2.39: no match
-- m. 42, beat 2 to m. 42, beat 2.67: no match
-- m. 42, beat 2.33 to m. 42, beat 2.66: no match
-- m. 42, beat 2.36 to m. 42, beat 2.67: no match
-- m. 42, beat 2.67 to m. 42, beat 2.99: no match
-- m. 42, beat 2.68 to m. 42, beat 2.97: no match
-- m. 42, beat 2.99 to m. 42, beat 3.26: no match
-- m. 42, beat 3 to m. 42, beat 3.33: no match
-- m. 42, beat 3.32 to m. 42, beat 3.61: no match
-- m. 42, beat 3.33 to m. 42, beat 4: no match
-- m. 42, beat 3.63 to m. 42, beat 4.01: no match
-- m. 42, beat 3.67 to m. 42, beat 3.99: no match
-- m. 42, beat 3.98 to m. 42, beat 4.34: no match
-- m. 42, beat 4 to m. 42, beat 4.33: no match
-- m. 42, beat 4.33 to m. 42, beat 4.69: no match
-- m. 42, beat 4.67 to m. 42, beat 4.99: no match
-- m. 42, beat 4.69 to m. 43, beat 1.06: no match
-- m. 43, beat 1 to m. 43, beat 1.33: no match
-- m. 43, beat 1.03 to m. 43, beat 1.23: no match
-- m. 43, beat 1.33 to m. 43, beat 2: no match
-- m. 43, beat 1.67 to m. 43, beat 1.99: no match
-- m. 43, beat 1.97 to m. 43, beat 2.08: no match
-- m. 43, beat 2 to m. 43, beat 2.67: no match
-- m. 43, beat 2.33 to m. 43, beat 2.66: no match
-- m. 43, beat 2.67 to m. 43, beat 2.99: no match
-- m. 43, beat 2.97 to m. 43, beat 3.31: no match
-- m. 43, beat 2.98 to m. 43, beat 3.34: no match
-- m. 43, beat 3 to m. 43, beat 3.33: no match
-- m. 43, beat 3.33 to m. 43, beat 3.66: no match
-- m. 43, beat 4.07 to m. 44, beat 1.14: no match
-- m. 44, beat 1 to m. 44, beat 1.33: no match
-- m. 44, beat 1.11 to m. 44, beat 4.02: no match
-- m. 44, beat 1.33 to m. 44, beat 2: no match
-- m. 44, beat 1.67 to m. 44, beat 1.99: no match
-- m. 44, beat 2 to m. 44, beat 2.67: no match
-- m. 44, beat 2.33 to m. 44, beat 2.66: no match
-- m. 44, beat 2.67 to m. 44, beat 2.99: no match
-- m. 44, beat 3 to m. 44, beat 3.33: no match
-- m. 44, beat 3.33 to m. 44, beat 4: no match
-- m. 44, beat 3.67 to m. 44, beat 3.99: no match
-- m. 44, beat 3.97 to m. 44, beat 4.84: no match
-- m. 44, beat 4 to m. 44, beat 4.67: no match
-- m. 44, beat 4.33 to m. 44, beat 4.66: no match
-- m. 44, beat 4.67 to m. 44, beat 4.99: no match
-- m. 44, beat 4.82 to m. 44, beat 4.94: no match
-- m. 44, beat 4.93 to m. 45, beat 1.96: no match
-- m. 45, beat 1 to m. 45, beat 1.33: no match
-- m. 45, beat 1.33 to m. 45, beat 2: no match
-- m. 45, beat 1.67 to m. 45, beat 1.99: no match
-- m. 45, beat 1.94 to m. 45, beat 3.03: no match
-- m. 45, beat 2 to m. 45, beat 2.67: no match
-- m. 45, beat 2.33 to m. 45, beat 3: no match
-- m. 45, beat 2.67 to m. 45, beat 2.99: no match
-- m. 45, beat 3 to m. 45, beat 4: no match
-- m. 45, beat 3.01 to m. 45, beat 4.04: no match
-- m. 45, beat 3.33 to m. 45, beat 4: no match
-- m. 45, beat 3.67 to m. 45, beat 3.99: no match
-- m. 45, beat 4 to m. 45, beat 4.33: no match
-- m. 45, beat 4.04 to m. 46, beat 1.03: no match
-- m. 45, beat 4.33 to m. 45, beat 4.66: no match
-- m. 45, beat 4.67 to m. 45, beat 4.99: no match
-- m. 45, beat 4.99 to m. 46, beat 3.24: no match
-- m. 46, beat 1 to m. 46, beat 1.33: no match
-- m. 46, beat 1.33 to m. 46, beat 2: no match
-- m. 46, beat 1.67 to m. 46, beat 1.99: no match
-- m. 46, beat 2 to m. 46, beat 2.67: no match
-- m. 46, beat 2.33 to m. 46, beat 3: no match
-- m. 46, beat 2.67 to m. 46, beat 2.99: no match
-- m. 46, beat 3 to m. 46, beat 4.79: no match
-- m. 46, beat 3.33 to m. 46, beat 4: no match
-- m. 46, beat 3.67 to m. 46, beat 3.99: no match
-- m. 46, beat 4 to m. 46, beat 4.67: no match
-- m. 46, beat 4.33 to m. 46, beat 4.66: no match
-- m. 46, beat 4.67 to m. 46, beat 4.99: no match
-- m. 46, beat 4.99 to m. 47, beat 3.27: no match
-- m. 47, beat 1 to m. 47, beat 1.33: no match
-- m. 47, beat 1.33 to m. 47, beat 2: no match
-- m. 47, beat 1.67 to m. 47, beat 1.99: no match
-- m. 47, beat 2 to m. 47, beat 2.67: no match
-- m. 47, beat 2.33 to m. 47, beat 3: no match
-- m. 47, beat 2.67 to m. 47, beat 2.99: no match
-- m. 47, beat 3 to m. 47, beat 4: no match
-- m. 47, beat 3.33 to m. 47, beat 4: no match
-- m. 47, beat 3.34 to m. 47, beat 3.63: no match
-- m. 47, beat 3.66 to m. 47, beat 4.02: no match
-- m. 47, beat 3.67 to m. 47, beat 3.99: no match
-- m. 47, beat 3.99 to m. 47, beat 4.36: no match
-- m. 47, beat 4 to m. 47, beat 4.67: no match
-- m. 47, beat 4.33 to m. 47, beat 4.66: no match
-- m. 47, beat 4.36 to m. 47, beat 4.59: no match
-- m. 47, beat 4.67 to m. 47, beat 4.99: no match
-- m. 48, beat 1 to m. 48, beat 1.33: no match
-- m. 48, beat 1.03 to m. 48, beat 2.12: no match
-- m. 48, beat 1.33 to m. 48, beat 2: no match
-- m. 48, beat 1.67 to m. 48, beat 1.99: no match
-- m. 48, beat 2 to m. 48, beat 2.67: no match
-- m. 48, beat 2.08 to m. 48, beat 3.51: no match
-- m. 48, beat 2.33 to m. 48, beat 3: no match
-- m. 48, beat 2.67 to m. 48, beat 2.99: no match
-- m. 48, beat 3 to m. 48, beat 4: no match
-- m. 48, beat 3.17 to m. 48, beat 3.33: no match
-- m. 48, beat 3.33 to m. 48, beat 4: no match
-- m. 48, beat 3.5 to m. 48, beat 3.75: no match
-- m. 48, beat 3.67 to m. 48, beat 3.99: no match
-- m. 48, beat 3.83 to m. 48, beat 4.04: no match
-- m. 48, beat 4 to m. 48, beat 4.67: no match
-- m. 48, beat 4.17 to m. 48, beat 4.36: no match
-- m. 48, beat 4.33 to m. 48, beat 4.66: no match
-- m. 48, beat 4.5 to m. 48, beat 4.64: no match
-- m. 48, beat 4.67 to m. 48, beat 4.99: no match
-- m. 48, beat 4.83 to m. 49, beat 1: no match
-- m. 49, beat 1 to m. 49, beat 1.67: no match
-- m. 49, beat 1.33 to m. 49, beat 2: no match
-- m. 49, beat 1.5 to m. 49, beat 1.67: no match
-- m. 49, beat 1.67 to m. 49, beat 1.99: no match
-- m. 49, beat 1.83 to m. 49, beat 2: no match
-- m. 49, beat 2 to m. 49, beat 2.67: no match
-- m. 49, beat 2.17 to m. 49, beat 2.34: no match
-- m. 49, beat 2.33 to m. 49, beat 2.66: no match
-- m. 49, beat 2.5 to m. 49, beat 2.67: no match
-- m. 49, beat 2.67 to m. 49, beat 3: no match
-- m. 49, beat 2.83 to m. 49, beat 2.98: no match
-- m. 49, beat 3 to m. 49, beat 4: no match
-- m. 49, beat 3.33 to m. 49, beat 4: no match
-- m. 49, beat 3.5 to m. 49, beat 3.67: no match
-- m. 49, beat 3.67 to m. 49, beat 3.99: no match
-- m. 49, beat 3.83 to m. 49, beat 4.09: no match
-- m. 49, beat 4 to m. 49, beat 4.67: no match
-- m. 49, beat 4.17 to m. 49, beat 4.37: no match
-- m. 49, beat 4.33 to m. 49, beat 4.66: no match
-- m. 49, beat 4.5 to m. 49, beat 4.65: no match
-- m. 49, beat 4.67 to m. 49, beat 4.99: no match
-- m. 49, beat 4.83 to m. 49, beat 4.98: no match
-- m. 49, beat 4.92 to m. 50, beat 1.08: no match
-- m. 50, beat 1 to m. 50, beat 1.33: no match
-- m. 50, beat 1.08 to m. 50, beat 1.25: no match
-- m. 50, beat 1.17 to m. 50, beat 2: no match
-- m. 50, beat 1.33 to m. 50, beat 2: no match
-- m. 50, beat 1.67 to m. 50, beat 1.99: no match
-- m. 50, beat 2 to m. 50, beat 3: no match
-- m. 50, beat 2.33 to m. 50, beat 3: no match
-- m. 50, beat 2.67 to m. 50, beat 2.99: no match
-- m. 50, beat 3 to m. 50, beat 4: no match
-- m. 50, beat 3.33 to m. 50, beat 4: no match
-- m. 50, beat 3.67 to m. 50, beat 3.99: no match
-- m. 50, beat 4 to m. 50, beat 4.67: no match
-- m. 50, beat 4.33 to m. 50, beat 4.66: no match
-- m. 50, beat 4.67 to m. 50, beat 4.99: no match
-- m. 51, beat 1 to m. 51, beat 1.33: no match
-- m. 51, beat 1.33 to m. 51, beat 2: no match
-- m. 51, beat 1.67 to m. 51, beat 1.99: no match
-- m. 51, beat 2 to m. 51, beat 2.67: no match
-- m. 51, beat 2.33 to m. 51, beat 2.66: no match
-- m. 51, beat 2.67 to m. 51, beat 2.99: no match
-- m. 51, beat 3 to m. 51, beat 3.33: no match
-- m. 51, beat 3.33 to m. 51, beat 4: no match
-- m. 51, beat 3.67 to m. 51, beat 3.99: no match
-- m. 51, beat 3.98 to m. 51, beat 4.58: no match
-- m. 51, beat 4 to m. 51, beat 4.67: no match
-- m. 51, beat 4.33 to m. 51, beat 4.66: no match
-- m. 51, beat 4.63 to m. 51, beat 4.78: no match
-- m. 51, beat 4.67 to m. 52, beat 1.02: no match
-- m. 52, beat 1 to m. 52, beat 1.33: no match
-- m. 52, beat 1.02 to m. 52, beat 1.99: no match
-- m. 52, beat 1.33 to m. 52, beat 2: no match
-- m. 52, beat 1.67 to m. 52, beat 1.99: no match
-- m. 52, beat 1.97 to m. 52, beat 3.68: no match
-- m. 52, beat 2 to m. 52, beat 2.67: no match
-- m. 52, beat 2.33 to m. 52, beat 2.66: no match
-- m. 52, beat 2.67 to m. 52, beat 2.99: no match
-- m. 52, beat 3 to m. 52, beat 4: no match
-- m. 52, beat 3.33 to m. 52, beat 4: no match
-- m. 52, beat 3.67 to m. 52, beat 3.99: no match
-- m. 52, beat 4 to m. 52, beat 4.67: no match
-- m. 52, beat 4.01 to m. 52, beat 4.7: no match
-- m. 52, beat 4.33 to m. 52, beat 4.66: no match
-- m. 52, beat 4.67 to m. 52, beat 4.99: no match
-- m. 52, beat 4.72 to m. 52, beat 4.76: no match
-- m. 52, beat 4.98 to m. 53, beat 1.63: no match
-- m. 53, beat 1 to m. 53, beat 1.33: no match
-- m. 53, beat 1.33 to m. 53, beat 2: no match
-- m. 53, beat 1.61 to m. 53, beat 1.75: no match
-- m. 53, beat 1.67 to m. 53, beat 1.99: no match
-- m. 53, beat 1.72 to m. 53, beat 1.84: no match
-- m. 53, beat 1.85 to m. 53, beat 1.98: no match
-- m. 53, beat 1.97 to m. 53, beat 2.03: no match
-- m. 53, beat 2 to m. 53, beat 2.67: no match
-- m. 53, beat 2.13 to m. 53, beat 3.48: no match
-- m. 53, beat 2.33 to m. 53, beat 2.66: no match
-- m. 53, beat 2.67 to m. 53, beat 2.99: no match
-- m. 53, beat 3 to m. 53, beat 3.33: no match
-- m. 53, beat 3.33 to m. 53, beat 4: no match
-- m. 53, beat 3.67 to m. 53, beat 3.99: no match
-- m. 53, beat 4 to m. 54, beat 1.05: no match
-- m. 53, beat 4.33 to m. 53, beat 4.66: no match
-- m. 53, beat 4.67 to m. 53, beat 4.99: no match
-- m. 54, beat 1 to m. 54, beat 1.33: no match
-- m. 54, beat 1.02 to m. 54, beat 2.02: no match
-- m. 54, beat 1.33 to m. 54, beat 2: no match
-- m. 54, beat 1.67 to m. 54, beat 1.99: no match
-- m. 54, beat 1.98 to m. 54, beat 3.28: no match
-- m. 54, beat 2 to m. 54, beat 2.67: no match
-- m. 54, beat 2.33 to m. 54, beat 3: no match
-- m. 54, beat 2.67 to m. 54, beat 2.99: no match
-- m. 54, beat 3 to m. 54, beat 4: no match
-- m. 54, beat 3.33 to m. 54, beat 4: no match
-- m. 54, beat 3.67 to m. 54, beat 3.99: no match
-- m. 54, beat 4 to m. 54, beat 4.67: no match
-- m. 54, beat 4.33 to m. 54, beat 4.66: no match
-- m. 54, beat 4.67 to m. 54, beat 4.99: no match
-- m. 55, beat 1 to m. 55, beat 1.33: no match
-- m. 55, beat 1.02 to m. 55, beat 2.04: no match
-- m. 55, beat 1.33 to m. 55, beat 2: no match
-- m. 55, beat 1.67 to m. 55, beat 1.99: no match
-- m. 55, beat 2 to m. 55, beat 2.67: no match
-- m. 55, beat 2.01 to m. 55, beat 2.92: no match
-- m. 55, beat 2.33 to m. 55, beat 3: no match
-- m. 55, beat 2.67 to m. 55, beat 2.99: no match
-- m. 55, beat 3 to m. 55, beat 4.01: no match
-- m. 55, beat 3.33 to m. 55, beat 4: no match
-- m. 55, beat 3.67 to m. 55, beat 3.99: no match
-- m. 55, beat 3.96 to m. 55, beat 4.64: no match
-- m. 55, beat 4 to m. 55, beat 4.67: no match
-- m. 55, beat 4.33 to m. 55, beat 4.66: no match
-- m. 55, beat 4.64 to m. 55, beat 4.85: no match
-- m. 55, beat 4.67 to m. 55, beat 4.99: no match
-- m. 56, beat 1 to m. 56, beat 1.33: no match
-- m. 56, beat 1.01 to m. 56, beat 1.63: no match
-- m. 56, beat 1.33 to m. 56, beat 2: no match
-- m. 56, beat 1.62 to m. 56, beat 2.01: no match
-- m. 56, beat 1.67 to m. 56, beat 1.99: no match
-- m. 56, beat 2 to m. 56, beat 2.67: no match
-- m. 56, beat 2.01 to m. 56, beat 3.27: no match
-- m. 56, beat 2.33 to m. 56, beat 3: no match
-- m. 56, beat 2.67 to m. 56, beat 2.99: no match
-- m. 56, beat 3 to m. 56, beat 4: no match
-- m. 56, beat 3.17 to m. 56, beat 3.49: no match
-- m. 56, beat 3.33 to m. 56, beat 4: no match
-- m. 56, beat 3.5 to m. 56, beat 3.78: no match
-- m. 56, beat 3.67 to m. 56, beat 3.99: no match
-- m. 56, beat 3.83 to m. 56, beat 3.99: no match
-- m. 56, beat 4 to m. 56, beat 4.67: no match
-- m. 56, beat 4.17 to m. 56, beat 4.37: no match
-- m. 56, beat 4.33 to m. 56, beat 4.66: no match
-- m. 56, beat 4.5 to m. 56, beat 4.71: no match
-- m. 56, beat 4.67 to m. 56, beat 4.99: no match
-- m. 56, beat 4.83 to m. 57, beat 1.05: no match
-- m. 57, beat 1 to m. 57, beat 1.65: no match
-- m. 57, beat 1.33 to m. 57, beat 1.66: no match
-- m. 57, beat 1.44 to m. 57, beat 1.6: no match
-- m. 57, beat 1.58 to m. 57, beat 1.72: no match
-- m. 57, beat 1.67 to m. 57, beat 1.99: no match
-- m. 57, beat 1.72 to m. 57, beat 1.89: no match
-- m. 57, beat 1.86 to m. 57, beat 1.96: no match
-- m. 57, beat 2 to m. 57, beat 2.67: no match
-- m. 57, beat 2.02 to m. 57, beat 4.02: no match
-- m. 57, beat 2.33 to m. 57, beat 2.66: no match
-- m. 57, beat 2.67 to m. 57, beat 2.99: no match
-- m. 57, beat 3 to m. 57, beat 3.33: no match
-- m. 57, beat 3.33 to m. 57, beat 4: no match
-- m. 57, beat 3.67 to m. 57, beat 3.99: no match
-- m. 57, beat 4 to m. 57, beat 4.33: no match
-- m. 57, beat 4.01 to m. 58, beat 1.04: no match
-- m. 57, beat 4.33 to m. 57, beat 4.66: no match
-- m. 57, beat 4.67 to m. 57, beat 4.99: no match
-- m. 58, beat 1 to m. 58, beat 1.33: no match
-- m. 58, beat 1.01 to m. 58, beat 2.56: no match
-- m. 58, beat 1.33 to m. 58, beat 2: no match
-- m. 58, beat 1.67 to m. 58, beat 1.99: no match
-- m. 58, beat 2 to m. 58, beat 2.67: no match
-- m. 58, beat 2.33 to m. 58, beat 3: no match
-- m. 58, beat 2.67 to m. 58, beat 2.99: no match
-- m. 58, beat 3 to m. 58, beat 4: no match
-- m. 58, beat 3.33 to m. 58, beat 4: no match
-- m. 58, beat 3.67 to m. 58, beat 3.99: no match
-- m. 58, beat 4 to m. 58, beat 4.67: no match
-- m. 58, beat 4.33 to m. 58, beat 4.66: no match
-- m. 58, beat 4.67 to m. 58, beat 4.99: no match
-- m. 59, beat 1 to m. 59, beat 1.33: no match
-- m. 59, beat 1.03 to m. 59, beat 1.72: no match
-- m. 59, beat 1.33 to m. 59, beat 2: no match
-- m. 59, beat 1.35 to m. 59, beat 1.68: no match
-- m. 59, beat 1.67 to m. 59, beat 1.99: no match
-- m. 59, beat 1.7 to m. 59, beat 1.82: no match
-- m. 59, beat 2 to m. 59, beat 2.67: no match
-- m. 59, beat 2.02 to m. 59, beat 2.43: no match
-- m. 59, beat 2.33 to m. 59, beat 2.66: no match
-- m. 59, beat 2.34 to m. 59, beat 2.61: no match
-- m. 59, beat 2.64 to m. 59, beat 2.75: no match
-- m. 59, beat 2.67 to m. 59, beat 2.99: no match
-- m. 59, beat 2.99 to m. 59, beat 3.51: no match
-- m. 59, beat 3 to m. 59, beat 3.67: no match
-- m. 59, beat 3.33 to m. 59, beat 4: no match
-- m. 59, beat 3.34 to m. 59, beat 3.71: no match
-- m. 59, beat 3.67 to m. 59, beat 3.99: no match
-- m. 59, beat 3.67 to m. 59, beat 3.78: no match
-- m. 59, beat 3.99 to m. 59, beat 4.37: no match
-- m. 59, beat 4 to m. 59, beat 4.67: no match
-- m. 59, beat 4.33 to m. 59, beat 4.64: no match
-- m. 59, beat 4.33 to m. 59, beat 4.66: no match
-- m. 59, beat 4.64 to m. 60, beat 1.02: no match
-- m. 59, beat 4.67 to m. 59, beat 4.99: no match
-- m. 60, beat 1 to m. 60, beat 1.67: no match
-- m. 60, beat 1.33 to m. 60, beat 1.69: no match
-- m. 60, beat 1.65 to m. 60, beat 1.92: no match
-- m. 60, beat 1.67 to m. 60, beat 1.99: no match
-- m. 60, beat 2 to m. 60, beat 3: no match
-- m. 60, beat 2.02 to m. 60, beat 2.27: no match
-- m. 60, beat 2.31 to m. 60, beat 2.61: no match
-- m. 60, beat 2.33 to m. 60, beat 2.66: no match
-- m. 60, beat 2.63 to m. 60, beat 3.05: no match
-- m. 60, beat 2.67 to m. 60, beat 2.99: no match
-- m. 60, beat 2.99 to m. 60, beat 3.23: no match
-- m. 60, beat 3 to m. 60, beat 3.67: no match
-- m. 60, beat 3.2 to m. 60, beat 3.39: no match
-- m. 60, beat 3.33 to m. 60, beat 4: no match
-- m. 60, beat 3.39 to m. 60, beat 3.61: no match
-- m. 60, beat 3.57 to m. 60, beat 3.74: no match
-- m. 60, beat 3.67 to m. 60, beat 3.99: no match
-- m. 60, beat 3.83 to m. 60, beat 4.01: no match
-- m. 60, beat 4 to m. 60, beat 4.67: no match
-- m. 60, beat 4.17 to m. 60, beat 4.37: no match
-- m. 60, beat 4.33 to m. 60, beat 4.66: no match
-- m. 60, beat 4.43 to m. 60, beat 4.64: no match
-- m. 60, beat 4.58 to m. 60, beat 4.79: no match
-- m. 60, beat 4.67 to m. 60, beat 4.99: no match
-- m. 60, beat 4.72 to m. 60, beat 4.91: no match
-- m. 60, beat 4.92 to m. 61, beat 1.01: no match
-- m. 61, beat 1 to m. 61, beat 1.33: no match
-- m. 61, beat 1.13 to m. 61, beat 1.61: no match
-- m. 61, beat 1.33 to m. 61, beat 2: no match
-- m. 61, beat 1.34 to m. 61, beat 1.37: no match
-- m. 61, beat 1.39 to m. 61, beat 1.63: no match
-- m. 61, beat 1.66 to m. 61, beat 1.72: no match
-- m. 61, beat 1.67 to m. 61, beat 1.99: no match
-- m. 61, beat 1.97 to m. 61, beat 2.29: no match
-- m. 61, beat 2 to m. 61, beat 2.67: no match
-- m. 61, beat 2.3 to m. 61, beat 2.68: no match
-- m. 61, beat 2.33 to m. 61, beat 2.66: no match
-- m. 61, beat 2.66 to m. 61, beat 2.76: no match
-- m. 61, beat 2.67 to m. 61, beat 2.99: no match
-- m. 61, beat 3 to m. 61, beat 4: no match
-- m. 61, beat 3.31 to m. 61, beat 3.65: no match
-- m. 61, beat 3.33 to m. 61, beat 4: no match
-- m. 61, beat 3.67 to m. 61, beat 3.99: no match
-- m. 61, beat 4 to m. 62, beat 1: no match
-- m. 61, beat 4.01 to m. 61, beat 4.35: no match
-- m. 61, beat 4.33 to m. 61, beat 4.66: no match
-- m. 61, beat 4.34 to m. 61, beat 4.68: no match
-- m. 61, beat 4.67 to m. 62, beat 1.02: no match
-- m. 62, beat 1 to m. 62, beat 1.33: no match
-- m. 62, beat 1.01 to m. 62, beat 1.59: no match
-- m. 62, beat 1.33 to m. 62, beat 2: no match
-- m. 62, beat 1.58 to m. 62, beat 1.77: no match
-- m. 62, beat 1.67 to m. 62, beat 1.99: no match
-- m. 62, beat 1.73 to m. 62, beat 1.92: no match
-- m. 62, beat 1.92 to m. 62, beat 2.16: no match
-- m. 62, beat 2 to m. 62, beat 2.67: no match
-- m. 62, beat 2.11 to m. 62, beat 2.63: no match
-- m. 62, beat 2.33 to m. 62, beat 3: no match
-- m. 62, beat 2.63 to m. 62, beat 3.1: no match
-- m. 62, beat 2.67 to m. 62, beat 2.99: no match
-- m. 62, beat 3 to m. 62, beat 4: no match
-- m. 62, beat 3.03 to m. 62, beat 3.91: no match
-- m. 62, beat 3.33 to m. 62, beat 4: no match
-- m. 62, beat 3.67 to m. 62, beat 3.99: no match
-- m. 62, beat 4 to m. 62, beat 4.67: no match
-- m. 62, beat 4.33 to m. 63, beat 1: no match
-- m. 62, beat 4.67 to m. 62, beat 4.99: no match
-- m. 63, beat 1 to m. 63, beat 1.67: no match
-- m. 63, beat 1.02 to m. 63, beat 1.34: no match
-- m. 63, beat 1.33 to m. 63, beat 2: no match
-- m. 63, beat 1.34 to m. 63, beat 1.68: no match
-- m. 63, beat 1.66 to m. 63, beat 2.29: no match
-- m. 63, beat 1.67 to m. 63, beat 1.99: no match
-- m. 63, beat 2 to m. 63, beat 2.33: no match
-- m. 63, beat 2.31 to m. 63, beat 2.63: no match
-- m. 63, beat 2.33 to m. 63, beat 2.66: no match
-- m. 63, beat 2.67 to m. 63, beat 3.3: no match
-- m. 63, beat 3 to m. 63, beat 3.33: no match
-- m. 63, beat 3.29 to m. 63, beat 3.64: no match
-- m. 63, beat 3.33 to m. 63, beat 4: no match
-- m. 63, beat 3.67 to m. 63, beat 3.99: no match
-- m. 63, beat 3.67 to m. 63, beat 4.32: no match
-- m. 63, beat 4 to m. 63, beat 4.33: no match
-- m. 63, beat 4.31 to m. 63, beat 4.67: no match
-- m. 63, beat 4.33 to m. 64, beat 1: no match
-- m. 63, beat 4.65 to m. 64, beat 1.31: no match
-- m. 63, beat 4.67 to m. 63, beat 4.99: no match
-- m. 64, beat 1 to m. 64, beat 1.67: no match
-- m. 64, beat 1.32 to m. 64, beat 1.69: no match
-- m. 64, beat 1.33 to m. 64, beat 2: no match
-- m. 64, beat 1.65 to m. 64, beat 2.32: no match
-- m. 64, beat 1.67 to m. 64, beat 1.99: no match
-- m. 64, beat 2 to m. 64, beat 2.67: no match
-- m. 64, beat 2.32 to m. 64, beat 2.67: no match
-- m. 64, beat 2.33 to m. 64, beat 3: no match
-- m. 64, beat 2.64 to m. 64, beat 3.02: no match
-- m. 64, beat 2.67 to m. 64, beat 2.99: no match
-- m. 64, beat 3 to m. 64, beat 3.67: no match
-- m. 64, beat 3.33 to m. 64, beat 4: no match
-- m. 64, beat 3.67 to m. 64, beat 4.06: no match
-- m. 64, beat 4 to m. 64, beat 4.67: no match
-- m. 64, beat 4.33 to m. 64, beat 4.67: no match
-- m. 64, beat 4.63 to m. 65, beat 1.01: no match
-- m. 64, beat 4.67 to m. 64, beat 4.99: no match
-- m. 65, beat 1 to m. 65, beat 2.22: no match
-- m. 65, beat 1.33 to m. 65, beat 1.66: no match
-- m. 65, beat 1.67 to m. 65, beat 1.99: no match
-- m. 65, beat 2 to m. 65, beat 2.67: no match
-- m. 65, beat 2.17 to m. 65, beat 2.39: no match
-- m. 65, beat 2.33 to m. 65, beat 2.66: no match
-- m. 65, beat 2.5 to m. 65, beat 2.61: no match
-- m. 65, beat 2.67 to m. 65, beat 2.99: no match
-- m. 65, beat 2.83 to m. 65, beat 2.97: no match
-- m. 65, beat 3 to m. 65, beat 3.33: no match
-- m. 65, beat 3.17 to m. 65, beat 3.33: no match
-- m. 65, beat 3.33 to m. 65, beat 4: no match
-- m. 65, beat 3.5 to m. 65, beat 3.67: no match
-- m. 65, beat 3.67 to m. 65, beat 3.99: no match
-- m. 65, beat 3.83 to m. 65, beat 4: no match
-- m. 65, beat 4 to m. 65, beat 4.33: no match
-- m. 65, beat 4.17 to m. 65, beat 4.33: no match
-- m. 65, beat 4.33 to m. 65, beat 4.66: no match
-- m. 65, beat 4.5 to m. 65, beat 4.67: no match
-- m. 65, beat 4.67 to m. 65, beat 4.99: no match
-- m. 65, beat 4.83 to m. 66, beat 1: no match
-- m. 66, beat 1 to m. 66, beat 1.67: no match
-- m. 66, beat 1.33 to m. 66, beat 2: no match
-- m. 66, beat 1.67 to m. 66, beat 1.99: no match
-- m. 66, beat 2 to m. 66, beat 2.67: no match
-- m. 66, beat 2.04 to m. 66, beat 3.04: no match
-- m. 66, beat 2.05 to m. 66, beat 3.05: no match
-- m. 66, beat 2.33 to m. 66, beat 2.66: no match
-- m. 66, beat 2.67 to m. 66, beat 2.99: no match
-- m. 66, beat 2.98 to m. 66, beat 3.34: no match
-- m. 66, beat 2.99 to m. 66, beat 3.34: no match
-- m. 66, beat 3 to m. 66, beat 3.33: no match
-- m. 66, beat 3.33 to m. 66, beat 4: no match
-- m. 66, beat 3.67 to m. 66, beat 3.99: no match
-- m. 66, beat 3.99 to m. 66, beat 4.99: no match
-- m. 66, beat 4 to m. 67, beat 1: no match
-- m. 66, beat 4.33 to m. 66, beat 4.66: no match
-- m. 66, beat 4.67 to m. 66, beat 4.99: no match
-- m. 66, beat 4.99 to m. 67, beat 3.99: no match
-- m. 67, beat 1 to m. 67, beat 1.33: no match
-- m. 67, beat 1.33 to m. 67, beat 2: no match
-- m. 67, beat 1.67 to m. 67, beat 1.99: no match
-- m. 67, beat 2 to m. 67, beat 2.67: no match
-- m. 67, beat 2.33 to m. 67, beat 2.66: no match
-- m. 67, beat 2.67 to m. 67, beat 2.99: no match
-- m. 67, beat 3 to m. 67, beat 4: no match
+- m. 1, beat 4 to m. 2, beat 1: V
+- m. 2, beat 1 to m. 2, beat 2: I
+- m. 2, beat 2 to m. 2, beat 3: I
+- m. 2, beat 3 to m. 2, beat 4: I
+- m. 2, beat 4 to m. 3, beat 1: minor7
+- m. 3, beat 1 to m. 3, beat 2: V
+- m. 3, beat 2 to m. 3, beat 3: half-diminished7
+- m. 3, beat 3 to m. 3, beat 4: V
+- m. 3, beat 4 to m. 3, beat 4.33: dominant7
+- m. 3, beat 4.33 to m. 4, beat 1: V
+- m. 4, beat 1 to m. 4, beat 2: I
+- m. 4, beat 2 to m. 4, beat 3: I
+- m. 4, beat 3 to m. 4, beat 4: I
+- m. 4, beat 4 to m. 5, beat 1: I
+- m. 5, beat 1 to m. 5, beat 2: I
+- m. 5, beat 2 to m. 5, beat 3: I
+- m. 5, beat 3 to m. 5, beat 4: I
+- m. 5, beat 4 to m. 6, beat 1: I
+- m. 6, beat 1 to m. 6, beat 2: I
+- m. 6, beat 2 to m. 6, beat 3: I
+- m. 6, beat 3 to m. 6, beat 4: I
+- m. 6, beat 4 to m. 7, beat 1: minor7
+- m. 7, beat 1 to m. 7, beat 2: V
+- m. 7, beat 2 to m. 7, beat 3: half-diminished7
+- m. 7, beat 3 to m. 7, beat 4: V
+- m. 7, beat 4 to m. 8, beat 1: dominant7
+- m. 8, beat 1 to m. 8, beat 2: major7
+- m. 8, beat 2 to m. 8, beat 3: I
+- m. 8, beat 3 to m. 8, beat 4: I
+- m. 8, beat 4 to m. 9, beat 1: I
+- m. 9, beat 1 to m. 9, beat 2: I
+- m. 9, beat 2 to m. 9, beat 3: I
+- m. 9, beat 3 to m. 9, beat 4: I
+- m. 9, beat 4 to m. 10, beat 1: major7
+- m. 10, beat 1 to m. 10, beat 2: vii°
+- m. 10, beat 2 to m. 10, beat 3: IV
+- m. 10, beat 3 to m. 10, beat 4: IV
+- m. 10, beat 4 to m. 11, beat 1: no match
+- m. 11, beat 1 to m. 11, beat 2: dominant7
+- m. 11, beat 2 to m. 11, beat 3: dominant7
+- m. 11, beat 3 to m. 11, beat 4: vii°
+- m. 11, beat 4 to m. 12, beat 1: iii
+- m. 12, beat 1 to m. 12, beat 2: I
+- m. 12, beat 2 to m. 12, beat 3: I
+- m. 12, beat 3 to m. 12, beat 4: I
+- m. 12, beat 4 to m. 13, beat 1: I
+- m. 13, beat 1 to m. 13, beat 2: I
+- m. 13, beat 2 to m. 13, beat 3: minor7
+- m. 13, beat 3 to m. 13, beat 4: I
+- m. 13, beat 4 to m. 14, beat 1: major7
+- m. 14, beat 1 to m. 14, beat 2: half-diminished7
+- m. 14, beat 2 to m. 14, beat 3: IV
+- m. 14, beat 3 to m. 14, beat 4: IV
+- m. 14, beat 4 to m. 15, beat 1: no match
+- m. 15, beat 1 to m. 15, beat 2: V
+- m. 15, beat 2 to m. 15, beat 3: half-diminished7
+- m. 15, beat 3 to m. 15, beat 4: half-diminished7
+- m. 15, beat 4 to m. 16, beat 1: dominant7
+- m. 16, beat 1 to m. 16, beat 2: major7
+- m. 16, beat 2 to m. 16, beat 3: I
+- m. 16, beat 3 to m. 16, beat 4: I
+- m. 16, beat 4 to m. 17, beat 1: I
+- m. 17, beat 1 to m. 17, beat 2: half-diminished7
+- m. 17, beat 2 to m. 17, beat 3: dominant7
+- m. 17, beat 3 to m. 17, beat 4: minor7
+- m. 17, beat 4 to m. 18, beat 1: dominant7
+- m. 18, beat 1 to m. 18, beat 2: major7
+- m. 18, beat 2 to m. 18, beat 3: major7
+- m. 18, beat 3 to m. 18, beat 4: I
+- m. 18, beat 4 to m. 19, beat 1: I
+- m. 19, beat 1 to m. 19, beat 2: vii°
+- m. 19, beat 2 to m. 19, beat 3: half-diminished7
+- m. 19, beat 3 to m. 19, beat 4: half-diminished7
+- m. 19, beat 4 to m. 19, beat 4.33: iii
+- m. 19, beat 4.33 to m. 20, beat 1: dominant7
+- m. 20, beat 1 to m. 20, beat 2: I
+- m. 20, beat 2 to m. 20, beat 3: I
+- m. 20, beat 3 to m. 20, beat 4: I
+- m. 20, beat 4 to m. 20, beat 4.37: minor7
+- m. 20, beat 4.37 to m. 21, beat 1: major7
+- m. 21, beat 1 to m. 21, beat 2: V
+- m. 21, beat 2 to m. 21, beat 3: V
+- m. 21, beat 3 to m. 21, beat 4: V
+- m. 21, beat 4 to m. 22, beat 1: V
+- m. 22, beat 1 to m. 22, beat 2: minor7
+- m. 22, beat 2 to m. 22, beat 3: minor7
+- m. 22, beat 3 to m. 22, beat 4: minor7
+- m. 22, beat 4 to m. 23, beat 1: half-diminished7
+- m. 23, beat 1 to m. 23, beat 2: minor7
+- m. 23, beat 2 to m. 23, beat 3: V
+- m. 23, beat 3 to m. 23, beat 4: V
+- m. 23, beat 4 to m. 24, beat 1: minor7
+- m. 24, beat 1 to m. 24, beat 2: minor7
+- m. 24, beat 2 to m. 24, beat 3: V
+- m. 24, beat 3 to m. 24, beat 4: V
+- m. 24, beat 4 to m. 25, beat 1: minor7
+- m. 25, beat 1 to m. 25, beat 2: minor7
+- m. 25, beat 2 to m. 25, beat 3: minor7
+- m. 25, beat 3 to m. 25, beat 4: V
+- m. 25, beat 4 to m. 26, beat 1: V
+- m. 26, beat 1 to m. 26, beat 3: minor7
+- m. 26, beat 3 to m. 26, beat 4: vi
+- m. 26, beat 4 to m. 27, beat 1: minor7
+- m. 27, beat 1 to m. 27, beat 2: minor7
+- m. 27, beat 2 to m. 27, beat 3: V
+- m. 27, beat 3 to m. 27, beat 4: V
+- m. 27, beat 4 to m. 28, beat 1: V
+- m. 28, beat 1 to m. 28, beat 2: V
+- m. 28, beat 2 to m. 28, beat 3: V
+- m. 28, beat 3 to m. 28, beat 3.33: ii
+- m. 28, beat 3.33 to m. 28, beat 4: ii
+- m. 28, beat 4 to m. 29, beat 1: iii
+- m. 29, beat 1 to m. 29, beat 2: ii
+- m. 29, beat 2 to m. 29, beat 3: ii
+- m. 29, beat 3 to m. 29, beat 4: ii
+- m. 29, beat 4 to m. 30, beat 1: ii
+- m. 30, beat 1 to m. 30, beat 2: vi
+- m. 30, beat 2 to m. 30, beat 3: minor7
+- m. 30, beat 3 to m. 30, beat 4: vi
+- m. 30, beat 4 to m. 31, beat 1: dominant7
+- m. 31, beat 1 to m. 31, beat 2: minor7
+- m. 31, beat 2 to m. 31, beat 3: ii
+- m. 31, beat 3 to m. 31, beat 4: ii
+- m. 31, beat 4 to m. 32, beat 1: ii
+- m. 32, beat 1 to m. 32, beat 2: V
+- m. 32, beat 2 to m. 32, beat 3: dominant7
+- m. 32, beat 3 to m. 32, beat 4: iii
+- m. 32, beat 4 to m. 33, beat 1: dominant7
+- m. 33, beat 1 to m. 33, beat 2: I
+- m. 33, beat 2 to m. 33, beat 3: I
+- m. 33, beat 3 to m. 33, beat 4: minor7
+- m. 33, beat 4 to m. 34, beat 1: vi
+- m. 34, beat 1 to m. 34, beat 2: V
+- m. 34, beat 2 to m. 34, beat 3: dominant7
+- m. 34, beat 3 to m. 34, beat 4: V
+- m. 34, beat 4 to m. 35, beat 1: minor7
+- m. 35, beat 1 to m. 35, beat 2: I
+- m. 35, beat 2 to m. 35, beat 3: I
+- m. 35, beat 3 to m. 35, beat 4: I
+- m. 35, beat 4 to m. 36, beat 1: major7
+- m. 36, beat 1 to m. 36, beat 2: dominant7
+- m. 36, beat 2 to m. 36, beat 3: dominant7
+- m. 36, beat 3 to m. 36, beat 4: vii°
+- m. 36, beat 4 to m. 37, beat 1: dominant7
+- m. 37, beat 1 to m. 37, beat 2: I
+- m. 37, beat 2 to m. 37, beat 3: I
+- m. 37, beat 3 to m. 37, beat 4: I
+- m. 37, beat 4 to m. 38, beat 1: major7
+- m. 38, beat 1 to m. 38, beat 2: dominant7
+- m. 38, beat 2 to m. 38, beat 3: dominant7
+- m. 38, beat 3 to m. 38, beat 4: half-diminished7
+- m. 38, beat 4 to m. 39, beat 1: dominant7
+- m. 39, beat 1 to m. 39, beat 2: major7
+- m. 39, beat 2 to m. 39, beat 3: major7
+- m. 39, beat 3 to m. 39, beat 4: I
+- m. 39, beat 4 to m. 40, beat 1: major7
+- m. 40, beat 1 to m. 40, beat 2: no match
+- m. 40, beat 2 to m. 40, beat 3: minor7
+- m. 40, beat 3 to m. 40, beat 4: vii°
+- m. 40, beat 4 to m. 41, beat 1: V
+- m. 41, beat 1 to m. 41, beat 2: minor7
+- m. 41, beat 2 to m. 41, beat 3: no match
+- m. 41, beat 3 to m. 41, beat 4: dominant7
+- m. 41, beat 4 to m. 41, beat 4.33: major7
+- m. 41, beat 4.33 to m. 42, beat 1: ii
+- m. 42, beat 1 to m. 42, beat 2: I
+- m. 42, beat 2 to m. 42, beat 3: major7
+- m. 42, beat 3 to m. 42, beat 4: iii
+- m. 42, beat 4 to m. 43, beat 1: dominant7
+- m. 43, beat 1 to m. 43, beat 2: major7
+- m. 43, beat 2 to m. 43, beat 3: I
+- m. 43, beat 3 to m. 43, beat 4: I
+- m. 43, beat 4.07 to m. 44, beat 1: V
+- m. 44, beat 1 to m. 44, beat 2: I
+- m. 44, beat 2 to m. 44, beat 3: I
+- m. 44, beat 3 to m. 44, beat 4: vi
+- m. 44, beat 4 to m. 45, beat 1: vii°
+- m. 45, beat 1 to m. 45, beat 2: V
+- m. 45, beat 2 to m. 45, beat 3: half-diminished7
+- m. 45, beat 3 to m. 45, beat 4: V
+- m. 45, beat 4 to m. 45, beat 4.33: dominant7
+- m. 45, beat 4.33 to m. 46, beat 1: V
+- m. 46, beat 1 to m. 46, beat 2: I
+- m. 46, beat 2 to m. 46, beat 4: I
+- m. 46, beat 4 to m. 47, beat 1: I
+- m. 47, beat 1 to m. 47, beat 2: I
+- m. 47, beat 2 to m. 47, beat 3: I
+- m. 47, beat 3 to m. 47, beat 4: I
+- m. 47, beat 4 to m. 48, beat 1: I
+- m. 48, beat 1 to m. 48, beat 2: I
+- m. 48, beat 2 to m. 48, beat 3: I
+- m. 48, beat 3 to m. 48, beat 4: major7
+- m. 48, beat 4 to m. 49, beat 1: minor7
+- m. 49, beat 1 to m. 49, beat 2: major7
+- m. 49, beat 2 to m. 49, beat 3: dominant7
+- m. 49, beat 3 to m. 49, beat 4: dominant7
+- m. 49, beat 4 to m. 50, beat 1: dominant7
+- m. 50, beat 1 to m. 50, beat 2: I
+- m. 50, beat 2 to m. 50, beat 3: I
+- m. 50, beat 3 to m. 50, beat 4: I
+- m. 50, beat 4 to m. 51, beat 1: I
+- m. 51, beat 1 to m. 51, beat 3: minor7
+- m. 51, beat 3 to m. 51, beat 4: vii°
+- m. 51, beat 4 to m. 52, beat 1: major7
+- m. 52, beat 1 to m. 52, beat 2: IV
+- m. 52, beat 2 to m. 52, beat 3: IV
+- m. 52, beat 3 to m. 52, beat 4: vi
+- m. 52, beat 4 to m. 53, beat 1: no match
+- m. 53, beat 1 to m. 53, beat 2: V
+- m. 53, beat 2 to m. 53, beat 3: dominant7
+- m. 53, beat 3 to m. 53, beat 4: dominant7
+- m. 53, beat 4 to m. 54, beat 1: iii
+- m. 54, beat 1 to m. 54, beat 2: I
+- m. 54, beat 2 to m. 54, beat 3: I
+- m. 54, beat 3 to m. 54, beat 4: I
+- m. 54, beat 4 to m. 55, beat 1: I
+- m. 55, beat 1 to m. 55, beat 3: minor7
+- m. 55, beat 3 to m. 55, beat 4: vii°
+- m. 55, beat 4 to m. 56, beat 1: major7
+- m. 56, beat 1 to m. 56, beat 2: IV
+- m. 56, beat 2 to m. 56, beat 3: IV
+- m. 56, beat 3 to m. 56, beat 4: major7
+- m. 56, beat 4 to m. 57, beat 1: minor7
+- m. 57, beat 1 to m. 57, beat 1.33: V
+- m. 57, beat 1.33 to m. 57, beat 2: V
+- m. 57, beat 2 to m. 57, beat 3: IV
+- m. 57, beat 3 to m. 57, beat 4: minor7
+- m. 57, beat 4 to m. 58, beat 1: dominant7
+- m. 58, beat 1 to m. 58, beat 2: major7
+- m. 58, beat 2 to m. 58, beat 3: I
+- m. 58, beat 3 to m. 58, beat 4: I
+- m. 58, beat 4 to m. 59, beat 1: I
+- m. 59, beat 1 to m. 59, beat 2: dominant7
+- m. 59, beat 2 to m. 59, beat 3: dominant7
+- m. 59, beat 3 to m. 59, beat 4: dominant7
+- m. 59, beat 4 to m. 60, beat 1: dominant7
+- m. 60, beat 1 to m. 60, beat 2: I
+- m. 60, beat 2 to m. 60, beat 3: I
+- m. 60, beat 3 to m. 60, beat 4: major7
+- m. 60, beat 4 to m. 61, beat 1: major7
+- m. 61, beat 1 to m. 61, beat 2: dominant7
+- m. 61, beat 2 to m. 61, beat 3: dominant7
+- m. 61, beat 3 to m. 61, beat 4: dominant7
+- m. 61, beat 4 to m. 62, beat 1: dominant7
+- m. 62, beat 1 to m. 62, beat 2: major7
+- m. 62, beat 2 to m. 62, beat 3: major7
+- m. 62, beat 3 to m. 62, beat 4: I
+- m. 62, beat 4 to m. 63, beat 1: I
+- m. 63, beat 1 to m. 63, beat 2: no match
+- m. 63, beat 2 to m. 63, beat 3: minor7
+- m. 63, beat 3 to m. 63, beat 4: vii°
+- m. 63, beat 4 to m. 64, beat 1: dominant7
+- m. 64, beat 1 to m. 64, beat 2: I
+- m. 64, beat 2 to m. 64, beat 3: iii
+- m. 64, beat 3 to m. 64, beat 4: ii
+- m. 64, beat 4 to m. 65, beat 1: ii
+- m. 65, beat 1 to m. 65, beat 1.33: V
+- m. 65, beat 1.33 to m. 65, beat 2: I
+- m. 65, beat 2 to m. 65, beat 3: I
+- m. 65, beat 3 to m. 65, beat 4: dominant7
+- m. 65, beat 4 to m. 66, beat 1: dominant7
+- m. 66, beat 1 to m. 66, beat 2: I
+- m. 66, beat 2 to m. 66, beat 3: I
+- m. 66, beat 3 to m. 66, beat 4: I
+- m. 66, beat 4 to m. 67, beat 1: I
+- m. 67, beat 1 to m. 67, beat 2: I
+- m. 67, beat 2 to m. 67, beat 3: I
+- m. 67, beat 3 to m. 67, beat 4: I

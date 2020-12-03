@@ -21,11 +21,13 @@ typedef struct {
 } AnalysisConfidence;
 
 typedef struct {
-    long time_numerator;
+    long time_numerator; /* segment start, whole notes */
     unsigned long time_denominator;
+    long end_numerator; /* segment end (exclusive), whole notes */
+    unsigned long end_denominator;
     char *chord_label; /* owned; "no match" when nothing was identified */
     char *key_label;   /* owned; "no match" when nothing was identified */
-    size_t *note_ids;  /* owned; ImportedNotes indices (Ursatz "midi-note-N") grouped into this sonority */
+    size_t *note_ids;  /* owned; ImportedNotes indices (Ursatz "midi-note-N") sounding in this segment, attacked or held */
     size_t note_id_count;
     AnalysisConfidence chord_confidence;
 } AnalysisReportEntry;
