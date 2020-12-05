@@ -5,6 +5,7 @@ add_library(standard_tonality
     scale_pattern.c
     major_scale_rules.c
     minor_scale_rules.c
+    mode_rules.c
     solfege_rules.c
     scale_degree_rules.c
     minor_scale_degree_rules.c
