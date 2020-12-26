@@ -56,6 +56,29 @@ Rules about how pitches relate within a key:
   same signature, fifth neighbors, and the enharmonic minor pairs (G-sharp
   / A-flat, D-sharp / E-flat, A-sharp / B-flat).
 
+- **Chromatic solfege** (`solfege_rules.h`): syllables by degree and
+  alteration -- raised di ri fi si li (-i), lowered ra me se le te (-e,
+  ra the exception); there is no lowered do or fa and no raised mi or ti.
+- **Diatonic modes** (`mode_rules.h`): lydian, ionian, mixolydian,
+  dorian, aeolian, phrygian, locrian, each with its step pattern, in
+  brightness order from lydian to locrian. The three bright modes have
+  mi, the four dark ones me. Alterations are computed against ionian or
+  aeolian (lydian raises 4; mixolydian lowers 7; dorian raises 6 against
+  minor; phrygian lowers 2; locrian lowers 2 and 5). Modes are described
+  by the parallel relationship: any mode builds on any note.
+  `modal_solfege_rules.h` gives each mode's syllables.
+- **Pentatonic collection** (`pentatonic_rules.h`): major 2 2 3 2 3
+  (degrees 1 2 3 5 6, do re mi sol la), spelled from the major scale on
+  the same tonic, the black keys when it begins on F-sharp or G-flat. The
+  minor pentatonic is the same collection begun on la (3 2 2 3 2, do me
+  fa sol te); the source states only the major's pattern, so this is the
+  standard definition.
+- **Chromatic scale** (`chromatic_scale_rules.h`): twelve adjacent half
+  steps (B-C and E-F are half steps already); usually written with
+  naturals and sharps ascending and flats descending, a flat tonic
+  included, but that is a convention, so the half-step check is separate
+  from the spelling check; raised syllables ascending, lowered descending.
+
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
 (`src/pitch/`), `Scale`, `ScaleDegree`, and `Key` stay the entity types;
@@ -67,7 +90,8 @@ called here.
 
 ## Not covered
 
-Modes, fixed-do solfege, and choosing between a signature's major and
+Fixed-do solfege, other collections (whole-tone, octatonic, and so
+on), jazz chord-scale theory, and choosing between a signature's major and
 minor key from the first and last notes: that is a judgement, not a
 rule, and belongs with key identification (`common-practice-minimal`
 keeps its own major and natural-minor vocabulary; the two are not yet
