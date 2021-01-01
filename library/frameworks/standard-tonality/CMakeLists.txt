@@ -8,6 +8,7 @@ add_library(standard_tonality
     mode_rules.c
     pentatonic_rules.c
     chromatic_scale_rules.c
+    interval_size_rules.c
     modal_solfege_rules.c
     solfege_rules.c
     scale_degree_rules.c
