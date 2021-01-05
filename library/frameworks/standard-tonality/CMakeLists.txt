@@ -9,6 +9,7 @@ add_library(standard_tonality
     pentatonic_rules.c
     chromatic_scale_rules.c
     interval_size_rules.c
+    interval_quality_rules.c
     modal_solfege_rules.c
     solfege_rules.c
     scale_degree_rules.c
