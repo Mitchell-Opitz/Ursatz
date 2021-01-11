@@ -13,6 +13,7 @@ add_library(standard_tonality
     interval_inversion_rules.c
     interval_consonance_rules.c
     interval_white_key_rules.c
+    interval_enharmonic_rules.c
     modal_solfege_rules.c
     solfege_rules.c
     scale_degree_rules.c
