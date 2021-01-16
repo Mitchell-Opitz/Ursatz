@@ -59,7 +59,10 @@ static int check_file(const char *path) {
             strcmp(start, "minor_scale_degree_rules.h") == 0 || strcmp(start, "key_relationship_rules.h") == 0 ||
             strcmp(start, "minor_key_rules.h") == 0 || strcmp(start, "solfege_rules.h") == 0 ||
             strcmp(start, "mode_rules.h") == 0 || strcmp(start, "modal_solfege_rules.h") == 0 ||
-            strcmp(start, "pentatonic_rules.h") == 0 || strcmp(start, "chromatic_scale_rules.h") == 0) {
+            strcmp(start, "pentatonic_rules.h") == 0 || strcmp(start, "chromatic_scale_rules.h") == 0 ||
+            strcmp(start, "interval_size_rules.h") == 0 || strcmp(start, "interval_quality_rules.h") == 0 ||
+            strcmp(start, "interval_inversion_rules.h") == 0 || strcmp(start, "interval_consonance_rules.h") == 0 ||
+            strcmp(start, "interval_white_key_rules.h") == 0 || strcmp(start, "interval_enharmonic_rules.h") == 0) {
             continue;
         }
 
