@@ -269,7 +269,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
     /* The report shows measure and beat, not raw beats from the start of the file. */
     assert(strstr(markdown, "## Meter\n") != NULL);
     assert(strstr(markdown, "- Beat ") == NULL);
-    assert(strstr(markdown, "- m. ") != NULL);
+    assert(strstr(markdown, "| m. ") != NULL);
 
     cJSON_Delete(document);
     free(markdown);

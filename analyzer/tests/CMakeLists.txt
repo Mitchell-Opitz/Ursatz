@@ -48,7 +48,7 @@ add_test(NAME test_analysis_document_schema
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v2.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v3.schema.json
                  -DFIXTURE_DIR=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)

@@ -3,7 +3,7 @@
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v2.schema.json`](../schema/analysis-document.v2.schema.json)
+[`schema/analysis-document.v3.schema.json`](../schema/analysis-document.v3.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render` from
 `<ursatz_analyzer/analysis_document.h>`.
 
@@ -14,7 +14,7 @@ newline. The same input and build always give the same bytes.
 
 | Key | Type | v2 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `2`. |
+| `schema_version` | integer | Always `3`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | array of key claims | Filled. |
@@ -123,14 +123,35 @@ Conventions:
 
 ### Chord claims
 
-`chords` holds one claim per group of notes that start together, in time order.
+`chords` holds one claim per sonority segment, in time order. The segments come from Ursatz's
+adaptive sonority segmentation, which cuts on the beats of the file's meter and where the bass
+changes, and merges neighbours that sound the same pitch classes over the same bass. The chords come
+from the library's weighted chord identification, read in the piece's key.
 
-- `span` runs from the group's onset to the latest end of any note in the group. The library's own
-  sonority window is zero-length (it starts and ends at the onset), so the document reports the
-  real sounding extent instead.
-- `note_ids` lists the notes in the group and is never empty.
-- `label` is the Roman numeral, or `"no match"` when no chord was identified.
+- `span` is the segment's window, from its start to its (exclusive) end.
+- `note_ids` lists every note sounding in the segment, attacked in it or held over from earlier, and
+  is never empty.
+- `label` is the library's label for the chord (a Roman numeral for a triad, the seventh quality for
+  a seventh chord), or `"no match"` when no chord was identified.
+- `uncertainty` is the library's confidence in the best chord, in [0, 1]. Higher is more confident,
+  despite the name (the name is shared with every claim).
 - `key_label` is the key the chord was read in, or `"no match"` when no key was found.
+
+Beyond the shared claim fields, a chord claim has the fields below. All but `duration` are `null`
+when no chord was identified.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `root` | string or null | The chord's root as a pitch class name, e.g. `"G"`. Flats are used in keys that read in flats. |
+| `quality` | string or null | `"major"`, `"minor"` or `"diminished"` for a triad; the library's seventh quality (`"dominant7"`, `"major7"`, `"minor7"`, `"half-diminished7"`) for a seventh chord. |
+| `bass` | string or null | The lowest sounding note of the segment, as a pitch class name. |
+| `inversion` | integer or null | Where the bass sits among the chord's tones: `0` root position, `1` first inversion (the third in the bass), `2` second, `3` third (sevenths only). `null` when the bass is not a chord tone. |
+| `duration` | object | `{"whole_notes", "beats"}`: the span's length as a rational in whole notes, and in beats of the signature the segment starts in (`null` when that signature has no beat grid). Where the chord starts and ends in measures and beats is `location`. |
+| `score` | number or null | The library's score for the chord. Scores run from below 0 to 1.05. |
+| `runner_up` | object or null | The best-scoring candidate on a different root, with `label`, `root`, `quality`, `score` and `uncertainty` (the library's plausibility of it relative to the best chord, in [0, 1]); `null` when no other root sounds. |
+
+The runner-up is always recorded when the library provides one. The Markdown report shows it only
+when its score is within 0.10 of the best chord's.
 
 ## Versioning
 
@@ -143,6 +164,10 @@ Conventions:
 
 ### Version history
 
+- **3**: Chord claims gain required `root`, `quality`, `bass`, `inversion`, `duration`, `score` and
+  `runner_up`, and are cut by the library's sonority segmentation, so `span` and `note_ids` cover the
+  segment's window and every note sounding in it. A required field is a breaking change under the
+  rule above.
 - **2**: `meter` is filled (it was `null`). Every claim has a required `location`. v1 documents had
   `"meter": null` and no `location`.
 - **1**: First version.

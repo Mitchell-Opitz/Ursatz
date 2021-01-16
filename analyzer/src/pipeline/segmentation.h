@@ -46,4 +46,7 @@ typedef struct {
 bool segment_notes(const ImportedNotes *notes, Segmentation *out);
 void segmentation_destroy(Segmentation *segmentation);
 
+/* Pitch class (0-11) of the lowest note sounding in a segment. */
+int segment_bass_pitch_class(const Segment *segment);
+
 #endif

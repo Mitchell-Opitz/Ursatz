@@ -20,6 +20,19 @@ typedef struct {
     unsigned long denominator;
 } AnalysisConfidence;
 
+/* One chord reading from the library's weighted identification: the best
+   chord of a segment, or its runner-up. label is NULL when there is no
+   such reading (no match, or no runner-up). All strings are owned. */
+typedef struct {
+    char *label;   /* the library's label for the chord, e.g. "V" or "dominant7" */
+    char *root;    /* root pitch class name, e.g. "G" */
+    char *quality; /* e.g. "major", "minor", "diminished", "dominant7" */
+    char *bass;    /* bass pitch class name; the segment's, so the same for both readings */
+    int inversion; /* 0 root position, 1 first, 2 second, 3 third; -1 when the bass is not a chord tone */
+    double score;  /* the library's candidate score */
+    AnalysisConfidence confidence;
+} AnalysisChordReading;
+
 typedef struct {
     long time_numerator; /* segment start, whole notes */
     unsigned long time_denominator;
@@ -30,7 +43,12 @@ typedef struct {
     size_t *note_ids;  /* owned; ImportedNotes indices (Ursatz "midi-note-N") sounding in this segment, attacked or held */
     size_t note_id_count;
     AnalysisConfidence chord_confidence;
+    AnalysisChordReading chord;     /* best chord; label NULL when "no match" */
+    AnalysisChordReading runner_up; /* label NULL when the library gave none */
 } AnalysisReportEntry;
+
+/* Frees a reading's strings and clears it. */
+void analysis_chord_reading_destroy(AnalysisChordReading *reading);
 
 typedef struct {
     AnalysisReportEntry *entries;

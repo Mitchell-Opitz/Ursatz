@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "metric_position_rules.h"
+#include "pipeline/pitch_class_util.h"
 #include "pitch/pitch_spelling.h"
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
@@ -173,4 +174,14 @@ void segmentation_destroy(Segmentation *segmentation) {
     free(segmentation->library_segments);
     free(segmentation->segment_ids);
     *segmentation = (Segmentation){NULL, 0, NULL, NULL};
+}
+
+int segment_bass_pitch_class(const Segment *segment) {
+    int lowest = segment->members[0].pitch;
+    for (size_t i = 1; i < segment->member_count; i++) {
+        if (segment->members[i].pitch < lowest) {
+            lowest = segment->members[i].pitch;
+        }
+    }
+    return pitch_class_of(lowest);
 }

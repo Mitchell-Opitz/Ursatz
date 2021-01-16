@@ -8,30 +8,6 @@
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/segmentation.h"
 
-/* Bass pitch class of a Segment: the pitch class of its lowest sounding
-   note. Used as a tonic guess -- the first and last chord of a piece is
-   very often the tonic triad in root position, i.e. the bass note is the
-   tonic. The closing chord is the more reliable of the two (a piece
-   almost always ends on its tonic; it can just as easily open on an
-   anacrusis, a pickup, or a non-tonic harmony), so callers should try it
-   before the opening chord. */
-static int bass_pitch_class(const Segment *segment) {
-    int lowest = segment->members[0].pitch;
-    for (size_t i = 1; i < segment->member_count; i++) {
-        if (segment->members[i].pitch < lowest) {
-            lowest = segment->members[i].pitch;
-        }
-    }
-    return pitch_class_of(lowest);
-}
-
-static void destroy_chords(ChordEstimate *chords, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        chord_estimate_destroy(&chords[i]);
-    }
-    free(chords);
-}
-
 bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entries = NULL;
     report->entry_count = 0;
@@ -52,12 +28,15 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         return true;
     }
 
+    /* Tonic guess: the bass of the closing segment, then of the opening one. A piece almost always
+       ends on its tonic; it can just as easily open on an anacrusis, a pickup, or a non-tonic
+       harmony. */
     int priority_tonics[2];
     size_t priority_tonic_count = 0;
     priority_tonics[priority_tonic_count++] =
-        bass_pitch_class(&segmentation.segments[segmentation.segment_count - 1]);
+        segment_bass_pitch_class(&segmentation.segments[segmentation.segment_count - 1]);
     if (segmentation.segment_count > 1) {
-        priority_tonics[priority_tonic_count++] = bass_pitch_class(&segmentation.segments[0]);
+        priority_tonics[priority_tonic_count++] = segment_bass_pitch_class(&segmentation.segments[0]);
     }
 
     KeyEstimate key;
@@ -76,7 +55,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
 
     AnalysisReportEntry *entries = calloc(segmentation.segment_count, sizeof(AnalysisReportEntry));
     if (!entries) {
-        destroy_chords(chords, segmentation.segment_count);
+        chord_estimates_destroy(chords, segmentation.segment_count);
         key_estimate_destroy(&key);
         segmentation_destroy(&segmentation);
         return false;
@@ -92,8 +71,12 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         entry->end_denominator = segment->end_denominator;
 
         entry->key_label = strdup(key.found ? key.label : "no match");
-        entry->chord_label = strdup(chords[i].found ? chords[i].label : "no match");
-        entry->chord_confidence = chords[i].confidence;
+        entry->chord_label = strdup(chords[i].found ? chords[i].best.label : "no match");
+        entry->chord_confidence = chords[i].best.confidence;
+        entry->chord = chords[i].best;
+        entry->runner_up = chords[i].runner_up;
+        chords[i].best = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
+        chords[i].runner_up = chords[i].best;
 
         entry->note_ids = malloc(sizeof(size_t) * segment->member_count);
         if (entry->note_ids) {
@@ -104,7 +87,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         if (!entry->key_label || !entry->chord_label || !entry->note_ids) {
             AnalysisReport partial = {entries, i + 1, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
             analysis_report_destroy(&partial);
-            destroy_chords(chords, segmentation.segment_count);
+            chord_estimates_destroy(chords, segmentation.segment_count);
             key_estimate_destroy(&key);
             segmentation_destroy(&segmentation);
             return false;
@@ -112,7 +95,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     }
 
     size_t segment_count = segmentation.segment_count;
-    destroy_chords(chords, segment_count);
+    chord_estimates_destroy(chords, segment_count);
     segmentation_destroy(&segmentation);
 
     report->entries = entries;
