@@ -79,6 +79,31 @@ Rules about how pitches relate within a key:
   included, but that is a convention, so the half-step check is separate
   from the spelling check; raised syllables ascending, lowered descending.
 
+- **Interval size** (`interval_size_rules.h`): counted in lines and
+  spaces from one (`GenericInterval`, `src/pitch/`), named by ordinals
+  except unison and octave, generic (accidentals never change it), simple
+  up to the octave and compound above (add 7).
+- **Interval quality** (`interval_quality_rules.h`): perfect for unisons,
+  fourths, fifths, octaves; major and minor for seconds, thirds, sixths,
+  sevenths; augmented a half step above perfect or major; diminished a
+  half step below perfect or minor; doubly and triply altered beyond;
+  compound intervals keep their simple quality. Found by the
+  major-scale method (the top note against the bottom note's major
+  scale) with a semitone engine that agrees with it wherever the scale
+  exists.
+- **Interval inversion** (`interval_inversion_rules.h`): sizes add to 9;
+  perfect to perfect, major to minor, augmented to diminished;
+  identifying through the inversion.
+- **Consonance** (`interval_consonance_rules.h`): melodic and harmonic
+  tables as in the source; the perfect fourth is dissonant harmonically.
+  The categorization varies with milieu, so it is this framework's.
+- **White-key intervals** (`interval_white_key_rules.h`): seconds, thirds,
+  fourths and their exceptions, the rest by inversion, and any interval as
+  a white-key interval altered by accidentals.
+- **Enharmonic intervals** (`interval_enharmonic_rules.h`): equivalence by
+  half steps (the source's chart), and identifying an interval through
+  enharmonic respelling of its notes.
+
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
 (`src/pitch/`), `Scale`, `ScaleDegree`, and `Key` stay the entity types;
@@ -90,7 +115,9 @@ called here.
 
 ## Not covered
 
-Fixed-do solfege, other collections (whole-tone, octatonic, and so
+Interval spelling beyond triply augmented or diminished, intervals
+between notes spelled with more than a double accidental, fixed-do
+solfege, other collections (whole-tone, octatonic, and so
 on), jazz chord-scale theory, and choosing between a signature's major and
 minor key from the first and last notes: that is a judgement, not a
 rule, and belongs with key identification (`common-practice-minimal`
