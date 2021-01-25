@@ -8,6 +8,12 @@ add_library(standard_tonality
     mode_rules.c
     pentatonic_rules.c
     chromatic_scale_rules.c
+    interval_size_rules.c
+    interval_quality_rules.c
+    interval_inversion_rules.c
+    interval_consonance_rules.c
+    interval_white_key_rules.c
+    interval_enharmonic_rules.c
     modal_solfege_rules.c
     solfege_rules.c
     scale_degree_rules.c
