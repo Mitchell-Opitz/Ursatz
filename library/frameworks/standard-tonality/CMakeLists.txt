@@ -17,6 +17,7 @@ add_library(standard_tonality
     interval_spelling_rules.c
     triad_rules.c
     triad_spelling_rules.c
+    triad_identification_rules.c
     modal_solfege_rules.c
     solfege_rules.c
     scale_degree_rules.c
