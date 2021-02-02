@@ -17,6 +17,8 @@ typedef struct {
     bool found;
     AnalysisChordReading best;
     AnalysisChordReading runner_up;
+    AnalysisNonChordTone *tones; /* owned; the segment's non-chord tones, chord_index unset */
+    size_t tone_count;
 } ChordEstimate;
 
 /*
@@ -30,6 +32,10 @@ typedef struct {
  * or no key, leaves every segment unmatched rather than reading it in a
  * key it cannot name chords for. A segment whose best score is below the
  * library's minimum coverage is likewise unmatched.
+ *
+ * The library's leftover tones for each matched segment become the
+ * estimate's non-chord tones: each with the library's name for its type,
+ * or no type when the library left it unclassified.
  *
  * Root, quality and the runner-up are read from the library's ranked
  * candidates and the chord tones it reports for them. The only work here

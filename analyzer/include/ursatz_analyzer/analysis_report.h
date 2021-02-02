@@ -50,9 +50,22 @@ typedef struct {
 /* Frees a reading's strings and clears it. */
 void analysis_chord_reading_destroy(AnalysisChordReading *reading);
 
+/* A note sounding in a chord's segment that is not one of the chord's tones
+   (a "leftover tone" in the library's weighted identification), against
+   the chord of entries[chord_index]. type is the library's name for the
+   figure (non_chord_tone_name, e.g. "passing", "escape-tone"), or NULL
+   when the library left the tone unclassified. */
+typedef struct {
+    size_t note_id; /* ImportedNotes index (Ursatz "midi-note-N") */
+    size_t chord_index;
+    char *type; /* owned; NULL when unclassified */
+} AnalysisNonChordTone;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
+    AnalysisNonChordTone *non_chord_tones; /* owned; in time order, then note order */
+    size_t non_chord_tone_count;
     bool key_found;
     AnalysisKeyMethod key_method;        /* ANALYSIS_KEY_METHOD_NONE unless key_found */
     AnalysisConfidence key_confidence;

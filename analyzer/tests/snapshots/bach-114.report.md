@@ -176,3 +176,61 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 24, beat 3.5 to m. 24, beat 4 | I | G | major | G | root position | 0.5 | 0.58 | - |
 | m. 24, beat 4 to m. 24, beat 4.5 | I | G | major | D | second | 0.5 | 0.38 | - |
 | m. 24, beat 4.5 to m. 25, beat 1 | I | G | major | G | root position | 0.5 | 1.00 | - |
+## Non-chord tones
+
+52 notes sound against a chord without being one of its tones; 13 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+
+| Position | Note | Type | Against |
+| --- | --- | --- | --- |
+| m. 1, beat 1 to m. 1, beat 2 | 5 | unclassified | I |
+| m. 1, beat 2 to m. 1, beat 2.5 | 6 | unclassified | ii |
+| m. 1, beat 4 to m. 2, beat 1 | 18 | escape-tone | major7 |
+| m. 2, beat 2.5 to m. 2, beat 3 | 25 | unclassified | I |
+| m. 2, beat 3 to m. 2, beat 4 | 29 | neighbor | ii |
+| m. 3, beat 1 to m. 3, beat 2 | 36 | passing | minor7 |
+| m. 3, beat 2.5 to m. 3, beat 3 | 43 | passing | I |
+| m. 3, beat 4 to m. 4, beat 1 | 51 | appoggiatura | minor7 |
+| m. 4, beat 1 to m. 4, beat 2 | 56 | appoggiatura | minor7 |
+| m. 4, beat 2 to m. 4, beat 2.5 | 58 | unclassified | ii |
+| m. 4, beat 4 to m. 5, beat 1 | 72 | escape-tone | major7 |
+| m. 5, beat 2 to m. 5, beat 3 | 79 | passing | minor7 |
+| m. 5, beat 2 to m. 5, beat 3 | 84 | unclassified | minor7 |
+| m. 5, beat 3 to m. 5, beat 4 | 87 | neighbor | ii |
+| m. 6, beat 1.25 to m. 6, beat 2 | 96 | unclassified | I |
+| m. 7, beat 1 to m. 7, beat 2 | 115 | escape-tone | I |
+| m. 7, beat 2 to m. 7, beat 2.5 | 116 | unclassified | ii |
+| m. 7, beat 4 to m. 8, beat 1 | 128 | escape-tone | major7 |
+| m. 8, beat 2.5 to m. 8, beat 3 | 135 | unclassified | I |
+| m. 8, beat 3 to m. 8, beat 4 | 139 | neighbor | ii |
+| m. 9, beat 1 to m. 9, beat 2 | 146 | passing | minor7 |
+| m. 9, beat 2.5 to m. 9, beat 3 | 153 | passing | I |
+| m. 9, beat 4 to m. 10, beat 1 | 161 | appoggiatura | minor7 |
+| m. 10, beat 1 to m. 10, beat 2 | 166 | appoggiatura | minor7 |
+| m. 10, beat 2 to m. 10, beat 2.5 | 168 | unclassified | ii |
+| m. 10, beat 4 to m. 11, beat 1 | 182 | escape-tone | major7 |
+| m. 11, beat 2 to m. 11, beat 3 | 189 | passing | minor7 |
+| m. 11, beat 2 to m. 11, beat 3 | 194 | unclassified | minor7 |
+| m. 11, beat 3 to m. 11, beat 4 | 197 | neighbor | ii |
+| m. 12, beat 1.25 to m. 12, beat 2 | 206 | unclassified | I |
+| m. 13, beat 1 to m. 13, beat 2 | 223 | passing | I |
+| m. 13, beat 3 to m. 13, beat 4 | 229 | passing | V |
+| m. 13, beat 4.5 to m. 14, beat 1 | 236 | passing | vi |
+| m. 14, beat 1.5 to m. 14, beat 2 | 240 | passing | ii |
+| m. 14, beat 2 to m. 14, beat 3 | 243 | escape-tone | minor7 |
+| m. 14, beat 3 to m. 14, beat 4 | 249 | passing | minor7 |
+| m. 16, beat 3 to m. 16, beat 3.5 | 280 | neighbor | vi |
+| m. 17, beat 1.5 to m. 17, beat 2 | 291 | unclassified | V |
+| m. 17, beat 3 to m. 17, beat 4 | 298 | passing | minor7 |
+| m. 18, beat 1 to m. 18, beat 1.5 | 306 | appoggiatura | I |
+| m. 18, beat 1 to m. 18, beat 1.5 | 308 | neighbor | I |
+| m. 19, beat 1 to m. 19, beat 2 | 328 | passing | I |
+| m. 19, beat 3 to m. 19, beat 4 | 334 | passing | V |
+| m. 19, beat 4.5 to m. 20, beat 1 | 341 | passing | vi |
+| m. 20, beat 1.5 to m. 20, beat 2 | 345 | passing | ii |
+| m. 20, beat 2 to m. 20, beat 3 | 348 | escape-tone | minor7 |
+| m. 20, beat 3 to m. 20, beat 4 | 354 | passing | minor7 |
+| m. 22, beat 3 to m. 22, beat 3.5 | 385 | neighbor | vi |
+| m. 23, beat 1.5 to m. 23, beat 2 | 396 | unclassified | V |
+| m. 23, beat 3 to m. 23, beat 4 | 403 | passing | minor7 |
+| m. 24, beat 1 to m. 24, beat 1.5 | 411 | appoggiatura | I |
+| m. 24, beat 1 to m. 24, beat 1.5 | 413 | neighbor | I |

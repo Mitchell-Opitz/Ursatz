@@ -19,6 +19,7 @@ newline. The same input and build always give the same bytes.
 | `meter` | meter claim | Filled. See below. |
 | `keys` | array of key claims | Filled. |
 | `chords` | array of chord claims | Filled. |
+| `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `cadences` | array | Placeholder: `[]`. |
 | `phrases` | array | Placeholder: `[]`. |
 | `form` | object or null | Placeholder: `null`. |
@@ -67,7 +68,7 @@ content.
 
 ## Claims
 
-Every entry in `keys` and `chords` is a claim. A claim mirrors the library's Interpretation.
+Every entry in `keys`, `chords` and `non_chord_tones` is a claim. A claim mirrors the library's Interpretation.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -153,6 +154,24 @@ when no chord was identified.
 The runner-up is always recorded when the library provides one. The Markdown report shows it only
 when its score is within 0.10 of the best chord's.
 
+### Non-chord-tone claims
+
+`non_chord_tones` holds one claim for every note the library finds sounding in a chord's segment
+without being one of the chord's tones, in time order, then note order. A note held across several
+segments is listed once for each segment in which it is non-chordal. Segments with no chord have no
+non-chord tones.
+
+- `span` and `location` are the chord segment the note is non-chordal against.
+- `note_ids` holds the one note.
+- `label` is the figure's type, or `"unclassified"`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `type` | string or null | The library's name for the figure, as `non_chord_tone_name` gives it: `"passing"`, `"neighbor"`, `"double-neighbor"`, `"changing-tone"`, `"suspension"`, `"anticipation"`, `"appoggiatura"`, `"escape-tone"`, `"retardation"` or `"pedal"`. `null` when the library left the tone unclassified. The library recognizes only some of these today. |
+| `classified` | boolean | `false` for an unclassified tone. Unclassified tones are listed, never dropped. |
+| `chord_index` | integer | Index into `chords` of the chord the note is non-chordal against. |
+| `chord_label` | string | That chord's `label`. |
+
 ## Versioning
 
 - `schema_version` changes only for breaking changes: removing or renaming a field, changing a
@@ -164,7 +183,7 @@ when its score is within 0.10 of the best chord's.
 
 ### Version history
 
-- **3**: Chord claims gain required `root`, `quality`, `bass`, `inversion`, `duration`, `score` and
+- **3**: Adds the required `non_chord_tones` section. Chord claims gain required `root`, `quality`, `bass`, `inversion`, `duration`, `score` and
   `runner_up`, and are cut by the library's sonority segmentation, so `span` and `note_ids` cover the
   segment's window and every note sounding in it. A required field is a breaking change under the
   rule above.

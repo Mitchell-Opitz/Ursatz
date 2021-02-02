@@ -11,6 +11,8 @@
 bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entries = NULL;
     report->entry_count = 0;
+    report->non_chord_tones = NULL;
+    report->non_chord_tone_count = 0;
     report->key_found = false;
     report->key_method = ANALYSIS_KEY_METHOD_NONE;
     report->key_confidence = (AnalysisConfidence){false, 0, 0};
@@ -85,7 +87,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         }
 
         if (!entry->key_label || !entry->chord_label || !entry->note_ids) {
-            AnalysisReport partial = {entries, i + 1, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
+            AnalysisReport partial = {entries, i + 1, NULL, 0, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
             analysis_report_destroy(&partial);
             chord_estimates_destroy(chords, segmentation.segment_count);
             key_estimate_destroy(&key);
@@ -95,11 +97,35 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     }
 
     size_t segment_count = segmentation.segment_count;
+    size_t tone_count = 0;
+    for (size_t i = 0; i < segment_count; i++) {
+        tone_count += chords[i].tone_count;
+    }
+    AnalysisNonChordTone *tones = calloc(tone_count > 0 ? tone_count : 1, sizeof(AnalysisNonChordTone));
+    if (!tones) {
+        AnalysisReport partial = {entries, segment_count, NULL, 0, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
+        analysis_report_destroy(&partial);
+        chord_estimates_destroy(chords, segment_count);
+        key_estimate_destroy(&key);
+        segmentation_destroy(&segmentation);
+        return false;
+    }
+    size_t next_tone = 0;
+    for (size_t i = 0; i < segment_count; i++) {
+        for (size_t t = 0; t < chords[i].tone_count; t++) {
+            tones[next_tone] = chords[i].tones[t];
+            tones[next_tone].chord_index = i;
+            chords[i].tones[t].type = NULL; /* moved */
+            next_tone++;
+        }
+    }
     chord_estimates_destroy(chords, segment_count);
     segmentation_destroy(&segmentation);
 
     report->entries = entries;
     report->entry_count = segment_count;
+    report->non_chord_tones = tones;
+    report->non_chord_tone_count = tone_count;
     report->key_found = key.found;
     report->key_method = key.method;
     report->key_confidence = key.confidence;

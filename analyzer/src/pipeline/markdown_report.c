@@ -414,6 +414,36 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
     return ok;
 }
 
+static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, const cJSON *tones) {
+    (void)document;
+    size_t unclassified = 0;
+    const cJSON *tone;
+    cJSON_ArrayForEach(tone, tones) {
+        if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(tone, "classified"))) {
+            unclassified++;
+        }
+    }
+    bool ok = sb_append(sb, "## Non-chord tones\n\n") &&
+              sb_appendf(sb, "%d notes sound against a chord without being one of its tones; %zu the library "
+                             "left unclassified. Type is the library's name for the figure. Note is the "
+                             "imported note's index.\n\n",
+                         cJSON_GetArraySize(tones), unclassified) &&
+              sb_append(sb, "| Position | Note | Type | Against |\n| --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(tone, tones) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(tone, "location");
+        const cJSON *note_ids = cJSON_GetObjectItemCaseSensitive(tone, "note_ids");
+        const char *type = string_member(tone, "type");
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+             sb_appendf(sb, " | %d | %s | %s |\n", (int)cJSON_GetArrayItem(note_ids, 0)->valuedouble,
+                        type ? type : "unclassified", string_member(tone, "chord_label"));
+    }
+    return ok;
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -425,6 +455,7 @@ static const struct {
     {"meter", render_meter},
     {"keys", render_key},
     {"chords", render_chords},
+    {"non_chord_tones", render_non_chord_tones},
 };
 
 static bool section_is_empty(const cJSON *section) {

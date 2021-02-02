@@ -518,13 +518,46 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
     return chords;
 }
 
+/* One claim per non-chord tone, in time order. Each is located where the note sounds against the chord:
+   that chord's segment. */
+static cJSON *non_chord_tones_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *tones = cJSON_CreateArray();
+    if (!tones) {
+        return NULL;
+    }
+    const char *framework = library_framework_name();
+    for (size_t i = 0; i < report->non_chord_tone_count; i++) {
+        const AnalysisNonChordTone *tone = &report->non_chord_tones[i];
+        const AnalysisReportEntry *chord = &report->entries[tone->chord_index];
+        AnalysisConfidence none = {false, 0, 0};
+        cJSON *claim = claim_json_at(framework, notes, &tone->note_id, 1,
+                                     rational_make(chord->time_numerator, chord->time_denominator),
+                                     rational_make(chord->end_numerator, chord->end_denominator),
+                                     tone->type ? tone->type : "unclassified", none);
+        if (!(claim && add(claim, "type", optional_string_json(tone->type)) &&
+              add(claim, "classified", cJSON_CreateBool(tone->type != NULL)) &&
+              add(claim, "chord_index", cJSON_CreateNumber((double)tone->chord_index)) &&
+              add(claim, "chord_label", cJSON_CreateString(chord->chord_label)))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(tones);
+            return NULL;
+        }
+        if (!append(tones, claim)) {
+            cJSON_Delete(tones);
+            return NULL;
+        }
+    }
+    return tones;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
         !(add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
           add(document, "metadata", metadata_json(input_path, notes, report)) &&
           add(document, "meter", meter_json(notes)) && add(document, "keys", keys_json(notes, report)) &&
-          add(document, "chords", chords_json(notes, report)) && add(document, "cadences", cJSON_CreateArray()) &&
+          add(document, "chords", chords_json(notes, report)) &&
+          add(document, "non_chord_tones", non_chord_tones_json(notes, report)) && add(document, "cadences", cJSON_CreateArray()) &&
           add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&

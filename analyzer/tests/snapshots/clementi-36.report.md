@@ -226,3 +226,21 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 38, beat 1.5 to m. 38, beat 2 | I | C | major | E | first | 0.5 | 0.62 | - |
 | m. 38, beat 2 to m. 38, beat 2.5 | V | G | major | G | root position | 0.5 | 1.00 | - |
 | m. 38, beat 2.5 to m. 38, beat 4 | I | C | major | C | root position | 1.5 | 1.00 | - |
+## Non-chord tones
+
+12 notes sound against a chord without being one of its tones; 4 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+
+| Position | Note | Type | Against |
+| --- | --- | --- | --- |
+| m. 4, beat 1 to m. 4, beat 2 | 24 | unclassified | V |
+| m. 7, beat 4 to m. 8, beat 1 | 57 | neighbor | ii |
+| m. 10, beat 1 to m. 10, beat 2 | 81 | appoggiatura | V |
+| m. 13, beat 1 to m. 13, beat 2 | 109 | neighbor | I |
+| m. 18, beat 3 to m. 18, beat 4 | 150 | escape-tone | I |
+| m. 19, beat 1 to m. 19, beat 2 | 155 | unclassified | V |
+| m. 22, beat 1 to m. 22, beat 2 | 186 | appoggiatura | vii° |
+| m. 22, beat 3 to m. 22, beat 4 | 191 | neighbor | IV |
+| m. 27, beat 1 to m. 27, beat 2 | 226 | unclassified | V |
+| m. 33, beat 1 to m. 33, beat 2 | 279 | appoggiatura | I |
+| m. 36, beat 1 to m. 36, beat 2 | 309 | appoggiatura | IV |
+| m. 37, beat 3 to m. 37, beat 4 | 324 | unclassified | iii |

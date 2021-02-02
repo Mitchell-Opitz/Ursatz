@@ -7,6 +7,7 @@
 #include "interpretation/chord.h"
 #include "pipeline/interpretation_util.h"
 #include "pipeline/pitch_class_util.h"
+#include "semantics/non_chord_tone.h"
 #include "weighted_chord_identification.h"
 
 /* Root-relative semitone offsets of the chord's tones, ascending (which is the stack-of-thirds order for
@@ -78,8 +79,40 @@ void chord_estimates_destroy(ChordEstimate *estimates, size_t count) {
     for (size_t i = 0; i < count; i++) {
         analysis_chord_reading_destroy(&estimates[i].best);
         analysis_chord_reading_destroy(&estimates[i].runner_up);
+        for (size_t t = 0; t < estimates[i].tone_count; t++) {
+            free(estimates[i].tones[t].type);
+        }
+        free(estimates[i].tones);
     }
     free(estimates);
+}
+
+/* The segment's non-chord tones, from the library's leftover tones; false on allocation failure. */
+static bool fill_tones(const Segment *segment, const CommonPracticeWeightedResult *result, ChordEstimate *estimate) {
+    if (result->leftover_count == 0) {
+        return true;
+    }
+    estimate->tones = calloc(result->leftover_count, sizeof(AnalysisNonChordTone));
+    if (!estimate->tones) {
+        return false;
+    }
+    for (size_t t = 0; t < result->leftover_count; t++) {
+        const CommonPracticeLeftoverTone *leftover = &result->leftover[t];
+        AnalysisNonChordTone *tone = &estimate->tones[estimate->tone_count++];
+        for (size_t m = 0; m < segment->member_count; m++) {
+            if (strcmp(segment->members[m].note_id, leftover->note_id) == 0) {
+                tone->note_id = segment->note_indices[m];
+                break;
+            }
+        }
+        if (leftover->classified) {
+            tone->type = strdup(non_chord_tone_name(leftover->tone));
+            if (!tone->type) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 bool identify_chords(const Segmentation *segmentation, const KeyEstimate *key, ChordEstimate **out) {
@@ -109,7 +142,8 @@ bool identify_chords(const Segmentation *segmentation, const KeyEstimate *key, C
                                   key->prefer_flats, &estimates[i].best) ||
                     (result->runner_up_chord &&
                      !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, tonic,
-                                   bass, key->prefer_flats, &estimates[i].runner_up))) {
+                                   bass, key->prefer_flats, &estimates[i].runner_up)) ||
+                    !fill_tones(&segmentation->segments[i], result, &estimates[i])) {
                     common_practice_weighted_results_destroy(&results);
                     chord_estimates_destroy(estimates, count);
                     return false;

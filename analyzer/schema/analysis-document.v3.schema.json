@@ -10,6 +10,7 @@
     "meter",
     "keys",
     "chords",
+    "non_chord_tones",
     "cadences",
     "phrases",
     "form",
@@ -37,6 +38,10 @@
     "chords": {
       "type": "array",
       "items": { "$ref": "#/$defs/chord_claim" }
+    },
+    "non_chord_tones": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/non_chord_tone_claim" }
     },
     "cadences": { "type": "array" },
     "phrases": { "type": "array" },
@@ -181,6 +186,21 @@
             "method": {
               "enum": ["key_signature", "bass_fallback", "pitch_class_scan"]
             }
+          }
+        }
+      ]
+    },
+    "non_chord_tone_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["type", "classified", "chord_index", "chord_label"],
+          "properties": {
+            "type": { "type": ["string", "null"] },
+            "classified": { "type": "boolean" },
+            "chord_index": { "type": "integer", "minimum": 0 },
+            "chord_label": { "type": "string" }
           }
         }
       ]
