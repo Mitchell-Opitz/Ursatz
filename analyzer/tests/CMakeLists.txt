@@ -66,3 +66,13 @@ target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_measure_locations PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_measure_locations COMMAND test_measure_locations)
+
+add_executable(test_chord_coverage test_chord_coverage.c)
+target_link_libraries(test_chord_coverage PRIVATE ursatz_analyzer)
+target_compile_definitions(test_chord_coverage PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_chord_coverage COMMAND test_chord_coverage)
+
+add_executable(test_chord_details test_chord_details.c)
+target_link_libraries(test_chord_details PRIVATE ursatz_analyzer cjson)
+add_test(NAME test_chord_details COMMAND test_chord_details)
