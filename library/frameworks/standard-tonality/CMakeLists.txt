@@ -19,6 +19,7 @@ add_library(standard_tonality
     triad_spelling_rules.c
     triad_identification_rules.c
     chord_symbol_rules.c
+    triad_in_key_rules.c
     modal_solfege_rules.c
     solfege_rules.c
     scale_degree_rules.c
