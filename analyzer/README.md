@@ -9,7 +9,7 @@ thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library 
 ## Build
 
 Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
-`external/ursatz`, pinned to Ursatz main at PR #108 (`9fe9934`).
+`external/ursatz`, pinned to Ursatz main at PR #111 (`ef5dccf`).
 
 ```sh
 git submodule update --init --recursive
