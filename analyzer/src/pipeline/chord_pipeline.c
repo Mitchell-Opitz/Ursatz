@@ -3,138 +3,157 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/chord_identification.h"
-#include "framework.h"
-#include "identity/entity_id.h"
+#include "chord_vocabulary_seventh.h"
+#include "interpretation/chord.h"
 #include "pipeline/interpretation_util.h"
 #include "pipeline/pitch_class_util.h"
-#include "semantics/sonority.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_span.h"
+#include "semantics/non_chord_tone.h"
+#include "weighted_chord_identification.h"
 
-/* Semitone offset from tonic -> diatonic scale degree (1-7), or -1 if
-   the offset is not diatonic in that mode. */
-static const int MAJOR_DEGREE_BY_OFFSET[12] = {1, -1, 2, -1, 3, 4, -1, 5, -1, 6, -1, 7};
-static const int MINOR_DEGREE_BY_OFFSET[12] = {1, -1, 2, 3, -1, 4, -1, 5, 6, -1, 7, -1};
-
-static Sonority *build_sonority(const SonorityGroup *group, NoteEvent *const *events) {
-    const NoteEvent *first = events[group->note_indices[0]];
-    const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(first));
-
-    MusicalTime *start_copy;
-    if (musical_time_create(musical_time_numerator(onset), musical_time_denominator(onset), &start_copy) !=
-        MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    MusicalTime *end_copy;
-    if (musical_time_create(musical_time_numerator(onset), musical_time_denominator(onset), &end_copy) !=
-        MUSICAL_TIME_OK) {
-        musical_time_destroy(start_copy);
-        return NULL;
-    }
-    TimeSpan *window;
-    if (time_span_create(start_copy, end_copy, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window) != TIME_SPAN_OK) {
-        musical_time_destroy(start_copy);
-        musical_time_destroy(end_copy);
-        return NULL;
-    }
-    musical_time_destroy(start_copy);
-    musical_time_destroy(end_copy);
-
-    EntityID **event_ids = malloc(sizeof(EntityID *) * group->note_index_count);
-    if (!event_ids) {
-        time_span_destroy(window);
-        return NULL;
-    }
-    for (size_t i = 0; i < group->note_index_count; i++) {
-        const NoteEvent *note = events[group->note_indices[i]];
-        if (entity_id_create(entity_id_value(note_event_id(note)), &event_ids[i]) != ENTITY_ID_OK) {
-            for (size_t k = 0; k < i; k++) {
-                entity_id_destroy(event_ids[k]);
-            }
-            free(event_ids);
-            time_span_destroy(window);
-            return NULL;
+/* Root-relative semitone offsets of the chord's tones, ascending (which is the stack-of-thirds order for
+   every chord in the library's vocabulary), from the pitch-class mask the library reports for it. */
+static size_t chord_offsets(const CommonPracticeRankedChord *candidate, int tonic_pitch_class, int offsets[4]) {
+    unsigned mask = common_practice_ranked_chord_mask(candidate, tonic_pitch_class);
+    size_t count = 0;
+    for (int offset = 0; offset < 12 && count < 4; offset++) {
+        if (mask & (1u << ((candidate->root_pitch_class + offset) % 12))) {
+            offsets[count++] = offset;
         }
     }
-
-    Sonority *sonority;
-    if (sonority_create(window, event_ids, group->note_index_count, NULL, 0, SONORITY_EVENT_DOMAIN_SOUNDING,
-                         &sonority) != SONORITY_OK) {
-        for (size_t i = 0; i < group->note_index_count; i++) {
-            entity_id_destroy(event_ids[i]);
-        }
-        free(event_ids);
-        time_span_destroy(window);
-        return NULL;
-    }
-    free(event_ids);
-    return sonority;
+    return count;
 }
 
-bool identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
-                              PitchNumericValue *const *pitch_values, const KeyEstimate *key, ChordEstimate *out) {
-    *out = (ChordEstimate){false, NULL, {false, 0, 0}};
-    bool out_of_memory = false;
-    if (!key || !key->found) {
-        return true;
+/* Quality of a triad from its offsets; NULL for a set the library does not build. */
+static const char *triad_quality(const int offsets[4], size_t count) {
+    if (count != 3) {
+        return NULL;
     }
-
-    const int *degree_table = key->is_major ? MAJOR_DEGREE_BY_OFFSET : MINOR_DEGREE_BY_OFFSET;
-
-    int *degrees = malloc(sizeof(int) * group->note_index_count);
-    if (!degrees) {
-        return true;
+    if (offsets[1] == 4 && offsets[2] == 7) {
+        return "major";
     }
-    size_t degree_count = 0;
-    for (size_t i = 0; i < group->note_index_count; i++) {
-        long note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[i]]);
-        int pitch_class = pitch_class_of(note_number);
-        int offset = ((pitch_class - key->tonic_pitch_class) % 12 + 12) % 12;
-        int degree = degree_table[offset];
-        if (degree != -1) {
-            degrees[degree_count++] = degree;
-        }
+    if (offsets[1] == 3 && offsets[2] == 7) {
+        return "minor";
     }
-
-    if (degree_count == 0) {
-        free(degrees);
-        return true;
+    if (offsets[1] == 3 && offsets[2] == 6) {
+        return "diminished";
     }
-
-    Sonority *sonority = build_sonority(group, events);
-    if (!sonority) {
-        free(degrees);
-        return true;
-    }
-
-    const Framework *framework = common_practice_minimal_framework();
-    if (framework) {
-        ChordIdentificationInput input = {sonority, framework, degrees, degree_count};
-        AnalysisResult *result = NULL;
-        if (chord_identification_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
-            const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
-            size_t claim_size;
-            const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-            out->label = strdup(claim);
-            out->confidence = interpretation_confidence(interpretation);
-            out->found = out->label != NULL;
-            out_of_memory = out->label == NULL;
-            analysis_result_destroy(result);
-        }
-    }
-
-    sonority_destroy(sonority);
-    free(degrees);
-    return !out_of_memory;
+    return NULL;
 }
 
-void chord_estimate_destroy(ChordEstimate *estimate) {
-    if (!estimate) {
+/* Position of the bass among the chord's tones: 0 for the root, 1 for the third, and so on; -1 when absent. */
+static int inversion_of(const int offsets[4], size_t count, int root_pitch_class, int bass_pitch_class) {
+    int bass_offset = ((bass_pitch_class - root_pitch_class) % 12 + 12) % 12;
+    for (size_t i = 0; i < count; i++) {
+        if (offsets[i] == bass_offset) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+static bool fill_reading(const CommonPracticeRankedChord *candidate, const Chord *chord, double score,
+                         int tonic_pitch_class, int bass_pitch_class, bool prefer_flats,
+                         AnalysisChordReading *out) {
+    int offsets[4];
+    size_t offset_count = chord_offsets(candidate, tonic_pitch_class, offsets);
+    const char *quality = candidate->is_seventh ? common_practice_seventh_label(candidate->seventh)
+                                                : triad_quality(offsets, offset_count);
+    out->label = strdup(chord_label(chord));
+    out->root = strdup(pitch_class_name(candidate->root_pitch_class, prefer_flats));
+    out->quality = strdup(quality ? quality : "unknown");
+    out->bass = strdup(pitch_class_name(bass_pitch_class, prefer_flats));
+    out->inversion = inversion_of(offsets, offset_count, candidate->root_pitch_class, bass_pitch_class);
+    out->score = score;
+    out->confidence = interpretation_confidence(chord_interpretation(chord));
+    if (!out->label || !out->root || !out->quality || !out->bass) {
+        analysis_chord_reading_destroy(out);
+        return false;
+    }
+    return true;
+}
+
+void chord_estimates_destroy(ChordEstimate *estimates, size_t count) {
+    if (!estimates) {
         return;
     }
-    free(estimate->label);
-    estimate->label = NULL;
-    estimate->found = false;
+    for (size_t i = 0; i < count; i++) {
+        analysis_chord_reading_destroy(&estimates[i].best);
+        analysis_chord_reading_destroy(&estimates[i].runner_up);
+        for (size_t t = 0; t < estimates[i].tone_count; t++) {
+            free(estimates[i].tones[t].type);
+        }
+        free(estimates[i].tones);
+    }
+    free(estimates);
+}
+
+/* The segment's non-chord tones, from the library's leftover tones; false on allocation failure. */
+static bool fill_tones(const Segment *segment, const CommonPracticeWeightedResult *result, ChordEstimate *estimate) {
+    if (result->leftover_count == 0) {
+        return true;
+    }
+    estimate->tones = calloc(result->leftover_count, sizeof(AnalysisNonChordTone));
+    if (!estimate->tones) {
+        return false;
+    }
+    for (size_t t = 0; t < result->leftover_count; t++) {
+        const CommonPracticeLeftoverTone *leftover = &result->leftover[t];
+        AnalysisNonChordTone *tone = &estimate->tones[estimate->tone_count++];
+        for (size_t m = 0; m < segment->member_count; m++) {
+            if (strcmp(segment->members[m].note_id, leftover->note_id) == 0) {
+                tone->note_id = segment->note_indices[m];
+                break;
+            }
+        }
+        if (leftover->classified) {
+            tone->type = strdup(non_chord_tone_name(leftover->tone));
+            if (!tone->type) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool identify_chords(const Segmentation *segmentation, const KeyEstimate *key, ChordEstimate **out) {
+    size_t count = segmentation->segment_count;
+    ChordEstimate *estimates = calloc(count > 0 ? count : 1, sizeof(ChordEstimate));
+    if (!estimates) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        estimates[i].best.inversion = -1;
+        estimates[i].runner_up.inversion = -1;
+    }
+
+    if (count > 0 && key && key->found && key->is_major) {
+        CommonPracticeWeightedResults results = {0};
+        if (common_practice_identify_weighted_sequence(segmentation->library_segments, count,
+                                                       key->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR, NULL,
+                                                       &results) == COMMON_PRACTICE_WEIGHTED_OK) {
+            for (size_t i = 0; i < count; i++) {
+                const CommonPracticeWeightedResult *result = &results.items[i];
+                if (!result->matched) {
+                    continue;
+                }
+                int tonic = key->tonic_pitch_class;
+                int bass = segment_bass_pitch_class(&segmentation->segments[i]);
+                if (!fill_reading(&result->best, result->best_chord, result->best_score, tonic, bass,
+                                  key->prefer_flats, &estimates[i].best) ||
+                    (result->runner_up_chord &&
+                     !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, tonic,
+                                   bass, key->prefer_flats, &estimates[i].runner_up)) ||
+                    !fill_tones(&segmentation->segments[i], result, &estimates[i])) {
+                    common_practice_weighted_results_destroy(&results);
+                    chord_estimates_destroy(estimates, count);
+                    return false;
+                }
+                estimates[i].found = true;
+            }
+            common_practice_weighted_results_destroy(&results);
+        }
+    }
+
+    *out = estimates;
+    return true;
 }

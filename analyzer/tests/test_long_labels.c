@@ -48,8 +48,8 @@ int main(void) {
     char *markdown = markdown_report_render(document);
     assert(markdown != NULL);
     assert(strstr(markdown, "**Detected key:** C major (long key label beyond thirty-one characters)\n") != NULL);
-    assert(strstr(markdown, "- m. 1, beat 1 to m. ") != NULL);
-    assert(strstr(markdown, ": I (long chord label beyond thirty-one characters)\n") != NULL);
+    assert(strstr(markdown, "| m. 1, beat 1 to m. ") != NULL);
+    assert(strstr(markdown, " | I (long chord label beyond thirty-one characters) | ") != NULL);
 
     free(markdown);
     analysis_document_destroy(document);

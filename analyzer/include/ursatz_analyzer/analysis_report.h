@@ -20,19 +20,52 @@ typedef struct {
     unsigned long denominator;
 } AnalysisConfidence;
 
+/* One chord reading from the library's weighted identification: the best
+   chord of a segment, or its runner-up. label is NULL when there is no
+   such reading (no match, or no runner-up). All strings are owned. */
 typedef struct {
-    long time_numerator;
+    char *label;   /* the library's label for the chord, e.g. "V" or "dominant7" */
+    char *root;    /* root pitch class name, e.g. "G" */
+    char *quality; /* e.g. "major", "minor", "diminished", "dominant7" */
+    char *bass;    /* bass pitch class name; the segment's, so the same for both readings */
+    int inversion; /* 0 root position, 1 first, 2 second, 3 third; -1 when the bass is not a chord tone */
+    double score;  /* the library's candidate score */
+    AnalysisConfidence confidence;
+} AnalysisChordReading;
+
+typedef struct {
+    long time_numerator; /* segment start, whole notes */
     unsigned long time_denominator;
+    long end_numerator; /* segment end (exclusive), whole notes */
+    unsigned long end_denominator;
     char *chord_label; /* owned; "no match" when nothing was identified */
     char *key_label;   /* owned; "no match" when nothing was identified */
-    size_t *note_ids;  /* owned; ImportedNotes indices (Ursatz "midi-note-N") grouped into this sonority */
+    size_t *note_ids;  /* owned; ImportedNotes indices (Ursatz "midi-note-N") sounding in this segment, attacked or held */
     size_t note_id_count;
     AnalysisConfidence chord_confidence;
+    AnalysisChordReading chord;     /* best chord; label NULL when "no match" */
+    AnalysisChordReading runner_up; /* label NULL when the library gave none */
 } AnalysisReportEntry;
+
+/* Frees a reading's strings and clears it. */
+void analysis_chord_reading_destroy(AnalysisChordReading *reading);
+
+/* A note sounding in a chord's segment that is not one of the chord's tones
+   (a "leftover tone" in the library's weighted identification), against
+   the chord of entries[chord_index]. type is the library's name for the
+   figure (non_chord_tone_name, e.g. "passing", "escape-tone"), or NULL
+   when the library left the tone unclassified. */
+typedef struct {
+    size_t note_id; /* ImportedNotes index (Ursatz "midi-note-N") */
+    size_t chord_index;
+    char *type; /* owned; NULL when unclassified */
+} AnalysisNonChordTone;
 
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
+    AnalysisNonChordTone *non_chord_tones; /* owned; in time order, then note order */
+    size_t non_chord_tone_count;
     bool key_found;
     AnalysisKeyMethod key_method;        /* ANALYSIS_KEY_METHOD_NONE unless key_found */
     AnalysisConfidence key_confidence;

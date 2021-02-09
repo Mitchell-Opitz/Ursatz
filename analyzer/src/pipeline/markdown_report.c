@@ -316,23 +316,130 @@ static bool append_position(StringBuilder *sb, const cJSON *position) {
     return sb_appendf(sb, "m. %d, beat %s", (int)number_member(position, "measure"), beat_text);
 }
 
+/* The runner-up is shown on a chord's row only when the library's scores for the two are this close
+   or closer: best score minus runner-up score below this. Documented in README.md. */
+#define RUNNER_UP_MARGIN_THRESHOLD 0.10
+
+/* A number with up to two decimals, trailing zeros trimmed ("1.5", "3"). */
+static void format_number(double value, char *buffer, size_t size) {
+    snprintf(buffer, size, "%.2f", value);
+    size_t length = strlen(buffer);
+    while (length > 0 && buffer[length - 1] == '0') {
+        buffer[--length] = '\0';
+    }
+    if (length > 0 && buffer[length - 1] == '.') {
+        buffer[--length] = '\0';
+    }
+}
+
+static double rational_member(const cJSON *object, const char *key) {
+    const cJSON *rational = cJSON_GetObjectItemCaseSensitive(object, key);
+    double denominator = number_member(rational, "den");
+    return denominator == 0.0 ? 0.0 : number_member(rational, "num") / denominator;
+}
+
+static const char *INVERSION_NAMES[] = {"root position", "first", "second", "third"};
+
+static bool append_chord_row(StringBuilder *sb, const cJSON *chord) {
+    const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
+    const char *label = string_member(chord, "label");
+    const char *root = string_member(chord, "root");
+    bool matched = root != NULL;
+
+    bool ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+              sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+              sb_appendf(sb, " | %s | ", label ? label : "");
+    if (!ok) {
+        return false;
+    }
+
+    if (!matched) {
+        return sb_append(sb, "- | - | - | - | - | - | - |\n");
+    }
+
+    const cJSON *inversion = cJSON_GetObjectItemCaseSensitive(chord, "inversion");
+    const char *inversion_text = "-";
+    if (cJSON_IsNumber(inversion) && inversion->valueint >= 0 && inversion->valueint < 4) {
+        inversion_text = INVERSION_NAMES[inversion->valueint];
+    }
+    const cJSON *duration = cJSON_GetObjectItemCaseSensitive(chord, "duration");
+    const cJSON *beats = cJSON_GetObjectItemCaseSensitive(duration, "beats");
+    char beats_text[32] = "-";
+    if (cJSON_IsObject(beats)) {
+        format_number(rational_member(duration, "beats"), beats_text, sizeof(beats_text));
+    }
+    const cJSON *uncertainty = cJSON_GetObjectItemCaseSensitive(chord, "uncertainty");
+    char confidence_text[32] = "-";
+    if (cJSON_IsNumber(uncertainty)) {
+        snprintf(confidence_text, sizeof(confidence_text), "%.2f", uncertainty->valuedouble);
+    }
+
+    ok = sb_appendf(sb, "%s | %s | %s | %s | %s | %s | ", root, string_member(chord, "quality"),
+                    string_member(chord, "bass"), inversion_text, beats_text, confidence_text);
+    if (!ok) {
+        return false;
+    }
+
+    const cJSON *runner_up = cJSON_GetObjectItemCaseSensitive(chord, "runner_up");
+    double margin = number_member(chord, "score") - number_member(runner_up, "score");
+    if (cJSON_IsObject(runner_up) && margin < RUNNER_UP_MARGIN_THRESHOLD) {
+        char score_text[32];
+        snprintf(score_text, sizeof(score_text), "%.2f", number_member(runner_up, "score"));
+        return sb_appendf(sb, "%s (%s %s, score %s) |\n", string_member(runner_up, "label"),
+                          string_member(runner_up, "root"), string_member(runner_up, "quality"), score_text);
+    }
+    return sb_append(sb, "- |\n");
+}
+
 static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON *chords) {
-    bool ok = sb_append(sb, "## Chord Regions\n\n") && sb_append(sb, "Positions are measure and beat.");
+    bool ok = sb_append(sb, "## Chords\n\n") && sb_append(sb, "Positions are measure and beat.");
     if (ok && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(
                   cJSON_GetObjectItemCaseSensitive(document, "meter"), "pickup"))) {
         ok = sb_append(sb, " The pickup is measure 0.");
     }
-    ok = ok && sb_append(sb, "\n\n");
+    ok = ok &&
+         sb_appendf(sb,
+                    " Duration is in beats. Confidence is the library's confidence in the chord. The runner-up "
+                    "is shown only when its score is within %.2f of the best chord's.\n\n",
+                    RUNNER_UP_MARGIN_THRESHOLD) &&
+         sb_append(sb, "| Position | Chord | Root | Quality | Bass | Inversion | Beats | Confidence | Runner-up |\n"
+                       "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
         if (!ok) {
             break;
         }
-        const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
-        const char *label = string_member(chord, "label");
-        ok = sb_append(sb, "- ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+        ok = append_chord_row(sb, chord);
+    }
+    return ok;
+}
+
+static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, const cJSON *tones) {
+    (void)document;
+    size_t unclassified = 0;
+    const cJSON *tone;
+    cJSON_ArrayForEach(tone, tones) {
+        if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(tone, "classified"))) {
+            unclassified++;
+        }
+    }
+    bool ok = sb_append(sb, "## Non-chord tones\n\n") &&
+              sb_appendf(sb, "%d notes sound against a chord without being one of its tones; %zu the library "
+                             "left unclassified. Type is the library's name for the figure. Note is the "
+                             "imported note's index.\n\n",
+                         cJSON_GetArraySize(tones), unclassified) &&
+              sb_append(sb, "| Position | Note | Type | Against |\n| --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(tone, tones) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(tone, "location");
+        const cJSON *note_ids = cJSON_GetObjectItemCaseSensitive(tone, "note_ids");
+        const char *type = string_member(tone, "type");
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
-             sb_appendf(sb, ": %s\n", label ? label : "");
+             sb_appendf(sb, " | %d | %s | %s |\n", (int)cJSON_GetArrayItem(note_ids, 0)->valuedouble,
+                        type ? type : "unclassified", string_member(tone, "chord_label"));
     }
     return ok;
 }
@@ -348,6 +455,7 @@ static const struct {
     {"meter", render_meter},
     {"keys", render_key},
     {"chords", render_chords},
+    {"non_chord_tones", render_non_chord_tones},
 };
 
 static bool section_is_empty(const cJSON *section) {

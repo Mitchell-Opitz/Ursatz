@@ -15,6 +15,7 @@ typedef struct {
     char *label; /* owned; e.g. "C major", copied out of KeyEstimation's claim; NULL unless found */
     int tonic_pitch_class; /* 0-11, valid only when found */
     bool is_major;         /* valid only when found */
+    bool prefer_flats;     /* the key reads in flats, for naming pitch classes; valid only when found */
     AnalysisKeyMethod method;      /* step that found the key; NONE unless found */
     AnalysisConfidence confidence; /* from KeyEstimation's Interpretation; absent for a key signature */
 } KeyEstimate;

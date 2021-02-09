@@ -4,8 +4,8 @@
 
 - **File:** Bach 114.mid, 430 notes.
 - **Key:** G major, inferred from the bass of the closing or opening chord.
-- **Chords:** 296 chord events; 4 matched a chord (1%), 292 did not.
-- **Most frequent chords:** I (4).
+- **Chords:** 155 chord events; 151 matched a chord (97%), 4 did not.
+- **Most frequent chords:** I (51), minor7 (24), ii (16).
 
 ## Meter
 
@@ -15,303 +15,222 @@
 
 **Detected key:** G major
 
-## Chord Regions
+## Chords
 
-Positions are measure and beat.
+Positions are measure and beat. Duration is in beats. Confidence is the library's confidence in the chord. The runner-up is shown only when its score is within 0.10 of the best chord's.
 
-- m. 1, beat 1 to m. 1, beat 2: I
-- m. 1, beat 1.5 to m. 1, beat 1.75: no match
-- m. 1, beat 1.75 to m. 1, beat 2: no match
-- m. 1, beat 2 to m. 1, beat 2.5: no match
-- m. 1, beat 2.25 to m. 1, beat 2.5: no match
-- m. 1, beat 2.5 to m. 1, beat 3.5: no match
-- m. 1, beat 3 to m. 1, beat 3.5: no match
-- m. 1, beat 3.5 to m. 1, beat 4: no match
-- m. 1, beat 4 to m. 2, beat 1: no match
-- m. 1, beat 4.38 to m. 1, beat 4.44: no match
-- m. 1, beat 4.44 to m. 1, beat 4.5: no match
-- m. 1, beat 4.5 to m. 1, beat 4.75: no match
-- m. 1, beat 4.75 to m. 2, beat 1: no match
-- m. 2, beat 1 to m. 2, beat 1.25: no match
-- m. 2, beat 1.25 to m. 2, beat 1.5: no match
-- m. 2, beat 1.5 to m. 2, beat 2.5: no match
-- m. 2, beat 2 to m. 2, beat 2.5: no match
-- m. 2, beat 2.5 to m. 2, beat 3: no match
-- m. 2, beat 2.88 to m. 2, beat 2.94: no match
-- m. 2, beat 2.94 to m. 2, beat 3: no match
-- m. 2, beat 3 to m. 2, beat 4: no match
-- m. 2, beat 3.5 to m. 2, beat 3.75: no match
-- m. 2, beat 3.75 to m. 2, beat 4: no match
-- m. 2, beat 4 to m. 2, beat 4.25: no match
-- m. 2, beat 4.25 to m. 2, beat 4.5: no match
-- m. 2, beat 4.5 to m. 3, beat 1.5: no match
-- m. 3, beat 1 to m. 3, beat 1.25: no match
-- m. 3, beat 1.25 to m. 3, beat 1.5: no match
-- m. 3, beat 1.5 to m. 3, beat 1.75: no match
-- m. 3, beat 1.75 to m. 3, beat 2: no match
-- m. 3, beat 2 to m. 3, beat 2.5: no match
-- m. 3, beat 2.5 to m. 3, beat 3: no match
-- m. 3, beat 2.75 to m. 3, beat 3: no match
-- m. 3, beat 3 to m. 3, beat 3.5: no match
-- m. 3, beat 3.25 to m. 3, beat 3.5: no match
-- m. 3, beat 3.5 to m. 3, beat 4: no match
-- m. 3, beat 4 to m. 4, beat 1: no match
-- m. 3, beat 4.25 to m. 3, beat 4.5: no match
-- m. 3, beat 4.5 to m. 3, beat 4.75: no match
-- m. 3, beat 4.75 to m. 4, beat 1: no match
-- m. 4, beat 1 to m. 4, beat 2: no match
-- m. 4, beat 1.5 to m. 4, beat 1.75: no match
-- m. 4, beat 1.75 to m. 4, beat 2: no match
-- m. 4, beat 2 to m. 4, beat 2.5: no match
-- m. 4, beat 2.25 to m. 4, beat 2.5: no match
-- m. 4, beat 2.5 to m. 4, beat 3: no match
-- m. 4, beat 3 to m. 4, beat 3.5: no match
-- m. 4, beat 3.5 to m. 4, beat 4: no match
-- m. 4, beat 4 to m. 5, beat 1: no match
-- m. 4, beat 4.38 to m. 4, beat 4.44: no match
-- m. 4, beat 4.44 to m. 4, beat 4.5: no match
-- m. 4, beat 4.5 to m. 4, beat 4.75: no match
-- m. 4, beat 4.75 to m. 5, beat 1: no match
-- m. 5, beat 1 to m. 5, beat 1.25: no match
-- m. 5, beat 1.25 to m. 5, beat 1.5: no match
-- m. 5, beat 1.5 to m. 5, beat 2: no match
-- m. 5, beat 2 to m. 5, beat 2.5: no match
-- m. 5, beat 2.25 to m. 5, beat 2.5: no match
-- m. 5, beat 2.5 to m. 5, beat 3: no match
-- m. 5, beat 2.75 to m. 5, beat 3: no match
-- m. 5, beat 2.88 to m. 5, beat 2.94: no match
-- m. 5, beat 2.94 to m. 5, beat 3: no match
-- m. 5, beat 3 to m. 5, beat 4: no match
-- m. 5, beat 3.5 to m. 5, beat 3.75: no match
-- m. 5, beat 3.75 to m. 5, beat 4: no match
-- m. 5, beat 4 to m. 5, beat 4.5: no match
-- m. 5, beat 4.25 to m. 5, beat 4.5: no match
-- m. 5, beat 4.5 to m. 6, beat 1: no match
-- m. 6, beat 1 to m. 6, beat 1.25: no match
-- m. 6, beat 1.25 to m. 6, beat 1.5: no match
-- m. 6, beat 1.5 to m. 6, beat 2: no match
-- m. 6, beat 1.75 to m. 6, beat 2: no match
-- m. 6, beat 2 to m. 6, beat 2.5: no match
-- m. 6, beat 2.5 to m. 6, beat 3: no match
-- m. 6, beat 2.75 to m. 6, beat 3: no match
-- m. 6, beat 3 to m. 6, beat 3.5: no match
-- m. 6, beat 3.25 to m. 6, beat 3.5: no match
-- m. 6, beat 3.5 to m. 6, beat 4.5: no match
-- m. 6, beat 4.5 to m. 7, beat 1: no match
-- m. 7, beat 1 to m. 7, beat 2: I
-- m. 7, beat 1.5 to m. 7, beat 1.75: no match
-- m. 7, beat 1.75 to m. 7, beat 2: no match
-- m. 7, beat 2 to m. 7, beat 2.5: no match
-- m. 7, beat 2.25 to m. 7, beat 2.5: no match
-- m. 7, beat 2.5 to m. 7, beat 3: no match
-- m. 7, beat 3 to m. 7, beat 3.5: no match
-- m. 7, beat 3.5 to m. 7, beat 4: no match
-- m. 7, beat 4 to m. 8, beat 1: no match
-- m. 7, beat 4.38 to m. 7, beat 4.44: no match
-- m. 7, beat 4.44 to m. 7, beat 4.5: no match
-- m. 7, beat 4.5 to m. 7, beat 4.75: no match
-- m. 7, beat 4.75 to m. 8, beat 1: no match
-- m. 8, beat 1 to m. 8, beat 1.25: no match
-- m. 8, beat 1.25 to m. 8, beat 1.5: no match
-- m. 8, beat 1.5 to m. 8, beat 2.5: no match
-- m. 8, beat 2 to m. 8, beat 2.5: no match
-- m. 8, beat 2.5 to m. 8, beat 3: no match
-- m. 8, beat 2.88 to m. 8, beat 2.94: no match
-- m. 8, beat 2.94 to m. 8, beat 3: no match
-- m. 8, beat 3 to m. 8, beat 4: no match
-- m. 8, beat 3.5 to m. 8, beat 3.75: no match
-- m. 8, beat 3.75 to m. 8, beat 4: no match
-- m. 8, beat 4 to m. 8, beat 4.25: no match
-- m. 8, beat 4.25 to m. 8, beat 4.5: no match
-- m. 8, beat 4.5 to m. 9, beat 1.5: no match
-- m. 9, beat 1 to m. 9, beat 1.25: no match
-- m. 9, beat 1.25 to m. 9, beat 1.5: no match
-- m. 9, beat 1.5 to m. 9, beat 1.75: no match
-- m. 9, beat 1.75 to m. 9, beat 2: no match
-- m. 9, beat 2 to m. 9, beat 2.5: no match
-- m. 9, beat 2.5 to m. 9, beat 3: no match
-- m. 9, beat 2.75 to m. 9, beat 3: no match
-- m. 9, beat 3 to m. 9, beat 3.5: no match
-- m. 9, beat 3.25 to m. 9, beat 3.5: no match
-- m. 9, beat 3.5 to m. 9, beat 4: no match
-- m. 9, beat 4 to m. 10, beat 1: no match
-- m. 9, beat 4.25 to m. 9, beat 4.5: no match
-- m. 9, beat 4.5 to m. 9, beat 4.75: no match
-- m. 9, beat 4.75 to m. 10, beat 1: no match
-- m. 10, beat 1 to m. 10, beat 2: no match
-- m. 10, beat 1.5 to m. 10, beat 1.75: no match
-- m. 10, beat 1.75 to m. 10, beat 2: no match
-- m. 10, beat 2 to m. 10, beat 2.5: no match
-- m. 10, beat 2.25 to m. 10, beat 2.5: no match
-- m. 10, beat 2.5 to m. 10, beat 3: no match
-- m. 10, beat 3 to m. 10, beat 3.5: no match
-- m. 10, beat 3.5 to m. 10, beat 4: no match
-- m. 10, beat 4 to m. 11, beat 1: no match
-- m. 10, beat 4.38 to m. 10, beat 4.44: no match
-- m. 10, beat 4.44 to m. 10, beat 4.5: no match
-- m. 10, beat 4.5 to m. 10, beat 4.75: no match
-- m. 10, beat 4.75 to m. 11, beat 1: no match
-- m. 11, beat 1 to m. 11, beat 1.25: no match
-- m. 11, beat 1.25 to m. 11, beat 1.5: no match
-- m. 11, beat 1.5 to m. 11, beat 2: no match
-- m. 11, beat 2 to m. 11, beat 2.5: no match
-- m. 11, beat 2.25 to m. 11, beat 2.5: no match
-- m. 11, beat 2.5 to m. 11, beat 3: no match
-- m. 11, beat 2.75 to m. 11, beat 3: no match
-- m. 11, beat 2.88 to m. 11, beat 2.94: no match
-- m. 11, beat 2.94 to m. 11, beat 3: no match
-- m. 11, beat 3 to m. 11, beat 4: no match
-- m. 11, beat 3.5 to m. 11, beat 3.75: no match
-- m. 11, beat 3.75 to m. 11, beat 4: no match
-- m. 11, beat 4 to m. 11, beat 4.5: no match
-- m. 11, beat 4.25 to m. 11, beat 4.5: no match
-- m. 11, beat 4.5 to m. 12, beat 1: no match
-- m. 12, beat 1 to m. 12, beat 1.25: no match
-- m. 12, beat 1.25 to m. 12, beat 1.5: no match
-- m. 12, beat 1.5 to m. 12, beat 2: no match
-- m. 12, beat 1.75 to m. 12, beat 2: no match
-- m. 12, beat 2 to m. 12, beat 2.5: no match
-- m. 12, beat 2.5 to m. 12, beat 3: no match
-- m. 12, beat 2.75 to m. 12, beat 3: no match
-- m. 12, beat 3 to m. 12, beat 3.5: no match
-- m. 12, beat 3.25 to m. 12, beat 3.5: no match
-- m. 12, beat 3.5 to m. 12, beat 4.5: no match
-- m. 12, beat 4.5 to m. 13, beat 1: no match
-- m. 13, beat 1 to m. 13, beat 2.5: no match
-- m. 13, beat 1.5 to m. 13, beat 1.75: no match
-- m. 13, beat 1.75 to m. 13, beat 2: no match
-- m. 13, beat 2 to m. 13, beat 2.25: no match
-- m. 13, beat 2.25 to m. 13, beat 2.5: no match
-- m. 13, beat 2.5 to m. 13, beat 4: no match
-- m. 13, beat 3 to m. 13, beat 3.25: no match
-- m. 13, beat 3.25 to m. 13, beat 3.5: no match
-- m. 13, beat 3.5 to m. 13, beat 3.75: no match
-- m. 13, beat 3.75 to m. 13, beat 4: no match
-- m. 13, beat 4 to m. 13, beat 4.5: no match
-- m. 13, beat 4.5 to m. 14, beat 1: no match
-- m. 13, beat 4.75 to m. 14, beat 1: no match
-- m. 14, beat 1 to m. 14, beat 1.5: no match
-- m. 14, beat 1.25 to m. 14, beat 1.5: no match
-- m. 14, beat 1.5 to m. 14, beat 2.5: no match
-- m. 14, beat 2 to m. 14, beat 2.25: no match
-- m. 14, beat 2.25 to m. 14, beat 2.5: no match
-- m. 14, beat 2.5 to m. 14, beat 3: no match
-- m. 14, beat 3 to m. 14, beat 4.5: no match
-- m. 14, beat 3.25 to m. 14, beat 3.5: no match
-- m. 14, beat 3.5 to m. 14, beat 3.75: no match
-- m. 14, beat 3.75 to m. 14, beat 4: no match
-- m. 14, beat 4 to m. 14, beat 4.25: no match
-- m. 14, beat 4.25 to m. 14, beat 4.5: no match
-- m. 14, beat 4.5 to m. 15, beat 1: no match
-- m. 15, beat 1 to m. 15, beat 1.5: no match
-- m. 15, beat 1.5 to m. 15, beat 2: no match
-- m. 15, beat 2 to m. 15, beat 2.5: no match
-- m. 15, beat 2.5 to m. 15, beat 3: no match
-- m. 15, beat 3 to m. 15, beat 3.5: no match
-- m. 15, beat 3.5 to m. 15, beat 4: no match
-- m. 15, beat 4 to m. 15, beat 4.5: no match
-- m. 15, beat 4.5 to m. 16, beat 1: no match
-- m. 16, beat 1 to m. 16, beat 1.5: no match
-- m. 16, beat 1.5 to m. 16, beat 2: no match
-- m. 16, beat 1.75 to m. 16, beat 2: no match
-- m. 16, beat 2 to m. 16, beat 2.5: no match
-- m. 16, beat 2.5 to m. 16, beat 3: no match
-- m. 16, beat 3 to m. 16, beat 3.5: no match
-- m. 16, beat 3.25 to m. 16, beat 3.5: no match
-- m. 16, beat 3.5 to m. 16, beat 4: no match
-- m. 16, beat 4 to m. 16, beat 4.5: no match
-- m. 16, beat 4.5 to m. 17, beat 1: no match
-- m. 17, beat 1 to m. 17, beat 1.5: no match
-- m. 17, beat 1.5 to m. 17, beat 2.5: no match
-- m. 17, beat 1.75 to m. 17, beat 2: no match
-- m. 17, beat 2 to m. 17, beat 2.25: no match
-- m. 17, beat 2.25 to m. 17, beat 2.5: no match
-- m. 17, beat 2.5 to m. 17, beat 3: no match
-- m. 17, beat 3 to m. 17, beat 4: no match
-- m. 17, beat 3.25 to m. 17, beat 3.5: no match
-- m. 17, beat 3.5 to m. 17, beat 3.75: no match
-- m. 17, beat 3.75 to m. 17, beat 4: no match
-- m. 17, beat 4 to m. 17, beat 4.5: no match
-- m. 17, beat 4.25 to m. 17, beat 4.5: no match
-- m. 17, beat 4.5 to m. 18, beat 1: no match
-- m. 18, beat 1 to m. 18, beat 1.5: no match
-- m. 18, beat 1.06 to m. 18, beat 1.12: no match
-- m. 18, beat 1.12 to m. 18, beat 1.19: no match
-- m. 18, beat 1.19 to m. 18, beat 1.44: no match
-- m. 18, beat 1.5 to m. 18, beat 2: no match
-- m. 18, beat 2 to m. 18, beat 2.5: no match
-- m. 18, beat 2.25 to m. 18, beat 2.5: no match
-- m. 18, beat 2.5 to m. 18, beat 3: no match
-- m. 18, beat 3 to m. 18, beat 3.5: no match
-- m. 18, beat 3.5 to m. 18, beat 4.5: I
-- m. 18, beat 4 to m. 18, beat 4.5: no match
-- m. 18, beat 4.5 to m. 19, beat 1: no match
-- m. 19, beat 1 to m. 19, beat 2.5: no match
-- m. 19, beat 1.5 to m. 19, beat 1.75: no match
-- m. 19, beat 1.75 to m. 19, beat 2: no match
-- m. 19, beat 2 to m. 19, beat 2.25: no match
-- m. 19, beat 2.25 to m. 19, beat 2.5: no match
-- m. 19, beat 2.5 to m. 19, beat 4: no match
-- m. 19, beat 3 to m. 19, beat 3.25: no match
-- m. 19, beat 3.25 to m. 19, beat 3.5: no match
-- m. 19, beat 3.5 to m. 19, beat 3.75: no match
-- m. 19, beat 3.75 to m. 19, beat 4: no match
-- m. 19, beat 4 to m. 19, beat 4.5: no match
-- m. 19, beat 4.5 to m. 20, beat 1: no match
-- m. 19, beat 4.75 to m. 20, beat 1: no match
-- m. 20, beat 1 to m. 20, beat 1.5: no match
-- m. 20, beat 1.25 to m. 20, beat 1.5: no match
-- m. 20, beat 1.5 to m. 20, beat 2.5: no match
-- m. 20, beat 2 to m. 20, beat 2.25: no match
-- m. 20, beat 2.25 to m. 20, beat 2.5: no match
-- m. 20, beat 2.5 to m. 20, beat 3: no match
-- m. 20, beat 3 to m. 20, beat 4.5: no match
-- m. 20, beat 3.25 to m. 20, beat 3.5: no match
-- m. 20, beat 3.5 to m. 20, beat 3.75: no match
-- m. 20, beat 3.75 to m. 20, beat 4: no match
-- m. 20, beat 4 to m. 20, beat 4.25: no match
-- m. 20, beat 4.25 to m. 20, beat 4.5: no match
-- m. 20, beat 4.5 to m. 21, beat 1: no match
-- m. 21, beat 1 to m. 21, beat 1.5: no match
-- m. 21, beat 1.5 to m. 21, beat 2: no match
-- m. 21, beat 2 to m. 21, beat 2.5: no match
-- m. 21, beat 2.5 to m. 21, beat 3: no match
-- m. 21, beat 3 to m. 21, beat 3.5: no match
-- m. 21, beat 3.5 to m. 21, beat 4: no match
-- m. 21, beat 4 to m. 21, beat 4.5: no match
-- m. 21, beat 4.5 to m. 22, beat 1: no match
-- m. 22, beat 1 to m. 22, beat 1.5: no match
-- m. 22, beat 1.5 to m. 22, beat 2: no match
-- m. 22, beat 1.75 to m. 22, beat 2: no match
-- m. 22, beat 2 to m. 22, beat 2.5: no match
-- m. 22, beat 2.5 to m. 22, beat 3: no match
-- m. 22, beat 3 to m. 22, beat 3.5: no match
-- m. 22, beat 3.25 to m. 22, beat 3.5: no match
-- m. 22, beat 3.5 to m. 22, beat 4: no match
-- m. 22, beat 4 to m. 22, beat 4.5: no match
-- m. 22, beat 4.5 to m. 23, beat 1: no match
-- m. 23, beat 1 to m. 23, beat 1.5: no match
-- m. 23, beat 1.5 to m. 23, beat 2.5: no match
-- m. 23, beat 1.75 to m. 23, beat 2: no match
-- m. 23, beat 2 to m. 23, beat 2.25: no match
-- m. 23, beat 2.25 to m. 23, beat 2.5: no match
-- m. 23, beat 2.5 to m. 23, beat 3: no match
-- m. 23, beat 3 to m. 23, beat 4: no match
-- m. 23, beat 3.25 to m. 23, beat 3.5: no match
-- m. 23, beat 3.5 to m. 23, beat 3.75: no match
-- m. 23, beat 3.75 to m. 23, beat 4: no match
-- m. 23, beat 4 to m. 23, beat 4.5: no match
-- m. 23, beat 4.25 to m. 23, beat 4.5: no match
-- m. 23, beat 4.5 to m. 24, beat 1: no match
-- m. 24, beat 1 to m. 24, beat 1.5: no match
-- m. 24, beat 1.06 to m. 24, beat 1.12: no match
-- m. 24, beat 1.12 to m. 24, beat 1.19: no match
-- m. 24, beat 1.19 to m. 24, beat 1.44: no match
-- m. 24, beat 1.5 to m. 24, beat 2: no match
-- m. 24, beat 2 to m. 24, beat 2.5: no match
-- m. 24, beat 2.25 to m. 24, beat 2.5: no match
-- m. 24, beat 2.5 to m. 24, beat 3: no match
-- m. 24, beat 3 to m. 24, beat 3.5: no match
-- m. 24, beat 3.5 to m. 24, beat 4.5: I
-- m. 24, beat 4 to m. 24, beat 4.5: no match
-- m. 24, beat 4.5 to m. 25, beat 1: no match
+| Position | Chord | Root | Quality | Bass | Inversion | Beats | Confidence | Runner-up |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| m. 1, beat 1 to m. 1, beat 2 | I | G | major | G | root position | 1 | 0.40 | - |
+| m. 1, beat 2 to m. 1, beat 2.5 | ii | A | minor | A | root position | 0.5 | 0.18 | - |
+| m. 1, beat 2.5 to m. 1, beat 3 | iii | B | minor | B | root position | 0.5 | 0.76 | - |
+| m. 1, beat 3 to m. 1, beat 3.5 | I | G | major | B | first | 0.5 | 0.56 | - |
+| m. 1, beat 3.5 to m. 1, beat 4 | I | G | major | G | root position | 0.5 | 1.00 | - |
+| m. 1, beat 4 to m. 2, beat 1 | major7 | C | major7 | C | root position | 1 | 0.28 | - |
+| m. 2, beat 1 to m. 2, beat 1.5 | half-diminished7 | F# | half-diminished7 | E | third | 0.5 | 0.23 | - |
+| m. 2, beat 1.5 to m. 2, beat 2.5 | I | G | major | B | first | 1 | 0.52 | - |
+| m. 2, beat 2.5 to m. 2, beat 3 | I | G | major | G | root position | 0.5 | 0.08 | major7 (C major7, score 0.90) |
+| m. 2, beat 3 to m. 2, beat 4 | ii | A | minor | A | root position | 1 | 0.09 | dominant7 (D dominant7, score 0.90) |
+| m. 2, beat 4 to m. 2, beat 4.5 | minor7 | B | minor7 | A | third | 0.5 | 0.44 | - |
+| m. 2, beat 4.5 to m. 3, beat 1 | I | G | major | G | root position | 0.5 | 0.76 | - |
+| m. 3, beat 1 to m. 3, beat 2 | minor7 | A | minor7 | G | third | 1 | 0.16 | - |
+| m. 3, beat 2 to m. 3, beat 2.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 3, beat 2.5 to m. 3, beat 3 | I | G | major | B | first | 0.5 | 0.18 | - |
+| m. 3, beat 3 to m. 3, beat 3.5 | I | G | major | G | root position | 0.5 | 0.93 | - |
+| m. 3, beat 3.5 to m. 3, beat 4 | iii | B | minor | D | first | 0.5 | 0.52 | - |
+| m. 3, beat 4 to m. 4, beat 1 | minor7 | B | minor7 | D | first | 1 | 0.16 | - |
+| m. 4, beat 1 to m. 4, beat 2 | minor7 | B | minor7 | B | root position | 1 | 0.00 | I (G major, score 1.00) |
+| m. 4, beat 2 to m. 4, beat 2.5 | ii | A | minor | A | root position | 0.5 | 0.18 | - |
+| m. 4, beat 2.5 to m. 4, beat 3 | I | G | major | G | root position | 0.5 | 0.72 | - |
+| m. 4, beat 3 to m. 4, beat 3.5 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 4, beat 3.5 to m. 4, beat 4 | I | G | major | G | root position | 0.5 | 1.00 | - |
+| m. 4, beat 4 to m. 5, beat 1 | major7 | C | major7 | C | root position | 1 | 0.28 | - |
+| m. 5, beat 1 to m. 5, beat 1.5 | half-diminished7 | F# | half-diminished7 | E | third | 0.5 | 0.23 | - |
+| m. 5, beat 1.5 to m. 5, beat 2 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 5, beat 2 to m. 5, beat 3 | minor7 | A | minor7 | G | third | 1 | 0.12 | - |
+| m. 5, beat 3 to m. 5, beat 4 | ii | A | minor | A | root position | 1 | 0.09 | dominant7 (D dominant7, score 0.90) |
+| m. 5, beat 4 to m. 5, beat 4.5 | minor7 | B | minor7 | F# | second | 0.5 | 0.06 | vii° (F# diminished, score 0.85) |
+| m. 5, beat 4.5 to m. 6, beat 1 | I | G | major | G | root position | 0.5 | 0.76 | - |
+| m. 6, beat 1 to m. 6, beat 1.25 | IV | C | major | C | root position | 0.25 | 1.00 | - |
+| m. 6, beat 1.25 to m. 6, beat 2 | I | G | major | B | first | 0.75 | 0.17 | - |
+| m. 6, beat 2 to m. 6, beat 2.5 | ii | A | minor | C | first | 0.5 | 0.52 | - |
+| m. 6, beat 2.5 to m. 6, beat 3 | minor7 | B | minor7 | D | first | 0.5 | 0.33 | - |
+| m. 6, beat 3 to m. 6, beat 3.5 | major7 | G | major7 | D | second | 0.5 | 0.08 | V (D major, score 0.83) |
+| m. 6, beat 3.5 to m. 7, beat 1 | I | G | major | G | root position | 1.5 | 1.00 | - |
+| m. 7, beat 1 to m. 7, beat 2 | I | G | major | G | root position | 1 | 0.40 | - |
+| m. 7, beat 2 to m. 7, beat 2.5 | ii | A | minor | A | root position | 0.5 | 0.18 | - |
+| m. 7, beat 2.5 to m. 7, beat 3 | iii | B | minor | B | root position | 0.5 | 0.76 | - |
+| m. 7, beat 3 to m. 7, beat 4 | I | G | major | G | root position | 1 | 1.00 | - |
+| m. 7, beat 4 to m. 8, beat 1 | major7 | C | major7 | C | root position | 1 | 0.28 | - |
+| m. 8, beat 1 to m. 8, beat 1.5 | half-diminished7 | F# | half-diminished7 | E | third | 0.5 | 0.23 | - |
+| m. 8, beat 1.5 to m. 8, beat 2.5 | I | G | major | B | first | 1 | 0.52 | - |
+| m. 8, beat 2.5 to m. 8, beat 3 | I | G | major | G | root position | 0.5 | 0.08 | major7 (C major7, score 0.90) |
+| m. 8, beat 3 to m. 8, beat 4 | ii | A | minor | A | root position | 1 | 0.09 | dominant7 (D dominant7, score 0.90) |
+| m. 8, beat 4 to m. 8, beat 4.5 | minor7 | B | minor7 | A | third | 0.5 | 0.44 | - |
+| m. 8, beat 4.5 to m. 9, beat 1 | I | G | major | G | root position | 0.5 | 0.76 | - |
+| m. 9, beat 1 to m. 9, beat 2 | minor7 | A | minor7 | G | third | 1 | 0.16 | - |
+| m. 9, beat 2 to m. 9, beat 2.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 9, beat 2.5 to m. 9, beat 3 | I | G | major | B | first | 0.5 | 0.18 | - |
+| m. 9, beat 3 to m. 9, beat 3.5 | I | G | major | G | root position | 0.5 | 0.93 | - |
+| m. 9, beat 3.5 to m. 9, beat 4 | iii | B | minor | D | first | 0.5 | 0.52 | - |
+| m. 9, beat 4 to m. 10, beat 1 | minor7 | B | minor7 | D | first | 1 | 0.16 | - |
+| m. 10, beat 1 to m. 10, beat 2 | minor7 | B | minor7 | B | root position | 1 | 0.00 | I (G major, score 1.00) |
+| m. 10, beat 2 to m. 10, beat 2.5 | ii | A | minor | A | root position | 0.5 | 0.18 | - |
+| m. 10, beat 2.5 to m. 10, beat 3 | I | G | major | G | root position | 0.5 | 0.72 | - |
+| m. 10, beat 3 to m. 10, beat 3.5 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 10, beat 3.5 to m. 10, beat 4 | I | G | major | G | root position | 0.5 | 1.00 | - |
+| m. 10, beat 4 to m. 11, beat 1 | major7 | C | major7 | C | root position | 1 | 0.28 | - |
+| m. 11, beat 1 to m. 11, beat 1.5 | half-diminished7 | F# | half-diminished7 | E | third | 0.5 | 0.23 | - |
+| m. 11, beat 1.5 to m. 11, beat 2 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 11, beat 2 to m. 11, beat 3 | minor7 | A | minor7 | G | third | 1 | 0.12 | - |
+| m. 11, beat 3 to m. 11, beat 4 | ii | A | minor | A | root position | 1 | 0.09 | dominant7 (D dominant7, score 0.90) |
+| m. 11, beat 4 to m. 11, beat 4.5 | minor7 | B | minor7 | F# | second | 0.5 | 0.06 | vii° (F# diminished, score 0.85) |
+| m. 11, beat 4.5 to m. 12, beat 1 | I | G | major | G | root position | 0.5 | 0.76 | - |
+| m. 12, beat 1 to m. 12, beat 1.25 | IV | C | major | C | root position | 0.25 | 1.00 | - |
+| m. 12, beat 1.25 to m. 12, beat 2 | I | G | major | B | first | 0.75 | 0.17 | - |
+| m. 12, beat 2 to m. 12, beat 2.5 | ii | A | minor | C | first | 0.5 | 0.52 | - |
+| m. 12, beat 2.5 to m. 12, beat 3 | minor7 | B | minor7 | D | first | 0.5 | 0.33 | - |
+| m. 12, beat 3 to m. 12, beat 3.5 | major7 | G | major7 | D | second | 0.5 | 0.08 | V (D major, score 0.83) |
+| m. 12, beat 3.5 to m. 13, beat 1 | I | G | major | G | root position | 1.5 | 1.00 | - |
+| m. 13, beat 1 to m. 13, beat 2 | I | G | major | G | root position | 1 | 0.33 | - |
+| m. 13, beat 2 to m. 13, beat 2.5 | I | G | major | G | root position | 0.5 | 1.00 | - |
+| m. 13, beat 2.5 to m. 13, beat 3 | vii° | F# | diminished | F# | root position | 0.5 | 0.76 | - |
+| m. 13, beat 3 to m. 13, beat 4 | V | D | major | F# | first | 1 | 0.28 | - |
+| m. 13, beat 4 to m. 13, beat 4.5 | vi | E | minor | E | root position | 0.5 | 0.76 | - |
+| m. 13, beat 4.5 to m. 14, beat 1 | vi | E | minor | G | first | 0.5 | 0.18 | - |
+| m. 14, beat 1 to m. 14, beat 1.5 | minor7 | E | minor7 | E | root position | 0.5 | 0.84 | - |
+| m. 14, beat 1.5 to m. 14, beat 2 | ii | A | minor | A | root position | 0.5 | 1.00 | - |
+| m. 14, beat 2 to m. 14, beat 3 | minor7 | B | minor7 | A | third | 1 | 0.12 | ii (A minor, score 0.70) |
+| m. 14, beat 3 to m. 14, beat 4 | minor7 | B | minor7 | A | third | 1 | 0.22 | - |
+| m. 14, beat 4 to m. 14, beat 4.5 | half-diminished7 | F# | half-diminished7 | A | first | 0.5 | 0.29 | - |
+| m. 14, beat 4.5 to m. 15, beat 1 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 15, beat 1 to m. 15, beat 1.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 15, beat 1.5 to m. 15, beat 2 | no match | - | - | - | - | - | - | - |
+| m. 15, beat 2 to m. 15, beat 2.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 15, beat 2.5 to m. 15, beat 3 | vii° | F# | diminished | F# | root position | 0.5 | 0.76 | - |
+| m. 15, beat 3 to m. 15, beat 3.5 | no match | - | - | - | - | - | - | - |
+| m. 15, beat 3.5 to m. 15, beat 4.5 | V | D | major | D | root position | 1 | 1.00 | - |
+| m. 15, beat 4.5 to m. 16, beat 1 | IV | C | major | C | root position | 0.5 | 1.00 | - |
+| m. 16, beat 1 to m. 16, beat 1.5 | iii | B | minor | B | root position | 0.5 | 0.76 | - |
+| m. 16, beat 1.5 to m. 16, beat 2 | major7 | G | major7 | D | second | 0.5 | 0.06 | V (D major, score 0.85) |
+| m. 16, beat 2 to m. 16, beat 2.5 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 16, beat 2.5 to m. 16, beat 3 | IV | C | major | C | root position | 0.5 | 0.76 | - |
+| m. 16, beat 3 to m. 16, beat 3.5 | vi | E | minor | E | root position | 0.5 | 0.26 | - |
+| m. 16, beat 3.5 to m. 16, beat 4 | IV | C | major | C | root position | 0.5 | 0.72 | - |
+| m. 16, beat 4 to m. 16, beat 4.5 | iii | B | minor | B | root position | 0.5 | 0.76 | - |
+| m. 16, beat 4.5 to m. 17, beat 1 | ii | A | minor | A | root position | 0.5 | 0.76 | - |
+| m. 17, beat 1 to m. 17, beat 1.5 | I | G | major | G | root position | 0.5 | 0.76 | - |
+| m. 17, beat 1.5 to m. 17, beat 2 | V | D | major | D | root position | 0.5 | 0.00 | I (G major, score 0.70) |
+| m. 17, beat 2 to m. 17, beat 2.5 | major7 | G | major7 | D | second | 0.5 | 0.00 | V (D major, score 0.90) |
+| m. 17, beat 2.5 to m. 17, beat 3 | ii | A | minor | A | root position | 0.5 | 1.00 | - |
+| m. 17, beat 3 to m. 17, beat 4 | minor7 | E | minor7 | D | third | 1 | 0.07 | V (D major, score 0.92) |
+| m. 17, beat 4 to m. 17, beat 4.5 | minor7 | B | minor7 | F# | second | 0.5 | 0.06 | vii° (F# diminished, score 0.85) |
+| m. 17, beat 4.5 to m. 18, beat 1 | IV | C | major | E | first | 0.5 | 0.38 | - |
+| m. 18, beat 1 to m. 18, beat 1.5 | I | G | major | G | root position | 0.5 | 0.06 | major7 (C major7, score 0.90) |
+| m. 18, beat 1.5 to m. 18, beat 2 | vii° | F# | diminished | F# | root position | 0.5 | 0.76 | - |
+| m. 18, beat 2 to m. 18, beat 2.5 | I | G | major | G | root position | 0.5 | 0.62 | - |
+| m. 18, beat 2.5 to m. 18, beat 3 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 18, beat 3 to m. 18, beat 3.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 18, beat 3.5 to m. 18, beat 4 | I | G | major | G | root position | 0.5 | 0.58 | - |
+| m. 18, beat 4 to m. 18, beat 4.5 | I | G | major | D | second | 0.5 | 0.38 | - |
+| m. 18, beat 4.5 to m. 19, beat 1 | I | G | major | G | root position | 0.5 | 1.00 | - |
+| m. 19, beat 1 to m. 19, beat 2 | I | G | major | G | root position | 1 | 0.33 | - |
+| m. 19, beat 2 to m. 19, beat 2.5 | I | G | major | G | root position | 0.5 | 1.00 | - |
+| m. 19, beat 2.5 to m. 19, beat 3 | vii° | F# | diminished | F# | root position | 0.5 | 0.76 | - |
+| m. 19, beat 3 to m. 19, beat 4 | V | D | major | F# | first | 1 | 0.28 | - |
+| m. 19, beat 4 to m. 19, beat 4.5 | vi | E | minor | E | root position | 0.5 | 0.76 | - |
+| m. 19, beat 4.5 to m. 20, beat 1 | vi | E | minor | G | first | 0.5 | 0.18 | - |
+| m. 20, beat 1 to m. 20, beat 1.5 | minor7 | E | minor7 | E | root position | 0.5 | 0.84 | - |
+| m. 20, beat 1.5 to m. 20, beat 2 | ii | A | minor | A | root position | 0.5 | 1.00 | - |
+| m. 20, beat 2 to m. 20, beat 3 | minor7 | B | minor7 | A | third | 1 | 0.12 | ii (A minor, score 0.70) |
+| m. 20, beat 3 to m. 20, beat 4 | minor7 | B | minor7 | A | third | 1 | 0.22 | - |
+| m. 20, beat 4 to m. 20, beat 4.5 | half-diminished7 | F# | half-diminished7 | A | first | 0.5 | 0.29 | - |
+| m. 20, beat 4.5 to m. 21, beat 1 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 21, beat 1 to m. 21, beat 1.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 21, beat 1.5 to m. 21, beat 2 | no match | - | - | - | - | - | - | - |
+| m. 21, beat 2 to m. 21, beat 2.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 21, beat 2.5 to m. 21, beat 3 | vii° | F# | diminished | F# | root position | 0.5 | 0.76 | - |
+| m. 21, beat 3 to m. 21, beat 3.5 | no match | - | - | - | - | - | - | - |
+| m. 21, beat 3.5 to m. 21, beat 4.5 | V | D | major | D | root position | 1 | 1.00 | - |
+| m. 21, beat 4.5 to m. 22, beat 1 | IV | C | major | C | root position | 0.5 | 1.00 | - |
+| m. 22, beat 1 to m. 22, beat 1.5 | iii | B | minor | B | root position | 0.5 | 0.76 | - |
+| m. 22, beat 1.5 to m. 22, beat 2 | major7 | G | major7 | D | second | 0.5 | 0.06 | V (D major, score 0.85) |
+| m. 22, beat 2 to m. 22, beat 2.5 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 22, beat 2.5 to m. 22, beat 3 | IV | C | major | C | root position | 0.5 | 0.76 | - |
+| m. 22, beat 3 to m. 22, beat 3.5 | vi | E | minor | E | root position | 0.5 | 0.26 | - |
+| m. 22, beat 3.5 to m. 22, beat 4 | IV | C | major | C | root position | 0.5 | 0.72 | - |
+| m. 22, beat 4 to m. 22, beat 4.5 | iii | B | minor | B | root position | 0.5 | 0.76 | - |
+| m. 22, beat 4.5 to m. 23, beat 1 | ii | A | minor | A | root position | 0.5 | 0.76 | - |
+| m. 23, beat 1 to m. 23, beat 1.5 | I | G | major | G | root position | 0.5 | 0.76 | - |
+| m. 23, beat 1.5 to m. 23, beat 2 | V | D | major | D | root position | 0.5 | 0.00 | I (G major, score 0.70) |
+| m. 23, beat 2 to m. 23, beat 2.5 | major7 | G | major7 | D | second | 0.5 | 0.00 | V (D major, score 0.90) |
+| m. 23, beat 2.5 to m. 23, beat 3 | ii | A | minor | A | root position | 0.5 | 1.00 | - |
+| m. 23, beat 3 to m. 23, beat 4 | minor7 | E | minor7 | D | third | 1 | 0.07 | V (D major, score 0.92) |
+| m. 23, beat 4 to m. 23, beat 4.5 | minor7 | B | minor7 | F# | second | 0.5 | 0.06 | vii° (F# diminished, score 0.85) |
+| m. 23, beat 4.5 to m. 24, beat 1 | IV | C | major | E | first | 0.5 | 0.38 | - |
+| m. 24, beat 1 to m. 24, beat 1.5 | I | G | major | G | root position | 0.5 | 0.06 | major7 (C major7, score 0.90) |
+| m. 24, beat 1.5 to m. 24, beat 2 | vii° | F# | diminished | F# | root position | 0.5 | 0.76 | - |
+| m. 24, beat 2 to m. 24, beat 2.5 | I | G | major | G | root position | 0.5 | 0.62 | - |
+| m. 24, beat 2.5 to m. 24, beat 3 | I | G | major | B | first | 0.5 | 0.52 | - |
+| m. 24, beat 3 to m. 24, beat 3.5 | V | D | major | D | root position | 0.5 | 0.76 | - |
+| m. 24, beat 3.5 to m. 24, beat 4 | I | G | major | G | root position | 0.5 | 0.58 | - |
+| m. 24, beat 4 to m. 24, beat 4.5 | I | G | major | D | second | 0.5 | 0.38 | - |
+| m. 24, beat 4.5 to m. 25, beat 1 | I | G | major | G | root position | 0.5 | 1.00 | - |
+## Non-chord tones
+
+52 notes sound against a chord without being one of its tones; 13 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+
+| Position | Note | Type | Against |
+| --- | --- | --- | --- |
+| m. 1, beat 1 to m. 1, beat 2 | 5 | unclassified | I |
+| m. 1, beat 2 to m. 1, beat 2.5 | 6 | unclassified | ii |
+| m. 1, beat 4 to m. 2, beat 1 | 18 | escape-tone | major7 |
+| m. 2, beat 2.5 to m. 2, beat 3 | 25 | unclassified | I |
+| m. 2, beat 3 to m. 2, beat 4 | 29 | neighbor | ii |
+| m. 3, beat 1 to m. 3, beat 2 | 36 | passing | minor7 |
+| m. 3, beat 2.5 to m. 3, beat 3 | 43 | passing | I |
+| m. 3, beat 4 to m. 4, beat 1 | 51 | appoggiatura | minor7 |
+| m. 4, beat 1 to m. 4, beat 2 | 56 | appoggiatura | minor7 |
+| m. 4, beat 2 to m. 4, beat 2.5 | 58 | unclassified | ii |
+| m. 4, beat 4 to m. 5, beat 1 | 72 | escape-tone | major7 |
+| m. 5, beat 2 to m. 5, beat 3 | 79 | passing | minor7 |
+| m. 5, beat 2 to m. 5, beat 3 | 84 | unclassified | minor7 |
+| m. 5, beat 3 to m. 5, beat 4 | 87 | neighbor | ii |
+| m. 6, beat 1.25 to m. 6, beat 2 | 96 | unclassified | I |
+| m. 7, beat 1 to m. 7, beat 2 | 115 | escape-tone | I |
+| m. 7, beat 2 to m. 7, beat 2.5 | 116 | unclassified | ii |
+| m. 7, beat 4 to m. 8, beat 1 | 128 | escape-tone | major7 |
+| m. 8, beat 2.5 to m. 8, beat 3 | 135 | unclassified | I |
+| m. 8, beat 3 to m. 8, beat 4 | 139 | neighbor | ii |
+| m. 9, beat 1 to m. 9, beat 2 | 146 | passing | minor7 |
+| m. 9, beat 2.5 to m. 9, beat 3 | 153 | passing | I |
+| m. 9, beat 4 to m. 10, beat 1 | 161 | appoggiatura | minor7 |
+| m. 10, beat 1 to m. 10, beat 2 | 166 | appoggiatura | minor7 |
+| m. 10, beat 2 to m. 10, beat 2.5 | 168 | unclassified | ii |
+| m. 10, beat 4 to m. 11, beat 1 | 182 | escape-tone | major7 |
+| m. 11, beat 2 to m. 11, beat 3 | 189 | passing | minor7 |
+| m. 11, beat 2 to m. 11, beat 3 | 194 | unclassified | minor7 |
+| m. 11, beat 3 to m. 11, beat 4 | 197 | neighbor | ii |
+| m. 12, beat 1.25 to m. 12, beat 2 | 206 | unclassified | I |
+| m. 13, beat 1 to m. 13, beat 2 | 223 | passing | I |
+| m. 13, beat 3 to m. 13, beat 4 | 229 | passing | V |
+| m. 13, beat 4.5 to m. 14, beat 1 | 236 | passing | vi |
+| m. 14, beat 1.5 to m. 14, beat 2 | 240 | passing | ii |
+| m. 14, beat 2 to m. 14, beat 3 | 243 | escape-tone | minor7 |
+| m. 14, beat 3 to m. 14, beat 4 | 249 | passing | minor7 |
+| m. 16, beat 3 to m. 16, beat 3.5 | 280 | neighbor | vi |
+| m. 17, beat 1.5 to m. 17, beat 2 | 291 | unclassified | V |
+| m. 17, beat 3 to m. 17, beat 4 | 298 | passing | minor7 |
+| m. 18, beat 1 to m. 18, beat 1.5 | 306 | appoggiatura | I |
+| m. 18, beat 1 to m. 18, beat 1.5 | 308 | neighbor | I |
+| m. 19, beat 1 to m. 19, beat 2 | 328 | passing | I |
+| m. 19, beat 3 to m. 19, beat 4 | 334 | passing | V |
+| m. 19, beat 4.5 to m. 20, beat 1 | 341 | passing | vi |
+| m. 20, beat 1.5 to m. 20, beat 2 | 345 | passing | ii |
+| m. 20, beat 2 to m. 20, beat 3 | 348 | escape-tone | minor7 |
+| m. 20, beat 3 to m. 20, beat 4 | 354 | passing | minor7 |
+| m. 22, beat 3 to m. 22, beat 3.5 | 385 | neighbor | vi |
+| m. 23, beat 1.5 to m. 23, beat 2 | 396 | unclassified | V |
+| m. 23, beat 3 to m. 23, beat 4 | 403 | passing | minor7 |
+| m. 24, beat 1 to m. 24, beat 1.5 | 411 | appoggiatura | I |
+| m. 24, beat 1 to m. 24, beat 1.5 | 413 | neighbor | I |

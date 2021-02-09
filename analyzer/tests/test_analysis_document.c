@@ -136,7 +136,7 @@ int main(void) {
 
     char *json = analysis_document_render(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 2,\n", 25) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 3,\n", 25) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = analysis_document_render(path, &notes, &report);
@@ -151,7 +151,7 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 2);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 3);
 
     const cJSON *metadata = member(document, "metadata");
     assert(cJSON_IsObject(metadata));
@@ -205,7 +205,7 @@ int main(void) {
     const cJSON *chords = member(document, "chords");
     assert(cJSON_IsArray(chords));
     assert(cJSON_GetArraySize(chords) == 6);
-    static const char *const CHORD_LABELS[] = {"I", "no match", "no match", "no match", "no match", "I"};
+    static const char *const CHORD_LABELS[] = {"I", "ii", "IV", "vi", "vii\xC2\xB0", "I"};
     static const int NOTE_COUNTS[] = {3, 1, 1, 1, 1, 4};
     for (int i = 0; i < 6; i++) {
         const cJSON *chord = cJSON_GetArrayItem(chords, i);

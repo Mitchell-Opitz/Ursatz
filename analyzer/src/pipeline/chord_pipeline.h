@@ -2,39 +2,48 @@
 #define URSATZ_ANALYZER_CHORD_PIPELINE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
-#include "events/note_event.h"
 #include "pipeline/key_pipeline.h"
 #include "pipeline/segmentation.h"
-#include "pitch/pitch_numeric_value.h"
 
+/*
+ * What the library's weighted identification established for one
+ * segment: the best chord and the runner-up, each as an
+ * AnalysisChordReading (label NULL when absent). found is true when a
+ * best chord was identified.
+ */
 typedef struct {
     bool found;
-    char *label; /* owned; NULL unless found */
-    AnalysisConfidence confidence; /* from ChordIdentification's Interpretation */
+    AnalysisChordReading best;
+    AnalysisChordReading runner_up;
+    AnalysisNonChordTone *tones; /* owned; the segment's non-chord tones, chord_index unset */
+    size_t tone_count;
 } ChordEstimate;
 
 /*
- * Identifies the chord for one SonorityGroup, given the previously
- * estimated key -- ChordIdentification takes each note's scale degree
- * as input (analysis/chord_identification.h), it does not derive
- * degrees from raw pitch itself, so this function computes them from
- * the estimated key's tonic and mode.
+ * Identifies the chord of every segment with Ursatz's weighted chord
+ * identification (common_practice_identify_weighted_sequence), in the
+ * estimated key. On success *out is an array of segmentation->segment_count
+ * estimates, owned by the caller (release with chord_estimates_destroy).
+ * Returns false only on allocation failure.
  *
- * JUDGMENT CALL: a note whose pitch class is not diatonic in the
- * estimated key (e.g. a chromatic passing tone) has no scale degree
- * and is dropped from the set passed to ChordIdentification, rather
- * than failing the whole sonority over one non-diatonic note.
+ * The library's weighted vocabulary is the major-key set, so a minor key,
+ * or no key, leaves every segment unmatched rather than reading it in a
+ * key it cannot name chords for. A segment whose best score is below the
+ * library's minimum coverage is likewise unmatched.
  *
- * If key is NULL or not found, no scale degrees can be computed and
- * this returns found = false without calling the analyzer.
+ * The library's leftover tones for each matched segment become the
+ * estimate's non-chord tones: each with the library's name for its type,
+ * or no type when the library left it unclassified.
  *
- * Fills *out and returns true; returns false only when the label could
- * not be allocated. Release *out with chord_estimate_destroy.
+ * Root, quality and the runner-up are read from the library's ranked
+ * candidates and the chord tones it reports for them. The only work here
+ * is naming them (a pitch class name, a triad's quality name) and finding
+ * the position of the segment's bass among the chord's tones.
  */
-bool identify_chord_for_group(const SonorityGroup *group, NoteEvent *const *events,
-                              PitchNumericValue *const *pitch_values, const KeyEstimate *key, ChordEstimate *out);
+bool identify_chords(const Segmentation *segmentation, const KeyEstimate *key, ChordEstimate **out);
 
-void chord_estimate_destroy(ChordEstimate *estimate);
+void chord_estimates_destroy(ChordEstimate *estimates, size_t count);
 
 #endif

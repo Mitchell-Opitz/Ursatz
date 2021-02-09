@@ -137,6 +137,7 @@ static bool key_estimate_from_key_signature(MidiKeySignature key_signature, KeyE
     out->label = label;
     out->tonic_pitch_class = tonic;
     out->is_major = !key_signature.is_minor;
+    out->prefer_flats = key_signature.sharps_flats < 0;
     out->method = ANALYSIS_KEY_METHOD_KEY_SIGNATURE;
     out->found = true;
     return true;
@@ -176,6 +177,7 @@ static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *
     estimate->label = label;
     estimate->tonic_pitch_class = tonic;
     estimate->is_major = (strstr(claim, "major") != NULL);
+    estimate->prefer_flats = prefers_flat_spelling(tonic);
     estimate->confidence = interpretation_confidence(interpretation);
     estimate->found = true;
     analysis_result_destroy(result);
@@ -185,7 +187,7 @@ static bool try_tonic(Structure *region, const Framework *framework, NoteEvent *
 bool estimate_global_key(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
                          MidiKeySignature key_signature, const int *priority_tonics, size_t priority_tonic_count,
                          KeyEstimate *out) {
-    *out = (KeyEstimate){false, NULL, 0, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
+    *out = (KeyEstimate){false, NULL, 0, false, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
     bool out_of_memory = false;
     if (count == 0) {
         return true;

@@ -218,12 +218,9 @@ static cJSON *location_json(const MeterMap *map, Rational start, Rational end) {
 
 /* The shared claim fields, in schema order. ids NULL means every
    imported note. */
-static cJSON *claim_json(const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
-                         const char *label, AnalysisConfidence confidence) {
-    Rational start;
-    Rational end;
-    notes_span(notes, ids, id_count, &start, &end);
-
+static cJSON *claim_json_at(const char *framework, const ImportedNotes *notes, const size_t *ids,
+                            size_t id_count, Rational start, Rational end, const char *label,
+                            AnalysisConfidence confidence) {
     cJSON *claim = cJSON_CreateObject();
     if (claim && !(add(claim, "framework", cJSON_CreateString(framework)) &&
                    add(claim, "span", span_json(start, end)) &&
@@ -235,6 +232,14 @@ static cJSON *claim_json(const char *framework, const ImportedNotes *notes, cons
         return NULL;
     }
     return claim;
+}
+
+static cJSON *claim_json(const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
+                         const char *label, AnalysisConfidence confidence) {
+    Rational start;
+    Rational end;
+    notes_span(notes, ids, id_count, &start, &end);
+    return claim_json_at(framework, notes, ids, id_count, start, end, label, confidence);
 }
 
 static Rational time_rational(const MusicalTime *time) {
@@ -410,6 +415,82 @@ static cJSON *keys_json(const ImportedNotes *notes, const AnalysisReport *report
     return keys;
 }
 
+/* The span's length in beats of the signature its start is read in: a rational, or null when the
+   position cannot be read or the signature has no beat grid. Segments do not cross a barline, so one
+   signature covers the whole span. */
+static cJSON *span_beats_json(const MeterMap *map, Rational start, Rational end) {
+    MusicalTime *musical_time = NULL;
+    if (musical_time_create((long)start.num, (unsigned long)start.den, &musical_time) != MUSICAL_TIME_OK) {
+        return cJSON_CreateNull();
+    }
+    MetricalPosition *position = NULL;
+    MetricalPositionResult result = metrical_position_from_time(map, musical_time, &position);
+    musical_time_destroy(musical_time);
+    if (result != METRICAL_POSITION_OK) {
+        return cJSON_CreateNull();
+    }
+    const TimeSignature *reading = NULL;
+    Duration *beat = NULL;
+    bool readable = metrical_position_reading_signature(map, metrical_position_measure(position), &reading) ==
+                        METRICAL_POSITION_OK &&
+                    standard_meter_beat_start(reading, 1, &beat);
+    metrical_position_destroy(position);
+    if (!readable) {
+        return cJSON_CreateNull();
+    }
+
+    Rational length = rational_make(end.num * (long long)start.den - start.num * (long long)end.den,
+                                    start.den * end.den);
+    cJSON *beats = rational_json(rational_make(length.num * (long long)duration_denominator(beat),
+                                               length.den * (unsigned long long)duration_numerator(beat)));
+    duration_destroy(beat);
+    return beats;
+}
+
+static cJSON *optional_string_json(const char *value) {
+    return value ? cJSON_CreateString(value) : cJSON_CreateNull();
+}
+
+/* The runner-up candidate, or null when the library gave none. */
+static cJSON *runner_up_json(const AnalysisChordReading *reading) {
+    if (!reading->label) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "label", cJSON_CreateString(reading->label)) &&
+                    add(object, "root", cJSON_CreateString(reading->root)) &&
+                    add(object, "quality", cJSON_CreateString(reading->quality)) &&
+                    add(object, "score", cJSON_CreateNumber(reading->score)) &&
+                    add(object, "uncertainty", uncertainty_json(reading->confidence)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The chord fields beyond the shared claim: root, quality, bass, inversion, duration, score and runner-up. */
+static bool add_chord_fields(cJSON *claim, const ImportedNotes *notes, const AnalysisReportEntry *entry,
+                             Rational start, Rational end) {
+    const AnalysisChordReading *chord = &entry->chord;
+    bool matched = chord->label != NULL;
+    cJSON *duration = cJSON_CreateObject();
+    if (duration && !(add(duration, "whole_notes",
+                          rational_json(rational_make(end.num * (long long)start.den - start.num * (long long)end.den,
+                                                      start.den * end.den))) &&
+                      add(duration, "beats", span_beats_json(notes->meter.meter_map, start, end)))) {
+        cJSON_Delete(duration);
+        duration = NULL;
+    }
+    return add(claim, "root", optional_string_json(chord->root)) &&
+           add(claim, "quality", optional_string_json(chord->quality)) &&
+           add(claim, "bass", optional_string_json(chord->bass)) &&
+           add(claim, "inversion", matched && chord->inversion >= 0 ? cJSON_CreateNumber(chord->inversion)
+                                                                    : cJSON_CreateNull()) &&
+           add(claim, "duration", duration) &&
+           add(claim, "score", matched ? cJSON_CreateNumber(chord->score) : cJSON_CreateNull()) &&
+           add(claim, "runner_up", runner_up_json(&entry->runner_up));
+}
+
 /* One chord claim per report entry, in time order. */
 static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
@@ -419,9 +500,12 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
     const char *framework = library_framework_name();
     for (size_t i = 0; i < report->entry_count; i++) {
         const AnalysisReportEntry *entry = &report->entries[i];
-        cJSON *claim = claim_json(framework, notes, entry->note_ids, entry->note_id_count, entry->chord_label,
-                                  entry->chord_confidence);
-        if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)))) {
+        Rational start = rational_make(entry->time_numerator, entry->time_denominator);
+        Rational end = rational_make(entry->end_numerator, entry->end_denominator);
+        cJSON *claim = claim_json_at(framework, notes, entry->note_ids, entry->note_id_count, start, end,
+                                     entry->chord_label, entry->chord_confidence);
+        if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
+              add_chord_fields(claim, notes, entry, start, end))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;
@@ -434,13 +518,46 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
     return chords;
 }
 
+/* One claim per non-chord tone, in time order. Each is located where the note sounds against the chord:
+   that chord's segment. */
+static cJSON *non_chord_tones_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *tones = cJSON_CreateArray();
+    if (!tones) {
+        return NULL;
+    }
+    const char *framework = library_framework_name();
+    for (size_t i = 0; i < report->non_chord_tone_count; i++) {
+        const AnalysisNonChordTone *tone = &report->non_chord_tones[i];
+        const AnalysisReportEntry *chord = &report->entries[tone->chord_index];
+        AnalysisConfidence none = {false, 0, 0};
+        cJSON *claim = claim_json_at(framework, notes, &tone->note_id, 1,
+                                     rational_make(chord->time_numerator, chord->time_denominator),
+                                     rational_make(chord->end_numerator, chord->end_denominator),
+                                     tone->type ? tone->type : "unclassified", none);
+        if (!(claim && add(claim, "type", optional_string_json(tone->type)) &&
+              add(claim, "classified", cJSON_CreateBool(tone->type != NULL)) &&
+              add(claim, "chord_index", cJSON_CreateNumber((double)tone->chord_index)) &&
+              add(claim, "chord_label", cJSON_CreateString(chord->chord_label)))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(tones);
+            return NULL;
+        }
+        if (!append(tones, claim)) {
+            cJSON_Delete(tones);
+            return NULL;
+        }
+    }
+    return tones;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
         !(add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
           add(document, "metadata", metadata_json(input_path, notes, report)) &&
           add(document, "meter", meter_json(notes)) && add(document, "keys", keys_json(notes, report)) &&
-          add(document, "chords", chords_json(notes, report)) && add(document, "cadences", cJSON_CreateArray()) &&
+          add(document, "chords", chords_json(notes, report)) &&
+          add(document, "non_chord_tones", non_chord_tones_json(notes, report)) && add(document, "cadences", cJSON_CreateArray()) &&
           add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&

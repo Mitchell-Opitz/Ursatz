@@ -4,34 +4,49 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
+#include <ursatz_analyzer/midi_pipeline.h>
+
+#include "weighted_chord_identification.h"
 
 /*
- * JUDGMENT CALL: Ursatz provides no logic for grouping NoteEvents into
- * Sonority-sized chunks -- this is new logic. Notes are grouped by
- * exact onset-time equality (same MusicalTime position), not general
- * temporal overlap. This keeps grouping simple and deterministic and
- * matches the common case of a stacked chord, at the cost of not
- * merging notes whose onsets differ slightly but whose durations
- * otherwise overlap (e.g. a suspension tied across a chord change).
+ * One sonority segment cut by Ursatz's adaptive segmentation
+ * (semantics/sonority_segmentation.h): every note sounding in its time
+ * window, those attacked in it and those held over from earlier.
+ *
+ * note_indices are ImportedNotes indices, parallel to members. The
+ * members are the plain per-note view Ursatz's weighted chord
+ * identification reads (pitch, duration inside the segment, held flag,
+ * beat strength of the attack, voice, onset); their note_id and voice_id
+ * borrow from the ImportedNotes, which must outlive the Segmentation.
  */
 typedef struct {
     size_t *note_indices;
-    size_t note_index_count;
-} SonorityGroup;
+    CommonPracticeMember *members;
+    size_t member_count;
+    long start_numerator; /* window start, whole notes */
+    unsigned long start_denominator;
+    long end_numerator; /* window end (exclusive), whole notes */
+    unsigned long end_denominator;
+} Segment;
 
 typedef struct {
-    SonorityGroup *groups;
-    size_t group_count;
-} SonorityGrouping;
+    Segment *segments;
+    size_t segment_count;
+    CommonPracticeSegment *library_segments; /* parallel to segments; views onto their members */
+    char (*segment_ids)[32];                 /* backs library_segments[i].id */
+} Segmentation;
 
 /*
- * Groups notes (assumed time-ordered, per MIDIImporter's contract) by
- * exact onset-time equality. On success, *out is owned by the caller
- * (release with sonority_grouping_destroy). Returns false only on
- * allocation failure.
+ * Cuts notes into sonority segments on the beat grid of the file's
+ * MeterMap using Ursatz's adaptive segmentation, and builds the weighted
+ * identification members for each. On success *out is owned by the
+ * caller (release with segmentation_destroy). Returns false on a library
+ * or allocation failure, with *out left empty.
  */
-bool segment_by_onset(NoteEvent *const *events, size_t count, SonorityGrouping *out);
-void sonority_grouping_destroy(SonorityGrouping *grouping);
+bool segment_notes(const ImportedNotes *notes, Segmentation *out);
+void segmentation_destroy(Segmentation *segmentation);
+
+/* Pitch class (0-11) of the lowest note sounding in a segment. */
+int segment_bass_pitch_class(const Segment *segment);
 
 #endif

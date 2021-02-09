@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +15,8 @@
 /*
  * Meter and measure/beat location test. The five reference pieces
  * (Ursatz framework-v1 corpus) and two constructed files are imported,
- * and the meter section and the location of chosen chords are compared
+ * and the meter section and the location of the chords covering chosen
+ * positions (a chord segment may start before the position) are compared
  * with expectations worked out by hand from the files' MIDI ticks:
  * barlines from the declared time signatures (a change that arrives
  * mid-measure starts a new grid there), beats from the signature (a
@@ -31,8 +33,7 @@
  */
 
 typedef struct {
-    size_t index;
-    int measure;
+    int measure; /* position some chord segment must cover */
     int beat;
     long sub_num;
     long sub_den;
@@ -60,28 +61,28 @@ typedef struct {
 } Expectation;
 
 static const ChordExpectation BACH_CHORDS[] = {
-    {0, 1, 1, 0, 1}, {74, 6, 2, 3, 4}, {148, 12, 1, 1, 4}, {222, 18, 2, 1, 2}, {295, 24, 4, 1, 2}};
+    {1, 1, 0, 1}, {6, 2, 3, 4}, {12, 1, 1, 4}, {18, 2, 1, 2}, {24, 4, 1, 2}};
 static const ChordExpectation CLEMENTI_CHORDS[] = {
-    {0, 1, 1, 0, 1}, {64, 10, 2, 1, 2}, {128, 20, 2, 0, 1}, {192, 30, 1, 0, 1}, {256, 38, 3, 0, 1}};
+    {1, 1, 0, 1}, {10, 2, 1, 2}, {20, 2, 0, 1}, {30, 1, 0, 1}, {38, 3, 0, 1}};
 /* Field 1 opens with three beats of rest: its first chord is on beat 4 of measure 1. */
 static const ChordExpectation FIELD_1_CHORDS[] = {
-    {0, 1, 4, 0, 1}, {553, 37, 2, 1, 3}, {830, 52, 4, 1, 3}, {1106, 67, 3, 0, 1}};
+    {1, 4, 0, 1}, {37, 2, 1, 3}, {52, 4, 1, 3}, {67, 3, 0, 1}};
 static const ChordExpectation FIELD_5_CHORDS[] = {
-    {0, 1, 1, 0, 1}, {134, 12, 1, 0, 1}, {269, 23, 2, 0, 1}, {404, 33, 1, 2, 3}, {538, 43, 3, 5, 32}};
+    {1, 1, 0, 1}, {12, 1, 0, 1}, {23, 2, 0, 1}, {33, 1, 2, 3}, {43, 3, 5, 32}};
 static const ChordExpectation MOZART_CHORDS[] = {
-    {0, 1, 1, 0, 1},     {951, 67, 4, 1, 4},  {1903, 134, 3, 1, 4}, {2090, 149, 1, 0, 1},
-    {2855, 217, 2, 1, 4}, {3287, 256, 1, 0, 1}, {3289, 257, 1, 0, 1}, {3806, 338, 1, 0, 1}};
+    {1, 1, 0, 1},     {67, 4, 1, 4},  {134, 3, 1, 4}, {149, 1, 0, 1},
+    {217, 2, 1, 4}, {256, 1, 0, 1}, {257, 1, 0, 1}, {338, 1, 0, 1}};
 static const ChangeExpectation MOZART_CHANGES[] = {{149, 3, 4}, {256, 1, 4}, {257, 2, 4}};
-static const ChordExpectation PICKUP_CHORDS[] = {{0, 0, 4, 0, 1}, {1, 1, 1, 0, 1}, {2, 1, 2, 0, 1}, {3, 1, 3, 0, 1}};
+static const ChordExpectation PICKUP_CHORDS[] = {{0, 4, 0, 1}, {1, 1, 0, 1}, {1, 2, 0, 1}, {1, 3, 0, 1}};
 static const ChordExpectation NO_METER_CHORDS[] = {
-    {0, 1, 1, 0, 1}, {1, 1, 2, 0, 1}, {3, 1, 4, 0, 1}, {4, 2, 1, 0, 1}};
+    {1, 1, 0, 1}, {1, 2, 0, 1}, {1, 4, 0, 1}, {2, 1, 0, 1}};
 
 static const Expectation PIECES[] = {
-    {"Bach 114.mid", "file", 4, 4, 24, 24, -1, 296, BACH_CHORDS, 5, NULL, 0},
-    {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 257, CLEMENTI_CHORDS, 5, NULL, 0},
-    {"Field 1.mid", "file", 12, 8, 67, 67, -1, 1107, FIELD_1_CHORDS, 4, NULL, 0},
-    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 539, FIELD_5_CHORDS, 5, NULL, 0},
-    {"Mozart 545.mid", "file", 4, 4, 338, 338, -1, 3807, MOZART_CHORDS, 8, MOZART_CHANGES, 3},
+    {"Bach 114.mid", "file", 4, 4, 24, 24, -1, 155, BACH_CHORDS, 5, NULL, 0},
+    {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 205, CLEMENTI_CHORDS, 5, NULL, 0},
+    {"Field 1.mid", "file", 12, 8, 67, 67, -1, 268, FIELD_1_CHORDS, 4, NULL, 0},
+    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 170, FIELD_5_CHORDS, 5, NULL, 0},
+    {"Mozart 545.mid", "file", 4, 4, 338, 338, -1, 1095, MOZART_CHORDS, 8, MOZART_CHANGES, 3},
 };
 
 static const Expectation PICKUP = {"pickup", "file", 4, 4, 2, 1, 1, 4, PICKUP_CHORDS, 4, NULL, 0};
@@ -170,12 +171,16 @@ static long number(const cJSON *object, const char *key) {
     return (long)item->valuedouble;
 }
 
-static void check_position(const cJSON *position, int measure, int beat, long sub_num, long sub_den) {
+/* Orders positions: measure first, then beat plus the fraction of it. */
+static double position_key(int measure, int beat, long sub_num, long sub_den) {
+    return (double)measure * 1000.0 + (double)beat + (double)sub_num / (double)sub_den;
+}
+
+static double position_key_of(const cJSON *position) {
     assert(cJSON_IsObject(position));
-    assert(number(position, "measure") == measure);
-    assert(number(position, "beat") == beat);
-    assert(number(member(position, "subdivision"), "num") == sub_num);
-    assert(number(member(position, "subdivision"), "den") == sub_den);
+    return position_key((int)number(position, "measure"), (int)number(position, "beat"),
+                        number(member(position, "subdivision"), "num"),
+                        number(member(position, "subdivision"), "den"));
 }
 
 static void check_piece(const char *path, const char *display_name, const Expectation *expected) {
@@ -234,9 +239,19 @@ static void check_piece(const char *path, const char *display_name, const Expect
     assert((size_t)cJSON_GetArraySize(chords) == expected->chord_count);
     for (size_t i = 0; i < expected->chord_expectation_count; i++) {
         const ChordExpectation *chord = &expected->chords[i];
-        const cJSON *location = member(cJSON_GetArrayItem(chords, (int)chord->index), "location");
-        check_position(member(location, "start"), chord->measure, chord->beat, chord->sub_num, chord->sub_den);
-        assert(cJSON_IsObject(member(location, "end")));
+        double at = position_key(chord->measure, chord->beat, chord->sub_num, chord->sub_den);
+        bool covered = false;
+        const cJSON *claim;
+        cJSON_ArrayForEach(claim, chords) {
+            const cJSON *location = member(claim, "location");
+            assert(cJSON_IsObject(member(location, "end")));
+            if (position_key_of(member(location, "start")) <= at + 1e-9 &&
+                at < position_key_of(member(location, "end")) - 1e-9) {
+                covered = true;
+                break;
+            }
+        }
+        assert(covered);
     }
 
     /* Every claim, not only the chosen chords, carries a location. */
@@ -254,7 +269,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
     /* The report shows measure and beat, not raw beats from the start of the file. */
     assert(strstr(markdown, "## Meter\n") != NULL);
     assert(strstr(markdown, "- Beat ") == NULL);
-    assert(strstr(markdown, "- m. ") != NULL);
+    assert(strstr(markdown, "| m. ") != NULL);
 
     cJSON_Delete(document);
     free(markdown);

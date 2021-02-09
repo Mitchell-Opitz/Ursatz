@@ -114,7 +114,7 @@ int main(void) {
     char *written = read_whole_file(output_path);
     assert(strstr(written, "C major") != NULL);
     assert(strstr(written, "I") != NULL);
-    assert(strstr(written, "no match") != NULL);
+    assert(strstr(written, "vii") != NULL);
 
     free(written);
     free(output_path);
