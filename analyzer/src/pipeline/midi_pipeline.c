@@ -72,6 +72,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
         midi_importer_import_with_meter(buffer, (size_t)size, &events, &pitch_values, &count, &meter);
 
     MidiKeySignature key_signature = {false, 0, false};
+    MidiKeySignatureEvents key_signature_events = {NULL, 0};
     unsigned ticks_per_quarter = 0;
     if (import_result == MIDI_IMPORT_OK) {
         SmfHeader header;
@@ -88,10 +89,15 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
         if (midi_key_signature_scan(buffer, (size_t)size, &key_signature) != MIDI_KEY_SIGNATURE_OK) {
             key_signature = (MidiKeySignature){false, 0, false};
         }
+        if (midi_key_signature_scan_all(buffer, (size_t)size, &key_signature_events) !=
+            MIDI_KEY_SIGNATURE_SCAN_ALL_OK) {
+            key_signature_events = (MidiKeySignatureEvents){NULL, 0};
+        }
     }
     free(buffer);
 
     if (import_result != MIDI_IMPORT_OK) {
+        midi_key_signature_events_destroy(&key_signature_events);
         fprintf(stderr, "Error: failed to import '%s': %s\n", path, midi_import_error_message(import_result));
         return MIDI_PIPELINE_ERR_IMPORT_FAILED;
     }
@@ -100,6 +106,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     out->pitch_values = pitch_values;
     out->count = count;
     out->key_signature = key_signature;
+    out->key_signature_events = key_signature_events;
     out->ticks_per_quarter = ticks_per_quarter;
     out->meter = meter;
     for (size_t i = 0; i < meter.conflict_count; i++) {
@@ -120,6 +127,7 @@ void imported_notes_destroy(ImportedNotes *notes) {
     free(notes->events);
     free(notes->pitch_values);
     midi_meter_import_destroy(&notes->meter);
+    midi_key_signature_events_destroy(&notes->key_signature_events);
     notes->meter = (MidiMeterImport){NULL, NULL, NULL, 0};
     notes->events = NULL;
     notes->pitch_values = NULL;

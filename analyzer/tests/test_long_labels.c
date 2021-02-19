@@ -35,9 +35,11 @@ int main(void) {
            MIDI_PIPELINE_OK);
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
-    assert(report.key_found);
+    assert(report.key_region_count > 0);
     assert(report.entry_count > 0);
 
+    free(report.key_regions[report.home_region].label);
+    report.key_regions[report.home_region].label = copy_string(key_label);
     free(report.entries[0].key_label);
     free(report.entries[0].chord_label);
     report.entries[0].key_label = copy_string(key_label);
@@ -47,7 +49,7 @@ int main(void) {
     assert(document != NULL);
     char *markdown = markdown_report_render(document);
     assert(markdown != NULL);
-    assert(strstr(markdown, "**Detected key:** C major (long key label beyond thirty-one characters)\n") != NULL);
+    assert(strstr(markdown, "- **Home key:** C major (long key label beyond thirty-one characters).\n") != NULL);
     assert(strstr(markdown, "| m. 1, beat 1 to m. ") != NULL);
     assert(strstr(markdown, " | I (long chord label beyond thirty-one characters) | ") != NULL);
 

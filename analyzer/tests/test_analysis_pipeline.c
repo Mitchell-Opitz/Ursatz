@@ -95,7 +95,7 @@ int main(void) {
 
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
-    assert(report.key_found);
+    assert(report.key_region_count > 0);
     assert(report.entry_count == 6);
 
     assert(report.entries[0].time_numerator == 0);

@@ -261,7 +261,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
         assert(cJSON_IsObject(member(member(chord, "location"), "end")));
     }
     assert(cJSON_IsObject(member(member(meter, "location"), "start")));
-    const cJSON *key = cJSON_GetArrayItem(member(document, "keys"), 0);
+    const cJSON *key = cJSON_GetArrayItem(member(member(document, "keys"), "regions"), 0);
     if (key) {
         assert(cJSON_IsObject(member(member(key, "location"), "start")));
     }

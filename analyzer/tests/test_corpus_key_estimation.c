@@ -40,7 +40,7 @@ int main(void) {
 
         AnalysisReport report;
         assert(run_analysis_pipeline(&notes, &report));
-        assert(report.key_found);
+        assert(report.key_region_count > 0);
         assert(report.entry_count > 0);
 
         if (strcmp(report.entries[0].key_label, CASES[i].expected_key_label) != 0) {

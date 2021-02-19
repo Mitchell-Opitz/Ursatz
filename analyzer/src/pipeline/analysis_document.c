@@ -11,6 +11,7 @@
 #include "metric_position_rules.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
+#include "pipeline/pitch_class_util.h"
 #include "theory/framework.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
@@ -26,9 +27,9 @@
 #define URSATZ_ANALYZER_URSATZ_COMMIT "unknown"
 #endif
 
-/* Source id for a key read from the MIDI key signature meta-event: no
-   framework Interpretation is involved there. */
-static const char KEY_SIGNATURE_SOURCE[] = "midi-key-signature";
+/* How the home key is chosen: the library offers no determination of its own, so it is the key region of
+   greatest duration, a tie going to the earliest. */
+static const char HOME_KEY_RULE[] = "longest_region";
 
 /* Source ids for the meter: a time signature the MIDI file declares, and
    the 4/4 the library assumes when it declares none. */
@@ -216,22 +217,35 @@ static cJSON *location_json(const MeterMap *map, Rational start, Rational end) {
     return object;
 }
 
-/* The shared claim fields, in schema order. ids NULL means every
-   imported note. */
-static cJSON *claim_json_at(const char *framework, const ImportedNotes *notes, const size_t *ids,
-                            size_t id_count, Rational start, Rational end, const char *label,
-                            AnalysisConfidence confidence) {
+/* The shared claim fields, in schema order, with the uncertainty as built by the caller (taken over, freed on
+   failure). ids NULL means every imported note. */
+static cJSON *claim_json_with(const char *framework, const ImportedNotes *notes, const size_t *ids,
+                              size_t id_count, Rational start, Rational end, const char *label,
+                              cJSON *uncertainty) {
     cJSON *claim = cJSON_CreateObject();
+    bool consumed = false; /* add() takes the uncertainty over, and frees it itself when it fails */
     if (claim && !(add(claim, "framework", cJSON_CreateString(framework)) &&
                    add(claim, "span", span_json(start, end)) &&
                    add(claim, "location", location_json(notes->meter.meter_map, start, end)) &&
                    add(claim, "note_ids", note_ids_json(ids, id_count)) &&
                    add(claim, "label", cJSON_CreateString(label)) &&
-                   add(claim, "uncertainty", uncertainty_json(confidence)))) {
+                   (consumed = true, add(claim, "uncertainty", uncertainty)))) {
+        if (!consumed) {
+            cJSON_Delete(uncertainty);
+        }
         cJSON_Delete(claim);
         return NULL;
     }
+    if (!claim) {
+        cJSON_Delete(uncertainty);
+    }
     return claim;
+}
+
+static cJSON *claim_json_at(const char *framework, const ImportedNotes *notes, const size_t *ids,
+                            size_t id_count, Rational start, Rational end, const char *label,
+                            AnalysisConfidence confidence) {
+    return claim_json_with(framework, notes, ids, id_count, start, end, label, uncertainty_json(confidence));
 }
 
 static cJSON *claim_json(const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
@@ -358,17 +372,49 @@ static const char *library_framework_name(void) {
     return framework ? framework_name(framework) : "unknown";
 }
 
-static const char *key_method_name(AnalysisKeyMethod method) {
-    switch (method) {
-        case ANALYSIS_KEY_METHOD_KEY_SIGNATURE:
-            return "key_signature";
-        case ANALYSIS_KEY_METHOD_BASS_FALLBACK:
-            return "bass_fallback";
-        case ANALYSIS_KEY_METHOD_PITCH_CLASS_SCAN:
-            return "pitch_class_scan";
+static const char *mode_hint_name(MidiModeHint hint) {
+    switch (hint) {
+        case MIDI_MODE_HINT_MAJOR:
+            return "major";
+        case MIDI_MODE_HINT_MINOR:
+            return "minor";
         default:
-            return NULL;
+            return "unknown";
     }
+}
+
+/* The notated key signatures, as the file declares them: where each sits, its sharps/flats count, the raw
+   major/minor hint (unreliable, never used to decide a key), and the major key and relative minor it allows. */
+static cJSON *key_signatures_json(const ImportedNotes *notes) {
+    cJSON *signatures = cJSON_CreateArray();
+    if (!signatures) {
+        return NULL;
+    }
+    for (size_t i = 0; i < notes->key_signature_events.count; i++) {
+        const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
+        int major = key_signature_major_tonic(event->sharps_flats);
+        char *major_label = key_label_create(major, true);
+        char *minor_label = key_label_create((major + 9) % 12, false);
+        Rational start = time_rational(event->position);
+        cJSON *object = cJSON_CreateObject();
+        bool ok = major_label && minor_label && object &&
+                  add(object, "start", rational_json(start)) &&
+                  add(object, "location", position_json(notes->meter.meter_map, start)) &&
+                  add(object, "sharps_flats", cJSON_CreateNumber(event->sharps_flats)) &&
+                  add(object, "mode_hint", cJSON_CreateString(mode_hint_name(event->mode_hint))) &&
+                  add(object, "major_key", cJSON_CreateString(major_label)) &&
+                  add(object, "minor_key", cJSON_CreateString(minor_label));
+        free(major_label);
+        free(minor_label);
+        if (!ok || !append(signatures, object)) {
+            if (!ok) {
+                cJSON_Delete(object);
+            }
+            cJSON_Delete(signatures);
+            return NULL;
+        }
+    }
+    return signatures;
 }
 
 static cJSON *metadata_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
@@ -381,38 +427,220 @@ static cJSON *metadata_json(const char *input_path, const ImportedNotes *notes, 
           add(metadata, "ticks_per_quarter", notes->ticks_per_quarter > 0
                                                  ? cJSON_CreateNumber((double)notes->ticks_per_quarter)
                                                  : cJSON_CreateNull()) &&
-          add(metadata, "key_found", cJSON_CreateBool(report->key_found)))) {
+          add(metadata, "key_found", cJSON_CreateBool(report->key_region_count > 0)) &&
+          add(metadata, "key_signatures", key_signatures_json(notes)))) {
         cJSON_Delete(metadata);
         return NULL;
     }
     return metadata;
 }
 
-/* One whole-piece key claim, or an empty array when no key was found. */
-static cJSON *keys_json(const ImportedNotes *notes, const AnalysisReport *report) {
-    cJSON *keys = cJSON_CreateArray();
-    if (!keys) {
-        return NULL;
-    }
-    const char *method = key_method_name(report->key_method);
-    if (!report->key_found || report->entry_count == 0 || notes->count == 0 || !method) {
-        return keys;
-    }
+static Rational region_start(const AnalysisKeyRegion *region) {
+    return rational_make(region->start_numerator, region->start_denominator);
+}
 
-    const char *framework = report->key_method == ANALYSIS_KEY_METHOD_KEY_SIGNATURE ? KEY_SIGNATURE_SOURCE
-                                                                                    : library_framework_name();
-    cJSON *claim = claim_json(framework, notes, NULL, notes->count, report->entries[0].key_label,
-                              report->key_confidence);
-    if (!(claim && add(claim, "method", cJSON_CreateString(method)))) {
-        cJSON_Delete(claim);
-        cJSON_Delete(keys);
+static Rational region_end(const AnalysisKeyRegion *region) {
+    return rational_make(region->end_numerator, region->end_denominator);
+}
+
+static Rational rational_difference(Rational end, Rational start) {
+    return rational_make(end.num * (long long)start.den - start.num * (long long)end.den, start.den * end.den);
+}
+
+/* The imported notes that start in [start, end), as indices; *count may be 0, and the result is then still a
+   valid pointer. NULL on allocation failure. */
+static size_t *notes_starting_in(const ImportedNotes *notes, Rational start, Rational end, size_t *count) {
+    size_t *ids = malloc(sizeof(size_t) * (notes->count > 0 ? notes->count : 1));
+    if (!ids) {
         return NULL;
     }
-    if (!append(keys, claim)) {
+    *count = 0;
+    for (size_t i = 0; i < notes->count; i++) {
+        Rational onset = note_onset(notes->events[i]);
+        if (!rational_less(onset, start) && rational_less(onset, end)) {
+            ids[(*count)++] = i;
+        }
+    }
+    return ids;
+}
+
+/* A claim over one key region's span: the notes that start in it, its label, and the library's uncertainty
+   for the region (in [0, 1], higher is LESS certain, unlike a chord's confidence). */
+static cJSON *region_span_claim(const ImportedNotes *notes, const AnalysisKeyRegion *region, const char *label,
+                                cJSON *uncertainty) {
+    size_t id_count = 0;
+    size_t *ids = notes_starting_in(notes, region_start(region), region_end(region), &id_count);
+    if (!ids) {
+        cJSON_Delete(uncertainty);
+        return NULL;
+    }
+    cJSON *claim = claim_json_with(library_framework_name(), notes, ids, id_count, region_start(region),
+                                   region_end(region), label, uncertainty);
+    free(ids);
+    return claim;
+}
+
+static const char *region_source_name(AnalysisRegionSource source) {
+    return source == ANALYSIS_REGION_SOURCE_KEY_SIGNATURE ? "key_signature" : "profile";
+}
+
+static cJSON *measures_json(int first, int last) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "first", cJSON_CreateNumber(first)) && add(object, "last", cJSON_CreateNumber(last)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One key region: the shared claim (its span runs barline to barline) and the key's fields. */
+static cJSON *key_region_json(const ImportedNotes *notes, const AnalysisKeyRegion *region, size_t index) {
+    cJSON *claim = region_span_claim(notes, region, region->label, cJSON_CreateNumber(region->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber((double)index)) &&
+          add(claim, "tonic", cJSON_CreateString(pitch_class_name(region->tonic_pitch_class, region->prefer_flats))) &&
+          add(claim, "mode", cJSON_CreateString(region->is_major ? "major" : "minor")) &&
+          add(claim, "measures", measures_json(region->first_measure, region->last_measure)) &&
+          add(claim, "source", cJSON_CreateString(region_source_name(region->source))))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+static cJSON *home_key_json(const AnalysisReport *report) {
+    const AnalysisKeyRegion *home = &report->key_regions[report->home_region];
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "rule", cJSON_CreateString(HOME_KEY_RULE)) &&
+                    add(object, "region_index", cJSON_CreateNumber((double)report->home_region)) &&
+                    add(object, "label", cJSON_CreateString(home->label)) &&
+                    add(object, "duration", rational_json(rational_difference(region_end(home), region_start(home)))))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The keys section: the key regions in time order, the home key derived from them, and the indices of the
+   opening and closing regions. With no key found the regions are empty and the rest null. */
+static cJSON *keys_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *keys = cJSON_CreateObject();
+    cJSON *regions = cJSON_CreateArray();
+    if (!keys || !regions) {
+        cJSON_Delete(keys);
+        cJSON_Delete(regions);
+        return NULL;
+    }
+    for (size_t i = 0; i < report->key_region_count; i++) {
+        if (!append(regions, key_region_json(notes, &report->key_regions[i], i))) {
+            cJSON_Delete(keys);
+            cJSON_Delete(regions);
+            return NULL;
+        }
+    }
+    bool found = report->key_region_count > 0;
+    if (!(add(keys, "regions", regions) && add(keys, "home_key", found ? home_key_json(report) : cJSON_CreateNull()) &&
+          add(keys, "opening_region", found ? cJSON_CreateNumber(0) : cJSON_CreateNull()) &&
+          add(keys, "closing_region",
+              found ? cJSON_CreateNumber((double)(report->key_region_count - 1)) : cJSON_CreateNull()))) {
         cJSON_Delete(keys);
         return NULL;
     }
     return keys;
+}
+
+/* Whether a key is the major key of a notated signature or its relative minor. */
+static bool key_fits_signature(const AnalysisKeyRegion *region, int sharps_flats) {
+    int major = key_signature_major_tonic(sharps_flats);
+    return region->is_major ? region->tonic_pitch_class == major : region->tonic_pitch_class == (major + 9) % 12;
+}
+
+/* The region in effect at time: the one whose span holds it, the first for a time before the piece's first
+   region; NULL for a time at or after the end of the last. */
+static const AnalysisKeyRegion *region_at(const AnalysisReport *report, Rational time, size_t *index) {
+    for (size_t i = 0; i < report->key_region_count; i++) {
+        if (rational_less(time, region_end(&report->key_regions[i]))) {
+            *index = i;
+            return &report->key_regions[i];
+        }
+    }
+    return NULL;
+}
+
+/* One disagreement between a notated signature and the detected keys. signature_index is -1 for a note about
+   the home key, which fits no signature at all. */
+static cJSON *disagreement_json(const char *scope, long signature_index, const MidiKeySignatureEvent *event,
+                                size_t region_index, const AnalysisKeyRegion *region) {
+    char notated[96] = "";
+    char message[256];
+    if (event) {
+        int major = key_signature_major_tonic(event->sharps_flats);
+        char *major_label = key_label_create(major, true);
+        char *minor_label = key_label_create((major + 9) % 12, false);
+        if (major_label && minor_label) {
+            snprintf(notated, sizeof(notated), "%s or %s", major_label, minor_label);
+        }
+        free(major_label);
+        free(minor_label);
+        snprintf(message, sizeof(message),
+                 "The notated key signature allows %s, but the key detected there is %s. Both are reported; "
+                 "neither is preferred.",
+                 notated, region->label);
+    } else {
+        snprintf(message, sizeof(message),
+                 "The home key %s is not the major key or relative minor of any notated key signature. Both are "
+                 "reported; neither is preferred.",
+                 region->label);
+    }
+    cJSON *note = cJSON_CreateObject();
+    if (note && !(add(note, "kind", cJSON_CreateString("key_signature_disagreement")) &&
+                  add(note, "scope", cJSON_CreateString(scope)) &&
+                  add(note, "signature_index",
+                      signature_index >= 0 ? cJSON_CreateNumber((double)signature_index) : cJSON_CreateNull()) &&
+                  add(note, "region_index", cJSON_CreateNumber((double)region_index)) &&
+                  add(note, "notated", event ? cJSON_CreateString(notated) : cJSON_CreateNull()) &&
+                  add(note, "detected", cJSON_CreateString(region->label)) &&
+                  add(note, "message", cJSON_CreateString(message)))) {
+        cJSON_Delete(note);
+        return NULL;
+    }
+    return note;
+}
+
+/* Notes on the analysis. A notated key signature that the detected keys do not fit is surfaced here, never
+   resolved silently: where a signature starts, the region in effect there should be its major key or relative
+   minor (the library restricts it to those, so a mismatch means the restriction did not hold); and the home
+   key should be the major key or relative minor of at least one signature. Inside a signature any key may
+   come and go, so the other regions are not compared. */
+static cJSON *notes_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    size_t signature_count = notes->key_signature_events.count;
+    if (report->key_region_count == 0 || signature_count == 0) {
+        return list;
+    }
+    bool home_fits_any = false;
+    const AnalysisKeyRegion *home = &report->key_regions[report->home_region];
+    for (size_t i = 0; i < signature_count; i++) {
+        const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
+        home_fits_any = home_fits_any || key_fits_signature(home, event->sharps_flats);
+        if (i > 0 && event->sharps_flats == notes->key_signature_events.events[i - 1].sharps_flats) {
+            continue; /* the same signature repeated is not a new one (the library does not treat it as a boundary) */
+        }
+        size_t region_index = 0;
+        const AnalysisKeyRegion *region = region_at(report, time_rational(event->position), &region_index);
+        if (region && !key_fits_signature(region, event->sharps_flats) &&
+            !append(list, disagreement_json("region_at_signature", (long)i, event, region_index, region))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    if (!home_fits_any && !append(list, disagreement_json("home_key", -1, NULL, report->home_region, home))) {
+        cJSON_Delete(list);
+        return NULL;
+    }
+    return list;
 }
 
 /* The span's length in beats of the signature its start is read in: a rational, or null when the
@@ -557,11 +785,13 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "metadata", metadata_json(input_path, notes, report)) &&
           add(document, "meter", meter_json(notes)) && add(document, "keys", keys_json(notes, report)) &&
           add(document, "chords", chords_json(notes, report)) &&
-          add(document, "non_chord_tones", non_chord_tones_json(notes, report)) && add(document, "cadences", cJSON_CreateArray()) &&
+          add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
+          add(document, "cadences", cJSON_CreateArray()) &&
           add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
-          add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()))) {
+          add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
+          add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);
         return NULL;
     }

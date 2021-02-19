@@ -3,7 +3,7 @@
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v3.schema.json`](../schema/analysis-document.v3.schema.json)
+[`schema/analysis-document.v4.schema.json`](../schema/analysis-document.v4.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render` from
 `<ursatz_analyzer/analysis_document.h>`.
 
@@ -12,12 +12,12 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v2 content |
+| Key | Type | v4 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `3`. |
+| `schema_version` | integer | Always `4`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
-| `keys` | array of key claims | Filled. |
+| `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
 | `chords` | array of chord claims | Filled. |
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `cadences` | array | Placeholder: `[]`. |
@@ -29,6 +29,7 @@ newline. The same input and build always give the same bytes.
 | `texture` | array | Placeholder: `[]`. |
 | `voice_leading` | array | Placeholder: `[]`. |
 | `schemas` | array | Placeholder: `[]`. |
+| `notes` | array of notes | Filled: where the notated and detected keys disagree. Empty when they do not, or there is no notated key signature. |
 
 Every key is always present, so consumers can read any section without checking for it first.
 The singular section `form` is `null` until filled; the rest are empty arrays.
@@ -42,7 +43,21 @@ The singular section `form` is `null` until filled; the rest are empty arrays.
 | `ursatz_commit` | string | Full commit hash of the `external/ursatz` submodule at configure time, or `"unknown"` when `git` could not read it. |
 | `note_count` | integer | Number of imported notes. |
 | `ticks_per_quarter` | integer or null | The MIDI header's ticks per quarter note, or `null` when unavailable. |
-| `key_found` | boolean | Whether a key was found. |
+| `key_found` | boolean | Whether any key region was found. |
+| `key_signatures` | array | The key signatures the file notates, in time order; empty when it has none. See below. |
+
+### Notated key signatures
+
+`metadata.key_signatures` is input metadata: what the file says, not what was detected. One entry
+per MIDI key signature meta-event.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `start` | rational | Where the event sits, in whole notes. |
+| `location` | position or null | The measure and beat of `start`. |
+| `sharps_flats` | integer | The signature's count, -7 to 7; negative is flats. |
+| `mode_hint` | `"major"`, `"minor"` or `"unknown"` | The file's major/minor byte. It is unreliable and never decides a key. |
+| `major_key`, `minor_key` | string | The major key and the relative minor the signature allows, e.g. `"Eb major"` and `"C minor"`. |
 
 ## meter
 
@@ -68,7 +83,7 @@ content.
 
 ## Claims
 
-Every entry in `keys`, `chords` and `non_chord_tones` is a claim. A claim mirrors the library's Interpretation.
+Every key region and every entry in `chords` and `non_chord_tones` is a claim. A claim mirrors the library's Interpretation.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -105,29 +120,71 @@ Conventions:
 - **`end` is the position of the span's exclusive end.** A span that ends on a barline ends at
   beat 1 of the next measure, not at the last beat of its own measure.
 - **A barline belongs to the following measure.**
-- The `meter` claim and the key claim cover the whole piece, so their positions run from the first
-  note to the end of the last.
+- The `meter` claim covers the whole piece, so its positions run from the first note to the end of
+  the last.
+- A key region runs from a barline to a barline, so its positions are always on beat 1.
 
-### Key claims
+### Keys
 
-`keys` holds one whole-piece claim, or is empty when no key was found.
+`keys` is an object, not a claim:
 
-- `span` runs from the earliest note onset to the latest note end, and `note_ids` lists every note.
-- `label` is the key, e.g. `"C major"` or `"Eb major"`.
-- `method` names the step that found the key, in the README's key-estimation order:
-
-| `method` | Step | `framework` |
+| Field | Type | Meaning |
 | --- | --- | --- |
-| `key_signature` | 1. MIDI key signature meta-event | `"midi-key-signature"` (no framework is involved) |
-| `bass_fallback` | 2. Closing-chord, then opening-chord bass as tonic | the framework id |
-| `pitch_class_scan` | 3. Brute-force scan of all twelve tonics | the framework id |
+| `regions` | array of key regions | The local keys, in time order, gap-free. Empty when no key was found. |
+| `home_key` | object or null | The piece's home key, derived from the regions; `null` with no regions. |
+| `opening_region` | integer or null | Index into `regions` of the first region. |
+| `closing_region` | integer or null | Index into `regions` of the last region. |
+
+The regions come from Ursatz's key-region detection (`key_regions_estimate`, in the
+`common-practice-minimal` framework): windowed correlation of the weighted pitch classes against the
+24 major and natural-minor keys, a path through the windows that charges for each key change, and
+regions merged from neighbouring measures with the same key. The analyzer adds no key logic of its
+own. A key signature the file notates is passed to the library as a boundary: the region that starts
+there is restricted to the signature's major key and its relative minor.
+
+A key region is a claim, plus:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `framework` | string | The framework id, e.g. `"common-practice-minimal-v1"`. |
+| `span`, `location` | | The region, barline to barline. `span.end` is exclusive. |
+| `note_ids` | array of integers | The notes that start in the region. |
+| `label` | string | The key, e.g. `"C major"` or `"Eb major"`. Flats are used when the tonic needs fewer flats than sharps (minimal-accidental spelling); the one tie, F#/Gb, reads in sharps. Every region label is spelled this way. |
+| `uncertainty` | number | The library's uncertainty for the region, in [0, 1]. Higher is LESS certain: 0 when the chosen key beats every other by a full unit, 1 when another key fits as well or better. This is the opposite sense from a chord claim's `uncertainty`, which carries the library's confidence (see Chord claims). |
+| `index` | integer | The region's position in `regions`. |
+| `tonic` | string | The tonic's pitch class name, e.g. `"Eb"`. |
+| `mode` | `"major"` or `"minor"` | The mode. Minor is the profile's minor (raised sixth and seventh weigh in); chord identification treats it as natural minor. |
+| `measures` | object | `{"first", "last"}`: the measure numbers the region covers, inclusive. |
+| `source` | `"profile"` or `"key_signature"` | `"key_signature"` when the region begins at a notated key signature and was restricted to its two keys; `"profile"` otherwise. |
+
+`home_key` is `{"rule", "region_index", "label", "duration"}`. The library offers no determination of
+its own, so the rule is `"longest_region"`: the region with the greatest duration (`duration`, a
+rational in whole notes), a tie going to the earliest. The rule is recorded so a consumer can tell
+which applied should another be added. The home key is the one region that stands for the piece; it is
+not necessarily the opening or the closing key.
+
+### Notes
+
+`notes` lists observations about the analysis that no claim carries. The only kind is
+`"key_signature_disagreement"`: a notated key signature that the detected keys do not fit. Neither side
+is preferred and nothing is overwritten: both are reported. A note has:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `kind` | string | `"key_signature_disagreement"`. |
+| `scope` | `"region_at_signature"` or `"home_key"` | What was compared. `"region_at_signature"`: the region in effect where a signature starts is not that signature's major key or relative minor. `"home_key"`: the home key is not the major key or relative minor of any notated signature. Regions inside a signature are not compared, since a piece modulates inside one signature all the time. A signature repeated unchanged is not compared again. |
+| `signature_index` | integer or null | Index into `metadata.key_signatures`; `null` for `"home_key"`. |
+| `region_index` | integer | The region concerned. |
+| `notated` | string or null | The two keys the signature allows, e.g. `"Eb major or C minor"`; `null` for `"home_key"`. |
+| `detected` | string | The region's label. |
+| `message` | string | The note in words, as the report shows it. |
 
 ### Chord claims
 
 `chords` holds one claim per sonority segment, in time order. The segments come from Ursatz's
 adaptive sonority segmentation, which cuts on the beats of the file's meter and where the bass
 changes, and merges neighbours that sound the same pitch classes over the same bass. The chords come
-from the library's weighted chord identification, read in the piece's key.
+from the library's weighted chord identification, each segment read in its key region's key.
 
 - `span` is the segment's window, from its start to its (exclusive) end.
 - `note_ids` lists every note sounding in the segment, attacked in it or held over from earlier, and
@@ -136,7 +193,8 @@ from the library's weighted chord identification, read in the piece's key.
   a seventh chord), or `"no match"` when no chord was identified.
 - `uncertainty` is the library's confidence in the best chord, in [0, 1]. Higher is more confident,
   despite the name (the name is shared with every claim).
-- `key_label` is the key the chord was read in, or `"no match"` when no key was found.
+- `key_label` is the key of the region the chord's segment starts in, the key it was read in, or `"no match"`
+  when no key was found.
 
 Beyond the shared claim fields, a chord claim has the fields below. All but `duration` are `null`
 when no chord was identified.
@@ -183,6 +241,11 @@ non-chord tones.
 
 ### Version history
 
+- **4**: `keys` is an object of key regions with a derived home key (it was an array holding one
+  whole-piece claim with a `method`), `metadata` gains the required `key_signatures`, and the top
+  level gains the required `notes`. The `method` field is gone, with the key-signature, bass-fallback
+  and pitch-class-scan steps it named. Changing a section's type and removing a field are breaking
+  changes under the rule above.
 - **3**: Adds the required `non_chord_tones` section. Chord claims gain required `root`, `quality`, `bass`, `inversion`, `duration`, `score` and
   `runner_up`, and are cut by the library's sonority segmentation, so `span` and `note_ids` cover the
   segment's window and every note sounding in it. A required field is a breaking change under the

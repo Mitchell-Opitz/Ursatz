@@ -136,7 +136,7 @@ int main(void) {
 
     char *json = analysis_document_render(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 3,\n", 25) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 4,\n", 25) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = analysis_document_render(path, &notes, &report);
@@ -151,7 +151,7 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 3);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 4);
 
     const cJSON *metadata = member(document, "metadata");
     assert(cJSON_IsObject(metadata));
@@ -182,24 +182,42 @@ int main(void) {
         assert(cJSON_GetArraySize(section) == 0);
     }
 
-    /* Keys: one whole-piece claim. The closing C-E-G-D group's bass C is
-       tried first and matches, so the bass fallback found the key. */
+    /* Keys: the two-measure piece is one key region, running barline to barline. */
     const cJSON *keys = member(document, "keys");
-    assert(cJSON_IsArray(keys));
-    assert(cJSON_GetArraySize(keys) == 1);
-    const cJSON *key = cJSON_GetArrayItem(keys, 0);
+    assert(cJSON_IsObject(keys));
+    const cJSON *regions = member(keys, "regions");
+    assert(cJSON_IsArray(regions));
+    assert(cJSON_GetArraySize(regions) == 1);
+    const cJSON *key = cJSON_GetArrayItem(regions, 0);
     assert(check_claim(key) == 11);
     assert(strcmp(string(key, "label"), "C major") == 0);
-    assert(strcmp(string(key, "method"), "bass_fallback") == 0);
+    assert(strcmp(string(key, "tonic"), "C") == 0);
+    assert(strcmp(string(key, "mode"), "major") == 0);
+    assert(strcmp(string(key, "source"), "profile") == 0);
+    assert(number(key, "index") == 0);
+    assert(number(member(key, "measures"), "first") == 1);
+    assert(number(member(key, "measures"), "last") == 2);
     check_rational(member(member(key, "span"), "start"), 0, 1);
-    check_rational(member(member(key, "span"), "end"), 3, 2);
-    /* Six quarter-note beats in 4/4: the key ends on beat 3 of measure 2. */
+    check_rational(member(member(key, "span"), "end"), 2, 1);
     const cJSON *key_location = member(key, "location");
     assert(number(member(key_location, "start"), "measure") == 1);
     assert(number(member(key_location, "start"), "beat") == 1);
     check_rational(member(member(key_location, "start"), "subdivision"), 0, 1);
-    assert(number(member(key_location, "end"), "measure") == 2);
-    assert(number(member(key_location, "end"), "beat") == 3);
+    assert(number(member(key_location, "end"), "measure") == 3);
+    assert(number(member(key_location, "end"), "beat") == 1);
+
+    /* The home key is the only region, which is also the opening and closing one. */
+    const cJSON *home = member(keys, "home_key");
+    assert(strcmp(string(home, "rule"), "longest_region") == 0);
+    assert(number(home, "region_index") == 0);
+    assert(strcmp(string(home, "label"), "C major") == 0);
+    check_rational(member(home, "duration"), 2, 1);
+    assert(number(keys, "opening_region") == 0);
+    assert(number(keys, "closing_region") == 0);
+
+    /* The file has no key signature, so none is reported and nothing disagrees. */
+    assert(cJSON_GetArraySize(member(metadata, "key_signatures")) == 0);
+    assert(cJSON_GetArraySize(member(document, "notes")) == 0);
 
     /* Chords: one claim per report entry, matching test_analysis_pipeline. */
     const cJSON *chords = member(document, "chords");

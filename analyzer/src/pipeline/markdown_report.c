@@ -97,20 +97,6 @@ static bool render_title(StringBuilder *sb, const cJSON *document, const cJSON *
     return sb_appendf(sb, "# Analysis Report: %s\n\n", source_file ? source_file : "");
 }
 
-/* How the key was found, in plain words, from keys[].method. */
-static const char *key_method_phrase(const char *method) {
-    if (method && strcmp(method, "key_signature") == 0) {
-        return "read from the key signature";
-    }
-    if (method && strcmp(method, "bass_fallback") == 0) {
-        return "inferred from the bass of the closing or opening chord";
-    }
-    if (method && strcmp(method, "pitch_class_scan") == 0) {
-        return "inferred from the overall pitch content";
-    }
-    return "found by an unrecorded method";
-}
-
 typedef struct {
     const char *label;
     size_t count;
@@ -174,11 +160,13 @@ static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON
               sb_appendf(sb, "- **File:** %s, %zu %s.\n", source_file ? source_file : "", note_count,
                          plural(note_count, "note", "notes"));
 
-    const cJSON *key = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "keys"), 0);
-    const char *key_label = string_member(key, "label");
-    if (key_label) {
-        ok = ok && sb_appendf(sb, "- **Key:** %s, %s.\n", key_label,
-                              key_method_phrase(string_member(key, "method")));
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
+    const char *home_label = string_member(cJSON_GetObjectItemCaseSensitive(keys, "home_key"), "label");
+    size_t region_count = (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(keys, "regions"));
+    if (home_label && region_count == 1) {
+        ok = ok && sb_appendf(sb, "- **Key:** %s, the only key region.\n", home_label);
+    } else if (home_label) {
+        ok = ok && sb_appendf(sb, "- **Key:** %s, the longest of %zu key regions.\n", home_label, region_count);
     } else {
         ok = ok && sb_append(sb, "- **Key:** No key was found.\n");
     }
@@ -288,12 +276,6 @@ static bool render_meter(StringBuilder *sb, const cJSON *document, const cJSON *
     return ok && sb_append(sb, "\n");
 }
 
-static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *keys) {
-    (void)document;
-    const char *label = string_member(cJSON_GetArrayItem(keys, 0), "label");
-    return sb_appendf(sb, "**Detected key:** %s\n\n", label ? label : "");
-}
-
 /* "m. 3, beat 2.5": the beat is the 1-based beat plus its fraction,
    shown to at most two places. A position that could not be read shows
    as "unknown position". */
@@ -314,6 +296,82 @@ static bool append_position(StringBuilder *sb, const cJSON *position) {
         beat_text[--length] = '\0';
     }
     return sb_appendf(sb, "m. %d, beat %s", (int)number_member(position, "measure"), beat_text);
+}
+
+static const char *region_source_phrase(const char *source) {
+    if (source && strcmp(source, "key_signature") == 0) {
+        return "key signature";
+    }
+    return "profile";
+}
+
+static bool append_key_region_row(StringBuilder *sb, const cJSON *region) {
+    const cJSON *location = cJSON_GetObjectItemCaseSensitive(region, "location");
+    const cJSON *uncertainty = cJSON_GetObjectItemCaseSensitive(region, "uncertainty");
+    char uncertainty_text[32] = "-";
+    if (cJSON_IsNumber(uncertainty)) {
+        snprintf(uncertainty_text, sizeof(uncertainty_text), "%.2f", uncertainty->valuedouble);
+    }
+    const char *label = string_member(region, "label");
+    return sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+           sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+           sb_appendf(sb, " | %s | %s | %s |\n", label ? label : "", uncertainty_text,
+                      region_source_phrase(string_member(region, "source")));
+}
+
+/* The key regions with the home key, the opening and closing keys, any notated key signatures, and the notes
+   on how the notated and detected keys compare. */
+static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *keys) {
+    const cJSON *regions = cJSON_GetObjectItemCaseSensitive(keys, "regions");
+    if (cJSON_GetArraySize(regions) == 0) {
+        return true;
+    }
+    const cJSON *home = cJSON_GetObjectItemCaseSensitive(keys, "home_key");
+    const cJSON *opening = cJSON_GetArrayItem(regions, (int)number_member(keys, "opening_region"));
+    const cJSON *closing = cJSON_GetArrayItem(regions, (int)number_member(keys, "closing_region"));
+
+    bool ok = sb_append(sb, "## Key regions\n\n") &&
+              sb_append(sb, "Positions are measure and beat. Uncertainty is the library's, from 0 (clearly this key) "
+                            "to 1 (another key fits as well or better). The home key is the longest key region.\n\n") &&
+              sb_appendf(sb, "- **Home key:** %s.\n", string_member(home, "label")) &&
+              sb_appendf(sb, "- **Opening key:** %s.\n", string_member(opening, "label")) &&
+              sb_appendf(sb, "- **Closing key:** %s.\n", string_member(closing, "label"));
+
+    const cJSON *signatures =
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "metadata"), "key_signatures");
+    if (ok && cJSON_GetArraySize(signatures) > 0) {
+        ok = sb_append(sb, "- **Notated key signatures:** ");
+        const cJSON *signature;
+        cJSON_ArrayForEach(signature, signatures) {
+            if (signature != signatures->child) {
+                ok = ok && sb_append(sb, ", ");
+            }
+            ok = ok &&
+                 sb_appendf(sb, "%s or %s at ", string_member(signature, "major_key"),
+                            string_member(signature, "minor_key")) &&
+                 append_position(sb, cJSON_GetObjectItemCaseSensitive(signature, "location"));
+        }
+        ok = ok && sb_append(sb, ".\n");
+    }
+
+    ok = ok && sb_append(sb, "\n| Position | Key | Uncertainty | Set by |\n| --- | --- | --- | --- |\n");
+    const cJSON *region;
+    cJSON_ArrayForEach(region, regions) {
+        if (!ok) {
+            break;
+        }
+        ok = append_key_region_row(sb, region);
+    }
+
+    const cJSON *notes = cJSON_GetObjectItemCaseSensitive(document, "notes");
+    const cJSON *note;
+    cJSON_ArrayForEach(note, notes) {
+        const char *kind = string_member(note, "kind");
+        if (ok && kind && strcmp(kind, "key_signature_disagreement") == 0) {
+            ok = sb_appendf(sb, "\n**Note:** %s\n", string_member(note, "message"));
+        }
+    }
+    return ok && sb_append(sb, "\n");
 }
 
 /* The runner-up is shown on a chord's row only when the library's scores for the two are this close
