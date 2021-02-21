@@ -9,6 +9,9 @@
     "metadata",
     "meter",
     "keys",
+    "tonicizations",
+    "modulations",
+    "pivot_chords",
     "chords",
     "non_chord_tones",
     "cadences",
@@ -34,6 +37,18 @@
     },
     "keys": {
       "$ref": "#/$defs/keys"
+    },
+    "tonicizations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tonicization_claim" }
+    },
+    "modulations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/modulation_claim" }
+    },
+    "pivot_chords": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pivot_chord_claim" }
     },
     "chords": {
       "type": "array",
@@ -246,6 +261,60 @@
         "opening_region": { "type": ["integer", "null"], "minimum": 0 },
         "closing_region": { "type": ["integer", "null"], "minimum": 0 }
       }
+    },
+    "tonicization_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["extent", "from_region", "target_region", "from_key", "to_key"],
+          "properties": {
+            "extent": { "enum": ["tonicization", "extended-tonicization"] },
+            "from_region": { "type": "integer", "minimum": 0 },
+            "target_region": { "type": "integer", "minimum": 0 },
+            "from_key": { "type": "string" },
+            "to_key": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "modulation_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["extent", "from_region", "to_region", "from_key", "to_key", "type", "is_return", "pivot_chord_index"],
+          "properties": {
+            "extent": { "enum": ["weak-modulation", "modulation"] },
+            "from_region": { "type": "integer", "minimum": 0 },
+            "to_region": { "type": "integer", "minimum": 0 },
+            "from_key": { "type": "string" },
+            "to_key": { "type": "string" },
+            "type": { "enum": ["pivot", "direct"] },
+            "is_return": { "type": "boolean" },
+            "pivot_chord_index": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "pivot_chord_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["modulation_index", "chord_index", "root", "quality", "bass", "inversion", "from_key", "to_key"],
+          "properties": {
+            "modulation_index": { "type": "integer", "minimum": 0 },
+            "chord_index": { "type": "integer", "minimum": 0 },
+            "root": { "type": "string" },
+            "quality": { "type": "string" },
+            "bass": { "type": "string" },
+            "inversion": { "type": ["integer", "null"], "minimum": 0, "maximum": 3 },
+            "from_key": { "type": "string" },
+            "to_key": { "type": "string" }
+          }
+        }
+      ]
     },
     "note": {
       "type": "object",

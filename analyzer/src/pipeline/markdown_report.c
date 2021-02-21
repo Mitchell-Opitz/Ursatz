@@ -374,6 +374,85 @@ static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *ke
     return ok && sb_append(sb, "\n");
 }
 
+static const char *INVERSION_NAMES[] = {"root position", "first", "second", "third"};
+
+/* "m. 3, beat 1 to m. 9, beat 1" for a claim's location. */
+static bool append_location(StringBuilder *sb, const cJSON *claim) {
+    const cJSON *location = cJSON_GetObjectItemCaseSensitive(claim, "location");
+    return append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) && sb_append(sb, " to ") &&
+           append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end"));
+}
+
+static bool render_tonicizations(StringBuilder *sb, const cJSON *document, const cJSON *tonicizations) {
+    (void)document;
+    bool ok = sb_append(sb, "## Tonicizations\n\n") &&
+              sb_appendf(sb,
+                         "%d brief %s of another key that return%s to the key before. Span is the stretch in the "
+                         "target key. The library tells a tonicization from a modulation by how long the new key "
+                         "lasts and whether it returns; no cadence is looked for.\n\n",
+                         cJSON_GetArraySize(tonicizations),
+                         cJSON_GetArraySize(tonicizations) == 1 ? "excursion" : "excursions",
+                         cJSON_GetArraySize(tonicizations) == 1 ? "s" : "") &&
+              sb_append(sb, "| Span | In | Target |\n| --- | --- | --- |\n");
+    const cJSON *item;
+    cJSON_ArrayForEach(item, tonicizations) {
+        if (!ok) {
+            break;
+        }
+        ok = sb_append(sb, "| ") && append_location(sb, item) &&
+             sb_appendf(sb, " | %s | %s |\n", string_member(item, "from_key"), string_member(item, "to_key"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_modulations(StringBuilder *sb, const cJSON *document, const cJSON *modulations) {
+    (void)document;
+    bool ok = sb_append(sb, "## Modulations\n\n") &&
+              sb_append(sb, "A modulation is a lasting new key. Position is where the new key arrives. Type is "
+                            "pivot when the library found a pivot chord and direct when it did not. A return goes "
+                            "back to the key before an excursion. The library gives the change's extent from the "
+                            "length of the new key and whether it returns; no cadence is looked for.\n\n") &&
+              sb_append(sb, "| Position | From | To | Extent | Type | Return |\n| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *item;
+    cJSON_ArrayForEach(item, modulations) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(item, "location");
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", string_member(item, "from_key"),
+                        string_member(item, "to_key"), string_member(item, "extent"), string_member(item, "type"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(item, "is_return")) ? "yes" : "no");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_pivot_chords(StringBuilder *sb, const cJSON *document, const cJSON *pivots) {
+    (void)document;
+    bool ok = sb_append(sb, "## Pivot chords\n\n") &&
+              sb_append(sb, "The chord at a modulation that is diatonic in both the old and the new key, named by "
+                            "root and quality, with no Roman numeral. Modulation is its row in the Modulations "
+                            "table, counting from 1.\n\n") &&
+              sb_append(sb, "| Position | Chord | Bass | Inversion | From | To | Modulation |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *item;
+    cJSON_ArrayForEach(item, pivots) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *inversion = cJSON_GetObjectItemCaseSensitive(item, "inversion");
+        const char *inversion_text = "-";
+        if (cJSON_IsNumber(inversion) && inversion->valueint >= 0 && inversion->valueint < 4) {
+            inversion_text = INVERSION_NAMES[inversion->valueint];
+        }
+        ok = sb_append(sb, "| ") && append_location(sb, item) &&
+             sb_appendf(sb, " | %s | %s | %s | %s | %s | %d |\n", string_member(item, "label"),
+                        string_member(item, "bass"), inversion_text, string_member(item, "from_key"),
+                        string_member(item, "to_key"), (int)number_member(item, "modulation_index") + 1);
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 /* The runner-up is shown on a chord's row only when the library's scores for the two are this close
    or closer: best score minus runner-up score below this. Documented in README.md. */
 #define RUNNER_UP_MARGIN_THRESHOLD 0.10
@@ -395,8 +474,6 @@ static double rational_member(const cJSON *object, const char *key) {
     double denominator = number_member(rational, "den");
     return denominator == 0.0 ? 0.0 : number_member(rational, "num") / denominator;
 }
-
-static const char *INVERSION_NAMES[] = {"root position", "first", "second", "third"};
 
 static bool append_chord_row(StringBuilder *sb, const cJSON *chord) {
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
@@ -512,6 +589,9 @@ static const struct {
     {"metadata", render_summary},
     {"meter", render_meter},
     {"keys", render_key},
+    {"tonicizations", render_tonicizations},
+    {"modulations", render_modulations},
+    {"pivot_chords", render_pivot_chords},
     {"chords", render_chords},
     {"non_chord_tones", render_non_chord_tones},
 };

@@ -548,6 +548,175 @@ static cJSON *keys_json(const ImportedNotes *notes, const AnalysisReport *report
     return keys;
 }
 
+/* ---- Key changes: tonicizations, modulations and pivot chords ---- */
+
+static const char *extent_name(AnalysisKeyChangeExtent extent) {
+    switch (extent) {
+        case ANALYSIS_KEY_CHANGE_EXTENDED_TONICIZATION:
+            return "extended-tonicization";
+        case ANALYSIS_KEY_CHANGE_WEAK_MODULATION:
+            return "weak-modulation";
+        case ANALYSIS_KEY_CHANGE_MODULATION:
+            return "modulation";
+        default:
+            return "tonicization";
+    }
+}
+
+static bool change_is_tonicization(const AnalysisKeyChange *change) {
+    return change->extent == ANALYSIS_KEY_CHANGE_TONICIZATION ||
+           change->extent == ANALYSIS_KEY_CHANGE_EXTENDED_TONICIZATION;
+}
+
+/* A change the library leaves as a modulation or weak modulation: a lasting new key. */
+static bool change_is_modulation(const AnalysisKeyChange *change) {
+    return !change_is_tonicization(change);
+}
+
+/* "<from> to <to>" for the labels of two regions. */
+static char *join_labels(const char *prefix, const char *middle, const char *label) {
+    size_t size = strlen(prefix) + strlen(middle) + strlen(label) + 1;
+    char *text = malloc(size);
+    if (text) {
+        snprintf(text, size, "%s%s%s", prefix, middle, label);
+    }
+    return text;
+}
+
+/* Fields every key change shares: its extent, the two regions and their keys. */
+static bool add_change_fields(cJSON *claim, const AnalysisReport *report, const AnalysisKeyChange *change,
+                              const char *to_name) {
+    const AnalysisKeyRegion *from = &report->key_regions[change->from_region];
+    const AnalysisKeyRegion *to = &report->key_regions[change->to_region];
+    return add(claim, "extent", cJSON_CreateString(extent_name(change->extent))) &&
+           add(claim, "from_region", cJSON_CreateNumber((double)change->from_region)) &&
+           add(claim, to_name, cJSON_CreateNumber((double)change->to_region)) &&
+           add(claim, "from_key", cJSON_CreateString(from->label)) &&
+           add(claim, "to_key", cJSON_CreateString(to->label));
+}
+
+/* One claim per tonicization: a brief excursion to another key that returns to the one before it. Its span is
+   the excursion (the region the library puts the new key in), its target the key of that region. The change
+   back out of the excursion is not listed again. */
+static cJSON *tonicizations_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    for (size_t i = 0; i < report->key_change_count; i++) {
+        const AnalysisKeyChange *change = &report->key_changes[i];
+        if (!change_is_tonicization(change) || change->is_return) {
+            continue;
+        }
+        const AnalysisKeyRegion *target = &report->key_regions[change->to_region];
+        char *label = join_labels("tonicization of ", "", target->label);
+        cJSON *claim = label ? region_span_claim(notes, target, label, cJSON_CreateNull()) : NULL;
+        free(label);
+        if (!(claim && add_change_fields(claim, report, change, "target_region"))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* Whether a change's pivot chord was identified, so it appears in pivot_chords. */
+static bool change_has_pivot_reading(const AnalysisKeyChange *change) {
+    return change->has_pivot && change->pivot.label != NULL;
+}
+
+/* One claim per modulation (and weak modulation): a lasting new key. Its span is the passage in the new key,
+   so location.start is where the new key arrives. type is "pivot" when the library found a pivot chord and
+   "direct" when it did not; pivot_chord_index points into pivot_chords. is_return marks the change back to the
+   key before an excursion. */
+static cJSON *modulations_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    size_t pivot_index = 0;
+    for (size_t i = 0; i < report->key_change_count; i++) {
+        const AnalysisKeyChange *change = &report->key_changes[i];
+        if (!change_is_modulation(change)) {
+            continue;
+        }
+        const AnalysisKeyRegion *from = &report->key_regions[change->from_region];
+        const AnalysisKeyRegion *to = &report->key_regions[change->to_region];
+        char *label = join_labels(from->label, " to ", to->label);
+        cJSON *claim = label ? region_span_claim(notes, to, label, cJSON_CreateNull()) : NULL;
+        free(label);
+        bool has_reading = change_has_pivot_reading(change);
+        if (!(claim && add_change_fields(claim, report, change, "to_region") &&
+              add(claim, "type", cJSON_CreateString(change->has_pivot ? "pivot" : "direct")) &&
+              add(claim, "is_return", cJSON_CreateBool(change->is_return)) &&
+              add(claim, "pivot_chord_index",
+                  has_reading ? cJSON_CreateNumber((double)pivot_index) : cJSON_CreateNull()))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        pivot_index += has_reading ? 1 : 0;
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* One claim per pivot chord: the chord that is diatonic in both the old and the new key at a modulation,
+   identified without a Roman numeral (root, quality, bass, inversion), read in the old key. The claim is the
+   chord's segment. */
+static cJSON *pivot_chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    size_t modulation_index = 0;
+    for (size_t i = 0; i < report->key_change_count; i++) {
+        const AnalysisKeyChange *change = &report->key_changes[i];
+        if (!change_is_modulation(change)) {
+            continue;
+        }
+        size_t this_modulation = modulation_index++;
+        if (!change_has_pivot_reading(change) || change->pivot_entry >= report->entry_count) {
+            continue;
+        }
+        const AnalysisReportEntry *entry = &report->entries[change->pivot_entry];
+        const AnalysisChordReading *pivot = &change->pivot;
+        char *label = join_labels(pivot->root, " ", pivot->quality);
+        cJSON *claim = label ? claim_json_at(library_framework_name(), notes, entry->note_ids, entry->note_id_count,
+                                             rational_make(entry->time_numerator, entry->time_denominator),
+                                             rational_make(entry->end_numerator, entry->end_denominator), label,
+                                             pivot->confidence)
+                             : NULL;
+        free(label);
+        if (!(claim && add(claim, "modulation_index", cJSON_CreateNumber((double)this_modulation)) &&
+              add(claim, "chord_index", cJSON_CreateNumber((double)change->pivot_entry)) &&
+              add(claim, "root", cJSON_CreateString(pivot->root)) &&
+              add(claim, "quality", cJSON_CreateString(pivot->quality)) &&
+              add(claim, "bass", cJSON_CreateString(pivot->bass)) &&
+              add(claim, "inversion",
+                  pivot->inversion >= 0 ? cJSON_CreateNumber(pivot->inversion) : cJSON_CreateNull()) &&
+              add(claim, "from_key", cJSON_CreateString(report->key_regions[change->from_region].label)) &&
+              add(claim, "to_key", cJSON_CreateString(report->key_regions[change->to_region].label)))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* Whether a key is the major key of a notated signature or its relative minor. */
 static bool key_fits_signature(const AnalysisKeyRegion *region, int sharps_flats) {
     int major = key_signature_major_tonic(sharps_flats);
@@ -784,6 +953,9 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
         !(add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
           add(document, "metadata", metadata_json(input_path, notes, report)) &&
           add(document, "meter", meter_json(notes)) && add(document, "keys", keys_json(notes, report)) &&
+          add(document, "tonicizations", tonicizations_json(notes, report)) &&
+          add(document, "modulations", modulations_json(notes, report)) &&
+          add(document, "pivot_chords", pivot_chords_json(notes, report)) &&
           add(document, "chords", chords_json(notes, report)) &&
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "cadences", cJSON_CreateArray()) &&

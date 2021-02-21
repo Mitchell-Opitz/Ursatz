@@ -18,6 +18,9 @@ newline. The same input and build always give the same bytes.
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
+| `tonicizations` | array of tonicization claims | Filled. See below. |
+| `modulations` | array of modulation claims | Filled. See below. |
+| `pivot_chords` | array of pivot chord claims | Filled. See below. |
 | `chords` | array of chord claims | Filled. |
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `cadences` | array | Placeholder: `[]`. |
@@ -162,6 +165,66 @@ its own, so the rule is `"longest_region"`: the region with the greatest duratio
 rational in whole notes), a tie going to the earliest. The rule is recorded so a consumer can tell
 which applied should another be added. The home key is the one region that stands for the piece; it is
 not necessarily the opening or the closing key.
+
+### Tonicizations, modulations and pivot chords
+
+The library classes the change between each pair of neighbouring key regions, and the analyzer reports
+what it establishes without adding a rule of its own. It reads the extent from the length of the region
+the change goes INTO and whether the key then returns:
+
+- shorter than four measures and followed by a return to the previous key: a tonicization;
+- longer, and followed by a return: a weak modulation;
+- not followed by a return: a modulation.
+
+No cadence is looked for, so "modulation" here means "a lasting new key region", not "a cadence
+established it". The change back out of an excursion (`is_return`) carries the extent of the
+excursion it closes. The library's extended tonicization (it needs a chord count) is not produced
+today, and would be listed under `tonicizations`.
+
+`tonicizations` holds one claim per tonicization, in time order. The return out of a tonicization is part
+of it and is not listed again. Beyond the claim fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `span`, `location`, `note_ids` | | The excursion: the stretch in the target key. |
+| `label` | string | `"tonicization of G major"`. |
+| `uncertainty` | null | The library supplies none. |
+| `extent` | string | `"tonicization"` (or `"extended-tonicization"`). |
+| `from_region`, `target_region` | integer | Indices into `keys.regions`: the key it leaves and the key it tonicizes. |
+| `from_key`, `to_key` | string | Those regions' labels. |
+
+`modulations` holds one claim per change the library gives a modulation extent, in time order, each a
+lasting new key (a weak modulation goes right back to the home key). A return from an excursion that
+was itself a modulation is listed, with `is_return` true; the return out of a tonicization is not.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `span`, `location`, `note_ids` | | The passage in the new key. `location.start` is where it arrives. |
+| `label` | string | `"C major to G major"`. |
+| `uncertainty` | null | The library supplies none. |
+| `extent` | `"weak-modulation"` or `"modulation"` | The library's extent. |
+| `from_region`, `to_region` | integer | Indices into `keys.regions`. |
+| `from_key`, `to_key` | string | Those regions' labels. |
+| `type` | `"pivot"` or `"direct"` | The library's classification: `"pivot"` when it found a pivot chord, `"direct"` when it found none. It does not classify further (common-tone modulation, for one, is not distinguished). |
+| `is_return` | boolean | The change goes back to the key before an excursion. |
+| `pivot_chord_index` | integer or null | Index into `pivot_chords`; `null` for a direct modulation. |
+
+`pivot_chords` holds one claim per pivot chord, in time order: the last segment before the new key
+arrives, within two measures, whose chord is diatonic in both keys. The library's collection for a
+minor key is its relative major's, so a chord needing the raised sixth or seventh does not count.
+The chord is identified by the library's weighted identification in the OLD key and named without a Roman
+numeral.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `span`, `location`, `note_ids` | | The chord's segment. |
+| `label` | string | The root and quality, e.g. `"D minor"`. |
+| `uncertainty` | number or null | The library's confidence in the chord, as for a chord claim. |
+| `modulation_index` | integer | Index into `modulations`. |
+| `chord_index` | integer | Index into `chords` of the same segment. That entry is read in the key of the region the segment starts in, which can differ from the old key if the pivot is the segment that starts at the boundary. |
+| `root`, `quality`, `bass` | string | As for a chord claim. |
+| `inversion` | integer or null | As for a chord claim. |
+| `from_key`, `to_key` | string | The two keys the chord belongs to. |
 
 ### Notes
 
