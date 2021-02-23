@@ -62,7 +62,10 @@ static int check_file(const char *path) {
             strcmp(start, "pentatonic_rules.h") == 0 || strcmp(start, "chromatic_scale_rules.h") == 0 ||
             strcmp(start, "interval_size_rules.h") == 0 || strcmp(start, "interval_quality_rules.h") == 0 ||
             strcmp(start, "interval_inversion_rules.h") == 0 || strcmp(start, "interval_consonance_rules.h") == 0 ||
-            strcmp(start, "interval_white_key_rules.h") == 0 || strcmp(start, "interval_enharmonic_rules.h") == 0) {
+            strcmp(start, "interval_white_key_rules.h") == 0 || strcmp(start, "interval_enharmonic_rules.h") == 0 ||
+            strcmp(start, "interval_spelling_rules.h") == 0 || strcmp(start, "triad_rules.h") == 0 ||
+            strcmp(start, "triad_spelling_rules.h") == 0 || strcmp(start, "triad_identification_rules.h") == 0 ||
+            strcmp(start, "chord_symbol_rules.h") == 0 || strcmp(start, "triad_in_key_rules.h") == 0) {
             continue;
         }
 
