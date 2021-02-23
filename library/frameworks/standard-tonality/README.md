@@ -104,6 +104,36 @@ Rules about how pitches relate within a key:
   half steps (the source's chart), and identifying an interval through
   enharmonic respelling of its notes.
 
+- **Interval spelling** (`interval_spelling_rules.h`): the note a given
+  size and quality above a lower note, the inverse of identifying an
+  interval (a perfect fifth above F is C, a diminished fifth is C-flat).
+- **Triad structure** (`triad_rules.h`): three notes stacked in thirds, all
+  on lines or all on spaces; root, third, fifth; four qualities set by
+  the intervals from the root (major ma3 P5, minor mi3 P5, diminished
+  mi3 d5, augmented ma3 A5); major and minor named for the third,
+  diminished and augmented for the fifth.
+- **Triad spelling** (`triad_spelling_rules.h`): from root and quality, by
+  the interval rules and, as the source steps it, from the root's major
+  key signature with the third and fifth altered (minor lowers the third,
+  diminished both, augmented raises the fifth).
+- **Triad identification** (`triad_identification_rules.h`): root and
+  quality from any notes, in any order; doublings and open spacing do not
+  matter (octave equivalence) and reduce to closed position. An imaginary
+  root is still identified; the literal key-signature steps report no
+  answer for it. Inversion beyond the bass note in a chord symbol is a
+  later chapter's.
+- **Chord symbols** (`chord_symbol_rules.h`): root, accidental, then
+  nothing / "mi" / "°" / "+", and a slash bass when the lowest note is not
+  the root (Cmi/E♭, Cmi/G); parse and format, and a `Chord` labeled with
+  the symbol. These are absolute symbols; common-practice-minimal's
+  Roman-numeral triads are relative to a key and are not touched.
+- **Triad qualities in a key** (`triad_in_key_rules.h`): major on do, fa,
+  sol and minor on re, mi, la with a diminished ti in major; in natural
+  minor, minor on do, fa, sol, major on me, le, te, diminished on re; the
+  raised leading tone makes the sol triad major and the ti triad
+  diminished. The me triad of harmonic minor (augmented) is not in the
+  source and is included because it follows from the spelled scale.
+
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
 (`src/pitch/`), `Scale`, `ScaleDegree`, and `Key` stay the entity types;
