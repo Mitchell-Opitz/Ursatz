@@ -87,7 +87,7 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
 
 1. `segmentation`: cuts the notes into sonority segments with Ursatz's adaptive segmentation, on the
    beats of the file's meter, and builds each segment's members for chord identification.
-2. `key_pipeline`: estimates one key for the whole piece.
+2. `key_region_pipeline`: finds the local key regions with Ursatz's key-region detection.
 3. `chord_pipeline`: identifies each segment's chord with Ursatz's weighted chord identification,
    with its runner-up and the segment's non-chord tones.
 
@@ -144,27 +144,15 @@ report writes these as `m. N, beat B`.
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 
-## Key estimation
+## Key regions
 
-`estimate_global_key` (`src/pipeline/key_pipeline.c`) stops at the first source that succeeds:
-
-1. **MIDI key signature meta-event** (`0xFF 0x59`, read by Ursatz's `midi_key_signature_scan`).
-   Its sharps/flats count and major/minor flag are decoded through a circle-of-fifths table.
-   It wins silently, even if the music later modulates.
-2. **Closing chord, then opening chord.** The bass pitch class of the last segment is tried
-   as the tonic first, then the first segment's. The closing chord is the more reliable one,
-   since a piece can open on a pickup or a dominant.
-3. **Brute-force scan.** Every pitch class 0 to 11 is tried in order against `KeyEstimation`'s
-   major and natural-minor collections; the first match wins.
-
-Key labels use flat spelling (`Eb`, `Db`) when the key signature has flats, or, for a key found
-by steps 2 or 3, when the tonic needs fewer flats than sharps. Chord roots and basses are spelled
-the same way, following the key.
+`estimate_key_regions` (`src/pipeline/key_region_pipeline.c`) calls Ursatz's key-region detection
+(`key_regions_estimate`) and copies out what it establishes. See "Key regions, tonicizations and
+modulations" below.
 
 ## Known limits
 
-- One key for the whole piece; no modulation tracking.
-- Chord identification is Ursatz's weighted identification, read in the whole-piece key. Its
+- Chord identification is Ursatz's weighted identification, read in each segment's key region. Its
   vocabulary is the diatonic triads and sevenths of a major key: in a minor key, or when no key is
   found, no chord is identified. Chromatic, applied and fully diminished chords are not candidates,
   so a segment built on one is matched to the nearest diatonic chord or not at all.

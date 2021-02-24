@@ -4,14 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-/* Which key-estimation step found the key, in the order they are tried. */
-typedef enum {
-    ANALYSIS_KEY_METHOD_NONE = 0,
-    ANALYSIS_KEY_METHOD_KEY_SIGNATURE,
-    ANALYSIS_KEY_METHOD_BASS_FALLBACK,
-    ANALYSIS_KEY_METHOD_PITCH_CLASS_SCAN
-} AnalysisKeyMethod;
-
 /* A library Interpretation's scalar confidence (numerator/denominator in
    [0, 1]); present is false when the library supplies none. */
 typedef struct {

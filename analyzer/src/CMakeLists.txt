@@ -2,7 +2,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/midi_pipeline.c
     pipeline/segmentation.c
     pipeline/pitch_class_util.c
-    pipeline/key_pipeline.c
     pipeline/key_region_pipeline.c
     pipeline/chord_pipeline.c
     pipeline/analysis_report.c
