@@ -76,3 +76,11 @@ add_test(NAME test_chord_coverage COMMAND test_chord_coverage)
 add_executable(test_chord_details test_chord_details.c)
 target_link_libraries(test_chord_details PRIVATE ursatz_analyzer cjson)
 add_test(NAME test_chord_details COMMAND test_chord_details)
+
+add_executable(test_key_regions test_key_regions.c)
+target_link_libraries(test_key_regions PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_key_regions PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_key_regions_clementi_36 COMMAND test_key_regions clementi)
+add_test(NAME test_key_regions_mozart_545 COMMAND test_key_regions mozart)
+add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
