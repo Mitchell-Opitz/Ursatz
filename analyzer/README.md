@@ -1,8 +1,9 @@
 # Ursatz-Analyzer
 
 A small C11 command-line tool that turns a MIDI file into a Markdown report and a JSON analysis
-document: the piece's time signature, measure count and pickup, its global key, and the most
-likely chord for each group of notes that start together, each located by measure and beat. It is a
+document: the piece's time signature, measure count and pickup, its local keys over time (key
+regions, with the home key, tonicizations, modulations and pivot chords), and the most likely chord
+for each group of notes that start together, each located by measure and beat. It is a
 thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library and its
 `common-practice-minimal` framework.
 
@@ -21,7 +22,11 @@ ctest --test-dir build --output-on-failure
 Tests:
 
 - `test_analysis_pipeline`, `test_report_output`: end-to-end pipeline and report file.
-- `test_corpus_key_estimation`: the reported key of six reference pieces.
+- `test_corpus_key_estimation`: the home key of six reference pieces.
+- `test_key_regions_clementi_36`, `test_key_regions_mozart_545`: the key regions and principal
+  modulations of Clementi Sonatina Op. 36 No. 1 and Mozart K. 545 against hand-read regions.
+- `test_key_regions_constructed`: a piece with no modulation, one with a tonicization only, one with a
+  modulation, and a notated key signature the music does not fit.
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
@@ -63,7 +68,7 @@ Its public include directory is `include/`, and consumers include headers as
 | --- | --- |
 | `midi_pipeline.h` | Imports a MIDI file into `ImportedNotes`; `imported_notes_destroy` frees it. |
 | `analysis_pipeline.h` | `run_analysis_pipeline` turns `ImportedNotes` into an `AnalysisReport`. |
-| `analysis_report.h` | `AnalysisReport` and its entries (segment span, chord readings, key label, non-chord tones). |
+| `analysis_report.h` | `AnalysisReport` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalysisReport`, serializes it as JSON, and derives `<stem>.analysis.json`. |
 | `markdown_report.h` | Renders an `AnalysisDocument` as the Markdown report, section by section. |
 | `report_writer.h` | Derives the `<stem>.report.md` path and writes the file. |
@@ -144,16 +149,51 @@ report writes these as `m. N, beat B`.
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 
-## Key regions
+## Key regions, tonicizations and modulations
 
-`estimate_key_regions` (`src/pipeline/key_region_pipeline.c`) calls Ursatz's key-region detection
-(`key_regions_estimate`) and copies out what it establishes. See "Key regions, tonicizations and
-modulations" below.
+The analyzer adds no music theory of its own here: it renders what Ursatz's key-region detection
+(`key_regions_estimate`, `frameworks/common-practice-minimal/key_regions.h`) establishes, in
+`src/pipeline/key_region_pipeline.c`.
+
+- **Key regions.** The piece is cut into windows of four measures, each scored against the 24 major and
+  minor keys, and a path through the windows that charges for each key change gives the local key over
+  time. Regions run from barline to barline. Each has a key, a span located by measure and beat, the
+  measures it covers, and the library's uncertainty (0 clearly this key, 1 another key fits as well or
+  better). Key labels use flat spelling (`Eb`, `Db`) when the tonic needs fewer flats than sharps,
+  for every region. Chord roots and basses are spelled the same way, following the region.
+- **Home key.** The library gives no determination of its own, so the home key is the region of
+  greatest duration, a tie going to the earliest. The opening and closing regions are reported as
+  well. The home key is not necessarily either of them.
+- **Notated key signatures.** The file's key signature events are input metadata
+  (`metadata.key_signatures`) and a boundary for the library: the region that starts at one is
+  restricted to the signature's major key and its relative minor. They never decide a key on their
+  own. Where the detected keys do not fit a notated signature, the document's `notes` and the report
+  say so; neither side is preferred.
+- **Tonicizations and modulations.** The library classes each change between neighbouring regions: a
+  region shorter than four measures that returns to the previous key is a tonicization; a longer one
+  that returns is a weak modulation; one that does not return is a modulation. No cadence is looked
+  for, so "modulation" means a lasting new key region. The analyzer reports the library's
+  classification exactly and applies no rule of its own.
+- **Pivot chords.** For a modulation, the library names the last segment before the new key whose
+  chord is diatonic in both keys, within two measures. The analysis document gives the chord by root,
+  quality, bass and inversion (no Roman numeral) with the two keys. A modulation with none is direct.
+
+Roman numerals, applied-chord notation and harmonic function are out of scope here.
+
+See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 
 ## Known limits
 
+- Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
+  phrase would put it and a modulation shorter than about half a window is smoothed away. A stretch of
+  four or more measures built on the subdominant, dominant or supertonic can read as its own key. On
+  Mozart K. 545 the detection finds fewer than half of the annotated measures' keys and reports more
+  regions than the movement has. The profile fits chromatic music less well. A key signature is trusted
+  as a boundary: many exporters write a default C major at tick 0 whatever the key.
+- Pivot chords are found only where the old key is major, and a chord that needs a minor key's raised
+  sixth or seventh is not diatonic in it.
 - Chord identification is Ursatz's weighted identification, read in each segment's key region. Its
-  vocabulary is the diatonic triads and sevenths of a major key: in a minor key, or when no key is
+  vocabulary is the diatonic triads and sevenths of a major key: in a minor region, or when no key is
   found, no chord is identified. Chromatic, applied and fully diminished chords are not candidates,
   so a segment built on one is matched to the nearest diatonic chord or not at all.
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
