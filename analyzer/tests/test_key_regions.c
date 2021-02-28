@@ -349,10 +349,10 @@ static void test_no_modulation(const char *path) {
     release(&analyzed);
 }
 
-/* A brief excursion that returns: C major, a few measures of G major, C major again. The library calls the
+/* A brief excursion that returns: C major, two measures of G major (the library smooths them into a three-measure region), C major again. The library calls the
    change a tonicization, so the document lists it as one and lists no modulation. */
 static void test_tonicization_only(const char *path) {
-    Stretch stretches[] = {{0, 8}, {7, 3}, {0, 8}};
+    Stretch stretches[] = {{0, 8}, {7, 2}, {0, 8}};
     write_piece(path, stretches, 3, false, 0);
     Analyzed analyzed;
     analyze(path, &analyzed);
