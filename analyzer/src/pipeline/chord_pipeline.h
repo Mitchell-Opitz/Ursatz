@@ -52,9 +52,9 @@ bool identify_chords(const Segmentation *segmentation, const AnalysisKeyRegion *
 
 /*
  * Fills the pivot reading of every key change that has a pivot chord: the pivot segment's best chord
- * read in the OLD key (the change's from-region), as the library found the pivot. Leaves the reading
- * empty when the old key is minor or the library names no chord there. Returns false only on
- * allocation failure.
+ * read in the OLD key (the change's from-region), as the library found the pivot. The library reads
+ * a minor old key in its relative major, and so does this. Leaves the reading empty when the library
+ * names no chord there. Returns false only on allocation failure.
  */
 bool identify_pivot_chords(const Segmentation *segmentation, const AnalysisKeyRegion *regions,
                            AnalysisKeyChange *changes, size_t change_count);

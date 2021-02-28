@@ -207,20 +207,23 @@ bool identify_pivot_chords(const Segmentation *segmentation, const AnalysisKeyRe
     for (size_t c = 0; c < change_count; c++) {
         AnalysisKeyChange *change = &changes[c];
         const AnalysisKeyRegion *old_region = &regions[change->from_region];
-        if (!change->has_pivot || !old_region->is_major || change->pivot_entry >= segmentation->segment_count) {
+        if (!change->has_pivot || change->pivot_entry >= segmentation->segment_count) {
             continue;
         }
+        /* The library reads the pivot in the old key's major collection: a minor old key reads in its relative
+           major (a minor third above the tonic), as key_regions_estimate does when it finds the pivot. */
+        int tonic = old_region->is_major ? old_region->tonic_pitch_class : (old_region->tonic_pitch_class + 3) % 12;
         CommonPracticeWeightedResult result = {0};
-        if (common_practice_identify_weighted(&segmentation->library_segments[change->pivot_entry],
-                                              old_region->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR, NULL,
-                                              &result) != COMMON_PRACTICE_WEIGHTED_OK) {
+        if (common_practice_identify_weighted(&segmentation->library_segments[change->pivot_entry], tonic,
+                                              COMMON_PRACTICE_KEY_MAJOR, NULL, &result) !=
+            COMMON_PRACTICE_WEIGHTED_OK) {
             continue;
         }
         bool ok = true;
         if (result.matched) {
             int bass = segment_bass_pitch_class(&segmentation->segments[change->pivot_entry]);
-            ok = fill_reading(&result.best, result.best_chord, result.best_score, old_region->tonic_pitch_class,
-                              bass, old_region->prefer_flats, &change->pivot);
+            ok = fill_reading(&result.best, result.best_chord, result.best_score, tonic, bass, old_region->prefer_flats,
+                              &change->pivot);
         }
         common_practice_weighted_result_destroy(&result);
         if (!ok) {

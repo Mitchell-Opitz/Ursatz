@@ -212,8 +212,8 @@ was itself a modulation is listed, with `is_return` true; the return out of a to
 `pivot_chords` holds one claim per pivot chord, in time order: the last segment before the new key
 arrives, within two measures, whose chord is diatonic in both keys. The library's collection for a
 minor key is its relative major's, so a chord needing the raised sixth or seventh does not count.
-The chord is identified by the library's weighted identification in the OLD key and named without a Roman
-numeral.
+The chord is identified by the library's weighted identification in the OLD key (a minor old key is read in
+its relative major, as the library does) and named without a Roman numeral.
 
 | Field | Type | Meaning |
 | --- | --- | --- |

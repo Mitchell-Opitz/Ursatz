@@ -190,8 +190,8 @@ See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
   Mozart K. 545 the detection finds fewer than half of the annotated measures' keys and reports more
   regions than the movement has. The profile fits chromatic music less well. A key signature is trusted
   as a boundary: many exporters write a default C major at tick 0 whatever the key.
-- Pivot chords are found only where the old key is major, and a chord that needs a minor key's raised
-  sixth or seventh is not diatonic in it.
+- Pivot chords are read in the old key's major collection (a minor old key reads in its relative
+  major), and a chord that needs a minor key's raised sixth or seventh is not diatonic in the new key.
 - Chord identification is Ursatz's weighted identification, read in each segment's key region. Its
   vocabulary is the diatonic triads and sevenths of a major key: in a minor region, or when no key is
   found, no chord is identified. Chromatic, applied and fully diminished chords are not candidates,
