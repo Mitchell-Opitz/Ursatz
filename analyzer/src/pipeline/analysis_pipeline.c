@@ -17,6 +17,8 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->key_changes = NULL;
     report->key_change_count = 0;
     report->home_region = 0;
+    report->home_duration_numerator = 0;
+    report->home_duration_denominator = 1;
 
     if (notes->count == 0) {
         return true;
@@ -39,7 +41,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         segmentation_destroy(&segmentation);
         return false;
     }
-    AnalysisReport keys = {NULL, 0, NULL, 0, regions, region_count, changes, change_count, 0};
+    AnalysisReport keys = {NULL, 0, NULL, 0, regions, region_count, changes, change_count, 0, 0, 1};
 
     ChordEstimate *chords = NULL;
     if (!identify_pivot_chords(&segmentation, regions, changes, change_count) ||
@@ -81,7 +83,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         }
 
         if (!entry->key_label || !entry->chord_label || !entry->note_ids) {
-            AnalysisReport partial = {entries, i + 1, NULL, 0, NULL, 0, NULL, 0, 0};
+            AnalysisReport partial = {entries, i + 1, NULL, 0, NULL, 0, NULL, 0, 0, 0, 1};
             analysis_report_destroy(&partial);
             analysis_report_destroy(&keys);
             chord_estimates_destroy(chords, segmentation.segment_count);
@@ -97,7 +99,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     }
     AnalysisNonChordTone *tones = calloc(tone_count > 0 ? tone_count : 1, sizeof(AnalysisNonChordTone));
     if (!tones) {
-        AnalysisReport partial = {entries, segment_count, NULL, 0, NULL, 0, NULL, 0, 0};
+        AnalysisReport partial = {entries, segment_count, NULL, 0, NULL, 0, NULL, 0, 0, 0, 1};
         analysis_report_destroy(&partial);
         analysis_report_destroy(&keys);
         chord_estimates_destroy(chords, segment_count);
@@ -124,6 +126,9 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->key_region_count = region_count;
     report->key_changes = changes;
     report->key_change_count = change_count;
-    report->home_region = region_count > 0 ? home_key_region(regions, region_count) : 0;
+    if (region_count > 0) {
+        report->home_region = home_key_region(regions, region_count, &report->home_duration_numerator,
+                                              &report->home_duration_denominator);
+    }
     return true;
 }

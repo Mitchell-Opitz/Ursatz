@@ -248,11 +248,14 @@
             { "type": "null" },
             {
               "type": "object",
-              "required": ["rule", "region_index", "label", "duration"],
+              "required": ["rule", "label", "region_indices", "duration"],
               "properties": {
-                "rule": { "enum": ["longest_region"] },
-                "region_index": { "type": "integer", "minimum": 0 },
+                "rule": { "enum": ["longest_total_duration"] },
                 "label": { "type": "string" },
+                "region_indices": {
+                  "type": "array",
+                  "items": { "type": "integer", "minimum": 0 }
+                },
                 "duration": { "$ref": "#/$defs/rational" }
               }
             }

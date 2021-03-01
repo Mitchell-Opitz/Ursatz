@@ -161,9 +161,9 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's key-
   measures it covers, and the library's uncertainty (0 clearly this key, 1 another key fits as well or
   better). Key labels use flat spelling (`Eb`, `Db`) when the tonic needs fewer flats than sharps,
   for every region. Chord roots and basses are spelled the same way, following the region.
-- **Home key.** The library gives no determination of its own, so the home key is the region of
-  greatest duration, a tie going to the earliest. The opening and closing regions are reported as
-  well. The home key is not necessarily either of them.
+- **Home key.** The library gives no determination of its own, so the home key is the key with the
+  greatest total time over all the regions in it, a tie going to the key that appears first. The
+  opening and closing regions are reported as well. The home key is not necessarily either of them.
 - **Notated key signatures.** The file's key signature events are input metadata
   (`metadata.key_signatures`) and a boundary for the library: the region that starts at one is
   restricted to the signature's major key and its relative minor. They never decide a key on their

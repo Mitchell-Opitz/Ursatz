@@ -160,11 +160,13 @@ A key region is a claim, plus:
 | `measures` | object | `{"first", "last"}`: the measure numbers the region covers, inclusive. |
 | `source` | `"profile"` or `"key_signature"` | `"key_signature"` when the region begins at a notated key signature and was restricted to its two keys; `"profile"` otherwise. |
 
-`home_key` is `{"rule", "region_index", "label", "duration"}`. The library offers no determination of
-its own, so the rule is `"longest_region"`: the region with the greatest duration (`duration`, a
-rational in whole notes), a tie going to the earliest. The rule is recorded so a consumer can tell
-which applied should another be added. The home key is the one region that stands for the piece; it is
-not necessarily the opening or the closing key.
+`home_key` is `{"rule", "label", "region_indices", "duration"}`. The library offers no determination of
+its own, so the rule is `"longest_total_duration"`: the key (tonic and mode) with the greatest total time over
+all the regions that are in it, a tie going to the key that appears first. `duration` is that total, a rational
+in whole notes, and `region_indices` lists those regions in time order. Totalling over a key's regions, not
+taking the single longest region, keeps a key the detection splits into several regions from being outweighed
+by one long stretch of another. The rule is recorded so a consumer can tell which applied should another be
+added. The home key is not necessarily the opening or the closing key.
 
 ### Tonicizations, modulations and pivot chords
 

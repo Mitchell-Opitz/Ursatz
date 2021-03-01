@@ -208,8 +208,9 @@ int main(void) {
 
     /* The home key is the only region, which is also the opening and closing one. */
     const cJSON *home = member(keys, "home_key");
-    assert(strcmp(string(home, "rule"), "longest_region") == 0);
-    assert(number(home, "region_index") == 0);
+    assert(strcmp(string(home, "rule"), "longest_total_duration") == 0);
+    assert(cJSON_GetArraySize(member(home, "region_indices")) == 1);
+    assert(cJSON_GetArrayItem(member(home, "region_indices"), 0)->valuedouble == 0);
     assert(strcmp(string(home, "label"), "C major") == 0);
     check_rational(member(home, "duration"), 2, 1);
     assert(number(keys, "opening_region") == 0);

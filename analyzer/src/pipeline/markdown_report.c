@@ -166,7 +166,8 @@ static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON
     if (home_label && region_count == 1) {
         ok = ok && sb_appendf(sb, "- **Key:** %s, the only key region.\n", home_label);
     } else if (home_label) {
-        ok = ok && sb_appendf(sb, "- **Key:** %s, the longest of %zu key regions.\n", home_label, region_count);
+        ok = ok && sb_appendf(sb, "- **Key:** %s, the key with the most time across %zu key regions.\n", home_label,
+                              region_count);
     } else {
         ok = ok && sb_append(sb, "- **Key:** No key was found.\n");
     }
@@ -332,7 +333,7 @@ static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *ke
 
     bool ok = sb_append(sb, "## Key regions\n\n") &&
               sb_append(sb, "Positions are measure and beat. Uncertainty is the library's, from 0 (clearly this key) "
-                            "to 1 (another key fits as well or better). The home key is the longest key region.\n\n") &&
+                            "to 1 (another key fits as well or better). The home key is the key with the most time across its regions.\n\n") &&
               sb_appendf(sb, "- **Home key:** %s.\n", string_member(home, "label")) &&
               sb_appendf(sb, "- **Opening key:** %s.\n", string_member(opening, "label")) &&
               sb_appendf(sb, "- **Closing key:** %s.\n", string_member(closing, "label"));

@@ -154,25 +154,70 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
     return ok;
 }
 
-/* a/b < c/d for non-negative-denominator rationals. */
-static bool rational_less(long long a, unsigned long long b, long long c, unsigned long long d) {
-    return a * (long long)d < c * (long long)b;
+typedef struct {
+    long long num;
+    unsigned long long den;
+} Rational;
+
+static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
+    while (b != 0) {
+        unsigned long long t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
 }
 
-size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count) {
+static Rational rational_sum(Rational a, Rational b) {
+    Rational sum = {a.num * (long long)b.den + b.num * (long long)a.den, a.den * b.den};
+    unsigned long long magnitude = sum.num < 0 ? (unsigned long long)(-sum.num) : (unsigned long long)sum.num;
+    unsigned long long divisor = gcd_ull(magnitude, sum.den);
+    if (divisor > 1) {
+        sum.num /= (long long)divisor;
+        sum.den /= divisor;
+    }
+    return sum;
+}
+
+static bool rational_less(Rational a, Rational b) {
+    return a.num * (long long)b.den < b.num * (long long)a.den;
+}
+
+static Rational region_duration(const AnalysisKeyRegion *region) {
+    Rational length = {(long long)region->end_numerator * (long long)region->start_denominator -
+                           (long long)region->start_numerator * (long long)region->end_denominator,
+                       (unsigned long long)region->start_denominator * region->end_denominator};
+    return rational_sum(length, (Rational){0, 1});
+}
+
+static bool same_key(const AnalysisKeyRegion *a, const AnalysisKeyRegion *b) {
+    return a->tonic_pitch_class == b->tonic_pitch_class && a->is_major == b->is_major;
+}
+
+size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count, long *duration_numerator,
+                       unsigned long *duration_denominator) {
     size_t home = 0;
-    long long best_num = 0;
-    unsigned long long best_den = 1;
+    Rational best = {0, 1};
     for (size_t i = 0; i < region_count; i++) {
-        const AnalysisKeyRegion *region = &regions[i];
-        long long num = (long long)region->end_numerator * (long long)region->start_denominator -
-                        (long long)region->start_numerator * (long long)region->end_denominator;
-        unsigned long long den = (unsigned long long)region->start_denominator * region->end_denominator;
-        if (i == 0 || rational_less(best_num, best_den, num, den)) {
+        bool first_of_key = true;
+        for (size_t earlier = 0; earlier < i && first_of_key; earlier++) {
+            first_of_key = !same_key(&regions[earlier], &regions[i]);
+        }
+        if (!first_of_key) {
+            continue;
+        }
+        Rational total = {0, 1};
+        for (size_t j = i; j < region_count; j++) {
+            if (same_key(&regions[i], &regions[j])) {
+                total = rational_sum(total, region_duration(&regions[j]));
+            }
+        }
+        if (i == 0 || rational_less(best, total)) {
             home = i;
-            best_num = num;
-            best_den = den;
+            best = total;
         }
     }
+    *duration_numerator = (long)best.num;
+    *duration_denominator = (unsigned long)best.den;
     return home;
 }

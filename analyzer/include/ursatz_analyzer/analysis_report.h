@@ -105,7 +105,9 @@ typedef struct {
     size_t key_region_count;
     AnalysisKeyChange *key_changes; /* owned; key_region_count - 1 of them */
     size_t key_change_count;
-    size_t home_region; /* index of the home key's region; valid only when key_region_count > 0 */
+    size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
+    long home_duration_numerator; /* total time in the home key across its regions, whole notes */
+    unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, and the key regions and changes. */

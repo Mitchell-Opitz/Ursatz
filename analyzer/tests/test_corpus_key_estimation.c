@@ -7,7 +7,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 /*
- * The home key of the six reference pieces: the longest of the key regions Ursatz's key-region detection finds.
+ * The home key of the six reference pieces: the key with the most total time over the key regions Ursatz's key-region detection finds.
  * Each piece's home key is its actual key. Four of the files carry a key signature (Bach Prelude, Mozart 545,
  * Clementi 36, Field 5), which the library takes as a boundary; Bach 114 and Field 1 carry none.
  */
@@ -20,7 +20,9 @@ typedef struct {
 static const CorpusCase CASES[] = {
     {"../external/ursatz/tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid", "C major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Bach 114.mid", "G major"},
-    {"../external/ursatz/tests/fixtures/framework-v1-corpus/Mozart 545.mid", "C major"},
+    /* The file holds all three movements (C, G, C major); the key with the most time across them is G major. The
+       first movement's own keys are asserted by test_key_regions_mozart_545. */
+    {"../external/ursatz/tests/fixtures/framework-v1-corpus/Mozart 545.mid", "G major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Clementi 36.mid", "C major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Field 1.mid", "Eb major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Field 5.mid", "Bb major"},

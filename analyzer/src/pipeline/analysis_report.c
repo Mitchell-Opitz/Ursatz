@@ -46,4 +46,6 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->key_changes = NULL;
     report->key_change_count = 0;
     report->home_region = 0;
+    report->home_duration_numerator = 0;
+    report->home_duration_denominator = 1;
 }

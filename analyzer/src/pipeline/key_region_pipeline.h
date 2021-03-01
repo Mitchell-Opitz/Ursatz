@@ -34,9 +34,13 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
                           size_t *region_count, AnalysisKeyChange **changes, size_t *change_count);
 
 /*
- * The home key's region: the library offers no determination of its own, so it is the region of
- * greatest duration in whole notes, a tie going to the earliest. region_count must be at least 1.
+ * The home key: the library offers no determination of its own, so it is the key (tonic and mode) with
+ * the greatest total duration over all its regions, a tie going to the key that appears first. Returns the
+ * first region in that key and sets *duration to the key's total time in whole notes, as a rational.
+ * Total time, not the longest single region, so a key the detection splits into several regions is not
+ * outweighed by one long stretch of another. region_count must be at least 1.
  */
-size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count);
+size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count, long *duration_numerator,
+                       unsigned long *duration_denominator);
 
 #endif

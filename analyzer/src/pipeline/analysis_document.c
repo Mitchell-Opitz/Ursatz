@@ -27,9 +27,9 @@
 #define URSATZ_ANALYZER_URSATZ_COMMIT "unknown"
 #endif
 
-/* How the home key is chosen: the library offers no determination of its own, so it is the key region of
-   greatest duration, a tie going to the earliest. */
-static const char HOME_KEY_RULE[] = "longest_region";
+/* How the home key is chosen: the library offers no determination of its own, so it is the key with the
+   greatest total duration over all its regions, a tie going to the key that appears first. */
+static const char HOME_KEY_RULE[] = "longest_total_duration";
 
 /* Source ids for the meter: a time signature the MIDI file declares, and
    the 4/4 the library assumes when it declares none. */
@@ -507,13 +507,30 @@ static cJSON *key_region_json(const ImportedNotes *notes, const AnalysisKeyRegio
     return claim;
 }
 
+/* The indices of every region in the home key, in time order. */
+static cJSON *home_region_indices_json(const AnalysisReport *report) {
+    const AnalysisKeyRegion *home = &report->key_regions[report->home_region];
+    cJSON *indices = cJSON_CreateArray();
+    for (size_t i = 0; indices && i < report->key_region_count; i++) {
+        const AnalysisKeyRegion *region = &report->key_regions[i];
+        if (region->tonic_pitch_class == home->tonic_pitch_class && region->is_major == home->is_major &&
+            !append(indices, cJSON_CreateNumber((double)i))) {
+            cJSON_Delete(indices);
+            return NULL;
+        }
+    }
+    return indices;
+}
+
 static cJSON *home_key_json(const AnalysisReport *report) {
     const AnalysisKeyRegion *home = &report->key_regions[report->home_region];
     cJSON *object = cJSON_CreateObject();
     if (object && !(add(object, "rule", cJSON_CreateString(HOME_KEY_RULE)) &&
-                    add(object, "region_index", cJSON_CreateNumber((double)report->home_region)) &&
                     add(object, "label", cJSON_CreateString(home->label)) &&
-                    add(object, "duration", rational_json(rational_difference(region_end(home), region_start(home)))))) {
+                    add(object, "region_indices", home_region_indices_json(report)) &&
+                    add(object, "duration",
+                        rational_json(rational_make(report->home_duration_numerator,
+                                                    report->home_duration_denominator))))) {
         cJSON_Delete(object);
         return NULL;
     }
