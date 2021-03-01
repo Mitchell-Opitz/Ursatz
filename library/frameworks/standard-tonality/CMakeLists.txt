@@ -29,6 +29,7 @@ add_library(standard_tonality
     key_signature_rules.c
     circle_of_fifths_rules.c
     seventh_rules.c
+    seventh_spelling_rules.c
 )
 target_include_directories(standard_tonality PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
