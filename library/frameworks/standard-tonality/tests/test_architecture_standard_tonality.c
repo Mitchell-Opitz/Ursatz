@@ -65,7 +65,9 @@ static int check_file(const char *path) {
             strcmp(start, "interval_white_key_rules.h") == 0 || strcmp(start, "interval_enharmonic_rules.h") == 0 ||
             strcmp(start, "interval_spelling_rules.h") == 0 || strcmp(start, "triad_rules.h") == 0 ||
             strcmp(start, "triad_spelling_rules.h") == 0 || strcmp(start, "triad_identification_rules.h") == 0 ||
-            strcmp(start, "chord_symbol_rules.h") == 0 || strcmp(start, "triad_in_key_rules.h") == 0) {
+            strcmp(start, "chord_symbol_rules.h") == 0 || strcmp(start, "triad_in_key_rules.h") == 0 ||
+            strcmp(start, "seventh_rules.h") == 0 || strcmp(start, "seventh_spelling_rules.h") == 0 ||
+            strcmp(start, "seventh_identification_rules.h") == 0 || strcmp(start, "seventh_in_key_rules.h") == 0) {
             continue;
         }
 

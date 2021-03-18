@@ -133,6 +133,33 @@ Rules about how pitches relate within a key:
   raised leading tone makes the sol triad major and the ti triad
   diminished. The me triad of harmonic minor (augmented) is not in the
   source and is included because it follows from the spelled scale.
+- **Seventh chord structure** (`seventh_rules.h`): four notes stacked in
+  thirds, all on lines or all on spaces; root, third, fifth, seventh;
+  five qualities set by the triad and the seventh above the root
+  (major-major, major-minor, minor-minor, half-diminished, fully
+  diminished), with the alternate names major, dominant, minor, and
+  diminished seventh chord (the half-diminished has none). Chords
+  outside the five (a minor triad with a major seventh, an augmented
+  triad) are a later chapter's and get no quality here.
+- **Seventh chord spelling** (`seventh_spelling_rules.h`): from root and
+  quality, by the interval rules and, as the source steps it, from the
+  root's major key signature with the third, fifth, and seventh altered.
+- **Seventh chord identification** (`seventh_identification_rules.h`):
+  root and quality from any notes, in any order; doublings and open
+  spacing do not matter and reduce to closed position. Root position
+  only; the bass note a chord symbol names is the one nod to inversion.
+- **Seventh chord symbols** (`chord_symbol_rules.h`): the root, then "ma7",
+  "7", "mi7", "∅7", or "°7", and a slash bass when the lowest note is not
+  the root (G∅7/F); parse and format, and a `Chord` labeled with the
+  symbol.
+- **Seventh chord qualities in a key** (`seventh_in_key_rules.h`): in
+  major, major-major on do and fa, major-minor on sol, minor-minor on re,
+  mi, la, half-diminished on ti; in natural minor, minor-minor on do, fa,
+  sol, major-major on me and le, major-minor on te, half-diminished on
+  re; the raised leading tone makes the sol chord major-minor and the ti
+  chord fully diminished. The raised leading tone in the chords on do
+  and me would give qualities outside the five, so they stay as in
+  natural minor.
 
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`

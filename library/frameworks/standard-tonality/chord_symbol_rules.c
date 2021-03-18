@@ -9,10 +9,11 @@
 #include "framework.h"
 #include "interpretation/uncertainty.h"
 #include "rule_pair.h"
+#include "seventh_identification_rules.h"
 #include "triad_identification_rules.h"
 
-static const char *const NAMES[STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT] = {"chord-symbol-root", "chord-symbol-quality",
-                                                                              "chord-symbol-slash-bass"};
+static const char *const NAMES[STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT] = {
+    "chord-symbol-root", "chord-symbol-quality", "chord-symbol-slash-bass", "chord-symbol-seventh-quality"};
 
 static StandardTonalityRulePair g_pairs[STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT];
 static bool g_built[STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT];
@@ -91,11 +92,10 @@ static const char *accidental_text(int accidental) {
     }
 }
 
-bool standard_tonality_chord_symbol(PitchLetter root_letter, int root_accidental,
-                                    StandardTonalityTriadQuality quality, bool has_bass, PitchLetter bass_letter,
-                                    int bass_accidental, char *buffer, size_t size) {
+/* Writes root, quality mark, and the optional slash bass. */
+static bool write_symbol(PitchLetter root_letter, int root_accidental, const char *quality_mark, bool has_bass,
+                         PitchLetter bass_letter, int bass_accidental, char *buffer, size_t size) {
     const char *root_mark = accidental_text(root_accidental);
-    const char *quality_mark = standard_tonality_triad_quality_symbol(quality);
     const char *bass_mark = has_bass ? accidental_text(bass_accidental) : "";
     if (buffer == NULL || size == 0 || root_mark == NULL || quality_mark == NULL || bass_mark == NULL) {
         return false;
@@ -116,6 +116,13 @@ bool standard_tonality_chord_symbol(PitchLetter root_letter, int root_accidental
     return true;
 }
 
+bool standard_tonality_chord_symbol(PitchLetter root_letter, int root_accidental,
+                                    StandardTonalityTriadQuality quality, bool has_bass, PitchLetter bass_letter,
+                                    int bass_accidental, char *buffer, size_t size) {
+    return write_symbol(root_letter, root_accidental, standard_tonality_triad_quality_symbol(quality), has_bass,
+                        bass_letter, bass_accidental, buffer, size);
+}
+
 bool standard_tonality_triad_chord_symbol(const PitchSpelling *const *notes, size_t count, char *buffer, size_t size) {
     PitchLetter root_letter;
     int root_accidental;
@@ -133,6 +140,51 @@ bool standard_tonality_triad_chord_symbol(const PitchSpelling *const *notes, siz
     bool has_bass = bass_letter != root_letter || bass_accidental != root_accidental;
     return standard_tonality_chord_symbol(root_letter, root_accidental, quality, has_bass, bass_letter,
                                           bass_accidental, buffer, size);
+}
+
+const char *standard_tonality_seventh_quality_symbol(StandardTonalitySeventhQuality quality) {
+    switch (quality) {
+        case STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR:
+            return "ma7";
+        case STANDARD_TONALITY_SEVENTH_MAJOR_MINOR:
+            return "7";
+        case STANDARD_TONALITY_SEVENTH_MINOR_MINOR:
+            return "mi7";
+        case STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED:
+            return "\xE2\x88\x85" "7";
+        case STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED:
+            return "\xC2\xB0" "7";
+        default:
+            return NULL;
+    }
+}
+
+bool standard_tonality_seventh_chord_symbol_text(PitchLetter root_letter, int root_accidental,
+                                                 StandardTonalitySeventhQuality quality, bool has_bass,
+                                                 PitchLetter bass_letter, int bass_accidental, char *buffer,
+                                                 size_t size) {
+    return write_symbol(root_letter, root_accidental, standard_tonality_seventh_quality_symbol(quality), has_bass,
+                        bass_letter, bass_accidental, buffer, size);
+}
+
+bool standard_tonality_seventh_chord_symbol(const PitchSpelling *const *notes, size_t count, char *buffer,
+                                            size_t size) {
+    PitchLetter root_letter;
+    int root_accidental;
+    StandardTonalitySeventhQuality quality;
+    if (!standard_tonality_identify_seventh(notes, count, &root_letter, &root_accidental, &quality)) {
+        return false;
+    }
+
+    PitchLetter bass_letter;
+    int bass_accidental;
+    if (!standard_tonality_lowest_note(notes, count, &bass_letter, &bass_accidental)) {
+        return false;
+    }
+
+    bool has_bass = bass_letter != root_letter || bass_accidental != root_accidental;
+    return standard_tonality_seventh_chord_symbol_text(root_letter, root_accidental, quality, has_bass, bass_letter,
+                                                       bass_accidental, buffer, size);
 }
 
 static bool parse_letter(const char *text, PitchLetter *letter) {
@@ -253,16 +305,81 @@ bool standard_tonality_parse_chord_symbol(const char *symbol, PitchLetter *root_
     return true;
 }
 
-ChordResult standard_tonality_build_triad_chord(PitchLetter root_letter, int root_accidental,
-                                                StandardTonalityTriadQuality quality, bool has_bass,
-                                                PitchLetter bass_letter, int bass_accidental, EntityID *target_id,
-                                                Chord **out) {
-    char label[64];
-    if (!standard_tonality_chord_symbol(root_letter, root_accidental, quality, has_bass, bass_letter, bass_accidental,
-                                        label, sizeof(label))) {
-        return CHORD_ERR_NULL_LABEL;
+bool standard_tonality_parse_seventh_chord_symbol(const char *symbol, PitchLetter *root_letter,
+                                                  int *root_accidental, StandardTonalitySeventhQuality *quality,
+                                                  bool *has_bass, PitchLetter *bass_letter, int *bass_accidental) {
+    if (symbol == NULL || root_letter == NULL || root_accidental == NULL || quality == NULL || has_bass == NULL ||
+        bass_letter == NULL || bass_accidental == NULL) {
+        return false;
     }
 
+    const char *cursor = symbol;
+    PitchLetter letter;
+    if (!parse_letter(cursor, &letter)) {
+        return false;
+    }
+    cursor++;
+
+    int accidental;
+    cursor += parse_accidental(cursor, &accidental);
+
+    StandardTonalitySeventhQuality parsed_quality;
+    if (strncmp(cursor, "ma7", 3) == 0) {
+        parsed_quality = STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR;
+        cursor += 3;
+    } else if (strncmp(cursor, "mi7", 3) == 0) {
+        parsed_quality = STANDARD_TONALITY_SEVENTH_MINOR_MINOR;
+        cursor += 3;
+    } else if (strncmp(cursor, "\xE2\x88\x85" "7", 4) == 0) {
+        parsed_quality = STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED;
+        cursor += 4;
+    } else if (strncmp(cursor, "\xC3\xB8" "7", 3) == 0) {
+        parsed_quality = STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED;
+        cursor += 3;
+    } else if (strncmp(cursor, "\xC2\xB0" "7", 3) == 0) {
+        parsed_quality = STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED;
+        cursor += 3;
+    } else if (strncmp(cursor, "o7", 2) == 0) {
+        parsed_quality = STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED;
+        cursor += 2;
+    } else if (cursor[0] == '7') {
+        parsed_quality = STANDARD_TONALITY_SEVENTH_MAJOR_MINOR;
+        cursor += 1;
+    } else {
+        return false;
+    }
+
+    bool bass = false;
+    PitchLetter parsed_bass_letter = PITCH_LETTER_C;
+    int parsed_bass_accidental = 0;
+    if (cursor[0] == '/') {
+        cursor++;
+        if (!parse_letter(cursor, &parsed_bass_letter)) {
+            return false;
+        }
+        cursor++;
+        cursor += parse_accidental(cursor, &parsed_bass_accidental);
+        bass = true;
+    }
+    if (cursor[0] != '\0') {
+        return false;
+    }
+
+    *root_letter = letter;
+    *root_accidental = accidental;
+    *quality = parsed_quality;
+    *has_bass = bass;
+    if (bass) {
+        *bass_letter = parsed_bass_letter;
+        *bass_accidental = parsed_bass_accidental;
+    }
+    return true;
+}
+
+/* Builds the Chord for a finished symbol label; `vocabulary` names the
+   rule vocabulary the interpretation claims. */
+static ChordResult build_chord_from_label(const char *label, const char *vocabulary, EntityID *target_id,
+                                          Chord **out) {
     const Framework *framework = standard_tonality_framework();
     if (framework == NULL) {
         return CHORD_ERR_ALLOC;
@@ -315,7 +432,7 @@ ChordResult standard_tonality_build_triad_chord(PitchLetter root_letter, int roo
     Interpretation *interpretation;
     InterpretationResult interpretation_result =
         interpretation_create(interpretation_id, target_id, claim, NULL, NULL, framework_reference, uncertainty,
-                               "standard-tonality-v1", "triad-chord-symbol-vocabulary",
+                               "standard-tonality-v1", vocabulary,
                                INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation);
     if (interpretation_result != INTERPRETATION_OK) {
         provenance_reference_destroy(provenance);
@@ -332,4 +449,28 @@ ChordResult standard_tonality_build_triad_chord(PitchLetter root_letter, int roo
         return chord_result;
     }
     return CHORD_OK;
+}
+
+ChordResult standard_tonality_build_triad_chord(PitchLetter root_letter, int root_accidental,
+                                                StandardTonalityTriadQuality quality, bool has_bass,
+                                                PitchLetter bass_letter, int bass_accidental, EntityID *target_id,
+                                                Chord **out) {
+    char label[64];
+    if (!standard_tonality_chord_symbol(root_letter, root_accidental, quality, has_bass, bass_letter, bass_accidental,
+                                        label, sizeof(label))) {
+        return CHORD_ERR_NULL_LABEL;
+    }
+    return build_chord_from_label(label, "triad-chord-symbol-vocabulary", target_id, out);
+}
+
+ChordResult standard_tonality_build_seventh_chord(PitchLetter root_letter, int root_accidental,
+                                                  StandardTonalitySeventhQuality quality, bool has_bass,
+                                                  PitchLetter bass_letter, int bass_accidental, EntityID *target_id,
+                                                  Chord **out) {
+    char label[64];
+    if (!standard_tonality_seventh_chord_symbol_text(root_letter, root_accidental, quality, has_bass, bass_letter,
+                                                     bass_accidental, label, sizeof(label))) {
+        return CHORD_ERR_NULL_LABEL;
+    }
+    return build_chord_from_label(label, "seventh-chord-symbol-vocabulary", target_id, out);
 }
