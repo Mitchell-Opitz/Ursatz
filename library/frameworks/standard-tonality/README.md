@@ -160,6 +160,24 @@ Rules about how pitches relate within a key:
   chord fully diminished. The raised leading tone in the chords on do
   and me would give qualities outside the five, so they stay as in
   natural minor.
+- **Roman numerals** (`roman_numeral_rules.h`): the numeral is the scale
+  degree of the root (I to VII); uppercase for a major third above the
+  root (major, augmented), lowercase for a minor third (minor,
+  diminished, half-diminished); "°" for diminished, "+" for augmented,
+  "∅" for half-diminished, and a 7 for sevenths (V7, ii7, ii∅7, vii°7).
+  Major-major and major-minor sevenths share a label, read as dominant on
+  V and VII and as major elsewhere. Parse and format, and a `Chord`
+  labeled with the numeral. common-practice-minimal's own triad labels
+  are separate and unchanged.
+- **Roman numeral analysis** (`roman_numeral_analysis_rules.h`): key
+  labels (capital note name for major, "mi" or a lowercase letter for
+  minor), the root's degree in a major or minor key, and the numeral of
+  any chord tones in a key. V and vii° (and III+) in minor imply the
+  raised leading tone. Voicing, doubling, an omitted fifth, and
+  inversion do not change the numeral. A chord with a root outside the
+  key, a quality the key does not give that degree, or a quality outside
+  the five sevenths gets no numeral. Embellishing tones and inversion
+  figures are other chapters'.
 
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
