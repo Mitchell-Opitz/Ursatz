@@ -67,7 +67,8 @@ static int check_file(const char *path) {
             strcmp(start, "triad_spelling_rules.h") == 0 || strcmp(start, "triad_identification_rules.h") == 0 ||
             strcmp(start, "chord_symbol_rules.h") == 0 || strcmp(start, "triad_in_key_rules.h") == 0 ||
             strcmp(start, "seventh_rules.h") == 0 || strcmp(start, "seventh_spelling_rules.h") == 0 ||
-            strcmp(start, "seventh_identification_rules.h") == 0 || strcmp(start, "seventh_in_key_rules.h") == 0) {
+            strcmp(start, "seventh_identification_rules.h") == 0 || strcmp(start, "seventh_in_key_rules.h") == 0 ||
+            strcmp(start, "roman_numeral_rules.h") == 0 || strcmp(start, "roman_numeral_analysis_rules.h") == 0) {
             continue;
         }
 
