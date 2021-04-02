@@ -186,15 +186,23 @@ See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
   phrase would put it and a modulation shorter than about half a window is smoothed away. A stretch of
-  four or more measures built on the subdominant, dominant or supertonic can read as its own key. On
-  Mozart K. 545 the detection finds fewer than half of the annotated measures' keys and reports more
-  regions than the movement has. The profile fits chromatic music less well. A key signature is trusted
-  as a boundary: many exporters write a default C major at tick 0 whatever the key.
+  four or more measures built on the subdominant, dominant or supertonic can read as its own key.
+  Measured here: Clementi Op. 36 No. 1 reads as annotated except measure 20 (the dominant of C minor
+  reads as G major). Mozart K. 545 (the file holds all three movements) comes out as 42 regions, and 50
+  measures inside the cores of the annotated first-movement regions read in a neighbouring key (the
+  subdominant as F major, the dominant or supertonic as G major, A minor, E minor or D minor); the
+  expositions' C-to-G modulation at measure 13 is found, the recapitulation's return to C at measures
+  79 and 124 is not. Bach 114 is read as G major, then D major from measure 14 to the end (the earlier one-key estimate
+  was G major). A region read in a key the music is not in also reads its chords in that key.
+  The profile fits chromatic music less well. A key signature is trusted as a boundary: many exporters
+  write a default C major at tick 0 whatever the key.
 - Pivot chords are read in the old key's major collection (a minor old key reads in its relative
   major), and a chord that needs a minor key's raised sixth or seventh is not diatonic in the new key.
 - Chord identification is Ursatz's weighted identification, read in each segment's key region. Its
   vocabulary is the diatonic triads and sevenths of a major key: in a minor region, or when no key is
-  found, no chord is identified. Chromatic, applied and fully diminished chords are not candidates,
+  found, no chord is identified. Read in local keys, Field Nocturne No. 1 has chord coverage of 86.6%,
+  below the 90% it reached when read in one key: its regions include an F minor one, which gets no
+  chords, and a Bb major one (uncertainty 0.97) that the detection is unsure of. Chromatic, applied and fully diminished chords are not candidates,
   so a segment built on one is matched to the nearest diatonic chord or not at all.
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
   anticipation, appoggiatura, escape-tone and pedal rules. Many tones come back unclassified.
