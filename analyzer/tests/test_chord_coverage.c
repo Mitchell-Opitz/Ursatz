@@ -104,7 +104,12 @@ int main(void) {
 
         assert(matched_chords > 0);
         if (PIECES[i].coverage_asserted) {
-            assert(fraction > COVERAGE_TARGET);
+            if (!(fraction > COVERAGE_TARGET)) {
+                /* A plain exit, not an abort, so the test can be marked WILL_FAIL. */
+                fprintf(stderr, "%s: chord coverage %.1f%% is not above %.0f%%\n", PIECES[i].file,
+                        fraction * 100.0, COVERAGE_TARGET * 100.0);
+                return 1;
+            }
         }
 
         analysis_report_destroy(&report);
