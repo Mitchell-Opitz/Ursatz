@@ -3,9 +3,9 @@
 ## Summary
 
 - **File:** Field 5.mid, 1083 notes.
-- **Key:** Bb major, read from the key signature.
-- **Chords:** 170 chord events; 157 matched a chord (92%), 13 did not.
-- **Most frequent chords:** I (56), minor7 (28), major7 (24).
+- **Key:** Bb major, the key with the most time across 5 key regions.
+- **Chords:** 170 chord events; 147 matched a chord (86%), 23 did not.
+- **Most frequent chords:** I (58), minor7 (26), major7 (24).
 
 ## Meter
 
@@ -13,7 +13,48 @@
 - **Measures:** 43 measures.
 - **Pickup:** None.
 
-**Detected key:** Bb major
+## Key regions
+
+Positions are measure and beat. Uncertainty is the library's, from 0 (clearly this key) to 1 (another key fits as well or better). The home key is the key with the most time across its regions.
+
+- **Home key:** Bb major.
+- **Opening key:** Bb major.
+- **Closing key:** Bb major.
+- **Notated key signatures:** Bb major or G minor at m. 1, beat 1.
+
+| Position | Key | Uncertainty | Set by |
+| --- | --- | --- | --- |
+| m. 1, beat 1 to m. 5, beat 1 | Bb major | 0.70 | key signature |
+| m. 5, beat 1 to m. 8, beat 1 | D minor | 0.77 | profile |
+| m. 8, beat 1 to m. 29, beat 1 | Bb major | 0.66 | profile |
+| m. 29, beat 1 to m. 33, beat 1 | F major | 0.89 | profile |
+| m. 33, beat 1 to m. 44, beat 1 | Bb major | 0.64 | profile |
+
+## Tonicizations
+
+1 brief excursion of another key that returns to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts and whether it returns; no cadence is looked for.
+
+| Span | In | Target |
+| --- | --- | --- |
+| m. 5, beat 1 to m. 8, beat 1 | Bb major | D minor |
+
+## Modulations
+
+A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key and whether it returns; no cadence is looked for.
+
+| Position | From | To | Extent | Type | Return |
+| --- | --- | --- | --- | --- | --- |
+| m. 29, beat 1 | Bb major | F major | weak-modulation | pivot | no |
+| m. 33, beat 1 | F major | Bb major | weak-modulation | pivot | yes |
+
+## Pivot chords
+
+The chord at a modulation that is diatonic in both the old and the new key, named by root and quality, with no Roman numeral. Modulation is its row in the Modulations table, counting from 1.
+
+| Position | Chord | Bass | Inversion | From | To | Modulation |
+| --- | --- | --- | --- | --- | --- | --- |
+| m. 28, beat 4 to m. 29, beat 1 | G minor7 | G | root position | Bb major | F major | 1 |
+| m. 33, beat 1 to m. 33, beat 2 | Bb major | Bb | root position | F major | Bb major | 2 |
 
 ## Chords
 
@@ -36,17 +77,17 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 4, beat 2 to m. 4, beat 3 | I | Bb | major | Bb | root position | 1 | 0.42 | - |
 | m. 4, beat 3 to m. 4, beat 4 | I | Bb | major | F | second | 1 | 0.55 | - |
 | m. 4, beat 4 to m. 5, beat 1 | I | Bb | major | Bb | root position | 1 | 0.44 | - |
-| m. 5, beat 1 to m. 5, beat 2 | I | Bb | major | Bb | root position | 1 | 0.53 | - |
-| m. 5, beat 2 to m. 5, beat 3 | I | Bb | major | Bb | root position | 1 | 0.23 | - |
+| m. 5, beat 1 to m. 5, beat 2 | no match | - | - | - | - | - | - | - |
+| m. 5, beat 2 to m. 5, beat 3 | no match | - | - | - | - | - | - | - |
 | m. 5, beat 3 to m. 5, beat 4 | no match | - | - | - | - | - | - | - |
-| m. 5, beat 4 to m. 6, beat 1 | half-diminished7 | A | half-diminished7 | A | root position | 1 | 0.99 | - |
-| m. 6, beat 1 to m. 6, beat 2 | iii | D | minor | D | root position | 1 | 0.39 | - |
-| m. 6, beat 2 to m. 6, beat 3 | iii | D | minor | A | second | 1 | 0.12 | - |
+| m. 5, beat 4 to m. 6, beat 1 | no match | - | - | - | - | - | - | - |
+| m. 6, beat 1 to m. 6, beat 2 | no match | - | - | - | - | - | - | - |
+| m. 6, beat 2 to m. 6, beat 3 | no match | - | - | - | - | - | - | - |
 | m. 6, beat 3 to m. 6, beat 4 | no match | - | - | - | - | - | - | - |
-| m. 6, beat 4 to m. 7, beat 1 | iii | D | minor | Ab | - | 1 | 0.99 | - |
-| m. 7, beat 1 to m. 7, beat 2 | minor7 | C | minor7 | C | root position | 1 | 0.83 | - |
-| m. 7, beat 2 to m. 7, beat 3 | minor7 | C | minor7 | G | second | 1 | 0.53 | - |
-| m. 7, beat 3 to m. 7, beat 4 | vi | G | minor | C | - | 1 | 0.03 | minor7 (D minor7, score 0.70) |
+| m. 6, beat 4 to m. 7, beat 1 | no match | - | - | - | - | - | - | - |
+| m. 7, beat 1 to m. 7, beat 2 | no match | - | - | - | - | - | - | - |
+| m. 7, beat 2 to m. 7, beat 3 | no match | - | - | - | - | - | - | - |
+| m. 7, beat 3 to m. 7, beat 4 | no match | - | - | - | - | - | - | - |
 | m. 7, beat 4 to m. 8, beat 1 | no match | - | - | - | - | - | - | - |
 | m. 8, beat 1 to m. 8, beat 2 | V | F | major | F | root position | 1 | 0.22 | - |
 | m. 8, beat 2 to m. 8, beat 3 | dominant7 | F | dominant7 | Eb | third | 1 | 0.36 | - |
@@ -129,22 +170,22 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 28, beat 2 to m. 28, beat 3 | iii | D | minor | A | second | 1 | 0.12 | - |
 | m. 28, beat 3 to m. 28, beat 4 | minor7 | G | minor7 | Bb | first | 1 | 0.04 | major7 (Bb major7, score 0.77) |
 | m. 28, beat 4 to m. 29, beat 1 | minor7 | G | minor7 | G | root position | 1 | 0.30 | - |
-| m. 29, beat 1 to m. 29, beat 2 | vii° | A | diminished | C | first | 1 | 0.14 | - |
-| m. 29, beat 2 to m. 29, beat 3 | V | F | major | A | first | 1 | 0.12 | - |
+| m. 29, beat 1 to m. 29, beat 2 | iii | A | minor | C | first | 1 | 0.14 | - |
+| m. 29, beat 2 to m. 29, beat 3 | I | F | major | A | first | 1 | 0.12 | - |
 | m. 29, beat 3 to m. 29, beat 4 | minor7 | D | minor7 | Ab | - | 1 | 0.81 | - |
-| m. 29, beat 4 to m. 30, beat 1 | no match | - | - | - | - | - | - | - |
-| m. 30, beat 1 to m. 30, beat 2 | V | F | major | F | root position | 1 | 1.00 | - |
-| m. 30, beat 2 to m. 30, beat 3 | dominant7 | F | dominant7 | Eb | third | 1 | 0.35 | - |
-| m. 30, beat 3 to m. 30, beat 4 | I | Bb | major | D | first | 1 | 0.29 | - |
-| m. 30, beat 4 to m. 31, beat 1 | dominant7 | F | dominant7 | C | second | 1 | 0.26 | - |
+| m. 29, beat 4 to m. 30, beat 1 | dominant7 | C | dominant7 | G | second | 1 | 0.14 | - |
+| m. 30, beat 1 to m. 30, beat 2 | I | F | major | F | root position | 1 | 1.00 | - |
+| m. 30, beat 2 to m. 30, beat 3 | I | F | major | Eb | - | 1 | 0.50 | - |
+| m. 30, beat 3 to m. 30, beat 4 | IV | Bb | major | D | first | 1 | 0.29 | - |
+| m. 30, beat 4 to m. 31, beat 1 | I | F | major | C | second | 1 | 0.25 | - |
 | m. 31, beat 1 to m. 31, beat 2 | minor7 | G | minor7 | B | - | 1 | 0.25 | - |
 | m. 31, beat 2 to m. 31, beat 3 | minor7 | G | minor7 | G | root position | 1 | 0.22 | - |
-| m. 31, beat 3 to m. 31, beat 4 | ii | C | minor | C | root position | 1 | 0.24 | - |
-| m. 31, beat 4 to m. 32, beat 1 | iii | D | minor | F | first | 1 | 0.17 | - |
-| m. 32, beat 1 to m. 32, beat 2 | ii | C | minor | G | second | 1 | 0.53 | - |
-| m. 32, beat 2 to m. 32, beat 3 | minor7 | G | minor7 | G | root position | 1 | 0.00 | major7 (Eb major7, score 0.74) |
-| m. 32, beat 3 to m. 32, beat 4 | ii | C | minor | C | root position | 1 | 0.30 | - |
-| m. 32, beat 4 to m. 33, beat 1 | dominant7 | F | dominant7 | A | first | 1 | 0.51 | - |
+| m. 31, beat 3 to m. 31, beat 4 | no match | - | - | - | - | - | - | - |
+| m. 31, beat 4 to m. 32, beat 1 | vi | D | minor | F | first | 1 | 0.17 | - |
+| m. 32, beat 1 to m. 32, beat 2 | V | C | major | G | second | 1 | 0.49 | - |
+| m. 32, beat 2 to m. 32, beat 3 | minor7 | G | minor7 | G | root position | 1 | 0.16 | - |
+| m. 32, beat 3 to m. 32, beat 4 | no match | - | - | - | - | - | - | - |
+| m. 32, beat 4 to m. 33, beat 1 | I | F | major | A | first | 1 | 0.58 | - |
 | m. 33, beat 1 to m. 33, beat 2 | I | Bb | major | Bb | root position | 1 | 0.53 | - |
 | m. 33, beat 2 to m. 33, beat 3 | I | Bb | major | F | second | 1 | 0.12 | - |
 | m. 33, beat 3 to m. 33, beat 4 | minor7 | C | minor7 | Eb | first | 1 | 0.74 | - |
@@ -193,7 +234,7 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 43, beat 3 to m. 44, beat 1 | I | Bb | major | Bb | root position | 2 | 0.67 | - |
 ## Non-chord tones
 
-228 notes sound against a chord without being one of its tones; 147 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+227 notes sound against a chord without being one of its tones; 145 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
 
 | Position | Note | Type | Against |
 | --- | --- | --- | --- |
@@ -206,12 +247,6 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 4, beat 1 to m. 4, beat 2 | 41 | unclassified | I |
 | m. 4, beat 2 to m. 4, beat 3 | 53 | escape-tone | I |
 | m. 4, beat 3 to m. 4, beat 4 | 53 | unclassified | I |
-| m. 5, beat 4 to m. 6, beat 1 | 74 | unclassified | half-diminished7 |
-| m. 6, beat 4 to m. 7, beat 1 | 86 | unclassified | iii |
-| m. 6, beat 4 to m. 7, beat 1 | 90 | unclassified | iii |
-| m. 7, beat 2 to m. 7, beat 3 | 95 | unclassified | minor7 |
-| m. 7, beat 3 to m. 7, beat 4 | 91 | unclassified | vi |
-| m. 7, beat 3 to m. 7, beat 4 | 99 | unclassified | vi |
 | m. 8, beat 1 to m. 8, beat 2 | 102 | unclassified | V |
 | m. 8, beat 1 to m. 8, beat 2 | 105 | unclassified | V |
 | m. 8, beat 3 to m. 8, beat 4 | 114 | suspension | I |
@@ -323,25 +358,30 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 28, beat 3 to m. 28, beat 4 | 626 | unclassified | minor7 |
 | m. 28, beat 4 to m. 29, beat 1 | 626 | unclassified | minor7 |
 | m. 28, beat 4 to m. 29, beat 1 | 631 | unclassified | minor7 |
-| m. 29, beat 1 to m. 29, beat 2 | 633 | unclassified | vii° |
+| m. 29, beat 1 to m. 29, beat 2 | 633 | unclassified | iii |
 | m. 29, beat 3 to m. 29, beat 4 | 642 | unclassified | minor7 |
 | m. 29, beat 3 to m. 29, beat 4 | 644 | passing | minor7 |
-| m. 30, beat 3 to m. 30, beat 4 | 657 | suspension | I |
-| m. 30, beat 4 to m. 31, beat 1 | 662 | unclassified | dominant7 |
-| m. 30, beat 4 to m. 31, beat 1 | 666 | unclassified | dominant7 |
-| m. 30, beat 4 to m. 31, beat 1 | 668 | anticipation | dominant7 |
+| m. 29, beat 4 to m. 30, beat 1 | 641 | unclassified | dominant7 |
+| m. 29, beat 4 to m. 30, beat 1 | 644 | unclassified | dominant7 |
+| m. 30, beat 2 to m. 30, beat 3 | 653 | unclassified | I |
+| m. 30, beat 3 to m. 30, beat 4 | 657 | suspension | IV |
+| m. 30, beat 4 to m. 31, beat 1 | 662 | unclassified | I |
+| m. 30, beat 4 to m. 31, beat 1 | 665 | escape-tone | I |
+| m. 30, beat 4 to m. 31, beat 1 | 666 | unclassified | I |
+| m. 30, beat 4 to m. 31, beat 1 | 668 | anticipation | I |
 | m. 31, beat 1 to m. 31, beat 2 | 670 | unclassified | minor7 |
 | m. 31, beat 2 to m. 31, beat 3 | 675 | unclassified | minor7 |
-| m. 31, beat 3 to m. 31, beat 4 | 678 | unclassified | ii |
-| m. 31, beat 4 to m. 32, beat 1 | 679 | unclassified | iii |
-| m. 31, beat 4 to m. 32, beat 1 | 682 | unclassified | iii |
-| m. 31, beat 4 to m. 32, beat 1 | 686 | unclassified | iii |
-| m. 32, beat 1 to m. 32, beat 2 | 683 | unclassified | ii |
-| m. 32, beat 1 to m. 32, beat 2 | 686 | unclassified | ii |
+| m. 31, beat 4 to m. 32, beat 1 | 679 | unclassified | vi |
+| m. 31, beat 4 to m. 32, beat 1 | 682 | unclassified | vi |
+| m. 31, beat 4 to m. 32, beat 1 | 686 | unclassified | vi |
+| m. 32, beat 1 to m. 32, beat 2 | 683 | unclassified | V |
+| m. 32, beat 1 to m. 32, beat 2 | 686 | unclassified | V |
+| m. 32, beat 1 to m. 32, beat 2 | 690 | unclassified | V |
 | m. 32, beat 2 to m. 32, beat 3 | 687 | unclassified | minor7 |
 | m. 32, beat 2 to m. 32, beat 3 | 690 | unclassified | minor7 |
 | m. 32, beat 2 to m. 32, beat 3 | 694 | appoggiatura | minor7 |
-| m. 32, beat 3 to m. 32, beat 4 | 691 | unclassified | ii |
+| m. 32, beat 4 to m. 33, beat 1 | 698 | unclassified | I |
+| m. 32, beat 4 to m. 33, beat 1 | 703 | unclassified | I |
 | m. 33, beat 4 to m. 34, beat 1 | 716 | unclassified | minor7 |
 | m. 34, beat 3 to m. 34, beat 4 | 719 | unclassified | V |
 | m. 34, beat 3 to m. 34, beat 4 | 725 | suspension | V |
