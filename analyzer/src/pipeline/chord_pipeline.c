@@ -115,7 +115,49 @@ static bool fill_tones(const Segment *segment, const CommonPracticeWeightedResul
     return true;
 }
 
-bool identify_chords(const Segmentation *segmentation, const KeyEstimate *key, ChordEstimate **out) {
+/* a/b <= c/d for positive denominators. */
+static bool rational_at_most(long long a, unsigned long long b, long long c, unsigned long long d) {
+    return a * (long long)d <= c * (long long)b;
+}
+
+/* Identifies segments [first, first + count) together, in the region's key, filling their estimates. False
+   on allocation failure. */
+static bool identify_in_region(const Segmentation *segmentation, size_t first, size_t count,
+                               const AnalysisKeyRegion *region, ChordEstimate *estimates) {
+    if (!region->is_major) {
+        return true;
+    }
+    CommonPracticeWeightedResults results = {0};
+    if (common_practice_identify_weighted_sequence(segmentation->library_segments + first, count,
+                                                   region->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR, NULL,
+                                                   &results) != COMMON_PRACTICE_WEIGHTED_OK) {
+        return true;
+    }
+    for (size_t k = 0; k < count; k++) {
+        size_t i = first + k;
+        const CommonPracticeWeightedResult *result = &results.items[k];
+        if (!result->matched) {
+            continue;
+        }
+        int tonic = region->tonic_pitch_class;
+        int bass = segment_bass_pitch_class(&segmentation->segments[i]);
+        if (!fill_reading(&result->best, result->best_chord, result->best_score, tonic, bass, region->prefer_flats,
+                          &estimates[i].best) ||
+            (result->runner_up_chord &&
+             !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, tonic, bass,
+                           region->prefer_flats, &estimates[i].runner_up)) ||
+            !fill_tones(&segmentation->segments[i], result, &estimates[i])) {
+            common_practice_weighted_results_destroy(&results);
+            return false;
+        }
+        estimates[i].found = true;
+    }
+    common_practice_weighted_results_destroy(&results);
+    return true;
+}
+
+bool identify_chords(const Segmentation *segmentation, const AnalysisKeyRegion *regions, size_t region_count,
+                     ChordEstimate **out) {
     size_t count = segmentation->segment_count;
     ChordEstimate *estimates = calloc(count > 0 ? count : 1, sizeof(ChordEstimate));
     if (!estimates) {
@@ -126,34 +168,67 @@ bool identify_chords(const Segmentation *segmentation, const KeyEstimate *key, C
         estimates[i].runner_up.inversion = -1;
     }
 
-    if (count > 0 && key && key->found && key->is_major) {
-        CommonPracticeWeightedResults results = {0};
-        if (common_practice_identify_weighted_sequence(segmentation->library_segments, count,
-                                                       key->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR, NULL,
-                                                       &results) == COMMON_PRACTICE_WEIGHTED_OK) {
-            for (size_t i = 0; i < count; i++) {
-                const CommonPracticeWeightedResult *result = &results.items[i];
-                if (!result->matched) {
-                    continue;
-                }
-                int tonic = key->tonic_pitch_class;
-                int bass = segment_bass_pitch_class(&segmentation->segments[i]);
-                if (!fill_reading(&result->best, result->best_chord, result->best_score, tonic, bass,
-                                  key->prefer_flats, &estimates[i].best) ||
-                    (result->runner_up_chord &&
-                     !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, tonic,
-                                   bass, key->prefer_flats, &estimates[i].runner_up)) ||
-                    !fill_tones(&segmentation->segments[i], result, &estimates[i])) {
-                    common_practice_weighted_results_destroy(&results);
-                    chord_estimates_destroy(estimates, count);
-                    return false;
-                }
-                estimates[i].found = true;
-            }
-            common_practice_weighted_results_destroy(&results);
+    /* A segment belongs to the region it starts in; segments and regions are both in time order, so the
+       segments of one region are contiguous. */
+    size_t region = 0;
+    size_t i = 0;
+    while (i < count) {
+        const Segment *segment = &segmentation->segments[i];
+        while (region < region_count &&
+               rational_at_most((long long)regions[region].end_numerator, regions[region].end_denominator,
+                                (long long)segment->start_numerator, segment->start_denominator)) {
+            region++;
         }
+        if (region >= region_count) {
+            break;
+        }
+        size_t last = i;
+        while (last < count &&
+               !rational_at_most((long long)regions[region].end_numerator, regions[region].end_denominator,
+                                 (long long)segmentation->segments[last].start_numerator,
+                                 segmentation->segments[last].start_denominator)) {
+            estimates[last].in_region = true;
+            estimates[last].region = region;
+            last++;
+        }
+        if (!identify_in_region(segmentation, i, last - i, &regions[region], estimates)) {
+            chord_estimates_destroy(estimates, count);
+            return false;
+        }
+        i = last;
     }
 
     *out = estimates;
+    return true;
+}
+
+bool identify_pivot_chords(const Segmentation *segmentation, const AnalysisKeyRegion *regions,
+                           AnalysisKeyChange *changes, size_t change_count) {
+    for (size_t c = 0; c < change_count; c++) {
+        AnalysisKeyChange *change = &changes[c];
+        const AnalysisKeyRegion *old_region = &regions[change->from_region];
+        if (!change->has_pivot || change->pivot_entry >= segmentation->segment_count) {
+            continue;
+        }
+        /* The library reads the pivot in the old key's major collection: a minor old key reads in its relative
+           major (a minor third above the tonic), as key_regions_estimate does when it finds the pivot. */
+        int tonic = old_region->is_major ? old_region->tonic_pitch_class : (old_region->tonic_pitch_class + 3) % 12;
+        CommonPracticeWeightedResult result = {0};
+        if (common_practice_identify_weighted(&segmentation->library_segments[change->pivot_entry], tonic,
+                                              COMMON_PRACTICE_KEY_MAJOR, NULL, &result) !=
+            COMMON_PRACTICE_WEIGHTED_OK) {
+            continue;
+        }
+        bool ok = true;
+        if (result.matched) {
+            int bass = segment_bass_pitch_class(&segmentation->segments[change->pivot_entry]);
+            ok = fill_reading(&result.best, result.best_chord, result.best_score, tonic, bass, old_region->prefer_flats,
+                              &change->pivot);
+        }
+        common_practice_weighted_result_destroy(&result);
+        if (!ok) {
+            return false;
+        }
+    }
     return true;
 }

@@ -7,15 +7,9 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 /*
- * Regression coverage over the real-world corpus fixtures that exposed
- * the original key-detection bug: a fixed-order pitch-class scan with
- * one-directional collection containment let chromatic content in a
- * piece spuriously match the wrong (earlier-tried) tonic, and had no
- * fallback for flat keys at all. Each fixture below is checked against
- * its actual key, exercising both new paths this fix adds: the MIDI
- * key signature meta-event (Bach Prelude, Mozart 545, Clementi 36,
- * Field 5) and the first/last-chord bass-note fallback for files that
- * carry no key signature (Bach 114, Field 1).
+ * The home key of the six reference pieces: the key with the most total time over the key regions Ursatz's key-region detection finds.
+ * Each piece's home key is its actual key. Four of the files carry a key signature (Bach Prelude, Mozart 545,
+ * Clementi 36, Field 5), which the library takes as a boundary; Bach 114 and Field 1 carry none.
  */
 
 typedef struct {
@@ -26,7 +20,9 @@ typedef struct {
 static const CorpusCase CASES[] = {
     {"../external/ursatz/tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid", "C major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Bach 114.mid", "G major"},
-    {"../external/ursatz/tests/fixtures/framework-v1-corpus/Mozart 545.mid", "C major"},
+    /* The file holds all three movements (C, G, C major); the key with the most time across them is G major. The
+       first movement's own keys are asserted by test_key_regions_mozart_545. */
+    {"../external/ursatz/tests/fixtures/framework-v1-corpus/Mozart 545.mid", "G major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Clementi 36.mid", "C major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Field 1.mid", "Eb major"},
     {"../external/ursatz/tests/fixtures/framework-v1-corpus/Field 5.mid", "Bb major"},
@@ -40,12 +36,13 @@ int main(void) {
 
         AnalysisReport report;
         assert(run_analysis_pipeline(&notes, &report));
-        assert(report.key_found);
+        assert(report.key_region_count > 0);
         assert(report.entry_count > 0);
 
-        if (strcmp(report.entries[0].key_label, CASES[i].expected_key_label) != 0) {
-            fprintf(stderr, "%s: expected key '%s', got '%s'\n", CASES[i].path, CASES[i].expected_key_label,
-                    report.entries[0].key_label);
+        const char *home_key = report.key_regions[report.home_region].label;
+        if (strcmp(home_key, CASES[i].expected_key_label) != 0) {
+            fprintf(stderr, "%s: expected home key '%s', got '%s'\n", CASES[i].path, CASES[i].expected_key_label,
+                    home_key);
             assert(0);
         }
 

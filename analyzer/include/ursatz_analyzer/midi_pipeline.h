@@ -22,7 +22,9 @@ typedef enum {
  *
  * key_signature is the file's first Key Signature meta-event, if any
  * (see io/midi_key_signature.h); key_signature.found is false when the
- * file carries none. A malformed key signature meta-event does not
+ * file carries none. key_signature_events is every Key Signature
+ * meta-event with its position, in time order (count 0 when the file
+ * carries none). A malformed key signature meta-event does not
  * fail the import -- see midi_pipeline_import_file.
  *
  * meter is the file's time signatures as a MeterMap, plus the end time
@@ -36,6 +38,7 @@ typedef struct {
     PitchNumericValue **pitch_values;
     size_t count;
     MidiKeySignature key_signature;
+    MidiKeySignatureEvents key_signature_events;
     unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */
     MidiMeterImport meter;
 } ImportedNotes;

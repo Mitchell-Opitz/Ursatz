@@ -4,14 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-/* Which key-estimation step found the key, in the order they are tried. */
-typedef enum {
-    ANALYSIS_KEY_METHOD_NONE = 0,
-    ANALYSIS_KEY_METHOD_KEY_SIGNATURE,
-    ANALYSIS_KEY_METHOD_BASS_FALLBACK,
-    ANALYSIS_KEY_METHOD_PITCH_CLASS_SCAN
-} AnalysisKeyMethod;
-
 /* A library Interpretation's scalar confidence (numerator/denominator in
    [0, 1]); present is false when the library supplies none. */
 typedef struct {
@@ -61,17 +53,64 @@ typedef struct {
     char *type; /* owned; NULL when unclassified */
 } AnalysisNonChordTone;
 
+/* What set a key region's boundary: the library's profile correlation, or a notated key signature
+   restricting the region to that signature's major key and its relative minor. */
+typedef enum {
+    ANALYSIS_REGION_SOURCE_PROFILE = 0,
+    ANALYSIS_REGION_SOURCE_KEY_SIGNATURE
+} AnalysisRegionSource;
+
+/* One local key from the library's key-region detection. The regions of a report are ordered and gap-free;
+   each runs from a barline to a barline. */
+typedef struct {
+    char *label;       /* owned; e.g. "Eb major", minimal-accidental spelling */
+    int tonic_pitch_class; /* 0-11 */
+    bool is_major;
+    bool prefer_flats; /* the key reads in flats, for naming pitch classes */
+    long start_numerator; /* region start, whole notes */
+    unsigned long start_denominator;
+    long end_numerator; /* region end (exclusive), whole notes */
+    unsigned long end_denominator;
+    int first_measure; /* measure numbers as the library numbers them (a pickup is 0), inclusive */
+    int last_measure;
+    double uncertainty; /* the library's, in [0, 1]; higher is LESS certain */
+    AnalysisRegionSource source;
+} AnalysisKeyRegion;
+
+/* How far a change goes toward the new key: the library's KeyChangeExtent. */
+typedef enum {
+    ANALYSIS_KEY_CHANGE_TONICIZATION = 0,
+    ANALYSIS_KEY_CHANGE_EXTENDED_TONICIZATION,
+    ANALYSIS_KEY_CHANGE_WEAK_MODULATION,
+    ANALYSIS_KEY_CHANGE_MODULATION
+} AnalysisKeyChangeExtent;
+
+/* The change between two neighbouring key regions (to_region == from_region + 1). */
+typedef struct {
+    size_t from_region;
+    size_t to_region;
+    AnalysisKeyChangeExtent extent;
+    bool is_return; /* goes back to the key before an excursion; extent is that excursion's */
+    bool has_pivot; /* the library found a pivot chord; false for a direct change */
+    size_t pivot_entry; /* index into entries of the pivot chord's segment; valid only when has_pivot */
+    AnalysisChordReading pivot; /* the pivot chord read in the old key; label NULL unless has_pivot */
+} AnalysisKeyChange;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
     AnalysisNonChordTone *non_chord_tones; /* owned; in time order, then note order */
     size_t non_chord_tone_count;
-    bool key_found;
-    AnalysisKeyMethod key_method;        /* ANALYSIS_KEY_METHOD_NONE unless key_found */
-    AnalysisConfidence key_confidence;
+    AnalysisKeyRegion *key_regions; /* owned; empty when no key was found */
+    size_t key_region_count;
+    AnalysisKeyChange *key_changes; /* owned; key_region_count - 1 of them */
+    size_t key_change_count;
+    size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
+    long home_duration_numerator; /* total time in the home key across its regions, whole notes */
+    unsigned long home_duration_denominator;
 } AnalysisReport;
 
-/* Frees every entry's labels and note ids, and the entries array. */
+/* Frees every entry's labels and note ids, the entries array, and the key regions and changes. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

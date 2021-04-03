@@ -4,8 +4,7 @@
 #include <string.h>
 
 #include "pipeline/chord_pipeline.h"
-#include "pipeline/key_pipeline.h"
-#include "pipeline/pitch_class_util.h"
+#include "pipeline/key_region_pipeline.h"
 #include "pipeline/segmentation.h"
 
 bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
@@ -13,9 +12,13 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entry_count = 0;
     report->non_chord_tones = NULL;
     report->non_chord_tone_count = 0;
-    report->key_found = false;
-    report->key_method = ANALYSIS_KEY_METHOD_NONE;
-    report->key_confidence = (AnalysisConfidence){false, 0, 0};
+    report->key_regions = NULL;
+    report->key_region_count = 0;
+    report->key_changes = NULL;
+    report->key_change_count = 0;
+    report->home_region = 0;
+    report->home_duration_numerator = 0;
+    report->home_duration_denominator = 1;
 
     if (notes->count == 0) {
         return true;
@@ -30,35 +33,28 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         return true;
     }
 
-    /* Tonic guess: the bass of the closing segment, then of the opening one. A piece almost always
-       ends on its tonic; it can just as easily open on an anacrusis, a pickup, or a non-tonic
-       harmony. */
-    int priority_tonics[2];
-    size_t priority_tonic_count = 0;
-    priority_tonics[priority_tonic_count++] =
-        segment_bass_pitch_class(&segmentation.segments[segmentation.segment_count - 1]);
-    if (segmentation.segment_count > 1) {
-        priority_tonics[priority_tonic_count++] = segment_bass_pitch_class(&segmentation.segments[0]);
-    }
-
-    KeyEstimate key;
-    if (!estimate_global_key(notes->events, notes->pitch_values, notes->count, notes->key_signature,
-                             priority_tonics, priority_tonic_count, &key)) {
+    AnalysisKeyRegion *regions = NULL;
+    size_t region_count = 0;
+    AnalysisKeyChange *changes = NULL;
+    size_t change_count = 0;
+    if (!estimate_key_regions(notes, &segmentation, &regions, &region_count, &changes, &change_count)) {
         segmentation_destroy(&segmentation);
         return false;
     }
+    AnalysisReport keys = {NULL, 0, NULL, 0, regions, region_count, changes, change_count, 0, 0, 1};
 
     ChordEstimate *chords = NULL;
-    if (!identify_chords(&segmentation, &key, &chords)) {
-        key_estimate_destroy(&key);
+    if (!identify_pivot_chords(&segmentation, regions, changes, change_count) ||
+        !identify_chords(&segmentation, regions, region_count, &chords)) {
+        analysis_report_destroy(&keys);
         segmentation_destroy(&segmentation);
         return false;
     }
 
     AnalysisReportEntry *entries = calloc(segmentation.segment_count, sizeof(AnalysisReportEntry));
     if (!entries) {
+        analysis_report_destroy(&keys);
         chord_estimates_destroy(chords, segmentation.segment_count);
-        key_estimate_destroy(&key);
         segmentation_destroy(&segmentation);
         return false;
     }
@@ -72,7 +68,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         entry->end_numerator = segment->end_numerator;
         entry->end_denominator = segment->end_denominator;
 
-        entry->key_label = strdup(key.found ? key.label : "no match");
+        entry->key_label = strdup(chords[i].in_region ? regions[chords[i].region].label : "no match");
         entry->chord_label = strdup(chords[i].found ? chords[i].best.label : "no match");
         entry->chord_confidence = chords[i].best.confidence;
         entry->chord = chords[i].best;
@@ -87,10 +83,10 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         }
 
         if (!entry->key_label || !entry->chord_label || !entry->note_ids) {
-            AnalysisReport partial = {entries, i + 1, NULL, 0, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
+            AnalysisReport partial = {entries, i + 1, NULL, 0, NULL, 0, NULL, 0, 0, 0, 1};
             analysis_report_destroy(&partial);
+            analysis_report_destroy(&keys);
             chord_estimates_destroy(chords, segmentation.segment_count);
-            key_estimate_destroy(&key);
             segmentation_destroy(&segmentation);
             return false;
         }
@@ -103,10 +99,10 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     }
     AnalysisNonChordTone *tones = calloc(tone_count > 0 ? tone_count : 1, sizeof(AnalysisNonChordTone));
     if (!tones) {
-        AnalysisReport partial = {entries, segment_count, NULL, 0, false, ANALYSIS_KEY_METHOD_NONE, {false, 0, 0}};
+        AnalysisReport partial = {entries, segment_count, NULL, 0, NULL, 0, NULL, 0, 0, 0, 1};
         analysis_report_destroy(&partial);
+        analysis_report_destroy(&keys);
         chord_estimates_destroy(chords, segment_count);
-        key_estimate_destroy(&key);
         segmentation_destroy(&segmentation);
         return false;
     }
@@ -126,9 +122,13 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entry_count = segment_count;
     report->non_chord_tones = tones;
     report->non_chord_tone_count = tone_count;
-    report->key_found = key.found;
-    report->key_method = key.method;
-    report->key_confidence = key.confidence;
-    key_estimate_destroy(&key);
+    report->key_regions = regions;
+    report->key_region_count = region_count;
+    report->key_changes = changes;
+    report->key_change_count = change_count;
+    if (region_count > 0) {
+        report->home_region = home_key_region(regions, region_count, &report->home_duration_numerator,
+                                              &report->home_duration_denominator);
+    }
     return true;
 }
