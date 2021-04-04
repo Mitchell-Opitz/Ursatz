@@ -33,6 +33,7 @@ add_library(standard_tonality
     seventh_identification_rules.c
     seventh_in_key_rules.c
     roman_numeral_rules.c
+    roman_numeral_analysis_rules.c
 )
 target_include_directories(standard_tonality PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
