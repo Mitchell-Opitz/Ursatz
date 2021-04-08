@@ -347,6 +347,28 @@
         }
       ]
     },
+    "outer_status": {
+      "enum": ["present", "absent", "bridged", "guarded"]
+    },
+    "chord_outer_voice": {
+      "type": "object",
+      "required": ["status", "note_id", "pitch", "degree", "uncertainty"],
+      "properties": {
+        "status": { "$ref": "#/$defs/outer_status" },
+        "note_id": { "type": ["integer", "null"], "minimum": 0 },
+        "pitch": { "type": ["string", "null"] },
+        "degree": { "type": ["string", "null"] },
+        "uncertainty": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "chord_outer_voices": {
+      "type": "object",
+      "required": ["soprano", "bass"],
+      "properties": {
+        "soprano": { "$ref": "#/$defs/chord_outer_voice" },
+        "bass": { "$ref": "#/$defs/chord_outer_voice" }
+      }
+    },
     "chord_claim": {
       "allOf": [
         { "$ref": "#/$defs/claim" },
@@ -355,6 +377,7 @@
           "required": ["key_label", "root", "quality", "bass", "inversion", "duration", "score", "runner_up"],
           "properties": {
             "key_label": { "type": "string" },
+            "outer": { "$ref": "#/$defs/chord_outer_voices" },
             "root": { "type": ["string", "null"] },
             "quality": { "type": ["string", "null"] },
             "bass": { "type": ["string", "null"] },

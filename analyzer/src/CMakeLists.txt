@@ -4,6 +4,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/pitch_class_util.c
     pipeline/key_region_pipeline.c
     pipeline/chord_pipeline.c
+    pipeline/outer_voice_pipeline.c
     pipeline/analysis_report.c
     pipeline/analysis_pipeline.c
     pipeline/markdown_report.c

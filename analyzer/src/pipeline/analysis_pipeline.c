@@ -5,6 +5,7 @@
 
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/key_region_pipeline.h"
+#include "pipeline/outer_voice_pipeline.h"
 #include "pipeline/segmentation.h"
 
 bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
@@ -90,6 +91,15 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
             segmentation_destroy(&segmentation);
             return false;
         }
+    }
+
+    if (!extract_outer_voices(notes, &segmentation, chords, regions, entries)) {
+        AnalysisReport partial = {entries, segmentation.segment_count, NULL, 0, NULL, 0, NULL, 0, 0, 0, 1};
+        analysis_report_destroy(&partial);
+        analysis_report_destroy(&keys);
+        chord_estimates_destroy(chords, segmentation.segment_count);
+        segmentation_destroy(&segmentation);
+        return false;
     }
 
     size_t segment_count = segmentation.segment_count;

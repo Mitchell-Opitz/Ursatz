@@ -905,6 +905,60 @@ static bool add_chord_fields(cJSON *claim, const ImportedNotes *notes, const Ana
            add(claim, "runner_up", runner_up_json(&entry->runner_up));
 }
 
+static const char *outer_status_name(AnalysisOuterStatus status) {
+    switch (status) {
+        case ANALYSIS_OUTER_PRESENT:
+            return "present";
+        case ANALYSIS_OUTER_BRIDGED:
+            return "bridged";
+        case ANALYSIS_OUTER_GUARDED:
+            return "guarded";
+        default:
+            return "absent";
+    }
+}
+
+/* The uncertainty of a degree: the library's uncertainty for the key region the segment lies in, since the
+   degree is only as sure as the key it is read against (in [0, 1], higher is LESS certain). Null when the
+   voice is not present, or the segment lies in no key region. */
+static cJSON *outer_uncertainty_json(const AnalysisReport *report, const AnalysisReportEntry *entry,
+                                     const AnalysisOuterNote *note) {
+    if (note->status != ANALYSIS_OUTER_PRESENT || !entry->in_region || entry->region >= report->key_region_count) {
+        return cJSON_CreateNull();
+    }
+    return cJSON_CreateNumber(report->key_regions[entry->region].uncertainty);
+}
+
+/* One outer voice of a chord: its status, the note and pitch name when a note sounds as the line, its scale
+   degree in the local key (null in no key region), and the degree's uncertainty. */
+static cJSON *outer_voice_summary_json(const AnalysisReport *report, const AnalysisReportEntry *entry,
+                                       const AnalysisOuterNote *note) {
+    bool present = note->status == ANALYSIS_OUTER_PRESENT;
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "status", cJSON_CreateString(outer_status_name(note->status))) &&
+          add(object, "note_id", present ? cJSON_CreateNumber((double)note->note_id) : cJSON_CreateNull()) &&
+          add(object, "pitch", optional_string_json(note->pitch_name)) &&
+          add(object, "degree", optional_string_json(note->degree)) &&
+          add(object, "uncertainty", outer_uncertainty_json(report, entry, note)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The chord's "outer" field: the soprano and the bass sounding in its segment. (The chord's own "bass" field is
+   the pitch class the chord is read over.) */
+static cJSON *chord_outer_json(const AnalysisReport *report, const AnalysisReportEntry *entry) {
+    cJSON *outer = cJSON_CreateObject();
+    if (outer && !(add(outer, "soprano", outer_voice_summary_json(report, entry, &entry->soprano)) &&
+                   add(outer, "bass", outer_voice_summary_json(report, entry, &entry->bass)))) {
+        cJSON_Delete(outer);
+        return NULL;
+    }
+    return outer;
+}
+
 /* One chord claim per report entry, in time order. */
 static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
@@ -919,7 +973,8 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
         cJSON *claim = claim_json_at(framework, notes, entry->note_ids, entry->note_id_count, start, end,
                                      entry->chord_label, entry->chord_confidence);
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
-              add_chord_fields(claim, notes, entry, start, end))) {
+              add_chord_fields(claim, notes, entry, start, end) &&
+              add(claim, "outer", chord_outer_json(report, entry)))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;

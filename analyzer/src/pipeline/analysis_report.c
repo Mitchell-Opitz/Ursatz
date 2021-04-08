@@ -2,6 +2,15 @@
 
 #include <stdlib.h>
 
+void analysis_outer_note_destroy(AnalysisOuterNote *note) {
+    if (!note) {
+        return;
+    }
+    free(note->pitch_name);
+    free(note->degree);
+    *note = (AnalysisOuterNote){ANALYSIS_OUTER_ABSENT, 0, 0, false, NULL, NULL};
+}
+
 void analysis_chord_reading_destroy(AnalysisChordReading *reading) {
     if (!reading) {
         return;
@@ -23,6 +32,8 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->entries[i].note_ids);
         analysis_chord_reading_destroy(&report->entries[i].chord);
         analysis_chord_reading_destroy(&report->entries[i].runner_up);
+        analysis_outer_note_destroy(&report->entries[i].soprano);
+        analysis_outer_note_destroy(&report->entries[i].bass);
     }
     free(report->entries);
     for (size_t i = 0; i < report->non_chord_tone_count; i++) {
