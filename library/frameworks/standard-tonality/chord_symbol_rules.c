@@ -376,10 +376,8 @@ bool standard_tonality_parse_seventh_chord_symbol(const char *symbol, PitchLette
     return true;
 }
 
-/* Builds the Chord for a finished symbol label; `vocabulary` names the
-   rule vocabulary the interpretation claims. */
-static ChordResult build_chord_from_label(const char *label, const char *vocabulary, EntityID *target_id,
-                                          Chord **out) {
+ChordResult standard_tonality_build_chord_from_label(const char *label, const char *vocabulary, EntityID *target_id,
+                                                     Chord **out) {
     const Framework *framework = standard_tonality_framework();
     if (framework == NULL) {
         return CHORD_ERR_ALLOC;
@@ -460,7 +458,7 @@ ChordResult standard_tonality_build_triad_chord(PitchLetter root_letter, int roo
                                         label, sizeof(label))) {
         return CHORD_ERR_NULL_LABEL;
     }
-    return build_chord_from_label(label, "triad-chord-symbol-vocabulary", target_id, out);
+    return standard_tonality_build_chord_from_label(label, "triad-chord-symbol-vocabulary", target_id, out);
 }
 
 ChordResult standard_tonality_build_seventh_chord(PitchLetter root_letter, int root_accidental,
@@ -472,5 +470,5 @@ ChordResult standard_tonality_build_seventh_chord(PitchLetter root_letter, int r
                                                      bass_accidental, label, sizeof(label))) {
         return CHORD_ERR_NULL_LABEL;
     }
-    return build_chord_from_label(label, "seventh-chord-symbol-vocabulary", target_id, out);
+    return standard_tonality_build_chord_from_label(label, "seventh-chord-symbol-vocabulary", target_id, out);
 }
