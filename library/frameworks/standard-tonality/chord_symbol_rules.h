@@ -153,4 +153,16 @@ ChordResult standard_tonality_build_seventh_chord(PitchLetter root_letter, int r
                                                   PitchLetter bass_letter, int bass_accidental, EntityID *target_id,
                                                   Chord **out);
 
+/*
+ * Builds a real, populated Chord labeled with `label`, claiming that the
+ * thing named by target_id is that chord under standard-tonality-v1;
+ * `vocabulary` names the label vocabulary the interpretation records
+ * ("triad-chord-symbol-vocabulary", say). Takes ownership of target_id on
+ * success (destroyed with the Chord); on failure the caller still owns
+ * it. This is the shared builder behind the triad and seventh chord
+ * builders and the Roman numeral Chord builder.
+ */
+ChordResult standard_tonality_build_chord_from_label(const char *label, const char *vocabulary, EntityID *target_id,
+                                                     Chord **out);
+
 #endif
