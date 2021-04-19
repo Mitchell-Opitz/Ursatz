@@ -1,6 +1,7 @@
 add_library(standard_texture
     framework.c
     rule_pair.c
+    texture_rules.c
 )
 target_include_directories(standard_texture PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
