@@ -90,3 +90,7 @@ add_test(NAME test_key_regions_clementi_36 COMMAND test_key_regions clementi)
 add_test(NAME test_key_regions_mozart_545 COMMAND test_key_regions mozart)
 set_tests_properties(test_key_regions_clementi_36 test_key_regions_mozart_545 PROPERTIES WILL_FAIL TRUE)
 add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
+
+add_executable(test_outer_voices test_outer_voices.c)
+target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer cjson)
+add_test(NAME test_outer_voices COMMAND test_outer_voices)
