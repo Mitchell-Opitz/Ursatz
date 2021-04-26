@@ -5,3 +5,7 @@ add_test(NAME standard_texture_framework COMMAND test_standard_texture_framework
 add_executable(test_architecture_standard_texture test_architecture_standard_texture.c)
 add_test(NAME architecture_standard_texture COMMAND test_architecture_standard_texture
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_standard_texture_texture_rules test_texture_rules.c)
+target_link_libraries(test_standard_texture_texture_rules PRIVATE standard_texture)
+add_test(NAME standard_texture_texture_rules COMMAND test_standard_texture_texture_rules)
