@@ -4,6 +4,7 @@ add_library(standard_voicing
     voicing_pitch.c
     voicing_rules.c
     stem_rules.c
+    construction_rules.c
 )
 target_include_directories(standard_voicing PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
