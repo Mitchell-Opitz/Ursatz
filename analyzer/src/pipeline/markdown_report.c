@@ -551,13 +551,13 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
 }
 
 /* One voice's cells in the outer-voices table: its pitch and its degree, or what the library made of its
-   absence. Appends "pitch | degree | ". */
+   absence. Appends " pitch | degree |". */
 static bool append_outer_voice_cells(StringBuilder *sb, const cJSON *voice) {
     const char *status = string_member(voice, "status");
     const char *pitch = string_member(voice, "pitch");
     const char *degree = string_member(voice, "degree");
     if (pitch) {
-        return sb_appendf(sb, "%s | %s | ", pitch, degree ? degree : "-");
+        return sb_appendf(sb, " %s | %s |", pitch, degree ? degree : "-");
     }
     const char *text = "rest";
     if (status && strcmp(status, "bridged") == 0) {
@@ -565,7 +565,7 @@ static bool append_outer_voice_cells(StringBuilder *sb, const cJSON *voice) {
     } else if (status && strcmp(status, "guarded") == 0) {
         text = "rest (register guard)";
     }
-    return sb_appendf(sb, "%s | - | ", text);
+    return sb_appendf(sb, " %s | - |", text);
 }
 
 /* The outer voices, one row per chord: the table is separate from the chord table to keep that one readable. */
@@ -590,7 +590,7 @@ static bool render_outer_voices(StringBuilder *sb, const cJSON *document, const 
         const cJSON *outer = cJSON_GetObjectItemCaseSensitive(chord, "outer");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
-             sb_appendf(sb, " | %s | ", string_member(chord, "key_label")) &&
+             sb_appendf(sb, " | %s |", string_member(chord, "key_label")) &&
              append_outer_voice_cells(sb, cJSON_GetObjectItemCaseSensitive(outer, "soprano")) &&
              append_outer_voice_cells(sb, cJSON_GetObjectItemCaseSensitive(outer, "bass")) && sb_append(sb, "\n");
     }
