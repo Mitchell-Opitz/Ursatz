@@ -1263,6 +1263,1107 @@ Positions are measure and beat. Duration is in beats. Confidence is the library'
 | m. 337, beat 2 to m. 337, beat 2.5 | I | C | major | G | second | 0.5 | 0.19 | - |
 | m. 337, beat 2.5 to m. 338, beat 1 | I | C | major | E | first | 0.5 | 0.33 | - |
 | m. 338, beat 1 to m. 338, beat 2 | I | C | major | C | root position | 1 | 0.93 | - |
+## Outer voices
+
+The highest (soprano) and lowest (bass) sounding note of each chord's span, with its scale degree in that chord's local key. A flat or sharp sign marks a chromatic alteration. A degree is "-" where the span lies in no key region. A rest means the library found no note for that line in the span, a bridged one a short gap inside the line, and a register guard a note the library dropped rather than adopt an accompaniment note. Degrees carry the key region's uncertainty in the analysis document.
+
+| Position | Key | Soprano | Degree | Bass | Degree |
+| --- | --- | --- | --- | --- | --- |
+| m. 1, beat 1 to m. 1, beat 1.5 | C major | C5 | 1 | C4 | 1 |
+| m. 1, beat 1.5 to m. 1, beat 2 | C major | C5 | 1 | G4 | 5 |
+| m. 1, beat 2 to m. 1, beat 2.5 | C major | C5 | 1 | E4 | 3 |
+| m. 1, beat 2.5 to m. 1, beat 3 | C major | C5 | 1 | G4 | 5 |
+| m. 1, beat 3 to m. 1, beat 3.5 | C major | E5 | 3 | C4 | 1 |
+| m. 1, beat 3.5 to m. 1, beat 4 | C major | E5 | 3 | G4 | 5 |
+| m. 1, beat 4 to m. 1, beat 4.5 | C major | G5 | 5 | E4 | 3 |
+| m. 1, beat 4.5 to m. 2, beat 1 | C major | G5 | 5 | G4 | 5 |
+| m. 2, beat 1 to m. 2, beat 1.5 | C major | B4 | 7 | D4 | 2 |
+| m. 2, beat 1.5 to m. 2, beat 2 | C major | B4 | 7 | G4 | 5 |
+| m. 2, beat 2 to m. 2, beat 2.5 | C major | B4 | 7 | F4 | 4 |
+| m. 2, beat 2.5 to m. 2, beat 3 | C major | D5 | 2 | G4 | 5 |
+| m. 2, beat 3 to m. 2, beat 3.5 | C major | C5 | 1 | C4 | 1 |
+| m. 2, beat 3.5 to m. 2, beat 4 | C major | C5 | 1 | G4 | 5 |
+| m. 2, beat 4 to m. 2, beat 4.5 | C major | C5 | 1 | E4 | 3 |
+| m. 2, beat 4.5 to m. 3, beat 1 | C major | C5 | 1 | G4 | 5 |
+| m. 3, beat 1 to m. 3, beat 1.5 | C major | A5 | 6 | C4 | 1 |
+| m. 3, beat 1.5 to m. 3, beat 2 | C major | A5 | 6 | A4 | 6 |
+| m. 3, beat 2 to m. 3, beat 2.5 | C major | A5 | 6 | F4 | 4 |
+| m. 3, beat 2.5 to m. 3, beat 3 | C major | A5 | 6 | A4 | 6 |
+| m. 3, beat 3 to m. 3, beat 3.5 | C major | G5 | 5 | C4 | 1 |
+| m. 3, beat 3.5 to m. 3, beat 4 | C major | G5 | 5 | G4 | 5 |
+| m. 3, beat 4 to m. 3, beat 4.5 | C major | C6 | 1 | E4 | 3 |
+| m. 3, beat 4.5 to m. 4, beat 1 | C major | C6 | 1 | G4 | 5 |
+| m. 4, beat 1 to m. 4, beat 1.5 | C major | G5 | 5 | B3 | 7 |
+| m. 4, beat 1.5 to m. 4, beat 2 | C major | G5 | 5 | G4 | 5 |
+| m. 4, beat 2 to m. 4, beat 2.5 | C major | G5 | 5 | D4 | 2 |
+| m. 4, beat 2.5 to m. 4, beat 3 | C major | F5 | 4 | G4 | 5 |
+| m. 4, beat 3 to m. 4, beat 3.5 | C major | E5 | 3 | C4 | 1 |
+| m. 4, beat 3.5 to m. 4, beat 4 | C major | E5 | 3 | G4 | 5 |
+| m. 4, beat 4 to m. 4, beat 4.5 | C major | E4 | 3 | E4 | 3 |
+| m. 4, beat 4.5 to m. 5, beat 1 | C major | G4 | 5 | G4 | 5 |
+| m. 5, beat 1 to m. 5, beat 2 | C major | C5 | 1 | F4 | 4 |
+| m. 5, beat 2 to m. 5, beat 3 | C major | G5 | 5 | D5 | 2 |
+| m. 5, beat 3 to m. 5, beat 4 | C major | A5 | 6 | E5 | 3 |
+| m. 5, beat 4 to m. 6, beat 1 | C major | D5 | 2 | F3 | 4 |
+| m. 6, beat 1 to m. 6, beat 2 | C major | B4 | 7 | E3 | 3 |
+| m. 6, beat 2 to m. 6, beat 3 | C major | F5 | 4 | rest (register guard) | - |
+| m. 6, beat 3 to m. 6, beat 4 | C major | G5 | 5 | D5 | 2 |
+| m. 6, beat 4 to m. 7, beat 1 | C major | C5 | 1 | E3 | 3 |
+| m. 7, beat 1 to m. 7, beat 2 | C major | A4 | 6 | D3 | 2 |
+| m. 7, beat 2 to m. 7, beat 3 | C major | E5 | 3 | rest (register guard) | - |
+| m. 7, beat 3 to m. 7, beat 4 | C major | F5 | 4 | C5 | 1 |
+| m. 7, beat 4 to m. 8, beat 1 | C major | B4 | 7 | D3 | 2 |
+| m. 8, beat 1 to m. 8, beat 2 | F major | G4 | 2 | C3 | 5 |
+| m. 8, beat 2 to m. 8, beat 3 | F major | D5 | 6 | rest (register guard) | - |
+| m. 8, beat 3 to m. 8, beat 4 | F major | E5 | 7 | B4 | #4 |
+| m. 8, beat 4 to m. 9, beat 1 | F major | A4 | 3 | C3 | 5 |
+| m. 9, beat 1 to m. 9, beat 2 | F major | F4 | 1 | F3 | 1 |
+| m. 9, beat 2 to m. 9, beat 3 | F major | Db5 | b6 | F3 | 1 |
+| m. 9, beat 3 to m. 9, beat 4 | F major | D5 | 6 | F3 | 1 |
+| m. 9, beat 4 to m. 10, beat 1 | F major | G5 | 2 | F3 | 1 |
+| m. 10, beat 1 to m. 10, beat 2 | F major | C6 | 5 | F3 | 1 |
+| m. 10, beat 2 to m. 10, beat 2.5 | F major | A5 | 3 | F3 | 1 |
+| m. 10, beat 2.5 to m. 10, beat 3 | F major | F5 | 1 | G3 | 2 |
+| m. 10, beat 3 to m. 10, beat 4 | F major | A5 | 3 | A3 | 3 |
+| m. 10, beat 4 to m. 11, beat 1 | F major | F5 | 1 | Gb3 | b2 |
+| m. 11, beat 1 to m. 11, beat 2 | F major | G5 | 2 | G2 | 2 |
+| m. 11, beat 2 to m. 11, beat 3 | F major | E5 | 7 | G2 | 2 |
+| m. 11, beat 3 to m. 11, beat 4 | F major | G5 | 2 | G2 | 2 |
+| m. 11, beat 4 to m. 12, beat 1 | F major | E5 | 7 | G2 | 2 |
+| m. 12, beat 1 to m. 12, beat 2 | G major | D5 | 5 | G2 | 1 |
+| m. 12, beat 2 to m. 12, beat 3 | G major | G5 | 1 | G3 | 1 |
+| m. 12, beat 3 to m. 12, beat 4 | G major | G4 | 1 | G2 | 1 |
+| m. 13, beat 1 to m. 13, beat 3 | G major | D4 | 5 | C#4 | #4 |
+| m. 13, beat 3 to m. 14, beat 1 | G major | D4 | 5 | C4 | 4 |
+| m. 14, beat 1 to m. 14, beat 2 | G major | D6 | 5 | B3 | 3 |
+| m. 14, beat 2 to m. 14, beat 3 | G major | G5 | 1 | B3 | 3 |
+| m. 14, beat 3 to m. 15, beat 1 | G major | B5 | 3 | B3 | 3 |
+| m. 15, beat 1 to m. 15, beat 2 | G major | A5 | 2 | B3 | 3 |
+| m. 15, beat 2 to m. 15, beat 3 | G major | F#5 | 7 | A3 | 2 |
+| m. 15, beat 3 to m. 15, beat 4 | G major | rest (register guard) | - | B3 | 3 |
+| m. 15, beat 4 to m. 16, beat 1 | G major | D4 | 5 | A3 | 2 |
+| m. 16, beat 1 to m. 16, beat 2 | G major | D6 | 5 | B3 | 3 |
+| m. 16, beat 2 to m. 16, beat 3 | G major | G5 | 1 | B3 | 3 |
+| m. 16, beat 3 to m. 17, beat 1 | G major | B5 | 3 | B3 | 3 |
+| m. 17, beat 1 to m. 17, beat 2 | G major | A5 | 2 | B3 | 3 |
+| m. 17, beat 2 to m. 17, beat 3 | G major | F#5 | 7 | A3 | 2 |
+| m. 17, beat 3 to m. 17, beat 4 | G major | rest (register guard) | - | B3 | 3 |
+| m. 17, beat 4 to m. 18, beat 1 | G major | D4 | 5 | A3 | 2 |
+| m. 18, beat 1 to m. 18, beat 3 | G major | D6 | 5 | B3 | 3 |
+| m. 18, beat 3 to m. 19, beat 1 | G major | G5 | 1 | C4 | 4 |
+| m. 19, beat 1 to m. 19, beat 3 | G major | C6 | 4 | A3 | 2 |
+| m. 19, beat 3 to m. 20, beat 1 | G major | F#5 | 7 | B3 | 3 |
+| m. 20, beat 1 to m. 20, beat 3 | G major | B5 | 3 | G3 | 1 |
+| m. 20, beat 3 to m. 21, beat 1 | G major | E5 | 6 | A3 | 2 |
+| m. 21, beat 1 to m. 21, beat 3 | A minor | A5 | 1 | F#3 | #6 |
+| m. 21, beat 3 to m. 22, beat 1 | A minor | G5 | 7 | G3 | 7 |
+| m. 22, beat 1 to m. 22, beat 3 | A minor | A4 | 1 | C4 | 3 |
+| m. 22, beat 3 to m. 22, beat 4 | A minor | C5 | 3 | C4 | 3 |
+| m. 22, beat 4 to m. 22, beat 4.5 | A minor | E5 | 5 | C4 | 3 |
+| m. 22, beat 4.5 to m. 23, beat 1 | A minor | E5 | 5 | C4 | 3 |
+| m. 23, beat 1 to m. 23, beat 1.5 | A minor | A5 | 1 | C4 | 3 |
+| m. 23, beat 1.5 to m. 23, beat 2.5 | A minor | A5 | 1 | C4 | 3 |
+| m. 23, beat 2.5 to m. 23, beat 3 | A minor | B5 | 2 | C4 | 3 |
+| m. 23, beat 3 to m. 24, beat 1 | A minor | C6 | 3 | C4 | 3 |
+| m. 24, beat 1 to m. 24, beat 4 | A minor | D6 | 4 | D4 | 4 |
+| m. 24, beat 4 to m. 25, beat 1 | A minor | C6 | 3 | D4 | 4 |
+| m. 25, beat 1 to m. 25, beat 1.5 | G major | B5 | 3 | D4 | 5 |
+| m. 25, beat 1.5 to m. 25, beat 2 | G major | B5 | 3 | F#4 | 7 |
+| m. 25, beat 2 to m. 25, beat 2.5 | G major | B5 | 3 | D4 | 5 |
+| m. 25, beat 2.5 to m. 25, beat 3 | G major | B5 | 3 | F#4 | 7 |
+| m. 25, beat 3 to m. 25, beat 3.5 | G major | B5 | 3 | D4 | 5 |
+| m. 25, beat 3.5 to m. 25, beat 4 | G major | B5 | 3 | F#4 | 7 |
+| m. 25, beat 4 to m. 25, beat 4.5 | G major | B5 | 3 | D4 | 5 |
+| m. 25, beat 4.5 to m. 26, beat 1 | G major | B5 | 3 | F#4 | 7 |
+| m. 26, beat 1 to m. 26, beat 2 | G major | G5 | 1 | G4 | 1 |
+| m. 26, beat 2 to m. 26, beat 3 | G major | B5 | 3 | D5 | 5 |
+| m. 26, beat 3 to m. 26, beat 4 | G major | D6 | 5 | G5 | 1 |
+| m. 26, beat 4 to m. 27, beat 1 | G major | C6 | 4 | D4 | 5 |
+| m. 27, beat 1 to m. 27, beat 2 | G major | G5 | 1 | G4 | 1 |
+| m. 27, beat 2 to m. 27, beat 3 | G major | B4 | 3 | D4 | 5 |
+| m. 27, beat 3 to m. 27, beat 4 | G major | D5 | 5 | G4 | 1 |
+| m. 27, beat 4 to m. 28, beat 1 | G major | C5 | 4 | D3 | 5 |
+| m. 28, beat 1 to m. 28, beat 2 | G major | G4 | 1 | G3 | 1 |
+| m. 28, beat 2 to m. 28, beat 3 | G major | B5 | 3 | G2 | 1 |
+| m. 28, beat 3 to m. 28, beat 4 | G major | G5 | 1 | G2 | 1 |
+| m. 29, beat 1 to m. 29, beat 1.5 | G major | C5 | 4 | C4 | 4 |
+| m. 29, beat 1.5 to m. 29, beat 2 | G major | C5 | 4 | G4 | 1 |
+| m. 29, beat 2 to m. 29, beat 2.5 | G major | C5 | 4 | E4 | 6 |
+| m. 29, beat 2.5 to m. 29, beat 3 | G major | C5 | 4 | G4 | 1 |
+| m. 29, beat 3 to m. 29, beat 3.5 | G major | E5 | 6 | C4 | 4 |
+| m. 29, beat 3.5 to m. 29, beat 4 | G major | E5 | 6 | G4 | 1 |
+| m. 29, beat 4 to m. 29, beat 4.5 | G major | G5 | 1 | E4 | 6 |
+| m. 29, beat 4.5 to m. 30, beat 1 | G major | G5 | 1 | G4 | 1 |
+| m. 30, beat 1 to m. 30, beat 1.5 | C major | B4 | 7 | D4 | 2 |
+| m. 30, beat 1.5 to m. 30, beat 2 | C major | B4 | 7 | G4 | 5 |
+| m. 30, beat 2 to m. 30, beat 2.5 | C major | B4 | 7 | F4 | 4 |
+| m. 30, beat 2.5 to m. 30, beat 3 | C major | D5 | 2 | G4 | 5 |
+| m. 30, beat 3 to m. 30, beat 3.5 | C major | C5 | 1 | C4 | 1 |
+| m. 30, beat 3.5 to m. 30, beat 4 | C major | C5 | 1 | G4 | 5 |
+| m. 30, beat 4 to m. 30, beat 4.5 | C major | C5 | 1 | E4 | 3 |
+| m. 30, beat 4.5 to m. 31, beat 1 | C major | C5 | 1 | G4 | 5 |
+| m. 31, beat 1 to m. 31, beat 1.5 | C major | A5 | 6 | C4 | 1 |
+| m. 31, beat 1.5 to m. 31, beat 2 | C major | A5 | 6 | A4 | 6 |
+| m. 31, beat 2 to m. 31, beat 2.5 | C major | A5 | 6 | F4 | 4 |
+| m. 31, beat 2.5 to m. 31, beat 3 | C major | A5 | 6 | A4 | 6 |
+| m. 31, beat 3 to m. 31, beat 3.5 | C major | G5 | 5 | C4 | 1 |
+| m. 31, beat 3.5 to m. 31, beat 4 | C major | G5 | 5 | G4 | 5 |
+| m. 31, beat 4 to m. 31, beat 4.5 | C major | C6 | 1 | E4 | 3 |
+| m. 31, beat 4.5 to m. 32, beat 1 | C major | C6 | 1 | G4 | 5 |
+| m. 32, beat 1 to m. 32, beat 1.5 | C major | G5 | 5 | B3 | 7 |
+| m. 32, beat 1.5 to m. 32, beat 2 | C major | G5 | 5 | G4 | 5 |
+| m. 32, beat 2 to m. 32, beat 2.5 | C major | G5 | 5 | D4 | 2 |
+| m. 32, beat 2.5 to m. 32, beat 3 | C major | F5 | 4 | G4 | 5 |
+| m. 32, beat 3 to m. 32, beat 3.5 | C major | E5 | 3 | C4 | 1 |
+| m. 32, beat 3.5 to m. 32, beat 4 | C major | E5 | 3 | G4 | 5 |
+| m. 32, beat 4 to m. 32, beat 4.5 | C major | E4 | 3 | E4 | 3 |
+| m. 32, beat 4.5 to m. 33, beat 1 | C major | G4 | 5 | G4 | 5 |
+| m. 33, beat 1 to m. 33, beat 2 | C major | C5 | 1 | F4 | 4 |
+| m. 33, beat 2 to m. 33, beat 3 | C major | G5 | 5 | D5 | 2 |
+| m. 33, beat 3 to m. 33, beat 4 | C major | A5 | 6 | E5 | 3 |
+| m. 33, beat 4 to m. 34, beat 1 | C major | D5 | 2 | F3 | 4 |
+| m. 34, beat 1 to m. 34, beat 2 | C major | B4 | 7 | E3 | 3 |
+| m. 34, beat 2 to m. 34, beat 3 | C major | F5 | 4 | rest (register guard) | - |
+| m. 34, beat 3 to m. 34, beat 4 | C major | G5 | 5 | D5 | 2 |
+| m. 34, beat 4 to m. 35, beat 1 | C major | C5 | 1 | E3 | 3 |
+| m. 35, beat 1 to m. 35, beat 2 | C major | A4 | 6 | D3 | 2 |
+| m. 35, beat 2 to m. 35, beat 3 | C major | E5 | 3 | rest (register guard) | - |
+| m. 35, beat 3 to m. 35, beat 4 | C major | F5 | 4 | C5 | 1 |
+| m. 35, beat 4 to m. 36, beat 1 | C major | B4 | 7 | D3 | 2 |
+| m. 36, beat 1 to m. 36, beat 2 | F major | G4 | 2 | C3 | 5 |
+| m. 36, beat 2 to m. 36, beat 3 | F major | D5 | 6 | rest (register guard) | - |
+| m. 36, beat 3 to m. 36, beat 4 | F major | E5 | 7 | B4 | #4 |
+| m. 36, beat 4 to m. 37, beat 1 | F major | A4 | 3 | C3 | 5 |
+| m. 37, beat 1 to m. 37, beat 2 | F major | F4 | 1 | F3 | 1 |
+| m. 37, beat 2 to m. 37, beat 3 | F major | Db5 | b6 | F3 | 1 |
+| m. 37, beat 3 to m. 37, beat 4 | F major | D5 | 6 | F3 | 1 |
+| m. 37, beat 4 to m. 38, beat 1 | F major | G5 | 2 | F3 | 1 |
+| m. 38, beat 1 to m. 38, beat 2 | F major | C6 | 5 | F3 | 1 |
+| m. 38, beat 2 to m. 38, beat 2.5 | F major | A5 | 3 | F3 | 1 |
+| m. 38, beat 2.5 to m. 38, beat 3 | F major | F5 | 1 | G3 | 2 |
+| m. 38, beat 3 to m. 38, beat 4 | F major | A5 | 3 | A3 | 3 |
+| m. 38, beat 4 to m. 39, beat 1 | F major | F5 | 1 | Gb3 | b2 |
+| m. 39, beat 1 to m. 39, beat 2 | F major | G5 | 2 | G2 | 2 |
+| m. 39, beat 2 to m. 39, beat 3 | F major | E5 | 7 | G2 | 2 |
+| m. 39, beat 3 to m. 39, beat 4 | F major | G5 | 2 | G2 | 2 |
+| m. 39, beat 4 to m. 40, beat 1 | F major | E5 | 7 | G2 | 2 |
+| m. 40, beat 1 to m. 40, beat 2 | G major | D5 | 5 | G2 | 1 |
+| m. 40, beat 2 to m. 40, beat 3 | G major | G5 | 1 | G3 | 1 |
+| m. 40, beat 3 to m. 40, beat 4 | G major | G4 | 1 | G2 | 1 |
+| m. 41, beat 1 to m. 41, beat 3 | G major | D4 | 5 | C#4 | #4 |
+| m. 41, beat 3 to m. 42, beat 1 | G major | D4 | 5 | C4 | 4 |
+| m. 42, beat 1 to m. 42, beat 2 | G major | D6 | 5 | B3 | 3 |
+| m. 42, beat 2 to m. 42, beat 3 | G major | G5 | 1 | B3 | 3 |
+| m. 42, beat 3 to m. 43, beat 1 | G major | B5 | 3 | B3 | 3 |
+| m. 43, beat 1 to m. 43, beat 2 | G major | A5 | 2 | B3 | 3 |
+| m. 43, beat 2 to m. 43, beat 3 | G major | F#5 | 7 | A3 | 2 |
+| m. 43, beat 3 to m. 43, beat 4 | G major | rest (register guard) | - | B3 | 3 |
+| m. 43, beat 4 to m. 44, beat 1 | G major | D4 | 5 | A3 | 2 |
+| m. 44, beat 1 to m. 44, beat 2 | G major | D6 | 5 | B3 | 3 |
+| m. 44, beat 2 to m. 44, beat 3 | G major | G5 | 1 | B3 | 3 |
+| m. 44, beat 3 to m. 45, beat 1 | G major | B5 | 3 | B3 | 3 |
+| m. 45, beat 1 to m. 45, beat 2 | G major | A5 | 2 | B3 | 3 |
+| m. 45, beat 2 to m. 45, beat 3 | G major | F#5 | 7 | A3 | 2 |
+| m. 45, beat 3 to m. 45, beat 4 | G major | rest (register guard) | - | B3 | 3 |
+| m. 45, beat 4 to m. 46, beat 1 | G major | D4 | 5 | A3 | 2 |
+| m. 46, beat 1 to m. 46, beat 3 | G major | D6 | 5 | B3 | 3 |
+| m. 46, beat 3 to m. 47, beat 1 | G major | G5 | 1 | C4 | 4 |
+| m. 47, beat 1 to m. 47, beat 3 | G major | C6 | 4 | A3 | 2 |
+| m. 47, beat 3 to m. 48, beat 1 | G major | F#5 | 7 | B3 | 3 |
+| m. 48, beat 1 to m. 48, beat 3 | G major | B5 | 3 | G3 | 1 |
+| m. 48, beat 3 to m. 49, beat 1 | G major | E5 | 6 | A3 | 2 |
+| m. 49, beat 1 to m. 49, beat 3 | A minor | A5 | 1 | F#3 | #6 |
+| m. 49, beat 3 to m. 50, beat 1 | A minor | G5 | 7 | G3 | 7 |
+| m. 50, beat 1 to m. 50, beat 3 | A minor | A4 | 1 | C4 | 3 |
+| m. 50, beat 3 to m. 50, beat 4 | A minor | C5 | 3 | C4 | 3 |
+| m. 50, beat 4 to m. 50, beat 4.5 | A minor | E5 | 5 | C4 | 3 |
+| m. 50, beat 4.5 to m. 51, beat 1 | A minor | E5 | 5 | C4 | 3 |
+| m. 51, beat 1 to m. 51, beat 1.5 | A minor | A5 | 1 | C4 | 3 |
+| m. 51, beat 1.5 to m. 51, beat 2.5 | A minor | A5 | 1 | C4 | 3 |
+| m. 51, beat 2.5 to m. 51, beat 3 | A minor | B5 | 2 | C4 | 3 |
+| m. 51, beat 3 to m. 52, beat 1 | A minor | C6 | 3 | C4 | 3 |
+| m. 52, beat 1 to m. 52, beat 4 | A minor | D6 | 4 | D4 | 4 |
+| m. 52, beat 4 to m. 53, beat 1 | A minor | C6 | 3 | D4 | 4 |
+| m. 53, beat 1 to m. 53, beat 1.5 | G major | B5 | 3 | D4 | 5 |
+| m. 53, beat 1.5 to m. 53, beat 2 | G major | B5 | 3 | F#4 | 7 |
+| m. 53, beat 2 to m. 53, beat 2.5 | G major | B5 | 3 | D4 | 5 |
+| m. 53, beat 2.5 to m. 53, beat 3 | G major | B5 | 3 | F#4 | 7 |
+| m. 53, beat 3 to m. 53, beat 3.5 | G major | B5 | 3 | D4 | 5 |
+| m. 53, beat 3.5 to m. 53, beat 4 | G major | B5 | 3 | F#4 | 7 |
+| m. 53, beat 4 to m. 53, beat 4.5 | G major | B5 | 3 | D4 | 5 |
+| m. 53, beat 4.5 to m. 54, beat 1 | G major | B5 | 3 | F#4 | 7 |
+| m. 54, beat 1 to m. 54, beat 2 | G major | G5 | 1 | G4 | 1 |
+| m. 54, beat 2 to m. 54, beat 3 | G major | B5 | 3 | D5 | 5 |
+| m. 54, beat 3 to m. 54, beat 4 | G major | D6 | 5 | G5 | 1 |
+| m. 54, beat 4 to m. 55, beat 1 | G major | C6 | 4 | D4 | 5 |
+| m. 55, beat 1 to m. 55, beat 2 | G major | G5 | 1 | G4 | 1 |
+| m. 55, beat 2 to m. 55, beat 3 | G major | B4 | 3 | D4 | 5 |
+| m. 55, beat 3 to m. 55, beat 4 | G major | D5 | 5 | G4 | 1 |
+| m. 55, beat 4 to m. 56, beat 1 | G major | C5 | 4 | D3 | 5 |
+| m. 56, beat 1 to m. 56, beat 2 | G major | G4 | 1 | G3 | 1 |
+| m. 56, beat 2 to m. 56, beat 3 | G major | B5 | 3 | G2 | 1 |
+| m. 56, beat 3 to m. 56, beat 4 | G major | G5 | 1 | G2 | 1 |
+| m. 57, beat 1 to m. 57, beat 2 | G major | G4 | 1 | G2 | 1 |
+| m. 57, beat 2 to m. 57, beat 3 | G major | A#5 | b3 | rest (register guard) | - |
+| m. 57, beat 3 to m. 57, beat 4 | G major | D6 | 5 | G5 | 1 |
+| m. 57, beat 4 to m. 58, beat 1 | G major | C6 | 4 | D4 | 5 |
+| m. 58, beat 1 to m. 58, beat 2 | G major | G5 | 1 | G4 | 1 |
+| m. 58, beat 2 to m. 58, beat 3 | G major | A#4 | b3 | D4 | 5 |
+| m. 58, beat 3 to m. 58, beat 4 | G major | D5 | 5 | G4 | 1 |
+| m. 58, beat 4 to m. 59, beat 1 | G major | C5 | 4 | D3 | 5 |
+| m. 59, beat 1 to m. 59, beat 2 | G major | G4 | 1 | G2 | 1 |
+| m. 59, beat 2 to m. 59, beat 3 | G major | rest (register guard) | - | C3 | 4 |
+| m. 59, beat 3 to m. 59, beat 4 | G major | A#5 | b3 | G3 | 1 |
+| m. 59, beat 4 to m. 60, beat 1 | G major | G5 | 1 | rest (register guard) | - |
+| m. 60, beat 1 to m. 60, beat 2 | G major | C#5 | #4 | A2 | 2 |
+| m. 60, beat 2 to m. 60, beat 3 | G major | rest (register guard) | - | D3 | 5 |
+| m. 60, beat 3 to m. 60, beat 4 | G major | E6 | 6 | A3 | 2 |
+| m. 60, beat 4 to m. 61, beat 1 | G major | C#6 | #4 | rest (register guard) | - |
+| m. 61, beat 1 to m. 61, beat 2 | D minor | F5 | 3 | D2 | 1 |
+| m. 61, beat 2 to m. 61, beat 3 | D minor | F5 | 3 | rest (register guard) | - |
+| m. 61, beat 3 to m. 61, beat 4 | D minor | A5 | 5 | D5 | 1 |
+| m. 61, beat 4 to m. 62, beat 1 | D minor | G5 | 4 | A3 | 5 |
+| m. 62, beat 1 to m. 62, beat 2 | D minor | D5 | 1 | D4 | 1 |
+| m. 62, beat 2 to m. 62, beat 3 | D minor | F4 | 3 | A3 | 5 |
+| m. 62, beat 3 to m. 62, beat 4 | D minor | A4 | 5 | D4 | 1 |
+| m. 62, beat 4 to m. 63, beat 1 | D minor | G4 | 4 | A2 | 5 |
+| m. 63, beat 1 to m. 63, beat 2 | D minor | F4 | 3 | D3 | 1 |
+| m. 63, beat 2 to m. 63, beat 3 | D minor | C#5 | #7 | rest (register guard) | - |
+| m. 63, beat 3 to m. 63, beat 4 | D minor | D5 | 1 | D4 | 1 |
+| m. 63, beat 4 to m. 64, beat 1 | D minor | D4 | 1 | A3 | 5 |
+| m. 64, beat 1 to m. 64, beat 2 | D minor | D5 | 1 | G#3 | #4 |
+| m. 64, beat 2 to m. 64, beat 3 | D minor | A5 | 5 | rest (register guard) | - |
+| m. 64, beat 3 to m. 64, beat 4 | D minor | B5 | #6 | G#3 | #4 |
+| m. 64, beat 4 to m. 65, beat 1 | D minor | rest (register guard) | - | D3 | 1 |
+| m. 65, beat 1 to m. 65, beat 2 | D minor | E6 | 2 | C3 | 7 |
+| m. 65, beat 2 to m. 65, beat 3 | D minor | C6 | 7 | rest (register guard) | - |
+| m. 65, beat 3 to m. 65, beat 4 | D minor | F5 | 3 | D4 | 1 |
+| m. 65, beat 4 to m. 66, beat 1 | D minor | F4 | 3 | C4 | 7 |
+| m. 66, beat 1 to m. 66, beat 2 | A minor | D6 | 4 | B3 | 2 |
+| m. 66, beat 2 to m. 66, beat 3 | A minor | B5 | 2 | rest (register guard) | - |
+| m. 66, beat 3 to m. 66, beat 4 | A minor | E5 | 5 | C4 | 3 |
+| m. 66, beat 4 to m. 67, beat 1 | A minor | E4 | 5 | B3 | 2 |
+| m. 67, beat 1 to m. 67, beat 2 | A minor | C6 | 3 | A3 | 1 |
+| m. 67, beat 2 to m. 67, beat 3 | A minor | A5 | 1 | rest (register guard) | - |
+| m. 67, beat 3 to m. 67, beat 4 | A minor | D5 | 4 | B3 | 2 |
+| m. 67, beat 4 to m. 68, beat 1 | A minor | D4 | 4 | A3 | 1 |
+| m. 68, beat 1 to m. 68, beat 2 | A minor | B5 | 2 | G#3 | #7 |
+| m. 68, beat 2 to m. 68, beat 3 | A minor | G#5 | #7 | rest (register guard) | - |
+| m. 68, beat 3 to m. 68, beat 4 | A minor | C5 | 3 | A3 | 1 |
+| m. 68, beat 4 to m. 69, beat 1 | A minor | rest (register guard) | - | E3 | 5 |
+| m. 69, beat 1 to m. 69, beat 2 | F major | D5 | 6 | D3 | 6 |
+| m. 69, beat 2 to m. 69, beat 3 | F major | Bb4 | 4 | D3 | 6 |
+| m. 69, beat 3 to m. 69, beat 4 | F major | A4 | 3 | C3 | 5 |
+| m. 69, beat 4 to m. 70, beat 1 | F major | E5 | 7 | C3 | 5 |
+| m. 70, beat 1 to m. 70, beat 1.5 | F major | F5 | 1 | rest (register guard) | - |
+| m. 70, beat 1.5 to m. 70, beat 2 | F major | F5 | 1 | rest (register guard) | - |
+| m. 70, beat 2 to m. 70, beat 2.5 | F major | F5 | 1 | A4 | 3 |
+| m. 70, beat 2.5 to m. 70, beat 3 | F major | F5 | 1 | C5 | 5 |
+| m. 70, beat 3 to m. 70, beat 3.5 | F major | A5 | 3 | F4 | 1 |
+| m. 70, beat 3.5 to m. 70, beat 4 | F major | A5 | 3 | C5 | 5 |
+| m. 70, beat 4 to m. 70, beat 4.5 | F major | C6 | 5 | A4 | 3 |
+| m. 70, beat 4.5 to m. 71, beat 1 | F major | C6 | 5 | C5 | 5 |
+| m. 71, beat 1 to m. 71, beat 1.5 | F major | E5 | 7 | G4 | 2 |
+| m. 71, beat 1.5 to m. 71, beat 2 | F major | E5 | 7 | C5 | 5 |
+| m. 71, beat 2 to m. 71, beat 2.5 | F major | E5 | 7 | Bb4 | 4 |
+| m. 71, beat 2.5 to m. 71, beat 3 | F major | G5 | 2 | C5 | 5 |
+| m. 71, beat 3 to m. 71, beat 3.5 | F major | F5 | 1 | F4 | 1 |
+| m. 71, beat 3.5 to m. 71, beat 4 | F major | F5 | 1 | C5 | 5 |
+| m. 71, beat 4 to m. 71, beat 4.5 | F major | F5 | 1 | A4 | 3 |
+| m. 71, beat 4.5 to m. 72, beat 1 | F major | F5 | 1 | C5 | 5 |
+| m. 72, beat 1 to m. 72, beat 1.5 | F major | D6 | 6 | F4 | 1 |
+| m. 72, beat 1.5 to m. 72, beat 2 | F major | D6 | 6 | D5 | 6 |
+| m. 72, beat 2 to m. 72, beat 2.5 | F major | D6 | 6 | Bb4 | 4 |
+| m. 72, beat 2.5 to m. 72, beat 3 | F major | D6 | 6 | D5 | 6 |
+| m. 72, beat 3 to m. 72, beat 3.5 | F major | C6 | 5 | F4 | 1 |
+| m. 72, beat 3.5 to m. 72, beat 4 | F major | C6 | 5 | C5 | 5 |
+| m. 72, beat 4 to m. 72, beat 4.5 | F major | F6 | 1 | A4 | 3 |
+| m. 72, beat 4.5 to m. 73, beat 1 | F major | F6 | 1 | C5 | 5 |
+| m. 73, beat 1 to m. 73, beat 1.5 | F major | C6 | 5 | E4 | 7 |
+| m. 73, beat 1.5 to m. 73, beat 2 | F major | C6 | 5 | C5 | 5 |
+| m. 73, beat 2 to m. 73, beat 2.5 | F major | C6 | 5 | G4 | 2 |
+| m. 73, beat 2.5 to m. 73, beat 3 | F major | Bb5 | 4 | C5 | 5 |
+| m. 73, beat 3 to m. 73, beat 3.5 | F major | A5 | 3 | F4 | 1 |
+| m. 73, beat 3.5 to m. 73, beat 4 | F major | A5 | 3 | C5 | 5 |
+| m. 73, beat 4 to m. 73, beat 4.5 | F major | A4 | 3 | A4 | 3 |
+| m. 73, beat 4.5 to m. 74, beat 1 | F major | C5 | 5 | C5 | 5 |
+| m. 74, beat 1 to m. 74, beat 2 | F major | F5 | 1 | Bb4 | 4 |
+| m. 74, beat 2 to m. 74, beat 3 | F major | C6 | 5 | G5 | 2 |
+| m. 74, beat 3 to m. 74, beat 4 | F major | D6 | 6 | A5 | 3 |
+| m. 74, beat 4 to m. 75, beat 1 | F major | G5 | 2 | Bb3 | 4 |
+| m. 75, beat 1 to m. 75, beat 2 | F major | E5 | 7 | A3 | 3 |
+| m. 75, beat 2 to m. 75, beat 3 | F major | Bb5 | 4 | rest (register guard) | - |
+| m. 75, beat 3 to m. 75, beat 4 | F major | C6 | 5 | G5 | 2 |
+| m. 75, beat 4 to m. 76, beat 1 | F major | F5 | 1 | A3 | 3 |
+| m. 76, beat 1 to m. 76, beat 2 | F major | D5 | 6 | G3 | 2 |
+| m. 76, beat 2 to m. 76, beat 3 | F major | A5 | 3 | rest (register guard) | - |
+| m. 76, beat 3 to m. 76, beat 4 | F major | Bb5 | 4 | F5 | 1 |
+| m. 76, beat 4 to m. 77, beat 1 | F major | E5 | 7 | G3 | 2 |
+| m. 77, beat 1 to m. 77, beat 2 | F major | C5 | 5 | F3 | 1 |
+| m. 77, beat 2 to m. 77, beat 3 | F major | G5 | 2 | rest (register guard) | - |
+| m. 77, beat 3 to m. 77, beat 4 | F major | A5 | 3 | E5 | 7 |
+| m. 77, beat 4 to m. 78, beat 1 | F major | D5 | 6 | A4 | 3 |
+| m. 78, beat 1 to m. 78, beat 2 | F major | A5 | 3 | F3 | 1 |
+| m. 78, beat 2 to m. 78, beat 3 | F major | rest (register guard) | - | Bb3 | 4 |
+| m. 78, beat 3 to m. 78, beat 4 | F major | F4 | 1 | C4 | 5 |
+| m. 78, beat 4 to m. 79, beat 1 | F major | A5 | 3 | F3 | 1 |
+| m. 79, beat 1 to m. 79, beat 2 | F major | G5 | 2 | E3 | 7 |
+| m. 79, beat 2 to m. 79, beat 3 | F major | rest (register guard) | - | A3 | 3 |
+| m. 79, beat 3 to m. 79, beat 4 | F major | E4 | 7 | B3 | #4 |
+| m. 79, beat 4 to m. 80, beat 1 | F major | G5 | 2 | E3 | 7 |
+| m. 80, beat 1 to m. 80, beat 2 | F major | F5 | 1 | D3 | 6 |
+| m. 80, beat 2 to m. 80, beat 3 | F major | rest (register guard) | - | G3 | 2 |
+| m. 80, beat 3 to m. 80, beat 4 | F major | D4 | 6 | A3 | 3 |
+| m. 80, beat 4 to m. 81, beat 1 | F major | F5 | 1 | D3 | 6 |
+| m. 81, beat 1 to m. 81, beat 2 | F major | E5 | 7 | C3 | 5 |
+| m. 81, beat 2 to m. 81, beat 3 | F major | rest (register guard) | - | F3 | 1 |
+| m. 81, beat 3 to m. 81, beat 4 | F major | C4 | 5 | G3 | 2 |
+| m. 81, beat 4 to m. 82, beat 1 | F major | E5 | 7 | C3 | 5 |
+| m. 82, beat 1 to m. 82, beat 2 | F major | D5 | 6 | F3 | 1 |
+| m. 82, beat 2 to m. 82, beat 3 | F major | Db5 | b6 | F3 | 1 |
+| m. 82, beat 3 to m. 82, beat 4 | F major | D5 | 6 | F3 | 1 |
+| m. 82, beat 4 to m. 83, beat 1 | F major | G5 | 2 | F3 | 1 |
+| m. 83, beat 1 to m. 83, beat 2 | F major | C6 | 5 | F3 | 1 |
+| m. 83, beat 2 to m. 83, beat 2.5 | F major | A5 | 3 | F3 | 1 |
+| m. 83, beat 2.5 to m. 83, beat 3 | F major | F5 | 1 | G3 | 2 |
+| m. 83, beat 3 to m. 83, beat 4 | F major | A5 | 3 | A3 | 3 |
+| m. 83, beat 4 to m. 83, beat 4.5 | F major | F5 | 1 | A3 | 3 |
+| m. 83, beat 4.5 to m. 84, beat 1 | F major | D5 | 6 | Gb3 | b2 |
+| m. 84, beat 1 to m. 84, beat 2 | F major | G5 | 2 | G2 | 2 |
+| m. 84, beat 2 to m. 84, beat 3 | F major | E5 | 7 | G2 | 2 |
+| m. 84, beat 3 to m. 84, beat 4 | F major | G5 | 2 | G2 | 2 |
+| m. 84, beat 4 to m. 85, beat 1 | F major | E5 | 7 | G2 | 2 |
+| m. 85, beat 1 to m. 85, beat 2 | G major | D5 | 5 | G2 | 1 |
+| m. 85, beat 2 to m. 85, beat 3 | G major | G5 | 1 | G3 | 1 |
+| m. 85, beat 3 to m. 85, beat 4 | G major | G4 | 1 | G2 | 1 |
+| m. 86, beat 1 to m. 86, beat 3 | G major | G4 | 1 | F#4 | 7 |
+| m. 86, beat 3 to m. 87, beat 1 | G major | G4 | 1 | F4 | b7 |
+| m. 87, beat 1 to m. 87, beat 2 | G major | G5 | 1 | E4 | 6 |
+| m. 87, beat 2 to m. 87, beat 3 | G major | C5 | 4 | E4 | 6 |
+| m. 87, beat 3 to m. 88, beat 1 | G major | E5 | 6 | E4 | 6 |
+| m. 88, beat 1 to m. 88, beat 2 | E minor | D5 | 7 | E4 | 1 |
+| m. 88, beat 2 to m. 88, beat 3 | E minor | B4 | 5 | D4 | 7 |
+| m. 88, beat 3 to m. 88, beat 4 | E minor | B4 | 5 | E4 | 1 |
+| m. 88, beat 4 to m. 89, beat 1 | E minor | B4 | 5 | D4 | 7 |
+| m. 89, beat 1 to m. 89, beat 2 | E minor | G5 | 3 | E4 | 1 |
+| m. 89, beat 2 to m. 89, beat 3 | E minor | C5 | 6 | E4 | 1 |
+| m. 89, beat 3 to m. 90, beat 1 | E minor | E5 | 1 | E4 | 1 |
+| m. 90, beat 1 to m. 90, beat 2 | E minor | D5 | 7 | E4 | 1 |
+| m. 90, beat 2 to m. 90, beat 3 | E minor | B4 | 5 | D4 | 7 |
+| m. 90, beat 3 to m. 90, beat 4 | E minor | B4 | 5 | E4 | 1 |
+| m. 90, beat 4 to m. 91, beat 1 | E minor | G4 | 3 | D4 | 7 |
+| m. 91, beat 1 to m. 91, beat 3 | E minor | G5 | 3 | E3 | 1 |
+| m. 91, beat 3 to m. 92, beat 1 | E minor | C5 | 6 | F3 | b2 |
+| m. 92, beat 1 to m. 92, beat 3 | E minor | F5 | b2 | D3 | 7 |
+| m. 92, beat 3 to m. 93, beat 1 | E minor | B5 | 5 | E3 | 1 |
+| m. 93, beat 1 to m. 93, beat 3 | E minor | E6 | 1 | C4 | 6 |
+| m. 93, beat 3 to m. 94, beat 1 | E minor | A5 | 4 | D4 | 7 |
+| m. 94, beat 1 to m. 94, beat 3 | D minor | D6 | 1 | B3 | #6 |
+| m. 94, beat 3 to m. 95, beat 1 | D minor | C6 | 7 | C4 | 7 |
+| m. 95, beat 1 to m. 95, beat 1.5 | D minor | D5 | 1 | D5 | 1 |
+| m. 95, beat 1.5 to m. 95, beat 3 | D minor | D5 | 1 | F4 | 3 |
+| m. 95, beat 3 to m. 95, beat 3.5 | D minor | D5 | 1 | F4 | 3 |
+| m. 95, beat 3.5 to m. 95, beat 4 | D minor | D5 | 1 | F4 | 3 |
+| m. 95, beat 4 to m. 95, beat 4.5 | D minor | D5 | 1 | F4 | 3 |
+| m. 95, beat 4.5 to m. 96, beat 1 | D minor | D5 | 1 | F4 | 3 |
+| m. 96, beat 1 to m. 96, beat 1.5 | D minor | A5 | 5 | rest (bridged) | - |
+| m. 96, beat 1.5 to m. 96, beat 3 | D minor | A5 | 5 | F#3 | #3 |
+| m. 96, beat 3 to m. 96, beat 3.5 | D minor | A5 | 5 | F#3 | #3 |
+| m. 96, beat 3.5 to m. 96, beat 4 | D minor | A5 | 5 | F#3 | #3 |
+| m. 96, beat 4 to m. 96, beat 4.5 | D minor | A5 | 5 | F#3 | #3 |
+| m. 96, beat 4.5 to m. 97, beat 1 | D minor | A5 | 5 | F#3 | #3 |
+| m. 97, beat 1 to m. 97, beat 2 | D minor | B5 | #6 | G3 | 4 |
+| m. 97, beat 2 to m. 97, beat 3 | D minor | E6 | 2 | G3 | 4 |
+| m. 97, beat 3 to m. 97, beat 4 | D minor | C6 | 7 | G3 | 4 |
+| m. 97, beat 4 to m. 98, beat 1 | D minor | F5 | 3 | G3 | 4 |
+| m. 98, beat 1 to m. 98, beat 4 | C major | E5 | 3 | G3 | 5 |
+| m. 98, beat 4 to m. 99, beat 1 | C major | E5 | 3 | G3 | 5 |
+| m. 99, beat 1 to m. 99, beat 2 | C major | C5 | 1 | C4 | 1 |
+| m. 99, beat 2 to m. 99, beat 3 | C major | E5 | 3 | G4 | 5 |
+| m. 99, beat 3 to m. 99, beat 4 | C major | G5 | 5 | C5 | 1 |
+| m. 99, beat 4 to m. 100, beat 1 | C major | F5 | 4 | G3 | 5 |
+| m. 100, beat 1 to m. 100, beat 2 | C major | C5 | 1 | C4 | 1 |
+| m. 100, beat 2 to m. 100, beat 3 | C major | E4 | 3 | G3 | 5 |
+| m. 100, beat 3 to m. 100, beat 4 | C major | G4 | 5 | C4 | 1 |
+| m. 100, beat 4 to m. 101, beat 1 | C major | F4 | 4 | G2 | 5 |
+| m. 101, beat 1 to m. 101, beat 2 | C major | C4 | 1 | C3 | 1 |
+| m. 101, beat 2 to m. 101, beat 3 | C major | C6 | 1 | C3 | 1 |
+| m. 101, beat 3 to m. 101, beat 4 | C major | C5 | 1 | C2 | 1 |
+| m. 102, beat 1 to m. 102, beat 2 | C major | G4 | 5 | G2 | 5 |
+| m. 102, beat 2 to m. 102, beat 3 | C major | A#5 | b7 | rest (register guard) | - |
+| m. 102, beat 3 to m. 102, beat 4 | C major | D6 | 2 | G5 | 5 |
+| m. 102, beat 4 to m. 103, beat 1 | C major | C6 | 1 | D4 | 2 |
+| m. 103, beat 1 to m. 103, beat 2 | C major | G5 | 5 | G4 | 5 |
+| m. 103, beat 2 to m. 103, beat 3 | C major | A#4 | b7 | D4 | 2 |
+| m. 103, beat 3 to m. 103, beat 4 | C major | D5 | 2 | G4 | 5 |
+| m. 103, beat 4 to m. 104, beat 1 | C major | C5 | 1 | D3 | 2 |
+| m. 104, beat 1 to m. 104, beat 2 | G minor | G4 | 1 | G2 | 1 |
+| m. 104, beat 2 to m. 104, beat 3 | G minor | rest (register guard) | - | C3 | 4 |
+| m. 104, beat 3 to m. 104, beat 4 | G minor | A#5 | 3 | G3 | 1 |
+| m. 104, beat 4 to m. 105, beat 1 | G minor | G5 | 1 | rest (register guard) | - |
+| m. 105, beat 1 to m. 105, beat 2 | G minor | C#5 | #4 | A2 | 2 |
+| m. 105, beat 2 to m. 105, beat 3 | G minor | rest (register guard) | - | D3 | 5 |
+| m. 105, beat 3 to m. 105, beat 4 | G minor | E6 | #6 | A3 | 2 |
+| m. 105, beat 4 to m. 106, beat 1 | G minor | C#6 | #4 | rest (register guard) | - |
+| m. 106, beat 1 to m. 106, beat 2 | D minor | F5 | 3 | D2 | 1 |
+| m. 106, beat 2 to m. 106, beat 3 | D minor | F5 | 3 | rest (register guard) | - |
+| m. 106, beat 3 to m. 106, beat 4 | D minor | A5 | 5 | D5 | 1 |
+| m. 106, beat 4 to m. 107, beat 1 | D minor | G5 | 4 | A3 | 5 |
+| m. 107, beat 1 to m. 107, beat 2 | D minor | D5 | 1 | D4 | 1 |
+| m. 107, beat 2 to m. 107, beat 3 | D minor | F4 | 3 | A3 | 5 |
+| m. 107, beat 3 to m. 107, beat 4 | D minor | A4 | 5 | D4 | 1 |
+| m. 107, beat 4 to m. 108, beat 1 | D minor | G4 | 4 | A2 | 5 |
+| m. 108, beat 1 to m. 108, beat 2 | D minor | F4 | 3 | D3 | 1 |
+| m. 108, beat 2 to m. 108, beat 3 | D minor | C#5 | #7 | rest (register guard) | - |
+| m. 108, beat 3 to m. 108, beat 4 | D minor | D5 | 1 | D4 | 1 |
+| m. 108, beat 4 to m. 109, beat 1 | D minor | D4 | 1 | A3 | 5 |
+| m. 109, beat 1 to m. 109, beat 2 | D minor | D5 | 1 | G#3 | #4 |
+| m. 109, beat 2 to m. 109, beat 3 | D minor | A5 | 5 | rest (register guard) | - |
+| m. 109, beat 3 to m. 109, beat 4 | D minor | B5 | #6 | G#3 | #4 |
+| m. 109, beat 4 to m. 110, beat 1 | D minor | rest (register guard) | - | D3 | 1 |
+| m. 110, beat 1 to m. 110, beat 2 | D minor | E6 | 2 | C3 | 7 |
+| m. 110, beat 2 to m. 110, beat 3 | D minor | C6 | 7 | rest (register guard) | - |
+| m. 110, beat 3 to m. 110, beat 4 | D minor | F5 | 3 | D4 | 1 |
+| m. 110, beat 4 to m. 111, beat 1 | D minor | F4 | 3 | C4 | 7 |
+| m. 111, beat 1 to m. 111, beat 2 | A minor | D6 | 4 | B3 | 2 |
+| m. 111, beat 2 to m. 111, beat 3 | A minor | B5 | 2 | rest (register guard) | - |
+| m. 111, beat 3 to m. 111, beat 4 | A minor | E5 | 5 | C4 | 3 |
+| m. 111, beat 4 to m. 112, beat 1 | A minor | E4 | 5 | B3 | 2 |
+| m. 112, beat 1 to m. 112, beat 2 | A minor | C6 | 3 | A3 | 1 |
+| m. 112, beat 2 to m. 112, beat 3 | A minor | A5 | 1 | rest (register guard) | - |
+| m. 112, beat 3 to m. 112, beat 4 | A minor | D5 | 4 | B3 | 2 |
+| m. 112, beat 4 to m. 113, beat 1 | A minor | D4 | 4 | A3 | 1 |
+| m. 113, beat 1 to m. 113, beat 2 | A minor | B5 | 2 | G#3 | #7 |
+| m. 113, beat 2 to m. 113, beat 3 | A minor | G#5 | #7 | rest (register guard) | - |
+| m. 113, beat 3 to m. 113, beat 4 | A minor | C5 | 3 | A3 | 1 |
+| m. 113, beat 4 to m. 114, beat 1 | A minor | rest (register guard) | - | E3 | 5 |
+| m. 114, beat 1 to m. 114, beat 2 | F major | D5 | 6 | D3 | 6 |
+| m. 114, beat 2 to m. 114, beat 3 | F major | Bb4 | 4 | D3 | 6 |
+| m. 114, beat 3 to m. 114, beat 4 | F major | A4 | 3 | C3 | 5 |
+| m. 114, beat 4 to m. 115, beat 1 | F major | E5 | 7 | C3 | 5 |
+| m. 115, beat 1 to m. 115, beat 1.5 | F major | F5 | 1 | rest (register guard) | - |
+| m. 115, beat 1.5 to m. 115, beat 2 | F major | F5 | 1 | rest (register guard) | - |
+| m. 115, beat 2 to m. 115, beat 2.5 | F major | F5 | 1 | A4 | 3 |
+| m. 115, beat 2.5 to m. 115, beat 3 | F major | F5 | 1 | C5 | 5 |
+| m. 115, beat 3 to m. 115, beat 3.5 | F major | A5 | 3 | F4 | 1 |
+| m. 115, beat 3.5 to m. 115, beat 4 | F major | A5 | 3 | C5 | 5 |
+| m. 115, beat 4 to m. 115, beat 4.5 | F major | C6 | 5 | A4 | 3 |
+| m. 115, beat 4.5 to m. 116, beat 1 | F major | C6 | 5 | C5 | 5 |
+| m. 116, beat 1 to m. 116, beat 1.5 | F major | E5 | 7 | G4 | 2 |
+| m. 116, beat 1.5 to m. 116, beat 2 | F major | E5 | 7 | C5 | 5 |
+| m. 116, beat 2 to m. 116, beat 2.5 | F major | E5 | 7 | Bb4 | 4 |
+| m. 116, beat 2.5 to m. 116, beat 3 | F major | G5 | 2 | C5 | 5 |
+| m. 116, beat 3 to m. 116, beat 3.5 | F major | F5 | 1 | F4 | 1 |
+| m. 116, beat 3.5 to m. 116, beat 4 | F major | F5 | 1 | C5 | 5 |
+| m. 116, beat 4 to m. 116, beat 4.5 | F major | F5 | 1 | A4 | 3 |
+| m. 116, beat 4.5 to m. 117, beat 1 | F major | F5 | 1 | C5 | 5 |
+| m. 117, beat 1 to m. 117, beat 1.5 | F major | D6 | 6 | F4 | 1 |
+| m. 117, beat 1.5 to m. 117, beat 2 | F major | D6 | 6 | D5 | 6 |
+| m. 117, beat 2 to m. 117, beat 2.5 | F major | D6 | 6 | Bb4 | 4 |
+| m. 117, beat 2.5 to m. 117, beat 3 | F major | D6 | 6 | D5 | 6 |
+| m. 117, beat 3 to m. 117, beat 3.5 | F major | C6 | 5 | F4 | 1 |
+| m. 117, beat 3.5 to m. 117, beat 4 | F major | C6 | 5 | C5 | 5 |
+| m. 117, beat 4 to m. 117, beat 4.5 | F major | F6 | 1 | A4 | 3 |
+| m. 117, beat 4.5 to m. 118, beat 1 | F major | F6 | 1 | C5 | 5 |
+| m. 118, beat 1 to m. 118, beat 1.5 | F major | C6 | 5 | E4 | 7 |
+| m. 118, beat 1.5 to m. 118, beat 2 | F major | C6 | 5 | C5 | 5 |
+| m. 118, beat 2 to m. 118, beat 2.5 | F major | C6 | 5 | G4 | 2 |
+| m. 118, beat 2.5 to m. 118, beat 3 | F major | Bb5 | 4 | C5 | 5 |
+| m. 118, beat 3 to m. 118, beat 3.5 | F major | A5 | 3 | F4 | 1 |
+| m. 118, beat 3.5 to m. 118, beat 4 | F major | A5 | 3 | C5 | 5 |
+| m. 118, beat 4 to m. 118, beat 4.5 | F major | A4 | 3 | A4 | 3 |
+| m. 118, beat 4.5 to m. 119, beat 1 | F major | C5 | 5 | C5 | 5 |
+| m. 119, beat 1 to m. 119, beat 2 | F major | F5 | 1 | Bb4 | 4 |
+| m. 119, beat 2 to m. 119, beat 3 | F major | C6 | 5 | G5 | 2 |
+| m. 119, beat 3 to m. 119, beat 4 | F major | D6 | 6 | A5 | 3 |
+| m. 119, beat 4 to m. 120, beat 1 | F major | G5 | 2 | Bb3 | 4 |
+| m. 120, beat 1 to m. 120, beat 2 | F major | E5 | 7 | A3 | 3 |
+| m. 120, beat 2 to m. 120, beat 3 | F major | Bb5 | 4 | rest (register guard) | - |
+| m. 120, beat 3 to m. 120, beat 4 | F major | C6 | 5 | G5 | 2 |
+| m. 120, beat 4 to m. 121, beat 1 | F major | F5 | 1 | A3 | 3 |
+| m. 121, beat 1 to m. 121, beat 2 | F major | D5 | 6 | G3 | 2 |
+| m. 121, beat 2 to m. 121, beat 3 | F major | A5 | 3 | rest (register guard) | - |
+| m. 121, beat 3 to m. 121, beat 4 | F major | Bb5 | 4 | F5 | 1 |
+| m. 121, beat 4 to m. 122, beat 1 | F major | E5 | 7 | G3 | 2 |
+| m. 122, beat 1 to m. 122, beat 2 | F major | C5 | 5 | F3 | 1 |
+| m. 122, beat 2 to m. 122, beat 3 | F major | G5 | 2 | rest (register guard) | - |
+| m. 122, beat 3 to m. 122, beat 4 | F major | A5 | 3 | E5 | 7 |
+| m. 122, beat 4 to m. 123, beat 1 | F major | D5 | 6 | A4 | 3 |
+| m. 123, beat 1 to m. 123, beat 2 | F major | A5 | 3 | F3 | 1 |
+| m. 123, beat 2 to m. 123, beat 3 | F major | rest (register guard) | - | Bb3 | 4 |
+| m. 123, beat 3 to m. 123, beat 4 | F major | F4 | 1 | C4 | 5 |
+| m. 123, beat 4 to m. 124, beat 1 | F major | A5 | 3 | F3 | 1 |
+| m. 124, beat 1 to m. 124, beat 2 | F major | G5 | 2 | E3 | 7 |
+| m. 124, beat 2 to m. 124, beat 3 | F major | rest (register guard) | - | A3 | 3 |
+| m. 124, beat 3 to m. 124, beat 4 | F major | E4 | 7 | B3 | #4 |
+| m. 124, beat 4 to m. 125, beat 1 | F major | G5 | 2 | E3 | 7 |
+| m. 125, beat 1 to m. 125, beat 2 | F major | F5 | 1 | D3 | 6 |
+| m. 125, beat 2 to m. 125, beat 3 | F major | rest (register guard) | - | G3 | 2 |
+| m. 125, beat 3 to m. 125, beat 4 | F major | D4 | 6 | A3 | 3 |
+| m. 125, beat 4 to m. 126, beat 1 | F major | F5 | 1 | D3 | 6 |
+| m. 126, beat 1 to m. 126, beat 2 | F major | E5 | 7 | C3 | 5 |
+| m. 126, beat 2 to m. 126, beat 3 | F major | rest (register guard) | - | F3 | 1 |
+| m. 126, beat 3 to m. 126, beat 4 | F major | C4 | 5 | G3 | 2 |
+| m. 126, beat 4 to m. 127, beat 1 | F major | E5 | 7 | C3 | 5 |
+| m. 127, beat 1 to m. 127, beat 2 | F major | D5 | 6 | F3 | 1 |
+| m. 127, beat 2 to m. 127, beat 3 | F major | Db5 | b6 | F3 | 1 |
+| m. 127, beat 3 to m. 127, beat 4 | F major | D5 | 6 | F3 | 1 |
+| m. 127, beat 4 to m. 128, beat 1 | F major | G5 | 2 | F3 | 1 |
+| m. 128, beat 1 to m. 128, beat 2 | F major | C6 | 5 | F3 | 1 |
+| m. 128, beat 2 to m. 128, beat 2.5 | F major | A5 | 3 | F3 | 1 |
+| m. 128, beat 2.5 to m. 128, beat 3 | F major | F5 | 1 | G3 | 2 |
+| m. 128, beat 3 to m. 128, beat 4 | F major | A5 | 3 | A3 | 3 |
+| m. 128, beat 4 to m. 128, beat 4.5 | F major | F5 | 1 | A3 | 3 |
+| m. 128, beat 4.5 to m. 129, beat 1 | F major | D5 | 6 | Gb3 | b2 |
+| m. 129, beat 1 to m. 129, beat 2 | F major | G5 | 2 | G2 | 2 |
+| m. 129, beat 2 to m. 129, beat 3 | F major | E5 | 7 | G2 | 2 |
+| m. 129, beat 3 to m. 129, beat 4 | F major | G5 | 2 | G2 | 2 |
+| m. 129, beat 4 to m. 130, beat 1 | F major | E5 | 7 | G2 | 2 |
+| m. 130, beat 1 to m. 130, beat 2 | G major | D5 | 5 | G2 | 1 |
+| m. 130, beat 2 to m. 130, beat 3 | G major | G5 | 1 | G3 | 1 |
+| m. 130, beat 3 to m. 130, beat 4 | G major | G4 | 1 | G2 | 1 |
+| m. 131, beat 1 to m. 131, beat 3 | G major | G4 | 1 | F#4 | 7 |
+| m. 131, beat 3 to m. 132, beat 1 | G major | G4 | 1 | F4 | b7 |
+| m. 132, beat 1 to m. 132, beat 2 | G major | G5 | 1 | E4 | 6 |
+| m. 132, beat 2 to m. 132, beat 3 | G major | C5 | 4 | E4 | 6 |
+| m. 132, beat 3 to m. 133, beat 1 | G major | E5 | 6 | E4 | 6 |
+| m. 133, beat 1 to m. 133, beat 2 | E minor | D5 | 7 | E4 | 1 |
+| m. 133, beat 2 to m. 133, beat 3 | E minor | B4 | 5 | D4 | 7 |
+| m. 133, beat 3 to m. 133, beat 4 | E minor | B4 | 5 | E4 | 1 |
+| m. 133, beat 4 to m. 134, beat 1 | E minor | B4 | 5 | D4 | 7 |
+| m. 134, beat 1 to m. 134, beat 2 | E minor | G5 | 3 | E4 | 1 |
+| m. 134, beat 2 to m. 134, beat 3 | E minor | C5 | 6 | E4 | 1 |
+| m. 134, beat 3 to m. 135, beat 1 | E minor | E5 | 1 | E4 | 1 |
+| m. 135, beat 1 to m. 135, beat 2 | E minor | D5 | 7 | E4 | 1 |
+| m. 135, beat 2 to m. 135, beat 3 | E minor | B4 | 5 | D4 | 7 |
+| m. 135, beat 3 to m. 135, beat 4 | E minor | B4 | 5 | E4 | 1 |
+| m. 135, beat 4 to m. 136, beat 1 | E minor | G4 | 3 | D4 | 7 |
+| m. 136, beat 1 to m. 136, beat 3 | E minor | G5 | 3 | E3 | 1 |
+| m. 136, beat 3 to m. 137, beat 1 | E minor | C5 | 6 | F3 | b2 |
+| m. 137, beat 1 to m. 137, beat 3 | E minor | F5 | b2 | D3 | 7 |
+| m. 137, beat 3 to m. 138, beat 1 | E minor | B5 | 5 | E3 | 1 |
+| m. 138, beat 1 to m. 138, beat 3 | E minor | E6 | 1 | C4 | 6 |
+| m. 138, beat 3 to m. 139, beat 1 | E minor | A5 | 4 | D4 | 7 |
+| m. 139, beat 1 to m. 139, beat 3 | D minor | D6 | 1 | B3 | #6 |
+| m. 139, beat 3 to m. 140, beat 1 | D minor | C6 | 7 | C4 | 7 |
+| m. 140, beat 1 to m. 140, beat 1.5 | D minor | D5 | 1 | D5 | 1 |
+| m. 140, beat 1.5 to m. 140, beat 3 | D minor | D5 | 1 | F4 | 3 |
+| m. 140, beat 3 to m. 140, beat 3.5 | D minor | D5 | 1 | F4 | 3 |
+| m. 140, beat 3.5 to m. 140, beat 4 | D minor | D5 | 1 | F4 | 3 |
+| m. 140, beat 4 to m. 140, beat 4.5 | D minor | D5 | 1 | F4 | 3 |
+| m. 140, beat 4.5 to m. 141, beat 1 | D minor | D5 | 1 | F4 | 3 |
+| m. 141, beat 1 to m. 141, beat 1.5 | D minor | A5 | 5 | rest (bridged) | - |
+| m. 141, beat 1.5 to m. 141, beat 3 | D minor | A5 | 5 | F#3 | #3 |
+| m. 141, beat 3 to m. 141, beat 3.5 | D minor | A5 | 5 | F#3 | #3 |
+| m. 141, beat 3.5 to m. 141, beat 4 | D minor | A5 | 5 | F#3 | #3 |
+| m. 141, beat 4 to m. 141, beat 4.5 | D minor | A5 | 5 | F#3 | #3 |
+| m. 141, beat 4.5 to m. 142, beat 1 | D minor | A5 | 5 | F#3 | #3 |
+| m. 142, beat 1 to m. 142, beat 2 | D minor | B5 | #6 | G3 | 4 |
+| m. 142, beat 2 to m. 142, beat 3 | D minor | E6 | 2 | G3 | 4 |
+| m. 142, beat 3 to m. 142, beat 4 | D minor | C6 | 7 | G3 | 4 |
+| m. 142, beat 4 to m. 143, beat 1 | D minor | F5 | 3 | G3 | 4 |
+| m. 143, beat 1 to m. 143, beat 4 | C major | E5 | 3 | G3 | 5 |
+| m. 143, beat 4 to m. 144, beat 1 | C major | E5 | 3 | G3 | 5 |
+| m. 144, beat 1 to m. 144, beat 2 | C major | C5 | 1 | C4 | 1 |
+| m. 144, beat 2 to m. 144, beat 3 | C major | E5 | 3 | G4 | 5 |
+| m. 144, beat 3 to m. 144, beat 4 | C major | G5 | 5 | C5 | 1 |
+| m. 144, beat 4 to m. 145, beat 1 | C major | F5 | 4 | G3 | 5 |
+| m. 145, beat 1 to m. 145, beat 2 | C major | C5 | 1 | C4 | 1 |
+| m. 145, beat 2 to m. 145, beat 3 | C major | E4 | 3 | G3 | 5 |
+| m. 145, beat 3 to m. 145, beat 4 | C major | G4 | 5 | C4 | 1 |
+| m. 145, beat 4 to m. 146, beat 1 | C major | F4 | 4 | G2 | 5 |
+| m. 146, beat 1 to m. 146, beat 2 | C major | C4 | 1 | C3 | 1 |
+| m. 146, beat 2 to m. 146, beat 3 | C major | C6 | 1 | C3 | 1 |
+| m. 146, beat 3 to m. 146, beat 4 | C major | C5 | 1 | C2 | 1 |
+| m. 149, beat 1 to m. 149, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 149, beat 3 to m. 150, beat 1 | G major | D5 | 5 | A3 | 2 |
+| m. 150, beat 1 to m. 151, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 151, beat 1 to m. 151, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 151, beat 2 to m. 151, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 151, beat 3 to m. 152, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 152, beat 1 to m. 153, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 153, beat 1 to m. 153, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 153, beat 2 to m. 153, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 153, beat 3 to m. 154, beat 1 | G major | C5 | 4 | A3 | 2 |
+| m. 154, beat 1 to m. 154, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 154, beat 2 to m. 154, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 154, beat 3 to m. 155, beat 1 | G major | rest (register guard) | - | B2 | 3 |
+| m. 155, beat 1 to m. 155, beat 2 | G major | A5 | 2 | C3 | 4 |
+| m. 155, beat 2 to m. 155, beat 3 | G major | F#5 | 7 | C3 | 4 |
+| m. 155, beat 3 to m. 156, beat 1 | G major | D5 | 5 | E3 | 6 |
+| m. 156, beat 1 to m. 156, beat 2 | G major | C5 | 4 | D3 | 5 |
+| m. 156, beat 2 to m. 156, beat 3 | G major | D5 | 5 | D3 | 5 |
+| m. 156, beat 3 to m. 156, beat 3.5 | G major | C#5 | #4 | rest (register guard) | - |
+| m. 156, beat 3.5 to m. 157, beat 1 | G major | C5 | 4 | rest (register guard) | - |
+| m. 157, beat 1 to m. 157, beat 3 | G major | D5 | 5 | G3 | 1 |
+| m. 157, beat 3 to m. 158, beat 1 | G major | E5 | 6 | A3 | 2 |
+| m. 158, beat 1 to m. 158, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 158, beat 2 to m. 158, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 158, beat 3 to m. 159, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 159, beat 1 to m. 159, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 159, beat 2 to m. 159, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 159, beat 3 to m. 160, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 160, beat 1 to m. 161, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 161, beat 1 to m. 161, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 161, beat 2 to m. 161, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 161, beat 3 to m. 162, beat 1 | G major | C#5 | #4 | A3 | 2 |
+| m. 162, beat 1 to m. 162, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 162, beat 2 to m. 162, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 162, beat 3 to m. 163, beat 1 | G major | B5 | 3 | B2 | 3 |
+| m. 163, beat 1 to m. 163, beat 2 | G major | E5 | 6 | C3 | 4 |
+| m. 163, beat 2 to m. 163, beat 3 | G major | G4 | 1 | D3 | 5 |
+| m. 163, beat 3 to m. 164, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 164, beat 1 to m. 164, beat 2 | G major | A4 | 2 | G3 | 1 |
+| m. 164, beat 2 to m. 164, beat 3 | G major | G4 | 1 | G3 | 1 |
+| m. 165, beat 1 to m. 165, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 165, beat 3 to m. 166, beat 1 | G major | D5 | 5 | A3 | 2 |
+| m. 166, beat 1 to m. 167, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 167, beat 1 to m. 167, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 167, beat 2 to m. 167, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 167, beat 3 to m. 168, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 168, beat 1 to m. 169, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 169, beat 1 to m. 169, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 169, beat 2 to m. 169, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 169, beat 3 to m. 170, beat 1 | G major | C5 | 4 | A3 | 2 |
+| m. 170, beat 1 to m. 170, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 170, beat 2 to m. 170, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 170, beat 3 to m. 171, beat 1 | G major | rest (register guard) | - | B2 | 3 |
+| m. 171, beat 1 to m. 171, beat 2 | G major | A5 | 2 | C3 | 4 |
+| m. 171, beat 2 to m. 171, beat 3 | G major | F#5 | 7 | C3 | 4 |
+| m. 171, beat 3 to m. 172, beat 1 | G major | D5 | 5 | E3 | 6 |
+| m. 172, beat 1 to m. 172, beat 2 | G major | C5 | 4 | D3 | 5 |
+| m. 172, beat 2 to m. 172, beat 3 | G major | D5 | 5 | D3 | 5 |
+| m. 172, beat 3 to m. 172, beat 3.5 | G major | C#5 | #4 | rest (register guard) | - |
+| m. 172, beat 3.5 to m. 173, beat 1 | G major | C5 | 4 | rest (register guard) | - |
+| m. 173, beat 1 to m. 173, beat 3 | G major | D5 | 5 | G3 | 1 |
+| m. 173, beat 3 to m. 174, beat 1 | G major | E5 | 6 | A3 | 2 |
+| m. 174, beat 1 to m. 174, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 174, beat 2 to m. 174, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 174, beat 3 to m. 175, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 175, beat 1 to m. 175, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 175, beat 2 to m. 175, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 175, beat 3 to m. 176, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 176, beat 1 to m. 177, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 177, beat 1 to m. 177, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 177, beat 2 to m. 177, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 177, beat 3 to m. 178, beat 1 | G major | C#5 | #4 | A3 | 2 |
+| m. 178, beat 1 to m. 178, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 178, beat 2 to m. 178, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 178, beat 3 to m. 179, beat 1 | G major | B5 | 3 | B2 | 3 |
+| m. 179, beat 1 to m. 179, beat 2 | G major | E5 | 6 | C3 | 4 |
+| m. 179, beat 2 to m. 179, beat 3 | G major | G4 | 1 | D3 | 5 |
+| m. 179, beat 3 to m. 180, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 180, beat 1 to m. 180, beat 2 | G major | A4 | 2 | G3 | 1 |
+| m. 180, beat 2 to m. 180, beat 3 | G major | G4 | 1 | G3 | 1 |
+| m. 181, beat 1 to m. 181, beat 2 | G major | D5 | 5 | D4 | 5 |
+| m. 181, beat 2 to m. 181, beat 3 | G major | E5 | 6 | D4 | 5 |
+| m. 181, beat 3 to m. 182, beat 1 | G major | G5 | 1 | D4 | 5 |
+| m. 182, beat 1 to m. 182, beat 2 | G major | D5 | 5 | E4 | 6 |
+| m. 182, beat 2 to m. 183, beat 1 | G major | E5 | 6 | E4 | 6 |
+| m. 183, beat 1 to m. 183, beat 2 | D major | E5 | 2 | C#4 | 7 |
+| m. 183, beat 2 to m. 183, beat 3 | D major | F#5 | 3 | C#4 | 7 |
+| m. 183, beat 3 to m. 184, beat 1 | D major | A5 | 5 | C#4 | 7 |
+| m. 184, beat 1 to m. 184, beat 2 | D major | E5 | 2 | D4 | 1 |
+| m. 184, beat 2 to m. 184, beat 3 | D major | F#5 | 3 | C#4 | 7 |
+| m. 184, beat 3 to m. 185, beat 1 | D major | G4 | 4 | B3 | 6 |
+| m. 185, beat 1 to m. 185, beat 2 | D major | F#5 | 3 | A3 | 5 |
+| m. 185, beat 2 to m. 185, beat 3 | D major | G5 | 4 | G3 | 4 |
+| m. 185, beat 3 to m. 186, beat 1 | D major | B5 | 6 | F#3 | 3 |
+| m. 186, beat 1 to m. 186, beat 2 | D major | E5 | 2 | B3 | 6 |
+| m. 186, beat 2 to m. 186, beat 3 | D major | F#5 | 3 | A3 | 5 |
+| m. 186, beat 3 to m. 187, beat 1 | D major | A5 | 5 | G3 | 4 |
+| m. 187, beat 1 to m. 187, beat 2 | D major | E5 | 2 | A3 | 5 |
+| m. 187, beat 2 to m. 187, beat 3 | D major | F#5 | 3 | A3 | 5 |
+| m. 187, beat 3 to m. 188, beat 1 | D major | F#5 | 3 | A3 | 5 |
+| m. 188, beat 1 to m. 188, beat 2 | D major | E5 | 2 | D4 | 1 |
+| m. 188, beat 2 to m. 188, beat 3 | D major | E5 | 2 | D4 | 1 |
+| m. 188, beat 3 to m. 189, beat 1 | D major | F#5 | 3 | C5 | b7 |
+| m. 189, beat 1 to m. 189, beat 3 | D major | D5 | 1 | G3 | 4 |
+| m. 189, beat 3 to m. 190, beat 1 | D major | E5 | 2 | A3 | 5 |
+| m. 190, beat 1 to m. 190, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 190, beat 2 to m. 190, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 190, beat 3 to m. 191, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 191, beat 1 to m. 191, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 191, beat 2 to m. 191, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 191, beat 3 to m. 192, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 192, beat 1 to m. 193, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 193, beat 1 to m. 193, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 193, beat 2 to m. 193, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 193, beat 3 to m. 194, beat 1 | G major | C#5 | #4 | A3 | 2 |
+| m. 194, beat 1 to m. 194, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 194, beat 2 to m. 194, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 194, beat 3 to m. 195, beat 1 | G major | B5 | 3 | B2 | 3 |
+| m. 195, beat 1 to m. 195, beat 2 | G major | E5 | 6 | C3 | 4 |
+| m. 195, beat 2 to m. 195, beat 3 | G major | G4 | 1 | D3 | 5 |
+| m. 195, beat 3 to m. 196, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 196, beat 1 to m. 196, beat 2 | G major | A4 | 2 | G3 | 1 |
+| m. 196, beat 2 to m. 196, beat 3 | G major | G4 | 1 | G3 | 1 |
+| m. 197, beat 1 to m. 197, beat 2 | G major | D5 | 5 | D4 | 5 |
+| m. 197, beat 2 to m. 197, beat 3 | G major | E5 | 6 | D4 | 5 |
+| m. 197, beat 3 to m. 198, beat 1 | G major | G5 | 1 | D4 | 5 |
+| m. 198, beat 1 to m. 198, beat 2 | G major | D5 | 5 | E4 | 6 |
+| m. 198, beat 2 to m. 199, beat 1 | G major | E5 | 6 | E4 | 6 |
+| m. 199, beat 1 to m. 199, beat 2 | D major | E5 | 2 | C#4 | 7 |
+| m. 199, beat 2 to m. 199, beat 3 | D major | F#5 | 3 | C#4 | 7 |
+| m. 199, beat 3 to m. 200, beat 1 | D major | A5 | 5 | C#4 | 7 |
+| m. 200, beat 1 to m. 200, beat 2 | D major | E5 | 2 | D4 | 1 |
+| m. 200, beat 2 to m. 200, beat 3 | D major | F#5 | 3 | C#4 | 7 |
+| m. 200, beat 3 to m. 201, beat 1 | D major | G4 | 4 | B3 | 6 |
+| m. 201, beat 1 to m. 201, beat 2 | D major | F#5 | 3 | A3 | 5 |
+| m. 201, beat 2 to m. 201, beat 3 | D major | G5 | 4 | G3 | 4 |
+| m. 201, beat 3 to m. 202, beat 1 | D major | B5 | 6 | F#3 | 3 |
+| m. 202, beat 1 to m. 202, beat 2 | D major | E5 | 2 | B3 | 6 |
+| m. 202, beat 2 to m. 202, beat 3 | D major | F#5 | 3 | A3 | 5 |
+| m. 202, beat 3 to m. 203, beat 1 | D major | A5 | 5 | G3 | 4 |
+| m. 203, beat 1 to m. 203, beat 2 | D major | E5 | 2 | A3 | 5 |
+| m. 203, beat 2 to m. 203, beat 3 | D major | F#5 | 3 | A3 | 5 |
+| m. 203, beat 3 to m. 204, beat 1 | D major | F#5 | 3 | A3 | 5 |
+| m. 204, beat 1 to m. 204, beat 2 | D major | E5 | 2 | D4 | 1 |
+| m. 204, beat 2 to m. 204, beat 3 | D major | E5 | 2 | D4 | 1 |
+| m. 204, beat 3 to m. 205, beat 1 | D major | F#5 | 3 | C5 | b7 |
+| m. 205, beat 1 to m. 205, beat 3 | D major | D5 | 1 | G3 | 4 |
+| m. 205, beat 3 to m. 206, beat 1 | D major | E5 | 2 | A3 | 5 |
+| m. 206, beat 1 to m. 206, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 206, beat 2 to m. 206, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 206, beat 3 to m. 207, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 207, beat 1 to m. 207, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 207, beat 2 to m. 207, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 207, beat 3 to m. 208, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 208, beat 1 to m. 209, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 209, beat 1 to m. 209, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 209, beat 2 to m. 209, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 209, beat 3 to m. 210, beat 1 | G major | C#5 | #4 | A3 | 2 |
+| m. 210, beat 1 to m. 210, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 210, beat 2 to m. 210, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 210, beat 3 to m. 211, beat 1 | G major | B5 | 3 | B2 | 3 |
+| m. 211, beat 1 to m. 211, beat 2 | G major | E5 | 6 | C3 | 4 |
+| m. 211, beat 2 to m. 211, beat 3 | G major | G4 | 1 | D3 | 5 |
+| m. 211, beat 3 to m. 212, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 212, beat 1 to m. 212, beat 2 | G major | A4 | 2 | G3 | 1 |
+| m. 212, beat 2 to m. 212, beat 3 | G major | G4 | 1 | G3 | 1 |
+| m. 213, beat 1 to m. 213, beat 2 | G minor | A#4 | 3 | G3 | 1 |
+| m. 213, beat 2 to m. 213, beat 3 | G minor | C5 | 4 | G3 | 1 |
+| m. 213, beat 3 to m. 214, beat 1 | G minor | A#4 | 3 | A3 | 2 |
+| m. 214, beat 1 to m. 215, beat 1 | G minor | D5 | 5 | G3 | 1 |
+| m. 215, beat 1 to m. 215, beat 2 | G minor | D5 | 5 | F#3 | #7 |
+| m. 215, beat 2 to m. 215, beat 3 | G minor | D#5 | 6 | F#3 | #7 |
+| m. 215, beat 3 to m. 216, beat 1 | G minor | D5 | 5 | D3 | 5 |
+| m. 216, beat 1 to m. 216, beat 3 | D minor | G5 | 4 | G3 | 4 |
+| m. 216, beat 3 to m. 217, beat 1 | D minor | rest (register guard) | - | G3 | 4 |
+| m. 217, beat 1 to m. 217, beat 2 | D minor | F5 | 3 | A3 | 5 |
+| m. 217, beat 2 to m. 217, beat 3 | D minor | C6 | 7 | A3 | 5 |
+| m. 217, beat 3 to m. 218, beat 1 | D minor | A5 | 5 | A3 | 5 |
+| m. 218, beat 1 to m. 218, beat 2 | Bb major | D5 | 3 | Bb3 | 1 |
+| m. 218, beat 2 to m. 218, beat 3 | Bb major | Bb5 | 1 | G3 | 6 |
+| m. 218, beat 3 to m. 219, beat 1 | Bb major | G5 | 6 | D3 | 3 |
+| m. 219, beat 1 to m. 219, beat 2 | Bb major | G5 | 6 | Eb3 | 4 |
+| m. 219, beat 2 to m. 219, beat 3 | Bb major | Bb4 | 1 | F3 | 5 |
+| m. 219, beat 3 to m. 220, beat 1 | Bb major | D5 | 3 | F3 | 5 |
+| m. 220, beat 1 to m. 220, beat 2 | Bb major | C5 | 2 | Bb3 | 1 |
+| m. 220, beat 2 to m. 220, beat 3 | Bb major | C5 | 2 | Bb3 | 1 |
+| m. 220, beat 3 to m. 221, beat 1 | Bb major | Eb5 | 4 | rest (register guard) | - |
+| m. 221, beat 1 to m. 221, beat 2 | Bb major | F5 | 5 | Ab3 | b7 |
+| m. 221, beat 2 to m. 221, beat 3 | Bb major | Ab5 | b7 | G3 | 6 |
+| m. 221, beat 3 to m. 222, beat 1 | Bb major | Eb5 | 4 | F3 | 5 |
+| m. 222, beat 1 to m. 222, beat 2 | Bb major | Eb5 | 4 | Eb3 | 4 |
+| m. 222, beat 2 to m. 222, beat 3 | Bb major | G5 | 6 | D3 | 3 |
+| m. 222, beat 3 to m. 223, beat 1 | Bb major | rest (register guard) | - | C3 | 2 |
+| m. 223, beat 1 to m. 223, beat 2 | G minor | G5 | 1 | C#3 | #4 |
+| m. 223, beat 2 to m. 223, beat 3 | G minor | A5 | 2 | D3 | 5 |
+| m. 223, beat 3 to m. 224, beat 1 | G minor | A#5 | 3 | D#3 | 6 |
+| m. 224, beat 1 to m. 224, beat 2 | G minor | C#5 | #4 | D3 | 5 |
+| m. 224, beat 2 to m. 225, beat 1 | G minor | D5 | 5 | D3 | 5 |
+| m. 225, beat 1 to m. 226, beat 1 | G minor | D#6 | 6 | C3 | 4 |
+| m. 226, beat 1 to m. 226, beat 2 | G minor | D6 | 5 | A#2 | 3 |
+| m. 226, beat 2 to m. 226, beat 3 | G minor | D6 | 5 | A#2 | 3 |
+| m. 226, beat 3 to m. 227, beat 1 | G minor | G5 | 1 | A#2 | 3 |
+| m. 227, beat 1 to m. 227, beat 2 | G minor | D#5 | 6 | C3 | 4 |
+| m. 227, beat 2 to m. 227, beat 3 | G minor | G4 | 1 | D3 | 5 |
+| m. 227, beat 3 to m. 228, beat 1 | G minor | A#4 | 3 | D3 | 5 |
+| m. 228, beat 1 to m. 228, beat 2 | G major | A4 | 2 | G3 | 1 |
+| m. 228, beat 2 to m. 228, beat 3 | G major | G#4 | b2 | G3 | 1 |
+| m. 228, beat 3 to m. 229, beat 1 | G major | A#4 | b3 | rest (register guard) | - |
+| m. 229, beat 1 to m. 229, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 229, beat 3 to m. 230, beat 1 | G major | D5 | 5 | A3 | 2 |
+| m. 230, beat 1 to m. 231, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 231, beat 1 to m. 231, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 231, beat 2 to m. 231, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 231, beat 3 to m. 232, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 232, beat 1 to m. 233, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 233, beat 1 to m. 233, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 233, beat 2 to m. 233, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 233, beat 3 to m. 234, beat 1 | G major | C5 | 4 | A3 | 2 |
+| m. 234, beat 1 to m. 234, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 234, beat 2 to m. 234, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 234, beat 3 to m. 235, beat 1 | G major | rest (register guard) | - | B2 | 3 |
+| m. 235, beat 1 to m. 235, beat 2 | G major | A5 | 2 | C3 | 4 |
+| m. 235, beat 2 to m. 235, beat 3 | G major | F#5 | 7 | C3 | 4 |
+| m. 235, beat 3 to m. 236, beat 1 | G major | D5 | 5 | E3 | 6 |
+| m. 236, beat 1 to m. 236, beat 2 | G major | C5 | 4 | D3 | 5 |
+| m. 236, beat 2 to m. 236, beat 3 | G major | D5 | 5 | D3 | 5 |
+| m. 236, beat 3 to m. 236, beat 3.5 | G major | C#5 | #4 | rest (register guard) | - |
+| m. 236, beat 3.5 to m. 237, beat 1 | G major | C5 | 4 | rest (register guard) | - |
+| m. 237, beat 1 to m. 237, beat 3 | G major | D5 | 5 | G3 | 1 |
+| m. 237, beat 3 to m. 238, beat 1 | G major | E5 | 6 | A3 | 2 |
+| m. 238, beat 1 to m. 238, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 238, beat 2 to m. 238, beat 3 | G major | B4 | 3 | G3 | 1 |
+| m. 238, beat 3 to m. 239, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 239, beat 1 to m. 239, beat 2 | G major | G5 | 1 | G3 | 1 |
+| m. 239, beat 2 to m. 239, beat 3 | G major | A5 | 2 | G3 | 1 |
+| m. 239, beat 3 to m. 240, beat 1 | G major | F#5 | 7 | G3 | 1 |
+| m. 240, beat 1 to m. 241, beat 1 | G major | D5 | 5 | G3 | 1 |
+| m. 241, beat 1 to m. 241, beat 2 | G major | C5 | 4 | A3 | 2 |
+| m. 241, beat 2 to m. 241, beat 3 | G major | A4 | 2 | A3 | 2 |
+| m. 241, beat 3 to m. 242, beat 1 | G major | C#5 | #4 | A3 | 2 |
+| m. 242, beat 1 to m. 242, beat 2 | G major | D5 | 5 | G3 | 1 |
+| m. 242, beat 2 to m. 242, beat 3 | G major | G5 | 1 | E3 | 6 |
+| m. 242, beat 3 to m. 243, beat 1 | G major | B5 | 3 | B2 | 3 |
+| m. 243, beat 1 to m. 243, beat 2 | G major | E5 | 6 | C3 | 4 |
+| m. 243, beat 2 to m. 243, beat 3 | G major | G4 | 1 | D3 | 5 |
+| m. 243, beat 3 to m. 244, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 244, beat 1 to m. 244, beat 2 | G major | A4 | 2 | G3 | 1 |
+| m. 244, beat 2 to m. 244, beat 3 | G major | C5 | 4 | rest (register guard) | - |
+| m. 244, beat 3 to m. 245, beat 1 | G major | E5 | 6 | C5 | 4 |
+| m. 245, beat 1 to m. 245, beat 2 | G major | F5 | b7 | A3 | 2 |
+| m. 245, beat 2 to m. 245, beat 3 | G major | A5 | 2 | A3 | 2 |
+| m. 245, beat 3 to m. 246, beat 1 | G major | G5 | 1 | B3 | 3 |
+| m. 246, beat 1 to m. 246, beat 2 | G major | D#5 | b6 | C4 | 4 |
+| m. 246, beat 2 to m. 246, beat 3 | G major | E5 | 6 | C4 | 4 |
+| m. 246, beat 3 to m. 247, beat 1 | G major | G5 | 1 | C4 | 4 |
+| m. 247, beat 1 to m. 247, beat 2 | G major | E5 | 6 | B3 | 3 |
+| m. 247, beat 2 to m. 247, beat 3 | G major | G4 | 1 | D3 | 5 |
+| m. 247, beat 3 to m. 248, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 248, beat 1 to m. 248, beat 2 | G major | A4 | 2 | G3 | 1 |
+| m. 248, beat 2 to m. 248, beat 3 | G major | C5 | 4 | rest (register guard) | - |
+| m. 248, beat 3 to m. 249, beat 1 | G major | E5 | 6 | C5 | 4 |
+| m. 249, beat 1 to m. 249, beat 2 | G major | F5 | b7 | A2 | 2 |
+| m. 249, beat 2 to m. 249, beat 3 | G major | A5 | 2 | B2 | 3 |
+| m. 249, beat 3 to m. 250, beat 1 | G major | G5 | 1 | G2 | 1 |
+| m. 250, beat 1 to m. 250, beat 2 | G major | E5 | 6 | C3 | 4 |
+| m. 250, beat 2 to m. 250, beat 3 | G major | F#5 | 7 | C3 | 4 |
+| m. 250, beat 3 to m. 251, beat 1 | G major | G5 | 1 | C#3 | #4 |
+| m. 251, beat 1 to m. 251, beat 2 | G major | G4 | 1 | D3 | 5 |
+| m. 251, beat 2 to m. 251, beat 3 | G major | A4 | 2 | D3 | 5 |
+| m. 251, beat 3 to m. 252, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 252, beat 1 to m. 252, beat 2 | G major | B4 | 3 | G3 | 1 |
+| m. 252, beat 2 to m. 252, beat 2.5 | G major | B4 | 3 | G4 | 1 |
+| m. 252, beat 2.5 to m. 252, beat 3 | G major | D5 | 5 | D5 | 5 |
+| m. 252, beat 3 to m. 252, beat 3.5 | G major | D5 | 5 | B4 | 3 |
+| m. 252, beat 3.5 to m. 253, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 253, beat 1 to m. 253, beat 2 | G major | B4 | 3 | G3 | 1 |
+| m. 253, beat 2 to m. 253, beat 2.5 | G major | B4 | 3 | G4 | 1 |
+| m. 253, beat 2.5 to m. 253, beat 3 | G major | D5 | 5 | D5 | 5 |
+| m. 253, beat 3 to m. 253, beat 3.5 | G major | D5 | 5 | B4 | 3 |
+| m. 253, beat 3.5 to m. 254, beat 1 | G major | B4 | 3 | D3 | 5 |
+| m. 254, beat 1 to m. 254, beat 3 | G major | G4 | 1 | G2 | 1 |
+| m. 256, beat 1 to m. 257, beat 1 | G major | G5 | 1 | E5 | 6 |
+| m. 257, beat 1 to m. 257, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 257, beat 1.5 to m. 257, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 257, beat 2 to m. 257, beat 2.5 | C major | F5 | 4 | F3 | 4 |
+| m. 257, beat 2.5 to m. 258, beat 1 | C major | F5 | 4 | rest (bridged) | - |
+| m. 258, beat 1 to m. 258, beat 1.5 | C major | D5 | 2 | G3 | 5 |
+| m. 258, beat 1.5 to m. 258, beat 2 | C major | rest (bridged) | - | G3 | 5 |
+| m. 258, beat 2 to m. 259, beat 1 | C major | E5 | 3 | E3 | 3 |
+| m. 259, beat 1 to m. 259, beat 2 | C major | C#5 | b2 | F3 | 4 |
+| m. 259, beat 2 to m. 259, beat 2.5 | C major | E5 | 3 | F3 | 4 |
+| m. 259, beat 2.5 to m. 260, beat 1 | C major | F5 | 4 | D3 | 2 |
+| m. 260, beat 1 to m. 260, beat 2 | C major | C5 | 1 | G3 | 5 |
+| m. 260, beat 2 to m. 261, beat 1 | C major | G5 | 5 | rest (register guard) | - |
+| m. 261, beat 1 to m. 261, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 261, beat 1.5 to m. 261, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 261, beat 2 to m. 261, beat 2.5 | C major | A5 | 6 | D3 | 2 |
+| m. 261, beat 2.5 to m. 262, beat 1 | C major | A5 | 6 | rest (bridged) | - |
+| m. 262, beat 1 to m. 262, beat 1.5 | C major | D5 | 2 | G3 | 5 |
+| m. 262, beat 1.5 to m. 262, beat 2 | C major | rest (bridged) | - | G3 | 5 |
+| m. 262, beat 2 to m. 263, beat 1 | C major | A5 | 6 | C3 | 1 |
+| m. 263, beat 1 to m. 263, beat 2 | C major | F5 | 4 | F3 | 4 |
+| m. 263, beat 2 to m. 263, beat 2.5 | C major | C5 | 1 | F3 | 4 |
+| m. 263, beat 2.5 to m. 264, beat 1 | C major | D5 | 2 | G3 | 5 |
+| m. 264, beat 1 to m. 264, beat 2 | C major | C5 | 1 | C3 | 1 |
+| m. 264, beat 2 to m. 265, beat 1 | C major | G5 | 5 | rest (register guard) | - |
+| m. 265, beat 1 to m. 265, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 265, beat 1.5 to m. 265, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 265, beat 2 to m. 265, beat 2.5 | C major | F5 | 4 | F3 | 4 |
+| m. 265, beat 2.5 to m. 266, beat 1 | C major | F5 | 4 | rest (bridged) | - |
+| m. 266, beat 1 to m. 266, beat 1.5 | C major | D5 | 2 | G3 | 5 |
+| m. 266, beat 1.5 to m. 266, beat 2 | C major | rest (bridged) | - | G3 | 5 |
+| m. 266, beat 2 to m. 267, beat 1 | C major | E5 | 3 | E3 | 3 |
+| m. 267, beat 1 to m. 267, beat 2 | C major | C#5 | b2 | F3 | 4 |
+| m. 267, beat 2 to m. 267, beat 2.5 | C major | E5 | 3 | F3 | 4 |
+| m. 267, beat 2.5 to m. 268, beat 1 | C major | F5 | 4 | D3 | 2 |
+| m. 268, beat 1 to m. 268, beat 2 | C major | C5 | 1 | G3 | 5 |
+| m. 268, beat 2 to m. 269, beat 1 | C major | G5 | 5 | rest (register guard) | - |
+| m. 269, beat 1 to m. 269, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 269, beat 1.5 to m. 269, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 269, beat 2 to m. 269, beat 2.5 | C major | A5 | 6 | D3 | 2 |
+| m. 269, beat 2.5 to m. 270, beat 1 | C major | A5 | 6 | rest (bridged) | - |
+| m. 270, beat 1 to m. 270, beat 1.5 | C major | D5 | 2 | G3 | 5 |
+| m. 270, beat 1.5 to m. 270, beat 2 | C major | rest (bridged) | - | G3 | 5 |
+| m. 270, beat 2 to m. 271, beat 1 | C major | A5 | 6 | C3 | 1 |
+| m. 271, beat 1 to m. 271, beat 2 | C major | F5 | 4 | F3 | 4 |
+| m. 271, beat 2 to m. 271, beat 2.5 | C major | C5 | 1 | F3 | 4 |
+| m. 271, beat 2.5 to m. 272, beat 1 | C major | D5 | 2 | G3 | 5 |
+| m. 272, beat 1 to m. 272, beat 2 | C major | C5 | 1 | C3 | 1 |
+| m. 272, beat 2 to m. 273, beat 1 | C major | G5 | 5 | C4 | 1 |
+| m. 273, beat 1 to m. 273, beat 2 | C major | A5 | 6 | B3 | 7 |
+| m. 273, beat 2 to m. 274, beat 1 | C major | D5 | 2 | F#3 | #4 |
+| m. 274, beat 1 to m. 274, beat 2 | C major | E5 | 3 | G3 | 5 |
+| m. 274, beat 2 to m. 275, beat 1 | C major | E6 | 3 | B2 | 7 |
+| m. 275, beat 1 to m. 275, beat 2 | G major | C6 | 4 | C3 | 4 |
+| m. 275, beat 2 to m. 276, beat 1 | G major | A5 | 2 | C#3 | #4 |
+| m. 276, beat 1 to m. 276, beat 2 | G major | G5 | 1 | D3 | 5 |
+| m. 276, beat 2 to m. 277, beat 1 | G major | D6 | 5 | rest (register guard) | - |
+| m. 277, beat 1 to m. 277, beat 2 | G major | B5 | 3 | E4 | 6 |
+| m. 277, beat 2 to m. 277, beat 2.5 | G major | C6 | 4 | C4 | 4 |
+| m. 277, beat 2.5 to m. 278, beat 1 | G major | C6 | 4 | rest (bridged) | - |
+| m. 278, beat 1 to m. 278, beat 2 | G major | A5 | 2 | D4 | 5 |
+| m. 278, beat 2 to m. 279, beat 1 | G major | B5 | 3 | B3 | 3 |
+| m. 279, beat 1 to m. 279, beat 2 | G major | G5 | 1 | C3 | 4 |
+| m. 279, beat 2 to m. 280, beat 1 | G major | D5 | 5 | D3 | 5 |
+| m. 280, beat 1 to m. 280, beat 2 | G major | G4 | 1 | G2 | 1 |
+| m. 280, beat 2 to m. 281, beat 1 | G major | C5 | 4 | rest (register guard) | - |
+| m. 281, beat 1 to m. 281, beat 1.5 | G major | D5 | 5 | G3 | 1 |
+| m. 281, beat 1.5 to m. 281, beat 2 | G major | rest (bridged) | - | G2 | 1 |
+| m. 281, beat 2 to m. 282, beat 1 | G major | E5 | 6 | rest (register guard) | - |
+| m. 282, beat 1 to m. 282, beat 1.5 | G major | F5 | b7 | G3 | 1 |
+| m. 282, beat 1.5 to m. 282, beat 2 | G major | rest (bridged) | - | G2 | 1 |
+| m. 282, beat 2 to m. 283, beat 1 | G major | G5 | 1 | rest (register guard) | - |
+| m. 283, beat 1 to m. 283, beat 1.5 | G major | A5 | 2 | A5 | 2 |
+| m. 283, beat 1.5 to m. 283, beat 2 | G major | G#5 | b2 | G#5 | b2 |
+| m. 283, beat 2 to m. 283, beat 2.5 | G major | G5 | 1 | G5 | 1 |
+| m. 283, beat 2.5 to m. 284, beat 1 | G major | F#5 | 7 | F#5 | 7 |
+| m. 284, beat 1 to m. 284, beat 2 | C major | F5 | 4 | F5 | 4 |
+| m. 284, beat 2 to m. 285, beat 1 | C major | G5 | 5 | E5 | 3 |
+| m. 285, beat 1 to m. 285, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 285, beat 1.5 to m. 285, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 285, beat 2 to m. 285, beat 2.5 | C major | F5 | 4 | F3 | 4 |
+| m. 285, beat 2.5 to m. 286, beat 1 | C major | F5 | 4 | rest (bridged) | - |
+| m. 286, beat 1 to m. 286, beat 1.5 | C major | D5 | 2 | G3 | 5 |
+| m. 286, beat 1.5 to m. 286, beat 2 | C major | rest (bridged) | - | G3 | 5 |
+| m. 286, beat 2 to m. 287, beat 1 | C major | E5 | 3 | E3 | 3 |
+| m. 287, beat 1 to m. 287, beat 2 | C major | C#5 | b2 | F3 | 4 |
+| m. 287, beat 2 to m. 287, beat 2.5 | C major | E5 | 3 | F3 | 4 |
+| m. 287, beat 2.5 to m. 288, beat 1 | C major | F5 | 4 | D3 | 2 |
+| m. 288, beat 1 to m. 288, beat 2 | C major | C5 | 1 | G3 | 5 |
+| m. 288, beat 2 to m. 289, beat 1 | C major | G5 | 5 | rest (register guard) | - |
+| m. 289, beat 1 to m. 289, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 289, beat 1.5 to m. 289, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 289, beat 2 to m. 289, beat 2.5 | C major | A5 | 6 | D3 | 2 |
+| m. 289, beat 2.5 to m. 290, beat 1 | C major | A5 | 6 | rest (bridged) | - |
+| m. 290, beat 1 to m. 290, beat 1.5 | A minor | D5 | 4 | G3 | 7 |
+| m. 290, beat 1.5 to m. 290, beat 2 | A minor | rest (bridged) | - | G3 | 7 |
+| m. 290, beat 2 to m. 291, beat 1 | A minor | A5 | 1 | C3 | 3 |
+| m. 291, beat 1 to m. 291, beat 2 | A minor | F5 | 6 | F3 | 6 |
+| m. 291, beat 2 to m. 291, beat 2.5 | A minor | C5 | 3 | F3 | 6 |
+| m. 291, beat 2.5 to m. 292, beat 1 | A minor | D5 | 4 | G3 | 7 |
+| m. 292, beat 1 to m. 293, beat 1 | A minor | C5 | 3 | C3 | 3 |
+| m. 293, beat 1 to m. 293, beat 2 | A minor | F5 | 6 | A3 | 1 |
+| m. 293, beat 2 to m. 294, beat 1 | A minor | rest (register guard) | - | B3 | 2 |
+| m. 294, beat 1 to m. 294, beat 2 | A minor | F5 | 6 | G#3 | #7 |
+| m. 294, beat 2 to m. 295, beat 1 | A minor | C6 | 3 | rest (register guard) | - |
+| m. 295, beat 1 to m. 295, beat 2 | A minor | A5 | 1 | D#4 | #4 |
+| m. 295, beat 2 to m. 296, beat 1 | A minor | B5 | 2 | D5 | 4 |
+| m. 296, beat 1 to m. 296, beat 2 | A minor | G#5 | #7 | D#4 | #4 |
+| m. 296, beat 2 to m. 297, beat 1 | A minor | A5 | 1 | C4 | 3 |
+| m. 297, beat 1 to m. 297, beat 2 | A minor | C5 | 3 | D4 | 4 |
+| m. 297, beat 2 to m. 298, beat 1 | A minor | D5 | 4 | E4 | 5 |
+| m. 298, beat 1 to m. 298, beat 1.5 | A minor | E5 | 5 | F4 | 6 |
+| m. 298, beat 1.5 to m. 298, beat 2 | A minor | F5 | 6 | C#4 | #3 |
+| m. 298, beat 2 to m. 298, beat 2.5 | A minor | G5 | 7 | D4 | 4 |
+| m. 298, beat 2.5 to m. 299, beat 1 | A minor | F5 | 6 | E4 | 5 |
+| m. 299, beat 1 to m. 299, beat 1.5 | A minor | E5 | 5 | F4 | 6 |
+| m. 299, beat 1.5 to m. 299, beat 2 | A minor | C6 | 3 | rest (bridged) | - |
+| m. 299, beat 2 to m. 299, beat 2.5 | A minor | C6 | 3 | F4 | 6 |
+| m. 299, beat 2.5 to m. 300, beat 1 | A minor | D#5 | #4 | D#5 | #4 |
+| m. 300, beat 1 to m. 300, beat 2 | A minor | E5 | 5 | E3 | 5 |
+| m. 300, beat 2 to m. 301, beat 1 | A minor | B5 | 2 | G#3 | #7 |
+| m. 301, beat 1 to m. 301, beat 2 | E major | A5 | 4 | E3 | 1 |
+| m. 301, beat 2 to m. 302, beat 1 | E major | A5 | 4 | A3 | 4 |
+| m. 302, beat 1 to m. 302, beat 2 | E major | G#5 | 3 | E3 | 1 |
+| m. 302, beat 2 to m. 303, beat 1 | E major | B5 | 5 | G#3 | 3 |
+| m. 303, beat 1 to m. 303, beat 2 | E major | A5 | 4 | E3 | 1 |
+| m. 303, beat 2 to m. 304, beat 1 | E major | A5 | 4 | A3 | 4 |
+| m. 304, beat 1 to m. 304, beat 2 | E major | rest (register guard) | - | E3 | 1 |
+| m. 304, beat 2 to m. 305, beat 1 | E major | E5 | 1 | rest (register guard) | - |
+| m. 305, beat 1 to m. 305, beat 2 | E major | C5 | b6 | D#4 | 7 |
+| m. 305, beat 2 to m. 306, beat 1 | E major | D5 | b7 | B4 | 5 |
+| m. 306, beat 1 to m. 306, beat 2 | E major | B4 | 5 | D#4 | 7 |
+| m. 306, beat 2 to m. 307, beat 1 | E major | C4 | b6 | E3 | 1 |
+| m. 307, beat 1 to m. 307, beat 2 | E major | F4 | b2 | C3 | b6 |
+| m. 307, beat 2 to m. 308, beat 1 | E major | B3 | 5 | D3 | b7 |
+| m. 308, beat 1 to m. 308, beat 2 | E major | F6 | b2 | B2 | 5 |
+| m. 308, beat 2 to m. 309, beat 1 | E major | E6 | 1 | G#3 | 3 |
+| m. 309, beat 1 to m. 309, beat 1.5 | A minor | D6 | 4 | A3 | 1 |
+| m. 309, beat 1.5 to m. 309, beat 2 | A minor | C6 | 3 | B3 | 2 |
+| m. 309, beat 2 to m. 309, beat 2.5 | A minor | B5 | 2 | C4 | 3 |
+| m. 309, beat 2.5 to m. 310, beat 1 | A minor | A5 | 1 | C#4 | #3 |
+| m. 310, beat 1 to m. 310, beat 1.5 | A minor | G5 | 7 | D4 | 4 |
+| m. 310, beat 1.5 to m. 310, beat 2 | A minor | F5 | 6 | E4 | 5 |
+| m. 310, beat 2 to m. 310, beat 2.5 | A minor | E5 | 5 | F4 | 6 |
+| m. 310, beat 2.5 to m. 311, beat 1 | A minor | D5 | 4 | E4 | 5 |
+| m. 311, beat 1 to m. 311, beat 2 | A minor | F5 | 6 | D4 | 4 |
+| m. 311, beat 2 to m. 312, beat 1 | A minor | A4 | 1 | E3 | 5 |
+| m. 312, beat 1 to m. 312, beat 2 | A minor | A4 | 1 | A3 | 1 |
+| m. 312, beat 2 to m. 313, beat 1 | A minor | D5 | 4 | E3 | 5 |
+| m. 313, beat 1 to m. 313, beat 2 | A minor | A4 | 1 | A3 | 1 |
+| m. 313, beat 2 to m. 314, beat 1 | A minor | D5 | 4 | E3 | 5 |
+| m. 314, beat 1 to m. 314, beat 2 | A minor | A4 | 1 | A3 | 1 |
+| m. 314, beat 2 to m. 315, beat 1 | A minor | D5 | 4 | E3 | 5 |
+| m. 315, beat 1 to m. 315, beat 2 | A minor | E5 | 5 | A3 | 1 |
+| m. 315, beat 2 to m. 316, beat 1 | A minor | F5 | 6 | G3 | 7 |
+| m. 317, beat 2 to m. 318, beat 1 | A minor | G5 | 7 | E5 | 5 |
+| m. 318, beat 1 to m. 318, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 318, beat 1.5 to m. 318, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 318, beat 2 to m. 318, beat 2.5 | C major | F5 | 4 | F3 | 4 |
+| m. 318, beat 2.5 to m. 319, beat 1 | C major | F5 | 4 | rest (bridged) | - |
+| m. 319, beat 1 to m. 319, beat 1.5 | C major | D5 | 2 | G3 | 5 |
+| m. 319, beat 1.5 to m. 319, beat 2 | C major | rest (bridged) | - | G3 | 5 |
+| m. 319, beat 2 to m. 320, beat 1 | C major | E5 | 3 | E3 | 3 |
+| m. 320, beat 1 to m. 320, beat 2 | C major | C#5 | b2 | F3 | 4 |
+| m. 320, beat 2 to m. 320, beat 2.5 | C major | E5 | 3 | F3 | 4 |
+| m. 320, beat 2.5 to m. 321, beat 1 | C major | F5 | 4 | D3 | 2 |
+| m. 321, beat 1 to m. 321, beat 2 | C major | C5 | 1 | G3 | 5 |
+| m. 321, beat 2 to m. 322, beat 1 | C major | G5 | 5 | rest (register guard) | - |
+| m. 322, beat 1 to m. 322, beat 1.5 | C major | E5 | 3 | A3 | 6 |
+| m. 322, beat 1.5 to m. 322, beat 2 | C major | rest (bridged) | - | A3 | 6 |
+| m. 322, beat 2 to m. 322, beat 2.5 | C major | A5 | 6 | D3 | 2 |
+| m. 322, beat 2.5 to m. 323, beat 1 | C major | A5 | 6 | rest (bridged) | - |
+| m. 323, beat 1 to m. 323, beat 1.5 | C major | D5 | 2 | G3 | 5 |
+| m. 323, beat 1.5 to m. 323, beat 2 | C major | rest (bridged) | - | G3 | 5 |
+| m. 323, beat 2 to m. 324, beat 1 | C major | A5 | 6 | C3 | 1 |
+| m. 324, beat 1 to m. 324, beat 2 | C major | F5 | 4 | F3 | 4 |
+| m. 324, beat 2 to m. 324, beat 2.5 | C major | C5 | 1 | F3 | 4 |
+| m. 324, beat 2.5 to m. 325, beat 1 | C major | D5 | 2 | G3 | 5 |
+| m. 325, beat 1 to m. 325, beat 1.5 | C major | C5 | 1 | C4 | 1 |
+| m. 325, beat 1.5 to m. 325, beat 2 | C major | rest (bridged) | - | C3 | 1 |
+| m. 325, beat 2 to m. 326, beat 1 | C major | F5 | 4 | F3 | 4 |
+| m. 326, beat 1 to m. 326, beat 2 | C major | A5 | 6 | E3 | 3 |
+| m. 326, beat 2 to m. 327, beat 1 | C major | F5 | 4 | F3 | 4 |
+| m. 327, beat 1 to m. 327, beat 2 | C major | A5 | 6 | E3 | 3 |
+| m. 327, beat 2 to m. 328, beat 1 | C major | D6 | 2 | F3 | 4 |
+| m. 328, beat 1 to m. 328, beat 2 | C major | A5 | 6 | G3 | 5 |
+| m. 328, beat 2 to m. 329, beat 1 | C major | E5 | 3 | G3 | 5 |
+| m. 329, beat 1 to m. 329, beat 2 | C major | D5 | 2 | C4 | 1 |
+| m. 329, beat 2 to m. 330, beat 1 | C major | F5 | 4 | F3 | 4 |
+| m. 330, beat 1 to m. 330, beat 2 | C major | A5 | 6 | E3 | 3 |
+| m. 330, beat 2 to m. 331, beat 1 | C major | F5 | 4 | F3 | 4 |
+| m. 331, beat 1 to m. 331, beat 2 | C major | A5 | 6 | E3 | 3 |
+| m. 331, beat 2 to m. 332, beat 1 | C major | D6 | 2 | F3 | 4 |
+| m. 332, beat 1 to m. 332, beat 2 | C major | A5 | 6 | G3 | 5 |
+| m. 332, beat 2 to m. 333, beat 1 | C major | E5 | 3 | G3 | 5 |
+| m. 333, beat 1 to m. 333, beat 2 | C major | E5 | 3 | G3 | 5 |
+| m. 333, beat 2 to m. 334, beat 1 | C major | G4 | 5 | C3 | 1 |
+| m. 334, beat 1 to m. 334, beat 2 | C major | G5 | 5 | G3 | 5 |
+| m. 334, beat 2 to m. 335, beat 1 | C major | G5 | 5 | G2 | 5 |
+| m. 335, beat 1 to m. 335, beat 2 | C major | E5 | 3 | G3 | 5 |
+| m. 335, beat 2 to m. 336, beat 1 | C major | G4 | 5 | C3 | 1 |
+| m. 336, beat 1 to m. 336, beat 2 | C major | G5 | 5 | G3 | 5 |
+| m. 336, beat 2 to m. 337, beat 1 | C major | G5 | 5 | G2 | 5 |
+| m. 337, beat 1 to m. 337, beat 1.5 | C major | C5 | 1 | C2 | 1 |
+| m. 337, beat 1.5 to m. 337, beat 2 | C major | C6 | 1 | E2 | 3 |
+| m. 337, beat 2 to m. 337, beat 2.5 | C major | C5 | 1 | G2 | 5 |
+| m. 337, beat 2.5 to m. 338, beat 1 | C major | C5 | 1 | E2 | 3 |
+| m. 338, beat 1 to m. 338, beat 2 | C major | C5 | 1 | C2 | 1 |
 ## Non-chord tones
 
 575 notes sound against a chord without being one of its tones; 182 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
