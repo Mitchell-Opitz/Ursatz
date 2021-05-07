@@ -3,7 +3,7 @@
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v4.schema.json`](../schema/analysis-document.v4.schema.json)
+[`schema/analysis-document.v5.schema.json`](../schema/analysis-document.v5.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render` from
 `<ursatz_analyzer/analysis_document.h>`.
 
@@ -12,9 +12,9 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v4 content |
+| Key | Type | v5 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `4`. |
+| `schema_version` | integer | Always `5`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
@@ -23,6 +23,7 @@ newline. The same input and build always give the same bytes.
 | `pivot_chords` | array of pivot chord claims | Filled. See below. |
 | `chords` | array of chord claims | Filled. |
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
+| `outer_voices` | object | Filled: the soprano and bass lines. See below. |
 | `cadences` | array | Placeholder: `[]`. |
 | `phrases` | array | Placeholder: `[]`. |
 | `form` | object or null | Placeholder: `null`. |
@@ -272,10 +273,45 @@ when no chord was identified.
 | `inversion` | integer or null | Where the bass sits among the chord's tones: `0` root position, `1` first inversion (the third in the bass), `2` second, `3` third (sevenths only). `null` when the bass is not a chord tone. |
 | `duration` | object | `{"whole_notes", "beats"}`: the span's length as a rational in whole notes, and in beats of the signature the segment starts in (`null` when that signature has no beat grid). Where the chord starts and ends in measures and beats is `location`. |
 | `score` | number or null | The library's score for the chord. Scores run from below 0 to 1.05. |
+| `outer` | object | `{"soprano", "bass"}`: the highest and lowest sounding note of the segment, each `{"status", "note_id", "pitch", "degree", "uncertainty"}`. `status` is `"present"` when a note sounds as the line, else `"absent"` (only other voices sound), `"bridged"` (a short gap inside the line) or `"guarded"` (dropped by the library's register guard). `note_id` and `pitch` (a name with octave, e.g. `"E5"`, spelled with flats in keys that read in flats) are `null` unless present. `degree` is the library's scale degree label in the local key of the chord's key region (`"1"` to `"7"`, with `b` or `#` for a chromatic alteration), `null` unless present and the segment lies in a key region. `uncertainty` is that key region's uncertainty, in [0, 1], higher LESS certain; `null` when `degree` is. The chord's `bass` field above is a different thing: it is the pitch class the chord is read over. |
 | `runner_up` | object or null | The best-scoring candidate on a different root, with `label`, `root`, `quality`, `score` and `uncertainty` (the library's plausibility of it relative to the best chord, in [0, 1]); `null` when no other root sounds. |
 
 The runner-up is always recorded when the library provides one. The Markdown report shows it only
 when its score is within 0.10 of the best chord's.
+
+### Outer voices
+
+`outer_voices` holds the two outer lines of the piece, from Ursatz's outer-voice extraction:
+`{"soprano": [...], "bass": [...]}`. Each line has one entry for every chord, in time order, so the
+entry at index `i` of either line belongs to the chord at index `i` of `chords` (`chord_index` says so
+too). A line is not a melody: it is the highest (soprano) or lowest (bass) sounding note of each
+chord's span, theory-neutral pitch height with the scale degree read against the local key. It is the
+shared input for voice-leading (A6.1), melody (A5.1, whose `melody` section stays reserved) and schema
+(A6.2) analysis, and for the Composer's schema recognition. Nothing in it is a voice-leading, melodic
+or schema claim.
+
+Each entry is a claim (see Claims) over the chord's span, plus:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `chord_index` | integer | Index into `chords` of the chord this entry belongs to. |
+| `status` | string | `"present"` when a note sounds as the line in the chord's span; otherwise `"absent"` (only other voices sound), `"bridged"` (a short gap inside the line) or `"guarded"` (the library dropped the note rather than adopt an accompaniment note). A line is never filled from another voice. |
+| `key_label` | string | The key of the region the chord lies in, the key the degree is read in, or `"no match"`. |
+| `note_id` | integer or null | The imported note index, as `note_ids` in every claim; `null` unless present. `note_ids` holds the same note, or is empty. |
+| `pitch` | object or null | `{"name", "midi"}`: the pitch name with octave (`"E5"`, spelled with flats in keys that read in flats) and the MIDI note number. `null` unless present. |
+| `degree` | string or null | The library's scale degree label in the local key: `"1"` to `"7"`, with `b` or `#` for a chromatic alteration. `null` unless present and the chord lies in a key region. In a minor region the diatonic degrees are the natural minor's. |
+| `held` | boolean or null | Whether the note was attacked before the chord began. `null` unless present. |
+| `onset` | object or null | `{"time", "location"}`: where the note itself is attacked, as a rational in whole notes and as a measure and beat. `null` unless present. |
+| `duration` | object or null | `{"whole_notes", "beats"}`: the note's whole length, not just its part in the chord, in whole notes and in beats of the signature it is attacked in (`null` when that signature has no beat grid). `null` unless present. |
+
+In a claim, `label` is the degree, failing that the pitch name, failing that the status. `uncertainty`
+is the uncertainty of the key region the degree is read in, in [0, 1], higher LESS certain, as for
+`keys` (note this is the other way round from a chord's `uncertainty`); `null` when `degree` is.
+
+One note can appear in consecutive entries: a note held across several chords is the line's note in
+each. Where one note sounds, the soprano and the bass are that note. Where voices cross, the soprano is
+whatever sounds highest and the bass whatever sounds lowest, whichever voice plays them. A chord also
+carries the same summary in its `outer` field (see Chord claims).
 
 ### Non-chord-tone claims
 
@@ -306,6 +342,9 @@ non-chord tones.
 
 ### Version history
 
+- **5**: Adds the required `outer_voices` section (the soprano and bass lines) and the required `outer`
+  field on every chord claim. A required section and a required field are breaking changes under the
+  rule above.
 - **4**: `keys` is an object of key regions with a derived home key (it was an array holding one
   whole-piece claim with a `method`), `metadata` gains the required `key_signatures`, and the top
   level gains the required `notes`. The `method` field is gone, with the key-signature, bass-fallback

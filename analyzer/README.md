@@ -53,7 +53,7 @@ Writes two files next to the input file:
 - `<stem>.report.md`: the Markdown report.
 - `<stem>.analysis.json`: the analysis document. See
   [docs/analysis-document.md](docs/analysis-document.md) and the
-  [schema](schema/analysis-document.v4.schema.json).
+  [schema](schema/analysis-document.v5.schema.json).
 
 `--markdown` writes only the report, `--json` writes only the analysis document. No flag, or both,
 writes both. Flags can come before or after the path. Exits 1 with a message on an unknown flag, a
@@ -96,6 +96,8 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
 2. `key_region_pipeline`: finds the local key regions with Ursatz's key-region detection.
 3. `chord_pipeline`: identifies each segment's chord with Ursatz's weighted chord identification,
    with its runner-up and the segment's non-chord tones.
+4. `outer_voice_pipeline`: extracts the soprano and bass of each segment with Ursatz's outer-voice
+   extraction and names their scale degrees in the segment's local key.
 
 `analysis_document` then builds the analysis document once. It is the single source of truth:
 the JSON file is its serialization, and `markdown_report` renders the report from it, never from
@@ -126,6 +128,36 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's segm
   library cannot place in one of its figures is listed as `unclassified`, not dropped.
 - **Chord coverage** is the fraction of the notes' sounding time, in all segments, that is a chord
   tone or a classified non-chord tone of an identified chord. `test_chord_coverage` measures it.
+
+See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
+
+## Outer voices
+
+The analyzer adds no music theory of its own here: it renders what Ursatz's outer-voice extraction
+(`outer_voice_extract`, `src/analysis/outer_voice.h`) and scale-degree labelling
+(`common_practice_scale_degree_label`, `frameworks/common-practice-minimal/outer_scale_degrees.h`)
+establish, in `src/pipeline/outer_voice_pipeline.c`.
+
+- **Soprano and bass.** For each chord segment the soprano is the highest sounding note and the bass the
+  lowest, attacked or held. Doubled pitches resolve to the note attacked most recently. The library
+  smooths each line across short gaps and register leaps; a line it leaves empty (a rest, a bridged gap,
+  or a note dropped by the register guard) is reported as a rest, never filled from another voice.
+- **Scale degrees** are taken relative to the local key: the key of the region the chord lies in, so a
+  note in a tonicized or modulated region is read against that region's key, not the home key. Degrees
+  are the library's labels: `1` to `7`, with `b` or `#` for a chromatic alteration (`b7`, `#4`). In a
+  minor region the diatonic degrees are the natural minor's, so the raised sixth and seventh read as
+  `#6` and `#7`. A chord outside every key region has pitches but no degrees. Pitches are spelled with
+  flats in keys that read in flats.
+- **Uncertainty.** A degree is only as sure as the key it is read against, so each degree's
+  `uncertainty` in the analysis document is the library's uncertainty for that key region (0 clearly
+  this key, 1 another key fits as well or better).
+- **Report layout.** The soprano and bass go in their own Outer voices table, one row per chord, and not
+  as columns of the Chords table, which already has nine. A chord's span is one segment, so each line has
+  one note per chord; the same note appears in consecutive rows when it is held across them.
+- **Crossing voices and texture.** The soprano is whatever is highest, whatever voice plays it: an inner
+  voice that rises above the melody becomes the soprano for as long as it is highest. Where the melody
+  repeats a note, the soprano is the note attacked most recently. When one note sounds, soprano and bass
+  are that note.
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 

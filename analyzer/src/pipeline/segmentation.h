@@ -6,6 +6,7 @@
 
 #include <ursatz_analyzer/midi_pipeline.h>
 
+#include "semantics/sonority_segmentation.h"
 #include "weighted_chord_identification.h"
 
 /*
@@ -34,6 +35,8 @@ typedef struct {
     size_t segment_count;
     CommonPracticeSegment *library_segments; /* parallel to segments; views onto their members */
     char (*segment_ids)[32];                 /* backs library_segments[i].id */
+    AdaptiveSonorities sonorities;           /* parallel to segments; the library's own segments, which the
+                                                outer-voice extraction reads */
 } Segmentation;
 
 /*

@@ -905,6 +905,60 @@ static bool add_chord_fields(cJSON *claim, const ImportedNotes *notes, const Ana
            add(claim, "runner_up", runner_up_json(&entry->runner_up));
 }
 
+static const char *outer_status_name(AnalysisOuterStatus status) {
+    switch (status) {
+        case ANALYSIS_OUTER_PRESENT:
+            return "present";
+        case ANALYSIS_OUTER_BRIDGED:
+            return "bridged";
+        case ANALYSIS_OUTER_GUARDED:
+            return "guarded";
+        default:
+            return "absent";
+    }
+}
+
+/* The uncertainty of a degree: the library's uncertainty for the key region the segment lies in, since the
+   degree is only as sure as the key it is read against (in [0, 1], higher is LESS certain). Null when the
+   voice is not present, or the segment lies in no key region. */
+static cJSON *outer_uncertainty_json(const AnalysisReport *report, const AnalysisReportEntry *entry,
+                                     const AnalysisOuterNote *note) {
+    if (note->status != ANALYSIS_OUTER_PRESENT || !entry->in_region || entry->region >= report->key_region_count) {
+        return cJSON_CreateNull();
+    }
+    return cJSON_CreateNumber(report->key_regions[entry->region].uncertainty);
+}
+
+/* One outer voice of a chord: its status, the note and pitch name when a note sounds as the line, its scale
+   degree in the local key (null in no key region), and the degree's uncertainty. */
+static cJSON *outer_voice_summary_json(const AnalysisReport *report, const AnalysisReportEntry *entry,
+                                       const AnalysisOuterNote *note) {
+    bool present = note->status == ANALYSIS_OUTER_PRESENT;
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "status", cJSON_CreateString(outer_status_name(note->status))) &&
+          add(object, "note_id", present ? cJSON_CreateNumber((double)note->note_id) : cJSON_CreateNull()) &&
+          add(object, "pitch", optional_string_json(note->pitch_name)) &&
+          add(object, "degree", optional_string_json(note->degree)) &&
+          add(object, "uncertainty", outer_uncertainty_json(report, entry, note)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The chord's "outer" field: the soprano and the bass sounding in its segment. (The chord's own "bass" field is
+   the pitch class the chord is read over.) */
+static cJSON *chord_outer_json(const AnalysisReport *report, const AnalysisReportEntry *entry) {
+    cJSON *outer = cJSON_CreateObject();
+    if (outer && !(add(outer, "soprano", outer_voice_summary_json(report, entry, &entry->soprano)) &&
+                   add(outer, "bass", outer_voice_summary_json(report, entry, &entry->bass)))) {
+        cJSON_Delete(outer);
+        return NULL;
+    }
+    return outer;
+}
+
 /* One chord claim per report entry, in time order. */
 static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
@@ -919,7 +973,8 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
         cJSON *claim = claim_json_at(framework, notes, entry->note_ids, entry->note_id_count, start, end,
                                      entry->chord_label, entry->chord_confidence);
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
-              add_chord_fields(claim, notes, entry, start, end))) {
+              add_chord_fields(claim, notes, entry, start, end) &&
+              add(claim, "outer", chord_outer_json(report, entry)))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;
@@ -964,6 +1019,105 @@ static cJSON *non_chord_tones_json(const ImportedNotes *notes, const AnalysisRep
     return tones;
 }
 
+/* ---- Outer voices ---- */
+
+/* The note's own timing, apart from the chord segment it sounds in: where it is attacked, as a time and a
+   measure and beat, and how long it lasts in whole notes and in beats of the signature it is attacked in.
+   Null members when no note sounds as the line. */
+static bool add_outer_note_timing(cJSON *claim, const ImportedNotes *notes, const AnalysisOuterNote *voice) {
+    if (voice->status != ANALYSIS_OUTER_PRESENT) {
+        return add(claim, "onset", cJSON_CreateNull()) && add(claim, "duration", cJSON_CreateNull());
+    }
+    const NoteEvent *event = notes->events[voice->note_id];
+    Rational onset = note_onset(event);
+    Rational end = note_end(event);
+    cJSON *onset_object = cJSON_CreateObject();
+    cJSON *duration = cJSON_CreateObject();
+    bool ok = onset_object && duration && add(onset_object, "time", rational_json(onset)) &&
+              add(onset_object, "location", position_json(notes->meter.meter_map, onset));
+    if (ok) {
+        Rational length = rational_difference(end, onset);
+        ok = add(duration, "whole_notes", rational_json(length)) &&
+             add(duration, "beats", span_beats_json(notes->meter.meter_map, onset, end));
+    }
+    if (!ok) {
+        cJSON_Delete(onset_object);
+        cJSON_Delete(duration);
+        return false;
+    }
+    return add(claim, "onset", onset_object) && add(claim, "duration", duration);
+}
+
+/* {"name", "midi"}: the note's pitch name with octave and its MIDI note number; null when no note sounds. */
+static cJSON *outer_pitch_json(const AnalysisOuterNote *voice) {
+    if (voice->status != ANALYSIS_OUTER_PRESENT) {
+        return cJSON_CreateNull();
+    }
+    cJSON *pitch = cJSON_CreateObject();
+    if (pitch && !(add(pitch, "name", cJSON_CreateString(voice->pitch_name)) &&
+                   add(pitch, "midi", cJSON_CreateNumber(voice->pitch)))) {
+        cJSON_Delete(pitch);
+        return NULL;
+    }
+    return pitch;
+}
+
+/* One entry of an outer line: the claim over the chord segment's span (note_ids is the line's note, or empty
+   when none sounds), then the chord it belongs to, the status, the note, its pitch, its scale degree in that
+   chord's local key, and its timing. The label is the degree; failing that the pitch name (the segment lies in
+   no key region), or the status when no note sounds. */
+static cJSON *outer_voice_note_json(const ImportedNotes *notes, const AnalysisReport *report, size_t chord_index,
+                                    const AnalysisOuterNote *voice) {
+    const AnalysisReportEntry *entry = &report->entries[chord_index];
+    bool present = voice->status == ANALYSIS_OUTER_PRESENT;
+    Rational start = rational_make(entry->time_numerator, entry->time_denominator);
+    Rational end = rational_make(entry->end_numerator, entry->end_denominator);
+    const char *label = voice->degree ? voice->degree
+                                       : (present ? voice->pitch_name : outer_status_name(voice->status));
+    cJSON *claim = claim_json_with(library_framework_name(), notes, present ? &voice->note_id : NULL,
+                                   present ? 1 : 0, start, end, label, outer_uncertainty_json(report, entry, voice));
+    if (!(claim && add(claim, "chord_index", cJSON_CreateNumber((double)chord_index)) &&
+          add(claim, "status", cJSON_CreateString(outer_status_name(voice->status))) &&
+          add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
+          add(claim, "note_id", present ? cJSON_CreateNumber((double)voice->note_id) : cJSON_CreateNull()) &&
+          add(claim, "pitch", outer_pitch_json(voice)) && add(claim, "degree", optional_string_json(voice->degree)) &&
+          add(claim, "held", present ? cJSON_CreateBool(voice->held) : cJSON_CreateNull()) &&
+          add_outer_note_timing(claim, notes, voice))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* One line of the outer voices: an entry for every chord segment, in time order, so a line lines up with the
+   chords by chord_index. */
+static cJSON *outer_line_json(const ImportedNotes *notes, const AnalysisReport *report, bool soprano) {
+    cJSON *line = cJSON_CreateArray();
+    if (!line) {
+        return NULL;
+    }
+    for (size_t i = 0; i < report->entry_count; i++) {
+        const AnalysisReportEntry *entry = &report->entries[i];
+        if (!append(line, outer_voice_note_json(notes, report, i, soprano ? &entry->soprano : &entry->bass))) {
+            cJSON_Delete(line);
+            return NULL;
+        }
+    }
+    return line;
+}
+
+/* The outer_voices section: the soprano and the bass, the shared input for voice-leading, melody and schema
+   analysis. */
+static cJSON *outer_voices_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *outer = cJSON_CreateObject();
+    if (outer && !(add(outer, "soprano", outer_line_json(notes, report, true)) &&
+                   add(outer, "bass", outer_line_json(notes, report, false)))) {
+        cJSON_Delete(outer);
+        return NULL;
+    }
+    return outer;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -975,6 +1129,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "pivot_chords", pivot_chords_json(notes, report)) &&
           add(document, "chords", chords_json(notes, report)) &&
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
+          add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cJSON_CreateArray()) &&
           add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&

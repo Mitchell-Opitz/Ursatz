@@ -143,7 +143,7 @@ static bool fill_segments(const ImportedNotes *notes, const AdaptiveSonorities *
 }
 
 bool segment_notes(const ImportedNotes *notes, Segmentation *out) {
-    *out = (Segmentation){NULL, 0, NULL, NULL};
+    *out = (Segmentation){NULL, 0, NULL, NULL, {NULL, 0}};
     if (notes->count == 0) {
         return true;
     }
@@ -154,12 +154,13 @@ bool segment_notes(const ImportedNotes *notes, Segmentation *out) {
                                         &sonorities) != AD_SEGMENTATION_OK) {
         return false;
     }
-    bool ok = fill_segments(notes, &sonorities, out);
-    adaptive_sonorities_destroy(&sonorities);
-    if (!ok) {
+    if (!fill_segments(notes, &sonorities, out)) {
+        adaptive_sonorities_destroy(&sonorities);
         segmentation_destroy(out);
+        return false;
     }
-    return ok;
+    out->sonorities = sonorities;
+    return true;
 }
 
 void segmentation_destroy(Segmentation *segmentation) {
@@ -173,7 +174,8 @@ void segmentation_destroy(Segmentation *segmentation) {
     free(segmentation->segments);
     free(segmentation->library_segments);
     free(segmentation->segment_ids);
-    *segmentation = (Segmentation){NULL, 0, NULL, NULL};
+    adaptive_sonorities_destroy(&segmentation->sonorities);
+    *segmentation = (Segmentation){NULL, 0, NULL, NULL, {NULL, 0}};
 }
 
 int segment_bass_pitch_class(const Segment *segment) {

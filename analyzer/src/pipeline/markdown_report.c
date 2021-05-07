@@ -550,6 +550,53 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
     return ok;
 }
 
+/* One voice's cells in the outer-voices table: its pitch and its degree, or what the library made of its
+   absence. Appends " pitch | degree |". */
+static bool append_outer_voice_cells(StringBuilder *sb, const cJSON *voice) {
+    const char *status = string_member(voice, "status");
+    const char *pitch = string_member(voice, "pitch");
+    const char *degree = string_member(voice, "degree");
+    if (pitch) {
+        return sb_appendf(sb, " %s | %s |", pitch, degree ? degree : "-");
+    }
+    const char *text = "rest";
+    if (status && strcmp(status, "bridged") == 0) {
+        text = "rest (bridged)";
+    } else if (status && strcmp(status, "guarded") == 0) {
+        text = "rest (register guard)";
+    }
+    return sb_appendf(sb, " %s | - |", text);
+}
+
+/* The outer voices, one row per chord: the table is separate from the chord table to keep that one readable. */
+static bool render_outer_voices(StringBuilder *sb, const cJSON *document, const cJSON *chords) {
+    (void)document;
+    bool ok = sb_append(sb, "## Outer voices\n\n") &&
+              sb_append(sb, "The highest (soprano) and lowest (bass) sounding note of each chord's span, with "
+                            "its scale degree in that chord's local key. A flat or sharp sign marks a chromatic "
+                            "alteration. A degree is \"-\" where the span lies in no key region. A rest means "
+                            "the library found no note for that line in the span, a bridged one a short gap "
+                            "inside the line, and a register guard a note the library dropped rather than "
+                            "adopt an accompaniment note. Degrees carry the key region's uncertainty in the "
+                            "analysis document.\n\n") &&
+              sb_append(sb, "| Position | Key | Soprano | Degree | Bass | Degree |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
+        const cJSON *outer = cJSON_GetObjectItemCaseSensitive(chord, "outer");
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+             sb_appendf(sb, " | %s |", string_member(chord, "key_label")) &&
+             append_outer_voice_cells(sb, cJSON_GetObjectItemCaseSensitive(outer, "soprano")) &&
+             append_outer_voice_cells(sb, cJSON_GetObjectItemCaseSensitive(outer, "bass")) && sb_append(sb, "\n");
+    }
+    return ok;
+}
+
 static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, const cJSON *tones) {
     (void)document;
     size_t unclassified = 0;
@@ -594,6 +641,7 @@ static const struct {
     {"modulations", render_modulations},
     {"pivot_chords", render_pivot_chords},
     {"chords", render_chords},
+    {"chords", render_outer_voices},
     {"non_chord_tones", render_non_chord_tones},
 };
 

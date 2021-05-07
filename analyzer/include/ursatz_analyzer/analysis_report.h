@@ -25,6 +25,26 @@ typedef struct {
     AnalysisConfidence confidence;
 } AnalysisChordReading;
 
+/* What one outer voice (the soprano or the bass) is in one chord segment, from the library's outer-voice
+   extraction (analysis/outer_voice.h). The extraction is theory-neutral pitch height; the degree is the
+   library's label for that pitch in the local key of the segment's key region. */
+typedef enum {
+    ANALYSIS_OUTER_ABSENT = 0,  /* the line is not sounding: only other voices are */
+    ANALYSIS_OUTER_PRESENT,     /* a note sounds as this line */
+    ANALYSIS_OUTER_BRIDGED,     /* a rest inside the line: a short gap between two of its notes */
+    ANALYSIS_OUTER_GUARDED      /* dropped by the register guard rather than adopt an accompaniment note */
+} AnalysisOuterStatus;
+
+typedef struct {
+    AnalysisOuterStatus status;
+    size_t note_id;     /* ImportedNotes index; valid only when status is PRESENT */
+    int pitch;          /* MIDI note number; valid only when PRESENT */
+    bool held;          /* the note was attacked before the segment began; valid only when PRESENT */
+    char *pitch_name;   /* owned; e.g. "E5", spelled in the key of the segment's region; NULL unless PRESENT */
+    char *degree;       /* owned; the library's scale degree label, e.g. "3" or "#4"; NULL unless PRESENT and the
+                           segment lies in a key region */
+} AnalysisOuterNote;
+
 typedef struct {
     long time_numerator; /* segment start, whole notes */
     unsigned long time_denominator;
@@ -37,7 +57,14 @@ typedef struct {
     AnalysisConfidence chord_confidence;
     AnalysisChordReading chord;     /* best chord; label NULL when "no match" */
     AnalysisChordReading runner_up; /* label NULL when the library gave none */
+    AnalysisOuterNote soprano;      /* the highest sounding line in this segment */
+    AnalysisOuterNote bass;         /* the lowest sounding line in this segment */
+    bool in_region;                 /* the segment lies in a key region */
+    size_t region;                  /* index of that region in key_regions; valid only when in_region */
 } AnalysisReportEntry;
+
+/* Frees an outer note's strings and clears it. */
+void analysis_outer_note_destroy(AnalysisOuterNote *note);
 
 /* Frees a reading's strings and clears it. */
 void analysis_chord_reading_destroy(AnalysisChordReading *reading);
