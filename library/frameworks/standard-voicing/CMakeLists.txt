@@ -6,6 +6,7 @@ add_library(standard_voicing
     stem_rules.c
     construction_rules.c
     range_rules.c
+    spacing_rules.c
 )
 target_include_directories(standard_voicing PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
