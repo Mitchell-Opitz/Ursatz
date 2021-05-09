@@ -1,5 +1,7 @@
 add_library(ursatz_analyzer STATIC
+    pipeline/imported_notes.c
     pipeline/midi_pipeline.c
+    pipeline/input_pipeline.c
     pipeline/segmentation.c
     pipeline/pitch_class_util.c
     pipeline/key_region_pipeline.c
