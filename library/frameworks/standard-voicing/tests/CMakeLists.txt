@@ -1,0 +1,7 @@
+add_executable(test_standard_voicing_framework test_framework.c)
+target_link_libraries(test_standard_voicing_framework PRIVATE standard_voicing)
+add_test(NAME standard_voicing_framework COMMAND test_standard_voicing_framework)
+
+add_executable(test_architecture_standard_voicing test_architecture_standard_voicing.c)
+add_test(NAME architecture_standard_voicing COMMAND test_architecture_standard_voicing
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
