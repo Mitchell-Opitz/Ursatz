@@ -31,9 +31,10 @@
    greatest total duration over all its regions, a tie going to the key that appears first. */
 static const char HOME_KEY_RULE[] = "longest_total_duration";
 
-/* Source ids for the meter: a time signature the MIDI file declares, and
+/* Source ids for the meter: a time signature the MIDI file declares or the score notates, and
    the 4/4 the library assumes when it declares none. */
 static const char TIME_SIGNATURE_SOURCE[] = "midi-time-signature";
+static const char NOTATED_TIME_SIGNATURE_SOURCE[] = "musicxml-time-signature";
 static const char DEFAULT_METER_SOURCE[] = "ursatz-default-meter";
 
 /* ---- Rational time (whole notes) ---- */
@@ -350,9 +351,11 @@ static cJSON *meter_json(const ImportedNotes *notes) {
     snprintf(label, sizeof(label), "%u/%u", time_signature_top_number(time_signature),
              time_signature_bottom_number(time_signature));
 
-    cJSON *meter = claim_json(inferred ? DEFAULT_METER_SOURCE : TIME_SIGNATURE_SOURCE, notes, NULL, notes->count,
-                              label, (AnalysisConfidence){false, 0, 0});
-    if (!(meter && add(meter, "source", cJSON_CreateString(inferred ? "inferred" : "file")) &&
+    bool notated = !inferred && notes->source.meter_notated;
+    const char *claim_source =
+        inferred ? DEFAULT_METER_SOURCE : (notated ? NOTATED_TIME_SIGNATURE_SOURCE : TIME_SIGNATURE_SOURCE);
+    cJSON *meter = claim_json(claim_source, notes, NULL, notes->count, label, (AnalysisConfidence){false, 0, 0});
+    if (!(meter && add(meter, "source", cJSON_CreateString(inferred ? "inferred" : (notated ? "notated" : "file"))) &&
           add(meter, "time_signature", time_signature_json(time_signature)) &&
           add(meter, "measure_count", cJSON_CreateNumber((double)measure_count)) &&
           add(meter, "last_measure",
@@ -417,6 +420,73 @@ static cJSON *key_signatures_json(const ImportedNotes *notes) {
     return signatures;
 }
 
+/* How the input knows its meter or key: written in the score, an event embedded in the file, or neither (the
+   library's 4/4, or a key found from the notes alone). */
+static const char *knowledge_name(bool present, bool notated) {
+    return !present ? "inferred" : (notated ? "notated" : "embedded");
+}
+
+static cJSON *input_parts_json(const ImportedNotes *notes) {
+    cJSON *parts = cJSON_CreateArray();
+    if (!parts) {
+        return NULL;
+    }
+    for (size_t i = 0; i < notes->source.part_count; i++) {
+        size_t note_count = 0;
+        for (size_t n = 0; n < notes->count; n++) {
+            note_count += notes->source.part_index[n] == i;
+        }
+        const ImportedPart *part = &notes->source.parts[i];
+        cJSON *object = cJSON_CreateObject();
+        if (!(object && add(object, "id", cJSON_CreateString(part->id)) &&
+              add(object, "name", cJSON_CreateString(part->name)) &&
+              add(object, "staff_count", cJSON_CreateNumber(part->staff_count)) &&
+              add(object, "note_count", cJSON_CreateNumber((double)note_count)) && append(parts, object))) {
+            cJSON_Delete(object);
+            cJSON_Delete(parts);
+            return NULL;
+        }
+    }
+    return parts;
+}
+
+static cJSON *input_tempo_json(const ImportedSource *source) {
+    cJSON *tempo = cJSON_CreateObject();
+    if (tempo && !(add(tempo, "declared", cJSON_CreateBool(source->tempo_declared)) &&
+                   add(tempo, "quarters_per_minute", source->tempo_declared
+                                                         ? cJSON_CreateNumber(source->initial_quarters_per_minute)
+                                                         : cJSON_CreateNull()) &&
+                   add(tempo, "marking_count", cJSON_CreateNumber((double)source->tempo_marking_count)))) {
+        cJSON_Delete(tempo);
+        return NULL;
+    }
+    return tempo;
+}
+
+/* Where the input came from and what it says about itself: the format, whether it is a score or a performance,
+   and for each of meter, key and pitch spelling whether the input states it or the pipeline supplied it. The
+   score's parts are merged into one texture; the tempo and dynamics markings are carried, not analyzed. */
+static cJSON *input_json(const ImportedNotes *notes) {
+    const ImportedSource *source = &notes->source;
+    bool score = source->format == INPUT_FORMAT_MUSICXML;
+    bool meter_stated = !meter_map_is_defaulted(notes->meter.meter_map);
+    cJSON *input = cJSON_CreateObject();
+    if (input &&
+        !(add(input, "format", cJSON_CreateString(score ? "musicxml" : "midi")) &&
+          add(input, "source_type", cJSON_CreateString(score ? "score" : "performance")) &&
+          add(input, "meter", cJSON_CreateString(knowledge_name(meter_stated, source->meter_notated))) &&
+          add(input, "key",
+              cJSON_CreateString(knowledge_name(notes->key_signature_events.count > 0, source->key_notated))) &&
+          add(input, "spelling", cJSON_CreateString(source->spelling_notated ? "notated" : "rule")) &&
+          add(input, "parts", input_parts_json(notes)) && add(input, "tempo", input_tempo_json(source)) &&
+          add(input, "dynamics_count", cJSON_CreateNumber((double)source->dynamics_count)) &&
+          add(input, "warning_count", cJSON_CreateNumber((double)source->warning_count)))) {
+        cJSON_Delete(input);
+        return NULL;
+    }
+    return input;
+}
+
 static cJSON *metadata_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *metadata = cJSON_CreateObject();
     if (metadata &&
@@ -427,6 +497,7 @@ static cJSON *metadata_json(const char *input_path, const ImportedNotes *notes, 
           add(metadata, "ticks_per_quarter", notes->ticks_per_quarter > 0
                                                  ? cJSON_CreateNumber((double)notes->ticks_per_quarter)
                                                  : cJSON_CreateNull()) &&
+          add(metadata, "input", input_json(notes)) &&
           add(metadata, "key_found", cJSON_CreateBool(report->key_region_count > 0)) &&
           add(metadata, "key_signatures", key_signatures_json(notes)))) {
         cJSON_Delete(metadata);

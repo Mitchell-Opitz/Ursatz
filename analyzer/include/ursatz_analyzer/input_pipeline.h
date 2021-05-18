@@ -6,12 +6,6 @@
 #include <ursatz_analyzer/imported_notes.h>
 
 typedef enum {
-    INPUT_FORMAT_AUTO = 0, /* choose by extension, then by content */
-    INPUT_FORMAT_MIDI,
-    INPUT_FORMAT_MUSICXML
-} InputFormat;
-
-typedef enum {
     INPUT_PIPELINE_OK = 0,
     INPUT_PIPELINE_ERR_CANNOT_READ_FILE,
     INPUT_PIPELINE_ERR_UNKNOWN_FORMAT,

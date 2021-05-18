@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/midi_pipeline.h>
+#include <ursatz_analyzer/musicxml_pipeline.h>
 
 bool input_format_parse(const char *name, InputFormat *out) {
     if (strcmp(name, "midi") == 0) {
@@ -114,8 +115,13 @@ InputPipelineResult input_pipeline_import_file(const char *path, InputFormat for
             return result == MIDI_PIPELINE_ERR_CANNOT_READ_FILE ? INPUT_PIPELINE_ERR_CANNOT_READ_FILE
                                                                 : INPUT_PIPELINE_ERR_IMPORT_FAILED;
         }
-        default:
-            fprintf(stderr, "Error: failed to import '%s': MusicXML input is not available yet\n", path);
-            return INPUT_PIPELINE_ERR_IMPORT_FAILED;
+        default: {
+            MusicXmlPipelineResult result = musicxml_pipeline_import_file(path, out);
+            if (result == MUSICXML_PIPELINE_OK) {
+                return INPUT_PIPELINE_OK;
+            }
+            return result == MUSICXML_PIPELINE_ERR_CANNOT_READ_FILE ? INPUT_PIPELINE_ERR_CANNOT_READ_FILE
+                                                                    : INPUT_PIPELINE_ERR_IMPORT_FAILED;
+        }
     }
 }

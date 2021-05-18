@@ -3,7 +3,7 @@
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v5.schema.json`](../schema/analysis-document.v5.schema.json)
+[`schema/analysis-document.v6.schema.json`](../schema/analysis-document.v6.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render` from
 `<ursatz_analyzer/analysis_document.h>`.
 
@@ -12,9 +12,9 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v5 content |
+| Key | Type | v6 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `5`. |
+| `schema_version` | integer | Always `6`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
@@ -47,13 +47,31 @@ The singular section `form` is `null` until filled; the rest are empty arrays.
 | `ursatz_commit` | string | Full commit hash of the `external/ursatz` submodule at configure time, or `"unknown"` when `git` could not read it. |
 | `note_count` | integer | Number of imported notes. |
 | `ticks_per_quarter` | integer or null | The MIDI header's ticks per quarter note, or `null` when unavailable. |
+| `input` | object | The input format and what it states or leaves to inference. See below. |
 | `key_found` | boolean | Whether any key region was found. |
 | `key_signatures` | array | The key signatures the file notates, in time order; empty when it has none. See below. |
+
+### Input
+
+`metadata.input` says which input the analysis read and how much of what it reports the input
+itself states.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `format` | `"midi"` or `"musicxml"` | The input format that was read (see `--input-format` in the README). |
+| `source_type` | `"performance"` or `"score"` | `"performance"` for MIDI (timed events, no notated spelling or barlines), `"score"` for MusicXML. |
+| `meter` | `"notated"`, `"embedded"` or `"inferred"` | `"notated"`: the score's `<time>`. `"embedded"`: a MIDI time signature event. `"inferred"`: the input declares none and 4/4 is assumed. |
+| `key` | `"notated"`, `"embedded"` or `"inferred"` | The same, for the key signature. `"inferred"` means the input has no key signature, so keys come from the notes alone. |
+| `spelling` | `"notated"` or `"rule"` | `"notated"`: pitch names in chord roots, chord basses and outer voices follow the score. `"rule"`: spelled by the pipeline's minimal-accidental rule (MIDI). |
+| `parts` | array | The score's parts, merged into one texture for the analysis; empty for MIDI. Each has `id`, `name`, `staff_count` and `note_count`. |
+| `tempo` | object | `declared`, `quarters_per_minute` (`null` when not declared) and `marking_count`. Carried, not analyzed. |
+| `dynamics_count` | integer | Dynamics markings the input carries. Carried, not analyzed. |
+| `warning_count` | integer | Importer warnings (skipped grace notes, rounded values, and so on). |
 
 ### Notated key signatures
 
 `metadata.key_signatures` is input metadata: what the file says, not what was detected. One entry
-per MIDI key signature meta-event.
+per MIDI key signature meta-event or MusicXML `<key>`.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -74,7 +92,7 @@ a successfully imported file, even one with no notes.
 | `span`, `note_ids` | | As for every claim: the extent of all the notes. |
 | `label` | string | The time signature, e.g. `"3/4"`. |
 | `uncertainty` | null | Always `null`: the library supplies no confidence for a declared or defaulted meter. Use `source` to tell them apart. |
-| `source` | `"file"` or `"inferred"` | `"file"` when the file declares at least one time signature. `"inferred"` when it declares none and the library's default 4/4 is used. An inferred meter is an assumption, not a fact about the piece. |
+| `source` | `"file"`, `"notated"` or `"inferred"` | `"file"` when a MIDI file declares at least one time signature; `"notated"` when a MusicXML score does. `"inferred"` when it declares none and the library's default 4/4 is used. An inferred meter is an assumption, not a fact about the piece. |
 | `time_signature` | object | `{"numerator", "denominator"}` of the first full measure. |
 | `measure_count` | integer | Measures that start before the last note ends, a pickup included (the library's count). `0` for a file with no notes. |
 | `last_measure` | integer or null | The number of the last measure (see numbering below), or `null` when there are no measures. |
@@ -342,6 +360,7 @@ non-chord tones.
 
 ### Version history
 
+- **6**: `metadata` gains the required `input` object (format, source type, whether meter, key and spelling are notated, embedded or inferred, parts, tempo), and `meter.source` gains `"notated"`. A required field is a breaking change under the rule above.
 - **5**: Adds the required `outer_voices` section (the soprano and bass lines) and the required `outer`
   field on every chord claim. A required section and a required field are breaking changes under the
   rule above.

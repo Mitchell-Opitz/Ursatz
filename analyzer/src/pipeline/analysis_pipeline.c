@@ -7,6 +7,25 @@
 #include "pipeline/key_region_pipeline.h"
 #include "pipeline/outer_voice_pipeline.h"
 #include "pipeline/segmentation.h"
+#include "pipeline/spelling_util.h"
+
+/* Names the roots and basses of the readings as the notated score spells them. */
+static bool respell_chords(const ImportedNotes *notes, const Segmentation *segmentation, ChordEstimate *chords,
+                           AnalysisKeyChange *changes, size_t change_count) {
+    for (size_t i = 0; i < segmentation->segment_count; i++) {
+        if (!respell_chord_reading(&chords[i].best, notes, &segmentation->segments[i]) ||
+            !respell_chord_reading(&chords[i].runner_up, notes, &segmentation->segments[i])) {
+            return false;
+        }
+    }
+    for (size_t c = 0; c < change_count; c++) {
+        if (changes[c].has_pivot && changes[c].pivot_entry < segmentation->segment_count &&
+            !respell_chord_reading(&changes[c].pivot, notes, &segmentation->segments[changes[c].pivot_entry])) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->entries = NULL;
@@ -48,6 +67,14 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     if (!identify_pivot_chords(&segmentation, regions, changes, change_count) ||
         !identify_chords(&segmentation, regions, region_count, &chords)) {
         analysis_report_destroy(&keys);
+        segmentation_destroy(&segmentation);
+        return false;
+    }
+
+    if (notes->source.spelling_notated &&
+        !respell_chords(notes, &segmentation, chords, changes, change_count)) {
+        analysis_report_destroy(&keys);
+        chord_estimates_destroy(chords, segmentation.segment_count);
         segmentation_destroy(&segmentation);
         return false;
     }

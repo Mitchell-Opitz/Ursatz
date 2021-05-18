@@ -109,6 +109,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     out->key_signature_events = key_signature_events;
     out->ticks_per_quarter = ticks_per_quarter;
     out->meter = meter;
+    out->source = (ImportedSource){INPUT_FORMAT_MIDI, false, false, false, NULL, 0, NULL, NULL, false, 0.0, 0, 0, 0};
     for (size_t i = 0; i < meter.conflict_count; i++) {
         fprintf(stderr, "Warning: '%s' declares different time signatures at tick %llu; the last one is used\n",
                 path, (unsigned long long)meter.conflict_ticks[i]);
