@@ -54,7 +54,7 @@ static void test_wide_chord(void) {
     assert(standard_voicing_first_wide_spacing(&wide) == VOICE_PART_SOPRANO);
 
     /* Only the alto and tenor are wide: the most common spacing error. */
-    StandardVoicingChord alto_tenor = make_chord(P(A, 0, 4), P(B, 0, 3), P(D, 0, 3), P(C, 0, 3));
+    StandardVoicingChord alto_tenor = make_chord(P(D, 0, 5), P(C, 0, 5), P(E, 0, 3), P(C, 0, 3));
     assert(!standard_voicing_chord_spacing_valid(&alto_tenor));
     assert(standard_voicing_first_wide_spacing(&alto_tenor) == VOICE_PART_ALTO);
 
