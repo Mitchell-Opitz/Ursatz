@@ -4,6 +4,8 @@ add_library(standard_counterpoint
     counterpoint_pitch.c
     counterpoint_interval.c
     consonance_rules.c
+    counterpoint_line.c
+    motion_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

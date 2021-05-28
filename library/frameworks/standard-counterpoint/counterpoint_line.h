@@ -1,6 +1,7 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_COUNTERPOINT_LINE_H
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_COUNTERPOINT_LINE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "pitch/pitch_spelling.h"
@@ -30,5 +31,12 @@ typedef struct {
     const StandardCounterpointLine *upper;
     const StandardCounterpointLine *lower;
 } StandardCounterpointPair;
+
+/* True when the line is non-NULL, has at least one note, and every note is
+   non-NULL. */
+bool standard_counterpoint_line_valid(const StandardCounterpointLine *line);
+
+/* True when both lines are valid and have the same number of notes. */
+bool standard_counterpoint_pair_valid(const StandardCounterpointPair *pair);
 
 #endif
