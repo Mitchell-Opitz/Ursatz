@@ -1,6 +1,9 @@
 add_library(standard_counterpoint
     framework.c
     rule_pair.c
+    counterpoint_pitch.c
+    counterpoint_interval.c
+    consonance_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
