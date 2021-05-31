@@ -6,6 +6,7 @@ add_library(standard_counterpoint
     consonance_rules.c
     counterpoint_line.c
     motion_rules.c
+    cantus_firmus_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
