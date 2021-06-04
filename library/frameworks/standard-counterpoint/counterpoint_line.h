@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "counterpoint_interval.h"
 #include "pitch/pitch_spelling.h"
 
 /*
@@ -38,5 +39,21 @@ bool standard_counterpoint_line_valid(const StandardCounterpointLine *line);
 
 /* True when both lines are valid and have the same number of notes. */
 bool standard_counterpoint_pair_valid(const StandardCounterpointPair *pair);
+
+/* The interval between notes `index` and `index + 1` of a valid line. False
+   (*out untouched) for an invalid line or an index with no next note. */
+bool standard_counterpoint_line_interval_at(const StandardCounterpointLine *line, size_t index,
+                                            StandardCounterpointInterval *out);
+
+/* The direction from note `index` to note `index + 1`: 1 up, -1 down, 0
+   for a repeated pitch. 0 for an invalid line or an index with no next
+   note. */
+int standard_counterpoint_line_direction_at(const StandardCounterpointLine *line, size_t index);
+
+/* The position of the first note at the highest pitch of a valid line (its
+   climax), and of the first note at the lowest pitch. 0 for an invalid
+   line. */
+size_t standard_counterpoint_line_highest_index(const StandardCounterpointLine *line);
+size_t standard_counterpoint_line_lowest_index(const StandardCounterpointLine *line);
 
 #endif
