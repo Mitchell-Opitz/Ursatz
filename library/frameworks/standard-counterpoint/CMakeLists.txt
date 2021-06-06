@@ -8,6 +8,7 @@ add_library(standard_counterpoint
     motion_rules.c
     cantus_firmus_rules.c
     melodic_rules.c
+    harmonic_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
