@@ -1,0 +1,7 @@
+add_executable(test_standard_counterpoint_framework test_framework.c)
+target_link_libraries(test_standard_counterpoint_framework PRIVATE standard_counterpoint)
+add_test(NAME standard_counterpoint_framework COMMAND test_standard_counterpoint_framework)
+
+add_executable(test_architecture_standard_counterpoint test_architecture_standard_counterpoint.c)
+add_test(NAME architecture_standard_counterpoint COMMAND test_architecture_standard_counterpoint
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
