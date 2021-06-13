@@ -69,7 +69,7 @@ static bool check_repeated_notes(const StandardCounterpointLine *line, const Sta
             return false;
         }
     }
-    return line->count == 0 || limits->max_consecutive_repeats >= 1;
+    return true;
 }
 
 static bool check_pitch_occurrences(const StandardCounterpointLine *line, const StandardCounterpointLimits *limits) {
