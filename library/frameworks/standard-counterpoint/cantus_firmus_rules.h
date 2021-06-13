@@ -38,7 +38,7 @@
  *                       seventh degree a whole step below the tonic does
  *                       not step up to it, since it must be raised there
  *   MOSTLY_STEPWISE     at least half the progressions are steps (soft)
- *   NO_REPEATED_MOTIVE  no run of three notes sounds twice (soft)
+ *   NO_REPEATED_MOTIVE  no run of four notes sounds twice (soft)
  *
  * The first eight hard rules say what a cantus firmus must be; the last
  * three soft ones are tendencies ("usually", "mostly", "no licks"). A leap

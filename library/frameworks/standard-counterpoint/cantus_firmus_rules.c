@@ -233,8 +233,10 @@ static bool check_mostly_stepwise(const StandardCounterpointLine *line) {
     return 2 * steps >= intervals;
 }
 
-static bool triple_equal(const StandardCounterpointLine *line, size_t i, size_t j) {
-    for (size_t k = 0; k < 3; k++) {
+#define MOTIVE_LENGTH 4
+
+static bool motive_equal(const StandardCounterpointLine *line, size_t i, size_t j) {
+    for (size_t k = 0; k < MOTIVE_LENGTH; k++) {
         if (!standard_counterpoint_same_pitch(line->notes[i + k], line->notes[j + k])) {
             return false;
         }
@@ -243,9 +245,9 @@ static bool triple_equal(const StandardCounterpointLine *line, size_t i, size_t 
 }
 
 static bool check_no_repeated_motive(const StandardCounterpointLine *line) {
-    for (size_t i = 0; i + 3 <= line->count; i++) {
-        for (size_t j = i + 1; j + 3 <= line->count; j++) {
-            if (triple_equal(line, i, j)) {
+    for (size_t i = 0; i + MOTIVE_LENGTH <= line->count; i++) {
+        for (size_t j = i + 1; j + MOTIVE_LENGTH <= line->count; j++) {
+            if (motive_equal(line, i, j)) {
                 return false;
             }
         }
