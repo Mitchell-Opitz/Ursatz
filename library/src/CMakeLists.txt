@@ -78,6 +78,7 @@ add_library(ursatz
     semantics/contour.c
     semantics/voice_part.c
     semantics/motion_type.c
+    semantics/counterpoint_species.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
