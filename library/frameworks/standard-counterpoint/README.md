@@ -49,7 +49,7 @@ referencing this Framework plus a pure check function.
   defaults), a unique climax, not ending on the climax, and reaching it by
   leap.
 - **Harmonic writing** (`harmonic_rules.h`): first interval perfect, last
-  interval a unison or octave, gap of at most a twelfth, no overlapping, no
+  interval a unison or octave, gap of at most a twelfth, no voice crossing, no
   parallel fifths or octaves (unisons count as octaves), all hard. Soft: the
   gap stays within an octave for the most part, no direct fifths or octaves,
   no interior unisons, the two climaxes do not coincide.

@@ -25,7 +25,7 @@ typedef struct {
  * A two-part texture: two lines of equal length, the note at position i
  * of the upper line sounding with the note at position i of the lower
  * line. "Upper" and "lower" are the parts' nominal roles; the rules
- * report a part that has gone below the other (overlapping).
+ * report a part that has gone below the other (crossing).
  */
 
 typedef struct {
