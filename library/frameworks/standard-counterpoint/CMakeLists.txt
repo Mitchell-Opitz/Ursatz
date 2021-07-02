@@ -14,6 +14,7 @@ add_library(standard_counterpoint
     first_species_harmony_rules.c
     first_species_ends_rules.c
     first_species_independence_rules.c
+    first_species_motion_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
