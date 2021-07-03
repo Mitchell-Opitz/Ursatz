@@ -29,7 +29,7 @@ static void record(StandardCounterpointResult *result, StandardCounterpointFirst
 bool standard_counterpoint_first_species_check(const StandardCounterpointInput *input,
                                                StandardCounterpointResult *out) {
     StandardCounterpointResult result;
-    if (!standard_counterpoint_check(input, &result)) {
+    if (out == NULL || !standard_counterpoint_check(input, &result)) {
         return false;
     }
 
