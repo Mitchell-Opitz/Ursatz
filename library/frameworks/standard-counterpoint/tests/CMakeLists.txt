@@ -43,3 +43,9 @@ add_executable(test_standard_counterpoint_first_species_ends_rules test_first_sp
 target_link_libraries(test_standard_counterpoint_first_species_ends_rules PRIVATE standard_counterpoint)
 add_test(NAME standard_counterpoint_first_species_ends_rules
          COMMAND test_standard_counterpoint_first_species_ends_rules)
+
+add_executable(test_standard_counterpoint_first_species_independence_rules
+               test_first_species_independence_rules.c)
+target_link_libraries(test_standard_counterpoint_first_species_independence_rules PRIVATE standard_counterpoint)
+add_test(NAME standard_counterpoint_first_species_independence_rules
+         COMMAND test_standard_counterpoint_first_species_independence_rules)
