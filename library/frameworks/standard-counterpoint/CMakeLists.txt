@@ -11,6 +11,12 @@ add_library(standard_counterpoint
     harmonic_rules.c
     tendency_rules.c
     counterpoint_rules.c
+    first_species_harmony_rules.c
+    first_species_ends_rules.c
+    first_species_independence_rules.c
+    first_species_motion_rules.c
+    first_species_line_rules.c
+    first_species_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

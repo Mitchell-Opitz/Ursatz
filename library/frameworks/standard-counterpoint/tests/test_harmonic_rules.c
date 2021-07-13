@@ -99,14 +99,14 @@ static void test_gap(void) {
     assert(!HOLDS(STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE, two_wide, lower));
 }
 
-static void test_no_overlap(void) {
+static void test_no_crossing(void) {
     const PitchSpelling *lower[] = {P(C, 0, 4), P(D, 0, 4)};
     const PitchSpelling *above[] = {P(E, 0, 4), P(F, 0, 4)};
     const PitchSpelling *unison[] = {P(C, 0, 4), P(F, 0, 4)};
     const PitchSpelling *below[] = {P(E, 0, 4), P(B, 0, 3)};
-    assert(HOLDS(STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_OVERLAP, above, lower));
-    assert(HOLDS(STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_OVERLAP, unison, lower));
-    assert(!HOLDS(STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_OVERLAP, below, lower));
+    assert(HOLDS(STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING, above, lower));
+    assert(HOLDS(STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING, unison, lower));
+    assert(!HOLDS(STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING, below, lower));
 }
 
 static void test_parallel_octaves(void) {
@@ -182,7 +182,7 @@ static void test_check_masks(void) {
     unsigned hard = 0, soft = 0;
     assert(standard_counterpoint_harmonic_check(&pair, &hard, &soft));
     assert(hard & (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_OCTAVES));
-    assert(!(hard & (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_OVERLAP)));
+    assert(!(hard & (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING)));
     assert(soft & (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_DIRECT_PERFECTS));
     assert(!(soft & (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_OCTAVES)));
 }
@@ -216,7 +216,7 @@ int main(void) {
     test_first_interval();
     test_last_interval();
     test_gap();
-    test_no_overlap();
+    test_no_crossing();
     test_parallel_octaves();
     test_parallel_fifths();
     test_direct_perfects();

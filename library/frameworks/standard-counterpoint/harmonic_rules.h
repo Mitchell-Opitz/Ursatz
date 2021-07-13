@@ -22,8 +22,8 @@
  *   MOSTLY_WITHIN_OCTAVE   the gap stays within an octave for the most
  *                          part: no more than a quarter of the intervals
  *                          are larger than an octave (soft)
- *   NO_OVERLAP             the upper part never sounds below the lower
- *                          one (hard)
+ *   NO_CROSSING            the upper part never sounds below the lower
+ *                          one (voice crossing) (hard)
  *   PARALLEL_OCTAVES       no two consecutive intervals are both perfect
  *                          octaves (or unisons, which are octaves for
  *                          this purpose) reached by parallel motion
@@ -51,7 +51,7 @@ typedef enum {
     STANDARD_COUNTERPOINT_HARMONIC_RULE_LAST_INTERVAL,
     STANDARD_COUNTERPOINT_HARMONIC_RULE_MAX_GAP,
     STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE,
-    STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_OVERLAP,
+    STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING,
     STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_OCTAVES,
     STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_FIFTHS,
     STANDARD_COUNTERPOINT_HARMONIC_RULE_DIRECT_PERFECTS,
@@ -67,7 +67,7 @@ const Rule *standard_counterpoint_harmonic_rule(StandardCounterpointHarmonicRule
 const Constraint *standard_counterpoint_harmonic_constraint(StandardCounterpointHarmonicRule which);
 
 /* "first-interval" "last-interval" "max-gap" "mostly-within-octave"
-   "no-overlap" "parallel-octaves" "parallel-fifths" "direct-perfects"
+   "no-crossing" "parallel-octaves" "parallel-fifths" "direct-perfects"
    "interior-unisons" "climax-coordination"; NULL for an invalid rule. */
 const char *standard_counterpoint_harmonic_rule_name(StandardCounterpointHarmonicRule which);
 

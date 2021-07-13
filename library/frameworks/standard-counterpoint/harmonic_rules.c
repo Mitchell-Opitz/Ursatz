@@ -10,7 +10,7 @@
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT] = {
-    "first-interval",   "last-interval",    "max-gap",          "mostly-within-octave", "no-overlap",
+    "first-interval",   "last-interval",    "max-gap",          "mostly-within-octave", "no-crossing",
     "parallel-octaves", "parallel-fifths",  "direct-perfects",  "interior-unisons",     "climax-coordination"};
 
 static bool rule_is_soft(StandardCounterpointHarmonicRule which) {
@@ -100,7 +100,7 @@ static bool check_mostly_within_octave(const StandardCounterpointPair *pair) {
     return wide * 4 <= pair->lower->count;
 }
 
-static bool check_no_overlap(const StandardCounterpointPair *pair) {
+static bool check_no_crossing(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i < pair->lower->count; i++) {
         if (standard_counterpoint_direction(pair->lower->notes[i], pair->upper->notes[i]) < 0) {
             return false;
@@ -194,8 +194,8 @@ bool standard_counterpoint_harmonic_rule_holds(StandardCounterpointHarmonicRule 
             return check_max_gap(pair);
         case STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE:
             return check_mostly_within_octave(pair);
-        case STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_OVERLAP:
-            return check_no_overlap(pair);
+        case STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING:
+            return check_no_crossing(pair);
         case STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_OCTAVES:
             return check_parallel_octaves(pair);
         case STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_FIFTHS:
