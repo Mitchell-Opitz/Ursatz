@@ -17,6 +17,7 @@ add_library(standard_counterpoint
     first_species_motion_rules.c
     first_species_line_rules.c
     first_species_rules.c
+    second_species_exercise.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
