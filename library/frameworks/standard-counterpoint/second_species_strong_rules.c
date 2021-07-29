@@ -57,12 +57,6 @@ static bool downbeat_category(const Exercise *exercise, size_t bar, StandardCoun
            standard_counterpoint_classify_interval(interval, category);
 }
 
-static bool weak_category(const Exercise *exercise, size_t bar, StandardCounterpointInterval *interval,
-                          StandardCounterpointIntervalCategory *category) {
-    return standard_counterpoint_second_species_weak_interval(exercise, bar, interval) &&
-           standard_counterpoint_classify_interval(interval, category);
-}
-
 static bool check_consonant(const Exercise *exercise) {
     for (size_t bar = 0; bar < exercise->cantus->count; bar++) {
         if (standard_counterpoint_second_species_downbeat(exercise, bar) == NULL) {
