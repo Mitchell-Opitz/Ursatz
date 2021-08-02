@@ -21,6 +21,7 @@ add_library(standard_counterpoint
     second_species_pattern.c
     second_species_strong_rules.c
     second_species_weak_rules.c
+    second_species_ends_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
