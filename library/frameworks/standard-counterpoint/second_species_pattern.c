@@ -53,10 +53,10 @@ bool standard_counterpoint_second_species_weak_beat_pattern(const StandardCounte
         return false;
     }
     if (!standard_counterpoint_interval_melodic_consonant(&first) ||
-        !standard_counterpoint_interval_melodic_consonant(&second) ||
-        !standard_counterpoint_interval_melodic_consonant(&whole)) {
+        !standard_counterpoint_interval_melodic_consonant(&second)) {
         return false;
     }
+    bool whole_consonant = standard_counterpoint_interval_melodic_consonant(&whole);
 
     bool ends_consonant = consonant(&vertical_d1) && consonant(&vertical_d2);
     bool weak_consonant = consonant(&vertical_w);
@@ -91,6 +91,11 @@ bool standard_counterpoint_second_species_weak_beat_pattern(const StandardCounte
     } else if (first.size == 2 && second.size == 2 && opposite_direction && standard_counterpoint_same_pitch(d1, d2)) {
         found = STANDARD_COUNTERPOINT_WEAK_BEAT_CONSONANT_NEIGHBOR_TONE;
     } else {
+        return false;
+    }
+    /* A change of register may outline a seventh between the downbeats: an
+       octave leap and a step back is smooth voice motion. */
+    if (found != STANDARD_COUNTERPOINT_WEAK_BEAT_CHANGE_OF_REGISTER && !whole_consonant) {
         return false;
     }
     *pattern = found;
