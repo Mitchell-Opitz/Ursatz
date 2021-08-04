@@ -13,7 +13,8 @@
  * downbeat d2, the bar is one of these patterns. Intervals are melodic,
  * counted in letter names (a step is a second, a third is a leap of a
  * third), and every melodic interval must be a consonant one
- * (consonance_rules.h). "Consonant" for the notes means consonant with the
+ * (consonance_rules.h), except that a change of register may make a seventh
+ * with the downbeat before it. "Consonant" for the notes means consonant with the
  * cantus firmus.
  *
  *   CONSONANT_PASSING_TONE   two steps in the same direction outline a
