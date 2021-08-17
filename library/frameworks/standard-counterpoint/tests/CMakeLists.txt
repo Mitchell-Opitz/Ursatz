@@ -82,3 +82,8 @@ add_executable(test_standard_counterpoint_second_species_weak_rules test_second_
 target_link_libraries(test_standard_counterpoint_second_species_weak_rules PRIVATE standard_counterpoint)
 add_test(NAME standard_counterpoint_second_species_weak_rules
          COMMAND test_standard_counterpoint_second_species_weak_rules)
+
+add_executable(test_standard_counterpoint_second_species_ends_rules test_second_species_ends_rules.c)
+target_link_libraries(test_standard_counterpoint_second_species_ends_rules PRIVATE standard_counterpoint)
+add_test(NAME standard_counterpoint_second_species_ends_rules
+         COMMAND test_standard_counterpoint_second_species_ends_rules)
