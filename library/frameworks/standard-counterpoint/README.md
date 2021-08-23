@@ -101,6 +101,53 @@ advice, first species can make it hard.
   `standard_counterpoint_check`. The groups that need the tonic are skipped
   when it is NULL.
 
+### Second species
+
+Two notes against one (`CounterpointSpecies` second,
+`src/semantics/counterpoint_species.h`). There is no rhythm model, so the
+counterpoint is a list of slots, two per bar (`second_species_exercise.h`):
+the first slot is the strong beat (`BeatStrength`,
+`src/semantics/beat_strength.h`), the second the weak beat. A slot is an
+attack, a tie to the slot before it (a whole note is an attack tied through the
+weak beat), or a rest (a half rest on the first beat only). The cantus firmus
+is the same as in first species. The caller supplies the exercise, which says
+which part is the cantus firmus, and the tonic.
+
+- **Weak-beat patterns** (`second_species_pattern.h`): from a downbeat, the
+  weak beat, and the next downbeat, a bar is a consonant passing tone,
+  substitution, skipped passing tone, interval subdivision, change of
+  register, delay of melodic progression, consonant neighbor tone, or
+  dissonant passing tone. The patterns are exclusive, and every melodic
+  interval in them is consonant (a change of register may make a seventh with
+  the downbeat).
+- **Strong beats** (`second_species_strong_rules.h`): downbeats consonant, no
+  repeated perfect interval between downbeats or from a weak beat to the next
+  downbeat, no dissonant outline between downbeats (an octave leap and a step
+  back is the exception), at most three bars in a row with the same imperfect
+  consonance, all hard. Soft: imperfect consonances and no unisons on interior
+  downbeats. Hidden fifths and octaves between downbeats are not forbidden.
+- **Weak beats** (`second_species_weak_rules.h`): a dissonant weak beat must be
+  a passing tone (hard). Soft: a consonant weak beat fits a pattern, a mixture
+  of consonant and dissonant weak beats from four weak beats up, at most one
+  change of register. Weak-beat unisons are allowed.
+- **Beginning and ending** (`second_species_ends_rules.h`), all hard: do or sol
+  above the cantus firmus and do below it, a first bar of two half notes or a
+  half rest and a half note, a last bar that is a whole note on do, and the
+  clausula vera on the note before it. Skipped when the tonic is NULL.
+- **Counterpoint line** (`second_species_line_rules.h`): on the line's
+  attacks. Hard: the species leap rule (a sixth only as the ascending minor
+  sixth or inside a change of register), final step, range, leading tone.
+  Soft: single climax, no repeated motive, at least two thirds steps, leaps
+  from strong to weak beat at least as many as leaps across the bar line, one
+  or two secondary climaxes from eight notes up. Leap recovery and consecutive
+  leaps of the cantus firmus rules are not applied, because an interval
+  subdivision is two leaps in a row.
+- **Aggregate check** (`standard_counterpoint_second_species_check`,
+  `standard_counterpoint_second_species_valid`): the cantus firmus, spacing
+  (the common gap, crossing, and climax rules on every note against its
+  cantus firmus note), strong beat, weak beat, ends, and counterpoint line
+  groups, as hard and soft bit masks.
+
 The tonic of the cantus firmus, which part is the cantus firmus, and the
 limits for the soft melodic rules are the caller's input. Notes are read as
 sounding pitch in 12-tone equal temperament, this module's own copy in
@@ -108,7 +155,7 @@ sounding pitch in 12-tone equal temperament, this module's own copy in
 
 ## Not covered
 
-Species beyond the first (rhythm, syncopation, florid counterpoint),
+Species beyond the second (four notes to one, syncopation, florid counterpoint),
 dissonance treatment, three or more parts, and imitation. Note values and
 whole-note rhythm of a cantus firmus and counterpoint: the one-against-one
 ratio is only that the two lines have the same number of notes. The overall shape of a cantus firmus
