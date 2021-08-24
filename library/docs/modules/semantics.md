@@ -4,7 +4,7 @@ Layer L6 (`music-semantics`). Path `src/semantics/`, tests `tests/semantics/`. O
 
 ## Provides
 
-`Interval`, `Sonority`, `SonorityBuilder`, `RhythmicPattern`, `Scale`, `Contour`, `VoicePart`, `MotionType`, `CounterpointSpecies`.
+`Interval`, `Sonority`, `SonorityBuilder`, `RhythmicPattern`, `Scale`, `Contour`, `VoicePart`, `MotionType`, `CounterpointSpecies`, `BeatStrength`.
 
 ## Notes
 
@@ -17,6 +17,7 @@ Layer L6 (`music-semantics`). Path `src/semantics/`, tests `tests/semantics/`. O
 - `VoicePart` is a plain enum value (soprano, alto, tenor, bass, ordered highest to lowest) naming a role in a four-part texture. It carries no `EntityID`, range, clef, or framework claim, and it is not `Voice` (`containers/voice.h`), which identifies a single line and may be written as any part or none. Ranges, staves, and stems for each part are conventions of `frameworks/standard-voicing`.
 - `MotionType` is a plain enum value naming how two parts move from one pair of simultaneous notes to the next: contrary, similar, parallel, oblique, or static (neither part moves). The categories are exclusive, and parallel is the refined case of similar (same direction and same distance), so `motion_type_is_same_direction` is true for both. It carries no `EntityID`, pitches, or framework claim. Deciding which type a pair of moves is takes pitch arithmetic, which belongs to a framework (`frameworks/standard-counterpoint`). It is not `VoiceLeadingMotion` (`analysis/voice_leading_analysis.h`), a caller-supplied observation of the four classic types with no static case.
 - `CounterpointSpecies` is a plain enum value naming one of the five species of strict counterpoint (first through fifth, ordered simplest to most elaborate), with a helper for the counterpoint notes against each cantus firmus note (1, 2, 4, 2, and 0 for the fifth, which mixes ratios). It carries no `EntityID`, rules, or framework claim. What each species requires of a line is a convention of `frameworks/standard-counterpoint`.
+- `BeatStrength` is a plain enum value naming the metric weight of a position in a bar, strong or weak. It carries no `EntityID`, time signature, or framework claim, and it is not the beat grid of a time signature (`time/time_signature.h`). Which positions of a bar are strong is a convention of a framework: in two notes against one (`frameworks/standard-counterpoint`), the first note of each bar is strong and the second weak.
 
 ## Deferred
 
