@@ -7,6 +7,7 @@
 #include "counterpoint_interval.h"
 #include "counterpoint_line.h"
 #include "counterpoint_rules.h"
+#include "counterpoint_slots.h"
 #include "pitch/pitch_spelling.h"
 #include "semantics/beat_strength.h"
 
@@ -42,22 +43,6 @@
 
 #define STANDARD_COUNTERPOINT_SECOND_SPECIES_SLOTS_PER_BAR 2
 #define STANDARD_COUNTERPOINT_SECOND_SPECIES_MAX_BARS 64
-
-typedef enum {
-    STANDARD_COUNTERPOINT_SLOT_ATTACK = 0,
-    STANDARD_COUNTERPOINT_SLOT_TIE,
-    STANDARD_COUNTERPOINT_SLOT_REST
-} StandardCounterpointSlotKind;
-
-typedef struct {
-    StandardCounterpointSlotKind kind;
-    const PitchSpelling *pitch;
-} StandardCounterpointSlot;
-
-typedef struct {
-    const StandardCounterpointSlot *slots;
-    size_t count;
-} StandardCounterpointSlotLine;
 
 typedef struct {
     const StandardCounterpointLine *cantus;
