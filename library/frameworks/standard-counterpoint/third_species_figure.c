@@ -80,8 +80,11 @@ static bool melodic_size_is(const PitchSpelling *a, const PitchSpelling *b, int 
            interval.size == size && standard_counterpoint_interval_melodic_consonant(&interval);
 }
 
+/* The direction from one slot's pitch to another's; 0 when either is a rest. */
 static int direction_between(const Exercise *exercise, size_t from, size_t to) {
-    return standard_counterpoint_direction(pitch_at(exercise, from), pitch_at(exercise, to));
+    const PitchSpelling *a = pitch_at(exercise, from);
+    const PitchSpelling *b = pitch_at(exercise, to);
+    return a == NULL || b == NULL ? 0 : standard_counterpoint_direction(a, b);
 }
 
 static bool step_between(const Exercise *exercise, size_t from, size_t to) {
