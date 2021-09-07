@@ -9,25 +9,25 @@
 #include "third_species_exercise.h"
 
 /*
- * Second-species beginning and ending rules for standard-counterpoint-v1:
- * how the counterpoint starts and finishes, which follows first species
- * (first_species_ends_rules.h) with the rhythm of two notes to a bar. They
- * need the tonic ("do") of the mode; which part is the cantus firmus is
- * part of the exercise.
+ * Third-species beginning and ending rules for standard-counterpoint-v1: how
+ * the counterpoint starts and finishes, which follows first and second
+ * species (first_species_ends_rules.h, second_species_ends_rules.h) with the
+ * rhythm of four notes to a bar. They need the tonic ("do") of the mode;
+ * which part is the cantus firmus is part of the exercise.
  *
  *   BEGIN         the first note of the counterpoint is do or sol above the
  *                 cantus firmus, do below it (hard)
- *   OPENING_BAR   the first bar is two half notes, or a half rest followed
- *                 by a half note; it is not a whole note (hard)
- *   FINAL_BAR     the last bar is a whole note on do: a note on the strong
- *                 beat tied through the weak beat (hard)
- *   CLAUSULA_VERA the note before the final do, which is the weak beat of
- *                 the penultimate bar when it is two half notes and the
- *                 whole note when it is one, reaches the final do by step
- *                 in contrary motion to the cantus firmus (ti to do against
- *                 re to do, or the reverse), and makes a major or minor
- *                 third or sixth with the cantus firmus note it sounds
- *                 with (hard)
+ *   OPENING_BAR   the first bar is four quarter notes, or a quarter rest
+ *                 followed by three quarter notes; it is not a whole note
+ *                 (hard)
+ *   FINAL_BAR     the last bar is a whole note on do: a note on the first
+ *                 beat tied through the rest of the bar (hard)
+ *   CLAUSULA_VERA the note before the final do, which is the last quarter
+ *                 note of the penultimate bar (or its whole note, when that
+ *                 bar is one), reaches the final do by step in contrary
+ *                 motion to the cantus firmus (ti to do against re to do, or
+ *                 the reverse), and makes a major or minor third or sixth
+ *                 with the cantus firmus note it sounds with (hard)
  *
  * Notes are compared by letter and accidental, octave ignored. Every check
  * returns false for an invalid exercise or a NULL tonic.

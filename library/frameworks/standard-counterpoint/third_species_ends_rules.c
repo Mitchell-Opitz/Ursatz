@@ -23,7 +23,7 @@ static void ensure_built(StandardCounterpointThirdSpeciesEndsRule which) {
     }
     g_built[which] = true;
     char name[96];
-    snprintf(name, sizeof(name), "second-species-ends-%s", NAMES[which]);
+    snprintf(name, sizeof(name), "third-species-ends-%s", NAMES[which]);
     standard_counterpoint_build_rule_pair(name, CONSTRAINT_TYPE_HARD, &g_pairs[which]);
 }
 
@@ -76,19 +76,20 @@ static bool check_opening_bar(const Exercise *exercise) {
 }
 
 static bool check_final_bar(const Exercise *exercise, const PitchSpelling *tonic) {
-    size_t last_slot = exercise->counterpoint->count - 1;
-    const StandardCounterpointSlot *strong = slot_at(exercise, last_slot - 1);
-    const StandardCounterpointSlot *weak = slot_at(exercise, last_slot);
-    return strong->kind == STANDARD_COUNTERPOINT_SLOT_ATTACK && weak->kind == STANDARD_COUNTERPOINT_SLOT_TIE &&
+    size_t first_slot = exercise->counterpoint->count - STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR;
+    const StandardCounterpointSlot *strong = slot_at(exercise, first_slot);
+    const StandardCounterpointSlot *next = slot_at(exercise, first_slot + 1);
+    return strong->kind == STANDARD_COUNTERPOINT_SLOT_ATTACK && next->kind == STANDARD_COUNTERPOINT_SLOT_TIE &&
            is_tonic(strong->pitch, tonic);
 }
 
 static bool check_clausula_vera(const Exercise *exercise) {
     size_t bars = exercise->cantus->count;
+    size_t final_slot = exercise->counterpoint->count - STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR;
     const PitchSpelling *cantus_before = exercise->cantus->notes[bars - 2];
     const PitchSpelling *cantus_final = exercise->cantus->notes[bars - 1];
-    const PitchSpelling *before = slot_at(exercise, 2 * bars - 3)->pitch;
-    const PitchSpelling *final = slot_at(exercise, 2 * bars - 2)->pitch;
+    const PitchSpelling *before = slot_at(exercise, final_slot - 1)->pitch;
+    const PitchSpelling *final = slot_at(exercise, final_slot)->pitch;
 
     StandardCounterpointInterval cantus_move, counterpoint_move, vertical;
     if (!standard_counterpoint_interval_between(cantus_before, cantus_final, &cantus_move) ||
