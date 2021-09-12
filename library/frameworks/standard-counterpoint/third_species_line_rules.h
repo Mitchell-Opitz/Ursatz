@@ -38,10 +38,12 @@
  *                       (soft)
  *   LEAP_PLACEMENT      leaps inside a bar are at least as many as leaps
  *                       across the bar line (soft)
- *   SECONDARY_CLIMAXES  with at least eight notes, the line has one or two
- *                       secondary climaxes: notes lower than the overall
- *                       climax that are higher than the notes on either side
- *                       (soft)
+ *   SECONDARY_CLIMAXES  with at least eight bars, the line has one or two
+ *                       secondary climaxes: downbeat notes lower than the
+ *                       overall climax that are higher than the downbeat
+ *                       notes on either side (soft). Judged on the downbeats
+ *                       because with four notes to a bar nearly every bar has
+ *                       a local high note of its own
  *
  * The cantus firmus rules that limit leaps (leap recovery and consecutive
  * leaps) are not applied: the dissonance figures include leaps of a third

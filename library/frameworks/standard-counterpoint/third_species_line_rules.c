@@ -135,17 +135,25 @@ static bool check_leap_placement(const Attacks *attacks) {
     return across <= inside;
 }
 
+/* The climaxes are judged on the downbeats, the skeleton of the line: with
+   four notes to a bar, nearly every bar has a local high note of its own. */
 static bool check_secondary_climaxes(const Attacks *attacks) {
-    size_t count = attacks->line.count;
+    const PitchSpelling *downbeats[BUFFER_SIZE];
+    size_t count = 0;
+    for (size_t i = 0; i < attacks->line.count; i++) {
+        if (attacks->slots[i] % STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR == 0) {
+            downbeats[count++] = attacks->notes[i];
+        }
+    }
     if (count < STANDARD_COUNTERPOINT_THIRD_SPECIES_MIN_ATTACKS_FOR_SECONDARY_CLIMAXES) {
         return true;
     }
     const PitchSpelling *top = attacks->notes[standard_counterpoint_line_highest_index(&attacks->line)];
     size_t peaks = 0;
     for (size_t i = 1; i + 1 < count; i++) {
-        if (standard_counterpoint_direction(attacks->notes[i - 1], attacks->notes[i]) > 0 &&
-            standard_counterpoint_direction(attacks->notes[i], attacks->notes[i + 1]) < 0 &&
-            standard_counterpoint_direction(attacks->notes[i], top) != 0) {
+        if (standard_counterpoint_direction(downbeats[i - 1], downbeats[i]) > 0 &&
+            standard_counterpoint_direction(downbeats[i], downbeats[i + 1]) < 0 &&
+            standard_counterpoint_direction(downbeats[i], top) != 0) {
             peaks++;
         }
     }
