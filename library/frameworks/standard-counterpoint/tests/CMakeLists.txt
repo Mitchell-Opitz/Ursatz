@@ -110,3 +110,8 @@ add_executable(test_standard_counterpoint_third_species_strong_rules test_third_
 target_link_libraries(test_standard_counterpoint_third_species_strong_rules PRIVATE standard_counterpoint)
 add_test(NAME standard_counterpoint_third_species_strong_rules
          COMMAND test_standard_counterpoint_third_species_strong_rules)
+
+add_executable(test_standard_counterpoint_third_species_beat_rules test_third_species_beat_rules.c)
+target_link_libraries(test_standard_counterpoint_third_species_beat_rules PRIVATE standard_counterpoint)
+add_test(NAME standard_counterpoint_third_species_beat_rules
+         COMMAND test_standard_counterpoint_third_species_beat_rules)
