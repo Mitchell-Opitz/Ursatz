@@ -80,6 +80,7 @@ add_library(ursatz
     semantics/motion_type.c
     semantics/counterpoint_species.c
     semantics/beat_strength.c
+    semantics/non_chord_tone.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c

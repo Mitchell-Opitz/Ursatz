@@ -14,14 +14,20 @@ static void test_validity(void) {
 
 static void test_names(void) {
     assert(strcmp(beat_strength_name(BEAT_STRENGTH_STRONG), "strong") == 0);
+    assert(strcmp(beat_strength_name(BEAT_STRENGTH_MEDIUM), "medium") == 0);
     assert(strcmp(beat_strength_name(BEAT_STRENGTH_WEAK), "weak") == 0);
     assert(beat_strength_name(BEAT_STRENGTH_COUNT) == NULL);
 }
 
 static void test_is_stronger(void) {
     assert(beat_strength_is_stronger(BEAT_STRENGTH_STRONG, BEAT_STRENGTH_WEAK));
+    assert(beat_strength_is_stronger(BEAT_STRENGTH_STRONG, BEAT_STRENGTH_MEDIUM));
+    assert(beat_strength_is_stronger(BEAT_STRENGTH_MEDIUM, BEAT_STRENGTH_WEAK));
     assert(!beat_strength_is_stronger(BEAT_STRENGTH_WEAK, BEAT_STRENGTH_STRONG));
+    assert(!beat_strength_is_stronger(BEAT_STRENGTH_MEDIUM, BEAT_STRENGTH_STRONG));
+    assert(!beat_strength_is_stronger(BEAT_STRENGTH_WEAK, BEAT_STRENGTH_MEDIUM));
     assert(!beat_strength_is_stronger(BEAT_STRENGTH_STRONG, BEAT_STRENGTH_STRONG));
+    assert(!beat_strength_is_stronger(BEAT_STRENGTH_MEDIUM, BEAT_STRENGTH_MEDIUM));
     assert(!beat_strength_is_stronger(BEAT_STRENGTH_WEAK, BEAT_STRENGTH_WEAK));
     assert(!beat_strength_is_stronger(BEAT_STRENGTH_COUNT, BEAT_STRENGTH_WEAK));
     assert(!beat_strength_is_stronger(BEAT_STRENGTH_STRONG, BEAT_STRENGTH_COUNT));
