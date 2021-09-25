@@ -164,10 +164,10 @@ static void test_bar_line_direct_perfect(void) {
 
     /* The same with the cantus firmus above the counterpoint. */
     const PitchSpelling *upper_cantus[] = {P(C, 0, 4), P(D, 0, 4)};
-    const StandardCounterpointSlot below_direct[] = {BAR(P(E, 0, 3), P(F, 0, 3), P(G, 0, 3), P(G, 0, 3)),
-                                                     WHOLE(P(A, 0, 3))};
-    const StandardCounterpointSlot below_contrary[] = {BAR(P(E, 0, 3), P(F, 0, 3), P(G, 0, 3), P(B, 0, 3)),
-                                                       WHOLE(P(A, 0, 3))};
+    const StandardCounterpointSlot below_direct[] = {BAR(P(E, 0, 3), P(D, 0, 3), P(E, 0, 3), P(F, 0, 3)),
+                                                     WHOLE(P(G, 0, 3))};
+    const StandardCounterpointSlot below_contrary[] = {BAR(P(E, 0, 3), P(D, 0, 3), P(E, 0, 3), P(A, 0, 3)),
+                                                       WHOLE(P(G, 0, 3))};
     EXERCISE(below_exercise, upper_cantus, below_direct, CANTUS_UPPER);
     EXERCISE(below_contrary_exercise, upper_cantus, below_contrary, CANTUS_UPPER);
     assert(!holds(STRONG(BAR_LINE_DIRECT_PERFECT), &below_exercise));
