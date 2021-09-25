@@ -23,4 +23,23 @@
 #define CANTUS_LOWER STANDARD_COUNTERPOINT_CANTUS_IN_LOWER
 #define CANTUS_UPPER STANDARD_COUNTERPOINT_CANTUS_IN_UPPER
 
+/* A third-species exercise over Fux's Dorian cantus firmus (D3 to D3), with
+   the counterpoint above it. It begins on sol, uses a dissonant neighbor
+   tone, ends with a clausula vera over a whole note on do, and breaks no hard
+   rule. Notes are interned in the test pool, so these macros may be used once
+   per test function. */
+#define GOOD_THIRD_SPECIES_CANTUS(name)                                                                     \
+    const PitchSpelling *name[] = {P(D, 0, 3), P(F, 0, 3), P(E, 0, 3), P(D, 0, 3), P(G, 0, 3), P(F, 0, 3), \
+                                   P(A, 0, 3), P(G, 0, 3), P(F, 0, 3), P(E, 0, 3), P(D, 0, 3)}
+#define GOOD_THIRD_SPECIES_SLOTS(name)                                                                       \
+    const StandardCounterpointSlot name[] = {                                                                \
+        ATK(P(A, 0, 3)), ATK(P(F, 0, 3)), ATK(P(E, 0, 3)), ATK(P(F, 0, 3)), ATK(P(A, 0, 3)), ATK(P(G, 0, 3)), \
+        ATK(P(A, 0, 3)), ATK(P(B, 0, 3)), ATK(P(C, 0, 4)), ATK(P(B, 0, 3)), ATK(P(C, 0, 4)), ATK(P(E, 0, 4)), \
+        ATK(P(F, 0, 4)), ATK(P(D, 0, 4)), ATK(P(E, 0, 4)), ATK(P(D, 0, 4)), ATK(P(E, 0, 4)), ATK(P(F, 0, 4)), \
+        ATK(P(G, 0, 4)), ATK(P(E, 0, 4)), ATK(P(D, 0, 4)), ATK(P(F, 0, 4)), ATK(P(E, 0, 4)), ATK(P(D, 0, 4)), \
+        ATK(P(C, 0, 4)), ATK(P(A, 0, 3)), ATK(P(B, 0, 3)), ATK(P(C, 0, 4)), ATK(P(E, 0, 4)), ATK(P(D, 0, 4)), \
+        ATK(P(C, 0, 4)), ATK(P(B, 0, 3)), ATK(P(A, 0, 3)), ATK(P(F, 0, 3)), ATK(P(G, 0, 3)), ATK(P(F, 0, 3)), \
+        ATK(P(G, 0, 3)), ATK(P(A, 0, 3)), ATK(P(B, 0, 3)), ATK(P(C, 1, 4)), ATK(P(D, 0, 4)), TIE(P(D, 0, 4)),  \
+        TIE(P(D, 0, 4)), TIE(P(D, 0, 4))}
+
 #endif
