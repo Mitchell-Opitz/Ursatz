@@ -148,6 +148,52 @@ which part is the cantus firmus, and the tonic.
   cantus firmus note), strong beat, weak beat, ends, and counterpoint line
   groups, as hard and soft bit masks.
 
+### Third species
+
+Four notes against one (`CounterpointSpecies` third,
+`src/semantics/counterpoint_species.h`). The counterpoint is a list of slots
+(`counterpoint_slots.h`), four per bar, with the strengths strong, weak, medium,
+weak (`BeatStrength`, `src/semantics/beat_strength.h`). A bar is four quarter
+notes (the first may be a quarter rest and three notes) or a whole note (an
+attack and three ties); `third_species_exercise.h`. The caller supplies the
+exercise, which says which part is the cantus firmus, and the tonic.
+
+- **Dissonance figures** (`third_species_figure.h`): a dissonance falls on beat
+  2, 3, or 4 and only as part of a figure: a dissonant passing tone, two
+  dissonant passing tones in a row, a dissonant neighbor tone, a double
+  neighbor, or a nota cambiata (the form that fills in a step down and the form
+  that fills in a step up). Each maps to a `NonChordTone`
+  (`src/semantics/non_chord_tone.h`).
+- **Strong beats** (`third_species_strong_rules.h`): downbeats consonant, no
+  three bars in a row beginning with the same perfect interval, at most three
+  with the same imperfect consonance, no dissonant outline between downbeats,
+  no fifth on beat 3 or 4 (or octave on beat 2, 3, or 4) before a downbeat of
+  the same kind, and the first-species rules from beat 4 into the downbeat
+  (no repeated perfect interval, no direct perfect interval), all hard. Soft:
+  imperfect consonances and no unisons on interior downbeats. Direct fifths and
+  octaves between downbeats are allowed.
+- **Other beats** (`third_species_beat_rules.h`): every dissonant new note is
+  part of a figure (hard). Soft: a mixture of consonant and dissonant beats
+  from four bars up, and a leap of a fourth or more followed by a step in the
+  opposite direction. Unisons are allowed on every beat but the downbeat.
+- **Beginning and ending** (`third_species_ends_rules.h`), all hard: do or sol
+  above the cantus firmus and do below it, a first bar of four quarter notes or
+  a quarter rest and three, a last bar that is a whole note on do, and the
+  clausula vera on the last note of the penultimate bar. Skipped when the tonic
+  is NULL.
+- **Counterpoint line** (`third_species_line_rules.h`): on the line's attacks.
+  Hard: every leap a consonant melodic interval (a sixth only as the ascending
+  minor sixth), final step, range, leading tone. Soft: single climax, no
+  repeated motive, at least three quarters steps, leaps inside a bar at least as
+  many as across the bar line, and one or two secondary climaxes among the
+  downbeats from eight bars up.
+- **Aggregate check** (`standard_counterpoint_third_species_check`,
+  `standard_counterpoint_third_species_valid`): the cantus firmus, spacing (the
+  common gap, crossing, and climax rules on every note against its cantus
+  firmus note, so the counterpoint's climax stays apart from the cantus
+  firmus climax), strong beat, other beat, ends, and counterpoint line groups,
+  as hard and soft bit masks.
+
 The tonic of the cantus firmus, which part is the cantus firmus, and the
 limits for the soft melodic rules are the caller's input. Notes are read as
 sounding pitch in 12-tone equal temperament, this module's own copy in
@@ -155,7 +201,7 @@ sounding pitch in 12-tone equal temperament, this module's own copy in
 
 ## Not covered
 
-Species beyond the second (four notes to one, syncopation, florid counterpoint),
+Species beyond the third (syncopation, florid counterpoint),
 dissonance treatment, three or more parts, and imitation. Note values and
 whole-note rhythm of a cantus firmus and counterpoint: the one-against-one
 ratio is only that the two lines have the same number of notes. The overall shape of a cantus firmus
