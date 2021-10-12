@@ -73,6 +73,9 @@ static int perfect_class(const StandardCounterpointInterval *interval) {
 
 static bool check_consonant(const Exercise *exercise) {
     for (size_t bar = 0; bar < weak_bars(exercise); bar++) {
+        if (standard_counterpoint_fourth_species_bar_is_broken(exercise, bar)) {
+            continue;
+        }
         StandardCounterpointInterval interval;
         StandardCounterpointIntervalCategory category;
         if (!weak_category(exercise, bar, &interval, &category) || category == STANDARD_COUNTERPOINT_DISSONANCE) {

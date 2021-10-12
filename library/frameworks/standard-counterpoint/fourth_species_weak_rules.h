@@ -17,7 +17,9 @@
  * 6-5, or 4-5 to a perfect one.
  *
  *   CONSONANT             every weak beat is a consonance against the cantus
- *                         firmus (hard)
+ *                         firmus (hard), except in a bar in which species is
+ *                         broken, which follows second species
+ *                         (species_break_rules.h)
  *   NO_REPEATED_PERFECT   two consecutive weak beats are not the same perfect
  *                         interval, a fifth or an octave (a unison counts as an
  *                         octave); compound intervals count as simple. This
