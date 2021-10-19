@@ -38,6 +38,7 @@ add_library(standard_counterpoint
     species_break_rules.c
     fourth_species_ends_rules.c
     fourth_species_line_rules.c
+    fourth_species_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
