@@ -194,6 +194,51 @@ exercise, which says which part is the cantus firmus, and the tonic.
   firmus climax), strong beat, other beat, ends, and counterpoint line groups,
   as hard and soft bit masks.
 
+### Fourth species
+
+Syncopated counterpoint (`CounterpointSpecies` fourth,
+`src/semantics/counterpoint_species.h`). The counterpoint is a list of slots
+(`counterpoint_slots.h`), two per bar, strong then weak. The weak-beat note is
+tied across the bar line to the next strong beat. The first bar is a half rest
+and a note, a middle bar is a new note on the weak beat and a tie (or a new
+note) on the strong beat, and the last bar is a whole note (an attack and a
+tie); `fourth_species_exercise.h`. The caller supplies the exercise, which says
+which part is the cantus firmus, and the tonic.
+
+- **Suspensions** (`fourth_species_suspension.h`): a tied downbeat is a
+  consonant preparation, a tie into the cantus firmus, and a consonant
+  resolution one step down. Above the cantus firmus the dissonant types are
+  7-6, 4-3, and 9-8, below it 2-3; a consonant tie that resolves down by step
+  is a consonant suspension. The dissonant types map to
+  `NON_CHORD_TONE_SUSPENSION` (`src/semantics/non_chord_tone.h`).
+- **Suspension rules** (`fourth_species_suspension_rules.h`): every dissonant
+  tied downbeat is a proper suspension (hard). Soft: at least half of the tied
+  bars hold a dissonant suspension, and no more than half of them are 9-8.
+- **Weak beats** (`fourth_species_weak_rules.h`): every weak beat is a
+  consonance except in a broken bar, no two weak beats in a row make the same
+  perfect interval, no more than three in a row make the same imperfect
+  consonance, and no weak beat is a perfect interval reached by similar motion,
+  all hard. Soft: no interior unisons.
+- **Species breaks** (`species_break_rules.h`): a middle bar whose strong beat
+  is a new note follows second-species principles. Hard: the downbeat is
+  consonant, and a dissonant weak beat is a passing tone between two consonant
+  downbeats. Soft: one stretch of broken bars at most, of two bars at most.
+- **Beginning and ending** (`fourth_species_ends_rules.h`), all hard: do or sol
+  above the cantus firmus and do below it, a cantus firmus that ends re to do,
+  a penultimate bar of a tied do (a 7-6 above the cantus firmus, a 2-3 below
+  it) and then ti, and a last bar that is a whole note on do. Skipped when the
+  tonic is NULL.
+- **Counterpoint line** (`fourth_species_line_rules.h`): on the line's attacks.
+  Hard: every leap a consonant melodic interval (a sixth only as the ascending
+  minor sixth), final step, range, leading tone. Soft: at least half of the
+  progressions are steps down, and at least one upward leap. The single climax
+  and secondary climax rules of the other species are not used.
+- **Aggregate check** (`standard_counterpoint_fourth_species_check`,
+  `standard_counterpoint_fourth_species_valid`): the cantus firmus, spacing (the
+  common gap, crossing, and climax rules on every sounding note against its
+  cantus firmus note), suspensions, weak beats, species breaks, ends, and
+  counterpoint line groups, as hard and soft bit masks.
+
 The tonic of the cantus firmus, which part is the cantus firmus, and the
 limits for the soft melodic rules are the caller's input. Notes are read as
 sounding pitch in 12-tone equal temperament, this module's own copy in
@@ -201,7 +246,7 @@ sounding pitch in 12-tone equal temperament, this module's own copy in
 
 ## Not covered
 
-Species beyond the third (syncopation, florid counterpoint),
+Species beyond the fourth (florid counterpoint),
 dissonance treatment, three or more parts, and imitation. Note values and
 whole-note rhythm of a cantus firmus and counterpoint: the one-against-one
 ratio is only that the two lines have the same number of notes. The overall shape of a cantus firmus
