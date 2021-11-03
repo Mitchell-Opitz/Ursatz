@@ -12,9 +12,9 @@ static void test_valid_exercise(void) {
     assert(standard_counterpoint_fourth_species_exercise_valid(&exercise));
     assert(standard_counterpoint_fourth_species_bar_count(&exercise) == 3);
 
-    GOOD_FOURTH_SPECIES_CANTUS(good_cantus);
-    GOOD_FOURTH_SPECIES_SLOTS(good_slots);
-    EXERCISE(good, good_cantus, good_slots, CANTUS_LOWER);
+    GOOD_FOURTH_SPECIES_CANTUS(good_notes);
+    GOOD_FOURTH_SPECIES_SLOTS(good_pitches);
+    EXERCISE(good, good_notes, good_pitches, CANTUS_LOWER);
     assert(standard_counterpoint_fourth_species_exercise_valid(&good));
     assert(standard_counterpoint_fourth_species_bar_count(&good) == 11);
 }

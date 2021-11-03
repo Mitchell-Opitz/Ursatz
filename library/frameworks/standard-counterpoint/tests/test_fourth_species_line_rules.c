@@ -126,9 +126,9 @@ static void test_invalid_input(void) {
     const PitchSpelling *cantus[] = {P(C, 0, 3), P(D, 0, 3)};
     const StandardCounterpointSlot too_few[] = {WHOLE(P(E, 0, 3))};
     EXERCISE(invalid, cantus, too_few, CANTUS_LOWER);
-    GOOD_FOURTH_SPECIES_CANTUS(good_cantus);
-    GOOD_FOURTH_SPECIES_SLOTS(good_slots);
-    EXERCISE(good, good_cantus, good_slots, CANTUS_LOWER);
+    GOOD_FOURTH_SPECIES_CANTUS(good_notes);
+    GOOD_FOURTH_SPECIES_SLOTS(good_pitches);
+    EXERCISE(good, good_notes, good_pitches, CANTUS_LOWER);
     unsigned hard = 5, soft = 5;
 
     assert(!standard_counterpoint_fourth_species_line_check(NULL, P(D, 0, 3), &hard, &soft));
