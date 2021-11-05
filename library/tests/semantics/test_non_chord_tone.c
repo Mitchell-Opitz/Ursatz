@@ -17,6 +17,7 @@ static void test_names(void) {
     assert(strcmp(non_chord_tone_name(NON_CHORD_TONE_NEIGHBOR), "neighbor") == 0);
     assert(strcmp(non_chord_tone_name(NON_CHORD_TONE_DOUBLE_NEIGHBOR), "double-neighbor") == 0);
     assert(strcmp(non_chord_tone_name(NON_CHORD_TONE_CHANGING_TONE), "changing-tone") == 0);
+    assert(strcmp(non_chord_tone_name(NON_CHORD_TONE_SUSPENSION), "suspension") == 0);
     assert(non_chord_tone_name(NON_CHORD_TONE_COUNT) == NULL);
 }
 
@@ -25,6 +26,7 @@ static void test_involves_leap(void) {
     assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_NEIGHBOR));
     assert(non_chord_tone_involves_leap(NON_CHORD_TONE_DOUBLE_NEIGHBOR));
     assert(non_chord_tone_involves_leap(NON_CHORD_TONE_CHANGING_TONE));
+    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_SUSPENSION));
     assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_COUNT));
 }
 
