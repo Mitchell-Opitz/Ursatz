@@ -27,7 +27,7 @@
  * above or below it:
  *
  *   SEVEN_SIX      above the cantus firmus: 7 resolves to 6
- *   FOUR_THREE     above the cantus firmus: 4 resolves to 3
+ *   FOUR_THREE     above the cantus firmus: a perfect 4 resolves to 3
  *   NINE_EIGHT     above the cantus firmus: 9 (a second) resolves to an
  *                  octave, or 2 to 1 (a unison)
  *   TWO_THREE      below the cantus firmus: 2 resolves to 3

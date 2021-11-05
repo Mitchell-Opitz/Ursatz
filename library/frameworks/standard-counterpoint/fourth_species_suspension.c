@@ -61,7 +61,7 @@ bool standard_counterpoint_fourth_species_suspension(const StandardCounterpointF
     if (above) {
         if (from == 7 && to == 6) {
             *type = STANDARD_COUNTERPOINT_SUSPENSION_SEVEN_SIX;
-        } else if (from == 4 && to == 3) {
+        } else if (from == 4 && suspension.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT && to == 3) {
             *type = STANDARD_COUNTERPOINT_SUSPENSION_FOUR_THREE;
         } else if (from == 2 && (to == 1 || to == 8)) {
             *type = STANDARD_COUNTERPOINT_SUSPENSION_NINE_EIGHT;
