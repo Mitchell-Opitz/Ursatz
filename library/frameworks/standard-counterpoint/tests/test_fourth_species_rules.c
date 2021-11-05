@@ -65,8 +65,8 @@ static void test_weak_beat_violation(void) {
 static void test_species_break_violation(void) {
     /* A broken bar whose downbeat is a fourth above the cantus firmus. */
     const PitchSpelling *cantus[] = {P(C, 0, 3), P(C, 0, 3), P(C, 0, 3), P(C, 0, 3)};
-    const StandardCounterpointSlot slots[] = {REST(), ATK(P(G, 0, 3)), ATK(P(F, 0, 3)), ATK(P(G, 0, 3)),
-                                              TIE(P(G, 0, 3)), ATK(P(E, 0, 3)), WHOLE(P(C, 0, 4))};
+    const StandardCounterpointSlot slots[] = {REST(), ATK(P(G, 0, 3)), ATK(P(F, 0, 3)), ATK(P(E, 0, 3)),
+                                              TIE(P(E, 0, 3)), ATK(P(G, 0, 3)), WHOLE(P(C, 0, 4))};
     EXERCISE(exercise, cantus, slots, CANTUS_LOWER);
     StandardCounterpointFourthSpeciesInput input = {&exercise, NULL};
     StandardCounterpointResult result;

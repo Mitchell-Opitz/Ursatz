@@ -37,7 +37,7 @@ static void test_good_exercise_suspensions(void) {
     /* Bar 1 ties a consonance but does not resolve down by step. */
     assert(!standard_counterpoint_fourth_species_suspension(&exercise, 1, &type));
     assert(standard_counterpoint_fourth_species_suspension(&exercise, 2, &type));
-    assert(type == STANDARD_COUNTERPOINT_SUSPENSION_CONSONANT_TIE);
+    assert(type == STANDARD_COUNTERPOINT_SUSPENSION_FOUR_THREE);
     assert(standard_counterpoint_fourth_species_suspension(&exercise, 3, &type));
     assert(type == STANDARD_COUNTERPOINT_SUSPENSION_FOUR_THREE);
     assert(standard_counterpoint_fourth_species_suspension(&exercise, 4, &type));
@@ -70,6 +70,17 @@ static void test_nine_eight_above(void) {
     /* Bar 1: E4 over D3 (ninth), resolving to D4 (octave). */
     assert(standard_counterpoint_fourth_species_suspension(&exercise, 1, &type));
     assert(type == STANDARD_COUNTERPOINT_SUSPENSION_NINE_EIGHT);
+}
+
+static void test_consonant_tie(void) {
+    /* A3 over C3 is a sixth, and resolves down by step to a fifth. */
+    const PitchSpelling *cantus[] = {P(C, 0, 3), P(C, 0, 3), P(C, 0, 3)};
+    const StandardCounterpointSlot slots[] = {REST(), ATK(P(A, 0, 3)), TIE(P(A, 0, 3)), ATK(P(G, 0, 3)),
+                                              WHOLE(P(C, 0, 4))};
+    EXERCISE(exercise, cantus, slots, CANTUS_LOWER);
+    StandardCounterpointSuspensionType type;
+    assert(standard_counterpoint_fourth_species_suspension(&exercise, 1, &type));
+    assert(type == STANDARD_COUNTERPOINT_SUSPENSION_CONSONANT_TIE);
 }
 
 static void test_two_three_below(void) {
@@ -130,6 +141,7 @@ int main(void) {
     test_names_and_kinds();
     test_good_exercise_suspensions();
     test_nine_eight_above();
+    test_consonant_tie();
     test_two_three_below();
     test_improper_suspensions();
     printf("test_fourth_species_suspension (standard-counterpoint): ok\n");

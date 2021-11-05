@@ -56,7 +56,7 @@ static void test_proper(void) {
     EXERCISE(broken_exercise, cantus, broken, CANTUS_LOWER);
     assert(holds(SUSPENSION(PROPER), &broken_exercise));
 
-    /* A 7-6 over E3. */
+    /* A tied consonance. */
     const StandardCounterpointSlot seven_six[] = {REST(), ATK(P(A, 0, 3)), TIE(P(A, 0, 3)), ATK(P(D, 0, 4)),
                                                   WHOLE(P(D, 0, 4))};
     EXERCISE(good_exercise, cantus, seven_six, CANTUS_LOWER);
