@@ -40,6 +40,7 @@ add_library(standard_counterpoint
     fourth_species_line_rules.c
     fourth_species_rules.c
     fifth_species_exercise.c
+    fifth_species_pattern.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
