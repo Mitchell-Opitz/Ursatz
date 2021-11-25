@@ -44,6 +44,7 @@ add_library(standard_counterpoint
     fifth_species_figure.c
     fifth_species_suspension_rules.c
     fifth_species_rhythm_rules.c
+    fifth_species_harmony_rules.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
