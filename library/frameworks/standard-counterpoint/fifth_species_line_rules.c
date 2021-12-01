@@ -1,0 +1,164 @@
+#include "fifth_species_line_rules.h"
+
+#include <stddef.h>
+#include <stdio.h>
+
+#include "cantus_firmus_rules.h"
+#include "counterpoint_interval.h"
+#include "counterpoint_line.h"
+#include "counterpoint_pitch.h"
+#include "rule_pair.h"
+
+#define BUFFER_SIZE STANDARD_COUNTERPOINT_FIFTH_SPECIES_MAX_NOTES
+
+static const char *const NAMES[STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_COUNT] = {
+    "leaps",         "final-step",    "range",           "leading-tone",
+    "single-climax", "leap-recovery", "mostly-stepwise", "no-repeated-motive"};
+
+static bool rule_is_hard(StandardCounterpointFifthSpeciesLineRule which) {
+    return which <= STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_LEADING_TONE;
+}
+
+static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_COUNT];
+static bool g_built[STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_COUNT];
+
+static bool valid_rule(StandardCounterpointFifthSpeciesLineRule which) {
+    return which >= 0 && which < STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_COUNT;
+}
+
+static void ensure_built(StandardCounterpointFifthSpeciesLineRule which) {
+    if (!valid_rule(which) || g_built[which]) {
+        return;
+    }
+    g_built[which] = true;
+    char name[96];
+    snprintf(name, sizeof(name), "fifth-species-line-%s", NAMES[which]);
+    standard_counterpoint_build_rule_pair(name, rule_is_hard(which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
+                                          &g_pairs[which]);
+}
+
+const Rule *standard_counterpoint_fifth_species_line_rule(StandardCounterpointFifthSpeciesLineRule which) {
+    ensure_built(which);
+    return valid_rule(which) ? g_pairs[which].rule : NULL;
+}
+
+const Constraint *standard_counterpoint_fifth_species_line_constraint(StandardCounterpointFifthSpeciesLineRule which) {
+    ensure_built(which);
+    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+}
+
+const char *standard_counterpoint_fifth_species_line_rule_name(StandardCounterpointFifthSpeciesLineRule which) {
+    return valid_rule(which) ? NAMES[which] : NULL;
+}
+
+typedef StandardCounterpointFifthSpeciesExercise Exercise;
+
+typedef struct {
+    const PitchSpelling *notes[BUFFER_SIZE];
+    size_t slots[BUFFER_SIZE];
+    StandardCounterpointLine line;
+} Attacks;
+
+static bool read_attacks(const Exercise *exercise, Attacks *attacks) {
+    size_t count;
+    if (!standard_counterpoint_fifth_species_attacks(exercise, attacks->notes, attacks->slots, BUFFER_SIZE, &count) ||
+        count == 0) {
+        return false;
+    }
+    attacks->line.notes = attacks->notes;
+    attacks->line.count = count;
+    return true;
+}
+
+static bool check_leaps(const Attacks *attacks) {
+    for (size_t j = 1; j < attacks->line.count; j++) {
+        StandardCounterpointInterval interval;
+        if (!standard_counterpoint_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
+            return false;
+        }
+        if (interval.size > 8 || interval.quality == STANDARD_COUNTERPOINT_QUALITY_AUGMENTED ||
+            interval.quality == STANDARD_COUNTERPOINT_QUALITY_DIMINISHED || interval.simple_size == 7) {
+            return false;
+        }
+        if (interval.simple_size == 6) {
+            bool ascending_minor = interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR &&
+                                   standard_counterpoint_direction(attacks->notes[j - 1], attacks->notes[j]) > 0;
+            if (!ascending_minor) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool cantus_rule_for(StandardCounterpointFifthSpeciesLineRule which, StandardCounterpointCantusRule *out) {
+    switch (which) {
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_FINAL_STEP:
+            *out = STANDARD_COUNTERPOINT_CANTUS_RULE_FINAL_STEP;
+            return true;
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_RANGE:
+            *out = STANDARD_COUNTERPOINT_CANTUS_RULE_RANGE;
+            return true;
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_LEADING_TONE:
+            *out = STANDARD_COUNTERPOINT_CANTUS_RULE_LEADING_TONE;
+            return true;
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_SINGLE_CLIMAX:
+            *out = STANDARD_COUNTERPOINT_CANTUS_RULE_SINGLE_CLIMAX;
+            return true;
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_LEAP_RECOVERY:
+            *out = STANDARD_COUNTERPOINT_CANTUS_RULE_LEAP_RECOVERY;
+            return true;
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_MOSTLY_STEPWISE:
+            *out = STANDARD_COUNTERPOINT_CANTUS_RULE_MOSTLY_STEPWISE;
+            return true;
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_NO_REPEATED_MOTIVE:
+            *out = STANDARD_COUNTERPOINT_CANTUS_RULE_NO_REPEATED_MOTIVE;
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool standard_counterpoint_fifth_species_line_rule_holds(StandardCounterpointFifthSpeciesLineRule which,
+                                                          const StandardCounterpointFifthSpeciesExercise *exercise,
+                                                          const PitchSpelling *tonic) {
+    Attacks attacks;
+    if (!valid_rule(which) || tonic == NULL || !read_attacks(exercise, &attacks)) {
+        return false;
+    }
+    StandardCounterpointCantusRule cantus_rule;
+    if (cantus_rule_for(which, &cantus_rule)) {
+        return standard_counterpoint_cantus_rule_holds(cantus_rule, &attacks.line, tonic);
+    }
+    switch (which) {
+        case STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_LEAPS:
+            return check_leaps(&attacks);
+        default:
+            return false;
+    }
+}
+
+bool standard_counterpoint_fifth_species_line_check(const StandardCounterpointFifthSpeciesExercise *exercise,
+                                                     const PitchSpelling *tonic, unsigned *hard_violations,
+                                                     unsigned *soft_violations) {
+    if (hard_violations == NULL || soft_violations == NULL || tonic == NULL ||
+        !standard_counterpoint_fifth_species_exercise_valid(exercise)) {
+        return false;
+    }
+    unsigned hard = 0;
+    unsigned soft = 0;
+    for (int i = 0; i < STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_COUNT; i++) {
+        StandardCounterpointFifthSpeciesLineRule which = (StandardCounterpointFifthSpeciesLineRule)i;
+        if (standard_counterpoint_fifth_species_line_rule_holds(which, exercise, tonic)) {
+            continue;
+        }
+        if (rule_is_hard(which)) {
+            hard |= 1u << i;
+        } else {
+            soft |= 1u << i;
+        }
+    }
+    *hard_violations = hard;
+    *soft_violations = soft;
+    return true;
+}
