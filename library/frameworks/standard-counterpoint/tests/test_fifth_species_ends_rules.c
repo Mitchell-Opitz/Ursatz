@@ -128,10 +128,10 @@ static void test_invalid_input(void) {
     const PitchSpelling *cantus[] = {P(D, 0, 3), P(E, 0, 3)};
     const StandardCounterpointSlot too_few[] = {WHOLE(P(E, 0, 3)), WHOLE(P(E, 0, 3))};
     EXERCISE(invalid, cantus, too_few, CANTUS_LOWER);
-    const PitchSpelling *good_cantus[] = {P(D, 0, 3), P(E, 0, 3), P(D, 0, 3)};
-    const StandardCounterpointSlot good_slots[] = {REST4(), HALF(P(D, 0, 4)), ATK(P(D, 0, 4)), T5(P(D, 0, 4)),
+    const PitchSpelling *good_notes[] = {P(D, 0, 3), P(E, 0, 3), P(D, 0, 3)};
+    const StandardCounterpointSlot good_pitches[] = {REST4(), HALF(P(D, 0, 4)), ATK(P(D, 0, 4)), T5(P(D, 0, 4)),
                                                    QUARTER(P(C, 1, 4)), WHOLE(P(D, 0, 4))};
-    EXERCISE(good, good_cantus, good_slots, CANTUS_LOWER);
+    EXERCISE(good, good_notes, good_pitches, CANTUS_LOWER);
     unsigned violations = 5;
 
     assert(!standard_counterpoint_fifth_species_ends_check(NULL, P(D, 0, 3), &violations));
