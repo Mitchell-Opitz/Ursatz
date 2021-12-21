@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 static const char *const NAMES[NON_CHORD_TONE_COUNT] = {"passing", "neighbor", "double-neighbor", "changing-tone",
-                                                          "suspension"};
+                                                          "suspension", "anticipation"};
 
 bool non_chord_tone_valid(NonChordTone type) {
     return type >= 0 && type < NON_CHORD_TONE_COUNT;

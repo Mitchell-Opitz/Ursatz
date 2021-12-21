@@ -22,6 +22,10 @@
  *                    into a position where it is dissonant, on a stronger
  *                    beat than the preparation, which then resolves by
  *                    stepping down to a consonance
+ *   ANTICIPATION     a note that arrives early: it sounds the pitch of the
+ *                    note that follows it, on a weaker beat before that note,
+ *                    and is dissonant against the harmony or the other part
+ *                    until the harmony moves to it
  *
  * Whether each figure is allowed, on which beats, and against what, is a
  * convention of a Framework (frameworks/standard-counterpoint), not of this
@@ -34,19 +38,21 @@ typedef enum {
     NON_CHORD_TONE_DOUBLE_NEIGHBOR,
     NON_CHORD_TONE_CHANGING_TONE,
     NON_CHORD_TONE_SUSPENSION,
+    NON_CHORD_TONE_ANTICIPATION,
     NON_CHORD_TONE_COUNT
 } NonChordTone;
 
-/* True for the five figures above; false for any other value. */
+/* True for the six figures above; false for any other value. */
 bool non_chord_tone_valid(NonChordTone type);
 
-/* "passing" "neighbor" "double-neighbor" "changing-tone" "suspension"; NULL for
-   an invalid type. */
+/* "passing" "neighbor" "double-neighbor" "changing-tone" "suspension" "anticipation";
+   NULL for an invalid type. */
 const char *non_chord_tone_name(NonChordTone type);
 
 /* True for the figures that include a leap: the double neighbor (between its
    two neighbors) and the changing tone (out of its dissonance). False for the
-   stepwise ones (the suspension resolves by step), and for an invalid
+   stepwise ones (the suspension resolves by step, and the anticipation
+   repeats a pitch), and for an invalid
    type. */
 bool non_chord_tone_involves_leap(NonChordTone type);
 

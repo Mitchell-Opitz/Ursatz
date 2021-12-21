@@ -239,6 +239,59 @@ which part is the cantus firmus, and the tonic.
   cantus firmus note), suspensions, weak beats, species breaks, ends, and
   counterpoint line groups, as hard and soft bit masks.
 
+### Fifth species
+
+Florid counterpoint (`CounterpointSpecies` fifth,
+`src/semantics/counterpoint_species.h`). The counterpoint mixes the note values
+of the first four species, and adds eighth notes. It is a list of slots
+(`counterpoint_slots.h`) on an eighth-note grid, eight per bar, with the
+strengths strong, medium (the third beat), and weak. A note is an attack and
+its ties and lasts an eighth, quarter, half, dotted half, or whole note; a
+half or longer note may be tied across the bar line from the third beat, and a
+quarter from the fourth beat into a half or dotted half. Eighths come in pairs
+on the second or fourth beat. The first bar may begin with a rest of one to
+three quarters, and the last bar is a whole note; `fifth_species_exercise.h`.
+The caller supplies the exercise, which says which part is the cantus firmus,
+and the tonic.
+
+- **Note values and bar patterns** (`fifth_species_pattern.h`): the value of
+  each note, and the pattern of each bar (whole, halves, half and quarters,
+  quarters and half, quarters, eighths, syncopated, rest start, other).
+- **Dissonance figures** (`fifth_species_figure.h`): a dissonance is never a
+  new note on the downbeat and is part of a figure: a passing tone (a quarter
+  or the second eighth of a pair), a double passing tone, a neighbor tone, a
+  double neighbor, a nota cambiata (down or up), a suspension (7-6, 4-3, or
+  9-8 above the cantus firmus, 2-3 below it, the held note a quarter, half, or
+  dotted half), an anticipation (a quarter on the fourth beat), or an
+  anticipation with a pair of eighths. Each maps to a `NonChordTone`
+  (`src/semantics/non_chord_tone.h`).
+- **Suspension rules** (`fifth_species_suspension_rules.h`): every dissonant
+  tied downbeat is a proper suspension (hard). Soft: an exercise of five bars
+  or more has one, and no more than half of them are 9-8.
+- **Rhythm** (`fifth_species_rhythm_rules.h`): an eighth is approached and left
+  by step or repetition (hard). Soft: three of the five note values from six
+  bars up, no more than three bars in a row with the same pattern (a run of
+  syncopated bars is free), and no pair of eighths in two bars in a row.
+- **Strong beats and harmony** (`fifth_species_harmony_rules.h`): a new note
+  on a downbeat is consonant, every dissonance is part of a figure, no two
+  downbeats make the same perfect interval, no downbeat perfect interval is
+  reached by similar or parallel motion, and no more than three downbeats in a
+  row make the same imperfect consonance, all hard. Soft: no interior unison
+  on a downbeat.
+- **Beginning and ending** (`fifth_species_ends_rules.h`), all hard: a perfect
+  consonance first, a clausula vera into the last bar (the note before it
+  steps contrary to the cantus firmus, a third or sixth over its note), and a
+  last bar that is a whole note on do. Skipped when the tonic is NULL.
+- **Counterpoint line** (`fifth_species_line_rules.h`): on the line's attacks.
+  Hard: every leap a consonant melodic interval (a sixth only as the ascending
+  minor sixth), final step, range, leading tone. Soft: single climax, leap
+  recovery, mostly stepwise, and no repeated motive.
+- **Aggregate check** (`standard_counterpoint_fifth_species_check`,
+  `standard_counterpoint_fifth_species_valid`): the cantus firmus, spacing (the
+  common gap, crossing, and climax rules on every sounding slot against its
+  cantus firmus note), rhythm, suspensions, harmony, ends, and counterpoint
+  line groups, as hard and soft bit masks.
+
 The tonic of the cantus firmus, which part is the cantus firmus, and the
 limits for the soft melodic rules are the caller's input. Notes are read as
 sounding pitch in 12-tone equal temperament, this module's own copy in
@@ -246,8 +299,7 @@ sounding pitch in 12-tone equal temperament, this module's own copy in
 
 ## Not covered
 
-Species beyond the fourth (florid counterpoint),
-dissonance treatment, three or more parts, and imitation. Note values and
+Dissonance treatment beyond the figures above, three or more parts, and imitation. Note values and
 whole-note rhythm of a cantus firmus and counterpoint: the one-against-one
 ratio is only that the two lines have the same number of notes. The overall shape of a cantus firmus
 beyond the melodic arch tendency. Choosing a counterpoint for a cantus
