@@ -46,15 +46,15 @@ typedef struct {
     const Exercise *exercise;
     Note notes[MAX_NOTES];
     size_t count;
-} Context;
+} NoteSequence;
 
-static bool load(const Exercise *exercise, Context *context) {
+static bool load(const Exercise *exercise, NoteSequence *context) {
     context->exercise = exercise;
     return standard_counterpoint_fifth_species_notes(exercise, context->notes, MAX_NOTES, &context->count);
 }
 
 /* The consonance category of a pitch sounding in the bar of `slot`. */
-static bool category_at(const Context *context, const PitchSpelling *pitch, size_t slot,
+static bool category_at(const NoteSequence *context, const PitchSpelling *pitch, size_t slot,
                         StandardCounterpointIntervalCategory *category) {
     const PitchSpelling *cantus = standard_counterpoint_fifth_species_cantus(context->exercise, slot / SLOTS);
     StandardCounterpointInterval interval;
@@ -62,28 +62,28 @@ static bool category_at(const Context *context, const PitchSpelling *pitch, size
            standard_counterpoint_classify_interval(&interval, category);
 }
 
-static bool dissonant_at(const Context *context, const PitchSpelling *pitch, size_t slot) {
+static bool dissonant_at(const NoteSequence *context, const PitchSpelling *pitch, size_t slot) {
     StandardCounterpointIntervalCategory category;
     return category_at(context, pitch, slot, &category) && category == STANDARD_COUNTERPOINT_DISSONANCE;
 }
 
-static bool consonant_at(const Context *context, const PitchSpelling *pitch, size_t slot) {
+static bool consonant_at(const NoteSequence *context, const PitchSpelling *pitch, size_t slot) {
     StandardCounterpointIntervalCategory category;
     return category_at(context, pitch, slot, &category) && category != STANDARD_COUNTERPOINT_DISSONANCE;
 }
 
 /* A note is consonant at its attack, or consonant just before the next note
    begins (the last slot it sounds in before slot `slot`). */
-static bool note_consonant_at_attack(const Context *context, size_t n) {
+static bool note_consonant_at_attack(const NoteSequence *context, size_t n) {
     return consonant_at(context, context->notes[n].pitch, context->notes[n].slot);
 }
 
-static bool note_dissonant_at_attack(const Context *context, size_t n) {
+static bool note_dissonant_at_attack(const NoteSequence *context, size_t n) {
     return dissonant_at(context, context->notes[n].pitch, context->notes[n].slot);
 }
 
 /* The note before note n sounds consonant in the slot just before n begins. */
-static bool before_consonant(const Context *context, size_t n) {
+static bool before_consonant(const NoteSequence *context, size_t n) {
     return n > 0 && consonant_at(context, context->notes[n - 1].pitch, context->notes[n].slot - 1);
 }
 
@@ -113,15 +113,15 @@ static int third_between(const PitchSpelling *from, const PitchSpelling *to) {
     return standard_counterpoint_direction(from, to);
 }
 
-static const PitchSpelling *pitch_of(const Context *context, size_t n) {
+static const PitchSpelling *pitch_of(const NoteSequence *context, size_t n) {
     return context->notes[n].pitch;
 }
 
-static bool off_downbeat_dissonant_attack(const Context *context, size_t n) {
+static bool off_downbeat_dissonant_attack(const NoteSequence *context, size_t n) {
     return context->notes[n].slot % SLOTS != 0 && !crosses_bar(&context->notes[n]) && note_dissonant_at_attack(context, n);
 }
 
-static bool passing_tone(const Context *context, size_t n) {
+static bool passing_tone(const NoteSequence *context, size_t n) {
     if (n == 0 || n + 1 >= context->count || !off_downbeat_dissonant_attack(context, n) || !before_consonant(context, n) ||
         !note_consonant_at_attack(context, n + 1)) {
         return false;
@@ -132,7 +132,7 @@ static bool passing_tone(const Context *context, size_t n) {
 }
 
 /* Two dissonant notes in a row, n and n + 1. */
-static bool double_passing_from(const Context *context, size_t n) {
+static bool double_passing_from(const NoteSequence *context, size_t n) {
     if (n == 0 || n + 2 >= context->count || !off_downbeat_dissonant_attack(context, n) ||
         !off_downbeat_dissonant_attack(context, n + 1) || !before_consonant(context, n) ||
         !note_consonant_at_attack(context, n + 2)) {
@@ -144,11 +144,11 @@ static bool double_passing_from(const Context *context, size_t n) {
     return first != 0 && first == second && second == third;
 }
 
-static bool double_passing_tone(const Context *context, size_t n) {
+static bool double_passing_tone(const NoteSequence *context, size_t n) {
     return double_passing_from(context, n) || (n > 0 && double_passing_from(context, n - 1));
 }
 
-static bool neighbor_tone(const Context *context, size_t n) {
+static bool neighbor_tone(const NoteSequence *context, size_t n) {
     if (n == 0 || n + 1 >= context->count || !off_downbeat_dissonant_attack(context, n) || !before_consonant(context, n) ||
         !note_consonant_at_attack(context, n + 1) ||
         !standard_counterpoint_same_pitch(pitch_of(context, n - 1), pitch_of(context, n + 1))) {
@@ -160,7 +160,7 @@ static bool neighbor_tone(const Context *context, size_t n) {
 }
 
 /* The double neighbor whose first dissonance is note b. */
-static bool double_neighbor_from(const Context *context, size_t b) {
+static bool double_neighbor_from(const NoteSequence *context, size_t b) {
     if (b == 0 || b + 2 >= context->count || !off_downbeat_dissonant_attack(context, b) ||
         !off_downbeat_dissonant_attack(context, b + 1) || !before_consonant(context, b) ||
         !note_consonant_at_attack(context, b + 2) ||
@@ -173,13 +173,13 @@ static bool double_neighbor_from(const Context *context, size_t b) {
     return first != 0 && leap == -first && last == first;
 }
 
-static bool double_neighbor(const Context *context, size_t n) {
+static bool double_neighbor(const NoteSequence *context, size_t n) {
     return double_neighbor_from(context, n) || (n > 0 && double_neighbor_from(context, n - 1));
 }
 
 /* The nota cambiata whose dissonance is note n: `way` is -1 for the figure
    that fills in a step down, 1 for its inversion. */
-static bool nota_cambiata(const Context *context, size_t n, int way) {
+static bool nota_cambiata(const NoteSequence *context, size_t n, int way) {
     if (n == 0 || n + 3 >= context->count || !off_downbeat_dissonant_attack(context, n) || !before_consonant(context, n) ||
         !note_consonant_at_attack(context, n + 1) || !note_consonant_at_attack(context, n + 3) ||
         !standard_counterpoint_same_pitch(pitch_of(context, n), pitch_of(context, n + 3))) {
@@ -193,7 +193,7 @@ static bool nota_cambiata(const Context *context, size_t n, int way) {
 
 /* An anticipation: note n, reached by step down, whose pitch comes again as
    a consonance on the next downbeat. */
-static bool anticipation_core(const Context *context, size_t n) {
+static bool anticipation_core(const NoteSequence *context, size_t n) {
     if (n == 0 || n + 1 >= context->count || !note_dissonant_at_attack(context, n) ||
         context->notes[n + 1].slot != (context->notes[n].slot / SLOTS + 1) * SLOTS ||
         !standard_counterpoint_same_pitch(pitch_of(context, n), pitch_of(context, n + 1)) ||
@@ -203,27 +203,27 @@ static bool anticipation_core(const Context *context, size_t n) {
     return step_between(pitch_of(context, n - 1), pitch_of(context, n)) < 0;
 }
 
-static bool anticipation(const Context *context, size_t n) {
+static bool anticipation(const NoteSequence *context, size_t n) {
     return context->notes[n].slot % SLOTS == 6 && context->notes[n].duration == 2 && before_consonant(context, n) &&
            anticipation_core(context, n);
 }
 
-static bool anticipation_turn(const Context *context, size_t n) {
+static bool anticipation_turn(const NoteSequence *context, size_t n) {
     return n > 0 && context->notes[n].slot % SLOTS == 7 && context->notes[n].duration == 1 &&
            context->notes[n - 1].duration == 1 && note_consonant_at_attack(context, n - 1) && anticipation_core(context, n);
 }
 
-static bool sounds_dissonant(const Context *context, size_t slot) {
+static bool sounds_dissonant(const NoteSequence *context, size_t slot) {
     return dissonant_at(context, standard_counterpoint_fifth_species_pitch(context->exercise, slot), slot);
 }
 
 bool standard_counterpoint_fifth_species_slot_is_dissonant(const Exercise *exercise, size_t slot) {
-    Context context;
+    NoteSequence context;
     return load(exercise, &context) && sounds_dissonant(&context, slot);
 }
 
 /* The index of the note sounding in the slot, or count when there is none. */
-static size_t note_at(const Context *context, size_t slot) {
+static size_t note_at(const NoteSequence *context, size_t slot) {
     for (size_t n = 0; n < context->count; n++) {
         if (context->notes[n].slot <= slot && slot < context->notes[n].slot + context->notes[n].duration) {
             return n;
@@ -232,7 +232,7 @@ static size_t note_at(const Context *context, size_t slot) {
     return context->count;
 }
 
-static bool suspension_type_of(const Context *context, size_t n, size_t slot, StandardCounterpointSuspensionType *type) {
+static bool suspension_type_of(const NoteSequence *context, size_t n, size_t slot, StandardCounterpointSuspensionType *type) {
     if (n + 1 >= context->count || context->notes[n].slot / SLOTS + 1 != slot / SLOTS || slot % SLOTS != 0 ||
         !note_consonant_at_attack(context, n) || !sounds_dissonant(context, slot) ||
         !note_consonant_at_attack(context, n + 1) ||
@@ -269,7 +269,7 @@ static bool suspension_type_of(const Context *context, size_t n, size_t slot, St
 
 bool standard_counterpoint_fifth_species_suspension_type(const Exercise *exercise, size_t slot,
                                                          StandardCounterpointSuspensionType *type) {
-    Context context;
+    NoteSequence context;
     if (type == NULL || !load(exercise, &context) || !standard_counterpoint_fifth_species_slot_is_tie(exercise, slot)) {
         return false;
     }
@@ -279,7 +279,7 @@ bool standard_counterpoint_fifth_species_suspension_type(const Exercise *exercis
 
 bool standard_counterpoint_fifth_species_dissonance_figure(const Exercise *exercise, size_t slot,
                                                            StandardCounterpointFifthSpeciesFigure *figure) {
-    Context context;
+    NoteSequence context;
     if (figure == NULL || !load(exercise, &context) || !sounds_dissonant(&context, slot)) {
         return false;
     }
