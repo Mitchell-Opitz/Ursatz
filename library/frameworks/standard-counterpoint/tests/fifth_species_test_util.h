@@ -48,7 +48,7 @@
 #define GOOD_FIFTH_SPECIES_SLOTS(name)                                                                       \
     const StandardCounterpointSlot name[] = {                                                                \
         /* bar 0 */ REST4(), HALF(P(A, 0, 3)),                                                               \
-        /* bar 1 */ T3(P(A, 0, 3)), TIE(P(A, 0, 3)), QUARTER(P(C, 0, 4)), QUARTER(P(D, 0, 4)),              \
+        /* bar 1 */ T3(P(A, 0, 3)), TIE(P(A, 0, 3)), QUARTER(P(C, 0, 4)), QUARTER(P(A, 0, 3)),              \
         /* bar 2 */ HALF(P(E, 0, 4)), QUARTER(P(D, 0, 4)), QUARTER(P(C, 0, 4)),                              \
         /* bar 3 */ TIE(P(C, 0, 4)), TIE(P(C, 0, 4)), QUARTER(P(B, 0, 3)), HALF(P(D, 0, 4)),                 \
         /* bar 4 */ WHOLE(P(B, 0, 3)),                                                                       \
