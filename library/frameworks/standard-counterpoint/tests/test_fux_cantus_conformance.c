@@ -53,11 +53,10 @@ static void test_dorian(void) {
 }
 
 static void test_phrygian(void) {
-    /* E: 10 uses. Only a third of the line moves by step (soft); the final
-       approach is a half step from above. */
+    /* E: 10 uses. The final approach is a half step from above. */
     const PitchSpelling *notes[] = {P(E, 0, 4), P(C, 0, 4), P(D, 0, 4), P(C, 0, 4), P(A, 0, 3),
                                     P(A, 0, 4), P(G, 0, 4), P(E, 0, 4), P(F, 0, 4), P(E, 0, 4)};
-    MELODY(phrygian, notes, P(E, 0, 4), 0, BIT(MOSTLY_STEPWISE));
+    MELODY(phrygian, notes, P(E, 0, 4), 0, 0);
     expect(&phrygian);
 }
 
