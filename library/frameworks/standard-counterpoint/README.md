@@ -302,8 +302,9 @@ sounding pitch in 12-tone equal temperament, this module's own copy in
 The distinct cantus firmi of the two-voice exercises in Gradus ad Parnassum
 are tested against the cantus firmus rules and the melodic rules
 (`tests/test_fux_cantus_conformance.c`), with the exact hard and soft results
-pinned. The rules are the textbook ideal, and four of Fux's melodies depart
-from it; the rules stay strict and the departures are recorded in the test:
+pinned. The rules are the textbook ideal, and three of Fux's melodies depart
+from it in a hard rule; the rules stay strict and the departures are recorded in
+the test:
 
 - The F melody leaps up a fifth and then down twice (three leaps in a row, the
   first not recovered by a step), and its rising run D3 to C4 outlines a
@@ -312,7 +313,7 @@ from it; the rules stay strict and the departures are recorded in the test:
   and few steps.
 - The A melody without its first D (fig. 42) has a rising run, B3 to F4, that
   outlines a diminished fifth. The full form does not.
-- The D, E, A, and both C melodies break no hard rule.
+- The D, E, full A, and both C melodies break no hard rule.
 
 ## Not covered
 
