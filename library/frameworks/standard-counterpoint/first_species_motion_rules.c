@@ -1,45 +1,34 @@
 #include "first_species_motion_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "counterpoint_interval.h"
 #include "motion_rules.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT] = {
     "motion-variety", "contrary-preferred", "similar-with-leap", "similar-with-large-leap"};
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "first-species-motion", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT, standard_counterpoint_rule_table_never_hard,
+    g_pairs, g_built};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesMotionRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT;
-}
-
-static void ensure_built(StandardCounterpointFirstSpeciesMotionRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "first-species-motion-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, CONSTRAINT_TYPE_SOFT, &g_pairs[which]);
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_first_species_motion_rule(StandardCounterpointFirstSpeciesMotionRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
-const Constraint *
-standard_counterpoint_first_species_motion_constraint(StandardCounterpointFirstSpeciesMotionRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+const Constraint *standard_counterpoint_first_species_motion_constraint(StandardCounterpointFirstSpeciesMotionRule which) {
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_first_species_motion_rule_name(StandardCounterpointFirstSpeciesMotionRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 /* How many motions of each MotionType the texture has. */
@@ -115,17 +104,16 @@ bool standard_counterpoint_first_species_motion_rule_holds(StandardCounterpointF
     }
 }
 
+static bool holds_adapter(int which, const void *subject) {
+    return standard_counterpoint_first_species_motion_rule_holds((StandardCounterpointFirstSpeciesMotionRule)which,
+                                                                 subject);
+}
+
 bool standard_counterpoint_first_species_motion_check(const StandardCounterpointPair *pair, unsigned *violations) {
     if (!standard_counterpoint_pair_valid(pair) || violations == NULL) {
         return false;
     }
-    unsigned mask = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT; i++) {
-        if (!standard_counterpoint_first_species_motion_rule_holds((StandardCounterpointFirstSpeciesMotionRule)i,
-                                                                   pair)) {
-            mask |= 1u << i;
-        }
-    }
-    *violations = mask;
+    unsigned unused_hard;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, pair, &unused_hard, violations);
     return true;
 }

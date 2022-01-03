@@ -1,45 +1,34 @@
 #include "first_species_ends_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
 #include "motion_rules.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
     "begin", "end-on-tonic", "contrary-stepwise-approach", "penultimate-third-or-sixth"};
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "first-species-ends", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesEndsRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT;
-}
-
-static void ensure_built(StandardCounterpointFirstSpeciesEndsRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "first-species-ends-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, CONSTRAINT_TYPE_HARD, &g_pairs[which]);
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_first_species_ends_rule(StandardCounterpointFirstSpeciesEndsRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_first_species_ends_constraint(StandardCounterpointFirstSpeciesEndsRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_first_species_ends_rule_name(StandardCounterpointFirstSpeciesEndsRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 static bool is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
@@ -126,6 +115,18 @@ bool standard_counterpoint_first_species_ends_rule_holds(StandardCounterpointFir
     }
 }
 
+typedef struct {
+    const StandardCounterpointPair *pair;
+    StandardCounterpointCantusPart cantus_part;
+    const PitchSpelling *tonic;
+} Subject;
+
+static bool holds_adapter(int which, const void *subject) {
+    const Subject *s = subject;
+    return standard_counterpoint_first_species_ends_rule_holds((StandardCounterpointFirstSpeciesEndsRule)which,
+                                                               s->pair, s->cantus_part, s->tonic);
+}
+
 bool standard_counterpoint_first_species_ends_check(const StandardCounterpointPair *pair,
                                                     StandardCounterpointCantusPart cantus_part,
                                                     const PitchSpelling *tonic, unsigned *violations) {
@@ -134,13 +135,8 @@ bool standard_counterpoint_first_species_ends_check(const StandardCounterpointPa
          cantus_part != STANDARD_COUNTERPOINT_CANTUS_IN_UPPER)) {
         return false;
     }
-    unsigned mask = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT; i++) {
-        if (!standard_counterpoint_first_species_ends_rule_holds((StandardCounterpointFirstSpeciesEndsRule)i, pair,
-                                                                 cantus_part, tonic)) {
-            mask |= 1u << i;
-        }
-    }
-    *violations = mask;
+    Subject subject = {pair, cantus_part, tonic};
+    unsigned unused_soft;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, &subject, violations, &unused_soft);
     return true;
 }
