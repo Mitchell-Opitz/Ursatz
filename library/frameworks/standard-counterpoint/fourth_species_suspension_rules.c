@@ -1,11 +1,10 @@
 #include "fourth_species_suspension_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "consonance_rules.h"
 #include "fourth_species_suspension.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT] = {"proper", "many",
                                                                                                "few-nine-eight"};
@@ -14,38 +13,30 @@ static bool rule_is_hard(StandardCounterpointFourthSpeciesSuspensionRule which) 
     return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_PROPER;
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT];
-
-static bool valid_rule(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT;
+static bool table_is_hard(int which) {
+    return rule_is_hard((StandardCounterpointFourthSpeciesSuspensionRule)which);
 }
 
-static void ensure_built(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "fourth-species-suspension-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, rule_is_hard(which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
-                                          &g_pairs[which]);
+static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT];
+static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "fourth-species-suspension", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT, table_is_hard,
+    g_pairs, g_built};
+
+static bool valid_rule(StandardCounterpointFourthSpeciesSuspensionRule which) {
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_fourth_species_suspension_rule(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
-const Constraint *
-standard_counterpoint_fourth_species_suspension_constraint(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+const Constraint *standard_counterpoint_fourth_species_suspension_constraint(StandardCounterpointFourthSpeciesSuspensionRule which) {
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
-const char *
-standard_counterpoint_fourth_species_suspension_rule_name(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+const char *standard_counterpoint_fourth_species_suspension_rule_name(StandardCounterpointFourthSpeciesSuspensionRule which) {
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
@@ -122,26 +113,18 @@ bool standard_counterpoint_fourth_species_suspension_rule_holds(
     }
 }
 
+static bool holds_adapter(int which, const void *subject) {
+    return standard_counterpoint_fourth_species_suspension_rule_holds(
+        (StandardCounterpointFourthSpeciesSuspensionRule)which, subject);
+}
+
 bool standard_counterpoint_fourth_species_suspension_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                            unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL ||
         !standard_counterpoint_fourth_species_exercise_valid(exercise)) {
         return false;
     }
-    unsigned hard = 0;
-    unsigned soft = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT; i++) {
-        StandardCounterpointFourthSpeciesSuspensionRule which = (StandardCounterpointFourthSpeciesSuspensionRule)i;
-        if (standard_counterpoint_fourth_species_suspension_rule_holds(which, exercise)) {
-            continue;
-        }
-        if (rule_is_hard(which)) {
-            hard |= 1u << i;
-        } else {
-            soft |= 1u << i;
-        }
-    }
-    *hard_violations = hard;
-    *soft_violations = soft;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, exercise, hard_violations,
+                                           soft_violations);
     return true;
 }

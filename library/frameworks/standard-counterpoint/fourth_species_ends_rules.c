@@ -1,45 +1,34 @@
 #include "fourth_species_ends_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
 #include "fourth_species_suspension.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT] = {
     "begin", "cantus-ends-re-do", "penultimate-suspension", "final-bar"};
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "fourth-species-ends", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesEndsRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT;
-}
-
-static void ensure_built(StandardCounterpointFourthSpeciesEndsRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "fourth-species-ends-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, CONSTRAINT_TYPE_HARD, &g_pairs[which]);
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_fourth_species_ends_rule(StandardCounterpointFourthSpeciesEndsRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_fourth_species_ends_constraint(StandardCounterpointFourthSpeciesEndsRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_fourth_species_ends_rule_name(StandardCounterpointFourthSpeciesEndsRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
@@ -124,18 +113,24 @@ bool standard_counterpoint_fourth_species_ends_rule_holds(StandardCounterpointFo
     }
 }
 
+typedef struct {
+    const StandardCounterpointFourthSpeciesExercise *exercise;
+    const PitchSpelling *tonic;
+} Subject;
+
+static bool holds_adapter(int which, const void *subject) {
+    const Subject *s = subject;
+    return standard_counterpoint_fourth_species_ends_rule_holds((StandardCounterpointFourthSpeciesEndsRule)which,
+                                                                s->exercise, s->tonic);
+}
+
 bool standard_counterpoint_fourth_species_ends_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *violations) {
     if (violations == NULL || tonic == NULL || !standard_counterpoint_fourth_species_exercise_valid(exercise)) {
         return false;
     }
-    unsigned mask = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT; i++) {
-        if (!standard_counterpoint_fourth_species_ends_rule_holds((StandardCounterpointFourthSpeciesEndsRule)i,
-                                                                  exercise, tonic)) {
-            mask |= 1u << i;
-        }
-    }
-    *violations = mask;
+    Subject subject = {exercise, tonic};
+    unsigned unused_soft;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, &subject, violations, &unused_soft);
     return true;
 }

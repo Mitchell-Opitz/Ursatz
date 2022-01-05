@@ -1,12 +1,11 @@
 #include "fourth_species_weak_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "consonance_rules.h"
 #include "counterpoint_interval.h"
 #include "motion_rules.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT] = {
     "consonant", "no-repeated-perfect", "max-same-imperfect-run", "no-direct-perfect", "no-interior-unison"};
@@ -15,36 +14,29 @@ static bool rule_is_soft(StandardCounterpointFourthSpeciesWeakRule which) {
     return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_NO_INTERIOR_UNISON;
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
-
-static bool valid_rule(StandardCounterpointFourthSpeciesWeakRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT;
+static bool table_is_hard(int which) {
+    return !rule_is_soft((StandardCounterpointFourthSpeciesWeakRule)which);
 }
 
-static void ensure_built(StandardCounterpointFourthSpeciesWeakRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "fourth-species-weak-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, rule_is_soft(which) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD,
-                                          &g_pairs[which]);
+static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
+static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "fourth-species-weak", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT, table_is_hard, g_pairs, g_built};
+
+static bool valid_rule(StandardCounterpointFourthSpeciesWeakRule which) {
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_fourth_species_weak_rule(StandardCounterpointFourthSpeciesWeakRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_fourth_species_weak_constraint(StandardCounterpointFourthSpeciesWeakRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_fourth_species_weak_rule_name(StandardCounterpointFourthSpeciesWeakRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
@@ -180,26 +172,18 @@ bool standard_counterpoint_fourth_species_weak_rule_holds(StandardCounterpointFo
     }
 }
 
+static bool holds_adapter(int which, const void *subject) {
+    return standard_counterpoint_fourth_species_weak_rule_holds((StandardCounterpointFourthSpeciesWeakRule)which,
+                                                                subject);
+}
+
 bool standard_counterpoint_fourth_species_weak_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                      unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL ||
         !standard_counterpoint_fourth_species_exercise_valid(exercise)) {
         return false;
     }
-    unsigned hard = 0;
-    unsigned soft = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT; i++) {
-        StandardCounterpointFourthSpeciesWeakRule which = (StandardCounterpointFourthSpeciesWeakRule)i;
-        if (standard_counterpoint_fourth_species_weak_rule_holds(which, exercise)) {
-            continue;
-        }
-        if (rule_is_soft(which)) {
-            soft |= 1u << i;
-        } else {
-            hard |= 1u << i;
-        }
-    }
-    *hard_violations = hard;
-    *soft_violations = soft;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, exercise, hard_violations,
+                                           soft_violations);
     return true;
 }
