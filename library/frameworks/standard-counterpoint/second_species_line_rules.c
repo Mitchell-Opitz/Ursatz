@@ -1,13 +1,12 @@
 #include "second_species_line_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "cantus_firmus_rules.h"
 #include "counterpoint_interval.h"
 #include "counterpoint_line.h"
 #include "counterpoint_pitch.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 #include "second_species_pattern.h"
 
 #define BUFFER_SIZE (STANDARD_COUNTERPOINT_SECOND_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_SECOND_SPECIES_MAX_BARS)
@@ -23,36 +22,29 @@ static bool rule_is_hard(StandardCounterpointSecondSpeciesLineRule which) {
            which == STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_LEADING_TONE;
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT];
-
-static bool valid_rule(StandardCounterpointSecondSpeciesLineRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT;
+static bool table_is_hard(int which) {
+    return rule_is_hard((StandardCounterpointSecondSpeciesLineRule)which);
 }
 
-static void ensure_built(StandardCounterpointSecondSpeciesLineRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "second-species-line-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, rule_is_hard(which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
-                                          &g_pairs[which]);
+static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT];
+static bool g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "second-species-line", NAMES, STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built};
+
+static bool valid_rule(StandardCounterpointSecondSpeciesLineRule which) {
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_second_species_line_rule(StandardCounterpointSecondSpeciesLineRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_second_species_line_constraint(StandardCounterpointSecondSpeciesLineRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_second_species_line_rule_name(StandardCounterpointSecondSpeciesLineRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 typedef StandardCounterpointSecondSpeciesExercise Exercise;
@@ -211,6 +203,17 @@ bool standard_counterpoint_second_species_line_rule_holds(StandardCounterpointSe
     }
 }
 
+typedef struct {
+    const StandardCounterpointSecondSpeciesExercise *exercise;
+    const PitchSpelling *tonic;
+} Subject;
+
+static bool holds_adapter(int which, const void *subject) {
+    const Subject *s = subject;
+    return standard_counterpoint_second_species_line_rule_holds((StandardCounterpointSecondSpeciesLineRule)which,
+                                                                s->exercise, s->tonic);
+}
+
 bool standard_counterpoint_second_species_line_check(const StandardCounterpointSecondSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *hard_violations,
                                                      unsigned *soft_violations) {
@@ -218,20 +221,8 @@ bool standard_counterpoint_second_species_line_check(const StandardCounterpointS
         !standard_counterpoint_second_species_exercise_valid(exercise)) {
         return false;
     }
-    unsigned hard = 0;
-    unsigned soft = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT; i++) {
-        StandardCounterpointSecondSpeciesLineRule which = (StandardCounterpointSecondSpeciesLineRule)i;
-        if (standard_counterpoint_second_species_line_rule_holds(which, exercise, tonic)) {
-            continue;
-        }
-        if (rule_is_hard(which)) {
-            hard |= 1u << i;
-        } else {
-            soft |= 1u << i;
-        }
-    }
-    *hard_violations = hard;
-    *soft_violations = soft;
+    Subject subject = {exercise, tonic};
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, &subject, hard_violations,
+                                           soft_violations);
     return true;
 }
