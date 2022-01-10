@@ -1,11 +1,10 @@
 #include "fifth_species_rhythm_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "counterpoint_interval.h"
 #include "fifth_species_pattern.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT] = {
     "eighths-stepwise", "mixture", "no-long-run", "eighths-sparing"};
@@ -14,38 +13,30 @@ static bool rule_is_hard(StandardCounterpointFifthSpeciesRhythmRule which) {
     return which == STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_EIGHTHS_STEPWISE;
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT];
-
-static bool valid_rule(StandardCounterpointFifthSpeciesRhythmRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT;
+static bool table_is_hard(int which) {
+    return rule_is_hard((StandardCounterpointFifthSpeciesRhythmRule)which);
 }
 
-static void ensure_built(StandardCounterpointFifthSpeciesRhythmRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "fifth-species-rhythm-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, rule_is_hard(which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
-                                          &g_pairs[which]);
+static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT];
+static bool g_built[STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "fifth-species-rhythm", NAMES, STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT, table_is_hard,
+    g_pairs, g_built};
+
+static bool valid_rule(StandardCounterpointFifthSpeciesRhythmRule which) {
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_fifth_species_rhythm_rule(StandardCounterpointFifthSpeciesRhythmRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
-const Constraint *
-standard_counterpoint_fifth_species_rhythm_constraint(StandardCounterpointFifthSpeciesRhythmRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+const Constraint *standard_counterpoint_fifth_species_rhythm_constraint(StandardCounterpointFifthSpeciesRhythmRule which) {
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
-const char *
-standard_counterpoint_fifth_species_rhythm_rule_name(StandardCounterpointFifthSpeciesRhythmRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+const char *standard_counterpoint_fifth_species_rhythm_rule_name(StandardCounterpointFifthSpeciesRhythmRule which) {
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 typedef StandardCounterpointFifthSpeciesExercise Exercise;
@@ -143,26 +134,18 @@ bool standard_counterpoint_fifth_species_rhythm_rule_holds(
     }
 }
 
+static bool holds_adapter(int which, const void *subject) {
+    return standard_counterpoint_fifth_species_rhythm_rule_holds((StandardCounterpointFifthSpeciesRhythmRule)which,
+                                                                 subject);
+}
+
 bool standard_counterpoint_fifth_species_rhythm_check(const StandardCounterpointFifthSpeciesExercise *exercise,
                                                            unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL ||
         !standard_counterpoint_fifth_species_exercise_valid(exercise)) {
         return false;
     }
-    unsigned hard = 0;
-    unsigned soft = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT; i++) {
-        StandardCounterpointFifthSpeciesRhythmRule which = (StandardCounterpointFifthSpeciesRhythmRule)i;
-        if (standard_counterpoint_fifth_species_rhythm_rule_holds(which, exercise)) {
-            continue;
-        }
-        if (rule_is_hard(which)) {
-            hard |= 1u << i;
-        } else {
-            soft |= 1u << i;
-        }
-    }
-    *hard_violations = hard;
-    *soft_violations = soft;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, exercise, hard_violations,
+                                           soft_violations);
     return true;
 }
