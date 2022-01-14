@@ -4,15 +4,13 @@
 
 #include "cantus_firmus_rules.h"
 #include "counterpoint_limits.h"
-#include "harmonic_rules.h"
 #include "melodic_rules.h"
+#include "species_aggregate.h"
 #include "fourth_species_ends_rules.h"
 #include "fourth_species_line_rules.h"
 #include "fourth_species_suspension_rules.h"
 #include "fourth_species_weak_rules.h"
 #include "species_break_rules.h"
-
-#define BUFFER_SIZE (STANDARD_COUNTERPOINT_FOURTH_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_FOURTH_SPECIES_MAX_BARS)
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_COUNT] = {
     "cantus-firmus", "spacing", "suspensions", "weak-beats", "species-breaks", "ends",
@@ -20,64 +18,6 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_COUNT]
 
 const char *standard_counterpoint_fourth_species_group_name(StandardCounterpointFourthSpeciesGroup group) {
     return group >= 0 && group < STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_COUNT ? NAMES[group] : NULL;
-}
-
-static void record(StandardCounterpointResult *result, StandardCounterpointFourthSpeciesGroup group, unsigned hard,
-                   unsigned soft) {
-    if (hard != 0) {
-        result->hard_violations |= 1u << group;
-    }
-    if (soft != 0) {
-        result->soft_violations |= 1u << group;
-    }
-}
-
-/* Every note the counterpoint sounds (a tie counts), each against the
-   cantus firmus note of its bar, as a pair of lines of equal length. */
-static bool spacing_check(const StandardCounterpointFourthSpeciesExercise *exercise, unsigned *hard,
-                          unsigned *soft) {
-    const PitchSpelling *cantus_notes[BUFFER_SIZE];
-    const PitchSpelling *counterpoint_notes[BUFFER_SIZE];
-    size_t count = 0;
-    for (size_t slot = 0; slot < exercise->counterpoint->count; slot++) {
-        const StandardCounterpointSlot *entry = &exercise->counterpoint->slots[slot];
-        if (entry->kind == STANDARD_COUNTERPOINT_SLOT_REST) {
-            continue;
-        }
-        cantus_notes[count] = exercise->cantus->notes[slot / STANDARD_COUNTERPOINT_FOURTH_SPECIES_SLOTS_PER_BAR];
-        counterpoint_notes[count] = entry->pitch;
-        count++;
-    }
-
-    StandardCounterpointLine cantus = {cantus_notes, count};
-    StandardCounterpointLine counterpoint = {counterpoint_notes, count};
-    StandardCounterpointPair pair;
-    if (exercise->cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER) {
-        pair.lower = &cantus;
-        pair.upper = &counterpoint;
-    } else {
-        pair.lower = &counterpoint;
-        pair.upper = &cantus;
-    }
-
-    static const StandardCounterpointHarmonicRule rules[] = {
-        STANDARD_COUNTERPOINT_HARMONIC_RULE_MAX_GAP, STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE,
-        STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING, STANDARD_COUNTERPOINT_HARMONIC_RULE_CLIMAX_COORDINATION};
-    *hard = 0;
-    *soft = 0;
-    for (size_t i = 0; i < sizeof(rules) / sizeof(rules[0]); i++) {
-        if (standard_counterpoint_harmonic_rule_holds(rules[i], &pair)) {
-            continue;
-        }
-        bool is_soft = rules[i] == STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE ||
-                       rules[i] == STANDARD_COUNTERPOINT_HARMONIC_RULE_CLIMAX_COORDINATION;
-        if (is_soft) {
-            *soft |= 1u << i;
-        } else {
-            *hard |= 1u << i;
-        }
-    }
-    return true;
 }
 
 bool standard_counterpoint_fourth_species_check(const StandardCounterpointFourthSpeciesInput *input,
@@ -94,43 +34,48 @@ bool standard_counterpoint_fourth_species_check(const StandardCounterpointFourth
         if (!standard_counterpoint_cantus_check(exercise->cantus, input->tonic, &hard, &soft)) {
             return false;
         }
-        record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_CANTUS_FIRMUS, hard, soft);
+        standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_CANTUS_FIRMUS,
+                                             hard, soft);
     }
     if (!standard_counterpoint_melodic_check(exercise->cantus, &limits, &hard, &soft)) {
         return false;
     }
-    record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_CANTUS_FIRMUS, hard, soft);
+    standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_CANTUS_FIRMUS, hard, soft);
 
-    if (!spacing_check(exercise, &hard, &soft)) {
+    if (!standard_counterpoint_species_spacing_check(exercise->cantus, exercise->counterpoint,
+                                                      STANDARD_COUNTERPOINT_FOURTH_SPECIES_SLOTS_PER_BAR,
+                                                      exercise->cantus_part, &hard, &soft)) {
         return false;
     }
-    record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_SPACING, hard, soft);
+    standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_SPACING, hard, soft);
 
     if (!standard_counterpoint_fourth_species_suspension_check(exercise, &hard, &soft)) {
         return false;
     }
-    record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_SUSPENSIONS, hard, soft);
+    standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_SUSPENSIONS, hard, soft);
 
     if (!standard_counterpoint_fourth_species_weak_check(exercise, &hard, &soft)) {
         return false;
     }
-    record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_WEAK_BEATS, hard, soft);
+    standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_WEAK_BEATS, hard, soft);
 
     if (!standard_counterpoint_species_break_check(exercise, &hard, &soft)) {
         return false;
     }
-    record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_SPECIES_BREAKS, hard, soft);
+    standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_SPECIES_BREAKS,
+                                         hard, soft);
 
     if (input->tonic != NULL) {
         if (!standard_counterpoint_fourth_species_ends_check(exercise, input->tonic, &hard)) {
             return false;
         }
-        record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_ENDS, hard, 0);
+        standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_ENDS, hard, 0);
 
         if (!standard_counterpoint_fourth_species_line_check(exercise, input->tonic, &hard, &soft)) {
             return false;
         }
-        record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_COUNTERPOINT_LINE, hard, soft);
+        standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_FOURTH_SPECIES_GROUP_COUNTERPOINT_LINE,
+                                             hard, soft);
     }
 
     *out = result;

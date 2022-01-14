@@ -5,6 +5,7 @@
 #include "cantus_firmus_rules.h"
 #include "harmonic_rules.h"
 #include "melodic_rules.h"
+#include "species_aggregate.h"
 #include "tendency_rules.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_GROUP_COUNT] = {"cantus-firmus", "melodic", "harmonic",
@@ -12,16 +13,6 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_GROUP_COUNT] = {"cantus-fir
 
 const char *standard_counterpoint_group_name(StandardCounterpointGroup group) {
     return group >= 0 && group < STANDARD_COUNTERPOINT_GROUP_COUNT ? NAMES[group] : NULL;
-}
-
-static void record(StandardCounterpointResult *result, StandardCounterpointGroup group, unsigned hard,
-                   unsigned soft) {
-    if (hard != 0) {
-        result->hard_violations |= 1u << group;
-    }
-    if (soft != 0) {
-        result->soft_violations |= 1u << group;
-    }
 }
 
 bool standard_counterpoint_check(const StandardCounterpointInput *input, StandardCounterpointResult *out) {
@@ -44,7 +35,7 @@ bool standard_counterpoint_check(const StandardCounterpointInput *input, Standar
         if (!standard_counterpoint_cantus_check(cantus, input->tonic, &hard, &soft)) {
             return false;
         }
-        record(&result, STANDARD_COUNTERPOINT_GROUP_CANTUS_FIRMUS, hard, soft);
+        standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_GROUP_CANTUS_FIRMUS, hard, soft);
     }
 
     for (int i = 0; i < 2; i++) {
@@ -53,14 +44,14 @@ bool standard_counterpoint_check(const StandardCounterpointInput *input, Standar
             !standard_counterpoint_tendency_check(lines[i], &tendency)) {
             return false;
         }
-        record(&result, STANDARD_COUNTERPOINT_GROUP_MELODIC, line_hard, line_soft);
-        record(&result, STANDARD_COUNTERPOINT_GROUP_TENDENCY, 0, tendency);
+        standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_GROUP_MELODIC, line_hard, line_soft);
+        standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_GROUP_TENDENCY, 0, tendency);
     }
 
     if (!standard_counterpoint_harmonic_check(input->texture, &hard, &soft)) {
         return false;
     }
-    record(&result, STANDARD_COUNTERPOINT_GROUP_HARMONIC, hard, soft);
+    standard_counterpoint_species_record(&result, STANDARD_COUNTERPOINT_GROUP_HARMONIC, hard, soft);
 
     *out = result;
     return true;
