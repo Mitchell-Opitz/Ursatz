@@ -297,6 +297,26 @@ limits for the soft melodic rules are the caller's input. Notes are read as
 sounding pitch in 12-tone equal temperament, this module's own copy in
 `counterpoint_pitch.h`.
 
+## Adding a rule module
+
+Every group of rules (a species' strong beats, its line rules, the common
+melodic rules) follows one pattern, built on two shared helpers.
+
+- **`rule_table.h`**: a table for one group. The module defines its rule
+  names, a function that says which rules are hard, and static storage for the
+  cached Rule/Constraint pairs, then points the table at them. The table
+  builds each pair the first time it is asked for, names it
+  `<prefix>-<rule>`, and reports a group's failures as hard and soft bit
+  masks. The module writes only how one rule is evaluated and a small adapter
+  that hands the table the exercise (or the exercise and the tonic).
+- **`species_aggregate.h`**: the parts every species aggregate shares: the
+  helper that records a group's result in the hard and soft masks, and the
+  spacing group (the common gap, crossing, and climax rules run on every
+  sounding note against its cantus firmus note).
+
+A new species keeps its own exercise type, its own rule modules, and its own
+list of groups, and uses these for the rest.
+
 ## Conformance to Fux
 
 The distinct cantus firmi of the two-voice exercises in Gradus ad Parnassum

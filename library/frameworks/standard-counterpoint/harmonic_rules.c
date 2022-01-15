@@ -1,13 +1,12 @@
 #include "harmonic_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "consonance_rules.h"
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
 #include "motion_rules.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT] = {
     "first-interval",   "last-interval",    "max-gap",          "mostly-within-octave", "no-crossing",
@@ -20,36 +19,29 @@ static bool rule_is_soft(StandardCounterpointHarmonicRule which) {
            which == STANDARD_COUNTERPOINT_HARMONIC_RULE_CLIMAX_COORDINATION;
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
-
-static bool valid_rule(StandardCounterpointHarmonicRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT;
+static bool table_is_hard(int which) {
+    return !rule_is_soft((StandardCounterpointHarmonicRule)which);
 }
 
-static void ensure_built(StandardCounterpointHarmonicRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "harmonic-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, rule_is_soft(which) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD,
-                                          &g_pairs[which]);
+static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
+static bool g_built[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "harmonic", NAMES, STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT, table_is_hard, g_pairs, g_built};
+
+static bool valid_rule(StandardCounterpointHarmonicRule which) {
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_harmonic_rule(StandardCounterpointHarmonicRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_harmonic_constraint(StandardCounterpointHarmonicRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_harmonic_rule_name(StandardCounterpointHarmonicRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 /* The interval between the two parts at position i. */
@@ -211,25 +203,16 @@ bool standard_counterpoint_harmonic_rule_holds(StandardCounterpointHarmonicRule 
     }
 }
 
+static bool holds_adapter(int which, const void *subject) {
+    return standard_counterpoint_harmonic_rule_holds((StandardCounterpointHarmonicRule)which, subject);
+}
+
 bool standard_counterpoint_harmonic_check(const StandardCounterpointPair *pair, unsigned *hard_violations,
                                           unsigned *soft_violations) {
     if (!standard_counterpoint_pair_valid(pair) || hard_violations == NULL || soft_violations == NULL) {
         return false;
     }
-    unsigned hard = 0;
-    unsigned soft = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT; i++) {
-        StandardCounterpointHarmonicRule which = (StandardCounterpointHarmonicRule)i;
-        if (standard_counterpoint_harmonic_rule_holds(which, pair)) {
-            continue;
-        }
-        if (rule_is_soft(which)) {
-            soft |= 1u << i;
-        } else {
-            hard |= 1u << i;
-        }
-    }
-    *hard_violations = hard;
-    *soft_violations = soft;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, pair, hard_violations,
+                                           soft_violations);
     return true;
 }

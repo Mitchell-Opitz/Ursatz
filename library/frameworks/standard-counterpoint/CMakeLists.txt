@@ -1,6 +1,8 @@
 add_library(standard_counterpoint
     framework.c
     rule_pair.c
+    rule_table.c
+    species_aggregate.c
     counterpoint_pitch.c
     counterpoint_interval.c
     consonance_rules.c

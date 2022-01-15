@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT] = {
     "consonance-perfect", "consonance-imperfect", "consonance-dissonance", "consonance-perfect-fourth",
@@ -10,27 +10,15 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT] = {
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT];
-
-static bool valid_rule(StandardCounterpointConsonanceRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT;
-}
-
-static void ensure_built(StandardCounterpointConsonanceRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_counterpoint_build_rule_pair(NAMES[which], CONSTRAINT_TYPE_HARD, &g_pairs[which]);
-}
+static const StandardCounterpointRuleTable TABLE = {
+    NULL, NAMES, STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT, NULL, g_pairs, g_built};
 
 const Rule *standard_counterpoint_consonance_rule(StandardCounterpointConsonanceRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_consonance_constraint(StandardCounterpointConsonanceRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 bool standard_counterpoint_classify_interval(const StandardCounterpointInterval *interval,

@@ -1,12 +1,11 @@
 #include "cantus_firmus_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "consonance_rules.h"
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT] = {
     "length",        "tonic-ends",        "final-step",   "melodic-consonance", "range",
@@ -19,36 +18,29 @@ static bool rule_is_soft(StandardCounterpointCantusRule which) {
            which == STANDARD_COUNTERPOINT_CANTUS_RULE_NO_REPEATED_MOTIVE;
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT];
-
-static bool valid_rule(StandardCounterpointCantusRule which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT;
+static bool table_is_hard(int which) {
+    return !rule_is_soft((StandardCounterpointCantusRule)which);
 }
 
-static void ensure_built(StandardCounterpointCantusRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "cantus-firmus-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, rule_is_soft(which) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD,
-                                          &g_pairs[which]);
+static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT];
+static bool g_built[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "cantus-firmus", NAMES, STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT, table_is_hard, g_pairs, g_built};
+
+static bool valid_rule(StandardCounterpointCantusRule which) {
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_cantus_rule(StandardCounterpointCantusRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_cantus_constraint(StandardCounterpointCantusRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_cantus_rule_name(StandardCounterpointCantusRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 static bool same_pitch_class(const PitchSpelling *a, const PitchSpelling *b) {
@@ -288,26 +280,24 @@ bool standard_counterpoint_cantus_rule_holds(StandardCounterpointCantusRule whic
     }
 }
 
+typedef struct {
+    const StandardCounterpointLine *line;
+    const PitchSpelling *tonic;
+} Subject;
+
+static bool holds_adapter(int which, const void *subject) {
+    const Subject *s = subject;
+    return standard_counterpoint_cantus_rule_holds((StandardCounterpointCantusRule)which, s->line, s->tonic);
+}
+
 bool standard_counterpoint_cantus_check(const StandardCounterpointLine *line, const PitchSpelling *tonic,
                                         unsigned *hard_violations, unsigned *soft_violations) {
     if (!standard_counterpoint_line_valid(line) || tonic == NULL || hard_violations == NULL ||
         soft_violations == NULL) {
         return false;
     }
-    unsigned hard = 0;
-    unsigned soft = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT; i++) {
-        StandardCounterpointCantusRule which = (StandardCounterpointCantusRule)i;
-        if (standard_counterpoint_cantus_rule_holds(which, line, tonic)) {
-            continue;
-        }
-        if (rule_is_soft(which)) {
-            soft |= 1u << i;
-        } else {
-            hard |= 1u << i;
-        }
-    }
-    *hard_violations = hard;
-    *soft_violations = soft;
+    Subject subject = {line, tonic};
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, &subject, hard_violations,
+                                           soft_violations);
     return true;
 }

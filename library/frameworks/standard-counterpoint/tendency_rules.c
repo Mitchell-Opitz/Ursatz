@@ -1,44 +1,34 @@
 #include "tendency_rules.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
-#include "rule_pair.h"
+#include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_TENDENCY_COUNT] = {
     "pitch-proximity", "step-declination", "step-inertia", "melodic-regression", "melodic-arch"};
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_TENDENCY_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_TENDENCY_COUNT];
+static const StandardCounterpointRuleTable TABLE = {
+    "tendency", NAMES, STANDARD_COUNTERPOINT_TENDENCY_COUNT, standard_counterpoint_rule_table_never_hard,
+    g_pairs, g_built};
 
 static bool valid_rule(StandardCounterpointTendency which) {
-    return which >= 0 && which < STANDARD_COUNTERPOINT_TENDENCY_COUNT;
-}
-
-static void ensure_built(StandardCounterpointTendency which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    char name[96];
-    snprintf(name, sizeof(name), "tendency-%s", NAMES[which]);
-    standard_counterpoint_build_rule_pair(name, CONSTRAINT_TYPE_SOFT, &g_pairs[which]);
+    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
 const Rule *standard_counterpoint_tendency_rule(StandardCounterpointTendency which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
 }
 
 const Constraint *standard_counterpoint_tendency_constraint(StandardCounterpointTendency which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_tendency_name(StandardCounterpointTendency which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
+    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
 static bool check_pitch_proximity(const StandardCounterpointLine *line) {
@@ -151,16 +141,15 @@ bool standard_counterpoint_tendency_holds(StandardCounterpointTendency which,
     }
 }
 
+static bool holds_adapter(int which, const void *subject) {
+    return standard_counterpoint_tendency_holds((StandardCounterpointTendency)which, subject);
+}
+
 bool standard_counterpoint_tendency_check(const StandardCounterpointLine *line, unsigned *violations) {
     if (!standard_counterpoint_line_valid(line) || violations == NULL) {
         return false;
     }
-    unsigned mask = 0;
-    for (int i = 0; i < STANDARD_COUNTERPOINT_TENDENCY_COUNT; i++) {
-        if (!standard_counterpoint_tendency_holds((StandardCounterpointTendency)i, line)) {
-            mask |= 1u << i;
-        }
-    }
-    *violations = mask;
+    unsigned unused_hard;
+    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, line, &unused_hard, violations);
     return true;
 }
