@@ -81,6 +81,7 @@ add_library(ursatz
     semantics/counterpoint_species.c
     semantics/beat_strength.c
     semantics/non_chord_tone.c
+    semantics/imitation_answer.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
