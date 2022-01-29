@@ -3,6 +3,7 @@ add_library(sixteenth_century_style
     century_rule_pair.c
     century_rule_table.c
     century_score.c
+    century_melodic_rules.c
 )
 target_include_directories(sixteenth_century_style PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
