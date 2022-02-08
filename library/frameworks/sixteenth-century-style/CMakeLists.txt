@@ -8,6 +8,7 @@ add_library(sixteenth_century_style
     century_dissonance_rules.c
     century_rhythm_rules.c
     century_imitation_rules.c
+    century_rules.c
 )
 target_include_directories(sixteenth_century_style PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
