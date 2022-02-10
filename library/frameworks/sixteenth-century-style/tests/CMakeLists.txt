@@ -5,3 +5,7 @@ add_test(NAME sixteenth_century_framework COMMAND test_sixteenth_century_framewo
 add_executable(test_architecture_sixteenth_century_style test_architecture_sixteenth_century_style.c)
 add_test(NAME architecture_sixteenth_century_style COMMAND test_architecture_sixteenth_century_style
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_sixteenth_century_score test_century_score.c)
+target_link_libraries(test_sixteenth_century_score PRIVATE sixteenth_century_style)
+add_test(NAME sixteenth_century_score COMMAND test_sixteenth_century_score)
