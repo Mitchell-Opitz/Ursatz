@@ -62,6 +62,7 @@ static void test_each_group_reports(void) {
     const PitchSpelling *a3 = P(A, 0, 3);
     IMITATIVE_SCORE(bad_contour, bad_contour_g3, a3);
     (void)e3;
+    (void)bad_contour_f3;
     SixteenthCenturyInput input = {&bad_contour, &bad_contour_point, 1};
     SixteenthCenturyResult result;
     assert(sixteenth_century_check(&input, &result));
