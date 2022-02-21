@@ -342,4 +342,5 @@ whole-note rhythm of a cantus firmus and counterpoint: the one-against-one
 ratio is only that the two lines have the same number of notes. The overall shape of a cantus firmus
 beyond the melodic arch tendency. Choosing a counterpoint for a cantus
 firmus. The perfect fourth between two upper parts is consonant, but this
-framework has two parts only.
+framework has two parts only. Three or more parts and imitation in the style of
+16th-century choral polyphony are in `frameworks/sixteenth-century-style`.
