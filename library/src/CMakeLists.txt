@@ -82,6 +82,7 @@ add_library(ursatz
     semantics/beat_strength.c
     semantics/non_chord_tone.c
     semantics/imitation_answer.c
+    semantics/fugue_role.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
