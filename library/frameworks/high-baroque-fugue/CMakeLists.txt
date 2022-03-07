@@ -3,6 +3,7 @@ add_library(high_baroque_fugue
     fugue_rule_pair.c
     fugue_rule_table.c
     fugue_exposition.c
+    fugue_entry_rules.c
 )
 target_include_directories(high_baroque_fugue PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
