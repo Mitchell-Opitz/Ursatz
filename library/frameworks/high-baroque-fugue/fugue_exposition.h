@@ -20,7 +20,11 @@
  *
  *   FugueStatement    a passage of one voice with a role (FugueRole): the voice,
  *                     the slot where it begins (the voice must begin a note
- *                     there), the role, and the number of notes it has
+ *                     there), the role, the number of notes it has, and, for a
+ *                     countersubject, which one it is (0 for the first, 1 for
+ *                     the second, and so on: statements with the same number
+ *                     are statements of the same countersubject). The number
+ *                     of any other role is ignored
  *   FugueLimits       the numbers behind the rules that ask a writer to
  *                     "limit" something without saying how much
  *   FugueExposition   the voices, the statements, the number of slots in a
@@ -43,6 +47,7 @@ typedef struct {
     size_t start;
     FugueRole role;
     size_t note_count;
+    size_t number;
 } FugueStatement;
 
 /*
