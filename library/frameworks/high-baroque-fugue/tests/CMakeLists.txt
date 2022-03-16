@@ -5,3 +5,7 @@ add_test(NAME high_baroque_fugue_framework COMMAND test_high_baroque_fugue_frame
 add_executable(test_architecture_high_baroque_fugue test_architecture_high_baroque_fugue.c)
 add_test(NAME architecture_high_baroque_fugue COMMAND test_architecture_high_baroque_fugue
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_high_baroque_fugue_exposition test_fugue_exposition.c)
+target_link_libraries(test_high_baroque_fugue_exposition PRIVATE high_baroque_fugue)
+add_test(NAME high_baroque_fugue_exposition COMMAND test_high_baroque_fugue_exposition)
