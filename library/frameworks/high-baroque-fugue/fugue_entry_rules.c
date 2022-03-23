@@ -47,7 +47,7 @@ size_t fugue_exposition_entry_count(const FugueExposition *exposition) {
 
 size_t fugue_exposition_redundant_entries(const FugueExposition *exposition) {
     size_t entries = fugue_exposition_entry_count(exposition);
-    return entries > exposition->voice_count ? entries - exposition->voice_count : 0;
+    return exposition != NULL && entries > exposition->voice_count ? entries - exposition->voice_count : 0;
 }
 
 /* The number of entries before any redundant one. */
