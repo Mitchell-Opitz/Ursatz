@@ -85,6 +85,7 @@ add_library(ursatz
     semantics/fugue_role.c
     semantics/subject_part.c
     semantics/subject_character.c
+    semantics/ostinato_type.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
