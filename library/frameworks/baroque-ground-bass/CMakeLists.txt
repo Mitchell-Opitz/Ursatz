@@ -5,6 +5,7 @@ add_library(baroque_ground_bass
     ground_piece.c
     ground_bass_rules.c
     ground_variety_rules.c
+    ground_imitation_rules.c
 )
 target_include_directories(baroque_ground_bass PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
