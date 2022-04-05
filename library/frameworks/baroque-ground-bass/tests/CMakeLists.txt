@@ -5,3 +5,7 @@ add_test(NAME baroque_ground_bass_framework COMMAND test_baroque_ground_bass_fra
 add_executable(test_architecture_baroque_ground_bass test_architecture_baroque_ground_bass.c)
 add_test(NAME architecture_baroque_ground_bass COMMAND test_architecture_baroque_ground_bass
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_baroque_ground_bass_piece test_ground_piece.c)
+target_link_libraries(test_baroque_ground_bass_piece PRIVATE baroque_ground_bass)
+add_test(NAME baroque_ground_bass_piece COMMAND test_baroque_ground_bass_piece)
