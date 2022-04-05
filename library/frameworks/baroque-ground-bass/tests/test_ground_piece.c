@@ -159,12 +159,16 @@ static void test_pitch_and_attacks(void) {
     assert(!ground_attacks_at(&f.piece, 3, 0));
     assert(!ground_attacks_at(&f.piece, 2, 96));
 
-    /* A rest has no pitch. */
+    /* A rest has no pitch (with no statement left that would begin on it). */
+    f.piece.statements = NULL;
+    f.piece.statement_count = 0;
     f.slots[0][0].kind = STANDARD_COUNTERPOINT_SLOT_REST;
     f.slots[0][0].pitch = NULL;
     f.slots[0][1].kind = STANDARD_COUNTERPOINT_SLOT_REST;
     f.slots[0][1].pitch = NULL;
+    assert(ground_piece_valid(&f.piece));
     assert(ground_pitch_at(&f.piece, 0, 0) == NULL);
+    assert(ground_pitch_at(&f.piece, 0, 2) != NULL);
 }
 
 static void test_notes(void) {
