@@ -95,6 +95,8 @@ called here.
 - **Enforcing the tonal answer.** `ImitationAnswer` names it and the point
   check classifies it, but no rule requires or forbids it; the high Baroque
   fugal exposition is `frameworks/high-baroque-fugue`.
+- **Imitation over a repeating bass.** The dux and comes imitation of a
+  Baroque ground bass is `frameworks/baroque-ground-bass`.
 - **Finding points of imitation.** The caller says where a point is.
 - **Repertoire statistics.** The Palestrina counts behind the rules (814 rising
   minor sixths and 54 rising major sixths in the masses, major final triads in

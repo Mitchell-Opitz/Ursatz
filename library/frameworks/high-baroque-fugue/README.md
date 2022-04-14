@@ -84,5 +84,7 @@ vocabulary only: no rule uses them.
   and idiomatic writing for an instrument.
 - **Where the changes fall.** That a countersubject changes exactly where the
   answer does; only the number of changes is compared.
+- **Imitation over a repeating bass.** The dux and comes imitation of a ground
+  bass is `frameworks/baroque-ground-bass`.
 - **Finding the statements.** The caller says where each subject, answer, and
   countersubject is.
