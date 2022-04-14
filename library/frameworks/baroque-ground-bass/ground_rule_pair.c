@@ -9,7 +9,7 @@ bool ground_build_rule_pair(const char *name, ConstraintType type, GroundRulePai
     if (type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
-    const Framework *framework = high_baroque_ground_framework();
+    const Framework *framework = baroque_ground_bass_framework();
     if (framework == NULL) {
         return false;
     }

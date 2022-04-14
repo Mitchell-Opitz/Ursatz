@@ -9,7 +9,7 @@
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
  * Every rule is backed by one Rule and one Constraint referencing
- * high_baroque_ground_framework(). A rule that states what the style
+ * baroque_ground_bass_framework(). A rule that states what the style
  * requires is hard; a rule written as "limit", "avoid", or "prefer" is
  * soft, so failing it never makes a piece invalid. constraint_evaluate is
  * never called here: it stays reserved for real L8 generation-pipeline
