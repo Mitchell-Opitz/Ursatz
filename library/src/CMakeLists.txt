@@ -87,6 +87,7 @@ add_library(ursatz
     semantics/subject_character.c
     semantics/ostinato_type.c
     semantics/imitative_role.c
+    semantics/schema_function.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
