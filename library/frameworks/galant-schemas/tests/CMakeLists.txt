@@ -1,0 +1,7 @@
+add_executable(test_galant_schemas_framework test_framework.c)
+target_link_libraries(test_galant_schemas_framework PRIVATE galant_schemas)
+add_test(NAME galant_schemas_framework COMMAND test_galant_schemas_framework)
+
+add_executable(test_architecture_galant_schemas test_architecture_galant_schemas.c)
+add_test(NAME architecture_galant_schemas COMMAND test_architecture_galant_schemas
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
