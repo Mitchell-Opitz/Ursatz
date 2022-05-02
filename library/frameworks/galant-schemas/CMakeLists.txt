@@ -5,6 +5,7 @@ add_library(galant_schemas
     galant_degree.c
     galant_exemplar.c
     galant_prototypes.c
+    galant_matching_rules.c
 )
 target_include_directories(galant_schemas PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
