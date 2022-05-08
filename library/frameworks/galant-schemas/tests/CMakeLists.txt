@@ -9,3 +9,7 @@ add_test(NAME architecture_galant_schemas COMMAND test_architecture_galant_schem
 add_executable(test_galant_schemas_degree test_galant_degree.c)
 target_link_libraries(test_galant_schemas_degree PRIVATE galant_schemas)
 add_test(NAME galant_schemas_degree COMMAND test_galant_schemas_degree)
+
+add_executable(test_galant_schemas_prototypes test_galant_prototypes.c)
+target_link_libraries(test_galant_schemas_prototypes PRIVATE galant_schemas)
+add_test(NAME galant_schemas_prototypes COMMAND test_galant_schemas_prototypes)
