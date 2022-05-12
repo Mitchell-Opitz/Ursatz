@@ -35,8 +35,8 @@ typedef enum {
 /* True for the five functions above; false for any other value. */
 bool schema_function_valid(SchemaFunction function);
 
-/* "opening-gambit" "continuation" "cadence" "post-cadential"; NULL for an
-   invalid function. */
+/* "opening-gambit" "continuation" "pre-cadential" "cadence" "post-cadential";
+   NULL for an invalid function. */
 const char *schema_function_name(SchemaFunction function);
 
 #endif
