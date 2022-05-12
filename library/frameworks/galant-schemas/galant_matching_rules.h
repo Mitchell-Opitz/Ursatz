@@ -21,7 +21,8 @@
  *   METER              every stage falls on the strength of beat the prototype
  *                      gives it (strong or weak)
  *   MELODY             every melody pitch is the degree the prototype gives
- *                      that stage (with an accepted alteration)
+ *                      that stage (with an accepted alteration), and a stage has
+ *                      a second melody pitch exactly when the prototype's does
  *   BASS_DEFINING      when the prototype's bass is defining (the Prinner),
  *                      every bass pitch is the degree it gives that stage;
  *                      holds when the bass is not defining

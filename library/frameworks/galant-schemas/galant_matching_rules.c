@@ -58,8 +58,14 @@ static bool check_melody(const GalantMatch *match) {
         return false;
     }
     for (size_t i = 0; i < match->exemplar->stage_count; i++) {
-        if (!pitch_allowed(&match->prototype->stages[i].melody, match->exemplar->stages[i].melody,
-                           match->exemplar->tonic)) {
+        const GalantStage *wanted = &match->prototype->stages[i];
+        const GalantExemplarStage *actual = &match->exemplar->stages[i];
+        if (!pitch_allowed(&wanted->melody, actual->melody, match->exemplar->tonic)) {
+            return false;
+        }
+        bool wants_next = wanted->melody_next.degree != 0;
+        if (wants_next != (actual->melody_next != NULL) ||
+            (wants_next && !pitch_allowed(&wanted->melody_next, actual->melody_next, match->exemplar->tonic))) {
             return false;
         }
     }

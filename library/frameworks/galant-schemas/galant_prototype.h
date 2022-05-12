@@ -16,6 +16,9 @@
  *
  *   strength          whether it falls on a strong ("S") or weak ("W") beat
  *   melody, bass      the scale degrees of the top and bottom voices
+ *   melody_next       for a stage whose melody has two notes (the Monte's do-te
+ *                     and re-do), the degree of the second; a degree of 0 when
+ *                     the stage has one melody note
  *   figures           the figured bass above the bass note, or NULL when there
  *                     is none
  *   numeral           the Roman numeral in the tonic key
@@ -48,6 +51,7 @@ typedef struct {
     const char *figures;
     const char *numeral;
     const char *numeral_dominant;
+    GalantDegree melody_next;
 } GalantStage;
 
 typedef struct {
