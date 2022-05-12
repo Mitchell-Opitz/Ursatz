@@ -11,8 +11,8 @@
  * An exemplar resembles a prototype when it breaks none of the hard matching
  * rules against it (galant_matching_rules.h); soft rules are advice and do not
  * count. An exemplar can resemble more than one prototype, or none: the
- * Prinner and the modulating Prinner share their beat pattern and several of
- * their degrees.
+ * Prinner and the modulating Prinner share their beat pattern and their
+ * parallel tenths, and differ in their degrees.
  */
 
 /* Sets bit (1u << id) in *schemas for each GalantSchemaId whose prototype the
