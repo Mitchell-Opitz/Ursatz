@@ -2,8 +2,8 @@
 
 #include <stddef.h>
 
-static const char *const NAMES[SCHEMA_FUNCTION_COUNT] = {"opening-gambit", "continuation", "cadence",
-                                                         "post-cadential"};
+static const char *const NAMES[SCHEMA_FUNCTION_COUNT] = {"opening-gambit", "continuation", "pre-cadential",
+                                                         "cadence", "post-cadential"};
 
 bool schema_function_valid(SchemaFunction function) {
     return function >= 0 && function < SCHEMA_FUNCTION_COUNT;
