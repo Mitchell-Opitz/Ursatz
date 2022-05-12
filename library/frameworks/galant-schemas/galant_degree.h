@@ -12,7 +12,8 @@
  * that tonic. So in C, E-flat is degree 3 altered by -1 (me), and A natural is
  * degree 6 altered by 0 (la); in a minor key the third and sixth degrees (mi
  * and la) are usually lowered (me and le), which is why the schemas' degrees
- * accept either.
+ * can accept either. A raised degree (di, fi) is altered by +1, and the lowered
+ * seventh (te) by -1.
  *
  *   GalantPitchDegree   a degree (1 to 7) and an alteration in semitones, of a
  *                       pitch against a tonic
