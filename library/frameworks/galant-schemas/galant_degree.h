@@ -31,7 +31,8 @@ typedef struct {
 typedef enum {
     GALANT_ALTERATION_NATURAL = 0,
     GALANT_ALTERATION_LOWERED,
-    GALANT_ALTERATION_EITHER
+    GALANT_ALTERATION_EITHER,
+    GALANT_ALTERATION_RAISED
 } GalantAlteration;
 
 typedef struct {
@@ -44,11 +45,11 @@ typedef struct {
 bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, GalantPitchDegree *out);
 
 /* True when a pitch's degree satisfies what the prototype asks for: the same
-   degree, and an alteration of 0 (natural), -1 (lowered), or either of those
-   (either). */
+   degree, and an alteration of 0 (natural), -1 (lowered), either of those
+   (either), or +1 (raised). */
 bool galant_degree_allows(const GalantDegree *wanted, const GalantPitchDegree *actual);
 
-/* "natural" "lowered" "either"; NULL for an invalid alteration. */
+/* "natural" "lowered" "either" "raised"; NULL for an invalid alteration. */
 const char *galant_alteration_name(GalantAlteration alteration);
 
 #endif
