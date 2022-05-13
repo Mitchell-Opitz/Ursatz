@@ -42,6 +42,7 @@ static inline void galant_fixture(GalantFixture *f, const PitchSpelling *tonic, 
         f->stages[i].melody = melody[i];
         f->stages[i].bass = bass[i];
         f->stages[i].strength = strengths[i];
+        f->stages[i].melody_next = NULL;
     }
     f->exemplar = (GalantExemplar){f->stages, 4, tonic};
 }

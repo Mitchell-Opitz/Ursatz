@@ -35,6 +35,17 @@ static void test_alterations(void) {
     assert(raised_ti.degree == 7 && raised_ti.alteration == 1);
 }
 
+static void test_chromatic_degrees(void) {
+    const PitchSpelling *c4 = P(C, 0, 4);
+    /* Di and fi are raised; te is lowered. */
+    GalantPitchDegree di = degree(P(C, 1, 4), c4);
+    assert(di.degree == 1 && di.alteration == 1);
+    GalantPitchDegree fi = degree(P(F, 1, 4), c4);
+    assert(fi.degree == 4 && fi.alteration == 1);
+    GalantPitchDegree te = degree(P(B, -1, 3), c4);
+    assert(te.degree == 7 && te.alteration == -1);
+}
+
 static void test_octave_does_not_matter(void) {
     const PitchSpelling *tonic = P(C, 0, 4);
     GalantPitchDegree low = degree(P(G, 0, 2), tonic);
@@ -85,6 +96,12 @@ static void test_degree_allows(void) {
     assert(!galant_degree_allows(&want_either, &raised));
     assert(!galant_degree_allows(&want_either, &other));
 
+    GalantDegree want_raised = {3, GALANT_ALTERATION_RAISED};
+    assert(galant_degree_allows(&want_raised, &raised));
+    assert(!galant_degree_allows(&want_raised, &natural));
+    assert(!galant_degree_allows(&want_raised, &lowered));
+    assert(!galant_degree_allows(&want_raised, &other));
+
     GalantDegree invalid = {3, (GalantAlteration)9};
     assert(!galant_degree_allows(&invalid, &natural));
     assert(!galant_degree_allows(NULL, &natural));
@@ -95,6 +112,7 @@ static void test_alteration_names(void) {
     assert(strcmp(galant_alteration_name(GALANT_ALTERATION_NATURAL), "natural") == 0);
     assert(strcmp(galant_alteration_name(GALANT_ALTERATION_LOWERED), "lowered") == 0);
     assert(strcmp(galant_alteration_name(GALANT_ALTERATION_EITHER), "either") == 0);
+    assert(strcmp(galant_alteration_name(GALANT_ALTERATION_RAISED), "raised") == 0);
     assert(galant_alteration_name((GalantAlteration)9) == NULL);
 }
 
@@ -139,6 +157,7 @@ static void test_exemplar_valid(void) {
 int main(void) {
     test_major_scale();
     test_alterations();
+    test_chromatic_degrees();
     test_octave_does_not_matter();
     test_minor_key();
     test_degree_of_arguments();
