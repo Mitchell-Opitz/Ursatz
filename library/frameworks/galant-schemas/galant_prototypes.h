@@ -58,6 +58,12 @@
  *   COMMA                 W S       fa mi / ti do                    6/5 5           V I
  *   CONVERGING_CADENCE    W S W S   mi re do ti / mi fa fi sol       6 6/5 6/5 5     I ii V/V V
  *
+ * Cadences and post-cadential:
+ *   CADENZA_SEMPLICE      W S W S   do re re do / mi fa sol do       6 6/5 5 5       I ii V I
+ *   CADENZA_COMPOSTA      W S S W S do re mi re do / mi fa sol sol do  6 6/5 6/4 7 5   I ii Cad. V I
+ *   CADENZA_DOPPIA        S W S W S fa mi re re do / sol sol sol sol do  5 6/4 4 3 5   V V V V I
+ *   QUIESCENZA            W S W S   te la ti do / do do do do        b7 6/4 7/4/2 5  V/IV V V I
+ *
  * Other schemas of the Galant style are not yet encoded. The Prinner schemas are
  * classified as continuation (SchemaFunction): the chapter calls the Prinner a
  * closing gesture, a response to an opening schema. The figures and numerals are
