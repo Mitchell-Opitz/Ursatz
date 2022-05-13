@@ -26,16 +26,16 @@
  *                       strength   S    W    S    W
  *                       melody     la/le sol  fa   mi/me
  *                       bass       fa   mi/me re   do
- *                       figures    5    6    7-6  I   (as the chapter gives
- *                                                       them; the row looks
- *                                                       garbled)
+ *                       figures    5    6    7-6  5   (the chapter's row ends in
+ *                                                       "I", a numeral; the
+ *                                                       other schemas end in 5)
  *                       numeral    IV   I    vii  I
  *   MODULATING_PRINNER  the Prinner as a modulation from the tonic to the
  *                     dominant:
  *                       strength   S    W    S    W
  *                       melody     mi   re   do   ti
  *                       bass       do   ti   la   sol
- *                       figures         6    7-#6
+ *                       figures    5    6    7-#6  5
  *                       numeral    I    V    vii/V  V   (tonic key)
  *                       numeral    IV   I    vii  I      (dominant key)
  *

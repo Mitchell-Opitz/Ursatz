@@ -69,7 +69,7 @@ static void test_prinner(void) {
     assert_degree(&p->stages[2].bass, 2, GALANT_ALTERATION_NATURAL);
     assert_degree(&p->stages[3].bass, 1, GALANT_ALTERATION_NATURAL);
 
-    const char *figures[4] = {"5", "6", "7-6", "I"};
+    const char *figures[4] = {"5", "6", "7-6", "5"};
     const char *numerals[4] = {"IV", "I", "vii", "I"};
     for (size_t i = 0; i < 4; i++) {
         assert(strcmp(p->stages[i].figures, figures[i]) == 0);
@@ -91,15 +91,11 @@ static void test_modulating_prinner(void) {
         assert_degree(&p->stages[i].melody, melody[i], GALANT_ALTERATION_NATURAL);
         assert_degree(&p->stages[i].bass, bass[i], GALANT_ALTERATION_NATURAL);
     }
-    const char *figures[4] = {NULL, "6", "7-#6", NULL};
+    const char *figures[4] = {"5", "6", "7-#6", "5"};
     const char *tonic_key[4] = {"I", "V", "vii/V", "V"};
     const char *dominant_key[4] = {"IV", "I", "vii", "I"};
     for (size_t i = 0; i < 4; i++) {
-        if (figures[i] == NULL) {
-            assert(p->stages[i].figures == NULL);
-        } else {
-            assert(strcmp(p->stages[i].figures, figures[i]) == 0);
-        }
+        assert(strcmp(p->stages[i].figures, figures[i]) == 0);
         assert(strcmp(p->stages[i].numeral, tonic_key[i]) == 0);
         assert(strcmp(p->stages[i].numeral_dominant, dominant_key[i]) == 0);
     }
