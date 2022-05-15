@@ -48,6 +48,16 @@
  *                         (the first and third stages have two melody notes)
  *   PONTE                 S W S     sol ti re / sol sol sol          5 7 7           V V V
  *
+ * Pre-cadential (incomplete cadences):
+ *   FENAROLI              S W S W   fa mi ti do / ti do re mi        6/5 5 6/5 6     V I V I
+ *   INDUGIO               S W S W S re fa la do ti / fa fa fa fi sol 6/5 6/5 6/5 6/5 5  IV IV IV V/V V
+ *   DECEPTIVE_CADENCE     W S W S   do re re do / mi fa sol la       6 6/5 5 5       I ii V vi
+ *   EVADED_CADENCE        W S W S   do re re do / mi fa sol mi       6 6/5 5 6       I ii V I
+ *   PASSO_INDIETRO        S W       ti do / fa mi                    6/4/2 6         V I
+ *                         (essentially the first two stages of a Prinner)
+ *   COMMA                 W S       fa mi / ti do                    6/5 5           V I
+ *   CONVERGING_CADENCE    W S W S   mi re do ti / mi fa fi sol       6 6/5 6/5 5     I ii V/V V
+ *
  * Other schemas of the Galant style are not yet encoded. The Prinner schemas are
  * classified as continuation (SchemaFunction): the chapter calls the Prinner a
  * closing gesture, a response to an opening schema. The figures and numerals are
