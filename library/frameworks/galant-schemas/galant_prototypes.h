@@ -38,6 +38,15 @@
  *                         "I", a numeral, where the other schemas end in 5)
  *   MODULATING_PRINNER    S W S W   mi re do ti / do ti la sol       5 6 7-#6 5      I V vii/V V
  *                         (in the dominant key: IV I vii I)
+ *   PRINNER_WITH_DOMINANT S W S W S la sol fa fa mi / fa mi re sol do  5 6 7-6 7 5   IV I vii V I
+ *   MODULATING_PRINNER_WITH_DOMINANT
+ *                         S W S W S mi re do do ti / do ti la re sol   5 6 7-#6 7/# 5   I V vii/V V/V V
+ *                         (the variants with an added dominant are not in
+ *                         parallel tenths at that stage)
+ *   FONTE                 W S W S   sol fa fa mi / di re ti do       6/5 5 6/5 5     V/ii ii V I
+ *   MONTE                 W S W S   do-te la re-do ti / mi fa fi sol 6/5 5 6/5 5     V/IV V V/V V
+ *                         (the first and third stages have two melody notes)
+ *   PONTE                 S W S     sol ti re / sol sol sol          5 7 7           V V V
  *
  * Other schemas of the Galant style are not yet encoded. The Prinner schemas are
  * classified as continuation (SchemaFunction): the chapter calls the Prinner a
