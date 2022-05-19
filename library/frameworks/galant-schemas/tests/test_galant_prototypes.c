@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "galant_prototypes.h"
+#include "galant_specs_a.h"
 #include "galant_test_util.h"
 
 static void assert_degree(const GalantDegree *d, int degree, GalantAlteration alteration) {
@@ -40,7 +41,6 @@ static void test_meyer(void) {
         assert(p->stages[i].strength == strengths[i]);
         assert_degree(&p->stages[i].melody, melody[i], GALANT_ALTERATION_NATURAL);
         assert_degree(&p->stages[i].bass, bass[i], GALANT_ALTERATION_NATURAL);
-        assert(p->stages[i].figures == NULL);
         assert(strcmp(p->stages[i].numeral, numerals[i]) == 0);
         assert(p->stages[i].numeral_dominant == NULL);
     }
@@ -101,6 +101,22 @@ static void test_modulating_prinner(void) {
     }
 }
 
+static void test_opening_and_continuation_data(void) {
+    for (size_t i = 0; i < SPECS_A_COUNT; i++) {
+        verify_spec(&SPECS_A[i]);
+    }
+}
+
+static void test_dominant_key_numerals(void) {
+    /* Only the modulating Prinner has numerals in the dominant key. */
+    for (size_t i = 0; i < SPECS_A_COUNT; i++) {
+        const GalantPrototype *p = galant_prototype(SPECS_A[i].id);
+        for (size_t s = 0; s < p->stage_count; s++) {
+            assert((p->stages[s].numeral_dominant != NULL) == (p->id == GALANT_SCHEMA_MODULATING_PRINNER));
+        }
+    }
+}
+
 static void test_every_prototype_is_well_formed(void) {
     for (int i = 0; i < GALANT_SCHEMA_COUNT; i++) {
         const GalantPrototype *p = galant_prototype((GalantSchemaId)i);
@@ -120,6 +136,8 @@ int main(void) {
     test_meyer();
     test_prinner();
     test_modulating_prinner();
+    test_opening_and_continuation_data();
+    test_dominant_key_numerals();
     test_every_prototype_is_well_formed();
     printf("test_galant_prototypes: ok\n");
     return 0;
