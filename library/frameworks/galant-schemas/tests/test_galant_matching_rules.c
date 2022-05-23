@@ -166,7 +166,8 @@ static void test_second_melody_note(void) {
                                  {{BEAT_STRENGTH_WEAK, {1, GALANT_ALTERATION_NATURAL}, {3, GALANT_ALTERATION_NATURAL},
                                    NULL, "I", NULL, {7, GALANT_ALTERATION_LOWERED}},
                                   {BEAT_STRENGTH_STRONG, {6, GALANT_ALTERATION_NATURAL},
-                                   {4, GALANT_ALTERATION_NATURAL}, NULL, "IV", NULL}},
+                                   {4, GALANT_ALTERATION_NATURAL}, NULL, "IV", NULL,
+                                   {0, GALANT_ALTERATION_NATURAL}}},
                                  false,
                                  false};
     GalantExemplarStage stages[2] = {{P(C, 0, 5), P(E, 0, 3), W, P(B, -1, 4)},
