@@ -156,6 +156,40 @@ static void test_meyer_in_minor_is_not_accepted(void) {
     assert(hard == (1u << MATCH(MELODY)));
 }
 
+static void test_second_melody_note(void) {
+    /* A prototype whose first stage has two melody notes, do then te, over a
+       bass of mi; its second stage has one. */
+    GalantPrototype prototype = {GALANT_SCHEMA_MEYER,
+                                 "two-notes",
+                                 SCHEMA_FUNCTION_CONTINUATION,
+                                 2,
+                                 {{BEAT_STRENGTH_WEAK, {1, GALANT_ALTERATION_NATURAL}, {3, GALANT_ALTERATION_NATURAL},
+                                   NULL, "I", NULL, {7, GALANT_ALTERATION_LOWERED}},
+                                  {BEAT_STRENGTH_STRONG, {6, GALANT_ALTERATION_NATURAL},
+                                   {4, GALANT_ALTERATION_NATURAL}, NULL, "IV", NULL,
+                                   {0, GALANT_ALTERATION_NATURAL}}},
+                                 false,
+                                 false};
+    GalantExemplarStage stages[2] = {{P(C, 0, 5), P(E, 0, 3), W, P(B, -1, 4)},
+                                     {P(A, 0, 4), P(F, 0, 3), S, NULL}};
+    GalantExemplar exemplar = {stages, 2, P(C, 0, 4)};
+    GalantMatch match = {&prototype, &exemplar};
+    assert(galant_matching_rule_holds(MATCH(MELODY), &match));
+
+    /* The second note is missing. */
+    stages[0].melody_next = NULL;
+    assert(!galant_matching_rule_holds(MATCH(MELODY), &match));
+
+    /* The second note is te's natural, ti. */
+    stages[0].melody_next = P(B, 0, 4);
+    assert(!galant_matching_rule_holds(MATCH(MELODY), &match));
+
+    /* A second note where the prototype has none. */
+    stages[0].melody_next = P(B, -1, 4);
+    stages[1].melody_next = P(G, 0, 4);
+    assert(!galant_matching_rule_holds(MATCH(MELODY), &match));
+}
+
 static void test_invalid_and_check(void) {
     GalantFixture f;
     meyer_in_c(&f);
@@ -205,6 +239,7 @@ int main(void) {
     test_bass_usual();
     test_tenths();
     test_meyer_in_minor_is_not_accepted();
+    test_second_melody_note();
     test_invalid_and_check();
     printf("test_galant_matching_rules: ok\n");
     return 0;

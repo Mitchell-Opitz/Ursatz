@@ -16,6 +16,9 @@
  *
  *   strength          whether it falls on a strong ("S") or weak ("W") beat
  *   melody, bass      the scale degrees of the top and bottom voices
+ *   melody_next       for a stage whose melody has two notes (the Monte's do-te
+ *                     and re-do), the degree of the second; a degree of 0 when
+ *                     the stage has one melody note
  *   figures           the figured bass above the bass note, or NULL when there
  *                     is none
  *   numeral           the Roman numeral in the tonic key
@@ -38,6 +41,29 @@ typedef enum {
     GALANT_SCHEMA_MEYER = 0,
     GALANT_SCHEMA_PRINNER,
     GALANT_SCHEMA_MODULATING_PRINNER,
+    GALANT_SCHEMA_ROMANESCA,
+    GALANT_SCHEMA_DO_RE_MI,
+    GALANT_SCHEMA_DO_RE_MI_FOUR_STAGE,
+    GALANT_SCHEMA_SOL_FA_MI,
+    GALANT_SCHEMA_APRILE,
+    GALANT_SCHEMA_JUPITER,
+    GALANT_SCHEMA_PASTORELLA,
+    GALANT_SCHEMA_PRINNER_WITH_DOMINANT,
+    GALANT_SCHEMA_MODULATING_PRINNER_WITH_DOMINANT,
+    GALANT_SCHEMA_FONTE,
+    GALANT_SCHEMA_MONTE,
+    GALANT_SCHEMA_PONTE,
+    GALANT_SCHEMA_FENAROLI,
+    GALANT_SCHEMA_INDUGIO,
+    GALANT_SCHEMA_DECEPTIVE_CADENCE,
+    GALANT_SCHEMA_EVADED_CADENCE,
+    GALANT_SCHEMA_PASSO_INDIETRO,
+    GALANT_SCHEMA_COMMA,
+    GALANT_SCHEMA_CONVERGING_CADENCE,
+    GALANT_SCHEMA_CADENZA_SEMPLICE,
+    GALANT_SCHEMA_CADENZA_COMPOSTA,
+    GALANT_SCHEMA_CADENZA_DOPPIA,
+    GALANT_SCHEMA_QUIESCENZA,
     GALANT_SCHEMA_COUNT
 } GalantSchemaId;
 
@@ -48,6 +74,7 @@ typedef struct {
     const char *figures;
     const char *numeral;
     const char *numeral_dominant;
+    GalantDegree melody_next;
 } GalantStage;
 
 typedef struct {

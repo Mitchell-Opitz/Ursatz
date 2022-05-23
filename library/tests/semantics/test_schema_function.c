@@ -12,9 +12,19 @@ static void test_validity(void) {
     assert(!schema_function_valid((SchemaFunction)-1));
 }
 
+static void test_temporal_order(void) {
+    /* The functions are listed in the order they typically occur in a piece. */
+    assert(SCHEMA_FUNCTION_OPENING_GAMBIT < SCHEMA_FUNCTION_CONTINUATION);
+    assert(SCHEMA_FUNCTION_CONTINUATION < SCHEMA_FUNCTION_PRE_CADENTIAL);
+    assert(SCHEMA_FUNCTION_PRE_CADENTIAL < SCHEMA_FUNCTION_CADENCE);
+    assert(SCHEMA_FUNCTION_CADENCE < SCHEMA_FUNCTION_POST_CADENTIAL);
+    assert(SCHEMA_FUNCTION_COUNT == 5);
+}
+
 static void test_names(void) {
     assert(strcmp(schema_function_name(SCHEMA_FUNCTION_OPENING_GAMBIT), "opening-gambit") == 0);
     assert(strcmp(schema_function_name(SCHEMA_FUNCTION_CONTINUATION), "continuation") == 0);
+    assert(strcmp(schema_function_name(SCHEMA_FUNCTION_PRE_CADENTIAL), "pre-cadential") == 0);
     assert(strcmp(schema_function_name(SCHEMA_FUNCTION_CADENCE), "cadence") == 0);
     assert(strcmp(schema_function_name(SCHEMA_FUNCTION_POST_CADENTIAL), "post-cadential") == 0);
     assert(schema_function_name(SCHEMA_FUNCTION_COUNT) == NULL);
@@ -22,6 +32,7 @@ static void test_names(void) {
 
 int main(void) {
     test_validity();
+    test_temporal_order();
     test_names();
     printf("test_schema_function: ok\n");
     return 0;

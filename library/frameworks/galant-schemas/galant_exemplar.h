@@ -12,7 +12,9 @@
  * resemble a prototype. The caller says which notes are its stages; finding
  * the stages in a passage is not done here. Each stage is the pitch of the top
  * (melodic) voice, the pitch of the bottom (bass) voice, and the strength of the
- * beat the stage falls on (BeatStrength: strong "S" or weak "W"). The tonic is
+ * beat the stage falls on (BeatStrength: strong "S" or weak "W"). A stage whose
+ * melody has two notes (the Monte's do-te and re-do) also has a second melody
+ * pitch, `melody_next`, and a stage with one has NULL there. The tonic is
  * the key the degrees are counted from. Pitches are borrowed, not owned, and
  * read as sounding pitches.
  */
@@ -23,6 +25,7 @@ typedef struct {
     const PitchSpelling *melody;
     const PitchSpelling *bass;
     BeatStrength strength;
+    const PitchSpelling *melody_next;
 } GalantExemplarStage;
 
 typedef struct {

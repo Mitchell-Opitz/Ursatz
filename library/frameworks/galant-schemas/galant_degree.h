@@ -12,7 +12,8 @@
  * that tonic. So in C, E-flat is degree 3 altered by -1 (me), and A natural is
  * degree 6 altered by 0 (la); in a minor key the third and sixth degrees (mi
  * and la) are usually lowered (me and le), which is why the schemas' degrees
- * accept either.
+ * can accept either. A raised degree (di, fi) is altered by +1, and the lowered
+ * seventh (te) by -1.
  *
  *   GalantPitchDegree   a degree (1 to 7) and an alteration in semitones, of a
  *                       pitch against a tonic
@@ -31,7 +32,8 @@ typedef struct {
 typedef enum {
     GALANT_ALTERATION_NATURAL = 0,
     GALANT_ALTERATION_LOWERED,
-    GALANT_ALTERATION_EITHER
+    GALANT_ALTERATION_EITHER,
+    GALANT_ALTERATION_RAISED
 } GalantAlteration;
 
 typedef struct {
@@ -44,11 +46,11 @@ typedef struct {
 bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, GalantPitchDegree *out);
 
 /* True when a pitch's degree satisfies what the prototype asks for: the same
-   degree, and an alteration of 0 (natural), -1 (lowered), or either of those
-   (either). */
+   degree, and an alteration of 0 (natural), -1 (lowered), either of those
+   (either), or +1 (raised). */
 bool galant_degree_allows(const GalantDegree *wanted, const GalantPitchDegree *actual);
 
-/* "natural" "lowered" "either"; NULL for an invalid alteration. */
+/* "natural" "lowered" "either" "raised"; NULL for an invalid alteration. */
 const char *galant_alteration_name(GalantAlteration alteration);
 
 #endif
