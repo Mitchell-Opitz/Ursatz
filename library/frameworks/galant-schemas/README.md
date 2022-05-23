@@ -37,19 +37,25 @@ check function. A rule that states what the schema requires is hard; "less
 fixed" and "usually" features are soft. `constraint_evaluate` is never called
 here.
 
-- **Prototypes** (`galant_prototypes.h`), as the Galant schemas chapter of Open
-  Music Theory sets them out:
-  - *Meyer*, an opening gambit of four stages on weak, strong, weak, strong
-    beats: melody do ti fa mi, bass do re ti do, harmony I V V I. The first and
-    last stages are tonic chords. The bass and the harmony are less fixed than
-    the melody.
-  - *Prinner*, a continuation (the typical response to an opening schema) of
-    four stages on strong, weak, strong, weak beats: melody la/le sol fa mi/me
-    over bass fa mi/me re do, in parallel tenths, harmony IV I vii I. The bass
-    is defining.
-  - *Modulating Prinner*, a continuation: melody mi re do ti over bass do ti la
-    sol, in parallel tenths, with Roman numerals in the tonic key (I V vii/V V)
-    and in the dominant key (IV I vii I).
+- **Prototypes** (`galant_prototypes.h`), 26 schemas. Meyer, Prinner, and the
+  modulating Prinner are as the Galant schemas chapter of Open Music Theory sets
+  them out; the rest are from the Galant Schemas - Summary chapter, taken from
+  its itemized stage tables. Each has stages with a beat strength, melody and
+  bass degrees (a stage of the Monte has two melody notes), figures, and Roman
+  numerals, a function, and two flags: whether the bass is defining (every schema
+  but the Meyer family) and whether the melody moves in parallel tenths (the
+  Prinner and modulating Prinner).
+  - *Opening gambits:* Meyer, Romanesca, Do-Re-Mi (three stages, and a derived
+    four-stage form), Sol-Fa-Mi, Aprile, Jupiter, Pastorella. The bass and
+    harmony of the Meyer, Aprile, Jupiter, and Pastorella are less fixed than
+    their melody.
+  - *Continuation* (the answer, process, and transition schemas): Prinner,
+    modulating Prinner, each with an added dominant (five stages), Fonte, Monte,
+    Ponte.
+  - *Pre-cadential:* Fenaroli, Indugio, Deceptive Cadence, Evaded Cadence, Passo
+    Indietro, Comma, Converging Cadence.
+  - *Cadence:* Cadenza Semplice, Cadenza Composta, Cadenza Doppia.
+  - *Post-cadential:* Quiescenza.
 - **Matching rules** (`galant_matching_rules.h`), an exemplar against a
   prototype stage by stage (`GalantMatch`). Hard: the same number of stages, the
   same beat strengths, and the melody degrees (an accepted alteration counts;
@@ -65,15 +71,24 @@ here.
 
 - **Harmony.** The figures and Roman numerals of a prototype are data. They are
   not checked in an exemplar, which needs chord analysis.
-- **Other schemas.** The Pastorella, Jupiter, and Aprile (named as like the
-  Meyer), and the continuation, cadence, and post-cadential schemas of the
-  summary chapter, are not encoded yet.
-- **Parts of a schema.** The Meyer divides into an opening part (I to V) and a
-  closing part (V to I); the parts are not prototypes of their own.
+- **Other schemas.** Schemas of the Galant style beyond the 26 above.
+- **Parts of a schema.** Many schemas divide into question and answer parts (the
+  Do-Re and Re-Mi parts, the Sol-Fa and Fa-Mi parts, the Meyer's opening and
+  closing parts, the Fonte and Monte "modular" halves); the parts are not
+  prototypes of their own, though the Comma and the Passo Indietro are listed as
+  schemas.
+- **Harmonic variants.** The Sol-Fa-Mi with I vii V I in place of I ii V I
+  differs only in harmony, which is not checked.
+- **Sources.** The itemized stage tables are followed where the summary table
+  disagrees (the Cadenza Composta has five stages in the itemized table, and the
+  Passo Indietro and the Converging Cadence have the meters the itemized tables
+  give). The Prinner's figures row ends in "I", a numeral, in the chapter; it is
+  corrected to 5, as the other schemas end. The four-stage Do-Re-Mi is derived
+  from the chapter's description (the Do-Re and Re-Mi parts put back together),
+  not from a table. The Cadenza Composta's third numeral, "Cad.", is kept as
+  given.
 - **Minor-key Meyer.** The Meyer's last melody degree is mi, as the chapter has
   it, so a minor-key Meyer that ends on me is not accepted.
-- **The Prinner figures.** The figures row as the chapter gives it (5, 6, 7-6,
-  I) looks garbled and is kept as given.
 - **Finding the stages.** The caller says which notes are the stages of an
   exemplar and which beats they fall on.
 - **Theory.** The third sense of "schema" (`SchemaSense`), the explanation of
