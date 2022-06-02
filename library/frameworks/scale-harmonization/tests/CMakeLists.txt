@@ -1,0 +1,7 @@
+add_executable(test_scale_harmonization_framework test_framework.c)
+target_link_libraries(test_scale_harmonization_framework PRIVATE scale_harmonization)
+add_test(NAME scale_harmonization_framework COMMAND test_scale_harmonization_framework)
+
+add_executable(test_architecture_scale_harmonization test_architecture_scale_harmonization.c)
+add_test(NAME architecture_scale_harmonization COMMAND test_architecture_scale_harmonization
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
