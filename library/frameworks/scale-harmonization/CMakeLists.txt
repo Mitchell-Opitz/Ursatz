@@ -4,6 +4,7 @@ add_library(scale_harmonization
     scale_rule_table.c
     scale_harmonization.c
     scale_patterns.c
+    scale_sequence_rules.c
 )
 target_include_directories(scale_harmonization PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
