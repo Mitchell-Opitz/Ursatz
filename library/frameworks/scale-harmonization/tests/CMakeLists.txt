@@ -5,3 +5,7 @@ add_test(NAME scale_harmonization_framework COMMAND test_scale_harmonization_fra
 add_executable(test_architecture_scale_harmonization test_architecture_scale_harmonization.c)
 add_test(NAME architecture_scale_harmonization COMMAND test_architecture_scale_harmonization
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_scale_harmonization_type test_scale_harmonization.c)
+target_link_libraries(test_scale_harmonization_type PRIVATE scale_harmonization)
+add_test(NAME scale_harmonization_type COMMAND test_scale_harmonization_type)
