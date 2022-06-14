@@ -89,6 +89,8 @@ add_library(ursatz
     semantics/imitative_role.c
     semantics/schema_function.c
     semantics/schema_sense.c
+    semantics/scale_direction.c
+    semantics/sequence_kind.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
