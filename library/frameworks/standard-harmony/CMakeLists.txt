@@ -2,6 +2,8 @@ add_library(standard_harmony
     harmony_framework.c
     harmony_rule_pair.c
     harmony_rule_table.c
+    harmony_chord.c
+    harmony_functions.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
