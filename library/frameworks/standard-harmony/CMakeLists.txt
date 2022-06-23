@@ -4,6 +4,7 @@ add_library(standard_harmony
     harmony_rule_table.c
     harmony_chord.c
     harmony_functions.c
+    harmony_phrase_rules.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
