@@ -5,3 +5,11 @@ add_test(NAME standard_harmony_framework COMMAND test_standard_harmony_framework
 add_executable(test_architecture_standard_harmony test_architecture_standard_harmony.c)
 add_test(NAME architecture_standard_harmony COMMAND test_architecture_standard_harmony
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_standard_harmony_functions test_harmony_functions.c)
+target_link_libraries(test_standard_harmony_functions PRIVATE standard_harmony)
+add_test(NAME standard_harmony_functions COMMAND test_standard_harmony_functions)
+
+add_executable(test_standard_harmony_phrase_rules test_harmony_phrase_rules.c)
+target_link_libraries(test_standard_harmony_phrase_rules PRIVATE standard_harmony)
+add_test(NAME standard_harmony_phrase_rules COMMAND test_standard_harmony_phrase_rules)
