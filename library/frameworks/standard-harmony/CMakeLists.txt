@@ -1,0 +1,22 @@
+add_library(standard_harmony
+    harmony_framework.c
+    harmony_rule_pair.c
+    harmony_rule_table.c
+    harmony_chord.c
+    harmony_functions.c
+    harmony_phrase_rules.c
+    harmony_cadence_rules.c
+    harmony_hearing_rules.c
+    harmony_writing_rules.c
+)
+target_include_directories(standard_harmony PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/frameworks
+    ${PROJECT_SOURCE_DIR}/src
+)
+target_link_libraries(standard_harmony PUBLIC ursatz)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

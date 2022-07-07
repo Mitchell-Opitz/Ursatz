@@ -91,6 +91,8 @@ add_library(ursatz
     semantics/schema_sense.c
     semantics/scale_direction.c
     semantics/sequence_kind.c
+    semantics/harmonic_function.c
+    semantics/cadence_type.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
