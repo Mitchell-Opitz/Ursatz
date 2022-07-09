@@ -93,6 +93,7 @@ add_library(ursatz
     semantics/sequence_kind.c
     semantics/harmonic_function.c
     semantics/cadence_type.c
+    semantics/seventh_resolution.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
