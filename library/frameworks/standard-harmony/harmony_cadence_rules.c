@@ -2,11 +2,10 @@
 
 #include "harmony_rule_table.h"
 
-static const char *const NAMES[HARMONY_CADENCE_RULE_COUNT] = {"cadential-progression"};
+static const char *const NAMES[HARMONY_CADENCE_RULE_COUNT] = {"cadential-progression", "half-without-seventh"};
 
 static bool table_is_hard(int which) {
-    (void)which;
-    return true;
+    return which == HARMONY_CADENCE_CADENTIAL_PROGRESSION;
 }
 
 static HarmonyRulePair g_pairs[HARMONY_CADENCE_RULE_COUNT];
@@ -42,6 +41,9 @@ static bool is_half(const HarmonyCadence *c) {
 bool harmony_cadence_rule_holds(HarmonyCadenceRule which, const HarmonyCadence *cadence) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_cadence_valid(cadence)) {
         return false;
+    }
+    if (which == HARMONY_CADENCE_HALF_WITHOUT_SEVENTH) {
+        return !(is_half(cadence) && cadence->to.seventh);
     }
     return is_authentic(cadence) || is_half(cadence);
 }

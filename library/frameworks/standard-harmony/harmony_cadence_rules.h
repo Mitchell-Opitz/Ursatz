@@ -31,9 +31,21 @@
  * authentic cadence can itself be made more or less strong (the melody, the
  * rhythm, a rest after it); that is not modeled.
  *
+ * V can have a seventh (V7), whose added dissonance strengthens the pull toward
+ * tonic. A V7 to I in root position with do in the soprano is still a perfect
+ * authentic cadence. V7 is much less common in a half cadence, which is already
+ * unstable and which a seventh makes more so; such a cadence appears more often
+ * in Romantic music (Schmalfeldt's "19th-century HC"). It is still a half
+ * cadence, not a type of its own.
+ *
  * Hard:
  *
  *   CADENTIAL_PROGRESSION   the progression is V to I or x to V
+ *
+ * Soft:
+ *
+ *   HALF_WITHOUT_SEVENTH    a half cadence does not end on V7; this always holds
+ *                           for an authentic cadence
  *
  * The subject is the last two chords of the phrase and the scale degree of the
  * soprano over the last one (1 to 7: do is 1, mi is 3).
@@ -48,6 +60,7 @@ typedef struct {
 
 typedef enum {
     HARMONY_CADENCE_CADENTIAL_PROGRESSION = 0,
+    HARMONY_CADENCE_HALF_WITHOUT_SEVENTH,
     HARMONY_CADENCE_RULE_COUNT
 } HarmonyCadenceRule;
 
@@ -57,7 +70,7 @@ bool harmony_cadence_valid(const HarmonyCadence *cadence);
 const Rule *harmony_cadence_rule(HarmonyCadenceRule which);
 const Constraint *harmony_cadence_constraint(HarmonyCadenceRule which);
 
-/* "cadential-progression"; NULL for an invalid rule. */
+/* "cadential-progression" "half-without-seventh"; NULL for an invalid rule. */
 const char *harmony_cadence_rule_name(HarmonyCadenceRule which);
 
 /* True when the cadence satisfies the rule. False when it does not, and for an
@@ -65,8 +78,8 @@ const char *harmony_cadence_rule_name(HarmonyCadenceRule which);
 bool harmony_cadence_rule_holds(HarmonyCadenceRule which, const HarmonyCadence *cadence);
 
 /* The rules the cadence breaks: hard_violations has bit (1u << rule) set for each
-   hard rule that fails; soft_violations is always 0 (there are no soft rules).
-   False (both untouched) for an invalid cadence. */
+   hard rule that fails, soft_violations for each soft rule. False (both
+   untouched) for an invalid cadence. */
 bool harmony_cadence_check(const HarmonyCadence *cadence, unsigned *hard_violations, unsigned *soft_violations);
 
 /* The type of the cadence: subverted when the progression is cadential and
