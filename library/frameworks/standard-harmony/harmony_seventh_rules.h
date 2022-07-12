@@ -6,6 +6,7 @@
 #include "harmony_chord.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "semantics/seventh_resolution.h"
 #include "semantics/voice_part.h"
 
 /*
@@ -32,12 +33,29 @@
  * and the third gives its quality. In minor the V7 uses ti, not te, to be a
  * major-minor seventh chord.
  *
+ * Two alternative resolutions make the tonic chord complete (root, third, and
+ * fifth) instead of leaving out the fifth, with the same steps for writing:
+ *
+ *   incomplete V7      the fifth (re) is omitted from the V7 and the root (sol)
+ *                      doubled to keep four voices, so sol, sol, ti, fa. Only the
+ *                      root can be doubled: doubling ti or fa would make parallel
+ *                      octaves when both resolve by their tendencies. The doubled
+ *                      sol stays a sol over the tonic chord's fifth
+ *   leading-tone drop  in a complete V7, ti leaps down to sol (never to mi, which
+ *                      is further away) instead of up to do, in the alto or tenor
+ *                      only, so that the leap is hidden. It works because ti is
+ *                      not dissonant, an inner voice is not very noticeable, and
+ *                      sol is the closest note it can move to without making
+ *                      parallels
+ *
  * Hard:
  *
  *   BASS_SOL_TO_DO      the bass is sol in V7 and do in I
- *   V7_NOTES            V7 is a complete chord: sol, ti, re, and fa, one each
+ *   V7_NOTES            V7 is a complete chord (sol, ti, re, and fa, one each) or
+ *                       an incomplete one (sol twice, ti, and fa)
  *   ACTIVE_NOTES_RESOLVE
- *                       fa goes to mi, ti goes to do, and re goes to do or mi
+ *                       fa goes to mi, re goes to do or mi, and ti goes to do; or
+ *                       ti goes to sol, in the alto or tenor of a complete V7
  *   TONIC_NOTES         the tonic chord has only do, mi, and sol, and has do and
  *                       mi (the root and the third are essential)
  *   MINOR_LEADING_TONE  in minor, the V7 has the leading tone (ti); in major
@@ -80,6 +98,12 @@ const char *harmony_seventh_rule_name(HarmonySeventhRule which);
 /* True when the resolution satisfies the rule. False when it does not, and for an
    invalid resolution or an invalid rule. */
 bool harmony_seventh_rule_holds(HarmonySeventhRule which, const HarmonySeventhResolution *resolution);
+
+/* The resolution of a V7 voicing that breaks no hard rule: INCOMPLETE when the V7
+   omits the fifth, LEADING_TONE_DROP when a ti goes down to sol, and DEFAULT
+   otherwise. False (*out untouched) when a hard rule fails or the resolution is
+   invalid. */
+bool harmony_seventh_classify(const HarmonySeventhResolution *resolution, SeventhResolution *out);
 
 /* The rules the resolution breaks: hard_violations has bit (1u << rule) set for
    each hard rule that fails, soft_violations for each soft rule. False (both

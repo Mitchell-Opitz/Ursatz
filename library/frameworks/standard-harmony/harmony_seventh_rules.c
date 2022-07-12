@@ -57,9 +57,22 @@ static int count_of(const int *chord, int degree) {
     return count;
 }
 
-static bool check_v7_notes(const HarmonySeventhResolution *r) {
+static bool is_complete_v7(const HarmonySeventhResolution *r) {
     return count_of(r->dominant, SOL) == 1 && count_of(r->dominant, TI) == 1 && count_of(r->dominant, RE) == 1 &&
            count_of(r->dominant, FA) == 1;
+}
+
+/* The fifth omitted and the root doubled: sol, sol, ti, fa. */
+static bool is_incomplete_v7(const HarmonySeventhResolution *r) {
+    return count_of(r->dominant, SOL) == 2 && count_of(r->dominant, TI) == 1 && count_of(r->dominant, FA) == 1;
+}
+
+static bool check_v7_notes(const HarmonySeventhResolution *r) {
+    return is_complete_v7(r) || is_incomplete_v7(r);
+}
+
+static bool is_inner_voice(int voice) {
+    return voice == VOICE_PART_ALTO || voice == VOICE_PART_TENOR;
 }
 
 static bool check_active_notes_resolve(const HarmonySeventhResolution *r) {
@@ -72,7 +85,7 @@ static bool check_active_notes_resolve(const HarmonySeventhResolution *r) {
                 }
                 break;
             case TI:
-                if (to != DO) {
+                if (to != DO && !(to == SOL && is_inner_voice(v) && is_complete_v7(r))) {
                     return false;
                 }
                 break;
@@ -126,6 +139,29 @@ bool harmony_seventh_rule_holds(HarmonySeventhRule which, const HarmonySeventhRe
         default:
             return false;
     }
+}
+
+bool harmony_seventh_classify(const HarmonySeventhResolution *resolution, SeventhResolution *out) {
+    if (out == NULL || !harmony_seventh_valid(resolution)) {
+        return false;
+    }
+    for (int i = 0; i < HARMONY_SEVENTH_RULE_COUNT; i++) {
+        if (table_is_hard(i) && !harmony_seventh_rule_holds((HarmonySeventhRule)i, resolution)) {
+            return false;
+        }
+    }
+    if (is_incomplete_v7(resolution)) {
+        *out = SEVENTH_RESOLUTION_INCOMPLETE;
+        return true;
+    }
+    for (int v = 0; v < VOICE_PART_COUNT; v++) {
+        if (resolution->dominant[v] == TI && resolution->tonic[v] == SOL) {
+            *out = SEVENTH_RESOLUTION_LEADING_TONE_DROP;
+            return true;
+        }
+    }
+    *out = SEVENTH_RESOLUTION_DEFAULT;
+    return true;
 }
 
 static bool holds_adapter(int which, const void *subject) {
