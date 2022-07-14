@@ -28,13 +28,15 @@ static void test_mode_and_chord_validity(void) {
     HarmonyChord high = CH(8);
     HarmonyChord inverted_too_far = CHI(5, 4);
     HarmonyChord negative_inversion = CHI(5, -1);
-    HarmonyChord leading_on_fifth = {5, 0, true};
+    HarmonyChord third_inversion_triad = CHI(5, 3);
+    HarmonyChord leading_on_fifth = {5, 0, true, false};
     assert(harmony_chord_valid(&ok));
-    assert(harmony_chord_valid(&(HarmonyChord){7, 3, true}));
+    assert(harmony_chord_valid(&(HarmonyChord){7, 2, true, false}));
     assert(!harmony_chord_valid(&low));
     assert(!harmony_chord_valid(&high));
     assert(!harmony_chord_valid(&inverted_too_far));
     assert(!harmony_chord_valid(&negative_inversion));
+    assert(!harmony_chord_valid(&third_inversion_triad));
     assert(!harmony_chord_valid(&leading_on_fifth));
     assert(!harmony_chord_valid(NULL));
 }
@@ -64,11 +66,42 @@ static void test_minor_leading_tone_is_dominant(void) {
 
 static void test_inversion_does_not_change_function(void) {
     for (int degree = 1; degree <= 7; degree++) {
-        for (int inversion = 1; inversion <= 3; inversion++) {
+        for (int inversion = 1; inversion <= 2; inversion++) {
             assert(function_of(HARMONY_MODE_MAJOR, CHI(degree, inversion)) ==
                    function_of(HARMONY_MODE_MAJOR, CH(degree)));
         }
     }
+}
+
+static void test_seventh_flag(void) {
+    /* A third inversion is a seventh chord's alone. */
+    assert(harmony_chord_valid(&(HarmonyChord){5, 3, false, true}));
+    HarmonyChord triad = CHI(5, 3);
+    assert(!harmony_chord_valid(&triad));
+    HarmonyChord v7 = CH7(5);
+    assert(harmony_chord_valid(&v7));
+    assert(!v7.leading_tone);
+
+    /* A seventh does not change a chord's function, in either mode, in any
+       inversion. */
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        for (int degree = 1; degree <= 7; degree++) {
+            for (int inversion = 0; inversion <= 3; inversion++) {
+                assert(function_of((HarmonyMode)mode, CH7I(degree, inversion)) ==
+                       function_of((HarmonyMode)mode, CH(degree)));
+            }
+        }
+    }
+    assert(function_of(HARMONY_MODE_MAJOR, CH7(5)) == D);
+    assert(function_of(HARMONY_MODE_MAJOR, CH7(2)) == PD);
+    assert(function_of(HARMONY_MODE_MAJOR, CH7(1)) == T);
+    assert(function_of(HARMONY_MODE_MINOR, (HarmonyChord){7, 0, true, true}) == D);
+    assert(function_of(HARMONY_MODE_MINOR, CH7(7)) == PD);
+
+    HarmonyPredominantStrength strength = HARMONY_PREDOMINANT_WEAK;
+    HarmonyChord ii7 = CH7(2);
+    assert(harmony_predominant_strength(HARMONY_MODE_MAJOR, &ii7, &strength));
+    assert(strength == HARMONY_PREDOMINANT_STRONG);
 }
 
 static HarmonyPredominantStrength strength_of(HarmonyMode mode, HarmonyChord chord) {
@@ -115,6 +148,7 @@ int main(void) {
     test_minor_functions();
     test_minor_leading_tone_is_dominant();
     test_inversion_does_not_change_function();
+    test_seventh_flag();
     test_predominant_strength();
     test_strength_only_for_predominants();
     test_invalid_inputs();

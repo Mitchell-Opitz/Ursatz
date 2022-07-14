@@ -7,14 +7,16 @@ Cadences, and Phrase Endings). Path `frameworks/standard-harmony/`, tests in
 separate from `src/theory/`, the same shape as `frameworks/standard-tonality/`.
 
 It depends on no other framework. Chords are plain data (`HarmonyChord`,
-`harmony_chord.h`: the scale degree of the root, 1 to 7, and the inversion), not
+`harmony_chord.h`: the scale degree of the root, 1 to 7, the inversion, and
+whether it is a seventh chord), not
 Roman numerals (`standard-tonality`) and not pitches. Voicing the inner voices is
 `standard-voicing`'s. File names carry a `harmony_` prefix so they never collide
 with the other frameworks' headers on the include path.
 
 The entities these rules use live in `src/semantics/`: `HarmonicFunction`
-(tonic, predominant, dominant) and `CadenceType` (perfect authentic, imperfect
-authentic, half, subverted). They name things and carry no rule; which chords have
+(tonic, predominant, dominant), `CadenceType` (perfect authentic, imperfect
+authentic, half, subverted), and `SeventhResolution` (default, incomplete,
+leading-tone drop). They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
 
 ## Scope
@@ -41,7 +43,20 @@ never called here.
   in root position and do is in the soprano, otherwise an IAC; x to V is a HC; a
   cadential progression the caller says is subverted is subverted.
   `harmony_cadence_strength` orders them: half, imperfect authentic, perfect
-  authentic.
+  authentic. A V7 to I in root position with do in the soprano is still a PAC.
+  Soft: a half cadence does not end on V7 (the "19th-century HC", uncommon; it is
+  still a half cadence).
+- **V7 resolution rules** (`harmony_seventh_rules.h`), V7 to I in four voices, as
+  scale degrees for each voice from the soprano to the bass, in root position (the
+  chapter Strengthening Endings with V7). Hard: the bass is sol to do; V7 is
+  complete (sol, ti, re, fa) or incomplete (the fifth omitted, the root doubled);
+  fa goes to mi, re to do or mi, ti to do, or (alto or tenor of a complete V7 only)
+  ti drops to sol; the tonic chord has only do, mi, and sol, with do and mi; in minor
+  the V7 has the leading tone. Soft: avoid re to mi (two roots, two thirds).
+  `harmony_seventh_classify` gives the `SeventhResolution`: default (three roots, one
+  third, no fifth), incomplete V7 (a complete tonic chord; only the root can be
+  doubled, since doubling ti or fa makes parallel octaves), or leading-tone drop (a
+  complete tonic chord).
 - **Cadence hearing rules** (`harmony_hearing_rules.h`), whether a potential
   cadence point is a true cadence, from what the caller says is heard. Hard: the
   harmonies are V to I or x to V; a sense of beginning follows; what follows does
@@ -60,6 +75,12 @@ never called here.
   `standard-voicing`'s.
 - **Hearing.** The caller says whether a beginning follows and whether material
   repeats; this module does not detect either.
+- **V7 inversions.** Only root position V7 to root position I is modeled; V6/5,
+  V4/3, and V4/2 are not.
+- **Voicing the V7.** `standard-voicing`'s `SEVENTH_CHORD` doubling rule says a
+  seventh chord has four notes with none doubled, which the incomplete V7 (the fifth
+  omitted, the root doubled) breaks. The two frameworks are independent, so this
+  one allows the incomplete V7; relaxing that voicing rule is a separate change.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.

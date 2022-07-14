@@ -19,7 +19,9 @@ static CadenceType classify(HarmonyCadence c) {
 static void test_rules_reference_framework(void) {
     CHECK_RULES_REFERENCE_FRAMEWORK(harmony_cadence_rule, harmony_cadence_constraint, HARMONY_CADENCE_RULE_COUNT);
     assert(constraint_type(harmony_cadence_constraint(HARMONY_CADENCE_CADENTIAL_PROGRESSION)) == CONSTRAINT_TYPE_HARD);
+    assert(constraint_type(harmony_cadence_constraint(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH)) == CONSTRAINT_TYPE_SOFT);
     assert(strcmp(harmony_cadence_rule_name(HARMONY_CADENCE_CADENTIAL_PROGRESSION), "cadential-progression") == 0);
+    assert(strcmp(harmony_cadence_rule_name(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH), "half-without-seventh") == 0);
     assert(harmony_cadence_rule_name(HARMONY_CADENCE_RULE_COUNT) == NULL);
 }
 
@@ -36,8 +38,6 @@ static void test_imperfect_authentic(void) {
     assert(classify(cadence(CHI(5, 1), CH(1), 1)) == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
     assert(classify(cadence(CH(5), CHI(1, 1), 1)) == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
     assert(classify(cadence(CHI(5, 1), CHI(1, 1), 1)) == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
-    /* A seventh chord on V in root position keeps the perfect cadence. */
-    assert(classify(cadence(CH(5), CH(1), 1)) == CADENCE_TYPE_PERFECT_AUTHENTIC);
 }
 
 static void test_half(void) {
@@ -79,6 +79,41 @@ static void test_cadential_progression_rule(void) {
     HarmonyCadence plagal = cadence(CH(4), CH(1), 1);
     assert(harmony_cadence_check(&plagal, &hard, &soft));
     assert(hard == (1u << HARMONY_CADENCE_CADENTIAL_PROGRESSION) && soft == 0);
+}
+
+static void test_v7_authentic(void) {
+    /* V7 to I with do in the soprano and both in root position is still a PAC. */
+    HarmonyCadence pac = cadence(CH7(5), CH(1), 1);
+    assert(classify(pac) == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    /* Inverted V7 or another soprano note is still an IAC. */
+    assert(classify(cadence(CH7I(5, 1), CH(1), 1)) == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
+    assert(classify(cadence(CH7I(5, 3), CH(1), 3)) == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
+    assert(classify(cadence(CH7(5), CH(1), 5)) == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
+
+    /* The seventh breaks no rule of an authentic cadence. */
+    unsigned hard = 99, soft = 99;
+    assert(harmony_cadence_check(&pac, &hard, &soft));
+    assert(hard == 0 && soft == 0);
+    assert(harmony_cadence_rule_holds(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH, &pac));
+}
+
+static void test_v7_half_cadence(void) {
+    /* x to V7 is still a half cadence, the "19th-century HC", but it is uncommon. */
+    HarmonyCadence hc_v7 = cadence(CH(4), CH7(5), 7);
+    assert(classify(hc_v7) == CADENCE_TYPE_HALF);
+    assert(harmony_cadence_rule_holds(HARMONY_CADENCE_CADENTIAL_PROGRESSION, &hc_v7));
+    assert(!harmony_cadence_rule_holds(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH, &hc_v7));
+
+    unsigned hard = 99, soft = 99;
+    assert(harmony_cadence_check(&hc_v7, &hard, &soft));
+    assert(hard == 0 && soft == (1u << HARMONY_CADENCE_HALF_WITHOUT_SEVENTH));
+
+    /* A half cadence on a plain V breaks nothing. */
+    HarmonyCadence hc = cadence(CH(4), CH(5), 7);
+    assert(harmony_cadence_rule_holds(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH, &hc));
+    /* A seventh chord on another degree is not a half cadence. */
+    HarmonyCadence ii7_to_v = cadence(CH7(2), CH(5), 2);
+    assert(harmony_cadence_rule_holds(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH, &ii7_to_v));
 }
 
 static void test_subverted(void) {
@@ -133,6 +168,8 @@ int main(void) {
     test_perfect_authentic();
     test_imperfect_authentic();
     test_half();
+    test_v7_authentic();
+    test_v7_half_cadence();
     test_not_a_cadence();
     test_cadential_progression_rule();
     test_subverted();

@@ -14,5 +14,6 @@ const char *harmony_mode_name(HarmonyMode mode) {
 
 bool harmony_chord_valid(const HarmonyChord *chord) {
     return chord != NULL && chord->degree >= 1 && chord->degree <= 7 && chord->inversion >= 0 &&
-           chord->inversion <= 3 && (!chord->leading_tone || chord->degree == 7);
+           chord->inversion <= 3 && (chord->inversion < 3 || chord->seventh) &&
+           (!chord->leading_tone || chord->degree == 7);
 }
