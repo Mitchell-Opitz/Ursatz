@@ -20,6 +20,11 @@
  *
  *   TONIC_THEN_DOMINANT   a tonic chord comes before a dominant chord: the least
  *                         a phrase needs to move toward a goal
+ *   IV_BEFORE_II          when IV and ii (or ii6) both come before the dominant, in
+ *                         one run of predominants, ii comes after IV, never before.
+ *                         ii shares a special relationship with V (its root is a
+ *                         fifth away from V's root, as V's is from I's), which makes
+ *                         it the stronger predominant
  *
  * Soft:
  *
@@ -47,6 +52,7 @@ typedef enum {
     HARMONY_PHRASE_TONIC_THEN_DOMINANT = 0,
     HARMONY_PHRASE_NO_BACKWARD_MOTION,
     HARMONY_PHRASE_WEAK_PREDOMINANT_LEADS_ON,
+    HARMONY_PHRASE_IV_BEFORE_II,
     HARMONY_PHRASE_RULE_COUNT
 } HarmonyPhraseRule;
 
@@ -56,8 +62,8 @@ bool harmony_phrase_valid(const HarmonyPhrase *phrase);
 const Rule *harmony_phrase_rule(HarmonyPhraseRule which);
 const Constraint *harmony_phrase_constraint(HarmonyPhraseRule which);
 
-/* "tonic-then-dominant" "no-backward-motion" "weak-predominant-leads-on"; NULL
-   for an invalid rule. */
+/* "tonic-then-dominant" "no-backward-motion" "weak-predominant-leads-on"
+   "iv-before-ii"; NULL for an invalid rule. */
 const char *harmony_phrase_rule_name(HarmonyPhraseRule which);
 
 /* True when the phrase satisfies the rule. False when it does not, and for an
