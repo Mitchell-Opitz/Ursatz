@@ -4,10 +4,10 @@
 #include "harmony_rule_table.h"
 
 static const char *const NAMES[HARMONY_PHRASE_RULE_COUNT] = {"tonic-then-dominant", "no-backward-motion",
-                                                             "weak-predominant-leads-on"};
+                                                             "weak-predominant-leads-on", "iv-before-ii"};
 
 static bool table_is_hard(int which) {
-    return which == HARMONY_PHRASE_TONIC_THEN_DOMINANT;
+    return which == HARMONY_PHRASE_TONIC_THEN_DOMINANT || which == HARMONY_PHRASE_IV_BEFORE_II;
 }
 
 static HarmonyRulePair g_pairs[HARMONY_PHRASE_RULE_COUNT];
@@ -80,6 +80,21 @@ static bool check_weak_predominant_leads_on(const HarmonyPhrase *phrase) {
     return true;
 }
 
+/* A ii (degree 2) never comes before a IV (degree 4) in one run of predominants. */
+static bool check_iv_before_ii(const HarmonyPhrase *phrase) {
+    bool seen_ii = false;
+    for (size_t i = 0; i < phrase->chord_count; i++) {
+        if (function_at(phrase, i) != HARMONIC_FUNCTION_PREDOMINANT) {
+            seen_ii = false;
+        } else if (phrase->chords[i].degree == 2) {
+            seen_ii = true;
+        } else if (phrase->chords[i].degree == 4 && seen_ii) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool harmony_phrase_rule_holds(HarmonyPhraseRule which, const HarmonyPhrase *phrase) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_phrase_valid(phrase)) {
         return false;
@@ -91,6 +106,8 @@ bool harmony_phrase_rule_holds(HarmonyPhraseRule which, const HarmonyPhrase *phr
             return check_no_backward_motion(phrase);
         case HARMONY_PHRASE_WEAK_PREDOMINANT_LEADS_ON:
             return check_weak_predominant_leads_on(phrase);
+        case HARMONY_PHRASE_IV_BEFORE_II:
+            return check_iv_before_ii(phrase);
         default:
             return false;
     }

@@ -9,6 +9,9 @@ add_library(standard_harmony
     harmony_hearing_rules.c
     harmony_writing_rules.c
     harmony_seventh_rules.c
+    harmony_strong_predominants.c
+    harmony_steps.c
+    harmony_predominant_rules.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
