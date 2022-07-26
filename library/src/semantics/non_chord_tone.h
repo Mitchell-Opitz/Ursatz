@@ -26,6 +26,18 @@
  *                    note that follows it, on a weaker beat before that note,
  *                    and is dissonant against the harmony or the other part
  *                    until the harmony moves to it
+ *   APPOGGIATURA     a note approached by leap and left by step in the opposite
+ *                    direction, typically on a stronger part of the beat than
+ *                    the notes around it; more often left downward than upward
+ *   ESCAPE_TONE      a note approached by step and left by leap in the opposite
+ *                    direction, typically on a weaker part of the beat than the
+ *                    notes around it; more often left downward than upward
+ *   RETARDATION      like the suspension, a note held over (approached by a
+ *                    static note) into a position on a stronger beat, but it
+ *                    resolves by stepping up
+ *   PEDAL            a static note, often in the bass, held under a series of
+ *                    chord changes that do not include it; it is approached and
+ *                    left by static notes, and labeled by its scale degree
  *
  * Whether each figure is allowed, on which beats, and against what, is a
  * convention of a Framework (frameworks/standard-counterpoint), not of this
@@ -39,21 +51,30 @@ typedef enum {
     NON_CHORD_TONE_CHANGING_TONE,
     NON_CHORD_TONE_SUSPENSION,
     NON_CHORD_TONE_ANTICIPATION,
+    NON_CHORD_TONE_APPOGGIATURA,
+    NON_CHORD_TONE_ESCAPE_TONE,
+    NON_CHORD_TONE_RETARDATION,
+    NON_CHORD_TONE_PEDAL,
     NON_CHORD_TONE_COUNT
 } NonChordTone;
 
-/* True for the six figures above; false for any other value. */
+/* True for the ten figures above; false for any other value. */
 bool non_chord_tone_valid(NonChordTone type);
 
-/* "passing" "neighbor" "double-neighbor" "changing-tone" "suspension" "anticipation";
-   NULL for an invalid type. */
+/* "passing" "neighbor" "double-neighbor" "changing-tone" "suspension" "anticipation"
+   "appoggiatura" "escape-tone" "retardation" "pedal"; NULL for an invalid type. */
 const char *non_chord_tone_name(NonChordTone type);
 
 /* True for the figures that include a leap: the double neighbor (between its
-   two neighbors) and the changing tone (out of its dissonance). False for the
-   stepwise ones (the suspension resolves by step, and the anticipation
-   repeats a pitch), and for an invalid
-   type. */
+   two neighbors), the changing tone (out of its dissonance), the appoggiatura
+   (into it), and the escape tone (out of it). False for the stepwise ones (the
+   suspension and retardation resolve by step, and the anticipation repeats a
+   pitch), for the pedal, and for an invalid type. */
 bool non_chord_tone_involves_leap(NonChordTone type);
+
+/* True for the figures that involve static notes (notes that do not move): the
+   suspension, retardation, pedal, and anticipation. False for the others and for
+   an invalid type. */
+bool non_chord_tone_involves_static_note(NonChordTone type);
 
 #endif
