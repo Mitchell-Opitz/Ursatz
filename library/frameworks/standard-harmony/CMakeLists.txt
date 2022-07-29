@@ -13,6 +13,7 @@ add_library(standard_harmony
     harmony_steps.c
     harmony_predominant_rules.c
     harmony_embellishing.c
+    harmony_embellishing_rules.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
