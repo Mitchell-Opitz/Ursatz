@@ -16,10 +16,15 @@ typedef struct {
 static const Entry MAJOR[7] = {TONIC, STRONG, WEAK, STRONG, DOMINANT, WEAK, DOMINANT};
 static const Entry MINOR[7] = {TONIC, STRONG, WEAK, STRONG, DOMINANT, WEAK, WEAK};
 static const Entry MINOR_LEADING_TONE = DOMINANT;
+/* The cadential 6/4 embellishes V, so it has dominant function. */
+static const Entry CADENTIAL = DOMINANT;
 
 static const Entry *lookup(HarmonyMode mode, const HarmonyChord *chord) {
     if (!harmony_mode_valid(mode) || !harmony_chord_valid(chord)) {
         return NULL;
+    }
+    if (chord->cadential) {
+        return &CADENTIAL;
     }
     if (mode == HARMONY_MODE_MAJOR) {
         return &MAJOR[chord->degree - 1];
