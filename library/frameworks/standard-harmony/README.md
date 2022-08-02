@@ -15,8 +15,9 @@ with the other frameworks' headers on the include path.
 
 The entities these rules use live in `src/semantics/`: `HarmonicFunction`
 (tonic, predominant, dominant), `CadenceType` (perfect authentic, imperfect
-authentic, half, subverted), and `SeventhResolution` (default, incomplete,
-leading-tone drop). They name things and carry no rule; which chords have
+authentic, half, subverted), `SeventhResolution` (default, incomplete,
+leading-tone drop), and `NonChordTone` (the embellishing tones), with
+`BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
 
 ## Scope
@@ -74,6 +75,19 @@ never called here.
   voices move the same way into V; the soprano reaches V from above or by common
   tone; IV doubles its bass; over ii the soprano is re or fa, not la; root position
   ii is for a major key. A half cadence leaves off I (`has_tonic` false).
+- **Embellishing tones** (`harmony_embellishing.h`, `harmony_embellishing_rules.h`),
+  notes that embellish a chord tone, as a gesture of two or three notes (diatonic
+  steps, whether each is a chord tone, and its beat strength). The kind comes from
+  how the middle note is approached and left (a step is one diatonic step, a leap
+  more): passing tone (step, step, same direction), neighbor tone (step, step,
+  opposite), appoggiatura (leap, step, opposite), escape tone (step, leap,
+  opposite), suspension (static, step down), retardation (static, step up), pedal
+  (static, static), and anticipation (a two-note gesture: the same pitch twice).
+  Hard: the gesture is one of those eight; a suspension or retardation is on a
+  stronger beat than the notes around it. Soft: the first and last notes are chord
+  tones; the embellishing note is not; an appoggiatura is on a stronger beat and an
+  escape tone on a weaker one; an anticipation is on a weaker beat than the note
+  after it; an appoggiatura or escape tone is left downward.
 - **Cadence hearing rules** (`harmony_hearing_rules.h`), whether a potential
   cadence point is a true cadence, from what the caller says is heard. Hard: the
   harmonies are V to I or x to V; a sense of beginning follows; what follows does
@@ -103,6 +117,12 @@ never called here.
   seventh chord has four notes with none doubled, which the incomplete V7 (the fifth
   omitted, the root doubled) breaks. The two frameworks are independent, so this
   one allows the incomplete V7; relaxing that voicing rule is a separate change.
+- **Other embellishing tones.** The double neighbor and the changing tone are
+  `NonChordTone` values but not in this chapter, so a gesture of them is not
+  classified (`standard-counterpoint` has them). A pedal tone is classified as a
+  three-note static gesture, not as a long note under changing chords. Chromatic
+  steps are not modeled, and neither is the interval with the bass: whether a note
+  is consonant with the bass is a chord-tone flag the caller sets.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.
