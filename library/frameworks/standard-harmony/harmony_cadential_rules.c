@@ -2,6 +2,7 @@
 
 #include "harmony_rule_table.h"
 #include "harmony_steps.h"
+#include "harmony_strong_predominants.h"
 
 #define SOL 5
 #define MI 3
@@ -10,11 +11,12 @@
 #define FA 4
 
 static const char *const NAMES[HARMONY_CADENTIAL_RULE_COUNT] = {
-    "bass-stays", "six-four-notes", "resolves-six-five-four-three", "doubling-voice", "minor-leading-tone"};
+    "bass-stays",         "six-four-notes",    "resolves-six-five-four-three",
+    "doubling-voice",     "minor-leading-tone", "no-parallels",
+    "smooth-approach",    "no-leap-to-fourth", "approach-strong-predominant"};
 
 static bool table_is_hard(int which) {
-    (void)which;
-    return true;
+    return which <= HARMONY_CADENTIAL_NO_PARALLELS;
 }
 
 static HarmonyRulePair g_pairs[HARMONY_CADENTIAL_RULE_COUNT];
@@ -35,7 +37,8 @@ const char *harmony_cadential_rule_name(HarmonyCadentialRule which) {
 }
 
 bool harmony_cadential_valid(const HarmonyCadentialSixFour *cadential) {
-    return cadential != NULL && harmony_mode_valid(cadential->mode);
+    return cadential != NULL && harmony_mode_valid(cadential->mode) &&
+           (!cadential->has_approach || harmony_chord_valid(&cadential->approach));
 }
 
 static int degree(const int *steps, int voice) {
@@ -84,6 +87,48 @@ static bool check_doubling_voice(const HarmonyCadentialSixFour *c) {
     return true;
 }
 
+static bool parallel_between(const int *from, const int *to) {
+    for (int a = 0; a < VOICE_PART_COUNT; a++) {
+        for (int b = a + 1; b < VOICE_PART_COUNT; b++) {
+            if (harmony_steps_parallel(from[a], to[a], from[b], to[b])) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static bool check_no_parallels(const HarmonyCadentialSixFour *c) {
+    return !(c->has_approach && parallel_between(c->approach_steps, c->six_four_steps)) &&
+           !parallel_between(c->six_four_steps, c->dominant_steps);
+}
+
+static int distance(int a, int b) {
+    return a < b ? b - a : a - b;
+}
+
+/* No upper voice (the bass is sol, and leaps to it in the ordinary way) leaps into
+   the 6/4 to a note of degree `only`, or to any note when `only` is 0. */
+static bool no_leap_into(const HarmonyCadentialSixFour *c, int only) {
+    if (!c->has_approach) {
+        return true;
+    }
+    for (int v = 0; v < VOICE_PART_BASS; v++) {
+        bool member = only == 0 || degree(c->six_four_steps, v) == only;
+        if (member && distance(c->approach_steps[v], c->six_four_steps[v]) > 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool check_approach_strong_predominant(const HarmonyCadentialSixFour *c) {
+    HarmonyStrongPredominant kind;
+    return !c->has_approach ||
+           (harmony_strong_predominant_of(c->mode, &c->approach, &kind) &&
+            (kind == HARMONY_STRONG_PREDOMINANT_IV || kind == HARMONY_STRONG_PREDOMINANT_II6));
+}
+
 bool harmony_cadential_rule_holds(HarmonyCadentialRule which, const HarmonyCadentialSixFour *cadential) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_cadential_valid(cadential)) {
         return false;
@@ -99,6 +144,14 @@ bool harmony_cadential_rule_holds(HarmonyCadentialRule which, const HarmonyCaden
             return check_doubling_voice(cadential);
         case HARMONY_CADENTIAL_MINOR_LEADING_TONE:
             return cadential->mode == HARMONY_MODE_MAJOR || cadential->dominant_has_leading_tone;
+        case HARMONY_CADENTIAL_NO_PARALLELS:
+            return check_no_parallels(cadential);
+        case HARMONY_CADENTIAL_SMOOTH_APPROACH:
+            return no_leap_into(cadential, 0);
+        case HARMONY_CADENTIAL_NO_LEAP_TO_FOURTH:
+            return no_leap_into(cadential, DO);
+        case HARMONY_CADENTIAL_APPROACH_STRONG_PREDOMINANT:
+            return check_approach_strong_predominant(cadential);
         default:
             return false;
     }
@@ -122,7 +175,7 @@ bool harmony_cadential_resolves_to_seventh(const HarmonyCadentialSixFour *cadent
         return false;
     }
     for (int i = 0; i < HARMONY_CADENTIAL_RULE_COUNT; i++) {
-        if (!harmony_cadential_rule_holds((HarmonyCadentialRule)i, cadential)) {
+        if (table_is_hard(i) && !harmony_cadential_rule_holds((HarmonyCadentialRule)i, cadential)) {
             return false;
         }
     }
