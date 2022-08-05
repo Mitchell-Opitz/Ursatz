@@ -52,6 +52,8 @@ static void test_other_chords_are_not_strong_predominants(void) {
         assert(!kind_of(m, CH7(2), &kind));
         assert(!kind_of(m, CH7(4), &kind));
         assert(!kind_of(m, CH7I(2, 1), &kind));
+        /* The cadential 6/4 is a dominant. */
+        assert(!kind_of(m, CADENTIAL_CHORD, &kind));
     }
     assert(!kind_of(HARMONY_MODE_MINOR, CH(7), &kind));
     assert(kind == IV);

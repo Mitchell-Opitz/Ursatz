@@ -131,6 +131,35 @@ static void test_strength_only_for_predominants(void) {
     assert(strength == HARMONY_PREDOMINANT_STRONG);
 }
 
+static void test_cadential_flag(void) {
+    /* The cadential 6/4 is the tonic triad in second inversion, marked cadential. */
+    HarmonyChord cadential = CADENTIAL_CHORD;
+    assert(harmony_chord_valid(&cadential));
+    HarmonyChord not_on_tonic = {5, 2, false, false, true};
+    HarmonyChord not_second_inversion = {1, 0, false, false, true};
+    HarmonyChord first_inversion = {1, 1, false, false, true};
+    HarmonyChord seventh = {1, 2, false, true, true};
+    HarmonyChord leading_tone = {7, 2, true, false, true};
+    assert(!harmony_chord_valid(&not_on_tonic));
+    assert(!harmony_chord_valid(&not_second_inversion));
+    assert(!harmony_chord_valid(&first_inversion));
+    assert(!harmony_chord_valid(&seventh));
+    assert(!harmony_chord_valid(&leading_tone));
+
+    /* It embellishes V, so it is a dominant, in either mode. The same chord without
+       the flag is a tonic. */
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        assert(function_of((HarmonyMode)mode, CADENTIAL_CHORD) == D);
+        assert(function_of((HarmonyMode)mode, CHI(1, 2)) == T);
+    }
+
+    /* It is not a predominant, so it has no strength. */
+    HarmonyPredominantStrength strength = HARMONY_PREDOMINANT_WEAK;
+    assert(!harmony_predominant_strength(HARMONY_MODE_MAJOR, &cadential, &strength));
+    assert(!harmony_predominant_strength(HARMONY_MODE_MINOR, &cadential, &strength));
+    assert(strength == HARMONY_PREDOMINANT_WEAK);
+}
+
 static void test_invalid_inputs(void) {
     HarmonicFunction function = T;
     HarmonyChord chord = CH(1);
@@ -149,6 +178,7 @@ int main(void) {
     test_minor_leading_tone_is_dominant();
     test_inversion_does_not_change_function();
     test_seventh_flag();
+    test_cadential_flag();
     test_predominant_strength();
     test_strength_only_for_predominants();
     test_invalid_inputs();

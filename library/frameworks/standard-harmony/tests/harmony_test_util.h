@@ -17,6 +17,8 @@
 /* A seventh chord on a scale degree (root position), and with an inversion. */
 #define CH7(degree) ((HarmonyChord){(degree), 0, false, true})
 #define CH7I(degree, inversion) ((HarmonyChord){(degree), (inversion), false, true})
+/* The cadential 6/4: the tonic triad in second inversion, marked cadential. */
+#define CADENTIAL_CHORD ((HarmonyChord){1, 2, false, false, true})
 /* The minor-key chord on the raised, leading-tone seventh degree (vii). */
 #define LEADING_TONE_CHORD ((HarmonyChord){7, 0, true, false})
 
