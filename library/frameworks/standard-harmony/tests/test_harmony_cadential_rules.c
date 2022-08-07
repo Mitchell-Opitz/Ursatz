@@ -196,6 +196,105 @@ static void test_check_reports_each_failure(void) {
     assert(soft == 0);
 }
 
+/* A cadential 6/4 approached by a chord: IV (fa la do) or ii6 (re fa la over fa),
+   each voice moving into it by step or common tone, the bass up from fa to sol. */
+static const int APPROACH_IV[4] = {3, 0, -2, -11};
+static const int APPROACH_II6[4] = {1, 1, -2, -11};
+
+static HarmonyCadentialSixFour approached(HarmonyChord chord, const int steps[4]) {
+    HarmonyCadentialSixFour c = cadential(HARMONY_MODE_MAJOR, SIX_FOUR_MI_TOP, V_TRIAD);
+    c.has_approach = true;
+    c.approach = chord;
+    memcpy(c.approach_steps, steps, sizeof(c.approach_steps));
+    return c;
+}
+
+static void test_approach_by_strong_predominants(void) {
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyCadentialSixFour iv = approached(CH(4), APPROACH_IV);
+        HarmonyCadentialSixFour ii6 = approached(CHI(2, 1), APPROACH_II6);
+        iv.mode = ii6.mode = (HarmonyMode)mode;
+        assert(harmony_cadential_valid(&iv));
+        assert(all_hold(&iv));
+        assert(all_hold(&ii6));
+        unsigned hard = 99, soft = 99;
+        assert(harmony_cadential_check(&iv, &hard, &soft));
+        assert(hard == 0 && soft == 0);
+    }
+}
+
+static void test_no_approach_skips_the_approach_rules(void) {
+    HarmonyCadentialSixFour c = cadential(HARMONY_MODE_MAJOR, SIX_FOUR_MI_TOP, V_TRIAD);
+    /* Whatever is in the approach fields is ignored. */
+    c.approach = CH(9);
+    c.approach_steps[0] = 99;
+    c.approach_steps[3] = -99;
+    assert(harmony_cadential_valid(&c));
+    assert(holds(CAD(NO_PARALLELS), &c));
+    assert(holds(CAD(SMOOTH_APPROACH), &c));
+    assert(holds(CAD(NO_LEAP_TO_FOURTH), &c));
+    assert(holds(CAD(APPROACH_STRONG_PREDOMINANT), &c));
+}
+
+static void test_parallels_into_the_six_four(void) {
+    /* The tenor and bass, an octave apart, both move up a step: parallel octaves. */
+    const int octaves[4] = {3, 0, -4, -11};
+    HarmonyCadentialSixFour c = approached(CH(4), octaves);
+    assert(!holds(CAD(NO_PARALLELS), &c));
+    /* It is a hard rule, and only that one is broken. */
+    unsigned hard = 0, soft = 99;
+    assert(harmony_cadential_check(&c, &hard, &soft));
+    assert(hard == (1u << CAD(NO_PARALLELS)) && soft == 0);
+}
+
+static void test_parallels_out_of_the_six_four(void) {
+    /* Two voices an octave apart, both falling a step to the resolution. */
+    const int six_four[4] = {7, 0, -3, -10};
+    const int resolved[4] = {6, -1, -3, -10};
+    HarmonyCadentialSixFour c = cadential(HARMONY_MODE_MAJOR, six_four, resolved);
+    assert(!holds(CAD(NO_PARALLELS), &c));
+}
+
+static void test_smooth_approach(void) {
+    /* The soprano leaps up a third to the sixth above the bass: rarer. */
+    const int to_sixth[4] = {0, 0, -2, -11};
+    HarmonyCadentialSixFour sixth = approached(CH(4), to_sixth);
+    assert(!holds(CAD(SMOOTH_APPROACH), &sixth));
+    assert(holds(CAD(NO_LEAP_TO_FOURTH), &sixth));
+    /* The alto leaps down a fourth to the fourth above the bass: much rarer, and
+       the one to avoid in particular. */
+    const int to_fourth[4] = {3, 3, -2, -11};
+    HarmonyCadentialSixFour fourth = approached(CH(4), to_fourth);
+    assert(!holds(CAD(SMOOTH_APPROACH), &fourth));
+    assert(!holds(CAD(NO_LEAP_TO_FOURTH), &fourth));
+    /* The bass leaps into sol in the ordinary way: not counted. */
+    const int bass_leaps[4] = {3, 0, -2, -14};
+    HarmonyCadentialSixFour bass = approached(CH(4), bass_leaps);
+    assert(holds(CAD(SMOOTH_APPROACH), &bass));
+    /* Common tones and steps are smooth, up or down. */
+    HarmonyCadentialSixFour smooth = approached(CH(4), APPROACH_IV);
+    assert(holds(CAD(SMOOTH_APPROACH), &smooth));
+
+    /* Both are advice: soft rules. */
+    unsigned hard = 99, soft = 0;
+    assert(harmony_cadential_check(&fourth, &hard, &soft));
+    assert(hard == 0);
+    assert(soft == ((1u << CAD(SMOOTH_APPROACH)) | (1u << CAD(NO_LEAP_TO_FOURTH))));
+}
+
+static void test_approach_is_usually_a_strong_predominant(void) {
+    HarmonyChord not_strong[] = {CH(6), CH(1), CH(2), CH(5), CH7(4), CHI(4, 1)};
+    for (size_t i = 0; i < COUNT_OF(not_strong); i++) {
+        HarmonyCadentialSixFour c = approached(not_strong[i], APPROACH_IV);
+        assert(!holds(CAD(APPROACH_STRONG_PREDOMINANT), &c));
+    }
+    /* A weak predominant breaks nothing hard. */
+    HarmonyCadentialSixFour vi = approached(CH(6), APPROACH_IV);
+    unsigned hard = 99, soft = 0;
+    assert(harmony_cadential_check(&vi, &hard, &soft));
+    assert(hard == 0 && soft == (1u << CAD(APPROACH_STRONG_PREDOMINANT)));
+}
+
 static void test_invalid_cadential(void) {
     HarmonyCadentialSixFour bad_mode = cadential(HARMONY_MODE_COUNT, SIX_FOUR_MI_TOP, V_TRIAD);
     HarmonyCadentialSixFour bad_approach = cadential(HARMONY_MODE_MAJOR, SIX_FOUR_MI_TOP, V_TRIAD);
@@ -227,6 +326,12 @@ int main(void) {
     test_doubling_voice();
     test_minor_needs_the_leading_tone();
     test_check_reports_each_failure();
+    test_approach_by_strong_predominants();
+    test_no_approach_skips_the_approach_rules();
+    test_parallels_into_the_six_four();
+    test_parallels_out_of_the_six_four();
+    test_smooth_approach();
+    test_approach_is_usually_a_strong_predominant();
     test_invalid_cadential();
     printf("test_harmony_cadential_rules: ok\n");
     return 0;
