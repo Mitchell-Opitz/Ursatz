@@ -19,6 +19,14 @@
  * VII (the root is the lowered seventh degree, a whole step below the tonic).
  * `leading_tone` marks the first; it is meaningful only for degree 7 and is
  * ignored in a major key, where degree 7 is always the leading tone.
+ *
+ * The tonic triad in second inversion (the notes of I over its fifth) is not always a
+ * tonic chord. After a predominant and before V, it is the cadential 6/4: not a
+ * standalone triad but an embellishment of V, the combination of two embellishing
+ * tones, a sixth and a fourth above the bass sol. It is labeled by how it functions
+ * (as V, with its figures 6-4 and their resolution to 5-3), not by its spelling, and
+ * has dominant function, not tonic. `cadential` marks it; the caller says which
+ * second inversion tonic chords are one.
  */
 
 typedef enum {
@@ -32,6 +40,7 @@ typedef struct {
     int inversion;
     bool leading_tone;
     bool seventh;
+    bool cadential;
 } HarmonyChord;
 
 /* True for the two modes above; false for any other value. */
@@ -41,8 +50,9 @@ bool harmony_mode_valid(HarmonyMode mode);
 const char *harmony_mode_name(HarmonyMode mode);
 
 /* True for a degree from 1 to 7, an inversion from 0 to 3 (3 only for a seventh
-   chord), and a leading_tone that is false unless the degree is 7. False for
-   NULL. */
+   chord), a leading_tone that is false unless the degree is 7, and a cadential
+   that is false unless the chord is the triad on degree 1 in second inversion.
+   False for NULL. */
 bool harmony_chord_valid(const HarmonyChord *chord);
 
 #endif

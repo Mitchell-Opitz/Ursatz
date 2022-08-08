@@ -19,6 +19,9 @@
  *   DOMINANT      V and vii diminished (the same in minor, where vii is the one
  *                 on the raised, leading-tone seventh degree)
  *
+ * The tonic triad in second inversion marked cadential (harmony_chord.h), the
+ * cadential 6/4, is a dominant: it embellishes V.
+ *
  * In degrees (major): 1 tonic; 2 and 4 strong predominant; 3 and 6 weak
  * predominant; 5 and 7 dominant. In minor, the same, except 7 is a weak
  * predominant (VII) unless the chord's leading_tone is set, when it is a

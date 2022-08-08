@@ -131,6 +131,31 @@ static void test_iv_before_ii(void) {
     assert(hard == (1u << PHRASE(IV_BEFORE_II)) && soft == 0);
 }
 
+static void test_cadential_six_four_is_a_dominant(void) {
+    /* A strong predominant, the cadential 6/4, V, then I: the phrase model, with the
+       6/4 as the first dominant. */
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        const HarmonyChord with_cadential[] = {CH(1), CH(4), CADENTIAL_CHORD, CH(5), CH(1)};
+        const HarmonyChord only_cadential[] = {CH(1), CADENTIAL_CHORD};
+        for (int i = 0; i < HARMONY_PHRASE_RULE_COUNT; i++) {
+            assert(holds((HarmonyPhraseRule)i, m, with_cadential, COUNT_OF(with_cadential)));
+        }
+        assert(holds(PHRASE(TONIC_THEN_DOMINANT), m, only_cadential, COUNT_OF(only_cadential)));
+
+        /* Not marked, the same chord is a tonic: no dominant, and a tonic after a
+           predominant is backward motion. */
+        const HarmonyChord unmarked[] = {CH(1), CH(4), CHI(1, 2), CH(5), CH(1)};
+        assert(!holds(PHRASE(NO_BACKWARD_MOTION), m, unmarked, COUNT_OF(unmarked)));
+        const HarmonyChord unmarked_only[] = {CH(1), CHI(1, 2)};
+        assert(!holds(PHRASE(TONIC_THEN_DOMINANT), m, unmarked_only, COUNT_OF(unmarked_only)));
+    }
+
+    /* A predominant does not follow the 6/4: that is backward motion from dominant. */
+    const HarmonyChord backward[] = {CH(1), CADENTIAL_CHORD, CH(4), CH(5)};
+    assert(!holds(PHRASE(NO_BACKWARD_MOTION), HARMONY_MODE_MAJOR, backward, COUNT_OF(backward)));
+}
+
 static void test_check_reports_hard_and_soft(void) {
     const HarmonyChord good[] = {CH(1), CH(4), CH(5), CH(1)};
     const HarmonyChord soft_only[] = {CH(1), CH(6), CH(5)};
@@ -179,6 +204,7 @@ int main(void) {
     test_no_backward_motion();
     test_weak_predominant_leads_on();
     test_iv_before_ii();
+    test_cadential_six_four_is_a_dominant();
     test_check_reports_hard_and_soft();
     test_invalid_phrase();
     printf("test_harmony_phrase_rules: ok\n");
