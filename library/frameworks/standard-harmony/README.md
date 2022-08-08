@@ -137,8 +137,8 @@ never called here.
   steps are not modeled, and neither is the interval with the bass: whether a note
   is consonant with the bass is a chord-tone flag the caller sets.
 - **Labeling a 6/4.** The caller says which second inversion tonic chords are
-  cadential; this module does not decide it. A tonic second inversion chord can also
-  be a passing, pedal or neighbor, or arpeggiated 6/4, which later chapters cover.
+  cadential; this module does not decide it. A second inversion chord has other
+  uses (the chapter says there are four categories), which later chapters introduce.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.
