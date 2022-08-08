@@ -8,7 +8,7 @@ separate from `src/theory/`, the same shape as `frameworks/standard-tonality/`.
 
 It depends on no other framework. Chords are plain data (`HarmonyChord`,
 `harmony_chord.h`: the scale degree of the root, 1 to 7, the inversion, and
-whether it is a seventh chord), not
+whether it is a seventh chord, and whether it is a cadential 6/4), not
 Roman numerals (`standard-tonality`) and not pitches. Voicing the inner voices is
 `standard-voicing`'s. File names carry a `harmony_` prefix so they never collide
 with the other frameworks' headers on the include path.
@@ -88,6 +88,19 @@ never called here.
   tones; the embellishing note is not; an appoggiatura is on a stronger beat and an
   escape tone on a weaker one; an anticipation is on a weaker beat than the note
   after it; an appoggiatura or escape tone is left downward.
+- **Cadential 6/4 rules** (`harmony_cadential_rules.h`), the cadential 6/4, an
+  embellishment of V from two embellishing tones, a sixth and a fourth above the bass
+  sol, and its resolution to V or V7 (Strengthening Endings with Cadential 6/4). The
+  chord is marked `cadential` on `HarmonyChord` (the tonic triad in second
+  inversion): it has dominant function, not tonic, so it counts as a dominant in the
+  phrase model. The rules take the chords as diatonic steps in four voices. Hard: the
+  bass is sol and stays; the chord is sol, sol, mi, do (the bass doubled); the voice
+  on mi falls a step to re and the voice on do falls a step to ti (6-5, 4-3), in the
+  same voice; the voice doubling the bass stays on sol (V) or falls a step to fa
+  (V7, 8-7); in minor, V has the leading tone; and no parallel fifths or octaves
+  into the 6/4 or out of it. Soft: no voice but the bass leaps into the 6/4; no voice
+  leaps to the fourth above the bass, the dissonance; the chord that approaches it is
+  IV or ii6. The approach chord is optional.
 - **Cadence hearing rules** (`harmony_hearing_rules.h`), whether a potential
   cadence point is a true cadence, from what the caller says is heard. Hard: the
   harmonies are V to I or x to V; a sense of beginning follows; what follows does
@@ -123,6 +136,9 @@ never called here.
   three-note static gesture, not as a long note under changing chords. Chromatic
   steps are not modeled, and neither is the interval with the bass: whether a note
   is consonant with the bass is a chord-tone flag the caller sets.
+- **Labeling a 6/4.** The caller says which second inversion tonic chords are
+  cadential; this module does not decide it. A tonic second inversion chord can also
+  be a passing, pedal or neighbor, or arpeggiated 6/4, which later chapters cover.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.
