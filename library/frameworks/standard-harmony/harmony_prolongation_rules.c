@@ -3,11 +3,11 @@
 #include "harmony_rule_table.h"
 #include "harmony_steps.h"
 
-static const char *const NAMES[HARMONY_PROLONGATION_RULE_COUNT] = {"progression", "bass-line", "chord-notes"};
+static const char *const NAMES[HARMONY_PROLONGATION_RULE_COUNT] = {"progression",        "bass-line",    "chord-notes",
+                                                                  "resolves",           "minor-leading-tone", "no-parallels"};
 
 static bool table_is_hard(int which) {
-    (void)which;
-    return true;
+    return which <= HARMONY_PROLONGATION_NO_PARALLELS;
 }
 
 static HarmonyRulePair g_pairs[HARMONY_PROLONGATION_RULE_COUNT];
@@ -90,6 +90,58 @@ static bool check_chord_notes(const HarmonyTonicProlongation *p) {
     return triad_notes(p, 0, 1, 3, 5) && middle && triad_notes(p, 2, 1, 3, 5);
 }
 
+/* The upper voice a tenth above the bass in all three chords: parallel tenths. */
+static bool tenths_with_bass(const HarmonyTonicProlongation *p, int voice) {
+    for (int i = 0; i < 3; i++) {
+        if (p->steps[i][voice] - p->steps[i][VOICE_PART_BASS] != 9) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool check_resolves(const HarmonyTonicProlongation *p) {
+    HarmonyProlongationLine line = HARMONY_PROLONGATION_LINE_COUNT;
+    bool classified = harmony_prolongation_of(p->chords, &line);
+    for (int v = 0; v < VOICE_PART_COUNT; v++) {
+        int move = p->steps[2][v] - p->steps[1][v];
+        switch (degree(p, 1, v)) {
+            case 7: /* ti up a step to do */
+                if (move != 1) {
+                    return false;
+                }
+                break;
+            case 4: /* the chordal seventh down a step to mi, or up to sol in parallel tenths */
+                if (move != -1 && !(move == 1 && classified && line == HARMONY_PROLONGATION_DO_RE_MI &&
+                                    v != VOICE_PART_BASS && tenths_with_bass(p, v))) {
+                    return false;
+                }
+                break;
+            case 2: /* re a step, to do or mi */
+                if (move != 1 && move != -1) {
+                    return false;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return true;
+}
+
+static bool check_no_parallels(const HarmonyTonicProlongation *p) {
+    for (int i = 0; i < 2; i++) {
+        for (int a = 0; a < VOICE_PART_COUNT; a++) {
+            for (int b = a + 1; b < VOICE_PART_COUNT; b++) {
+                if (harmony_steps_parallel(p->steps[i][a], p->steps[i + 1][a], p->steps[i][b], p->steps[i + 1][b])) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const HarmonyTonicProlongation *prolongation) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_prolongation_valid(prolongation)) {
         return false;
@@ -102,6 +154,12 @@ bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const Harmon
             return check_bass_line(prolongation);
         case HARMONY_PROLONGATION_CHORD_NOTES:
             return check_chord_notes(prolongation);
+        case HARMONY_PROLONGATION_RESOLVES:
+            return check_resolves(prolongation);
+        case HARMONY_PROLONGATION_MINOR_LEADING_TONE:
+            return prolongation->mode == HARMONY_MODE_MAJOR || prolongation->dominant_has_leading_tone;
+        case HARMONY_PROLONGATION_NO_PARALLELS:
+            return check_no_parallels(prolongation);
         default:
             return false;
     }
