@@ -45,6 +45,17 @@
  *   NO_PARALLELS        no two voices make parallel fifths or octaves (a unison
  *                       counts as an octave) from one chord to the next
  *
+ * Soft ("less common", "not very common", "typically"):
+ *
+ *   AVOID_V6_TRIAD      the middle chord is an inverted V7 (V6/5 for do ti do), not
+ *                       the V6 triad, which is possible but less common
+ *   AVOID_V43_TO_ROOT   I V4/3 I (do re do) is possible but not very common; I V4/3
+ *                       I6 (do re mi) is the usual V4/3 progression. This always
+ *                       holds for the other progressions
+ *   MIDDLE_WEAKER_BEAT  the V is on a weaker beat than both tonic chords, which is
+ *                       part of why the tonic's influence is felt more strongly
+ *                       (hyperbeats are not modeled)
+ *
  * Every check returns false for an invalid prolongation.
  */
 
@@ -63,6 +74,9 @@ typedef enum {
     HARMONY_PROLONGATION_RESOLVES,
     HARMONY_PROLONGATION_MINOR_LEADING_TONE,
     HARMONY_PROLONGATION_NO_PARALLELS,
+    HARMONY_PROLONGATION_AVOID_V6_TRIAD,
+    HARMONY_PROLONGATION_AVOID_V43_TO_ROOT,
+    HARMONY_PROLONGATION_MIDDLE_WEAKER_BEAT,
     HARMONY_PROLONGATION_RULE_COUNT
 } HarmonyProlongationRule;
 
@@ -73,7 +87,8 @@ const Rule *harmony_prolongation_rule(HarmonyProlongationRule which);
 const Constraint *harmony_prolongation_constraint(HarmonyProlongationRule which);
 
 /* "progression" "bass-line" "chord-notes" "resolves" "minor-leading-tone"
-   "no-parallels"; NULL for an invalid rule. */
+   "no-parallels" "avoid-v6-triad" "avoid-v43-to-root" "middle-weaker-beat"; NULL for an
+   invalid rule. */
 const char *harmony_prolongation_rule_name(HarmonyProlongationRule which);
 
 /* True when the prolongation satisfies the rule. False when it does not, and for an

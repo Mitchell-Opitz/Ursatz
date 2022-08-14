@@ -4,7 +4,8 @@
 #include "harmony_steps.h"
 
 static const char *const NAMES[HARMONY_PROLONGATION_RULE_COUNT] = {"progression",        "bass-line",    "chord-notes",
-                                                                  "resolves",           "minor-leading-tone", "no-parallels"};
+                                                                  "resolves",           "minor-leading-tone", "no-parallels",
+                                                                  "avoid-v6-triad",     "avoid-v43-to-root",  "middle-weaker-beat"};
 
 static bool table_is_hard(int which) {
     return which <= HARMONY_PROLONGATION_NO_PARALLELS;
@@ -160,6 +161,14 @@ bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const Harmon
             return prolongation->mode == HARMONY_MODE_MAJOR || prolongation->dominant_has_leading_tone;
         case HARMONY_PROLONGATION_NO_PARALLELS:
             return check_no_parallels(prolongation);
+        case HARMONY_PROLONGATION_AVOID_V6_TRIAD:
+            return prolongation->chords[1].seventh;
+        case HARMONY_PROLONGATION_AVOID_V43_TO_ROOT:
+            return !(harmony_prolongation_of(prolongation->chords, &line) &&
+                     line == HARMONY_PROLONGATION_DO_RE_DO);
+        case HARMONY_PROLONGATION_MIDDLE_WEAKER_BEAT:
+            return beat_strength_is_stronger(prolongation->beat[0], prolongation->beat[1]) &&
+                   beat_strength_is_stronger(prolongation->beat[2], prolongation->beat[1]);
         default:
             return false;
     }
