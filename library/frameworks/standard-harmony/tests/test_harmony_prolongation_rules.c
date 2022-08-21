@@ -252,6 +252,70 @@ static void test_no_parallel_fifths_or_octaves(void) {
     assert((hard & (1u << PRO(NO_PARALLELS))) != 0);
 }
 
+static unsigned soft_of(const HarmonyTonicProlongation *p) {
+    unsigned hard = 99, soft = 99;
+    assert(harmony_prolongation_check(p, &hard, &soft));
+    assert(hard == 0);
+    return soft;
+}
+
+static void test_the_usual_progressions_break_no_preference(void) {
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        HarmonyTonicProlongation v65 = example_v65(m);
+        HarmonyTonicProlongation v43 = example_v43_to_first(m);
+        HarmonyTonicProlongation v42 = example_v42(m);
+        HarmonyTonicProlongation tenths = example_tenths(m);
+        assert(soft_of(&v65) == 0);
+        assert(soft_of(&v43) == 0);
+        assert(soft_of(&v42) == 0);
+        assert(soft_of(&tenths) == 0);
+    }
+}
+
+static void test_v6_triad_is_less_common(void) {
+    HarmonyTonicProlongation triad = example_v6_triad(HARMONY_MODE_MAJOR);
+    assert(!holds(PRO(AVOID_V6_TRIAD), &triad));
+    assert(soft_of(&triad) == (1u << PRO(AVOID_V6_TRIAD)));
+    HarmonyTonicProlongation v65 = example_v65(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(AVOID_V6_TRIAD), &v65));
+}
+
+static void test_v43_to_root_tonic_is_less_common(void) {
+    HarmonyTonicProlongation to_root = example_v43_to_root(HARMONY_MODE_MAJOR);
+    assert(!holds(PRO(AVOID_V43_TO_ROOT), &to_root));
+    assert(soft_of(&to_root) == (1u << PRO(AVOID_V43_TO_ROOT)));
+    /* do re mi is the usual one, and the other progressions are not affected. */
+    HarmonyTonicProlongation to_first = example_v43_to_first(HARMONY_MODE_MAJOR);
+    HarmonyTonicProlongation v65 = example_v65(HARMONY_MODE_MAJOR);
+    HarmonyTonicProlongation v42 = example_v42(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(AVOID_V43_TO_ROOT), &to_first));
+    assert(holds(PRO(AVOID_V43_TO_ROOT), &v65));
+    assert(holds(PRO(AVOID_V43_TO_ROOT), &v42));
+}
+
+static void test_the_v_is_on_a_weaker_beat(void) {
+    const BeatStrength S = BEAT_STRENGTH_STRONG, M = BEAT_STRENGTH_MEDIUM, W = BEAT_STRENGTH_WEAK;
+    const BeatStrength good[][3] = {{S, W, S}, {S, M, S}, {S, W, M}, {M, W, M}};
+    for (size_t i = 0; i < COUNT_OF(good); i++) {
+        HarmonyTonicProlongation p = example_v65(HARMONY_MODE_MAJOR);
+        for (int c = 0; c < 3; c++) {
+            p.beat[c] = good[i][c];
+        }
+        assert(holds(PRO(MIDDLE_WEAKER_BEAT), &p));
+    }
+    const BeatStrength bad[][3] = {{S, S, S}, {W, S, W}, {S, W, W}, {W, W, S}, {M, M, S}, {S, M, M}};
+    for (size_t i = 0; i < COUNT_OF(bad); i++) {
+        HarmonyTonicProlongation p = example_v65(HARMONY_MODE_MAJOR);
+        for (int c = 0; c < 3; c++) {
+            p.beat[c] = bad[i][c];
+        }
+        assert(!holds(PRO(MIDDLE_WEAKER_BEAT), &p));
+        /* It is advice: nothing hard breaks. */
+        assert(soft_of(&p) == (1u << PRO(MIDDLE_WEAKER_BEAT)));
+    }
+}
+
 static void test_invalid_prolongation(void) {
     HarmonyTonicProlongation bad_mode = example_v65(HARMONY_MODE_COUNT);
     HarmonyTonicProlongation bad_chord = example_v65(HARMONY_MODE_MAJOR);
@@ -289,6 +353,10 @@ int main(void) {
     test_the_exception_for_parallel_tenths();
     test_minor_needs_the_leading_tone();
     test_no_parallel_fifths_or_octaves();
+    test_the_usual_progressions_break_no_preference();
+    test_v6_triad_is_less_common();
+    test_v43_to_root_tonic_is_less_common();
+    test_the_v_is_on_a_weaker_beat();
     test_invalid_prolongation();
     printf("test_harmony_prolongation_rules: ok\n");
     return 0;
