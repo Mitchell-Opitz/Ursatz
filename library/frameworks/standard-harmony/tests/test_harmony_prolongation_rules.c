@@ -131,6 +131,127 @@ static void test_structure_violations_are_hard(void) {
            ((1u << PRO(PROGRESSION)) | (1u << PRO(BASS_LINE)) | (1u << PRO(CHORD_NOTES))));
 }
 
+static void test_the_worked_progressions_resolve(void) {
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        HarmonyTonicProlongation examples[] = {
+            example_v65(m),         example_v6_triad(m), example_v43_to_first(m),
+            example_v43_to_root(m), example_v42(m),      example_tenths(m),
+        };
+        for (size_t i = 0; i < COUNT_OF(examples); i++) {
+            assert(holds(PRO(RESOLVES), &examples[i]));
+            assert(holds(PRO(MINOR_LEADING_TONE), &examples[i]));
+            assert(holds(PRO(NO_PARALLELS), &examples[i]));
+            unsigned hard = 99, soft = 99;
+            assert(harmony_prolongation_check(&examples[i], &hard, &soft));
+            assert(hard == 0);
+        }
+    }
+}
+
+static void test_ti_resolves_up_to_do(void) {
+    /* The bass ti of V6/5 has to go up to do. */
+    HarmonyTonicProlongation stays = example_v65(HARMONY_MODE_MAJOR);
+    stays.steps[2][VOICE_PART_BASS] = -8;
+    HarmonyTonicProlongation down = example_v65(HARMONY_MODE_MAJOR);
+    down.steps[2][VOICE_PART_BASS] = -9;
+    HarmonyTonicProlongation leaps = example_v65(HARMONY_MODE_MAJOR);
+    leaps.steps[2][VOICE_PART_BASS] = -14; /* do an octave lower */
+    assert(!holds(PRO(RESOLVES), &stays));
+    assert(!holds(PRO(RESOLVES), &down));
+    assert(!holds(PRO(RESOLVES), &leaps));
+}
+
+static void test_the_seventh_resolves_down_to_mi(void) {
+    /* fa goes down a step to mi, in an upper voice or in the bass (V4/2). */
+    HarmonyTonicProlongation up = example_v65(HARMONY_MODE_MAJOR);
+    up.steps[2][VOICE_PART_SOPRANO] = 4; /* fa up to sol, with no tenths */
+    HarmonyTonicProlongation stays = example_v65(HARMONY_MODE_MAJOR);
+    stays.steps[2][VOICE_PART_SOPRANO] = 3;
+    HarmonyTonicProlongation bass_up = example_v42(HARMONY_MODE_MAJOR);
+    bass_up.steps[2][VOICE_PART_BASS] = -3; /* the bass fa up to sol */
+    HarmonyTonicProlongation bass_stays = example_v42(HARMONY_MODE_MAJOR);
+    bass_stays.steps[2][VOICE_PART_BASS] = -4;
+    assert(!holds(PRO(RESOLVES), &up));
+    assert(!holds(PRO(RESOLVES), &stays));
+    assert(!holds(PRO(RESOLVES), &bass_up));
+    assert(!holds(PRO(RESOLVES), &bass_stays));
+}
+
+static void test_re_goes_a_step(void) {
+    HarmonyTonicProlongation leaps = example_v65(HARMONY_MODE_MAJOR);
+    leaps.steps[2][VOICE_PART_ALTO] = -3; /* re leaps down to sol */
+    HarmonyTonicProlongation stays = example_v65(HARMONY_MODE_MAJOR);
+    stays.steps[2][VOICE_PART_ALTO] = 1;
+    assert(!holds(PRO(RESOLVES), &leaps));
+    assert(!holds(PRO(RESOLVES), &stays));
+    /* The bass re of V4/3 goes to either do or mi. */
+    HarmonyTonicProlongation to_mi = example_v43_to_first(HARMONY_MODE_MAJOR);
+    HarmonyTonicProlongation to_do = example_v43_to_root(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(RESOLVES), &to_mi));
+    assert(holds(PRO(RESOLVES), &to_do));
+    HarmonyTonicProlongation bass_leaps = example_v43_to_first(HARMONY_MODE_MAJOR);
+    bass_leaps.steps[2][VOICE_PART_BASS] = -3;
+    assert(!holds(PRO(RESOLVES), &bass_leaps));
+}
+
+static void test_the_exception_for_parallel_tenths(void) {
+    /* In do re mi, an upper voice on mi fa sol, parallel tenths with the bass, takes
+       fa up to sol. */
+    HarmonyTonicProlongation tenths = example_tenths(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(RESOLVES), &tenths));
+    /* Any upper voice will do. */
+    HarmonyTonicProlongation alto = example_v43_to_first(HARMONY_MODE_MAJOR);
+    alto.steps[2][VOICE_PART_ALTO] = 4; /* mi fa sol in the alto: 2, 3, 4 */
+    assert(holds(PRO(RESOLVES), &alto));
+
+    /* Not a tenth the whole way: the first chord's note is not mi. */
+    HarmonyTonicProlongation not_tenths = example_tenths(HARMONY_MODE_MAJOR);
+    not_tenths.steps[0][VOICE_PART_SOPRANO] = 0;
+    assert(!holds(PRO(RESOLVES), &not_tenths));
+    /* Not a tenth: a seventeenth (two octaves and a third) the whole way. */
+    HarmonyTonicProlongation compound = example_tenths(HARMONY_MODE_MAJOR);
+    for (int i = 0; i < 3; i++) {
+        compound.steps[i][VOICE_PART_SOPRANO] += 7;
+    }
+    assert(!holds(PRO(RESOLVES), &compound));
+    /* Only in do re mi: do re do has no tenths with a bass that returns to do. */
+    HarmonyTonicProlongation do_re_do = example_v43_to_root(HARMONY_MODE_MAJOR);
+    do_re_do.steps[2][VOICE_PART_ALTO] = 4;
+    assert(!holds(PRO(RESOLVES), &do_re_do));
+    /* Only for V4/3: the V6/5 has no such exception. */
+    HarmonyTonicProlongation v65 = example_v65(HARMONY_MODE_MAJOR);
+    v65.steps[0][VOICE_PART_SOPRANO] = 2;
+    v65.steps[2][VOICE_PART_SOPRANO] = 4;
+    assert(!holds(PRO(RESOLVES), &v65));
+}
+
+static void test_minor_needs_the_leading_tone(void) {
+    HarmonyTonicProlongation minor = example_v65(HARMONY_MODE_MINOR);
+    minor.dominant_has_leading_tone = false;
+    assert(!holds(PRO(MINOR_LEADING_TONE), &minor));
+    minor.dominant_has_leading_tone = true;
+    assert(holds(PRO(MINOR_LEADING_TONE), &minor));
+    HarmonyTonicProlongation major = example_v65(HARMONY_MODE_MAJOR);
+    major.dominant_has_leading_tone = false;
+    assert(holds(PRO(MINOR_LEADING_TONE), &major));
+}
+
+static void test_no_parallel_fifths_or_octaves(void) {
+    /* The tenor and bass, an octave apart, both fall a step into the V. */
+    HarmonyTonicProlongation octaves = example_v65(HARMONY_MODE_MAJOR);
+    octaves.steps[1][VOICE_PART_TENOR] = -1;
+    assert(!holds(PRO(NO_PARALLELS), &octaves));
+    /* The alto and tenor, a fifth apart, both fall a step out of the V. */
+    HarmonyTonicProlongation fifths = example_v65(HARMONY_MODE_MAJOR);
+    fifths.steps[2][VOICE_PART_TENOR] = -4;
+    assert(!holds(PRO(NO_PARALLELS), &fifths));
+
+    unsigned hard = 0, soft = 99;
+    assert(harmony_prolongation_check(&octaves, &hard, &soft));
+    assert((hard & (1u << PRO(NO_PARALLELS))) != 0);
+}
+
 static void test_invalid_prolongation(void) {
     HarmonyTonicProlongation bad_mode = example_v65(HARMONY_MODE_COUNT);
     HarmonyTonicProlongation bad_chord = example_v65(HARMONY_MODE_MAJOR);
@@ -161,6 +282,13 @@ int main(void) {
     test_bass_line();
     test_chord_notes();
     test_structure_violations_are_hard();
+    test_the_worked_progressions_resolve();
+    test_ti_resolves_up_to_do();
+    test_the_seventh_resolves_down_to_mi();
+    test_re_goes_a_step();
+    test_the_exception_for_parallel_tenths();
+    test_minor_needs_the_leading_tone();
+    test_no_parallel_fifths_or_octaves();
     test_invalid_prolongation();
     printf("test_harmony_prolongation_rules: ok\n");
     return 0;
