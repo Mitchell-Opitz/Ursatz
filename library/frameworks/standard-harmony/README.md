@@ -101,6 +101,22 @@ never called here.
   into the 6/4 or out of it. Soft: no voice but the bass leaps into the 6/4; no voice
   leaps to the fourth above the bass, the dissonance; the chord that approaches it is
   IV or ii6. The approach chord is optional.
+- **Tonic prolongation** (`harmony_prolongation.h`, `harmony_prolongation_rules.h`,
+  `harmony_prolongation_chain.h`), the way phrase beginnings extend the tonic's
+  influence by alternating tonic with V6 or an inverted V7: three chords, I, then V6
+  (the triad), V6/5, V4/3, or V4/2, then I or I6. The four progressions, by bass line:
+  do ti do (I V6/5 I, or V6), do re mi (I V4/3 I6), do re do (I V4/3 I, less common),
+  and do fa mi (I V4/2 I6); `harmony_prolongation_of` classifies three chords into one.
+  The rules take the three chords in four voices as diatonic steps, with a beat strength
+  for each. Hard: the progression is one of the four; the bass is its line (ti, re, or
+  fa for the inversion); each chord has only its own notes (an inverted V7 has sol, ti,
+  re, fa once each); ti goes up to do, fa down to mi, re a step to do or mi; the one
+  exception is that in do re mi an upper voice on mi fa sol, in parallel tenths with the
+  bass, takes fa up to sol; in minor, V has the leading tone; and no parallel fifths or
+  octaves. Soft: avoid the V6 triad (prefer an inverted V7), avoid I V4/3 I (prefer
+  I6), and the V on a weaker beat than both tonic chords. A chain is progressions that
+  share their joining chord (the same chord, notes, and beat strength), which is always
+  a root position tonic, in one mode; every link breaks no hard rule.
 - **Cadence hearing rules** (`harmony_hearing_rules.h`), whether a potential
   cadence point is a true cadence, from what the caller says is heard. Hard: the
   harmonies are V to I or x to V; a sense of beginning follows; what follows does
@@ -139,6 +155,10 @@ never called here.
 - **Labeling a 6/4.** The caller says which second inversion tonic chords are
   cadential; this module does not decide it. A second inversion chord has other
   uses (the chapter says there are four categories), which later chapters introduce.
+- **Other prolongations.** Prolonging tonic by holding or repeating a chord has no
+  rule beyond the chord repeating. Progressions that begin on I6, and a phrase
+  that begins by prolonging tonic as a rule of the phrase model, are not modeled.
+  Hyperbeats are not modeled, only the beat strength of each chord.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.
