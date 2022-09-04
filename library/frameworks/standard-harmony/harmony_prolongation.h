@@ -29,9 +29,25 @@
  *   DO_FA_MI   do fa mi   I  V4/2  I6   fa in the bass is the chordal seventh and
  *                         resolves down to mi
  *
+ * The leading-tone chord (Prolongation at Phrase Beginnings using the Leading-Tone
+ * Chord) can take the place of the V, since it can substitute for V7 and its inversions
+ * according to which note is in the bass:
+ *
+ *   ti in the bass   V6 or V6/5          vii7 (root position)
+ *   re in the bass   V4/3                vii6 (the triad, in first inversion) or vii6/5
+ *   fa in the bass   V4/2                vii4/3
+ *
+ * so each line is harmonized either way. The leading-tone triad is only ever in first
+ * inversion: any other inversion makes a dissonance with the bass that composers tend to
+ * avoid. In minor the leading-tone chord is built on ti, not te (its `leading_tone`
+ * flag); in major its seventh is usually lowered, to make it fully diminished
+ * (`half_diminished` marks the rarer half-diminished chord). vii4/2, built on le, is a
+ * very rare harmony that is not an inversion of V7 and is not modeled.
+ *
  * A progression is three HarmonyChords (harmony_chord.h): V6 is a triad on degree 5
  * in first inversion, and V6/5, V4/3, and V4/2 are seventh chords on degree 5 in
- * first, second, and third inversion. I is the triad on degree 1 in root position and
+ * first, second, and third inversion; the leading-tone chords are on degree 7 the
+ * same way. I is the triad on degree 1 in root position and
  * I6 in first inversion.
  */
 
@@ -53,8 +69,8 @@ const char *harmony_prolongation_line_name(HarmonyProlongationLine line);
    (*out untouched) for an invalid line or NULL. */
 bool harmony_prolongation_line_bass(HarmonyProlongationLine line, int out[3]);
 
-/* The line a progression of three chords makes: I, then V6, V6/5, V4/3, or V4/2, then
-   I or I6, as listed above. False (*out untouched) for any other three chords, for a
+/* The line a progression of three chords makes: I, then V6, V6/5, V4/3, V4/2 or the
+   leading-tone chord that replaces it, then I or I6, as listed above. False (*out untouched) for any other three chords, for a
    chord marked cadential or an invalid one, and for NULL. */
 bool harmony_prolongation_of(const HarmonyChord chords[3], HarmonyProlongationLine *out);
 
