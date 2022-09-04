@@ -27,6 +27,13 @@
  * (as V, with its figures 6-4 and their resolution to 5-3), not by its spelling, and
  * has dominant function, not tonic. `cadential` marks it; the caller says which
  * second inversion tonic chords are one.
+ *
+ * The leading-tone chord is the chord on degree 7 (vii; in minor the one on the raised
+ * seventh degree, `leading_tone`). As a triad it is diminished; as a seventh chord it is
+ * usually fully diminished (vii with a circle and a 7: in C major B D F A-flat, with the
+ * chordal seventh lowered, which composers nearly always do). Left unaltered in a major
+ * key it is half diminished (B D F A). `half_diminished` marks that rarer one; it is
+ * meaningful only for the seventh chord on degree 7.
  */
 
 typedef enum {
@@ -41,6 +48,7 @@ typedef struct {
     bool leading_tone;
     bool seventh;
     bool cadential;
+    bool half_diminished;
 } HarmonyChord;
 
 /* True for the two modes above; false for any other value. */
@@ -51,8 +59,9 @@ const char *harmony_mode_name(HarmonyMode mode);
 
 /* True for a degree from 1 to 7, an inversion from 0 to 3 (3 only for a seventh
    chord), a leading_tone that is false unless the degree is 7, and a cadential
-   that is false unless the chord is the triad on degree 1 in second inversion.
-   False for NULL. */
+   that is false unless the chord is the triad on degree 1 in second inversion, and a
+   half_diminished that is false unless the chord is a seventh chord on degree 7. False
+   for NULL. */
 bool harmony_chord_valid(const HarmonyChord *chord);
 
 #endif
