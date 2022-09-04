@@ -5,6 +5,8 @@ add_library(standard_harmony
     harmony_chord.c
     harmony_functions.c
     harmony_phrase_rules.c
+    harmony_phrase_labels.c
+    harmony_phrase_label_rules.c
     harmony_cadence_rules.c
     harmony_hearing_rules.c
     harmony_writing_rules.c

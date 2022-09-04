@@ -94,6 +94,7 @@ add_library(ursatz
     semantics/harmonic_function.c
     semantics/cadence_type.c
     semantics/seventh_resolution.c
+    semantics/phrase_model_label.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c

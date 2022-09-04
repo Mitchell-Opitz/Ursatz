@@ -16,7 +16,7 @@ with the other frameworks' headers on the include path.
 The entities these rules use live in `src/semantics/`: `HarmonicFunction`
 (tonic, predominant, dominant), `CadenceType` (perfect authentic, imperfect
 authentic, half, subverted), `SeventhResolution` (default, incomplete,
-leading-tone drop), and `NonChordTone` (the embellishing tones), with
+leading-tone drop), `PhraseModelLabel` (Tb, PD, D, Te), and `NonChordTone` (the embellishing tones), with
 `BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
 
@@ -117,6 +117,20 @@ never called here.
   I6), and the V on a weaker beat than both tonic chords. A chain is progressions that
   share their joining chord (the same chord, notes, and beat strength), which is always
   a root position tonic, in one mode; every link breaks no hard rule.
+- **Phrase model labeling** (`harmony_phrase_labels.h`,
+  `harmony_phrase_label_rules.h`), Performing Harmonic Analysis Using the Phrase
+  Model: each phrase gets one set of the labels Tb, PD, D, Te
+  (`PhraseModelLabel`), placed from the ending back. The cadence the listener heard
+  (PAC, IAC, or HC) is given with the phrase. D goes on the cadential V or V7 (the last
+  chord of a half cadence, the chord before the tonic in an authentic one); a cadential
+  6/4 before it is part of the dominant unit and gets no label. Te goes on the final
+  tonic of an authentic cadence (none for a half cadence). PD goes on the first strong
+  predominant of the run of predominants just before the dominant, past a cadential
+  6/4; a run of only weak predominants has none. Tb goes on the first chord when it is
+  a tonic. A subverted cadence is not labeled. `harmony_phrase_model_label` returns
+  false when the phrase does not end as its cadence says. Rules: hard, the phrase ends
+  as its cadence says; soft, it starts on a tonic (a delayed or omitted tonic is rare,
+  more often in Romantic music), and a strong predominant comes before the dominant.
 - **Cadence hearing rules** (`harmony_hearing_rules.h`), whether a potential
   cadence point is a true cadence, from what the caller says is heard. Hard: the
   harmonies are V to I or x to V; a sense of beginning follows; what follows does
@@ -159,6 +173,10 @@ never called here.
   rule beyond the chord repeating. Progressions that begin on I6, and a phrase
   that begins by prolonging tonic as a rule of the phrase model, are not modeled.
   Hyperbeats are not modeled, only the beat strength of each chord.
+- **The analysis procedure.** Listening for phrase endings, labeling the cadence, and
+  guessing the harmony from the bass line are the analyst's. The bass line hints (sol
+  at the cadence, fa or re under a strong predominant) are the cadence and strong
+  predominant rules'. Nothing here finds a phrase's chords or its cadence.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.
