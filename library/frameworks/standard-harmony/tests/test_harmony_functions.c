@@ -160,6 +160,38 @@ static void test_cadential_flag(void) {
     assert(strength == HARMONY_PREDOMINANT_WEAK);
 }
 
+static void test_half_diminished_flag(void) {
+    /* Only the seventh chord on degree 7 can be half diminished. */
+    HarmonyChord half = VII_HALF(0);
+    assert(harmony_chord_valid(&half));
+    for (int inversion = 0; inversion <= 3; inversion++) {
+        HarmonyChord h = VII_HALF(inversion);
+        assert(harmony_chord_valid(&h));
+    }
+    HarmonyChord triad = {7, 0, false, false, false, true};
+    HarmonyChord on_dominant = {5, 0, false, true, false, true};
+    HarmonyChord on_tonic = {1, 0, false, true, false, true};
+    HarmonyChord cadential = {1, 2, false, false, true, true};
+    assert(!harmony_chord_valid(&triad));
+    assert(!harmony_chord_valid(&on_dominant));
+    assert(!harmony_chord_valid(&on_tonic));
+    assert(!harmony_chord_valid(&cadential));
+
+    /* The quality does not change the function: a dominant, in either mode. */
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        assert(function_of((HarmonyMode)mode, VII_HALF(1)) == function_of((HarmonyMode)mode, VII7(1)));
+        assert(function_of(HARMONY_MODE_MAJOR, VII_HALF(2)) == D);
+    }
+    assert(function_of(HARMONY_MODE_MAJOR, VII(1)) == D);
+    assert(function_of(HARMONY_MODE_MINOR, VIIM7(0)) == D);
+    /* In minor the chord without the leading tone is VII, a weak predominant. */
+    assert(function_of(HARMONY_MODE_MINOR, VII7(0)) == PD);
+
+    /* The same chord is fully diminished unless marked. */
+    assert(!VII7(0).half_diminished);
+    assert(VII_HALF(0).half_diminished);
+}
+
 static void test_invalid_inputs(void) {
     HarmonicFunction function = T;
     HarmonyChord chord = CH(1);
@@ -179,6 +211,7 @@ int main(void) {
     test_inversion_does_not_change_function();
     test_seventh_flag();
     test_cadential_flag();
+    test_half_diminished_flag();
     test_predominant_strength();
     test_strength_only_for_predominants();
     test_invalid_inputs();
