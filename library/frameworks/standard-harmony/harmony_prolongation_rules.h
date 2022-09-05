@@ -49,7 +49,12 @@
  *                       chord in the middle (its `leading_tone` flag, ti and not te); in
  *                       major this always holds
  *   NO_PARALLELS        no two voices make parallel fifths or octaves (a unison
- *                       counts as an octave) from one chord to the next
+ *                       counts as an octave) from one chord to the next. Scale degrees do
+ *                       not tell le from la, so the sixth degree of a fully diminished
+ *                       leading-tone chord (le) makes a diminished fifth with re, which
+ *                       is not a perfect one: resolving re and le to do and sol is no
+ *                       parallel fifths. In the half-diminished chord re and la are a
+ *                       perfect fifth, and parallel fifths are a hazard there
  *
  * Soft ("less common", "not very common", "typically"):
  *

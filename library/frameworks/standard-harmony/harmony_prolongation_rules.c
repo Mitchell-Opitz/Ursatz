@@ -146,11 +146,35 @@ static bool check_resolves(const HarmonyTonicProlongation *p) {
     return true;
 }
 
+/* A fully diminished leading-tone seventh chord: the seventh is le, the lowered sixth degree. */
+static bool fully_diminished(const HarmonyChord *chord) {
+    return chord->degree == 7 && chord->seventh && !chord->half_diminished;
+}
+
+/* The perfect interval two voices make in a chord. Degrees do not tell le from la, so in
+   a fully diminished leading-tone chord re with the sixth degree above it is a diminished
+   fifth, not a perfect one (in the half-diminished chord it is a perfect fifth, la). */
+static HarmonyPerfectInterval perfect_in_chord(const HarmonyTonicProlongation *p, int chord, int a, int b) {
+    int low = p->steps[chord][a] < p->steps[chord][b] ? p->steps[chord][a] : p->steps[chord][b];
+    int high = p->steps[chord][a] < p->steps[chord][b] ? p->steps[chord][b] : p->steps[chord][a];
+    HarmonyPerfectInterval kind = harmony_step_perfect_interval(low, high);
+    if (kind == HARMONY_PERFECT_FIFTH && fully_diminished(&p->chords[chord]) && harmony_step_degree(low) == 2 &&
+        harmony_step_degree(high) == 6) {
+        return HARMONY_PERFECT_NONE;
+    }
+    return kind;
+}
+
 static bool check_no_parallels(const HarmonyTonicProlongation *p) {
     for (int i = 0; i < 2; i++) {
         for (int a = 0; a < VOICE_PART_COUNT; a++) {
             for (int b = a + 1; b < VOICE_PART_COUNT; b++) {
-                if (harmony_steps_parallel(p->steps[i][a], p->steps[i + 1][a], p->steps[i][b], p->steps[i + 1][b])) {
+                int direction = harmony_step_direction(p->steps[i][a], p->steps[i + 1][a]);
+                if (direction == 0 || direction != harmony_step_direction(p->steps[i][b], p->steps[i + 1][b])) {
+                    continue;
+                }
+                HarmonyPerfectInterval before = perfect_in_chord(p, i, a, b);
+                if (before != HARMONY_PERFECT_NONE && before == perfect_in_chord(p, i + 1, a, b)) {
                     return false;
                 }
             }
