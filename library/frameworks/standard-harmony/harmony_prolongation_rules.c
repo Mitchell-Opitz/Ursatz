@@ -77,9 +77,21 @@ static bool triad_notes(const HarmonyTonicProlongation *p, int chord, int root, 
     return count_degree(p, chord, root) > 0 && count_degree(p, chord, third) > 0;
 }
 
-static bool seventh_chord_notes(const HarmonyTonicProlongation *p, int chord) {
-    return count_degree(p, chord, 5) == 1 && count_degree(p, chord, 7) == 1 && count_degree(p, chord, 2) == 1 &&
-           count_degree(p, chord, 4) == 1;
+/* Four voices on the four notes of a seventh chord, once each. */
+static bool seventh_chord_notes(const HarmonyTonicProlongation *p, int chord, int root, int third, int fifth,
+                                int seventh) {
+    return count_degree(p, chord, root) == 1 && count_degree(p, chord, third) == 1 &&
+           count_degree(p, chord, fifth) == 1 && count_degree(p, chord, seventh) == 1;
+}
+
+/* The middle chord: V (sol ti re, and fa for a V7) or the leading-tone chord (ti re fa, and
+   le or la for the seventh chord, the sixth degree). */
+static bool middle_chord_notes(const HarmonyTonicProlongation *p) {
+    const HarmonyChord *m = &p->chords[1];
+    if (m->degree == 7) {
+        return m->seventh ? seventh_chord_notes(p, 1, 7, 2, 4, 6) : triad_notes(p, 1, 7, 2, 4);
+    }
+    return m->seventh ? seventh_chord_notes(p, 1, 5, 7, 2, 4) : triad_notes(p, 1, 5, 7, 2);
 }
 
 static bool check_chord_notes(const HarmonyTonicProlongation *p) {
@@ -87,8 +99,7 @@ static bool check_chord_notes(const HarmonyTonicProlongation *p) {
     if (!harmony_prolongation_of(p->chords, &line)) {
         return false;
     }
-    bool middle = p->chords[1].seventh ? seventh_chord_notes(p, 1) : triad_notes(p, 1, 5, 7, 2);
-    return triad_notes(p, 0, 1, 3, 5) && middle && triad_notes(p, 2, 1, 3, 5);
+    return triad_notes(p, 0, 1, 3, 5) && middle_chord_notes(p) && triad_notes(p, 2, 1, 3, 5);
 }
 
 /* The upper voice a tenth above the bass in all three chords: parallel tenths. */
@@ -115,6 +126,11 @@ static bool check_resolves(const HarmonyTonicProlongation *p) {
             case 4: /* the chordal seventh down a step to mi, or up to sol in parallel tenths */
                 if (move != -1 && !(move == 1 && classified && line == HARMONY_PROLONGATION_DO_RE_MI &&
                                     v != VOICE_PART_BASS && tenths_with_bass(p, v))) {
+                    return false;
+                }
+                break;
+            case 6: /* le or la, the seventh of the leading-tone chord, down a step to sol */
+                if (p->chords[1].degree == 7 && move != -1) {
                     return false;
                 }
                 break;
@@ -158,7 +174,9 @@ bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const Harmon
         case HARMONY_PROLONGATION_RESOLVES:
             return check_resolves(prolongation);
         case HARMONY_PROLONGATION_MINOR_LEADING_TONE:
-            return prolongation->mode == HARMONY_MODE_MAJOR || prolongation->dominant_has_leading_tone;
+            return prolongation->mode == HARMONY_MODE_MAJOR ||
+                   (prolongation->dominant_has_leading_tone &&
+                    (prolongation->chords[1].degree != 7 || prolongation->chords[1].leading_tone));
         case HARMONY_PROLONGATION_NO_PARALLELS:
             return check_no_parallels(prolongation);
         case HARMONY_PROLONGATION_AVOID_V6_TRIAD:

@@ -27,7 +27,10 @@
  *   CHORD_NOTES   each chord has only the notes of its chord. I and I6: do, mi, sol,
  *                 with do and mi (the root and the third) present. V6: sol, ti, re,
  *                 with sol and ti present. An inverted V7 is four voices on four
- *                 notes: sol, ti, re, and fa, once each
+ *                 notes: sol, ti, re, and fa, once each. The leading-tone chord that
+ *                 replaces the V: vii6, the triad, has ti, re, and fa, with ti and re
+ *                 present; a vii seventh chord is ti, re, fa, and le (la in the half-
+ *                 diminished chord), the sixth degree, once each
  *
  * Hard (voice leading), as in the V7 resolution (harmony_seventh_rules.h):
  *
@@ -35,13 +38,16 @@
  *                       up a step to do (so V6 and V6/5, with ti in the bass, resolve
  *                       to root position I), fa goes down a step to mi (so V4/2, with
  *                       fa in the bass, goes to I6), and re goes a step to do or mi
- *                       (so V4/3, with re in the bass, goes to either). The one
+ *                       (so V4/3, with re in the bass, goes to either). In the
+ *                       leading-tone seventh chord, le (or la), the sixth degree, falls a
+ *                       step to sol, the one new tendency. The one
  *                       exception is the chordal seventh going up: in I V4/3 I6, an
  *                       upper voice may take the line mi fa sol, fa going up to sol,
  *                       because the bass (do re mi) makes parallel tenths with it all
  *                       the way
- *   MINOR_LEADING_TONE  in minor, V has the leading tone (ti); in major this always
- *                       holds
+ *   MINOR_LEADING_TONE  in minor, V has the leading tone (ti), and so does a leading-tone
+ *                       chord in the middle (its `leading_tone` flag, ti and not te); in
+ *                       major this always holds
  *   NO_PARALLELS        no two voices make parallel fifths or octaves (a unison
  *                       counts as an octave) from one chord to the next
  *
