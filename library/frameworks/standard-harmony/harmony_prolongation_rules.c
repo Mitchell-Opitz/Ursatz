@@ -5,7 +5,8 @@
 
 static const char *const NAMES[HARMONY_PROLONGATION_RULE_COUNT] = {"progression",        "bass-line",    "chord-notes",
                                                                   "resolves",           "minor-leading-tone", "no-parallels",
-                                                                  "avoid-v6-triad",     "avoid-v43-to-root",  "middle-weaker-beat"};
+                                                                  "avoid-v6-triad",     "avoid-v43-to-root",  "middle-weaker-beat",
+                                                                  "avoid-half-diminished", "re-above-la"};
 
 static bool table_is_hard(int which) {
     return which <= HARMONY_PROLONGATION_NO_PARALLELS;
@@ -183,6 +184,26 @@ static bool check_no_parallels(const HarmonyTonicProlongation *p) {
     return true;
 }
 
+/* In the half-diminished chord, the voice on re is above the voice on la. */
+static bool check_re_above_la(const HarmonyTonicProlongation *p) {
+    if (!p->chords[1].half_diminished) {
+        return true;
+    }
+    int re = 0, la = 0;
+    bool have_re = false, have_la = false;
+    for (int v = 0; v < VOICE_PART_COUNT; v++) {
+        int d = degree(p, 1, v);
+        if (d == 2) {
+            re = p->steps[1][v];
+            have_re = true;
+        } else if (d == 6) {
+            la = p->steps[1][v];
+            have_la = true;
+        }
+    }
+    return !have_re || !have_la || re > la;
+}
+
 bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const HarmonyTonicProlongation *prolongation) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_prolongation_valid(prolongation)) {
         return false;
@@ -208,6 +229,10 @@ bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const Harmon
         case HARMONY_PROLONGATION_AVOID_V43_TO_ROOT:
             return !(harmony_prolongation_of(prolongation->chords, &line) &&
                      line == HARMONY_PROLONGATION_DO_RE_DO);
+        case HARMONY_PROLONGATION_AVOID_HALF_DIMINISHED:
+            return !prolongation->chords[1].half_diminished;
+        case HARMONY_PROLONGATION_RE_ABOVE_LA:
+            return check_re_above_la(prolongation);
         case HARMONY_PROLONGATION_MIDDLE_WEAKER_BEAT:
             return beat_strength_is_stronger(prolongation->beat[0], prolongation->beat[1]) &&
                    beat_strength_is_stronger(prolongation->beat[2], prolongation->beat[1]);

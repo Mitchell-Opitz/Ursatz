@@ -63,6 +63,16 @@
  *   AVOID_V43_TO_ROOT   I V4/3 I (do re do) is possible but not very common; I V4/3
  *                       I6 (do re mi) is the usual V4/3 progression. This always
  *                       holds for the other progressions
+ *   AVOID_HALF_DIMINISHED
+ *                       the leading-tone seventh chord is the fully diminished one,
+ *                       not the half-diminished chord (vii with a slashed circle), which
+ *                       is much less common. This always holds when the middle chord is
+ *                       not half diminished
+ *   RE_ABOVE_LA         in a half-diminished leading-tone chord, re is above la, which
+ *                       avoids parallel fifths between them. It cannot be done in the
+ *                       first-inversion seventh chord, where re is in the bass, so that
+ *                       chord always breaks it (use the triad vii6, or expand I6,
+ *                       instead). This always holds for any other middle chord
  *   MIDDLE_WEAKER_BEAT  the V is on a weaker beat than both tonic chords, which is
  *                       part of why the tonic's influence is felt more strongly
  *                       (hyperbeats are not modeled)
@@ -88,6 +98,8 @@ typedef enum {
     HARMONY_PROLONGATION_AVOID_V6_TRIAD,
     HARMONY_PROLONGATION_AVOID_V43_TO_ROOT,
     HARMONY_PROLONGATION_MIDDLE_WEAKER_BEAT,
+    HARMONY_PROLONGATION_AVOID_HALF_DIMINISHED,
+    HARMONY_PROLONGATION_RE_ABOVE_LA,
     HARMONY_PROLONGATION_RULE_COUNT
 } HarmonyProlongationRule;
 
@@ -98,8 +110,8 @@ const Rule *harmony_prolongation_rule(HarmonyProlongationRule which);
 const Constraint *harmony_prolongation_constraint(HarmonyProlongationRule which);
 
 /* "progression" "bass-line" "chord-notes" "resolves" "minor-leading-tone"
-   "no-parallels" "avoid-v6-triad" "avoid-v43-to-root" "middle-weaker-beat"; NULL for an
-   invalid rule. */
+   "no-parallels" "avoid-v6-triad" "avoid-v43-to-root" "middle-weaker-beat"
+   "avoid-half-diminished" "re-above-la"; NULL for an invalid rule. */
 const char *harmony_prolongation_rule_name(HarmonyProlongationRule which);
 
 /* True when the prolongation satisfies the rule. False when it does not, and for an
