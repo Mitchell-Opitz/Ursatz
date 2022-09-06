@@ -225,7 +225,7 @@ bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const Harmon
         case HARMONY_PROLONGATION_NO_PARALLELS:
             return check_no_parallels(prolongation);
         case HARMONY_PROLONGATION_AVOID_V6_TRIAD:
-            return prolongation->chords[1].seventh;
+            return prolongation->chords[1].degree != 5 || prolongation->chords[1].seventh;
         case HARMONY_PROLONGATION_AVOID_V43_TO_ROOT:
             return !(harmony_prolongation_of(prolongation->chords, &line) &&
                      line == HARMONY_PROLONGATION_DO_RE_DO);

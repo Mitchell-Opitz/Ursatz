@@ -59,7 +59,9 @@
  * Soft ("less common", "not very common", "typically"):
  *
  *   AVOID_V6_TRIAD      the middle chord is an inverted V7 (V6/5 for do ti do), not
- *                       the V6 triad, which is possible but less common
+ *                       the V6 triad, which is possible but less common. This is about
+ *                       the V triad only: the leading-tone triad vii6 is the usual way
+ *                       to harmonize re in the bass with the triad
  *   AVOID_V43_TO_ROOT   I V4/3 I (do re do) is possible but not very common; I V4/3
  *                       I6 (do re mi) is the usual V4/3 progression. This always
  *                       holds for the other progressions
