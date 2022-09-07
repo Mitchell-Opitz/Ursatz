@@ -396,6 +396,51 @@ static void test_minor_leading_tone_chord_needs_ti(void) {
     assert(holds(PRO(MINOR_LEADING_TONE), &major));
 }
 
+static void test_re_and_le_are_a_diminished_fifth(void) {
+    /* In the fully diminished chord, re with le above it is a diminished fifth: the soprano
+       (le) and the bass (re) of vii6/5 both go up a step into it from a perfect fifth
+       (sol over do), and down to a perfect fifth (sol over do), with no parallel fifths. */
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyTonicProlongation p = example_vii65((HarmonyMode)mode);
+        assert(holds(PRO(NO_PARALLELS), &p));
+    }
+    HarmonyTonicProlongation vii43 = example_vii43(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(NO_PARALLELS), &vii43));
+    HarmonyTonicProlongation vii7 = example_vii7(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(NO_PARALLELS), &vii7));
+}
+
+static void test_half_diminished_has_perfect_fifth(void) {
+    /* The same notes, with la for le: re and la are a perfect fifth, and sol over do in
+       the first chord goes to la over re (parallel fifths between the soprano and the
+       bass). */
+    HarmonyTonicProlongation half = example_half_diminished_65();
+    assert(holds(PRO(PROGRESSION), &half));
+    assert(holds(PRO(CHORD_NOTES), &half));
+    assert(holds(PRO(RESOLVES), &half));
+    assert(!holds(PRO(NO_PARALLELS), &half));
+    unsigned hard = 0, soft = 99;
+    assert(harmony_prolongation_check(&half, &hard, &soft));
+    assert(hard == (1u << PRO(NO_PARALLELS)));
+
+    /* The fully diminished chord with the same steps has none. */
+    HarmonyTonicProlongation diminished = example_vii65(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(NO_PARALLELS), &diminished));
+}
+
+static void test_other_parallels_are_still_found_in_leading_tone_chords(void) {
+    /* Octaves, as ever: the tenor and bass an octave apart, both going down a step into vii7. */
+    HarmonyTonicProlongation octaves = example_vii7(HARMONY_MODE_MAJOR);
+    octaves.steps[1][VOICE_PART_TENOR] = -1;
+    assert(!holds(PRO(NO_PARALLELS), &octaves));
+    /* A perfect fifth that is not re with the sixth degree is perfect in the fully diminished
+       chord too: the alto (re) and tenor (sol) a fifth apart, both going down a step. */
+    HarmonyTonicProlongation fifths = example_vii7(HARMONY_MODE_MAJOR);
+    fifths.steps[1][VOICE_PART_TENOR] = -3;
+    fifths.steps[2][VOICE_PART_TENOR] = -4;
+    assert(!holds(PRO(NO_PARALLELS), &fifths));
+}
+
 static void test_invalid_prolongation(void) {
     HarmonyTonicProlongation bad_mode = example_v65(HARMONY_MODE_COUNT);
     HarmonyTonicProlongation bad_chord = example_v65(HARMONY_MODE_MAJOR);
@@ -437,6 +482,9 @@ int main(void) {
     test_leading_tone_chord_notes();
     test_le_falls_to_sol();
     test_minor_leading_tone_chord_needs_ti();
+    test_re_and_le_are_a_diminished_fifth();
+    test_half_diminished_has_perfect_fifth();
+    test_other_parallels_are_still_found_in_leading_tone_chords();
     test_the_usual_progressions_break_no_preference();
     test_v6_triad_is_less_common();
     test_v43_to_root_tonic_is_less_common();
