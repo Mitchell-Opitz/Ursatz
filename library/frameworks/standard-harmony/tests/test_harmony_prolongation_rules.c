@@ -316,6 +316,86 @@ static void test_the_v_is_on_a_weaker_beat(void) {
     }
 }
 
+static void test_leading_tone_chords_structure_and_resolution(void) {
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        HarmonyTonicProlongation examples[] = {example_vii7(m), example_vii6_triad(m), example_vii65(m),
+                                               example_vii43(m)};
+        for (size_t i = 0; i < COUNT_OF(examples); i++) {
+            assert(harmony_prolongation_valid(&examples[i]));
+            assert(holds(PRO(PROGRESSION), &examples[i]));
+            assert(holds(PRO(BASS_LINE), &examples[i]));
+            assert(holds(PRO(CHORD_NOTES), &examples[i]));
+            assert(holds(PRO(RESOLVES), &examples[i]));
+            assert(holds(PRO(MINOR_LEADING_TONE), &examples[i]));
+            assert(holds(PRO(NO_PARALLELS), &examples[i]));
+            unsigned hard = 99, soft = 99;
+            assert(harmony_prolongation_check(&examples[i], &hard, &soft));
+            assert(hard == 0 && soft == 0);
+        }
+    }
+}
+
+static void test_leading_tone_chord_notes(void) {
+    /* vii7 is ti, re, fa, and le (the sixth degree) once each. */
+    HarmonyTonicProlongation twice_ti = example_vii7(HARMONY_MODE_MAJOR);
+    twice_ti.steps[1][VOICE_PART_TENOR] = -1; /* ti again, no le */
+    HarmonyTonicProlongation no_re = example_vii7(HARMONY_MODE_MAJOR);
+    no_re.steps[1][VOICE_PART_ALTO] = 4; /* sol, not re */
+    assert(!holds(PRO(CHORD_NOTES), &twice_ti));
+    assert(!holds(PRO(CHORD_NOTES), &no_re));
+    /* The triad vii6 is ti, re, and fa, with ti and re present. */
+    HarmonyTonicProlongation with_sol = example_vii6_triad(HARMONY_MODE_MAJOR);
+    with_sol.steps[1][VOICE_PART_SOPRANO] = 4;
+    HarmonyTonicProlongation no_ti = example_vii6_triad(HARMONY_MODE_MAJOR);
+    no_ti.steps[1][VOICE_PART_TENOR] = 3; /* fa, so no ti */
+    assert(!holds(PRO(CHORD_NOTES), &with_sol));
+    assert(!holds(PRO(CHORD_NOTES), &no_ti));
+    /* The triad is not the seventh chord: le in it is a foreign note. */
+    HarmonyTonicProlongation le_in_triad = example_vii6_triad(HARMONY_MODE_MAJOR);
+    le_in_triad.steps[1][VOICE_PART_ALTO] = 5;
+    assert(!holds(PRO(CHORD_NOTES), &le_in_triad));
+}
+
+static void test_le_falls_to_sol(void) {
+    /* The seventh of the leading-tone chord, le or la, falls a step to sol. */
+    HarmonyTonicProlongation stays = example_vii7(HARMONY_MODE_MAJOR);
+    stays.steps[2][VOICE_PART_TENOR] = -2;
+    HarmonyTonicProlongation rises = example_vii7(HARMONY_MODE_MAJOR);
+    rises.steps[2][VOICE_PART_TENOR] = -1;
+    HarmonyTonicProlongation leaps = example_vii7(HARMONY_MODE_MAJOR);
+    leaps.steps[2][VOICE_PART_TENOR] = -5;
+    assert(!holds(PRO(RESOLVES), &stays));
+    assert(!holds(PRO(RESOLVES), &rises));
+    assert(!holds(PRO(RESOLVES), &leaps));
+    /* The other tendencies are the V7's: ti up, re down, fa down. */
+    HarmonyTonicProlongation fa_up = example_vii7(HARMONY_MODE_MAJOR);
+    fa_up.steps[2][VOICE_PART_SOPRANO] = 4;
+    HarmonyTonicProlongation ti_stays = example_vii7(HARMONY_MODE_MAJOR);
+    ti_stays.steps[2][VOICE_PART_BASS] = -8;
+    HarmonyTonicProlongation re_leaps = example_vii7(HARMONY_MODE_MAJOR);
+    re_leaps.steps[2][VOICE_PART_ALTO] = -3;
+    assert(!holds(PRO(RESOLVES), &fa_up));
+    assert(!holds(PRO(RESOLVES), &ti_stays));
+    assert(!holds(PRO(RESOLVES), &re_leaps));
+}
+
+static void test_minor_leading_tone_chord_needs_ti(void) {
+    /* In minor the chord is built on ti, not te: without its flag it is VII. */
+    HarmonyTonicProlongation minor = example_vii7(HARMONY_MODE_MINOR);
+    assert(minor.chords[1].leading_tone);
+    assert(holds(PRO(MINOR_LEADING_TONE), &minor));
+    minor.chords[1].leading_tone = false;
+    assert(!holds(PRO(MINOR_LEADING_TONE), &minor));
+    minor.chords[1].leading_tone = true;
+    minor.dominant_has_leading_tone = false;
+    assert(!holds(PRO(MINOR_LEADING_TONE), &minor));
+    /* In major the leading tone is implied. */
+    HarmonyTonicProlongation major = example_vii7(HARMONY_MODE_MAJOR);
+    assert(!major.chords[1].leading_tone);
+    assert(holds(PRO(MINOR_LEADING_TONE), &major));
+}
+
 static void test_invalid_prolongation(void) {
     HarmonyTonicProlongation bad_mode = example_v65(HARMONY_MODE_COUNT);
     HarmonyTonicProlongation bad_chord = example_v65(HARMONY_MODE_MAJOR);
@@ -353,6 +433,10 @@ int main(void) {
     test_the_exception_for_parallel_tenths();
     test_minor_needs_the_leading_tone();
     test_no_parallel_fifths_or_octaves();
+    test_leading_tone_chords_structure_and_resolution();
+    test_leading_tone_chord_notes();
+    test_le_falls_to_sol();
+    test_minor_leading_tone_chord_needs_ti();
     test_the_usual_progressions_break_no_preference();
     test_v6_triad_is_less_common();
     test_v43_to_root_tonic_is_less_common();
