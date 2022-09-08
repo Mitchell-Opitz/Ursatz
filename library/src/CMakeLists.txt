@@ -95,6 +95,7 @@ add_library(ursatz
     semantics/cadence_type.c
     semantics/seventh_resolution.c
     semantics/phrase_model_label.c
+    semantics/six_four_type.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
