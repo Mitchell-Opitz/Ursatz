@@ -117,6 +117,19 @@ never called here.
   I6), and the V on a weaker beat than both tonic chords. A chain is progressions that
   share their joining chord (the same chord, notes, and beat strength), which is always
   a root position tonic, in one mode; every link breaks no hard rule.
+  The leading-tone chord (Prolongation at Phrase Beginnings using the Leading-Tone Chord)
+  takes the place of the V with the same bass note: vii7 (root position, ti in the bass)
+  for V6 or V6/5, vii6 (the triad, only in first inversion) or vii6/5 (re in the bass)
+  for V4/3, and vii4/3 (fa in the bass) for V4/2, in the same four lines. In minor it is
+  built on ti (`leading_tone`); in major its seventh is usually lowered, a fully
+  diminished chord (`half_diminished` marks the rarer vii with a slashed circle, with la).
+  The notes are ti, re, fa, and le or la once each (the triad: ti, re, fa), and le or la
+  falls a step to sol. Scale degrees do not tell le from la, so in the fully diminished
+  chord re with the sixth degree above it is a diminished fifth, not a perfect one
+  (resolving re and le to do and sol is no parallel fifths); in the half-diminished chord
+  it is a perfect fifth, and parallel fifths are a hazard. Soft: prefer the fully
+  diminished chord, and in the half-diminished chord keep re above la (impossible in
+  vii6/5, where re is in the bass).
 - **Phrase model labeling** (`harmony_phrase_labels.h`,
   `harmony_phrase_label_rules.h`), Performing Harmonic Analysis Using the Phrase
   Model: each phrase gets one set of the labels Tb, PD, D, Te
@@ -169,6 +182,10 @@ never called here.
 - **Labeling a 6/4.** The caller says which second inversion tonic chords are
   cadential; this module does not decide it. A second inversion chord has other
   uses (the chapter says there are four categories), which later chapters introduce.
+- **vii4/2.** The leading-tone seventh chord in third inversion, with le in the bass, is
+  very rare and is not an inversion of V7: le falls to sol in the bass, to a chord with sol
+  in the bass. It is not modeled. Other uses of the leading-tone chord in place of V or V7
+  (cadences, the strong predominant ending) are not modeled either.
 - **Other prolongations.** Prolonging tonic by holding or repeating a chord has no
   rule beyond the chord repeating. Progressions that begin on I6, and a phrase
   that begins by prolonging tonic as a rule of the phrase model, are not modeled.
