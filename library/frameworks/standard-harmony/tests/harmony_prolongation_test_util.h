@@ -85,4 +85,59 @@ static inline HarmonyTonicProlongation example_tenths(HarmonyMode mode) {
     return make_prolongation(mode, I_ROOT, V43, I_FIRST, s0, s1, s2);
 }
 
+/* The leading-tone chord in the middle, in place of the V with the same bass note. In minor
+   it is built on ti (the leading_tone flag). */
+static inline HarmonyChord vii_chord(HarmonyMode mode, int inversion, bool seventh) {
+    return (HarmonyChord){7, inversion, mode == HARMONY_MODE_MINOR, seventh};
+}
+
+/* do ti do: I vii7 I. The seventh is le, a fully diminished chord; le falls to sol. */
+static inline HarmonyTonicProlongation example_vii7(HarmonyMode mode) {
+    static const int s0[4] = {4, 2, 0, -7};
+    static const int s1[4] = {3, 1, -2, -8};
+    static const int s2[4] = {2, 0, -3, -7};
+    return make_prolongation(mode, I_ROOT, vii_chord(mode, 0, true), I_ROOT, s0, s1, s2);
+}
+
+/* do re mi: I vii6 I6, the triad in first inversion, re doubled. */
+static inline HarmonyTonicProlongation example_vii6_triad(HarmonyMode mode) {
+    static const int s0[4] = {4, 2, 0, -7};
+    static const int s1[4] = {3, 1, -1, -6};
+    static const int s2[4] = {2, 0, 0, -5};
+    return make_prolongation(mode, I_ROOT, vii_chord(mode, 1, false), I_FIRST, s0, s1, s2);
+}
+
+/* do re mi: I vii6/5 I6. re (bass) and le make a diminished fifth, then do re resolves. */
+static inline HarmonyTonicProlongation example_vii65(HarmonyMode mode) {
+    static const int s0[4] = {4, 2, 0, -7};
+    static const int s1[4] = {5, 3, -1, -6};
+    static const int s2[4] = {4, 2, 0, -5};
+    return make_prolongation(mode, I_ROOT, vii_chord(mode, 1, true), I_FIRST, s0, s1, s2);
+}
+
+/* do fa mi: I vii4/3 I6. */
+static inline HarmonyTonicProlongation example_vii43(HarmonyMode mode) {
+    static const int s0[4] = {4, 2, 0, -7};
+    static const int s1[4] = {5, 1, -1, -4};
+    static const int s2[4] = {4, 0, 0, -5};
+    return make_prolongation(mode, I_ROOT, vii_chord(mode, 2, true), I_FIRST, s0, s1, s2);
+}
+
+/* The same notes as example_vii65, but the half-diminished chord (la, not le): re in the
+   bass and la make a perfect fifth, and parallel fifths follow. */
+static inline HarmonyTonicProlongation example_half_diminished_65(void) {
+    HarmonyTonicProlongation p = example_vii65(HARMONY_MODE_MAJOR);
+    p.chords[1] = (HarmonyChord){7, 1, false, true, false, true};
+    return p;
+}
+
+/* do ti do with the half-diminished chord, re above la: no parallel fifths. */
+static inline HarmonyTonicProlongation example_half_diminished_7(void) {
+    static const int s0[4] = {7, 4, 2, -7};
+    static const int s1[4] = {8, 5, 3, -8};
+    static const int s2[4] = {7, 4, 2, -7};
+    return make_prolongation(HARMONY_MODE_MAJOR, I_ROOT, (HarmonyChord){7, 0, false, true, false, true}, I_ROOT, s0, s1,
+                             s2);
+}
+
 #endif

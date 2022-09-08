@@ -5,7 +5,8 @@
 
 static const char *const NAMES[HARMONY_PROLONGATION_RULE_COUNT] = {"progression",        "bass-line",    "chord-notes",
                                                                   "resolves",           "minor-leading-tone", "no-parallels",
-                                                                  "avoid-v6-triad",     "avoid-v43-to-root",  "middle-weaker-beat"};
+                                                                  "avoid-v6-triad",     "avoid-v43-to-root",  "middle-weaker-beat",
+                                                                  "avoid-half-diminished", "re-above-la"};
 
 static bool table_is_hard(int which) {
     return which <= HARMONY_PROLONGATION_NO_PARALLELS;
@@ -77,9 +78,21 @@ static bool triad_notes(const HarmonyTonicProlongation *p, int chord, int root, 
     return count_degree(p, chord, root) > 0 && count_degree(p, chord, third) > 0;
 }
 
-static bool seventh_chord_notes(const HarmonyTonicProlongation *p, int chord) {
-    return count_degree(p, chord, 5) == 1 && count_degree(p, chord, 7) == 1 && count_degree(p, chord, 2) == 1 &&
-           count_degree(p, chord, 4) == 1;
+/* Four voices on the four notes of a seventh chord, once each. */
+static bool seventh_chord_notes(const HarmonyTonicProlongation *p, int chord, int root, int third, int fifth,
+                                int seventh) {
+    return count_degree(p, chord, root) == 1 && count_degree(p, chord, third) == 1 &&
+           count_degree(p, chord, fifth) == 1 && count_degree(p, chord, seventh) == 1;
+}
+
+/* The middle chord: V (sol ti re, and fa for a V7) or the leading-tone chord (ti re fa, and
+   le or la for the seventh chord, the sixth degree). */
+static bool middle_chord_notes(const HarmonyTonicProlongation *p) {
+    const HarmonyChord *m = &p->chords[1];
+    if (m->degree == 7) {
+        return m->seventh ? seventh_chord_notes(p, 1, 7, 2, 4, 6) : triad_notes(p, 1, 7, 2, 4);
+    }
+    return m->seventh ? seventh_chord_notes(p, 1, 5, 7, 2, 4) : triad_notes(p, 1, 5, 7, 2);
 }
 
 static bool check_chord_notes(const HarmonyTonicProlongation *p) {
@@ -87,8 +100,7 @@ static bool check_chord_notes(const HarmonyTonicProlongation *p) {
     if (!harmony_prolongation_of(p->chords, &line)) {
         return false;
     }
-    bool middle = p->chords[1].seventh ? seventh_chord_notes(p, 1) : triad_notes(p, 1, 5, 7, 2);
-    return triad_notes(p, 0, 1, 3, 5) && middle && triad_notes(p, 2, 1, 3, 5);
+    return triad_notes(p, 0, 1, 3, 5) && middle_chord_notes(p) && triad_notes(p, 2, 1, 3, 5);
 }
 
 /* The upper voice a tenth above the bass in all three chords: parallel tenths. */
@@ -118,6 +130,11 @@ static bool check_resolves(const HarmonyTonicProlongation *p) {
                     return false;
                 }
                 break;
+            case 6: /* le or la, the seventh of the leading-tone chord, down a step to sol */
+                if (p->chords[1].degree == 7 && move != -1) {
+                    return false;
+                }
+                break;
             case 2: /* re a step, to do or mi */
                 if (move != 1 && move != -1) {
                     return false;
@@ -130,17 +147,61 @@ static bool check_resolves(const HarmonyTonicProlongation *p) {
     return true;
 }
 
+/* A fully diminished leading-tone seventh chord: the seventh is le, the lowered sixth degree. */
+static bool fully_diminished(const HarmonyChord *chord) {
+    return chord->degree == 7 && chord->seventh && !chord->half_diminished;
+}
+
+/* The perfect interval two voices make in a chord. Degrees do not tell le from la, so in
+   a fully diminished leading-tone chord re with the sixth degree above it is a diminished
+   fifth, not a perfect one (in the half-diminished chord it is a perfect fifth, la). */
+static HarmonyPerfectInterval perfect_in_chord(const HarmonyTonicProlongation *p, int chord, int a, int b) {
+    int low = p->steps[chord][a] < p->steps[chord][b] ? p->steps[chord][a] : p->steps[chord][b];
+    int high = p->steps[chord][a] < p->steps[chord][b] ? p->steps[chord][b] : p->steps[chord][a];
+    HarmonyPerfectInterval kind = harmony_step_perfect_interval(low, high);
+    if (kind == HARMONY_PERFECT_FIFTH && fully_diminished(&p->chords[chord]) && harmony_step_degree(low) == 2 &&
+        harmony_step_degree(high) == 6) {
+        return HARMONY_PERFECT_NONE;
+    }
+    return kind;
+}
+
 static bool check_no_parallels(const HarmonyTonicProlongation *p) {
     for (int i = 0; i < 2; i++) {
         for (int a = 0; a < VOICE_PART_COUNT; a++) {
             for (int b = a + 1; b < VOICE_PART_COUNT; b++) {
-                if (harmony_steps_parallel(p->steps[i][a], p->steps[i + 1][a], p->steps[i][b], p->steps[i + 1][b])) {
+                int direction = harmony_step_direction(p->steps[i][a], p->steps[i + 1][a]);
+                if (direction == 0 || direction != harmony_step_direction(p->steps[i][b], p->steps[i + 1][b])) {
+                    continue;
+                }
+                HarmonyPerfectInterval before = perfect_in_chord(p, i, a, b);
+                if (before != HARMONY_PERFECT_NONE && before == perfect_in_chord(p, i + 1, a, b)) {
                     return false;
                 }
             }
         }
     }
     return true;
+}
+
+/* In the half-diminished chord, the voice on re is above the voice on la. */
+static bool check_re_above_la(const HarmonyTonicProlongation *p) {
+    if (!p->chords[1].half_diminished) {
+        return true;
+    }
+    int re = 0, la = 0;
+    bool have_re = false, have_la = false;
+    for (int v = 0; v < VOICE_PART_COUNT; v++) {
+        int d = degree(p, 1, v);
+        if (d == 2) {
+            re = p->steps[1][v];
+            have_re = true;
+        } else if (d == 6) {
+            la = p->steps[1][v];
+            have_la = true;
+        }
+    }
+    return !have_re || !have_la || re > la;
 }
 
 bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const HarmonyTonicProlongation *prolongation) {
@@ -158,14 +219,20 @@ bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const Harmon
         case HARMONY_PROLONGATION_RESOLVES:
             return check_resolves(prolongation);
         case HARMONY_PROLONGATION_MINOR_LEADING_TONE:
-            return prolongation->mode == HARMONY_MODE_MAJOR || prolongation->dominant_has_leading_tone;
+            return prolongation->mode == HARMONY_MODE_MAJOR ||
+                   (prolongation->dominant_has_leading_tone &&
+                    (prolongation->chords[1].degree != 7 || prolongation->chords[1].leading_tone));
         case HARMONY_PROLONGATION_NO_PARALLELS:
             return check_no_parallels(prolongation);
         case HARMONY_PROLONGATION_AVOID_V6_TRIAD:
-            return prolongation->chords[1].seventh;
+            return prolongation->chords[1].degree != 5 || prolongation->chords[1].seventh;
         case HARMONY_PROLONGATION_AVOID_V43_TO_ROOT:
             return !(harmony_prolongation_of(prolongation->chords, &line) &&
                      line == HARMONY_PROLONGATION_DO_RE_DO);
+        case HARMONY_PROLONGATION_AVOID_HALF_DIMINISHED:
+            return !prolongation->chords[1].half_diminished;
+        case HARMONY_PROLONGATION_RE_ABOVE_LA:
+            return check_re_above_la(prolongation);
         case HARMONY_PROLONGATION_MIDDLE_WEAKER_BEAT:
             return beat_strength_is_stronger(prolongation->beat[0], prolongation->beat[1]) &&
                    beat_strength_is_stronger(prolongation->beat[2], prolongation->beat[1]);

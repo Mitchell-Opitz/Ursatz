@@ -27,7 +27,10 @@
  *   CHORD_NOTES   each chord has only the notes of its chord. I and I6: do, mi, sol,
  *                 with do and mi (the root and the third) present. V6: sol, ti, re,
  *                 with sol and ti present. An inverted V7 is four voices on four
- *                 notes: sol, ti, re, and fa, once each
+ *                 notes: sol, ti, re, and fa, once each. The leading-tone chord that
+ *                 replaces the V: vii6, the triad, has ti, re, and fa, with ti and re
+ *                 present; a vii seventh chord is ti, re, fa, and le (la in the half-
+ *                 diminished chord), the sixth degree, once each
  *
  * Hard (voice leading), as in the V7 resolution (harmony_seventh_rules.h):
  *
@@ -35,23 +38,43 @@
  *                       up a step to do (so V6 and V6/5, with ti in the bass, resolve
  *                       to root position I), fa goes down a step to mi (so V4/2, with
  *                       fa in the bass, goes to I6), and re goes a step to do or mi
- *                       (so V4/3, with re in the bass, goes to either). The one
+ *                       (so V4/3, with re in the bass, goes to either). In the
+ *                       leading-tone seventh chord, le (or la), the sixth degree, falls a
+ *                       step to sol, the one new tendency. The one
  *                       exception is the chordal seventh going up: in I V4/3 I6, an
  *                       upper voice may take the line mi fa sol, fa going up to sol,
  *                       because the bass (do re mi) makes parallel tenths with it all
  *                       the way
- *   MINOR_LEADING_TONE  in minor, V has the leading tone (ti); in major this always
- *                       holds
+ *   MINOR_LEADING_TONE  in minor, V has the leading tone (ti), and so does a leading-tone
+ *                       chord in the middle (its `leading_tone` flag, ti and not te); in
+ *                       major this always holds
  *   NO_PARALLELS        no two voices make parallel fifths or octaves (a unison
- *                       counts as an octave) from one chord to the next
+ *                       counts as an octave) from one chord to the next. Scale degrees do
+ *                       not tell le from la, so the sixth degree of a fully diminished
+ *                       leading-tone chord (le) makes a diminished fifth with re, which
+ *                       is not a perfect one: resolving re and le to do and sol is no
+ *                       parallel fifths. In the half-diminished chord re and la are a
+ *                       perfect fifth, and parallel fifths are a hazard there
  *
  * Soft ("less common", "not very common", "typically"):
  *
  *   AVOID_V6_TRIAD      the middle chord is an inverted V7 (V6/5 for do ti do), not
- *                       the V6 triad, which is possible but less common
+ *                       the V6 triad, which is possible but less common. This is about
+ *                       the V triad only: the leading-tone triad vii6 is the usual way
+ *                       to harmonize re in the bass with the triad
  *   AVOID_V43_TO_ROOT   I V4/3 I (do re do) is possible but not very common; I V4/3
  *                       I6 (do re mi) is the usual V4/3 progression. This always
  *                       holds for the other progressions
+ *   AVOID_HALF_DIMINISHED
+ *                       the leading-tone seventh chord is the fully diminished one,
+ *                       not the half-diminished chord (vii with a slashed circle), which
+ *                       is much less common. This always holds when the middle chord is
+ *                       not half diminished
+ *   RE_ABOVE_LA         in a half-diminished leading-tone chord, re is above la, which
+ *                       avoids parallel fifths between them. It cannot be done in the
+ *                       first-inversion seventh chord, where re is in the bass, so that
+ *                       chord always breaks it (use the triad vii6, or expand I6,
+ *                       instead). This always holds for any other middle chord
  *   MIDDLE_WEAKER_BEAT  the V is on a weaker beat than both tonic chords, which is
  *                       part of why the tonic's influence is felt more strongly
  *                       (hyperbeats are not modeled)
@@ -77,6 +100,8 @@ typedef enum {
     HARMONY_PROLONGATION_AVOID_V6_TRIAD,
     HARMONY_PROLONGATION_AVOID_V43_TO_ROOT,
     HARMONY_PROLONGATION_MIDDLE_WEAKER_BEAT,
+    HARMONY_PROLONGATION_AVOID_HALF_DIMINISHED,
+    HARMONY_PROLONGATION_RE_ABOVE_LA,
     HARMONY_PROLONGATION_RULE_COUNT
 } HarmonyProlongationRule;
 
@@ -87,8 +112,8 @@ const Rule *harmony_prolongation_rule(HarmonyProlongationRule which);
 const Constraint *harmony_prolongation_constraint(HarmonyProlongationRule which);
 
 /* "progression" "bass-line" "chord-notes" "resolves" "minor-leading-tone"
-   "no-parallels" "avoid-v6-triad" "avoid-v43-to-root" "middle-weaker-beat"; NULL for an
-   invalid rule. */
+   "no-parallels" "avoid-v6-triad" "avoid-v43-to-root" "middle-weaker-beat"
+   "avoid-half-diminished" "re-above-la"; NULL for an invalid rule. */
 const char *harmony_prolongation_rule_name(HarmonyProlongationRule which);
 
 /* True when the prolongation satisfies the rule. False when it does not, and for an
