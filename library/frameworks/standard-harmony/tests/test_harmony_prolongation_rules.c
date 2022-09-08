@@ -484,10 +484,10 @@ static void test_re_must_be_above_la_in_the_half_diminished_chord(void) {
     assert(hard == (1u << PRO(NO_PARALLELS)));
     assert(soft == ((1u << PRO(AVOID_HALF_DIMINISHED)) | (1u << PRO(RE_ABOVE_LA))));
 
-    /* Swapping re and la in the half-diminished vii7 breaks only the preference rule. */
+    /* With la above re in the half-diminished vii7 the rule is broken too. */
     HarmonyTonicProlongation swapped = example_half_diminished_7();
-    swapped.steps[1][VOICE_PART_SOPRANO] = 5;
-    swapped.steps[1][VOICE_PART_ALTO] = 8;
+    swapped.steps[1][VOICE_PART_SOPRANO] = 12; /* la, above the re */
+    swapped.steps[1][VOICE_PART_ALTO] = 8;     /* re */
     assert(!holds(PRO(RE_ABOVE_LA), &swapped));
 }
 
