@@ -33,7 +33,8 @@ static void test_names(void) {
     const char *const expected[HARMONY_PROLONGATION_RULE_COUNT] = {
         "progression",    "bass-line",         "chord-notes",
         "resolves",       "minor-leading-tone", "no-parallels",
-        "avoid-v6-triad", "avoid-v43-to-root",  "middle-weaker-beat"};
+        "avoid-v6-triad", "avoid-v43-to-root",  "middle-weaker-beat",
+        "avoid-half-diminished", "re-above-la"};
     for (int i = 0; i < HARMONY_PROLONGATION_RULE_COUNT; i++) {
         assert(strcmp(harmony_prolongation_rule_name((HarmonyProlongationRule)i), expected[i]) == 0);
     }
@@ -441,6 +442,55 @@ static void test_other_parallels_are_still_found_in_leading_tone_chords(void) {
     assert(!holds(PRO(NO_PARALLELS), &fifths));
 }
 
+static void test_the_fully_diminished_chord_is_usual(void) {
+    /* The fully diminished chord, and the triad, break no preference. */
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        HarmonyTonicProlongation examples[] = {example_vii7(m), example_vii6_triad(m), example_vii65(m),
+                                               example_vii43(m)};
+        for (size_t i = 0; i < COUNT_OF(examples); i++) {
+            assert(holds(PRO(AVOID_HALF_DIMINISHED), &examples[i]));
+            assert(holds(PRO(RE_ABOVE_LA), &examples[i]));
+        }
+    }
+    /* The V triad is the one the avoid-V6 rule is about, not the leading-tone triad. */
+    HarmonyTonicProlongation triad = example_vii6_triad(HARMONY_MODE_MAJOR);
+    assert(holds(PRO(AVOID_V6_TRIAD), &triad));
+    unsigned hard = 99, soft = 99;
+    assert(harmony_prolongation_check(&triad, &hard, &soft));
+    assert(hard == 0 && soft == 0);
+}
+
+static void test_the_half_diminished_chord_is_less_common(void) {
+    /* With re above la there are no parallel fifths, but it is the rarer chord. */
+    HarmonyTonicProlongation half = example_half_diminished_7();
+    assert(holds(PRO(PROGRESSION), &half));
+    assert(holds(PRO(NO_PARALLELS), &half));
+    assert(holds(PRO(RE_ABOVE_LA), &half));
+    assert(!holds(PRO(AVOID_HALF_DIMINISHED), &half));
+    unsigned hard = 99, soft = 0;
+    assert(harmony_prolongation_check(&half, &hard, &soft));
+    assert(hard == 0 && soft == (1u << PRO(AVOID_HALF_DIMINISHED)));
+}
+
+static void test_re_must_be_above_la_in_the_half_diminished_chord(void) {
+    /* vii6/5 has re in the bass, so la is always above it: the rule is always broken, and
+       so are the parallel fifths in this voicing. */
+    HarmonyTonicProlongation half = example_half_diminished_65();
+    assert(!holds(PRO(RE_ABOVE_LA), &half));
+    assert(!holds(PRO(AVOID_HALF_DIMINISHED), &half));
+    unsigned hard = 0, soft = 0;
+    assert(harmony_prolongation_check(&half, &hard, &soft));
+    assert(hard == (1u << PRO(NO_PARALLELS)));
+    assert(soft == ((1u << PRO(AVOID_HALF_DIMINISHED)) | (1u << PRO(RE_ABOVE_LA))));
+
+    /* Swapping re and la in the half-diminished vii7 breaks only the preference rule. */
+    HarmonyTonicProlongation swapped = example_half_diminished_7();
+    swapped.steps[1][VOICE_PART_SOPRANO] = 5;
+    swapped.steps[1][VOICE_PART_ALTO] = 8;
+    assert(!holds(PRO(RE_ABOVE_LA), &swapped));
+}
+
 static void test_invalid_prolongation(void) {
     HarmonyTonicProlongation bad_mode = example_v65(HARMONY_MODE_COUNT);
     HarmonyTonicProlongation bad_chord = example_v65(HARMONY_MODE_MAJOR);
@@ -485,6 +535,9 @@ int main(void) {
     test_re_and_le_are_a_diminished_fifth();
     test_half_diminished_has_perfect_fifth();
     test_other_parallels_are_still_found_in_leading_tone_chords();
+    test_the_fully_diminished_chord_is_usual();
+    test_the_half_diminished_chord_is_less_common();
+    test_re_must_be_above_la_in_the_half_diminished_chord();
     test_the_usual_progressions_break_no_preference();
     test_v6_triad_is_less_common();
     test_v43_to_root_tonic_is_less_common();
