@@ -20,6 +20,7 @@ add_library(standard_harmony
     harmony_prolongation.c
     harmony_prolongation_rules.c
     harmony_prolongation_chain.c
+    harmony_six_four.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
