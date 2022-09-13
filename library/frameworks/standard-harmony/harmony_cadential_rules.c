@@ -13,7 +13,8 @@
 static const char *const NAMES[HARMONY_CADENTIAL_RULE_COUNT] = {
     "bass-stays",         "six-four-notes",    "resolves-six-five-four-three",
     "doubling-voice",     "minor-leading-tone", "no-parallels",
-    "smooth-approach",    "no-leap-to-fourth", "approach-strong-predominant"};
+    "smooth-approach",    "no-leap-to-fourth", "approach-strong-predominant",
+    "six-four-stronger-beat"};
 
 static bool table_is_hard(int which) {
     return which <= HARMONY_CADENTIAL_NO_PARALLELS;
@@ -37,7 +38,8 @@ const char *harmony_cadential_rule_name(HarmonyCadentialRule which) {
 }
 
 bool harmony_cadential_valid(const HarmonyCadentialSixFour *cadential) {
-    return cadential != NULL && harmony_mode_valid(cadential->mode) &&
+    return cadential != NULL && harmony_mode_valid(cadential->mode) && beat_strength_valid(cadential->six_four_beat) &&
+           beat_strength_valid(cadential->dominant_beat) &&
            (!cadential->has_approach || harmony_chord_valid(&cadential->approach));
 }
 
@@ -152,6 +154,8 @@ bool harmony_cadential_rule_holds(HarmonyCadentialRule which, const HarmonyCaden
             return no_leap_into(cadential, DO);
         case HARMONY_CADENTIAL_APPROACH_STRONG_PREDOMINANT:
             return check_approach_strong_predominant(cadential);
+        case HARMONY_CADENTIAL_SIX_FOUR_STRONGER_BEAT:
+            return beat_strength_is_stronger(cadential->six_four_beat, cadential->dominant_beat);
         default:
             return false;
     }
