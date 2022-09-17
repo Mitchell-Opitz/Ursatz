@@ -16,7 +16,7 @@ with the other frameworks' headers on the include path.
 The entities these rules use live in `src/semantics/`: `HarmonicFunction`
 (tonic, predominant, dominant), `CadenceType` (perfect authentic, imperfect
 authentic, half, subverted), `SeventhResolution` (default, incomplete,
-leading-tone drop), `PhraseModelLabel` (Tb, PD, D, Te), and `NonChordTone` (the embellishing tones), with
+leading-tone drop), `PhraseModelLabel` (Tb, PD, D, Te), `SixFourType`, and `NonChordTone` (the embellishing tones), with
 `BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
 
@@ -144,6 +144,25 @@ never called here.
   false when the phrase does not end as its cadence says. Rules: hard, the phrase ends
   as its cadence says; soft, it starts on a tonic (a delayed or omitted tonic is rare,
   more often in Romantic music), and a strong predominant comes before the dominant.
+- **6/4 chords** (`harmony_six_four.h`, `harmony_passing_rules.h`,
+  `harmony_neighbor_rules.h`, `harmony_arpeggiating_rules.h`), 6/4 Chords as Forms of
+  Prolongation: the three kinds of 6/4 chord besides the cadential one, `SixFourType`
+  (cadential, passing, neighbor, arpeggiating), which the label depends on, not the Roman
+  numeral alone. The subject is three chords (before, the 6/4, after), their notes as
+  diatonic steps in four voices, and a beat strength for each; the 6/4 is a second
+  inversion triad whose root is a fourth above the bass. `harmony_six_four_classify` says
+  which kind it is: a chord marked cadential; a static bass with the same root position
+  chord on both sides is a neighbor; a bass in three steps one way with the same function on
+  both sides is passing; a bass leap to the fifth of the same chord with the upper voices
+  sustaining it is arpeggiating. Passing, which prolongs tonic or predominant: hard, the bass
+  steps one way, both sides have the same function, and the 6/4 is the bass doubled with the
+  fourth and sixth above it; soft, tonic or predominant, the soprano moves by step, and the
+  inner voices stay or step. Neighbor (pedal), over do do do or sol sol sol: hard, the bass is
+  static, the same root position chord is on both sides, the bass is that chord's root, the 6/4
+  notes, and two upper voices go up a step and back while the third stays; soft, I or V.
+  Arpeggiating: hard, the same chord throughout, the bass leaps to its fifth, and the upper
+  voices sustain; it is not labeled in analysis. The cadential 6/4 gets a soft rule that it is
+  on a stronger beat than the V(7) it resolves to.
 - **Cadence hearing rules** (`harmony_hearing_rules.h`), whether a potential
   cadence point is a true cadence, from what the caller says is heard. Hard: the
   harmonies are V to I or x to V; a sense of beginning follows; what follows does
@@ -179,21 +198,11 @@ never called here.
   three-note static gesture, not as a long note under changing chords. Chromatic
   steps are not modeled, and neither is the interval with the bass: whether a note
   is consonant with the bass is a chord-tone flag the caller sets.
-- **Labeling a 6/4.** The caller says which second inversion tonic chords are
-  cadential; this module does not decide it. A second inversion chord has other
-  uses (the chapter says there are four categories), which later chapters introduce.
-- **vii4/2.** The leading-tone seventh chord in third inversion, with le in the bass, is
-  very rare and is not an inversion of V7: le falls to sol in the bass, to a chord with sol
-  in the bass. It is not modeled. Other uses of the leading-tone chord in place of V or V7
-  (cadences, the strong predominant ending) are not modeled either.
-- **Other prolongations.** Prolonging tonic by holding or repeating a chord has no
-  rule beyond the chord repeating. Progressions that begin on I6, and a phrase
-  that begins by prolonging tonic as a rule of the phrase model, are not modeled.
-  Hyperbeats are not modeled, only the beat strength of each chord.
-- **The analysis procedure.** Listening for phrase endings, labeling the cadence, and
-  guessing the harmony from the bass line are the analyst's. The bass line hints (sol
-  at the cadence, fa or re under a strong predominant) are the cadence and strong
-  predominant rules'. Nothing here finds a phrase's chords or its cadence.
+- **Labeling a 6/4 in an analysis.** The classification says which kind a given three-chord
+  gesture is, but `HarmonyChord` itself only marks the cadential one. How a passing or
+  neighbor 6/4 counts in the phrase model (a V6/4 passing between tonics belongs to the tonic
+  area, unlike the cadential 6/4, which is dominant) is not modeled: the phrase rules use each
+  chord's own function.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.
