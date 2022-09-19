@@ -1,5 +1,7 @@
 #include "harmony_six_four.h"
 
+#include <stddef.h>
+
 #include "harmony_functions.h"
 #include "harmony_steps.h"
 
