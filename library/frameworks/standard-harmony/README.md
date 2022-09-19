@@ -203,6 +203,18 @@ never called here.
   neighbor 6/4 counts in the phrase model (a V6/4 passing between tonics belongs to the tonic
   area, unlike the cadential 6/4, which is dominant) is not modeled: the phrase rules use each
   chord's own function.
+- **vii4/2.** The leading-tone seventh chord in third inversion, with le in the bass, is
+  very rare and is not an inversion of V7: le falls to sol in the bass, to a chord with sol
+  in the bass. It is not modeled. Other uses of the leading-tone chord in place of V or V7
+  (cadences, the strong predominant ending) are not modeled either.
+- **Other prolongations.** Prolonging tonic by holding or repeating a chord has no
+  rule beyond the chord repeating. Progressions that begin on I6, and a phrase
+  that begins by prolonging tonic as a rule of the phrase model, are not modeled.
+  Hyperbeats are not modeled, only the beat strength of each chord.
+- **The analysis procedure.** Listening for phrase endings, labeling the cadence, and
+  guessing the harmony from the bass line are the analyst's. The bass line hints (sol
+  at the cadence, fa or re under a strong predominant) are the cadence and strong
+  predominant rules'. Nothing here finds a phrase's chords or its cadence.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. Chords before V other than as "x" are not modeled.
