@@ -18,6 +18,8 @@ static HarmonyCadentialSixFour cadential(HarmonyMode mode, const int six_four[4]
     memcpy(c.six_four_steps, six_four, sizeof(c.six_four_steps));
     memcpy(c.dominant_steps, dominant, sizeof(c.dominant_steps));
     c.dominant_has_leading_tone = true;
+    c.six_four_beat = BEAT_STRENGTH_STRONG; /* the 6/4 on a stronger beat than the V */
+    c.dominant_beat = BEAT_STRENGTH_WEAK;
     return c;
 }
 
@@ -55,7 +57,7 @@ static void test_names(void) {
     const char *const expected[HARMONY_CADENTIAL_RULE_COUNT] = {
         "bass-stays",     "six-four-notes",    "resolves-six-five-four-three",
         "doubling-voice", "minor-leading-tone", "no-parallels",
-        "smooth-approach", "no-leap-to-fourth", "approach-strong-predominant"};
+        "smooth-approach", "no-leap-to-fourth", "approach-strong-predominant", "six-four-stronger-beat"};
     for (int i = 0; i < HARMONY_CADENTIAL_RULE_COUNT; i++) {
         assert(strcmp(harmony_cadential_rule_name((HarmonyCadentialRule)i), expected[i]) == 0);
     }
@@ -295,6 +297,32 @@ static void test_approach_is_usually_a_strong_predominant(void) {
     assert(hard == 0 && soft == (1u << CAD(APPROACH_STRONG_PREDOMINANT)));
 }
 
+static void test_six_four_is_on_a_stronger_beat(void) {
+    const BeatStrength S = BEAT_STRENGTH_STRONG, M = BEAT_STRENGTH_MEDIUM, W = BEAT_STRENGTH_WEAK;
+    const BeatStrength good[][2] = {{S, W}, {S, M}, {M, W}};
+    const BeatStrength bad[][2] = {{S, S}, {W, W}, {M, M}, {W, S}, {M, S}, {W, M}};
+    for (size_t i = 0; i < COUNT_OF(good); i++) {
+        HarmonyCadentialSixFour c = cadential(HARMONY_MODE_MAJOR, SIX_FOUR_MI_TOP, V_TRIAD);
+        c.six_four_beat = good[i][0];
+        c.dominant_beat = good[i][1];
+        assert(holds(CAD(SIX_FOUR_STRONGER_BEAT), &c));
+    }
+    for (size_t i = 0; i < COUNT_OF(bad); i++) {
+        HarmonyCadentialSixFour c = cadential(HARMONY_MODE_MAJOR, SIX_FOUR_MI_TOP, V_TRIAD);
+        c.six_four_beat = bad[i][0];
+        c.dominant_beat = bad[i][1];
+        assert(!holds(CAD(SIX_FOUR_STRONGER_BEAT), &c));
+        /* It is advice: nothing hard breaks. */
+        unsigned hard = 99, soft = 0;
+        assert(harmony_cadential_check(&c, &hard, &soft));
+        assert(hard == 0 && soft == (1u << CAD(SIX_FOUR_STRONGER_BEAT)));
+    }
+    HarmonyCadentialSixFour invalid = cadential(HARMONY_MODE_MAJOR, SIX_FOUR_MI_TOP, V_TRIAD);
+    invalid.dominant_beat = BEAT_STRENGTH_COUNT;
+    assert(!harmony_cadential_valid(&invalid));
+    assert(!holds(CAD(SIX_FOUR_STRONGER_BEAT), &invalid));
+}
+
 static void test_invalid_cadential(void) {
     HarmonyCadentialSixFour bad_mode = cadential(HARMONY_MODE_COUNT, SIX_FOUR_MI_TOP, V_TRIAD);
     HarmonyCadentialSixFour bad_approach = cadential(HARMONY_MODE_MAJOR, SIX_FOUR_MI_TOP, V_TRIAD);
@@ -332,6 +360,7 @@ int main(void) {
     test_parallels_out_of_the_six_four();
     test_smooth_approach();
     test_approach_is_usually_a_strong_predominant();
+    test_six_four_is_on_a_stronger_beat();
     test_invalid_cadential();
     printf("test_harmony_cadential_rules: ok\n");
     return 0;

@@ -6,6 +6,7 @@
 #include "harmony_chord.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "semantics/beat_strength.h"
 #include "semantics/voice_part.h"
 
 /*
@@ -71,6 +72,9 @@
  *   APPROACH_STRONG_PREDOMINANT
  *                       the approach chord is IV or ii6 (harmony_strong_
  *                       predominants.h), the most common
+ *   SIX_FOUR_STRONGER_BEAT
+ *                       the cadential 6/4 is on a stronger beat than the V(7) it
+ *                       resolves to
  *
  * The approach rules have nothing to check without an approach chord.
  *
@@ -82,6 +86,8 @@ typedef struct {
     int six_four_steps[VOICE_PART_COUNT];
     int dominant_steps[VOICE_PART_COUNT];
     bool dominant_has_leading_tone;
+    BeatStrength six_four_beat;
+    BeatStrength dominant_beat;
     bool has_approach;
     HarmonyChord approach;
     int approach_steps[VOICE_PART_COUNT]; /* ignored without an approach */
@@ -97,10 +103,12 @@ typedef enum {
     HARMONY_CADENTIAL_SMOOTH_APPROACH,
     HARMONY_CADENTIAL_NO_LEAP_TO_FOURTH,
     HARMONY_CADENTIAL_APPROACH_STRONG_PREDOMINANT,
+    HARMONY_CADENTIAL_SIX_FOUR_STRONGER_BEAT,
     HARMONY_CADENTIAL_RULE_COUNT
 } HarmonyCadentialRule;
 
-/* True for a valid mode and, when there is an approach chord, a valid chord. */
+/* True for a valid mode, valid beat strengths, and, when there is an approach chord, a valid
+   chord. */
 bool harmony_cadential_valid(const HarmonyCadentialSixFour *cadential);
 
 const Rule *harmony_cadential_rule(HarmonyCadentialRule which);
@@ -108,7 +116,7 @@ const Constraint *harmony_cadential_constraint(HarmonyCadentialRule which);
 
 /* "bass-stays" "six-four-notes" "resolves-six-five-four-three" "doubling-voice"
    "minor-leading-tone" "no-parallels" "smooth-approach" "no-leap-to-fourth"
-   "approach-strong-predominant"; NULL for an invalid rule. */
+   "approach-strong-predominant" "six-four-stronger-beat"; NULL for an invalid rule. */
 const char *harmony_cadential_rule_name(HarmonyCadentialRule which);
 
 /* True when the cadential 6/4 satisfies the rule. False when it does not, and for
