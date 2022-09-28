@@ -123,6 +123,18 @@ never called here.
   for V4/3, and vii4/3 (fa in the bass) for V4/2, in the same four lines. In minor it is
   built on ti (`leading_tone`); in major its seventh is usually lowered, a fully
   diminished chord (`half_diminished` marks the rarer vii with a slashed circle, with la).
+- **Plagal motion** (`harmony_plagal.h`, `harmony_plagal_rules.h`), (IV)-I as a
+  prolongation of tonic, not a predominant: the IV is written in parentheses. It sits
+  either after an authentic cadence or at a phrase beginning, and the caller gives which
+  (`HarmonyPlagalPlacement`). IV is a root position triad; I is root position, or first
+  inversion at a phrase beginning only. It is plagal motion, not a plagal cadence, since a
+  cadence ends a phrase. The rules take the two chords in four voices as diatonic steps.
+  Hard: the progression is (IV)-I in its placement; each chord has only its own notes, all
+  three present, the bass on the root (the third in I6), and the bass doubled in root
+  position; with both chords in root position, each upper voice moves by step or common tone;
+  and no parallel fifths or octaves (in IV to I6, an upper voice that follows the bass down a
+  step makes parallel octaves with it). Soft: do in the soprano after a cadence, and, at a
+  phrase beginning, the less common choice of (IV) over an inverted V7.
   The notes are ti, re, fa, and le or la once each (the triad: ti, re, fa), and le or la
   falls a step to sol. Scale degrees do not tell le from la, so in the fully diminished
   chord re with the sixth degree above it is a diminished fifth, not a perfect one
@@ -210,6 +222,8 @@ never called here.
 - **Other prolongations.** Prolonging tonic by holding or repeating a chord has no
   rule beyond the chord repeating. Progressions that begin on I6, and a phrase
   that begins by prolonging tonic as a rule of the phrase model, are not modeled.
+  Plagal motion is not a link in a prolongation chain: the chain needs V6 or an inverted
+  V7 in the middle.
   Hyperbeats are not modeled, only the beat strength of each chord.
 - **The analysis procedure.** Listening for phrase endings, labeling the cadence, and
   guessing the harmony from the bass line are the analyst's. The bass line hints (sol
@@ -217,7 +231,8 @@ never called here.
   predominant rules'. Nothing here finds a phrase's chords or its cadence.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
-  cadential. Chords before V other than as "x" are not modeled.
+  cadential. A phrase that really ends on (IV)-I exists but is not modeled: plagal
+  motion has no placement for a phrase ending, and is never a `CadenceType`. Chords before V other than as "x" are not modeled.
 - **The strength of an IAC.** An imperfect authentic cadence can be made more or
   less strong by its melody, rhythm, and what follows; that is not modeled.
 - **Minor-mode melodic alterations** beyond the leading tone in V.

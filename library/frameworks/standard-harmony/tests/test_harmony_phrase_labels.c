@@ -91,6 +91,17 @@ static void test_only_the_run_before_the_dominant_counts(void) {
     expect(&labels, 0, 3, 4, 5);
 }
 
+static void test_a_plagal_iv_before_tonic_gets_no_label(void) {
+    /* (IV) goes to I, so it is not in the run of predominants before the dominant. */
+    const HarmonyChord phrase[] = {I, IV, I, IV, V, I};
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyPhraseLabels labels;
+        assert(label((HarmonyMode)mode, phrase, COUNT_OF(phrase), PAC, &labels));
+        expect(&labels, 0, 3, 4, 5);
+        assert(!labels.has_label[1]);
+    }
+}
+
 static void test_cadential_six_four_gets_no_label(void) {
     HarmonyPhraseLabels labels;
     const HarmonyChord phrase[] = {I, IV, CADENTIAL_CHORD, V, I};
@@ -206,6 +217,7 @@ int main(void) {
     test_half_cadence_has_no_tonic_ending();
     test_pd_is_the_first_strong_predominant_of_the_run();
     test_only_the_run_before_the_dominant_counts();
+    test_a_plagal_iv_before_tonic_gets_no_label();
     test_cadential_six_four_gets_no_label();
     test_dominant_seventh();
     test_tonic_beginning_and_prolongation();

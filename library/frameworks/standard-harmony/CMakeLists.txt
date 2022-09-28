@@ -24,6 +24,8 @@ add_library(standard_harmony
     harmony_passing_rules.c
     harmony_neighbor_rules.c
     harmony_arpeggiating_rules.c
+    harmony_plagal.c
+    harmony_plagal_rules.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
