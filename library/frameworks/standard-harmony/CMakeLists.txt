@@ -24,6 +24,7 @@ add_library(standard_harmony
     harmony_passing_rules.c
     harmony_neighbor_rules.c
     harmony_arpeggiating_rules.c
+    harmony_deceptive.c
     harmony_plagal.c
     harmony_plagal_rules.c
 )
