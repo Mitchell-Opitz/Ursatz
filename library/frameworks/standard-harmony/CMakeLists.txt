@@ -26,6 +26,7 @@ add_library(standard_harmony
     harmony_arpeggiating_rules.c
     harmony_deceptive.c
     harmony_deceptive_rules.c
+    harmony_iv6_prolongation.c
     harmony_plagal.c
     harmony_plagal_rules.c
 )
