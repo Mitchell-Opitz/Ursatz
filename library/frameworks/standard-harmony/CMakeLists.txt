@@ -31,6 +31,7 @@ add_library(standard_harmony
     harmony_plagal_six_rules.c
     harmony_connection_rules.c
     harmony_phrygian.c
+    harmony_phrygian_rules.c
     harmony_plagal.c
     harmony_plagal_rules.c
 )
