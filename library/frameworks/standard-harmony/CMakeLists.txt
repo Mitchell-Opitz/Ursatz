@@ -24,6 +24,14 @@ add_library(standard_harmony
     harmony_passing_rules.c
     harmony_neighbor_rules.c
     harmony_arpeggiating_rules.c
+    harmony_deceptive.c
+    harmony_deceptive_rules.c
+    harmony_iv6_prolongation.c
+    harmony_iv6_prolongation_rules.c
+    harmony_plagal_six_rules.c
+    harmony_connection_rules.c
+    harmony_phrygian.c
+    harmony_phrygian_rules.c
     harmony_plagal.c
     harmony_plagal_rules.c
 )

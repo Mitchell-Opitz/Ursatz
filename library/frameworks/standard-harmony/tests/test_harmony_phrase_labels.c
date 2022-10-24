@@ -102,6 +102,25 @@ static void test_a_plagal_iv_before_tonic_gets_no_label(void) {
     }
 }
 
+static void test_la_in_the_bass_labels(void) {
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        HarmonyPhraseLabels labels;
+        /* vi connects tonic to a strong predominant: the PD label goes on the strong one. */
+        const HarmonyChord connecting[] = {I, VI, II6, V, I};
+        assert(label(m, connecting, COUNT_OF(connecting), PAC, &labels));
+        expect(&labels, 0, 2, 3, 4);
+        /* vi as a stand-in for a strong predominant: only a weak one, so no PD. */
+        const HarmonyChord stand_in[] = {I, VI, V, I};
+        assert(label(m, stand_in, COUNT_OF(stand_in), PAC, &labels));
+        expect(&labels, 0, -1, 2, 3);
+        /* IV6 has the function of IV, a strong predominant. */
+        const HarmonyChord iv6[] = {I, CHI(4, 1), V, I};
+        assert(label(m, iv6, COUNT_OF(iv6), PAC, &labels));
+        expect(&labels, 0, 1, 2, 3);
+    }
+}
+
 static void test_cadential_six_four_gets_no_label(void) {
     HarmonyPhraseLabels labels;
     const HarmonyChord phrase[] = {I, IV, CADENTIAL_CHORD, V, I};
@@ -218,6 +237,7 @@ int main(void) {
     test_pd_is_the_first_strong_predominant_of_the_run();
     test_only_the_run_before_the_dominant_counts();
     test_a_plagal_iv_before_tonic_gets_no_label();
+    test_la_in_the_bass_labels();
     test_cadential_six_four_gets_no_label();
     test_dominant_seventh();
     test_tonic_beginning_and_prolongation();
