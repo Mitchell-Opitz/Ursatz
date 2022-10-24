@@ -88,7 +88,8 @@ static void test_the_leading_tone_is_not_doubled(void) {
     HarmonyIv6Prolongation p = example_iv6_v(HARMONY_MODE_MAJOR);
     p.steps[2][VOICE_PART_TENOR] = 6; /* ti in the alto and the tenor */
     assert(!holds(IV6(NO_DOUBLED_LEADING_TONE), &p));
-    assert(holds(IV6(NO_DOUBLED_LEADING_TONE), &(HarmonyIv6Prolongation){example_iv6_v6(HARMONY_MODE_MAJOR)}));
+    HarmonyIv6Prolongation once = example_iv6_v6(HARMONY_MODE_MAJOR);
+    assert(holds(IV6(NO_DOUBLED_LEADING_TONE), &once));
 }
 
 static void test_the_soprano_line(void) {
