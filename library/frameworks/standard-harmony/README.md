@@ -185,6 +185,24 @@ never called here.
   IAC: bass 5 to 1, soprano 2 to 3 or 5 to 5. HC: bass 1 to 5, soprano 1 to 7 or 3
   to 2 (5 to 5 is possible but not common, a soft rule). In minor the V chord needs
   the leading tone. A subverted cadence is not written.
+- **La in the bass** (`harmony_deceptive.h`, `harmony_deceptive_rules.h`,
+  `harmony_iv6_prolongation.h`, `harmony_iv6_prolongation_rules.h`,
+  `harmony_plagal_six_rules.h`, `harmony_connection_rules.h`, `harmony_phrygian.h`,
+  `harmony_phrygian_rules.h`), La in the Bass at Beginnings, Middles, and Endings. Each takes
+  its chords in four voices as diatonic steps. Deceptive motion (V or V7 to vi, or less
+  commonly IV6; a motion, never a cadence): hard, the chords, their notes, ti up to do (and fa
+  down to mi in V7), every other upper voice down against the bass in V(7) to vi, and no
+  parallels; soft, vi over IV6. Tonic prolongation with IV6 as a predominant (I IV6 V I, or I
+  IV6 V6 I, bass do la sol|ti do): hard, the chords, the bass line, their notes, no parallels,
+  no doubled leading tone; soft, the soprano do do re do, V6 over V, and a major key. Plagal
+  (IV6) prolongation (I (IV6) I6, bass do la mi): hard, the bass leaps down each time, the
+  notes, the other voices by step or common tone, no parallels; soft, the soprano mi fa sol.
+  La connecting tonic to a strong predominant in a phrase middle (I, vi or IV6, IV or ii6,
+  bass do la fa): all hard, with the bass leaping down and the upper voices by step or common
+  tone. The phrygian half cadence (iv6 to V, minor only, a half cadence and not a
+  `CadenceType`): hard, minor, the notes, do doubled in the iv6, no augmented second from le up
+  to ti, no parallels. For the phrase model labels, a vi that connects the areas or stands in
+  for a strong predominant is a weak predominant, so only a strong one gets PD.
 
 ## Not covered
 
@@ -224,6 +242,8 @@ never called here.
   that begins by prolonging tonic as a rule of the phrase model, are not modeled.
   Plagal motion is not a link in a prolongation chain: the chain needs V6 or an inverted
   V7 in the middle.
+  In minor, raising le to la to avoid the augmented second in the IV6 prolongation is not
+  modeled (accidentals are not), so the progression is only a soft "avoid" there.
   Hyperbeats are not modeled, only the beat strength of each chord.
 - **The analysis procedure.** Listening for phrase endings, labeling the cadence, and
   guessing the harmony from the bass line are the analyst's. The bass line hints (sol
@@ -232,7 +252,7 @@ never called here.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. A phrase that really ends on (IV)-I exists but is not modeled: plagal
-  motion has no placement for a phrase ending, and is never a `CadenceType`. Chords before V other than as "x" are not modeled.
+  motion has no placement for a phrase ending, and is never a `CadenceType`. Deceptive motion is likewise never a `CadenceType`, and the phrygian half cadence is a half cadence the framework recognizes, not a type of its own. A phrygian half cadence approached from i, with the soprano me fa sol, needs the chords before and is not modeled. Chords before V other than as "x" are not modeled.
 - **The strength of an IAC.** An imperfect authentic cadence can be made more or
   less strong by its melody, rhythm, and what follows; that is not modeled.
 - **Minor-mode melodic alterations** beyond the leading tone in V.
