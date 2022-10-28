@@ -29,6 +29,8 @@ add_library(standard_harmony
     harmony_iv6_prolongation.c
     harmony_iv6_prolongation_rules.c
     harmony_plagal_six_rules.c
+    harmony_mediant.c
+    harmony_mediant_rules.c
     harmony_connection_rules.c
     harmony_phrygian.c
     harmony_phrygian_rules.c

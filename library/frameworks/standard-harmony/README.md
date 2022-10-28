@@ -203,6 +203,17 @@ never called here.
   `CadenceType`): hard, minor, the notes, do doubled in the iv6, no augmented second from le up
   to ti, no parallels. For the phrase model labels, a vi that connects the areas or stands in
   for a strong predominant is a weak predominant, so only a strong one gets PD.
+- **The mediant** (`harmony_mediant.h`, `harmony_mediant_rules.h`), The Mediant Harmonizing
+  Mi in the Bass: iii (III in minor), a weak predominant that usually travels through a strong
+  predominant on its way to V, used after I in root position to harmonize a descending ti.
+  Three chords, I (root position), iii (root position, or less often first inversion), then
+  a strong predominant (IV, ii6, ii) or V directly: `harmony_mediant_of` says which of the two
+  kinds. Hard: the chords; each chord's own bass (do mi, then fa or re, or sol to V); each
+  chord's notes with root and third present; an upper voice on ti over iii that is do over the
+  I and goes down to la over the predominant (or stays on ti into V); and no parallels. Soft:
+  iii in root position, iii through a predominant rather than directly to V, and, in minor,
+  no iii directly to V. iii is not a substitute for I6, which the prolongation rules
+  harmonize I V4/3 I6, so no chord before iii but I is accepted.
 
 ## Not covered
 
@@ -244,6 +255,8 @@ never called here.
   V7 in the middle.
   In minor, raising le to la to avoid the augmented second in the IV6 prolongation is not
   modeled (accidentals are not), so the progression is only a soft "avoid" there.
+  The same holds for the mediant: III has te, not ti, in minor, and te descending to le is not
+  distinguished from the major mode's ti to la.
   Hyperbeats are not modeled, only the beat strength of each chord.
 - **The analysis procedure.** Listening for phrase endings, labeling the cadence, and
   guessing the harmony from the bass line are the analyst's. The bass line hints (sol
@@ -252,7 +265,7 @@ never called here.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this
   chapter's vocabulary, so a progression like IV to I is reported as not
   cadential. A phrase that really ends on (IV)-I exists but is not modeled: plagal
-  motion has no placement for a phrase ending, and is never a `CadenceType`. Deceptive motion is likewise never a `CadenceType`, and the phrygian half cadence is a half cadence the framework recognizes, not a type of its own. A phrygian half cadence approached from i, with the soprano me fa sol, needs the chords before and is not modeled. Chords before V other than as "x" are not modeled.
+  motion has no placement for a phrase ending, and is never a `CadenceType`. V going to iii is not stylistically normative and is not a recognized progression. Deceptive motion is likewise never a `CadenceType`, and the phrygian half cadence is a half cadence the framework recognizes, not a type of its own. A phrygian half cadence approached from i, with the soprano me fa sol, needs the chords before and is not modeled. Chords before V other than as "x" are not modeled.
 - **The strength of an IAC.** An imperfect authentic cadence can be made more or
   less strong by its melody, rhythm, and what follows; that is not modeled.
 - **Minor-mode melodic alterations** beyond the leading tone in V.
