@@ -121,6 +121,21 @@ static void test_la_in_the_bass_labels(void) {
     }
 }
 
+static void test_the_mediant_is_a_weak_predominant(void) {
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        HarmonyPhraseLabels labels;
+        /* iii goes through a strong predominant: the PD label goes on the strong one. */
+        const HarmonyChord through[] = {I, CH(3), IV, V, I};
+        assert(label(m, through, COUNT_OF(through), PAC, &labels));
+        expect(&labels, 0, 2, 3, 4);
+        /* iii directly to V: only a weak predominant, so no PD. */
+        const HarmonyChord direct[] = {I, CH(3), V, I};
+        assert(label(m, direct, COUNT_OF(direct), PAC, &labels));
+        expect(&labels, 0, -1, 2, 3);
+    }
+}
+
 static void test_cadential_six_four_gets_no_label(void) {
     HarmonyPhraseLabels labels;
     const HarmonyChord phrase[] = {I, IV, CADENTIAL_CHORD, V, I};
@@ -238,6 +253,7 @@ int main(void) {
     test_only_the_run_before_the_dominant_counts();
     test_a_plagal_iv_before_tonic_gets_no_label();
     test_la_in_the_bass_labels();
+    test_the_mediant_is_a_weak_predominant();
     test_cadential_six_four_gets_no_label();
     test_dominant_seventh();
     test_tonic_beginning_and_prolongation();
