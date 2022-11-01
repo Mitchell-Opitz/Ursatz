@@ -32,6 +32,7 @@ add_library(standard_harmony
     harmony_mediant.c
     harmony_mediant_rules.c
     harmony_predominant_seventh.c
+    harmony_predominant_seventh_rules.c
     harmony_connection_rules.c
     harmony_phrygian.c
     harmony_phrygian_rules.c
