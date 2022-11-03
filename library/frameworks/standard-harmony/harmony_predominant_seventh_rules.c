@@ -2,13 +2,15 @@
 
 #include <stddef.h>
 
+#include "harmony_functions.h"
 #include "harmony_rule_table.h"
 #include "harmony_steps.h"
 
 #define CHORD_COUNT 3
 
 static const char *const NAMES[HARMONY_PREDOMINANT_SEVENTH_RULE_COUNT] = {
-    "progression", "chord-notes", "seventh-approach", "seventh-resolves", "no-parallels", "preceded-by-i6"};
+    "progression", "chord-notes", "seventh-approach", "seventh-resolves",
+    "no-parallels", "preceded-by-i6", "root-position", "vi7-connects"};
 
 static bool table_is_hard(int which) {
     return which <= HARMONY_PREDOMINANT_SEVENTH_NO_PARALLELS;
@@ -113,6 +115,22 @@ static bool check_preceded_by_i6(const HarmonyPredominantSeventh *s) {
     return !(before->degree == 1 && before->inversion == 0 && !before->seventh);
 }
 
+static bool check_root_position(const HarmonyPredominantSeventh *s, HarmonyPredominantSeventhKind kind) {
+    if (kind != HARMONY_PREDOMINANT_SEVENTH_IV7 && kind != HARMONY_PREDOMINANT_SEVENTH_VI7) {
+        return true;
+    }
+    return s->chords[1].inversion == 0;
+}
+
+static bool check_vi7_connects(const HarmonyPredominantSeventh *s, HarmonyPredominantSeventhKind kind) {
+    if (kind != HARMONY_PREDOMINANT_SEVENTH_VI7) {
+        return true;
+    }
+    HarmonyPredominantStrength strength;
+    return s->chords[0].degree != 5 && harmony_predominant_strength(s->mode, &s->chords[2], &strength) &&
+           strength == HARMONY_PREDOMINANT_STRONG;
+}
+
 bool harmony_predominant_seventh_rule_holds(HarmonyPredominantSeventhRule which,
                                             const HarmonyPredominantSeventh *subject) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_predominant_seventh_valid(subject)) {
@@ -133,6 +151,10 @@ bool harmony_predominant_seventh_rule_holds(HarmonyPredominantSeventhRule which,
             return check_no_parallels(subject);
         case HARMONY_PREDOMINANT_SEVENTH_PRECEDED_BY_I6:
             return check_preceded_by_i6(subject);
+        case HARMONY_PREDOMINANT_SEVENTH_ROOT_POSITION:
+            return !classified || check_root_position(subject, kind);
+        case HARMONY_PREDOMINANT_SEVENTH_VI7_CONNECTS:
+            return !classified || check_vi7_connects(subject, kind);
         default:
             return false;
     }

@@ -52,6 +52,8 @@ typedef enum {
     HARMONY_PREDOMINANT_SEVENTH_SEVENTH_RESOLVES,
     HARMONY_PREDOMINANT_SEVENTH_NO_PARALLELS,
     HARMONY_PREDOMINANT_SEVENTH_PRECEDED_BY_I6,
+    HARMONY_PREDOMINANT_SEVENTH_ROOT_POSITION,
+    HARMONY_PREDOMINANT_SEVENTH_VI7_CONNECTS,
     HARMONY_PREDOMINANT_SEVENTH_RULE_COUNT
 } HarmonyPredominantSeventhRule;
 
@@ -62,7 +64,7 @@ const Rule *harmony_predominant_seventh_rule(HarmonyPredominantSeventhRule which
 const Constraint *harmony_predominant_seventh_constraint(HarmonyPredominantSeventhRule which);
 
 /* "progression" "chord-notes" "seventh-approach" "seventh-resolves" "no-parallels"
-   "preceded-by-i6"; NULL for an invalid rule. */
+   "preceded-by-i6" "root-position" "vi7-connects"; NULL for an invalid rule. */
 const char *harmony_predominant_seventh_rule_name(HarmonyPredominantSeventhRule which);
 
 /* True when the subject satisfies the rule. False when it does not, and for an invalid
