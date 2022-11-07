@@ -128,6 +128,37 @@ static void test_ii7_is_best_preceded_by_i6(void) {
     assert(holds(PS(PRECEDED_BY_I6), &p));
 }
 
+static void test_iv7_and_vi7_are_in_root_position(void) {
+    HarmonyPredominantSeventh p = example_ii7(HARMONY_MODE_MAJOR);
+    p.chords[1] = CH7(4);
+    assert(holds(PS(ROOT_POSITION), &p));
+    p.chords[1] = CH7I(4, 1);
+    assert(!holds(PS(ROOT_POSITION), &p));
+    p.chords[1] = CH7I(6, 2);
+    assert(!holds(PS(ROOT_POSITION), &p));
+    p.chords[1] = CH7I(2, 1); /* ii6/5 is common in inversion */
+    assert(holds(PS(ROOT_POSITION), &p));
+    p.chords[1] = CH7I(3, 1);
+    assert(holds(PS(ROOT_POSITION), &p));
+}
+
+static void test_vi7_connects_tonic_to_a_strong_predominant(void) {
+    HarmonyPredominantSeventh p = example_ii7(HARMONY_MODE_MAJOR);
+    p.chords[0] = CH(1);
+    p.chords[1] = CH7(6);
+    p.chords[2] = CH(4);
+    assert(holds(PS(VI7_CONNECTS), &p));
+    p.chords[2] = CHI(2, 1);
+    assert(holds(PS(VI7_CONNECTS), &p));
+    p.chords[0] = CH7(5); /* V7 to vi7 is not common */
+    assert(!holds(PS(VI7_CONNECTS), &p));
+    p.chords[0] = CH(1);
+    p.chords[2] = CH(5); /* not on to a strong predominant */
+    assert(!holds(PS(VI7_CONNECTS), &p));
+    p.chords[1] = CH7(4); /* the rule is about vi7 only */
+    assert(holds(PS(VI7_CONNECTS), &p));
+}
+
 static void test_invalid_subject(void) {
     HarmonyPredominantSeventh bad_chord = example_ii7(HARMONY_MODE_MAJOR);
     bad_chord.chords[2] = CH(9);
@@ -157,6 +188,8 @@ int main(void) {
     test_the_seventh_resolves_down_by_step();
     test_no_parallel_fifths();
     test_ii7_is_best_preceded_by_i6();
+    test_iv7_and_vi7_are_in_root_position();
+    test_vi7_connects_tonic_to_a_strong_predominant();
     test_invalid_subject();
     printf("test_harmony_predominant_seventh_rules: ok\n");
     return 0;
