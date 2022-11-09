@@ -136,6 +136,28 @@ static void test_the_mediant_is_a_weak_predominant(void) {
     }
 }
 
+static void test_predominant_sevenths_are_predominants(void) {
+    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
+        HarmonyMode m = (HarmonyMode)mode;
+        HarmonyPhraseLabels labels;
+        /* ii7 and its inversions are strong predominants: the PD label goes on them. */
+        const HarmonyChord ii7[] = {I, CH7(2), V, I};
+        assert(label(m, ii7, COUNT_OF(ii7), PAC, &labels));
+        expect(&labels, 0, 1, 2, 3);
+        const HarmonyChord ii65[] = {I, CH7I(2, 1), V7, I};
+        assert(label(m, ii65, COUNT_OF(ii65), PAC, &labels));
+        expect(&labels, 0, 1, 2, 3);
+        /* vi7 is a weak predominant: alone before V there is no PD. */
+        const HarmonyChord vi7[] = {I, CH7(6), V, I};
+        assert(label(m, vi7, COUNT_OF(vi7), PAC, &labels));
+        expect(&labels, 0, -1, 2, 3);
+        /* vi7 connecting to a strong predominant: the PD label goes on the strong one. */
+        const HarmonyChord connecting[] = {I, CH7(6), CH7I(2, 1), V, I};
+        assert(label(m, connecting, COUNT_OF(connecting), PAC, &labels));
+        expect(&labels, 0, 2, 3, 4);
+    }
+}
+
 static void test_cadential_six_four_gets_no_label(void) {
     HarmonyPhraseLabels labels;
     const HarmonyChord phrase[] = {I, IV, CADENTIAL_CHORD, V, I};
@@ -254,6 +276,7 @@ int main(void) {
     test_a_plagal_iv_before_tonic_gets_no_label();
     test_la_in_the_bass_labels();
     test_the_mediant_is_a_weak_predominant();
+    test_predominant_sevenths_are_predominants();
     test_cadential_six_four_gets_no_label();
     test_dominant_seventh();
     test_tonic_beginning_and_prolongation();

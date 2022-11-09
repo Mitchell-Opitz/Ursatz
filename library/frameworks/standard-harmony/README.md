@@ -214,6 +214,21 @@ never called here.
   iii in root position, iii through a predominant rather than directly to V, and, in minor,
   no iii directly to V. iii is not a substitute for I6, which the prolongation rules
   harmonize I V4/3 I6, so no chord before iii but I is accepted.
+- **Predominant seventh chords** (`harmony_predominant_seventh.h`,
+  `harmony_predominant_seventh_rules.h`, `harmony_ii7_v7_rules.h`), Predominant Seventh
+  Chords: ii7 and its inversions (ii6/5, ii4/3, ii4/2), IV7, vi7, and iii7, which have
+  predominant function. `harmony_predominant_seventh_of` gives the kind, and
+  `harmony_predominant_seventh_rank` how common it is (a value of the kind, not a rule): ii6/5
+  most, ii7 somewhat, ii4/3 less, ii4/2 least; IV7 and vi7 less common, iii7 least. The
+  treatment rules take three chords (before, the seventh chord, after) in four voices as
+  diatonic steps. Hard: the middle chord is a predominant seventh; its notes (root, third, and
+  seventh present, the bass on the root, third, fifth, or seventh of its inversion); the chordal
+  seventh is approached by step or common tone and resolves down by step; and no parallels.
+  Soft: ii7 is preceded by I6 rather than I, IV7 and vi7 are in root position, and vi7
+  connects the tonic area to a strong predominant (it is not reached from V7 or followed by
+  V). ii7 to V7, both in root position, is its own subject: hard, the notes, one of the two
+  incomplete (ii7 with re doubled and no la, or V7 with sol doubled and no re), and no
+  parallels.
 
 ## Not covered
 
@@ -257,6 +272,9 @@ never called here.
   modeled (accidentals are not), so the progression is only a soft "avoid" there.
   The same holds for the mediant: III has te, not ti, in minor, and te descending to le is not
   distinguished from the major mode's ti to la.
+  Predominant sevenths in minor have altered notes (ii7 is half diminished), which are not
+  modeled. The treatment rules cover each predominant seventh alone; the progressions ii6/5
+  for ii6, I ii4/3 I6, and ii4/2 in place of a strong predominant are not separate subjects.
   Hyperbeats are not modeled, only the beat strength of each chord.
 - **The analysis procedure.** Listening for phrase endings, labeling the cadence, and
   guessing the harmony from the bass line are the analyst's. The bass line hints (sol
