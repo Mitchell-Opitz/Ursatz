@@ -1,0 +1,69 @@
+#include "harmony_applied.h"
+
+#include <stdio.h>
+
+static const char *const QUALITY_NAMES[HARMONY_APPLIED_QUALITY_COUNT] = {
+    "major-triad", "dominant-seventh", "diminished-triad", "fully-diminished-seventh", "half-diminished-seventh"};
+
+/* The label of the applied chord itself, by quality. */
+static const char *const QUALITY_SYMBOLS[HARMONY_APPLIED_QUALITY_COUNT] = {"V", "V7", "viio", "viio7", "vii%7"};
+
+/* Roman numerals of the diatonic triads, indexed by degree. */
+static const char *const MAJOR_NUMERALS[8] = {"", "I", "ii", "iii", "IV", "V", "vi", "viio"};
+static const char *const MINOR_NUMERALS[8] = {"", "i", "iio", "III", "iv", "V", "VI", "VII"};
+
+bool harmony_applied_quality_valid(HarmonyAppliedQuality quality) {
+    return quality >= 0 && quality < HARMONY_APPLIED_QUALITY_COUNT;
+}
+
+const char *harmony_applied_quality_name(HarmonyAppliedQuality quality) {
+    return harmony_applied_quality_valid(quality) ? QUALITY_NAMES[quality] : NULL;
+}
+
+bool harmony_applied_quality_is_seventh(HarmonyAppliedQuality quality) {
+    return quality == HARMONY_APPLIED_DOMINANT_SEVENTH || quality == HARMONY_APPLIED_FULLY_DIMINISHED_SEVENTH ||
+           quality == HARMONY_APPLIED_HALF_DIMINISHED_SEVENTH;
+}
+
+bool harmony_applied_quality_kind(HarmonyAppliedQuality quality, AppliedChordKind *out) {
+    if (out == NULL || !harmony_applied_quality_valid(quality)) {
+        return false;
+    }
+    *out = quality <= HARMONY_APPLIED_DOMINANT_SEVENTH ? APPLIED_CHORD_KIND_SECONDARY_DOMINANT
+                                                       : APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE;
+    return true;
+}
+
+bool harmony_applied_target_valid(HarmonyMode mode, int degree) {
+    switch (mode) {
+        case HARMONY_MODE_MAJOR:
+            return degree >= 2 && degree <= 6;
+        case HARMONY_MODE_MINOR:
+            return degree >= 3 && degree <= 7;
+        default:
+            return false;
+    }
+}
+
+bool harmony_applied_valid(HarmonyMode mode, const HarmonyAppliedChord *chord) {
+    if (chord == NULL || !harmony_mode_valid(mode) || !applied_chord_kind_valid(chord->kind)) {
+        return false;
+    }
+    AppliedChordKind kind;
+    return harmony_applied_quality_kind(chord->quality, &kind) && kind == chord->kind &&
+           harmony_applied_target_valid(mode, chord->target);
+}
+
+bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, char *out, size_t size) {
+    if (out == NULL || !harmony_applied_valid(mode, chord)) {
+        return false;
+    }
+    const char *target = mode == HARMONY_MODE_MAJOR ? MAJOR_NUMERALS[chord->target] : MINOR_NUMERALS[chord->target];
+    char label[32];
+    int length = snprintf(label, sizeof(label), "%s/%s", QUALITY_SYMBOLS[chord->quality], target);
+    if (length < 0 || (size_t)length >= size) {
+        return false;
+    }
+    snprintf(out, size, "%s", label);
+    return true;
+}
