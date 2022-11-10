@@ -67,3 +67,35 @@ bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, c
     snprintf(out, size, "%s", label);
     return true;
 }
+
+static const int MAJOR_SEMITONES[7] = {0, 2, 4, 5, 7, 9, 11};
+static const int MINOR_SEMITONES[7] = {0, 2, 3, 5, 7, 8, 10};
+
+int harmony_applied_scale_semitone(HarmonyMode mode, int degree) {
+    if (!harmony_mode_valid(mode) || degree < 1 || degree > 7) {
+        return -1;
+    }
+    return mode == HARMONY_MODE_MAJOR ? MAJOR_SEMITONES[degree - 1] : MINOR_SEMITONES[degree - 1];
+}
+
+bool harmony_applied_analyze(HarmonyMode mode, int root_semitone, HarmonyAppliedQuality quality,
+                             HarmonyAppliedChord *out) {
+    AppliedChordKind kind;
+    if (out == NULL || !harmony_mode_valid(mode) || !harmony_applied_quality_kind(quality, &kind)) {
+        return false;
+    }
+    int root = ((root_semitone % 12) + 12) % 12;
+    int target_root = kind == APPLIED_CHORD_KIND_SECONDARY_DOMINANT ? (root + 5) % 12 : (root + 1) % 12;
+    for (int degree = 1; degree <= 7; degree++) {
+        if (harmony_applied_scale_semitone(mode, degree) == target_root) {
+            if (!harmony_applied_target_valid(mode, degree)) {
+                return false;
+            }
+            out->kind = kind;
+            out->quality = quality;
+            out->target = degree;
+            return true;
+        }
+    }
+    return false;
+}

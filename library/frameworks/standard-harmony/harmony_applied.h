@@ -76,4 +76,25 @@ bool harmony_applied_valid(HarmonyMode mode, const HarmonyAppliedChord *chord);
    buffer too small. */
 bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, char *out, size_t size);
 
+/* The semitones above the tonic of the scale degree (1 to 7) in the mode: major 0 2 4 5 7 9 11,
+   natural minor 0 2 3 5 7 8 10. -1 for an invalid mode or degree. */
+int harmony_applied_scale_semitone(HarmonyMode mode, int degree);
+
+/*
+ * Analyzing tonicization. A chromatic chord is an applied chord when it is a major triad or a
+ * dominant seventh (V or V7), or a diminished triad, fully diminished seventh, or half-diminished
+ * seventh (vii diminished), whose target, the chord it is V or vii of, is a diatonic chord that
+ * can be tonicized. Given the chord's root, as semitones above the tonic (any integer, taken
+ * modulo 12), and its quality: the quality names the kind; the target's root is a fifth below
+ * the root of a dominant (the root is its V) or a semitone above the root of a leading-tone
+ * chord (the root is its vii); the target is the diatonic chord of that root, its Roman numeral
+ * in the home key. False (*out untouched) when the root is not that of a tonicizable diatonic
+ * chord (for example the root of V itself, which tonicizes the tonic and is just V), for an
+ * invalid mode or quality, and for NULL.
+ *
+ * Whether a chromatic note belongs to the chord or is an embellishing tone is the analyst's.
+ */
+bool harmony_applied_analyze(HarmonyMode mode, int root_semitone, HarmonyAppliedQuality quality,
+                             HarmonyAppliedChord *out);
+
 #endif
