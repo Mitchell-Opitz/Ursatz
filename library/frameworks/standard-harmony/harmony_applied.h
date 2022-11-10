@@ -97,4 +97,28 @@ int harmony_applied_scale_semitone(HarmonyMode mode, int degree);
 bool harmony_applied_analyze(HarmonyMode mode, int root_semitone, HarmonyAppliedQuality quality,
                              HarmonyAppliedChord *out);
 
+/*
+ * Spelling an applied chord: determine the root of the chord being tonicized, pretend it is the
+ * tonic of a temporary key, and spell the V7 or vii diminished 7 of that key.
+ *
+ *   root degree     the scale degree the applied chord's root is named on: a fifth above the
+ *                   target's root for a secondary dominant, a step below it for a secondary
+ *                   leading-tone chord (so V7/V is on re and vii diminished 7/V on fa). -1 for
+ *                   an invalid chord or mode
+ *   root semitone   the same root as semitones above the tonic (0 to 11): V7/V is 2 in major,
+ *                   vii diminished 7/V is 6. -1 for an invalid chord or mode
+ */
+int harmony_applied_root_degree(HarmonyMode mode, const HarmonyAppliedChord *chord);
+int harmony_applied_root_semitone(HarmonyMode mode, const HarmonyAppliedChord *chord);
+
+/*
+ * Secondary dominants as altered diatonic chords: the applied V7 that shares its root with a
+ * diatonic chord, which is that chord with its third raised (or otherwise altered): ii to II
+ * sharp, which is V7/V; I to I7, which is V7/IV. The target is a fifth below the diatonic
+ * chord's root. False (*out untouched) when that chord cannot be tonicized (the diatonic V,
+ * which would tonicize the tonic, and in major IV and in minor VI, which would tonicize vii
+ * diminished and ii diminished), for an invalid mode or degree, and for NULL.
+ */
+bool harmony_applied_from_diatonic_root(HarmonyMode mode, int degree, HarmonyAppliedChord *out);
+
 #endif

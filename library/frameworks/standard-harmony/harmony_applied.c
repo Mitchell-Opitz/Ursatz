@@ -99,3 +99,33 @@ bool harmony_applied_analyze(HarmonyMode mode, int root_semitone, HarmonyApplied
     }
     return false;
 }
+
+int harmony_applied_root_degree(HarmonyMode mode, const HarmonyAppliedChord *chord) {
+    if (!harmony_applied_valid(mode, chord)) {
+        return -1;
+    }
+    int up = chord->kind == APPLIED_CHORD_KIND_SECONDARY_DOMINANT ? 4 : 6;
+    return (chord->target - 1 + up) % 7 + 1;
+}
+
+int harmony_applied_root_semitone(HarmonyMode mode, const HarmonyAppliedChord *chord) {
+    if (!harmony_applied_valid(mode, chord)) {
+        return -1;
+    }
+    int target_root = harmony_applied_scale_semitone(mode, chord->target);
+    return chord->kind == APPLIED_CHORD_KIND_SECONDARY_DOMINANT ? (target_root + 7) % 12 : (target_root + 11) % 12;
+}
+
+bool harmony_applied_from_diatonic_root(HarmonyMode mode, int degree, HarmonyAppliedChord *out) {
+    if (out == NULL || !harmony_mode_valid(mode) || degree < 1 || degree > 7) {
+        return false;
+    }
+    int target = (degree - 1 + 3) % 7 + 1;
+    if (!harmony_applied_target_valid(mode, target)) {
+        return false;
+    }
+    out->kind = APPLIED_CHORD_KIND_SECONDARY_DOMINANT;
+    out->quality = HARMONY_APPLIED_DOMINANT_SEVENTH;
+    out->target = target;
+    return true;
+}
