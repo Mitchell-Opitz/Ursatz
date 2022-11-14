@@ -37,6 +37,7 @@ add_library(standard_harmony
     harmony_applied.c
     harmony_applied_rules.c
     harmony_tonicization_frequency.c
+    harmony_tonicized_deceptive.c
     harmony_connection_rules.c
     harmony_phrygian.c
     harmony_phrygian_rules.c
