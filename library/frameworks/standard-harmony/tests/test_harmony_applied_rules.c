@@ -90,14 +90,13 @@ static void test_names(void) {
 }
 
 static void test_the_worked_examples_break_no_rule(void) {
-    for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
-        HarmonyAppliedMotion examples[] = {example_v7_of_v((HarmonyMode)mode), example_viio7_of_v((HarmonyMode)mode)};
-        for (size_t i = 0; i < COUNT_OF(examples); i++) {
-            for (int rule = 0; rule < HARMONY_APPLIED_RULE_COUNT; rule++) {
-                assert(holds((HarmonyAppliedRule)rule, &examples[i]));
-            }
-            expect_breaks(&examples[i], 0, 0);
+    /* The steps are those of C major: la is a semitone lower in minor. */
+    HarmonyAppliedMotion examples[] = {example_v7_of_v(HARMONY_MODE_MAJOR), example_viio7_of_v(HARMONY_MODE_MAJOR)};
+    for (size_t i = 0; i < COUNT_OF(examples); i++) {
+        for (int rule = 0; rule < HARMONY_APPLIED_RULE_COUNT; rule++) {
+            assert(holds((HarmonyAppliedRule)rule, &examples[i]));
         }
+        expect_breaks(&examples[i], 0, 0);
     }
 }
 
