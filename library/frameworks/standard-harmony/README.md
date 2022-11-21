@@ -229,6 +229,28 @@ never called here.
   V). ii7 to V7, both in root position, is its own subject: hard, the notes, one of the two
   incomplete (ii7 with re doubled and no la, or V7 with sol doubled and no re), and no
   parallels.
+- **Tonicization** (`harmony_applied.h`, `harmony_applied_rules.h`,
+  `harmony_tonicization_frequency.h`, `harmony_tonicized_deceptive.h`), Tonicization: applied
+  chords, chromatic chords that make a non-tonic chord sound like a temporary tonic
+  (`AppliedChordKind`: secondary dominant or secondary leading-tone). An applied chord is a kind,
+  a quality (major triad or dominant seventh; diminished triad, fully diminished seventh, or
+  rarely half-diminished seventh), and the target chord, given as its scale degree: ii, iii, IV,
+  V, vi in major and III, iv, V, VI, VII in minor (not the tonic, whose V is just V, and not the
+  diminished chords, since there are no diminished keys). `harmony_applied_label` writes the
+  label ("V7/V", "viio7/vi"); `harmony_applied_analyze` takes a chromatic chord's root (semitones
+  above the tonic) and quality and returns the label, the target being the key in which the chord
+  is V or vii; `harmony_applied_root_degree` and `harmony_applied_root_semitone` spell it; and
+  `harmony_applied_from_diatonic_root` gives the applied V7 that is an altered diatonic chord (ii
+  to II sharp, which is V7/V). The resolution rules take the applied chord, the chord after it,
+  and four voices as diatonic steps with an alteration for each note (tonicization is chromatic).
+  Hard: the chord after is the target (or, for V, the cadential 6/4); each voice is a note of the
+  applied chord with its root, third, and seventh present; the secondary leading tone goes up a
+  semitone (or down a semitone into the seventh of a following seventh chord); the secondary
+  seventh goes down by step; and no parallels. Soft: not the rare half-diminished chord, and an
+  altered note in the chord (applied chords nearly always have accidentals).
+  `harmony_tonicization_frequency` ranks the target: V, IV, and ii (minor: V and iv) common, vi
+  (minor: VI and III) frequent, iii and, in minor, VII uncommon. Tonicized deceptive motion is V,
+  vii diminished 7 of vi, then vi (`harmony_tonicized_deceptive_is`).
 
 ## Not covered
 
@@ -272,6 +294,12 @@ never called here.
   modeled (accidentals are not), so the progression is only a soft "avoid" there.
   The same holds for the mediant: III has te, not ti, in minor, and te descending to le is not
   distinguished from the major mode's ti to la.
+- **Tonicization and keys.** Tonicization is not a modulation: nothing tracks a temporary key, and
+  the applied chord's label is the whole result. The phrase model (`harmony_phrase_labels.h`)
+  does not label applied chords, which are not `HarmonyChord`s. Whether a chromatic note belongs to
+  the chord or is an embellishing tone is the analyst's. The applied chord's inversion and the
+  doubling in its voices are not modeled beyond the notes of the chord, and tonicizing a chord
+  with an applied half-diminished seventh is only a soft rule.
   Predominant sevenths in minor have altered notes (ii7 is half diminished), which are not
   modeled. The treatment rules cover each predominant seventh alone; the progressions ii6/5
   for ii6, I ii4/3 I6, and ii4/2 in place of a strong predominant are not separate subjects.
