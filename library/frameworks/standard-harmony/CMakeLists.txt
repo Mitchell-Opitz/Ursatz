@@ -39,6 +39,7 @@ add_library(standard_harmony
     harmony_tonicization_frequency.c
     harmony_tonicized_deceptive.c
     harmony_related_key.c
+    harmony_pivot.c
     harmony_connection_rules.c
     harmony_phrygian.c
     harmony_phrygian_rules.c
