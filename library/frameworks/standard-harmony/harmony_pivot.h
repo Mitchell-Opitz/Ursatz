@@ -45,4 +45,36 @@ bool harmony_pivot_valid(HarmonyMode home, const HarmonyRelatedKey *key, const H
 bool harmony_pivot_label(HarmonyMode home, const HarmonyRelatedKey *key, const HarmonyPivot *pivot, char *out,
                          size_t size);
 
+/*
+ * How good a pivot is, by the function of the chord in each key (harmony_functions.h). Several
+ * chords could serve as the pivot; V usually appears soon after it, so the best are predominants
+ * in both keys, which suggests we are on the way to V in both. The second best is a tonic in the
+ * old key becoming a predominant in the new one (I becomes IV), since a tonic can go directly to
+ * V. Poor ones involve the dominant: "V becomes I" says the same chord is both unstable and very
+ * stable, which is not how it is heard.
+ *
+ *   BEST   predominant in both keys
+ *   GOOD   tonic in the old key, predominant in the new
+ *   FAIR   any other pair that does not involve a dominant
+ *   POOR   a dominant in either key
+ */
+typedef enum {
+    HARMONY_PIVOT_BEST = 0,
+    HARMONY_PIVOT_GOOD,
+    HARMONY_PIVOT_FAIR,
+    HARMONY_PIVOT_POOR,
+    HARMONY_PIVOT_RANK_COUNT
+} HarmonyPivotRank;
+
+/* True for the four ranks above; false for any other value. */
+bool harmony_pivot_rank_valid(HarmonyPivotRank rank);
+
+/* "best" "good" "fair" "poor"; NULL for an invalid rank. */
+const char *harmony_pivot_rank_name(HarmonyPivotRank rank);
+
+/* The rank of the pivot. False (*out untouched) for a pair that is not a pivot between the two
+   keys, an invalid mode, and NULL. */
+bool harmony_pivot_rank(HarmonyMode home, const HarmonyRelatedKey *key, const HarmonyPivot *pivot,
+                        HarmonyPivotRank *out);
+
 #endif

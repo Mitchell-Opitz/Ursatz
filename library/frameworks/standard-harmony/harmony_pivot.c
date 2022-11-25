@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "harmony_applied.h"
+#include "harmony_functions.h"
 
 typedef enum { TRIAD_MAJOR = 0, TRIAD_MINOR, TRIAD_DIMINISHED } Triad;
 
@@ -65,5 +66,39 @@ bool harmony_pivot_label(HarmonyMode home, const HarmonyRelatedKey *key, const H
         return false;
     }
     snprintf(out, size, "%s", label);
+    return true;
+}
+
+static const char *const RANK_NAMES[HARMONY_PIVOT_RANK_COUNT] = {"best", "good", "fair", "poor"};
+
+bool harmony_pivot_rank_valid(HarmonyPivotRank rank) {
+    return rank >= 0 && rank < HARMONY_PIVOT_RANK_COUNT;
+}
+
+const char *harmony_pivot_rank_name(HarmonyPivotRank rank) {
+    return harmony_pivot_rank_valid(rank) ? RANK_NAMES[rank] : NULL;
+}
+
+static bool function_of(HarmonyMode mode, int degree, HarmonicFunction *out) {
+    HarmonyChord chord = {degree, 0, false, false, false, false};
+    return harmony_function_of(mode, &chord, out);
+}
+
+bool harmony_pivot_rank(HarmonyMode home, const HarmonyRelatedKey *key, const HarmonyPivot *pivot,
+                        HarmonyPivotRank *out) {
+    HarmonicFunction old_function, new_function;
+    if (out == NULL || !harmony_pivot_valid(home, key, pivot) || !function_of(home, pivot->old_degree, &old_function) ||
+        !function_of(key->mode, pivot->new_degree, &new_function)) {
+        return false;
+    }
+    if (old_function == HARMONIC_FUNCTION_DOMINANT || new_function == HARMONIC_FUNCTION_DOMINANT) {
+        *out = HARMONY_PIVOT_POOR;
+    } else if (old_function == HARMONIC_FUNCTION_PREDOMINANT && new_function == HARMONIC_FUNCTION_PREDOMINANT) {
+        *out = HARMONY_PIVOT_BEST;
+    } else if (old_function == HARMONIC_FUNCTION_TONIC && new_function == HARMONIC_FUNCTION_PREDOMINANT) {
+        *out = HARMONY_PIVOT_GOOD;
+    } else {
+        *out = HARMONY_PIVOT_FAIR;
+    }
     return true;
 }
