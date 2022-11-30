@@ -177,3 +177,7 @@ add_test(NAME standard_harmony_related_key COMMAND test_standard_harmony_related
 add_executable(test_standard_harmony_pivot test_harmony_pivot.c)
 target_link_libraries(test_standard_harmony_pivot PRIVATE standard_harmony)
 add_test(NAME standard_harmony_pivot COMMAND test_standard_harmony_pivot)
+
+add_executable(test_standard_harmony_key_change test_harmony_key_change.c)
+target_link_libraries(test_standard_harmony_key_change PRIVATE standard_harmony)
+add_test(NAME standard_harmony_key_change COMMAND test_standard_harmony_key_change)
