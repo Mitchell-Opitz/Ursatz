@@ -24,7 +24,11 @@ bool harmony_extended_tonicization_label(HarmonyMode home, const HarmonyRelatedK
     if (out == NULL || !harmony_key_is_closely_related(home, key)) {
         return false;
     }
-    const char *numeral = harmony_triad_numeral(home, key->degree);
-    int length = snprintf(out, size, "%s", numeral);
-    return length >= 0 && (size_t)length < size;
+    char label[8];
+    int length = snprintf(label, sizeof(label), "%s", harmony_triad_numeral(home, key->degree));
+    if (length < 0 || (size_t)length >= size) {
+        return false;
+    }
+    snprintf(out, size, "%s", label);
+    return true;
 }
