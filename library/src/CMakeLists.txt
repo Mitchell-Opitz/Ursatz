@@ -97,6 +97,8 @@ add_library(ursatz
     semantics/phrase_model_label.c
     semantics/six_four_type.c
     semantics/applied_chord_kind.c
+    semantics/modulation_kind.c
+    semantics/key_change_extent.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c

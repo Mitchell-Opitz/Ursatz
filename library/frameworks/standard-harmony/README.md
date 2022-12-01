@@ -251,6 +251,26 @@ never called here.
   `harmony_tonicization_frequency` ranks the target: V, IV, and ii (minor: V and iv) common, vi
   (minor: VI and III) frequent, iii and, in minor, VII uncommon. Tonicized deceptive motion is V,
   vii diminished 7 of vi, then vi (`harmony_tonicized_deceptive_is`).
+- **Modulation and closely related keys** (`harmony_related_key.h`, `harmony_pivot.h`,
+  `harmony_key_change.h`), Extended Tonicization and Modulation to Closely Related Keys. A key is
+  given relative to the home key, as the scale degree of the diatonic chord whose root is its
+  tonic and whether it is major or minor, so this module does not depend on spelled keys
+  (`standard-tonality` has the circle of fifths and the relative keys by name). The closely
+  related keys, within one accidental of the home key's signature, are the keys of its diatonic
+  major and minor triads (the home key excluded): ii, iii, IV, V, vi in major; III, iv, v, VI, VII
+  in minor (v is the natural-minor key). `harmony_key_relation_rank` calls V and vi in major and
+  III and v in minor the common modulations. A pivot chord is a triad diatonic in both keys, with
+  the same root and quality (natural scales; a seventh rides on the chord); `harmony_pivot_find`
+  lists them as pairs of degrees and `harmony_pivot_label` writes "iv becomes ii".
+  `harmony_pivot_rank` ranks a pivot: best a predominant in both keys, good a tonic that becomes a
+  predominant, poor any pivot involving a dominant ("V becomes I"), fair the rest.
+  `harmony_key_change_classify` takes the analyst's facts (chords in the new key, whether a
+  cadence establishes it, whether the passage continues after it) and gives a `KeyChangeExtent`:
+  two chords or fewer with no cadence is a tonicization, more with none an extended tonicization,
+  a cadence a modulation (strong if it continues, weak if it goes right back home).
+  `harmony_extended_tonicization_label` writes the Roman numeral for the bracket under an
+  extended tonicization ("ii" for F minor in E-flat major). `harmony_modulation_kind` is pivot
+  when a pivot is given and direct when not.
 
 ## Not covered
 
@@ -300,6 +320,12 @@ never called here.
   the chord or is an embellishing tone is the analyst's. The applied chord's inversion and the
   doubling in its voices are not modeled beyond the notes of the chord, and tonicizing a chord
   with an applied half-diminished seventh is only a soft rule.
+- **Finding modulations.** Finding cadences, noticing repeated accidentals, backing up a chord
+  to find the pivot, hearing x/ii, y/ii, z/ii over and over, and deciding where a passage sits on
+  the spectrum are the analyst's; the facts are given. Writing advice for a modulating phrase (do
+  not cadence too quickly after the pivot, use deceptive motion to avoid a cadence in the new key
+  and then retry) is not a rule, since it gives no number. Modulation to keys beyond the closely
+  related ones, and pivots through the harmonic minor's V or vii diminished, are not modeled.
   Predominant sevenths in minor have altered notes (ii7 is half diminished), which are not
   modeled. The treatment rules cover each predominant seventh alone; the progressions ii6/5
   for ii6, I ii4/3 I6, and ii4/2 in place of a strong predominant are not separate subjects.
