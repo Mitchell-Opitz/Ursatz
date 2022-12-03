@@ -100,6 +100,7 @@ add_library(ursatz
     semantics/modulation_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
+    semantics/motive_kind.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
