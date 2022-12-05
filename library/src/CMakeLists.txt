@@ -136,6 +136,7 @@ add_library(ursatz
     transform/contraction.c
     transform/displacement.c
     transform/ornamentation.c
+    transform/intervallic_manipulation.c
     analysis/analyzer.c
     analysis/feature_extraction.c
     analysis/interval_analysis.c
