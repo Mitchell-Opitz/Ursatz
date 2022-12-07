@@ -1,6 +1,7 @@
 add_library(standard_form
     framework.c
     rule_pair.c
+    motive_rules.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
