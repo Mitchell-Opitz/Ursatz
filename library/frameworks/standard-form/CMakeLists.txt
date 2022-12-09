@@ -4,6 +4,7 @@ add_library(standard_form
     motive_rules.c
     hierarchy_rules.c
     phrase_rules.c
+    segmentation_rules.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
