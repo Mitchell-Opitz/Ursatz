@@ -141,8 +141,8 @@ static void test_apply_widens_in_each_direction(void) {
     for (int i = 0; i < 3; i++) {
         const NoteEvent *derived = transform_result_event_at(result, i);
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(derived));
-        assert(musical_time_numerator(position) == i);
-        assert(musical_time_denominator(position) == 4);
+        /* onset is i quarters; MusicalTime is stored reduced, so compare cross-multiplied */
+        assert(musical_time_numerator(position) * 4 == (long)i * (long)musical_time_denominator(position));
         assert(duration_numerator(note_event_duration(derived)) == 1);
         assert(duration_denominator(note_event_duration(derived)) == 4);
 
