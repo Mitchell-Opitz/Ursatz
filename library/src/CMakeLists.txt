@@ -101,6 +101,7 @@ add_library(ursatz
     semantics/modulation_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
+    semantics/continuation_trait.c
     semantics/idea_label.c
     semantics/phrase_role.c
     semantics/subphrase_role.c
