@@ -55,6 +55,7 @@ add_library(ursatz
     containers/measure.c
     containers/phrase.c
     containers/idea.c
+    containers/subphrase.c
     containers/section.c
     containers/movement.c
     containers/work.c
