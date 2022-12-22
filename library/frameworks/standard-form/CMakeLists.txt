@@ -6,6 +6,7 @@ add_library(standard_form
     phrase_rules.c
     segmentation_rules.c
     sentence_rules.c
+    period_rules.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
