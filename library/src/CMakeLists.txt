@@ -54,6 +54,7 @@ add_library(ursatz
     containers/part.c
     containers/measure.c
     containers/phrase.c
+    containers/idea.c
     containers/section.c
     containers/movement.c
     containers/work.c
@@ -99,6 +100,8 @@ add_library(ursatz
     semantics/applied_chord_kind.c
     semantics/modulation_kind.c
     semantics/key_change_extent.c
+    semantics/form_level.c
+    semantics/motive_kind.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
@@ -133,6 +136,7 @@ add_library(ursatz
     transform/contraction.c
     transform/displacement.c
     transform/ornamentation.c
+    transform/intervallic_manipulation.c
     analysis/analyzer.c
     analysis/feature_extraction.c
     analysis/interval_analysis.c

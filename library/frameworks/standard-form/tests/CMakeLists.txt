@@ -1,0 +1,23 @@
+add_executable(test_standard_form_framework test_framework.c)
+target_link_libraries(test_standard_form_framework PRIVATE standard_form)
+add_test(NAME standard_form_framework COMMAND test_standard_form_framework)
+
+add_executable(test_standard_form_motive_rules test_motive_rules.c)
+target_link_libraries(test_standard_form_motive_rules PRIVATE standard_form)
+add_test(NAME standard_form_motive_rules COMMAND test_standard_form_motive_rules)
+
+add_executable(test_standard_form_hierarchy_rules test_hierarchy_rules.c)
+target_link_libraries(test_standard_form_hierarchy_rules PRIVATE standard_form)
+add_test(NAME standard_form_hierarchy_rules COMMAND test_standard_form_hierarchy_rules)
+
+add_executable(test_standard_form_phrase_rules test_phrase_rules.c)
+target_link_libraries(test_standard_form_phrase_rules PRIVATE standard_form)
+add_test(NAME standard_form_phrase_rules COMMAND test_standard_form_phrase_rules)
+
+add_executable(test_standard_form_segmentation_rules test_segmentation_rules.c)
+target_link_libraries(test_standard_form_segmentation_rules PRIVATE standard_form)
+add_test(NAME standard_form_segmentation_rules COMMAND test_standard_form_segmentation_rules)
+
+add_executable(test_architecture_standard_form test_architecture_standard_form.c)
+add_test(NAME architecture_standard_form COMMAND test_architecture_standard_form
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
