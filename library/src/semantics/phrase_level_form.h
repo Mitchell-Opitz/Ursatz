@@ -11,6 +11,7 @@
  *   PERIOD                two phrases, an antecedent then a consequent
  *   REPEATED_PHRASE       a phrase followed by a written-out repeat of itself
  *   COMPOUND_PERIOD       a period whose two phrases are sentences
+ *   HYBRID                the beginning of one archetype paired with the ending of another
  *   UNIQUE                organized as neither a sentence nor a period
  *
  * Sentence and period are the archetypes; archetype and unique are two ends of a spectrum, not
@@ -23,6 +24,7 @@ typedef enum {
     PHRASE_LEVEL_FORM_PERIOD,
     PHRASE_LEVEL_FORM_REPEATED_PHRASE,
     PHRASE_LEVEL_FORM_COMPOUND_PERIOD,
+    PHRASE_LEVEL_FORM_HYBRID,
     PHRASE_LEVEL_FORM_UNIQUE,
     PHRASE_LEVEL_FORM_COUNT
 } PhraseLevelForm;
