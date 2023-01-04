@@ -10,6 +10,7 @@ add_library(standard_form
     combination_rules.c
     unique_rules.c
     beginning_rules.c
+    ending_rules.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
