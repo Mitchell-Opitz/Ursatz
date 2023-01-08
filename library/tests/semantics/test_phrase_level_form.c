@@ -17,6 +17,7 @@ static void test_names(void) {
     assert(strcmp(phrase_level_form_name(PHRASE_LEVEL_FORM_PERIOD), "period") == 0);
     assert(strcmp(phrase_level_form_name(PHRASE_LEVEL_FORM_REPEATED_PHRASE), "repeated-phrase") == 0);
     assert(strcmp(phrase_level_form_name(PHRASE_LEVEL_FORM_COMPOUND_PERIOD), "compound-period") == 0);
+    assert(strcmp(phrase_level_form_name(PHRASE_LEVEL_FORM_HYBRID), "hybrid") == 0);
     assert(strcmp(phrase_level_form_name(PHRASE_LEVEL_FORM_UNIQUE), "unique") == 0);
     assert(phrase_level_form_name(PHRASE_LEVEL_FORM_COUNT) == NULL);
 }
