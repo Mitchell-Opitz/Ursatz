@@ -34,6 +34,14 @@ add_executable(test_standard_form_unique_rules test_unique_rules.c)
 target_link_libraries(test_standard_form_unique_rules PRIVATE standard_form)
 add_test(NAME standard_form_unique_rules COMMAND test_standard_form_unique_rules)
 
+add_executable(test_standard_form_beginning_rules test_beginning_rules.c)
+target_link_libraries(test_standard_form_beginning_rules PRIVATE standard_form)
+add_test(NAME standard_form_beginning_rules COMMAND test_standard_form_beginning_rules)
+
+add_executable(test_standard_form_ending_rules test_ending_rules.c)
+target_link_libraries(test_standard_form_ending_rules PRIVATE standard_form)
+add_test(NAME standard_form_ending_rules COMMAND test_standard_form_ending_rules)
+
 add_executable(test_architecture_standard_form test_architecture_standard_form.c)
 add_test(NAME architecture_standard_form COMMAND test_architecture_standard_form
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
