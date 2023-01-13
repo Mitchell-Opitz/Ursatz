@@ -79,6 +79,36 @@ it uses are plain value types in `src/semantics/` (`FormLevel`,
   spectrum, not exclusive categories, and a repeated phrase takes the
   category of the phrase repeated. Labels are applied flexibly and dropped
   where they do not support the interpretation.
+- **Beginnings** (`beginning_rules.h`): a hybrid form pairs the beginning
+  of one archetype with the ending of another. The three beginnings are
+  the antecedent (ends with a cadence; basic idea then contrasting idea),
+  the compound basic idea (an antecedent without a cadence: the melody may
+  rest but the harmony evades the half cadence) and the presentation (no
+  cadence; basic idea then its repetition). A classifier tells them apart
+  by cadence and the two ideas.
+- **Endings** (`ending_rules.h`): the consequent (PAC or IAC, never HC;
+  basic idea then contrasting idea; begins stable), the continuation (HC,
+  IAC or PAC; often divided 1+1+2 or 2+2; begins unstable) and the
+  cadential ending (PAC or IAC, never HC; core bass line; 2+2 or
+  indivisible; never fragmented). Stability at the start of a cadential
+  ending is not characterized. A classifier takes cadence, bass, ideas and
+  fragmentation; a cadential bass with an authentic cadence and no
+  fragmentation settles a combination that also fits a consequent.
+- **Cadential bass** (`cadential_bass_rules.h`): the core line is mi fa sol
+  do (3 4 5 1), harmonized I6, ii6 or IV, V or V7 (often with a cadential
+  six-four), I. It may be embellished by tonicizing the dominant with fi
+  before sol. The clearest cadential ending is four measures with one bass
+  note per measure. A bass note is a degree and an alteration, since this
+  framework does no pitch arithmetic.
+- **Hybrids** (`hybrid_rules.h`): any beginning can pair with any ending,
+  nine pairings. Presentation + continuation is a sentence and antecedent
+  + consequent is a period; the other seven are hybrids. Commonality: the
+  sentence and period are very common; compound basic idea + consequent,
+  compound basic idea + continuation and antecedent + continuation are
+  slightly less common; compound basic idea + cadential and antecedent +
+  cadential are occasional; presentation + cadential and presentation +
+  consequent are rare or non-existent, which is still a valid pairing. The
+  rules carry no length: hybrids are not limited to eight measures.
 
 Related types: `Idea` (`src/containers/idea.h`) and `Subphrase`
 (`src/containers/subphrase.h`) are reference-only groupings of events at
@@ -94,7 +124,9 @@ called here.
 
 ## Not covered
 
-Other signals of closure besides the cadence, a numeric size limit on a
+The suggested listening process for phrase-level forms (its tables are
+encoded as the beginning and ending classifiers), other signals of closure
+besides the cadence, a numeric size limit on a
 motive (only its relation to the idea is asserted), a closeness score
 between archetype and unique (an analysis judgment with its own
 uncertainty), and the harmonic start of a presentation. `analysis/` does
