@@ -42,6 +42,14 @@ add_executable(test_standard_form_ending_rules test_ending_rules.c)
 target_link_libraries(test_standard_form_ending_rules PRIVATE standard_form)
 add_test(NAME standard_form_ending_rules COMMAND test_standard_form_ending_rules)
 
+add_executable(test_standard_form_cadential_bass_rules test_cadential_bass_rules.c)
+target_link_libraries(test_standard_form_cadential_bass_rules PRIVATE standard_form)
+add_test(NAME standard_form_cadential_bass_rules COMMAND test_standard_form_cadential_bass_rules)
+
+add_executable(test_standard_form_hybrid_rules test_hybrid_rules.c)
+target_link_libraries(test_standard_form_hybrid_rules PRIVATE standard_form)
+add_test(NAME standard_form_hybrid_rules COMMAND test_standard_form_hybrid_rules)
+
 add_executable(test_architecture_standard_form test_architecture_standard_form.c)
 add_test(NAME architecture_standard_form COMMAND test_architecture_standard_form
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
