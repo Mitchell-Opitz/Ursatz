@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-static const char *const NAMES[PHRASE_LEVEL_FORM_COUNT] = {"sentence", "period", "repeated-phrase", "compound-period", "unique"};
+static const char *const NAMES[PHRASE_LEVEL_FORM_COUNT] = {"sentence", "period", "repeated-phrase", "compound-period", "hybrid", "unique"};
 
 bool phrase_level_form_valid(PhraseLevelForm value) {
     return value >= 0 && value < PHRASE_LEVEL_FORM_COUNT;

@@ -9,6 +9,10 @@ add_library(standard_form
     period_rules.c
     combination_rules.c
     unique_rules.c
+    beginning_rules.c
+    ending_rules.c
+    cadential_bass_rules.c
+    hybrid_rules.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

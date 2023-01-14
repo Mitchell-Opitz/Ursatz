@@ -1,0 +1,94 @@
+#include "cadential_bass_rules.h"
+
+#include "rule_pair.h"
+
+static const char *const NAMES[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT] = {
+    "cadential-bass-core-line",
+    "cadential-bass-harmonization",
+    "cadential-bass-embellishment",
+    "cadential-bass-clearest"};
+
+static StandardFormRulePair g_pairs[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT];
+static bool g_built[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT];
+
+static bool valid_rule(StandardFormCadentialBassRule which) {
+    return which >= 0 && which < STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT;
+}
+
+static void ensure_built(StandardFormCadentialBassRule which) {
+    if (!valid_rule(which) || g_built[which]) {
+        return;
+    }
+    g_built[which] = true;
+    standard_form_build_rule_pair(NAMES[which], &g_pairs[which]);
+}
+
+const Rule *standard_form_cadential_bass_rule(StandardFormCadentialBassRule which) {
+    ensure_built(which);
+    return valid_rule(which) ? g_pairs[which].rule : NULL;
+}
+
+const Constraint *standard_form_cadential_bass_constraint(StandardFormCadentialBassRule which) {
+    ensure_built(which);
+    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+}
+
+static const int CORE_DEGREES[4] = {3, 4, 5, 1};
+
+size_t standard_form_cadential_core_length(void) {
+    return 4;
+}
+
+int standard_form_cadential_core_degree(size_t index) {
+    return index < 4 ? CORE_DEGREES[index] : 0;
+}
+
+static bool note_is(const StandardFormBassNote *note, int degree, int alteration) {
+    return note->degree == degree && note->alteration == alteration;
+}
+
+bool standard_form_bass_has_fi_embellishment(const StandardFormBassNote *notes, size_t count) {
+    return notes != NULL && count == 5 && note_is(&notes[0], 3, 0) && note_is(&notes[1], 4, 0) &&
+           note_is(&notes[2], 4, 1) && note_is(&notes[3], 5, 0) && note_is(&notes[4], 1, 0);
+}
+
+bool standard_form_bass_is_cadential(const StandardFormBassNote *notes, size_t count) {
+    if (notes == NULL) {
+        return false;
+    }
+    if (count == 5) {
+        return standard_form_bass_has_fi_embellishment(notes, count);
+    }
+    if (count != 4) {
+        return false;
+    }
+    for (size_t i = 0; i < 4; i++) {
+        if (!note_is(&notes[i], CORE_DEGREES[i], 0)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool standard_form_cadential_chord_allowed(size_t core_index, StandardFormCadentialChord chord) {
+    switch (core_index) {
+        case 0:
+            return chord == STANDARD_FORM_CADENTIAL_CHORD_I6;
+        case 1:
+            return chord == STANDARD_FORM_CADENTIAL_CHORD_II6 || chord == STANDARD_FORM_CADENTIAL_CHORD_IV;
+        case 2:
+            return chord == STANDARD_FORM_CADENTIAL_CHORD_V || chord == STANDARD_FORM_CADENTIAL_CHORD_V7;
+        case 3:
+            return chord == STANDARD_FORM_CADENTIAL_CHORD_I;
+        default:
+            return false;
+    }
+}
+
+bool standard_form_cadential_six_four_elaborates(size_t core_index) {
+    return core_index == 2;
+}
+
+bool standard_form_cadential_is_clearest(size_t measures, size_t bass_note_count) {
+    return measures == 4 && bass_note_count == 4;
+}
