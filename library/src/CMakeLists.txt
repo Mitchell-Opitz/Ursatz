@@ -99,6 +99,7 @@ add_library(ursatz
     semantics/modulation_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
+    semantics/expected_length_basis.c
     semantics/external_expansion_kind.c
     semantics/alternative_path_kind.c
     semantics/internal_expansion_technique.c
