@@ -55,6 +55,7 @@ add_library(ursatz
     containers/measure.c
     containers/phrase.c
     containers/idea.c
+    containers/subphrase.c
     containers/section.c
     containers/movement.c
     containers/work.c
@@ -101,6 +102,11 @@ add_library(ursatz
     semantics/modulation_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
+    semantics/continuation_trait.c
+    semantics/idea_label.c
+    semantics/phrase_role.c
+    semantics/subphrase_role.c
+    semantics/phrase_level_form.c
     semantics/motive_kind.c
     relationship/relationship.c
     relationship/predicate_definition.c
