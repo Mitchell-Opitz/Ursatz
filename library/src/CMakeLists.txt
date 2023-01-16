@@ -99,6 +99,7 @@ add_library(ursatz
     semantics/modulation_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
+    semantics/phrase_length_change.c
     semantics/phrase_ending.c
     semantics/phrase_beginning.c
     semantics/continuation_trait.c
