@@ -14,6 +14,7 @@ add_library(standard_form
     cadential_bass_rules.c
     hybrid_rules.c
     length_rules.c
+    internal_expansion_rules.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
