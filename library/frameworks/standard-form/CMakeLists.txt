@@ -15,6 +15,7 @@ add_library(standard_form
     hybrid_rules.c
     length_rules.c
     internal_expansion_rules.c
+    external_expansion_rules.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
