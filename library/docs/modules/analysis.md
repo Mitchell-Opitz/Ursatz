@@ -12,7 +12,7 @@ An `Analyzer` never returns a bare conclusion; it derives owned `Interpretation`
 
 **Real (wired to `frameworks/common-practice-minimal/`):**
 
-- `ChordIdentification` -- given a Sonority's scale degrees, produces a real, populated `Chord` (L6) naming one of common-practice-minimal-v1's seven diatonic triads, or reports a failed analysis on no match. Single-answer/deterministic, matching the framework's own deterministic behavior.
+- `ChordIdentification` -- given a Sonority's scale degrees, produces a real, populated `Chord` (L6) naming one of common-practice-minimal-v1's seven diatonic triads or four seventh qualities, or reports a failed analysis on no match. Matching is by subset (extra degrees ignored as non-chord tones, first match wins, ties logged to stderr), so it tolerates one non-chord tone per beat but not two or more. Single-answer/deterministic, matching the framework's own deterministic behavior.
 - `KeyEstimation` -- given a region's tonic name and tonic-relative pitch-class collection, produces a real, populated `Key` (L6) naming major or natural minor under common-practice-minimal-v1, or reports a failed analysis on no match. Single-answer/deterministic, same as `ChordIdentification`.
 
 Both build their real `Chord`/`Key` via the framework, then unwrap it with `chord_take_interpretation`/`key_take_interpretation` (L6) into the bare `Interpretation` `AnalysisResult` carries -- `AnalysisResult` only ever holds `Interpretation`/`Evidence` objects, never a `Chord`/`Key` wrapper.
@@ -33,7 +33,7 @@ What's REAL vs. CALLER-SUPPLIED-REFINEMENT vs. UNCLASSIFIED, the same transparen
 
 - Real: the from/to root-degree motion driving which rule fires.
 - Optional caller-supplied refinement (never required): `from_is_dominant_seventh` and Voice Leading's bass-motion classification (`analysis/voice_leading_analysis.h`) each only adjust the winning candidate's confidence tier within the authentic-cadence rule -- a caller with no Voice Leading data still gets a classification, just a lower-confidence one.
-- Optional caller-supplied refinement that changes the LABEL, not just its weight: `soprano_resolves_to_tonic`, distinguishing PAC from IAC. This genuinely cannot be derived today -- no `PitchClass`/`TuningSystem` (`docs/modules/l8-notes.md`) means no real soprano-resolution computation exists anywhere in this codebase. When absent, the authentic-cadence candidate is reported as `"authentic (unclassified: PAC/IAC)"` rather than guessing PAC or IAC.
+- Optional caller-supplied refinement that changes the LABEL, not just its weight: `soprano_resolves_to_tonic`, distinguishing PAC from IAC. This genuinely cannot be derived today: no analyzer identifies the soprano line or computes its resolution, even though `PitchClass`, `TuningSystem` and `PitchNumericValue` now exist. When absent, the authentic-cadence candidate is reported as `"authentic (unclassified: PAC/IAC)"` rather than guessing PAC or IAC.
 
 **`PhraseBoundaryDetection` -- real cadence-primary/contour-rhythm-secondary boundary signal, built on `PhraseSegmentation`:**
 

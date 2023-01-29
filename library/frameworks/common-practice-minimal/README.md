@@ -76,18 +76,21 @@ All of the above are planned for later passes, either within this
 Framework's own versioning (`common-practice-minimal-v2`+) or as
 separate `frameworks/<name>/` extensions.
 
-## Known gap: exact-cardinality matching
+## Known gap: non-chord tones
 
-Both `triad_identification.c` and `seventh_identification.c` require an
-exact count of distinct degrees/intervals (3 for a triad, 4 for a
-seventh chord) before checking set containment -- a sonority carrying
-any extra tone beyond that exact count fails to match rather than
-matching with the extras tolerated. `key_identification.c` does not
-have this problem (it already matches by pure containment, extras
-allowed). This is a disclosed, not-yet-fixed gap in the chord-region
-matching code path generally; seventh-chord identification inherits it
-by construction (same mechanism as the triads) rather than introducing
-a new instance of it. Fixing it is out of scope for this pass.
+`triad_identification.c` and `seventh_identification.c` match by subset:
+a triad or seventh matches when its degrees or intervals are all present,
+and any extra degrees are ignored as non-chord tones. Ties go to the first
+match in scan order and are logged to stderr. This tolerates one extra tone
+per beat. Real melody-plus-accompaniment textures often carry two or more,
+and then nothing matches (Field Nocturne No. 1 resolves 61 of 394 beats).
+The fix is weighting by duration and beat strength, which is open work.
+
+`key_identification.c` matches by one-directional containment: a key
+matches when all seven of its pitch classes are present, and pitch classes
+outside the key do not disqualify it. That lets a chromatic piece match the
+wrong tonic. It is the last-resort fallback in both consumer apps, so it is
+rarely reached, but it is still wrong when it is.
 
 ## Boundary with `rules/constraint_evaluate`
 

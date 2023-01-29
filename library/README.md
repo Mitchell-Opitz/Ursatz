@@ -1,7 +1,16 @@
 # Ursatz
 
-Ursatz is a general-purpose, theory-neutral computational music platform. It provides a canonical representation of musical material that strictly separates events, structures, relationships, observations, interpretations, contexts, and provenance.
+Ursatz is a general-purpose, theory-neutral computational music platform, written as a C11
+static library (`libursatz`). It provides a canonical representation of musical material that
+strictly separates events, structures, relationships, observations, interpretations, contexts,
+and provenance. Interpretations (chord, key, cadence, form) are only ever produced under an
+explicit, named Theory Framework.
 
-Layers L0 through L8 are implemented; L9 (I/O adapters, notation, performance, corpus, applications) has not started.
+- `src/`: the kernel, layers L0 through L9. L0 to L8 are implemented. L9 is partial: MIDI
+  import, MusicXML export, SQLite persistence, and corpus storage.
+- `frameworks/`: 17 Theory Framework extension modules (tonality, harmony, counterpoint,
+  form, meter, notation, and more). See [frameworks/README.md](frameworks/README.md).
 
-See [docs/BUILDING.md](docs/BUILDING.md) for build and test instructions, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layer model and current module status. Per-module detail lives under `docs/modules/`.
+See [docs/BUILDING.md](docs/BUILDING.md) for build and test instructions, and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layer model and current module status.
+Per-module detail lives under `docs/modules/`.

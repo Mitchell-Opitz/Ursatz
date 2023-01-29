@@ -4,7 +4,9 @@ Layer L6 (`music-semantics`). Path `src/semantics/`, tests `tests/semantics/`. O
 
 ## Provides
 
-`Interval`, `Sonority`, `SonorityBuilder`, `RhythmicPattern`, `Scale`, `Contour`, `VoicePart`, `MotionType`, `CounterpointSpecies`, `BeatStrength`, `NonChordTone`.
+`Interval`, `Sonority`, `SonorityBuilder`, `RhythmicPattern`, `Scale`, `Contour`.
+
+Vocabulary enums (plain names, no `EntityID`, no framework claim; see `docs/ARCHITECTURE.md` for the admission rule): `VoicePart`, `MotionType`, `CounterpointSpecies`, `BeatStrength`, `NonChordTone`, `ImitationAnswer`, `FugueRole`, `SubjectPart`, `SubjectCharacter`, `OstinatoType`, `ImitativeRole`, `SchemaFunction`, `SchemaSense`, `ScaleDirection`, `SequenceKind`, `HarmonicFunction`, `CadenceType`, `SeventhResolution`, `PhraseModelLabel`, `SixFourType`, `AppliedChordKind`, `ModulationKind`, `KeyChangeExtent`, `FormLevel`, `MotiveKind`, `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `SubphraseRole`, `ContinuationTrait`, `PhraseLevelForm`.
 
 ## Notes
 

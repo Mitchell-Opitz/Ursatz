@@ -4,7 +4,7 @@ Layer L8 (`music-transform`). Path `src/transform/`, tests `tests/transform/`. O
 
 ## Provides
 
-`Transformation` and its eleven concrete subtypes (`Transposition`, `Inversion`, `Retrograde`, `RetrogradeInversion`, `Augmentation`, `Diminution`, `Fragmentation`, `Expansion`, `Contraction`, `Displacement`, `Ornamentation`).
+`Transformation` and its twelve concrete subtypes (`Transposition`, `Inversion`, `Retrograde`, `RetrogradeInversion`, `Augmentation`, `Diminution`, `Fragmentation`, `Expansion`, `Contraction`, `Displacement`, `Ornamentation`, `IntervallicManipulation`).
 
 ## Notes
 
@@ -13,6 +13,8 @@ Every concrete subtype owns one `Transformation` built internally at constructio
 Every concrete subtype now implements real transformation logic via a `<subtype>_apply` function, not just construction. Each `_apply` returns a `TransformResult` (`transform/transform_result.h`): an owned array of newly-allocated `NoteEvent`s, never a mutation of the input. All arithmetic is exact-rational (Law 19); no subtype touches `float`/`double`.
 
 `PitchIdentity` (L2) is intentionally opaque -- an arbitrary caller-defined token with no numeric representation. `Transposition`, `Inversion`, and `RetrogradeInversion` need to add intervals and reflect about an axis, which is impossible against an opaque token. `PitchNumericValue` (`pitch/pitch_numeric_value.h`, L2) was added alongside `PitchIdentity`, not in place of it: an exact-rational position tied to a copy of a `TuningSystem`, supporting `add_interval`, `distance`, and `reflect_about_axis`, plus a one-directional `to_identity` conversion. There is deliberately no generic decode from `PitchIdentity` back to a numeric value -- callers that need numeric transposition/inversion supply the `PitchNumericValue` themselves; `PitchIdentity`'s opacity is preserved for every other subtype.
+
+`IntervallicManipulation` changes the size of each interval between successive notes while keeping its direction. It takes one signed semitone adjustment per interval over caller-supplied `PitchNumericValue`s; the first note stays put and each later note moves by the running sum. Rhythm, order, articulation and contour are preserved.
 
 `RetrogradeInversion` composes `Retrograde` and `Inversion`'s own `_apply` rather than duplicating either's logic, using `transform_result_take_event_at` to move ownership of an event out of one `TransformResult` and into another.
 
