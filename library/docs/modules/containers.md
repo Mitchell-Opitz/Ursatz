@@ -18,6 +18,10 @@ Layer L4 (`music-containers`). Path `src/containers/`, tests `tests/containers/`
 
 `Phrase` (Container -- L4 sense only, see Known Gaps below): a mid-level grouping of `Event` references. Schema `{id, event_ids}`, array optional.
 
+`Idea` (Container): the smallest unit of a segmentation analysis, a short group of `Event` references. Schema `{id, event_ids}`, array optional. Not `Motif` (an abstract pattern); an `Idea` is a located group of events that may contain motives.
+
+`Subphrase` (Container): a group of `Event` references between an `Idea` and a `Phrase`. Schema `{id, event_ids}`, array optional. Unlike `Phrase`, it need not end with a cadence. Its role (presentation, continuation) is a `SubphraseRole` assigned by an analysis, not a field here.
+
 `Section` (Container): groups `Phrase` refs. Schema `{id, phrase_ids}`, array optional.
 
 `Movement` (Container): a work subdivision, groups `Section` refs. Schema `{id, section_ids}`, array optional.
@@ -37,10 +41,10 @@ Layer L4 (`music-containers`). Path `src/containers/`, tests `tests/containers/`
 - `Voice`'s schema is `{id}` only (Domain Spec §10). It has no membership field; no owned/mutable list of notes or events. The mechanism by which a Voice's membership is represented is deferred to a later Container/Structure spec that does not exist yet.
 - A `Voice` must not be assumed to map one to one to an Instrument, Staff, or Part. A `Voice` may appear on multiple staves; a Staff may contain multiple voices.
 - `Voice` has no mutator. A revision is a new `Voice` construction, not an in-place field change. The same holds for every type in this module: none has a mutator, a revision is always a new construction.
-- `Voice`'s identity equality (`voice_identity_equals`) compares by `EntityID` only, the same pattern `Entity` uses, reduced to the one field `Voice` actually has. `Layer`, `Staff`, `Part`, `Measure`, `Phrase`, `Section`, and `Movement` follow the same pattern: identity equality by `EntityID` only, with referenced ids excluded (they are content, not identity). `Work`, `Edition`, `Arrangement`, and `Revision` are Entity-category and delegate identity equality to `entity_identity_equals` (`EntityID` + `SchemaVersion`). `SourceVariant` is Value-category: equality is by content (`source_id` + `descriptor`), not by an assigned identifier.
+- `Voice`'s identity equality (`voice_identity_equals`) compares by `EntityID` only, the same pattern `Entity` uses, reduced to the one field `Voice` actually has. `Layer`, `Staff`, `Part`, `Measure`, `Idea`, `Subphrase`, `Phrase`, `Section`, and `Movement` follow the same pattern: identity equality by `EntityID` only, with referenced ids excluded (they are content, not identity). `Work`, `Edition`, `Arrangement`, and `Revision` are Entity-category and delegate identity equality to `entity_identity_equals` (`EntityID` + `SchemaVersion`). `SourceVariant` is Value-category: equality is by content (`source_id` + `descriptor`), not by an assigned identifier.
 - This is the layer where `VoiceReference` (built at L1 in `core`) gets a real resolution target. Nothing in `containers` redefines or duplicates what `VoiceReference` already does.
 - Every reference field in this module (`voice_ids`, `layer_ids`, `staff_ids`, `event_ids`, `phrase_ids`, `section_ids`, `movement_ids`, `work_id`, `target_id`, `source_id`) is an `EntityID`, held by reference only -- never an embedded/resolved copy of the referenced object. Resolving a reference to its actual object is a registry/repository concern (L9), out of scope here, same treatment `VoiceReference` already gets.
-- Where a reference array is optional (`Staff`, `Part`, `Phrase`, `Section`, `Movement`, `Work`), an empty array (count `0`, `NULL`) is valid, not an error -- the same "found nothing is not an error" treatment `generation`'s `CandidateSet` gives its own arrays. This is a deliberate difference from `structure`'s `Structure`, which requires a non-empty `event_ids`.
+- Where a reference array is optional (`Staff`, `Part`, `Idea`, `Subphrase`, `Phrase`, `Section`, `Movement`, `Work`), an empty array (count `0`, `NULL`) is valid, not an error -- the same "found nothing is not an error" treatment `generation`'s `CandidateSet` gives its own arrays. This is a deliberate difference from `structure`'s `Structure`, which requires a non-empty `event_ids`.
 
 ## Known Gaps
 
@@ -53,4 +57,4 @@ Flagged rather than silently resolved:
 
 ## Dependencies
 
-Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), and `events` (L3) only. All twelve types added this pass stay within this same ceiling -- none required extending the allowlist `tests/containers/test_architecture_containers.c` enforces; that test is directory-driven and needed no edits to cover them.
+Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), and `events` (L3) only. Every type in this module stays within this same ceiling -- none required extending the allowlist `tests/containers/test_architecture_containers.c` enforces; that test is directory-driven and needed no edits to cover them.

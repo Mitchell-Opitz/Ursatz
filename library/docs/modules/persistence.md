@@ -30,7 +30,7 @@ SQLite-backed storage for a NoteEvent sequence plus the Chord/Key interpretation
 Deliberate scope cuts for this pass, not gaps to be filled incidentally:
 
 - The full L9 `EntityRepository`/`RelationshipRepository`/`StructureRepository` contract from the System Registry.
-- Any persistence for `Motif`, `Phrase Segmentation`, `Voice Leading`, `Scale Analysis`, or `Cadence Detection` -- all still unbuilt/deferred in `analysis`/`structure`.
+- Any persistence for `Motif`, phrase, cadence, period, sentence, form, voice-leading, or scale-analysis output. Those analyzers are built (`docs/modules/analysis.md`); their results have no repository here. Ursatz-GUI stores Relationship output in its own stopgap table.
 - Schema migration/versioning beyond whatever prevents a crash on schema changes during this module's own development.
 - Any query/filtering API beyond "load by id" -- a list/browse API belongs to a future GUI scaffold task, not this one.
 - The remaining `UncertaintyKind` shapes not yet implemented upstream (interval estimate, probability distribution, credible interval, qualitative uncertainty) have no persistence here either -- each gets its own child table (the same pattern `uncertainty_candidates` establishes) when it is actually built upstream, not a speculative table now.

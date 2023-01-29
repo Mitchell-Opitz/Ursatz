@@ -43,7 +43,7 @@ Both tables are created on demand (`CREATE TABLE IF NOT EXISTS`) by `corpus/pers
 Deliberate scope cuts for this pass, not gaps to be filled incidentally:
 
 - Statistics, feature extraction, or any cross-piece computation over a Corpus's membership -- built as a separate module, `corpus_stats` (see `docs/modules/corpus_stats.md`), rather than added here; `corpus/` itself stays exactly as documented above (identity + persistence only).
-- Actual wiring of `ursatz-gui` or Generator against `corpus_api.h` -- later passes (`feat/corpus-tool`, Generator integration); this module only exposes the API surface.
+- Wiring a Generator against `corpus_api.h`. Ursatz-GUI's Collections tool already uses it.
 - Provenance of Corpus membership (who added what, when).
 - Tags, labels, or "feeling" metadata on Corpus entries.
 - Existence validation of `piece_ref` against Persistence's own tables -- a reference to a piece that was never actually stored, or was since deleted, is not detected here.
@@ -59,9 +59,10 @@ were added separately, outside this module.
 covering it: it creates a Corpus named `framework-v1-reference-set`, scans
 `tests/fixtures/framework-v1-corpus/` for `.mid` files at test-run time, adds
 one piece_ref per filename found, and asserts the Corpus's piece_ref set
-matches exactly. It is not hardcoded to any specific file count -- an empty
-fixture directory (the state before the real files land) is expected, not a
-failure.
+matches exactly. It is not hardcoded to any specific file count. The fixture directory holds
+five pieces: Bach BWV Anh. 114, Clementi Op. 36, Field Nocturnes No. 1 and
+No. 5, and Mozart K. 545. This test checks registration only, not analysis
+output.
 
 ## Dependencies
 

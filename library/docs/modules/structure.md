@@ -20,7 +20,7 @@ Layer L5 (`music-structure`). Path `src/structure/`, tests `tests/structure/`. D
 
 ## Deferred
 
-Out of scope entirely, not missing. `SimilarityResult`, Motif Detection, Phrase Segmentation, Cadence Detection (Phase 8 `analysis` procedures that produce `Motif`/`MotifOccurrence`/`Cadence` instances, and generic `Interpretation` claims about them, not data shapes this layer defines). Also out of scope, `Section`, `Movement`, `Work` (L4 containers, deferred there too), and any harmonic-context resolution (L6/L7).
+Out of scope entirely, not missing. `SimilarityResult`, Motif Detection, Phrase Segmentation, Cadence Detection (Phase 8 `analysis` procedures that produce `Motif`/`MotifOccurrence`/`Cadence` instances, and generic `Interpretation` claims about them, not data shapes this layer defines). Also out of scope, `Section`, `Movement`, `Work` (L4 containers, built in `containers`), and any harmonic-context resolution (L6/L7).
 
 ## Dependencies
 

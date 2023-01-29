@@ -4,9 +4,9 @@ Layer L9 (`music-io`). Path `src/io/`, tests `tests/io/`. Depends on `identity`,
 
 ## Provides
 
-`MIDIImporter`: parses a Standard MIDI File (SMF) type 0 or type 1 buffer into a flat, time-ordered sequence of canonical `NoteEvent`s (L3). This is intentionally the only thing in this module -- no renderer, no other importer format, and no `DigitalArtifact` type are scaffolded here, even though they are related Registry items for this layer.
+`MIDIImporter`: parses a Standard MIDI File (SMF) type 0 or type 1 buffer into a flat, time-ordered sequence of canonical `NoteEvent`s (L3). No renderer, other importer format, or `DigitalArtifact` type is scaffolded here, even though they are related Registry items for this layer. MusicXML export lives in its own module, `src/export/`.
 
-`midi_key_signature_scan`: a second, standalone entry point that scans an SMF buffer for its first Key Signature meta-event (`0xFF 0x59`) and reports the signed sharps/flats count and major/minor flag it carries. This is intentionally separate from `MIDIImporter` rather than a new output on `midi_importer_import` -- it does not touch note import at all, walking track bytes itself (duplicating `midi_event_decoder`'s small delta-time/event-length skipping logic) so it can be added without changing `midi_importer_import`'s or `midi_event_decoder_decode`'s signatures or any of their existing callers. A future pass may fold this into `midi_event_decoder`/`midi_importer` proper as a refactor once this path is proven; see `music-analysis`'s key-estimation pipeline for its first consumer.
+`midi_key_signature_scan`: a second, standalone entry point that scans an SMF buffer for its first Key Signature meta-event (`0xFF 0x59`) and reports the signed sharps/flats count and major/minor flag it carries. This is intentionally separate from `MIDIImporter` rather than a new output on `midi_importer_import` -- it does not touch note import at all, walking track bytes itself (duplicating `midi_event_decoder`'s small delta-time/event-length skipping logic) so it can be added without changing `midi_importer_import`'s or `midi_event_decoder_decode`'s signatures or any of their existing callers. A future pass may fold this into `midi_event_decoder`/`midi_importer` proper as a refactor once this path is proven; its consumers are Ursatz-Analyzer's `key_pipeline.c` and Ursatz-GUI's `analysis_service.c`.
 
 ## Notes
 
@@ -24,7 +24,7 @@ Layer L9 (`music-io`). Path `src/io/`, tests `tests/io/`. Depends on `identity`,
 Deliberate scope cuts for `MIDIImporter`, not gaps to be filled incidentally:
 
 - Tempo map / tempo change meta-events are not read. See the fixed-tempo assumption above.
-- Meter/time signature changes are not read.
+- Time signature meta-events (`0xFF 0x58`) are not read, so `MusicalTime` positions only line up with notated measures in 4/4. `TimeSignature` (`time/time_signature.h`) now exists as the value this importer should produce; wiring it in is open work.
 - `midi_key_signature_scan` reports only the first Key Signature meta-event it finds; key changes (modulations) partway through a file are not tracked.
 - Controller (CC), pedal, program change, pitch bend, and aftertouch events are ignored, not errored on.
 - Channel-aware `Voice` assignment is not attempted for multi-channel imports -- those `NoteEvent`s are flattened into one time-ordered sequence with `optional_voice == NULL`, same as before. A single-channel import (matched notes all from one channel, regardless of how many note-bearing MTrk chunks they come from) is the one exception: it now gets a `VoiceReference` assigned per `NoteEvent` via greedy interval-graph coloring by timing, scoped independently within each source track, purely so `MusicXmlExport` (`music-export`) can represent overlapping notes (e.g. two-handed piano recorded onto one track/channel, or a two-staff piece with RH/LH on separate tracks) without a false-positive overlap error. Voice ids are namespaced by track, so two tracks that each land on local slot 0 never collide into the same exported voice. This is an export-grouping label only -- no musical/analytical meaning, no melody/harmony distinction, and it is a placeholder pending Deliverable F (Container and Structure Specification). No backfill: only new imports get this.
@@ -32,7 +32,7 @@ Deliberate scope cuts for `MIDIImporter`, not gaps to be filled incidentally:
 - SMF type 2 files are rejected as unsupported, not parsed.
 - Key-signature-aware spelling (choosing sharps vs. flats per the piece's actual key) is not attempted -- this importer has no key-detection step to draw on, and always applies the fixed sharps-only convention described above.
 
-Out of scope entirely for this pass, not missing: renderers, other importer formats, `DigitalArtifact`, and any other L9 Registry item besides `MIDIImporter`.
+Out of scope entirely for this module, not missing: renderers, other importer formats, and `DigitalArtifact`.
 
 ## Dependencies
 
