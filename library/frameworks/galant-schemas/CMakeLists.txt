@@ -15,7 +15,4 @@ target_include_directories(galant_schemas PUBLIC
 )
 target_link_libraries(galant_schemas PUBLIC standard_counterpoint ursatz)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+ursatz_add_tests()

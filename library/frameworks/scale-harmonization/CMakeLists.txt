@@ -14,7 +14,4 @@ target_include_directories(scale_harmonization PUBLIC
 )
 target_link_libraries(scale_harmonization PUBLIC galant_schemas standard_counterpoint ursatz)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+ursatz_add_tests()

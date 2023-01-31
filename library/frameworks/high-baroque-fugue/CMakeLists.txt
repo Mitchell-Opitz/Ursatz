@@ -15,7 +15,4 @@ target_include_directories(high_baroque_fugue PUBLIC
 )
 target_link_libraries(high_baroque_fugue PUBLIC standard_counterpoint ursatz)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+ursatz_add_tests()

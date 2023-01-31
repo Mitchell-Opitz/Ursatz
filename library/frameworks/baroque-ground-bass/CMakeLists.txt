@@ -15,7 +15,4 @@ target_include_directories(baroque_ground_bass PUBLIC
 )
 target_link_libraries(baroque_ground_bass PUBLIC standard_counterpoint ursatz)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+ursatz_add_tests()

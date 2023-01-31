@@ -16,7 +16,4 @@ target_include_directories(standard_voicing PUBLIC
 )
 target_link_libraries(standard_voicing PUBLIC ursatz)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+ursatz_add_tests()
