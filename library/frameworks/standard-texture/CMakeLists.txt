@@ -11,7 +11,4 @@ target_include_directories(standard_texture PUBLIC
 )
 target_link_libraries(standard_texture PUBLIC ursatz)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+ursatz_add_tests()

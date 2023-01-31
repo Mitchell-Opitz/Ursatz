@@ -9,7 +9,4 @@ target_include_directories(western_periods PUBLIC
 )
 target_link_libraries(western_periods PUBLIC ursatz)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+ursatz_add_tests()
