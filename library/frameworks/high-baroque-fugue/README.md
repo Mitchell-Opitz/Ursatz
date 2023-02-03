@@ -64,10 +64,6 @@ they begin; entries beyond the number of voices are redundant entries
   countersubject groups over an exposition, reported as hard and soft bit masks
   indexed by `FugueGroup`. An exposition is valid when no hard rule is broken.
 
-The subject's structure (`SubjectPart`, `src/semantics/subject_part.h`) and
-character (`SubjectCharacter`, `src/semantics/subject_character.h`) are
-vocabulary only: no rule uses them.
-
 ## Not covered
 
 - **Tonal answers for other reasons.** A V-I gesture at the start of the

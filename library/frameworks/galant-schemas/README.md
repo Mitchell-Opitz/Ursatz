@@ -17,9 +17,8 @@ path.
 ## Scope
 
 A schema is a prototype (an idealized pattern), an exemplar (a single pattern
-that resembles it), or a theory (an explanation of how the exemplar functions):
-`SchemaSense`, `src/semantics/schema_sense.h`. This framework holds the
-prototypes and decides whether an exemplar resembles one.
+that resembles it), or a theory (an explanation of how the exemplar functions).
+This framework holds the prototypes and decides whether an exemplar resembles one.
 
 - A prototype (`galant_prototype.h`) is two or more stages, each with the
   strength of the beat it falls on (`BeatStrength`, strong or weak), the scale
@@ -91,6 +90,6 @@ here.
   it, so a minor-key Meyer that ends on me is not accepted.
 - **Finding the stages.** The caller says which notes are the stages of an
   exemplar and which beats they fall on.
-- **Theory.** The third sense of "schema" (`SchemaSense`), the explanation of
+- **Theory.** The third sense of "schema", the explanation of
   how an exemplar functions in a passage, is not modeled beyond the match
   itself.
