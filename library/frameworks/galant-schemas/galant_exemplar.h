@@ -8,7 +8,7 @@
 #include "semantics/beat_strength.h"
 
 /*
- * An exemplar for galant-schemas-v1 (SchemaSense): a single pattern that may
+ * An exemplar for galant-schemas-v1: a single pattern that may
  * resemble a prototype. The caller says which notes are its stages; finding
  * the stages in a passage is not done here. Each stage is the pitch of the top
  * (melodic) voice, the pitch of the bottom (bass) voice, and the strength of the

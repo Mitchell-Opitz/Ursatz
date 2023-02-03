@@ -10,7 +10,7 @@
  * schema is defined by its stages (melody and bass scale degrees, figures,
  * Roman numerals, and the strength of the beat each falls on) and by where it
  * typically appears (SchemaFunction). This framework holds the prototypes
- * (SchemaSense) and decides whether an exemplar resembles one. Built as a
+ * and decides whether an exemplar resembles one. Built as a
  * Framework extension module physically outside src/theory/, the same shape
  * as standard-counterpoint; this module never modifies src/theory/ or
  * src/rules/.
