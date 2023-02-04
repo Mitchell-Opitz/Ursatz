@@ -10,7 +10,7 @@
 #include "semantics/schema_function.h"
 
 /*
- * A prototype for galant-schemas-v1 (SchemaSense): the idealized version of a
+ * A prototype for galant-schemas-v1: the idealized version of a
  * common pattern. A schema is defined by what happens in it, two or more
  * stages, and by where it typically appears (SchemaFunction). Each stage has:
  *
