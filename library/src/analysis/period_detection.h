@@ -5,6 +5,7 @@
 
 #include "analysis/analyzer.h"
 #include "relationship/relationship.h"
+#include "semantics/cadence_type.h"
 #include "structure/phrase_occurrence.h"
 
 /*
@@ -39,65 +40,56 @@
  * Relationship; music-analysis already depends on all four L6 modules
  * (docs/modules/analysis.md), so no new dependency is introduced.
  *
- * cadence_type is a plain copy of PhraseBoundaryDetection's signal
- * Interpretation claim label (analysis/phrase_boundary_detection.h) --
- * the caller (who already ran PhraseBoundaryDetection) associates each
- * PhraseOccurrence with the cadence_type that closed it. "unclassified"
- * is a legitimate value (not re-parsed or guessed at), and an absent
- * cadence_type (empty string or NULL) is likewise valid input, not an
- * error -- both mean "no reliable cadence strength for this phrase",
- * and a pair touching either is skipped entirely, never guessed at
- * (the same unknown-vs-low-confidence discipline
- * PhraseBoundaryDetection/CadenceClassification already use).
+ * cadence_type is the CadenceType (semantics/cadence_type.h) that closed
+ * each PhraseOccurrence, supplied by the caller. CADENCE_TYPE_UNKNOWN is
+ * a legitimate value (no reliable cadence for this phrase), and a pair
+ * touching it is skipped entirely, never guessed at (the same
+ * unknown-vs-low-confidence discipline PhraseBoundaryDetection/
+ * CadenceClassification already use).
  *
- * Cadence-strength ordering (flagged design default, NOT Registry-
- * settled -- a reasonable common-practice ordering, the same
- * flagged-default treatment PhraseBoundaryDetection's
- * max_length_without_cadence and MotifWindowMatching's two-occurrences
- * minimum use), weakest to strongest:
- *   "half cadence (HC)" < "deceptive" < "plagal" <
- *   "authentic (unclassified: PAC/IAC)" < "authentic (IAC)" <
- *   "authentic (PAC)"
- * matching CadenceClassification's exact label strings
- * (analysis/cadence_classification.h). A pair is identified only when
- * the antecedent's rank is STRICTLY weaker than the consequent's --
- * equal strength (including two "unclassified"/absent phrases, already
- * excluded above) is not a period.
+ * Cadence strength is not defined here. The caller injects a ranking function
+ * (PeriodDetectionRankFn) mapping a CadenceType to its strength; a framework that owns
+ * cadence strength provides it (frameworks/standard-harmony's harmony_cadence_strength).
+ * Kernel analysis never includes a framework. A pair is identified only when both
+ * cadences are rankable (rank > 0) and the antecedent's rank is STRICTLY weaker than the
+ * consequent's -- equal strength is not a period. A rank <= 0 means not rankable (an
+ * unknown, invalid, or non-closing cadence): a pair touching one is skipped, never
+ * guessed at.
  */
 
 typedef struct {
     const PhraseOccurrence *phrase_occurrence;
-    /* Borrowed; NULL or empty means no reliable cadence type for this phrase. Otherwise
-       one of CadenceClassification's label strings, including "unclassified". */
-    const char *cadence_type;
+    CadenceType cadence_type; /* CADENCE_TYPE_UNKNOWN: no reliable cadence for this phrase */
 } PeriodDetectionEntry;
+
+/* Strength of a cadence: larger is stronger, <= 0 is not rankable. Supplied by the caller. */
+typedef int (*PeriodDetectionRankFn)(CadenceType type);
 
 typedef struct {
     const PeriodDetectionEntry *entries;
     size_t entry_count;
+    PeriodDetectionRankFn rank; /* required, non-NULL */
 } PeriodDetectionInput;
 
 #define PERIOD_DETECTION_PHRASE_ID_BUFFER_SIZE 128
-#define PERIOD_DETECTION_CADENCE_TYPE_BUFFER_SIZE 64
 
 typedef struct {
     char antecedent_phrase_occurrence_id[PERIOD_DETECTION_PHRASE_ID_BUFFER_SIZE];
     char consequent_phrase_occurrence_id[PERIOD_DETECTION_PHRASE_ID_BUFFER_SIZE];
-    char antecedent_cadence_type[PERIOD_DETECTION_CADENCE_TYPE_BUFFER_SIZE];
-    char consequent_cadence_type[PERIOD_DETECTION_CADENCE_TYPE_BUFFER_SIZE];
+    CadenceType antecedent_cadence_type;
+    CadenceType consequent_cadence_type;
 } PeriodDetectionClaim;
 
 /*
  * Conforms to AnalyzerFn (analysis/analyzer.h): input MUST point to a
  * PeriodDetectionInput; context and config are accepted per the
- * interface but unused. Every entry's phrase_occurrence MUST be
- * non-NULL. entry_count < 2 is valid and yields an empty AnalysisResult
+ * interface but unused. rank MUST be non-NULL and every entry's
+ * phrase_occurrence MUST be non-NULL. entry_count < 2 is valid and yields an empty AnalysisResult
  * (no consecutive pair exists).
  *
  * For each consecutive pair (entries[i], entries[i+1]): if both
- * cadence_types are present, non-empty, not "unclassified", and the
- * first's rank is strictly weaker than the second's (per the ordering
- * above), produces one Relationship (source = entries[i]'s
+ * cadences are rankable and the first's rank is strictly weaker than
+ * the second's (per the injected ranking), produces one Relationship (source = entries[i]'s
  * PhraseOccurrence id, predicate "precedes", target = entries[i+1]'s
  * PhraseOccurrence id) and one Interpretation (targeting that
  * Relationship's id, a PeriodDetectionClaim claim, scalar-confidence
@@ -124,12 +116,13 @@ typedef enum {
     PERIOD_DETECTION_REL_OK = 0,
     PERIOD_DETECTION_REL_ERR_NULL_ENTRIES,
     PERIOD_DETECTION_REL_ERR_NULL_ENTRY,
+    PERIOD_DETECTION_REL_ERR_NULL_RANK,
     PERIOD_DETECTION_REL_ERR_ALLOC
 } PeriodDetectionRelationshipResult;
 
 /*
  * Builds the Relationship objects backing period_detection_analyze's
- * Interpretations, using the identical pairing rule. entries/entry_count
+ * Interpretations, using the identical pairing rule. entries/entry_count/rank
  * validation matches period_detection_analyze. entry_count < 2 is valid
  * and yields *out_relationships = NULL, *out_relationship_count = 0.
  *
@@ -142,6 +135,7 @@ typedef enum {
  */
 PeriodDetectionRelationshipResult period_detection_build_relationships(const PeriodDetectionEntry *entries,
                                                                          size_t entry_count,
+                                                                         PeriodDetectionRankFn rank,
                                                                          Relationship ***out_relationships,
                                                                          size_t *out_relationship_count);
 
