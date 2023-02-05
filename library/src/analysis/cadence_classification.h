@@ -20,7 +20,9 @@
  * output type: it is a candidate-BUILDER that packages chord-motion
  * rules into the UncertaintyCandidate set CadenceDetection already
  * knows how to turn into an Interpretation (it calls
- * cadence_detection_analyze directly).
+ * cadence_detection_analyze directly). Each candidate is a CadenceType
+ * (semantics/cadence_type.h); its label, which becomes the Interpretation claim,
+ * comes from cadence_type_label.
  *
  * Root-motion signal: ChordIdentification (analysis/
  * chord_identification.h) reports a chord's Roman-numeral/quality LABEL
@@ -47,12 +49,12 @@
  *     resolves_to_tonic is an OPTIONAL caller-supplied refinement, the
  *     same optional-refinement pattern VoiceLeadingAnalysis's bass_
  *     motion uses. When absent, the candidate is reported as
- *     "authentic (unclassified: PAC/IAC)" rather than guessing.
+ *     CADENCE_TYPE_AUTHENTIC_UNSPECIFIED rather than guessing.
  *   - to_degree == 1 && from_degree == 4: plagal-cadence candidate.
  *   - to_degree == 5 (and the authentic rule above did not already
  *     match): half-cadence candidate.
  *   - from_degree == 5 && to_degree == 6: deceptive-cadence candidate.
- *   - anything else: a single "unclassified" candidate, weight 1/1 --
+ *   - anything else: a single CADENCE_TYPE_UNKNOWN candidate, weight 1/1 --
  *     no false-confidence guess.
  *
  * from_is_dominant_seventh and has_bass_motion/bass_motion are further
