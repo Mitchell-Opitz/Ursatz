@@ -18,6 +18,6 @@ target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/src
 )
-target_link_libraries(standard_form PUBLIC ursatz)
+target_link_libraries(standard_form PUBLIC ursatz standard_harmony)
 
 ursatz_add_tests()

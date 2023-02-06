@@ -1,5 +1,6 @@
 #include "period_rules.h"
 
+#include "harmony_cadence_rules.h"
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_FORM_PERIOD_RULE_COUNT] = {
@@ -47,7 +48,7 @@ bool standard_form_period_phrase_ideas_valid(IdeaLabel first, IdeaLabel second) 
 
 bool standard_form_period_cadences_valid(CadenceType antecedent, CadenceType consequent) {
     return standard_form_cadence_is_phrase_goal(antecedent) && standard_form_cadence_is_phrase_goal(consequent) &&
-           standard_form_cadence_strength(consequent) > standard_form_cadence_strength(antecedent);
+           harmony_cadence_compare(consequent, antecedent) > 0;
 }
 
 bool standard_form_antecedent_cadence_usual(CadenceType type) {

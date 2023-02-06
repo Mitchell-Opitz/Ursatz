@@ -59,14 +59,6 @@ bool standard_form_phrase_length_common(size_t measures);
    for a subverted cadence and for an invalid type. */
 bool standard_form_cadence_is_phrase_goal(CadenceType type);
 
-/*
- * PHRASE_GOAL: how strongly a cadence closes, used to compare the cadences of two phrases:
- * half 1, imperfect authentic 2, perfect authentic 3. 0 for a subverted cadence, which does
- * not close, and for an invalid type. This is standard-form's own ordering of the goals so
- * that this framework does not depend on another.
- */
-int standard_form_cadence_strength(CadenceType type);
-
 typedef enum {
     STANDARD_FORM_DIAGRAM_MARK_BRACKET = 0,
     STANDARD_FORM_DIAGRAM_MARK_ARC,
