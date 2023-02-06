@@ -12,14 +12,11 @@
 
 #define FORM_STRUCTURE_DETECTION_ID_MINT_BUFFER_SIZE 288
 
-/* Only these two cadence types achieve tonic resolution -- the only ones treated as
-   section-closing (structural) by this module's flagged default. Matches
-   CadenceClassification's exact label strings. */
-static bool is_structural_cadence(const char *cadence_type) {
-    if (cadence_type == NULL || cadence_type[0] == '\0') {
-        return false;
-    }
-    return strcmp(cadence_type, "authentic (PAC)") == 0 || strcmp(cadence_type, "authentic (IAC)") == 0;
+/* Only PAC and IAC achieve tonic resolution -- the only types treated as section-closing
+   (structural) by this module's flagged default. Authentic-unspecified is deliberately not
+   promoted. */
+static bool is_structural_cadence(CadenceType cadence_type) {
+    return cadence_type == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence_type == CADENCE_TYPE_IMPERFECT_AUTHENTIC;
 }
 
 static bool validate_entries(const FormStructureDetectionEntry *entries, size_t entry_count) {
@@ -186,9 +183,7 @@ AnalyzerResult form_structure_detection_analyze(const void *input, const Context
         memset(&claim_content, 0, sizeof(claim_content));
         snprintf(claim_content.earlier_section_id, sizeof(claim_content.earlier_section_id), "%s", earlier_value);
         snprintf(claim_content.later_section_id, sizeof(claim_content.later_section_id), "%s", later_value);
-        snprintf(claim_content.earlier_section_closing_cadence_type,
-                  sizeof(claim_content.earlier_section_closing_cadence_type), "%s",
-                  analysis_input->entries[earlier_end].cadence_type);
+        claim_content.earlier_section_closing_cadence_type = analysis_input->entries[earlier_end].cadence_type;
 
         entity_id_destroy(later_section_id);
         entity_id_destroy(earlier_section_id);
