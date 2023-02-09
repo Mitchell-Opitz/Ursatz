@@ -164,7 +164,6 @@ int main(void) {
     assert(strcmp(entity_id_value(relationship_target_id(relationships[0])), "phrase-occ-1") == 0);
     period_detection_destroy_relationships(relationships, relationship_count);
 
-    phrase_occurrence_destroy(phrase0);
     /* Plagal pairs like any ranked cadence: HC -> plagal is a period; plagal -> HC and a
        subverted or unknown cadence on either side are not. */
     PeriodDetectionEntry plagal_entries[4] = {
@@ -195,6 +194,7 @@ int main(void) {
     assert(analysis_result_interpretation_count(reversed_result) == 0);
     analysis_result_destroy(reversed_result);
 
+    phrase_occurrence_destroy(phrase0);
     phrase_occurrence_destroy(phrase1);
     phrase_occurrence_destroy(phrase2);
     phrase_occurrence_destroy(phrase3);
