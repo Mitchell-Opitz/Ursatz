@@ -45,8 +45,10 @@ never called here.
   `harmony_cadence_classify` gives the type: V to I is a PAC when both chords are
   in root position and do is in the soprano, otherwise an IAC; x to V is a HC; a
   cadential progression the caller says is subverted is subverted.
-  `harmony_cadence_strength` orders them: half, imperfect authentic, perfect
-  authentic. A V7 to I in root position with do in the soprano is still a PAC.
+  `harmony_cadence_strength` is the one strength order for every `CadenceType`: half,
+  deceptive, plagal, authentic (unspecified), imperfect authentic, perfect authentic
+  (a subverted cadence ranks 0, an unknown type -1). Kernel analysis receives it from
+  its caller as a ranking function, and `harmony_cadence_compare` compares two types. A V7 to I in root position with do in the soprano is still a PAC.
   Soft: a half cadence does not end on V7 (the "19th-century HC", uncommon; it is
   still a half cadence).
 - **V7 resolution rules** (`harmony_seventh_rules.h`), V7 to I in four voices, as

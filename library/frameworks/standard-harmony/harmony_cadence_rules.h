@@ -87,8 +87,18 @@ bool harmony_cadence_check(const HarmonyCadence *cadence, unsigned *hard_violati
    untouched) when the progression is not cadential and for an invalid cadence. */
 bool harmony_cadence_classify(const HarmonyCadence *cadence, CadenceType *out);
 
-/* How conclusive a type is: 0 subverted (no cadence), 1 half, 2 imperfect
-   authentic, 3 perfect authentic. -1 for an invalid type. */
+/*
+ * How conclusive a type is, the one strength ordering for CadenceType: 0 subverted
+ * (no cadence), 1 half, 2 deceptive, 3 plagal, 4 authentic (unspecified), 5 imperfect
+ * authentic, 6 perfect authentic. -1 for UNKNOWN and for an invalid type. Compare ranks,
+ * not the numbers themselves: only the order is part of the contract. Code outside this
+ * framework (kernel analysis) receives this function from its caller as a
+ * `int (*)(CadenceType)`.
+ */
 int harmony_cadence_strength(CadenceType type);
+
+/* -1, 0, or 1 as `a` is weaker than, equal to, or stronger than `b` by
+   harmony_cadence_strength. Two unranked types (UNKNOWN or invalid) compare equal. */
+int harmony_cadence_compare(CadenceType a, CadenceType b);
 
 #endif

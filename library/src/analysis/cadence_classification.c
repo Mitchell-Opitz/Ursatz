@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "interpretation/uncertainty.h"
+#include "semantics/cadence_type.h"
 
 /* Weight tiers out of 8ths for the top candidate; the complement candidate gets (8 - top)/8. */
 #define CADENCE_CLASSIFICATION_WEIGHT_DEFAULT 6u  /* 3/4 */
@@ -26,6 +27,19 @@ static unsigned long authentic_top_weight(const CadenceClassificationInput *inpu
     }
 
     return weight;
+}
+
+/* The candidate label is the display label of the CadenceType; the label is the Interpretation
+   claim (see cadence_type_label). */
+static UncertaintyCandidate make_candidate(CadenceType type, unsigned long weight) {
+    return (UncertaintyCandidate){(char *)cadence_type_label(type), weight, CADENCE_CLASSIFICATION_WEIGHT_DENOM};
+}
+
+/* The default-weight candidate for `type` and its UNKNOWN complement. */
+static void set_typed_pair(UncertaintyCandidate candidates[2], CadenceType type) {
+    candidates[0] = make_candidate(type, CADENCE_CLASSIFICATION_WEIGHT_DEFAULT);
+    candidates[1] = make_candidate(CADENCE_TYPE_UNKNOWN,
+                                    CADENCE_CLASSIFICATION_WEIGHT_DENOM - CADENCE_CLASSIFICATION_WEIGHT_DEFAULT);
 }
 
 AnalyzerResult cadence_classification_analyze(const void *input, const Context *context, const Value *config,
@@ -54,48 +68,35 @@ AnalyzerResult cadence_classification_analyze(const void *input, const Context *
         unsigned long top_weight = authentic_top_weight(classification_input);
         unsigned long complement_weight = CADENCE_CLASSIFICATION_WEIGHT_DENOM - top_weight;
 
-        const char *top_label;
-        const char *complement_label;
+        CadenceType top_type;
+        CadenceType complement_type;
         if (classification_input->has_soprano_resolves_to_tonic) {
             if (classification_input->soprano_resolves_to_tonic) {
-                top_label = "authentic (PAC)";
-                complement_label = "authentic (IAC)";
+                top_type = CADENCE_TYPE_PERFECT_AUTHENTIC;
+                complement_type = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
             } else {
-                top_label = "authentic (IAC)";
-                complement_label = "authentic (PAC)";
+                top_type = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
+                complement_type = CADENCE_TYPE_PERFECT_AUTHENTIC;
             }
         } else {
-            top_label = "authentic (unclassified: PAC/IAC)";
-            complement_label = "unclassified";
+            top_type = CADENCE_TYPE_AUTHENTIC_UNSPECIFIED;
+            complement_type = CADENCE_TYPE_UNKNOWN;
         }
 
-        candidates[0] = (UncertaintyCandidate){(char *)top_label, top_weight, CADENCE_CLASSIFICATION_WEIGHT_DENOM};
-        candidates[1] =
-            (UncertaintyCandidate){(char *)complement_label, complement_weight, CADENCE_CLASSIFICATION_WEIGHT_DENOM};
+        candidates[0] = make_candidate(top_type, top_weight);
+        candidates[1] = make_candidate(complement_type, complement_weight);
         candidate_count = 2;
     } else if (to_degree == 1 && from_degree == 4) {
-        candidates[0] = (UncertaintyCandidate){(char *)"plagal", CADENCE_CLASSIFICATION_WEIGHT_DEFAULT,
-                                                CADENCE_CLASSIFICATION_WEIGHT_DENOM};
-        candidates[1] = (UncertaintyCandidate){
-            (char *)"unclassified", CADENCE_CLASSIFICATION_WEIGHT_DENOM - CADENCE_CLASSIFICATION_WEIGHT_DEFAULT,
-            CADENCE_CLASSIFICATION_WEIGHT_DENOM};
+        set_typed_pair(candidates, CADENCE_TYPE_PLAGAL);
         candidate_count = 2;
     } else if (to_degree == 5) {
-        candidates[0] = (UncertaintyCandidate){(char *)"half cadence (HC)", CADENCE_CLASSIFICATION_WEIGHT_DEFAULT,
-                                                CADENCE_CLASSIFICATION_WEIGHT_DENOM};
-        candidates[1] = (UncertaintyCandidate){
-            (char *)"unclassified", CADENCE_CLASSIFICATION_WEIGHT_DENOM - CADENCE_CLASSIFICATION_WEIGHT_DEFAULT,
-            CADENCE_CLASSIFICATION_WEIGHT_DENOM};
+        set_typed_pair(candidates, CADENCE_TYPE_HALF);
         candidate_count = 2;
     } else if (from_degree == 5 && to_degree == 6) {
-        candidates[0] = (UncertaintyCandidate){(char *)"deceptive", CADENCE_CLASSIFICATION_WEIGHT_DEFAULT,
-                                                CADENCE_CLASSIFICATION_WEIGHT_DENOM};
-        candidates[1] = (UncertaintyCandidate){
-            (char *)"unclassified", CADENCE_CLASSIFICATION_WEIGHT_DENOM - CADENCE_CLASSIFICATION_WEIGHT_DEFAULT,
-            CADENCE_CLASSIFICATION_WEIGHT_DENOM};
+        set_typed_pair(candidates, CADENCE_TYPE_DECEPTIVE);
         candidate_count = 2;
     } else {
-        candidates[0] = (UncertaintyCandidate){(char *)"unclassified", 1, 1};
+        candidates[0] = (UncertaintyCandidate){(char *)cadence_type_label(CADENCE_TYPE_UNKNOWN), 1, 1};
         candidate_count = 1;
     }
 

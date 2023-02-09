@@ -31,8 +31,8 @@
  *                        antecedent's, and its contrasting idea almost always differs; when
  *                        the basic ideas differ they are numbered b.i.1 and b.i.2
  *
- * Lengths are whole measures. Cadence order comes from standard_form_cadence_strength
- * (phrase_rules.h).
+ * Lengths are whole measures. Cadence order comes from standard-harmony's
+ * harmony_cadence_strength, the one owner of cadence strength.
  */
 
 typedef enum {

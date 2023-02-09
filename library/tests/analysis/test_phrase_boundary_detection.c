@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/phrase_boundary_detection.h"
+#include "semantics/cadence_type.h"
 #include "containers/phrase.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
@@ -113,7 +114,7 @@ int main(void) {
         {e0, false, NULL, false},
         {e1, false, NULL, false},
         {e2, false, NULL, true},
-        {e3, true, "unclassified", false},
+        {e3, true, cadence_type_label(CADENCE_TYPE_UNKNOWN), false},
         {e4, false, NULL, false},
     };
     PhraseBoundaryDetectionInput input = {points, 5, 3};
@@ -160,7 +161,7 @@ int main(void) {
                                                                     &second_claim_size);
     assert(second_claim_size == sizeof(PhraseBoundaryDetectionSignalClaim));
     assert(second_claim->signal == PHRASE_BOUNDARY_SIGNAL_CADENCE);
-    assert(strcmp(second_claim->cadence_type, "unclassified") == 0);
+    assert(strcmp(second_claim->cadence_type, cadence_type_label(CADENCE_TYPE_UNKNOWN)) == 0);
     const Uncertainty *second_uncertainty = interpretation_uncertainty(second_signal);
     assert(uncertainty_scalar_confidence_numerator(second_uncertainty) == 1);
     assert(uncertainty_scalar_confidence_denominator(second_uncertainty) == 1);

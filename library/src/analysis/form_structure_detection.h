@@ -6,6 +6,7 @@
 #include "analysis/analyzer.h"
 #include "containers/section.h"
 #include "relationship/relationship.h"
+#include "semantics/cadence_type.h"
 #include "structure/phrase_occurrence.h"
 
 /*
@@ -24,17 +25,15 @@
  *
  * Structural (section-closing) cadence default (flagged design default,
  * NOT Registry-settled, per this branch's requirement 2): only
- * "authentic (PAC)" and "authentic (IAC)" count as structural --
- * they are the only cadence types that actually achieve tonic
- * resolution. "authentic (unclassified: PAC/IAC)", "plagal",
- * "deceptive", and "half cadence (HC)" all either substitute for or
- * avoid landing on tonic -- they work as internal phrase punctuation,
- * not section-ending closure. An ambiguous PAC/IAC call
- * ("unclassified") is deliberately NOT promoted to structural: the same
- * unknown-vs-low-confidence discipline used throughout this codebase.
- * Matches CadenceClassification's exact label strings
- * (analysis/cadence_classification.h), the same strings
- * PeriodDetection's cadence_type already uses.
+ * CADENCE_TYPE_PERFECT_AUTHENTIC and CADENCE_TYPE_IMPERFECT_AUTHENTIC
+ * count as structural -- they are the only cadence types that actually
+ * achieve tonic resolution. AUTHENTIC_UNSPECIFIED, PLAGAL, DECEPTIVE,
+ * and HALF all either substitute for or avoid landing on tonic -- they
+ * work as internal phrase punctuation, not section-ending closure. An
+ * ambiguous PAC/IAC call (AUTHENTIC_UNSPECIFIED) is deliberately NOT
+ * promoted to structural: the same unknown-vs-low-confidence discipline
+ * used throughout this codebase. PeriodDetection's cadence_type is the
+ * same CadenceType (semantics/cadence_type.h).
  *
  * Boundary rule: a structural cadence at entries[i] (i.e. not the last
  * entry) closes a Section spanning entries since the previous boundary
@@ -62,9 +61,7 @@
 
 typedef struct {
     const PhraseOccurrence *phrase_occurrence;
-    /* Borrowed; NULL or empty means no reliable cadence type for this phrase. Otherwise
-       one of CadenceClassification's label strings, including "unclassified". */
-    const char *cadence_type;
+    CadenceType cadence_type; /* CADENCE_TYPE_UNKNOWN: no reliable cadence for this phrase */
 } FormStructureDetectionEntry;
 
 typedef struct {
@@ -73,12 +70,11 @@ typedef struct {
 } FormStructureDetectionInput;
 
 #define FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE 128
-#define FORM_STRUCTURE_DETECTION_CADENCE_TYPE_BUFFER_SIZE 64
 
 typedef struct {
     char earlier_section_id[FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE];
     char later_section_id[FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE];
-    char earlier_section_closing_cadence_type[FORM_STRUCTURE_DETECTION_CADENCE_TYPE_BUFFER_SIZE];
+    CadenceType earlier_section_closing_cadence_type;
 } FormStructureDetectionClaim;
 
 /*

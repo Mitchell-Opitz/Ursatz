@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/cadence_detection.h"
+#include "semantics/cadence_type.h"
 #include "core/entity.h"
 #include "core/framework_reference.h"
 #include "core/provenance_reference.h"
@@ -75,8 +76,8 @@ int main(void) {
 
     /* Analysis-regression: "authentic (PAC)" (3/4) beats "deceptive" (1/4). */
     UncertaintyCandidate candidates[2] = {
-        {"authentic (PAC)", 3, 4},
-        {"deceptive", 1, 4},
+        {(char *)cadence_type_label(CADENCE_TYPE_PERFECT_AUTHENTIC), 3, 4},
+        {(char *)cadence_type_label(CADENCE_TYPE_DECEPTIVE), 1, 4},
     };
     CadenceDetectionInput input = {region, candidates, 2, NULL};
 
@@ -91,16 +92,16 @@ int main(void) {
 
     size_t claim_size;
     const char *claim_content = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-    assert(claim_size == strlen("authentic (PAC)") + 1);
-    assert(strcmp(claim_content, "authentic (PAC)") == 0);
+    assert(claim_size == strlen(cadence_type_label(CADENCE_TYPE_PERFECT_AUTHENTIC)) + 1);
+    assert(strcmp(claim_content, cadence_type_label(CADENCE_TYPE_PERFECT_AUTHENTIC)) == 0);
 
     const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
     assert(uncertainty_kind(uncertainty) == UNCERTAINTY_KIND_CANDIDATE_SET);
     assert(uncertainty_candidate_count(uncertainty) == 2);
-    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 0), "authentic (PAC)") == 0);
+    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 0), cadence_type_label(CADENCE_TYPE_PERFECT_AUTHENTIC)) == 0);
     assert(uncertainty_candidate_weight_numerator_at(uncertainty, 0) == 3);
     assert(uncertainty_candidate_weight_denominator_at(uncertainty, 0) == 4);
-    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 1), "deceptive") == 0);
+    assert(strcmp(uncertainty_candidate_label_at(uncertainty, 1), cadence_type_label(CADENCE_TYPE_DECEPTIVE)) == 0);
 
     const Evidence *evidence = analysis_result_evidence_at(result, 0);
     assert(strcmp(evidence_method(evidence), "candidate-cadence-type matching") == 0);

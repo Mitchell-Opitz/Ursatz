@@ -87,11 +87,23 @@ int harmony_cadence_strength(CadenceType type) {
             return 0;
         case CADENCE_TYPE_HALF:
             return 1;
-        case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
+        case CADENCE_TYPE_DECEPTIVE:
             return 2;
-        case CADENCE_TYPE_PERFECT_AUTHENTIC:
+        case CADENCE_TYPE_PLAGAL:
             return 3;
+        case CADENCE_TYPE_AUTHENTIC_UNSPECIFIED:
+            return 4;
+        case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
+            return 5;
+        case CADENCE_TYPE_PERFECT_AUTHENTIC:
+            return 6;
         default:
             return -1;
     }
+}
+
+int harmony_cadence_compare(CadenceType a, CadenceType b) {
+    int strength_a = harmony_cadence_strength(a);
+    int strength_b = harmony_cadence_strength(b);
+    return (strength_a > strength_b) - (strength_a < strength_b);
 }

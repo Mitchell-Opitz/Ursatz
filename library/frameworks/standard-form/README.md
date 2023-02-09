@@ -33,7 +33,7 @@ it uses are plain value types in `src/semantics/` (`FormLevel`,
   tonal classical music the goal is a perfect authentic, imperfect
   authentic or half cadence; a subverted cadence is avoided, so it is not a
   goal. Cadence strength is half, then imperfect authentic, then perfect
-  authentic (this framework's own ordering). In diagrams, square brackets
+  authentic (the ordering comes from standard-harmony). In diagrams, square brackets
   mark ideas and subphrases and arcs mark the phrase level and above.
 - **Segmentation analysis** (`segmentation_rules.h`): divides a passage
   into grouping units with square brackets. The steps run in order:

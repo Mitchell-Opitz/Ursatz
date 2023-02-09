@@ -12,29 +12,6 @@
 
 #define PERIOD_DETECTION_ID_BUFFER_SIZE 288
 
-/* Weakest to strongest, per period_detection.h's flagged cadence-strength ordering default.
-   "unclassified" is deliberately absent -- it is never ranked, always excluded before ranking
-   is consulted. */
-static const char *const PERIOD_DETECTION_CADENCE_RANK[] = {
-    "half cadence (HC)", "deceptive", "plagal", "authentic (unclassified: PAC/IAC)", "authentic (IAC)",
-    "authentic (PAC)",
-};
-#define PERIOD_DETECTION_CADENCE_RANK_COUNT (sizeof(PERIOD_DETECTION_CADENCE_RANK) / sizeof(PERIOD_DETECTION_CADENCE_RANK[0]))
-
-/* -1 when cadence_type is NULL, empty, "unclassified", or not a recognized label -- not
-   ranked, never guessed at. */
-static int cadence_rank(const char *cadence_type) {
-    if (cadence_type == NULL || cadence_type[0] == '\0') {
-        return -1;
-    }
-    for (size_t i = 0; i < PERIOD_DETECTION_CADENCE_RANK_COUNT; i++) {
-        if (strcmp(cadence_type, PERIOD_DETECTION_CADENCE_RANK[i]) == 0) {
-            return (int)i;
-        }
-    }
-    return -1;
-}
-
 static bool validate_entries(const PeriodDetectionEntry *entries, size_t entry_count) {
     if (entry_count > 0 && entries == NULL) {
         return false;
@@ -47,10 +24,13 @@ static bool validate_entries(const PeriodDetectionEntry *entries, size_t entry_c
     return true;
 }
 
-static bool is_period_pair(const PeriodDetectionEntry *antecedent, const PeriodDetectionEntry *consequent) {
-    int antecedent_rank = cadence_rank(antecedent->cadence_type);
-    int consequent_rank = cadence_rank(consequent->cadence_type);
-    if (antecedent_rank < 0 || consequent_rank < 0) {
+/* A cadence with rank <= 0 is not rankable (unknown, invalid, or one that does not close) and
+   never part of a period -- not ranked, never guessed at. */
+static bool is_period_pair(const PeriodDetectionEntry *antecedent, const PeriodDetectionEntry *consequent,
+                           PeriodDetectionRankFn rank) {
+    int antecedent_rank = rank(antecedent->cadence_type);
+    int consequent_rank = rank(consequent->cadence_type);
+    if (antecedent_rank <= 0 || consequent_rank <= 0) {
         return false;
     }
     return antecedent_rank < consequent_rank;
@@ -81,7 +61,8 @@ AnalyzerResult period_detection_analyze(const void *input, const Context *contex
     }
 
     const PeriodDetectionInput *analysis_input = (const PeriodDetectionInput *)input;
-    if (!validate_entries(analysis_input->entries, analysis_input->entry_count)) {
+    if (analysis_input->rank == NULL ||
+        !validate_entries(analysis_input->entries, analysis_input->entry_count)) {
         return ANALYZER_ERR_NULL_INPUT;
     }
 
@@ -100,7 +81,7 @@ AnalyzerResult period_detection_analyze(const void *input, const Context *contex
     for (size_t i = 0; i + 1 < entry_count; i++) {
         const PeriodDetectionEntry *antecedent = &analysis_input->entries[i];
         const PeriodDetectionEntry *consequent = &analysis_input->entries[i + 1];
-        if (!is_period_pair(antecedent, consequent)) {
+        if (!is_period_pair(antecedent, consequent, analysis_input->rank)) {
             continue;
         }
 
@@ -127,10 +108,8 @@ AnalyzerResult period_detection_analyze(const void *input, const Context *contex
                   "%s", antecedent_value);
         snprintf(claim_content.consequent_phrase_occurrence_id, sizeof(claim_content.consequent_phrase_occurrence_id),
                   "%s", consequent_value);
-        snprintf(claim_content.antecedent_cadence_type, sizeof(claim_content.antecedent_cadence_type), "%s",
-                  antecedent->cadence_type);
-        snprintf(claim_content.consequent_cadence_type, sizeof(claim_content.consequent_cadence_type), "%s",
-                  consequent->cadence_type);
+        claim_content.antecedent_cadence_type = antecedent->cadence_type;
+        claim_content.consequent_cadence_type = consequent->cadence_type;
 
         Value *claim;
         if (value_create("period-detection-claim", &claim_content, sizeof(claim_content), &claim) != VALUE_OK) {
@@ -214,8 +193,12 @@ static void destroy_partial_relationships(Relationship **relationships, size_t c
 
 PeriodDetectionRelationshipResult period_detection_build_relationships(const PeriodDetectionEntry *entries,
                                                                          size_t entry_count,
+                                                                         PeriodDetectionRankFn rank,
                                                                          Relationship ***out_relationships,
                                                                          size_t *out_relationship_count) {
+    if (rank == NULL) {
+        return PERIOD_DETECTION_REL_ERR_NULL_RANK;
+    }
     if (entry_count > 0 && entries == NULL) {
         return PERIOD_DETECTION_REL_ERR_NULL_ENTRIES;
     }
@@ -241,7 +224,7 @@ PeriodDetectionRelationshipResult period_detection_build_relationships(const Per
     for (size_t i = 0; i + 1 < entry_count; i++) {
         const PeriodDetectionEntry *antecedent = &entries[i];
         const PeriodDetectionEntry *consequent = &entries[i + 1];
-        if (!is_period_pair(antecedent, consequent)) {
+        if (!is_period_pair(antecedent, consequent, rank)) {
             continue;
         }
 

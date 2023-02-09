@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/cadence_classification.h"
+#include "semantics/cadence_type.h"
 #include "core/entity.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
@@ -80,7 +81,7 @@ int main(void) {
     AnalysisResult *authentic_unclassified_result;
     assert(cadence_classification_analyze(&authentic_unclassified, NULL, NULL, &authentic_unclassified_result) ==
            ANALYZER_OK);
-    assert(strcmp(top_label(authentic_unclassified_result), "authentic (unclassified: PAC/IAC)") == 0);
+    assert(strcmp(top_label(authentic_unclassified_result), cadence_type_label(CADENCE_TYPE_AUTHENTIC_UNSPECIFIED)) == 0);
     const Interpretation *authentic_unclassified_interpretation =
         analysis_result_interpretation_at(authentic_unclassified_result, 0);
     const Uncertainty *authentic_unclassified_uncertainty =
@@ -94,7 +95,7 @@ int main(void) {
                                              VOICE_LEADING_BASS_MOTION_SAME};
     AnalysisResult *pac_result;
     assert(cadence_classification_analyze(&pac_input, NULL, NULL, &pac_result) == ANALYZER_OK);
-    assert(strcmp(top_label(pac_result), "authentic (PAC)") == 0);
+    assert(strcmp(top_label(pac_result), cadence_type_label(CADENCE_TYPE_PERFECT_AUTHENTIC)) == 0);
     analysis_result_destroy(pac_result);
 
     /* Regression: V-I with soprano NOT resolving to tonic classifies as IAC. */
@@ -102,7 +103,7 @@ int main(void) {
                                              VOICE_LEADING_BASS_MOTION_SAME};
     AnalysisResult *iac_result;
     assert(cadence_classification_analyze(&iac_input, NULL, NULL, &iac_result) == ANALYZER_OK);
-    assert(strcmp(top_label(iac_result), "authentic (IAC)") == 0);
+    assert(strcmp(top_label(iac_result), cadence_type_label(CADENCE_TYPE_IMPERFECT_AUTHENTIC)) == 0);
     analysis_result_destroy(iac_result);
 
     /* Regression: V-I with a caller-supplied bass leap strengthens (but doesn't require) the authentic reading. */
@@ -121,7 +122,7 @@ int main(void) {
                                                 VOICE_LEADING_BASS_MOTION_SAME};
     AnalysisResult *plagal_result;
     assert(cadence_classification_analyze(&plagal_input, NULL, NULL, &plagal_result) == ANALYZER_OK);
-    assert(strcmp(top_label(plagal_result), "plagal") == 0);
+    assert(strcmp(top_label(plagal_result), cadence_type_label(CADENCE_TYPE_PLAGAL)) == 0);
     analysis_result_destroy(plagal_result);
 
     /* Regression: ending on V (e.g. I-V) classifies as half cadence. */
@@ -129,7 +130,7 @@ int main(void) {
                                             VOICE_LEADING_BASS_MOTION_SAME};
     AnalysisResult *hc_result;
     assert(cadence_classification_analyze(&hc_input, NULL, NULL, &hc_result) == ANALYZER_OK);
-    assert(strcmp(top_label(hc_result), "half cadence (HC)") == 0);
+    assert(strcmp(top_label(hc_result), cadence_type_label(CADENCE_TYPE_HALF)) == 0);
     analysis_result_destroy(hc_result);
 
     /* Regression: V-vi classifies as deceptive. */
@@ -137,7 +138,7 @@ int main(void) {
                                                    VOICE_LEADING_BASS_MOTION_SAME};
     AnalysisResult *deceptive_result;
     assert(cadence_classification_analyze(&deceptive_input, NULL, NULL, &deceptive_result) == ANALYZER_OK);
-    assert(strcmp(top_label(deceptive_result), "deceptive") == 0);
+    assert(strcmp(top_label(deceptive_result), cadence_type_label(CADENCE_TYPE_DECEPTIVE)) == 0);
     analysis_result_destroy(deceptive_result);
 
     /* Regression: unrecognized motion (e.g. ii-iii) reports a bare "unclassified" with no false confidence. */
@@ -145,7 +146,7 @@ int main(void) {
                                                        VOICE_LEADING_BASS_MOTION_SAME};
     AnalysisResult *unclassified_result;
     assert(cadence_classification_analyze(&unclassified_input, NULL, NULL, &unclassified_result) == ANALYZER_OK);
-    assert(strcmp(top_label(unclassified_result), "unclassified") == 0);
+    assert(strcmp(top_label(unclassified_result), cadence_type_label(CADENCE_TYPE_UNKNOWN)) == 0);
     const Interpretation *unclassified_interpretation = analysis_result_interpretation_at(unclassified_result, 0);
     const Uncertainty *unclassified_uncertainty = interpretation_uncertainty(unclassified_interpretation);
     assert(uncertainty_candidate_count(unclassified_uncertainty) == 1);

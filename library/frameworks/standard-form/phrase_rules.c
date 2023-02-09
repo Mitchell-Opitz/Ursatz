@@ -55,19 +55,6 @@ bool standard_form_cadence_is_phrase_goal(CadenceType type) {
            type == CADENCE_TYPE_HALF;
 }
 
-int standard_form_cadence_strength(CadenceType type) {
-    switch (type) {
-        case CADENCE_TYPE_HALF:
-            return 1;
-        case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
-            return 2;
-        case CADENCE_TYPE_PERFECT_AUTHENTIC:
-            return 3;
-        default:
-            return 0;
-    }
-}
-
 bool standard_form_level_diagram_mark(FormLevel level, StandardFormDiagramMark *out) {
     if (!form_level_valid(level) || level == FORM_LEVEL_MOTIVE) {
         return false;
