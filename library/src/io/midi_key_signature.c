@@ -159,3 +159,30 @@ MidiKeySignatureResult midi_key_signature_scan(const unsigned char *data, size_t
     *out = result;
     return MIDI_KEY_SIGNATURE_OK;
 }
+
+static const PitchLetter SHARP_ORDER[7] = {PITCH_LETTER_F, PITCH_LETTER_C, PITCH_LETTER_G, PITCH_LETTER_D,
+                                           PITCH_LETTER_A, PITCH_LETTER_E, PITCH_LETTER_B};
+static const PitchLetter FLAT_ORDER[7] = {PITCH_LETTER_B, PITCH_LETTER_E, PITCH_LETTER_A, PITCH_LETTER_D,
+                                          PITCH_LETTER_G, PITCH_LETTER_C, PITCH_LETTER_F};
+
+MidiKeySignatureBuildResult midi_key_signature_build(int sharps_flats, KeySignature **out) {
+    if (out == NULL) {
+        return MIDI_KEY_SIGNATURE_BUILD_ERR_NULL_OUT;
+    }
+    if (sharps_flats < -7 || sharps_flats > 7) {
+        return MIDI_KEY_SIGNATURE_BUILD_ERR_SF_OUT_OF_RANGE;
+    }
+
+    size_t count = (size_t)(sharps_flats < 0 ? -sharps_flats : sharps_flats);
+    const PitchLetter *order = sharps_flats < 0 ? FLAT_ORDER : SHARP_ORDER;
+    int accidental = sharps_flats < 0 ? -1 : 1;
+
+    KeySignatureEntry entries[7];
+    for (size_t i = 0; i < count; i++) {
+        entries[i].letter = order[i];
+        entries[i].accidental = accidental;
+    }
+
+    return key_signature_create(entries, count, out) == KEY_SIGNATURE_OK ? MIDI_KEY_SIGNATURE_BUILD_OK
+                                                                          : MIDI_KEY_SIGNATURE_BUILD_ERR_ALLOC;
+}

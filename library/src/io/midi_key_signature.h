@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "pitch/key_signature.h"
+
 /*
  * midi_key_signature: scans a Standard MIDI File buffer for the first
  * Key Signature meta-event (0xFF 0x59), independently of
@@ -49,5 +51,25 @@ typedef enum {
  * left untouched.
  */
 MidiKeySignatureResult midi_key_signature_scan(const unsigned char *data, size_t size, MidiKeySignature *out);
+
+/*
+ * midi_key_signature_build: the KeySignature a MIDI "sf" (sharps/flats count) value
+ * denotes, in the standard circle-of-fifths order. Sharps are added in the order
+ * F C G D A E B, flats in the order B E A D G C F: sf = 3 is F# C# G#, sf = -2 is Bb Eb,
+ * sf = 0 has no entries. This is a spelling of the signature only. It makes no claim
+ * about which key or mode the music is in; the "mi" major/minor byte is a hint carried
+ * next to a KeySignature, never part of it.
+ */
+
+typedef enum {
+    MIDI_KEY_SIGNATURE_BUILD_OK = 0,
+    MIDI_KEY_SIGNATURE_BUILD_ERR_NULL_OUT,
+    MIDI_KEY_SIGNATURE_BUILD_ERR_SF_OUT_OF_RANGE,
+    MIDI_KEY_SIGNATURE_BUILD_ERR_ALLOC
+} MidiKeySignatureBuildResult;
+
+/* sharps_flats must be in -7..7. On OK, *out is a new KeySignature the caller owns
+   (key_signature_destroy); otherwise *out is untouched. */
+MidiKeySignatureBuildResult midi_key_signature_build(int sharps_flats, KeySignature **out);
 
 #endif
