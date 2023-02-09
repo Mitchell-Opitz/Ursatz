@@ -12,6 +12,7 @@
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
 #include "relationship/relationship.h"
+#include "semantics/cadence_type.h"
 #include "structure/phrase_occurrence.h"
 
 /*
@@ -79,14 +80,25 @@ int main(void) {
     /* Requirement 4: no structural cadence anywhere -> no boundary found, no output. */
     PhraseOccurrence *only_phrase = make_phrase_occurrence("phrase-occ-only", "phrase-only", "note-only");
     FormStructureDetectionEntry no_boundary_entries[2] = {
-        {only_phrase, "half cadence (HC)"},
-        {only_phrase, "plagal"},
+        {only_phrase, CADENCE_TYPE_HALF},
+        {only_phrase, CADENCE_TYPE_PLAGAL},
     };
     FormStructureDetectionInput no_boundary_input = {no_boundary_entries, 2};
     AnalysisResult *no_boundary_result;
     assert(form_structure_detection_analyze(&no_boundary_input, NULL, NULL, &no_boundary_result) == ANALYZER_OK);
     assert(analysis_result_interpretation_count(no_boundary_result) == 0);
     analysis_result_destroy(no_boundary_result);
+
+    /* An unspecified authentic cadence is not promoted to structural, and neither is an unknown one. */
+    FormStructureDetectionEntry unspecified_entries[2] = {
+        {only_phrase, CADENCE_TYPE_AUTHENTIC_UNSPECIFIED},
+        {only_phrase, CADENCE_TYPE_UNKNOWN},
+    };
+    FormStructureDetectionInput unspecified_input = {unspecified_entries, 2};
+    AnalysisResult *unspecified_result;
+    assert(form_structure_detection_analyze(&unspecified_input, NULL, NULL, &unspecified_result) == ANALYZER_OK);
+    assert(analysis_result_interpretation_count(unspecified_result) == 0);
+    analysis_result_destroy(unspecified_result);
     phrase_occurrence_destroy(only_phrase);
 
     /*
@@ -104,8 +116,11 @@ int main(void) {
     PhraseOccurrence *phrase4 = make_phrase_occurrence("phrase-occ-4", "phrase-4", "note-4");
 
     FormStructureDetectionEntry entries[5] = {
-        {phrase0, "half cadence (HC)"}, {phrase1, "authentic (PAC)"}, {phrase2, "deceptive"},
-        {phrase3, "authentic (IAC)"},   {phrase4, "half cadence (HC)"},
+        {phrase0, CADENCE_TYPE_HALF},
+        {phrase1, CADENCE_TYPE_PERFECT_AUTHENTIC},
+        {phrase2, CADENCE_TYPE_DECEPTIVE},
+        {phrase3, CADENCE_TYPE_IMPERFECT_AUTHENTIC},
+        {phrase4, CADENCE_TYPE_HALF},
     };
     FormStructureDetectionInput input = {entries, 5};
 
@@ -123,7 +138,7 @@ int main(void) {
     assert(claim_size == sizeof(FormStructureDetectionClaim));
     assert(strcmp(claim->earlier_section_id, "section-formstructure-phrase-occ-0-phrase-occ-1") == 0);
     assert(strcmp(claim->later_section_id, "section-formstructure-phrase-occ-2-phrase-occ-3") == 0);
-    assert(strcmp(claim->earlier_section_closing_cadence_type, "authentic (PAC)") == 0);
+    assert(claim->earlier_section_closing_cadence_type == CADENCE_TYPE_PERFECT_AUTHENTIC);
     const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
     assert(uncertainty_scalar_confidence_numerator(uncertainty) == 1);
     assert(uncertainty_scalar_confidence_denominator(uncertainty) == 1);

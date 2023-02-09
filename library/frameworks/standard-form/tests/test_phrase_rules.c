@@ -38,15 +38,11 @@ static void test_phrase_goal(void) {
     assert(standard_form_cadence_is_phrase_goal(CADENCE_TYPE_IMPERFECT_AUTHENTIC));
     assert(standard_form_cadence_is_phrase_goal(CADENCE_TYPE_HALF));
     assert(!standard_form_cadence_is_phrase_goal(CADENCE_TYPE_SUBVERTED));
+    assert(!standard_form_cadence_is_phrase_goal(CADENCE_TYPE_PLAGAL));
+    assert(!standard_form_cadence_is_phrase_goal(CADENCE_TYPE_DECEPTIVE));
+    assert(!standard_form_cadence_is_phrase_goal(CADENCE_TYPE_AUTHENTIC_UNSPECIFIED));
+    assert(!standard_form_cadence_is_phrase_goal(CADENCE_TYPE_UNKNOWN));
     assert(!standard_form_cadence_is_phrase_goal(CADENCE_TYPE_COUNT));
-}
-
-static void test_cadence_strength(void) {
-    assert(standard_form_cadence_strength(CADENCE_TYPE_HALF) == 1);
-    assert(standard_form_cadence_strength(CADENCE_TYPE_IMPERFECT_AUTHENTIC) == 2);
-    assert(standard_form_cadence_strength(CADENCE_TYPE_PERFECT_AUTHENTIC) == 3);
-    assert(standard_form_cadence_strength(CADENCE_TYPE_SUBVERTED) == 0);
-    assert(standard_form_cadence_strength(CADENCE_TYPE_COUNT) == 0);
 }
 
 /* Brackets for ideas and subphrases; arcs for the phrase level and above; a motive takes neither. */
@@ -75,7 +71,6 @@ int main(void) {
     test_cadence_signals_closure();
     test_phrase_length();
     test_phrase_goal();
-    test_cadence_strength();
     test_diagram_mark();
     printf("test_phrase_rules (standard-form): ok\n");
     return 0;

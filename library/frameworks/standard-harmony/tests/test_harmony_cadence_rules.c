@@ -133,14 +133,34 @@ static void test_subverted(void) {
 }
 
 static void test_strength_order(void) {
+    /* Only the order is the contract: HC < deceptive < plagal < authentic (unspecified) < IAC < PAC. */
+    static const CadenceType ASCENDING[] = {
+        CADENCE_TYPE_HALF,
+        CADENCE_TYPE_DECEPTIVE,
+        CADENCE_TYPE_PLAGAL,
+        CADENCE_TYPE_AUTHENTIC_UNSPECIFIED,
+        CADENCE_TYPE_IMPERFECT_AUTHENTIC,
+        CADENCE_TYPE_PERFECT_AUTHENTIC,
+    };
+    const size_t count = sizeof(ASCENDING) / sizeof(ASCENDING[0]);
+    for (size_t i = 0; i + 1 < count; i++) {
+        assert(harmony_cadence_strength(ASCENDING[i]) < harmony_cadence_strength(ASCENDING[i + 1]));
+        assert(harmony_cadence_compare(ASCENDING[i], ASCENDING[i + 1]) == -1);
+        assert(harmony_cadence_compare(ASCENDING[i + 1], ASCENDING[i]) == 1);
+    }
+    for (size_t i = 0; i < count; i++) {
+        assert(harmony_cadence_strength(ASCENDING[i]) > 0);
+        assert(harmony_cadence_compare(ASCENDING[i], ASCENDING[i]) == 0);
+    }
+    /* A subverted cadence does not close: it ranks 0, below every closing type. */
     assert(harmony_cadence_strength(CADENCE_TYPE_SUBVERTED) == 0);
-    assert(harmony_cadence_strength(CADENCE_TYPE_HALF) == 1);
-    assert(harmony_cadence_strength(CADENCE_TYPE_IMPERFECT_AUTHENTIC) == 2);
-    assert(harmony_cadence_strength(CADENCE_TYPE_PERFECT_AUTHENTIC) == 3);
-    assert(harmony_cadence_strength(CADENCE_TYPE_HALF) < harmony_cadence_strength(CADENCE_TYPE_IMPERFECT_AUTHENTIC));
-    assert(harmony_cadence_strength(CADENCE_TYPE_IMPERFECT_AUTHENTIC) <
-           harmony_cadence_strength(CADENCE_TYPE_PERFECT_AUTHENTIC));
+    assert(harmony_cadence_compare(CADENCE_TYPE_SUBVERTED, CADENCE_TYPE_HALF) == -1);
+    /* Unknown and invalid types are unranked, and equal to each other. */
+    assert(harmony_cadence_strength(CADENCE_TYPE_UNKNOWN) == -1);
     assert(harmony_cadence_strength(CADENCE_TYPE_COUNT) == -1);
+    assert(harmony_cadence_strength((CadenceType)-1) == -1);
+    assert(harmony_cadence_compare(CADENCE_TYPE_UNKNOWN, CADENCE_TYPE_COUNT) == 0);
+    assert(harmony_cadence_compare(CADENCE_TYPE_UNKNOWN, CADENCE_TYPE_SUBVERTED) == -1);
 }
 
 static void test_invalid_cadence(void) {
