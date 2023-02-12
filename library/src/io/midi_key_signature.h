@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "pitch/key_signature.h"
+#include "time/musical_time.h"
 
 /*
  * midi_key_signature: scans a Standard MIDI File buffer for the first
@@ -71,5 +72,70 @@ typedef enum {
 /* sharps_flats must be in -7..7. On OK, *out is a new KeySignature the caller owns
    (key_signature_destroy); otherwise *out is untouched. */
 MidiKeySignatureBuildResult midi_key_signature_build(int sharps_flats, KeySignature **out);
+
+/*
+ * midi_key_signature_scan_all: every Key Signature meta-event (0xFF 0x59) in an SMF buffer,
+ * with its position, in time order. midi_key_signature_scan (above) is kept unchanged for
+ * existing callers; it reports the first event in track-then-byte order and returns the raw
+ * bytes. This is the function that reads key changes.
+ *
+ * Each event carries a KeySignature (midi_key_signature_build of its sf byte) and, next to
+ * it, a mode hint from the mi byte. The hint is not part of the KeySignature, which makes no
+ * claim about key or mode; deciding a key from sf and mi is analysis work.
+ *
+ * Positions are MusicalTime in whole notes: tick / (4 * division), as MIDIImporter converts.
+ * An SMPTE division is rejected as UNSUPPORTED_DIVISION, and so is a division of 0 (no
+ * position can be formed).
+ *
+ * Order: by tick, then track index, then byte order within a track. Events from all tracks are
+ * merged. An exact duplicate (same tick, same sf byte, same mi byte) is reported once, on the
+ * lowest track. Different events at the same tick are all kept.
+ *
+ * Malformed events are skipped and scanning continues: a 0xFF 0x59 whose length is not 2, or
+ * whose sf is outside -7..7. An mi other than 0 or 1 is kept, with an UNKNOWN hint. A structural
+ * SMF error is reported as midi_key_signature_scan reports it. No key signature events is OK
+ * with zero events.
+ */
+
+typedef enum {
+    MIDI_MODE_HINT_MAJOR = 0,
+    MIDI_MODE_HINT_MINOR,
+    MIDI_MODE_HINT_UNKNOWN
+} MidiModeHint;
+
+typedef struct {
+    KeySignature *key_signature;
+    MidiModeHint mode_hint;
+    MusicalTime *position;
+    uint64_t tick;
+    size_t track_index;
+    int8_t sharps_flats; /* the raw sf byte */
+    uint8_t mode_byte;   /* the raw mi byte */
+} MidiKeySignatureEvent;
+
+typedef struct {
+    MidiKeySignatureEvent *events; /* owned; NULL when count is 0 */
+    size_t count;
+} MidiKeySignatureEvents;
+
+typedef enum {
+    MIDI_KEY_SIGNATURE_SCAN_ALL_OK = 0,
+    MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_NULL_BUFFER,
+    MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_TRUNCATED,
+    MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_BAD_HEADER,
+    MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_UNSUPPORTED_FORMAT,
+    MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_UNSUPPORTED_DIVISION,
+    MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_BAD_TRACK,
+    MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_ALLOC
+} MidiKeySignatureScanAllResult;
+
+/* On OK, *out owns its events (midi_key_signature_events_destroy). Otherwise *out is
+   untouched. */
+MidiKeySignatureScanAllResult midi_key_signature_scan_all(const unsigned char *data, size_t size,
+                                                           MidiKeySignatureEvents *out);
+
+/* Destroys every event's KeySignature and position, and the list. NULL is a no-op. Leaves
+   events NULL and count 0. */
+void midi_key_signature_events_destroy(MidiKeySignatureEvents *events);
 
 #endif
