@@ -18,6 +18,8 @@
  *                    fa) before sol, making the line mi-fa-fi-sol-do
  *   CLEAREST         the clearest cadential endings are four measures long with one bass
  *                    note per measure
+ *   VARIANTS         the core line has variants: di-re-sol-do (raised 1, 2, 5, 1), as in
+ *                    a song, and fi-sol-do (raised 4, 5, 1), as in a codetta
  *
  * A bass note is a scale degree and an alteration, because this framework does no pitch
  * arithmetic: fi is degree 4 with alteration +1. Only a raise of one semitone is modeled.
@@ -28,6 +30,7 @@ typedef enum {
     STANDARD_FORM_CADENTIAL_BASS_RULE_HARMONIZATION,
     STANDARD_FORM_CADENTIAL_BASS_RULE_EMBELLISHMENT,
     STANDARD_FORM_CADENTIAL_BASS_RULE_CLEAREST,
+    STANDARD_FORM_CADENTIAL_BASS_RULE_VARIANTS,
     STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT
 } StandardFormCadentialBassRule;
 
@@ -74,5 +77,19 @@ bool standard_form_cadential_six_four_elaborates(size_t core_index);
 /* CLEAREST: true for four measures with one bass note per measure. Other lengths and shapes are
    possible cadential endings, just less clear. */
 bool standard_form_cadential_is_clearest(size_t measures, size_t bass_note_count);
+
+typedef enum {
+    STANDARD_FORM_CADENTIAL_VARIANT_DI_RE_SOL_DO = 0,
+    STANDARD_FORM_CADENTIAL_VARIANT_FI_SOL_DO,
+    STANDARD_FORM_CADENTIAL_VARIANT_COUNT
+} StandardFormCadentialVariant;
+
+/* VARIANTS: true when the bass is the variant line: di-re-sol-do (1 raised, 2, 5, 1) or
+   fi-sol-do (4 raised, 5, 1). The core line and its fi embellishment are not variants. */
+bool standard_form_bass_is_cadential_variant(const StandardFormBassNote *notes, size_t count,
+                                             StandardFormCadentialVariant variant);
+
+/* VARIANTS: true when the bass is either variant line. */
+bool standard_form_bass_is_any_cadential_variant(const StandardFormBassNote *notes, size_t count);
 
 #endif

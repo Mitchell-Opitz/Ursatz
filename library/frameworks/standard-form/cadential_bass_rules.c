@@ -6,7 +6,8 @@ static const char *const NAMES[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT] = {
     "cadential-bass-core-line",
     "cadential-bass-harmonization",
     "cadential-bass-embellishment",
-    "cadential-bass-clearest"};
+    "cadential-bass-clearest",
+    "cadential-bass-variants"};
 
 static StandardFormRulePair g_pairs[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT];
 static bool g_built[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT];
@@ -91,4 +92,25 @@ bool standard_form_cadential_six_four_elaborates(size_t core_index) {
 
 bool standard_form_cadential_is_clearest(size_t measures, size_t bass_note_count) {
     return measures == 4 && bass_note_count == 4;
+}
+
+bool standard_form_bass_is_cadential_variant(const StandardFormBassNote *notes, size_t count,
+                                             StandardFormCadentialVariant variant) {
+    if (notes == NULL) {
+        return false;
+    }
+    switch (variant) {
+        case STANDARD_FORM_CADENTIAL_VARIANT_DI_RE_SOL_DO:
+            return count == 4 && note_is(&notes[0], 1, 1) && note_is(&notes[1], 2, 0) && note_is(&notes[2], 5, 0) &&
+                   note_is(&notes[3], 1, 0);
+        case STANDARD_FORM_CADENTIAL_VARIANT_FI_SOL_DO:
+            return count == 3 && note_is(&notes[0], 4, 1) && note_is(&notes[1], 5, 0) && note_is(&notes[2], 1, 0);
+        default:
+            return false;
+    }
+}
+
+bool standard_form_bass_is_any_cadential_variant(const StandardFormBassNote *notes, size_t count) {
+    return standard_form_bass_is_cadential_variant(notes, count, STANDARD_FORM_CADENTIAL_VARIANT_DI_RE_SOL_DO) ||
+           standard_form_bass_is_cadential_variant(notes, count, STANDARD_FORM_CADENTIAL_VARIANT_FI_SOL_DO);
 }

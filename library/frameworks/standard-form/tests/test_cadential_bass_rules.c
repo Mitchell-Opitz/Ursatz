@@ -76,6 +76,34 @@ static void test_clearest(void) {
     assert(!standard_form_cadential_is_clearest(4, 2));
 }
 
+/* di-re-sol-do (a song) and fi-sol-do (a codetta) are variants of the core line. */
+static void test_variants(void) {
+    StandardFormBassNote di_re_sol_do[4] = {{1, 1}, {2, 0}, {5, 0}, {1, 0}};
+    StandardFormBassNote fi_sol_do[3] = {{4, 1}, {5, 0}, {1, 0}};
+    StandardFormBassNote core[4] = {{3, 0}, {4, 0}, {5, 0}, {1, 0}};
+    StandardFormBassNote with_fi[5] = {{3, 0}, {4, 0}, {4, 1}, {5, 0}, {1, 0}};
+    StandardFormBassNote do_unraised[4] = {{1, 0}, {2, 0}, {5, 0}, {1, 0}};
+    StandardFormBassNote sol_do[2] = {{5, 0}, {1, 0}};
+
+    assert(standard_form_bass_is_cadential_variant(di_re_sol_do, 4, STANDARD_FORM_CADENTIAL_VARIANT_DI_RE_SOL_DO));
+    assert(!standard_form_bass_is_cadential_variant(di_re_sol_do, 4, STANDARD_FORM_CADENTIAL_VARIANT_FI_SOL_DO));
+    assert(standard_form_bass_is_cadential_variant(fi_sol_do, 3, STANDARD_FORM_CADENTIAL_VARIANT_FI_SOL_DO));
+    assert(!standard_form_bass_is_cadential_variant(fi_sol_do, 3, STANDARD_FORM_CADENTIAL_VARIANT_DI_RE_SOL_DO));
+    assert(!standard_form_bass_is_cadential_variant(di_re_sol_do, 4, STANDARD_FORM_CADENTIAL_VARIANT_COUNT));
+    assert(!standard_form_bass_is_cadential_variant(NULL, 4, STANDARD_FORM_CADENTIAL_VARIANT_DI_RE_SOL_DO));
+
+    assert(standard_form_bass_is_any_cadential_variant(di_re_sol_do, 4));
+    assert(standard_form_bass_is_any_cadential_variant(fi_sol_do, 3));
+
+    /* the core line and its fi embellishment are not variants, and variants are not the core line */
+    assert(!standard_form_bass_is_any_cadential_variant(core, 4));
+    assert(!standard_form_bass_is_any_cadential_variant(with_fi, 5));
+    assert(!standard_form_bass_is_any_cadential_variant(do_unraised, 4));
+    assert(!standard_form_bass_is_any_cadential_variant(sol_do, 2));
+    assert(!standard_form_bass_is_cadential(di_re_sol_do, 4));
+    assert(!standard_form_bass_is_cadential(fi_sol_do, 3));
+}
+
 int main(void) {
     test_rules_reference_framework();
     test_core_line();
@@ -83,6 +111,7 @@ int main(void) {
     test_fi_embellishment();
     test_harmonization();
     test_clearest();
+    test_variants();
     printf("test_cadential_bass_rules (standard-form): ok\n");
     return 0;
 }

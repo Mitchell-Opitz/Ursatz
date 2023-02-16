@@ -30,7 +30,7 @@ catalog and the shared conventions.
 | `galant-schemas` | Gjerdingen's Galant schemas | standard-counterpoint, ursatz |
 | `scale-harmonization` | Rule of the octave, sequences over a bass scale | galant-schemas, standard-counterpoint, ursatz |
 | `standard-harmony` | Harmonic function, phrase model, cadences, six-four chords, prolongation, tonicization, modulation | ursatz |
-| `standard-form` | Form levels, motives, sentence, period, hybrid forms | standard-harmony, ursatz |
+| `standard-form` | Form levels, motives, sentence, period, hybrid forms, phrase expansion and contraction | standard-harmony, ursatz |
 
 Most of the frameworks after `common-practice-minimal` follow Open Music Theory, a free
 textbook; each README names the chapters it covers.
