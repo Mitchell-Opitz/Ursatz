@@ -156,4 +156,6 @@ motive (only its relation to the idea is asserted), a closeness score
 between archetype and unique (an analysis judgment with its own
 uncertainty), and the harmonic start of a presentation. `analysis/` does
 not use these rules yet (`phrase_segmentation`, `motif_detection`,
-`sentence_detection`, `period_detection`).
+`sentence_detection`, `period_detection`). Phrase expansion and contraction
+are rules over caller-supplied lengths only: detecting them in real music
+arrives with the form adapter (L3.6).

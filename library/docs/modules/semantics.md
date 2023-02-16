@@ -6,7 +6,7 @@ Layer L6 (`music-semantics`). Path `src/semantics/`, tests `tests/semantics/`. O
 
 `Interval`, `Sonority`, `SonorityBuilder`, `RhythmicPattern`, `Scale`, `Contour`.
 
-Vocabulary enums (plain names, no `EntityID`, no framework claim; see `docs/ARCHITECTURE.md` for the admission rule): `VoicePart`, `MotionType`, `CounterpointSpecies`, `BeatStrength`, `NonChordTone`, `ImitationAnswer`, `FugueRole`, `OstinatoType`, `ImitativeRole`, `SchemaFunction`, `ScaleDirection`, `SequenceKind`, `HarmonicFunction`, `CadenceType`, `SeventhResolution`, `PhraseModelLabel`, `SixFourType`, `AppliedChordKind`, `ModulationKind`, `KeyChangeExtent`, `FormLevel`, `MotiveKind`, `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `SubphraseRole`, `ContinuationTrait`, `PhraseLevelForm`.
+Vocabulary enums (plain names, no `EntityID`, no framework claim; see `docs/ARCHITECTURE.md` for the admission rule): `VoicePart`, `MotionType`, `CounterpointSpecies`, `BeatStrength`, `NonChordTone`, `ImitationAnswer`, `FugueRole`, `OstinatoType`, `ImitativeRole`, `SchemaFunction`, `ScaleDirection`, `SequenceKind`, `HarmonicFunction`, `CadenceType`, `SeventhResolution`, `PhraseModelLabel`, `SixFourType`, `AppliedChordKind`, `ModulationKind`, `KeyChangeExtent`, `FormLevel`, `MotiveKind`, `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `SubphraseRole`, `ContinuationTrait`, `PhraseLevelForm`, `PhraseLengthChange`, `ExpansionPlacement`, `InternalExpansionTechnique`, `AlternativePathKind`, `ExternalExpansionKind`, `ExpectedLengthBasis`.
 
 ## Notes
 
