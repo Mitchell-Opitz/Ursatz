@@ -2,6 +2,8 @@ add_ursatz_test(smf_reader)
 add_ursatz_test(midi_event_decoder)
 add_ursatz_test(midi_importer)
 add_ursatz_test(midi_key_signature)
+target_compile_definitions(test_midi_key_signature PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 add_ursatz_architecture_test(io)
 
 # Scoped memcheck coverage for this module's own test binaries only
