@@ -1,6 +1,9 @@
 #include "io/midi_event_decoder.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
+
+#include "time/note_value.h"
 
 typedef struct {
     const unsigned char *data;
@@ -55,14 +58,38 @@ static int event_list_push(EventList *list, MidiNoteEvent event) {
     return 0;
 }
 
-MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data, size_t track_size,
-                                                  MidiNoteEvent **out_events, size_t *out_count) {
-    if (track_data == NULL || out_events == NULL || out_count == NULL) {
-        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
-    }
+typedef struct {
+    uint32_t tick;
+    unsigned char nn;
+    unsigned char dd;
+} RawTimeSignature;
 
+typedef struct {
+    RawTimeSignature *items;
+    size_t count;
+    size_t capacity;
+} RawTimeSignatureList;
+
+static int raw_time_signature_push(RawTimeSignatureList *list, RawTimeSignature event) {
+    if (list->count == list->capacity) {
+        size_t new_capacity = (list->capacity == 0) ? 8 : list->capacity * 2;
+        RawTimeSignature *grown = realloc(list->items, sizeof(RawTimeSignature) * new_capacity);
+        if (grown == NULL) {
+            return -1;
+        }
+        list->items = grown;
+        list->capacity = new_capacity;
+    }
+    list->items[list->count++] = event;
+    return 0;
+}
+
+/* Walks one track, appending note events to notes (when non-NULL) and well-formed time signature
+   meta-events (0xFF 0x58) to time_signatures (when non-NULL). The caller owns both lists, also on
+   failure. */
+static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t track_size, EventList *notes,
+                                          RawTimeSignatureList *time_signatures) {
     Cursor c = {track_data, track_size, 0};
-    EventList list = {NULL, 0, 0};
 
     uint32_t tick = 0;
     unsigned char running_status = 0;
@@ -70,13 +97,11 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
     while (c.pos < c.size) {
         uint32_t delta = 0;
         if (read_vlq(&c, &delta) != 0) {
-            free(list.items);
             return MIDI_EVENT_DECODER_ERR_TRUNCATED;
         }
         tick += delta;
 
         if (!cursor_has(&c, 1)) {
-            free(list.items);
             return MIDI_EVENT_DECODER_ERR_TRUNCATED;
         }
 
@@ -93,14 +118,24 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
         if (status == 0xFF) {
             /* Meta event: type byte + VLQ length + data. */
             if (!cursor_has(&c, 1)) {
-                free(list.items);
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
-            c.pos++; /* meta type, not interpreted */
+            unsigned char meta_type = cursor_byte(&c);
             uint32_t len = 0;
             if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
-                free(list.items);
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
+            }
+            if (meta_type == 0x58 && time_signatures != NULL && len == 4) {
+                /* nn dd cc bb: cc and bb are only required to be present. A signature the
+                   TimeSignature type cannot hold is malformed and skipped. */
+                unsigned char nn = c.data[c.pos];
+                unsigned char dd = c.data[c.pos + 1];
+                if (nn >= 1 && nn <= TIME_SIGNATURE_MAX_TOP_NUMBER && dd <= TIME_SIGNATURE_MAX_BOTTOM_UNIT_EXPONENT) {
+                    RawTimeSignature raw = {tick, nn, dd};
+                    if (raw_time_signature_push(time_signatures, raw) != 0) {
+                        return MIDI_EVENT_DECODER_ERR_ALLOC;
+                    }
+                }
             }
             c.pos += len;
             continue;
@@ -110,7 +145,6 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
             /* Sysex / escape: VLQ length + data. */
             uint32_t len = 0;
             if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
-                free(list.items);
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
             c.pos += len;
@@ -123,7 +157,6 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
         if (high_nibble == 0x80 || high_nibble == 0x90) {
             /* Note off / note on: 2 data bytes. */
             if (!cursor_has(&c, 2)) {
-                free(list.items);
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
             unsigned char note = cursor_byte(&c);
@@ -136,33 +169,189 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
             event.velocity = velocity;
             event.kind = (high_nibble == 0x90 && velocity > 0) ? MIDI_NOTE_ON : MIDI_NOTE_OFF;
 
-            if (event_list_push(&list, event) != 0) {
-                free(list.items);
+            if (notes != NULL && event_list_push(notes, event) != 0) {
                 return MIDI_EVENT_DECODER_ERR_ALLOC;
             }
         } else if (high_nibble == 0xA0 || high_nibble == 0xB0 || high_nibble == 0xE0) {
             /* Polyphonic aftertouch, CC, pitch bend: 2 data bytes, ignored. */
             if (!cursor_has(&c, 2)) {
-                free(list.items);
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
             c.pos += 2;
         } else if (high_nibble == 0xC0 || high_nibble == 0xD0) {
             /* Program change, channel aftertouch: 1 data byte, ignored. */
             if (!cursor_has(&c, 1)) {
-                free(list.items);
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
             c.pos += 1;
         } else {
             /* Unrecognized status byte with no defined length: cannot
                safely skip, so fail cleanly rather than guess. */
-            free(list.items);
             return MIDI_EVENT_DECODER_ERR_TRUNCATED;
         }
     }
 
+    return MIDI_EVENT_DECODER_OK;
+}
+
+MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data, size_t track_size,
+                                                  MidiNoteEvent **out_events, size_t *out_count) {
+    if (track_data == NULL || out_events == NULL || out_count == NULL) {
+        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
+    }
+
+    EventList list = {NULL, 0, 0};
+    MidiEventDecoderResult result = walk_track(track_data, track_size, &list, NULL);
+    if (result != MIDI_EVENT_DECODER_OK) {
+        free(list.items);
+        return result;
+    }
+
     *out_events = list.items;
     *out_count = list.count;
+    return MIDI_EVENT_DECODER_OK;
+}
+
+typedef struct {
+    RawTimeSignature raw;
+    size_t track_index;
+    size_t sequence;
+} SequencedTimeSignature;
+
+static int compare_sequenced_time_signatures(const void *a, const void *b) {
+    const SequencedTimeSignature *left = (const SequencedTimeSignature *)a;
+    const SequencedTimeSignature *right = (const SequencedTimeSignature *)b;
+    if (left->raw.tick != right->raw.tick) {
+        return left->raw.tick < right->raw.tick ? -1 : 1;
+    }
+    if (left->track_index != right->track_index) {
+        return left->track_index < right->track_index ? -1 : 1;
+    }
+    if (left->sequence != right->sequence) {
+        return left->sequence < right->sequence ? -1 : 1;
+    }
+    return 0;
+}
+
+void midi_time_signature_events_destroy(MidiTimeSignatureEvents *events) {
+    if (events == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < events->count; i++) {
+        time_signature_destroy(events->events[i].time_signature);
+    }
+    free(events->events);
+    free(events->conflict_ticks);
+    events->events = NULL;
+    events->count = 0;
+    events->conflict_ticks = NULL;
+    events->conflict_count = 0;
+}
+
+static int build_time_signature(const RawTimeSignature *raw, TimeSignature **out) {
+    NoteValue *unit = NULL;
+    if (note_value_create((int)raw->dd, &unit) != NOTE_VALUE_OK) {
+        return -1;
+    }
+    TimeSignatureResult r = time_signature_create(raw->nn, unit, out);
+    note_value_destroy(unit);
+    return r == TIME_SIGNATURE_OK ? 0 : -1;
+}
+
+MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack *tracks, size_t track_count,
+                                                                    MidiTimeSignatureEvents *out) {
+    if ((tracks == NULL && track_count > 0) || out == NULL) {
+        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
+    }
+
+    SequencedTimeSignature *all = NULL;
+    size_t all_count = 0;
+    size_t all_capacity = 0;
+    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
+
+    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
+        RawTimeSignatureList raw = {NULL, 0, 0};
+        failure = walk_track(tracks[t].data, tracks[t].size, NULL, &raw);
+        if (failure == MIDI_EVENT_DECODER_OK && all_count + raw.count > all_capacity) {
+            size_t new_capacity = all_count + raw.count;
+            SequencedTimeSignature *grown = realloc(all, sizeof(SequencedTimeSignature) * new_capacity);
+            if (grown == NULL) {
+                failure = MIDI_EVENT_DECODER_ERR_ALLOC;
+            } else {
+                all = grown;
+                all_capacity = new_capacity;
+            }
+        }
+        if (failure == MIDI_EVENT_DECODER_OK) {
+            for (size_t i = 0; i < raw.count; i++) {
+                all[all_count].raw = raw.items[i];
+                all[all_count].track_index = t;
+                all[all_count].sequence = all_count;
+                all_count++;
+            }
+        }
+        free(raw.items);
+    }
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        free(all);
+        return failure;
+    }
+
+    MidiTimeSignatureEvents result = {NULL, 0, NULL, 0};
+    if (all_count > 0) {
+        qsort(all, all_count, sizeof(SequencedTimeSignature), compare_sequenced_time_signatures);
+        result.events = (MidiTimeSignatureEvent *)calloc(all_count, sizeof(MidiTimeSignatureEvent));
+        result.conflict_ticks = (uint64_t *)calloc(all_count, sizeof(uint64_t));
+        if (result.events == NULL || result.conflict_ticks == NULL) {
+            free(result.events);
+            free(result.conflict_ticks);
+            free(all);
+            return MIDI_EVENT_DECODER_ERR_ALLOC;
+        }
+
+        /* One event per tick. Exact duplicates merge; if the signatures at a tick differ, the last
+           in (track, byte) order wins and the tick is recorded as a conflict. */
+        size_t i = 0;
+        while (i < all_count && failure == MIDI_EVENT_DECODER_OK) {
+            size_t j = i;
+            bool conflict = false;
+            while (j + 1 < all_count && all[j + 1].raw.tick == all[i].raw.tick) {
+                j++;
+            }
+            const SequencedTimeSignature *winner = &all[j];
+            for (size_t k = i; k < j; k++) {
+                if (all[k].raw.nn != winner->raw.nn || all[k].raw.dd != winner->raw.dd) {
+                    conflict = true;
+                }
+            }
+
+            MidiTimeSignatureEvent *entry = &result.events[result.count];
+            if (build_time_signature(&winner->raw, &entry->time_signature) != 0) {
+                failure = MIDI_EVENT_DECODER_ERR_ALLOC;
+                break;
+            }
+            entry->tick = winner->raw.tick;
+            entry->track_index = winner->track_index;
+            result.count++;
+            if (conflict) {
+                result.conflict_ticks[result.conflict_count++] = winner->raw.tick;
+            }
+            i = j + 1;
+        }
+    }
+    free(all);
+
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        midi_time_signature_events_destroy(&result);
+        return failure;
+    }
+
+    if (result.count == 0) {
+        free(result.events);
+        free(result.conflict_ticks);
+        result.events = NULL;
+        result.conflict_ticks = NULL;
+    }
+    *out = result;
     return MIDI_EVENT_DECODER_OK;
 }
