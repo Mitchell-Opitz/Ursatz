@@ -14,6 +14,7 @@
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
 #include "time/duration.h"
+#include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 
@@ -537,5 +538,151 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
     *out_events = note_events;
     *out_pitch_values = pitch_values;
     *out_count = built_count;
+    return MIDI_IMPORT_OK;
+}
+
+void midi_meter_import_destroy(MidiMeterImport *meter) {
+    if (meter == NULL) {
+        return;
+    }
+    meter_map_destroy(meter->meter_map);
+    musical_time_destroy(meter->end_time);
+    free(meter->conflict_ticks);
+    meter->meter_map = NULL;
+    meter->end_time = NULL;
+    meter->conflict_ticks = NULL;
+    meter->conflict_count = 0;
+}
+
+/* Reads the meter of a file midi_importer_import has already accepted, so the SMF header and tracks
+   are known to parse. Reparsing keeps midi_importer_import itself untouched. */
+static MidiImportResult build_meter(const unsigned char *data, size_t size, MidiMeterImport *out) {
+    SmfHeader header;
+    SmfTrack *tracks = NULL;
+    size_t track_count = 0;
+    if (smf_reader_parse(data, size, &header, &tracks, &track_count) != SMF_READER_OK) {
+        return MIDI_IMPORT_ERR_BAD_TRACK;
+    }
+    unsigned long denominator = 4UL * (unsigned long)header.division;
+
+    uint32_t end_tick = 0;
+    for (size_t t = 0; t < track_count; t++) {
+        MidiNoteEvent *events = NULL;
+        size_t event_count = 0;
+        if (midi_event_decoder_decode(tracks[t].data, tracks[t].size, &events, &event_count) !=
+            MIDI_EVENT_DECODER_OK) {
+            free(tracks);
+            return MIDI_IMPORT_ERR_BAD_TRACK;
+        }
+        for (size_t i = 0; i < event_count; i++) {
+            if (events[i].kind == MIDI_NOTE_OFF && events[i].tick > end_tick) {
+                end_tick = events[i].tick;
+            }
+        }
+        free(events);
+    }
+
+    MidiTimeSignatureEvents signatures = {NULL, 0, NULL, 0};
+    MidiEventDecoderResult collected = midi_event_decoder_collect_time_signatures(tracks, track_count, &signatures);
+    free(tracks);
+    if (collected != MIDI_EVENT_DECODER_OK) {
+        return collected == MIDI_EVENT_DECODER_ERR_ALLOC ? MIDI_IMPORT_ERR_ALLOC : MIDI_IMPORT_ERR_BAD_TRACK;
+    }
+
+    MidiMeterImport result = {NULL, NULL, NULL, 0};
+    MidiImportResult failure = MIDI_IMPORT_OK;
+
+    EntityID *map_id = NULL;
+    if (entity_id_create("midi-meter-map", &map_id) != ENTITY_ID_OK) {
+        failure = MIDI_IMPORT_ERR_ALLOC;
+    } else if (signatures.count == 0) {
+        if (meter_map_create_defaulted(map_id, &result.meter_map) != METER_MAP_OK) {
+            entity_id_destroy(map_id);
+            failure = MIDI_IMPORT_ERR_ALLOC;
+        }
+    } else {
+        MeterMapChangePoint *points = calloc(signatures.count, sizeof(MeterMapChangePoint));
+        MusicalTime **starts = calloc(signatures.count, sizeof(MusicalTime *));
+        if (points == NULL || starts == NULL) {
+            failure = MIDI_IMPORT_ERR_ALLOC;
+        } else {
+            for (size_t i = 0; i < signatures.count && failure == MIDI_IMPORT_OK; i++) {
+                if (musical_time_create((long)signatures.events[i].tick, denominator, &starts[i]) !=
+                    MUSICAL_TIME_OK) {
+                    failure = MIDI_IMPORT_ERR_ALLOC;
+                    break;
+                }
+                points[i].time_signature = signatures.events[i].time_signature;
+                points[i].start = starts[i];
+            }
+            if (failure == MIDI_IMPORT_OK &&
+                meter_map_create(map_id, points, signatures.count, &result.meter_map) != METER_MAP_OK) {
+                failure = MIDI_IMPORT_ERR_ALLOC;
+            }
+        }
+        if (starts != NULL) {
+            for (size_t i = 0; i < signatures.count; i++) {
+                musical_time_destroy(starts[i]);
+            }
+        }
+        free(starts);
+        free(points);
+        if (failure != MIDI_IMPORT_OK) {
+            entity_id_destroy(map_id);
+        }
+    }
+
+    if (failure == MIDI_IMPORT_OK &&
+        musical_time_create((long)end_tick, denominator, &result.end_time) != MUSICAL_TIME_OK) {
+        failure = MIDI_IMPORT_ERR_ALLOC;
+    }
+    if (failure == MIDI_IMPORT_OK && signatures.conflict_count > 0) {
+        result.conflict_ticks = malloc(sizeof(uint64_t) * signatures.conflict_count);
+        if (result.conflict_ticks == NULL) {
+            failure = MIDI_IMPORT_ERR_ALLOC;
+        } else {
+            for (size_t i = 0; i < signatures.conflict_count; i++) {
+                result.conflict_ticks[i] = signatures.conflict_ticks[i];
+            }
+            result.conflict_count = signatures.conflict_count;
+        }
+    }
+    midi_time_signature_events_destroy(&signatures);
+
+    if (failure != MIDI_IMPORT_OK) {
+        midi_meter_import_destroy(&result);
+        return failure;
+    }
+    *out = result;
+    return MIDI_IMPORT_OK;
+}
+
+MidiImportResult midi_importer_import_with_meter(const unsigned char *data, size_t size, NoteEvent ***out_events,
+                                                  PitchNumericValue ***out_pitch_values, size_t *out_count,
+                                                  MidiMeterImport *out_meter) {
+    if (out_meter == NULL) {
+        return MIDI_IMPORT_ERR_NULL_BUFFER;
+    }
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiImportResult imported = midi_importer_import(data, size, &events, &pitch_values, &count);
+    if (imported != MIDI_IMPORT_OK) {
+        return imported;
+    }
+
+    MidiMeterImport meter = {NULL, NULL, NULL, 0};
+    MidiImportResult meter_result = build_meter(data, size, &meter);
+    if (meter_result != MIDI_IMPORT_OK) {
+        destroy_note_events(events, count);
+        destroy_pitch_values(pitch_values, count);
+        return meter_result;
+    }
+
+    *out_events = events;
+    *out_pitch_values = pitch_values;
+    *out_count = count;
+    *out_meter = meter;
     return MIDI_IMPORT_OK;
 }

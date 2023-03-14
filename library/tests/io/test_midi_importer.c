@@ -461,6 +461,121 @@ static void test_rejects_null_buffer(void) {
     assert(r == MIDI_IMPORT_ERR_NULL_BUFFER);
 }
 
+/* --- meter (midi_importer_import_with_meter) --- */
+
+static const unsigned char TS_6_8[] = {0x00, 0xFF, 0x58, 0x04, 0x06, 0x03, 0x18, 0x08};
+static const unsigned char TS_3_4[] = {0x00, 0xFF, 0x58, 0x04, 0x03, 0x02, 0x18, 0x08};
+
+static void free_import(NoteEvent **events, PitchNumericValue **pitch_values, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
+}
+
+static void test_import_with_meter_defaults_to_four_four_without_a_time_signature(void) {
+    unsigned char track[] = {
+        0x00, 0x90, 0x3C, 0x64, /* note-on at tick 0 */
+        0x83, 0x60, 0x80, 0x3C, 0x40 /* delta 480: note-off at tick 480 */
+    };
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiMeterImport meter = {0};
+    assert(midi_importer_import_with_meter(buf, size, &events, &pitch_values, &count, &meter) == MIDI_IMPORT_OK);
+    assert(count == 1);
+    assert(meter_map_is_defaulted(meter.meter_map));
+    assert(meter_map_region_count(meter.meter_map) == 1);
+    const MeterMapRegion *region = meter_map_region(meter.meter_map, 0);
+    assert(time_signature_top_number(meter_map_region_time_signature(region)) == 4);
+    assert(time_signature_bottom_number(meter_map_region_time_signature(region)) == 4);
+    assert(meter.conflict_count == 0);
+
+    MusicalTime *quarter = NULL;
+    musical_time_create(1, 4, &quarter);
+    assert(musical_time_equals(meter.end_time, quarter));
+    musical_time_destroy(quarter);
+
+    midi_meter_import_destroy(&meter);
+    free_import(events, pitch_values, count);
+}
+
+static void test_import_with_meter_reads_time_signature_and_matches_plain_import(void) {
+    unsigned char track[sizeof(TS_6_8) + 4 + 5 + 4];
+    size_t n = 0;
+    memcpy(track + n, TS_6_8, sizeof(TS_6_8));
+    n += sizeof(TS_6_8);
+    const unsigned char notes[] = {0x00, 0x90, 0x3C, 0x64, 0x81, 0x70, 0x80, 0x3C, 0x40}; /* off at tick 240 */
+    memcpy(track + n, notes, sizeof(notes));
+    n += sizeof(notes);
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, n);
+
+    NoteEvent **plain_events = NULL;
+    PitchNumericValue **plain_values = NULL;
+    size_t plain_count = 0;
+    assert(midi_importer_import(buf, size, &plain_events, &plain_values, &plain_count) == MIDI_IMPORT_OK);
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiMeterImport meter = {0};
+    assert(midi_importer_import_with_meter(buf, size, &events, &pitch_values, &count, &meter) == MIDI_IMPORT_OK);
+    assert(count == plain_count);
+    assert(note_event_duration(events[0]) != NULL);
+
+    assert(!meter_map_is_defaulted(meter.meter_map));
+    const MeterMapRegion *region = meter_map_region(meter.meter_map, 0);
+    assert(time_signature_top_number(meter_map_region_time_signature(region)) == 6);
+    assert(time_signature_bottom_number(meter_map_region_time_signature(region)) == 8);
+    assert(!meter_map_region_is_defaulted(region));
+
+    midi_meter_import_destroy(&meter);
+    free_import(events, pitch_values, count);
+    free_import(plain_events, plain_values, plain_count);
+}
+
+static void test_import_with_meter_reports_conflicting_time_signatures(void) {
+    unsigned char track[sizeof(TS_6_8) + sizeof(TS_3_4)];
+    memcpy(track, TS_6_8, sizeof(TS_6_8));
+    memcpy(track + sizeof(TS_6_8), TS_3_4, sizeof(TS_3_4));
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiMeterImport meter = {0};
+    assert(midi_importer_import_with_meter(buf, size, &events, &pitch_values, &count, &meter) == MIDI_IMPORT_OK);
+    assert(count == 0);
+    assert(meter.conflict_count == 1 && meter.conflict_ticks[0] == 0);
+    const MeterMapRegion *region = meter_map_region(meter.meter_map, 0);
+    assert(time_signature_top_number(meter_map_region_time_signature(region)) == 3); /* last wins */
+
+    midi_meter_import_destroy(&meter);
+    free(events);
+    free(pitch_values);
+}
+
+static void test_import_with_meter_rejects_bad_input_without_writing_outputs(void) {
+    unsigned char buf[8] = {'M', 'T', 'h', 'd', 0, 0, 0, 6};
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 7;
+    MidiMeterImport meter = {0};
+    assert(midi_importer_import_with_meter(buf, sizeof(buf), &events, &pitch_values, &count, &meter) ==
+           MIDI_IMPORT_ERR_TRUNCATED);
+    assert(events == NULL && pitch_values == NULL && count == 7 && meter.meter_map == NULL);
+    assert(midi_importer_import_with_meter(buf, sizeof(buf), &events, &pitch_values, &count, NULL) ==
+           MIDI_IMPORT_ERR_NULL_BUFFER);
+    midi_meter_import_destroy(NULL);
+}
+
 int main(void) {
     test_sequence_of_notes();
     test_simultaneous_chord();
@@ -470,6 +585,10 @@ int main(void) {
     test_multi_channel_import_gets_no_voice();
     test_rejects_truncated_file();
     test_rejects_null_buffer();
+    test_import_with_meter_defaults_to_four_four_without_a_time_signature();
+    test_import_with_meter_reads_time_signature_and_matches_plain_import();
+    test_import_with_meter_reports_conflicting_time_signatures();
+    test_import_with_meter_rejects_bad_input_without_writing_outputs();
     printf("test_midi_importer: ok\n");
     return 0;
 }
