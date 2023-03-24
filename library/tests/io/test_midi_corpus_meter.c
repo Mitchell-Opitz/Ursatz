@@ -142,7 +142,7 @@ static void test_bach_114(void) {
  *   File: 240 ticks per quarter, four meter events in track 0: 4/4 at tick 0, 3/4 at 142080, 1/4 at
  *   219120 (one quarter note long) and 2/4 at 219360.
  * DISCREPANCY: the score numbers each movement from 1, but a MIDI file is one timeline, so the file
- * numbers straight through. The 4/4 region is 148 measures (repeats played out), the 3/4 region is
+ * numbers straight through. The 4/4 region is 148 measures, the 3/4 region is
  * 107 (measures 149-255), the one-quarter region is measure 256, and the 2/4 region runs from 257 to
  * 338. The one-quarter region is the finale's upbeat, encoded as its own short signature in the
  * middle of the file; it is not the first region, so the pickup rule does not apply and it takes a
@@ -180,9 +180,9 @@ static void test_clementi_36(void) {
  * Field, Nocturne No. 1 in E-flat.
  *   Score: 12/8 (stated in the task brief for this import). The score's measure count is not
  *   re-checked here (file-derived, score unverified).
- *   File: 12/8 at tick 0 (0xFF 0x58: 12 3 12 8), 240 ticks per quarter, so a measure is 2880
+ *   File: 12/8 at tick 0 (0xFF 0x58: 12 3 12 8), 240 ticks per quarter, so a measure is 1440
  *   ticks. The first note starts at tick 1080, nine eighth notes into measure 1, and the notes end at
- *   tick 96120, 33.4 measures in: 34 measures, the final note in measure 34.
+ *   tick 96120, 66.75 measures in: 67 measures, the final note in measure 67.
  * POSSIBLE DISCREPANCY: a first note nine eighths into a 12/8 measure is the shape of a padded upbeat
  * (an upbeat of three eighths written after nine eighths of rest). The file says nothing about a
  * pickup (no short leading signature, no partial first measure), so the importer numbers that
@@ -191,7 +191,7 @@ static void test_clementi_36(void) {
  */
 static void test_field_1(void) {
     const Signature signatures[] = {{12, 8}};
-    check_piece("Field 1.mid", signatures, 1, 34, 34);
+    check_piece("Field 1.mid", signatures, 1, 67, 67);
 }
 
 /*
