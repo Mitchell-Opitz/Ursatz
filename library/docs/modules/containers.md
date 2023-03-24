@@ -14,7 +14,7 @@ Layer L4 (`music-containers`). Path `src/containers/`, tests `tests/containers/`
 
 `Part` (Container): an instrument/performer grouping. Groups `Staff`(s) by reference. Schema `{id, staff_ids}`, array optional.
 
-`Measure` (Container): a metrical grouping. Schema `{id, meter_map_region_ref}` -- see Known Gaps below.
+`Measure` (Container): a metrical grouping. Schema `{id, meter_map_region_ref}`; the ref resolves against a `MeterMap` region -- see Known Gaps below.
 
 `Phrase` (Container -- L4 sense only, see Known Gaps below): a mid-level grouping of `Event` references. Schema `{id, event_ids}`, array optional.
 
@@ -50,7 +50,7 @@ Layer L4 (`music-containers`). Path `src/containers/`, tests `tests/containers/`
 
 Flagged rather than silently resolved:
 
-- **`Measure.meter_map_region_ref`**: `MeterMap` does not exist yet in this codebase. This field is kept as a bare opaque `EntityID` reference -- the same "opaque, resolved only once the real target type exists" treatment `VoiceReference`/`RelationshipReference` give references to types defined at a higher layer, here applied ahead of schedule to a same-layer dependency that simply is not built yet. Once `MeterMap` exists, this field should be revisited -- it may need to become a dedicated `MeterMapRegionReference` type rather than a bare `EntityID`.
+- **`Measure.meter_map_region_ref`**: resolved against `MeterMap` (`time/meter_map.h`). The field stays a bare `EntityID`, the id of a `MeterMap` region, so `measure_create` is unchanged. `measure_resolve_region` looks it up in a map. A `Measure` holds only `{id, meter_map_region_ref}`: its number and its start and end are not stored on it, because the `MeterMap` is the single source for measure boundaries. `measure_enumerate` returns every measure of a map up to an end time as `{index, TimeSpan, region ref}`. A region holds many measures, so the ref alone does not say which one a `Measure` is; the caller's id for it and the enumerated index do.
 - **`Phrase` naming**: this module's `Phrase` is the L4 Container-layer sense (a grouping object holding `Event` references directly). It is NOT `structure`'s L5 occurrence-based Phrase concept (referred to elsewhere as `PhraseOccurrence`, a situated instance of an abstract Phrase Structure). Same English word, two distinct concepts at two different layers, disambiguated in both modules' header comments -- not conflated or merged.
 - **`Revision.target_id`**: nothing in this codebase yet distinguishes "this `EntityID` names a `Work`" from "this `EntityID` names an `Edition`" at the type level (no discriminated/tagged reference exists for that). `target_id` is therefore a bare opaque `EntityID` that may resolve to either, exactly as the Registry's own "Work/Edition" phrasing leaves it.
 - **`SourceVariant`**: Registry marks this "shall eventually support" -- deferred normative, no concrete schema given. The `{source_id, descriptor}` shape here is a minimal structural guess at that eventual schema, not a resolution of it. `descriptor` is kept as an opaque string (matching `Layer.grouping`, `Articulation.kind`, `Dynamics.marking`) rather than a bare-EntityID placeholder, since it is content rather than a stand-in for an as-yet-unbuilt entity type (contrast `Measure.meter_map_region_ref` above).
