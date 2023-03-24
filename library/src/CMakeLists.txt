@@ -21,6 +21,7 @@ add_library(ursatz
     time/historical_period.c
     time/note_value.c
     time/time_signature.c
+    time/meter_map.c
     time/tuplet.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
