@@ -84,11 +84,36 @@ static int raw_time_signature_push(RawTimeSignatureList *list, RawTimeSignature 
     return 0;
 }
 
-/* Walks one track, appending note events to notes (when non-NULL) and well-formed time signature
-   meta-events (0xFF 0x58) to time_signatures (when non-NULL). The caller owns both lists, also on
-   failure. */
+typedef struct {
+    uint32_t tick;
+    uint32_t microseconds_per_quarter;
+} RawTempo;
+
+typedef struct {
+    RawTempo *items;
+    size_t count;
+    size_t capacity;
+} RawTempoList;
+
+static int raw_tempo_push(RawTempoList *list, RawTempo event) {
+    if (list->count == list->capacity) {
+        size_t new_capacity = (list->capacity == 0) ? 8 : list->capacity * 2;
+        RawTempo *grown = realloc(list->items, sizeof(RawTempo) * new_capacity);
+        if (grown == NULL) {
+            return -1;
+        }
+        list->items = grown;
+        list->capacity = new_capacity;
+    }
+    list->items[list->count++] = event;
+    return 0;
+}
+
+/* Walks one track, appending note events to notes (when non-NULL), well-formed time signature
+   meta-events (0xFF 0x58) to time_signatures (when non-NULL) and well-formed set-tempo meta-events
+   (0xFF 0x51) to tempos (when non-NULL). The caller owns the lists, also on failure. */
 static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t track_size, EventList *notes,
-                                          RawTimeSignatureList *time_signatures) {
+                                          RawTimeSignatureList *time_signatures, RawTempoList *tempos) {
     Cursor c = {track_data, track_size, 0};
 
     uint32_t tick = 0;
@@ -133,6 +158,17 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
                 if (nn >= 1 && nn <= TIME_SIGNATURE_MAX_TOP_NUMBER && dd <= TIME_SIGNATURE_MAX_BOTTOM_UNIT_EXPONENT) {
                     RawTimeSignature raw = {tick, nn, dd};
                     if (raw_time_signature_push(time_signatures, raw) != 0) {
+                        return MIDI_EVENT_DECODER_ERR_ALLOC;
+                    }
+                }
+            }
+            if (meta_type == 0x51 && tempos != NULL && len == 3) {
+                /* Three bytes, big-endian: microseconds per quarter note. Zero is malformed. */
+                uint32_t value = ((uint32_t)c.data[c.pos] << 16) | ((uint32_t)c.data[c.pos + 1] << 8) |
+                                 (uint32_t)c.data[c.pos + 2];
+                if (value != 0) {
+                    RawTempo raw = {tick, value};
+                    if (raw_tempo_push(tempos, raw) != 0) {
                         return MIDI_EVENT_DECODER_ERR_ALLOC;
                     }
                 }
@@ -201,7 +237,7 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
     }
 
     EventList list = {NULL, 0, 0};
-    MidiEventDecoderResult result = walk_track(track_data, track_size, &list, NULL);
+    MidiEventDecoderResult result = walk_track(track_data, track_size, &list, NULL, NULL);
     if (result != MIDI_EVENT_DECODER_OK) {
         free(list.items);
         return result;
@@ -271,7 +307,7 @@ MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack
 
     for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
         RawTimeSignatureList raw = {NULL, 0, 0};
-        failure = walk_track(tracks[t].data, tracks[t].size, NULL, &raw);
+        failure = walk_track(tracks[t].data, tracks[t].size, NULL, &raw, NULL);
         if (failure == MIDI_EVENT_DECODER_OK && all_count + raw.count > all_capacity) {
             size_t new_capacity = all_count + raw.count;
             SequencedTimeSignature *grown = realloc(all, sizeof(SequencedTimeSignature) * new_capacity);
@@ -345,6 +381,128 @@ MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack
         midi_time_signature_events_destroy(&result);
         return failure;
     }
+
+    if (result.count == 0) {
+        free(result.events);
+        free(result.conflict_ticks);
+        result.events = NULL;
+        result.conflict_ticks = NULL;
+    }
+    *out = result;
+    return MIDI_EVENT_DECODER_OK;
+}
+
+typedef struct {
+    RawTempo raw;
+    size_t track_index;
+    size_t sequence;
+} SequencedTempo;
+
+static int compare_sequenced_tempos(const void *a, const void *b) {
+    const SequencedTempo *left = (const SequencedTempo *)a;
+    const SequencedTempo *right = (const SequencedTempo *)b;
+    if (left->raw.tick != right->raw.tick) {
+        return left->raw.tick < right->raw.tick ? -1 : 1;
+    }
+    if (left->track_index != right->track_index) {
+        return left->track_index < right->track_index ? -1 : 1;
+    }
+    if (left->sequence != right->sequence) {
+        return left->sequence < right->sequence ? -1 : 1;
+    }
+    return 0;
+}
+
+void midi_tempo_events_destroy(MidiTempoEvents *events) {
+    if (events == NULL) {
+        return;
+    }
+    free(events->events);
+    free(events->conflict_ticks);
+    events->events = NULL;
+    events->count = 0;
+    events->conflict_ticks = NULL;
+    events->conflict_count = 0;
+}
+
+MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks, size_t track_count,
+                                                          MidiTempoEvents *out) {
+    if ((tracks == NULL && track_count > 0) || out == NULL) {
+        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
+    }
+
+    SequencedTempo *all = NULL;
+    size_t all_count = 0;
+    size_t all_capacity = 0;
+    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
+
+    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
+        RawTempoList raw = {NULL, 0, 0};
+        failure = walk_track(tracks[t].data, tracks[t].size, NULL, NULL, &raw);
+        if (failure == MIDI_EVENT_DECODER_OK && all_count + raw.count > all_capacity) {
+            size_t new_capacity = all_count + raw.count;
+            SequencedTempo *grown = realloc(all, sizeof(SequencedTempo) * new_capacity);
+            if (grown == NULL) {
+                failure = MIDI_EVENT_DECODER_ERR_ALLOC;
+            } else {
+                all = grown;
+                all_capacity = new_capacity;
+            }
+        }
+        if (failure == MIDI_EVENT_DECODER_OK) {
+            for (size_t i = 0; i < raw.count; i++) {
+                all[all_count].raw = raw.items[i];
+                all[all_count].track_index = t;
+                all[all_count].sequence = all_count;
+                all_count++;
+            }
+        }
+        free(raw.items);
+    }
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        free(all);
+        return failure;
+    }
+
+    MidiTempoEvents result = {NULL, 0, NULL, 0};
+    if (all_count > 0) {
+        qsort(all, all_count, sizeof(SequencedTempo), compare_sequenced_tempos);
+        result.events = (MidiTempoEvent *)calloc(all_count, sizeof(MidiTempoEvent));
+        result.conflict_ticks = (uint64_t *)calloc(all_count, sizeof(uint64_t));
+        if (result.events == NULL || result.conflict_ticks == NULL) {
+            free(result.events);
+            free(result.conflict_ticks);
+            free(all);
+            return MIDI_EVENT_DECODER_ERR_ALLOC;
+        }
+
+        /* One event per tick. Exact duplicates merge; if the tempos at a tick differ, the last in
+           (track, byte) order wins and the tick is recorded as a conflict. */
+        size_t i = 0;
+        while (i < all_count) {
+            size_t j = i;
+            while (j + 1 < all_count && all[j + 1].raw.tick == all[i].raw.tick) {
+                j++;
+            }
+            const SequencedTempo *winner = &all[j];
+            bool conflict = false;
+            for (size_t k = i; k < j; k++) {
+                if (all[k].raw.microseconds_per_quarter != winner->raw.microseconds_per_quarter) {
+                    conflict = true;
+                }
+            }
+
+            MidiTempoEvent *entry = &result.events[result.count++];
+            entry->microseconds_per_quarter = winner->raw.microseconds_per_quarter;
+            entry->tick = winner->raw.tick;
+            entry->track_index = winner->track_index;
+            if (conflict) {
+                result.conflict_ticks[result.conflict_count++] = winner->raw.tick;
+            }
+            i = j + 1;
+        }
+    }
+    free(all);
 
     if (result.count == 0) {
         free(result.events);

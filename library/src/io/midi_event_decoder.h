@@ -22,7 +22,8 @@
  * spec.
  *
  * Time signature meta-events (0xFF 0x58) are read separately, by
- * midi_event_decoder_collect_time_signatures below. midi_event_decoder_decode
+ * midi_event_decoder_collect_time_signatures below, and set-tempo meta-events (0xFF 0x51) by
+ * midi_event_decoder_collect_tempos. midi_event_decoder_decode
  * still skips them, so its output and signature are unchanged.
  */
 
@@ -94,5 +95,44 @@ MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack
 
 /* Destroys every event's TimeSignature, and the lists. NULL is a no-op. */
 void midi_time_signature_events_destroy(MidiTimeSignatureEvents *events);
+
+/*
+ * Set-tempo meta-events: 0xFF 0x51, length 3, one big-endian 24-bit value: microseconds per quarter
+ * note (500,000 is 120 quarter notes per minute, MIDI's default when a file sets none). The value
+ * is carried as read. Which tempo applies where, the default, and what a tempo means in seconds are
+ * TempoMap's concern (time/tempo_map.h); this decoder reads the bytes and their tick positions.
+ *
+ * Collected from every track and merged in time order, with the same rules as time signatures:
+ * order is by tick, then track index, then byte order within a track; at most one event per tick;
+ * an exact duplicate (same tick, same tempo) is merged; if different tempos share a tick the last in
+ * track order (then byte order) wins and the tick is reported in conflict_ticks, which the library
+ * does not print. Tempo changes are never merged across ticks: every distinct tick is its own
+ * event, even if the value repeats.
+ *
+ * Malformed events are skipped: a length other than 3, or a tempo of 0 (no quarter note can last no
+ * time). A track whose bytes are structurally malformed fails with TRUNCATED, as
+ * midi_event_decoder_decode does. An SMPTE division never reaches this function: smf_reader_parse
+ * rejects it when the tracks are read. No set-tempo events is OK with zero events.
+ */
+
+typedef struct {
+    uint32_t microseconds_per_quarter; /* 1..16777215 */
+    uint64_t tick;                     /* absolute tick position */
+    size_t track_index;                /* the track of the event that was kept */
+} MidiTempoEvent;
+
+typedef struct {
+    MidiTempoEvent *events; /* owned; NULL when count is 0 */
+    size_t count;
+    uint64_t *conflict_ticks; /* owned; NULL when conflict_count is 0 */
+    size_t conflict_count;
+} MidiTempoEvents;
+
+/* On OK, *out owns its lists (midi_tempo_events_destroy). Otherwise *out is untouched. */
+MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks, size_t track_count,
+                                                          MidiTempoEvents *out);
+
+/* Destroys the lists. NULL is a no-op. */
+void midi_tempo_events_destroy(MidiTempoEvents *events);
 
 #endif

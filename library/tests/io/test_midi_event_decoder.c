@@ -210,6 +210,109 @@ static void test_collect_rejects_truncated_track_and_null(void) {
     assert(midi_event_decoder_collect_time_signatures(NULL, 0, NULL) == MIDI_EVENT_DECODER_ERR_NULL_TRACK);
 }
 
+/* --- set-tempo meta-events (0xFF 0x51) --- */
+
+static MidiEventDecoderResult collect_tempos(const unsigned char *a, size_t a_size, const unsigned char *b,
+                                             size_t b_size, MidiTempoEvents *out) {
+    SmfTrack tracks[2] = {{a, a_size}, {b, b_size}};
+    return midi_event_decoder_collect_tempos(tracks, b == NULL ? 1 : 2, out);
+}
+
+static void test_collects_tempos(void) {
+    unsigned char track[] = {
+        0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20, /* tick 0: 500000 */
+        0x60, 0xFF, 0x51, 0x03, 0x0A, 0x2C, 0x2A  /* tick 96: 666666 */
+    };
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(track, sizeof(track), NULL, 0, &events) == MIDI_EVENT_DECODER_OK);
+    assert(events.count == 2);
+    assert(events.conflict_count == 0);
+    assert(events.events[0].tick == 0 && events.events[0].microseconds_per_quarter == 500000);
+    assert(events.events[1].tick == 96 && events.events[1].microseconds_per_quarter == 666666);
+    midi_tempo_events_destroy(&events);
+}
+
+static void test_collects_tempo_from_a_non_first_track_in_time_order(void) {
+    unsigned char a[] = {0x60, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20};
+    unsigned char b[] = {0x00, 0xFF, 0x51, 0x03, 0x0A, 0x2C, 0x2A};
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(a, sizeof(a), b, sizeof(b), &events) == MIDI_EVENT_DECODER_OK);
+    assert(events.count == 2);
+    assert(events.events[0].tick == 0 && events.events[0].track_index == 1);
+    assert(events.events[1].tick == 96 && events.events[1].track_index == 0);
+    midi_tempo_events_destroy(&events);
+}
+
+static void test_merges_exact_duplicate_tempos(void) {
+    unsigned char a[] = {0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20};
+    unsigned char b[] = {0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20};
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(a, sizeof(a), b, sizeof(b), &events) == MIDI_EVENT_DECODER_OK);
+    assert(events.count == 1 && events.conflict_count == 0);
+    midi_tempo_events_destroy(&events);
+}
+
+static void test_tempo_conflict_last_track_wins_and_is_reported(void) {
+    unsigned char a[] = {0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20};
+    unsigned char b[] = {0x00, 0xFF, 0x51, 0x03, 0x0A, 0x2C, 0x2A};
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(a, sizeof(a), b, sizeof(b), &events) == MIDI_EVENT_DECODER_OK);
+    assert(events.count == 1);
+    assert(events.events[0].microseconds_per_quarter == 666666);
+    assert(events.events[0].track_index == 1);
+    assert(events.conflict_count == 1 && events.conflict_ticks[0] == 0);
+    midi_tempo_events_destroy(&events);
+}
+
+static void test_repeated_tempo_at_a_later_tick_is_kept(void) {
+    unsigned char track[] = {
+        0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20,
+        0x60, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20
+    };
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(track, sizeof(track), NULL, 0, &events) == MIDI_EVENT_DECODER_OK);
+    assert(events.count == 2);
+    midi_tempo_events_destroy(&events);
+}
+
+static void test_skips_malformed_tempos(void) {
+    unsigned char track[] = {
+        0x00, 0xFF, 0x51, 0x02, 0x07, 0xA1,             /* length 2: skipped */
+        0x00, 0xFF, 0x51, 0x04, 0x00, 0x07, 0xA1, 0x20, /* length 4: skipped */
+        0x00, 0xFF, 0x51, 0x03, 0x00, 0x00, 0x00,       /* tempo 0: skipped */
+        0x00, 0xFF, 0x51, 0x03, 0xFF, 0xFF, 0xFF        /* 16777215: kept */
+    };
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(track, sizeof(track), NULL, 0, &events) == MIDI_EVENT_DECODER_OK);
+    assert(events.count == 1);
+    assert(events.events[0].microseconds_per_quarter == 16777215);
+    midi_tempo_events_destroy(&events);
+}
+
+static void test_no_tempos_is_ok_and_empty(void) {
+    unsigned char track[] = {0x00, 0x90, 0x3C, 0x64};
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(track, sizeof(track), NULL, 0, &events) == MIDI_EVENT_DECODER_OK);
+    assert(events.count == 0 && events.events == NULL);
+    midi_tempo_events_destroy(&events);
+}
+
+static void test_tempo_collect_rejects_truncated_track_and_null(void) {
+    unsigned char track[] = {0x00, 0xFF, 0x51, 0x03, 0x07};
+    MidiTempoEvents events = {0};
+    assert(collect_tempos(track, sizeof(track), NULL, 0, &events) == MIDI_EVENT_DECODER_ERR_TRUNCATED);
+    assert(midi_event_decoder_collect_tempos(NULL, 0, NULL) == MIDI_EVENT_DECODER_ERR_NULL_TRACK);
+}
+
+static void test_note_decode_ignores_tempos(void) {
+    unsigned char track[] = {0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20, 0x00, 0x90, 0x3C, 0x64};
+    MidiNoteEvent *events = NULL;
+    size_t count = 0;
+    assert(midi_event_decoder_decode(track, sizeof(track), &events, &count) == MIDI_EVENT_DECODER_OK);
+    assert(count == 1);
+    free(events);
+}
+
 int main(void) {
     test_decodes_note_on_and_off();
     test_note_on_velocity_zero_is_note_off();
@@ -225,6 +328,15 @@ int main(void) {
     test_no_time_signatures_is_ok_and_empty();
     test_note_decode_ignores_time_signatures();
     test_collect_rejects_truncated_track_and_null();
+    test_collects_tempos();
+    test_collects_tempo_from_a_non_first_track_in_time_order();
+    test_merges_exact_duplicate_tempos();
+    test_tempo_conflict_last_track_wins_and_is_reported();
+    test_repeated_tempo_at_a_later_tick_is_kept();
+    test_skips_malformed_tempos();
+    test_no_tempos_is_ok_and_empty();
+    test_tempo_collect_rejects_truncated_track_and_null();
+    test_note_decode_ignores_tempos();
     printf("test_midi_event_decoder: ok\n");
     return 0;
 }
