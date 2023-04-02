@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.URSATZ_SUBMODULE_TOKEN }}@github.com/Mitchell-Opitz/Ursatz".insteadOf "https://github.com/Mitchell-Opitz/Ursatz"
+          git submodule update --init --recursive
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev pkg-config
+      - name: Configure
+        run: cmake -S . -B build
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
