@@ -10,3 +10,4 @@ target_link_libraries(ursatz_composer
 target_compile_definitions(ursatz_composer PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"
 )
+target_compile_options(ursatz_composer PRIVATE -Wall -Wextra -Wpedantic)
