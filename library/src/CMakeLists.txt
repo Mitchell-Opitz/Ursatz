@@ -23,6 +23,7 @@ add_library(ursatz
     time/time_signature.c
     time/meter_map.c
     time/performance_time.c
+    time/tempo_map.c
     time/tuplet.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
