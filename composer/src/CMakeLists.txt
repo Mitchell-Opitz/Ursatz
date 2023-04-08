@@ -1,8 +1,10 @@
 add_library(ursatz_composer STATIC
     composer.c
+    plan/piece_plan.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_composer
     PUBLIC ursatz ursatz_analyzer
