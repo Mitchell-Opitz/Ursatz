@@ -27,7 +27,9 @@ typedef enum {
     PLAN_ERR_BAD_SPAN,
     PLAN_ERR_BAD_KIND,
     PLAN_ERR_ROOT_EXISTS,
-    PLAN_ERR_NOT_FOUND
+    PLAN_ERR_NOT_FOUND,
+    PLAN_ERR_LANE_OVERLAP,
+    PLAN_ERR_BAD_PAYLOAD
 } PlanResult;
 
 typedef struct {

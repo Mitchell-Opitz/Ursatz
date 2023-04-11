@@ -77,6 +77,7 @@ void plan_destroy(PiecePlan *plan) {
         free(plan->nodes[i].name);
         free(plan->nodes[i].children);
     }
+    plan_lanes_free(plan);
     free(plan->nodes);
     free(plan);
 }
