@@ -8,6 +8,7 @@
 #include "pitch/pitch_numeric_value.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
+#include "time/tempo_map.h"
 
 /*
  * MIDIImporter (L9, music-io): parses a Standard MIDI File (SMF) type 0
@@ -91,5 +92,40 @@ MidiImportResult midi_importer_import_with_meter(const unsigned char *data, size
 
 /* Destroys the MeterMap, the end time and the conflict list. NULL is a no-op. */
 void midi_meter_import_destroy(MidiMeterImport *meter);
+
+/*
+ * Tempo (additive, the same pattern as the meter above). midi_importer_import and
+ * midi_importer_import_with_meter are unchanged. Note times stay tempo-independent: positions and
+ * durations are whole-note fractions from ticks and the header's division alone, exactly as before,
+ * and reading the tempo does not change them. The TempoMap is a separate answer to "how many
+ * seconds is that?", not an input to the notes.
+ *
+ * tempo_map: the file's set-tempo meta-events (0xFF 0x51, every track) as a TempoMap, one region
+ * per distinct tick. A tempo at tick 0 is the first region; with none at tick 0 the default of
+ * 500,000 microseconds per quarter note (120 quarter notes per minute) applies from 0 as a
+ * defaulted region, and a file with no set-tempo event is one defaulted region. See time/tempo_map.h
+ * for the exact seconds mapping.
+ *
+ * conflict_ticks: ticks where different tempos shared a tick. The last in track order was kept (see
+ * midi_event_decoder.h); the importer reports the tick and leaves printing to the caller.
+ */
+typedef struct {
+    TempoMap *tempo_map;      /* owned */
+    uint64_t *conflict_ticks; /* owned; NULL when conflict_count is 0 */
+    size_t conflict_count;
+} MidiTempoImport;
+
+/*
+ * As midi_importer_import, and also fills *out_tempo (destroy with midi_tempo_import_destroy). On
+ * any failure no output is written: *out_events, *out_pitch_values and *out_tempo are untouched.
+ * A file whose tempo times do not fit a TempoMap (the seconds would overflow) fails with
+ * MIDI_IMPORT_ERR_ALLOC.
+ */
+MidiImportResult midi_importer_import_with_tempo(const unsigned char *data, size_t size, NoteEvent ***out_events,
+                                                  PitchNumericValue ***out_pitch_values, size_t *out_count,
+                                                  MidiTempoImport *out_tempo);
+
+/* Destroys the TempoMap and the conflict list. NULL is a no-op. */
+void midi_tempo_import_destroy(MidiTempoImport *tempo);
 
 #endif
