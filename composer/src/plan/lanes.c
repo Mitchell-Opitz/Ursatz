@@ -52,7 +52,7 @@ static bool note_fits(const PlanNote *note, PlanTime span_length) {
     return plan_time_compare(note_end, span_length) <= 0;
 }
 
-static bool payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
+bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
     switch (lane) {
     case PLAN_LANE_METER:
         return payload->meter.beats_per_bar > 0 && payload->meter.beat_unit > 0 &&
@@ -96,7 +96,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     if (voice < 0 || (lane != PLAN_LANE_INNER_VOICE && voice != 0)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
-    if (!payload_is_valid(lane, span, payload)) {
+    if (!lane_payload_is_valid(lane, span, payload)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     for (size_t i = 0; i < plan->lane_span_count; i++) {
@@ -136,6 +136,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     entry->owner = owner;
     entry->span = span;
     entry->payload = stored;
+    entry->state = PLAN_STATE_CONSTRAINED;
     *out_id = plan->lane_span_count;
     return PLAN_OK;
 }

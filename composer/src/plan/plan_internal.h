@@ -3,6 +3,7 @@
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
+#include <ursatz_composer/plan_state.h>
 
 typedef struct {
     PlanNodeKind kind;
@@ -12,6 +13,7 @@ typedef struct {
     NodeId *children;
     size_t child_count;
     size_t child_capacity;
+    PlanState state;
 } PlanNode;
 
 typedef struct {
@@ -20,6 +22,7 @@ typedef struct {
     NodeId owner;
     PlanSpan span;
     PlanLanePayload payload;
+    PlanState state;
 } LaneSpan;
 
 struct PiecePlan {
@@ -33,6 +36,9 @@ struct PiecePlan {
 
 /* Frees every lane span and the note arrays they own. */
 void plan_lanes_free(PiecePlan *plan);
+
+/* True when payload is a legal payload for lane over span. */
+bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload);
 
 /* NULL for LANE_SPAN_NONE or an unknown id. */
 LaneSpan *plan_lane_span_at(const PiecePlan *plan, LaneSpanId id);
