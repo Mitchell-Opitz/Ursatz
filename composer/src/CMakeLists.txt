@@ -3,6 +3,7 @@ add_library(ursatz_composer STATIC
     plan/piece_plan.c
     plan/lanes.c
     plan/plan_state.c
+    plan/constraint.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

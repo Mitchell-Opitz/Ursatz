@@ -76,6 +76,7 @@ void plan_destroy(PiecePlan *plan) {
     for (size_t i = 0; i < plan->node_count; i++) {
         free(plan->nodes[i].name);
         free(plan->nodes[i].children);
+        constraint_list_free(&plan->nodes[i].constraints);
     }
     plan_lanes_free(plan);
     free(plan->nodes);

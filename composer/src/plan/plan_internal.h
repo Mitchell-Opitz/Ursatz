@@ -1,9 +1,16 @@
 #ifndef URSATZ_COMPOSER_PLAN_INTERNAL_H
 #define URSATZ_COMPOSER_PLAN_INTERNAL_H
 
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_state.h>
+
+typedef struct {
+    PlanConstraint *items;
+    size_t count;
+    size_t capacity;
+} ConstraintList;
 
 typedef struct {
     PlanNodeKind kind;
@@ -14,6 +21,7 @@ typedef struct {
     size_t child_count;
     size_t child_capacity;
     PlanState state;
+    ConstraintList constraints;
 } PlanNode;
 
 typedef struct {
@@ -23,6 +31,7 @@ typedef struct {
     PlanSpan span;
     PlanLanePayload payload;
     PlanState state;
+    ConstraintList constraints;
 } LaneSpan;
 
 struct PiecePlan {
@@ -33,6 +42,8 @@ struct PiecePlan {
     size_t lane_span_count;
     size_t lane_span_capacity;
 };
+
+void constraint_list_free(ConstraintList *list);
 
 /* Frees every lane span and the note arrays they own. */
 void plan_lanes_free(PiecePlan *plan);

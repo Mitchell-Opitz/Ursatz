@@ -30,7 +30,8 @@ typedef enum {
     PLAN_ERR_NOT_FOUND,
     PLAN_ERR_LANE_OVERLAP,
     PLAN_ERR_BAD_PAYLOAD,
-    PLAN_ERR_GIVEN_LOCKED
+    PLAN_ERR_GIVEN_LOCKED,
+    PLAN_ERR_BAD_INDEX
 } PlanResult;
 
 typedef struct {

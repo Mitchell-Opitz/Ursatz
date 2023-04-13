@@ -11,6 +11,7 @@ static bool is_note_lane(PlanLaneKind lane) {
 
 void plan_lanes_free(PiecePlan *plan) {
     for (size_t i = 0; i < plan->lane_span_count; i++) {
+        constraint_list_free(&plan->lane_spans[i].constraints);
         if (is_note_lane(plan->lane_spans[i].lane)) {
             free((void *)plan->lane_spans[i].payload.notes.notes);
         }
@@ -137,6 +138,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     entry->span = span;
     entry->payload = stored;
     entry->state = PLAN_STATE_CONSTRAINED;
+    memset(&entry->constraints, 0, sizeof(entry->constraints));
     *out_id = plan->lane_span_count;
     return PLAN_OK;
 }
