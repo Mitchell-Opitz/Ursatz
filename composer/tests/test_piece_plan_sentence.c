@@ -190,10 +190,10 @@ int main(void) {
            PLAN_ERR_LANE_OVERLAP);
     assert(plan_add_lane_span(plan, basic_idea, PLAN_LANE_HARMONY, 0, bars(2, 1), &tonic, &overlap) ==
            PLAN_ERR_BAD_SPAN);
-    assert(plan_lane_span_count(plan) == 9);
+    assert(plan_lane_span_count(plan) == 8);
 
     LaneSpanId found[8];
-    assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, bars(1, 4), found, 8) == 4);
+    assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, bars(1, 4), found, 8) == 3);
     assert(found[0] == harmony_one);
     assert(found[1] == harmony_two);
     assert(plan_node_lane_spans(plan, continuation, found, 8) == 3);
