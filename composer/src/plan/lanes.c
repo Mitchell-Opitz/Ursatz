@@ -177,32 +177,50 @@ const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId 
     return entry ? &entry->payload : NULL;
 }
 
+static bool matches_lane(const LaneSpan *entry, PlanLaneKind lane, int voice, PlanSpan range) {
+    return entry->lane == lane && entry->voice == voice && spans_overlap(entry->span, range);
+}
+
+/* Orders spans by start, then by id. */
+static bool comes_before(const PiecePlan *plan, LaneSpanId a, LaneSpanId b) {
+    int by_start = plan_time_compare(plan->lane_spans[a - 1].span.start, plan->lane_spans[b - 1].span.start);
+    return by_start < 0 || (by_start == 0 && a < b);
+}
+
 size_t plan_lane_find(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan range, LaneSpanId *out_ids,
                       size_t capacity) {
     if (!plan) {
         return 0;
     }
-    /* Matches are kept in start order by inserting each one into place. */
     size_t matches = 0;
     for (size_t i = 0; i < plan->lane_span_count; i++) {
-        const LaneSpan *entry = &plan->lane_spans[i];
-        if (entry->lane != lane || entry->voice != voice || !spans_overlap(entry->span, range)) {
-            continue;
+        if (matches_lane(&plan->lane_spans[i], lane, voice, range)) {
+            matches++;
         }
-        if (out_ids && capacity > 0) {
-            size_t position = matches < capacity ? matches : capacity;
-            while (position > 0 &&
-                   plan_time_compare(plan->lane_spans[out_ids[position - 1] - 1].span.start, entry->span.start) > 0) {
-                if (position < capacity) {
-                    out_ids[position] = out_ids[position - 1];
-                }
-                position--;
+    }
+    if (!out_ids) {
+        return matches;
+    }
+
+    /* Each pass picks the earliest match that follows the one before it. */
+    size_t wanted = matches < capacity ? matches : capacity;
+    LaneSpanId previous = PLAN_LANE_SPAN_NONE;
+    for (size_t k = 0; k < wanted; k++) {
+        LaneSpanId best = PLAN_LANE_SPAN_NONE;
+        for (size_t i = 0; i < plan->lane_span_count; i++) {
+            LaneSpanId id = i + 1;
+            if (!matches_lane(&plan->lane_spans[i], lane, voice, range)) {
+                continue;
             }
-            if (position < capacity) {
-                out_ids[position] = i + 1;
+            if (previous != PLAN_LANE_SPAN_NONE && !comes_before(plan, previous, id)) {
+                continue;
+            }
+            if (best == PLAN_LANE_SPAN_NONE || comes_before(plan, id, best)) {
+                best = id;
             }
         }
-        matches++;
+        out_ids[k] = best;
+        previous = best;
     }
     return matches;
 }
