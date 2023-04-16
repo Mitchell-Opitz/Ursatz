@@ -195,7 +195,7 @@ static void test_duration_seconds_across_a_change(void) {
     assert_duration(map, TIME_SPAN_BOUNDARY_CLOSED, 1, 2, 5, 2, 11, 2);
     assert_duration(map, TIME_SPAN_BOUNDARY_OPEN, 1, 2, 5, 2, 11, 2);
     /* Within one region, and empty. */
-    assert_duration(map, TIME_SPAN_BOUNDARY_CLOSED, 5, 4, 7, 4, 3, 2);
+    assert_duration(map, TIME_SPAN_BOUNDARY_CLOSED, 5, 4, 7, 4, 2, 1); /* half a whole note at 4 s a whole note */
     assert_duration(map, TIME_SPAN_BOUNDARY_CLOSED, 3, 2, 3, 2, 0, 1);
 
     tempo_map_destroy(map);
@@ -332,6 +332,7 @@ static void test_overflow_is_an_error_not_a_wrap(void) {
     MusicalTime *zero = at(0, 1);
     TempoMapChangePoint points[2] = {{zero, 16777215}, {huge, 1}};
     EntityID *kept = id("tempo");
+    map = NULL;
     assert(tempo_map_create(kept, points, 2, &map) == TEMPO_MAP_ERR_OVERFLOW);
     assert(map == NULL);
     entity_id_destroy(kept);
