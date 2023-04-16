@@ -11,6 +11,7 @@ target_include_directories(ursatz_composer
 )
 target_link_libraries(ursatz_composer
     PUBLIC ursatz ursatz_analyzer
+    PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"
