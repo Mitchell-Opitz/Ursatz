@@ -186,7 +186,7 @@ int main(void) {
     assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi_pitch == 67);
 
     LaneSpanId overlap = PLAN_LANE_SPAN_NONE;
-    assert(plan_add_lane_span(plan, basic_idea, PLAN_LANE_HARMONY, 0, bars(1, 2), &tonic, &overlap) ==
+    assert(plan_add_lane_span(plan, presentation, PLAN_LANE_HARMONY, 0, bars(1, 2), &tonic, &overlap) ==
            PLAN_ERR_LANE_OVERLAP);
     assert(plan_add_lane_span(plan, basic_idea, PLAN_LANE_HARMONY, 0, bars(2, 1), &tonic, &overlap) ==
            PLAN_ERR_BAD_SPAN);
