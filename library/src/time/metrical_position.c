@@ -271,6 +271,10 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
     Rat start = {0, 1};
     Rat end = {0, 1};
     MetricalPositionResult bounded = span_bounds(map, measure, &start, &end);
+    if (bounded == METRICAL_POSITION_ERR_MEASURE_OUT_OF_RANGE) {
+        /* The index came from the map itself, so it can only be out of range if it wrapped. */
+        return METRICAL_POSITION_ERR_OVERFLOW;
+    }
     if (bounded != METRICAL_POSITION_OK) {
         return bounded;
     }
