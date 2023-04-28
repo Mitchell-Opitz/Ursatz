@@ -146,7 +146,7 @@ static void test_twelve_eight(void) {
     check(ts, 3, 4, 3, 0, 1, SECOND, M); /* beat 3 of a quadruple meter */
     check(ts, 9, 8, 4, 0, 1, BEAT, W);
     check(ts, 7, 8, 3, 1, 3, OFF, W);
-    check(ts, 25, 16, 4, 1, 6, FINE, W);
+    check(ts, 19, 16, 4, 1, 6, FINE, W);
     check_past_the_measure(ts, 3, 2);
     time_signature_destroy(ts);
 }
