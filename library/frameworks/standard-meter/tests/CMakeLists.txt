@@ -50,6 +50,10 @@ add_executable(test_standard_meter_syncopation_rules test_syncopation_rules.c)
 target_link_libraries(test_standard_meter_syncopation_rules PRIVATE standard_meter)
 add_test(NAME standard_meter_syncopation_rules COMMAND test_standard_meter_syncopation_rules)
 
+add_executable(test_standard_meter_metric_position_rules test_metric_position_rules.c)
+target_link_libraries(test_standard_meter_metric_position_rules PRIVATE standard_meter)
+add_test(NAME standard_meter_metric_position_rules COMMAND test_standard_meter_metric_position_rules)
+
 add_executable(test_architecture_standard_meter test_architecture_standard_meter.c)
 add_test(NAME architecture_standard_meter COMMAND test_architecture_standard_meter
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
