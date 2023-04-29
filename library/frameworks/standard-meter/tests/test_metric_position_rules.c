@@ -205,7 +205,7 @@ static void test_declines_null_and_overflow(void) {
     metrical_position_destroy(p);
 
     /* An offset whose exact arithmetic does not fit is declined, not wrapped into a wrong beat. */
-    p = position(LONG_MAX, ULONG_MAX - 1);
+    p = position(LONG_MAX, ULONG_MAX); /* coprime, so it does not reduce */
     assert(!standard_meter_beat_position(ts, p, &beat_position));
     assert(!standard_meter_beat_strength(ts, p, &strength));
     metrical_position_destroy(p);
