@@ -576,6 +576,160 @@ static void test_import_with_meter_rejects_bad_input_without_writing_outputs(voi
     midi_meter_import_destroy(NULL);
 }
 
+/* --- tempo (midi_importer_import_with_tempo) --- */
+
+static const unsigned char TEMPO_500000[] = {0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20};
+static const unsigned char TEMPO_1000000[] = {0x00, 0xFF, 0x51, 0x03, 0x0F, 0x42, 0x40};
+
+static unsigned long first_region_tempo(const MidiTempoImport *tempo) {
+    return tempo_map_region_microseconds_per_quarter(tempo_map_region(tempo->tempo_map, 0));
+}
+
+static void test_import_with_tempo_defaults_without_a_set_tempo(void) {
+    unsigned char track[] = {0x00, 0x90, 0x3C, 0x64, 0x83, 0x60, 0x80, 0x3C, 0x40};
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo = {0};
+    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(count == 1);
+    assert(tempo_map_is_defaulted(tempo.tempo_map));
+    assert(tempo_map_region_count(tempo.tempo_map) == 1);
+    assert(first_region_tempo(&tempo) == 500000);
+    assert(tempo.conflict_count == 0);
+
+    midi_tempo_import_destroy(&tempo);
+    free_import(events, pitch_values, count);
+}
+
+static void test_import_with_tempo_reads_tempo_at_tick_zero_over_the_default(void) {
+    unsigned char track[sizeof(TEMPO_1000000) + 9];
+    memcpy(track, TEMPO_1000000, sizeof(TEMPO_1000000));
+    const unsigned char notes[] = {0x00, 0x90, 0x3C, 0x64, 0x83, 0x60, 0x80, 0x3C, 0x40};
+    memcpy(track + sizeof(TEMPO_1000000), notes, sizeof(notes));
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo = {0};
+    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(!tempo_map_is_defaulted(tempo.tempo_map));
+    assert(tempo_map_region_count(tempo.tempo_map) == 1);
+    assert(first_region_tempo(&tempo) == 1000000);
+
+    /* One whole note at 1,000,000 microseconds per quarter is 4 seconds. */
+    MusicalTime *whole = NULL;
+    musical_time_create(1, 1, &whole);
+    PerformanceTime *seconds = NULL;
+    assert(tempo_map_seconds_at(tempo.tempo_map, whole, &seconds) == TEMPO_MAP_OK);
+    assert(performance_time_numerator(seconds) == 4 && performance_time_denominator(seconds) == 1);
+    performance_time_destroy(seconds);
+    musical_time_destroy(whole);
+
+    midi_tempo_import_destroy(&tempo);
+    free_import(events, pitch_values, count);
+}
+
+static void test_import_with_tempo_late_first_tempo_keeps_a_defaulted_start(void) {
+    /* A tempo event at tick 480 (a quarter note): the default covers [0, 1/4). */
+    unsigned char track[] = {0x83, 0x60, 0xFF, 0x51, 0x03, 0x0F, 0x42, 0x40};
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo = {0};
+    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(tempo_map_region_count(tempo.tempo_map) == 2);
+    assert(tempo_map_region_is_defaulted(tempo_map_region(tempo.tempo_map, 0)));
+    assert(first_region_tempo(&tempo) == 500000);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(tempo.tempo_map, 1)) == 1000000);
+    assert(!tempo_map_is_defaulted(tempo.tempo_map));
+
+    midi_tempo_import_destroy(&tempo);
+    free(events);
+    free(pitch_values);
+}
+
+static void test_import_with_tempo_leaves_note_times_unchanged(void) {
+    unsigned char track[sizeof(TEMPO_1000000) + 18];
+    size_t n = 0;
+    memcpy(track + n, TEMPO_1000000, sizeof(TEMPO_1000000));
+    n += sizeof(TEMPO_1000000);
+    const unsigned char notes[] = {0x00, 0x90, 0x3C, 0x64, 0x81, 0x70, 0x80, 0x3C, 0x40,
+                                   0x00, 0x90, 0x40, 0x64, 0x83, 0x60, 0x80, 0x40, 0x40};
+    memcpy(track + n, notes, sizeof(notes));
+    n += sizeof(notes);
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, n);
+
+    NoteEvent **plain_events = NULL;
+    PitchNumericValue **plain_values = NULL;
+    size_t plain_count = 0;
+    assert(midi_importer_import(buf, size, &plain_events, &plain_values, &plain_count) == MIDI_IMPORT_OK);
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo = {0};
+    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(count == plain_count && count == 2);
+    for (size_t i = 0; i < count; i++) {
+        const MusicalTime *a = temporal_anchor_position(note_event_temporal_anchor(events[i]));
+        const MusicalTime *b = temporal_anchor_position(note_event_temporal_anchor(plain_events[i]));
+        assert(musical_time_equals(a, b));
+        assert(duration_equals(note_event_duration(events[i]), note_event_duration(plain_events[i])));
+    }
+
+    /* The note's own times are whole-note fractions of ticks, whatever the tempo says. */
+    assert_position(events[1], 240, 1920);
+    assert_duration(events[1], 480, 1920);
+
+    midi_tempo_import_destroy(&tempo);
+    free_import(events, pitch_values, count);
+    free_import(plain_events, plain_values, plain_count);
+}
+
+static void test_import_with_tempo_reports_conflicting_tempos(void) {
+    unsigned char track[sizeof(TEMPO_500000) + sizeof(TEMPO_1000000)];
+    memcpy(track, TEMPO_500000, sizeof(TEMPO_500000));
+    memcpy(track + sizeof(TEMPO_500000), TEMPO_1000000, sizeof(TEMPO_1000000));
+    unsigned char buf[128];
+    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo = {0};
+    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(tempo.conflict_count == 1 && tempo.conflict_ticks[0] == 0);
+    assert(first_region_tempo(&tempo) == 1000000); /* last wins */
+
+    midi_tempo_import_destroy(&tempo);
+    free(events);
+    free(pitch_values);
+}
+
+static void test_import_with_tempo_rejects_bad_input_without_writing_outputs(void) {
+    unsigned char buf[8] = {'M', 'T', 'h', 'd', 0, 0, 0, 6};
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 7;
+    MidiTempoImport tempo = {0};
+    assert(midi_importer_import_with_tempo(buf, sizeof(buf), &events, &pitch_values, &count, &tempo) ==
+           MIDI_IMPORT_ERR_TRUNCATED);
+    assert(events == NULL && pitch_values == NULL && count == 7 && tempo.tempo_map == NULL);
+    assert(midi_importer_import_with_tempo(buf, sizeof(buf), &events, &pitch_values, &count, NULL) ==
+           MIDI_IMPORT_ERR_NULL_BUFFER);
+    midi_tempo_import_destroy(NULL);
+}
+
 int main(void) {
     test_sequence_of_notes();
     test_simultaneous_chord();
@@ -589,6 +743,12 @@ int main(void) {
     test_import_with_meter_reads_time_signature_and_matches_plain_import();
     test_import_with_meter_reports_conflicting_time_signatures();
     test_import_with_meter_rejects_bad_input_without_writing_outputs();
+    test_import_with_tempo_defaults_without_a_set_tempo();
+    test_import_with_tempo_reads_tempo_at_tick_zero_over_the_default();
+    test_import_with_tempo_late_first_tempo_keeps_a_defaulted_start();
+    test_import_with_tempo_leaves_note_times_unchanged();
+    test_import_with_tempo_reports_conflicting_tempos();
+    test_import_with_tempo_rejects_bad_input_without_writing_outputs();
     printf("test_midi_importer: ok\n");
     return 0;
 }
