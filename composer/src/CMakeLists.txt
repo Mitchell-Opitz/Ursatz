@@ -4,6 +4,7 @@ add_library(ursatz_composer STATIC
     plan/lanes.c
     plan/plan_state.c
     plan/constraint.c
+    plan/plan_json.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

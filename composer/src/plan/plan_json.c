@@ -1,0 +1,1208 @@
+#include <ursatz_composer/plan_json.h>
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <cJSON.h>
+#include <ursatz_composer/composer.h>
+#include <ursatz_composer/constraint.h>
+#include <ursatz_composer/lanes.h>
+#include <ursatz_composer/plan_state.h>
+
+#define COMPOSER_FRAMEWORK "ursatz-composer"
+#define COMPOSER_KEY_METHOD "composer_plan"
+
+static const char *const NODE_KINDS[] = {"form", "section", "phrase", "subphrase", "idea", "motive"};
+static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
+static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
+static const char *const MODE_NAMES[] = {"major", "minor"};
+static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant"};
+static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype"};
+static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
+static const char *const TRANSFORM_NAMES[] = {"none",      "transposed", "inverted", "retrograde",
+                                              "augmented", "diminished", "fragmented"};
+static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
+static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+
+#define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
+
+/* ------------------------------------------------------------------ writing */
+
+static bool add(cJSON *object, const char *key, cJSON *item) {
+    if (!item) {
+        return false;
+    }
+    if (!cJSON_AddItemToObject(object, key, item)) {
+        cJSON_Delete(item);
+        return false;
+    }
+    return true;
+}
+
+static bool append(cJSON *array, cJSON *item) {
+    if (!item) {
+        return false;
+    }
+    if (!cJSON_AddItemToArray(array, item)) {
+        cJSON_Delete(item);
+        return false;
+    }
+    return true;
+}
+
+static cJSON *number(long value) {
+    return cJSON_CreateNumber((double)value);
+}
+
+static cJSON *rational_json(PlanTime time) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "num", number(time.num)) && add(object, "den", number((long)time.den)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *span_json(PlanSpan span) {
+    PlanTime end;
+    if (plan_span_end(span, &end) != PLAN_OK) {
+        return NULL;
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "start", rational_json(span.start)) && add(object, "end", rational_json(end)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *constraint_json(const PlanConstraint *constraint) {
+    cJSON *object = cJSON_CreateObject();
+    if (!object) {
+        return NULL;
+    }
+    bool ok = add(object, "kind", cJSON_CreateString(CONSTRAINT_KINDS[constraint->kind]));
+    switch (constraint->kind) {
+    case PLAN_CONSTRAINT_LENGTH_BARS:
+        ok = ok && add(object, "bars", number(constraint->params.bars));
+        break;
+    case PLAN_CONSTRAINT_CADENCE:
+        ok = ok && add(object, "type", cJSON_CreateString(CADENCE_NAMES[constraint->params.cadence]));
+        break;
+    case PLAN_CONSTRAINT_MOTIVE_REF:
+        ok = ok && add(object, "motive", number((long)constraint->params.motive.motive)) &&
+             add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
+             add(object, "semitones", number(constraint->params.motive.semitones));
+        break;
+    case PLAN_CONSTRAINT_KEY:
+        ok = ok && add(object, "tonic_pitch_class", number(constraint->params.key.tonic_pitch_class)) &&
+             add(object, "mode", cJSON_CreateString(MODE_NAMES[constraint->params.key.mode]));
+        break;
+    case PLAN_CONSTRAINT_ARCHETYPE:
+        ok = ok && add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
+        break;
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *node_constraints_json(const PiecePlan *plan, NodeId id) {
+    cJSON *array = cJSON_CreateArray();
+    for (size_t i = 0; array && i < plan_node_constraint_count(plan, id); i++) {
+        if (!append(array, constraint_json(plan_node_constraint_at(plan, id, i)))) {
+            cJSON_Delete(array);
+            return NULL;
+        }
+    }
+    return array;
+}
+
+static cJSON *span_constraints_json(const PiecePlan *plan, LaneSpanId id) {
+    cJSON *array = cJSON_CreateArray();
+    for (size_t i = 0; array && i < plan_lane_span_constraint_count(plan, id); i++) {
+        if (!append(array, constraint_json(plan_lane_span_constraint_at(plan, id, i)))) {
+            cJSON_Delete(array);
+            return NULL;
+        }
+    }
+    return array;
+}
+
+static cJSON *node_json(const PiecePlan *plan, NodeId id) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *composer = cJSON_CreateObject();
+    cJSON *children = cJSON_CreateArray();
+    const char *name = plan_node_name(plan, id);
+    bool ok = object && composer && children;
+    ok = ok && add(composer, "id", number((long)id)) &&
+         add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_node_state(plan, id)])) &&
+         add(composer, "constraints", node_constraints_json(plan, id));
+    ok = ok && add(object, "kind", cJSON_CreateString(NODE_KINDS[plan_node_kind(plan, id)])) &&
+         add(object, "label", name ? cJSON_CreateString(name) : cJSON_CreateNull()) &&
+         add(object, "span", span_json(plan_node_span(plan, id)));
+    for (size_t i = 0; ok && i < plan_node_child_count(plan, id); i++) {
+        ok = append(children, node_json(plan, plan_node_child_at(plan, id, i)));
+    }
+    ok = ok && add(object, "children", children);
+    if (ok) {
+        children = NULL;
+        ok = add(object, "composer", composer);
+        composer = NULL;
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        cJSON_Delete(composer);
+        cJSON_Delete(children);
+        return NULL;
+    }
+    return object;
+}
+
+static void key_label(const PlanKey *key, char *out, size_t size) {
+    snprintf(out, size, "%s %s", PITCH_CLASS_NAMES[key->tonic_pitch_class], MODE_NAMES[key->mode]);
+}
+
+static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {
+    switch (lane) {
+    case PLAN_LANE_METER:
+        snprintf(out, size, "%d/%d", payload->meter.beats_per_bar, payload->meter.beat_unit);
+        return true;
+    case PLAN_LANE_KEY:
+        key_label(&payload->key, out, size);
+        return true;
+    case PLAN_LANE_HARMONY:
+        snprintf(out, size, "%s", payload->harmony.roman_numeral);
+        return true;
+    case PLAN_LANE_BASS:
+    case PLAN_LANE_MELODY:
+    case PLAN_LANE_INNER_VOICE:
+        snprintf(out, size, "%s", LANE_NAMES[lane]);
+        return true;
+    }
+    return false;
+}
+
+static cJSON *notes_json(const PlanNotes *notes) {
+    cJSON *array = cJSON_CreateArray();
+    for (size_t i = 0; array && i < notes->note_count; i++) {
+        const PlanNote *note = &notes->notes[i];
+        cJSON *object = cJSON_CreateObject();
+        if (!(object && add(object, "midi_pitch", number(note->midi_pitch)) &&
+              add(object, "offset", rational_json(note->offset)) &&
+              add(object, "duration", rational_json(note->duration)) && append(array, object))) {
+            if (object && !cJSON_GetObjectItem(object, "duration")) {
+                cJSON_Delete(object);
+            }
+            cJSON_Delete(array);
+            return NULL;
+        }
+    }
+    return array;
+}
+
+static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
+    cJSON *object = cJSON_CreateObject();
+    if (!object) {
+        return NULL;
+    }
+    bool ok = true;
+    switch (lane) {
+    case PLAN_LANE_METER:
+        ok = add(object, "beats_per_bar", number(payload->meter.beats_per_bar)) &&
+             add(object, "beat_unit", number(payload->meter.beat_unit)) &&
+             add(object, "bars_per_hyperbar", number(payload->meter.bars_per_hyperbar));
+        break;
+    case PLAN_LANE_KEY:
+        ok = add(object, "tonic_pitch_class", number(payload->key.tonic_pitch_class)) &&
+             add(object, "mode", cJSON_CreateString(MODE_NAMES[payload->key.mode]));
+        break;
+    case PLAN_LANE_HARMONY:
+        ok = add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral)) &&
+             add(object, "function", cJSON_CreateString(FUNCTION_NAMES[payload->harmony.function]));
+        break;
+    case PLAN_LANE_BASS:
+    case PLAN_LANE_MELODY:
+    case PLAN_LANE_INNER_VOICE:
+        ok = add(object, "notes", notes_json(&payload->notes));
+        break;
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The label of the key span that covers the start of span, or "no match". */
+static void enclosing_key_label(const PiecePlan *plan, PlanSpan span, char *out, size_t size) {
+    LaneSpanId found = PLAN_LANE_SPAN_NONE;
+    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &found, 1) > 0) {
+        key_label(&plan_lane_span_payload(plan, found)->key, out, size);
+    } else {
+        snprintf(out, size, "no match");
+    }
+}
+
+static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
+    PlanLaneKind lane = plan_lane_span_lane(plan, id);
+    PlanSpan span = plan_lane_span_span(plan, id);
+    const PlanLanePayload *payload = plan_lane_span_payload(plan, id);
+    char label[64];
+    char context_key[64];
+    lane_label(payload, lane, label, sizeof(label));
+
+    cJSON *object = cJSON_CreateObject();
+    cJSON *composer = cJSON_CreateObject();
+    bool ok = object && composer;
+    ok = ok && add(composer, "id", number((long)id)) && add(composer, "owner", number((long)plan_lane_span_owner(plan, id))) &&
+         add(composer, "lane", cJSON_CreateString(LANE_NAMES[lane])) &&
+         add(composer, "voice", number(plan_lane_span_voice(plan, id))) &&
+         add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_lane_span_state(plan, id)])) &&
+         add(composer, "constraints", span_constraints_json(plan, id)) &&
+         add(composer, "payload", payload_json(lane, payload));
+    ok = ok && add(object, "framework", cJSON_CreateString(COMPOSER_FRAMEWORK)) &&
+         add(object, "span", span_json(span)) && add(object, "note_ids", cJSON_CreateArray()) &&
+         add(object, "label", cJSON_CreateString(label)) && add(object, "uncertainty", cJSON_CreateNull());
+    if (ok && lane == PLAN_LANE_KEY) {
+        ok = add(object, "method", cJSON_CreateString(COMPOSER_KEY_METHOD));
+    }
+    if (ok && lane == PLAN_LANE_HARMONY) {
+        enclosing_key_label(plan, span, context_key, sizeof(context_key));
+        ok = add(object, "key_label", cJSON_CreateString(context_key));
+    }
+    if (ok) {
+        ok = add(object, "composer", composer);
+        composer = NULL;
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        cJSON_Delete(composer);
+        return NULL;
+    }
+    return object;
+}
+
+/* The claims for every lane span whose lane is in mask, in id order. */
+static cJSON *lane_array_json(const PiecePlan *plan, unsigned mask) {
+    cJSON *array = cJSON_CreateArray();
+    for (LaneSpanId id = 1; array && id <= plan_lane_span_count(plan); id++) {
+        if ((mask & (1u << plan_lane_span_lane(plan, id))) && !append(array, lane_entry_json(plan, id))) {
+            cJSON_Delete(array);
+            return NULL;
+        }
+    }
+    return array;
+}
+
+static cJSON *meter_json(const PiecePlan *plan) {
+    cJSON *spans = lane_array_json(plan, 1u << PLAN_LANE_METER);
+    if (!spans) {
+        return NULL;
+    }
+    if (cJSON_GetArraySize(spans) == 0) {
+        cJSON_Delete(spans);
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!object || !add(object, "spans", spans)) {
+        if (!object) {
+            cJSON_Delete(spans);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *metadata_json(const PiecePlan *plan) {
+    cJSON *object = cJSON_CreateObject();
+    bool has_key = false;
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        has_key = has_key || plan_lane_span_lane(plan, id) == PLAN_LANE_KEY;
+    }
+    if (object && !(add(object, "source_file", cJSON_CreateString("")) &&
+                    add(object, "analyzer_version", cJSON_CreateString(composer_version())) &&
+                    add(object, "ursatz_commit", cJSON_CreateString("unknown")) &&
+                    add(object, "note_count", number(0)) && add(object, "ticks_per_quarter", cJSON_CreateNull()) &&
+                    add(object, "key_found", cJSON_CreateBool(has_key)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *empty_array(void) {
+    return cJSON_CreateArray();
+}
+
+static cJSON *document_json(const PiecePlan *plan) {
+    cJSON *document = cJSON_CreateObject();
+    if (!document) {
+        return NULL;
+    }
+    bool ok = add(document, "schema_version", number(PLAN_JSON_SCHEMA_VERSION)) &&
+              add(document, "metadata", metadata_json(plan)) && add(document, "meter", meter_json(plan)) &&
+              add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
+              add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
+              add(document, "cadences", empty_array()) && add(document, "phrases", empty_array()) &&
+              add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
+              add(document, "motives", empty_array()) &&
+              add(document, "melody", lane_array_json(plan, 1u << PLAN_LANE_MELODY)) &&
+              add(document, "rhythm", empty_array()) &&
+              add(document, "texture", lane_array_json(plan, (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE))) &&
+              add(document, "voice_leading", empty_array()) && add(document, "schemas", empty_array());
+    if (!ok) {
+        cJSON_Delete(document);
+        return NULL;
+    }
+    return document;
+}
+
+static void set_error(PlanJsonError *error, long offset, const char *path, const char *format, ...) {
+    if (!error) {
+        return;
+    }
+    va_list args;
+    va_start(args, format);
+    vsnprintf(error->message, sizeof(error->message), format, args);
+    va_end(args);
+    snprintf(error->path, sizeof(error->path), "%s", path);
+    error->offset = offset;
+}
+
+/* cJSON prints with tabs; the project's JSON uses a 2-space indent. */
+static char *indent_with_spaces(const char *printed) {
+    size_t tabs = 0;
+    size_t length = strlen(printed);
+    for (size_t i = 0; i < length; i++) {
+        tabs += printed[i] == '\t';
+    }
+    char *out = malloc(length + tabs + 2);
+    if (!out) {
+        return NULL;
+    }
+    char *cursor = out;
+    for (size_t i = 0; i < length; i++) {
+        if (printed[i] == '\t') {
+            *cursor++ = ' ';
+            *cursor++ = ' ';
+        } else {
+            *cursor++ = printed[i];
+        }
+    }
+    *cursor++ = '\n';
+    *cursor = '\0';
+    return out;
+}
+
+char *plan_to_json(const PiecePlan *plan, PlanJsonError *error) {
+    if (!plan) {
+        set_error(error, -1, "", "plan is NULL");
+        return NULL;
+    }
+    cJSON *document = document_json(plan);
+    char *printed = document ? cJSON_Print(document) : NULL;
+    cJSON_Delete(document);
+    char *text = printed ? indent_with_spaces(printed) : NULL;
+    cJSON_free(printed);
+    if (!text) {
+        set_error(error, -1, "", "out of memory");
+    }
+    return text;
+}
+
+PlanResult plan_write_json_file(const PiecePlan *plan, const char *path, PlanJsonError *error) {
+    if (!path) {
+        set_error(error, -1, "", "path is NULL");
+        return PLAN_ERR_NULL;
+    }
+    char *text = plan_to_json(plan, error);
+    if (!text) {
+        return plan ? PLAN_ERR_ALLOC : PLAN_ERR_NULL;
+    }
+    FILE *file = fopen(path, "wb");
+    size_t length = strlen(text);
+    bool wrote = file && fwrite(text, 1, length, file) == length;
+    bool closed = file && fclose(file) == 0;
+    free(text);
+    if (!wrote || !closed) {
+        set_error(error, -1, "", "could not write '%s'", path);
+        return PLAN_ERR_IO;
+    }
+    return PLAN_OK;
+}
+
+/* ------------------------------------------------------------------ reading */
+
+typedef struct {
+    PlanJsonError *error;
+    PlanResult result;
+} Reader;
+
+static bool fail(Reader *reader, PlanResult result, const char *path, const char *format, ...) {
+    if (reader->result == PLAN_OK) {
+        reader->result = result;
+        if (reader->error) {
+            va_list args;
+            va_start(args, format);
+            vsnprintf(reader->error->message, sizeof(reader->error->message), format, args);
+            va_end(args);
+            snprintf(reader->error->path, sizeof(reader->error->path), "%s", path);
+            reader->error->offset = -1;
+        }
+    }
+    return false;
+}
+
+static bool bad_format(Reader *reader, const char *path, const char *message) {
+    return fail(reader, PLAN_ERR_FORMAT, path, "%s", message);
+}
+
+static void child_path(char *out, const char *parent, const char *key) {
+    if (parent[0] == '\0') {
+        snprintf(out, PLAN_JSON_PATH_MAX, "%s", key);
+    } else {
+        snprintf(out, PLAN_JSON_PATH_MAX, "%s.%s", parent, key);
+    }
+}
+
+static void index_path(char *out, const char *parent, size_t index) {
+    snprintf(out, PLAN_JSON_PATH_MAX, "%s[%zu]", parent, index);
+}
+
+/* The member of object named key, or NULL after reporting it missing (when required) or of the wrong type. */
+static const cJSON *member(Reader *reader, const cJSON *object, const char *path, const char *key, bool required) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    if (!item && required) {
+        char at[PLAN_JSON_PATH_MAX];
+        child_path(at, path, key);
+        bad_format(reader, at, "missing required field");
+    }
+    return item;
+}
+
+static bool read_long(Reader *reader, const cJSON *item, const char *path, long min, long max, long *out) {
+    if (!cJSON_IsNumber(item)) {
+        return bad_format(reader, path, "expected a number");
+    }
+    double value = item->valuedouble;
+    if (value < (double)min || value > (double)max || (double)(long)value != value) {
+        return fail(reader, PLAN_ERR_FORMAT, path, "expected an integer from %ld to %ld", min, max);
+    }
+    *out = (long)value;
+    return true;
+}
+
+static bool read_int_member(Reader *reader, const cJSON *object, const char *path, const char *key, long min,
+                            long max, long *out) {
+    const cJSON *item = member(reader, object, path, key, true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    child_path(at, path, key);
+    return read_long(reader, item, at, min, max, out);
+}
+
+static bool read_enum(Reader *reader, const cJSON *item, const char *path, const char *const *names, size_t count,
+                      int *out) {
+    if (!cJSON_IsString(item)) {
+        return bad_format(reader, path, "expected a string");
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(item->valuestring, names[i]) == 0) {
+            *out = (int)i;
+            return true;
+        }
+    }
+    return fail(reader, PLAN_ERR_FORMAT, path, "unknown value '%.40s'", item->valuestring);
+}
+
+static bool read_enum_member(Reader *reader, const cJSON *object, const char *path, const char *key,
+                             const char *const *names, size_t count, int *out) {
+    const cJSON *item = member(reader, object, path, key, true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    child_path(at, path, key);
+    return read_enum(reader, item, at, names, count, out);
+}
+
+#define TIME_LIMIT 1000000000L
+
+static bool read_rational(Reader *reader, const cJSON *item, const char *path, PlanTime *out) {
+    if (!cJSON_IsObject(item)) {
+        return bad_format(reader, path, "expected an object with num and den");
+    }
+    long num;
+    long den;
+    if (!read_int_member(reader, item, path, "num", -TIME_LIMIT, TIME_LIMIT, &num) ||
+        !read_int_member(reader, item, path, "den", 1, TIME_LIMIT, &den)) {
+        return false;
+    }
+    return plan_time_make(num, (unsigned long)den, out) == PLAN_OK;
+}
+
+static bool read_rational_member(Reader *reader, const cJSON *object, const char *path, const char *key,
+                                 PlanTime *out) {
+    const cJSON *item = member(reader, object, path, key, true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    child_path(at, path, key);
+    return read_rational(reader, item, at, out);
+}
+
+/* Reads {"start", "end"} into a start and a length. */
+static bool read_span(Reader *reader, const cJSON *object, const char *path, PlanSpan *out) {
+    const cJSON *item = member(reader, object, path, "span", true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    child_path(at, path, "span");
+    if (!cJSON_IsObject(item)) {
+        return bad_format(reader, at, "expected an object with start and end");
+    }
+    PlanTime end;
+    if (!read_rational_member(reader, item, at, "start", &out->start) ||
+        !read_rational_member(reader, item, at, "end", &end)) {
+        return false;
+    }
+    PlanTime negative_start = {-out->start.num, out->start.den};
+    if (plan_time_add(end, negative_start, &out->length) != PLAN_OK || out->length.num <= 0) {
+        return bad_format(reader, at, "end must be after start");
+    }
+    return true;
+}
+
+static bool read_constraint(Reader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
+    if (!cJSON_IsObject(item)) {
+        return bad_format(reader, path, "expected an object");
+    }
+    int kind;
+    int value;
+    long number_value;
+    memset(out, 0, sizeof(*out));
+    if (!read_enum_member(reader, item, path, "kind", CONSTRAINT_KINDS, COUNT_OF(CONSTRAINT_KINDS), &kind)) {
+        return false;
+    }
+    out->kind = (PlanConstraintKind)kind;
+    switch (out->kind) {
+    case PLAN_CONSTRAINT_LENGTH_BARS:
+        if (!read_int_member(reader, item, path, "bars", 1, TIME_LIMIT, &number_value)) {
+            return false;
+        }
+        out->params.bars = (int)number_value;
+        return true;
+    case PLAN_CONSTRAINT_CADENCE:
+        if (!read_enum_member(reader, item, path, "type", CADENCE_NAMES, COUNT_OF(CADENCE_NAMES), &value)) {
+            return false;
+        }
+        out->params.cadence = (PlanCadenceType)value;
+        return true;
+    case PLAN_CONSTRAINT_MOTIVE_REF: {
+        long semitones;
+        if (!read_int_member(reader, item, path, "motive", 1, TIME_LIMIT, &number_value) ||
+            !read_enum_member(reader, item, path, "transform", TRANSFORM_NAMES, COUNT_OF(TRANSFORM_NAMES), &value) ||
+            !read_int_member(reader, item, path, "semitones", -127, 127, &semitones)) {
+            return false;
+        }
+        out->params.motive.motive = (NodeId)number_value;
+        out->params.motive.transform = (PlanMotiveTransform)value;
+        out->params.motive.semitones = (int)semitones;
+        return true;
+    }
+    case PLAN_CONSTRAINT_KEY:
+        if (!read_int_member(reader, item, path, "tonic_pitch_class", 0, 11, &number_value) ||
+            !read_enum_member(reader, item, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
+            return false;
+        }
+        out->params.key.tonic_pitch_class = (int)number_value;
+        out->params.key.mode = (PlanKeyMode)value;
+        return true;
+    case PLAN_CONSTRAINT_ARCHETYPE:
+        if (!read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value)) {
+            return false;
+        }
+        out->params.archetype = (PlanArchetype)value;
+        return true;
+    }
+    return false;
+}
+
+static const char *result_name(PlanResult result) {
+    switch (result) {
+    case PLAN_ERR_BAD_TIME:
+        return "invalid time";
+    case PLAN_ERR_BAD_SPAN:
+        return "span is empty or not inside its parent";
+    case PLAN_ERR_BAD_KIND:
+        return "this kind cannot go here";
+    case PLAN_ERR_ROOT_EXISTS:
+        return "a plan has one root";
+    case PLAN_ERR_NOT_FOUND:
+        return "refers to a missing node";
+    case PLAN_ERR_LANE_OVERLAP:
+        return "overlaps another span in the same lane";
+    case PLAN_ERR_BAD_PAYLOAD:
+        return "value is not valid here";
+    case PLAN_ERR_GIVEN_LOCKED:
+        return "the item is Given";
+    default:
+        return "could not be added";
+    }
+}
+
+/* Reads composer.constraints and adds each one through add. */
+typedef PlanResult (*AddConstraintFn)(PiecePlan *plan, size_t id, const PlanConstraint *constraint);
+
+static PlanResult add_node_constraint(PiecePlan *plan, size_t id, const PlanConstraint *constraint) {
+    return plan_node_add_constraint(plan, (NodeId)id, constraint);
+}
+
+static PlanResult add_span_constraint(PiecePlan *plan, size_t id, const PlanConstraint *constraint) {
+    return plan_lane_span_add_constraint(plan, (LaneSpanId)id, constraint);
+}
+
+static bool read_constraints(Reader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path,
+                             size_t id, AddConstraintFn add_constraint) {
+    const cJSON *list = member(reader, composer, composer_path, "constraints", true);
+    if (!list) {
+        return false;
+    }
+    char list_path[PLAN_JSON_PATH_MAX];
+    child_path(list_path, composer_path, "constraints");
+    if (!cJSON_IsArray(list)) {
+        return bad_format(reader, list_path, "expected an array");
+    }
+    size_t index = 0;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, list) {
+        char at[PLAN_JSON_PATH_MAX];
+        index_path(at, list_path, index++);
+        PlanConstraint constraint;
+        if (!read_constraint(reader, item, at, &constraint)) {
+            return false;
+        }
+        PlanResult result = add_constraint(plan, id, &constraint);
+        if (result == PLAN_ERR_ALLOC) {
+            return fail(reader, PLAN_ERR_ALLOC, at, "out of memory");
+        }
+        if (result != PLAN_OK) {
+            return fail(reader, PLAN_ERR_FORMAT, at, "constraint %s", result_name(result));
+        }
+    }
+    return true;
+}
+
+typedef struct {
+    const cJSON *json;
+    NodeId parent;
+    char path[PLAN_JSON_PATH_MAX];
+} ParsedNode;
+
+static bool count_nodes(Reader *reader, const cJSON *node, const char *path, size_t *count) {
+    if (!cJSON_IsObject(node)) {
+        return bad_format(reader, path, "expected an object");
+    }
+    (*count)++;
+    const cJSON *children = member(reader, node, path, "children", true);
+    if (!children) {
+        return false;
+    }
+    char list_path[PLAN_JSON_PATH_MAX];
+    child_path(list_path, path, "children");
+    if (!cJSON_IsArray(children)) {
+        return bad_format(reader, list_path, "expected an array");
+    }
+    size_t index = 0;
+    const cJSON *child;
+    cJSON_ArrayForEach(child, children) {
+        char at[PLAN_JSON_PATH_MAX];
+        index_path(at, list_path, index++);
+        if (!count_nodes(reader, child, at, count)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Files each node under its composer.id so nodes can be added in id order. */
+static bool collect_nodes(Reader *reader, const cJSON *node, const char *path, NodeId parent, ParsedNode *table,
+                          size_t count) {
+    const cJSON *composer = member(reader, node, path, "composer", true);
+    if (!composer) {
+        return false;
+    }
+    char composer_path[PLAN_JSON_PATH_MAX];
+    child_path(composer_path, path, "composer");
+    if (!cJSON_IsObject(composer)) {
+        return bad_format(reader, composer_path, "expected an object");
+    }
+    long id;
+    if (!read_int_member(reader, composer, composer_path, "id", 1, (long)count, &id)) {
+        return false;
+    }
+    if (table[id - 1].json) {
+        char id_path[PLAN_JSON_PATH_MAX];
+        child_path(id_path, composer_path, "id");
+        return bad_format(reader, id_path, "id is used twice");
+    }
+    table[id - 1].json = node;
+    table[id - 1].parent = parent;
+    snprintf(table[id - 1].path, PLAN_JSON_PATH_MAX, "%s", path);
+
+    const cJSON *children = cJSON_GetObjectItemCaseSensitive(node, "children");
+    char list_path[PLAN_JSON_PATH_MAX];
+    child_path(list_path, path, "children");
+    size_t index = 0;
+    const cJSON *child;
+    cJSON_ArrayForEach(child, children) {
+        char at[PLAN_JSON_PATH_MAX];
+        index_path(at, list_path, index++);
+        if (!collect_nodes(reader, child, at, (NodeId)id, table, count)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool build_nodes(Reader *reader, PiecePlan *plan, const cJSON *form) {
+    size_t count = 0;
+    if (!count_nodes(reader, form, "form", &count)) {
+        return false;
+    }
+    ParsedNode *table = calloc(count, sizeof(ParsedNode));
+    if (!table) {
+        return fail(reader, PLAN_ERR_ALLOC, "form", "out of memory");
+    }
+    bool ok = collect_nodes(reader, form, "form", PLAN_NODE_NONE, table, count);
+    for (size_t i = 0; ok && i < count; i++) {
+        const ParsedNode *parsed = &table[i];
+        int kind;
+        PlanSpan span;
+        char at[PLAN_JSON_PATH_MAX];
+        ok = read_enum_member(reader, parsed->json, parsed->path, "kind", NODE_KINDS, COUNT_OF(NODE_KINDS), &kind) &&
+             read_span(reader, parsed->json, parsed->path, &span);
+        const cJSON *label = ok ? member(reader, parsed->json, parsed->path, "label", false) : NULL;
+        if (ok && label && !cJSON_IsNull(label) && !cJSON_IsString(label)) {
+            child_path(at, parsed->path, "label");
+            ok = bad_format(reader, at, "expected a string or null");
+        }
+        if (ok) {
+            NodeId id;
+            const char *name = cJSON_IsString(label) ? label->valuestring : NULL;
+            PlanResult result = plan_add_node(plan, parsed->parent, (PlanNodeKind)kind, span, name, &id);
+            if (result == PLAN_ERR_ALLOC) {
+                ok = fail(reader, PLAN_ERR_ALLOC, parsed->path, "out of memory");
+            } else if (result != PLAN_OK) {
+                ok = fail(reader, PLAN_ERR_FORMAT, parsed->path, "node %s", result_name(result));
+            }
+        }
+    }
+    free(table);
+    return ok;
+}
+
+typedef struct {
+    const cJSON *json;
+    unsigned lanes;
+    char path[PLAN_JSON_PATH_MAX];
+} ParsedLane;
+
+static bool count_section(Reader *reader, const cJSON *document, const char *name, size_t *count) {
+    const cJSON *section = member(reader, document, "", name, false);
+    if (!section || cJSON_IsNull(section)) {
+        return true;
+    }
+    if (strcmp(name, "meter") == 0) {
+        section = member(reader, section, "meter", "spans", true);
+        if (!section) {
+            return false;
+        }
+    }
+    if (!cJSON_IsArray(section)) {
+        return bad_format(reader, name, "expected an array");
+    }
+    *count += (size_t)cJSON_GetArraySize(section);
+    return true;
+}
+
+static bool collect_section(Reader *reader, const cJSON *document, const char *name, unsigned lanes,
+                            ParsedLane *table, size_t count) {
+    const cJSON *section = cJSON_GetObjectItemCaseSensitive(document, name);
+    char section_path[PLAN_JSON_PATH_MAX];
+    snprintf(section_path, sizeof(section_path), "%s", name);
+    if (!section || cJSON_IsNull(section)) {
+        return true;
+    }
+    if (strcmp(name, "meter") == 0) {
+        section = cJSON_GetObjectItemCaseSensitive(section, "spans");
+        child_path(section_path, name, "spans");
+    }
+    size_t index = 0;
+    const cJSON *entry;
+    cJSON_ArrayForEach(entry, section) {
+        char at[PLAN_JSON_PATH_MAX];
+        index_path(at, section_path, index++);
+        if (!cJSON_IsObject(entry)) {
+            return bad_format(reader, at, "expected an object");
+        }
+        const cJSON *composer = member(reader, entry, at, "composer", true);
+        if (!composer) {
+            return false;
+        }
+        char composer_path[PLAN_JSON_PATH_MAX];
+        child_path(composer_path, at, "composer");
+        if (!cJSON_IsObject(composer)) {
+            return bad_format(reader, composer_path, "expected an object");
+        }
+        long id;
+        if (!read_int_member(reader, composer, composer_path, "id", 1, (long)count, &id)) {
+            return false;
+        }
+        if (table[id - 1].json) {
+            char id_path[PLAN_JSON_PATH_MAX];
+            child_path(id_path, composer_path, "id");
+            return bad_format(reader, id_path, "id is used twice");
+        }
+        table[id - 1].json = entry;
+        table[id - 1].lanes = lanes;
+        snprintf(table[id - 1].path, PLAN_JSON_PATH_MAX, "%s", at);
+    }
+    return true;
+}
+
+static bool read_payload(Reader *reader, const cJSON *composer, const char *composer_path, PlanLaneKind lane,
+                         PlanLanePayload *payload, PlanNote **notes_storage) {
+    const cJSON *object = member(reader, composer, composer_path, "payload", true);
+    if (!object) {
+        return false;
+    }
+    char path[PLAN_JSON_PATH_MAX];
+    child_path(path, composer_path, "payload");
+    if (!cJSON_IsObject(object)) {
+        return bad_format(reader, path, "expected an object");
+    }
+    long first;
+    long second;
+    long third;
+    int value;
+    memset(payload, 0, sizeof(*payload));
+    switch (lane) {
+    case PLAN_LANE_METER:
+        if (!read_int_member(reader, object, path, "beats_per_bar", 1, 1000, &first) ||
+            !read_int_member(reader, object, path, "beat_unit", 1, 1000, &second) ||
+            !read_int_member(reader, object, path, "bars_per_hyperbar", 0, 1000, &third)) {
+            return false;
+        }
+        payload->meter.beats_per_bar = (int)first;
+        payload->meter.beat_unit = (int)second;
+        payload->meter.bars_per_hyperbar = (int)third;
+        return true;
+    case PLAN_LANE_KEY:
+        if (!read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &first) ||
+            !read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
+            return false;
+        }
+        payload->key.tonic_pitch_class = (int)first;
+        payload->key.mode = (PlanKeyMode)value;
+        return true;
+    case PLAN_LANE_HARMONY: {
+        const cJSON *numeral = member(reader, object, path, "roman_numeral", true);
+        if (!numeral) {
+            return false;
+        }
+        char numeral_path[PLAN_JSON_PATH_MAX];
+        child_path(numeral_path, path, "roman_numeral");
+        if (!cJSON_IsString(numeral)) {
+            return bad_format(reader, numeral_path, "expected a string");
+        }
+        if (numeral->valuestring[0] == '\0' || strlen(numeral->valuestring) >= PLAN_ROMAN_NUMERAL_MAX) {
+            return fail(reader, PLAN_ERR_FORMAT, numeral_path, "expected 1 to %d characters",
+                        PLAN_ROMAN_NUMERAL_MAX - 1);
+        }
+        if (!read_enum_member(reader, object, path, "function", FUNCTION_NAMES, COUNT_OF(FUNCTION_NAMES), &value)) {
+            return false;
+        }
+        snprintf(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX, "%s", numeral->valuestring);
+        payload->harmony.function = (PlanHarmonicFunction)value;
+        return true;
+    }
+    case PLAN_LANE_BASS:
+    case PLAN_LANE_MELODY:
+    case PLAN_LANE_INNER_VOICE: {
+        const cJSON *list = member(reader, object, path, "notes", true);
+        if (!list) {
+            return false;
+        }
+        char list_path[PLAN_JSON_PATH_MAX];
+        child_path(list_path, path, "notes");
+        if (!cJSON_IsArray(list) || cJSON_GetArraySize(list) == 0) {
+            return bad_format(reader, list_path, "expected a non-empty array");
+        }
+        size_t count = (size_t)cJSON_GetArraySize(list);
+        PlanNote *notes = calloc(count, sizeof(PlanNote));
+        if (!notes) {
+            return fail(reader, PLAN_ERR_ALLOC, list_path, "out of memory");
+        }
+        *notes_storage = notes;
+        size_t index = 0;
+        const cJSON *item;
+        cJSON_ArrayForEach(item, list) {
+            char at[PLAN_JSON_PATH_MAX];
+            index_path(at, list_path, index);
+            if (!cJSON_IsObject(item)) {
+                return bad_format(reader, at, "expected an object");
+            }
+            long pitch;
+            if (!read_int_member(reader, item, at, "midi_pitch", 0, 127, &pitch) ||
+                !read_rational_member(reader, item, at, "offset", &notes[index].offset) ||
+                !read_rational_member(reader, item, at, "duration", &notes[index].duration)) {
+                return false;
+            }
+            notes[index].midi_pitch = (int)pitch;
+            index++;
+        }
+        payload->notes.notes = notes;
+        payload->notes.note_count = count;
+        return true;
+    }
+    }
+    return false;
+}
+
+static bool build_lane_span(Reader *reader, PiecePlan *plan, const ParsedLane *parsed, size_t expected_id) {
+    const cJSON *composer = cJSON_GetObjectItemCaseSensitive(parsed->json, "composer");
+    char composer_path[PLAN_JSON_PATH_MAX];
+    child_path(composer_path, parsed->path, "composer");
+
+    int lane;
+    long owner;
+    long voice;
+    PlanSpan span;
+    if (!read_enum_member(reader, composer, composer_path, "lane", LANE_NAMES, COUNT_OF(LANE_NAMES), &lane) ||
+        !read_int_member(reader, composer, composer_path, "owner", 1, TIME_LIMIT, &owner) ||
+        !read_int_member(reader, composer, composer_path, "voice", 0, 1000, &voice) ||
+        !read_span(reader, parsed->json, parsed->path, &span)) {
+        return false;
+    }
+    if (!(parsed->lanes & (1u << lane))) {
+        char lane_path[PLAN_JSON_PATH_MAX];
+        child_path(lane_path, composer_path, "lane");
+        return bad_format(reader, lane_path, "lane does not belong in this section");
+    }
+
+    PlanLanePayload payload;
+    PlanNote *notes_storage = NULL;
+    bool ok = read_payload(reader, composer, composer_path, (PlanLaneKind)lane, &payload, &notes_storage);
+    if (ok) {
+        LaneSpanId id;
+        PlanResult result =
+            plan_add_lane_span(plan, (NodeId)owner, (PlanLaneKind)lane, (int)voice, span, &payload, &id);
+        if (result == PLAN_ERR_ALLOC) {
+            ok = fail(reader, PLAN_ERR_ALLOC, parsed->path, "out of memory");
+        } else if (result != PLAN_OK) {
+            ok = fail(reader, PLAN_ERR_FORMAT, parsed->path, "lane span %s", result_name(result));
+        } else if (id != expected_id) {
+            ok = bad_format(reader, parsed->path, "lane span ids must run from 1 without gaps");
+        }
+    }
+    free(notes_storage);
+    return ok;
+}
+
+static bool build_lane_spans(Reader *reader, PiecePlan *plan, const cJSON *document) {
+    static const struct {
+        const char *name;
+        unsigned lanes;
+    } sections[] = {
+        {"meter", 1u << PLAN_LANE_METER},
+        {"keys", 1u << PLAN_LANE_KEY},
+        {"chords", 1u << PLAN_LANE_HARMONY},
+        {"melody", 1u << PLAN_LANE_MELODY},
+        {"texture", (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE)},
+    };
+    size_t count = 0;
+    for (size_t i = 0; i < COUNT_OF(sections); i++) {
+        if (!count_section(reader, document, sections[i].name, &count)) {
+            return false;
+        }
+    }
+    if (count == 0) {
+        return true;
+    }
+    ParsedLane *table = calloc(count, sizeof(ParsedLane));
+    if (!table) {
+        return fail(reader, PLAN_ERR_ALLOC, "", "out of memory");
+    }
+    bool ok = true;
+    for (size_t i = 0; ok && i < COUNT_OF(sections); i++) {
+        ok = collect_section(reader, document, sections[i].name, sections[i].lanes, table, count);
+    }
+    for (size_t i = 0; ok && i < count; i++) {
+        ok = build_lane_span(reader, plan, &table[i], i + 1);
+    }
+
+    /* Constraints and states go on last so a Given item never refuses its own constraints. */
+    for (size_t i = 0; ok && i < count; i++) {
+        const cJSON *composer = cJSON_GetObjectItemCaseSensitive(table[i].json, "composer");
+        char composer_path[PLAN_JSON_PATH_MAX];
+        child_path(composer_path, table[i].path, "composer");
+        ok = read_constraints(reader, plan, composer, composer_path, i + 1, add_span_constraint);
+    }
+    free(table);
+    return ok;
+}
+
+static bool apply_states(Reader *reader, PiecePlan *plan, const cJSON *document) {
+    /* Nodes: walk the form tree; the ids were validated while building. */
+    size_t node_count = plan_node_count(plan);
+    ParsedNode *table = node_count ? calloc(node_count, sizeof(ParsedNode)) : NULL;
+    if (node_count && !table) {
+        return fail(reader, PLAN_ERR_ALLOC, "form", "out of memory");
+    }
+    bool ok = true;
+    if (node_count) {
+        ok = collect_nodes(reader, cJSON_GetObjectItemCaseSensitive(document, "form"), "form", PLAN_NODE_NONE, table,
+                           node_count);
+    }
+    for (size_t i = 0; ok && i < node_count; i++) {
+        const cJSON *composer = cJSON_GetObjectItemCaseSensitive(table[i].json, "composer");
+        char composer_path[PLAN_JSON_PATH_MAX];
+        child_path(composer_path, table[i].path, "composer");
+        int state;
+        ok = read_constraints(reader, plan, composer, composer_path, i + 1, add_node_constraint) &&
+             read_enum_member(reader, composer, composer_path, "state", STATE_NAMES, COUNT_OF(STATE_NAMES), &state);
+        if (ok) {
+            plan_node_set_state(plan, (NodeId)(i + 1), (PlanState)state);
+        }
+    }
+    free(table);
+    if (!ok) {
+        return false;
+    }
+
+    static const char *const SECTIONS[] = {"meter", "keys", "chords", "melody", "texture"};
+    for (size_t s = 0; s < COUNT_OF(SECTIONS); s++) {
+        const cJSON *section = cJSON_GetObjectItemCaseSensitive(document, SECTIONS[s]);
+        if (section && strcmp(SECTIONS[s], "meter") == 0) {
+            section = cJSON_GetObjectItemCaseSensitive(section, "spans");
+        }
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, section) {
+            const cJSON *composer = cJSON_GetObjectItemCaseSensitive(entry, "composer");
+            const cJSON *id = cJSON_GetObjectItemCaseSensitive(composer, "id");
+            const cJSON *state_item = cJSON_GetObjectItemCaseSensitive(composer, "state");
+            char at[PLAN_JSON_PATH_MAX];
+            snprintf(at, sizeof(at), "%s[%d].composer.state", SECTIONS[s], 0);
+            int state;
+            if (!read_enum(reader, state_item, at, STATE_NAMES, COUNT_OF(STATE_NAMES), &state)) {
+                return false;
+            }
+            plan_lane_span_set_state(plan, (LaneSpanId)id->valueint, (PlanState)state);
+        }
+    }
+    return true;
+}
+
+static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJsonError *error) {
+    Reader reader = {error, PLAN_OK};
+    if (!cJSON_IsObject(document)) {
+        bad_format(&reader, "", "expected a JSON object");
+        return reader.result;
+    }
+    long version;
+    if (!read_int_member(&reader, document, "", "schema_version", 1, PLAN_JSON_SCHEMA_VERSION, &version)) {
+        return reader.result;
+    }
+    const cJSON *form = member(&reader, document, "", "form", true);
+    if (!form) {
+        return reader.result;
+    }
+    if (!cJSON_IsNull(form) && !build_nodes(&reader, plan, form)) {
+        return reader.result;
+    }
+    if (!build_lane_spans(&reader, plan, document)) {
+        return reader.result;
+    }
+    if (!apply_states(&reader, plan, document)) {
+        return reader.result;
+    }
+    return PLAN_OK;
+}
+
+PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *error) {
+    if (!text || !out) {
+        set_error(error, -1, "", "text or out is NULL");
+        return PLAN_ERR_NULL;
+    }
+    *out = NULL;
+    const char *end = NULL;
+    cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text), &end, true);
+    if (!document) {
+        set_error(error, end ? (long)(end - text) : -1, "", "not valid JSON");
+        return PLAN_ERR_PARSE;
+    }
+    PiecePlan *plan = plan_create();
+    if (!plan) {
+        cJSON_Delete(document);
+        set_error(error, -1, "", "out of memory");
+        return PLAN_ERR_ALLOC;
+    }
+    PlanResult result = read_document(document, plan, error);
+    cJSON_Delete(document);
+    if (result != PLAN_OK) {
+        plan_destroy(plan);
+        return result;
+    }
+    *out = plan;
+    return PLAN_OK;
+}
+
+PlanResult plan_read_json_file(const char *path, PiecePlan **out, PlanJsonError *error) {
+    if (!path || !out) {
+        set_error(error, -1, "", "path or out is NULL");
+        return PLAN_ERR_NULL;
+    }
+    *out = NULL;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        set_error(error, -1, "", "could not open '%s'", path);
+        return PLAN_ERR_IO;
+    }
+    char *text = NULL;
+    size_t size = 0;
+    size_t capacity = 0;
+    bool ok = true;
+    while (ok && !feof(file)) {
+        if (size + 4096 + 1 > capacity) {
+            capacity = capacity ? capacity * 2 : 8192;
+            char *grown = realloc(text, capacity);
+            ok = grown != NULL;
+            text = grown ? grown : text;
+        }
+        if (ok) {
+            size += fread(text + size, 1, 4096, file);
+            ok = !ferror(file);
+        }
+    }
+    fclose(file);
+    if (!ok) {
+        free(text);
+        set_error(error, -1, "", "could not read '%s'", path);
+        return PLAN_ERR_IO;
+    }
+    text[size] = '\0';
+    PlanResult result = plan_from_json(text, out, error);
+    free(text);
+    return result;
+}
