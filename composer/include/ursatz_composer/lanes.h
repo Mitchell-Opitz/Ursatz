@@ -32,7 +32,9 @@ typedef enum {
 typedef enum {
     PLAN_FUNCTION_TONIC,
     PLAN_FUNCTION_PREDOMINANT,
-    PLAN_FUNCTION_DOMINANT
+    PLAN_FUNCTION_DOMINANT,
+    /* For chords read from an analysis, which records no function. */
+    PLAN_FUNCTION_UNKNOWN
 } PlanHarmonicFunction;
 
 /* beat_unit is the note value of one beat (4 for a quarter); bars_per_hyperbar is 0 when there is none. */
