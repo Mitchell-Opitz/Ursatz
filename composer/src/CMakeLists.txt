@@ -5,6 +5,7 @@ add_library(ursatz_composer STATIC
     plan/plan_state.c
     plan/constraint.c
     plan/plan_json.c
+    plan/analysis_load.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
