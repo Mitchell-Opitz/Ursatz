@@ -22,6 +22,7 @@ add_library(ursatz
     time/note_value.c
     time/time_signature.c
     time/meter_map.c
+    time/metrical_position.c
     time/performance_time.c
     time/tempo_map.c
     time/tuplet.c
