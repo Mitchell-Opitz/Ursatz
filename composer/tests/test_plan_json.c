@@ -220,6 +220,13 @@ static bool plans_equal(const PiecePlan *a, const PiecePlan *b) {
     return true;
 }
 
+static void expect_ok(PlanResult result, const PlanJsonError *error) {
+    if (result != PLAN_OK) {
+        fprintf(stderr, "result %d at '%s': %s\n", (int)result, error->path, error->message);
+    }
+    assert(result == PLAN_OK);
+}
+
 static void test_round_trip(void) {
     PiecePlan *plan = build_sentence_plan();
     PlanJsonError error;
@@ -230,7 +237,7 @@ static void test_round_trip(void) {
     assert(strstr(text, "\"schema_version\": 1") != NULL);
 
     PiecePlan *parsed = NULL;
-    assert(plan_from_json(text, &parsed, &error) == PLAN_OK);
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
     assert(parsed != NULL);
     assert(plans_equal(plan, parsed));
     assert(plan_node_state(parsed, 6) == PLAN_STATE_GIVEN);
