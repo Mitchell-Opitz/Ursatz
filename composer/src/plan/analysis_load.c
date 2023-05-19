@@ -302,7 +302,7 @@ PlanResult plan_from_analysis_document(const char *text, PiecePlan **out, Analys
         report->count = 0;
     }
     const char *end = NULL;
-    cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text), &end, true);
+    cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text) + 1, &end, true);
     if (!document) {
         json_set_error(error, end ? (long)(end - text) : -1, "", "not valid JSON");
         return PLAN_ERR_PARSE;
