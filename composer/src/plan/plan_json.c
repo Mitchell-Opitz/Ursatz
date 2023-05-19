@@ -377,7 +377,7 @@ void json_set_error(PlanJsonError *error, long offset, const char *path, const c
     error->offset = offset;
 }
 
-/* cJSON prints with tabs; the project's JSON uses a 2-space indent. */
+/* cJSON prints with tabs; the project's JSON uses a 2-space indent and "key": value. */
 static char *indent_with_spaces(const char *printed) {
     size_t tabs = 0;
     size_t length = strlen(printed);
@@ -390,7 +390,9 @@ static char *indent_with_spaces(const char *printed) {
     }
     char *cursor = out;
     for (size_t i = 0; i < length; i++) {
-        if (printed[i] == '\t') {
+        if (printed[i] == '\t' && i > 0 && printed[i - 1] == ':') {
+            *cursor++ = ' ';
+        } else if (printed[i] == '\t') {
             *cursor++ = ' ';
             *cursor++ = ' ';
         } else {
