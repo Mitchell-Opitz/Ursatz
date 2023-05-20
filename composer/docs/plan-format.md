@@ -169,7 +169,8 @@ additive change.
 
 ## Example
 
-A two-bar plan: a form in 4/4 and C major, one section, one chord.
+A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the exact output of
+`plan_to_json`.
 
 ```json
 {
@@ -183,12 +184,17 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord.
     "key_found": true
   },
   "meter": {
-    "spans": [
-      {
+    "spans": [{
         "framework": "ursatz-composer",
         "span": {
-          "start": { "num": 0, "den": 1 },
-          "end": { "num": 2, "den": 1 }
+          "start": {
+            "num": 0,
+            "den": 1
+          },
+          "end": {
+            "num": 2,
+            "den": 1
+          }
         },
         "note_ids": [],
         "label": "4/4",
@@ -206,15 +212,19 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord.
             "bars_per_hyperbar": 0
           }
         }
-      }
-    ]
+      }]
   },
-  "keys": [
-    {
+  "keys": [{
       "framework": "ursatz-composer",
       "span": {
-        "start": { "num": 0, "den": 1 },
-        "end": { "num": 2, "den": 1 }
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 2,
+          "den": 1
+        }
       },
       "note_ids": [],
       "label": "C major",
@@ -232,14 +242,18 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord.
           "mode": "major"
         }
       }
-    }
-  ],
-  "chords": [
-    {
+    }],
+  "chords": [{
       "framework": "ursatz-composer",
       "span": {
-        "start": { "num": 0, "den": 1 },
-        "end": { "num": 1, "den": 1 }
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 1,
+          "den": 1
+        }
       },
       "note_ids": [],
       "label": "I",
@@ -251,39 +265,54 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord.
         "lane": "harmony",
         "voice": 0,
         "state": "constrained",
-        "constraints": [{ "kind": "length_bars", "bars": 1 }],
+        "constraints": [{
+            "kind": "length_bars",
+            "bars": 1
+          }],
         "payload": {
           "roman_numeral": "I",
           "function": "tonic"
         }
       }
-    }
-  ],
+    }],
   "cadences": [],
   "phrases": [],
   "form": {
     "kind": "form",
     "label": "example",
     "span": {
-      "start": { "num": 0, "den": 1 },
-      "end": { "num": 2, "den": 1 }
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      }
     },
-    "children": [
-      {
+    "children": [{
         "kind": "section",
         "label": "A",
         "span": {
-          "start": { "num": 0, "den": 1 },
-          "end": { "num": 2, "den": 1 }
+          "start": {
+            "num": 0,
+            "den": 1
+          },
+          "end": {
+            "num": 2,
+            "den": 1
+          }
         },
         "children": [],
         "composer": {
           "id": 2,
           "state": "constrained",
-          "constraints": [{ "kind": "cadence", "type": "pac" }]
+          "constraints": [{
+              "kind": "cadence",
+              "type": "pac"
+            }]
         }
-      }
-    ],
+      }],
     "composer": {
       "id": 1,
       "state": "given",
