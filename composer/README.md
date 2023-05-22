@@ -35,3 +35,8 @@ ursatz-composer --help
 
 The CLI prints the version and usage only. Planning, I/O, rendering and filling are not
 implemented yet.
+
+## Plan format
+
+A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
+[docs/plan-format.md](docs/plan-format.md).

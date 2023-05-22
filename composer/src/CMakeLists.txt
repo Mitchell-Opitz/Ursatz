@@ -4,6 +4,8 @@ add_library(ursatz_composer STATIC
     plan/lanes.c
     plan/plan_state.c
     plan/constraint.c
+    plan/plan_json.c
+    plan/analysis_load.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
@@ -11,6 +13,7 @@ target_include_directories(ursatz_composer
 )
 target_link_libraries(ursatz_composer
     PUBLIC ursatz ursatz_analyzer
+    PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"
