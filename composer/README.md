@@ -31,10 +31,12 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 ```sh
 ursatz-composer --version
 ursatz-composer --help
+ursatz-composer export plan.json --midi out.mid --musicxml out.xml
 ```
 
-The CLI prints the version and usage only. Planning, I/O, rendering and filling are not
-implemented yet.
+`export` loads a plan from JSON and writes its Given and Realized notes as a MIDI file, a
+MusicXML file, or both, through Ursatz's renderer and exporter. Spans that are not written yet are
+listed on stderr. Filling a plan is not implemented yet.
 
 ## Plan format
 
