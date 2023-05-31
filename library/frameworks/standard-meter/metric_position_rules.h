@@ -6,6 +6,7 @@
 #include "rules/constraint.h"
 #include "rules/rule.h"
 #include "semantics/beat_strength.h"
+#include "time/duration.h"
 #include "time/metrical_position.h"
 #include "time/time_signature.h"
 
@@ -64,6 +65,15 @@ typedef struct {
     long subdivision_numerator;             /* the place inside the beat, an exact fraction of the beat */
     unsigned long subdivision_denominator;  /* in lowest terms; 0 over 1 is on the beat */
 } StandardMeterBeatPosition;
+
+/*
+ * The beat grid a signature is read with here: how long one beat is and how many a measure holds. A
+ * classified meter takes both from the meter class (meter_class_rules.h): the bottom unit in simple
+ * meter, a dotted unit in compound. An unclassified one (5/8, 7/8) has no grouping defined, so each
+ * bottom-unit pulse is a beat. False, leaving the outputs untouched, for a NULL argument or on
+ * allocation failure. On success the caller owns *out_beat.
+ */
+bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats);
 
 const Rule *standard_meter_metric_rule(StandardMeterMetricRule which);
 const Constraint *standard_meter_metric_constraint(StandardMeterMetricRule which);

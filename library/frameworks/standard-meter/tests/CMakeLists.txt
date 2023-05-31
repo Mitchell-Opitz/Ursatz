@@ -60,6 +60,10 @@ target_compile_definitions(test_standard_meter_metric_position_integration PRIVA
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 add_test(NAME standard_meter_metric_position_integration COMMAND test_standard_meter_metric_position_integration)
 
+add_executable(test_standard_meter_segmentation_beat_grid test_segmentation_beat_grid.c)
+target_link_libraries(test_standard_meter_segmentation_beat_grid PRIVATE standard_meter)
+add_test(NAME standard_meter_segmentation_beat_grid COMMAND test_standard_meter_segmentation_beat_grid)
+
 add_executable(test_architecture_standard_meter test_architecture_standard_meter.c)
 add_test(NAME architecture_standard_meter COMMAND test_architecture_standard_meter
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
