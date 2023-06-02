@@ -208,9 +208,8 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
 
 /* ------------------------------------------------------------------ meter */
 
-static PlanRenderResult build_meter_map(const KeySource *unused, const LaneSpanId *meter_spans, size_t count,
-                                        const PiecePlan *plan, MeterMap **out) {
-    (void)unused;
+static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t count, const PiecePlan *plan,
+                                        MeterMap **out) {
     *out = NULL;
     if (count == 0) {
         return PLAN_RENDER_OK;
@@ -370,7 +369,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
 
     /* Meter. */
     if (result == PLAN_RENDER_OK) {
-        result = build_meter_map(keys, meter_spans, meter_count, plan, &out->meter_map);
+        result = build_meter_map(meter_spans, meter_count, plan, &out->meter_map);
     }
 
     /* Parts, then notes. */
