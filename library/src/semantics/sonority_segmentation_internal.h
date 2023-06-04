@@ -61,6 +61,17 @@ AdaptiveSegmentationResult segmentation_members_of(const NoteSpan *spans, size_t
 AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_count, const MeterMap *map,
                                              BeatGridProvider provider, void *provider_context, SegmentList *out);
 
+/*
+ * Step 3, the merge: joins adjacent segments whose sounding pitch-class set AND bass pitch class are
+ * both identical, repeatedly, so a run of unchanged beats becomes one segment. A merge may cross a
+ * beat but not a barline (a segment with starts_measure set) unless config->merge_across_barlines.
+ * An empty segment (silence) is never merged, and so keeps the segments either side of it apart.
+ * The merged segment spans both, holds each sounding note once, and a note is attacked in it if it
+ * was attacked in either part. `segments` is edited in place.
+ */
+AdaptiveSegmentationResult segmentation_merge(const NoteSpan *spans, const AdaptiveSegmentationConfig *config,
+                                               SegmentList *segments);
+
 /* The lowest sounding pitch of a segment, and the pitch-class set of its members as a 12-bit mask
    (bit pc set). A segment with no members has bass pitch -1 and an empty set. */
 int segment_bass_pitch(const NoteSpan *spans, const Segment *segment);

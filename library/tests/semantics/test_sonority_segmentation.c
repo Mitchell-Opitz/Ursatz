@@ -253,12 +253,13 @@ static void test_a_pickup_measure_is_cut_on_its_own_span(void) {
     AdaptiveSonorities out = {0};
     assert(sonority_builder_build_adaptive(notes, 2, map, stub_provider, &quarter, NULL, &out) ==
            AD_SEGMENTATION_OK);
-    assert(out.count == 4); /* the pickup beat, then the three beats of the 3/4 measure */
+    /* The pickup measure is its own segment; the 3/4 measure's three beats hold the same note and
+       merge (the merge stays inside the measure). */
+    assert(out.count == 2);
     assert_window(&out.items[0], 0, 1, 1, 4);
     assert_member(&out.items[0], 0, "pickup", false);
-    assert_window(&out.items[1], 1, 4, 1, 2);
+    assert_window(&out.items[1], 1, 4, 1, 1);
     assert_member(&out.items[1], 0, "down", false);
-    assert_member(&out.items[2], 0, "down", true);
     adaptive_sonorities_destroy(&out);
     meter_map_destroy(map);
     destroy_notes(notes, 2);
@@ -273,10 +274,12 @@ static void test_a_short_measure_is_cut_at_its_end(void) {
     AdaptiveSonorities out = {0};
     assert(sonority_builder_build_adaptive(notes, 1, map, stub_provider, &quarter, NULL, &out) ==
            AD_SEGMENTATION_OK);
-    assert(out.count == 3);
-    assert_window(&out.items[0], 2, 1, 9, 4);
-    assert_window(&out.items[1], 9, 4, 5, 2);
-    assert_window(&out.items[2], 5, 2, 11, 4); /* the first beat of the 3/4 measure that follows */
+    /* Measure 3's two beats hold one note and merge; the 3/4 measure after it is a new segment, so a
+       merge does not cross the cut-short barline. */
+    assert(out.count == 2);
+    assert_window(&out.items[0], 2, 1, 5, 2);
+    assert_window(&out.items[1], 5, 2, 11, 4);
+    assert_member(&out.items[1], 0, "long", true);
     adaptive_sonorities_destroy(&out);
     meter_map_destroy(map);
     destroy_notes(notes, 1);
@@ -348,6 +351,179 @@ static void test_pitch_and_pitch_class_from_the_spelling(void) {
     destroy_notes(notes, 3);
 }
 
+/* --- step 3, the merge --- */
+
+static AdaptiveSonorities build(NoteEvent **notes, size_t count, const MeterMap *map, StubBeat *beat,
+                                const AdaptiveSegmentationConfig *config) {
+    AdaptiveSonorities out = {0};
+    assert(sonority_builder_build_adaptive(notes, count, map, stub_provider, beat, config, &out) ==
+           AD_SEGMENTATION_OK);
+    return out;
+}
+
+static void test_an_unchanged_chord_over_a_bar_merges_to_one_segment(void) {
+    NoteEvent *notes[3] = {make_note("c", 0, 1, 1, 1, 48), make_note("e", 0, 1, 1, 1, 52),
+                           make_note("g", 0, 1, 1, 1, 55)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 3, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 1);
+    assert(sonority_event_id_count(out.items[0].sonority) == 3);
+    for (size_t i = 0; i < 3; i++) {
+        assert(!out.items[0].held[i]); /* attacked in the segment: it began with them */
+    }
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 3);
+}
+
+static void test_a_merge_does_not_cross_a_barline_by_default(void) {
+    NoteEvent *notes[3] = {make_note("c", 0, 1, 2, 1, 48), make_note("e", 0, 1, 2, 1, 52),
+                           make_note("g", 0, 1, 2, 1, 55)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+
+    AdaptiveSonorities out = build(notes, 3, map, &quarter, NULL);
+    assert(out.count == 2); /* one per bar */
+    assert_window(&out.items[0], 0, 1, 1, 1);
+    assert_window(&out.items[1], 1, 1, 2, 1);
+    assert(!out.items[0].held[0] && out.items[1].held[0]); /* held into the second bar */
+    adaptive_sonorities_destroy(&out);
+
+    AdaptiveSegmentationConfig across = adaptive_segmentation_config_default();
+    across.merge_across_barlines = true;
+    out = build(notes, 3, map, &quarter, &across);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 2, 1);
+    assert(!out.items[0].held[0]); /* attacked in the merged segment, which began with it */
+    adaptive_sonorities_destroy(&out);
+
+    meter_map_destroy(map);
+    destroy_notes(notes, 3);
+}
+
+static void test_a_change_of_pitch_class_content_does_not_merge(void) {
+    /* A C major triad for two beats, then a G major triad: two segments. */
+    NoteEvent *notes[6] = {make_note("c", 0, 1, 1, 2, 48), make_note("e", 0, 1, 1, 2, 52),
+                           make_note("g", 0, 1, 1, 2, 55), make_note("g2", 1, 2, 1, 2, 43),
+                           make_note("b", 1, 2, 1, 2, 47), make_note("d", 1, 2, 1, 2, 50)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 6, map, &quarter, NULL);
+    assert(out.count == 2);
+    assert_window(&out.items[0], 0, 1, 1, 2);
+    assert_window(&out.items[1], 1, 2, 1, 1);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 6);
+}
+
+static void test_the_same_pitch_classes_over_a_different_bass_do_not_merge(void) {
+    /* C E G with C in the bass, then C E G with E in the bass. */
+    NoteEvent *notes[6] = {make_note("c3", 0, 1, 1, 2, 48), make_note("e4", 0, 1, 1, 2, 64),
+                           make_note("g4", 0, 1, 1, 2, 67), make_note("e3", 1, 2, 1, 2, 52),
+                           make_note("c4", 1, 2, 1, 2, 60), make_note("g4b", 1, 2, 1, 2, 67)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 6, map, &quarter, NULL);
+    assert(out.count == 2);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 6);
+}
+
+static void test_the_bass_in_a_different_octave_still_merges(void) {
+    /* The bass is C3 for a beat and C2 for the next: the same pitch class, so the beats merge. */
+    NoteEvent *notes[4] = {make_note("c3", 0, 1, 1, 4, 48), make_note("e4a", 0, 1, 1, 4, 64),
+                           make_note("c2", 1, 4, 1, 4, 36), make_note("e4b", 1, 4, 1, 4, 64)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 4, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 2);
+    assert(sonority_event_id_count(out.items[0].sonority) == 4);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 4);
+}
+
+static void test_silence_keeps_equal_segments_apart(void) {
+    NoteEvent *notes[2] = {make_note("a", 0, 1, 1, 4, 60), make_note("b", 1, 2, 1, 4, 60)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 2, map, &quarter, NULL);
+    assert(out.count == 2);
+    assert_window(&out.items[0], 0, 1, 1, 4);
+    assert_window(&out.items[1], 1, 2, 3, 4);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 2);
+}
+
+static void test_a_merged_segment_holds_each_note_once_and_keeps_attacks(void) {
+    /* A whole-note bass C3 with E4 in beat 1 and E4 again in beat 2: the sets match, so beats 1-2 merge
+       into one segment holding the bass once, attacked, and both E4s. Beat 3 adds a G4: a new set. */
+    NoteEvent *notes[4] = {make_note("bass", 0, 1, 1, 1, 48), make_note("e1", 0, 1, 1, 4, 64),
+                           make_note("e2", 1, 4, 1, 4, 64), make_note("g", 1, 2, 1, 2, 67)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 4, map, &quarter, NULL);
+    assert(out.count == 2);
+    assert_window(&out.items[0], 0, 1, 1, 2);
+    assert(sonority_event_id_count(out.items[0].sonority) == 3);
+    assert_member(&out.items[0], 0, "bass", false);
+    assert_member(&out.items[0], 1, "e1", false);
+    assert_member(&out.items[0], 2, "e2", false);
+    assert_window(&out.items[1], 1, 2, 1, 1);
+    assert_member(&out.items[1], 0, "bass", true);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 4);
+}
+
+static void test_arpeggiation_within_a_beat_merges_only_when_content_matches(void) {
+    /* An arpeggio C E G in sixteenths: beat 1 sounds C E G and so does beat 2 (a repeat): merged. */
+    NoteEvent *same[6] = {make_note("a1", 0, 1, 1, 16, 48), make_note("a2", 1, 16, 1, 16, 52),
+                          make_note("a3", 1, 8, 1, 8, 55),  make_note("b1", 1, 4, 1, 16, 48),
+                          make_note("b2", 5, 16, 1, 16, 52), make_note("b3", 3, 8, 1, 8, 55)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(same, 6, map, &quarter, NULL);
+    assert(out.count == 1);
+    adaptive_sonorities_destroy(&out);
+    destroy_notes(same, 6);
+
+    /* C E in beat 1 and E G in beat 2: different sets, not merged. */
+    NoteEvent *different[4] = {make_note("c", 0, 1, 1, 8, 48), make_note("e", 1, 8, 1, 8, 52),
+                               make_note("e2", 1, 4, 1, 8, 52), make_note("g", 3, 8, 1, 8, 55)};
+    out = build(different, 4, map, &quarter, NULL);
+    assert(out.count == 2);
+    adaptive_sonorities_destroy(&out);
+    destroy_notes(different, 4);
+    meter_map_destroy(map);
+}
+
+static void test_merge_edits_the_segment_list_in_place(void) {
+    NoteEvent *notes[1] = {make_note("a", 0, 1, 1, 1, 60)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    NoteSpan *spans = NULL;
+    SegmentList list = {0};
+    assert(segmentation_prepare_notes(notes, 1, &spans) == AD_SEGMENTATION_OK);
+    assert(segmentation_cut(spans, 1, map, stub_provider, &quarter, &list) == AD_SEGMENTATION_OK);
+    assert(list.count == 4);
+    AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
+    assert(segmentation_merge(spans, &config, &list) == AD_SEGMENTATION_OK);
+    assert(list.count == 1);
+    assert(list.items[0].starts_measure && list.items[0].member_count == 1);
+    assert(segmentation_merge(NULL, &config, &list) == AD_SEGMENTATION_ERR_NULL_ARGUMENT);
+    segment_list_destroy(&list);
+    free(spans);
+    meter_map_destroy(map);
+    destroy_notes(notes, 1);
+}
+
 int main(void) {
     test_a_held_whole_note_is_held_in_every_later_beat();
     test_silence_makes_no_segment();
@@ -358,6 +534,15 @@ int main(void) {
     test_rejects_bad_input();
     test_config_defaults();
     test_pitch_and_pitch_class_from_the_spelling();
+    test_an_unchanged_chord_over_a_bar_merges_to_one_segment();
+    test_a_merge_does_not_cross_a_barline_by_default();
+    test_a_change_of_pitch_class_content_does_not_merge();
+    test_the_same_pitch_classes_over_a_different_bass_do_not_merge();
+    test_the_bass_in_a_different_octave_still_merges();
+    test_silence_keeps_equal_segments_apart();
+    test_a_merged_segment_holds_each_note_once_and_keeps_attacks();
+    test_arpeggiation_within_a_beat_merges_only_when_content_matches();
+    test_merge_edits_the_segment_list_in_place();
     printf("test_sonority_segmentation: ok\n");
     return 0;
 }

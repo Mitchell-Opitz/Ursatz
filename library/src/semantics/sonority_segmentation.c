@@ -212,6 +212,88 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
     return AD_SEGMENTATION_OK;
 }
 
+/* The pitch class of the lowest sounding pitch of a non-empty segment. */
+static int bass_pitch_class(const NoteSpan *spans, const Segment *segment) {
+    return ((segment_bass_pitch(spans, segment) % 12) + 12) % 12;
+}
+
+/* Appends the members of `next` that `into` does not already hold, and marks a shared note attacked if
+   either has it attacked. */
+static AdaptiveSegmentationResult union_members(Segment *into, const Segment *next) {
+    size_t added = 0;
+    for (size_t i = 0; i < next->member_count; i++) {
+        bool found = false;
+        for (size_t j = 0; j < into->member_count; j++) {
+            if (into->members[j].note == next->members[i].note) {
+                into->members[j].attacked = into->members[j].attacked || next->members[i].attacked;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            added++;
+        }
+    }
+    if (added == 0) {
+        return AD_SEGMENTATION_OK;
+    }
+    SegmentMember *grown = (SegmentMember *)realloc(into->members, (into->member_count + added) * sizeof(SegmentMember));
+    if (grown == NULL) {
+        return AD_SEGMENTATION_ERR_ALLOC;
+    }
+    into->members = grown;
+    size_t base = into->member_count;
+    for (size_t i = 0; i < next->member_count; i++) {
+        bool found = false;
+        for (size_t j = 0; j < base; j++) {
+            if (into->members[j].note == next->members[i].note) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            into->members[into->member_count++] = next->members[i];
+        }
+    }
+    return AD_SEGMENTATION_OK;
+}
+
+AdaptiveSegmentationResult segmentation_merge(const NoteSpan *spans, const AdaptiveSegmentationConfig *config,
+                                               SegmentList *segments) {
+    if (spans == NULL || config == NULL || segments == NULL) {
+        return AD_SEGMENTATION_ERR_NULL_ARGUMENT;
+    }
+
+    size_t kept = 0; /* segments[0..kept) is the merged result so far */
+    for (size_t i = 0; i < segments->count; i++) {
+        Segment *segment = &segments->items[i];
+        if (kept > 0) {
+            Segment *last = &segments->items[kept - 1];
+            bool crosses_barline = segment->starts_measure && !config->merge_across_barlines;
+            bool same_content = last->member_count > 0 && segment->member_count > 0 &&
+                                segment_pitch_class_set(spans, last) == segment_pitch_class_set(spans, segment) &&
+                                bass_pitch_class(spans, last) == bass_pitch_class(spans, segment);
+            if (same_content && !crosses_barline && er_cmp(last->end, segment->start) == 0) {
+                AdaptiveSegmentationResult merged = union_members(last, segment);
+                if (merged != AD_SEGMENTATION_OK) {
+                    return merged;
+                }
+                last->end = segment->end;
+                free(segment->members);
+                segment->members = NULL;
+                segment->member_count = 0;
+                continue;
+            }
+        }
+        if (kept != i) {
+            segments->items[kept] = *segment;
+        }
+        kept++;
+    }
+    segments->count = kept;
+    return AD_SEGMENTATION_OK;
+}
+
 void adaptive_sonorities_destroy(AdaptiveSonorities *sonorities) {
     if (sonorities == NULL) {
         return;
@@ -313,6 +395,9 @@ AdaptiveSegmentationResult sonority_builder_build_adaptive(NoteEvent *const *not
     SegmentList segments = {NULL, 0};
     AdaptiveSegmentationResult result =
         segmentation_cut(spans, note_count, map, provider, provider_context, &segments);
+    if (result == AD_SEGMENTATION_OK) {
+        result = segmentation_merge(spans, &effective, &segments);
+    }
 
     AdaptiveSonorities assembled = {NULL, 0};
     if (result == AD_SEGMENTATION_OK) {

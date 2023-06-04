@@ -180,7 +180,8 @@ static EntityID *make_id(const char *value) {
     return id;
 }
 
-static NoteEvent *make_note(const char *id, long on_n, unsigned long on_d, long dur_n, unsigned long dur_d) {
+static NoteEvent *make_note(const char *id, long on_n, unsigned long on_d, long dur_n, unsigned long dur_d,
+                            PitchLetter letter) {
     MusicalTime *position = NULL;
     assert(musical_time_create(on_n, on_d, &position) == MUSICAL_TIME_OK);
     TemporalAnchor *anchor = NULL;
@@ -189,7 +190,7 @@ static NoteEvent *make_note(const char *id, long on_n, unsigned long on_d, long 
     PitchIdentity *pitch = NULL;
     assert(pitch_identity_create("pitch", 6, &pitch) == PITCH_IDENTITY_OK);
     PitchSpelling *spelling = NULL;
-    assert(pitch_spelling_create(PITCH_LETTER_C, 0, 4, &spelling) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(letter, 0, 4, &spelling) == PITCH_SPELLING_OK);
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *note = NULL;
@@ -211,31 +212,48 @@ static void assert_window(const AdaptiveSonority *s, long sn, unsigned long sd, 
 }
 
 static void test_the_builder_cuts_6_8_and_12_8_on_dotted_quarter_beats(void) {
-    /* One note held over a whole 6/8 measure and into a second: cut at 3/8, 3/4, 9/8 ... */
+    /* A different note on each dotted-quarter beat of 6/8: the segments fall at 3/8. */
     Change six_eight[] = {{6, 3, 0, 1}};
     MeterMap *map = build_map(six_eight, 1);
-    NoteEvent *held = make_note("held", 0, 1, 9, 8);
-    NoteEvent *notes[1] = {held};
+    NoteEvent *first = make_note("c", 0, 1, 3, 8, PITCH_LETTER_C);
+    NoteEvent *second = make_note("d", 3, 8, 3, 8, PITCH_LETTER_D);
+    NoteEvent *two[2] = {first, second};
     AdaptiveSonorities out = {0};
-    assert(sonority_builder_build_adaptive(notes, 1, map, standard_meter_segmentation_beat_grid, NULL, NULL,
+    assert(sonority_builder_build_adaptive(two, 2, map, standard_meter_segmentation_beat_grid, NULL, NULL,
                                            &out) == AD_SEGMENTATION_OK);
-    assert(out.count == 3);
+    assert(out.count == 2);
     assert_window(&out.items[0], 0, 1, 3, 8);
     assert_window(&out.items[1], 3, 8, 3, 4);
-    assert_window(&out.items[2], 3, 4, 9, 8);
-    assert(!out.items[0].held[0] && out.items[1].held[0] && out.items[2].held[0]);
     adaptive_sonorities_destroy(&out);
     meter_map_destroy(map);
-    note_event_destroy(held);
+    note_event_destroy(first);
+    note_event_destroy(second);
 
+    /* Four notes on the four dotted-quarter beats of 12/8. */
     Change twelve_eight[] = {{12, 3, 0, 1}};
     map = build_map(twelve_eight, 1);
-    NoteEvent *whole = make_note("whole", 0, 1, 3, 2);
-    NoteEvent *twelve[1] = {whole};
-    assert(sonority_builder_build_adaptive(twelve, 1, map, standard_meter_segmentation_beat_grid, NULL, NULL,
+    NoteEvent *beats[4] = {make_note("b1", 0, 1, 3, 8, PITCH_LETTER_C), make_note("b2", 3, 8, 3, 8, PITCH_LETTER_D),
+                           make_note("b3", 3, 4, 3, 8, PITCH_LETTER_E), make_note("b4", 9, 8, 3, 8, PITCH_LETTER_F)};
+    assert(sonority_builder_build_adaptive(beats, 4, map, standard_meter_segmentation_beat_grid, NULL, NULL,
                                            &out) == AD_SEGMENTATION_OK);
-    assert(out.count == 4); /* four beats of 3/8 */
+    assert(out.count == 4);
+    assert_window(&out.items[1], 3, 8, 3, 4);
     assert_window(&out.items[3], 9, 8, 3, 2);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    for (size_t i = 0; i < 4; i++) {
+        note_event_destroy(beats[i]);
+    }
+
+    /* The same note held over the whole of a 12/8 measure is one segment: the beat lines are cuts, and
+       the merge joins the unchanged content. */
+    map = build_map(twelve_eight, 1);
+    NoteEvent *whole = make_note("whole", 0, 1, 3, 2, PITCH_LETTER_C);
+    NoteEvent *held[1] = {whole};
+    assert(sonority_builder_build_adaptive(held, 1, map, standard_meter_segmentation_beat_grid, NULL, NULL,
+                                           &out) == AD_SEGMENTATION_OK);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 3, 2);
     adaptive_sonorities_destroy(&out);
     meter_map_destroy(map);
     note_event_destroy(whole);
