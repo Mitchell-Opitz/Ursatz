@@ -212,6 +212,205 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
     return AD_SEGMENTATION_OK;
 }
 
+/* --- step 2, the bass split --- */
+
+/* The lowest sounding pitch among the members sounding at `t` (onset <= t < release) when `after`,
+   or sounding just before it (onset < t <= release) otherwise; -1 for none. *out_attacked is set when
+   a note with onset == t has that lowest pitch. */
+static int lowest_at(const NoteSpan *spans, const Segment *segment, ExactRational t, bool after,
+                     bool *out_attacked) {
+    int lowest = -1;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        const NoteSpan *note = &spans[segment->members[i].note];
+        bool sounding = after ? (er_cmp(note->onset, t) <= 0 && er_cmp(note->release, t) > 0)
+                              : (er_cmp(note->onset, t) < 0 && er_cmp(note->release, t) >= 0);
+        if (sounding && (lowest < 0 || note->pitch < lowest)) {
+            lowest = note->pitch;
+        }
+    }
+    if (out_attacked != NULL) {
+        *out_attacked = false;
+        for (size_t i = 0; lowest >= 0 && i < segment->member_count; i++) {
+            const NoteSpan *note = &spans[segment->members[i].note];
+            if (er_cmp(note->onset, t) == 0 && note->pitch == lowest) {
+                *out_attacked = true;
+            }
+        }
+    }
+    return lowest;
+}
+
+static int pitch_class_of(int pitch) {
+    return ((pitch % 12) + 12) % 12;
+}
+
+/* The accepted split times inside `segment`, ascending. *out is allocated (NULL when none). */
+static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const Segment *segment,
+                                                   const AdaptiveSegmentationConfig *config,
+                                                   ExactRational **out, size_t *out_count) {
+    *out = NULL;
+    *out_count = 0;
+    if (segment->member_count == 0) {
+        return AD_SEGMENTATION_OK;
+    }
+
+    /* The attack times strictly inside the beat, ascending and without repeats. */
+    ExactRational *attacks = (ExactRational *)malloc(segment->member_count * sizeof(ExactRational));
+    ExactRational *changes = (ExactRational *)malloc(segment->member_count * sizeof(ExactRational));
+    if (attacks == NULL || changes == NULL) {
+        free(attacks);
+        free(changes);
+        return AD_SEGMENTATION_ERR_ALLOC;
+    }
+    size_t attack_count = 0;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        ExactRational onset = spans[segment->members[i].note].onset;
+        if (er_cmp(onset, segment->start) <= 0 || er_cmp(onset, segment->end) >= 0) {
+            continue;
+        }
+        size_t at = 0;
+        while (at < attack_count && er_cmp(attacks[at], onset) < 0) {
+            at++;
+        }
+        if (at < attack_count && er_cmp(attacks[at], onset) == 0) {
+            continue;
+        }
+        for (size_t j = attack_count; j > at; j--) {
+            attacks[j] = attacks[j - 1];
+        }
+        attacks[at] = onset;
+        attack_count++;
+    }
+
+    /* Of those, the times the bass changes at (a new lowest note, a different pitch class). */
+    size_t change_count = 0;
+    for (size_t i = 0; i < attack_count; i++) {
+        bool attacked = false;
+        int after = lowest_at(spans, segment, attacks[i], true, &attacked);
+        int before = lowest_at(spans, segment, attacks[i], false, NULL);
+        if (after >= 0 && attacked && (before < 0 || pitch_class_of(before) != pitch_class_of(after))) {
+            changes[change_count++] = attacks[i];
+        }
+    }
+    free(attacks);
+
+    /* The shortest a new bass may last: the minimum fraction of the beat. */
+    ExactRational beat = {0, 1};
+    ExactRational minimum = {0, 1};
+    if (er_sub(segment->end, segment->start, &beat) != 0 ||
+        er_mul(beat, er_make(config->min_split_numerator, config->min_split_denominator), &minimum) != 0) {
+        free(changes);
+        return AD_SEGMENTATION_ERR_OVERFLOW;
+    }
+
+    size_t accepted = 0;
+    for (size_t i = 0; i < change_count; i++) {
+        ExactRational until = i + 1 < change_count ? changes[i + 1] : segment->end;
+        ExactRational lasts = {0, 1};
+        if (er_sub(until, changes[i], &lasts) != 0) {
+            free(changes);
+            return AD_SEGMENTATION_ERR_OVERFLOW;
+        }
+        if (er_cmp(lasts, minimum) >= 0) {
+            changes[accepted++] = changes[i]; /* in place: accepted never passes i */
+            /* the next candidate's end is read from changes[i + 1], untouched while accepted <= i */
+        }
+    }
+    if (accepted == 0) {
+        free(changes);
+        return AD_SEGMENTATION_OK;
+    }
+    *out = changes;
+    *out_count = accepted;
+    return AD_SEGMENTATION_OK;
+}
+
+/* The members of `parent` that sound in [start, end). */
+static AdaptiveSegmentationResult members_within(const NoteSpan *spans, const Segment *parent, ExactRational start,
+                                                  ExactRational end, SegmentMember **out, size_t *out_count) {
+    SegmentMember *members = NULL;
+    size_t count = 0;
+    if (parent->member_count > 0) {
+        members = (SegmentMember *)malloc(parent->member_count * sizeof(SegmentMember));
+        if (members == NULL) {
+            return AD_SEGMENTATION_ERR_ALLOC;
+        }
+    }
+    for (size_t i = 0; i < parent->member_count; i++) {
+        const NoteSpan *note = &spans[parent->members[i].note];
+        if (er_cmp(note->onset, end) < 0 && er_cmp(note->release, start) > 0) {
+            members[count].note = parent->members[i].note;
+            members[count].attacked = er_cmp(note->onset, start) >= 0;
+            count++;
+        }
+    }
+    if (count == 0) {
+        free(members);
+        members = NULL;
+    }
+    *out = members;
+    *out_count = count;
+    return AD_SEGMENTATION_OK;
+}
+
+AdaptiveSegmentationResult segmentation_split_bass(const NoteSpan *spans, const AdaptiveSegmentationConfig *config,
+                                                    SegmentList *segments) {
+    if (spans == NULL || config == NULL || segments == NULL) {
+        return AD_SEGMENTATION_ERR_NULL_ARGUMENT;
+    }
+
+    SegmentList result = {NULL, 0};
+    size_t capacity = 0;
+    AdaptiveSegmentationResult failure = AD_SEGMENTATION_OK;
+
+    for (size_t i = 0; i < segments->count && failure == AD_SEGMENTATION_OK; i++) {
+        Segment *segment = &segments->items[i];
+        ExactRational *points = NULL;
+        size_t point_count = 0;
+        failure = split_points_of(spans, segment, config, &points, &point_count);
+        if (failure != AD_SEGMENTATION_OK) {
+            break;
+        }
+
+        if (point_count == 0) {
+            failure = append_segment(&result, &capacity, *segment);
+            if (failure == AD_SEGMENTATION_OK) {
+                segment->members = NULL; /* moved to the result */
+                segment->member_count = 0;
+            }
+            continue;
+        }
+
+        ExactRational piece_start = segment->start;
+        for (size_t piece = 0; piece <= point_count && failure == AD_SEGMENTATION_OK; piece++) {
+            Segment part;
+            part.start = piece_start;
+            part.end = piece < point_count ? points[piece] : segment->end;
+            part.starts_measure = piece == 0 && segment->starts_measure;
+            failure = members_within(spans, segment, part.start, part.end, &part.members, &part.member_count);
+            if (failure != AD_SEGMENTATION_OK) {
+                break;
+            }
+            failure = append_segment(&result, &capacity, part);
+            if (failure != AD_SEGMENTATION_OK) {
+                free(part.members);
+                break;
+            }
+            piece_start = part.end;
+        }
+        free(points);
+    }
+
+    if (failure != AD_SEGMENTATION_OK) {
+        segment_list_destroy(&result);
+        return failure;
+    }
+    /* Segments that were split still own their member arrays; the moved ones were cleared. */
+    segment_list_destroy(segments);
+    *segments = result;
+    return AD_SEGMENTATION_OK;
+}
+
 /* The pitch class of the lowest sounding pitch of a non-empty segment. */
 static int bass_pitch_class(const NoteSpan *spans, const Segment *segment) {
     return ((segment_bass_pitch(spans, segment) % 12) + 12) % 12;
@@ -395,6 +594,9 @@ AdaptiveSegmentationResult sonority_builder_build_adaptive(NoteEvent *const *not
     SegmentList segments = {NULL, 0};
     AdaptiveSegmentationResult result =
         segmentation_cut(spans, note_count, map, provider, provider_context, &segments);
+    if (result == AD_SEGMENTATION_OK) {
+        result = segmentation_split_bass(spans, &effective, &segments);
+    }
     if (result == AD_SEGMENTATION_OK) {
         result = segmentation_merge(spans, &effective, &segments);
     }

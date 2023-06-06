@@ -62,6 +62,23 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
                                              BeatGridProvider provider, void *provider_context, SegmentList *out);
 
 /*
+ * Step 2, the bass split: splits a beat segment where the bass changes, at the ATTACK of the new
+ * lowest note, unless the new bass lasts less than the minimum split duration. Edited in place; the
+ * pieces of a split segment hold the notes sounding in each (a note held across the split is held in
+ * the later piece), and only the first piece keeps starts_measure.
+ *
+ *   - A bass change is a change of pitch class: an octave leap of the same pitch class does not split.
+ *   - It is made by an attack: the new lowest sounding note starts at that time. A bass that changes
+ *     because the lowest note releases (and a higher note was already sounding) is not split.
+ *   - The new bass must last min_split_numerator / min_split_denominator of the beat (the beat being
+ *     the segment as the grid cut made it): from its attack to the next bass change, or the end of the
+ *     beat. So every piece a split makes is at least that long.
+ *   - A bass attack after silence in the beat counts as a change from no bass.
+ */
+AdaptiveSegmentationResult segmentation_split_bass(const NoteSpan *spans, const AdaptiveSegmentationConfig *config,
+                                                    SegmentList *segments);
+
+/*
  * Step 3, the merge: joins adjacent segments whose sounding pitch-class set AND bass pitch class are
  * both identical, repeatedly, so a run of unchanged beats becomes one segment. A merge may cross a
  * beat but not a barline (a segment with starts_measure set) unless config->merge_across_barlines.

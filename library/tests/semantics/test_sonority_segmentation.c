@@ -483,20 +483,22 @@ static void test_a_merged_segment_holds_each_note_once_and_keeps_attacks(void) {
 }
 
 static void test_arpeggiation_within_a_beat_merges_only_when_content_matches(void) {
-    /* An arpeggio C E G in sixteenths: beat 1 sounds C E G and so does beat 2 (a repeat): merged. */
-    NoteEvent *same[6] = {make_note("a1", 0, 1, 1, 16, 48), make_note("a2", 1, 16, 1, 16, 52),
-                          make_note("a3", 1, 8, 1, 8, 55),  make_note("b1", 1, 4, 1, 16, 48),
-                          make_note("b2", 5, 16, 1, 16, 52), make_note("b3", 3, 8, 1, 8, 55)};
+    /* A sustained arpeggio: C is held while E and G are added, so the bass stays C (no split). Beat 1
+       sounds C E G and so does beat 2 (the arpeggio again): merged. */
+    NoteEvent *same[6] = {make_note("a1", 0, 1, 1, 4, 48), make_note("a2", 1, 16, 3, 16, 52),
+                          make_note("a3", 1, 8, 1, 8, 55), make_note("b1", 1, 4, 1, 4, 48),
+                          make_note("b2", 5, 16, 3, 16, 52), make_note("b3", 3, 8, 1, 8, 55)};
     MeterMap *map = four_four();
     StubBeat quarter = {1, 4};
     AdaptiveSonorities out = build(same, 6, map, &quarter, NULL);
     assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 2);
     adaptive_sonorities_destroy(&out);
     destroy_notes(same, 6);
 
-    /* C E in beat 1 and E G in beat 2: different sets, not merged. */
-    NoteEvent *different[4] = {make_note("c", 0, 1, 1, 8, 48), make_note("e", 1, 8, 1, 8, 52),
-                               make_note("e2", 1, 4, 1, 8, 52), make_note("g", 3, 8, 1, 8, 55)};
+    /* C E in beat 1 and E G in beat 2 (E is the bass of beat 2): different sets, not merged. */
+    NoteEvent *different[4] = {make_note("c", 0, 1, 1, 4, 48), make_note("e", 1, 8, 1, 8, 52),
+                               make_note("e2", 1, 4, 1, 4, 52), make_note("g", 3, 8, 1, 8, 55)};
     out = build(different, 4, map, &quarter, NULL);
     assert(out.count == 2);
     adaptive_sonorities_destroy(&out);
@@ -524,6 +526,138 @@ static void test_merge_edits_the_segment_list_in_place(void) {
     destroy_notes(notes, 1);
 }
 
+/* --- step 2, the bass split --- (beats are quarter notes; the default minimum is half a beat, 1/8) */
+
+static void test_a_bass_change_mid_beat_splits(void) {
+    /* Bass C3 for the first half of beat 1 and E3 for the second, over a held G4. */
+    NoteEvent *notes[3] = {make_note("c3", 0, 1, 1, 8, 48), make_note("e3", 1, 8, 1, 8, 52),
+                           make_note("g4", 0, 1, 1, 4, 67)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 3, map, &quarter, NULL);
+    assert(out.count == 2);
+    assert_window(&out.items[0], 0, 1, 1, 8);
+    assert(sonority_event_id_count(out.items[0].sonority) == 2);
+    assert_member(&out.items[0], 0, "c3", false);
+    assert_member(&out.items[0], 1, "g4", false);
+    assert_window(&out.items[1], 1, 8, 1, 4); /* at the attack of the new bass */
+    assert(sonority_event_id_count(out.items[1].sonority) == 2);
+    assert_member(&out.items[1], 0, "e3", false);
+    assert_member(&out.items[1], 1, "g4", true); /* held across the split */
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 3);
+}
+
+static void test_a_bass_change_shorter_than_the_minimum_does_not_split(void) {
+    /* E3 arrives at 3/16 and lasts 1/16, under the 1/8 minimum: the beat stays whole. */
+    NoteEvent *notes[2] = {make_note("c3", 0, 1, 3, 16, 48), make_note("e3", 3, 16, 1, 16, 52)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 2, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 4);
+    assert(sonority_event_id_count(out.items[0].sonority) == 2);
+    adaptive_sonorities_destroy(&out);
+
+    /* The minimum is configurable: at a quarter of a beat (1/16) the same change splits. */
+    AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
+    config.min_split_numerator = 1;
+    config.min_split_denominator = 4;
+    out = build(notes, 2, map, &quarter, &config);
+    assert(out.count == 2);
+    assert_window(&out.items[1], 3, 16, 1, 4);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 2);
+}
+
+static void test_the_new_bass_is_measured_to_the_next_bass_change(void) {
+    /* C3 [0,1/16), D3 [1/16,1/8), E3 [1/8,1/4): D lasts only until E arrives (1/16, too short), so it is
+       not a split; E lasts to the end of the beat (1/8) and is. */
+    NoteEvent *notes[3] = {make_note("c3", 0, 1, 1, 16, 48), make_note("d3", 1, 16, 1, 16, 50),
+                           make_note("e3", 1, 8, 1, 8, 52)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 3, map, &quarter, NULL);
+    assert(out.count == 2);
+    assert_window(&out.items[0], 0, 1, 1, 8);
+    assert(sonority_event_id_count(out.items[0].sonority) == 2); /* C and D together */
+    assert_window(&out.items[1], 1, 8, 1, 4);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 3);
+}
+
+static void test_an_octave_change_of_the_bass_does_not_split(void) {
+    NoteEvent *notes[2] = {make_note("c3", 0, 1, 1, 8, 48), make_note("c2", 1, 8, 1, 8, 36)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 2, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 4);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 2);
+}
+
+static void test_a_bass_that_changes_by_release_alone_does_not_split(void) {
+    /* E3 sounds all beat; C3 below it releases at 1/8, so E3 becomes the lowest without an attack. */
+    NoteEvent *notes[2] = {make_note("c3", 0, 1, 1, 8, 48), make_note("e3", 0, 1, 1, 4, 52)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 2, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 4);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 2);
+}
+
+static void test_a_higher_note_attacked_over_the_bass_does_not_split(void) {
+    NoteEvent *notes[2] = {make_note("c3", 0, 1, 1, 4, 48), make_note("g4", 1, 8, 1, 8, 67)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 2, map, &quarter, NULL);
+    assert(out.count == 1);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 2);
+}
+
+static void test_a_bass_attack_after_silence_in_the_beat_starts_the_segment(void) {
+    NoteEvent *notes[1] = {make_note("c3", 1, 8, 1, 8, 48)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 1, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 1, 8, 1, 4); /* not [0, 1/4): the silence before the attack is cut off */
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 1);
+}
+
+static void test_a_split_keeps_the_barline_flag_on_its_first_piece(void) {
+    NoteEvent *notes[2] = {make_note("c3", 0, 1, 1, 8, 48), make_note("e3", 1, 8, 1, 8, 52)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    NoteSpan *spans = NULL;
+    SegmentList list = {0};
+    assert(segmentation_prepare_notes(notes, 2, &spans) == AD_SEGMENTATION_OK);
+    assert(segmentation_cut(spans, 2, map, stub_provider, &quarter, &list) == AD_SEGMENTATION_OK);
+    assert(list.count == 4);
+    AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
+    assert(segmentation_split_bass(spans, &config, &list) == AD_SEGMENTATION_OK);
+    assert(list.count == 5); /* beat 1 became two pieces; beats 2 to 4 are untouched and empty */
+    assert(list.items[0].starts_measure && !list.items[1].starts_measure);
+    assert(list.items[0].member_count == 1 && list.items[1].member_count == 1);
+    assert(segmentation_split_bass(NULL, &config, &list) == AD_SEGMENTATION_ERR_NULL_ARGUMENT);
+    segment_list_destroy(&list);
+    free(spans);
+    meter_map_destroy(map);
+    destroy_notes(notes, 2);
+}
+
 int main(void) {
     test_a_held_whole_note_is_held_in_every_later_beat();
     test_silence_makes_no_segment();
@@ -543,6 +677,14 @@ int main(void) {
     test_a_merged_segment_holds_each_note_once_and_keeps_attacks();
     test_arpeggiation_within_a_beat_merges_only_when_content_matches();
     test_merge_edits_the_segment_list_in_place();
+    test_a_bass_change_mid_beat_splits();
+    test_a_bass_change_shorter_than_the_minimum_does_not_split();
+    test_the_new_bass_is_measured_to_the_next_bass_change();
+    test_an_octave_change_of_the_bass_does_not_split();
+    test_a_bass_that_changes_by_release_alone_does_not_split();
+    test_a_higher_note_attacked_over_the_bass_does_not_split();
+    test_a_bass_attack_after_silence_in_the_beat_starts_the_segment();
+    test_a_split_keeps_the_barline_flag_on_its_first_piece();
     printf("test_sonority_segmentation: ok\n");
     return 0;
 }
