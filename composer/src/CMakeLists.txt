@@ -9,6 +9,8 @@ add_library(ursatz_composer STATIC
     render/render.c
     render/export.c
     fill/fill_target.c
+    fill/fill_operator.c
+    fill/fill_loop.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
