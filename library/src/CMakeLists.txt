@@ -79,6 +79,7 @@ add_library(ursatz
     semantics/interval.c
     semantics/sonority.c
     semantics/sonority_builder.c
+    semantics/sonority_segmentation.c
     semantics/rhythmic_pattern.c
     semantics/scale.c
     semantics/contour.c

@@ -44,10 +44,10 @@ static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
     return a;
 }
 
-/* The beat grid of a signature: how long one beat is and how many a measure holds. A classified meter
-   takes both from the meter class (meter_class_rules.h); an unclassified one has no grouping defined,
-   so each bottom-unit pulse is a beat. */
-static bool beat_grid_of(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats) {
+bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats) {
+    if (time_signature == NULL || out_beat == NULL || out_beats == NULL) {
+        return false;
+    }
     if (standard_meter_beat_duration(time_signature, out_beat)) {
         return standard_meter_beats_per_measure(time_signature, out_beats);
     }
@@ -92,7 +92,7 @@ static bool locate(const TimeSignature *time_signature, const MetricalPosition *
     }
     Duration *beat = NULL;
     unsigned beats = 0;
-    if (!beat_grid_of(time_signature, &beat, &beats)) {
+    if (!standard_meter_beat_grid(time_signature, &beat, &beats)) {
         duration_destroy(beat);
         return false;
     }
