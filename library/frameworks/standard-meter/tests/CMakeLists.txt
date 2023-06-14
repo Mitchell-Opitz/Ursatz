@@ -64,6 +64,13 @@ add_executable(test_standard_meter_segmentation_beat_grid test_segmentation_beat
 target_link_libraries(test_standard_meter_segmentation_beat_grid PRIVATE standard_meter)
 add_test(NAME standard_meter_segmentation_beat_grid COMMAND test_standard_meter_segmentation_beat_grid)
 
+add_executable(test_standard_meter_adaptive_segmentation_eval test_adaptive_segmentation_eval.c)
+target_link_libraries(test_standard_meter_adaptive_segmentation_eval PRIVATE standard_meter)
+target_compile_definitions(test_standard_meter_adaptive_segmentation_eval PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME standard_meter_adaptive_segmentation_eval COMMAND test_standard_meter_adaptive_segmentation_eval)
+
 add_executable(test_architecture_standard_meter test_architecture_standard_meter.c)
 add_test(NAME architecture_standard_meter COMMAND test_architecture_standard_meter
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
