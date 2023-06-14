@@ -90,6 +90,16 @@ the two numbers and nothing more; this framework reads them):
   - Positions must be inside the measure; a function is false for an offset at
     or past its end, and for arithmetic that does not fit (checked, never
     wrapped).
+- **Segmentation beat grid** (`segmentation_beat_grid.h`): the standard
+  `BeatGridProvider` for adaptive sonority segmentation
+  (`semantics/sonority_segmentation.h`, which cannot include a framework, so
+  the beat grid is injected). It returns the beat starts of a measure from
+  the meter class's beat unit, in the signature the kernel says the measure
+  is read in: 6/8 gives two dotted-quarter beats, 3/4 three quarter-note
+  beats, 12/8 four dotted-quarter beats, 5/8 five eighth-note pulses. A short
+  measure's last beat is cut at the barline, and a pickup's beats fall where
+  a full measure's would, so a pickup starting partway through a beat begins
+  with a partial beat.
 - **Beat ties** (`beat_tie_rules.h`): a note starting off the beat that
   runs past the next beat is split and tied there to show the beat.
 
