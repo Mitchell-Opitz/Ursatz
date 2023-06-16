@@ -17,7 +17,8 @@
  *   1. Pick the open target with the most constraints (fill_pick_open_target).
  *   2. Ask every applicable operator, in registration order, for candidates.
  *   3. Check each candidate. A hard-rule break rejects it; a score ranks the rest.
- *   4. Choose the best-scoring candidate.
+ *   4. Choose the best-scoring candidate; equal scores are settled by the run's
+ *      seeded random stream.
  *   5. Apply it, mark the target Realized, and propagate.
  * It repeats until nothing is open.
  *
@@ -58,8 +59,9 @@ bool fill_default_checker(const PiecePlan *plan, FillTarget target, const FillOp
 
 #define FILL_DEFAULT_MAX_ITERATIONS 10000
 
-/* All-zero is the default configuration. */
+/* All-zero is the default configuration (seed 0). */
 typedef struct {
+    unsigned long seed;     /* seeds the run's one random stream */
     size_t max_iterations;  /* attempts, including failed ones; 0 means FILL_DEFAULT_MAX_ITERATIONS */
     FillCheckerFn checker;  /* NULL means fill_default_checker */
     void *checker_context;
@@ -92,14 +94,22 @@ typedef struct {
 
 void fill_outcome_destroy(FillOutcome *outcome);
 
+/* The record of a run; see fill_record.h. */
+typedef struct FillRecord FillRecord;
+
 /*
  * Runs the loop on plan. registry and outcome are required. On FILL_OK the
  * outcome says how it ended. On an error (an operator's generate or apply
  * failed, the checker failed, allocation failed) the plan may have been changed
  * by the steps before it, and outcome->status is FILL_STATUS_ERROR.
+ *
+ * Every choice is made from config->seed: the same plan, operators, checker and
+ * seed give the same plan and the same record. When record is not NULL, *record
+ * is set to the run's record (also after an error, if one was started), which
+ * the caller destroys with fill_record_destroy.
  */
 FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
-                    FillOutcome *outcome);
+                    FillOutcome *outcome, FillRecord **record);
 
 /* --- propagation helper ------------------------------------------------- */
 

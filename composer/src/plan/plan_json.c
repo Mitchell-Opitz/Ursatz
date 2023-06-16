@@ -32,7 +32,7 @@ static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", 
 
 /* ------------------------------------------------------------------ writing */
 
-static bool add(cJSON *object, const char *key, cJSON *item) {
+bool json_add(cJSON *object, const char *key, cJSON *item) {
     if (!item) {
         return false;
     }
@@ -43,7 +43,7 @@ static bool add(cJSON *object, const char *key, cJSON *item) {
     return true;
 }
 
-static bool append(cJSON *array, cJSON *item) {
+bool json_append(cJSON *array, cJSON *item) {
     if (!item) {
         return false;
     }
@@ -54,13 +54,13 @@ static bool append(cJSON *array, cJSON *item) {
     return true;
 }
 
-static cJSON *number(long value) {
+cJSON *json_number(long value) {
     return cJSON_CreateNumber((double)value);
 }
 
 static cJSON *rational_json(PlanTime time) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(add(object, "num", number(time.num)) && add(object, "den", number((long)time.den)))) {
+    if (object && !(json_add(object, "num", json_number(time.num)) && json_add(object, "den", json_number((long)time.den)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -73,7 +73,7 @@ static cJSON *span_json(PlanSpan span) {
         return NULL;
     }
     cJSON *object = cJSON_CreateObject();
-    if (object && !(add(object, "start", rational_json(span.start)) && add(object, "end", rational_json(end)))) {
+    if (object && !(json_add(object, "start", rational_json(span.start)) && json_add(object, "end", rational_json(end)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -85,25 +85,25 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
     if (!object) {
         return NULL;
     }
-    bool ok = add(object, "kind", cJSON_CreateString(CONSTRAINT_KINDS[constraint->kind]));
+    bool ok = json_add(object, "kind", cJSON_CreateString(CONSTRAINT_KINDS[constraint->kind]));
     switch (constraint->kind) {
     case PLAN_CONSTRAINT_LENGTH_BARS:
-        ok = ok && add(object, "bars", number(constraint->params.bars));
+        ok = ok && json_add(object, "bars", json_number(constraint->params.bars));
         break;
     case PLAN_CONSTRAINT_CADENCE:
-        ok = ok && add(object, "type", cJSON_CreateString(CADENCE_NAMES[constraint->params.cadence]));
+        ok = ok && json_add(object, "type", cJSON_CreateString(CADENCE_NAMES[constraint->params.cadence]));
         break;
     case PLAN_CONSTRAINT_MOTIVE_REF:
-        ok = ok && add(object, "motive", number((long)constraint->params.motive.motive)) &&
-             add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
-             add(object, "semitones", number(constraint->params.motive.semitones));
+        ok = ok && json_add(object, "motive", json_number((long)constraint->params.motive.motive)) &&
+             json_add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
+             json_add(object, "semitones", json_number(constraint->params.motive.semitones));
         break;
     case PLAN_CONSTRAINT_KEY:
-        ok = ok && add(object, "tonic_pitch_class", number(constraint->params.key.tonic_pitch_class)) &&
-             add(object, "mode", cJSON_CreateString(MODE_NAMES[constraint->params.key.mode]));
+        ok = ok && json_add(object, "tonic_pitch_class", json_number(constraint->params.key.tonic_pitch_class)) &&
+             json_add(object, "mode", cJSON_CreateString(MODE_NAMES[constraint->params.key.mode]));
         break;
     case PLAN_CONSTRAINT_ARCHETYPE:
-        ok = ok && add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
+        ok = ok && json_add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
         break;
     }
     if (!ok) {
@@ -116,7 +116,7 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
 static cJSON *node_constraints_json(const PiecePlan *plan, NodeId id) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < plan_node_constraint_count(plan, id); i++) {
-        if (!append(array, constraint_json(plan_node_constraint_at(plan, id, i)))) {
+        if (!json_append(array, constraint_json(plan_node_constraint_at(plan, id, i)))) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -127,7 +127,7 @@ static cJSON *node_constraints_json(const PiecePlan *plan, NodeId id) {
 static cJSON *span_constraints_json(const PiecePlan *plan, LaneSpanId id) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < plan_lane_span_constraint_count(plan, id); i++) {
-        if (!append(array, constraint_json(plan_lane_span_constraint_at(plan, id, i)))) {
+        if (!json_append(array, constraint_json(plan_lane_span_constraint_at(plan, id, i)))) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -141,19 +141,19 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     cJSON *children = cJSON_CreateArray();
     const char *name = plan_node_name(plan, id);
     bool ok = object && composer && children;
-    ok = ok && add(composer, "id", number((long)id)) &&
-         add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_node_state(plan, id)])) &&
-         add(composer, "constraints", node_constraints_json(plan, id));
-    ok = ok && add(object, "kind", cJSON_CreateString(NODE_KINDS[plan_node_kind(plan, id)])) &&
-         add(object, "label", name ? cJSON_CreateString(name) : cJSON_CreateNull()) &&
-         add(object, "span", span_json(plan_node_span(plan, id)));
+    ok = ok && json_add(composer, "id", json_number((long)id)) &&
+         json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_node_state(plan, id)])) &&
+         json_add(composer, "constraints", node_constraints_json(plan, id));
+    ok = ok && json_add(object, "kind", cJSON_CreateString(NODE_KINDS[plan_node_kind(plan, id)])) &&
+         json_add(object, "label", name ? cJSON_CreateString(name) : cJSON_CreateNull()) &&
+         json_add(object, "span", span_json(plan_node_span(plan, id)));
     for (size_t i = 0; ok && i < plan_node_child_count(plan, id); i++) {
-        ok = append(children, node_json(plan, plan_node_child_at(plan, id, i)));
+        ok = json_append(children, node_json(plan, plan_node_child_at(plan, id, i)));
     }
-    ok = ok && add(object, "children", children);
+    ok = ok && json_add(object, "children", children);
     if (ok) {
         children = NULL;
-        ok = add(object, "composer", composer);
+        ok = json_add(object, "composer", composer);
         composer = NULL;
     }
     if (!ok) {
@@ -194,9 +194,9 @@ static cJSON *notes_json(const PlanNotes *notes) {
     for (size_t i = 0; array && i < notes->note_count; i++) {
         const PlanNote *note = &notes->notes[i];
         cJSON *object = cJSON_CreateObject();
-        if (!(object && add(object, "midi_pitch", number(note->midi_pitch)) &&
-              add(object, "offset", rational_json(note->offset)) &&
-              add(object, "duration", rational_json(note->duration)) && append(array, object))) {
+        if (!(object && json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
+              json_add(object, "offset", rational_json(note->offset)) &&
+              json_add(object, "duration", rational_json(note->duration)) && json_append(array, object))) {
             if (object && !cJSON_GetObjectItem(object, "duration")) {
                 cJSON_Delete(object);
             }
@@ -215,22 +215,22 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
     bool ok = true;
     switch (lane) {
     case PLAN_LANE_METER:
-        ok = add(object, "beats_per_bar", number(payload->meter.beats_per_bar)) &&
-             add(object, "beat_unit", number(payload->meter.beat_unit)) &&
-             add(object, "bars_per_hyperbar", number(payload->meter.bars_per_hyperbar));
+        ok = json_add(object, "beats_per_bar", json_number(payload->meter.beats_per_bar)) &&
+             json_add(object, "beat_unit", json_number(payload->meter.beat_unit)) &&
+             json_add(object, "bars_per_hyperbar", json_number(payload->meter.bars_per_hyperbar));
         break;
     case PLAN_LANE_KEY:
-        ok = add(object, "tonic_pitch_class", number(payload->key.tonic_pitch_class)) &&
-             add(object, "mode", cJSON_CreateString(MODE_NAMES[payload->key.mode]));
+        ok = json_add(object, "tonic_pitch_class", json_number(payload->key.tonic_pitch_class)) &&
+             json_add(object, "mode", cJSON_CreateString(MODE_NAMES[payload->key.mode]));
         break;
     case PLAN_LANE_HARMONY:
-        ok = add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral)) &&
-             add(object, "function", cJSON_CreateString(FUNCTION_NAMES[payload->harmony.function]));
+        ok = json_add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral)) &&
+             json_add(object, "function", cJSON_CreateString(FUNCTION_NAMES[payload->harmony.function]));
         break;
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
     case PLAN_LANE_INNER_VOICE:
-        ok = add(object, "notes", notes_json(&payload->notes));
+        ok = json_add(object, "notes", notes_json(&payload->notes));
         break;
     }
     if (!ok) {
@@ -261,24 +261,24 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
     cJSON *object = cJSON_CreateObject();
     cJSON *composer = cJSON_CreateObject();
     bool ok = object && composer;
-    ok = ok && add(composer, "id", number((long)id)) && add(composer, "owner", number((long)plan_lane_span_owner(plan, id))) &&
-         add(composer, "lane", cJSON_CreateString(LANE_NAMES[lane])) &&
-         add(composer, "voice", number(plan_lane_span_voice(plan, id))) &&
-         add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_lane_span_state(plan, id)])) &&
-         add(composer, "constraints", span_constraints_json(plan, id)) &&
-         add(composer, "payload", payload_json(lane, payload));
-    ok = ok && add(object, "framework", cJSON_CreateString(COMPOSER_FRAMEWORK)) &&
-         add(object, "span", span_json(span)) && add(object, "note_ids", cJSON_CreateArray()) &&
-         add(object, "label", cJSON_CreateString(label)) && add(object, "uncertainty", cJSON_CreateNull());
+    ok = ok && json_add(composer, "id", json_number((long)id)) && json_add(composer, "owner", json_number((long)plan_lane_span_owner(plan, id))) &&
+         json_add(composer, "lane", cJSON_CreateString(LANE_NAMES[lane])) &&
+         json_add(composer, "voice", json_number(plan_lane_span_voice(plan, id))) &&
+         json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_lane_span_state(plan, id)])) &&
+         json_add(composer, "constraints", span_constraints_json(plan, id)) &&
+         json_add(composer, "payload", payload_json(lane, payload));
+    ok = ok && json_add(object, "framework", cJSON_CreateString(COMPOSER_FRAMEWORK)) &&
+         json_add(object, "span", span_json(span)) && json_add(object, "note_ids", cJSON_CreateArray()) &&
+         json_add(object, "label", cJSON_CreateString(label)) && json_add(object, "uncertainty", cJSON_CreateNull());
     if (ok && lane == PLAN_LANE_KEY) {
-        ok = add(object, "method", cJSON_CreateString(COMPOSER_KEY_METHOD));
+        ok = json_add(object, "method", cJSON_CreateString(COMPOSER_KEY_METHOD));
     }
     if (ok && lane == PLAN_LANE_HARMONY) {
         enclosing_key_label(plan, span, context_key, sizeof(context_key));
-        ok = add(object, "key_label", cJSON_CreateString(context_key));
+        ok = json_add(object, "key_label", cJSON_CreateString(context_key));
     }
     if (ok) {
-        ok = add(object, "composer", composer);
+        ok = json_add(object, "composer", composer);
         composer = NULL;
     }
     if (!ok) {
@@ -293,7 +293,7 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
 static cJSON *lane_array_json(const PiecePlan *plan, unsigned mask) {
     cJSON *array = cJSON_CreateArray();
     for (LaneSpanId id = 1; array && id <= plan_lane_span_count(plan); id++) {
-        if ((mask & (1u << plan_lane_span_lane(plan, id))) && !append(array, lane_entry_json(plan, id))) {
+        if ((mask & (1u << plan_lane_span_lane(plan, id))) && !json_append(array, lane_entry_json(plan, id))) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -311,7 +311,7 @@ static cJSON *meter_json(const PiecePlan *plan) {
         return cJSON_CreateNull();
     }
     cJSON *object = cJSON_CreateObject();
-    if (!object || !add(object, "spans", spans)) {
+    if (!object || !json_add(object, "spans", spans)) {
         if (!object) {
             cJSON_Delete(spans);
         }
@@ -327,11 +327,11 @@ static cJSON *metadata_json(const PiecePlan *plan) {
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         has_key = has_key || plan_lane_span_lane(plan, id) == PLAN_LANE_KEY;
     }
-    if (object && !(add(object, "source_file", cJSON_CreateString("")) &&
-                    add(object, "analyzer_version", cJSON_CreateString(composer_version())) &&
-                    add(object, "ursatz_commit", cJSON_CreateString("unknown")) &&
-                    add(object, "note_count", number(0)) && add(object, "ticks_per_quarter", cJSON_CreateNull()) &&
-                    add(object, "key_found", cJSON_CreateBool(has_key)))) {
+    if (object && !(json_add(object, "source_file", cJSON_CreateString("")) &&
+                    json_add(object, "analyzer_version", cJSON_CreateString(composer_version())) &&
+                    json_add(object, "ursatz_commit", cJSON_CreateString("unknown")) &&
+                    json_add(object, "note_count", json_number(0)) && json_add(object, "ticks_per_quarter", cJSON_CreateNull()) &&
+                    json_add(object, "key_found", cJSON_CreateBool(has_key)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -347,17 +347,17 @@ static cJSON *document_json(const PiecePlan *plan) {
     if (!document) {
         return NULL;
     }
-    bool ok = add(document, "schema_version", number(PLAN_JSON_SCHEMA_VERSION)) &&
-              add(document, "metadata", metadata_json(plan)) && add(document, "meter", meter_json(plan)) &&
-              add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
-              add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
-              add(document, "cadences", empty_array()) && add(document, "phrases", empty_array()) &&
-              add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
-              add(document, "motives", empty_array()) &&
-              add(document, "melody", lane_array_json(plan, 1u << PLAN_LANE_MELODY)) &&
-              add(document, "rhythm", empty_array()) &&
-              add(document, "texture", lane_array_json(plan, (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE))) &&
-              add(document, "voice_leading", empty_array()) && add(document, "schemas", empty_array());
+    bool ok = json_add(document, "schema_version", json_number(PLAN_JSON_SCHEMA_VERSION)) &&
+              json_add(document, "metadata", metadata_json(plan)) && json_add(document, "meter", meter_json(plan)) &&
+              json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
+              json_add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
+              json_add(document, "cadences", empty_array()) && json_add(document, "phrases", empty_array()) &&
+              json_add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
+              json_add(document, "motives", empty_array()) &&
+              json_add(document, "melody", lane_array_json(plan, 1u << PLAN_LANE_MELODY)) &&
+              json_add(document, "rhythm", empty_array()) &&
+              json_add(document, "texture", lane_array_json(plan, (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE))) &&
+              json_add(document, "voice_leading", empty_array()) && json_add(document, "schemas", empty_array());
     if (!ok) {
         cJSON_Delete(document);
         return NULL;
@@ -378,7 +378,7 @@ void json_set_error(PlanJsonError *error, long offset, const char *path, const c
 }
 
 /* cJSON prints with tabs; the project's JSON uses a 2-space indent and "key": value. */
-static char *indent_with_spaces(const char *printed) {
+char *json_indent_with_spaces(const char *printed) {
     size_t tabs = 0;
     size_t length = strlen(printed);
     for (size_t i = 0; i < length; i++) {
@@ -412,7 +412,7 @@ char *plan_to_json(const PiecePlan *plan, PlanJsonError *error) {
     cJSON *document = document_json(plan);
     char *printed = document ? cJSON_Print(document) : NULL;
     cJSON_Delete(document);
-    char *text = printed ? indent_with_spaces(printed) : NULL;
+    char *text = printed ? json_indent_with_spaces(printed) : NULL;
     cJSON_free(printed);
     if (!text) {
         json_set_error(error, -1, "", "out of memory");

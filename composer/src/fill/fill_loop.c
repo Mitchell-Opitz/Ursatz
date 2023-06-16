@@ -149,7 +149,7 @@ static bool entries_append(FillEntries *entries, const FillEntry *entry) {
 }
 
 FillResult fill_gather(const PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
-                       FillTarget target, FillEntries *out) {
+                       FillTarget target, FillRng *rng, FillEntries *out) {
     memset(out, 0, sizeof(*out));
     FillCheckerFn checker = config && config->checker ? config->checker : fill_default_checker;
     void *checker_context = config ? config->checker_context : NULL;
@@ -163,7 +163,7 @@ FillResult fill_gather(const PiecePlan *plan, const FillOperatorRegistry *regist
 
         FillCandidateList list;
         memset(&list, 0, sizeof(list));
-        if (!operator_->generate(plan, target, operator_->context, &list)) {
+        if (!operator_->generate(plan, target, rng, operator_->context, &list)) {
             fill_candidates_clear(&list);
             fill_entries_destroy(out);
             return FILL_ERR_OPERATOR_FAILED;
@@ -224,21 +224,49 @@ typedef enum {
     STEP_ALL_REJECTED
 } StepKind;
 
-static StepKind choose_entry(const FillEntries *entries, size_t *chosen) {
+/*
+ * The best-scoring candidate that was not rejected. Candidates tied for the best
+ * score are settled by the run's random stream.
+ */
+static StepKind choose_entry(const FillEntries *entries, FillRng *rng, size_t *chosen) {
     if (entries->applicable == 0) {
         return STEP_NO_OPERATOR;
     }
     bool found = false;
+    size_t best = 0;
+    size_t tied = 0;
     for (size_t i = 0; i < entries->count; i++) {
         if (entries->items[i].check.hard_violation) {
             continue;
         }
-        if (!found || fill_check_scores_higher(&entries->items[i].check, &entries->items[*chosen].check)) {
-            *chosen = i;
+        if (!found || fill_check_scores_higher(&entries->items[i].check, &entries->items[best].check)) {
+            best = i;
+            tied = 1;
             found = true;
+        } else if (!fill_check_scores_higher(&entries->items[best].check, &entries->items[i].check)) {
+            tied++;
         }
     }
-    return found ? STEP_DONE : STEP_ALL_REJECTED;
+    if (!found) {
+        return STEP_ALL_REJECTED;
+    }
+    if (tied > 1) {
+        /* Pick the nth of the candidates that tie the best score, in the order they were proposed. */
+        uint64_t pick = fill_rng_below(rng, tied);
+        for (size_t i = 0; i < entries->count; i++) {
+            const FillCheck *check = &entries->items[i].check;
+            if (!check->hard_violation && !fill_check_scores_higher(&entries->items[best].check, check) &&
+                !fill_check_scores_higher(check, &entries->items[best].check)) {
+                if (pick == 0) {
+                    best = i;
+                    break;
+                }
+                pick--;
+            }
+        }
+    }
+    *chosen = best;
+    return STEP_DONE;
 }
 
 void fill_outcome_destroy(FillOutcome *outcome) {
@@ -271,7 +299,10 @@ static bool stuck_add(StuckSet *set, FillTarget target, FillStuckReason reason) 
 }
 
 FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
-                    FillOutcome *outcome) {
+                    FillOutcome *outcome, FillRecord **record_out) {
+    if (record_out) {
+        *record_out = NULL;
+    }
     if (!outcome) {
         return FILL_ERR_NULL;
     }
@@ -286,6 +317,15 @@ FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const
     memset(&stuck, 0, sizeof(stuck));
     FillTarget *excluded = NULL;
     FillResult result = FILL_OK;
+    unsigned long seed = config ? config->seed : 0;
+    FillRng rng;
+    fill_rng_seed(&rng, seed);
+    FillRecord *record = NULL;
+    result = fill_record_begin(&record, seed);
+    if (result != FILL_OK) {
+        outcome->status = FILL_STATUS_ERROR;
+        return result;
+    }
 
     for (;;) {
         if (outcome->iterations >= max_iterations) {
@@ -310,13 +350,19 @@ FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const
         outcome->iterations++;
 
         FillEntries entries;
-        result = fill_gather(plan, registry, config, target, &entries);
+        uint64_t state_before = rng.state;
+        result = fill_gather(plan, registry, config, target, &rng, &entries);
         if (result != FILL_OK) {
             break;
         }
         size_t chosen = 0;
-        StepKind kind = choose_entry(&entries, &chosen);
-        if (kind == STEP_DONE) {
+        StepKind kind = choose_entry(&entries, &rng, &chosen);
+        FillStepOutcome step_outcome = kind == STEP_DONE         ? FILL_STEP_APPLIED
+                                       : kind == STEP_NO_OPERATOR ? FILL_STEP_NO_OPERATOR
+                                                                  : FILL_STEP_ALL_REJECTED;
+        result = fill_record_add_step(record, target, step_outcome, &entries, registry,
+                                      kind == STEP_DONE ? (long)chosen : -1, state_before, rng.state);
+        if (result == FILL_OK && kind == STEP_DONE) {
             result = fill_apply_entry(plan, registry, target, &entries.items[chosen]);
         }
         fill_entries_destroy(&entries);
@@ -336,6 +382,15 @@ FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const
     free(excluded);
     if (result != FILL_OK) {
         outcome->status = FILL_STATUS_ERROR;
+    }
+    record->status = outcome->status;
+    record->iterations = outcome->iterations;
+    if (record_out) {
+        *record_out = record;
+    } else {
+        fill_record_destroy(record);
+    }
+    if (result != FILL_OK) {
         free(stuck.items);
         return result;
     }

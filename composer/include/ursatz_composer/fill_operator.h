@@ -6,6 +6,7 @@
 
 #include "generation/generator.h"
 
+#include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -25,7 +26,8 @@
  * node to fill or what to change).
  *
  * An operator must not touch Given material, and it must not change the plan in
- * generate(), which only proposes. Changes happen in apply().
+ * generate(), which only proposes. Changes happen in apply(). Any randomness in
+ * generate() must come from the FillRng it is given (see fill_rng.h).
  */
 
 typedef enum {
@@ -81,7 +83,7 @@ typedef struct {
     /* Can this operator propose anything for the target? Required. */
     bool (*applies)(const PiecePlan *plan, FillTarget target, void *context);
     /* Proposes candidates into out. Returns false on failure. Required. */
-    bool (*generate)(const PiecePlan *plan, FillTarget target, void *context, FillCandidateList *out);
+    bool (*generate)(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context, FillCandidateList *out);
     /* Applies one candidate to the plan. PLAN_OK on success. Required. */
     PlanResult (*apply)(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context);
     /* Adds constraints to the target's relatives (see fill_relatives) after apply. May be NULL. */
