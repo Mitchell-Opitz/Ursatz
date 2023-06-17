@@ -6,6 +6,7 @@ add_library(common_practice_minimal
     triad_identification.c
     seventh_identification.c
     key_identification.c
+    weighted_identification.c
     ${PROJECT_SOURCE_DIR}/src/analysis/chord_identification.c
     ${PROJECT_SOURCE_DIR}/src/analysis/key_estimation.c
 )
