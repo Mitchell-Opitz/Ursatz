@@ -157,6 +157,187 @@ static void test_rejects_bad_input_and_leaves_the_output_untouched(void) {
     assert(memcmp(&weights, &before, sizeof(weights)) == 0);
 }
 
+/* --- step 2, scoring --- (key of C major unless stated: tonic pitch class 0) */
+
+static CommonPracticeWeights weigh(const CommonPracticeMember *members, size_t count) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeights weights;
+    assert(common_practice_weight_segment(members, count, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    return weights;
+}
+
+static void rank(const CommonPracticeWeights *weights, int tonic, CommonPracticeRankedChord out[14]) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    assert(common_practice_rank_candidates(weights, tonic, COMMON_PRACTICE_KEY_MAJOR, &config, out) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+}
+
+static void assert_best(const CommonPracticeRankedChord *ranked, int degree, bool is_seventh) {
+    assert(ranked[0].degree == degree && ranked[0].is_seventh == is_seventh);
+}
+
+static void test_a_pure_triad_is_covered_completely(void) {
+    CommonPracticeMember members[3] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(52, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 3);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 0, ranked);
+    assert_best(ranked, 1, false); /* I, and the triad beats the tied I major seventh */
+    assert(ranked[0].triad == COMMON_PRACTICE_TRIAD_I);
+    assert(close_to(ranked[0].score, 1.0 + 0.05)); /* all the weight, third present, bass is a chord tone */
+}
+
+static void test_the_candidates_are_the_fourteen_diatonic_chords_best_first(void) {
+    CommonPracticeMember members[3] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(52, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 3);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 0, ranked);
+
+    int seen_triad[8] = {0};
+    int seen_seventh[8] = {0};
+    for (int i = 0; i < 14; i++) {
+        assert(ranked[i].degree >= 1 && ranked[i].degree <= 7);
+        (ranked[i].is_seventh ? seen_seventh : seen_triad)[ranked[i].degree]++;
+        if (i > 0) {
+            assert(ranked[i - 1].score >= ranked[i].score - 1e-9);
+        }
+    }
+    for (int d = 1; d <= 7; d++) {
+        assert(seen_triad[d] == 1 && seen_seventh[d] == 1);
+    }
+
+    /* The seventh quality each degree takes in a major key. */
+    for (int i = 0; i < 14; i++) {
+        if (!ranked[i].is_seventh) {
+            continue;
+        }
+        CommonPracticeSeventh expected[8] = {0,
+                                             COMMON_PRACTICE_SEVENTH_MAJOR7, COMMON_PRACTICE_SEVENTH_MINOR7,
+                                             COMMON_PRACTICE_SEVENTH_MINOR7, COMMON_PRACTICE_SEVENTH_MAJOR7,
+                                             COMMON_PRACTICE_SEVENTH_DOMINANT7, COMMON_PRACTICE_SEVENTH_MINOR7,
+                                             COMMON_PRACTICE_SEVENTH_HALF_DIMINISHED7};
+        assert(ranked[i].seventh == expected[ranked[i].degree]);
+    }
+}
+
+static void test_a_dominant_seventh_beats_the_dominant_triad(void) {
+    CommonPracticeMember members[4] = {member(43, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(59, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(62, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(65, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 4);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 0, ranked);
+    assert_best(ranked, 5, true); /* V7: G B D F */
+    assert(ranked[0].seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7);
+}
+
+static void test_the_key_is_transposed(void) {
+    /* E-flat major: Eb3 G3 Bb3 is I; the tonic is pitch class 3. */
+    CommonPracticeMember members[3] = {member(51, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(55, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(58, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 3);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 3, ranked);
+    assert_best(ranked, 1, false);
+    assert(ranked[0].root_pitch_class == 3);
+    /* The same notes in C major are no tonic chord. */
+    rank(&weights, 0, ranked);
+    assert(!(ranked[0].degree == 1 && !ranked[0].is_seventh));
+}
+
+static void test_a_missing_third_is_penalized(void) {
+    CommonPracticeMember with_third[3] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG),
+                                          member(52, false, 1.0, BEAT_STRENGTH_STRONG),
+                                          member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeMember without_third[2] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG),
+                                             member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights a = weigh(with_third, 3);
+    CommonPracticeWeights b = weigh(without_third, 2);
+    CommonPracticeRankedChord full[14];
+    CommonPracticeRankedChord bare[14];
+    rank(&a, 0, full);
+    rank(&b, 0, bare);
+    assert_best(bare, 1, false); /* C and G alone are still best read as I... */
+    assert(close_to(full[0].score - bare[0].score, 0.15)); /* ...but cost the 0.15 penalty */
+}
+
+static void test_the_bass_bonus_decides_between_i_and_iii(void) {
+    /* The same four pitch classes under both chords: C E G B, with the B given the weight of the C bass
+       (a B of duration 1.5 against a C3 bass of 1.0 * 1.5), so I (C E G) and iii (E G B) cover the same
+       amount. The C bass is a tone of I and not of iii, so the bonus decides. */
+    CommonPracticeMember members[4] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(64, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(67, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(71, false, 1.5, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 4);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 0, ranked);
+    assert_best(ranked, 1, false);
+
+    int iii_at = -1;
+    for (int i = 0; i < 14; i++) {
+        if (ranked[i].degree == 3 && !ranked[i].is_seventh) {
+            iii_at = i;
+        }
+    }
+    assert(iii_at > 0);
+    assert(close_to(ranked[0].score - ranked[iii_at].score, 0.05)); /* the bonus, and nothing else */
+}
+
+static void test_a_tie_goes_to_root_position_then_the_triad(void) {
+    /* C E G B with E in the bass: I (first inversion) and iii (root position) cover the same amount and
+       both contain the bass. The tie goes to the chord with the bass as its root: iii. */
+    CommonPracticeMember members[4] = {member(52, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(60, false, 1.5, BEAT_STRENGTH_STRONG),
+                                       member(67, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(71, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 4);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 0, ranked);
+    /* iii7 (E G B D? no: E G B D is not diatonic here) -- the best is a triad or seventh whose root is E. */
+    assert(ranked[0].root_pitch_class == 4);
+}
+
+static void test_a_second_inversion_does_not_hide_the_chord(void) {
+    /* G in the bass under C and E: still I, though not in root position. */
+    CommonPracticeMember members[3] = {member(43, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(60, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(64, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 3);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 0, ranked);
+    assert_best(ranked, 1, false);
+}
+
+static void test_an_empty_segment_ranks_without_a_bass(void) {
+    CommonPracticeWeights weights = weigh(NULL, 0);
+    CommonPracticeRankedChord ranked[14];
+    rank(&weights, 0, ranked);
+    assert(ranked[0].score <= 0.0); /* nothing sounds: no chord covers anything */
+}
+
+static void test_scoring_rejects_bad_input(void) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeights weights = weigh(NULL, 0);
+    CommonPracticeRankedChord ranked[14];
+    assert(common_practice_rank_candidates(NULL, 0, COMMON_PRACTICE_KEY_MAJOR, &config, ranked) ==
+           COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MINOR, &config, ranked) ==
+           COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE);
+    assert(common_practice_rank_candidates(&weights, 12, COMMON_PRACTICE_KEY_MAJOR, &config, ranked) ==
+           COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC);
+    assert(common_practice_rank_candidates(&weights, -1, COMMON_PRACTICE_KEY_MAJOR, &config, ranked) ==
+           COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC);
+    config.bass_weight = -1.0;
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, &config, ranked) ==
+           COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG);
+}
+
 int main(void) {
     test_default_config();
     test_a_pure_triad_weighs_its_three_pitch_classes();
@@ -168,6 +349,16 @@ int main(void) {
     test_the_result_is_deterministic();
     test_no_members_weigh_nothing();
     test_rejects_bad_input_and_leaves_the_output_untouched();
+    test_a_pure_triad_is_covered_completely();
+    test_the_candidates_are_the_fourteen_diatonic_chords_best_first();
+    test_a_dominant_seventh_beats_the_dominant_triad();
+    test_the_key_is_transposed();
+    test_a_missing_third_is_penalized();
+    test_the_bass_bonus_decides_between_i_and_iii();
+    test_a_tie_goes_to_root_position_then_the_triad();
+    test_a_second_inversion_does_not_hide_the_chord();
+    test_an_empty_segment_ranks_without_a_bass();
+    test_scoring_rejects_bad_input();
     printf("test_weighted_identification: ok\n");
     return 0;
 }
