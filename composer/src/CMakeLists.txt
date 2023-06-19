@@ -13,6 +13,7 @@ add_library(ursatz_composer STATIC
     fill/fill_loop.c
     fill/fill_rng.c
     fill/fill_record.c
+    fill/fill_suggest.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
