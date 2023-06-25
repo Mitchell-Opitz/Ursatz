@@ -7,6 +7,7 @@ add_library(common_practice_minimal
     seventh_identification.c
     key_identification.c
     weighted_identification.c
+    non_chord_tones.c
     ${PROJECT_SOURCE_DIR}/src/analysis/chord_identification.c
     ${PROJECT_SOURCE_DIR}/src/analysis/key_estimation.c
 )
