@@ -172,3 +172,18 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     }
     return COMMON_PRACTICE_WEIGHTED_OK;
 }
+
+unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chord, int tonic_pitch_class) {
+    if (chord == NULL || chord->degree < 1 || chord->degree > 7 || tonic_pitch_class < 0 || tonic_pitch_class > 11) {
+        return 0;
+    }
+    int degree = chord->degree - 1;
+    unsigned mask = 0;
+    mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[degree]) % 12);
+    mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[(degree + 2) % 7]) % 12);
+    mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[(degree + 4) % 7]) % 12);
+    if (chord->is_seventh) {
+        mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[(degree + 6) % 7]) % 12);
+    }
+    return mask;
+}

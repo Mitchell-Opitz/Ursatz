@@ -100,7 +100,10 @@ const Constraint *common_practice_triad_constraint(CommonPracticeTriad triad) {
     return valid_triad(triad) ? g_constraints[triad] : NULL;
 }
 
-ChordResult common_practice_build_triad_chord(CommonPracticeTriad triad, EntityID *sonority_target_id, Chord **out) {
+ChordResult common_practice_build_triad_chord_with_confidence(CommonPracticeTriad triad, EntityID *sonority_target_id,
+                                                          unsigned long confidence_numerator,
+                                                          unsigned long confidence_denominator,
+                                                          const char *interpretation_id_suffix, Chord **out) {
     if (!valid_triad(triad)) {
         return CHORD_ERR_NULL_LABEL;
     }
@@ -111,8 +114,9 @@ ChordResult common_practice_build_triad_chord(CommonPracticeTriad triad, EntityI
     }
 
     char interpretation_id_value[256];
-    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "%s-%s",
-             DESCRIPTORS[triad].chord_interpretation_id_prefix, entity_id_value(sonority_target_id));
+    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "%s-%s%s",
+             DESCRIPTORS[triad].chord_interpretation_id_prefix, entity_id_value(sonority_target_id),
+             interpretation_id_suffix != NULL ? interpretation_id_suffix : "");
 
     EntityID *interpretation_id;
     if (entity_id_create(interpretation_id_value, &interpretation_id) != ENTITY_ID_OK) {
@@ -140,7 +144,7 @@ ChordResult common_practice_build_triad_chord(CommonPracticeTriad triad, EntityI
     }
 
     Uncertainty *uncertainty;
-    if (uncertainty_create_scalar_confidence(1, 1, &uncertainty) != UNCERTAINTY_OK) {
+    if (uncertainty_create_scalar_confidence(confidence_numerator, confidence_denominator, &uncertainty) != UNCERTAINTY_OK) {
         value_destroy(claim);
         framework_reference_destroy(framework_reference);
         entity_id_destroy(interpretation_id);
@@ -177,4 +181,8 @@ ChordResult common_practice_build_triad_chord(CommonPracticeTriad triad, EntityI
     }
 
     return CHORD_OK;
+}
+
+ChordResult common_practice_build_triad_chord(CommonPracticeTriad triad, EntityID *sonority_target_id, Chord **out) {
+    return common_practice_build_triad_chord_with_confidence(triad, sonority_target_id, 1, 1, NULL, out);
 }

@@ -53,4 +53,16 @@ const Constraint *common_practice_triad_constraint(CommonPracticeTriad triad);
  */
 ChordResult common_practice_build_triad_chord(CommonPracticeTriad triad, EntityID *sonority_target_id, Chord **out);
 
+/*
+ * As common_practice_build_triad_chord, but the Interpretation's scalar confidence is
+ * confidence_numerator / confidence_denominator (a rational in [0, 1]) instead of 1, and the
+ * Interpretation's id has interpretation_id_suffix (NULL for none) appended, so two Chords over one
+ * Sonority (a best and a runner-up) get distinct ids. The existing builder is this one with confidence
+ * 1/1 and no suffix. Takes ownership of sonority_target_id on success only.
+ */
+ChordResult common_practice_build_triad_chord_with_confidence(CommonPracticeTriad triad, EntityID *sonority_target_id,
+                                                          unsigned long confidence_numerator,
+                                                          unsigned long confidence_denominator,
+                                                          const char *interpretation_id_suffix, Chord **out);
+
 #endif

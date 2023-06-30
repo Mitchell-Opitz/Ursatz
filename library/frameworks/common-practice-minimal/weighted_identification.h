@@ -64,7 +64,8 @@ typedef enum {
     COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG,
     COMMON_PRACTICE_WEIGHTED_ERR_BAD_MEMBER,
     COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE,
-    COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC
+    COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC,
+    COMMON_PRACTICE_WEIGHTED_ERR_ALLOC
 } CommonPracticeWeightedStatus;
 
 /* The weight of each pitch class (0 = C ... 11 = B), their sum, and the bass. */
@@ -119,5 +120,9 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
                                                               int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                               const CommonPracticeWeightedConfig *config,
                                                               CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]);
+
+/* The chord's pitch classes as a 12-bit mask (bit pc set), for a key on tonic_pitch_class: its root, third
+   and fifth, and its seventh when is_seventh. 0 for an invalid chord or tonic. */
+unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chord, int tonic_pitch_class);
 
 #endif

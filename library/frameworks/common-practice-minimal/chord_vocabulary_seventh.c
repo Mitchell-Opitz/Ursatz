@@ -92,8 +92,10 @@ const Constraint *common_practice_seventh_constraint(CommonPracticeSeventh seven
     return valid_seventh(seventh) ? g_constraints[seventh] : NULL;
 }
 
-ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, EntityID *sonority_target_id,
-                                                 Chord **out) {
+ChordResult common_practice_build_seventh_chord_with_confidence(CommonPracticeSeventh seventh, EntityID *sonority_target_id,
+                                                          unsigned long confidence_numerator,
+                                                          unsigned long confidence_denominator,
+                                                          const char *interpretation_id_suffix, Chord **out) {
     if (!valid_seventh(seventh)) {
         return CHORD_ERR_NULL_LABEL;
     }
@@ -104,8 +106,9 @@ ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, E
     }
 
     char interpretation_id_value[256];
-    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "%s-%s",
-             DESCRIPTORS[seventh].chord_interpretation_id_prefix, entity_id_value(sonority_target_id));
+    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "%s-%s%s",
+             DESCRIPTORS[seventh].chord_interpretation_id_prefix, entity_id_value(sonority_target_id),
+             interpretation_id_suffix != NULL ? interpretation_id_suffix : "");
 
     EntityID *interpretation_id;
     if (entity_id_create(interpretation_id_value, &interpretation_id) != ENTITY_ID_OK) {
@@ -133,7 +136,7 @@ ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, E
     }
 
     Uncertainty *uncertainty;
-    if (uncertainty_create_scalar_confidence(1, 1, &uncertainty) != UNCERTAINTY_OK) {
+    if (uncertainty_create_scalar_confidence(confidence_numerator, confidence_denominator, &uncertainty) != UNCERTAINTY_OK) {
         value_destroy(claim);
         framework_reference_destroy(framework_reference);
         entity_id_destroy(interpretation_id);
@@ -170,4 +173,8 @@ ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, E
     }
 
     return CHORD_OK;
+}
+
+ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, EntityID *sonority_target_id, Chord **out) {
+    return common_practice_build_seventh_chord_with_confidence(seventh, sonority_target_id, 1, 1, NULL, out);
 }
