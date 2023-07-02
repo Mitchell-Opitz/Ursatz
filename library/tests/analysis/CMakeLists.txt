@@ -37,4 +37,11 @@ target_link_libraries(test_framework_v1_corpus_subset_match_report PRIVATE commo
 add_test(NAME framework_v1_corpus_subset_match_report COMMAND test_framework_v1_corpus_subset_match_report
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_executable(test_field1_weighted_harmony test_field1_weighted_harmony.c)
+target_link_libraries(test_field1_weighted_harmony PRIVATE common_practice_minimal standard_meter)
+target_compile_definitions(test_field1_weighted_harmony PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME field1_weighted_harmony COMMAND test_field1_weighted_harmony)
+
 add_ursatz_architecture_test(analysis)
