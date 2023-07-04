@@ -44,4 +44,10 @@ target_compile_definitions(test_field1_weighted_harmony PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME field1_weighted_harmony COMMAND test_field1_weighted_harmony)
 
+add_executable(test_weighted_coverage_report test_weighted_coverage_report.c)
+target_link_libraries(test_weighted_coverage_report PRIVATE common_practice_minimal standard_meter)
+target_compile_definitions(test_weighted_coverage_report PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
+add_test(NAME weighted_coverage_report COMMAND test_weighted_coverage_report)
+
 add_ursatz_architecture_test(analysis)
