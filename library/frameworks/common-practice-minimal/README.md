@@ -76,15 +76,35 @@ All of the above are planned for later passes, either within this
 Framework's own versioning (`common-practice-minimal-v2`+) or as
 separate `frameworks/<name>/` extensions.
 
-## Known gap: non-chord tones
+## Weighted identification and non-chord tones
 
 `triad_identification.c` and `seventh_identification.c` match by subset:
 a triad or seventh matches when its degrees or intervals are all present,
 and any extra degrees are ignored as non-chord tones. Ties go to the first
 match in scan order and are logged to stderr. This tolerates one extra tone
-per beat. Real melody-plus-accompaniment textures often carry two or more,
-and then nothing matches (Field Nocturne No. 1 resolves 61 of 394 beats).
-The fix is weighting by duration and beat strength, which is open work.
+per beat; with two or more, nothing matches (Field Nocturne No. 1 resolved
+61 of 394 fixed-grid beats). Those functions are unchanged.
+
+`weighted_identification.h`, `non_chord_tones.h` and
+`weighted_chord_identification.h` are the weighted replacement, a new
+function beside them. A segment's members (plain structs: pitch, held or
+attacked, duration, the caller-computed `BeatStrength`, voice) are weighted by
+duration times a beat-strength or held factor, with the bass boosted. The 14
+diatonic candidates of a major key (seven triads, seven sevenths) are scored
+by chord-tone share, minus a penalty for an absent third and plus a bonus for
+a chord-tone bass; ties go to root position, then the triad, then the lower
+degree. The best chord, a runner-up on a different root, both scores, and an
+uncertainty (runner-up over best, higher is less certain) are reported, and a
+best score under the minimum coverage is no match. Leftover tones are labeled
+with the shared `NonChordTone` enum (passing, neighbor, appoggiatura, escape
+tone, suspension, anticipation, pedal) by approach and departure, using the
+same voice or else the nearest pitch in adjacent segments; anything unclear
+is left unclassified. The defaults are strong 1.0, medium 0.7, weak 0.4, held
+0.6, bass x1.5, missing third 0.15, chord-tone bass 0.05, minimum coverage
+0.5, all configurable. This framework includes no other framework: the caller
+supplies each member's `BeatStrength`. Limits: a major key only, diatonic
+candidates only, a whole-piece key, and no voice separation yet. See
+docs/modules/analysis.md.
 
 `key_identification.c` matches by one-directional containment: a key
 matches when all seven of its pitch classes are present, and pitch classes
