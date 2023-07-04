@@ -37,7 +37,7 @@ typedef struct {
     CommonPracticeMember *members; /* every segment's members, one after another */
     CommonPracticeSegment *segments;
     size_t segment_count;
-    char (*segment_ids)[24];
+    char (*segment_ids)[32];
     double *starts; /* each segment's window, in whole notes */
     double *ends;
 } WeightedPipeline;
@@ -131,7 +131,7 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
     p.segment_count = p.sonorities.count;
     p.members = (CommonPracticeMember *)calloc(total_members > 0 ? total_members : 1, sizeof(CommonPracticeMember));
     p.segments = (CommonPracticeSegment *)calloc(p.segment_count, sizeof(CommonPracticeSegment));
-    p.segment_ids = calloc(p.segment_count, sizeof(char[24]));
+    p.segment_ids = calloc(p.segment_count, sizeof(char[32]));
     p.starts = (double *)calloc(p.segment_count, sizeof(double));
     p.ends = (double *)calloc(p.segment_count, sizeof(double));
 
