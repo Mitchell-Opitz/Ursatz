@@ -98,10 +98,13 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
  *             - missing_third_penalty   if the chord's third has no weight at all
  *             + bass_chord_tone_bonus   if the bass pitch class is a chord tone
  *
- * A score can therefore run from below 0 to 1.05 with the defaults. The candidates are ranked best
- * first. Two scores within TOLERANCE (1e-9) are tied, and a tie goes: to the chord whose root is the
- * bass (root position), then to the triad over the seventh, then to the lower scale degree, so the
- * ranking is total and deterministic.
+ * A score can therefore run from below 0 to 1.05 with the defaults. A candidate is only eligible if its ROOT
+ * sounds (has weight): a chord whose root is absent is not a reading the notes support. Without this, a plain
+ * C-E-G is fully covered by A minor seventh (A C E G) and every bare triad would tie with the seventh above
+ * it. So fewer than 14 candidates may be ranked (none when nothing diatonic sounds as a root). The ranking is
+ * best first. Two scores within TOLERANCE (1e-9) are tied, and a tie goes: to the chord whose root is the
+ * bass (root position), then to the triad over the seventh, then to the lower scale degree, so the ranking is
+ * total and deterministic.
  */
 
 #define COMMON_PRACTICE_CANDIDATE_COUNT 14
@@ -115,11 +118,13 @@ typedef struct {
     double score;
 } CommonPracticeRankedChord;
 
-/* Ranks all 14 candidates for weights in a major key on tonic_pitch_class (0..11), best first. */
+/* Ranks the eligible candidates (root sounding) for weights in a major key on tonic_pitch_class (0..11),
+   best first: *out_count of them, at most COMMON_PRACTICE_CANDIDATE_COUNT, may be 0. */
 CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPracticeWeights *weights,
                                                               int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                               const CommonPracticeWeightedConfig *config,
-                                                              CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]);
+                                                              CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT],
+                                                              size_t *out_count);
 
 /* The chord's pitch classes as a 12-bit mask (bit pc set), for a key on tonic_pitch_class: its root, third
    and fifth, and its seventh when is_seventh. 0 for an invalid chord or tonic. */

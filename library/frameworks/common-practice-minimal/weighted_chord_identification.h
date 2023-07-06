@@ -15,7 +15,8 @@
  * For each segment the result holds the BEST chord and the RUNNER-UP, both scores, the UNCERTAINTY, and
  * the labeled leftover tones of the best chord. The runner-up is the best-scoring candidate on a DIFFERENT
  * ROOT from the best: a triad and the seventh chord built on it are one harmony, not rivals, and counting the
- * seventh of a bare triad as its runner-up would make every plain triad a dead tie.
+ * seventh of a bare triad as its runner-up would make every plain triad a dead tie. With no other root
+ * sounding there is no runner-up (its chord is NULL, its score 0) and the uncertainty is 0.
  *
  *     uncertainty = runner_up_score / best_score, clamped to [0, 1]   (1 when best_score <= 0)
  *

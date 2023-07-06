@@ -107,8 +107,9 @@ static bool ranks_ahead(const CommonPracticeRankedChord *a, const CommonPractice
 CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPracticeWeights *weights,
                                                               int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                               const CommonPracticeWeightedConfig *config,
-                                                              CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]) {
-    if (weights == NULL || config == NULL || out == NULL) {
+                                                              CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT],
+                                                              size_t *out_count) {
+    if (weights == NULL || config == NULL || out == NULL || out_count == NULL) {
         return COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT;
     }
     if (!config_valid(config)) {
@@ -128,6 +129,10 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         int third = (tonic_pitch_class + MAJOR_SCALE[(degree + 2) % 7]) % 12;
         int fifth = (tonic_pitch_class + MAJOR_SCALE[(degree + 4) % 7]) % 12;
         int seventh = (tonic_pitch_class + MAJOR_SCALE[(degree + 6) % 7]) % 12;
+
+        if (weights->pitch_class[root] <= 0.0) {
+            continue; /* the root does not sound: not a reading the notes support */
+        }
 
         for (int with_seventh = 0; with_seventh < 2; with_seventh++) {
             double in_chord = weights->pitch_class[root] + weights->pitch_class[third] + weights->pitch_class[fifth];
@@ -170,6 +175,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     for (size_t i = 0; i < count; i++) {
         out[i] = ranked[i];
     }
+    *out_count = count;
     return COMMON_PRACTICE_WEIGHTED_OK;
 }
 

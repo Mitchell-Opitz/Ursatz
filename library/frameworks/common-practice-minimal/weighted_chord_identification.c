@@ -96,22 +96,29 @@ static CommonPracticeWeightedStatus identify_one(const CommonPracticeSegment *se
         return status;
     }
     CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
-    status = common_practice_rank_candidates(&weights, tonic_pitch_class, mode, config, ranked);
+    size_t ranked_count = 0;
+    status = common_practice_rank_candidates(&weights, tonic_pitch_class, mode, config, ranked, &ranked_count);
     if (status != COMMON_PRACTICE_WEIGHTED_OK) {
         return status;
     }
+    if (ranked_count == 0) {
+        *out = result; /* no root sounds: no candidate, and no match */
+        return COMMON_PRACTICE_WEIGHTED_OK;
+    }
 
     /* The runner-up is the best candidate on a DIFFERENT root: a triad and the seventh built on it are one
-       harmony, not rivals, so the seventh of a bare triad does not make a dead tie. */
+       harmony, not rivals. With none, there is no rival and the uncertainty is 0. */
     size_t runner_index = 1;
-    while (runner_index + 1 < COMMON_PRACTICE_CANDIDATE_COUNT &&
-           ranked[runner_index].root_pitch_class == ranked[0].root_pitch_class) {
+    while (runner_index < ranked_count && ranked[runner_index].root_pitch_class == ranked[0].root_pitch_class) {
         runner_index++;
     }
+    bool has_runner_up = runner_index < ranked_count;
     result.best = ranked[0];
-    result.runner_up = ranked[runner_index];
     result.best_score = ranked[0].score;
-    result.runner_up_score = ranked[runner_index].score;
+    if (has_runner_up) {
+        result.runner_up = ranked[runner_index];
+        result.runner_up_score = ranked[runner_index].score;
+    }
     if (result.best_score > 0.0) {
         double ratio = result.runner_up_score / result.best_score;
         result.uncertainty = ratio < 0.0 ? 0.0 : (ratio > 1.0 ? 1.0 : ratio);
@@ -125,7 +132,7 @@ static CommonPracticeWeightedStatus identify_one(const CommonPracticeSegment *se
             return COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT;
         }
         status = build_chord(&result.best, segment->id, 1.0 - result.uncertainty, NULL, &result.best_chord);
-        if (status == COMMON_PRACTICE_WEIGHTED_OK) {
+        if (status == COMMON_PRACTICE_WEIGHTED_OK && has_runner_up) {
             status = build_chord(&result.runner_up, segment->id, result.uncertainty, "-runner-up",
                                  &result.runner_up_chord);
         }
