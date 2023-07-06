@@ -52,7 +52,9 @@ static int check_file(const char *path) {
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
             strcmp(start, "chord_vocabulary.h") == 0 || strcmp(start, "key_vocabulary.h") == 0 ||
             strcmp(start, "triad_identification.h") == 0 || strcmp(start, "key_identification.h") == 0 ||
-            strcmp(start, "chord_vocabulary_seventh.h") == 0 || strcmp(start, "seventh_identification.h") == 0) {
+            strcmp(start, "chord_vocabulary_seventh.h") == 0 || strcmp(start, "seventh_identification.h") == 0 ||
+            strcmp(start, "weighted_identification.h") == 0 || strcmp(start, "non_chord_tones.h") == 0 ||
+            strcmp(start, "weighted_chord_identification.h") == 0) {
             continue;
         }
 

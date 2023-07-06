@@ -1,0 +1,35 @@
+# Hand-marked harmony in John Field, Nocturne No. 1 in E-flat major (H. 24), the opening of the piece.
+#
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The score was not available when this file was
+# written. The marks are a hand reading of the harmony, made from the pitch content of
+# tests/fixtures/framework-v1-corpus/"Field 1.mid" (the left hand's bass and arpeggio figure carries the
+# harmony, one chord to a measure) and the piece's known opening progression in E-flat major, I - V7 - I. They
+# were NOT derived from the output of the weighted chord identifier. A human should confirm them against an
+# edition of the score (for example the Breitkopf & Hartel edition, or the IMSLP scan of Field's Nocturnes)
+# before this file is relied on.
+#
+# NUMBERING: measures are numbered as the importer numbers the FILE. The file declares 12/8 from the start and
+# no pickup, so its first note (a B-flat in the right hand, on beat 4 of measure 1) is in measure 1 and the left
+# hand begins in measure 2. If the score counts the opening as an upbeat, the score's numbers run one lower than
+# these.
+#
+# FORMAT: <measure> <beat> <numeral>. Each line gives the harmony from that point until the next line. Beat is
+# 1-based in dotted-quarter beats (a 12/8 measure has four). Numerals are Roman numerals in E-flat major: I, ii,
+# iii, IV, V, vi, vii; a trailing 7 (V7) is the seventh chord on that root. The last line, "END", closes the
+# annotated span. Lines starting with # and blank lines are ignored.
+#
+# Reading (left-hand bass and chord tones): measure 2 E-flat bass over E-flat G B-flat (I); measure 3 B-flat bass
+# with D, A-flat (V7); measures 4-6 I; 7 V7; 8-9 I; 10 A-flat bass (IV); 11 V7; 12-13 I; 14 IV; 15 V7; 16 I.
+
+2 1 I
+3 1 V7
+4 1 I
+7 1 V7
+8 1 I
+10 1 IV
+11 1 V7
+12 1 I
+14 1 IV
+15 1 V7
+16 1 I
+17 1 END
