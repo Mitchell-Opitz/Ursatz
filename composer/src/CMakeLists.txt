@@ -8,6 +8,12 @@ add_library(ursatz_composer STATIC
     plan/analysis_load.c
     render/render.c
     render/export.c
+    fill/fill_target.c
+    fill/fill_operator.c
+    fill/fill_loop.c
+    fill/fill_rng.c
+    fill/fill_record.c
+    fill/fill_suggest.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

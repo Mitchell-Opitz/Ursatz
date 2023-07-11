@@ -6,6 +6,15 @@
 #include <cJSON.h>
 #include <ursatz_composer/plan_json.h>
 
+/* Writing helpers shared by plan_json.c and fill_record.c. */
+
+/* Adds item under key, taking ownership; false (item freed) on failure or when item is NULL. */
+bool json_add(cJSON *object, const char *key, cJSON *item);
+bool json_append(cJSON *array, cJSON *item);
+cJSON *json_number(long value);
+/* cJSON's tab-indented print as 2-space indent, "key": value, and a trailing newline. Caller frees. */
+char *json_indent_with_spaces(const char *printed);
+
 /* Reading helpers shared by plan_json.c and analysis_load.c. */
 
 typedef struct {
