@@ -176,7 +176,6 @@ FillResult fill_gather(const PiecePlan *plan, const FillOperatorRegistry *regist
             if (!checker(plan, target, operator_, &entry.candidate, checker_context, &entry.check) ||
                 entry.check.score_denominator == 0) {
                 /* Candidates already moved into out are freed with it; the rest of the list is freed here. */
-                list.items[c].destroy = entry.candidate.destroy;
                 fill_candidates_clear(&list);
                 fill_entries_destroy(out);
                 return FILL_ERR_CHECKER_FAILED;
