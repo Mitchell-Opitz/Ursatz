@@ -42,3 +42,8 @@ listed on stderr. Filling a plan is not implemented yet.
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
 [docs/plan-format.md](docs/plan-format.md).
+
+## Fill loop
+
+The engine that fills a plan with registered operators, seeded and recorded, with a suggestion mode.
+See [docs/fill-loop.md](docs/fill-loop.md).
