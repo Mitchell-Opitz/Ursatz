@@ -25,3 +25,8 @@ add_executable(test_fill_loop test_fill_loop.c)
 target_link_libraries(test_fill_loop PRIVATE ursatz_composer)
 target_compile_options(test_fill_loop PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_fill_loop COMMAND test_fill_loop)
+
+add_executable(test_lane_resize test_lane_resize.c)
+target_link_libraries(test_lane_resize PRIVATE ursatz_composer)
+target_compile_options(test_lane_resize PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_lane_resize COMMAND test_lane_resize)
