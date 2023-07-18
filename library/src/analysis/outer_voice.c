@@ -70,6 +70,155 @@ void outer_voice_pick_line(const OuterNote *notes, const OuterSegment *segments,
     }
 }
 
+/* --- smoothing --- */
+
+/* How much higher `a` is than `b`, if it is: false when a <= b. */
+static bool excess_above(ExactRational a, ExactRational b, ExactRational *out) {
+    if (er_cmp(a, b) <= 0) {
+        return false;
+    }
+    return er_sub(a, b, out) == 0;
+}
+
+OuterVoiceResult outer_voice_guard_register(const OuterNote *notes, const OuterSegment *segments,
+                                             size_t segment_count, bool soprano, int semitones,
+                                             ExactRational window_beats, OuterBeatLength beat_length,
+                                             void *beat_context, OuterNode *nodes) {
+    ExactRational limit = er_make((unsigned long long)semitones, 1);
+    bool have_previous = false;
+    size_t previous = 0;
+    for (size_t i = 0; i < segment_count; i++) {
+        if (!nodes[i].present) {
+            continue;
+        }
+        if (have_previous) {
+            const OuterNote *before = &notes[nodes[previous].note];
+            const OuterNote *now = &notes[nodes[i].note];
+            /* Only a note that has ended can be the one "during a gap". */
+            if (er_cmp(before->release, segments[i].start) <= 0) {
+                /* The soprano falling below, or the bass rising above, the previous note. */
+                ExactRational jump = {0, 1};
+                bool leaps = soprano ? excess_above(before->pitch, now->pitch, &jump)
+                                     : excess_above(now->pitch, before->pitch, &jump);
+                if (leaps && er_cmp(jump, limit) > 0) {
+                    ExactRational gap = {0, 1};
+                    ExactRational beat = {0, 1};
+                    ExactRational window = {0, 1};
+                    if (er_sub(segments[i].start, before->release, &gap) != 0) {
+                        return OUTER_VOICE_ERR_OVERFLOW;
+                    }
+                    if (!beat_length(beat_context, before->release, &beat)) {
+                        return OUTER_VOICE_ERR_BEAT_GRID;
+                    }
+                    if (er_mul(beat, window_beats, &window) != 0) {
+                        return OUTER_VOICE_ERR_OVERFLOW;
+                    }
+                    if (er_cmp(gap, window) < 0) {
+                        nodes[i].present = false;
+                        nodes[i].guarded = true;
+                        continue;
+                    }
+                }
+            }
+        }
+        have_previous = true;
+        previous = i;
+    }
+    return OUTER_VOICE_OK;
+}
+
+OuterVoiceResult outer_voice_mark_bridged_gaps(const OuterNote *notes, const OuterSegment *segments,
+                                                size_t segment_count, ExactRational window_beats,
+                                                OuterBeatLength beat_length, void *beat_context,
+                                                OuterNode *nodes) {
+    size_t i = 0;
+    while (i < segment_count) {
+        if (nodes[i].present) {
+            i++;
+            continue;
+        }
+        size_t run_start = i;
+        while (i < segment_count && !nodes[i].present) {
+            i++;
+        }
+        size_t run_end = i; /* one past the run; the next present entry, if any, is at run_end */
+        if (run_start == 0 || run_end >= segment_count) {
+            continue; /* an end of the line, not a gap between two notes */
+        }
+
+        const OuterNote *before = &notes[nodes[run_start - 1].note];
+        ExactRational gap_start = before->release;
+        if (er_cmp(gap_start, segments[run_start].start) > 0) {
+            gap_start = segments[run_start].start;
+        }
+        ExactRational gap = {0, 1};
+        ExactRational beat = {0, 1};
+        ExactRational window = {0, 1};
+        if (er_cmp(segments[run_end].start, gap_start) < 0) {
+            continue;
+        }
+        if (er_sub(segments[run_end].start, gap_start, &gap) != 0) {
+            return OUTER_VOICE_ERR_OVERFLOW;
+        }
+        if (!beat_length(beat_context, gap_start, &beat)) {
+            return OUTER_VOICE_ERR_BEAT_GRID;
+        }
+        if (er_mul(beat, window_beats, &window) != 0) {
+            return OUTER_VOICE_ERR_OVERFLOW;
+        }
+        if (er_cmp(gap, window) < 0) {
+            for (size_t k = run_start; k < run_end; k++) {
+                nodes[k].bridged = true;
+            }
+        }
+    }
+    return OUTER_VOICE_OK;
+}
+
+/* The beat length from the injected beat grid: the length of the beat that holds `at`. */
+typedef struct {
+    const MeterMap *map;
+    BeatGridProvider provider;
+    void *provider_context;
+} BeatGridContext;
+
+static bool grid_beat_length(void *context, ExactRational at, ExactRational *out) {
+    const BeatGridContext *grid = (const BeatGridContext *)context;
+    MusicalTime *time = er_to_time(at);
+    if (time == NULL) {
+        return false;
+    }
+    int measure = 0;
+    MeterMapResult indexed = meter_map_measure_index_at(grid->map, time, &measure);
+    musical_time_destroy(time);
+    TimeSpan *span = NULL;
+    if (indexed != METER_MAP_OK || meter_map_measure_span(grid->map, measure, &span) != METER_MAP_OK) {
+        return false;
+    }
+    ExactRational measure_end = er_of_time(time_span_end(span));
+    time_span_destroy(span);
+
+    MusicalTime **starts = NULL;
+    size_t count = 0;
+    if (!grid->provider(grid->map, measure, grid->provider_context, &starts, &count) || count == 0) {
+        return false;
+    }
+    bool found = false;
+    for (size_t k = 0; k < count && !found; k++) {
+        ExactRational beat_start = er_of_time(starts[k]);
+        ExactRational beat_end = k + 1 < count ? er_of_time(starts[k + 1]) : measure_end;
+        if (er_cmp(beat_start, at) <= 0 && er_cmp(at, beat_end) < 0) {
+            found = er_sub(beat_end, beat_start, out) == 0;
+            break;
+        }
+    }
+    for (size_t k = 0; k < count; k++) {
+        musical_time_destroy(starts[k]);
+    }
+    free(starts);
+    return found;
+}
+
 typedef struct {
     const char *id;
     size_t index;
@@ -134,10 +283,7 @@ OuterVoiceResult outer_voice_extract(const AdaptiveSonorities *segments, NoteEve
                                       PitchNumericValue *const *pitch_values, size_t note_count, const MeterMap *map,
                                       BeatGridProvider provider, void *provider_context,
                                       const OuterVoiceConfig *config, OuterVoiceLines *out) {
-    (void)map;
-    (void)provider;
-    (void)provider_context;
-    if (segments == NULL || out == NULL || (note_count > 0 && (notes == NULL || pitch_values == NULL))) {
+    if (segments == NULL || out == NULL || map == NULL || provider == NULL || (note_count > 0 && (notes == NULL || pitch_values == NULL))) {
         return OUTER_VOICE_ERR_NULL_ARGUMENT;
     }
     OuterVoiceConfig effective = config != NULL ? *config : outer_voice_config_default();
@@ -229,6 +375,27 @@ OuterVoiceResult outer_voice_extract(const AdaptiveSonorities *segments, NoteEve
         } else {
             outer_voice_pick_line(facts, views, segment_count, true, soprano_nodes);
             outer_voice_pick_line(facts, views, segment_count, false, bass_nodes);
+
+            BeatGridContext grid = {map, provider, provider_context};
+            ExactRational window = er_make(effective.gap_bridge_max_numerator, effective.gap_bridge_max_denominator);
+            if (effective.guard_soprano_register) {
+                failure = outer_voice_guard_register(facts, views, segment_count, true,
+                                                     effective.register_guard_semitones, window, grid_beat_length,
+                                                     &grid, soprano_nodes);
+            }
+            if (failure == OUTER_VOICE_OK && effective.guard_bass_register) {
+                failure = outer_voice_guard_register(facts, views, segment_count, false,
+                                                     effective.register_guard_semitones, window, grid_beat_length,
+                                                     &grid, bass_nodes);
+            }
+            if (failure == OUTER_VOICE_OK && effective.bridge_gaps) {
+                failure = outer_voice_mark_bridged_gaps(facts, views, segment_count, window, grid_beat_length, &grid,
+                                                        soprano_nodes);
+                if (failure == OUTER_VOICE_OK) {
+                    failure = outer_voice_mark_bridged_gaps(facts, views, segment_count, window, grid_beat_length,
+                                                            &grid, bass_nodes);
+                }
+            }
             size_t built = 0;
             for (; built < segment_count && failure == OUTER_VOICE_OK; built++) {
                 failure = build_entry(&soprano_nodes[built], built, &views[built], notes, pitch_values,

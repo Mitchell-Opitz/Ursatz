@@ -44,4 +44,34 @@ typedef struct {
 void outer_voice_pick_line(const OuterNote *notes, const OuterSegment *segments, size_t segment_count,
                            bool soprano, OuterNode *nodes);
 
+/*
+ * The length of the beat at time `at`, from the beat grid (injected). False on failure. Smoothing measures
+ * gaps in beats with it, so a gap is "short" by the beat of the meter it falls in (a dotted-quarter in 6/8).
+ */
+typedef bool (*OuterBeatLength)(void *context, ExactRational at, ExactRational *out_beat);
+
+/*
+ * Rules 2 and 3, the register guard. For a segment whose picked note falls more than `semitones` away from
+ * the line's previous present note in the wrong direction (below it for the soprano, above it for the bass),
+ * while that note ended less than `window_beats` beats before the segment, the segment is made absent and
+ * marked guarded, rather than adopting an accompaniment note. The previous note is the last present entry
+ * after earlier guarding, so a run of accompaniment-only segments stays absent until the window passes.
+ * `semitones` is in pitch position units. nodes is edited in place.
+ */
+OuterVoiceResult outer_voice_guard_register(const OuterNote *notes, const OuterSegment *segments,
+                                             size_t segment_count, bool soprano, int semitones,
+                                             ExactRational window_beats, OuterBeatLength beat_length,
+                                             void *beat_context, OuterNode *nodes);
+
+/*
+ * Rule 1, gap bridging. A run of absent entries between two present entries is a gap: from the end of the
+ * earlier note (or the first absent segment's start, if later) to the start of the next present segment. If
+ * the gap is under `window_beats` beats the run is marked bridged: a rest inside one line, never filled from
+ * another voice. Runs at either end of the line are not bridged.
+ */
+OuterVoiceResult outer_voice_mark_bridged_gaps(const OuterNote *notes, const OuterSegment *segments,
+                                                size_t segment_count, ExactRational window_beats,
+                                                OuterBeatLength beat_length, void *beat_context,
+                                                OuterNode *nodes);
+
 #endif

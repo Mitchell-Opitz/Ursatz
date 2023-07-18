@@ -377,6 +377,244 @@ static void test_config_defaults(void) {
     assert(config.bridge_gaps && config.guard_soprano_register && config.guard_bass_register);
 }
 
+/* --- the smoothing rules, each on its own (a constant quarter-note beat) --- */
+
+static bool constant_beat(void *context, ExactRational at, ExactRational *out) {
+    (void)context;
+    (void)at;
+    *out = er_make(1, 4);
+    return true;
+}
+
+/* A note [onset, release) in 1/16s of a whole note at pitch p. */
+static OuterNote note16(const char *id, unsigned long onset, unsigned long release, unsigned long pitch) {
+    OuterNote n;
+    memset(&n, 0, sizeof(n));
+    n.id = id;
+    n.onset = er_make(onset, 16);
+    n.release = er_make(release, 16);
+    n.pitch = er_make(pitch, 1);
+    return n;
+}
+
+/* A one-beat (4/16) segment starting at beat `beat` (0-based). */
+static OuterSegment beat_segment(unsigned long beat, const size_t *members, size_t count) {
+    OuterSegment s;
+    s.start = er_make(beat * 4, 16);
+    s.end = er_make(beat * 4 + 4, 16);
+    s.members = members;
+    s.member_count = count;
+    return s;
+}
+
+static void test_the_soprano_guard_keeps_a_resting_melody_absent(void) {
+    /* Melody C6 in beat 0; in beat 1 only the accompaniment (E4) sounds, 20 semitones lower, and the melody note
+       ended as the beat began: absent, not the accompaniment's top note. Beat 2 the melody returns. */
+    OuterNote notes[4] = {note16("m0", 0, 4, 84), note16("acc0", 0, 12, 52), note16("acc1", 4, 8, 64),
+                          note16("m2", 8, 12, 86)};
+    size_t beat0[2] = {0, 1};
+    size_t beat1[2] = {1, 2};
+    size_t beat2[2] = {1, 3};
+    OuterSegment segments[3] = {beat_segment(0, beat0, 2), beat_segment(1, beat1, 2), beat_segment(2, beat2, 2)};
+    OuterNode nodes[3];
+    outer_voice_pick_line(notes, segments, 3, true, nodes);
+    assert(nodes[1].present && notes[nodes[1].note].pitch.n == 64); /* before the guard: the accompaniment */
+
+    assert(outer_voice_guard_register(notes, segments, 3, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[0].present && !nodes[0].guarded);
+    assert(!nodes[1].present && nodes[1].guarded);
+    assert(nodes[2].present && notes[nodes[2].note].pitch.n == 86);
+}
+
+static void test_the_soprano_guard_does_not_fire_without_a_big_enough_drop_or_a_short_enough_gap(void) {
+    /* A drop of exactly an octave is not more than an octave. */
+    OuterNote exact[2] = {note16("a", 0, 4, 72), note16("b", 4, 8, 60)};
+    size_t first[1] = {0};
+    size_t second[1] = {1};
+    OuterSegment two[2] = {beat_segment(0, first, 1), beat_segment(1, second, 1)};
+    OuterNode nodes[2];
+    outer_voice_pick_line(exact, two, 2, true, nodes);
+    assert(outer_voice_guard_register(exact, two, 2, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[1].present);
+
+    /* A big drop after a gap of a whole beat or more: the line has been silent long enough, so the lower
+       note is adopted (a new phrase low in the range). */
+    OuterNote late[2] = {note16("a", 0, 4, 84), note16("b", 8, 12, 60)};
+    OuterSegment far[2] = {beat_segment(0, first, 1), beat_segment(2, second, 1)};
+    outer_voice_pick_line(late, far, 2, true, nodes);
+    assert(outer_voice_guard_register(late, far, 2, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[1].present && !nodes[1].guarded);
+
+    /* The previous note still sounding is not "ended": nothing to guard against. */
+    OuterNote sounding[2] = {note16("a", 0, 12, 84), note16("b", 4, 8, 60)};
+    OuterSegment overlapped[2] = {beat_segment(0, first, 1), beat_segment(1, second, 1)};
+    outer_voice_pick_line(sounding, overlapped, 2, true, nodes);
+    assert(outer_voice_guard_register(sounding, overlapped, 2, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[1].present);
+
+    /* The threshold is configurable: a 20 semitone drop is under a 24 semitone guard. */
+    OuterNote big[2] = {note16("a", 0, 4, 84), note16("b", 4, 8, 64)};
+    outer_voice_pick_line(big, two, 2, true, nodes);
+    assert(outer_voice_guard_register(big, two, 2, true, 24, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[1].present);
+}
+
+static void test_the_soprano_stays_absent_until_the_window_passes(void) {
+    /* Melody C6 ends at 4/16; accompaniment-only beats follow at 1, 2 and 3. A beat is 4/16, so the window is
+       a beat from the melody's end: beat 1 starts at the end (gap 0), beat 2 a beat later (gap 4/16, not under
+       a beat). Only the first is absent. */
+    OuterNote notes[3] = {note16("m", 0, 4, 84), note16("acc1", 4, 8, 60), note16("acc2", 8, 12, 60)};
+    size_t a[1] = {0};
+    size_t b[1] = {1};
+    size_t c[1] = {2};
+    OuterSegment segments[3] = {beat_segment(0, a, 1), beat_segment(1, b, 1), beat_segment(2, c, 1)};
+    OuterNode nodes[3];
+    outer_voice_pick_line(notes, segments, 3, true, nodes);
+    assert(outer_voice_guard_register(notes, segments, 3, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(!nodes[1].present && nodes[1].guarded);
+    assert(nodes[2].present && !nodes[2].guarded);
+
+    /* A wider window (two beats) keeps beat 2 absent too. */
+    outer_voice_pick_line(notes, segments, 3, true, nodes);
+    assert(outer_voice_guard_register(notes, segments, 3, true, 12, er_make(2, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(!nodes[1].present && !nodes[2].present);
+}
+
+static void test_the_bass_guard_mirrors_the_soprano_guard(void) {
+    /* Bass C2 in beat 0; in beat 1 the lowest sounding note is C4, 24 above, as the bass note ended. */
+    OuterNote notes[3] = {note16("b0", 0, 4, 36), note16("up", 0, 12, 76), note16("c4", 4, 8, 60)};
+    size_t beat0[2] = {0, 1};
+    size_t beat1[2] = {1, 2};
+    OuterSegment segments[2] = {beat_segment(0, beat0, 2), beat_segment(1, beat1, 2)};
+    OuterNode nodes[2];
+    outer_voice_pick_line(notes, segments, 2, false, nodes);
+    assert(nodes[1].present && notes[nodes[1].note].pitch.n == 60);
+    assert(outer_voice_guard_register(notes, segments, 2, false, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[0].present);
+    assert(!nodes[1].present && nodes[1].guarded);
+
+    /* A bass that falls is not guarded (the mirror of a soprano that rises). */
+    OuterNote falling[2] = {note16("a", 0, 4, 60), note16("b", 4, 8, 36)};
+    size_t one[1] = {0};
+    size_t two[1] = {1};
+    OuterSegment pair[2] = {beat_segment(0, one, 1), beat_segment(1, two, 1)};
+    outer_voice_pick_line(falling, pair, 2, false, nodes);
+    assert(outer_voice_guard_register(falling, pair, 2, false, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[1].present);
+}
+
+static void test_gap_bridging_marks_short_rests_only(void) {
+    OuterNote notes[3] = {note16("a", 0, 4, 60), note16("b", 8, 12, 62), note16("c", 20, 24, 64)};
+    size_t a[1] = {0};
+    size_t b[1] = {1};
+    size_t c[1] = {2};
+    OuterSegment segments[6] = {beat_segment(0, a, 1), beat_segment(1, NULL, 0), beat_segment(2, b, 1),
+                                beat_segment(3, NULL, 0), beat_segment(4, NULL, 0), beat_segment(5, c, 1)};
+    /* beat 0 note a, beat 1 rest, beat 2 note b (a one-beat... the gap from a's end at 4/16 to beat 2 at 8/16
+       is 4/16: exactly one beat, not under it), beats 3-4 rest, beat 5 note c. */
+    OuterNode nodes[6];
+    outer_voice_pick_line(notes, segments, 6, true, nodes);
+    assert(outer_voice_mark_bridged_gaps(notes, segments, 6, er_make(2, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(nodes[1].bridged);                       /* 4/16 of a gap is under two beats */
+    assert(!nodes[3].bridged && !nodes[4].bridged); /* b ends at 12/16, c starts at 20/16: two beats, not under */
+
+    /* With the limit at one beat, the first gap (exactly a beat) is no longer short. */
+    outer_voice_pick_line(notes, segments, 6, true, nodes);
+    assert(outer_voice_mark_bridged_gaps(notes, segments, 6, er_make(1, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(!nodes[1].bridged && !nodes[3].bridged);
+}
+
+static void test_rests_at_the_ends_of_a_line_are_not_bridged(void) {
+    OuterNote notes[1] = {note16("a", 4, 8, 60)};
+    size_t a[1] = {0};
+    OuterSegment segments[3] = {beat_segment(0, NULL, 0), beat_segment(1, a, 1), beat_segment(2, NULL, 0)};
+    OuterNode nodes[3];
+    outer_voice_pick_line(notes, segments, 3, true, nodes);
+    assert(outer_voice_mark_bridged_gaps(notes, segments, 3, er_make(4, 1), constant_beat, NULL, nodes) ==
+           OUTER_VOICE_OK);
+    assert(!nodes[0].bridged && !nodes[2].bridged);
+}
+
+/* --- the rules through outer_voice_extract --- */
+
+static void test_a_resting_melody_stays_absent_while_the_accompaniment_continues(void) {
+    TuningSystem *tuning = make_tuning("midi");
+    Notes set = {{0}, {0}, 0};
+    add_note_in(&set, tuning, "bass", 0, 1, 3, 4, 36);   /* C2 held under beats 1 to 3 */
+    add_note_in(&set, tuning, "chord", 0, 1, 3, 4, 60);  /* C4 */
+    add_note_in(&set, tuning, "m0", 0, 1, 1, 4, 84);     /* melody C6 in beat 1 */
+    add_note_in(&set, tuning, "m2", 1, 2, 1, 4, 86);     /* melody D6 in beat 3; beat 2 rests */
+    MeterMap *map = four_four();
+    OuterVoiceConfig config = outer_voice_config_default();
+    AdaptiveSonorities segments = {0};
+    OuterVoiceLines lines = {0};
+    extract(&set, map, &config, &segments, &lines);
+
+    assert(lines.count == 3);
+    assert_entry(&lines.soprano[0], "m0", 84);
+    assert(!lines.soprano[1].present && lines.soprano[1].guarded && lines.soprano[1].bridged);
+    assert(lines.soprano[1].note_id == NULL && lines.soprano[1].pitch == NULL);
+    assert_span(&lines.soprano[1], 1, 4, 1, 2); /* the absent entry keeps its segment's span */
+    assert_entry(&lines.soprano[2], "m2", 86);
+    for (size_t i = 0; i < 3; i++) {
+        assert_entry(&lines.bass[i], "bass", 36); /* the bass line is unbroken */
+    }
+    outer_voice_lines_destroy(&lines);
+    adaptive_sonorities_destroy(&segments);
+
+    /* With the guard off, the soprano adopts the accompaniment's top note in the rest. */
+    config.guard_soprano_register = false;
+    config.bridge_gaps = false;
+    extract(&set, map, &config, &segments, &lines);
+    assert_entry(&lines.soprano[1], "chord", 60);
+    assert(!lines.soprano[1].guarded && !lines.soprano[1].bridged);
+    outer_voice_lines_destroy(&lines);
+    adaptive_sonorities_destroy(&segments);
+
+    meter_map_destroy(map);
+    destroy_notes(&set);
+    tuning_system_destroy(tuning);
+}
+
+static void test_a_bass_rest_is_bridged(void) {
+    /* Bass C2 in beat 1, resting in beat 2 while upper voices continue, back in beat 3. */
+    TuningSystem *tuning = make_tuning("midi");
+    Notes set = {{0}, {0}, 0};
+    add_note_in(&set, tuning, "b0", 0, 1, 1, 4, 36);
+    add_note_in(&set, tuning, "b2", 1, 2, 1, 4, 38);
+    add_note_in(&set, tuning, "up", 0, 1, 3, 4, 72);
+    add_note_in(&set, tuning, "mid", 0, 1, 3, 4, 67);
+    MeterMap *map = four_four();
+    OuterVoiceConfig config = outer_voice_config_default();
+    AdaptiveSonorities segments = {0};
+    OuterVoiceLines lines = {0};
+    extract(&set, map, &config, &segments, &lines);
+
+    assert(lines.count == 3);
+    assert_entry(&lines.bass[0], "b0", 36);
+    assert(!lines.bass[1].present && lines.bass[1].guarded && lines.bass[1].bridged);
+    assert_entry(&lines.bass[2], "b2", 38);
+    for (size_t i = 0; i < 3; i++) {
+        assert_entry(&lines.soprano[i], "up", 72);
+    }
+    outer_voice_lines_destroy(&lines);
+    adaptive_sonorities_destroy(&segments);
+    meter_map_destroy(map);
+    destroy_notes(&set);
+    tuning_system_destroy(tuning);
+}
+
 int main(void) {
     test_config_defaults();
     test_a_single_voice_is_both_outer_lines();
@@ -386,6 +624,14 @@ int main(void) {
     test_silence_between_segments_makes_no_entry();
     test_pick_line_directly();
     test_rejects_bad_input();
+    test_the_soprano_guard_keeps_a_resting_melody_absent();
+    test_the_soprano_guard_does_not_fire_without_a_big_enough_drop_or_a_short_enough_gap();
+    test_the_soprano_stays_absent_until_the_window_passes();
+    test_the_bass_guard_mirrors_the_soprano_guard();
+    test_gap_bridging_marks_short_rests_only();
+    test_rests_at_the_ends_of_a_line_are_not_bridged();
+    test_a_resting_melody_stays_absent_while_the_accompaniment_continues();
+    test_a_bass_rest_is_bridged();
     printf("test_outer_voice: ok\n");
     return 0;
 }
