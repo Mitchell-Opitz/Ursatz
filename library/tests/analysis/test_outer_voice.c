@@ -552,21 +552,23 @@ static void test_a_resting_melody_stays_absent_while_the_accompaniment_continues
     TuningSystem *tuning = make_tuning("midi");
     Notes set = {{0}, {0}, 0};
     add_note_in(&set, tuning, "bass", 0, 1, 3, 4, 36);   /* C2 held under beats 1 to 3 */
-    add_note_in(&set, tuning, "chord", 0, 1, 3, 4, 60);  /* C4 */
-    add_note_in(&set, tuning, "m0", 0, 1, 1, 4, 84);     /* melody C6 in beat 1 */
-    add_note_in(&set, tuning, "m2", 1, 2, 1, 4, 86);     /* melody D6 in beat 3; beat 2 rests */
+    add_note_in(&set, tuning, "chord", 0, 1, 3, 4, 64);  /* E4 */
+    add_note_in(&set, tuning, "m0", 0, 1, 1, 4, 86);     /* melody D6 in beat 1 */
+    add_note_in(&set, tuning, "m2", 1, 2, 1, 4, 89);     /* melody F6 in beat 3; beat 2 rests */
     MeterMap *map = four_four();
+    /* A rest of a whole beat is not "under one beat", so the limit is two beats here. */
     OuterVoiceConfig config = outer_voice_config_default();
+    config.gap_bridge_max_numerator = 2;
     AdaptiveSonorities segments = {0};
     OuterVoiceLines lines = {0};
     extract(&set, map, &config, &segments, &lines);
 
     assert(lines.count == 3);
-    assert_entry(&lines.soprano[0], "m0", 84);
+    assert_entry(&lines.soprano[0], "m0", 86);
     assert(!lines.soprano[1].present && lines.soprano[1].guarded && lines.soprano[1].bridged);
     assert(lines.soprano[1].note_id == NULL && lines.soprano[1].pitch == NULL);
     assert_span(&lines.soprano[1], 1, 4, 1, 2); /* the absent entry keeps its segment's span */
-    assert_entry(&lines.soprano[2], "m2", 86);
+    assert_entry(&lines.soprano[2], "m2", 89);
     for (size_t i = 0; i < 3; i++) {
         assert_entry(&lines.bass[i], "bass", 36); /* the bass line is unbroken */
     }
@@ -577,7 +579,7 @@ static void test_a_resting_melody_stays_absent_while_the_accompaniment_continues
     config.guard_soprano_register = false;
     config.bridge_gaps = false;
     extract(&set, map, &config, &segments, &lines);
-    assert_entry(&lines.soprano[1], "chord", 60);
+    assert_entry(&lines.soprano[1], "chord", 64);
     assert(!lines.soprano[1].guarded && !lines.soprano[1].bridged);
     outer_voice_lines_destroy(&lines);
     adaptive_sonorities_destroy(&segments);
@@ -597,6 +599,7 @@ static void test_a_bass_rest_is_bridged(void) {
     add_note_in(&set, tuning, "mid", 0, 1, 3, 4, 67);
     MeterMap *map = four_four();
     OuterVoiceConfig config = outer_voice_config_default();
+    config.gap_bridge_max_numerator = 2; /* a rest of a whole beat is not under one beat */
     AdaptiveSonorities segments = {0};
     OuterVoiceLines lines = {0};
     extract(&set, map, &config, &segments, &lines);
