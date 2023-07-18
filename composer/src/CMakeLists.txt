@@ -15,6 +15,7 @@ add_library(ursatz_composer STATIC
     fill/fill_record.c
     fill/fill_suggest.c
     harmony/harmony_roman.c
+    harmony/harmony_rhythm.c
     harmony/harmony_request.c
     harmony/harmony_progression.c
     harmony/harmony_phrase.c

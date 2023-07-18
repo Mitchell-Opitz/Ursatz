@@ -57,12 +57,6 @@ static bool find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSp
     return false;
 }
 
-/* The harmonic rhythm of a meter: how many places in a bar a chord may start. */
-static size_t cells_per_bar_of(const PlanMeter *meter) {
-    (void)meter;
-    return 1;
-}
-
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY) {
         return false;
@@ -108,8 +102,7 @@ bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, Phras
         return false;
     }
 
-    request.cells_per_bar = cells_per_bar_of(&request.meter);
-    if (request.cells_per_bar == 0 ||
+    if (!harmony_rhythm_cells_per_bar(&request.meter, &request.cells_per_bar) ||
         plan_time_make(request.bar_length.num, request.bar_length.den * request.cells_per_bar,
                        &request.cell_length) != PLAN_OK) {
         return false;

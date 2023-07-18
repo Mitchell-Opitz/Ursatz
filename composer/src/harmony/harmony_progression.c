@@ -64,13 +64,17 @@ void harmony_progression_destroy(void *payload) {
     }
 }
 
+/* Deals tried before a request is given up on, for a plagal cadence whose first tonic must land on a downbeat. */
+#define DEAL_ATTEMPTS 16
+
 /*
  * One progression for the request, or false when the phrase has no room for the
  * chords its cadence needs. Every chord before the last gets at least one cell;
  * the last gets the whole last bar, so the cadence arrives on a downbeat. The
- * cells left over are dealt out to the other chords at random.
+ * cells left over are dealt out to the other chords at random. In a plagal
+ * cadence the tonic that ends the authentic cadence also lands on a downbeat.
  */
-static bool build_progression(const PhraseRequest *request, FillRng *rng, PhraseProgression *out) {
+static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseProgression *out) {
     bool half = request->cadence == PLAN_CADENCE_HC;
     bool plagal = request->cadence == PLAN_CADENCE_PC;
     size_t fixed = 1 + (half ? 0 : 1) + (plagal ? 2 : 0);
@@ -116,6 +120,16 @@ static bool build_progression(const PhraseRequest *request, FillRng *rng, Phrase
         cells[fill_rng_below(rng, before_count)]++;
     }
 
+    if (plagal) {
+        size_t start = 0;
+        for (size_t i = 0; i + 2 < before_count; i++) {
+            start += cells[i];
+        }
+        if (start % request->cells_per_bar != 0) {
+            return false;
+        }
+    }
+
     PhraseChord *chords = calloc(MAX_CHORDS, sizeof(PhraseChord));
     if (!chords) {
         return false;
@@ -134,6 +148,15 @@ static bool build_progression(const PhraseRequest *request, FillRng *rng, Phrase
     out->chords = chords;
     out->count = before_count + 1;
     return true;
+}
+
+static bool build_progression(const PhraseRequest *request, FillRng *rng, PhraseProgression *out) {
+    for (size_t attempt = 0; attempt < DEAL_ATTEMPTS; attempt++) {
+        if (deal_progression(request, rng, out)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool same_progression(const PhraseProgression *a, const PhraseProgression *b) {

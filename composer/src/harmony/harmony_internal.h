@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <harmony_chord.h>
+#include <semantics/beat_strength.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
@@ -41,6 +42,11 @@ typedef struct {
 } PhraseProgression;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
+
+/* How many strong beats a bar of the meter has, which is where a chord may start. False for a meter not supported. */
+bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);
+/* The strength of the cell with this index in its bar: the first is strong, any other medium. */
+BeatStrength harmony_rhythm_cell_strength(size_t cell_in_bar);
 
 /* Fills out from the plan. False when the span is not one this operator applies to. */
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
