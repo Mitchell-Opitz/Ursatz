@@ -4,7 +4,9 @@
 #include <stdbool.h>
 
 #include <harmony_chord.h>
+#include <semantics/cadence_type.h>
 
+#include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/lanes.h>
 
@@ -40,6 +42,35 @@
 
 /* Registers the operator. FILL_OK, or the registry's error. */
 FillResult harmony_phrase_register(FillOperatorRegistry *registry);
+
+/*
+ * The checker for this operator's candidates; pass it as FillConfig.checker.
+ * It reads the candidate's chords against standard-harmony:
+ *   - hard rules reject: the phrase model (a tonic before the dominant, IV
+ *     before ii), the cadence's own progression (V to I, x to V, the deceptive
+ *     motion, or the plagal IV to I), and the cadence standard-harmony's
+ *     recognizer hears at the end, which must be the one requested;
+ *   - soft rules score: the score is the share of the soft rules that hold.
+ * Candidates from any other operator are accepted at 0/1, as the default
+ * checker does.
+ */
+bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                            const FillCandidate *candidate, void *context, FillCheck *out);
+
+/*
+ * The cadence standard-harmony's recognizer hears at the end of the harmony
+ * lane over span, which must be tiled by chord spans written by this operator
+ * inside one meter lane span. The recognizer needs a soprano, and the harmony
+ * lane has none, so it is told the one the requested cadence implies: do for a
+ * PAC, mi for an IAC (as a melody operator will write them). *at_end is true
+ * when the cadence arrives on the last chord. False when the lane cannot be
+ * read, or the recognizer hears no cadence.
+ */
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+                          CadenceType *heard, bool *at_end);
+
+/* The recognizer's name for a cadence type of the plan. */
+CadenceType harmony_cadence_type_of(PlanCadenceType type);
 
 /*
  * Roman numerals as this operator writes them: upper case for major chords

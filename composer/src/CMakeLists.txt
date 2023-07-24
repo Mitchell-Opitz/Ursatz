@@ -18,6 +18,8 @@ add_library(ursatz_composer STATIC
     harmony/harmony_rhythm.c
     harmony/harmony_request.c
     harmony/harmony_progression.c
+    harmony/harmony_hear.c
+    harmony/harmony_check.c
     harmony/harmony_phrase.c
 )
 target_include_directories(ursatz_composer

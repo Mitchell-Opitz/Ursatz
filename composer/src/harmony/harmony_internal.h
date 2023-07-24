@@ -41,7 +41,20 @@ typedef struct {
     size_t count;
 } PhraseProgression;
 
+/* A phrase as the recognizer is shown it. */
+typedef struct {
+    const PhraseChord *chords;
+    size_t count;
+    PlanKeyMode mode;
+    PlanCadenceType requested;
+    size_t cells_per_bar;
+    PlanTime cell_length;
+} HeardPhrase;
+
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
+
+/* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
+bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);
 
 /* How many strong beats a bar of the meter has, which is where a chord may start. False for a meter not supported. */
 bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);
