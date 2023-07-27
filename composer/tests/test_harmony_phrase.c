@@ -319,7 +319,10 @@ static void test_cadence_on_owner(void) {
     Fixture fixture = build(&scenario, false);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
     cadence.params.cadence = PLAN_CADENCE_HC;
+    /* A Given node refuses constraints, so it is opened for this one. */
+    assert(plan_node_set_state(fixture.plan, fixture.owner, PLAN_STATE_CONSTRAINED) == PLAN_OK);
     assert(plan_node_add_constraint(fixture.plan, fixture.owner, &cadence) == PLAN_OK);
+    assert(plan_node_set_state(fixture.plan, fixture.owner, PLAN_STATE_GIVEN) == PLAN_OK);
     FillOutcome outcome = run(&fixture, 3);
     assert(outcome.status == FILL_STATUS_COMPLETE);
     CadenceType heard;
