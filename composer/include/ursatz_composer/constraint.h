@@ -8,7 +8,7 @@
 
 /*
  * Constraints: requirements attached to a node or a lane span ("8 bars",
- * "ends with a PAC", "uses motive m1 inverted"). They are data only; nothing
+ * "ends with a PAC", "uses motive m1 inverted", "embellish this chord"). They are data only; nothing
  * here evaluates or checks them. A node or span keeps its constraints in the
  * order they were added. Adding or removing one on a Given node or span is
  * refused with PLAN_ERR_GIVEN_LOCKED.
@@ -19,7 +19,8 @@ typedef enum {
     PLAN_CONSTRAINT_CADENCE,
     PLAN_CONSTRAINT_MOTIVE_REF,
     PLAN_CONSTRAINT_KEY,
-    PLAN_CONSTRAINT_ARCHETYPE
+    PLAN_CONSTRAINT_ARCHETYPE,
+    PLAN_CONSTRAINT_EMBELLISH /* no parameters: a harmony span reopened for the embellishment pass */
 } PlanConstraintKind;
 
 typedef enum {

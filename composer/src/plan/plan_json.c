@@ -21,7 +21,7 @@ static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "mel
 static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
-static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype"};
+static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",      "transposed", "inverted", "retrograde",
                                               "augmented", "diminished", "fragmented"};
@@ -104,6 +104,8 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         break;
     case PLAN_CONSTRAINT_ARCHETYPE:
         ok = ok && json_add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
+        break;
+    case PLAN_CONSTRAINT_EMBELLISH:
         break;
     }
     if (!ok) {
@@ -632,6 +634,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
             return false;
         }
         out->params.archetype = (PlanArchetype)value;
+        return true;
+    case PLAN_CONSTRAINT_EMBELLISH:
         return true;
     }
     return false;

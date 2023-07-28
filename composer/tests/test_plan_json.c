@@ -113,6 +113,8 @@ static PiecePlan *build_sentence_plan(void) {
     assert(plan_node_add_constraint(plan, fragment, &motive_ref) == PLAN_OK);
     assert(plan_lane_span_add_constraint(plan, harmony_two, &key_constraint) == PLAN_OK);
     assert(plan_lane_span_add_constraint(plan, harmony_two, &motive_ref) == PLAN_OK);
+    PlanConstraint embellish = {PLAN_CONSTRAINT_EMBELLISH, {0}};
+    assert(plan_lane_span_add_constraint(plan, harmony_two, &embellish) == PLAN_OK);
 
     assert(plan_node_set_state(plan, m1, PLAN_STATE_GIVEN) == PLAN_OK);
     assert(plan_node_set_state(plan, repetition, PLAN_STATE_REALIZED) == PLAN_OK);
@@ -143,6 +145,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.key.mode == b->params.key.mode;
     case PLAN_CONSTRAINT_ARCHETYPE:
         return a->params.archetype == b->params.archetype;
+    case PLAN_CONSTRAINT_EMBELLISH:
+        return true;
     }
     return false;
 }
