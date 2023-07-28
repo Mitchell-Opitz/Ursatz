@@ -52,7 +52,10 @@ static PlanTime time_plus(PlanTime a, PlanTime b) {
     return sum;
 }
 
-static Fixture build(const Scenario *scenario, bool with_cadence) {
+/* The cadence goes on the harmony span, or on the owner node (which is then Given, and cannot take it later). */
+typedef enum { CADENCE_NONE, CADENCE_ON_SPAN, CADENCE_ON_OWNER } CadencePlace;
+
+static Fixture build(const Scenario *scenario, CadencePlace place) {
     Fixture fixture;
     fixture.plan = plan_create();
     fixture.bar_length = fraction(scenario->beats_per_bar, (unsigned long)scenario->beat_unit);
@@ -60,6 +63,11 @@ static Fixture build(const Scenario *scenario, bool with_cadence) {
     fixture.span.length = fraction(scenario->bars * (long)fixture.bar_length.num, fixture.bar_length.den);
 
     assert(plan_add_node(fixture.plan, PLAN_NODE_NONE, PLAN_NODE_FORM, fixture.span, NULL, &fixture.owner) == PLAN_OK);
+    if (place == CADENCE_ON_OWNER) {
+        PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
+        cadence.params.cadence = scenario->cadence;
+        assert(plan_node_add_constraint(fixture.plan, fixture.owner, &cadence) == PLAN_OK);
+    }
     assert(plan_node_set_state(fixture.plan, fixture.owner, PLAN_STATE_GIVEN) == PLAN_OK);
 
     PlanLanePayload payload;
@@ -81,7 +89,7 @@ static Fixture build(const Scenario *scenario, bool with_cadence) {
     payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload,
                               &fixture.target) == PLAN_OK);
-    if (with_cadence) {
+    if (place == CADENCE_ON_SPAN) {
         PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
         cadence.params.cadence = scenario->cadence;
         assert(plan_lane_span_add_constraint(fixture.plan, fixture.target, &cadence) == PLAN_OK);
@@ -225,7 +233,7 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
 }
 
 static void check_scenario(const Scenario *scenario) {
-    Fixture fixture = build(scenario, true);
+    Fixture fixture = build(scenario, CADENCE_ON_SPAN);
     FillOutcome outcome = run(&fixture, scenario->seed);
     int fewest = fewest_bars(scenario->cadence, cells_per_bar(scenario->beats_per_bar, scenario->beat_unit));
     if (scenario->bars < fewest) {
@@ -244,7 +252,7 @@ static void check_scenario(const Scenario *scenario) {
         char first[512];
         char second[512];
         signature(&fixture, first, sizeof(first));
-        Fixture again = build(scenario, true);
+        Fixture again = build(scenario, CADENCE_ON_SPAN);
         FillOutcome again_outcome = run(&again, scenario->seed);
         assert(again_outcome.status == FILL_STATUS_COMPLETE);
         signature(&again, second, sizeof(second));
@@ -284,7 +292,7 @@ static void test_seeds_vary(void) {
     int distinct = 0;
     for (unsigned long seed = 0; seed < 16; seed++) {
         Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, seed};
-        Fixture fixture = build(&scenario, true);
+        Fixture fixture = build(&scenario, CADENCE_ON_SPAN);
         FillOutcome outcome = run(&fixture, seed);
         assert(outcome.status == FILL_STATUS_COMPLETE);
         char text[512];
@@ -305,7 +313,7 @@ static void test_seeds_vary(void) {
 /* A span with no cadence to ask for is not one the operator applies to. */
 static void test_no_cadence_is_not_applicable(void) {
     Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 4, PLAN_CADENCE_PAC, 0};
-    Fixture fixture = build(&scenario, false);
+    Fixture fixture = build(&scenario, CADENCE_NONE);
     FillOutcome outcome = run(&fixture, 0);
     assert(outcome.status == FILL_STATUS_STUCK);
     assert(outcome.stuck_count == 1 && outcome.stuck[0].reason == FILL_STUCK_NO_OPERATOR);
@@ -316,13 +324,7 @@ static void test_no_cadence_is_not_applicable(void) {
 /* A cadence on the owner node does as well as one on the span. */
 static void test_cadence_on_owner(void) {
     Scenario scenario = {3, 4, PLAN_MODE_MINOR, 9, 4, PLAN_CADENCE_HC, 3};
-    Fixture fixture = build(&scenario, false);
-    PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_HC;
-    /* A Given node refuses constraints, so it is opened for this one. */
-    assert(plan_node_set_state(fixture.plan, fixture.owner, PLAN_STATE_CONSTRAINED) == PLAN_OK);
-    assert(plan_node_add_constraint(fixture.plan, fixture.owner, &cadence) == PLAN_OK);
-    assert(plan_node_set_state(fixture.plan, fixture.owner, PLAN_STATE_GIVEN) == PLAN_OK);
+    Fixture fixture = build(&scenario, CADENCE_ON_OWNER);
     FillOutcome outcome = run(&fixture, 3);
     assert(outcome.status == FILL_STATUS_COMPLETE);
     CadenceType heard;
