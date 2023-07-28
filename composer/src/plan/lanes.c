@@ -143,6 +143,25 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     return PLAN_OK;
 }
 
+PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, PlanTime new_length) {
+    LaneSpan *entry = plan_lane_span_at(plan, id);
+    if (!entry) {
+        return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
+    }
+    if (entry->state == PLAN_STATE_GIVEN) {
+        return PLAN_ERR_GIVEN_LOCKED;
+    }
+    if (new_length.den == 0 || new_length.num <= 0 || plan_time_compare(new_length, entry->span.length) > 0) {
+        return PLAN_ERR_BAD_SPAN;
+    }
+    PlanSpan shorter = {entry->span.start, new_length};
+    if (!lane_payload_is_valid(entry->lane, shorter, &entry->payload)) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    entry->span = shorter;
+    return PLAN_OK;
+}
+
 bool plan_has_lane_span(const PiecePlan *plan, LaneSpanId id) {
     return plan_lane_span_at(plan, id) != NULL;
 }

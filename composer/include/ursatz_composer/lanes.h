@@ -88,6 +88,16 @@ typedef union {
 PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                               const PlanLanePayload *payload, LaneSpanId *out_id);
 
+/*
+ * Shortens a lane span to new_length, keeping its start, id, state and
+ * constraints, so the room it frees can take more spans (a harmony span split
+ * into one span per chord). new_length must be positive and no longer than the
+ * span. Fails with PLAN_ERR_NOT_FOUND for an unknown id, PLAN_ERR_GIVEN_LOCKED
+ * for a Given span, PLAN_ERR_BAD_SPAN for any other length, and
+ * PLAN_ERR_BAD_PAYLOAD when the payload no longer fits (notes past the new end).
+ */
+PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, PlanTime new_length);
+
 bool plan_has_lane_span(const PiecePlan *plan, LaneSpanId id);
 size_t plan_lane_span_count(const PiecePlan *plan);
 

@@ -14,13 +14,20 @@ add_library(ursatz_composer STATIC
     fill/fill_rng.c
     fill/fill_record.c
     fill/fill_suggest.c
+    harmony/harmony_roman.c
+    harmony/harmony_rhythm.c
+    harmony/harmony_request.c
+    harmony/harmony_progression.c
+    harmony/harmony_hear.c
+    harmony/harmony_check.c
+    harmony/harmony_phrase.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_composer
-    PUBLIC ursatz ursatz_analyzer
+    PUBLIC ursatz ursatz_analyzer standard_harmony
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
