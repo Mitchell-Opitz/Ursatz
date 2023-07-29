@@ -192,8 +192,7 @@ static void test_each_degree_carries_a_framework_reference_and_its_note(void) {
 static void test_the_label_function_directly(void) {
     assert(strcmp(common_practice_scale_degree_label(0, 0, COMMON_PRACTICE_KEY_MAJOR), "1") == 0);
     assert(strcmp(common_practice_scale_degree_label(6, 0, COMMON_PRACTICE_KEY_MAJOR), "#4") == 0);
-    assert(strcmp(common_practice_scale_degree_label(2, 9, COMMON_PRACTICE_KEY_MINOR), "b2") == 0 ||
-           strcmp(common_practice_scale_degree_label(2, 9, COMMON_PRACTICE_KEY_MINOR), "2") != NULL);
+    assert(strcmp(common_practice_scale_degree_label(2, 9, COMMON_PRACTICE_KEY_MINOR), "4") == 0);
     assert(common_practice_scale_degree_label(12, 0, COMMON_PRACTICE_KEY_MAJOR) == NULL);
     assert(common_practice_scale_degree_label(0, -1, COMMON_PRACTICE_KEY_MAJOR) == NULL);
     assert(common_practice_scale_degree_label(0, 0, (CommonPracticeKeyMode)7) == NULL);
