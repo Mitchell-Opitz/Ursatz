@@ -106,6 +106,12 @@ supplies each member's `BeatStrength`. Limits: a major key only, diatonic
 candidates only, a whole-piece key, and no voice separation yet. See
 docs/modules/analysis.md.
 
+`outer_scale_degrees.h` labels the soprano and bass of each segment from
+`analysis/outer_voice.h` as `ScaleDegree` Interpretations relative to the
+caller's key, with a required `FrameworkReference` and confidence 1/1. Limits:
+no voice-crossing awareness, no inner voices, one line per extreme; absent
+segments get no label. See docs/modules/analysis.md.
+
 `key_identification.c` matches by one-directional containment: a key
 matches when all seven of its pitch classes are present, and pitch classes
 outside the key do not disqualify it. That lets a chromatic piece match the
