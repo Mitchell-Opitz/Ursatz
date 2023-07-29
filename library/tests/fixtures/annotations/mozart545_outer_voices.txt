@@ -1,0 +1,141 @@
+# Written outer voices of Mozart, Piano Sonata in C major, K. 545, first movement, measures 1-8 (4/4).
+#
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The score was not available when this file was
+# written. It is a transcription of the note events of tests/fixtures/framework-v1-corpus/"Mozart 545.mid" for
+# measures 1-8, with each note assigned by hand to the right hand's melody ("soprano") or the left hand's bass
+# ("bass") from the piece's known texture: a right-hand melody over a left-hand Alberti figure in measures 1-4,
+# and in measures 5-8 right-hand scales over a left-hand bass note and chord on beats 1 and 4. The left-hand
+# notes were picked out by position, measure by measure; every other note is the melody. It was NOT derived
+# from the output of the outer-voice extractor. A human should confirm it against an edition of the score
+# (for example the Breitkopf & Hartel Urtext, or the IMSLP scan of the first edition) before it is relied on.
+#
+# FORMAT: <line> <measure> <offset_ticks> <duration_ticks> <midi_pitch>. line is soprano or bass. offset is in
+# MIDI ticks from the start of the measure and duration in ticks, at 240 ticks per quarter note (a 4/4 measure is
+# 960 ticks); midi_pitch is the MIDI note number (C4 = 60). Where a hand rests, the line has no note: a segment
+# with no annotated note of a line sounding in it is expected to have that line ABSENT (for example the bass of
+# measures 5-8 between beats 2 and 3, where the left hand rests).
+#
+soprano 1 0 480 72
+soprano 1 480 240 76
+soprano 1 720 240 79
+soprano 2 0 360 71
+soprano 2 360 60 72
+soprano 2 420 60 74
+soprano 2 480 480 72
+soprano 3 0 480 81
+soprano 3 480 240 79
+soprano 3 720 240 84
+soprano 4 0 240 79
+soprano 4 240 39 77
+soprano 4 279 40 79
+soprano 4 319 40 77
+soprano 4 360 60 76
+soprano 4 420 60 77
+soprano 4 480 240 76
+soprano 5 0 120 69
+soprano 5 120 60 71
+soprano 5 180 60 72
+soprano 5 240 60 74
+soprano 5 300 60 76
+soprano 5 360 60 77
+soprano 5 420 60 79
+soprano 5 480 60 81
+soprano 5 540 60 79
+soprano 5 600 60 77
+soprano 5 660 60 76
+soprano 5 720 60 74
+soprano 5 780 60 72
+soprano 5 840 60 71
+soprano 5 900 60 69
+soprano 6 0 120 67
+soprano 6 120 60 69
+soprano 6 180 60 71
+soprano 6 240 60 72
+soprano 6 300 60 74
+soprano 6 360 60 76
+soprano 6 420 60 77
+soprano 6 480 60 79
+soprano 6 540 60 77
+soprano 6 600 60 76
+soprano 6 660 60 74
+soprano 6 720 60 72
+soprano 6 780 60 71
+soprano 6 840 60 69
+soprano 6 900 60 67
+soprano 7 0 120 65
+soprano 7 120 60 67
+soprano 7 180 60 69
+soprano 7 240 60 71
+soprano 7 300 60 72
+soprano 7 360 60 74
+soprano 7 420 60 76
+soprano 7 480 60 77
+soprano 7 540 60 76
+soprano 7 600 60 74
+soprano 7 660 60 72
+soprano 7 720 60 71
+soprano 7 780 60 69
+soprano 7 840 60 67
+soprano 7 900 60 65
+soprano 8 0 120 64
+soprano 8 120 60 65
+soprano 8 180 60 67
+soprano 8 240 60 69
+soprano 8 300 60 71
+soprano 8 360 60 72
+soprano 8 420 60 74
+soprano 8 480 60 76
+soprano 8 540 60 74
+soprano 8 600 60 72
+soprano 8 660 60 71
+soprano 8 720 60 69
+soprano 8 780 60 67
+soprano 8 840 60 65
+soprano 8 900 60 64
+bass 1 0 120 60
+bass 1 120 120 67
+bass 1 240 120 64
+bass 1 360 120 67
+bass 1 480 120 60
+bass 1 600 120 67
+bass 1 720 120 64
+bass 1 840 120 67
+bass 2 0 120 62
+bass 2 120 120 67
+bass 2 240 120 65
+bass 2 360 120 67
+bass 2 480 120 60
+bass 2 600 120 67
+bass 2 720 120 64
+bass 2 840 120 67
+bass 3 0 120 60
+bass 3 120 120 69
+bass 3 240 120 65
+bass 3 360 120 69
+bass 3 480 120 60
+bass 3 600 120 67
+bass 3 720 120 64
+bass 3 840 120 67
+bass 4 0 120 59
+bass 4 120 120 67
+bass 4 240 120 62
+bass 4 360 120 67
+bass 4 480 120 60
+bass 4 600 120 67
+bass 4 720 120 64
+bass 4 840 120 67
+bass 5 0 240 65
+bass 5 720 240 53
+bass 5 720 240 60
+bass 6 0 240 52
+bass 6 0 240 60
+bass 6 720 240 52
+bass 6 720 240 60
+bass 7 0 240 50
+bass 7 0 240 60
+bass 7 720 240 50
+bass 7 720 240 59
+bass 8 0 240 48
+bass 8 0 240 60
+bass 8 720 240 48
+bass 8 720 240 52
