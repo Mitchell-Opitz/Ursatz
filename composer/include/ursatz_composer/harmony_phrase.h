@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include <harmony_applied.h>
 #include <harmony_chord.h>
 #include <semantics/cadence_type.h>
 
@@ -75,13 +76,19 @@ CadenceType harmony_cadence_type_of(PlanCadenceType type);
 /*
  * Roman numerals as this operator writes them: upper case for major chords
  * (V, IV, VI), lower case for minor ones (ii, vi, i), a degree sign for
- * diminished ones, a 7 after a seventh chord. The numeral does not depend on
- * inversion; only root position is written.
+ * diminished ones, then the figures for the inversion: none, 6 and 6/4 for a
+ * triad; 7, 6/5, 4/3 and 4/2 for a seventh chord. An applied chord is
+ * standard-harmony's own label (V7/V, V/vi, viio7/V). The numeral does not say
+ * whether a tonic 6/4 is cadential; that comes from its place in the phrase.
  */
 
-/* Formats a root-position chord. False for an invalid chord, an inverted or cadential one. */
+/* Formats a diatonic chord. False for an invalid chord, and for a half-diminished seventh. */
 bool harmony_roman_format(PlanKeyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]);
-/* Reads a numeral this operator writes. False for any other text. */
+/* Reads a numeral this operator writes, never cadential. False for any other text, and for an applied chord. */
 bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out);
+/* Formats and reads an applied chord. False for an invalid chord or other text. */
+bool harmony_roman_format_applied(PlanKeyMode mode, const HarmonyAppliedChord *applied,
+                                  char out[PLAN_ROMAN_NUMERAL_MAX]);
+bool harmony_roman_parse_applied(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out);
 
 #endif

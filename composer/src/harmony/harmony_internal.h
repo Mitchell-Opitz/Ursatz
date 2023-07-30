@@ -30,7 +30,9 @@ typedef struct {
 typedef struct {
     char roman[PLAN_ROMAN_NUMERAL_MAX];
     PlanHarmonicFunction function;
-    HarmonyChord chord;
+    HarmonyChord chord;          /* the chord, when it is not applied */
+    bool applied;
+    HarmonyAppliedChord applied_chord; /* the chord, when it is applied */
     size_t cells;
 } PhraseChord;
 

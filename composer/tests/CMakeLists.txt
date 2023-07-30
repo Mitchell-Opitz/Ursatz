@@ -35,3 +35,8 @@ add_executable(test_harmony_phrase test_harmony_phrase.c)
 target_link_libraries(test_harmony_phrase PRIVATE ursatz_composer)
 target_compile_options(test_harmony_phrase PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_phrase COMMAND test_harmony_phrase)
+
+add_executable(test_harmony_roman test_harmony_roman.c)
+target_link_libraries(test_harmony_roman PRIVATE ursatz_composer)
+target_compile_options(test_harmony_roman PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_harmony_roman COMMAND test_harmony_roman)
