@@ -4,8 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <analysis_input.h>
 #include <harmony_chord.h>
 #include <semantics/beat_strength.h>
+#include <semantics/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_embellish.h>

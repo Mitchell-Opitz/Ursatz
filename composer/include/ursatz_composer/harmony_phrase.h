@@ -52,8 +52,13 @@ FillResult harmony_phrase_register(FillOperatorRegistry *registry);
  *     motion, or the plagal IV to I), and the cadence standard-harmony's
  *     recognizer hears at the end, which must be the one requested;
  *   - soft rules score: the score is the share of the soft rules that hold.
- * Candidates from any other operator are accepted at 0/1, as the default
- * checker does.
+ * It checks the candidates of the embellishment operator (harmony_embellish.h) the
+ * same way, on the whole phrase as the edit would leave it, and every chord that is
+ * not a plain root-position one needs a reason to be there: a 6/4 the classifier
+ * names, the inside of a prolongation, a strong predominant, a predominant seventh,
+ * or V7; an applied chord must resolve to its target. An unchanged progression is
+ * always accepted. Candidates from any other operator are accepted at 0/1, as the
+ * default checker does.
  */
 bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out);

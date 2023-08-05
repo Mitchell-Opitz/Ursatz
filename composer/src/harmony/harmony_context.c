@@ -3,7 +3,7 @@
 #include <string.h>
 
 /* Reads the chord of one span: a diatonic numeral, else an applied one. */
-static bool read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length,
+bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length,
                        PhraseChord *out) {
     const PlanHarmony *harmony = &plan_lane_span_payload(plan, id)->harmony;
     memset(out, 0, sizeof(*out));
@@ -97,7 +97,7 @@ bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContex
             return false;
         }
         context.ids[i] = id;
-        if (!read_chord(plan, id, context.mode, context.metre.cell_length, &context.chords[i])) {
+        if (!harmony_read_chord(plan, id, context.mode, context.metre.cell_length, &context.chords[i])) {
             return false;
         }
     }

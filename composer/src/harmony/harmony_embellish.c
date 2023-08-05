@@ -44,11 +44,6 @@ PlanResult harmony_embellish_open(PiecePlan *plan, PlanSpan range) {
     return result;
 }
 
-/* What an embellishment candidate does to the marked chord. */
-typedef struct {
-    bool plain; /* leave the progression as it is */
-} EmbellishCandidate;
-
 static const HarmonyEmbellishParams *params_of(void *context) {
     static const HarmonyEmbellishParams defaults = {DEFAULT_DENSITY, HARMONY_EMBELLISH_ALL};
     return context ? context : &defaults;
