@@ -26,14 +26,14 @@ static bool phrase_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     return harmony_phrase_propose(&request, rng, out);
 }
 
-static void chord_payload(const PhraseChord *chord, PlanLanePayload *payload) {
+void harmony_chord_payload(const PhraseChord *chord, PlanLanePayload *payload) {
     memset(payload, 0, sizeof(*payload));
     memcpy(payload->harmony.roman_numeral, chord->roman, PLAN_ROMAN_NUMERAL_MAX);
     payload->harmony.function = chord->function;
 }
 
 /* Moves the target's cadence constraint to the final chord's span, where the cadence arrives. */
-static PlanResult move_cadence(PiecePlan *plan, LaneSpanId from, LaneSpanId to) {
+PlanResult harmony_move_cadence(PiecePlan *plan, LaneSpanId from, LaneSpanId to) {
     size_t count = plan_lane_span_constraint_count(plan, from);
     for (size_t i = 0; i < count; i++) {
         const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, from, i);
@@ -77,7 +77,7 @@ static PlanResult phrase_apply(PiecePlan *plan, FillTarget target, const FillCan
     }
     result = plan_lane_span_resize(plan, first, span.length);
     if (result == PLAN_OK) {
-        chord_payload(&progression->chords[0], &payload);
+        harmony_chord_payload(&progression->chords[0], &payload);
         result = plan_lane_span_write(plan, first, &payload);
     }
     LaneSpanId last = first;
@@ -87,14 +87,14 @@ static PlanResult phrase_apply(PiecePlan *plan, FillTarget target, const FillCan
         if (result != PLAN_OK) {
             break;
         }
-        chord_payload(&progression->chords[i], &payload);
+        harmony_chord_payload(&progression->chords[i], &payload);
         result = plan_add_lane_span(plan, request.owner, PLAN_LANE_HARMONY, 0, span, &payload, &last);
         if (result == PLAN_OK) {
             result = plan_lane_span_set_state(plan, last, PLAN_STATE_REALIZED);
         }
         cell += progression->chords[i].cells;
     }
-    return result == PLAN_OK ? move_cadence(plan, first, last) : result;
+    return result == PLAN_OK ? harmony_move_cadence(plan, first, last) : result;
 }
 
 FillResult harmony_phrase_register(FillOperatorRegistry *registry) {
