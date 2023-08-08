@@ -188,3 +188,76 @@ void harmony_options_prolongation(const PiecePlan *plan, const PhraseContext *ph
     tonic_options(phrase, rng, list);
     dominant_options(plan, phrase, rng, list);
 }
+
+/*
+ * Predominants. The marked chord is a strong predominant (IV or ii) in root position. It is replaced
+ * by another way of writing a strong predominant (ii6, a predominant seventh, IV or ii), or extended
+ * into IV followed by ii in one of those forms (ii never comes before IV).
+ */
+typedef struct {
+    int degree;
+    int inversion;
+    bool seventh;
+} Form;
+
+/* In a minor key ii is diminished and is not written in root position. */
+static const Form MAJOR_FORMS[] = {{2, 1, false}, {2, 1, true}, {2, 0, true}, {2, 2, true},
+                                   {4, 0, true},  {2, 0, false}, {4, 0, false}};
+static const Form MINOR_FORMS[] = {{2, 1, false}, {2, 1, true}, {4, 0, true}, {4, 0, false}};
+/* The forms of ii that may follow IV. */
+static const Form MAJOR_AFTER_IV[] = {{2, 1, false}, {2, 1, true}, {2, 0, true}, {2, 2, true}};
+static const Form MINOR_AFTER_IV[] = {{2, 1, false}, {2, 1, true}};
+
+static bool same_numeral(const PhraseChord *a, const PhraseChord *b) {
+    return strcmp(a->roman, b->roman) == 0;
+}
+
+void harmony_options_predominant(const PhraseContext *phrase, FillRng *rng, OptionList *list) {
+    size_t t = phrase->target;
+    const PhraseChord *chord = &phrase->chords[t];
+    PlanKeyMode mode = phrase->mode;
+    size_t n = chord->cells;
+    if (chord->applied || chord->chord.seventh || chord->chord.inversion != 0 ||
+        (chord->chord.degree != 4 && chord->chord.degree != 2) || t + 1 == phrase->count) {
+        return;
+    }
+    bool minor = mode == PLAN_MODE_MINOR;
+    const Form *forms = minor ? MINOR_FORMS : MAJOR_FORMS;
+    size_t form_count = minor ? sizeof(MINOR_FORMS) / sizeof(MINOR_FORMS[0]) : sizeof(MAJOR_FORMS) / sizeof(MAJOR_FORMS[0]);
+    const PhraseChord *before = t > 0 ? &phrase->chords[t - 1] : NULL;
+    const PhraseChord *after = &phrase->chords[t + 1];
+
+    for (size_t f = 0; f < form_count; f++) {
+        Edit edit;
+        memset(&edit, 0, sizeof(edit));
+        edit.piece_count = 1;
+        if (harmony_make_chord(mode, forms[f].degree, forms[f].inversion, forms[f].seventh, false, n,
+                               &edit.pieces[0]) &&
+            !same_numeral(&edit.pieces[0], chord) && !(before && same_numeral(&edit.pieces[0], before)) &&
+            !same_numeral(&edit.pieces[0], after)) {
+            harmony_options_add(list, phrase, &edit);
+        }
+    }
+
+    if (n < 2) {
+        return;
+    }
+    const Form *seconds = minor ? MINOR_AFTER_IV : MAJOR_AFTER_IV;
+    size_t second_count = minor ? sizeof(MINOR_AFTER_IV) / sizeof(MINOR_AFTER_IV[0])
+                                : sizeof(MAJOR_AFTER_IV) / sizeof(MAJOR_AFTER_IV[0]);
+    for (size_t f = 0; f < second_count; f++) {
+        size_t firsts[2];
+        size_t picked = harmony_options_pick(rng, 1, n - 1, firsts);
+        for (size_t k = 0; k < picked; k++) {
+            Edit edit;
+            memset(&edit, 0, sizeof(edit));
+            edit.piece_count = 2;
+            if (harmony_make_chord(mode, 4, 0, false, false, firsts[k], &edit.pieces[0]) &&
+                harmony_make_chord(mode, seconds[f].degree, seconds[f].inversion, seconds[f].seventh, false,
+                                   n - firsts[k], &edit.pieces[1]) &&
+                !(before && same_numeral(&edit.pieces[0], before)) && !same_numeral(&edit.pieces[1], after)) {
+                harmony_options_add(list, phrase, &edit);
+            }
+        }
+    }
+}

@@ -103,6 +103,9 @@ static bool propose_edits(const PiecePlan *plan, const PhraseContext *phrase, co
     if (ok && (params->families & HARMONY_EMBELLISH_PROLONGATION)) {
         harmony_options_prolongation(plan, phrase, rng, options);
     }
+    if (ok && (params->families & HARMONY_EMBELLISH_PREDOMINANT)) {
+        harmony_options_predominant(phrase, rng, options);
+    }
     if (ok) {
         shuffle(options->items, options->count, rng);
     }
