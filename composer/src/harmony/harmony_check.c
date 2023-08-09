@@ -262,3 +262,20 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
     }
     return fill_default_checker(plan, target, operator_, candidate, context, out);
 }
+
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+                        const char **violation) {
+    PhraseMetre metre;
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+    size_t count;
+    PhraseVerdict verdict;
+    if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
+        return false;
+    }
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length};
+    if (!harmony_judge(&phrase, &verdict)) {
+        return false;
+    }
+    *violation = verdict.hard;
+    return true;
+}

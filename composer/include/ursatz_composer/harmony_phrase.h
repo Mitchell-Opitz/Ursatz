@@ -75,6 +75,16 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
 bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
                           CadenceType *heard, bool *at_end);
 
+/*
+ * Checks the harmony lane over span against standard-harmony, reading only what is in the plan:
+ * the same rules the checker applies (phrase model, explained chords, applied chords resolving,
+ * the cadence's progression, and the cadence the recognizer hears, which must be the requested
+ * one and end the phrase). True when the lane could be read, with *violation NULL if nothing is
+ * broken and otherwise the rule that is.
+ */
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+                        const char **violation);
+
 /* The recognizer's name for a cadence type of the plan. */
 CadenceType harmony_cadence_type_of(PlanCadenceType type);
 

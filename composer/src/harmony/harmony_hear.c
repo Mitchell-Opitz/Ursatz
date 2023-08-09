@@ -264,31 +264,41 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
     return ok;
 }
 
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
-                          CadenceType *heard, bool *at_end) {
-    PhraseMetre metre;
-    if (!plan || !heard || !at_end || !harmony_read_metre(plan, span, &metre)) {
-        return false;
-    }
+bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
+                       PhraseMetre *metre) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
-    size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
-    if (count == 0 || count > HARMONY_MAX_CHORDS) {
+    if (!plan || !chords || !count || !metre || !harmony_read_metre(plan, span, metre)) {
         return false;
     }
-    PhraseChord chords[HARMONY_MAX_CHORDS];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
+    if (found == 0 || found > HARMONY_MAX_CHORDS) {
+        return false;
+    }
     PlanTime position = span.start;
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < found; i++) {
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
         PlanTime end;
         /* Chords must start where the last ended, in whole cells. */
         if (plan_time_compare(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
-            !harmony_read_chord(plan, ids[i], mode, metre.cell_length, &chords[i])) {
+            !harmony_read_chord(plan, ids[i], mode, metre->cell_length, &chords[i])) {
             return false;
         }
         position = end;
     }
     PlanTime span_end;
     if (plan_span_end(span, &span_end) != PLAN_OK || plan_time_compare(position, span_end) != 0) {
+        return false;
+    }
+    *count = found;
+    return true;
+}
+
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+                          CadenceType *heard, bool *at_end) {
+    PhraseMetre metre;
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+    size_t count;
+    if (!heard || !at_end || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
     HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length};

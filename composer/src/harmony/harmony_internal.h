@@ -83,6 +83,10 @@ typedef struct {
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
 
+/* Reads the chords of the harmony lane over span, which must tile it exactly. False if it cannot be read. */
+bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
+                       PhraseMetre *metre);
+
 /* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
 bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);
 
