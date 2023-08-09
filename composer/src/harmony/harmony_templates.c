@@ -261,3 +261,51 @@ void harmony_options_predominant(const PhraseContext *phrase, FillRng *rng, Opti
         }
     }
 }
+
+/*
+ * Applied chords. An applied dominant or leading-tone chord is put before the marked chord, taking
+ * one cell from the end of the chord before it, and leads into it as its target (the marked chord
+ * must be one standard-harmony can tonicize in the mode: never the tonic).
+ */
+static const HarmonyAppliedQuality APPLIED_QUALITIES[] = {
+    HARMONY_APPLIED_MAJOR_TRIAD, HARMONY_APPLIED_DOMINANT_SEVENTH, HARMONY_APPLIED_DIMINISHED_TRIAD,
+    HARMONY_APPLIED_FULLY_DIMINISHED_SEVENTH};
+
+void harmony_options_applied(const PiecePlan *plan, const PhraseContext *phrase, OptionList *list) {
+    size_t t = phrase->target;
+    const PhraseChord *target = &phrase->chords[t];
+    PlanKeyMode mode = phrase->mode;
+    if (t == 0 || t + 1 == phrase->count || target->applied || target->chord.inversion != 0 ||
+        target->chord.cadential || !harmony_applied_target_valid(harmony_mode_of(mode), target->chord.degree)) {
+        return;
+    }
+    const PhraseChord *before = &phrase->chords[t - 1];
+    if (before->applied || before->cells < 2 || plan_lane_span_state(plan, phrase->ids[t - 1]) == PLAN_STATE_GIVEN) {
+        return;
+    }
+    for (size_t q = 0; q < sizeof(APPLIED_QUALITIES) / sizeof(APPLIED_QUALITIES[0]); q++) {
+        Edit edit;
+        HarmonyAppliedChord applied;
+        memset(&edit, 0, sizeof(edit));
+        memset(&applied, 0, sizeof(applied));
+        applied.quality = APPLIED_QUALITIES[q];
+        applied.target = target->chord.degree;
+        if (!harmony_applied_quality_kind(applied.quality, &applied.kind) ||
+            !harmony_applied_valid(harmony_mode_of(mode), &applied)) {
+            continue;
+        }
+        PhraseChord *lead = &edit.lead[0];
+        if (!harmony_roman_format_applied(mode, &applied, lead->roman)) {
+            continue;
+        }
+        lead->applied = true;
+        lead->applied_chord = applied;
+        lead->function = PLAN_FUNCTION_DOMINANT;
+        lead->cells = 1;
+        edit.steal_cells = 1;
+        edit.lead_count = 1;
+        edit.piece_count = 1;
+        edit.pieces[0] = *target;
+        harmony_options_add(list, phrase, &edit);
+    }
+}
