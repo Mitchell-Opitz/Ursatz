@@ -5,6 +5,10 @@
 
 static const PlanKeyMode MODES[2] = {PLAN_MODE_MAJOR, PLAN_MODE_MINOR};
 
+static HarmonyMode harmony_mode_of(PlanKeyMode mode) {
+    return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+}
+
 /* Every chord that can be formatted reads back as the same chord, and no two chords share a numeral. */
 static void test_diatonic_round_trip(void) {
     for (int m = 0; m < 2; m++) {
