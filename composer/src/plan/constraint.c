@@ -27,6 +27,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_ARCHETYPE:
         return constraint->params.archetype >= PLAN_ARCHETYPE_SENTENCE &&
                constraint->params.archetype <= PLAN_ARCHETYPE_HYBRID;
+    case PLAN_CONSTRAINT_EMBELLISH:
+        return true;
     }
     return false;
 }

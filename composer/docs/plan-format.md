@@ -126,6 +126,7 @@ nothing checks them.
 | `motive_ref` | `motive`: the id of a motive node; `transform`: `none`, `transposed`, `inverted`, `retrograde`, `augmented`, `diminished` or `fragmented`; `semitones`: used by `transposed`. |
 | `key` | `tonic_pitch_class` (0 to 11), `mode` (`major` or `minor`). |
 | `archetype` | `type`: `sentence`, `period` or `hybrid`. |
+| `embellish` | No fields. Marks a harmony lane span reopened for the embellishment pass. |
 
 ## Reading
 

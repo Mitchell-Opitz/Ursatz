@@ -41,19 +41,28 @@ static PlanHarmonicFunction plan_function_of(HarmonicFunction function) {
     }
 }
 
-static bool make_chord(PlanKeyMode mode, ChordSpec spec, size_t cells, PhraseChord *out) {
+bool harmony_make_chord(PlanKeyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+                        PhraseChord *out) {
     HarmonyChord chord;
     HarmonicFunction function;
     memset(&chord, 0, sizeof(chord));
-    chord.degree = spec.degree;
-    chord.seventh = spec.seventh;
-    if (!harmony_function_of(harmony_mode_of(mode), &chord, &function) || !harmony_roman_format(mode, &chord, out->roman)) {
+    memset(out, 0, sizeof(*out));
+    chord.degree = degree;
+    chord.inversion = inversion;
+    chord.seventh = seventh;
+    chord.cadential = cadential;
+    if (!harmony_chord_valid(&chord) || !harmony_function_of(harmony_mode_of(mode), &chord, &function) ||
+        !harmony_roman_format(mode, &chord, out->roman)) {
         return false;
     }
     out->function = plan_function_of(function);
     out->chord = chord;
     out->cells = cells;
     return true;
+}
+
+static bool make_chord(PlanKeyMode mode, ChordSpec spec, size_t cells, PhraseChord *out) {
+    return harmony_make_chord(mode, spec.degree, 0, spec.seventh, false, cells, out);
 }
 
 void harmony_progression_destroy(void *payload) {

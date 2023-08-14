@@ -9,12 +9,22 @@ static const char *const MINOR_NUMERALS[8] = {NULL, "i", "ii" DIMINISHED, "III",
 /* The chord on the raised seventh degree of a minor key. */
 static const char *const MINOR_LEADING_TONE = "vii" DIMINISHED;
 
+/* The figures after a numeral: triads in three positions, sevenths in four. */
+typedef struct {
+    const char *text;
+    bool seventh;
+    int inversion;
+} Figure;
+
+static const Figure FIGURES[] = {{"", false, 0},    {"6", false, 1},    {"6/4", false, 2}, {"7", true, 0},
+                                 {"6/5", true, 1}, {"4/3", true, 2}, {"4/2", true, 3}};
+
 HarmonyMode harmony_mode_of(PlanKeyMode mode) {
     return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
 }
 
 bool harmony_roman_format(PlanKeyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
-    if (!chord || !out || !harmony_chord_valid(chord) || chord->inversion != 0 || chord->cadential) {
+    if (!chord || !out || !harmony_chord_valid(chord) || chord->half_diminished) {
         return false;
     }
     const char *base = NULL;
@@ -23,47 +33,100 @@ bool harmony_roman_format(PlanKeyMode mode, const HarmonyChord *chord, char out[
     } else {
         base = MAJOR_NUMERALS[chord->degree];
     }
-    size_t length = strlen(base);
-    if (length + 2 > PLAN_ROMAN_NUMERAL_MAX) {
+    for (size_t i = 0; i < sizeof(FIGURES) / sizeof(FIGURES[0]); i++) {
+        if (FIGURES[i].seventh != chord->seventh || FIGURES[i].inversion != chord->inversion) {
+            continue;
+        }
+        size_t base_length = strlen(base);
+        size_t figure_length = strlen(FIGURES[i].text);
+        if (base_length + figure_length >= PLAN_ROMAN_NUMERAL_MAX) {
+            return false;
+        }
+        memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
+        memcpy(out, base, base_length);
+        memcpy(out + base_length, FIGURES[i].text, figure_length);
+        return true;
+    }
+    return false;
+}
+
+/* Whether text is exactly numeral followed by a figure; sets *figure to it. */
+static bool numeral_with_figure(const char *text, const char *numeral, const Figure **figure) {
+    size_t length = strlen(numeral);
+    if (strncmp(text, numeral, length) != 0) {
         return false;
     }
-    memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
-    memcpy(out, base, length);
-    if (chord->seventh) {
-        out[length] = '7';
+    for (size_t i = 0; i < sizeof(FIGURES) / sizeof(FIGURES[0]); i++) {
+        if (strcmp(text + length, FIGURES[i].text) == 0) {
+            *figure = &FIGURES[i];
+            return true;
+        }
     }
-    return true;
+    return false;
 }
 
 bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out) {
     if (!roman || !out) {
         return false;
     }
-    size_t length = strlen(roman);
-    bool seventh = length > 1 && roman[length - 1] == '7';
-    if (seventh) {
-        length--;
-    }
     const char *const *numerals = mode == PLAN_MODE_MINOR ? MINOR_NUMERALS : MAJOR_NUMERALS;
-    for (int degree = 1; degree <= 7; degree++) {
-        if (strlen(numerals[degree]) == length && memcmp(numerals[degree], roman, length) == 0) {
-            HarmonyChord chord;
-            memset(&chord, 0, sizeof(chord));
+    const Figure *figure = NULL;
+    HarmonyChord chord;
+    memset(&chord, 0, sizeof(chord));
+    for (int degree = 1; degree <= 7 && !figure; degree++) {
+        if (numeral_with_figure(roman, numerals[degree], &figure)) {
             chord.degree = degree;
-            chord.seventh = seventh;
-            *out = chord;
-            return harmony_chord_valid(&chord);
         }
     }
-    if (mode == PLAN_MODE_MINOR && strlen(MINOR_LEADING_TONE) == length &&
-        memcmp(MINOR_LEADING_TONE, roman, length) == 0) {
-        HarmonyChord chord;
-        memset(&chord, 0, sizeof(chord));
+    if (!figure && mode == PLAN_MODE_MINOR && numeral_with_figure(roman, MINOR_LEADING_TONE, &figure)) {
         chord.degree = 7;
         chord.leading_tone = true;
-        chord.seventh = seventh;
-        *out = chord;
-        return harmony_chord_valid(&chord);
+    }
+    if (!figure) {
+        return false;
+    }
+    chord.seventh = figure->seventh;
+    chord.inversion = figure->inversion;
+    if (!harmony_chord_valid(&chord)) {
+        return false;
+    }
+    *out = chord;
+    return true;
+}
+
+bool harmony_roman_format_applied(PlanKeyMode mode, const HarmonyAppliedChord *applied,
+                                  char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    char label[PLAN_ROMAN_NUMERAL_MAX];
+    if (!applied || !out || !harmony_applied_label(harmony_mode_of(mode), applied, label, sizeof(label))) {
+        return false;
+    }
+    memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
+    memcpy(out, label, strlen(label));
+    return true;
+}
+
+bool harmony_roman_parse_applied(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out) {
+    if (!roman || !out) {
+        return false;
+    }
+    /* The labels are the framework's, so each valid one is generated and compared. */
+    for (int quality = 0; quality < HARMONY_APPLIED_QUALITY_COUNT; quality++) {
+        for (int target = 1; target <= 7; target++) {
+            HarmonyAppliedChord applied;
+            char label[PLAN_ROMAN_NUMERAL_MAX];
+            memset(&applied, 0, sizeof(applied));
+            applied.quality = (HarmonyAppliedQuality)quality;
+            applied.target = target;
+            if (!harmony_applied_quality_kind(applied.quality, &applied.kind) ||
+                !harmony_applied_valid(harmony_mode_of(mode), &applied) ||
+                !harmony_applied_label(harmony_mode_of(mode), &applied, label, sizeof(label))) {
+                continue;
+            }
+            if (strcmp(label, roman) == 0) {
+                *out = applied;
+                return true;
+            }
+        }
     }
     return false;
 }
