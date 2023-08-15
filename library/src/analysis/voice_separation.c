@@ -5,6 +5,7 @@
 
 #include "analysis/voice_separation_internal.h"
 #include "pitch/tuning_system.h"
+#include "time/time_span.h"
 #include "time/temporal_anchor.h"
 
 #define VS_MAX_VOICES_LIMIT 8
@@ -13,6 +14,8 @@ VoiceSeparationConfig voice_separation_config_default(void) {
     VoiceSeparationConfig config;
     config.max_voices = 4;
     config.allow_crossing = false;
+    config.rest_hold_numerator = 2;
+    config.rest_hold_denominator = 1;
     return config;
 }
 
@@ -312,6 +315,74 @@ size_t vs_nearest_voice(const ExactRational *current, const bool *has_current, s
     return best;
 }
 
+/* --- step 5: continuity across rests --- */
+
+int vs_reference_kept(ExactRational last_release, ExactRational at, ExactRational hold_beats,
+                      VsBeatLength beat_length, void *beat_context, bool *out_kept) {
+    if (er_cmp(last_release, at) >= 0) {
+        *out_kept = true;
+        return 0;
+    }
+    ExactRational rest = {0, 1};
+    ExactRational beat = {0, 1};
+    ExactRational window = {0, 1};
+    if (er_sub(at, last_release, &rest) != 0) {
+        return -1;
+    }
+    if (!beat_length(beat_context, last_release, &beat)) {
+        return -3;
+    }
+    if (er_mul(beat, hold_beats, &window) != 0) {
+        return -1;
+    }
+    *out_kept = er_cmp(rest, window) <= 0;
+    return 0;
+}
+
+/* The beat length from the injected beat grid: the length of the beat that holds `at`. */
+typedef struct {
+    const MeterMap *map;
+    BeatGridProvider provider;
+    void *provider_context;
+} BeatGridContext;
+
+static bool grid_beat_length(void *context, ExactRational at, ExactRational *out) {
+    const BeatGridContext *grid = (const BeatGridContext *)context;
+    MusicalTime *time = er_to_time(at);
+    if (time == NULL) {
+        return false;
+    }
+    int measure = 0;
+    MeterMapResult indexed = meter_map_measure_index_at(grid->map, time, &measure);
+    musical_time_destroy(time);
+    TimeSpan *span = NULL;
+    if (indexed != METER_MAP_OK || meter_map_measure_span(grid->map, measure, &span) != METER_MAP_OK) {
+        return false;
+    }
+    ExactRational measure_end = er_of_time(time_span_end(span));
+    time_span_destroy(span);
+
+    MusicalTime **starts = NULL;
+    size_t count = 0;
+    if (!grid->provider(grid->map, measure, grid->provider_context, &starts, &count) || count == 0) {
+        return false;
+    }
+    bool found = false;
+    for (size_t k = 0; k < count && !found; k++) {
+        ExactRational beat_start = er_of_time(starts[k]);
+        ExactRational beat_end = k + 1 < count ? er_of_time(starts[k + 1]) : measure_end;
+        if (er_cmp(beat_start, at) <= 0 && er_cmp(at, beat_end) < 0) {
+            found = er_sub(beat_end, beat_start, out) == 0;
+            break;
+        }
+    }
+    for (size_t k = 0; k < count; k++) {
+        musical_time_destroy(starts[k]);
+    }
+    free(starts);
+    return found;
+}
+
 /* --- the notes of one stream --- */
 
 typedef struct {
@@ -385,12 +456,6 @@ typedef struct {
     unsigned long recency;
 } VoiceState;
 
-/* The pitch a voice is measured from at time t: its last pitch while it is sounding or has only just ended,
-   else its nominal pitch (the middle of its band of the stream's range). */
-static bool voice_reference(const VoiceState *state, ExactRational at) {
-    return state->has_note && er_cmp(state->release, at) >= 0;
-}
-
 static int nominal_pitch(ExactRational lowest, ExactRational highest, size_t voice, size_t voice_count,
                          ExactRational *out) {
     ExactRational range = {0, 1};
@@ -402,8 +467,11 @@ static int nominal_pitch(ExactRational lowest, ExactRational highest, size_t voi
     return er_sub(highest, offset, out);
 }
 
+/* The pitch a voice is measured from at `onset` is its last pitch while it keeps a reference (step 5), else
+   its nominal pitch (the middle of its band of the stream's range). */
 static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, size_t hi,
-                           const VoiceSeparationConfig *config, NoteResult *results, size_t *out_voice_count) {
+                           const VoiceSeparationConfig *config, ExactRational hold, const BeatGridContext *grid,
+                           NoteResult *results, size_t *out_voice_count) {
     size_t simultaneous = 0;
     int status = max_simultaneous(notes, keys, lo, hi, &simultaneous);
     if (status != 0) {
@@ -445,7 +513,14 @@ static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, 
         for (size_t v = 0; v < voice_count; v++) {
             voices[v].held = state[v].has_note && er_cmp(state[v].release, onset) > 0;
             voices[v].recency = state[v].recency;
-            if (voice_reference(&state[v], onset)) {
+            bool kept = false;
+            if (state[v].has_note) {
+                int status = vs_reference_kept(state[v].release, onset, hold, grid_beat_length, (void *)grid, &kept);
+                if (status != 0) {
+                    return status;
+                }
+            }
+            if (kept) {
                 voices[v].pitch = state[v].pitch;
             } else if (nominal_pitch(lowest, highest, v, voice_count, &voices[v].pitch) != 0) {
                 return -1;
@@ -524,14 +599,18 @@ static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, 
 
 VoiceSeparationResult voice_separate(NoteEvent *const *notes, PitchNumericValue *const *pitch_values,
                                       size_t note_count, const size_t *stream_of_note,
+                                      const MeterMap *map, BeatGridProvider provider, void *provider_context,
                                       const VoiceSeparationConfig *config, VoiceAssignment *out) {
-    if (out == NULL || (note_count > 0 && (notes == NULL || pitch_values == NULL))) {
+    if (out == NULL || map == NULL || provider == NULL || (note_count > 0 && (notes == NULL || pitch_values == NULL))) {
         return VOICE_SEPARATION_ERR_NULL_ARGUMENT;
     }
     VoiceSeparationConfig effective = config != NULL ? *config : voice_separation_config_default();
-    if (effective.max_voices < 1 || effective.max_voices > VS_MAX_VOICES_LIMIT) {
+    if (effective.max_voices < 1 || effective.max_voices > VS_MAX_VOICES_LIMIT ||
+        effective.rest_hold_denominator == 0) {
         return VOICE_SEPARATION_ERR_BAD_CONFIG;
     }
+    ExactRational hold = er_make(effective.rest_hold_numerator, effective.rest_hold_denominator);
+    BeatGridContext grid = {map, provider, provider_context};
 
     VsNote *facts = (VsNote *)calloc(note_count > 0 ? note_count : 1, sizeof(VsNote));
     SortKey *keys = (SortKey *)calloc(note_count > 0 ? note_count : 1, sizeof(SortKey));
@@ -589,9 +668,11 @@ VoiceSeparationResult voice_separate(NoteEvent *const *notes, PitchNumericValue 
             hi++;
         }
         size_t voice_count = 0;
-        int status = separate_stream(facts, keys, lo, hi, &effective, results, &voice_count);
+        int status = separate_stream(facts, keys, lo, hi, &effective, hold, &grid, results, &voice_count);
         if (status == -2) {
             failure = VOICE_SEPARATION_ERR_ALLOC;
+        } else if (status == -3) {
+            failure = VOICE_SEPARATION_ERR_BEAT_GRID;
         } else if (status != 0) {
             failure = VOICE_SEPARATION_ERR_OVERFLOW;
         } else {

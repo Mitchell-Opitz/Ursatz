@@ -38,6 +38,20 @@ int vs_assign_onset(const VsVoice *voices, size_t voice_count, const VsAttack *a
                     bool allow_crossing, size_t *out_voice, double *out_margin);
 
 /*
+ * The length of the beat at time `at`, from the beat grid (injected). False on failure.
+ */
+typedef bool (*VsBeatLength)(void *context, ExactRational at, ExactRational *out_beat);
+
+/*
+ * Step 5: whether a voice whose last note ended at last_release still has a reference at `at`: true when the
+ * note is still sounding or ends exactly at `at`, or when the rest (at - last_release) is no longer than
+ * hold_beats beats of the beat that holds last_release. Returns 0 on success, -1 on overflow, -3 when the
+ * beat grid fails.
+ */
+int vs_reference_kept(ExactRational last_release, ExactRational at, ExactRational hold_beats,
+                      VsBeatLength beat_length, void *beat_context, bool *out_kept);
+
+/*
  * Step 6: when more notes are attacked than there are free voices, chooses `keep` of them to take voices and
  * marks the rest as chord members, by repeatedly dropping the lower note of the closest pair (the lower
  * note id of an equal pair). is_member[i] is true for the dropped ones. keep <= attack_count. Returns 0, or -1

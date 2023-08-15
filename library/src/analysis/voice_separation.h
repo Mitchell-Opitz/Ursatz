@@ -7,6 +7,8 @@
 #include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_numeric_value.h"
+#include "semantics/sonority_segmentation.h"
+#include "time/meter_map.h"
 
 /*
  * VoiceSeparation (analysis, theory-neutral): assigns each note of a stream to a voice by pitch HEIGHT
@@ -26,11 +28,17 @@
  *      least. Without allow_crossing the attacked notes keep their pitch order, and a note that would sit on
  *      the wrong side of a held note is counted as a violation, which ranks before distance (so a crossing is
  *      chosen only when no assignment avoids one).
- *   4. A voice with no note to take rests. A voice that has never sounded is measured from its nominal pitch:
- *      the stream's pitch range is split into equal bands, one per voice, top to bottom.
- *   5. More attacked notes than free voices: the extra notes join the nearest voice as chord members and are
+ *   4. A voice with no note to take rests. A voice with no reference (never sounded, or resting longer than
+ *      rest_hold) is measured from its nominal pitch: the stream's pitch range is split into equal bands, one
+ *      per voice, top to bottom, so it re-enters by register.
+ *   5. Continuity across rests: a voice whose last note ended up to rest_hold beats ago (2 by default,
+ *      inclusive) keeps its last pitch as its reference, so after a short rest the same voice resumes. Beat
+ *      length is the length of the beat holding the end of that note, from the beat grid, which is INJECTED
+ *      as a BeatGridProvider with the MeterMap it reads (as sonority segmentation takes it): this file
+ *      includes no framework.
+ *   6. More attacked notes than free voices: the extra notes join the nearest voice as chord members and are
  *      flagged. The extras are chosen by repeatedly dropping the lower note of the closest pair.
- *   6. Ties go to the lower total distance, then to the more recently sounding voices (keep the previous
+ *   7. Ties go to the lower total distance, then to the more recently sounding voices (keep the previous
  *      voice), then to the lower note id.
  *
  * confidence (in [0, 1]) comes from the cost margin of the assignment of one onset: (second best - best) /
@@ -43,9 +51,11 @@
 typedef struct {
     size_t max_voices;     /* 1..8, default 4 */
     bool allow_crossing;   /* default false */
+    unsigned long rest_hold_numerator;   /* the rest a voice survives, in beats (default 2/1) */
+    unsigned long rest_hold_denominator;
 } VoiceSeparationConfig;
 
-/* max_voices 4, no crossing. */
+/* max_voices 4, no crossing, rest_hold 2 beats. */
 VoiceSeparationConfig voice_separation_config_default(void);
 
 typedef struct {
@@ -75,18 +85,22 @@ typedef enum {
     VOICE_SEPARATION_ERR_BAD_CONFIG,
     VOICE_SEPARATION_ERR_MIXED_TUNING,
     VOICE_SEPARATION_ERR_UNSUPPORTED_PITCH,
+    VOICE_SEPARATION_ERR_BEAT_GRID,
+    VOICE_SEPARATION_ERR_METER_MAP,
     VOICE_SEPARATION_ERR_OVERFLOW,
     VOICE_SEPARATION_ERR_ALLOC
 } VoiceSeparationResult;
 
 /*
  * Separates the notes. notes and pitch_values are parallel (note_count entries); stream_of_note is NULL or
- * parallel too; config may be NULL for the defaults. BAD_CONFIG for max_voices outside 1..8,
+ * parallel too; config may be NULL for the defaults. BAD_CONFIG for max_voices outside 1..8 or a zero
+ * rest_hold denominator, BEAT_GRID and METER_MAP when the beat grid cannot answer for a rest,
  * UNSUPPORTED_PITCH for a negative pitch or time. On OK, *out owns its entries (voice_assignment_destroy);
  * otherwise *out is untouched.
  */
 VoiceSeparationResult voice_separate(NoteEvent *const *notes, PitchNumericValue *const *pitch_values,
                                       size_t note_count, const size_t *stream_of_note,
+                                      const MeterMap *map, BeatGridProvider provider, void *provider_context,
                                       const VoiceSeparationConfig *config, VoiceAssignment *out);
 
 /* Destroys every entry's note id and the arrays. NULL is a no-op. */
