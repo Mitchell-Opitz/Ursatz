@@ -71,6 +71,13 @@ typedef struct {
     size_t target; /* the index of the marked chord */
 } PhraseContext;
 
+/*
+ * The chord as the recognizer wants it: a set of intervals above the root, in semitones, by the
+ * quality the chord has in the key. False for a chord this module does not write.
+ */
+bool harmony_diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count);
+bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals[4], size_t *count);
+
 /* A phrase as the recognizer is shown it. */
 typedef struct {
     const PhraseChord *chords;
@@ -101,6 +108,8 @@ bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner,
 bool harmony_span_has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind);
 /* The mode of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKeyMode *out);
+/* The key of the key lane over the span, else of a key constraint on the span or its owner. */
+bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKey *out);
 /* The meter under span, which must lie in one meter lane span, start on a barline and be whole bars long. */
 bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out);
 /* The span of cells [first_cell, first_cell + cells) counted from start. */
@@ -215,5 +224,41 @@ bool harmony_edit_compose(const PhraseContext *phrase, const Edit *edit, Embelli
 bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCandidateList *out);
 
 void harmony_progression_destroy(void *payload);
+
+/* The harmony under a bass span, as the bass operator reads it. */
+typedef struct {
+    LaneSpanId target;
+    NodeId owner;
+    PlanSpan span;
+    PlanKey key;
+    PhraseMetre metre;
+    size_t count;
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+} BassContext;
+
+/* One note of a bass candidate: its MIDI pitch, its length in cells, and the chord it sounds under. */
+#define BASS_MAX_NOTES 256
+typedef struct {
+    int pitch;
+    size_t cells;
+    size_t chord;
+} BassNote;
+
+/* A bass candidate's payload: the harmony it was made for and the notes. */
+typedef struct {
+    BassContext context;
+    BassNote notes[BASS_MAX_NOTES];
+    size_t note_count;
+} BassCandidate;
+
+/*
+ * Reads the harmony under a Constrained bass span: the chord spans must tile the span exactly, none
+ * of them open, with a meter and a key over it. False when the span is not one the bass operator
+ * applies to.
+ */
+bool harmony_bass_context_read(const PiecePlan *plan, LaneSpanId target, BassContext *out);
+
+/* The pitch class (0 to 11) of the chord's bass member in the key. False for a chord not written here. */
+bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc);
 
 #endif

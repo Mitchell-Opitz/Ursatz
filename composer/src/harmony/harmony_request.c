@@ -42,22 +42,31 @@ bool harmony_span_has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConst
     return span_constraint(plan, id, kind, &unused);
 }
 
-bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKeyMode *out) {
+bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKey *out) {
     LaneSpanId keys[2];
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys, 2);
     if (found == 1) {
         if (!plan_span_contains(plan_lane_span_span(plan, keys[0]), span)) {
             return false;
         }
-        *out = plan_lane_span_payload(plan, keys[0])->key.mode;
+        *out = plan_lane_span_payload(plan, keys[0])->key;
         return true;
     }
     PlanConstraint constraint;
     if (found == 0 && harmony_find_constraint(plan, id, owner, PLAN_CONSTRAINT_KEY, &constraint)) {
-        *out = constraint.params.key.mode;
+        *out = constraint.params.key;
         return true;
     }
     return false;
+}
+
+bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKeyMode *out) {
+    PlanKey key;
+    if (!harmony_find_key(plan, id, owner, span, &key)) {
+        return false;
+    }
+    *out = key.mode;
+    return true;
 }
 
 bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) {
