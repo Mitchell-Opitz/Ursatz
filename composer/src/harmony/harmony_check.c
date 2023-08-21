@@ -14,6 +14,8 @@
 #include <harmony_predominant_seventh.h>
 #include <harmony_strong_predominants.h>
 
+#include <ursatz_composer/harmony_octave.h>
+
 #include "harmony/harmony_internal.h"
 
 static unsigned bits_set(unsigned bits) {
@@ -116,10 +118,12 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
     size_t model_count = 0;
     /* A deceptive or plagal ending is not a cadential progression, so the phrase rules read the chords up
        to the dominant (deceptive) or to the authentic cadence's tonic (plagal). */
-    size_t model_end = count - (cadence == PLAN_CADENCE_DC ? 1 : (cadence == PLAN_CADENCE_PC ? 2 : 0));
+    size_t model_end = phrase->open_ended
+                           ? count
+                           : count - (cadence == PLAN_CADENCE_DC ? 1 : (cadence == PLAN_CADENCE_PC ? 2 : 0));
 
     const char *hard = NULL;
-    if (unexplained_six_four) {
+    if (unexplained_six_four && !phrase->open_ended) {
         hard = "6/4 chord without a type";
     }
     for (size_t i = 0; !hard && i < count; i++) {
@@ -135,12 +139,13 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
             if (!resolves) {
                 hard = "applied chord does not resolve to its target";
             }
-        } else if (!chord_is_explained(phrase->mode, &segment->chord, reading[i].six_four, reading[i].inside)) {
+        } else if (!phrase->open_ended &&
+                   !chord_is_explained(phrase->mode, &segment->chord, reading[i].six_four, reading[i].inside)) {
             hard = "chord with no reason to be there";
         }
     }
     for (size_t i = 0; !hard && i < model_end; i++) {
-        if (!segments[i].applied && !reading[i].inside && !reading[i].prolonging_six_four) {
+        if (!segments[i].applied && (phrase->open_ended || (!reading[i].inside && !reading[i].prolonging_six_four))) {
             model[model_count++] = segments[i].chord;
         }
     }
@@ -158,10 +163,10 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
     }
 
     /* The ending's own progression. */
-    if (!hard && (count < 2 || segments[count - 2].applied || segments[count - 1].applied)) {
+    if (!hard && !phrase->open_ended && (count < 2 || segments[count - 2].applied || segments[count - 1].applied)) {
         hard = "no cadential progression";
     }
-    if (!hard) {
+    if (!hard && !phrase->open_ended) {
         const HarmonyChord ending[2] = {segments[count - 2].chord, segments[count - 1].chord};
         if (cadence == PLAN_CADENCE_DC) {
             HarmonyDeceptiveKind kind;
@@ -186,7 +191,7 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
 
     /* The cadence the recognizer hears must be the one asked for, and it must end the phrase. */
     CadenceType heard = CADENCE_TYPE_UNKNOWN;
-    if (!hard) {
+    if (!hard && !phrase->open_ended) {
         HarmonyCadences found = {NULL, 0};
         if (harmony_analysis_find_cadences(segments, count, NULL, &found) != HARMONY_CADENCE_ANALYSIS_OK) {
             ok = false;
@@ -260,7 +265,27 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
                               edit->cell_length};
         return verdict_to_check(&phrase, out);
     }
+    if (strcmp(operator_->generator.name, HARMONY_OCTAVE_OPERATOR_NAME) == 0) {
+        return harmony_octave_check(candidate->payload, out);
+    }
     return fill_default_checker(plan, target, operator_, candidate, context, out);
+}
+
+bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode,
+                                         const char **violation) {
+    PhraseMetre metre;
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+    size_t count;
+    PhraseVerdict verdict;
+    if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
+        return false;
+    }
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true};
+    if (!harmony_judge(&phrase, &verdict)) {
+        return false;
+    }
+    *violation = verdict.hard;
+    return true;
 }
 
 bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,

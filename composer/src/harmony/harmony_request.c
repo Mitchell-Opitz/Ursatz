@@ -1,3 +1,5 @@
+#include <ursatz_composer/plan_state.h>
+
 #include "harmony/harmony_internal.h"
 
 /* The most bars a phrase can span, and the most barlines searched before a phrase; guards for the loops below. */
@@ -135,6 +137,14 @@ bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, Phras
     request.cells_per_bar = metre.cells_per_bar;
     request.cell_length = metre.cell_length;
     request.cells = metre.cells;
+    /* A Given bass over the span means the harmony is to be found from the bass (harmony_octave.h). */
+    LaneSpanId basses[HARMONY_MAX_CHORDS];
+    size_t bass_count = plan_lane_find(plan, PLAN_LANE_BASS, 0, request.span, basses, HARMONY_MAX_CHORDS);
+    for (size_t i = 0; i < bass_count && i < HARMONY_MAX_CHORDS; i++) {
+        if (plan_lane_span_state(plan, basses[i]) == PLAN_STATE_GIVEN) {
+            return false;
+        }
+    }
 
     PlanConstraint constraint;
     if (!harmony_find_constraint(plan, target, request.owner, PLAN_CONSTRAINT_CADENCE, &constraint)) {

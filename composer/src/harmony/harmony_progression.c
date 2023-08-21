@@ -41,16 +41,9 @@ static PlanHarmonicFunction plan_function_of(HarmonicFunction function) {
     }
 }
 
-bool harmony_make_chord(PlanKeyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
-                        PhraseChord *out) {
-    HarmonyChord chord;
+static bool make_from(PlanKeyMode mode, HarmonyChord chord, size_t cells, PhraseChord *out) {
     HarmonicFunction function;
-    memset(&chord, 0, sizeof(chord));
     memset(out, 0, sizeof(*out));
-    chord.degree = degree;
-    chord.inversion = inversion;
-    chord.seventh = seventh;
-    chord.cadential = cadential;
     if (!harmony_chord_valid(&chord) || !harmony_function_of(harmony_mode_of(mode), &chord, &function) ||
         !harmony_roman_format(mode, &chord, out->roman)) {
         return false;
@@ -59,6 +52,26 @@ bool harmony_make_chord(PlanKeyMode mode, int degree, int inversion, bool sevent
     out->chord = chord;
     out->cells = cells;
     return true;
+}
+
+bool harmony_make_chord(PlanKeyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+                        PhraseChord *out) {
+    HarmonyChord chord;
+    memset(&chord, 0, sizeof(chord));
+    chord.degree = degree;
+    chord.inversion = inversion;
+    chord.seventh = seventh;
+    chord.cadential = cadential;
+    return make_from(mode, chord, cells, out);
+}
+
+bool harmony_make_leading_tone(PlanKeyMode mode, int inversion, size_t cells, PhraseChord *out) {
+    HarmonyChord chord;
+    memset(&chord, 0, sizeof(chord));
+    chord.degree = 7;
+    chord.inversion = inversion;
+    chord.leading_tone = mode == PLAN_MODE_MINOR;
+    return make_from(mode, chord, cells, out);
 }
 
 static bool make_chord(PlanKeyMode mode, ChordSpec spec, size_t cells, PhraseChord *out) {

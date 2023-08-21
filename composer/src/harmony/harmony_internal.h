@@ -86,6 +86,8 @@ typedef struct {
     PlanCadenceType requested;
     size_t cells_per_bar;
     PlanTime cell_length;
+    /* A phrase that need not end in a cadence, nor explain every inverted chord: a harmonization of a given bass. */
+    bool open_ended;
 } HeardPhrase;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
@@ -208,6 +210,9 @@ void harmony_options_applied(const PiecePlan *plan, const PhraseContext *phrase,
 bool harmony_make_chord(PlanKeyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
                         PhraseChord *out);
 
+/* The leading-tone triad (the chord on the raised seventh degree in minor). */
+bool harmony_make_leading_tone(PlanKeyMode mode, int inversion, size_t cells, PhraseChord *out);
+
 /* The lane payload that writes a chord. */
 void harmony_chord_payload(const PhraseChord *chord, PlanLanePayload *payload);
 
@@ -224,6 +229,9 @@ bool harmony_edit_compose(const PhraseContext *phrase, const Edit *edit, Embelli
 bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCandidateList *out);
 
 void harmony_progression_destroy(void *payload);
+
+/* The verdict of the harmony-from-bass operator's checker on a candidate payload. */
+bool harmony_octave_check(const void *payload, FillCheck *out);
 
 /* The harmony under a bass span, as the bass operator reads it. */
 typedef struct {
