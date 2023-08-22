@@ -164,6 +164,7 @@ add_library(ursatz
     # circular library dependency.
     analysis/voice_leading_analysis.c
     analysis/outer_voice.c
+    analysis/voice_separation.c
     analysis/cadence_detection.c
     analysis/cadence_classification.c
     analysis/motif_detection.c

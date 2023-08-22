@@ -17,6 +17,7 @@ add_test(NAME key_estimation COMMAND test_key_estimation)
 
 add_ursatz_test(voice_leading_analysis)
 add_ursatz_test(outer_voice)
+add_ursatz_test(voice_separation)
 add_ursatz_test(cadence_detection)
 add_ursatz_test(cadence_classification)
 add_ursatz_test(motif_detection)
@@ -57,5 +58,12 @@ target_compile_definitions(test_outer_voices_written_parts PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME outer_voices_written_parts COMMAND test_outer_voices_written_parts)
+
+add_executable(test_voice_separation_corpus test_voice_separation_corpus.c)
+target_link_libraries(test_voice_separation_corpus PRIVATE standard_meter)
+target_compile_definitions(test_voice_separation_corpus PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME voice_separation_corpus COMMAND test_voice_separation_corpus)
 
 add_ursatz_architecture_test(analysis)

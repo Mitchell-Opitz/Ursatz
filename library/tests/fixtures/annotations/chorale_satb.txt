@@ -1,0 +1,21 @@
+# Four-part chorale excerpt for voice-separation ground truth: 8 measures, G major, 4/4, one quarter note = 2 units.
+#
+# SOURCE AND STATUS: DRAFT, UNVERIFIED, NOT A TRANSCRIPTION OF ANY EDITION. This is a four-part chorale
+# written by hand for this fixture, in the idiom of J. S. Bach's harmonisations and modelled on the opening
+# phrases of "Aus meiner Herzens Grunde" (BWV 269; Riemenschneider / Breitkopf numbering). It was not copied
+# from the printed score and its notes will differ from it in places, so it must not be cited as the edition.
+# A human should either check it against an edition (and correct it) or replace it with a verified transcription
+# before it is relied on as more than a texture with known voices. It was NOT derived from the output of the
+# voice-separation code.
+#
+# What it exercises: four voices that move together and apart without crossing, eighth-note passing tones in
+# the alto (m2, m6) and tenor (m3, m5) while the other voices hold, repeated notes, and a half-note cadence.
+#
+# FORMAT: <part> <midi>:<duration> ... The parts are S (soprano, voice 0), A (alto, 1), T (tenor, 2), B (bass,
+# 3), each one line of consecutive notes with no rests, starting at time 0. duration is in eighth notes (2 = a
+# quarter note); midi is the MIDI note number (C4 = 60). All four lines must have the same total length.
+#
+S 71:2 72:2 74:2 71:2  71:2 69:2 67:2 67:2  72:2 71:2 69:2 67:2  69:2 66:2 67:4  71:2 71:2 72:2 74:2  74:2 72:2 71:2 71:2  72:2 71:2 69:2 69:2  69:4 67:4
+A 67:2 67:2 69:2 67:2  67:1 69:1 66:2 62:2 62:2  64:2 62:2 64:2 64:2  66:2 62:2 62:4  67:2 67:2 69:2 69:2  69:2 69:1 67:1 67:2 67:2  64:2 62:2 66:2 66:2  66:4 62:4
+T 62:2 64:2 66:2 62:2  59:2 62:2 59:2 59:2  60:2 59:1 57:1 57:2 59:2  62:2 57:2 55:4  62:2 64:1 62:1 64:2 66:2  66:2 64:2 62:2 62:2  60:2 55:2 62:2 60:2  62:4 59:4
+B 55:2 48:2 50:2 55:2  55:2 50:2 55:2 43:2  48:2 43:2 45:2 40:2  50:2 50:2 43:4  55:2 52:2 48:2 50:2  50:2 48:2 55:2 43:2  48:2 47:2 50:2 50:2  50:4 43:4
