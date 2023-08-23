@@ -10,6 +10,7 @@
 #include <semantics/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/lanes.h>
@@ -252,9 +253,10 @@ typedef struct {
     size_t chord;
 } BassNote;
 
-/* A bass candidate's payload: the harmony it was made for and the notes. */
+/* A bass candidate's payload: the harmony it was made for, the range it keeps to, and the notes. */
 typedef struct {
     BassContext context;
+    HarmonyBassParams params;
     BassNote notes[BASS_MAX_NOTES];
     size_t note_count;
 } BassCandidate;
@@ -265,6 +267,15 @@ typedef struct {
  * applies to.
  */
 bool harmony_bass_context_read(const PiecePlan *plan, LaneSpanId target, BassContext *out);
+
+/*
+ * Judges a bass line: every note in range and the bass member of its chord, then standard-counterpoint's
+ * melodic rules over the whole line. Hard rules reject (all but the one for the last note of a line,
+ * which a cadence outline breaks); soft rules score. False only when it fails itself (allocation).
+ */
+bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict);
+/* The checker's verdict on a bass candidate's payload. */
+bool harmony_bass_check(const void *payload, FillCheck *out);
 
 /* The pitch class (0 to 11) of the chord's bass member in the key. False for a chord not written here. */
 bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc);

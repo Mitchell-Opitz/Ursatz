@@ -14,8 +14,9 @@
 #define DEFAULT_STEPWISE 750
 #define CHANCE_SCALE 1000
 
-/* Bass candidates tried per call; ones that repeat an earlier one are dropped. */
-#define BASS_ATTEMPTS 6
+/* Bass candidates tried per call, and kept; ones that repeat an earlier one are dropped. */
+#define BASS_ATTEMPTS 16
+#define BASS_KEEP 6
 /* The most notes one chord is split into. */
 #define MAX_NOTES_PER_CHORD 4
 
@@ -126,6 +127,7 @@ static bool build_bass(const BassContext *context, const HarmonyBassParams *para
     int previous = -1;
     memset(out, 0, sizeof(*out));
     out->context = *context;
+    out->params = *params;
     for (size_t i = 0; i < context->count; i++) {
         const PhraseChord *chord = &context->chords[i];
         int pc;
@@ -220,16 +222,25 @@ static bool bass_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     if (target.kind != FILL_TARGET_LANE_SPAN || !harmony_bass_context_read(plan, (LaneSpanId)target.id, &read)) {
         return false;
     }
-    BassCandidate *kept[BASS_ATTEMPTS];
+    BassCandidate *kept[BASS_KEEP];
     size_t kept_count = 0;
     BassCandidate *scratch = malloc(sizeof(*scratch));
     if (!scratch) {
         return false;
     }
     bool ok = true;
-    for (size_t attempt = 0; ok && attempt < BASS_ATTEMPTS; attempt++) {
+    for (size_t attempt = 0; ok && attempt < BASS_ATTEMPTS && kept_count < BASS_KEEP; attempt++) {
+        PhraseVerdict verdict;
         if (!build_bass(&read, params, rng, scratch)) {
             break;
+        }
+        /* Only lines that pass the melodic rules are proposed; none passing leaves the span open. */
+        if (!harmony_bass_judge(scratch, &verdict)) {
+            ok = false;
+            break;
+        }
+        if (verdict.hard) {
+            continue;
         }
         bool repeat = false;
         for (size_t i = 0; i < kept_count; i++) {

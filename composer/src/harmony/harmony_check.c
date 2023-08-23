@@ -265,6 +265,9 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
                               edit->cell_length};
         return verdict_to_check(&phrase, out);
     }
+    if (strcmp(operator_->generator.name, HARMONY_BASS_OPERATOR_NAME) == 0) {
+        return harmony_bass_check(candidate->payload, out);
+    }
     if (strcmp(operator_->generator.name, HARMONY_OCTAVE_OPERATOR_NAME) == 0) {
         return harmony_octave_check(candidate->payload, out);
     }

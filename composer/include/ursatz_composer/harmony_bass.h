@@ -1,6 +1,8 @@
 #ifndef URSATZ_COMPOSER_HARMONY_BASS_H
 #define URSATZ_COMPOSER_HARMONY_BASS_H
 
+#include <stdbool.h>
+
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/lanes.h>
 
@@ -42,6 +44,17 @@ typedef struct {
 
 /* The defaults: MIDI 40 to 60 (E2 to C4), subdivision 250, stepwise 750. */
 HarmonyBassParams harmony_bass_params_default(void);
+
+/*
+ * Checks the bass lane over span, which must hold one bass span for each chord of the harmony lane,
+ * aligned with it, against standard-counterpoint's melodic rules, reading only what is in the plan.
+ * Every note must be in range (params, NULL for the defaults) and the bass member of its chord; the
+ * line must break no hard melodic rule (augmented, diminished and seventh leaps, outlines of them), and
+ * soft rules are not asked. True when the lane could be read, with *violation NULL if nothing is broken
+ * and otherwise the rule that is.
+ */
+bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const HarmonyBassParams *params,
+                        const char **violation);
 
 /*
  * Registers the operator with these parameters. The registry keeps the pointer,
