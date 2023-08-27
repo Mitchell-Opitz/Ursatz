@@ -10,6 +10,7 @@ add_library(common_practice_minimal
     non_chord_tones.c
     weighted_chord_identification.c
     outer_scale_degrees.c
+    key_regions.c
     ${PROJECT_SOURCE_DIR}/src/analysis/chord_identification.c
     ${PROJECT_SOURCE_DIR}/src/analysis/key_estimation.c
 )
