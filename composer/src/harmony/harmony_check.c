@@ -243,7 +243,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         }
         HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode,
                               progression->request.cadence, progression->request.cells_per_bar,
-                              progression->request.cell_length};
+                              progression->request.cell_length, false};
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_EMBELLISH_OPERATOR_NAME) == 0) {
@@ -262,7 +262,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
             return false;
         }
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
-                              edit->cell_length};
+                              edit->cell_length, false};
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_BASS_OPERATOR_NAME) == 0) {
@@ -300,7 +300,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, 
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
