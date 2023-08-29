@@ -330,9 +330,10 @@ static PlanResult bass_apply(PiecePlan *plan, FillTarget target, const FillCandi
         payload.notes.notes = notes;
         payload.notes.note_count = note_count;
         if (i == 0) {
-            result = plan_lane_span_resize(plan, first, span.length);
+            /* The placeholder note is as long as the span, so the shorter notes are written before it shrinks. */
+            result = plan_lane_span_write(plan, first, &payload);
             if (result == PLAN_OK) {
-                result = plan_lane_span_write(plan, first, &payload);
+                result = plan_lane_span_resize(plan, first, span.length);
             }
         } else {
             LaneSpanId id;
