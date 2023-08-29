@@ -255,8 +255,13 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
     }
 }
 
-/* Runs the harmony operators, then the bass operator, and checks the result. Returns the bass as text. */
-static void pipeline(const Scenario *scenario, const HarmonyBassParams *params, char *text) {
+/*
+ * Runs the harmony operators, then the bass operator. When the bass is written, checks it and returns it as
+ * text. A progression whose chords no bass line can follow without a forbidden leap (a tritone from I to the
+ * root of vii/V, say) gets the loop's "no valid candidate" result and the bass span stays open; that is checked
+ * too, and false is returned.
+ */
+static bool pipeline(const Scenario *scenario, const HarmonyBassParams *params, char *text) {
     Fixture fixture = build(scenario, true);
     FillOutcome outcome = run(&fixture, scenario->seed, true, false, false, NULL, false);
     assert(outcome.status == FILL_STATUS_COMPLETE);
@@ -271,11 +276,19 @@ static void pipeline(const Scenario *scenario, const HarmonyBassParams *params, 
     (void)given_before;
     LaneSpanId target = add_bass_target(&fixture);
     outcome = run(&fixture, scenario->seed, false, false, true, params, false);
-    assert(outcome.status == FILL_STATUS_COMPLETE);
+    bool written = outcome.status == FILL_STATUS_COMPLETE;
+    if (!written) {
+        assert(outcome.status == FILL_STATUS_STUCK);
+        assert(outcome.stuck_count == 1 && outcome.stuck[0].reason == FILL_STUCK_ALL_REJECTED);
+        assert(outcome.stuck[0].target.id == target);
+        assert(plan_lane_span_state(fixture.plan, target) == PLAN_STATE_CONSTRAINED);
+        text[0] = '\0';
+    }
     fill_outcome_destroy(&outcome);
-    (void)target;
-    check_bass(&fixture, scenario, params);
-    signature(&fixture, text, SIGNATURE_SIZE);
+    if (written) {
+        check_bass(&fixture, scenario, params);
+        signature(&fixture, text, SIGNATURE_SIZE);
+    }
 
     /* The Given bass note after the phrase is untouched. */
     PlanSpan now = plan_lane_span_span(fixture.plan, fixture.given_bass);
@@ -283,15 +296,17 @@ static void pipeline(const Scenario *scenario, const HarmonyBassParams *params, 
     assert(plan_lane_span_state(fixture.plan, fixture.given_bass) == PLAN_STATE_GIVEN);
     assert(plan_lane_span_payload(fixture.plan, fixture.given_bass)->notes.notes[0].midi_pitch == 43);
     plan_destroy(fixture.plan);
+    return written;
 }
 
-static void check_scenario(const Scenario *scenario, const HarmonyBassParams *params) {
+static bool check_scenario(const Scenario *scenario, const HarmonyBassParams *params) {
     static char first[SIGNATURE_SIZE];
     static char second[SIGNATURE_SIZE];
-    pipeline(scenario, params, first);
-    /* The same seed gives the same bass. */
-    pipeline(scenario, params, second);
+    bool written = pipeline(scenario, params, first);
+    /* The same seed gives the same bass, or the same refusal. */
+    assert(pipeline(scenario, params, second) == written);
     assert(strcmp(first, second) == 0);
+    return written;
 }
 
 static void test_sweep(void) {
@@ -304,6 +319,8 @@ static void test_sweep(void) {
     HarmonyBassParams split = harmony_bass_params_default();
     plain.subdivision = 0;
     split.subdivision = 1000;
+    int total = 0;
+    int written = 0;
     for (int m = 0; m < 4; m++) {
         for (int mode = 0; mode < 2; mode++) {
             for (int t = 0; t < 4; t++) {
@@ -312,13 +329,16 @@ static void test_sweep(void) {
                         for (unsigned long seed = 0; seed < 2; seed++) {
                             Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
                                                  tonics[t], bars[b], cadences[c], seed};
-                            check_scenario(&scenario, seed ? &split : &plain);
+                            total++;
+                            written += check_scenario(&scenario, seed ? &split : &plain);
                         }
                     }
                 }
             }
         }
     }
+    /* Most progressions have a bass; the rest are the ones no line follows without a forbidden leap. */
+    assert(written * 10 >= total * 8);
 }
 
 /* Subdivision splits chords into several notes of the same bass member; none keeps one note a chord. */
