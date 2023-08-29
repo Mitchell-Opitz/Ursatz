@@ -1,6 +1,7 @@
 #include <ursatz_composer/harmony_bass.h>
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,7 +16,7 @@
 #define CHANCE_SCALE 1000
 
 /* Bass candidates tried per call, and kept; ones that repeat an earlier one are dropped. */
-#define BASS_ATTEMPTS 16
+#define BASS_ATTEMPTS 48
 #define BASS_KEEP 6
 /* The most notes one chord is split into. */
 #define MAX_NOTES_PER_CHORD 4
@@ -101,22 +102,36 @@ static size_t pitches_in_range(int pc, int low, int high, int *out, size_t capac
     return count;
 }
 
-/* The first note of a chord: the octave nearest the note before with the stepwise chance, otherwise any. */
-static int choose_pitch(const int *options, size_t count, int previous, unsigned stepwise, FillRng *rng) {
+/*
+ * The first note of a chord. The first chord of the line takes the octave nearest the middle of the range, so
+ * the line has room to move both ways. After that, with the stepwise chance the octave nearest the note
+ * before is taken, and otherwise any octave within an octave of it.
+ */
+static int choose_pitch(const int *options, size_t count, int previous, const HarmonyBassParams *params,
+                        unsigned stepwise, FillRng *rng) {
     bool near = fill_rng_below(rng, CHANCE_SCALE) < stepwise;
-    size_t random = (size_t)fill_rng_below(rng, count);
-    if (previous < 0 || !near) {
-        return options[random];
-    }
+    uint64_t draw = fill_rng_below(rng, count);
+    int anchor = previous >= 0 ? previous : (params->range_low + params->range_high) / 2;
     size_t best = 0;
     for (size_t i = 1; i < count; i++) {
-        int here = options[i] > previous ? options[i] - previous : previous - options[i];
-        int then = options[best] > previous ? options[best] - previous : previous - options[best];
+        int here = options[i] > anchor ? options[i] - anchor : anchor - options[i];
+        int then = options[best] > anchor ? options[best] - anchor : anchor - options[best];
         if (here < then) {
             best = i;
         }
     }
-    return options[best];
+    if (previous < 0 || near) {
+        return options[best];
+    }
+    size_t within[16];
+    size_t within_count = 0;
+    for (size_t i = 0; i < count; i++) {
+        int distance = options[i] > anchor ? options[i] - anchor : anchor - options[i];
+        if (distance <= 12) {
+            within[within_count++] = i;
+        }
+    }
+    return within_count ? options[within[draw % within_count]] : options[best];
 }
 
 /* Builds one bass line for the harmony, or false when a chord has no pitch in range. */
@@ -156,7 +171,7 @@ static bool build_bass(const BassContext *context, const HarmonyBassParams *para
             lengths[fill_rng_below(rng, parts)]++;
         }
 
-        int pitch = choose_pitch(options, option_count, previous, stepwise, rng);
+        int pitch = choose_pitch(options, option_count, previous, params, stepwise, rng);
         for (size_t k = 0; k < parts; k++) {
             if (k > 0) {
                 /* A later note repeats the pitch or moves it an octave, to another pitch of the chord's member. */
