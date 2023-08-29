@@ -53,10 +53,6 @@ static PlanTime time_plus(PlanTime a, PlanTime b) {
     return sum;
 }
 
-static PlanTime time_sub(PlanTime a, PlanTime b) {
-    return fraction(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
-}
-
 static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, const int *pitches, int count) {
     PlanNote notes[8];
     PlanLanePayload payload;
