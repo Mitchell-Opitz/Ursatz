@@ -35,7 +35,7 @@ CadenceType harmony_cadence_type_of(PlanCadenceType type) {
  * triad on each degree, and the seventh chord built on it (the dominant seventh on V, a fully
  * diminished seventh on the leading tone).
  */
-static bool diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
+bool harmony_diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
     static const int MAJOR_TRIAD[3] = {0, 4, 7};
     static const int MINOR_TRIAD[3] = {0, 3, 7};
     static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
@@ -75,7 +75,7 @@ static bool diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int 
     return true;
 }
 
-static bool applied_intervals(const HarmonyAppliedChord *applied, int intervals[4], size_t *count) {
+bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals[4], size_t *count) {
     memset(intervals, 0, 4 * sizeof(int));
     switch (applied->quality) {
     case HARMONY_APPLIED_MAJOR_TRIAD:
@@ -199,9 +199,9 @@ SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
         const PhraseChord *chord = &phrase->chords[i];
         HarmonySegmentInput *input = &set->inputs[i];
         snprintf(set->ids[i], sizeof(set->ids[i]), "c%zu", i);
-        bool intervals_ok = chord->applied ? applied_intervals(&chord->applied_chord, input->intervals,
+        bool intervals_ok = chord->applied ? harmony_applied_intervals(&chord->applied_chord, input->intervals,
                                                                &input->interval_count)
-                                           : diatonic_intervals(phrase->mode, &chord->chord, input->intervals,
+                                           : harmony_diatonic_intervals(phrase->mode, &chord->chord, input->intervals,
                                                                 &input->interval_count);
         if (!intervals_ok || !times_create(phrase, first_cell, chord->cells, &set->times[i])) {
             harmony_segments_destroy(set);
@@ -301,6 +301,6 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
     if (!heard || !at_end || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false};
     return harmony_hear_phrase(&phrase, heard, at_end);
 }

@@ -45,3 +45,8 @@ add_executable(test_harmony_embellish test_harmony_embellish.c)
 target_link_libraries(test_harmony_embellish PRIVATE ursatz_composer)
 target_compile_options(test_harmony_embellish PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_embellish COMMAND test_harmony_embellish)
+
+add_executable(test_harmony_bass test_harmony_bass.c)
+target_link_libraries(test_harmony_bass PRIVATE ursatz_composer)
+target_compile_options(test_harmony_bass PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_harmony_bass COMMAND test_harmony_bass)

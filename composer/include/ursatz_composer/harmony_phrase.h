@@ -85,6 +85,14 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
 bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
                         const char **violation);
 
+/*
+ * The same check for a lane that need not end in a cadence nor explain every inverted chord, such
+ * as the harmony found from a bass (harmony_octave.h): only the phrase model, the applied chords
+ * resolving, and that every chord is readable are asked.
+ */
+bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode,
+                                        const char **violation);
+
 /* The recognizer's name for a cadence type of the plan. */
 CadenceType harmony_cadence_type_of(PlanCadenceType type);
 

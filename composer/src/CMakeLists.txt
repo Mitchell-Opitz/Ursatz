@@ -24,13 +24,16 @@ add_library(ursatz_composer STATIC
     harmony/harmony_context.c
     harmony/harmony_templates.c
     harmony/harmony_embellish.c
+    harmony/harmony_bass.c
+    harmony/harmony_bass_check.c
+    harmony/harmony_octave.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_composer
-    PUBLIC ursatz ursatz_analyzer standard_harmony
+    PUBLIC ursatz ursatz_analyzer standard_harmony standard_counterpoint
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
