@@ -278,6 +278,19 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict);
 /* The checker's verdict on a bass candidate's payload. */
 bool harmony_bass_check(const void *payload, FillCheck *out);
 
+/* The most notes one chord's bass span holds. */
+#define BASS_MAX_NOTES_PER_CHORD 4
+
+/*
+ * Builds one bass line for the harmony in context (its key, metre and chords), choosing octaves in the range
+ * with only rng, and splitting chords by the parameters. False when a chord has no pitch in range.
+ */
+bool harmony_bass_build(const BassContext *context, const HarmonyBassParams *params, FillRng *rng,
+                        BassCandidate *out);
+
+/* The notes of one chord of a bass line, as lane notes with offsets from the chord's start. */
+PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, PlanNote *notes, size_t *count);
+
 /* The pitch class (0 to 11) of the chord's bass member in the key. False for a chord not written here. */
 bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc);
 

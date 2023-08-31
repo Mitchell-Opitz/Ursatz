@@ -19,7 +19,7 @@
 #define BASS_ATTEMPTS 48
 #define BASS_KEEP 6
 /* The most notes one chord is split into. */
-#define MAX_NOTES_PER_CHORD 4
+#define MAX_NOTES_PER_CHORD BASS_MAX_NOTES_PER_CHORD
 
 HarmonyBassParams harmony_bass_params_default(void) {
     HarmonyBassParams params = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_SUBDIVISION, DEFAULT_STEPWISE};
@@ -134,9 +134,8 @@ static int choose_pitch(const int *options, size_t count, int previous, const Ha
     return within_count ? options[within[draw % within_count]] : options[best];
 }
 
-/* Builds one bass line for the harmony, or false when a chord has no pitch in range. */
-static bool build_bass(const BassContext *context, const HarmonyBassParams *params, FillRng *rng,
-                       BassCandidate *out) {
+bool harmony_bass_build(const BassContext *context, const HarmonyBassParams *params, FillRng *rng,
+                        BassCandidate *out) {
     unsigned subdivision = chance_of(params->subdivision);
     unsigned stepwise = chance_of(params->stepwise);
     int previous = -1;
@@ -246,7 +245,7 @@ static bool bass_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     bool ok = true;
     for (size_t attempt = 0; ok && attempt < BASS_ATTEMPTS && kept_count < BASS_KEEP; attempt++) {
         PhraseVerdict verdict;
-        if (!build_bass(&read, params, rng, scratch)) {
+        if (!harmony_bass_build(&read, params, rng, scratch)) {
             break;
         }
         /* Only lines that pass the melodic rules are proposed; none passing leaves the span open. */
@@ -279,8 +278,7 @@ static bool bass_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     return ok;
 }
 
-/* Writes the notes of chord i as the payload of its span. */
-static PlanResult chord_notes(const BassCandidate *line, size_t chord, PlanNote *notes, size_t *count) {
+PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, PlanNote *notes, size_t *count) {
     PlanTime cell = line->context.metre.cell_length;
     size_t used = 0;
     size_t at = 0;
@@ -331,7 +329,7 @@ static PlanResult bass_apply(PiecePlan *plan, FillTarget target, const FillCandi
         size_t note_count = 0;
         PlanSpan span;
         PlanLanePayload payload;
-        result = chord_notes(line, i, notes, &note_count);
+        result = harmony_bass_chord_notes(line, i, notes, &note_count);
         if (result == PLAN_OK && note_count == 0) {
             result = PLAN_ERR_BAD_PAYLOAD;
         }
