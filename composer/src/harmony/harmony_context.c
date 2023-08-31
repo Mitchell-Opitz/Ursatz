@@ -12,7 +12,7 @@ bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, 
     out->function = harmony->function;
     if (!harmony_roman_parse(mode, out->roman, &out->chord)) {
         out->applied = true;
-        if (!harmony_roman_parse_applied(mode, out->roman, &out->applied_chord)) {
+        if (!harmony_roman_parse_applied_inverted(mode, out->roman, &out->applied_chord, &out->applied_inversion)) {
             return false;
         }
     }

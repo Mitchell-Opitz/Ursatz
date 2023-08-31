@@ -101,7 +101,48 @@ static void test_applied_round_trip(void) {
     assert(!harmony_roman_parse_applied(PLAN_MODE_MAJOR, "V/I", &parsed));
 }
 
+static void test_inverted_applied(void) {
+    for (int m = 0; m < 2; m++) {
+        int formatted = 0;
+        for (int quality = 0; quality < HARMONY_APPLIED_QUALITY_COUNT; quality++) {
+            for (int target = 1; target <= 7; target++) {
+                for (int inversion = 0; inversion <= 3; inversion++) {
+                    HarmonyAppliedChord applied;
+                    memset(&applied, 0, sizeof(applied));
+                    applied.quality = (HarmonyAppliedQuality)quality;
+                    applied.target = target;
+                    assert(harmony_applied_quality_kind(applied.quality, &applied.kind));
+                    char roman[PLAN_ROMAN_NUMERAL_MAX];
+                    if (!harmony_applied_valid(harmony_mode_of(MODES[m]), &applied) ||
+                        !harmony_roman_format_applied_inverted(MODES[m], &applied, inversion, roman)) {
+                        continue;
+                    }
+                    HarmonyAppliedChord parsed;
+                    int parsed_inversion = -1;
+                    assert(harmony_roman_parse_applied_inverted(MODES[m], roman, &parsed, &parsed_inversion));
+                    assert(parsed.quality == applied.quality && parsed.target == applied.target);
+                    assert(parsed_inversion == inversion);
+                    /* The plain parser reads root position only. */
+                    assert(harmony_roman_parse_applied(MODES[m], roman, &parsed) == (inversion == 0));
+                    formatted++;
+                }
+            }
+        }
+        assert(formatted > 0);
+    }
+    HarmonyAppliedChord parsed;
+    int inversion;
+    assert(harmony_roman_parse_applied_inverted(PLAN_MODE_MAJOR, "V6/5/ii", &parsed, &inversion));
+    assert(parsed.quality == HARMONY_APPLIED_DOMINANT_SEVENTH && parsed.target == 2 && inversion == 1);
+    assert(harmony_roman_parse_applied_inverted(PLAN_MODE_MAJOR, "V4/2/IV", &parsed, &inversion));
+    assert(parsed.target == 4 && inversion == 3);
+    assert(harmony_roman_parse_applied_inverted(PLAN_MODE_MAJOR, "V6/vi", &parsed, &inversion));
+    assert(parsed.quality == HARMONY_APPLIED_MAJOR_TRIAD && inversion == 1);
+    assert(!harmony_roman_parse_applied_inverted(PLAN_MODE_MAJOR, "V6/4/V", &parsed, &inversion));
+}
+
 int main(void) {
+    test_inverted_applied();
     test_diatonic_round_trip();
     test_known_numerals();
     test_applied_round_trip();

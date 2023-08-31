@@ -114,7 +114,8 @@ bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals
 /* The scale degree of the bass: the chord's root, or its third, fifth or seventh by inversion. */
 static int bass_degree_of(PlanKeyMode mode, const PhraseChord *chord) {
     if (chord->applied) {
-        return harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord);
+        return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
+                2 * chord->applied_inversion) % 7 + 1;
     }
     return (chord->chord.degree - 1 + 2 * chord->chord.inversion) % 7 + 1;
 }
@@ -215,7 +216,7 @@ SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
             bool leading = chord->applied_chord.kind == APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE;
             input->degree = leading ? 7 : 5;
             input->applied_to = chord->applied_chord.target;
-            input->inversion = 0;
+            input->inversion = chord->applied_inversion;
         } else {
             input->degree = chord->chord.degree;
             input->applied_to = 0;

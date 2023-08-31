@@ -46,7 +46,7 @@ bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc
             return false;
         }
         root = harmony_applied_root_semitone(harmony_mode_of(key->mode), &chord->applied_chord);
-        member = 0;
+        member = chord->applied_inversion;
     } else {
         if (!harmony_diatonic_intervals(key->mode, &chord->chord, intervals, &count)) {
             return false;

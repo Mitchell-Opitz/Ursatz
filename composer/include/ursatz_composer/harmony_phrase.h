@@ -101,7 +101,7 @@ CadenceType harmony_cadence_type_of(PlanCadenceType type);
  * (V, IV, VI), lower case for minor ones (ii, vi, i), a degree sign for
  * diminished ones, then the figures for the inversion: none, 6 and 6/4 for a
  * triad; 7, 6/5, 4/3 and 4/2 for a seventh chord. An applied chord is
- * standard-harmony's own label (V7/V, V/vi, viio7/V). The numeral does not say
+ * standard-harmony's own label (V7/V, V/vi, viio7/V), with figures for its inversion (V6/5/V). The numeral does not say
  * whether a tonic 6/4 is cadential; that comes from its place in the phrase.
  */
 
@@ -113,5 +113,15 @@ bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out)
 bool harmony_roman_format_applied(PlanKeyMode mode, const HarmonyAppliedChord *applied,
                                   char out[PLAN_ROMAN_NUMERAL_MAX]);
 bool harmony_roman_parse_applied(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out);
+/*
+ * The same with an inversion, for the applied chords that standard-harmony's schemas use: a triad in
+ * root position or first inversion (V/vi, V6/vi), a seventh chord in any inversion (V7/V, V6/5/V,
+ * V4/3/V, V4/2/V). The figures sit between the chord and its target. The parser reads root position
+ * too; the plain one above reads root position only.
+ */
+bool harmony_roman_format_applied_inverted(PlanKeyMode mode, const HarmonyAppliedChord *applied, int inversion,
+                                           char out[PLAN_ROMAN_NUMERAL_MAX]);
+bool harmony_roman_parse_applied_inverted(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out,
+                                          int *inversion);
 
 #endif

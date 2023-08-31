@@ -12,7 +12,8 @@
  * span for each chord, aligned with the chord's span, so the bass spans tile the
  * phrase as the chords do. Each note is the chord's bass member: the root of a
  * chord in root position, the third in first inversion, the fifth in second, the
- * seventh in third; an applied chord (root position only) sounds its root.
+ * seventh in third; an applied chord sounds its root in root position and its third, fifth or seventh
+ * in inversion.
  *
  * A target is a Constrained bass lane span, which stands for the phrase and holds
  * one placeholder note (a bass span needs a note). It must cover exactly the

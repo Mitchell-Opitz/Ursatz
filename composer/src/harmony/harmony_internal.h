@@ -47,6 +47,7 @@ typedef struct {
     HarmonyChord chord;          /* the chord, when it is not applied */
     bool applied;
     HarmonyAppliedChord applied_chord; /* the chord, when it is applied */
+    int applied_inversion;             /* 0 for root position; a triad has 0 or 1, a seventh chord 0 to 3 */
     size_t cells;
 } PhraseChord;
 

@@ -35,7 +35,8 @@ static const PitchLetter LETTERS[7] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LET
 /* The scale degree of the bass member of the chord, which names the letter of its note. */
 static int member_degree(PlanKeyMode mode, const PhraseChord *chord) {
     if (chord->applied) {
-        return harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord);
+        return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
+                2 * chord->applied_inversion) % 7 + 1;
     }
     return (chord->chord.degree - 1 + 2 * chord->chord.inversion) % 7 + 1;
 }
