@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <galant_prototypes.h>
+
 #include "plan/plan_internal.h"
 
 void constraint_list_free(ConstraintList *list) {
@@ -29,6 +31,11 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                constraint->params.archetype <= PLAN_ARCHETYPE_HYBRID;
     case PLAN_CONSTRAINT_EMBELLISH:
         return true;
+    case PLAN_CONSTRAINT_SCHEMA: {
+        const GalantPrototype *prototype = galant_prototype((GalantSchemaId)constraint->params.schema.schema);
+        return prototype && constraint->params.schema.stage >= 0 &&
+               (size_t)constraint->params.schema.stage < prototype->stage_count;
+    }
     }
     return false;
 }

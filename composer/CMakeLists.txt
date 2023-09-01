@@ -21,7 +21,7 @@ set(URSATZ_ANALYZER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/ursatz)
 add_subdirectory(external/ursatz-analyzer)
 # Submodule headers are not ours to warn about.
-foreach(submodule_target ursatz ursatz_analyzer standard_harmony standard_counterpoint cjson)
+foreach(submodule_target ursatz ursatz_analyzer standard_harmony standard_counterpoint galant_schemas cjson)
     get_target_property(submodule_includes ${submodule_target} INTERFACE_INCLUDE_DIRECTORIES)
     set_target_properties(${submodule_target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${submodule_includes}")
 endforeach()

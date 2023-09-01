@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <ursatz_composer/analysis_load.h>
+#include <galant_prototypes.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
@@ -115,6 +117,12 @@ static PiecePlan *build_sentence_plan(void) {
     assert(plan_lane_span_add_constraint(plan, harmony_two, &motive_ref) == PLAN_OK);
     PlanConstraint embellish = {PLAN_CONSTRAINT_EMBELLISH, {0}};
     assert(plan_lane_span_add_constraint(plan, harmony_two, &embellish) == PLAN_OK);
+    PlanConstraint schema = {PLAN_CONSTRAINT_SCHEMA, {0}};
+    schema.params.schema.schema = GALANT_SCHEMA_ROMANESCA;
+    schema.params.schema.stage = 2;
+    assert(plan_lane_span_add_constraint(plan, harmony_two, &schema) == PLAN_OK);
+    schema.params.schema.stage = 9;
+    assert(plan_lane_span_add_constraint(plan, harmony_two, &schema) == PLAN_ERR_BAD_PAYLOAD);
 
     assert(plan_node_set_state(plan, m1, PLAN_STATE_GIVEN) == PLAN_OK);
     assert(plan_node_set_state(plan, repetition, PLAN_STATE_REALIZED) == PLAN_OK);
@@ -147,6 +155,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.archetype == b->params.archetype;
     case PLAN_CONSTRAINT_EMBELLISH:
         return true;
+    case PLAN_CONSTRAINT_SCHEMA:
+        return a->params.schema.schema == b->params.schema.schema && a->params.schema.stage == b->params.schema.stage;
     }
     return false;
 }

@@ -20,7 +20,8 @@ typedef enum {
     PLAN_CONSTRAINT_MOTIVE_REF,
     PLAN_CONSTRAINT_KEY,
     PLAN_CONSTRAINT_ARCHETYPE,
-    PLAN_CONSTRAINT_EMBELLISH /* no parameters: a harmony span reopened for the embellishment pass */
+    PLAN_CONSTRAINT_EMBELLISH, /* no parameters: a harmony span reopened for the embellishment pass */
+    PLAN_CONSTRAINT_SCHEMA     /* the galant schema a span was made from, and which stage of it */
 } PlanConstraintKind;
 
 typedef enum {
@@ -54,6 +55,16 @@ typedef struct {
     int semitones;
 } PlanMotiveRef;
 
+/*
+ * The schema a span was made from: schema is the id of a galant-schemas prototype (GalantSchemaId in
+ * Ursatz's frameworks/galant-schemas), stage the index of its stage the span sounds. The prototype's
+ * other voices (the melody) are read from the framework by that id, not copied here.
+ */
+typedef struct {
+    int schema;
+    int stage;
+} PlanSchemaRef;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -63,6 +74,7 @@ typedef struct {
         PlanMotiveRef motive;
         PlanKey key;
         PlanArchetype archetype;
+        PlanSchemaRef schema;
     } params;
 } PlanConstraint;
 

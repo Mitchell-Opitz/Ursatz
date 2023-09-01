@@ -7,6 +7,8 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer.h>
+#include <galant_prototypes.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
@@ -21,7 +23,7 @@ static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "mel
 static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
-static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish"};
+static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",      "transposed", "inverted", "retrograde",
                                               "augmented", "diminished", "fragmented"};
@@ -106,6 +108,11 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         ok = ok && json_add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
         break;
     case PLAN_CONSTRAINT_EMBELLISH:
+        break;
+    case PLAN_CONSTRAINT_SCHEMA:
+        ok = ok && json_add(object, "schema", cJSON_CreateString(galant_schema_name(
+                                                    (GalantSchemaId)constraint->params.schema.schema))) &&
+             json_add(object, "stage", json_number(constraint->params.schema.stage));
         break;
     }
     if (!ok) {
@@ -637,6 +644,34 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         return true;
     case PLAN_CONSTRAINT_EMBELLISH:
         return true;
+    case PLAN_CONSTRAINT_SCHEMA: {
+        const cJSON *name = json_member(reader, item, path, "schema", true);
+        if (!name) {
+            return false;
+        }
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "schema");
+        if (!cJSON_IsString(name)) {
+            return json_bad_format(reader, at, "expected a schema name");
+        }
+        int schema = -1;
+        for (int id = 0; id < GALANT_SCHEMA_COUNT; id++) {
+            if (strcmp(galant_schema_name((GalantSchemaId)id), name->valuestring) == 0) {
+                schema = id;
+            }
+        }
+        if (schema < 0) {
+            return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown schema '%.40s'", name->valuestring);
+        }
+        const GalantPrototype *prototype = galant_prototype((GalantSchemaId)schema);
+        if (!json_read_int_member(reader, item, path, "stage", 0, (long)prototype->stage_count - 1,
+                                  &number_value)) {
+            return false;
+        }
+        out->params.schema.schema = schema;
+        out->params.schema.stage = (int)number_value;
+        return true;
+    }
     }
     return false;
 }

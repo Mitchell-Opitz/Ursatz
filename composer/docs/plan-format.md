@@ -127,6 +127,7 @@ nothing checks them.
 | `key` | `tonic_pitch_class` (0 to 11), `mode` (`major` or `minor`). |
 | `archetype` | `type`: `sentence`, `period` or `hybrid`. |
 | `embellish` | No fields. Marks a harmony lane span reopened for the embellishment pass. |
+| `schema` | `schema`: the name of a galant schema as Ursatz's galant-schemas framework names it (`romanesca`, `do-re-mi`, `fonte` and so on); `stage`: the index of the schema's stage the span sounds, from 0. The span's other voices are read from the framework's prototype. |
 
 ## Reading
 
