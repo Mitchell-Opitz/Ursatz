@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 static const char *const TONIC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
@@ -17,6 +18,9 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     CommonPracticeKeyRegionsConfig config;
     config.window_measures = 4;
     config.profiles = common_practice_krumhansl_kessler_profiles();
+    config.change_penalty = 0.2;
+    config.tonicization_max_measures = 4;
+    config.context_id_prefix = "key-region";
     return config;
 }
 
@@ -108,21 +112,17 @@ static bool before(const MusicalTime *a, const MusicalTime *b) {
            (long double)musical_time_numerator(b) * (long double)musical_time_denominator(a);
 }
 
-CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment *segments, size_t segment_count,
-                                                  const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
-                                                  CommonPracticeKeyWindows *out) {
-    if (out == NULL || map == NULL || (segment_count > 0 && segments == NULL)) {
-        return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
-    }
-    if (segment_count == 0) {
-        return COMMON_PRACTICE_KEY_REGIONS_ERR_NO_SEGMENTS;
-    }
-    CommonPracticeKeyRegionsConfig effective =
-        config != NULL ? *config : common_practice_key_regions_config_default();
-    if (effective.window_measures == 0 || !profiles_valid(&effective.profiles)) {
-        return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG;
-    }
+/* The per-measure pitch-class weights of the segments, from the first measure that holds a segment start to
+   the last. */
+typedef struct {
+    double (*weights)[12]; /* owned; measure_count rows */
+    size_t measure_count;
+    int first_measure;
+    int last_measure;
+} MeasureWeights;
 
+static CommonPracticeKeyRegionsStatus gather_measures(const CommonPracticeKeySegment *segments, size_t segment_count,
+                                                       const MeterMap *map, MeasureWeights *out) {
     int *measure_of = (int *)calloc(segment_count, sizeof(int));
     if (measure_of == NULL) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
@@ -166,36 +166,349 @@ CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment 
         }
     }
     free(measure_of);
+    out->weights = per_measure;
+    out->measure_count = measure_count;
+    out->first_measure = first_measure;
+    out->last_measure = last_measure;
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
 
-    size_t window_length = effective.window_measures < measure_count ? effective.window_measures : measure_count;
-    size_t window_count = measure_count - window_length + 1;
+static CommonPracticeKeyRegionsStatus validate_inputs(const CommonPracticeKeySegment *segments, size_t segment_count,
+                                                       const MeterMap *map, const CommonPracticeKeyRegionsConfig *config) {
+    if (map == NULL || (segment_count > 0 && segments == NULL)) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
+    }
+    if (segment_count == 0) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_NO_SEGMENTS;
+    }
+    if (config->window_measures == 0 || !profiles_valid(&config->profiles)) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG;
+    }
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+/* Scores the windows of already-gathered measures. */
+static CommonPracticeKeyRegionsStatus score_windows(const MeasureWeights *measures,
+                                                     const CommonPracticeKeyRegionsConfig *config,
+                                                     CommonPracticeKeyWindows *out) {
+    size_t window_length = config->window_measures < measures->measure_count ? config->window_measures
+                                                                              : measures->measure_count;
+    size_t window_count = measures->measure_count - window_length + 1;
     CommonPracticeKeyWindow *windows = (CommonPracticeKeyWindow *)calloc(window_count, sizeof(CommonPracticeKeyWindow));
     if (windows == NULL) {
-        free(per_measure);
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
     double profile[COMMON_PRACTICE_KEY_COUNT][12];
     for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
-        rotated_profile(&effective.profiles, k, profile[k]);
+        rotated_profile(&config->profiles, k, profile[k]);
     }
     for (size_t w = 0; w < window_count; w++) {
         double sum[12] = {0.0};
         for (size_t m = w; m < w + window_length; m++) {
             for (int pc = 0; pc < 12; pc++) {
-                sum[pc] += per_measure[m][pc];
+                sum[pc] += measures->weights[m][pc];
             }
         }
-        windows[w].first_measure = first_measure + (int)w;
-        windows[w].last_measure = first_measure + (int)(w + window_length) - 1;
+        windows[w].first_measure = measures->first_measure + (int)w;
+        windows[w].last_measure = measures->first_measure + (int)(w + window_length) - 1;
         for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
             windows[w].correlation[k] = correlate(sum, profile[k]);
         }
     }
-    free(per_measure);
-
     out->items = windows;
     out->count = window_count;
+    out->first_measure = measures->first_measure;
+    out->last_measure = measures->last_measure;
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment *segments, size_t segment_count,
+                                                  const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
+                                                  CommonPracticeKeyWindows *out) {
+    if (out == NULL) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
+    }
+    CommonPracticeKeyRegionsConfig effective =
+        config != NULL ? *config : common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsStatus status = validate_inputs(segments, segment_count, map, &effective);
+    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
+        return status;
+    }
+    MeasureWeights measures;
+    status = gather_measures(segments, segment_count, map, &measures);
+    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
+        return status;
+    }
+    status = score_windows(&measures, &effective, out);
+    free(measures.weights);
+    return status;
+}
+
+/* --- the region path --- */
+
+#define TIE 1e-12
+
+void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions) {
+    if (regions == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < regions->region_count; i++) {
+        key_destroy(regions->regions[i].key);
+        time_span_destroy(regions->regions[i].span);
+    }
+    free(regions->regions);
+    free(regions->changes);
+    regions->regions = NULL;
+    regions->changes = NULL;
+    regions->region_count = 0;
+    regions->change_count = 0;
+}
+
+/* The least-cost key per window (see key_regions.h). */
+static CommonPracticeKeyRegionsStatus choose_path(const CommonPracticeKeyWindows *windows, double penalty,
+                                                   int *path) {
+    size_t n = windows->count;
+    double(*cost)[COMMON_PRACTICE_KEY_COUNT] =
+        (double(*)[COMMON_PRACTICE_KEY_COUNT])calloc(n, sizeof(double[COMMON_PRACTICE_KEY_COUNT]));
+    int(*from)[COMMON_PRACTICE_KEY_COUNT] =
+        (int(*)[COMMON_PRACTICE_KEY_COUNT])calloc(n, sizeof(int[COMMON_PRACTICE_KEY_COUNT]));
+    if (cost == NULL || from == NULL) {
+        free(cost);
+        free(from);
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+        cost[0][k] = -windows->items[0].correlation[k];
+        from[0][k] = k;
+    }
+    for (size_t w = 1; w < n; w++) {
+        /* the cheapest previous key to change FROM (lowest index on a tie) */
+        int cheapest = 0;
+        for (int j = 1; j < COMMON_PRACTICE_KEY_COUNT; j++) {
+            if (cost[w - 1][j] < cost[w - 1][cheapest] - TIE) {
+                cheapest = j;
+            }
+        }
+        for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+            /* the cheapest previous key other than k */
+            int other = cheapest != k ? cheapest : (k == 0 ? 1 : 0);
+            for (int j = 0; j < COMMON_PRACTICE_KEY_COUNT; j++) {
+                if (j != k && cost[w - 1][j] < cost[w - 1][other] - TIE) {
+                    other = j;
+                }
+            }
+            double change = cost[w - 1][other] + penalty;
+            if (cost[w - 1][k] <= change + TIE) {
+                cost[w][k] = cost[w - 1][k] - windows->items[w].correlation[k];
+                from[w][k] = k;
+            } else {
+                cost[w][k] = change - windows->items[w].correlation[k];
+                from[w][k] = other;
+            }
+        }
+    }
+    int last = 0;
+    for (int k = 1; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+        if (cost[n - 1][k] < cost[n - 1][last] - TIE) {
+            last = k;
+        }
+    }
+    for (size_t w = n; w-- > 0;) {
+        path[w] = last;
+        last = from[w][last];
+    }
+    free(cost);
+    free(from);
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+static CommonPracticeKeyRegionsStatus build_region(const CommonPracticeKeyRegionsConfig *config, size_t number,
+                                                    int key_index, const MeterMap *map, int first_measure,
+                                                    int last_measure, double uncertainty,
+                                                    CommonPracticeKeyRegion *out) {
+    memset(out, 0, sizeof(*out));
+    out->key_index = key_index;
     out->first_measure = first_measure;
     out->last_measure = last_measure;
+    out->uncertainty = uncertainty;
+    out->source = COMMON_PRACTICE_REGION_SOURCE_PROFILE;
+
+    TimeSpan *first = NULL;
+    TimeSpan *last = NULL;
+    if (meter_map_measure_span(map, first_measure, &first) != METER_MAP_OK) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
+    }
+    if (meter_map_measure_span(map, last_measure, &last) != METER_MAP_OK) {
+        time_span_destroy(first);
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
+    }
+    TimeSpanResult spanned = time_span_create(time_span_start(first), time_span_end(last),
+                                              TIME_SPAN_BOUNDARY_LEFT_CLOSED, &out->span);
+    time_span_destroy(first);
+    time_span_destroy(last);
+    if (spanned != TIME_SPAN_OK) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+
+    char context[160];
+    snprintf(context, sizeof(context), "%s-%zu", config->context_id_prefix, number);
+    EntityID *context_id = NULL;
+    if (entity_id_create(context, &context_id) != ENTITY_ID_OK) {
+        time_span_destroy(out->span);
+        out->span = NULL;
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    KeyResult built = common_practice_build_key(common_practice_key_index_mode(key_index),
+                                                common_practice_key_index_tonic_name(key_index), context_id, &out->key);
+    if (built != KEY_OK) {
+        entity_id_destroy(context_id);
+        time_span_destroy(out->span);
+        out->span = NULL;
+        return built == KEY_ERR_ALLOC ? COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC : COMMON_PRACTICE_KEY_REGIONS_ERR_KEY;
+    }
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+static double clamp01(double value) {
+    return value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
+}
+
+/* 1 - (r(chosen) - r(best other)) for the pooled weights of measures [from, to] (slots in `measures`). */
+static double region_uncertainty(const MeasureWeights *measures, size_t from, size_t to, int key_index,
+                                 const CommonPracticeKeyProfiles *profiles) {
+    double sum[12] = {0.0};
+    for (size_t m = from; m <= to; m++) {
+        for (int pc = 0; pc < 12; pc++) {
+            sum[pc] += measures->weights[m][pc];
+        }
+    }
+    double chosen = 0.0;
+    double other = -2.0;
+    for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+        double profile[12];
+        rotated_profile(profiles, k, profile);
+        double r = correlate(sum, profile);
+        if (k == key_index) {
+            chosen = r;
+        } else if (r > other) {
+            other = r;
+        }
+    }
+    return clamp01(1.0 - (chosen - other));
+}
+
+CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegment *segments, size_t segment_count,
+                                                     const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
+                                                     CommonPracticeKeyRegions *out) {
+    if (out == NULL) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
+    }
+    CommonPracticeKeyRegionsConfig effective =
+        config != NULL ? *config : common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsStatus status = validate_inputs(segments, segment_count, map, &effective);
+    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
+        return status;
+    }
+    if (!isfinite(effective.change_penalty) || effective.change_penalty < 0.0 ||
+        effective.tonicization_max_measures == 0 || effective.context_id_prefix == NULL ||
+        effective.context_id_prefix[0] == '\0' || strlen(effective.context_id_prefix) > 100) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG;
+    }
+
+    MeasureWeights measures;
+    status = gather_measures(segments, segment_count, map, &measures);
+    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
+        return status;
+    }
+    CommonPracticeKeyWindows windows = {0};
+    status = score_windows(&measures, &effective, &windows);
+    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
+        free(measures.weights);
+        return status;
+    }
+
+    int *path = (int *)calloc(windows.count, sizeof(int));
+    int *measure_key = (int *)calloc(measures.measure_count, sizeof(int));
+    if (path == NULL || measure_key == NULL) {
+        status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    } else {
+        status = choose_path(&windows, effective.change_penalty, path);
+    }
+    CommonPracticeKeyRegions result = {NULL, 0, NULL, 0};
+    if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+        /* window w labels the measure at its centre; the ends take the edge windows' keys */
+        size_t window_length = (size_t)(windows.items[0].last_measure - windows.items[0].first_measure) + 1;
+        size_t half = window_length / 2;
+        for (size_t m = 0; m < measures.measure_count; m++) {
+            size_t w = m < half ? 0 : m - half;
+            measure_key[m] = path[w < windows.count ? w : windows.count - 1];
+        }
+
+        size_t region_count = 1;
+        for (size_t m = 1; m < measures.measure_count; m++) {
+            region_count += measure_key[m] != measure_key[m - 1] ? 1 : 0;
+        }
+        result.regions = (CommonPracticeKeyRegion *)calloc(region_count, sizeof(CommonPracticeKeyRegion));
+        result.changes = (CommonPracticeKeyChange *)calloc(region_count > 1 ? region_count - 1 : 1,
+                                                           sizeof(CommonPracticeKeyChange));
+        if (result.regions == NULL || result.changes == NULL) {
+            status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+        }
+        size_t from = 0;
+        for (size_t m = 1; m <= measures.measure_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; m++) {
+            if (m < measures.measure_count && measure_key[m] == measure_key[from]) {
+                continue;
+            }
+            double uncertainty =
+                region_uncertainty(&measures, from, m - 1, measure_key[from], &effective.profiles);
+            status = build_region(&effective, result.region_count + 1, measure_key[from], map,
+                                  measures.first_measure + (int)from, measures.first_measure + (int)m - 1,
+                                  uncertainty, &result.regions[result.region_count]);
+            if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+                result.region_count++;
+            }
+            from = m;
+        }
+    }
+    if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+        /* the extent of each change, by the length and return of the region it goes into */
+        size_t n = result.region_count;
+        for (size_t i = 1; i < n; i++) {
+            CommonPracticeKeyChange *change = &result.changes[i - 1];
+            change->from_region = i - 1;
+            change->to_region = i;
+            change->cadence_confirmed = false;
+            const CommonPracticeKeyRegion *into = &result.regions[i];
+            bool goes_back = i + 1 < n && result.regions[i + 1].key_index == result.regions[i - 1].key_index;
+            size_t length = (size_t)(into->last_measure - into->first_measure) + 1;
+            if (goes_back && length < effective.tonicization_max_measures) {
+                change->extent = KEY_CHANGE_EXTENT_TONICIZATION;
+            } else if (goes_back) {
+                change->extent = KEY_CHANGE_EXTENT_WEAK_MODULATION;
+            } else {
+                change->extent = KEY_CHANGE_EXTENT_MODULATION;
+            }
+            change->is_return = false;
+        }
+        for (size_t i = 2; i < n; i++) {
+            /* the change out of an excursion back to the key before it */
+            if (result.regions[i].key_index == result.regions[i - 2].key_index) {
+                CommonPracticeKeyChange *back = &result.changes[i - 1];
+                back->is_return = true;
+                back->extent = result.changes[i - 2].extent;
+            }
+        }
+        result.change_count = n - 1;
+    }
+
+    free(path);
+    free(measure_key);
+    common_practice_key_windows_destroy(&windows);
+    free(measures.weights);
+    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
+        common_practice_key_regions_destroy(&result);
+        return status;
+    }
+    *out = result;
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }

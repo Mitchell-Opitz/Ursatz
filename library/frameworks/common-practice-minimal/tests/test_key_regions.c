@@ -269,6 +269,179 @@ static void test_key_index_helpers(void) {
     assert(kk.major[0] == 6.35 && kk.minor[3] == 5.38);
 }
 
+/* --- regions --- */
+
+static void add_run(Piece *piece, long *measure, int tonic, long count) {
+    double weights[12];
+    major_weights(tonic, weights);
+    for (long i = 0; i < count; i++) {
+        add_measure(piece, (*measure)++, weights);
+    }
+}
+
+static bool time_is(const MusicalTime *time, long numerator, unsigned long denominator) {
+    return musical_time_numerator(time) * (long)denominator == numerator * (long)musical_time_denominator(time);
+}
+
+static void assert_gap_free(const CommonPracticeKeyRegions *regions, int first, int last) {
+    assert(regions->region_count >= 1);
+    assert(regions->regions[0].first_measure == first);
+    assert(regions->regions[regions->region_count - 1].last_measure == last);
+    assert(regions->change_count == regions->region_count - 1);
+    for (size_t i = 0; i < regions->region_count; i++) {
+        const CommonPracticeKeyRegion *region = &regions->regions[i];
+        assert(region->first_measure <= region->last_measure);
+        assert(region->uncertainty >= 0.0 && region->uncertainty <= 1.0);
+        assert(region->source == COMMON_PRACTICE_REGION_SOURCE_PROFILE);
+        assert(region->key != NULL && region->span != NULL);
+        if (i > 0) {
+            assert(region->first_measure == regions->regions[i - 1].last_measure + 1);
+            assert(regions->changes[i - 1].from_region == i - 1 && regions->changes[i - 1].to_region == i);
+            assert(!regions->changes[i - 1].cadence_confirmed);
+            assert(regions->regions[i].key_index != regions->regions[i - 1].key_index);
+            /* the spans meet at a barline */
+            assert(musical_time_equals(time_span_end(regions->regions[i - 1].span), time_span_start(region->span)));
+        }
+    }
+}
+
+static void test_a_single_key_piece_is_one_region(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 0, 7);
+    assert(regions.region_count == 1 && regions.change_count == 0);
+    assert(regions.regions[0].key_index == 0);
+    assert(strcmp(key_label(regions.regions[0].key), "C major") == 0);
+    assert(time_is(time_span_start(regions.regions[0].span), 0, 1) && time_is(time_span_end(regions.regions[0].span), 8, 1));
+    assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[0].key))),
+                  "key-region-1") == 0);
+    common_practice_key_regions_destroy(&regions);
+    common_practice_key_regions_destroy(&regions);
+    common_practice_key_regions_destroy(NULL);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_modulation_from_c_to_g_is_two_regions(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 8);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 0, 15);
+    assert(regions.region_count == 2);
+    assert(regions.regions[0].key_index == 0 && regions.regions[1].key_index == 7);
+    assert(strcmp(key_label(regions.regions[1].key), "G major") == 0);
+    assert(regions.regions[1].first_measure >= 7 && regions.regions[1].first_measure <= 9);
+    assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_MODULATION && !regions.changes[0].is_return);
+    assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[1].key))),
+                  "key-region-2") == 0);
+    common_practice_key_regions_destroy(&regions);
+
+    /* a penalty above the correlation range allows no change; zero follows every window */
+    CommonPracticeKeyRegionsConfig stiff = common_practice_key_regions_config_default();
+    stiff.change_penalty = 10.0;
+    assert(key_regions_estimate(piece.items, piece.count, map, &stiff, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 1);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_brief_excursion_that_returns_is_a_tonicization(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 6);
+    add_run(&piece, &measure, 0, 8);
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.tonicization_max_measures = 8;
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 0, 21);
+    assert(regions.region_count == 3);
+    assert(regions.regions[0].key_index == 0 && regions.regions[1].key_index == 7 && regions.regions[2].key_index == 0);
+    assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_TONICIZATION && !regions.changes[0].is_return);
+    assert(regions.changes[1].extent == KEY_CHANGE_EXTENT_TONICIZATION && regions.changes[1].is_return);
+    common_practice_key_regions_destroy(&regions);
+
+    /* the same excursion, no longer "short" under the default limit of 4 measures, is a weak modulation */
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 3);
+    assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_WEAK_MODULATION);
+    assert(regions.changes[1].extent == KEY_CHANGE_EXTENT_WEAK_MODULATION && regions.changes[1].is_return);
+    assert(key_change_extent_is_modulation(regions.changes[0].extent));
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_the_same_input_gives_the_same_regions(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 6);
+    add_run(&piece, &measure, 7, 6);
+    add_run(&piece, &measure, 2, 6);
+    CommonPracticeKeyRegions a = {0};
+    CommonPracticeKeyRegions b = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &a) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &b) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(a.region_count == b.region_count && a.change_count == b.change_count);
+    for (size_t i = 0; i < a.region_count; i++) {
+        assert(a.regions[i].key_index == b.regions[i].key_index);
+        assert(a.regions[i].first_measure == b.regions[i].first_measure);
+        assert(a.regions[i].last_measure == b.regions[i].last_measure);
+        assert(a.regions[i].uncertainty == b.regions[i].uncertainty);
+    }
+    for (size_t i = 0; i < a.change_count; i++) {
+        assert(a.changes[i].extent == b.changes[i].extent && a.changes[i].is_return == b.changes[i].is_return);
+    }
+    common_practice_key_regions_destroy(&a);
+    common_practice_key_regions_destroy(&b);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_region_input_errors(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 4);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, NULL) == COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT);
+    assert(key_regions_estimate(piece.items, 0, map, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_NO_SEGMENTS);
+
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.change_penalty = -0.1;
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    config.change_penalty = NAN;
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    config = common_practice_key_regions_config_default();
+    config.tonicization_max_measures = 0;
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    config = common_practice_key_regions_config_default();
+    config.context_id_prefix = "";
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    config.context_id_prefix = NULL;
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    config = common_practice_key_regions_config_default();
+    config.context_id_prefix = "piece-7";
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[0].key))), "piece-7-1") == 0);
+    common_practice_key_regions_destroy(&regions);
+    assert(regions.regions == NULL);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
 int main(void) {
     test_a_scale_scores_its_own_key_highest();
     test_a_minor_distribution_scores_the_minor_key();
@@ -278,6 +451,11 @@ int main(void) {
     test_a_custom_profile_set_is_used();
     test_bad_input();
     test_key_index_helpers();
+    test_a_single_key_piece_is_one_region();
+    test_a_modulation_from_c_to_g_is_two_regions();
+    test_a_brief_excursion_that_returns_is_a_tonicization();
+    test_the_same_input_gives_the_same_regions();
+    test_region_input_errors();
     printf("test_key_regions: ok\n");
     return 0;
 }

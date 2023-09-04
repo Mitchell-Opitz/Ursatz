@@ -4,7 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "interpretation/key.h"
 #include "key_vocabulary.h"
+#include "semantics/key_change_extent.h"
+#include "time/time_span.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "weighted_chord_identification.h"
@@ -71,9 +74,13 @@ typedef struct {
 typedef struct {
     size_t window_measures;                    /* default 4 */
     CommonPracticeKeyProfiles profiles;        /* default Krumhansl-Kessler */
+    double change_penalty;                     /* default 0.2: the cost of one key change, in correlation units */
+    size_t tonicization_max_measures;          /* default 4 */
+    const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
 } CommonPracticeKeyRegionsConfig;
 
-/* window_measures 4, Krumhansl-Kessler profiles. */
+/* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
+   "key-region". */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
 
 typedef enum {
@@ -83,6 +90,7 @@ typedef enum {
     COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG,
     COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT,
     COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP,
+    COMMON_PRACTICE_KEY_REGIONS_ERR_KEY,
     COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC
 } CommonPracticeKeyRegionsStatus;
 
@@ -112,5 +120,93 @@ CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment 
                                                   CommonPracticeKeyWindows *out);
 
 void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
+
+/*
+ * REGION PATH (step 2). key_regions_estimate chooses one key per window by dynamic programming, then reads
+ * the windows as measures and merges equal neighbours into regions.
+ *
+ *   cost of a path = the sum over windows of -correlation(window, key)
+ *                    + change_penalty for every window whose key differs from the one before it.
+ *
+ * The path with the least cost wins. It is deterministic: an exactly tied cost (within 1e-12) keeps the
+ * previous window's key rather than changing, and among tied keys to change from the lowest key index wins.
+ * change_penalty (default 0.2, about the gap between a clearly right key and its dominant or relative
+ * neighbour in one window) is what keeps a single odd window from becoming a region; 0 follows the best key of
+ * every window, and a penalty above the correlation range (2) allows no change. It is a stated v1 value, not a
+ * learned one.
+ *
+ * Window i labels the measure at its CENTRE (its first measure + window length / 2, rounded down); the measures
+ * before the first centre take the first window's key and those after the last centre the last window's. A
+ * region is a run of measures with one key, so its edges are barlines, and the regions are ordered, gap-free
+ * and cover every measure from the first segment's to the last's.
+ *
+ * Each region carries a Key (common_practice_build_key: major or natural-minor label such as "G major", a
+ * Context id "<prefix>-<n>", the common-practice-minimal-v1 FrameworkReference), a TimeSpan (the first measure's
+ * start to the last measure's end, left-closed), its first and last measure, its key index, and an
+ * UNCERTAINTY in [0, 1]:
+ *
+ *   uncertainty = 1 - (r(chosen key) - r(best other key)), clamped to [0, 1]
+ *
+ * where r is the correlation of the region's pooled pitch-class weights with a key's profile. It is 0 when the
+ * chosen key beats every other by a full unit, and 1 when another key fits as well or better (the penalty can
+ * keep a worse key). The Key's own Interpretation keeps the vocabulary's confidence of 1/1; the region's
+ * uncertainty is this field.
+ *
+ * CHANGES. Between each pair of neighbouring regions there is one change, labelled with the existing
+ * KeyChangeExtent values by the length and return of the region it goes INTO (region n):
+ *
+ *   region n is shorter than tonicization_max_measures AND region n+1 goes back to region n-1's key
+ *       -> TONICIZATION
+ *   region n goes back to region n-1's key at the next change, and is not shorter
+ *       -> WEAK_MODULATION
+ *   otherwise -> MODULATION
+ *
+ * A change that is the return out of such a region (the key goes back to the one before the excursion) is
+ * flagged is_return and carries the extent of the excursion it closes. EXTENDED_TONICIZATION is not used here (it
+ * needs a count of chords). The extent is read from region lengths ALONE: no cadence is looked for, so
+ * cadence_confirmed is always false in this version, and MODULATION / WEAK_MODULATION mean "a lasting new
+ * key region", not "a cadence established it". Cadence confirmation is later work (L3.3).
+ */
+
+typedef enum {
+    COMMON_PRACTICE_REGION_SOURCE_PROFILE = 0
+} CommonPracticeRegionSource;
+
+typedef struct {
+    Key *key;                      /* owned */
+    int key_index;                 /* 0..23 */
+    TimeSpan *span;                /* owned */
+    int first_measure;             /* MeterMap measure indices, inclusive */
+    int last_measure;
+    double uncertainty;            /* [0, 1] */
+    CommonPracticeRegionSource source;
+} CommonPracticeKeyRegion;
+
+typedef struct {
+    size_t from_region;            /* indices into regions[]; to_region == from_region + 1 */
+    size_t to_region;
+    KeyChangeExtent extent;
+    bool is_return;                /* goes back to the key before an excursion that this extent describes */
+    bool cadence_confirmed;        /* always false: no cadence is looked for */
+} CommonPracticeKeyChange;
+
+typedef struct {
+    CommonPracticeKeyRegion *regions; /* owned; ordered, gap-free */
+    size_t region_count;
+    CommonPracticeKeyChange *changes; /* owned; region_count - 1 of them */
+    size_t change_count;
+} CommonPracticeKeyRegions;
+
+/*
+ * Estimates the regions. BAD_CONFIG additionally for a negative or non-finite change_penalty, a zero
+ * tonicization_max_measures or an empty prefix. config may be NULL for the defaults. On OK, *out owns its
+ * regions and changes (common_practice_key_regions_destroy); otherwise *out is untouched.
+ */
+CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegment *segments, size_t segment_count,
+                                                     const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
+                                                     CommonPracticeKeyRegions *out);
+
+/* Destroys every region's Key and TimeSpan and the arrays. NULL is a no-op. */
+void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions);
 
 #endif
