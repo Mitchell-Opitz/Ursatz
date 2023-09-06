@@ -442,6 +442,104 @@ static void test_region_input_errors(void) {
     meter_map_destroy(map);
 }
 
+/* --- pivot chords --- */
+
+static void make_chord(CommonPracticeMember members[4], CommonPracticeSegment *segment, const int pitches[4],
+                       const char *id) {
+    for (int i = 0; i < 4; i++) {
+        members[i].note_id = NULL;
+        members[i].pitch = pitches[i];
+        members[i].held = false;
+        members[i].duration = 1.0;
+        members[i].strength = BEAT_STRENGTH_STRONG;
+        members[i].voice_id = NULL;
+        members[i].onset = 0.0;
+    }
+    segment->members = members;
+    segment->member_count = 4;
+    segment->id = id;
+}
+
+/* C x8 (the last measure's segment is a C major chord), then a run in `tonic` x8. */
+static void build_modulation(Piece *piece, const CommonPracticeSegment *chord, int tonic) {
+    long measure = 0;
+    add_run(piece, &measure, 0, 8);
+    piece->items[7].source = chord;
+    add_run(piece, &measure, tonic, 8);
+}
+
+static void test_a_chord_in_both_keys_is_the_pivot(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    CommonPracticeMember members[4];
+    CommonPracticeSegment chord;
+    const int c_major[4] = {48, 60, 64, 67}; /* I in C, IV in G */
+    make_chord(members, &chord, c_major, "chord-c");
+    build_modulation(&piece, &chord, 7);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2 && regions.regions[1].key_index == 7);
+    assert(regions.changes[0].has_pivot && regions.changes[0].pivot_segment == 7);
+    common_practice_key_regions_destroy(&regions);
+
+    /* a search distance of 0 reaches only segments at the boundary, and the chord is a measure before it */
+    CommonPracticeKeyRegionsConfig none = common_practice_key_regions_config_default();
+    none.pivot_search_measures = 0;
+    assert(key_regions_estimate(piece.items, piece.count, map, &none, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2);
+    assert(regions.regions[1].first_measure == 8 ? !regions.changes[0].has_pivot : true);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_direct_modulation_has_no_pivot(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    CommonPracticeMember members[4];
+    CommonPracticeSegment chord;
+    const int c_major[4] = {48, 60, 64, 67};
+    make_chord(members, &chord, c_major, "chord-c");
+    build_modulation(&piece, &chord, 6); /* F# major shares no note of C major's triad */
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2 && regions.regions[1].key_index == 6);
+    assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_MODULATION);
+    assert(!regions.changes[0].has_pivot);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_tonicization_has_no_pivot_but_a_weak_modulation_does(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    CommonPracticeMember members[4];
+    CommonPracticeSegment chord;
+    const int c_major[4] = {48, 60, 64, 67};
+    make_chord(members, &chord, c_major, "chord-c");
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    piece.items[7].source = &chord;
+    add_run(&piece, &measure, 7, 6);
+    add_run(&piece, &measure, 0, 8);
+
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.tonicization_max_measures = 8;
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 3 && regions.changes[0].extent == KEY_CHANGE_EXTENT_TONICIZATION);
+    assert(!regions.changes[0].has_pivot);
+    common_practice_key_regions_destroy(&regions);
+
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 3 && regions.changes[0].extent == KEY_CHANGE_EXTENT_WEAK_MODULATION);
+    assert(regions.changes[0].has_pivot && regions.changes[0].pivot_segment == 7);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
 int main(void) {
     test_a_scale_scores_its_own_key_highest();
     test_a_minor_distribution_scores_the_minor_key();
@@ -456,6 +554,9 @@ int main(void) {
     test_a_brief_excursion_that_returns_is_a_tonicization();
     test_the_same_input_gives_the_same_regions();
     test_region_input_errors();
+    test_a_chord_in_both_keys_is_the_pivot();
+    test_a_direct_modulation_has_no_pivot();
+    test_a_tonicization_has_no_pivot_but_a_weak_modulation_does();
     printf("test_key_regions: ok\n");
     return 0;
 }

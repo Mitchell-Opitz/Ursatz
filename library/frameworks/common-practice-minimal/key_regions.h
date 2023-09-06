@@ -77,10 +77,11 @@ typedef struct {
     double change_penalty;                     /* default 0.2: the cost of one key change, in correlation units */
     size_t tonicization_max_measures;          /* default 4 */
     const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
+    size_t pivot_search_measures;              /* default 2: how far back a pivot chord is looked for */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
-   "key-region". */
+   "key-region", pivot_search_measures 2. */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
 
 typedef enum {
@@ -168,6 +169,20 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * key region", not "a cadence established it". Cadence confirmation is later work (L3.3).
  */
 
+/*
+ * PIVOT CHORDS. At each change whose extent is a modulation (WEAK_MODULATION or MODULATION: a tonicization
+ * has no pivot, and neither does a change with no extent worth a pivot), the pivot is the LAST segment, looking
+ * back from the boundary (the start of the new region's first measure), whose chord is diatonic in both the old
+ * key and the new. The search takes the segments that start at or before the boundary and no more than
+ * pivot_search_measures measures before the new region's first measure. A segment's chord is its best chord from
+ * weighted identification (common_practice_identify_weighted, default weights) read in the OLD key; a segment
+ * with no members or no matching chord is skipped. "Diatonic in a key" is the natural collection: a major
+ * key's seven notes, and for a minor key those of its relative major, so a chord that needs the raised sixth or
+ * seventh of a minor key (the major V, the diminished vii) is not diatonic there in this version. If no segment
+ * qualifies the change is DIRECT: has_pivot is false. No Roman numeral is assigned: the pivot is a segment of
+ * the caller's list, whose chord the caller can read in either key.
+ */
+
 typedef enum {
     COMMON_PRACTICE_REGION_SOURCE_PROFILE = 0
 } CommonPracticeRegionSource;
@@ -188,6 +203,8 @@ typedef struct {
     KeyChangeExtent extent;
     bool is_return;                /* goes back to the key before an excursion that this extent describes */
     bool cadence_confirmed;        /* always false: no cadence is looked for */
+    bool has_pivot;                /* a pivot chord was found (see below); false for a direct change */
+    size_t pivot_segment;          /* its index in the caller's segments; meaningful only when has_pivot */
 } CommonPracticeKeyChange;
 
 typedef struct {

@@ -21,6 +21,7 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.change_penalty = 0.2;
     config.tonicization_max_measures = 4;
     config.context_id_prefix = "key-region";
+    config.pivot_search_measures = 2;
     return config;
 }
 
@@ -115,6 +116,7 @@ static bool before(const MusicalTime *a, const MusicalTime *b) {
 /* The per-measure pitch-class weights of the segments, from the first measure that holds a segment start to
    the last. */
 typedef struct {
+    int *segment_measure;  /* owned; the measure each segment starts in */
     double (*weights)[12]; /* owned; measure_count rows */
     size_t measure_count;
     int first_measure;
@@ -165,12 +167,17 @@ static CommonPracticeKeyRegionsStatus gather_measures(const CommonPracticeKeySeg
             per_measure[slot][pc] += segments[i].weights.pitch_class[pc];
         }
     }
-    free(measure_of);
+    out->segment_measure = measure_of;
     out->weights = per_measure;
     out->measure_count = measure_count;
     out->first_measure = first_measure;
     out->last_measure = last_measure;
     return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+static void measures_release(MeasureWeights *measures) {
+    free(measures->segment_measure);
+    free(measures->weights);
 }
 
 static CommonPracticeKeyRegionsStatus validate_inputs(const CommonPracticeKeySegment *segments, size_t segment_count,
@@ -240,7 +247,7 @@ CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment 
         return status;
     }
     status = score_windows(&measures, &effective, out);
-    free(measures.weights);
+    measures_release(&measures);
     return status;
 }
 
@@ -397,6 +404,68 @@ static double region_uncertainty(const MeasureWeights *measures, size_t from, si
     return clamp01(1.0 - (chosen - other));
 }
 
+/* The pitch classes of a key's natural collection as a 12-bit mask: the major scale, or the relative major's
+   for a minor key. */
+static unsigned natural_collection(int key_index) {
+    static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
+    int tonic = common_practice_key_index_tonic(key_index);
+    if (common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR) {
+        tonic = (tonic + 3) % 12;
+    }
+    unsigned mask = 0;
+    for (int i = 0; i < 7; i++) {
+        mask |= 1u << ((tonic + MAJOR_SCALE[i]) % 12);
+    }
+    return mask;
+}
+
+/* The pivot of one change (see key_regions.h): the last segment at or before the boundary, within the search
+   distance, whose best chord in the old key lies inside the new key's collection. */
+static CommonPracticeKeyRegionsStatus find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
+                                                  const MeasureWeights *measures, int boundary_measure,
+                                                  const MusicalTime *boundary_start, int old_key, int new_key,
+                                                  size_t search_measures, bool *found, size_t *pivot) {
+    *found = false;
+    int old_tonic = common_practice_key_index_tonic(old_key);
+    if (common_practice_key_index_mode(old_key) == COMMON_PRACTICE_KEY_MINOR) {
+        old_tonic = (old_tonic + 3) % 12;
+    }
+    unsigned new_collection = natural_collection(new_key);
+    for (size_t i = segment_count; i-- > 0;) {
+        int measure = measures->segment_measure[i];
+        if (measure > boundary_measure || before(boundary_start, segments[i].start)) {
+            continue; /* after the boundary */
+        }
+        if ((size_t)(boundary_measure - measure) > search_measures) {
+            break; /* too far back, and the segments are in time order */
+        }
+        if (segments[i].source == NULL) {
+            continue;
+        }
+        CommonPracticeWeightedResult result;
+        CommonPracticeWeightedStatus identified =
+            common_practice_identify_weighted(segments[i].source, old_tonic, COMMON_PRACTICE_KEY_MAJOR, NULL, &result);
+        if (identified == COMMON_PRACTICE_WEIGHTED_ERR_ALLOC) {
+            return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+        }
+        if (identified != COMMON_PRACTICE_WEIGHTED_OK) {
+            continue;
+        }
+        bool diatonic = false;
+        if (result.matched) {
+            unsigned mask = common_practice_ranked_chord_mask(&result.best, old_tonic);
+            diatonic = mask != 0 && (mask & ~new_collection) == 0;
+        }
+        common_practice_weighted_result_destroy(&result);
+        if (diatonic) {
+            *found = true;
+            *pivot = i;
+            return COMMON_PRACTICE_KEY_REGIONS_OK;
+        }
+    }
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
 CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                      const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
                                                      CommonPracticeKeyRegions *out) {
@@ -423,7 +492,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     CommonPracticeKeyWindows windows = {0};
     status = score_windows(&measures, &effective, &windows);
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
-        free(measures.weights);
+        measures_release(&measures);
         return status;
     }
 
@@ -499,12 +568,26 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
             }
         }
         result.change_count = n - 1;
+
+        for (size_t i = 0; i < result.change_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; i++) {
+            CommonPracticeKeyChange *change = &result.changes[i];
+            change->has_pivot = false;
+            change->pivot_segment = 0;
+            if (!key_change_extent_is_modulation(change->extent)) {
+                continue;
+            }
+            const CommonPracticeKeyRegion *into = &result.regions[change->to_region];
+            status = find_pivot(segments, segment_count, &measures, into->first_measure,
+                                time_span_start(into->span), result.regions[change->from_region].key_index,
+                                into->key_index, effective.pivot_search_measures, &change->has_pivot,
+                                &change->pivot_segment);
+        }
     }
 
     free(path);
     free(measure_key);
     common_practice_key_windows_destroy(&windows);
-    free(measures.weights);
+    measures_release(&measures);
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         common_practice_key_regions_destroy(&result);
         return status;
