@@ -27,6 +27,8 @@ add_library(ursatz_composer STATIC
     harmony/harmony_bass.c
     harmony/harmony_bass_check.c
     harmony/harmony_octave.c
+    harmony/harmony_skeleton.c
+    harmony/harmony_schema.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

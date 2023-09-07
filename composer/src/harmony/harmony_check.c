@@ -15,6 +15,7 @@
 #include <harmony_strong_predominants.h>
 
 #include <ursatz_composer/harmony_octave.h>
+#include <ursatz_composer/harmony_schema.h>
 
 #include "harmony/harmony_internal.h"
 
@@ -139,7 +140,7 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
             if (!resolves) {
                 hard = "applied chord does not resolve to its target";
             }
-        } else if (!phrase->open_ended &&
+        } else if (!phrase->open_ended && !(phrase->exempt && phrase->exempt[i]) &&
                    !chord_is_explained(phrase->mode, &segment->chord, reading[i].six_four, reading[i].inside)) {
             hard = "chord with no reason to be there";
         }
@@ -243,7 +244,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         }
         HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode,
                               progression->request.cadence, progression->request.cells_per_bar,
-                              progression->request.cell_length, false};
+                              progression->request.cell_length, false, NULL};
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_EMBELLISH_OPERATOR_NAME) == 0) {
@@ -262,8 +263,11 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
             return false;
         }
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
-                              edit->cell_length, false};
+                              edit->cell_length, false, NULL};
         return verdict_to_check(&phrase, out);
+    }
+    if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {
+        return harmony_skeleton_check(candidate->payload, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_BASS_OPERATOR_NAME) == 0) {
         return harmony_bass_check(candidate->payload, out);
@@ -283,7 +287,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true};
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -300,7 +304,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, 
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }

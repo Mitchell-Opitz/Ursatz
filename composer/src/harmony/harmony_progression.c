@@ -86,6 +86,12 @@ void harmony_progression_destroy(void *payload) {
     }
 }
 
+size_t harmony_phrase_min_cells(PlanCadenceType cadence, size_t cells_per_bar) {
+    /* A tonic, the dominant unless the phrase ends on it, and for a plagal cadence the tonic and IV after it. */
+    size_t before_last = 1 + (cadence == PLAN_CADENCE_HC ? 0 : 1) + (cadence == PLAN_CADENCE_PC ? 2 : 0);
+    return before_last + cells_per_bar;
+}
+
 /* Deals tried before a request is given up on, for a plagal cadence whose first tonic must land on a downbeat. */
 #define DEAL_ATTEMPTS 16
 

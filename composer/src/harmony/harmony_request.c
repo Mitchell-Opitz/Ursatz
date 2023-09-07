@@ -175,6 +175,40 @@ PlanResult harmony_cells_span(PlanTime start, PlanTime cell_length, size_t first
     return time_scaled(cell_length, cells, &out->length);
 }
 
+bool harmony_count_cells_or_zero(PlanTime cell_length, PlanTime length, size_t *cells) {
+    if (length.num == 0) {
+        *cells = 0;
+        return true;
+    }
+    return length.num > 0 && harmony_count_cells(cell_length, length, cells);
+}
+
+bool harmony_read_cells(const PiecePlan *plan, PlanSpan span, CellMetre *out) {
+    LaneSpanId meters[2];
+    CellMetre metre;
+    if (!plan || !out || plan_lane_find(plan, PLAN_LANE_METER, 0, span, meters, 2) != 1) {
+        return false;
+    }
+    PlanSpan meter_span = plan_lane_span_span(plan, meters[0]);
+    if (!plan_span_contains(meter_span, span)) {
+        return false;
+    }
+    metre.meter = plan_lane_span_payload(plan, meters[0])->meter;
+    PlanTime before = {-meter_span.start.num, meter_span.start.den};
+    PlanTime offset;
+    if (plan_time_make(metre.meter.beats_per_bar, (unsigned long)metre.meter.beat_unit, &metre.bar_length) != PLAN_OK ||
+        !harmony_rhythm_cells_per_bar(&metre.meter, &metre.cells_per_bar) ||
+        plan_time_make(metre.bar_length.num, metre.bar_length.den * metre.cells_per_bar, &metre.cell_length) !=
+            PLAN_OK ||
+        plan_time_add(span.start, before, &offset) != PLAN_OK ||
+        !harmony_count_cells_or_zero(metre.cell_length, offset, &metre.first_cell) ||
+        !harmony_count_cells(metre.cell_length, span.length, &metre.cells)) {
+        return false;
+    }
+    *out = metre;
+    return true;
+}
+
 bool harmony_count_cells(PlanTime cell_length, PlanTime length, size_t *cells) {
     PlanTime sum = {0, 1};
     size_t count = 0;

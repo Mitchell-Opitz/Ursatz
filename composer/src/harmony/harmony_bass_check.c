@@ -33,7 +33,7 @@ static const PitchLetter LETTERS[7] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LET
                                        PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_B};
 
 /* The scale degree of the bass member of the chord, which names the letter of its note. */
-static int member_degree(PlanKeyMode mode, const PhraseChord *chord) {
+int harmony_member_degree(PlanKeyMode mode, const PhraseChord *chord) {
     if (chord->applied) {
         return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
                 2 * chord->applied_inversion) % 7 + 1;
@@ -42,7 +42,7 @@ static int member_degree(PlanKeyMode mode, const PhraseChord *chord) {
 }
 
 /* Spells a MIDI pitch as the given scale degree of the key; NULL when it cannot be spelled. */
-static PitchSpelling *spell(const PlanKey *key, int degree, int pitch) {
+PitchSpelling *harmony_spell_pitch(const PlanKey *key, int degree, int pitch) {
     if (degree < 1 || degree > 7) {
         return NULL;
     }
@@ -54,6 +54,16 @@ static PitchSpelling *spell(const PlanKey *key, int degree, int pitch) {
     int octave = (pitch - accidental) / 12 - 1;
     PitchSpelling *spelling = NULL;
     if (pitch_spelling_create(LETTERS[letter], accidental, octave, &spelling) != PITCH_SPELLING_OK) {
+        return NULL;
+    }
+    return spelling;
+}
+
+PitchSpelling *harmony_spell_tonic(const PlanKey *key, int octave) {
+    const Tonic *tonic = key->mode == PLAN_MODE_MINOR ? &MINOR_TONICS[key->tonic_pitch_class]
+                                                      : &MAJOR_TONICS[key->tonic_pitch_class];
+    PitchSpelling *spelling = NULL;
+    if (pitch_spelling_create(LETTERS[tonic->letter], tonic->accidental, octave, &spelling) != PITCH_SPELLING_OK) {
         return NULL;
     }
     return spelling;
@@ -96,7 +106,7 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
         } else if (((note->pitch % 12) + 12) % 12 != pc) {
             verdict->hard = "not the chord's bass member";
         } else {
-            spellings[made] = spell(&context->key, member_degree(context->key.mode, &context->chords[note->chord]),
+            spellings[made] = harmony_spell_pitch(&context->key, harmony_member_degree(context->key.mode, &context->chords[note->chord]),
                                     note->pitch);
             if (!spellings[made]) {
                 ok = false;
