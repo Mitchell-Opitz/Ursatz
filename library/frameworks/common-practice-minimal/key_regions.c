@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "time/exact_rational.h"
+
 static const char *const TONIC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
@@ -332,13 +334,13 @@ static CommonPracticeKeyRegionsStatus choose_path(const CommonPracticeKeyWindows
 static CommonPracticeKeyRegionsStatus build_region(const CommonPracticeKeyRegionsConfig *config, size_t number,
                                                     int key_index, const MeterMap *map, int first_measure,
                                                     int last_measure, double uncertainty,
-                                                    CommonPracticeKeyRegion *out) {
+                                                    CommonPracticeRegionSource source, CommonPracticeKeyRegion *out) {
     memset(out, 0, sizeof(*out));
     out->key_index = key_index;
     out->first_measure = first_measure;
     out->last_measure = last_measure;
     out->uncertainty = uncertainty;
-    out->source = COMMON_PRACTICE_REGION_SOURCE_PROFILE;
+    out->source = source;
 
     TimeSpan *first = NULL;
     TimeSpan *last = NULL;
@@ -404,6 +406,173 @@ static double region_uncertainty(const MeasureWeights *measures, size_t from, si
     return clamp01(1.0 - (chosen - other));
 }
 
+/* The least-cost path when the FIRST region (the windows before the first change of key) must be one of the
+   `allowed` keys (a bit mask over the 24): a two-phase search, phase 0 = still in that first region. */
+#define BIG 1e300
+
+static CommonPracticeKeyRegionsStatus choose_path_restricted(const CommonPracticeKeyWindows *windows, double penalty,
+                                                              unsigned allowed, int *path) {
+    size_t n = windows->count;
+    size_t cells = n * COMMON_PRACTICE_KEY_COUNT;
+    double *cost0 = (double *)calloc(cells, sizeof(double));
+    double *cost1 = (double *)calloc(cells, sizeof(double));
+    int *from_phase = (int *)calloc(cells, sizeof(int));
+    int *from_key = (int *)calloc(cells, sizeof(int));
+    if (cost0 == NULL || cost1 == NULL || from_phase == NULL || from_key == NULL) {
+        free(cost0);
+        free(cost1);
+        free(from_phase);
+        free(from_key);
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+#define AT(w, k) ((w) * COMMON_PRACTICE_KEY_COUNT + (k))
+    for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+        cost0[AT(0, k)] = ((allowed >> k) & 1u) ? -windows->items[0].correlation[k] : BIG;
+        cost1[AT(0, k)] = BIG;
+    }
+    for (size_t w = 1; w < n; w++) {
+        for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+            double r = windows->items[w].correlation[k];
+            cost0[AT(w, k)] = cost0[AT(w - 1, k)] >= BIG ? BIG : cost0[AT(w - 1, k)] - r;
+            /* into phase 1 at key k: stay in phase 1, or change from any other key in either phase */
+            double best = cost1[AT(w - 1, k)];
+            int best_phase = 1;
+            int best_key = k;
+            for (int j = 0; j < COMMON_PRACTICE_KEY_COUNT; j++) {
+                if (j == k) {
+                    continue;
+                }
+                for (int phase = 0; phase < 2; phase++) {
+                    double previous = (phase == 0 ? cost0 : cost1)[AT(w - 1, j)];
+                    if (previous >= BIG) {
+                        continue;
+                    }
+                    double candidate = previous + penalty;
+                    if (best >= BIG || candidate < best - TIE) {
+                        best = candidate;
+                        best_phase = phase;
+                        best_key = j;
+                    }
+                }
+            }
+            cost1[AT(w, k)] = best >= BIG ? BIG : best - r;
+            from_phase[AT(w, k)] = best_phase;
+            from_key[AT(w, k)] = best_key;
+        }
+    }
+    int last_phase = 0;
+    int last_key = 0;
+    double best = BIG;
+    for (int phase = 0; phase < 2; phase++) {
+        for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+            double c = (phase == 0 ? cost0 : cost1)[AT(n - 1, k)];
+            if (c < BIG && (best >= BIG || c < best - TIE)) {
+                best = c;
+                last_phase = phase;
+                last_key = k;
+            }
+        }
+    }
+    for (size_t w = n; w-- > 0;) {
+        path[w] = last_key;
+        if (last_phase == 1) {
+            int phase = from_phase[AT(w, last_key)];
+            int key = from_key[AT(w, last_key)];
+            last_phase = phase;
+            last_key = key;
+        }
+    }
+#undef AT
+    free(cost0);
+    free(cost1);
+    free(from_phase);
+    free(from_key);
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+/* The spans of the piece the events cut it into: span i starts at measure slot start[i] and its first region
+   is restricted to the keys in allowed[i] (0 = unrestricted). */
+typedef struct {
+    size_t *start;
+    unsigned *allowed;
+    size_t count;
+} SpanPlan;
+
+static unsigned signature_keys(int sharps_flats) {
+    int tonic = ((7 * sharps_flats) % 12 + 12) % 12; /* the major key: sharps climb by fifths from C */
+    int relative = (tonic + 9) % 12;
+    return (1u << tonic) | (1u << (12 + relative));
+}
+
+/* The measure whose start is nearest `position`. */
+static CommonPracticeKeyRegionsStatus nearest_barline(const MeterMap *map, const MusicalTime *position,
+                                                       int *out_measure) {
+    int measure = 0;
+    TimeSpan *span = NULL;
+    if (meter_map_measure_index_at(map, position, &measure) != METER_MAP_OK ||
+        meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
+    }
+    ExactRational at = er_of_time(position);
+    ExactRational start = er_of_time(time_span_start(span));
+    ExactRational end = er_of_time(time_span_end(span));
+    time_span_destroy(span);
+    ExactRational since = {0, 1};
+    ExactRational until = {0, 1};
+    if (er_sub(at, start, &since) != 0 || er_sub(end, at, &until) != 0) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
+    }
+    *out_measure = er_cmp(since, until) > 0 ? measure + 1 : measure;
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+static CommonPracticeKeyRegionsStatus plan_spans(const CommonPracticeKeySignatureEvent *events, size_t event_count,
+                                                  const MeterMap *map, const MeasureWeights *measures,
+                                                  SpanPlan *plan) {
+    if (event_count > 0 && events == NULL) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
+    }
+    plan->start = (size_t *)calloc(event_count + 1, sizeof(size_t));
+    plan->allowed = (unsigned *)calloc(event_count + 1, sizeof(unsigned));
+    if (plan->start == NULL || plan->allowed == NULL) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    plan->count = 1;
+    bool have_previous = false;
+    int previous_sharps = 0;
+    for (size_t i = 0; i < event_count; i++) {
+        const CommonPracticeKeySignatureEvent *event = &events[i];
+        if (!time_ok(event->position) || event->sharps_flats < -7 || event->sharps_flats > 7 ||
+            (i > 0 && before(event->position, events[i - 1].position))) {
+            return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT;
+        }
+        if (have_previous && event->sharps_flats == previous_sharps) {
+            continue; /* the same signature again: not a change */
+        }
+        have_previous = true;
+        previous_sharps = event->sharps_flats;
+        int measure = 0;
+        CommonPracticeKeyRegionsStatus snapped = nearest_barline(map, event->position, &measure);
+        if (snapped != COMMON_PRACTICE_KEY_REGIONS_OK) {
+            return snapped;
+        }
+        long slot = (long)measure - (long)measures->first_measure;
+        unsigned keys = signature_keys(event->sharps_flats);
+        if (slot <= 0) {
+            plan->allowed[0] = keys;
+        } else if ((size_t)slot < measures->measure_count) {
+            if (plan->start[plan->count - 1] == (size_t)slot) {
+                plan->allowed[plan->count - 1] = keys;
+            } else {
+                plan->start[plan->count] = (size_t)slot;
+                plan->allowed[plan->count] = keys;
+                plan->count++;
+            }
+        }
+    }
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
 /* The pitch classes of a key's natural collection as a 12-bit mask: the major scale, or the relative major's
    for a minor key. */
 static unsigned natural_collection(int key_index) {
@@ -467,7 +636,9 @@ static CommonPracticeKeyRegionsStatus find_pivot(const CommonPracticeKeySegment 
 }
 
 CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegment *segments, size_t segment_count,
-                                                     const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
+                                                     const MeterMap *map,
+                                                     const CommonPracticeKeySignatureEvent *events, size_t event_count,
+                                                     const CommonPracticeKeyRegionsConfig *config,
                                                      CommonPracticeKeyRegions *out) {
     if (out == NULL) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
@@ -489,30 +660,47 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         return status;
     }
-    CommonPracticeKeyWindows windows = {0};
-    status = score_windows(&measures, &effective, &windows);
-    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
-        measures_release(&measures);
-        return status;
-    }
-
-    int *path = (int *)calloc(windows.count, sizeof(int));
     int *measure_key = (int *)calloc(measures.measure_count, sizeof(int));
-    if (path == NULL || measure_key == NULL) {
+    bool *forced = (bool *)calloc(measures.measure_count, sizeof(bool));
+    SpanPlan plan = {NULL, NULL, 0};
+    if (measure_key == NULL || forced == NULL) {
         status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     } else {
-        status = choose_path(&windows, effective.change_penalty, path);
+        status = plan_spans(events, event_count, map, &measures, &plan);
+    }
+    for (size_t sp = 0; sp < plan.count && status == COMMON_PRACTICE_KEY_REGIONS_OK; sp++) {
+        size_t from_slot = plan.start[sp];
+        size_t to_slot = sp + 1 < plan.count ? plan.start[sp + 1] : measures.measure_count;
+        MeasureWeights view = {NULL, measures.weights + from_slot, to_slot - from_slot,
+                               measures.first_measure + (int)from_slot, measures.first_measure + (int)to_slot - 1};
+        CommonPracticeKeyWindows windows = {0};
+        status = score_windows(&view, &effective, &windows);
+        if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
+            break;
+        }
+        int *path = (int *)calloc(windows.count, sizeof(int));
+        if (path == NULL) {
+            status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+        } else if (plan.allowed[sp] != 0) {
+            status = choose_path_restricted(&windows, effective.change_penalty, plan.allowed[sp], path);
+        } else {
+            status = choose_path(&windows, effective.change_penalty, path);
+        }
+        if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+            /* window w labels the measure at its centre; the ends take the edge windows' keys */
+            size_t window_length = (size_t)(windows.items[0].last_measure - windows.items[0].first_measure) + 1;
+            size_t half = window_length / 2;
+            for (size_t m = 0; m < view.measure_count; m++) {
+                size_t w = m < half ? 0 : m - half;
+                measure_key[from_slot + m] = path[w < windows.count ? w : windows.count - 1];
+            }
+            forced[from_slot] = plan.allowed[sp] != 0;
+        }
+        free(path);
+        common_practice_key_windows_destroy(&windows);
     }
     CommonPracticeKeyRegions result = {NULL, 0, NULL, 0};
     if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
-        /* window w labels the measure at its centre; the ends take the edge windows' keys */
-        size_t window_length = (size_t)(windows.items[0].last_measure - windows.items[0].first_measure) + 1;
-        size_t half = window_length / 2;
-        for (size_t m = 0; m < measures.measure_count; m++) {
-            size_t w = m < half ? 0 : m - half;
-            measure_key[m] = path[w < windows.count ? w : windows.count - 1];
-        }
-
         size_t region_count = 1;
         for (size_t m = 1; m < measures.measure_count; m++) {
             region_count += measure_key[m] != measure_key[m - 1] ? 1 : 0;
@@ -532,7 +720,10 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
                 region_uncertainty(&measures, from, m - 1, measure_key[from], &effective.profiles);
             status = build_region(&effective, result.region_count + 1, measure_key[from], map,
                                   measures.first_measure + (int)from, measures.first_measure + (int)m - 1,
-                                  uncertainty, &result.regions[result.region_count]);
+                                  uncertainty,
+                                  forced[from] ? COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE
+                                               : COMMON_PRACTICE_REGION_SOURCE_PROFILE,
+                                  &result.regions[result.region_count]);
             if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
                 result.region_count++;
             }
@@ -584,9 +775,10 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         }
     }
 
-    free(path);
     free(measure_key);
-    common_practice_key_windows_destroy(&windows);
+    free(forced);
+    free(plan.start);
+    free(plan.allowed);
     measures_release(&measures);
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         common_practice_key_regions_destroy(&result);

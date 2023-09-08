@@ -91,6 +91,7 @@ typedef enum {
     COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG,
     COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT,
     COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP,
+    COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT,
     COMMON_PRACTICE_KEY_REGIONS_ERR_KEY,
     COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC
 } CommonPracticeKeyRegionsStatus;
@@ -183,8 +184,33 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * the caller's list, whose chord the caller can read in either key.
  */
 
+/*
+ * KEY SIGNATURE EVENTS. A key signature change in the source (the file's key signature meta-events) is an
+ * AUTHORITATIVE boundary: the piece's key regions are found separately between the events, so a region can
+ * never straddle one. The caller passes the events as plain structs (this framework includes no io/ and no
+ * other framework): the position of the event and its sharps_flats count (-7..7, negative flats), in time
+ * order, as midi_key_signature_scan_all returns them. The mode hint is ignored (the byte is unreliable).
+ *
+ * Each event, snapped to the nearest barline, starts a span of the piece. Consecutive events with the same
+ * sharps_flats are one signature, so the repeat is not a boundary. The FIRST region of a span that starts at an
+ * event is restricted to that signature's major key and its relative minor (candidates: the 2 of the 24 keys);
+ * the region ends at the first change the path makes, and after it every key is a candidate again, because
+ * a piece modulates inside one signature all the time (an accidental, not a new signature). An event at or
+ * before the start of the piece restricts only the first region and forces no boundary. An event after the last
+ * measure is ignored. Such a region has source KEY_SIGNATURE (when it begins at the span's start; if the
+ * restricted key equals the one before it the two merge into one region and the source stays PROFILE). Many
+ * exporters write a default C-major event at tick 0 whatever the key: the first region is then restricted
+ * to C major or A minor, which is a limit of trusting the signature.
+ */
+
+typedef struct {
+    const MusicalTime *position;   /* whole notes; borrowed */
+    int sharps_flats;              /* -7..7 */
+} CommonPracticeKeySignatureEvent;
+
 typedef enum {
-    COMMON_PRACTICE_REGION_SOURCE_PROFILE = 0
+    COMMON_PRACTICE_REGION_SOURCE_PROFILE = 0,
+    COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE
 } CommonPracticeRegionSource;
 
 typedef struct {
@@ -215,12 +241,16 @@ typedef struct {
 } CommonPracticeKeyRegions;
 
 /*
- * Estimates the regions. BAD_CONFIG additionally for a negative or non-finite change_penalty, a zero
+ * Estimates the regions. events may be NULL with event_count 0 (no signature information: boundaries come only
+ * from the path). BAD_EVENT for a missing or negative position, sharps_flats outside -7..7, or events out of
+ * time order. BAD_CONFIG additionally for a negative or non-finite change_penalty, a zero
  * tonicization_max_measures or an empty prefix. config may be NULL for the defaults. On OK, *out owns its
  * regions and changes (common_practice_key_regions_destroy); otherwise *out is untouched.
  */
 CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegment *segments, size_t segment_count,
-                                                     const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
+                                                     const MeterMap *map,
+                                                     const CommonPracticeKeySignatureEvent *events, size_t event_count,
+                                                     const CommonPracticeKeyRegionsConfig *config,
                                                      CommonPracticeKeyRegions *out);
 
 /* Destroys every region's Key and TimeSpan and the arrays. NULL is a no-op. */
