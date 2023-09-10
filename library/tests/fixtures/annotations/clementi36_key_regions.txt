@@ -1,0 +1,28 @@
+# Local key regions of Clementi, Sonatina in C major, Op. 36 No. 1, first movement (Allegro), as encoded in
+# tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (38 measures of 4/4, no repeats).
+#
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The score was not available when this file was
+# written. It is a hand reading of the MIDI file's notes (the pitch classes sounding in each measure, read by
+# eye) and of the piece's familiar shape. It was written BEFORE the key-region code was run and was NOT derived
+# from its output. A human should confirm it against an edition (for example the Breitkopf & Hartel or Peters
+# edition of the Op. 36 sonatinas, or the IMSLP scan) before it is relied on. Measures are 1-based
+# (MeterMap measure index + 1) and numbered as in the file; where the reading is a judgement it is noted.
+#
+# The reading: C major (the opening theme, measures 1-5); G major from the first F-sharp and the D major
+# dominant of measures 6-7, closed by a G major cadence in measure 15; the parallel minor, C minor (E-flat
+# in measures 16-22, with a G7 / G major dominant in 16 and 19-21); and C major again from the G7 of measure
+# 23, the opening theme returning in measure 24 and a C major close in measure 38. The edges (measures 6 and 16
+# in particular) are judgement calls, which is why the test allows 2 measures.
+#
+# FORMAT, one per line:
+#   region <first> <last> <tonic> <major|minor>   the key of those measures (tonic: C, Db, D, Eb, E, F, F#, G, Ab, A, Bb, B)
+#   change <measure> <modulation|tonicization>    a key change that STARTS at this measure; the test checks each
+#                                                 modulation is found within 2 measures
+#
+region 1 5 C major
+region 6 15 G major
+region 16 22 C minor
+region 23 38 C major
+change 6 modulation
+change 16 modulation
+change 23 modulation

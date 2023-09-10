@@ -66,4 +66,11 @@ target_compile_definitions(test_voice_separation_corpus PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME voice_separation_corpus COMMAND test_voice_separation_corpus)
 
+add_executable(test_key_regions_corpus test_key_regions_corpus.c)
+target_link_libraries(test_key_regions_corpus PRIVATE common_practice_minimal standard_meter)
+target_compile_definitions(test_key_regions_corpus PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME key_regions_corpus COMMAND test_key_regions_corpus)
+
 add_ursatz_architecture_test(analysis)
