@@ -299,16 +299,27 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     return true;
 }
 
+/* Marks the chords of the lane over span that a schema made: they need no reason of their own to be there. */
+static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t count, bool *exempt) {
+    LaneSpanId ids[HARMONY_MAX_CHORDS];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
+    for (size_t i = 0; i < count; i++) {
+        exempt[i] = i < found && harmony_span_has_constraint(plan, ids[i], PLAN_CONSTRAINT_SCHEMA);
+    }
+}
+
 bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
                         const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
+    bool exempt[HARMONY_MAX_CHORDS];
     size_t count;
     PhraseVerdict verdict;
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL};
+    mark_schema_chords(plan, span, count, exempt);
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
