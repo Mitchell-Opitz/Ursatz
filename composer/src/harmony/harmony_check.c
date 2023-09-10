@@ -16,6 +16,7 @@
 
 #include <ursatz_composer/harmony_octave.h>
 #include <ursatz_composer/harmony_schema.h>
+#include <ursatz_composer/harmony_sequence.h>
 
 #include "harmony/harmony_internal.h"
 
@@ -267,6 +268,9 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {
+        return harmony_skeleton_check(candidate->payload, out);
+    }
+    if (strcmp(operator_->generator.name, HARMONY_SEQUENCE_OPERATOR_NAME) == 0) {
         return harmony_skeleton_check(candidate->payload, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_BASS_OPERATOR_NAME) == 0) {
