@@ -131,7 +131,11 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
     if (!all) {
         return false;
     }
-    size_t total = context->before_count + skeleton->count;
+    bool ends = skeleton->remainder_cells == 0 && context->has_cadence;
+    /* A skeleton that leaves the span open is a phrase not yet finished: the rest will bring the dominant and the
+       tonic, so they are counted in for the phrase model, as chords that need no reason of their own. */
+    size_t virtual_count = ends ? 0 : 2;
+    size_t total = context->before_count + skeleton->count + virtual_count;
     if (total > HARMONY_MAX_CHORDS) {
         free(all);
         verdict->hard = "too many chords";
@@ -145,9 +149,19 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
         all[context->before_count + i] = skeleton->chords[i];
         exempt[context->before_count + i] = true;
     }
+    if (virtual_count == 2) {
+        size_t at = context->before_count + skeleton->count;
+        if (!harmony_make_chord(context->key.mode, 5, 0, false, false, 1, &all[at]) ||
+            !harmony_make_chord(context->key.mode, 1, 0, false, false, 1, &all[at + 1])) {
+            free(all);
+            verdict->hard = "no cadence to come";
+            return true;
+        }
+        exempt[at] = true;
+        exempt[at + 1] = true;
+    }
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
-    bool ends = skeleton->remainder_cells == 0 && context->has_cadence;
     HeardPhrase phrase = {all, total, context->key.mode, context->has_cadence ? context->cadence : PLAN_CADENCE_PAC,
                           context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt};
     bool ok = harmony_judge(&phrase, &harmony);
