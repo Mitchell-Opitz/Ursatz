@@ -5,8 +5,8 @@
 # written. It is a hand reading of the MIDI file's notes (the pitch classes sounding in each measure, read by
 # eye) and of the piece's familiar shape. It was written BEFORE the key-region code was run and was NOT derived
 # from its output. A human should confirm it against an edition (for example the Breitkopf & Hartel or Peters
-# edition of the Op. 36 sonatinas, or the IMSLP scan) before it is relied on. Measures are 1-based
-# (MeterMap measure index + 1) and numbered as in the file; where the reading is a judgement it is noted.
+# edition of the Op. 36 sonatinas, or the IMSLP scan) before it is relied on. Measures are numbered
+# as the MeterMap numbers them (the first measure is 1; no pickup) and as in the file; where the reading is a judgement it is noted.
 #
 # The reading: C major (the opening theme, measures 1-5); G major from the first F-sharp and the D major
 # dominant of measures 6-7, closed by a G major cadence in measure 15; the parallel minor, C minor (E-flat

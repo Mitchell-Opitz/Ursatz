@@ -97,7 +97,7 @@ typedef enum {
 } CommonPracticeKeyRegionsStatus;
 
 typedef struct {
-    int first_measure;                         /* the measures the window covers (MeterMap measure indices) */
+    int first_measure;                         /* the measures the window covers (MeterMap measure numbers) */
     int last_measure;
     double correlation[COMMON_PRACTICE_KEY_COUNT];
 } CommonPracticeKeyWindow;
@@ -217,7 +217,7 @@ typedef struct {
     Key *key;                      /* owned */
     int key_index;                 /* 0..23 */
     TimeSpan *span;                /* owned */
-    int first_measure;             /* MeterMap measure indices, inclusive */
+    int first_measure;             /* MeterMap measure numbers (the first measure is 1), inclusive */
     int last_measure;
     double uncertainty;            /* [0, 1] */
     CommonPracticeRegionSource source;

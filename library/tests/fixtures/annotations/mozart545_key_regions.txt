@@ -7,8 +7,8 @@
 # written. It is a hand reading of the MIDI file's notes (the pitch classes sounding in each measure, read by
 # eye) and of the movement's well-known form. It was written BEFORE the key-region code was run and was NOT
 # derived from its output. A human should confirm it against an edition (the Neue Mozart-Ausgabe, Barenreiter,
-# or the IMSLP scan) before it is relied on. Measures are 1-based (MeterMap measure index + 1) and numbered as in
-# the file.
+# or the IMSLP scan) before it is relied on. Measures are numbered as the MeterMap numbers them (the first measure is 1;
+# no pickup) and as in the file.
 #
 # The reading: C major for the first theme and its transition (1-12, ending on a G chord); G major from the
 # D7 of measure 13, the second theme (14-28); the repeat, which returns to C at 29 and to G at 41; the

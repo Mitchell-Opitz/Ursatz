@@ -100,9 +100,9 @@ static void test_a_scale_scores_its_own_key_highest(void) {
     }
     CommonPracticeKeyWindows windows = {0};
     assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert(windows.count == 3 && windows.first_measure == 0 && windows.last_measure == 5);
+    assert(windows.count == 3 && windows.first_measure == 1 && windows.last_measure == 6);
     for (size_t w = 0; w < windows.count; w++) {
-        assert(windows.items[w].first_measure == (int)w && windows.items[w].last_measure == (int)w + 3);
+        assert(windows.items[w].first_measure == (int)w + 1 && windows.items[w].last_measure == (int)w + 4);
         assert(best_key(&windows.items[w]) == 0);
         assert(windows.items[w].correlation[0] > 0.8);
         assert(windows.items[w].correlation[0] > windows.items[w].correlation[21]); /* over A minor */
@@ -171,7 +171,7 @@ static void test_a_short_piece_gets_one_window(void) {
     add_measure(&piece, 1, c);
     CommonPracticeKeyWindows windows = {0};
     assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert(windows.count == 1 && windows.items[0].first_measure == 0 && windows.items[0].last_measure == 1);
+    assert(windows.count == 1 && windows.items[0].first_measure == 1 && windows.items[0].last_measure == 2);
     common_practice_key_windows_destroy(&windows);
 
     CommonPracticeKeyRegionsConfig one = common_practice_key_regions_config_default();
@@ -292,7 +292,8 @@ static void assert_gap_free(const CommonPracticeKeyRegions *regions, int first, 
         const CommonPracticeKeyRegion *region = &regions->regions[i];
         assert(region->first_measure <= region->last_measure);
         assert(region->uncertainty >= 0.0 && region->uncertainty <= 1.0);
-        assert(region->source == COMMON_PRACTICE_REGION_SOURCE_PROFILE);
+        assert(region->source == COMMON_PRACTICE_REGION_SOURCE_PROFILE ||
+               region->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
         assert(region->key != NULL && region->span != NULL);
         if (i > 0) {
             assert(region->first_measure == regions->regions[i - 1].last_measure + 1);
@@ -312,7 +313,7 @@ static void test_a_single_key_piece_is_one_region(void) {
     add_run(&piece, &measure, 0, 8);
     CommonPracticeKeyRegions regions = {0};
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert_gap_free(&regions, 0, 7);
+    assert_gap_free(&regions, 1, 8);
     assert(regions.region_count == 1 && regions.change_count == 0);
     assert(regions.regions[0].key_index == 0);
     assert(strcmp(key_label(regions.regions[0].key), "C major") == 0);
@@ -334,11 +335,11 @@ static void test_a_modulation_from_c_to_g_is_two_regions(void) {
     add_run(&piece, &measure, 7, 8);
     CommonPracticeKeyRegions regions = {0};
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert_gap_free(&regions, 0, 15);
+    assert_gap_free(&regions, 1, 16);
     assert(regions.region_count == 2);
     assert(regions.regions[0].key_index == 0 && regions.regions[1].key_index == 7);
     assert(strcmp(key_label(regions.regions[1].key), "G major") == 0);
-    assert(regions.regions[1].first_measure >= 7 && regions.regions[1].first_measure <= 9);
+    assert(regions.regions[1].first_measure >= 8 && regions.regions[1].first_measure <= 10);
     assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_MODULATION && !regions.changes[0].is_return);
     assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[1].key))),
                   "key-region-2") == 0);
@@ -365,7 +366,7 @@ static void test_a_brief_excursion_that_returns_is_a_tonicization(void) {
     config.tonicization_max_measures = 8;
     CommonPracticeKeyRegions regions = {0};
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert_gap_free(&regions, 0, 21);
+    assert_gap_free(&regions, 1, 22);
     assert(regions.region_count == 3);
     assert(regions.regions[0].key_index == 0 && regions.regions[1].key_index == 7 && regions.regions[2].key_index == 0);
     assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_TONICIZATION && !regions.changes[0].is_return);
@@ -487,7 +488,7 @@ static void test_a_chord_in_both_keys_is_the_pivot(void) {
     none.pivot_search_measures = 0;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &none, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 2);
-    assert(regions.regions[1].first_measure == 8 ? !regions.changes[0].has_pivot : true);
+    assert(regions.regions[1].first_measure == 9 ? !regions.changes[0].has_pivot : true);
     common_practice_key_regions_destroy(&regions);
     destroy_piece(&piece);
     meter_map_destroy(map);
@@ -574,12 +575,12 @@ static void test_a_signature_change_forces_a_boundary_against_the_profile(void) 
     CommonPracticeKeySignatureEvent one_flat = make_event(&piece, 8, 1, -1);
     assert(key_regions_estimate(piece.items, piece.count, map, &one_flat, 1, NULL, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert_gap_free(&regions, 0, 15);
-    const CommonPracticeKeyRegion *forced = region_starting_at(&regions, 8);
+    assert_gap_free(&regions, 1, 16);
+    const CommonPracticeKeyRegion *forced = region_starting_at(&regions, 9);
     assert(forced != NULL);
     assert(forced->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     assert(forced->key_index == 5 || forced->key_index == 14);
-    assert(regions.regions[0].last_measure == 7 && regions.regions[0].key_index == 0);
+    assert(regions.regions[0].last_measure == 8 && regions.regions[0].key_index == 0);
     assert(regions.regions[0].source == COMMON_PRACTICE_REGION_SOURCE_PROFILE);
     common_practice_key_regions_destroy(&regions);
     destroy_piece(&piece);
@@ -599,7 +600,7 @@ static void test_a_signature_at_the_start_restricts_only_the_first_region(void) 
     CommonPracticeKeySignatureEvent none = make_event(&piece, 0, 1, 0); /* C major / A minor */
     assert(key_regions_estimate(piece.items, piece.count, map, &none, 1, NULL, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert_gap_free(&regions, 0, 11);
+    assert_gap_free(&regions, 1, 12);
     assert(regions.region_count >= 2);
     assert(regions.regions[0].key_index == 0 || regions.regions[0].key_index == 21);
     assert(regions.regions[0].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
@@ -634,13 +635,13 @@ static void test_events_snap_to_the_nearest_barline(void) {
     CommonPracticeKeyRegions regions = {0};
     CommonPracticeKeySignatureEvent early = make_event(&piece, 33, 4, -1); /* 8 + 1/4 whole notes */
     assert(key_regions_estimate(piece.items, piece.count, map, &early, 1, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert(region_starting_at(&regions, 8) != NULL &&
-           region_starting_at(&regions, 8)->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
+    assert(region_starting_at(&regions, 9) != NULL &&
+           region_starting_at(&regions, 9)->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     common_practice_key_regions_destroy(&regions);
     CommonPracticeKeySignatureEvent late = make_event(&piece, 35, 4, -1); /* 8 + 3/4 */
     assert(key_regions_estimate(piece.items, piece.count, map, &late, 1, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert(region_starting_at(&regions, 9) != NULL &&
-           region_starting_at(&regions, 9)->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
+    assert(region_starting_at(&regions, 10) != NULL &&
+           region_starting_at(&regions, 10)->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     common_practice_key_regions_destroy(&regions);
     destroy_piece(&piece);
     meter_map_destroy(map);
