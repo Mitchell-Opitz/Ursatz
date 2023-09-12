@@ -112,6 +112,13 @@ caller's key, with a required `FrameworkReference` and confidence 1/1. Limits:
 no voice-crossing awareness, no inner voices, one line per extreme; absent
 segments get no label. See docs/modules/analysis.md.
 
+`key_regions.h` finds LOCAL key regions: windowed Krumhansl-Kessler key scoring, a dynamic-programming
+path with a change penalty, `KeyChangeExtent` labels, pivot chords, and key signature events as authoritative
+boundaries. It is a new function beside the whole-piece estimator, which is unchanged. It takes plain structs
+(segment time windows, `CommonPracticeWeights`, members, signature events) and includes no other framework.
+Limits: fixed windows until phrases exist, no cadence confirmation, profile bias in chromatic music, natural-minor
+pivots. See docs/modules/analysis.md.
+
 `key_identification.c` matches by one-directional containment: a key
 matches when all seven of its pitch classes are present, and pitch classes
 outside the key do not disqualify it. That lets a chromatic piece match the

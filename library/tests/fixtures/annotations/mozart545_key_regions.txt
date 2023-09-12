@@ -1,0 +1,42 @@
+# Local key regions of Mozart, Piano Sonata No. 16 in C major, K. 545 ("Sonata facile"), first movement
+# (Allegro), as encoded in tests/fixtures/framework-v1-corpus/"Mozart 545.mid". The file holds all three
+# movements; this movement is its first 146 measures of 4/4, which are the 73-bar movement with BOTH repeats
+# written out (exposition 1-28 and 29-56, development and recapitulation 57-101 and 102-146).
+#
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The score was not available when this file was
+# written. It is a hand reading of the MIDI file's notes (the pitch classes sounding in each measure, read by
+# eye) and of the movement's well-known form. It was written BEFORE the key-region code was run and was NOT
+# derived from its output. A human should confirm it against an edition (the Neue Mozart-Ausgabe, Barenreiter,
+# or the IMSLP scan) before it is relied on. Measures are numbered as the MeterMap numbers them (the first measure is 1;
+# no pickup) and as in the file.
+#
+# The reading: C major for the first theme and its transition (1-12, ending on a G chord); G major from the
+# D7 of measure 13, the second theme (14-28); the repeat, which returns to C at 29 and to G at 41; the
+# development (57-69), a run of passing keys that is NOT scored (G, D minor and a falling-fifths sequence);
+# the recapitulation, which Mozart opens in F major, the subdominant (70-78), then C major for the rest
+# (79-101); and the repeat of the second half, the same again (102-146). The development's keys are left
+# unscored because the reading is too uncertain to assert.
+#
+# FORMAT, one per line:
+#   scope <first> <last>                          the measures the test reads (the first movement)
+#   region <first> <last> <tonic> <major|minor>   the key of those measures (tonic: C, Db, D, Eb, E, F, F#, G, Ab, A, Bb, B)
+#   unscored <first> <last>                       measures left out of the accuracy count
+#   change <measure> <modulation|tonicization>    a key change that STARTS at this measure, between two scored
+#                                                 regions; the test checks each modulation is found within 2 measures
+#
+scope 1 146
+region 1 12 C major
+region 13 28 G major
+region 29 40 C major
+region 41 56 G major
+unscored 57 69
+region 70 78 F major
+region 79 101 C major
+unscored 102 114
+region 115 123 F major
+region 124 146 C major
+change 13 modulation
+change 29 modulation
+change 41 modulation
+change 79 modulation
+change 124 modulation

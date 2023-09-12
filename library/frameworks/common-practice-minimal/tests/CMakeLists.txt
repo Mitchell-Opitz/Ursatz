@@ -44,3 +44,6 @@ add_test(NAME common_practice_minimal_outer_scale_degrees COMMAND test_common_pr
 add_executable(test_architecture_common_practice_minimal test_architecture_common_practice_minimal.c)
 add_test(NAME architecture_common_practice_minimal COMMAND test_architecture_common_practice_minimal
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(test_common_practice_minimal_key_regions test_key_regions.c)
+target_link_libraries(test_common_practice_minimal_key_regions PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_key_regions COMMAND test_common_practice_minimal_key_regions)
