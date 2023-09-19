@@ -209,10 +209,6 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
 
 /* --- reading the plan back ------------------------------------------------ */
 
-static HarmonyMode harmony_mode(PlanKeyMode mode) {
-    return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-}
-
 /* The scale degree a Roman numeral names, whatever its case. */
 static int numeral_degree(const char *numeral, size_t length) {
     static const char *const NAMES[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
