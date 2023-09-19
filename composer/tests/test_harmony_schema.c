@@ -488,6 +488,17 @@ static void test_schema_sweep(void) {
     }
 }
 
+/* Why the loop left the harmony target open; the bass placeholder beside it has no operator in these runs. */
+static FillStuckReason stuck_reason(const Fixture *fixture, const FillOutcome *outcome) {
+    for (size_t i = 0; i < outcome->stuck_count; i++) {
+        if (outcome->stuck[i].target.kind == FILL_TARGET_LANE_SPAN && outcome->stuck[i].target.id == fixture->target) {
+            return outcome->stuck[i].reason;
+        }
+    }
+    assert(false);
+    return FILL_STUCK_NO_OPERATOR;
+}
+
 /* A schema that cannot fit is rejected cleanly; a meter without weak beats gets none. */
 static void test_unfittable(void) {
     HarmonySchemaParams params = harmony_schema_params_default();
@@ -498,8 +509,8 @@ static void test_unfittable(void) {
     Scenario short_target = {4, 4, PLAN_MODE_MAJOR, 0, 2, 1, PLAN_CADENCE_PAC, 0};
     Fixture fixture = build(&short_target);
     FillOutcome outcome = run(&fixture, 0, &operators, NULL);
-    assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck_count == 1);
-    assert(outcome.stuck[0].reason == FILL_STUCK_ALL_REJECTED);
+    assert(outcome.status == FILL_STATUS_STUCK);
+    assert(stuck_reason(&fixture, &outcome) == FILL_STUCK_ALL_REJECTED);
     assert(plan_lane_span_state(fixture.plan, fixture.target) == PLAN_STATE_CONSTRAINED);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
@@ -509,7 +520,7 @@ static void test_unfittable(void) {
     fixture = build(&waltz);
     outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK);
-    assert(outcome.stuck[0].reason == FILL_STUCK_NO_OPERATOR);
+    assert(stuck_reason(&fixture, &outcome) == FILL_STUCK_NO_OPERATOR);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
 
@@ -517,14 +528,14 @@ static void test_unfittable(void) {
     Scenario later = {4, 4, PLAN_MODE_MAJOR, 0, 8, 1, PLAN_CADENCE_PAC, 0};
     fixture = build(&later);
     outcome = run(&fixture, 0, &operators, NULL);
-    assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck[0].reason == FILL_STUCK_ALL_REJECTED);
+    assert(outcome.status == FILL_STATUS_STUCK && stuck_reason(&fixture, &outcome) == FILL_STUCK_ALL_REJECTED);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
     params.schemas = 0;
     Scenario opening = {4, 4, PLAN_MODE_MAJOR, 0, 8, 0, PLAN_CADENCE_PAC, 0};
     fixture = build(&opening);
     outcome = run(&fixture, 0, &operators, NULL);
-    assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck[0].reason == FILL_STUCK_ALL_REJECTED);
+    assert(outcome.status == FILL_STATUS_STUCK && stuck_reason(&fixture, &outcome) == FILL_STUCK_ALL_REJECTED);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
 }
