@@ -82,11 +82,12 @@ static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, int pit
     return id;
 }
 
-static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, PlanHarmonicFunction function) {
+static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, const char *roman,
+                              PlanHarmonicFunction function) {
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
-    strcpy(payload.harmony.roman_numeral, "I");
+    strcpy(payload.harmony.roman_numeral, roman);
     payload.harmony.function = function;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
     return id;
@@ -122,10 +123,11 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     if (scenario->before_bars > 0) {
-        fixture.given_chord = add_harmony(fixture.plan, fixture.owner, before, PLAN_FUNCTION_TONIC);
+        fixture.given_chord = add_harmony(fixture.plan, fixture.owner, before, scenario->mode == PLAN_MODE_MINOR ? "i" : "I",
+                                          PLAN_FUNCTION_TONIC);
         assert(plan_lane_span_set_state(fixture.plan, fixture.given_chord, PLAN_STATE_GIVEN) == PLAN_OK);
     }
-    fixture.target = add_harmony(fixture.plan, fixture.owner, fixture.region, PLAN_FUNCTION_UNKNOWN);
+    fixture.target = add_harmony(fixture.plan, fixture.owner, fixture.region, "I", PLAN_FUNCTION_UNKNOWN);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
     cadence.params.cadence = scenario->cadence;
     assert(plan_lane_span_add_constraint(fixture.plan, fixture.target, &cadence) == PLAN_OK);
@@ -397,7 +399,8 @@ static void check_given(const Fixture *fixture, const Scenario *scenario) {
         PlanSpan span = plan_lane_span_span(fixture->plan, fixture->given_chord);
         assert(plan_lane_span_state(fixture->plan, fixture->given_chord) == PLAN_STATE_GIVEN);
         assert(plan_time_compare(span.length, bars_of(fixture, scenario->before_bars)) == 0);
-        assert(strcmp(plan_lane_span_payload(fixture->plan, fixture->given_chord)->harmony.roman_numeral, "I") == 0);
+        assert(strcmp(plan_lane_span_payload(fixture->plan, fixture->given_chord)->harmony.roman_numeral,
+                      scenario->mode == PLAN_MODE_MINOR ? "i" : "I") == 0);
     }
     PlanSpan span = plan_lane_span_span(fixture->plan, fixture->given_bass);
     assert(plan_lane_span_state(fixture->plan, fixture->given_bass) == PLAN_STATE_GIVEN);
