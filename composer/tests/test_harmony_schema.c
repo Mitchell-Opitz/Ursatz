@@ -11,6 +11,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>
+#include <ursatz_composer/fill_suggest.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_schema.h>
@@ -620,13 +621,6 @@ static void test_phrases_keep_their_cadence(void) {
 
 static bool applied_sequence[SCALE_PATTERN_COUNT];
 
-/* Whether the pattern's name is in the labels the loop chose. */
-static bool chose_pattern(const char *labels, ScalePatternId id) {
-    char wanted[FILL_LABEL_MAX];
-    snprintf(wanted, sizeof(wanted), "sequence:%s", scale_pattern_name(id));
-    return strstr(labels, wanted) != NULL;
-}
-
 /* The harmony chords the sequence wrote: from the start of the target to the first span still open. */
 static size_t sequence_chords(const Fixture *fixture, LaneSpanId *ids) {
     LaneSpanId found[MAX_CHORDS];
@@ -684,6 +678,10 @@ static void check_sequence(const Fixture *fixture, const Scenario *scenario, con
     }
 }
 
+/*
+ * Applies each candidate the sequence operator proposes for the target, one at a time on a fresh plan (the loop would
+ * go on to apply the operator again to what is left), and checks what was written.
+ */
 static void test_sequence_sweep(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
     static const int tonics[2] = {0, 6};
@@ -691,40 +689,52 @@ static void test_sequence_sweep(void) {
         const ScalePattern *pattern = scale_pattern((ScalePatternId)id);
         HarmonySequenceParams params = harmony_sequence_params_default();
         params.patterns = HARMONY_SEQUENCE_BIT(id);
-        Operators operators = {NULL, &params, false, false};
         for (int m = 0; m < 4; m++) {
             for (int mode = 0; mode < 2; mode++) {
                 for (int t = 0; t < 2; t++) {
                     for (unsigned long seed = 0; seed < 4; seed++) {
                         Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
                                              tonics[t], 9, 1, PLAN_CADENCE_PAC, seed};
-                        static char first[SIGNATURE_SIZE];
-                        static char second[SIGNATURE_SIZE];
-                        Fixture fixture = build(&scenario);
-                        FillRecord *record = NULL;
-                        FillOutcome outcome = run(&fixture, seed, &operators, &record);
-                        char labels[SIGNATURE_SIZE];
-                        chosen_labels(record, labels, sizeof(labels));
-                        if (chose_pattern(labels, (ScalePatternId)id)) {
-                            applied_sequence[id] = true;
-                            check_sequence(&fixture, &scenario, pattern, &params);
-                        } else {
-                            assert(outcome.status == FILL_STATUS_STUCK);
-                            assert(plan_lane_span_state(fixture.plan, fixture.target) == PLAN_STATE_CONSTRAINED);
+                        FillConfig config;
+                        memset(&config, 0, sizeof(config));
+                        config.seed = seed;
+                        config.checker = harmony_phrase_checker;
+                        for (size_t pick = 0;; pick++) {
+                            static char first[SIGNATURE_SIZE];
+                            static char second[SIGNATURE_SIZE];
+                            size_t count = 0;
+                            for (int pass = 0; pass < 2; pass++) {
+                                Fixture fixture = build(&scenario);
+                                FillOperatorRegistry *registry = fill_registry_create();
+                                FillSuggestions *suggestions = NULL;
+                                FillTarget target = {FILL_TARGET_LANE_SPAN, fixture.target};
+                                assert(harmony_sequence_register(registry, &params) == FILL_OK);
+                                assert(fill_suggest(fixture.plan, registry, &config, target, 8, &suggestions) == FILL_OK);
+                                count = fill_suggestions_count(suggestions);
+                                if (pick < count) {
+                                    char wanted[FILL_LABEL_MAX];
+                                    snprintf(wanted, sizeof(wanted), "sequence:%s", pattern->name);
+                                    assert(strncmp(fill_suggestion_label(suggestions, pick), wanted, strlen(wanted)) == 0);
+                                    assert(fill_apply_suggestion(fixture.plan, suggestions, pick) == FILL_OK);
+                                    if (pass == 0) {
+                                        applied_sequence[id] = true;
+                                        check_sequence(&fixture, &scenario, pattern, &params);
+                                        check_given(&fixture, &scenario);
+                                        signature(&fixture, first, sizeof(first));
+                                    } else {
+                                        /* The same seed gives the same result. */
+                                        signature(&fixture, second, sizeof(second));
+                                        assert(strcmp(first, second) == 0);
+                                    }
+                                }
+                                fill_suggestions_destroy(suggestions);
+                                fill_registry_destroy(registry);
+                                plan_destroy(fixture.plan);
+                            }
+                            if (pick + 1 >= count) {
+                                break;
+                            }
                         }
-                        check_given(&fixture, &scenario);
-                        signature(&fixture, first, sizeof(first));
-                        fill_outcome_destroy(&outcome);
-                        fill_record_destroy(record);
-                        plan_destroy(fixture.plan);
-
-                        /* The same seed gives the same result. */
-                        Fixture again = build(&scenario);
-                        outcome = run(&again, seed, &operators, NULL);
-                        signature(&again, second, sizeof(second));
-                        assert(strcmp(first, second) == 0);
-                        fill_outcome_destroy(&outcome);
-                        plan_destroy(again.plan);
                     }
                 }
             }
