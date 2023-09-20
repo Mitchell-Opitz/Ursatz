@@ -15,6 +15,8 @@
 #include <harmony_strong_predominants.h>
 
 #include <ursatz_composer/harmony_octave.h>
+#include <ursatz_composer/harmony_schema.h>
+#include <ursatz_composer/harmony_sequence.h>
 
 #include "harmony/harmony_internal.h"
 
@@ -139,7 +141,7 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
             if (!resolves) {
                 hard = "applied chord does not resolve to its target";
             }
-        } else if (!phrase->open_ended &&
+        } else if (!phrase->open_ended && !(phrase->exempt && phrase->exempt[i]) &&
                    !chord_is_explained(phrase->mode, &segment->chord, reading[i].six_four, reading[i].inside)) {
             hard = "chord with no reason to be there";
         }
@@ -243,7 +245,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         }
         HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode,
                               progression->request.cadence, progression->request.cells_per_bar,
-                              progression->request.cell_length, false};
+                              progression->request.cell_length, false, NULL};
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_EMBELLISH_OPERATOR_NAME) == 0) {
@@ -262,8 +264,14 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
             return false;
         }
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
-                              edit->cell_length, false};
+                              edit->cell_length, false, NULL};
         return verdict_to_check(&phrase, out);
+    }
+    if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {
+        return harmony_skeleton_check(candidate->payload, out);
+    }
+    if (strcmp(operator_->generator.name, HARMONY_SEQUENCE_OPERATOR_NAME) == 0) {
+        return harmony_skeleton_check(candidate->payload, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_BASS_OPERATOR_NAME) == 0) {
         return harmony_bass_check(candidate->payload, out);
@@ -283,7 +291,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true};
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -291,16 +299,27 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     return true;
 }
 
+/* Marks the chords of the lane over span that a schema made: they need no reason of their own to be there. */
+static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t count, bool *exempt) {
+    LaneSpanId ids[HARMONY_MAX_CHORDS];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
+    for (size_t i = 0; i < count; i++) {
+        exempt[i] = i < found && harmony_span_has_constraint(plan, ids[i], PLAN_CONSTRAINT_SCHEMA);
+    }
+}
+
 bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
                         const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
+    bool exempt[HARMONY_MAX_CHORDS];
     size_t count;
     PhraseVerdict verdict;
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false};
+    mark_schema_chords(plan, span, count, exempt);
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }

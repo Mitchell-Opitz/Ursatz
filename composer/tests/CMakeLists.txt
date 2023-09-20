@@ -50,3 +50,8 @@ add_executable(test_harmony_bass test_harmony_bass.c)
 target_link_libraries(test_harmony_bass PRIVATE ursatz_composer)
 target_compile_options(test_harmony_bass PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_bass COMMAND test_harmony_bass)
+
+add_executable(test_harmony_schema test_harmony_schema.c)
+target_link_libraries(test_harmony_schema PRIVATE ursatz_composer)
+target_compile_options(test_harmony_schema PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_harmony_schema COMMAND test_harmony_schema)

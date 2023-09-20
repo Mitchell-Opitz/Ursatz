@@ -118,7 +118,7 @@ static bool propose_edits(const PiecePlan *plan, const PhraseContext *phrase, co
             continue;
         }
         HeardPhrase heard = {scratch->chords, scratch->count, scratch->mode, scratch->cadence,
-                             scratch->cells_per_bar, scratch->cell_length, false};
+                             scratch->cells_per_bar, scratch->cell_length, false, NULL};
         PhraseVerdict verdict;
         if (!harmony_judge(&heard, &verdict)) {
             ok = false;

@@ -94,39 +94,74 @@ bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out)
     return true;
 }
 
-bool harmony_roman_format_applied(PlanKeyMode mode, const HarmonyAppliedChord *applied,
-                                  char out[PLAN_ROMAN_NUMERAL_MAX]) {
+bool harmony_roman_format_applied_inverted(PlanKeyMode mode, const HarmonyAppliedChord *applied, int inversion,
+                                           char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    static const char *const SEVENTH_FIGURES[3] = {"6/5", "4/3", "4/2"};
     char label[PLAN_ROMAN_NUMERAL_MAX];
-    if (!applied || !out || !harmony_applied_label(harmony_mode_of(mode), applied, label, sizeof(label))) {
+    if (!applied || !out || inversion < 0 || inversion > 3 ||
+        !harmony_applied_label(harmony_mode_of(mode), applied, label, sizeof(label))) {
+        return false;
+    }
+    bool seventh = harmony_applied_quality_is_seventh(applied->quality);
+    /* A triad is written in root position or first inversion, a seventh chord in any. */
+    if (inversion > (seventh ? 3 : 1)) {
         return false;
     }
     memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
-    memcpy(out, label, strlen(label));
+    if (inversion == 0) {
+        memcpy(out, label, strlen(label));
+        return true;
+    }
+    /* The figures go between the chord and its target: "V7/V" becomes "V6/5/V". */
+    const char *slash = strrchr(label, '/');
+    const char *figure = seventh ? SEVENTH_FIGURES[inversion - 1] : "6";
+    size_t head = (size_t)(slash - label) - (seventh ? 1 : 0);
+    size_t tail = strlen(slash);
+    if (head + strlen(figure) + tail >= PLAN_ROMAN_NUMERAL_MAX) {
+        return false;
+    }
+    memcpy(out, label, head);
+    memcpy(out + head, figure, strlen(figure));
+    memcpy(out + head + strlen(figure), slash, tail);
     return true;
 }
 
-bool harmony_roman_parse_applied(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out) {
-    if (!roman || !out) {
+bool harmony_roman_parse_applied_inverted(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out,
+                                          int *inversion) {
+    if (!roman || !out || !inversion) {
         return false;
     }
     /* The labels are the framework's, so each valid one is generated and compared. */
     for (int quality = 0; quality < HARMONY_APPLIED_QUALITY_COUNT; quality++) {
         for (int target = 1; target <= 7; target++) {
-            HarmonyAppliedChord applied;
-            char label[PLAN_ROMAN_NUMERAL_MAX];
-            memset(&applied, 0, sizeof(applied));
-            applied.quality = (HarmonyAppliedQuality)quality;
-            applied.target = target;
-            if (!harmony_applied_quality_kind(applied.quality, &applied.kind) ||
-                !harmony_applied_valid(harmony_mode_of(mode), &applied) ||
-                !harmony_applied_label(harmony_mode_of(mode), &applied, label, sizeof(label))) {
-                continue;
-            }
-            if (strcmp(label, roman) == 0) {
-                *out = applied;
-                return true;
+            for (int position = 0; position <= 3; position++) {
+                HarmonyAppliedChord applied;
+                char label[PLAN_ROMAN_NUMERAL_MAX];
+                memset(&applied, 0, sizeof(applied));
+                applied.quality = (HarmonyAppliedQuality)quality;
+                applied.target = target;
+                if (!harmony_applied_quality_kind(applied.quality, &applied.kind) ||
+                    !harmony_applied_valid(harmony_mode_of(mode), &applied) ||
+                    !harmony_roman_format_applied_inverted(mode, &applied, position, label)) {
+                    continue;
+                }
+                if (strcmp(label, roman) == 0) {
+                    *out = applied;
+                    *inversion = position;
+                    return true;
+                }
             }
         }
     }
     return false;
+}
+
+bool harmony_roman_format_applied(PlanKeyMode mode, const HarmonyAppliedChord *applied,
+                                  char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    return harmony_roman_format_applied_inverted(mode, applied, 0, out);
+}
+
+bool harmony_roman_parse_applied(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out) {
+    int inversion;
+    return harmony_roman_parse_applied_inverted(mode, roman, out, &inversion) && inversion == 0;
 }

@@ -114,7 +114,8 @@ bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals
 /* The scale degree of the bass: the chord's root, or its third, fifth or seventh by inversion. */
 static int bass_degree_of(PlanKeyMode mode, const PhraseChord *chord) {
     if (chord->applied) {
-        return harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord);
+        return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
+                2 * chord->applied_inversion) % 7 + 1;
     }
     return (chord->chord.degree - 1 + 2 * chord->chord.inversion) % 7 + 1;
 }
@@ -215,7 +216,7 @@ SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
             bool leading = chord->applied_chord.kind == APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE;
             input->degree = leading ? 7 : 5;
             input->applied_to = chord->applied_chord.target;
-            input->inversion = 0;
+            input->inversion = chord->applied_inversion;
         } else {
             input->degree = chord->chord.degree;
             input->applied_to = 0;
@@ -301,6 +302,6 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
     if (!heard || !at_end || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL};
     return harmony_hear_phrase(&phrase, heard, at_end);
 }

@@ -6,6 +6,7 @@
 
 #include <analysis_input.h>
 #include <harmony_chord.h>
+#include <pitch/pitch_spelling.h>
 #include <semantics/beat_strength.h>
 #include <semantics/cadence_type.h>
 
@@ -47,6 +48,7 @@ typedef struct {
     HarmonyChord chord;          /* the chord, when it is not applied */
     bool applied;
     HarmonyAppliedChord applied_chord; /* the chord, when it is applied */
+    int applied_inversion;             /* 0 for root position; a triad has 0 or 1, a seventh chord 0 to 3 */
     size_t cells;
 } PhraseChord;
 
@@ -89,6 +91,8 @@ typedef struct {
     PlanTime cell_length;
     /* A phrase that need not end in a cadence, nor explain every inverted chord: a harmonization of a given bass. */
     bool open_ended;
+    /* Chords, by index, that need no reason to be there beyond the phrase they are in: a schema's. NULL for none. */
+    const bool *exempt;
 } HeardPhrase;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
@@ -123,6 +127,21 @@ bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, Phras
 
 /* The span of cells [first_cell, first_cell + cells) of the request. */
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out);
+
+/* The cell grid under a span: the meter lane span containing it, and where the span sits in that grid. */
+typedef struct {
+    PlanMeter meter;
+    PlanTime bar_length;
+    size_t cells_per_bar;
+    PlanTime cell_length;
+    size_t first_cell; /* cells from the start of the meter lane span to the start of the span */
+    size_t cells;      /* the span's length in cells */
+} CellMetre;
+
+/* False unless the span lies in one meter lane span, starts on a cell and is a whole number of cells. */
+bool harmony_read_cells(const PiecePlan *plan, PlanSpan span, CellMetre *out);
+/* As harmony_count_cells, but a length of zero is zero cells. */
+bool harmony_count_cells_or_zero(PlanTime cell_length, PlanTime length, size_t *cells);
 
 /* How many cells of cell_length make length exactly. False if it is not a whole number. */
 bool harmony_count_cells(PlanTime cell_length, PlanTime length, size_t *cells);
@@ -231,6 +250,9 @@ bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCand
 
 void harmony_progression_destroy(void *payload);
 
+/* The fewest cells a phrase can have and still end in the cadence (the phrase-model operator's minimum). */
+size_t harmony_phrase_min_cells(PlanCadenceType cadence, size_t cells_per_bar);
+
 /* The verdict of the harmony-from-bass operator's checker on a candidate payload. */
 bool harmony_octave_check(const void *payload, FillCheck *out);
 
@@ -277,7 +299,81 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict);
 /* The checker's verdict on a bass candidate's payload. */
 bool harmony_bass_check(const void *payload, FillCheck *out);
 
+/* The most notes one chord's bass span holds. */
+#define BASS_MAX_NOTES_PER_CHORD 4
+
+/*
+ * Builds one bass line for the harmony in context (its key, metre and chords), choosing octaves in the range
+ * with only rng, and splitting chords by the parameters. False when a chord has no pitch in range.
+ */
+bool harmony_bass_build(const BassContext *context, const HarmonyBassParams *params, FillRng *rng,
+                        BassCandidate *out);
+
+/* The notes of one chord of a bass line, as lane notes with offsets from the chord's start. */
+PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, PlanNote *notes, size_t *count);
+
+/* The scale degree of the chord's bass member: its root, or its third, fifth or seventh by inversion. */
+int harmony_member_degree(PlanKeyMode mode, const PhraseChord *chord);
+
+/* A MIDI pitch spelled as a scale degree of the key (see harmony_bass.h); NULL when it cannot be. */
+PitchSpelling *harmony_spell_pitch(const PlanKey *key, int degree, int pitch);
+/* The key's tonic, spelled with the fewest accidentals, in the octave given. */
+PitchSpelling *harmony_spell_tonic(const PlanKey *key, int octave);
+
 /* The pitch class (0 to 11) of the chord's bass member in the key. False for a chord not written here. */
 bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc);
+
+
+/*
+ * Skeletons: the schema and sequence operators write harmony and bass together for the start of a
+ * harmony target span, and leave the rest of the span open for the loop. This is the span as they read it.
+ */
+typedef struct {
+    LaneSpanId target;
+    NodeId owner;
+    PlanSpan span;
+    PlanKey key;
+    CellMetre metre;
+    bool at_start;      /* the span starts the owner node */
+    bool has_cadence;   /* the span, or its owner, asks for a cadence */
+    PlanCadenceType cadence;
+    size_t before_count; /* the written chords that lead up to the span, from the start of the owner node */
+    PhraseChord before[HARMONY_MAX_CHORDS];
+    LaneSpanId bass_placeholder; /* the Constrained bass span equal to the target, or PLAN_LANE_SPAN_NONE for none */
+} SkeletonContext;
+
+/* A skeleton candidate: the chords and bass it writes at the start of the span. */
+typedef struct {
+    int schema;           /* a GalantSchemaId, or -1 when the skeleton is not a schema */
+    SkeletonContext context;
+    size_t count;         /* the skeleton's chords */
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+    size_t remainder_cells; /* what is left of the span after the skeleton */
+    unsigned preference;  /* added to the score, in thousandths */
+    BassCandidate bass;
+} SkeletonCandidate;
+
+/* Reads a Constrained harmony target for a skeleton; false when it is not one (see harmony_schema.h). */
+bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonContext *out);
+
+/*
+ * Judges the skeleton in its phrase: the chords before it and its own, the schema's chords needing no
+ * further reason to be there, standard-harmony's phrase model, and, when the skeleton ends the span
+ * and a cadence is asked for, the cadence heard; then the bass by the melodic rules. A skeleton that
+ * leaves the span open must leave room for the cadence. False only when it fails itself.
+ */
+bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *verdict);
+/* The checker's verdict on a skeleton candidate: the judgment, and the preference added to its score. */
+bool harmony_skeleton_check(const void *payload, FillCheck *out);
+
+/* Builds the bass line for the skeleton's chords, with the parameters. False when no bass fits. */
+bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams *params, FillRng *rng);
+
+/*
+ * Writes the skeleton: the chords over the start of the span (the span itself becomes the first), the bass
+ * beside them, a schema constraint on each chord of a schema, and a new Constrained span for what is left,
+ * carrying the cadence.
+ */
+PlanResult harmony_skeleton_apply(PiecePlan *plan, const SkeletonCandidate *skeleton);
 
 #endif
