@@ -55,3 +55,8 @@ add_executable(test_harmony_schema test_harmony_schema.c)
 target_link_libraries(test_harmony_schema PRIVATE ursatz_composer)
 target_compile_options(test_harmony_schema PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_schema COMMAND test_harmony_schema)
+
+add_executable(test_harmony_lookups test_harmony_lookups.c)
+target_link_libraries(test_harmony_lookups PRIVATE ursatz_composer)
+target_compile_options(test_harmony_lookups PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_harmony_lookups COMMAND test_harmony_lookups)

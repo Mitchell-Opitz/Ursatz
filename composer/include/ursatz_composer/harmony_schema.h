@@ -1,6 +1,8 @@
 #ifndef URSATZ_COMPOSER_HARMONY_SCHEMA_H
 #define URSATZ_COMPOSER_HARMONY_SCHEMA_H
 
+#include <stdbool.h>
+
 #include <galant_prototypes.h>
 
 #include <ursatz_composer/fill_operator.h>
@@ -65,6 +67,15 @@ typedef struct {
     unsigned preference;
     HarmonyBassParams bass;
 } HarmonySchemaParams;
+
+/* The id of the schema with this name, as the framework spells it ("romanesca", "do-re-mi"). False if there is none. */
+bool harmony_schema_find(const char *name, GalantSchemaId *id);
+
+/*
+ * Whether every stage of the schema makes one consistent chord in a key of this mode, so that it can be offered
+ * at all (see the top of this header). It does not say whether the meter and the span can hold it.
+ */
+bool harmony_schema_available(GalantSchemaId id, PlanKeyMode mode);
 
 /* The defaults: every schema, every role, preference 250, and the bass operator's defaults. */
 HarmonySchemaParams harmony_schema_params_default(void);
