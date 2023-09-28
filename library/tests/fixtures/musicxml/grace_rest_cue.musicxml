@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <part-list><score-part id="P1"><part-name>Voice</part-name></score-part></part-list>
+  <!-- A rest, a cue note and an unpitched note each take a quarter and make no note; the grace note takes no time
+       and is skipped; the C4 starts at three quarters. -->
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>4</divisions></attributes>
+      <note><rest/><duration>4</duration></note>
+      <note><cue/><pitch><step>D</step><octave>4</octave></pitch><duration>4</duration></note>
+      <note><unpitched><display-step>E</display-step><display-octave>4</display-octave></unpitched><duration>4</duration></note>
+      <note><grace/><pitch><step>B</step><octave>3</octave></pitch></note>
+      <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration></note>
+    </measure>
+  </part>
+</score-partwise>
