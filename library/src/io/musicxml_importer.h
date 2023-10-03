@@ -3,8 +3,13 @@
 
 #include <stddef.h>
 
+#include <stdint.h>
+
 #include "events/note_event.h"
+#include "pitch/key_signature.h"
 #include "pitch/pitch_numeric_value.h"
+#include "time/meter_map.h"
+#include "time/musical_time.h"
 
 /*
  * MusicXMLImporter (L9, music-io): reads an uncompressed score-partwise MusicXML document into the same
@@ -28,6 +33,21 @@
  * Order. Notes come out in time order (stable by onset, then part, then document order), as the MIDIImporter
  * returns them; they are NOT unfolded for repeats and endings. Note ids are "musicxml-<part id>-<n>", n counting
  * from 0 in document order within the part.
+ *
+ * Meter. Each <time> gives a TimeSignature at its position, and the MeterMap is built from them (declared, not
+ * defaulted); with no <time> anywhere it is the defaulted 4/4 map, as for a MIDI file with no time signature event.
+ * A first measure marked implicit="yes" and shorter than a full measure is the PICKUP, measure 0 (the MeterMap
+ * detects a pickup only from a short first region, so the importer ends that region at the pickup's length). The
+ * measure numbers, and where every barline falls, come from the MeterMap and the time signatures alone: a measure
+ * of the document whose length differs from its signature's (other than an implicit one) cannot be represented
+ * and is a warning. Additive meters (3+2) are summed, with a warning; senza-misura and beat types that are not
+ * a power of two are skipped.
+ *
+ * Keys. Each <key> gives a key-signature event {KeySignature, mode hint, position}, the same entry shape as
+ * midi_key_signature_scan_all: <fifths> is the sharps/flats count (-7..7), <mode> major or minor gives the
+ * hint, and any other mode (dorian ...) or none is UNKNOWN, as it makes no claim the signature does not. Events
+ * that repeat exactly (same position, fifths and mode, in other staves or parts) are kept once, on the lowest
+ * part.
  *
  * Warnings. Anything skipped, rounded or inconsistent is counted in warnings.count, and the first
  * MUSICXML_IMPORT_MAX_WARNING_MESSAGES messages are kept. A warning never stops the import; a structural error
@@ -63,11 +83,28 @@ typedef struct {
     char messages[MUSICXML_IMPORT_MAX_WARNING_MESSAGES][MUSICXML_IMPORT_WARNING_MESSAGE_SIZE];
 } MusicXmlImportWarnings;
 
+typedef enum {
+    MUSICXML_MODE_HINT_MAJOR = 0,
+    MUSICXML_MODE_HINT_MINOR,
+    MUSICXML_MODE_HINT_UNKNOWN
+} MusicXmlModeHint;
+
+typedef struct {
+    KeySignature *key_signature;  /* owned: built as midi_key_signature_build builds it */
+    MusicXmlModeHint mode_hint;   /* next to the signature, never part of it */
+    MusicalTime *position;        /* owned; whole notes */
+    int8_t sharps_flats;          /* the raw <fifths>, -7..7 */
+    size_t part_index;            /* the lowest part that declared it */
+} MusicXmlKeySignatureEvent;
+
 typedef struct {
     NoteEvent **events;                  /* owned; count entries, in time order */
     PitchNumericValue **pitch_values;    /* owned; parallel to events: the sounding pitch */
     size_t count;
     size_t *part_index;                  /* owned; parallel to events: the part (0-based, document order) */
+    MeterMap *meter_map;                 /* owned */
+    MusicXmlKeySignatureEvent *key_signatures; /* owned; in time order; NULL when there are none */
+    size_t key_signature_count;
     MusicXmlImportWarnings warnings;
     char error_message[MUSICXML_IMPORT_ERROR_MESSAGE_SIZE]; /* set on every error, empty on OK */
 } MusicXmlImport;

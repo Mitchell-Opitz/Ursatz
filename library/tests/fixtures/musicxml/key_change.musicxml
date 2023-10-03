@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <part-list>
+    <score-part id="P1"><part-name>Right</part-name></score-part>
+    <score-part id="P2"><part-name>Left</part-name></score-part>
+  </part-list>
+  <!-- C major, then three flats minor at measure 2, then two sharps in a mode with no major/minor hint at measure 3.
+       Part P2 repeats the first key, which is one event. -->
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>4</divisions><key><fifths>0</fifths><mode>major</mode></key><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="2">
+      <attributes><key><fifths>-3</fifths><mode>minor</mode></key></attributes>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="3">
+      <attributes><key><fifths>2</fifths><mode>dorian</mode></key></attributes>
+      <note><pitch><step>D</step><octave>5</octave></pitch><duration>16</duration></note>
+    </measure>
+  </part>
+  <part id="P2">
+    <measure number="1">
+      <attributes><divisions>4</divisions><key><fifths>0</fifths><mode>major</mode></key></attributes>
+      <note><pitch><step>C</step><octave>3</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="2"><note><pitch><step>C</step><octave>3</octave></pitch><duration>16</duration></note></measure>
+    <measure number="3"><note><pitch><step>D</step><octave>3</octave></pitch><duration>16</duration></note></measure>
+  </part>
+</score-partwise>

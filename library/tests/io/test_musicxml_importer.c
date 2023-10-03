@@ -6,7 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pitch/key_signature.h"
 #include "pitch/pitch_spelling.h"
+#include "time/meter_map.h"
+#include "time/time_signature.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
@@ -245,6 +248,162 @@ static void test_a_backup_before_the_measure_is_stopped(void) {
     musicxml_import_destroy(&import);
 }
 
+/* --- measures, time signatures and key signatures --- */
+
+static void assert_time(const MusicalTime *time, long numerator, unsigned long denominator) {
+    assert(equals(musical_time_numerator(time), musical_time_denominator(time), numerator, denominator));
+}
+
+static MusicalTime *at(long numerator, unsigned long denominator) {
+    MusicalTime *time = NULL;
+    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+    return time;
+}
+
+static int measure_at(const MeterMap *map, long numerator, unsigned long denominator) {
+    MusicalTime *time = at(numerator, denominator);
+    int measure = -99;
+    assert(meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK);
+    musical_time_destroy(time);
+    return measure;
+}
+
+static void test_no_time_signature_is_a_defaulted_map(void) {
+    MusicXmlImport import = import_fixture("chords_backup.musicxml");
+    assert(import.meter_map != NULL && meter_map_is_defaulted(import.meter_map));
+    assert(import.key_signature_count == 0 && import.key_signatures == NULL);
+    musicxml_import_destroy(&import);
+    assert(import.meter_map == NULL);
+}
+
+static void test_a_pickup_is_measure_zero(void) {
+    MusicXmlImport import = import_fixture("pickup.musicxml");
+    assert(import.count == 3 && import.warnings.count == 0);
+    assert(!meter_map_is_defaulted(import.meter_map));
+    assert(meter_map_has_pickup(import.meter_map) && meter_map_first_measure_number(import.meter_map) == 0);
+    assert(measure_at(import.meter_map, 0, 1) == 0);
+    assert(measure_at(import.meter_map, 1, 4) == 1); /* a barline is the measure that starts there */
+    assert(measure_at(import.meter_map, 5, 4) == 2);
+    assert_note(&import, 0, 0, 1, 1, 4, 67);
+    assert_note(&import, 1, 1, 4, 1, 1, 72);
+    musicxml_import_destroy(&import);
+}
+
+static void test_a_full_implicit_first_measure_is_not_a_pickup(void) {
+    MusicXmlImport import;
+    assert(import_text("<score-partwise><part-list/><part id=\"P1\"><measure number=\"1\" implicit=\"yes\">"
+                       "<attributes><divisions>4</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>"
+                       "<note><rest/><duration>16</duration></note></measure>"
+                       "<measure number=\"2\"><note><rest/><duration>16</duration></note></measure></part></score-partwise>",
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(!meter_map_has_pickup(import.meter_map) && meter_map_first_measure_number(import.meter_map) == 1);
+    musicxml_import_destroy(&import);
+}
+
+static void test_a_meter_change(void) {
+    MusicXmlImport import = import_fixture("meter_change.musicxml");
+    assert(import.count == 3 && import.warnings.count == 0);
+    assert(!meter_map_is_defaulted(import.meter_map) && meter_map_region_count(import.meter_map) == 3);
+    const TimeSignature *first = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
+    const TimeSignature *second = meter_map_region_time_signature(meter_map_region(import.meter_map, 1));
+    const TimeSignature *third = meter_map_region_time_signature(meter_map_region(import.meter_map, 2));
+    assert(time_signature_top_number(first) == 4 && time_signature_bottom_number(first) == 4);
+    assert(time_signature_top_number(second) == 3 && time_signature_bottom_number(second) == 4);
+    assert(time_signature_top_number(third) == 6 && time_signature_bottom_number(third) == 8);
+    assert_time(meter_map_region_start(meter_map_region(import.meter_map, 1)), 1, 1);
+    assert_time(meter_map_region_start(meter_map_region(import.meter_map, 2)), 7, 4);
+    assert(measure_at(import.meter_map, 1, 1) == 2 && measure_at(import.meter_map, 7, 4) == 3);
+    musicxml_import_destroy(&import);
+}
+
+static void test_key_signature_events(void) {
+    MusicXmlImport import = import_fixture("key_change.musicxml");
+    assert(import.count == 6 && import.warnings.count == 0);
+    assert(import.key_signature_count == 3); /* the second part's repeat of the first is not a new event */
+    const MusicXmlKeySignatureEvent *events = import.key_signatures;
+    assert_time(events[0].position, 0, 1);
+    assert(events[0].sharps_flats == 0 && events[0].mode_hint == MUSICXML_MODE_HINT_MAJOR && events[0].part_index == 0);
+    assert(key_signature_entry_count(events[0].key_signature) == 0);
+    assert_time(events[1].position, 1, 1);
+    assert(events[1].sharps_flats == -3 && events[1].mode_hint == MUSICXML_MODE_HINT_MINOR);
+    assert(key_signature_entry_count(events[1].key_signature) == 3); /* B E A flats */
+    assert_time(events[2].position, 2, 1);
+    assert(events[2].sharps_flats == 2 && events[2].mode_hint == MUSICXML_MODE_HINT_UNKNOWN);
+    assert(key_signature_entry_count(events[2].key_signature) == 2); /* F C sharps */
+    musicxml_import_destroy(&import);
+}
+
+static void test_a_bad_key_is_skipped(void) {
+    MusicXmlImport import;
+    assert(import_text(DOC(DIV4 "<attributes><key><fifths>9</fifths></key></attributes>" NOTE("C", "4", "4", "")), &import) ==
+           MUSICXML_IMPORT_OK);
+    assert(import.key_signature_count == 0 && import.warnings.count == 1);
+    musicxml_import_destroy(&import);
+}
+
+static void test_measure_length_warnings(void) {
+    MusicXmlImport import;
+    const char *time44 = "<attributes><divisions>4</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>";
+    /* a 3-quarter measure in 4/4 is a warning ... */
+    char text[2048];
+    snprintf(text, sizeof(text),
+             "<score-partwise><part-list/><part id=\"P1\"><measure number=\"1\">%s"
+             "<note><rest/><duration>16</duration></note></measure><measure number=\"2\">"
+             "<note><rest/><duration>12</duration></note></measure></part></score-partwise>",
+             time44);
+    assert(import_text(text, &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "measure 2") != NULL);
+    musicxml_import_destroy(&import);
+    /* ... but not when that measure is marked implicit */
+    snprintf(text, sizeof(text),
+             "<score-partwise><part-list/><part id=\"P1\"><measure number=\"1\">%s"
+             "<note><rest/><duration>16</duration></note></measure><measure number=\"2\" implicit=\"yes\">"
+             "<note><rest/><duration>12</duration></note></measure></part></score-partwise>",
+             time44);
+    assert(import_text(text, &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 0);
+    musicxml_import_destroy(&import);
+}
+
+static void test_additive_and_unsupported_meters(void) {
+    MusicXmlImport import;
+    assert(import_text(DOC("<attributes><divisions>2</divisions><time><beats>3+2</beats><beat-type>8</beat-type></time></attributes>"
+                           "<note><rest/><duration>5</duration></note>"),
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "additive") != NULL);
+    const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
+    assert(time_signature_top_number(signature) == 5 && time_signature_bottom_number(signature) == 8);
+    musicxml_import_destroy(&import);
+
+    assert(import_text(DOC("<attributes><divisions>4</divisions><time><beats>4</beats><beat-type>3</beat-type></time></attributes>"
+                           "<note><rest/><duration>4</duration></note>"),
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 1 && meter_map_is_defaulted(import.meter_map));
+    musicxml_import_destroy(&import);
+
+    assert(import_text(DOC("<attributes><divisions>4</divisions><time><senza-misura/></time></attributes>"
+                           "<note><rest/><duration>4</duration></note>"),
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 0 && meter_map_is_defaulted(import.meter_map));
+    musicxml_import_destroy(&import);
+}
+
+static void test_parts_that_disagree_about_the_meter(void) {
+    MusicXmlImport import;
+    assert(import_text("<score-partwise><part-list/>"
+                       "<part id=\"P1\"><measure number=\"1\"><attributes><divisions>4</divisions>"
+                       "<time><beats>4</beats><beat-type>4</beat-type></time></attributes>"
+                       "<note><rest/><duration>16</duration></note></measure></part>"
+                       "<part id=\"P2\"><measure number=\"1\"><attributes><divisions>4</divisions>"
+                       "<time><beats>3</beats><beat-type>4</beat-type></time></attributes>"
+                       "<note><rest/><duration>12</duration></note></measure></part></score-partwise>",
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "disagree") != NULL);
+    const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
+    assert(time_signature_top_number(signature) == 4); /* the first part's wins */
+    musicxml_import_destroy(&import);
+}
+
 int main(void) {
     test_chords_and_backup();
     test_ties_merge_across_barlines();
@@ -259,6 +418,15 @@ int main(void) {
     test_warnings_are_counted_and_capped();
     test_a_microtonal_alter_is_rounded();
     test_a_backup_before_the_measure_is_stopped();
+    test_no_time_signature_is_a_defaulted_map();
+    test_a_pickup_is_measure_zero();
+    test_a_full_implicit_first_measure_is_not_a_pickup();
+    test_a_meter_change();
+    test_key_signature_events();
+    test_a_bad_key_is_skipped();
+    test_measure_length_warnings();
+    test_additive_and_unsupported_meters();
+    test_parts_that_disagree_about_the_meter();
     printf("test_musicxml_importer: ok\n");
     return 0;
 }
