@@ -49,6 +49,16 @@
  * that repeat exactly (same position, fifths and mode, in other staves or parts) are kept once, on the lowest
  * part.
  *
+ * Parts, staves, voices. Each <part> is a part (parts[i], in document order, with its id from <score-part id>, its
+ * <part-name> and the number of staves its <staves> declares, 1 by default). Each note keeps its part index and its
+ * <staff> number (1 when it names none). A notated <voice> within a part is a Voice: the NoteEvent carries a
+ * VoiceReference whose target id is "musicxml-voice-<part id>-<voice>" (none when the note names no voice). A voice
+ * is notated, not found: nothing here separates voices, and the MIDIImporter's per-track voices are untouched.
+ *
+ * Transposing parts. A <transpose> (<chromatic> plus 12 * <octave-change>) shifts the SOUNDING pitch, the
+ * PitchNumericValue and the PitchIdentity the NoteEvent carries; the PitchSpelling stays the WRITTEN pitch. Each
+ * distinct transposition of a part is a warning, since downstream analysis reads sounding pitch.
+ *
  * Warnings. Anything skipped, rounded or inconsistent is counted in warnings.count, and the first
  * MUSICXML_IMPORT_MAX_WARNING_MESSAGES messages are kept. A warning never stops the import; a structural error
  * does: malformed XML, a root that is not <score-partwise>, a duration-bearing element before any <divisions>, a
@@ -98,10 +108,19 @@ typedef struct {
 } MusicXmlKeySignatureEvent;
 
 typedef struct {
+    char *id;                     /* owned: the <score-part id> (or "part-<n>" when the <part> names none) */
+    char *name;                   /* owned: the <part-name>, or "" */
+    int staff_count;              /* <staves>, 1 when none */
+} MusicXmlPart;
+
+typedef struct {
     NoteEvent **events;                  /* owned; count entries, in time order */
     PitchNumericValue **pitch_values;    /* owned; parallel to events: the sounding pitch */
     size_t count;
     size_t *part_index;                  /* owned; parallel to events: the part (0-based, document order) */
+    int *staff;                          /* owned; parallel to events: the <staff> number, 1 when none */
+    MusicXmlPart *parts;                 /* owned; in document order */
+    size_t part_count;
     MeterMap *meter_map;                 /* owned */
     MusicXmlKeySignatureEvent *key_signatures; /* owned; in time order; NULL when there are none */
     size_t key_signature_count;

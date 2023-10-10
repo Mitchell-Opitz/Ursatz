@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/voice_reference.h"
 #include "pitch/key_signature.h"
 #include "pitch/pitch_spelling.h"
 #include "time/meter_map.h"
@@ -404,6 +405,83 @@ static void test_parts_that_disagree_about_the_meter(void) {
     musicxml_import_destroy(&import);
 }
 
+/* --- parts, staves and voices --- */
+
+static const char *voice_of(const MusicXmlImport *import, size_t i) {
+    const VoiceReference *voice = note_event_optional_voice(import->events[i]);
+    return voice == NULL ? NULL : entity_id_value(voice_reference_target_id(voice));
+}
+
+static void test_two_parts(void) {
+    MusicXmlImport import = import_fixture("two_parts.musicxml");
+    assert(import.part_count == 2 && import.count == 3 && import.warnings.count == 0);
+    assert(strcmp(import.parts[0].id, "P1") == 0 && strcmp(import.parts[0].name, "Flute") == 0);
+    assert(strcmp(import.parts[1].id, "P2") == 0 && strcmp(import.parts[1].name, "Cello") == 0);
+    assert(import.parts[0].staff_count == 1 && import.parts[1].staff_count == 1);
+    /* the flute's C5 and the cello's C3 start together; each part has its own divisions */
+    assert_note(&import, 0, 0, 1, 1, 1, 72);
+    assert_note(&import, 1, 0, 1, 1, 2, 48);
+    assert_note(&import, 2, 1, 2, 1, 2, 55);
+    assert(import.part_index[0] == 0 && import.part_index[1] == 1 && import.part_index[2] == 1);
+    assert(strcmp(entity_id_value(note_event_id(import.events[0])), "musicxml-P1-0") == 0);
+    assert(strcmp(entity_id_value(note_event_id(import.events[2])), "musicxml-P2-1") == 0);
+    assert(voice_of(&import, 0) == NULL); /* no <voice> notated, no voice */
+    musicxml_import_destroy(&import);
+}
+
+static void test_two_voices_on_one_staff(void) {
+    MusicXmlImport import = import_fixture("two_voices_one_staff.musicxml");
+    assert(import.count == 3 && import.warnings.count == 0);
+    /* time order: the first voice's E5 and the second voice's C4 start together */
+    assert_note(&import, 0, 0, 1, 1, 4, 76);
+    assert_note(&import, 1, 0, 1, 1, 2, 60);
+    assert_note(&import, 2, 1, 4, 1, 4, 79);
+    assert(strcmp(voice_of(&import, 0), "musicxml-voice-P1-1") == 0);
+    assert(strcmp(voice_of(&import, 1), "musicxml-voice-P1-2") == 0);
+    assert(strcmp(voice_of(&import, 2), "musicxml-voice-P1-1") == 0);
+    for (size_t i = 0; i < import.count; i++) {
+        assert(import.staff[i] == 1);
+    }
+    musicxml_import_destroy(&import);
+}
+
+static void test_two_staves(void) {
+    MusicXmlImport import = import_fixture("two_staves.musicxml");
+    assert(import.count == 3 && import.warnings.count == 0 && import.parts[0].staff_count == 2);
+    assert_note(&import, 0, 0, 1, 1, 2, 76);
+    assert_note(&import, 1, 0, 1, 1, 2, 48);
+    assert_note(&import, 2, 1, 2, 1, 2, 74);
+    assert(import.staff[0] == 1 && import.staff[1] == 2 && import.staff[2] == 1);
+    assert(strcmp(voice_of(&import, 0), "musicxml-voice-P1-1") == 0);
+    assert(strcmp(voice_of(&import, 1), "musicxml-voice-P1-5") == 0);
+    assert(voice_of(&import, 2) == NULL);
+    musicxml_import_destroy(&import);
+}
+
+static void test_transposing_parts(void) {
+    MusicXmlImport import = import_fixture("transposing_part.musicxml");
+    assert(import.count == 2);
+    assert(import.warnings.count == 2); /* one for each transposing part */
+    assert(strstr(import.warnings.messages[0], "transposing") != NULL && strstr(import.warnings.messages[0], "-2") != NULL);
+    assert(strstr(import.warnings.messages[1], "+12") != NULL);
+    assert_note(&import, 0, 0, 1, 1, 1, 70); /* a clarinet's written C5 sounds as B-flat 4 */
+    assert_note(&import, 1, 0, 1, 1, 1, 84); /* a piccolo's sounds an octave up */
+    assert_spelling(&import, 0, PITCH_LETTER_C, 0, 5); /* the written spelling is kept */
+    assert_spelling(&import, 1, PITCH_LETTER_C, 0, 5);
+    musicxml_import_destroy(&import);
+}
+
+static void test_a_bad_transposition_and_staff_are_ignored(void) {
+    MusicXmlImport import;
+    assert(import_text(DOC("<attributes><divisions>4</divisions><transpose><chromatic>x</chromatic></transpose></attributes>"
+                           NOTE("C", "4", "4", "<staff>99</staff>")),
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.count == 1 && import.warnings.count == 2);
+    assert_note(&import, 0, 0, 1, 1, 4, 60);
+    assert(import.staff[0] == 1);
+    musicxml_import_destroy(&import);
+}
+
 int main(void) {
     test_chords_and_backup();
     test_ties_merge_across_barlines();
@@ -427,6 +505,11 @@ int main(void) {
     test_measure_length_warnings();
     test_additive_and_unsupported_meters();
     test_parts_that_disagree_about_the_meter();
+    test_two_parts();
+    test_two_voices_on_one_staff();
+    test_two_staves();
+    test_transposing_parts();
+    test_a_bad_transposition_and_staff_are_ignored();
     printf("test_musicxml_importer: ok\n");
     return 0;
 }

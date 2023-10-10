@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <part-list>
+    <score-part id="P1"><part-name>Clarinet in B-flat</part-name></score-part>
+    <score-part id="P2"><part-name>Piccolo</part-name></score-part>
+  </part-list>
+  <!-- A written C5 for a clarinet in B-flat sounds as B-flat 4 (MIDI 70); a piccolo's written C5 sounds an octave up
+       (MIDI 84). The written spelling is kept in both. -->
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>4</divisions><transpose><diatonic>-1</diatonic><chromatic>-2</chromatic></transpose></attributes>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>16</duration></note>
+    </measure>
+  </part>
+  <part id="P2">
+    <measure number="1">
+      <attributes><divisions>4</divisions><transpose><diatonic>0</diatonic><chromatic>0</chromatic><octave-change>1</octave-change></transpose></attributes>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>16</duration></note>
+    </measure>
+  </part>
+</score-partwise>

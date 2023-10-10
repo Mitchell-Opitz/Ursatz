@@ -12,6 +12,7 @@
 #include "ezxml.h"
 
 #include "core/provenance_reference.h"
+#include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "io/midi_key_signature.h"
 #include "pitch/pitch_identity.h"
@@ -47,6 +48,7 @@ typedef struct {
     size_t part;
     size_t order;    /* document order within the part */
     char voice[32];  /* the notated <voice>, or "" */
+    int staff;       /* the <staff>, 1 when none */
 } XNote;
 
 typedef struct {
@@ -89,6 +91,7 @@ typedef struct {
     const char *part_id;
     const char *measure_number;
     size_t current_part;
+    int *part_staves;              /* per part: the largest <staves> read */
 } Ctx;
 
 /* --- warnings and errors --- */
@@ -295,6 +298,8 @@ typedef struct {
     ExactRational reached;   /* the furthest the measure has gone: where the next measure starts */
     ExactRational measure_start;
     ExactRational last_onset;/* the onset of the last note that was not a chord note */
+    long transpose;          /* semitones from written to sounding pitch */
+    int staves;              /* <staves> */
 } PartState;
 
 static bool advance(Ctx *ctx, PartState *state, ExactRational by) {
@@ -355,6 +360,13 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
     if (read_text(ezxml_child(note, "voice"), voice, sizeof(voice))) {
         snprintf(parsed.voice, sizeof(parsed.voice), "%s", voice);
     }
+    long staff = 1;
+    if (ezxml_child(note, "staff") != NULL && (!read_long(ezxml_child(note, "staff"), &staff) || staff < 1 || staff > 64)) {
+        warn(ctx, "<staff> is not a number from 1 to 64; staff 1 used");
+        staff = 1;
+    }
+    parsed.staff = (int)staff;
+    parsed.midi += state->transpose;
 
     if (length.n == 0) {
         warn(ctx, "note with a zero duration skipped");
@@ -541,6 +553,35 @@ static bool handle_attributes(Ctx *ctx, PartState *state, ezxml_t attributes) {
         }
         state->divisions = divisions;
     }
+    if (ezxml_child(attributes, "staves") != NULL) {
+        long staves = 0;
+        if (!read_long(ezxml_child(attributes, "staves"), &staves) || staves < 1 || staves > 64) {
+            warn(ctx, "<staves> is not a number from 1 to 64; ignored");
+        } else {
+            state->staves = (int)staves;
+        }
+    }
+    ezxml_t transpose = ezxml_child(attributes, "transpose");
+    if (transpose != NULL) {
+        long chromatic = 0;
+        long octaves = 0;
+        bool has_chromatic = ezxml_child(transpose, "chromatic") != NULL;
+        bool has_octaves = ezxml_child(transpose, "octave-change") != NULL;
+        if ((has_chromatic && !read_long(ezxml_child(transpose, "chromatic"), &chromatic)) ||
+            (has_octaves && !read_long(ezxml_child(transpose, "octave-change"), &octaves)) || chromatic < -48 ||
+            chromatic > 48 || octaves < -4 || octaves > 4) {
+            warn(ctx, "<transpose> is not read (unusable <chromatic> or <octave-change>)");
+        } else {
+            long semitones = chromatic + 12 * octaves;
+            if (semitones != state->transpose) {
+                state->transpose = semitones;
+                if (semitones != 0) {
+                    warn(ctx, "transposing part: sounding pitch is written pitch %+ld semitones; written spelling kept",
+                         semitones);
+                }
+            }
+        }
+    }
     ezxml_t time = ezxml_child(attributes, "time");
     if (time != NULL && !handle_time(ctx, state, time)) {
         return false;
@@ -556,6 +597,7 @@ static bool process_part(Ctx *ctx, ezxml_t part, size_t part_index) {
     PartState state;
     memset(&state, 0, sizeof(state));
     state.cursor = state.reached = state.measure_start = state.last_onset = er_make(0, 1);
+    state.staves = 1;
     size_t order = 0;
     bool first_measure = true;
     ctx->tie_count = 0;
@@ -601,6 +643,9 @@ static bool process_part(Ctx *ctx, ezxml_t part, size_t part_index) {
                  length.n, length.d, state.measure_length.n, state.measure_length.d);
         }
         state.measure_start = state.reached;
+        if (state.staves > ctx->part_staves[part_index]) {
+            ctx->part_staves[part_index] = state.staves;
+        }
     }
     if (ctx->tie_count > 0) {
         warn(ctx, "%zu tie start(s) never stopped", ctx->tie_count);
@@ -642,10 +687,14 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
     PitchSpelling *spelling = NULL;
     EntityID *provenance_id = NULL;
     ProvenanceReference *provenance = NULL;
+    EntityID *voice_id = NULL;
+    VoiceReference *voice = NULL;
     NoteEvent *event = NULL;
 
     char id_text[128];
     snprintf(id_text, sizeof(id_text), "musicxml-%s-%zu", part_id, note->order);
+    char voice_text[128];
+    snprintf(voice_text, sizeof(voice_text), "musicxml-voice-%s-%s", part_id, note->voice);
     position = er_to_time(note->onset);
     bool fits = note->duration.n <= (unsigned long long)LONG_MAX && note->duration.d <= (unsigned long long)ULONG_MAX;
     bool ok = position != NULL && fits && entity_id_create(id_text, &id) == ENTITY_ID_OK &&
@@ -658,7 +707,14 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
               provenance_reference_create_present(provenance_id, &provenance) == PROVENANCE_REFERENCE_OK;
     if (ok) {
         provenance_id = NULL; /* owned by the provenance reference */
-        ok = note_event_create(id, anchor, duration, pitch, spelling, NULL, provenance, &event) == NOTE_EVENT_OK;
+        if (note->voice[0] != '\0') {
+            ok = entity_id_create(voice_text, &voice_id) == ENTITY_ID_OK &&
+                 voice_reference_create(voice_id, &voice) == VOICE_REFERENCE_OK;
+            if (voice != NULL) {
+                voice_id = NULL; /* owned by the voice reference */
+            }
+        }
+        ok = ok && note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK;
     }
     if (!ok) {
         if (!fits || position == NULL) {
@@ -677,6 +733,8 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
         pitch_numeric_value_destroy(numeric);
         entity_id_destroy(provenance_id);
         provenance_reference_destroy(provenance);
+        entity_id_destroy(voice_id);
+        voice_reference_destroy(voice);
         return false;
     }
     *out_event = event;
@@ -699,6 +757,12 @@ void musicxml_import_destroy(MusicXmlImport *import) {
     free(import->events);
     free(import->pitch_values);
     free(import->part_index);
+    free(import->staff);
+    for (size_t i = 0; i < import->part_count; i++) {
+        free(import->parts[i].id);
+        free(import->parts[i].name);
+    }
+    free(import->parts);
     meter_map_destroy(import->meter_map);
     for (size_t i = 0; i < import->key_signature_count; i++) {
         key_signature_destroy(import->key_signatures[i].key_signature);
@@ -866,7 +930,9 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
         part_count++;
     }
     part_ids = (char **)calloc(part_count > 0 ? part_count : 1, sizeof(char *));
-    if (part_ids == NULL) {
+    ctx->part_staves = (int *)calloc(part_count > 0 ? part_count : 1, sizeof(int));
+    if (part_ids == NULL || ctx->part_staves == NULL) {
+        free(part_ids);
         return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
     }
     size_t index = 0;
@@ -888,6 +954,31 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
 
     MusicXmlImport *out = ctx->out;
     if (ctx->status == MUSICXML_IMPORT_OK) {
+        out->parts = (MusicXmlPart *)calloc(part_count > 0 ? part_count : 1, sizeof(MusicXmlPart));
+        if (out->parts == NULL) {
+            fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
+        }
+        for (size_t i = 0; i < part_count && ctx->status == MUSICXML_IMPORT_OK; i++) {
+            const char *name = "";
+            ezxml_t list = ezxml_child(root, "part-list");
+            for (ezxml_t listed = list != NULL ? ezxml_child(list, "score-part") : NULL; listed != NULL;
+                 listed = listed->next) {
+                const char *listed_id = ezxml_attr(listed, "id");
+                if (listed_id != NULL && strcmp(listed_id, part_ids[i]) == 0) {
+                    name = ezxml_txt(ezxml_child(listed, "part-name"));
+                    break;
+                }
+            }
+            out->parts[i].id = strdup(part_ids[i]);
+            out->parts[i].name = strdup(name);
+            out->parts[i].staff_count = ctx->part_staves[i] > 0 ? ctx->part_staves[i] : 1;
+            if (out->parts[i].id == NULL || out->parts[i].name == NULL) {
+                fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
+            }
+            out->part_count = i + 1;
+        }
+    }
+    if (ctx->status == MUSICXML_IMPORT_OK) {
         build_meter_map(ctx);
     }
     if (ctx->status == MUSICXML_IMPORT_OK) {
@@ -899,10 +990,11 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
         out->events = (NoteEvent **)calloc(count > 0 ? count : 1, sizeof(NoteEvent *));
         out->pitch_values = (PitchNumericValue **)calloc(count > 0 ? count : 1, sizeof(PitchNumericValue *));
         out->part_index = (size_t *)calloc(count > 0 ? count : 1, sizeof(size_t));
+        out->staff = (int *)calloc(count > 0 ? count : 1, sizeof(int));
         EntityID *tuning_id = NULL;
         TuningSystem *tuning = NULL;
         if (order == NULL || out->events == NULL || out->pitch_values == NULL || out->part_index == NULL ||
-            entity_id_create("midi-note-number", &tuning_id) != ENTITY_ID_OK) {
+            out->staff == NULL || entity_id_create("midi-note-number", &tuning_id) != ENTITY_ID_OK) {
             fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
         } else if (tuning_system_create(tuning_id, "MIDI note number", &tuning) != TUNING_SYSTEM_OK) {
             entity_id_destroy(tuning_id);
@@ -920,6 +1012,7 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
                 const XNote *note = &ctx->notes[order[i].index];
                 if (build_event(ctx, note, part_ids[note->part], tuning, &out->events[i], &out->pitch_values[i])) {
                     out->part_index[i] = note->part;
+                    out->staff[i] = note->staff;
                     out->count = i + 1;
                 }
             }
@@ -931,6 +1024,8 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
         free(part_ids[i]);
     }
     free(part_ids);
+    free(ctx->part_staves);
+    ctx->part_staves = NULL;
     return ctx->status;
 }
 
