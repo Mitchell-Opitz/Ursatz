@@ -346,7 +346,7 @@ static void test_errors(void) {
         }
         assert(status == CASES[i].status);
         /* An error says what is wrong on stderr, writes nothing on stdout, and leaves no file behind. */
-        assert(contains("cli_e.txt", i == 0 ? "Usage" : "Error:"));
+        assert(contains("cli_e.txt", "Error:"));
         size_t out_size = 0;
         free(read_file("cli_o.txt", &out_size));
         assert(out_size == 0);
