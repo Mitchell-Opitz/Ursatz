@@ -233,6 +233,16 @@ static const char *cadence_name(PlanCadenceType cadence) {
     return NAMES[cadence];
 }
 
+/*
+ * A sequence continues something, and so do the schemas that are not opening gambits: for those the first bar
+ * is a tonic chord, written before the operators run, and the skeleton follows it.
+ */
+static bool needs_lead(const Options *options) {
+    return options->has_sequence ||
+           (options->has_schema &&
+            galant_prototype(options->schema)->function != SCHEMA_FUNCTION_OPENING_GAMBIT);
+}
+
 /* Splits argv into options and checks each value; returns 0, or the exit status. */
 static int read_options(int argc, char **argv, Options *options) {
     memset(options, 0, sizeof(*options));
@@ -373,16 +383,6 @@ static int read_options(int argc, char **argv, Options *options) {
                     minimum);
     }
     return 0;
-}
-
-/*
- * A sequence continues something, and so do the schemas that are not opening gambits: for those the first bar
- * is a tonic chord, written before the operators run, and the skeleton follows it.
- */
-static bool needs_lead(const Options *options) {
-    return options->has_sequence ||
-           (options->has_schema &&
-            galant_prototype(options->schema)->function != SCHEMA_FUNCTION_OPENING_GAMBIT);
 }
 
 /* --- building the plan ------------------------------------------------------ */
