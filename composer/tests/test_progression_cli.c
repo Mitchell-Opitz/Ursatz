@@ -8,6 +8,8 @@
 #include "io/musicxml_importer.h"
 #include "pitch/pitch_numeric_value.h"
 
+#include <galant_prototypes.h>
+
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_json.h>
@@ -369,7 +371,197 @@ static void test_help(void) {
     assert(contains("cli_usage.txt", "progression"));
 }
 
+/* The schema constraint of the first chord that has one, or -1. */
+static int schema_in_plan(const PiecePlan *plan) {
+    LaneSpanId ids[64];
+    size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, plan_root(plan)), ids, 64);
+    for (size_t i = 0; i < count; i++) {
+        for (size_t k = 0; k < plan_lane_span_constraint_count(plan, ids[i]); k++) {
+            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, ids[i], k);
+            if (constraint->kind == PLAN_CONSTRAINT_SCHEMA) {
+                return constraint->params.schema.schema;
+            }
+        }
+    }
+    return -1;
+}
+
+/* The names under a heading of the --list-schemas output, up to the next blank line. */
+static size_t listed_names(const char *heading, char names[][64], size_t capacity) {
+    char *text = read_file("cli_list.txt", NULL);
+    assert(text);
+    char *at = strstr(text, heading);
+    assert(at);
+    at = strchr(at, '\n') + 1;
+    size_t count = 0;
+    while (*at == ' ' && count < capacity) {
+        size_t length = 0;
+        at += 2;
+        while (at[length] && at[length] != ' ' && at[length] != '\n') {
+            length++;
+        }
+        memcpy(names[count], at, length);
+        names[count][length] = '\0';
+        count++;
+        at = strchr(at, '\n') + 1;
+    }
+    free(text);
+    return count;
+}
+
+static void test_list_schemas(void) {
+    char schemas[GALANT_SCHEMA_COUNT][64];
+    char sequences[8][64];
+    assert(run("--list-schemas", "cli_list.txt", "cli_e.txt") == 0);
+    size_t schema_count = listed_names("Schemas", schemas, GALANT_SCHEMA_COUNT);
+    size_t sequence_count = listed_names("Sequences", sequences, 8);
+    assert(schema_count >= 5 && sequence_count == 5);
+    assert(contains("cli_list.txt", "romanesca") && contains("cli_list.txt", "five-six-ascending"));
+    assert(!contains("cli_list.txt", "modulating"));
+    assert(!contains("cli_list.txt", "quiescenza"));
+
+    /* Every name listed is accepted. A schema is used or, when this phrase has no room for it, refused with status
+       2; the result is a valid progression either way. */
+    Combination major = {"C major", 0, PLAN_MODE_MAJOR, "4/4", 8, "PAC", PLAN_CADENCE_PAC};
+    int used = 0;
+    for (size_t i = 0; i < schema_count; i++) {
+        char arguments[256];
+        snprintf(arguments, sizeof(arguments),
+                 "--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --seed 4 --schema %s --out cli_schema.json",
+                 schemas[i]);
+        remove("cli_schema.json");
+        int status = run(arguments, "cli_o.txt", "cli_e.txt");
+        assert(status == 0 || status == 2);
+        if (status == 0) {
+            PiecePlan *plan = read_plan("cli_schema.json");
+            int found = schema_in_plan(plan);
+            assert(found >= 0 && strcmp(galant_schema_name((GalantSchemaId)found), schemas[i]) == 0);
+            plan_destroy(plan);
+            plan = check_plan("cli_schema.json", &major, true);
+            plan_destroy(plan);
+            used++;
+        } else {
+            assert(!file_exists("cli_schema.json"));
+        }
+    }
+    assert(used >= 5);
+}
+
+static void test_schema_reproducible(void) {
+    const char *arguments = "--key \"G major\" --meter 4/4 --bars 8 --cadence PAC --seed 9 --schema romanesca "
+                            "--embellish medium --out cli_r1.json --midi cli_r1.mid";
+    assert(run(arguments, "cli_r1.txt", "cli_e.txt") == 0);
+    arguments = "--key \"G major\" --meter 4/4 --bars 8 --cadence PAC --seed 9 --schema romanesca "
+                "--embellish medium --out cli_r2.json --midi cli_r2.mid";
+    assert(run(arguments, "cli_r2.txt", "cli_e.txt") == 0);
+    assert(same_file("cli_r1.json", "cli_r2.json") && same_file("cli_r1.mid", "cli_r2.mid"));
+    PiecePlan *plan = read_plan("cli_r1.json");
+    assert(schema_in_plan(plan) == GALANT_SCHEMA_ROMANESCA);
+    plan_destroy(plan);
+}
+
+static void test_sequences(void) {
+    static const char *const METERS[3] = {"4/4", "3/4", "6/8"};
+    static const char *const NAMES[5] = {"parallel-chords", "five-six-ascending", "five-six-descending",
+                                         "five-six-descending-alternating", "seven-six-descending"};
+    for (int name = 0; name < 5; name++) {
+        for (int meter = 0; meter < 3; meter++) {
+            char arguments[256];
+            snprintf(arguments, sizeof(arguments),
+                     "--key \"D minor\" --meter %s --bars 9 --cadence PAC --seed 3 --sequence %s --out cli_seq.json",
+                     METERS[meter], NAMES[name]);
+            int status = run(arguments, "cli_o.txt", "cli_e.txt");
+            assert(status == 0 || status == 2);
+            if (status == 0) {
+                /* The sequence's inverted chords have no reason of their own for the strict check, so the phrase
+                   model and the cadence are checked, and the bass. */
+                PiecePlan *plan = read_plan("cli_seq.json");
+                PlanSpan phrase = plan_node_span(plan, plan_root(plan));
+                CadenceType heard;
+                bool at_end;
+                const char *violation = "unread";
+                assert(harmony_hear_cadence(plan, phrase, PLAN_MODE_MINOR, PLAN_CADENCE_PAC, &heard, &at_end));
+                assert(at_end && heard == CADENCE_TYPE_PERFECT_AUTHENTIC);
+                assert(harmony_check_lane_without_cadence(plan, phrase, PLAN_MODE_MINOR, &violation) && violation == NULL);
+                PlanKey key = {2, PLAN_MODE_MINOR};
+                violation = "unread";
+                assert(harmony_check_bass(plan, phrase, key, NULL, &violation) && violation == NULL);
+                plan_destroy(plan);
+            }
+        }
+    }
+    /* A sequence is offered in every meter, so at least one of these is used. */
+    assert(run("--key \"D minor\" --meter 3/4 --bars 9 --cadence PAC --seed 3 --sequence parallel-chords", "cli_o.txt",
+               "cli_e.txt") == 0);
+}
+
+static void test_suggest(void) {
+    Combination combination = COMBINATIONS[1];
+    remove("cli_sg-1.json");
+    remove("cli_sg-2.json");
+    remove("cli_sg-3.json");
+    assert(run("--key \"D minor\" --meter 4/4 --bars 8 --cadence PAC --seed 6 --suggest 3 --embellish low "
+               "--out cli_sg.json --midi cli_sg.mid",
+               "cli_sg.txt", "cli_e.txt") == 0);
+    assert(contains("cli_sg.txt", "alternative 1 of 3") && contains("cli_sg.txt", "alternative 3 of 3"));
+    assert(!file_exists("cli_sg.json") && !file_exists("cli_sg.mid"));
+    assert(file_exists("cli_sg-1.json") && file_exists("cli_sg-3.json") && file_exists("cli_sg-2.mid"));
+    PiecePlan *plan = check_plan("cli_sg-1.json", &combination, true);
+    plan_destroy(plan);
+    plan = check_plan("cli_sg-2.json", &combination, true);
+    plan_destroy(plan);
+    plan = check_plan("cli_sg-3.json", &combination, true);
+    plan_destroy(plan);
+    /* Three distinct alternatives. */
+    assert(!same_file("cli_sg-1.json", "cli_sg-2.json") && !same_file("cli_sg-1.json", "cli_sg-3.json") &&
+           !same_file("cli_sg-2.json", "cli_sg-3.json"));
+
+    /* The same request again gives the same alternatives. */
+    assert(run("--key \"D minor\" --meter 4/4 --bars 8 --cadence PAC --seed 6 --suggest 3 --embellish low "
+               "--out cli_sh.json",
+               "cli_sh.txt", "cli_e.txt") == 0);
+    assert(same_file("cli_sg-1.json", "cli_sh-1.json") && same_file("cli_sg-3.json", "cli_sh-3.json"));
+
+    /* On stdout only, as text and as JSON. */
+    assert(run("--key \"D minor\" --meter 4/4 --bars 8 --cadence PAC --seed 6 --suggest 2 --format json", "cli_sj.txt",
+               "cli_e.txt") == 0);
+    char *json = read_file("cli_sj.txt", NULL);
+    assert(json && strstr(json, "\"alternatives\":[{") && strstr(json, "\"seed\":6,"));
+    free(json);
+}
+
+static void test_skeleton_errors(void) {
+    static const ErrorCase CASES[] = {
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --schema nonsense", 1},
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --sequence nonsense", 1},
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --schema romanesca --no-bass", 1},
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --sequence parallel-chords --no-bass", 1},
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --suggest 0", 1},
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --suggest 9", 1},
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --suggest many", 1},
+        {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --schema quiescenza", 2},
+        {"--key \"C major\" --meter 3/4 --bars 8 --cadence PAC --schema romanesca", 2},
+        {"--key \"C major\" --meter 4/4 --bars 2 --cadence PAC --schema romanesca", 2},
+    };
+    for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++) {
+        int status = run(CASES[i].arguments, "cli_o.txt", "cli_e.txt");
+        if (status != CASES[i].status) {
+            fprintf(stderr, "case %zu '%s': exit %d, wanted %d\n", i, CASES[i].arguments, status, CASES[i].status);
+        }
+        assert(status == CASES[i].status);
+        assert(contains("cli_e.txt", "Error:"));
+        size_t out_size = 0;
+        free(read_file("cli_o.txt", &out_size));
+        assert(out_size == 0);
+    }
+}
+
 int main(void) {
+    test_list_schemas();
+    test_schema_reproducible();
+    test_sequences();
+    test_suggest();
+    test_skeleton_errors();
     test_combinations();
     test_same_seed_same_bytes();
     test_other_seeds_can_differ();
