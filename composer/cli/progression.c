@@ -366,13 +366,23 @@ static int read_options(int argc, char **argv, Options *options) {
         return fail(EXIT_USAGE, "--midi and --musicxml write the bass line (harmony makes no sound yet), "
                                 "so they cannot be used with --no-bass");
     }
-    size_t minimum = harmony_phrase_min_bars(options->cadence, &options->meter);
+    size_t minimum = harmony_phrase_min_bars(options->cadence, &options->meter) + (needs_lead(options) ? 1 : 0);
     if ((size_t)options->bars < minimum) {
         return fail(EXIT_UNSATISFIABLE, "%ld bar%s is too short for a %s in %s; at least %zu bars are needed",
                     options->bars, options->bars == 1 ? "" : "s", cadence_name(options->cadence), options->meter_text,
                     minimum);
     }
     return 0;
+}
+
+/*
+ * A sequence continues something, and so do the schemas that are not opening gambits: for those the first bar
+ * is a tonic chord, written before the operators run, and the skeleton follows it.
+ */
+static bool needs_lead(const Options *options) {
+    return options->has_sequence ||
+           (options->has_schema &&
+            galant_prototype(options->schema)->function != SCHEMA_FUNCTION_OPENING_GAMBIT);
 }
 
 /* --- building the plan ------------------------------------------------------ */
@@ -438,18 +448,46 @@ static bool build_plan(const Options *options, Built *built) {
     ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_KEY, 0, built->span, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(built->plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
 
+    /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
+    PlanSpan region = built->span;
+    const char *tonic = options->key.mode == PLAN_MODE_MINOR ? "i" : "I";
+    if (needs_lead(options)) {
+        PlanSpan lead = {built->span.start, built->bar_length};
+        region.start = built->bar_length;
+        region.length = time_minus(built->span.length, built->bar_length);
+        memset(&payload, 0, sizeof(payload));
+        strcpy(payload.harmony.roman_numeral, tonic);
+        payload.harmony.function = PLAN_FUNCTION_TONIC;
+        ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, lead, &payload, &id) == PLAN_OK &&
+             plan_lane_span_set_state(built->plan, id, PLAN_STATE_REALIZED) == PLAN_OK;
+        /* Its bass is the tonic in the octave of the range nearest the middle of it. */
+        PlanNote tonic_note = {48, time_of(0, 1), lead.length};
+        for (int pitch = 40; pitch <= 60; pitch++) {
+            int distance = pitch > 50 ? pitch - 50 : 50 - pitch;
+            int best = tonic_note.midi_pitch > 50 ? tonic_note.midi_pitch - 50 : 50 - tonic_note.midi_pitch;
+            if (pitch % 12 == options->key.tonic_pitch_class && (tonic_note.midi_pitch % 12 != options->key.tonic_pitch_class || distance < best)) {
+                tonic_note.midi_pitch = pitch;
+            }
+        }
+        memset(&payload, 0, sizeof(payload));
+        payload.notes.notes = &tonic_note;
+        payload.notes.note_count = 1;
+        ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_BASS, 0, lead, &payload, &id) == PLAN_OK &&
+             plan_lane_span_set_state(built->plan, id, PLAN_STATE_REALIZED) == PLAN_OK;
+    }
+
     /* The open harmony span asks for the cadence; its placeholder chord is replaced by the operators. */
     memset(&payload, 0, sizeof(payload));
-    strcpy(payload.harmony.roman_numeral, options->key.mode == PLAN_MODE_MINOR ? "i" : "I");
+    strcpy(payload.harmony.roman_numeral, tonic);
     payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
-    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, built->span, &payload, &id) == PLAN_OK &&
+    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, region, &payload, &id) == PLAN_OK &&
          plan_lane_span_add_constraint(built->plan, id, &cadence) == PLAN_OK;
     if (options->bass) {
-        PlanNote note = {40, time_of(0, 1), built->span.length};
+        PlanNote note = {40, time_of(0, 1), region.length};
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
-        ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_BASS, 0, built->span, &payload, &id) == PLAN_OK;
+        ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_BASS, 0, region, &payload, &id) == PLAN_OK;
     }
     ok = ok && plan_node_set_state(built->plan, form, PLAN_STATE_GIVEN) == PLAN_OK &&
          plan_node_set_state(built->plan, section, PLAN_STATE_GIVEN) == PLAN_OK &&
