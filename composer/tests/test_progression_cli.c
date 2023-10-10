@@ -329,7 +329,7 @@ static void test_errors(void) {
         {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --seed", 1},
         {"--key \"C major\" --key \"D major\" --meter 4/4 --bars 8 --cadence PAC", 1},
         {"--key \"C major\" --meter 4/4 --bars 1 --cadence PAC", 2},
-        {"--key \"C major\" --meter 3/4 --bars 2 --cadence HC --out cli_short.json", 2},
+        {"--key \"C major\" --meter 3/4 --bars 1 --cadence HC --out cli_short.json", 2},
         {"--key \"C major\" --meter 3/4 --bars 4 --cadence PC --out cli_short.json", 2},
         {"--key \"C major\" --meter 6/8 --bars 2 --cadence PC --out cli_short.json", 2},
         {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --out /no_such_directory/plan.json", 3},
