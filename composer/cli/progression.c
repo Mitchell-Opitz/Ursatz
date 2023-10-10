@@ -693,8 +693,12 @@ static Made make_progression(const Options *options, const Parameters *parameter
              !any_open(built->plan, PLAN_LANE_HARMONY, built->span);
     }
     if (ok && !unused && options->bass) {
+        /* The bass is built in pieces (before and after a skeleton, say), so the whole line is checked once more
+           against the melodic rules; a seed whose line breaks one is not used. */
+        const char *violation = "unread";
         ok = run_stage(built->plan, options, seed, STAGE_BASS, parameters, NULL) &&
-             !any_open(built->plan, PLAN_LANE_BASS, built->span);
+             !any_open(built->plan, PLAN_LANE_BASS, built->span) &&
+             harmony_check_bass(built->plan, built->span, options->key, &parameters->bass, &violation) && !violation;
     }
     if (!ok || unused) {
         plan_destroy(built->plan);
