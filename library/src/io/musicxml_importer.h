@@ -5,11 +5,14 @@
 
 #include <stdint.h>
 
+#include "events/dynamics.h"
 #include "events/note_event.h"
+#include "events/tempo_marking.h"
 #include "pitch/key_signature.h"
 #include "pitch/pitch_numeric_value.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
+#include "time/tempo_map.h"
 
 /*
  * MusicXMLImporter (L9, music-io): reads an uncompressed score-partwise MusicXML document into the same
@@ -58,6 +61,22 @@
  * Transposing parts. A <transpose> (<chromatic> plus 12 * <octave-change>) shifts the SOUNDING pitch, the
  * PitchNumericValue and the PitchIdentity the NoteEvent carries; the PitchSpelling stays the WRITTEN pitch. Each
  * distinct transposition of a part is a warning, since downstream analysis reads sounding pitch.
+ *
+ * Tempo. <sound tempo="..."> (quarter notes per minute) gives a TempoMap region at its position: microseconds per
+ * quarter note = 60,000,000 / bpm, rounded to the nearest whole microsecond (with a warning when it was not
+ * exact, as a TempoMap holds whole microseconds). Several parts that give the same position the same tempo are one
+ * region; a conflict keeps the first part's and warns. With no tempo anywhere the TempoMap is the defaulted 120
+ * quarter notes per minute. A <metronome> (beat unit, dots, per-minute) gives a MetronomeMarking and a TempoMarking
+ * at its position, and so does a <sound tempo> that has <words> with it. <words> are tempo text ONLY when their
+ * <direction> also holds a <metronome> or a <sound tempo>; other direction text is not classified (io carries no
+ * tempo vocabulary) and is counted in one warning. A <metronome> with no <words> is a TempoMarking with only the
+ * metronome marking. A <direction>'s <offset> moves a marking's position, never a <sound tempo>'s.
+ *
+ * Dynamics. Each <dynamics> child (p, mf, sfz, ...; other-dynamics gives its text) is a Dynamics (events/
+ * dynamics.h) whose marking is that name. A Dynamics targets a TimeSpan, so each marking holds from its position to
+ * the next LATER marking in the same part, or to the part's end ("in force until the next"); markings at one
+ * position share a span. One with no extent (at or after the part's end) is skipped with a warning. Wedges
+ * (crescendo and diminuendo) are not read.
  *
  * Warnings. Anything skipped, rounded or inconsistent is counted in warnings.count, and the first
  * MUSICXML_IMPORT_MAX_WARNING_MESSAGES messages are kept. A warning never stops the import; a structural error
@@ -122,6 +141,14 @@ typedef struct {
     MusicXmlPart *parts;                 /* owned; in document order */
     size_t part_count;
     MeterMap *meter_map;                 /* owned */
+    TempoMap *tempo_map;                 /* owned */
+    TempoMarking **tempo_markings;       /* owned; in time order */
+    size_t *tempo_marking_part;          /* owned; parallel to tempo_markings */
+    size_t tempo_marking_count;
+    Dynamics **dynamics;                 /* owned; in time order */
+    size_t *dynamics_part;               /* owned; parallel to dynamics */
+    int *dynamics_staff;                 /* owned; parallel to dynamics: the <staff> of its <direction>, 1 when none */
+    size_t dynamics_count;
     MusicXmlKeySignatureEvent *key_signatures; /* owned; in time order; NULL when there are none */
     size_t key_signature_count;
     MusicXmlImportWarnings warnings;

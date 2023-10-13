@@ -23,6 +23,11 @@
 #include "time/exact_rational.h"
 #include "time/meter_map.h"
 #include "time/note_value.h"
+#include "time/tempo_map.h"
+#include "time/time_span.h"
+#include "events/dynamics.h"
+#include "events/tempo_marking.h"
+#include "time/metronome_marking.h"
 #include "time/time_signature.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
@@ -71,7 +76,45 @@ typedef struct {
 } KeyEvent;
 
 typedef struct {
+    ExactRational position;
+    unsigned long microseconds_per_quarter;
+    size_t part;
+} TempoEvent;
+
+typedef struct {
+    ExactRational position;
+    size_t part;
+    size_t order;
+    bool has_text;
+    char text[160];
+    bool has_metronome;
+    ExactRational beat_unit;
+    unsigned long bpm_numerator;
+    unsigned long bpm_denominator;
+} MarkingEvent;
+
+typedef struct {
+    ExactRational position;
+    size_t part;
+    size_t order;
+    int staff;
+    char name[40];
+} DynamicEvent;
+
+typedef struct {
     MusicXmlImport *out;
+    TempoEvent *tempos;
+    size_t tempo_count;
+    size_t tempo_capacity;
+    MarkingEvent *markings;
+    size_t marking_count;
+    size_t marking_capacity;
+    DynamicEvent *dynamics;
+    size_t dynamic_count;
+    size_t dynamic_capacity;
+    size_t unclassified_words;
+    size_t direction_order;
+    ExactRational *part_end;       /* per part: where its last measure ends */
     TimeEvent *times;
     size_t time_count;
     size_t time_capacity;
@@ -544,6 +587,202 @@ static bool handle_key(Ctx *ctx, PartState *state, ezxml_t key) {
     return true;
 }
 
+/* --- tempo and dynamics --- */
+
+/* A decimal in an element's text ("120", "92.5", "c. 120", "120-132" reads 120) as a rational over 1000. */
+static bool read_decimal(const char *text, unsigned long *numerator, unsigned long *denominator) {
+    while (*text != '\0' && !isdigit((unsigned char)*text)) {
+        text++;
+    }
+    if (*text == '\0') {
+        return false;
+    }
+    unsigned long whole = 0;
+    while (isdigit((unsigned char)*text)) {
+        whole = whole * 10 + (unsigned long)(*text++ - '0');
+        if (whole > 100000) {
+            return false;
+        }
+    }
+    unsigned long thousandths = whole * 1000;
+    if (*text == '.') {
+        text++;
+        unsigned long scale = 100;
+        while (isdigit((unsigned char)*text) && scale > 0) {
+            thousandths += (unsigned long)(*text++ - '0') * scale;
+            scale /= 10;
+        }
+    }
+    if (thousandths == 0) {
+        return false;
+    }
+    ExactRational reduced = er_make(thousandths, 1000);
+    *numerator = (unsigned long)reduced.n;
+    *denominator = (unsigned long)reduced.d;
+    return true;
+}
+
+/* The duration of a <beat-unit> name with its dots, in whole notes. */
+static bool beat_unit_duration(const char *name, int dots, ExactRational *out) {
+    static const struct {
+        const char *name;
+        unsigned long long numerator;
+        unsigned long long denominator;
+    } UNITS[] = {{"long", 4, 1}, {"breve", 2, 1}, {"whole", 1, 1}, {"half", 1, 2}, {"quarter", 1, 4},
+                 {"eighth", 1, 8}, {"16th", 1, 16}, {"32nd", 1, 32}, {"64th", 1, 64}, {"128th", 1, 128}};
+    for (size_t i = 0; i < sizeof(UNITS) / sizeof(UNITS[0]); i++) {
+        if (strcmp(name, UNITS[i].name) == 0 && dots >= 0 && dots <= 4) {
+            /* base * (2^(dots+1) - 1) / 2^dots */
+            *out = er_make(UNITS[i].numerator * ((1ull << (dots + 1)) - 1), UNITS[i].denominator * (1ull << dots));
+            return true;
+        }
+    }
+    return false;
+}
+
+static void record_tempo(Ctx *ctx, ExactRational position, const char *text) {
+    char *end = NULL;
+    double bpm = strtod(text, &end);
+    if (end == text || *end != '\0' || !isfinite(bpm) || bpm <= 0.0) {
+        warn(ctx, "<sound tempo=\"%s\"> is not a positive number of quarter notes per minute; skipped", text);
+        return;
+    }
+    double microseconds = 60000000.0 / bpm;
+    long rounded = lround(microseconds);
+    if (rounded < 1 || rounded > 2000000000L) {
+        warn(ctx, "<sound tempo=\"%s\"> is out of range; skipped", text);
+        return;
+    }
+    if (fabs(microseconds - (double)rounded) > 1e-6) {
+        warn(ctx, "tempo %s is %.3f microseconds per quarter note, rounded to %ld", text, microseconds, rounded);
+    }
+    if (!grow(ctx, (void **)&ctx->tempos, &ctx->tempo_capacity, ctx->tempo_count, sizeof(TempoEvent))) {
+        return;
+    }
+    ctx->tempos[ctx->tempo_count].position = position;
+    ctx->tempos[ctx->tempo_count].microseconds_per_quarter = (unsigned long)rounded;
+    ctx->tempos[ctx->tempo_count].part = ctx->current_part;
+    ctx->tempo_count++;
+}
+
+static bool handle_direction(Ctx *ctx, PartState *state, ezxml_t direction) {
+    ExactRational position = state->cursor;
+    long offset = 0;
+    if (ezxml_child(direction, "offset") != NULL) {
+        if (!read_long(ezxml_child(direction, "offset"), &offset)) {
+            warn(ctx, "<offset> is not a whole number; ignored");
+            offset = 0;
+        }
+    }
+    bool before_zero = false;
+    if (offset != 0 && state->divisions > 0) {
+        ExactRational shift = {0, 1};
+        if (to_whole_notes(ctx, state->divisions, offset < 0 ? -offset : offset, &shift)) {
+            if (offset > 0) {
+                if (er_add(position, shift, &position) != 0) {
+                    return fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "a direction's position does not fit") ==
+                           MUSICXML_IMPORT_OK;
+                }
+            } else if (er_cmp(shift, position) > 0 || er_sub(position, shift, &position) != 0) {
+                before_zero = true;
+            }
+        } else {
+            return false;
+        }
+    }
+    long staff = 1;
+    if (ezxml_child(direction, "staff") != NULL && (!read_long(ezxml_child(direction, "staff"), &staff) || staff < 1 || staff > 64)) {
+        staff = 1;
+    }
+
+    bool has_sound_tempo = false;
+    ezxml_t sound = ezxml_child(direction, "sound");
+    if (sound != NULL && ezxml_attr(sound, "tempo") != NULL) {
+        has_sound_tempo = true;
+        record_tempo(ctx, state->cursor, ezxml_attr(sound, "tempo"));
+        if (ctx->status != MUSICXML_IMPORT_OK) {
+            return false;
+        }
+    }
+
+    MarkingEvent marking;
+    memset(&marking, 0, sizeof(marking));
+    bool has_metronome = false;
+    bool has_words = false;
+    for (ezxml_t type = ezxml_child(direction, "direction-type"); type != NULL; type = type->next) {
+        for (ezxml_t item = type->child; item != NULL; item = item->ordered) {
+            const char *name = ezxml_name(item);
+            if (strcmp(name, "words") == 0) {
+                char words[160];
+                if (read_text(item, words, sizeof(words))) {
+                    size_t used = strlen(marking.text);
+                    snprintf(marking.text + used, sizeof(marking.text) - used, "%s%s", used > 0 ? " " : "", words);
+                    has_words = true;
+                }
+            } else if (strcmp(name, "metronome") == 0 && !has_metronome) {
+                char unit[24];
+                char per_minute[48];
+                int dots = 0;
+                for (ezxml_t dot = ezxml_child(item, "beat-unit-dot"); dot != NULL; dot = dot->next) {
+                    dots++;
+                }
+                if (read_text(ezxml_child(item, "beat-unit"), unit, sizeof(unit)) &&
+                    read_text(ezxml_child(item, "per-minute"), per_minute, sizeof(per_minute)) &&
+                    beat_unit_duration(unit, dots, &marking.beat_unit) &&
+                    read_decimal(per_minute, &marking.bpm_numerator, &marking.bpm_denominator)) {
+                    has_metronome = true;
+                } else {
+                    warn(ctx, "<metronome> is not a beat unit and a number per minute; skipped");
+                }
+            } else if (strcmp(name, "dynamics") == 0) {
+                for (ezxml_t mark = item->child; mark != NULL; mark = mark->ordered) {
+                    char dynamic[40];
+                    const char *mark_name = ezxml_name(mark);
+                    if (strcmp(mark_name, "other-dynamics") == 0) {
+                        if (!read_text(mark, dynamic, sizeof(dynamic))) {
+                            continue;
+                        }
+                    } else {
+                        snprintf(dynamic, sizeof(dynamic), "%s", mark_name);
+                    }
+                    if (before_zero) {
+                        warn(ctx, "dynamic marking %s is placed before the start of the piece; skipped", dynamic);
+                        continue;
+                    }
+                    if (!grow(ctx, (void **)&ctx->dynamics, &ctx->dynamic_capacity, ctx->dynamic_count,
+                              sizeof(DynamicEvent))) {
+                        return false;
+                    }
+                    DynamicEvent *event = &ctx->dynamics[ctx->dynamic_count++];
+                    event->position = position;
+                    event->part = ctx->current_part;
+                    event->order = ctx->direction_order++;
+                    event->staff = (int)staff;
+                    snprintf(event->name, sizeof(event->name), "%s", dynamic);
+                }
+            }
+        }
+    }
+
+    if (has_metronome || (has_sound_tempo && has_words)) {
+        if (before_zero) {
+            warn(ctx, "tempo marking is placed before the start of the piece; skipped");
+        } else if (grow(ctx, (void **)&ctx->markings, &ctx->marking_capacity, ctx->marking_count, sizeof(MarkingEvent))) {
+            marking.position = position;
+            marking.part = ctx->current_part;
+            marking.order = ctx->direction_order++;
+            marking.has_text = has_words;
+            marking.has_metronome = has_metronome;
+            ctx->markings[ctx->marking_count++] = marking;
+        } else {
+            return false;
+        }
+    } else if (has_words) {
+        ctx->unclassified_words++;
+    }
+    return true;
+}
+
 static bool handle_attributes(Ctx *ctx, PartState *state, ezxml_t attributes) {
     if (ezxml_child(attributes, "divisions") != NULL) {
         long divisions = 0;
@@ -615,6 +854,11 @@ static bool process_part(Ctx *ctx, ezxml_t part, size_t part_index) {
                 ok = handle_attributes(ctx, &state, element);
             } else if (strcmp(name, "note") == 0) {
                 ok = handle_note(ctx, &state, part_index, &order, element);
+            } else if (strcmp(name, "direction") == 0) {
+                ok = handle_direction(ctx, &state, element);
+            } else if (strcmp(name, "sound") == 0 && ezxml_attr(element, "tempo") != NULL) {
+                record_tempo(ctx, state.cursor, ezxml_attr(element, "tempo"));
+                ok = ctx->status == MUSICXML_IMPORT_OK;
             } else if (strcmp(name, "backup") == 0) {
                 ok = handle_move(ctx, &state, element, true);
             } else if (strcmp(name, "forward") == 0) {
@@ -650,6 +894,7 @@ static bool process_part(Ctx *ctx, ezxml_t part, size_t part_index) {
     if (ctx->tie_count > 0) {
         warn(ctx, "%zu tie start(s) never stopped", ctx->tie_count);
     }
+    ctx->part_end[part_index] = state.measure_start;
     return true;
 }
 
@@ -764,6 +1009,18 @@ void musicxml_import_destroy(MusicXmlImport *import) {
     }
     free(import->parts);
     meter_map_destroy(import->meter_map);
+    tempo_map_destroy(import->tempo_map);
+    for (size_t i = 0; i < import->tempo_marking_count; i++) {
+        tempo_marking_destroy(import->tempo_markings[i]);
+    }
+    free(import->tempo_markings);
+    free(import->tempo_marking_part);
+    for (size_t i = 0; i < import->dynamics_count; i++) {
+        dynamics_destroy(import->dynamics[i]);
+    }
+    free(import->dynamics);
+    free(import->dynamics_part);
+    free(import->dynamics_staff);
     for (size_t i = 0; i < import->key_signature_count; i++) {
         key_signature_destroy(import->key_signatures[i].key_signature);
         musical_time_destroy(import->key_signatures[i].position);
@@ -912,6 +1169,182 @@ static bool build_key_signatures(Ctx *ctx) {
     return true;
 }
 
+static int compare_tempo_events(const void *a, const void *b) {
+    const TempoEvent *x = (const TempoEvent *)a;
+    const TempoEvent *y = (const TempoEvent *)b;
+    int by_position = er_cmp(x->position, y->position);
+    if (by_position != 0) {
+        return by_position;
+    }
+    return x->part < y->part ? -1 : (x->part > y->part ? 1 : 0);
+}
+
+static int compare_marking_events(const void *a, const void *b) {
+    const MarkingEvent *x = (const MarkingEvent *)a;
+    const MarkingEvent *y = (const MarkingEvent *)b;
+    int by_position = er_cmp(x->position, y->position);
+    if (by_position != 0) {
+        return by_position;
+    }
+    if (x->part != y->part) {
+        return x->part < y->part ? -1 : 1;
+    }
+    return x->order < y->order ? -1 : (x->order > y->order ? 1 : 0);
+}
+
+static int compare_dynamic_events(const void *a, const void *b) {
+    const DynamicEvent *x = (const DynamicEvent *)a;
+    const DynamicEvent *y = (const DynamicEvent *)b;
+    int by_position = er_cmp(x->position, y->position);
+    if (by_position != 0) {
+        return by_position;
+    }
+    if (x->part != y->part) {
+        return x->part < y->part ? -1 : 1;
+    }
+    return x->order < y->order ? -1 : (x->order > y->order ? 1 : 0);
+}
+
+static bool build_tempo_map(Ctx *ctx) {
+    MusicXmlImport *out = ctx->out;
+    EntityID *map_id = NULL;
+    if (entity_id_create("musicxml-tempo-map", &map_id) != ENTITY_ID_OK) {
+        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+    }
+    if (ctx->tempo_count == 0) {
+        if (tempo_map_create_defaulted(map_id, &out->tempo_map) != TEMPO_MAP_OK) {
+            entity_id_destroy(map_id);
+            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+        }
+        return true;
+    }
+    qsort(ctx->tempos, ctx->tempo_count, sizeof(TempoEvent), compare_tempo_events);
+    TempoEvent *kept = (TempoEvent *)calloc(ctx->tempo_count, sizeof(TempoEvent));
+    TempoMapChangePoint *points = (TempoMapChangePoint *)calloc(ctx->tempo_count, sizeof(TempoMapChangePoint));
+    MusicalTime **starts = (MusicalTime **)calloc(ctx->tempo_count, sizeof(MusicalTime *));
+    size_t kept_count = 0;
+    bool ok = kept != NULL && points != NULL && starts != NULL;
+    for (size_t i = 0; i < ctx->tempo_count && ok; i++) {
+        if (kept_count > 0 && er_cmp(kept[kept_count - 1].position, ctx->tempos[i].position) == 0) {
+            if (kept[kept_count - 1].microseconds_per_quarter != ctx->tempos[i].microseconds_per_quarter) {
+                warn(ctx, "parts disagree about the tempo at one position; part %zu's is used", kept[kept_count - 1].part);
+            }
+            continue;
+        }
+        kept[kept_count++] = ctx->tempos[i];
+    }
+    for (size_t i = 0; i < kept_count && ok; i++) {
+        starts[i] = er_to_time(kept[i].position);
+        ok = starts[i] != NULL;
+        points[i].start = starts[i];
+        points[i].microseconds_per_quarter = kept[i].microseconds_per_quarter;
+    }
+    TempoMapResult made = ok ? tempo_map_create(map_id, points, kept_count, &out->tempo_map) : TEMPO_MAP_ERR_ALLOC;
+    for (size_t i = 0; starts != NULL && i < kept_count; i++) {
+        musical_time_destroy(starts[i]);
+    }
+    free(starts);
+    free(points);
+    free(kept);
+    if (made != TEMPO_MAP_OK) {
+        entity_id_destroy(map_id);
+        return fail(ctx, made == TEMPO_MAP_ERR_OVERFLOW ? MUSICXML_IMPORT_ERR_OVERFLOW : MUSICXML_IMPORT_ERR_ALLOC,
+                    "the tempos could not form a tempo map") == MUSICXML_IMPORT_OK;
+    }
+    return true;
+}
+
+static bool build_tempo_markings(Ctx *ctx) {
+    MusicXmlImport *out = ctx->out;
+    if (ctx->marking_count == 0) {
+        return true;
+    }
+    qsort(ctx->markings, ctx->marking_count, sizeof(MarkingEvent), compare_marking_events);
+    out->tempo_markings = (TempoMarking **)calloc(ctx->marking_count, sizeof(TempoMarking *));
+    out->tempo_marking_part = (size_t *)calloc(ctx->marking_count, sizeof(size_t));
+    if (out->tempo_markings == NULL || out->tempo_marking_part == NULL) {
+        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+    }
+    for (size_t i = 0; i < ctx->marking_count; i++) {
+        const MarkingEvent *event = &ctx->markings[i];
+        MusicalTime *position = er_to_time(event->position);
+        TemporalAnchor *anchor = NULL;
+        Duration *unit = NULL;
+        MetronomeMarking *metronome = NULL;
+        bool ok = position != NULL && temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
+        if (ok && event->has_metronome) {
+            ok = event->beat_unit.n <= (unsigned long long)LONG_MAX && event->beat_unit.d <= (unsigned long long)ULONG_MAX &&
+                 duration_create((long)event->beat_unit.n, (unsigned long)event->beat_unit.d, &unit) == DURATION_OK &&
+                 metronome_marking_create(unit, event->bpm_numerator, event->bpm_denominator, &metronome) ==
+                     METRONOME_MARKING_OK;
+        }
+        duration_destroy(unit);
+        TempoMarking *marking = NULL;
+        ok = ok && tempo_marking_create(anchor, event->has_text ? event->text : NULL, metronome, &marking) ==
+                       TEMPO_MARKING_OK;
+        if (!ok) {
+            if (anchor != NULL) {
+                temporal_anchor_destroy(anchor);
+            } else {
+                musical_time_destroy(position);
+            }
+            metronome_marking_destroy(metronome);
+            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "a tempo marking could not be built") == MUSICXML_IMPORT_OK;
+        }
+        out->tempo_markings[i] = marking;
+        out->tempo_marking_part[i] = event->part;
+        out->tempo_marking_count = i + 1;
+    }
+    return true;
+}
+
+static bool build_dynamics(Ctx *ctx) {
+    MusicXmlImport *out = ctx->out;
+    if (ctx->dynamic_count == 0) {
+        return true;
+    }
+    qsort(ctx->dynamics, ctx->dynamic_count, sizeof(DynamicEvent), compare_dynamic_events);
+    out->dynamics = (Dynamics **)calloc(ctx->dynamic_count, sizeof(Dynamics *));
+    out->dynamics_part = (size_t *)calloc(ctx->dynamic_count, sizeof(size_t));
+    out->dynamics_staff = (int *)calloc(ctx->dynamic_count, sizeof(int));
+    if (out->dynamics == NULL || out->dynamics_part == NULL || out->dynamics_staff == NULL) {
+        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+    }
+    for (size_t i = 0; i < ctx->dynamic_count; i++) {
+        const DynamicEvent *event = &ctx->dynamics[i];
+        /* in force until the next later marking in the same part, or the part's end */
+        ExactRational end = ctx->part_end[event->part];
+        for (size_t j = i + 1; j < ctx->dynamic_count; j++) {
+            if (ctx->dynamics[j].part == event->part && er_cmp(ctx->dynamics[j].position, event->position) > 0) {
+                end = ctx->dynamics[j].position;
+                break;
+            }
+        }
+        if (er_cmp(end, event->position) <= 0) {
+            warn(ctx, "dynamic marking %s has no extent (it is at or after the end of the part); skipped", event->name);
+            continue;
+        }
+        MusicalTime *from = er_to_time(event->position);
+        MusicalTime *to = er_to_time(end);
+        TimeSpan *span = NULL;
+        Dynamics *dynamics = NULL;
+        bool ok = from != NULL && to != NULL &&
+                  time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK;
+        musical_time_destroy(from);
+        musical_time_destroy(to);
+        ok = ok && dynamics_create_for_time_span(event->name, span, &dynamics) == DYNAMICS_OK;
+        if (!ok) {
+            time_span_destroy(span);
+            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "a dynamic marking could not be built") == MUSICXML_IMPORT_OK;
+        }
+        out->dynamics[out->dynamics_count] = dynamics;
+        out->dynamics_part[out->dynamics_count] = event->part;
+        out->dynamics_staff[out->dynamics_count] = event->staff;
+        out->dynamics_count++;
+    }
+    return true;
+}
+
 /* --- the document --- */
 
 static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
@@ -931,7 +1364,8 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
     }
     part_ids = (char **)calloc(part_count > 0 ? part_count : 1, sizeof(char *));
     ctx->part_staves = (int *)calloc(part_count > 0 ? part_count : 1, sizeof(int));
-    if (part_ids == NULL || ctx->part_staves == NULL) {
+    ctx->part_end = (ExactRational *)calloc(part_count > 0 ? part_count : 1, sizeof(ExactRational));
+    if (part_ids == NULL || ctx->part_staves == NULL || ctx->part_end == NULL) {
         free(part_ids);
         return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
     }
@@ -985,6 +1419,19 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
         build_key_signatures(ctx);
     }
     if (ctx->status == MUSICXML_IMPORT_OK) {
+        build_tempo_map(ctx);
+    }
+    if (ctx->status == MUSICXML_IMPORT_OK) {
+        build_tempo_markings(ctx);
+    }
+    if (ctx->status == MUSICXML_IMPORT_OK) {
+        build_dynamics(ctx);
+    }
+    if (ctx->status == MUSICXML_IMPORT_OK && ctx->unclassified_words > 0) {
+        warn(ctx, "%zu direction text(s) not classified as tempo text (no <metronome> or <sound tempo> with them)",
+             ctx->unclassified_words);
+    }
+    if (ctx->status == MUSICXML_IMPORT_OK) {
         size_t count = ctx->note_count;
         SortItem *order = (SortItem *)calloc(count > 0 ? count : 1, sizeof(SortItem));
         out->events = (NoteEvent **)calloc(count > 0 ? count : 1, sizeof(NoteEvent *));
@@ -1025,7 +1472,9 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
     }
     free(part_ids);
     free(ctx->part_staves);
+    free(ctx->part_end);
     ctx->part_staves = NULL;
+    ctx->part_end = NULL;
     return ctx->status;
 }
 
@@ -1090,6 +1539,9 @@ MusicXmlImportStatus musicxml_import_buffer(const char *data, size_t size, Music
     free(ctx.ties);
     free(ctx.times);
     free(ctx.keys);
+    free(ctx.tempos);
+    free(ctx.markings);
+    free(ctx.dynamics);
     if (status != MUSICXML_IMPORT_OK) {
         char message[MUSICXML_IMPORT_ERROR_MESSAGE_SIZE];
         snprintf(message, sizeof(message), "%s", out->error_message);

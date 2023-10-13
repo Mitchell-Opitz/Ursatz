@@ -9,7 +9,12 @@
 #include "core/voice_reference.h"
 #include "pitch/key_signature.h"
 #include "pitch/pitch_spelling.h"
+#include "events/dynamics.h"
+#include "events/tempo_marking.h"
 #include "time/meter_map.h"
+#include "time/metronome_marking.h"
+#include "time/tempo_map.h"
+#include "time/time_span.h"
 #include "time/time_signature.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
@@ -482,6 +487,106 @@ static void test_a_bad_transposition_and_staff_are_ignored(void) {
     musicxml_import_destroy(&import);
 }
 
+/* --- tempo and dynamics --- */
+
+static void test_tempo_and_metronome(void) {
+    MusicXmlImport import = import_fixture("tempo_metronome.musicxml");
+    assert(import.count == 4);
+    /* the tempo map: 96 from 0, 60 from measure 2, 92.5 (rounded) from measure 4 */
+    assert(!tempo_map_is_defaulted(import.tempo_map) && tempo_map_region_count(import.tempo_map) == 3);
+    const TempoMapRegion *first = tempo_map_region(import.tempo_map, 0);
+    const TempoMapRegion *second = tempo_map_region(import.tempo_map, 1);
+    const TempoMapRegion *third = tempo_map_region(import.tempo_map, 2);
+    assert_time(tempo_map_region_start(first), 0, 1);
+    assert(tempo_map_region_microseconds_per_quarter(first) == 625000);
+    assert_time(tempo_map_region_start(second), 1, 1);
+    assert(tempo_map_region_microseconds_per_quarter(second) == 1000000);
+    assert_time(tempo_map_region_start(third), 3, 1);
+    assert(tempo_map_region_microseconds_per_quarter(third) == 648649);
+    /* the markings: "Allegro" with its metronome in measure 1, and the dotted-quarter metronome alone in measure 3 */
+    assert(import.tempo_marking_count == 2);
+    const TempoMarking *allegro = import.tempo_markings[0];
+    assert(tempo_marking_has_text(allegro) && strcmp(tempo_marking_text(allegro), "Allegro") == 0);
+    assert(tempo_marking_has_metronome_marking(allegro));
+    const MetronomeMarking *quarter = tempo_marking_metronome_marking(allegro);
+    assert(metronome_marking_beat_unit_numerator(quarter) == 1 && metronome_marking_beat_unit_denominator(quarter) == 4);
+    assert(metronome_marking_bpm_numerator(quarter) == 96 && metronome_marking_bpm_denominator(quarter) == 1);
+    assert_time(temporal_anchor_position(tempo_marking_temporal_anchor(allegro)), 0, 1);
+    const TempoMarking *dotted = import.tempo_markings[1];
+    assert(!tempo_marking_has_text(dotted) && tempo_marking_has_metronome_marking(dotted));
+    const MetronomeMarking *three_eighths = tempo_marking_metronome_marking(dotted);
+    assert(metronome_marking_beat_unit_numerator(three_eighths) == 3 && metronome_marking_beat_unit_denominator(three_eighths) == 8);
+    assert(metronome_marking_bpm_numerator(three_eighths) == 60 && metronome_marking_bpm_denominator(three_eighths) == 1);
+    assert_time(temporal_anchor_position(tempo_marking_temporal_anchor(dotted)), 2, 1);
+    assert(import.tempo_marking_part[0] == 0 && import.tempo_marking_part[1] == 0);
+    /* warnings: the rounded tempo, and the standalone "rit." that is not tempo text */
+    assert(import.warnings.count == 2);
+    assert(strstr(import.warnings.messages[0], "rounded") != NULL);
+    assert(strstr(import.warnings.messages[1], "not classified") != NULL);
+    musicxml_import_destroy(&import);
+    assert(import.tempo_map == NULL && import.tempo_markings == NULL);
+}
+
+static void test_no_tempo_is_a_defaulted_map(void) {
+    MusicXmlImport import = import_fixture("chords_backup.musicxml");
+    assert(tempo_map_is_defaulted(import.tempo_map) && tempo_map_region_count(import.tempo_map) == 1);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == 500000);
+    assert(import.tempo_marking_count == 0 && import.dynamics_count == 0);
+    musicxml_import_destroy(&import);
+}
+
+static void test_dynamics(void) {
+    MusicXmlImport import = import_fixture("dynamics.musicxml");
+    assert(import.count == 4);
+    assert(import.dynamics_count == 4); /* the pp at the end has no extent */
+    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "pp") != NULL);
+    static const char *const NAMES[4] = {"p", "ff", "mf", "sfz"};
+    static const long FROM_N[4] = {0, 0, 1, 9};
+    static const unsigned long FROM_D[4] = {1, 1, 1, 8};
+    static const long TO_N[4] = {1, 2, 9, 2};
+    static const unsigned long TO_D[4] = {1, 1, 8, 1};
+    static const size_t PART[4] = {0, 1, 0, 0};
+    static const int STAFF[4] = {1, 2, 1, 1};
+    for (size_t i = 0; i < 4; i++) {
+        assert(strcmp(dynamics_marking(import.dynamics[i]), NAMES[i]) == 0);
+        assert(dynamics_target_kind(import.dynamics[i]) == DYNAMICS_TARGET_TIME_SPAN);
+        const TimeSpan *span = dynamics_target_time_span(import.dynamics[i]);
+        assert_time(time_span_start(span), FROM_N[i], FROM_D[i]);
+        assert_time(time_span_end(span), TO_N[i], TO_D[i]);
+        assert(import.dynamics_part[i] == PART[i] && import.dynamics_staff[i] == STAFF[i]);
+    }
+    musicxml_import_destroy(&import);
+    assert(import.dynamics == NULL && import.dynamics_count == 0);
+}
+
+static void test_tempo_edge_cases(void) {
+    MusicXmlImport import;
+    /* a bad tempo and a bad metronome are warnings, not errors */
+    assert(import_text(DOC(DIV4 "<sound tempo=\"fast\"/><direction><direction-type><metronome><beat-unit>quarter</beat-unit>"
+                           "<per-minute>x</per-minute></metronome></direction-type></direction>" NOTE("C", "4", "4", "")),
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 2 && tempo_map_is_defaulted(import.tempo_map) && import.tempo_marking_count == 0);
+    musicxml_import_destroy(&import);
+    /* two parts that disagree about the tempo at one position: the first part's wins */
+    assert(import_text("<score-partwise><part-list/>"
+                       "<part id=\"P1\"><measure number=\"1\"><attributes><divisions>4</divisions></attributes>"
+                       "<sound tempo=\"120\"/><note><rest/><duration>4</duration></note></measure></part>"
+                       "<part id=\"P2\"><measure number=\"1\"><attributes><divisions>4</divisions></attributes>"
+                       "<sound tempo=\"100\"/><note><rest/><duration>4</duration></note></measure></part></score-partwise>",
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "disagree") != NULL);
+    assert(tempo_map_region_count(import.tempo_map) == 1);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == 500000);
+    musicxml_import_destroy(&import);
+    /* a tempo that starts after 0 leaves a defaulted region before it */
+    assert(import_text(DOC(DIV4 NOTE("C", "4", "4", "") "<sound tempo=\"60\"/>" NOTE("D", "4", "4", "")), &import) ==
+           MUSICXML_IMPORT_OK);
+    assert(tempo_map_region_count(import.tempo_map) == 2);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == 500000);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 1)) == 1000000);
+    musicxml_import_destroy(&import);
+}
+
 int main(void) {
     test_chords_and_backup();
     test_ties_merge_across_barlines();
@@ -510,6 +615,10 @@ int main(void) {
     test_two_staves();
     test_transposing_parts();
     test_a_bad_transposition_and_staff_are_ignored();
+    test_tempo_and_metronome();
+    test_no_tempo_is_a_defaulted_map();
+    test_dynamics();
+    test_tempo_edge_cases();
     printf("test_musicxml_importer: ok\n");
     return 0;
 }
