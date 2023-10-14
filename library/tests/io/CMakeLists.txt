@@ -15,6 +15,9 @@ target_compile_definitions(test_midi_key_signature PRIVATE
 add_ursatz_test(musicxml_importer)
 target_compile_definitions(test_musicxml_importer PRIVATE
     URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
+add_ursatz_test(musicxml_roundtrip)
+target_compile_definitions(test_musicxml_roundtrip PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 add_ursatz_architecture_test(io)
 
 # Scoped memcheck coverage for this module's own test binaries only
