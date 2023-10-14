@@ -38,6 +38,13 @@ ursatz-composer export plan.json --midi out.mid --musicxml out.xml
 MusicXML file, or both, through Ursatz's renderer and exporter. Spans that are not written yet are
 listed on stderr. Filling a plan is not implemented yet.
 
+```sh
+ursatz-composer progression --key "D minor" --meter 4/4 --bars 8 --cadence PAC --seed 7
+```
+
+`progression` writes a chord progression with a bass line for one phrase. See
+[docs/cli-progression.md](docs/cli-progression.md).
+
 ## Plan format
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
