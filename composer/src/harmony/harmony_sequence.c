@@ -31,6 +31,19 @@ static const HarmonySequenceParams *params_of(void *context) {
     return context ? context : &defaults;
 }
 
+bool harmony_sequence_find(const char *name, ScalePatternId *id) {
+    if (!name || !id) {
+        return false;
+    }
+    for (int candidate = 0; candidate < SCALE_PATTERN_COUNT; candidate++) {
+        if (strcmp(scale_pattern_name((ScalePatternId)candidate), name) == 0) {
+            *id = (ScalePatternId)candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
 /* The chord the upper voice's intervals make with the bass degree: a sixth or a third, a first inversion. */
 static bool stage_chord(PlanKeyMode mode, int bass, unsigned intervals, PhraseChord *out) {
     bool first_inversion = (intervals & ((1u << 6) | (1u << 3))) != 0;

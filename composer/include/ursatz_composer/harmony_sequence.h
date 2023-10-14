@@ -1,6 +1,8 @@
 #ifndef URSATZ_COMPOSER_HARMONY_SEQUENCE_H
 #define URSATZ_COMPOSER_HARMONY_SEQUENCE_H
 
+#include <stdbool.h>
+
 #include <scale_patterns.h>
 
 #include <ursatz_composer/fill_operator.h>
@@ -45,6 +47,9 @@ typedef struct {
     unsigned preference;
     HarmonyBassParams bass;
 } HarmonySequenceParams;
+
+/* The id of the pattern with this name, as scale-harmonization spells it ("five-six-ascending"). False if none. */
+bool harmony_sequence_find(const char *name, ScalePatternId *id);
 
 /* The defaults: every pattern, 2 to 4 repeats, preference 250, and the bass operator's defaults. */
 HarmonySequenceParams harmony_sequence_params_default(void);

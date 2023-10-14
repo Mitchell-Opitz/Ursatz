@@ -164,6 +164,26 @@ static bool derive_schema(const PlanKey *key, const GalantPrototype *prototype, 
     return true;
 }
 
+bool harmony_schema_find(const char *name, GalantSchemaId *id) {
+    if (!name || !id) {
+        return false;
+    }
+    for (int candidate = 0; candidate < GALANT_SCHEMA_COUNT; candidate++) {
+        if (strcmp(galant_schema_name((GalantSchemaId)candidate), name) == 0) {
+            *id = (GalantSchemaId)candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool harmony_schema_available(GalantSchemaId id, PlanKeyMode mode) {
+    const GalantPrototype *prototype = galant_prototype(id);
+    PhraseChord chords[GALANT_MAX_STAGES];
+    PlanKey key = {0, mode};
+    return prototype && derive_schema(&key, prototype, chords);
+}
+
 /* --- from stages to cells ----------------------------------------------- */
 
 /*

@@ -209,7 +209,7 @@ bool harmony_skeleton_check(const void *payload, FillCheck *out) {
     }
     /* The preference puts a skeleton ahead of the plain operators' candidates, which score at most 1. */
     unsigned total = verdict.soft_total ? verdict.soft_total : 1;
-    out->score_numerator = (unsigned long)verdict.soft_held * PREFERENCE_SCALE + skeleton->preference;
+    out->score_numerator = (unsigned long)verdict.soft_held * PREFERENCE_SCALE + (unsigned long)skeleton->preference * total;
     out->score_denominator = (unsigned long)total * PREFERENCE_SCALE;
     snprintf(out->reason, sizeof(out->reason), "standard-harmony and melodic rules");
     return true;

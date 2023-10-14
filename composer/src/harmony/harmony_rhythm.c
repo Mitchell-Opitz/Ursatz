@@ -30,6 +30,20 @@ bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells) {
     return false;
 }
 
+bool harmony_meter_supported(const PlanMeter *meter) {
+    size_t cells;
+    return harmony_rhythm_cells_per_bar(meter, &cells);
+}
+
+size_t harmony_phrase_min_bars(PlanCadenceType cadence, const PlanMeter *meter) {
+    size_t cells_per_bar;
+    if (!harmony_rhythm_cells_per_bar(meter, &cells_per_bar)) {
+        return 0;
+    }
+    size_t cells = harmony_phrase_min_cells(cadence, cells_per_bar);
+    return (cells + cells_per_bar - 1) / cells_per_bar;
+}
+
 BeatStrength harmony_rhythm_cell_strength(size_t cell_in_bar) {
     return cell_in_bar == 0 ? BEAT_STRENGTH_STRONG : BEAT_STRENGTH_MEDIUM;
 }

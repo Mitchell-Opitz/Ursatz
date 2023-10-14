@@ -41,6 +41,18 @@
 
 #define HARMONY_PHRASE_OPERATOR_NAME "harmony-phrase-model"
 
+/*
+ * Whether the harmony operators can write for a meter: 2/4, 3/4, 4/4 and 6/8, where a chord may start on a
+ * strong beat.
+ */
+bool harmony_meter_supported(const PlanMeter *meter);
+
+/*
+ * The fewest bars a phrase can have and still end in the cadence, in a meter the operators support; 0 for any
+ * other meter. A phrase of fewer bars gets no candidates from the phrase-model operator.
+ */
+size_t harmony_phrase_min_bars(PlanCadenceType cadence, const PlanMeter *meter);
+
 /* Registers the operator. FILL_OK, or the registry's error. */
 FillResult harmony_phrase_register(FillOperatorRegistry *registry);
 
