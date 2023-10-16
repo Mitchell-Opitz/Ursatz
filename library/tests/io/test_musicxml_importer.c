@@ -195,7 +195,8 @@ static void test_tie_warnings(void) {
                                NOTE("E", "4", "4", "<tie type=\"start\"/>")),
                        &import) == MUSICXML_IMPORT_OK);
     assert(import.count == 3);
-    assert(import.warnings.count == 3); /* C start never stops; D stop does not match; E start never stops */
+    assert(import.warnings.count == 2); /* the unmatched stop, and one summary for the two starts that never stop */
+    assert(strstr(import.warnings.messages[1], "2 tie start(s) never stopped") != NULL);
     assert(strstr(import.warnings.messages[0], "tie stop") != NULL);
     musicxml_import_destroy(&import);
 }
