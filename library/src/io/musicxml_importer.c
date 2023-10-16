@@ -145,7 +145,7 @@ static void warn(Ctx *ctx, const char *format, ...) {
     if (warnings->message_count >= MUSICXML_IMPORT_MAX_WARNING_MESSAGES) {
         return;
     }
-    char text[MUSICXML_IMPORT_WARNING_MESSAGE_SIZE];
+    char text[MUSICXML_IMPORT_WARNING_MESSAGE_SIZE - 48]; /* room for the "part ..., measure ...: " prefix */
     va_list args;
     va_start(args, format);
     vsnprintf(text, sizeof(text), format, args);
