@@ -21,12 +21,14 @@
  * What the export can carry decides what is asserted. It writes every duration as a whole number of 1/3072
  * of a whole note by INTEGER DIVISION (musicxml_export.c, TICKS_PER_WHOLE_NOTE), so:
  *   - a MIDI file whose tick is a whole number of those units (384 ticks per quarter note: Bach 114, 2 units per
- *     tick; 256: Field 5, 3 units per tick) is written exactly, and must come back EXACTLY equal;
- *   - a file at 240 ticks per quarter note (Clementi 36, Field 1, Mozart 545: 3.2 units per tick) is rounded down,
- *     note by note, and a measure's fragments then sum to a little less than the measure, so a reader that takes
- *     the document at its word (this importer does, as the MusicXML specification says to) drifts earlier measure
- *     by measure. For those the test asserts the note count and the pitch multiset, and REPORTS how far onsets and
- *     durations moved. The export is not changed here.
+ *     tick; 256: Field 5, 3 units per tick) is written exactly, and must come back EXACTLY equal (asserted);
+ *   - a file at 240 ticks per quarter note (Mozart 545; 3.2 units per tick) is rounded down note by note, so
+ *     onsets and durations can only come back within the rounding: the test asserts the count, the pitch multiset
+ *     and that every onset and duration is within 16 units (16/3072 of a whole note) and prints the largest shift
+ *     and how many notes are exactly equal;
+ *   - Clementi 36 and Field 1 are two-channel files, whose notes have no voice, so the two hands overlap in one
+ *     implicit voice and MusicXmlExport refuses them (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES). They cannot be
+ *     round-tripped without changing the export, which is out of scope: the test says so and reports it.
  * The importer's own exactness is proved by the hand-written fixtures (test_musicxml_importer.c), which a lossy
  * export cannot hide.
  */
@@ -78,7 +80,9 @@ static double as_double(ExactRational r) {
     return (double)r.n / (double)r.d;
 }
 
-static void roundtrip(const char *file, bool exact) {
+/* exact: the file's tick divides the export's unit evenly (asserted equal). cannot_export: the export is known to refuse
+   the file (reported, not asserted). Otherwise: asserted within 16 units. */
+static void roundtrip(const char *file, bool exact, bool cannot_export) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, file);
     size_t size = 0;
@@ -91,7 +95,7 @@ static void roundtrip(const char *file, bool exact) {
     assert(count > 0);
 
     char database[256];
-    snprintf(database, sizeof(database), "test_musicxml_roundtrip_%s.sqlite", exact ? "exact" : "report");
+    snprintf(database, sizeof(database), "test_musicxml_roundtrip_%zu.sqlite", count);
     remove(database);
     PersistenceHandle *handle = NULL;
     assert(persistence_open(database, &handle) == PERSISTENCE_OK);
@@ -99,8 +103,9 @@ static void roundtrip(const char *file, bool exact) {
     char *xml = NULL;
     MusicXmlExportResult exported = musicxml_export_write(handle, &xml);
     if (exported != MUSICXML_EXPORT_OK) {
-        printf("%s: MusicXmlExport failed (%d); not round-tripped\n", file, (int)exported);
-        assert(!exact);
+        printf("%s: MusicXmlExport refused the file (status %d: two-channel notes overlap in one implicit voice); not "
+               "round-tripped\n", file, (int)exported);
+        assert(cannot_export && exported == MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES);
     }
     persistence_close(handle);
     remove(database);
@@ -135,6 +140,8 @@ static void roundtrip(const char *file, bool exact) {
             within_16 += (onset <= 16.0 && duration <= 16.0) ? 1 : 0;
             if (exact) {
                 assert(same);
+            } else {
+                assert(onset <= 16.0 && duration <= 16.0);
             }
         }
         printf("%s: %zu notes; pitches equal; %zu exactly equal in onset and duration; %zu within 16/3072 of a whole note; "
@@ -155,11 +162,11 @@ static void roundtrip(const char *file, bool exact) {
 }
 
 int main(void) {
-    roundtrip("Bach 114.mid", true);   /* 384 ticks per quarter note: exactly representable */
-    roundtrip("Field 5.mid", true);    /* 256 ticks per quarter note: exactly representable */
-    roundtrip("Clementi 36.mid", false);
-    roundtrip("Field 1.mid", false);
-    roundtrip("Mozart 545.mid", false);
+    roundtrip("Bach 114.mid", true, false);   /* 384 ticks per quarter note: exactly representable */
+    roundtrip("Field 5.mid", true, false);    /* 256 ticks per quarter note: exactly representable */
+    roundtrip("Mozart 545.mid", false, false); /* 240: rounded down by the export */
+    roundtrip("Clementi 36.mid", false, true); /* two channels: the export refuses it */
+    roundtrip("Field 1.mid", false, true);
     printf("test_musicxml_roundtrip: ok\n");
     return 0;
 }
