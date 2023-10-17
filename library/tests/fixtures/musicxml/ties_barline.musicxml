@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <part-list><score-part id="P1"><part-name>Voice</part-name></score-part></part-list>
+  <!-- C4 half; then D4 half, tied across the barline to a whole-measure D4, tied across the next to a quarter D4:
+       one D4 of 4 + 8 + 2 = 14 divisions (seven quarter notes' worth of eighths: 7/4 of a whole note). -->
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>2</divisions></attributes>
+      <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration></note>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>4</duration><tie type="start"/></note>
+    </measure>
+    <measure number="2">
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>8</duration><tie type="stop"/><tie type="start"/></note>
+    </measure>
+    <measure number="3">
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>2</duration><tie type="stop"/></note>
+    </measure>
+  </part>
+</score-partwise>

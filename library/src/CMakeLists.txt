@@ -187,6 +187,7 @@ add_library(ursatz
     io/midi_event_decoder.c
     io/midi_key_signature.c
     io/smf_reader.c
+    io/musicxml_importer.c
     persistence/persistence.c
     persistence/persistence_note_events.c
     persistence/persistence_uncertainty.c
@@ -207,3 +208,7 @@ target_include_directories(ursatz PUBLIC
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
 target_link_libraries(ursatz PUBLIC PkgConfig::SQLITE3)
+# The XML parser used by io/musicxml_importer.c only (third_party/ezxml); PRIVATE so no consumer sees it.
+target_link_libraries(ursatz PRIVATE ursatz_ezxml)
+# lround, floor and friends (musicxml_importer.c)
+target_link_libraries(ursatz PUBLIC m)

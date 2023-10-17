@@ -13,7 +13,10 @@
  *
  * Scans every .h/.c file under src/io/ and flags any local include
  * ("...") that does not point into identity/, core/, time/, pitch/,
- * events/, or io/ itself.
+ * events/, or io/ itself -- except "ezxml.h", the vendored XML parser
+ * (third_party/ezxml) that io/musicxml_importer.c alone uses.
+ * tests/test_architecture_third_party.c checks that nothing outside
+ * src/io/ includes it.
  */
 
 static int check_file(const char *path) {
@@ -39,6 +42,10 @@ static int check_file(const char *path) {
             continue;
         }
         *end = '\0';
+
+        if (strcmp(start, "ezxml.h") == 0) {
+            continue;
+        }
 
         if (strncmp(start, "identity/", 9) != 0 && strncmp(start, "core/", 5) != 0 &&
             strncmp(start, "time/", 5) != 0 && strncmp(start, "pitch/", 6) != 0 &&

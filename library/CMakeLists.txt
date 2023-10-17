@@ -18,5 +18,6 @@ if(URSATZ_BUILD_TESTS)
 endif()
 ursatz_add_tests()
 
+add_subdirectory(third_party)
 add_subdirectory(src)
 add_subdirectory(frameworks)

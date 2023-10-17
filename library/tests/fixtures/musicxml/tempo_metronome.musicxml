@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <part-list><score-part id="P1"><part-name>Voice</part-name></score-part></part-list>
+  <!-- m1: "Allegro" with quarter = 96 and sound tempo 96 (a TempoMap region and a TempoMarking with text);
+       m2: standalone "rit." (not tempo text) and a sound tempo 60 alone (a region, no marking);
+       m3: dotted quarter = 60 with no words (a TempoMarking with only the metronome, no region);
+       m4: sound tempo 92.5 (a region, rounded, with a warning). -->
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>4</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <direction placement="above">
+        <direction-type><words>Allegro</words></direction-type>
+        <direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>96</per-minute></metronome></direction-type>
+        <sound tempo="96"/>
+      </direction>
+      <note><pitch><step>C</step><octave>4</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="2">
+      <direction placement="above"><direction-type><words>rit.</words></direction-type></direction>
+      <direction><sound tempo="60"/></direction>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="3">
+      <direction><direction-type><metronome><beat-unit>quarter</beat-unit><beat-unit-dot/><per-minute>60</per-minute></metronome></direction-type></direction>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="4">
+      <sound tempo="92.5"/>
+      <note><pitch><step>F</step><octave>4</octave></pitch><duration>16</duration></note>
+    </measure>
+  </part>
+</score-partwise>

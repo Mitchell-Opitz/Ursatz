@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <part-list>
+    <score-part id="P1"><part-name>Violin</part-name></score-part>
+    <score-part id="P2"><part-name>Cello</part-name></score-part>
+  </part-list>
+  <!-- Violin: p at the start, mf at measure 2, sfz an eighth after it (an <offset>), and a pp at the very end,
+       which has no extent. Cello: ff on staff 2 from the start. -->
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>4</divisions></attributes>
+      <direction><direction-type><dynamics><p/></dynamics></direction-type></direction>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="2">
+      <direction><direction-type><dynamics><mf/></dynamics></direction-type></direction>
+      <direction><direction-type><dynamics><sfz/></dynamics></direction-type><offset>2</offset></direction>
+      <note><pitch><step>D</step><octave>5</octave></pitch><duration>16</duration></note>
+      <direction><direction-type><dynamics><pp/></dynamics></direction-type></direction>
+    </measure>
+  </part>
+  <part id="P2">
+    <measure number="1">
+      <attributes><divisions>4</divisions></attributes>
+      <direction><direction-type><dynamics><ff/></dynamics></direction-type><staff>2</staff></direction>
+      <note><pitch><step>C</step><octave>3</octave></pitch><duration>16</duration></note>
+    </measure>
+    <measure number="2">
+      <note><pitch><step>D</step><octave>3</octave></pitch><duration>16</duration></note>
+    </measure>
+  </part>
+</score-partwise>
