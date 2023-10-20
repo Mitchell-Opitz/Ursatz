@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 /*
  * Architecture test: standard-tonality (Framework extension
@@ -17,14 +18,31 @@
  * RuleEvaluation are not needed by this extension; constraint_evaluate
  * itself is never called here -- see rule_pair.c).
  *
- * Scans every .h/.c file directly under frameworks/standard-tonality/
- * (not its tests/ subdirectory) and flags any local include ("...")
+ * Scans every .h/.c file directly under frameworks/standard-tonality/ and under its analysis/
+ * subdirectory (the L3 adapter; not its tests/ subdirectory) and flags any local include ("...")
  * that does not point into an allowed prefix. This also keeps the module
  * independent of the other framework modules: standard-notation's
  * headers are not on the allowed list. Directory-driven rather
  * than a fixed file list, same pattern as
  * tests/rules/test_architecture_rules.c.
  */
+
+/* True when a bare include names a header that lives in this module (its top directory or analysis/). */
+static int is_module_header(const char *name) {
+    if (strchr(name, '/') != NULL) {
+        return 0;
+    }
+    const char *dirs[] = {"..", "../analysis"};
+    for (size_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); i++) {
+        char path[512];
+        struct stat info;
+        snprintf(path, sizeof(path), "%s/%s", dirs[i], name);
+        if (stat(path, &info) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 static int check_file(const char *path) {
     FILE *f = fopen(path, "r");
@@ -49,6 +67,10 @@ static int check_file(const char *path) {
             continue;
         }
         *end = '\0';
+
+        if (is_module_header(start)) {
+            continue;
+        }
 
         if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0 ||
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
@@ -101,29 +123,33 @@ static int has_suffix(const char *name, const char *suffix) {
 }
 
 int main(void) {
-    const char *module_dir = "..";
-    DIR *d = opendir(module_dir);
-    if (d == NULL) {
-        printf("standard-tonality: directory not found, nothing to check\n");
-        return 0;
-    }
-
+    const char *module_dirs[] = {"..", "../analysis"};
     int total_violations = 0;
     int files_checked = 0;
-    struct dirent *entry;
 
-    while ((entry = readdir(d)) != NULL) {
-        if (!has_suffix(entry->d_name, ".h") && !has_suffix(entry->d_name, ".c")) {
+    for (size_t i = 0; i < sizeof(module_dirs) / sizeof(module_dirs[0]); i++) {
+        DIR *d = opendir(module_dirs[i]);
+        if (d == NULL) {
+            if (i == 0) {
+                printf("standard-tonality: directory not found, nothing to check\n");
+                return 0;
+            }
             continue;
         }
 
-        char path[512];
-        snprintf(path, sizeof(path), "%s/%s", module_dir, entry->d_name);
-        total_violations += check_file(path);
-        files_checked++;
-    }
+        struct dirent *entry;
+        while ((entry = readdir(d)) != NULL) {
+            if (!has_suffix(entry->d_name, ".h") && !has_suffix(entry->d_name, ".c")) {
+                continue;
+            }
 
-    closedir(d);
+            char path[512];
+            snprintf(path, sizeof(path), "%s/%s", module_dirs[i], entry->d_name);
+            total_violations += check_file(path);
+            files_checked++;
+        }
+        closedir(d);
+    }
 
     if (total_violations > 0) {
         fprintf(stderr, "%d architecture violation(s) found in standard-tonality\n", total_violations);

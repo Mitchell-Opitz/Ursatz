@@ -1,5 +1,6 @@
 #include "weighted_chord_identification.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "chord_vocabulary.h"
@@ -57,8 +58,65 @@ static unsigned long millionths(double confidence) {
     return (unsigned long)(confidence * (double)CONFIDENCE_DENOMINATOR + 0.5);
 }
 
+/* The candidate's quality as root-relative semitones. In a major key the triads on degrees 1 4 5 are major,
+   2 3 6 minor, 7 diminished; the four seventh qualities are fixed by their name. */
+static size_t candidate_intervals(const CommonPracticeRankedChord *candidate, int intervals[4]) {
+    static const int MAJOR_TRIAD[3] = {0, 4, 7};
+    static const int MINOR_TRIAD[3] = {0, 3, 7};
+    static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
+    static const int SEVENTHS[COMMON_PRACTICE_SEVENTH_COUNT][4] = {
+        {0, 4, 7, 10}, {0, 4, 7, 11}, {0, 3, 7, 10}, {0, 3, 6, 10}};
+    if (candidate->is_seventh) {
+        for (int i = 0; i < 4; i++) {
+            intervals[i] = SEVENTHS[candidate->seventh][i];
+        }
+        return 4;
+    }
+    const int *triad = MAJOR_TRIAD;
+    switch (candidate->triad) {
+    case COMMON_PRACTICE_TRIAD_II:
+    case COMMON_PRACTICE_TRIAD_III:
+    case COMMON_PRACTICE_TRIAD_VI:
+        triad = MINOR_TRIAD;
+        break;
+    case COMMON_PRACTICE_TRIAD_VII_DIM:
+        triad = DIMINISHED_TRIAD;
+        break;
+    default:
+        break;
+    }
+    for (int i = 0; i < 3; i++) {
+        intervals[i] = triad[i];
+    }
+    return 3;
+}
+
+/* Re-wraps a built Chord with the structure the kernel carries: root, quality intervals, bass. */
+static bool attach_structure(const CommonPracticeRankedChord *candidate, int bass_pitch_class, Chord **chord) {
+    ChordStructure structure;
+    structure.root_pitch_class = candidate->root_pitch_class;
+    structure.bass_pitch_class = bass_pitch_class;
+    int intervals[4];
+    structure.interval_count = candidate_intervals(candidate, intervals);
+    for (size_t i = 0; i < structure.interval_count; i++) {
+        structure.root_relative_intervals[i] = intervals[i];
+    }
+    char label[256];
+    snprintf(label, sizeof(label), "%s", chord_label(*chord));
+    Interpretation *interpretation = chord_take_interpretation(*chord);
+    Chord *wrapped = NULL;
+    if (chord_create_with_structure(interpretation, label, &structure, &wrapped) != CHORD_OK) {
+        interpretation_destroy(interpretation);
+        *chord = NULL;
+        return false;
+    }
+    *chord = wrapped;
+    return true;
+}
+
 static CommonPracticeWeightedStatus build_chord(const CommonPracticeRankedChord *candidate, const char *segment_id,
-                                                double confidence, const char *suffix, Chord **out) {
+                                                int bass_pitch_class, double confidence, const char *suffix,
+                                                Chord **out) {
     EntityID *target = NULL;
     if (entity_id_create(segment_id, &target) != ENTITY_ID_OK) {
         return COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
@@ -72,6 +130,10 @@ static CommonPracticeWeightedStatus build_chord(const CommonPracticeRankedChord 
                                   out);
     if (built != CHORD_OK) {
         entity_id_destroy(target); /* the builders take the id on success only */
+        return COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
+    }
+    if (!attach_structure(candidate, bass_pitch_class, out)) {
+        *out = NULL;
         return COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
     }
     return COMMON_PRACTICE_WEIGHTED_OK;
@@ -131,9 +193,9 @@ static CommonPracticeWeightedStatus identify_one(const CommonPracticeSegment *se
         if (segment->id == NULL) {
             return COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT;
         }
-        status = build_chord(&result.best, segment->id, 1.0 - result.uncertainty, NULL, &result.best_chord);
+        status = build_chord(&result.best, segment->id, weights.bass_pitch_class, 1.0 - result.uncertainty, NULL, &result.best_chord);
         if (status == COMMON_PRACTICE_WEIGHTED_OK && has_runner_up) {
-            status = build_chord(&result.runner_up, segment->id, result.uncertainty, "-runner-up",
+            status = build_chord(&result.runner_up, segment->id, weights.bass_pitch_class, result.uncertainty, "-runner-up",
                                  &result.runner_up_chord);
         }
         if (status != COMMON_PRACTICE_WEIGHTED_OK) {

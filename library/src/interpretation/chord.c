@@ -6,6 +6,8 @@
 struct Chord {
     Interpretation *interpretation;
     char *label;
+    bool has_structure;
+    ChordStructure structure;
 };
 
 ChordResult chord_create(Interpretation *interpretation, const char *label, Chord **out) {
@@ -33,7 +35,26 @@ ChordResult chord_create(Interpretation *interpretation, const char *label, Chor
 
     chord->interpretation = interpretation;
     chord->label = owned_label;
+    chord->has_structure = false;
 
+    *out = chord;
+    return CHORD_OK;
+}
+
+ChordResult chord_create_with_structure(Interpretation *interpretation, const char *label,
+                                         const ChordStructure *structure, Chord **out) {
+    if (structure == NULL || structure->interval_count > CHORD_STRUCTURE_MAX_INTERVALS ||
+        structure->root_pitch_class < -1 || structure->root_pitch_class > 11 || structure->bass_pitch_class < -1 ||
+        structure->bass_pitch_class > 11) {
+        return CHORD_ERR_BAD_STRUCTURE;
+    }
+    Chord *chord = NULL;
+    ChordResult result = chord_create(interpretation, label, &chord);
+    if (result != CHORD_OK) {
+        return result;
+    }
+    chord->has_structure = true;
+    chord->structure = *structure;
     *out = chord;
     return CHORD_OK;
 }
@@ -60,4 +81,12 @@ Interpretation *chord_take_interpretation(Chord *chord) {
     free(chord->label);
     free(chord);
     return interpretation;
+}
+
+bool chord_structure(const Chord *chord, ChordStructure *out) {
+    if (!chord->has_structure) {
+        return false;
+    }
+    *out = chord->structure;
+    return true;
 }
