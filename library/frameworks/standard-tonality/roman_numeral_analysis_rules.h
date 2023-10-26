@@ -112,6 +112,16 @@ bool standard_tonality_roman_root_degree(StandardTonalityRomanKeyMode mode, cons
  * chord whose numeral would read back as the other seventh quality
  * (SEVENTH_INFERENCE: a major-major seventh on V, say).
  */
+/*
+ * QUALITY: true when the key gives the numeral's degree and quality: in major the key's table; in minor
+ * the natural table or, below the seventh, the one the raised leading tone gives, and for a root on the
+ * raised leading tone (raised_leading_tone) only the harmonic minor's seventh-degree quality. The same
+ * test standard_tonality_identify_roman_numeral applies, for callers that already know the root's degree
+ * (the pitch-class adapter, analysis/). False for an invalid mode or numeral.
+ */
+bool standard_tonality_roman_numeral_fits_key(StandardTonalityRomanKeyMode mode, int degree, bool raised_leading_tone,
+                                              const StandardTonalityRomanNumeral *numeral);
+
 bool standard_tonality_identify_roman_numeral(StandardTonalityRomanKeyMode mode, const PitchSpelling *tonic,
                                               const PitchSpelling *const *notes, size_t count,
                                               StandardTonalityRomanNumeral *out);

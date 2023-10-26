@@ -379,6 +379,15 @@ static bool seventh_in_key(StandardTonalityRomanKeyMode mode, int degree, bool r
            table == quality;
 }
 
+bool standard_tonality_roman_numeral_fits_key(StandardTonalityRomanKeyMode mode, int degree, bool raised_leading_tone,
+                                              const StandardTonalityRomanNumeral *numeral) {
+    if (numeral == NULL || !valid_mode(mode) || degree < 1 || degree > 7 || numeral->degree != degree) {
+        return false;
+    }
+    return numeral->seventh ? seventh_in_key(mode, degree, raised_leading_tone, numeral->seventh_quality)
+                            : triad_in_key(mode, degree, raised_leading_tone, numeral->triad);
+}
+
 bool standard_tonality_identify_roman_numeral(StandardTonalityRomanKeyMode mode, const PitchSpelling *tonic,
                                               const PitchSpelling *const *notes, size_t count,
                                               StandardTonalityRomanNumeral *out) {
