@@ -36,6 +36,7 @@ add_library(standard_tonality
     roman_numeral_analysis_rules.c
     analysis/chord_input.c
     analysis/roman_numeral_adapter.c
+    analysis/applied_chords.c
 )
 target_include_directories(standard_tonality PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

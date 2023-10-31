@@ -8,6 +8,7 @@
 #include "interpretation/interpretation.h"
 #include "relationship/relationship.h"
 #include "roman_numeral_rules.h"
+#include "semantics/applied_chord_kind.h"
 
 /*
  * Roman numeral Interpretations per chord segment, in the segment's local key (the standard-tonality
@@ -47,19 +48,25 @@
 /* The structured fields of the claim, copied into the Interpretation's claim Value. */
 typedef struct {
     char label[STANDARD_TONALITY_ROMAN_LABEL_MAX];
-    int degree;                 /* 1..7: the chord's root as a degree of the local key */
+    int degree;                 /* 1..7: the chord's root as a degree of the local key; for an applied chord, of
+                                   the tonicized key (5 for V/x, 7 for vii-diminished/x) */
     bool seventh;               /* a seventh chord rather than a triad */
     int quality;                /* StandardTonalityTriadQuality, or StandardTonalitySeventhQuality when seventh */
     int inversion;              /* 0 root position, 1 first, 2 second, 3 third (sevenths only) */
-    bool applied;               /* an applied chord (a later step); false here */
+    bool applied;               /* an applied chord (applied_chords.h) */
     int applied_kind;           /* AppliedChordKind; meaningful only when applied */
-    int applied_target_degree;  /* 1..7: the degree tonicized; meaningful only when applied */
+    int applied_target_degree;  /* 1..7: the degree of the local key tonicized; meaningful only when applied */
 } StandardTonalityRomanClaim;
 
 typedef struct {
     StandardTonalityRomanNumeral numeral;
     bool raised_leading_tone;   /* minor: the root is the raised leading tone (a vii-diminished) */
     int inversion;
+    /* An applied chord (applied_chords.h): `numeral` is then the chord as it reads in the tonicized key (V, V7,
+       vii-diminished, vii-diminished-7) and applied_target the numeral of the chord tonicized (ii, IV, V ...). */
+    bool applied;
+    AppliedChordKind applied_kind;
+    StandardTonalityRomanNumeral applied_target;
 } StandardTonalityRomanReading;
 
 /*
@@ -69,7 +76,7 @@ typedef struct {
 bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *input,
                                           StandardTonalityRomanReading *out);
 
-/* Writes the label (see LABEL) into buffer of `size` bytes. False for a bad reading or a buffer too small. */
+/* Writes the label (see LABEL; an applied chord adds "/" and the target's numeral) into buffer of `size` bytes. False for a bad reading or a buffer too small. */
 bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *reading, char *buffer, size_t size);
 
 typedef struct {
@@ -79,7 +86,16 @@ typedef struct {
     StandardTonalityRomanClaim claim;
     double uncertainty;         /* [0, 1] */
     Interpretation *interpretation; /* owned */
+    /* An applied chord is linked to the segment it resolves to by a Relationship, predicate
+       STANDARD_TONALITY_RESOLVES_TO (source: this segment's Sonority id, target: the resolution segment's),
+       the durable claim pattern: the link is its own object, not a field of either claim. */
+    Relationship *resolves_to;  /* owned; NULL unless applied */
+    size_t resolution_index;    /* the resolution segment, an index into the inputs; meaningful when applied */
+    bool deceptive;             /* resolves to the target's submediant, not the target; meaningful when applied */
 } StandardTonalityRomanResult;
+
+#define STANDARD_TONALITY_RESOLVES_TO "resolves-to"
+
 
 typedef enum {
     STANDARD_TONALITY_ROMAN_OK = 0,
@@ -88,11 +104,16 @@ typedef enum {
 } StandardTonalityRomanStatus;
 
 /*
- * One result per input, in order. On OK, *out owns the results and their Interpretations
- * (standard_tonality_roman_results_destroy); otherwise *out is untouched.
+ * One result per input, in order. Each segment is first read in its local key; a segment with a reading is
+ * then re-checked as an applied chord (applied_chords.h) with the default configuration. On OK, *out owns the
+ * results, their Interpretations and Relationships (standard_tonality_roman_results_destroy); otherwise *out is
+ * untouched.
  */
 StandardTonalityRomanStatus standard_tonality_build_roman_numerals(const StandardTonalityChordInput *inputs,
                                                                    size_t count, StandardTonalityRomanResult **out);
+
+/* standard_tonality_build_roman_numerals_with_config, with the applied chord thresholds of a
+   StandardTonalityAppliedConfig, is in applied_chords.h. */
 
 void standard_tonality_roman_results_destroy(StandardTonalityRomanResult *results, size_t count);
 

@@ -1,5 +1,7 @@
 #include "roman_numeral_adapter.h"
 
+#include "applied_chords.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -106,6 +108,7 @@ bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *inpu
         !standard_tonality_roman_numeral_fits_key(input->mode, degree, raised, &numeral)) {
         return false;
     }
+    memset(out, 0, sizeof(*out));
     out->numeral = numeral;
     out->raised_leading_tone = raised;
     out->inversion = inversion_of(input);
@@ -137,6 +140,16 @@ bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *
         return false;
     }
     strcpy(buffer + length, figure);
+    length += strlen(figure);
+    if (reading->applied) {
+        char target[16];
+        if (!standard_tonality_roman_numeral_format(&reading->applied_target, target, sizeof(target)) ||
+            length + 1 + strlen(target) + 1 > size) {
+            return false;
+        }
+        buffer[length++] = '/';
+        strcpy(buffer + length, target);
+    }
     return true;
 }
 
@@ -158,6 +171,11 @@ static bool fill_claim(const StandardTonalityRomanReading *reading, StandardTona
     claim->seventh = reading->numeral.seventh;
     claim->quality = reading->numeral.seventh ? (int)reading->numeral.seventh_quality : (int)reading->numeral.triad;
     claim->inversion = reading->inversion;
+    if (reading->applied) {
+        claim->applied = true;
+        claim->applied_kind = (int)reading->applied_kind;
+        claim->applied_target_degree = reading->applied_target.degree;
+    }
     return true;
 }
 
@@ -214,9 +232,36 @@ fail:
     return NULL;
 }
 
-StandardTonalityRomanStatus standard_tonality_build_roman_numerals(const StandardTonalityChordInput *inputs,
-                                                                   size_t count, StandardTonalityRomanResult **out) {
-    if (out == NULL || (inputs == NULL && count > 0)) {
+/* The "resolves-to" Relationship from one segment's Sonority to another's. */
+static Relationship *build_resolves_to(const char *source_segment, const char *target_segment) {
+    char relationship_id_value[512];
+    snprintf(relationship_id_value, sizeof(relationship_id_value), "standard-tonality-resolves-to-%s-%s",
+             source_segment, target_segment);
+    EntityID *relationship_id = NULL;
+    EntityID *source = NULL;
+    EntityID *target = NULL;
+    ProvenanceReference *provenance = NULL;
+    Relationship *relationship = NULL;
+    if (entity_id_create(relationship_id_value, &relationship_id) != ENTITY_ID_OK ||
+        entity_id_create(source_segment, &source) != ENTITY_ID_OK ||
+        entity_id_create(target_segment, &target) != ENTITY_ID_OK ||
+        provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK ||
+        relationship_create(relationship_id, source, STANDARD_TONALITY_RESOLVES_TO, target, NULL, NULL, NULL, NULL,
+                            NULL, provenance, &relationship) != RELATIONSHIP_OK) {
+        entity_id_destroy(relationship_id);
+        entity_id_destroy(source);
+        entity_id_destroy(target);
+        provenance_reference_destroy(provenance);
+        return NULL;
+    }
+    return relationship;
+}
+
+StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
+    const StandardTonalityChordInput *inputs, size_t count, const StandardTonalityAppliedConfig *config,
+    StandardTonalityRomanResult **out) {
+    if (out == NULL || (inputs == NULL && count > 0) ||
+        (config != NULL && !standard_tonality_applied_config_valid(config))) {
         return STANDARD_TONALITY_ROMAN_ERR_NULL_ARGUMENT;
     }
     StandardTonalityRomanResult *results =
@@ -224,14 +269,33 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals(const Standar
     if (results == NULL) {
         return STANDARD_TONALITY_ROMAN_ERR_ALLOC;
     }
+
+    /* Pass 1: the diatonic reading of every segment, then the applied re-check of each (it looks at the
+       following segments' chords, which are the diatonic ones). */
+    for (size_t i = 0; i < count; i++) {
+        results[i].segment_id = inputs[i].segment_id;
+        results[i].has_numeral = standard_tonality_read_roman_numeral(&inputs[i], &results[i].reading);
+    }
+    StandardTonalityAppliedResult applied[1];
+    for (size_t i = 0; i < count; i++) {
+        if (results[i].has_numeral &&
+            standard_tonality_recheck_applied_chord(inputs, count, i, config, &applied[0])) {
+            results[i].reading = applied[0].reading;
+            results[i].resolution_index = applied[0].resolution_index;
+            results[i].deceptive = applied[0].deceptive;
+        }
+    }
+
+    /* Pass 2: the claims and the links. */
     for (size_t i = 0; i < count; i++) {
         StandardTonalityRomanResult *result = &results[i];
-        result->segment_id = inputs[i].segment_id;
-        if (!standard_tonality_read_roman_numeral(&inputs[i], &result->reading) ||
-            !fill_claim(&result->reading, &result->claim)) {
+        if (!result->has_numeral) {
             continue;
         }
-        result->has_numeral = true;
+        if (!fill_claim(&result->reading, &result->claim)) {
+            result->has_numeral = false;
+            continue;
+        }
         result->uncertainty =
             clamp01(1.0 - (1.0 - clamp01(inputs[i].chord_uncertainty)) * (1.0 - clamp01(inputs[i].key_uncertainty)));
         result->interpretation = build_interpretation(inputs[i].segment_id, &result->claim, result->uncertainty);
@@ -239,9 +303,21 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals(const Standar
             standard_tonality_roman_results_destroy(results, count);
             return STANDARD_TONALITY_ROMAN_ERR_ALLOC;
         }
+        if (result->reading.applied) {
+            result->resolves_to = build_resolves_to(inputs[i].segment_id, inputs[result->resolution_index].segment_id);
+            if (result->resolves_to == NULL) {
+                standard_tonality_roman_results_destroy(results, count);
+                return STANDARD_TONALITY_ROMAN_ERR_ALLOC;
+            }
+        }
     }
     *out = results;
     return STANDARD_TONALITY_ROMAN_OK;
+}
+
+StandardTonalityRomanStatus standard_tonality_build_roman_numerals(const StandardTonalityChordInput *inputs,
+                                                                   size_t count, StandardTonalityRomanResult **out) {
+    return standard_tonality_build_roman_numerals_with_config(inputs, count, NULL, out);
 }
 
 void standard_tonality_roman_results_destroy(StandardTonalityRomanResult *results, size_t count) {
@@ -250,6 +326,7 @@ void standard_tonality_roman_results_destroy(StandardTonalityRomanResult *result
     }
     for (size_t i = 0; i < count; i++) {
         interpretation_destroy(results[i].interpretation);
+        relationship_destroy(results[i].resolves_to);
     }
     free(results);
 }
