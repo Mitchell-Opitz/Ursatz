@@ -30,13 +30,16 @@ add_library(ursatz_composer STATIC
     harmony/harmony_skeleton.c
     harmony/harmony_schema.c
     harmony/harmony_sequence.c
+    motive/motive.c
+    motive/motive_notes.c
+    motive/motive_import.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_composer
-    PUBLIC ursatz ursatz_analyzer standard_harmony standard_counterpoint galant_schemas scale_harmonization
+    PUBLIC ursatz ursatz_analyzer common_practice_minimal standard_harmony standard_counterpoint galant_schemas scale_harmonization
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
