@@ -1,0 +1,75 @@
+# Hand-marked Roman numerals in Bach, Minuet in G, BWV Anh. 114 (Notebook for Anna Magdalena Bach, 1725).
+#
+# SOURCE: the Minuet in G major as engraved in the Notebook for Anna Magdalena Bach, 1725 (Neue Bach-Ausgabe
+# V/4; the IMSLP scan of the Notebook). The score text itself was not available when this file was written.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The marks are a hand reading of the harmony, made
+# from the pitch content of tests/fixtures/framework-v1-corpus/"Bach 114.mid" (dumped note by note, measure by
+# measure) and the Minuet's known harmonic outline. They were NOT derived from the output of the chord
+# identifier, the key estimator or this adapter. A human should confirm them against an edition before this
+# file is relied on. Where the second strain's A chords (measures 18-19) tonicize D, they are marked as applied
+# chords in G (V/V), the reading of the piece's own key; a key estimator that reads measures 17-20 as D major
+# will disagree, and that is a result to report, not a mark to change.
+#
+# METER: the score is 3/4. (The MIDI file declares 4/4, which is wrong for the piece; the evaluation test uses
+# a 3/4 MeterMap.) The file plays the repeats out: measures 1-8 are the first strain, 9-16 the same again,
+# 17-24 the second strain, 25-32 the same again. Only the first playing of each strain (measures 1-8 and
+# 17-24) is marked: the repeats are note for note the same.
+#
+# FORMAT: one chord per line, the chord that starts at the mark and sounds until the next one:
+#   <measure> <beat> <numeral>
+# Measure counts from 1. Beat is 1-based in quarter-note beats (a half beat is written .5: 2.5 is the second
+# half of beat 2). The numeral is in the LOCAL key, which is G major throughout, spelled in ASCII:
+#   upper/lower case Roman numeral, "o" after it for a diminished chord, then the bass figure: none for root
+#   position, 6, 6/4; for a seventh chord 7, 6/5, 4/3, 4/2. An applied chord is the numeral, its figure, a
+#   slash and the numeral of the chord it tonicizes: V/V, V6/V, V4/3/V. Lines starting with # and blank lines
+#   are ignored. A final line "END" marks the end of a marked stretch (the scope below it ends there).
+#
+# SCOPE: measures 1-8 (the first strain) and 17-24 (the second strain).
+
+# first strain
+1 1 I
+2 1 IV
+2 2.5 I6
+3 1 ii
+3 2.5 I
+4 1 V
+4 1.5 I6
+4 3 V7
+5 1 I
+6 1 IV
+6 2.5 I6
+6 3 IV
+7 1 ii
+7 2 V6
+7 2.5 I
+8 1 V4/2
+8 2 V
+8 2.5 I
+8 4 END
+# second strain: measures 18-19 hold the applied chords, A major (V of D) in G
+17 1 I
+17 2.5 V6
+18 1 vi
+18 2.5 V/V
+19 1 V/V
+20 1 V
+20 1.5 V6
+20 2 V6/4
+20 2.5 V
+20 3.5 V4/2
+21 1 I6
+21 2.5 IV
+22 1 I6
+22 1.5 ii
+22 2 I
+22 2.5 V
+23 1 V
+23 2 V6
+23 2.5 IV6
+23 3 IV6/4
+23 3.5 V6
+24 1 I
+24 1.5 I6
+24 2 V
+24 2.5 I
+24 4 END
