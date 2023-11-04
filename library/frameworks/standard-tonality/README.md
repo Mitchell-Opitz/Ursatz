@@ -179,6 +179,10 @@ Rules about how pitches relate within a key:
   the five sevenths gets no numeral. Embellishing tones and inversion
   figures are other chapters'.
 
+- **Analysis adapter** (`analysis/`): Roman numeral Interpretations per
+  chord segment in its local key, with applied chords, read from kernel
+  Chord and Key data only. See `docs/modules/standard-tonality-analysis.md`.
+
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
 (`src/pitch/`), `Scale`, `ScaleDegree`, and `Key` stay the entity types;
