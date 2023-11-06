@@ -6,6 +6,7 @@
 
 #include "harmony_chord.h"
 #include "semantics/applied_chord_kind.h"
+#include "semantics/harmonic_function.h"
 
 /*
  * Applied chords for standard-harmony-v1 (Tonicization). Tonicization is the process of making
@@ -79,6 +80,15 @@ bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, c
 /* The semitones above the tonic of the scale degree (1 to 7) in the mode: major 0 2 4 5 7 9 11,
    natural minor 0 2 3 5 7 8 10. -1 for an invalid mode or degree. */
 int harmony_applied_scale_semitone(HarmonyMode mode, int degree);
+
+/*
+ * The harmonic function of an applied chord: DOMINANT, whatever its kind or quality. A secondary
+ * dominant and a secondary leading-tone chord are V and vii diminished of the temporary key, so
+ * each leads to its target the way a dominant leads to tonic. The function is toward the
+ * target: the applied chord's own target (chord->target) is the chord it resolves to. False
+ * (*out untouched) for an invalid applied chord or mode, and for NULL.
+ */
+bool harmony_applied_function(HarmonyMode mode, const HarmonyAppliedChord *chord, HarmonicFunction *out);
 
 /*
  * Analyzing tonicization. A chromatic chord is an applied chord when it is a major triad or a
