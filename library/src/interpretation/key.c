@@ -6,6 +6,8 @@
 struct Key {
     Interpretation *interpretation;
     char *label;
+    bool has_structure;
+    KeyStructure structure;
 };
 
 KeyResult key_create(Interpretation *interpretation, const char *label, Key **out) {
@@ -33,7 +35,25 @@ KeyResult key_create(Interpretation *interpretation, const char *label, Key **ou
 
     key->interpretation = interpretation;
     key->label = owned_label;
+    key->has_structure = false;
 
+    *out = key;
+    return KEY_OK;
+}
+
+KeyResult key_create_with_structure(Interpretation *interpretation, const char *label, const KeyStructure *structure,
+                                     Key **out) {
+    if (structure == NULL || structure->tonic_pitch_class < 0 || structure->tonic_pitch_class > 11 ||
+        (structure->mode != KEY_STRUCTURE_MODE_MAJOR && structure->mode != KEY_STRUCTURE_MODE_MINOR)) {
+        return KEY_ERR_BAD_STRUCTURE;
+    }
+    Key *key = NULL;
+    KeyResult result = key_create(interpretation, label, &key);
+    if (result != KEY_OK) {
+        return result;
+    }
+    key->has_structure = true;
+    key->structure = *structure;
     *out = key;
     return KEY_OK;
 }
@@ -60,4 +80,12 @@ Interpretation *key_take_interpretation(Key *key) {
     free(key->label);
     free(key);
     return interpretation;
+}
+
+bool key_structure(const Key *key, KeyStructure *out) {
+    if (!key->has_structure) {
+        return false;
+    }
+    *out = key->structure;
+    return true;
 }

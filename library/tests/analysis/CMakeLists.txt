@@ -74,3 +74,10 @@ target_compile_definitions(test_key_regions_corpus PRIVATE
 add_test(NAME key_regions_corpus COMMAND test_key_regions_corpus)
 
 add_ursatz_architecture_test(analysis)
+
+add_executable(test_bach114_roman_numerals test_bach114_roman_numerals.c)
+target_link_libraries(test_bach114_roman_numerals PRIVATE standard_tonality common_practice_minimal standard_meter)
+target_compile_definitions(test_bach114_roman_numerals PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME bach114_roman_numerals COMMAND test_bach114_roman_numerals)

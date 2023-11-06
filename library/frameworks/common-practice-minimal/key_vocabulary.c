@@ -21,6 +21,26 @@ static const char *mode_suffix(CommonPracticeKeyMode mode) {
     }
 }
 
+/* The pitch class of a tonic name: a letter A-G then any number of '#' or 'b' accidentals. -1 if it is not
+   one, in which case the Key is built without a structure. */
+static int tonic_pitch_class_of(const char *name) {
+    static const int LETTER_PITCH_CLASS[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
+    if (name[0] < 'A' || name[0] > 'G') {
+        return -1;
+    }
+    int pitch_class = LETTER_PITCH_CLASS[name[0] - 'A'];
+    for (const char *c = name + 1; *c != '\0'; c++) {
+        if (*c == '#') {
+            pitch_class++;
+        } else if (*c == 'b') {
+            pitch_class--;
+        } else {
+            return -1;
+        }
+    }
+    return ((pitch_class % 12) + 12) % 12;
+}
+
 KeyResult common_practice_build_key(CommonPracticeKeyMode mode, const char *tonic_name, EntityID *context_target_id,
                                      Key **out) {
     if (tonic_name == NULL || tonic_name[0] == '\0') {
@@ -110,7 +130,16 @@ KeyResult common_practice_build_key(CommonPracticeKeyMode mode, const char *toni
         return KEY_ERR_ALLOC;
     }
 
-    KeyResult key_result = key_create(interpretation, label, out);
+    int tonic_pitch_class = tonic_pitch_class_of(tonic_name);
+    KeyResult key_result;
+    if (tonic_pitch_class >= 0) {
+        KeyStructure structure = {tonic_pitch_class,
+                                  mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR
+                                                                    : KEY_STRUCTURE_MODE_MAJOR};
+        key_result = key_create_with_structure(interpretation, label, &structure, out);
+    } else {
+        key_result = key_create(interpretation, label, out);
+    }
     free(label);
     if (key_result != KEY_OK) {
         interpretation_destroy(interpretation);
