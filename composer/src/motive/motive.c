@@ -537,7 +537,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
 
 /* ------------------------------------------------------------------- JSON */
 
-static cJSON *time_json(PlanTime time) {
+cJSON *motive_time_json(PlanTime time) {
     cJSON *object = cJSON_CreateObject();
     if (object &&
         !(json_add(object, "num", json_number(time.num)) && json_add(object, "den", json_number((long)time.den)))) {
@@ -573,13 +573,16 @@ static cJSON *notes_json(const Motive *motive) {
     for (size_t i = 0; array && i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
         cJSON *object = cJSON_CreateObject();
-        if (!(object && json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
-              json_add(object, "offset", time_json(note->offset)) &&
-              json_add(object, "duration", time_json(note->duration)) && json_append(array, object))) {
-            /* json_append frees the object itself when it fails; otherwise it is still ours. */
-            if (object && !cJSON_GetObjectItem(object, "duration")) {
-                cJSON_Delete(object);
-            }
+        bool ok = object && json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
+                  json_add(object, "offset", motive_time_json(note->offset)) &&
+                  json_add(object, "duration", motive_time_json(note->duration));
+        if (!ok) {
+            cJSON_Delete(object);
+            cJSON_Delete(array);
+            return NULL;
+        }
+        /* json_append frees the object itself when it fails. */
+        if (!json_append(array, object)) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -587,10 +590,7 @@ static cJSON *notes_json(const Motive *motive) {
     return array;
 }
 
-char *motive_to_json(const Motive *motive) {
-    if (!motive) {
-        return NULL;
-    }
+cJSON *motive_json_object(const Motive *motive) {
     cJSON *document = cJSON_CreateObject();
     bool ok = document && json_add(document, "meter", meter_json(&motive->meter));
     /* An inferred key is worked out again on reading, so only a stated one is written. */
@@ -598,11 +598,23 @@ char *motive_to_json(const Motive *motive) {
         ok = json_add(document, "key", key_json(&motive->key));
     }
     ok = ok && json_add(document, "notes", notes_json(motive));
-    char *printed = ok ? cJSON_Print(document) : NULL;
+    if (!ok) {
+        cJSON_Delete(document);
+        return NULL;
+    }
+    return document;
+}
+
+char *motive_json_text(cJSON *document) {
+    char *printed = document ? cJSON_Print(document) : NULL;
     cJSON_Delete(document);
     char *text = printed ? json_indent_with_spaces(printed) : NULL;
     cJSON_free(printed);
     return text;
+}
+
+char *motive_to_json(const Motive *motive) {
+    return motive ? motive_json_text(motive_json_object(motive)) : NULL;
 }
 
 static bool read_time(JsonReader *reader, const cJSON *item, const char *path, long min_num, PlanTime *out) {

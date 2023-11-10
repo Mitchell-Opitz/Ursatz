@@ -33,6 +33,7 @@ add_library(ursatz_composer STATIC
     motive/motive.c
     motive/motive_notes.c
     motive/motive_import.c
+    motive/motive_analysis.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
