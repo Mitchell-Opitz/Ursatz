@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/six_four_type.h"
+#include "six_four_type.h"
 
 static void test_validity(void) {
     for (int i = 0; i < SIX_FOUR_TYPE_COUNT; i++) {

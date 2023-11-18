@@ -14,9 +14,11 @@ Roman numerals (`standard-tonality`) and not pitches. Voicing the inner voices i
 with the other frameworks' headers on the include path.
 
 The entities these rules use live in `src/semantics/`: `CadenceType` (perfect authentic, imperfect
-authentic, half, subverted), `SixFourType`, and `NonChordTone` (the embellishing tones), with
+authentic, half, subverted), `NonChordTone` (the embellishing tones), with
 `BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
+
+`SixFourType` (six_four_type.h, cadential, passing, neighbor, arpeggiating) is single-framework, so it lives in this module, not in `src/semantics/`.
 
 `PhraseModelLabel` (phrase_model_label.h, Tb, PD, D, Te) is single-framework, so it lives in this module, not in `src/semantics/`.
 

@@ -5,7 +5,7 @@
 
 #include "harmony_chord.h"
 #include "semantics/beat_strength.h"
-#include "semantics/six_four_type.h"
+#include "six_four_type.h"
 #include "semantics/voice_part.h"
 
 /*
@@ -13,7 +13,7 @@
  * a triad in second inversion: the fifth of the chord is in the bass, with the root a
  * fourth above and the third a sixth above. The fourth is a dissonance with the bass, so
  * composers treat these chords in special ways, and in analysis the Roman numeral is not
- * a sufficient label: the kind (SixFourType, semantics/six_four_type.h) is part of it.
+ * a sufficient label: the kind (SixFourType, six_four_type.h) is part of it.
  * Besides the cadential 6/4 (harmony_cadential_rules.h), three more are labeled:
  *
  *   PASSING   built on a passing tone in the bass: three notes in stepwise motion, the
