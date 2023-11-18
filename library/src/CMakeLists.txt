@@ -96,7 +96,6 @@ add_library(ursatz
     semantics/scale_direction.c
     semantics/sequence_kind.c
     semantics/cadence_type.c
-    semantics/phrase_model_label.c
     semantics/six_four_type.c
     semantics/applied_chord_kind.c
     semantics/modulation_kind.c

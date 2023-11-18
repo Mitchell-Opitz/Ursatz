@@ -6,12 +6,12 @@
 
 #include "harmony_phrase_rules.h"
 #include "semantics/cadence_type.h"
-#include "semantics/phrase_model_label.h"
+#include "phrase_model_label.h"
 
 /*
  * Phrase model labeling for standard-harmony-v1 (Performing Harmonic Analysis Using
  * the Phrase Model). To see the phrase model at work in a phrase, each phrase gets one
- * (and only one) set of the labels Tb, PD, D, Te (semantics/phrase_model_label.h),
+ * (and only one) set of the labels Tb, PD, D, Te (phrase_model_label.h),
  * placed by working from the ending back:
  *
  *   D    the cadential dominant, V or V7. If the phrase ends with a half cadence it

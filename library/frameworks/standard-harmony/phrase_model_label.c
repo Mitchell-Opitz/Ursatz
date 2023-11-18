@@ -1,4 +1,4 @@
-#include "semantics/phrase_model_label.h"
+#include "phrase_model_label.h"
 
 #include <stddef.h>
 
