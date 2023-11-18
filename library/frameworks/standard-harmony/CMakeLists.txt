@@ -46,9 +46,13 @@ add_library(standard_harmony
     harmony_phrygian_rules.c
     harmony_plagal.c
     harmony_plagal_rules.c
+    analysis/analysis_input.c
+    analysis/analysis_claim.c
+    analysis/analysis_function.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${PROJECT_SOURCE_DIR}/frameworks
     ${PROJECT_SOURCE_DIR}/src
 )
