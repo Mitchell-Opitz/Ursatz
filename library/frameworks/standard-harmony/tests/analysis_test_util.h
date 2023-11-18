@@ -53,7 +53,7 @@ static inline HarmonySegmentInput *fixture_add(Fixture *f, int degree, const int
     MusicalTime *end = NULL;
     assert(musical_time_create((long)n, 4, &start) == MUSICAL_TIME_OK);
     assert(musical_time_create((long)n + 1, 4, &end) == MUSICAL_TIME_OK);
-    assert(time_span_create(start, end, TIME_SPAN_CLOSED_OPEN, &f->spans[n]) == TIME_SPAN_OK);
+    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &f->spans[n]) == TIME_SPAN_OK);
     musical_time_destroy(start);
     musical_time_destroy(end);
     Duration *offset = NULL;
