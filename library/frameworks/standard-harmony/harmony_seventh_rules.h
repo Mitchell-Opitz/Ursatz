@@ -6,7 +6,7 @@
 #include "harmony_chord.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/seventh_resolution.h"
+#include "seventh_resolution.h"
 #include "semantics/voice_part.h"
 
 /*

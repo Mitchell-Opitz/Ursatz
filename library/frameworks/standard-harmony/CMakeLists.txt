@@ -1,5 +1,6 @@
 add_library(standard_harmony
     harmony_framework.c
+    seventh_resolution.c
     harmonic_function.c
     harmony_rule_pair.c
     harmony_rule_table.c

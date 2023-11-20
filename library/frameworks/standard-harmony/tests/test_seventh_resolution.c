@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/seventh_resolution.h"
+#include "seventh_resolution.h"
 
 static void test_validity(void) {
     for (int i = 0; i < SEVENTH_RESOLUTION_COUNT; i++) {
