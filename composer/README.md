@@ -45,6 +45,13 @@ ursatz-composer progression --key "D minor" --meter 4/4 --bars 8 --cadence PAC -
 `progression` writes a chord progression with a bass line for one phrase. See
 [docs/cli-progression.md](docs/cli-progression.md).
 
+```sh
+ursatz-composer motive theme.txt --meter 4/4 --key "D minor"
+```
+
+`motive` loads a motive from MIDI, MusicXML, a note list or JSON and prints its analysis. See
+[docs/cli-motive.md](docs/cli-motive.md).
+
 ## Plan format
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
