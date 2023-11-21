@@ -162,6 +162,64 @@ Nothing is dropped silently. The report lists:
 A document with no key or chord claim that can be read is an error, since there is no timeline to
 build on.
 
+## Motive documents
+
+A motive is a short cell of notes the user supplies (`<ursatz_composer/motive.h>`). It is read from MIDI,
+MusicXML, a note list or JSON, and attaches to a plan as a Given motive node with a Given melody lane span
+(`motive_attach`). The JSON below is the motive on its own and the form `motive_from_json` reads and
+`motive_to_json` writes. It uses the plan's vocabulary: the meter and key are payloads of the meter and key
+lanes, and `notes` is the note payload of a melody lane, with times as in the conventions above.
+
+| Key | Content |
+| --- | --- |
+| `meter` | Optional. `beats_per_bar` (1 to 64), `beat_unit` (1, 2, 4, 8 or 16) and optionally `bars_per_hyperbar`. |
+| `key` | Optional. `tonic_pitch_class` (0 to 11) and `mode` (`major` or `minor`). |
+| `notes` | A non-empty array of at most 64 `{"midi_pitch": 0 to 127, "offset": <time>, "duration": <time>}`. `offset` is measured from the start of the motive, so a gap between notes is a rest and a first note after 0 is a leading rest. Notes are in order and do not overlap. A tie is one note as long as both. |
+
+The motive ends where its last note ends. Unknown fields are ignored; a value that is not allowed is an error
+that names the field, for example `notes[2].duration.den`.
+
+```json
+{
+  "meter": {"beats_per_bar": 4, "beat_unit": 4, "bars_per_hyperbar": 0},
+  "key": {"tonic_pitch_class": 2, "mode": "minor"},
+  "notes": [
+    {"midi_pitch": 62, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}},
+    {"midi_pitch": 65, "offset": {"num": 1, "den": 4}, "duration": {"num": 1, "den": 8}},
+    {"midi_pitch": 69, "offset": {"num": 3, "den": 8}, "duration": {"num": 1, "den": 8}},
+    {"midi_pitch": 74, "offset": {"num": 1, "den": 2}, "duration": {"num": 1, "den": 2}}
+  ]
+}
+```
+
+The meter is the file's own for MIDI and MusicXML (4/4 when a file has none), and a meter given by the caller
+that differs from a declared one is an error. A note list has no meter and needs one from the caller. The key is
+the caller's, else the input's (a key signature with a major or minor mode, or `key` above); otherwise it is
+inferred when the pitches settle on one key, and is left out when they do not. A key that was inferred is not
+written, since reading the motive infers it again.
+
+### Motive analysis
+
+`motive_analysis_to_json` writes the motive and its analysis together, as an object with a `motive` member (the
+document above) and an `analysis` member:
+
+| Key | Content |
+| --- | --- |
+| `note_count` | The number of notes. |
+| `length`, `bars` | The motive's length in whole notes, and as a number of bars of its meter. Times. |
+| `key` | `null` without a key. Otherwise `tonic_pitch_class`, `mode` and `source`: `given` or `inferred`. |
+| `intervals` | One per pair of neighboring notes: `semitones` (signed) and `steps` (signed diatonic steps in the key, `null` without a key). |
+| `contour` | `shape` (`single note`, `level`, `ascending`, `descending`, `arch`, `valley` or `wave`) and `directions`, one of `up`, `down` and `same` per interval. |
+| `rhythm` | One per note: `onset`, `duration`, `bar` (from 0), `beat` (the position in the bar in beats of the beat unit, 0 is the downbeat; a time), `on_beat`, `dotted` (the duration is 3 or 7 over a power of two) and `rest_before` (a time). |
+| `range` | `lowest` and `highest` MIDI pitch, and `semitones` between them. |
+| `scale_degrees` | `null` without a key. Otherwise `start`, `end` and `all` (one per note), each `{"degree": 1 to 7, "alteration": 0 or 1}`; 1 is a raised degree. |
+| `implied_harmony` | `key_known`, and `candidates`, best fit first: `roman_numeral`, `function`, `fit` (the share of the motive that is chord tones, 0 to 1, to four places), `chord_tones` and `non_chord_tones`. Empty without a key. |
+
+For the motive above, `scale_degrees` gives `1 3 5 1`, the contour is `ascending` and the intervals are `+3`, `+4`
+and `+5` semitones, `+2`, `+2` and `+3` steps. The best implied chord is `i`, with `fit` 1.
+
+The analysis is deterministic: the same motive gives the same document, byte for byte.
+
 ## Analyzer compatibility
 
 Version 1 of the Analyzer's schema lists three values for a key claim's `method`. A plan's key
