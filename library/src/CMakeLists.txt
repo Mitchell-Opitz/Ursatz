@@ -97,7 +97,6 @@ add_library(ursatz
     semantics/sequence_kind.c
     semantics/cadence_type.c
     semantics/applied_chord_kind.c
-    semantics/modulation_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
     semantics/expected_length_basis.c

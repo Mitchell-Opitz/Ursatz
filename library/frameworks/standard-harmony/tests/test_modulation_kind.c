@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/modulation_kind.h"
+#include "modulation_kind.h"
 
 static void test_validity(void) {
     for (int i = 0; i < MODULATION_KIND_COUNT; i++) {

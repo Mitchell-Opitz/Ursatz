@@ -1,4 +1,4 @@
-#include "semantics/modulation_kind.h"
+#include "modulation_kind.h"
 
 #include <stddef.h>
 

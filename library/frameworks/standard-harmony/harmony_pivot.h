@@ -10,7 +10,7 @@
 /*
  * Pivot chords for standard-harmony-v1 (Extended Tonicization and Modulation to Closely
  * Related Keys). A pivot chord is a single chord that is diatonic in both the old key and the new
- * key, so a modulation through it is subtle (ModulationKind, semantics/modulation_kind.h). It is
+ * key, so a modulation through it is subtle (ModulationKind, modulation_kind.h). It is
  * labeled with two Roman numerals, the old key's above and the new key's below: "iv becomes ii".
  *
  * To find the potential pivots between two keys, list the triads of the old key, list the triads

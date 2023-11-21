@@ -1,5 +1,6 @@
 add_library(standard_harmony
     harmony_framework.c
+    modulation_kind.c
     six_four_type.c
     phrase_model_label.c
     seventh_resolution.c
