@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,8 +128,33 @@ MotiveResult motive_read_midi(const unsigned char *data, size_t size, Motive *mo
     return result;
 }
 
+/*
+ * Ursatz's XML parser takes a first byte of 0xFE or 0xFF as the start of UTF-16 and crashes when nothing is left to
+ * convert, so bytes that cannot be UTF-16 text are refused here first.
+ */
+static bool musicxml_bytes_are_safe(const char *data, size_t size) {
+    const unsigned char *start = (const unsigned char *)data;
+    size_t length = size;
+    if (length >= 3 && start[0] == 0xEF && start[1] == 0xBB && start[2] == 0xBF) {
+        start += 3;
+        length -= 3;
+    }
+    while (length > 0 && isspace(start[length - 1])) {
+        length--;
+    }
+    if (length == 0 || (start[0] != 0xFE && start[0] != 0xFF)) {
+        return true;
+    }
+    bool mark = length >= 2 && ((start[0] == 0xFF && start[1] == 0xFE) || (start[0] == 0xFE && start[1] == 0xFF));
+    return mark && length >= 4;
+}
+
 MotiveResult motive_read_musicxml(const char *data, size_t size, Motive *motive, MotiveDocument *document,
                                   MotiveError *error) {
+    if (!musicxml_bytes_are_safe(data, size)) {
+        motive_set_error(error, "musicxml", "malformed XML: not a UTF-16 document with a byte order mark");
+        return MOTIVE_ERR_IMPORT;
+    }
     MusicXmlImport imported;
     memset(&imported, 0, sizeof(imported));
     MusicXmlImportStatus status = musicxml_import_buffer(data, size, &imported);
