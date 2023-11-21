@@ -6,7 +6,7 @@
 
 #include "harmony_chord.h"
 #include "semantics/applied_chord_kind.h"
-#include "semantics/harmonic_function.h"
+#include "harmonic_function.h"
 
 /*
  * Applied chords for standard-harmony-v1 (Tonicization). Tonicization is the process of making

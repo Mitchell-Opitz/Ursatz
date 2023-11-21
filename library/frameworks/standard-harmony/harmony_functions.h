@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "harmony_chord.h"
-#include "semantics/harmonic_function.h"
+#include "harmonic_function.h"
 
 /*
  * Harmonic function rules for standard-harmony-v1: which of the three functions

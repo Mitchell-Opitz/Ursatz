@@ -95,7 +95,6 @@ add_library(ursatz
     semantics/schema_function.c
     semantics/scale_direction.c
     semantics/sequence_kind.c
-    semantics/harmonic_function.c
     semantics/cadence_type.c
     semantics/seventh_resolution.c
     semantics/phrase_model_label.c

@@ -13,12 +13,13 @@ Roman numerals (`standard-tonality`) and not pitches. Voicing the inner voices i
 `standard-voicing`'s. File names carry a `harmony_` prefix so they never collide
 with the other frameworks' headers on the include path.
 
-The entities these rules use live in `src/semantics/`: `HarmonicFunction`
-(tonic, predominant, dominant), `CadenceType` (perfect authentic, imperfect
+The entities these rules use live in `src/semantics/`: `CadenceType` (perfect authentic, imperfect
 authentic, half, subverted), `SeventhResolution` (default, incomplete,
 leading-tone drop), `PhraseModelLabel` (Tb, PD, D, Te), `SixFourType`, and `NonChordTone` (the embellishing tones), with
 `BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
+
+`HarmonicFunction` (harmonic_function.h, tonic, predominant, dominant) is single-framework, so it lives in this module, not in `src/semantics/`.
 
 ## Scope
 
