@@ -521,8 +521,7 @@ static void test_json_errors(void) {
     expect_json_error("[]", &FOUR_FOUR, MOTIVE_ERR_VALUE, "");
     snprintf(text, sizeof(text), "{%s\"notes\":[]}", meter);
     expect_json_error(text, NULL, MOTIVE_ERR_VALUE, "notes");
-    snprintf(text, sizeof(text), "{%s}", meter);
-    expect_json_error(text, NULL, MOTIVE_ERR_VALUE, "notes");
+    expect_json_error("{\"meter\":{\"beats_per_bar\":4,\"beat_unit\":4}}", NULL, MOTIVE_ERR_VALUE, "notes");
     snprintf(text, sizeof(text),
              "{%s\"notes\":[{\"midi_pitch\":60,\"offset\":{\"num\":0,\"den\":1},\"duration\":{\"num\":1,\"den\":4}},"
              "{\"midi_pitch\":62,\"offset\":{\"num\":1,\"den\":8},\"duration\":{\"num\":1,\"den\":4}}]}",
