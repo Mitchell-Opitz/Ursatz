@@ -18,7 +18,7 @@ authentic, half, subverted), `NonChordTone` (the embellishing tones), with
 `BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
 
-is single-framework, so it lives in this module, not in `src/semantics/`.
+`ModulationKind` (modulation_kind.h, how a new key is introduced) is single-framework, so it lives in this module, not in `src/semantics/`.
 
 `SixFourType` (six_four_type.h, cadential, passing, neighbor, arpeggiating) is single-framework, so it lives in this module, not in `src/semantics/`.
 
