@@ -75,7 +75,8 @@ typedef struct {
  *
  *   chord          the HarmonyChord (harmony_chord.h) of a DIATONIC segment: the degree, the inversion, whether it
  *                  is a seventh chord, the leading tone of a minor-key vii (a diminished chord on degree 7), and
- *                  half-diminished. `cadential` is false here: it is set by the six-four step, not by the caller
+ *                  half-diminished. `cadential` is not read from the caller: harmony_analysis_prepare sets it for a cadential 6/4 by the rule in
+ *                  analysis_six_four.h
  *   applied        true for an applied chord (applied_to != 0); applied_chord is then its HarmonyAppliedChord
  *                  (kind, quality, target), and `chord` is not meaningful
  */

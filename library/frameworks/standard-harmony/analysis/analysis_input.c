@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis_six_four.h"
+
 typedef struct {
     int intervals[HARMONY_SEGMENT_MAX_INTERVALS];
     size_t count;
@@ -113,6 +115,7 @@ HarmonyAnalysisStatus harmony_analysis_prepare(const HarmonySegmentInput *inputs
             read_applied(segment, shape);
         }
     }
+    harmony_analysis_mark_cadential(segments, count);
     *out = segments;
     return HARMONY_ANALYSIS_OK;
 }
