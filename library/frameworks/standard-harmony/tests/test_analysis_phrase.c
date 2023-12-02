@@ -107,11 +107,35 @@ static void test_a_phrase_that_does_not_end_as_its_cadence_says_is_unlabeled(voi
     fixture_destroy(&f);
 }
 
+static void test_a_neighbor_six_four_does_not_break_the_dominant(void) {
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 2, TRIAD_MINOR, 3, 1, 4, 6);  /* ii6, beat 1 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);  /* V, beat 2 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 1);  /* I6/4 over sol, beat 3: a neighbor, between two V */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);  /* V, beat 4 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 1);  /* I6/4, measure 2 beat 1 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);  /* V, measure 2 beat 2 */
+    HarmonyPhraseSpan span = {0, 5, CADENCE_TYPE_HALF};
+    HarmonySegment *segments = NULL;
+    HarmonyPhraseModel model = run(&f, &segments, &span, 1);
+    assert(model.phrase_labeled[0]);
+    assert(model.segments[0].label == PHRASE_MODEL_LABEL_PREDOMINANT);
+    assert(model.segments[1].label == PHRASE_MODEL_LABEL_DOMINANT);
+    assert(!model.segments[2].has_label);                 /* the neighbor 6/4 is part of the V */
+    assert(model.segments[3].label == PHRASE_MODEL_LABEL_DOMINANT);
+    assert(model.segments[5].label == PHRASE_MODEL_LABEL_DOMINANT);
+    harmony_phrase_model_destroy(&model);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
 int main(void) {
     test_model_phrase_i_iv_v_i();
     test_half_cadence_phrase_has_no_te();
     test_repeated_chords_and_applied_chords();
     test_a_phrase_that_does_not_end_as_its_cadence_says_is_unlabeled();
+    test_a_neighbor_six_four_does_not_break_the_dominant();
     printf("standard-harmony analysis phrase model: all tests passed\n");
     return 0;
 }

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "analysis_claim.h"
+#include "analysis_six_four.h"
 #include "core/value.h"
 #include "harmony_phrase_labels.h"
 #include "identity/entity_id.h"
@@ -31,8 +32,15 @@ typedef struct {
     size_t chord_count;
 } Collapsed;
 
+/* A 6/4 that prolongs the harmony around it (passing, neighbor or arpeggiating) is part of that harmony, not a
+   chord of the phrase model. The cadential 6/4 stays: the rules treat it as part of the dominant unit. */
+static bool prolonging_six_four(const HarmonySixFourResult *result) {
+    return result->classified && result->type != SIX_FOUR_TYPE_CADENTIAL;
+}
+
 /* The span's chords, consecutive equal diatonic segments as one. */
-static bool collapse(const HarmonySegment *segments, const HarmonyPhraseSpan *span, Collapsed *out) {
+static bool collapse(const HarmonySegment *segments, const HarmonySixFourResult *six_fours,
+                     const HarmonyPhraseSpan *span, Collapsed *out) {
     size_t n = span->last_segment - span->first_segment + 1;
     out->chords = (HarmonyChord *)calloc(n, sizeof(HarmonyChord));
     out->chord_of_segment = (size_t *)calloc(n, sizeof(size_t));
@@ -45,7 +53,7 @@ static bool collapse(const HarmonySegment *segments, const HarmonyPhraseSpan *sp
     for (size_t i = 0; i < n; i++) {
         const HarmonySegment *segment = &segments[span->first_segment + i];
         out->chord_of_segment[i] = (size_t)-1;
-        if (!segment->valid || segment->applied) {
+        if (!segment->valid || segment->applied || prolonging_six_four(&six_fours[span->first_segment + i])) {
             continue;
         }
         if (out->chord_count == 0 || !same_chord(&out->chords[out->chord_count - 1], &segment->chord)) {
@@ -70,10 +78,10 @@ static bool make_interpretation(const HarmonySegmentInput *input, PhraseModelLab
 }
 
 /* Labels one span. false only on allocation failure; a phrase the rules do not label is true and unlabeled. */
-static bool label_span(const HarmonySegment *segments, const HarmonyPhraseSpan *span, int phrase_index,
-                       HarmonyPhraseModel *model) {
+static bool label_span(const HarmonySegment *segments, const HarmonySixFourResult *six_fours,
+                       const HarmonyPhraseSpan *span, int phrase_index, HarmonyPhraseModel *model) {
     Collapsed collapsed;
-    if (!collapse(segments, span, &collapsed)) {
+    if (!collapse(segments, six_fours, span, &collapsed)) {
         return false;
     }
     bool ok = true;
@@ -124,15 +132,22 @@ HarmonyPhraseModelStatus harmony_analysis_phrase_model_label(const HarmonySegmen
         model.segments[i].segment_id = segments[i].input->segment_id;
         model.segments[i].phrase_index = -1;
     }
+    HarmonySixFourResult *six_fours = NULL;
+    if (harmony_analysis_classify_six_fours(segments, count, &six_fours) != HARMONY_SIX_FOUR_OK) {
+        harmony_phrase_model_destroy(&model);
+        return HARMONY_PHRASE_MODEL_ERR_ALLOC;
+    }
     for (size_t p = 0; p < span_count; p++) {
         for (size_t s = spans[p].first_segment; s <= spans[p].last_segment; s++) {
             model.segments[s].phrase_index = (int)p;
         }
-        if (!label_span(segments, &spans[p], (int)p, &model)) {
+        if (!label_span(segments, six_fours, &spans[p], (int)p, &model)) {
+            harmony_six_four_results_destroy(six_fours, count);
             harmony_phrase_model_destroy(&model);
             return HARMONY_PHRASE_MODEL_ERR_ALLOC;
         }
     }
+    harmony_six_four_results_destroy(six_fours, count);
     *out = model;
     return HARMONY_PHRASE_MODEL_OK;
 }

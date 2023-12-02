@@ -24,8 +24,10 @@
  * Within one span the labels are the existing rules' (harmony_phrase_model_label, harmony_phrase_labels.h), applied
  * to the phrase's CHORDS: consecutive valid diatonic segments that make the same chord (the same degree,
  * inversion, seventh and cadential mark) are one chord, so a chord sounded over several segments is labeled once
- * and every one of its segments carries the label. Invalid segments and applied chords are left out of the chord
- * list: an applied chord is not one of the phrase model's chords, and takes no label. The labels, by the rules:
+ * and every one of its segments carries the label. Invalid segments, applied chords and 6/4s that prolong the
+ * harmony around them (classified passing, neighbor or arpeggiating, analysis_six_four.h) are left out of the chord
+ * list: they are not chords of the phrase model and take no label, so a V, a neighbor I6/4 and a V are one V. The
+ * cadential 6/4 stays in the list, marked, as the rules expect. The labels, by the rules:
  *
  *   Tb   the first chord, when it is a tonic
  *   PD   the first strong predominant of the run of predominants before the cadential dominant
