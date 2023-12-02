@@ -53,6 +53,14 @@ char *motive_json_text(cJSON *document);
 /* The key of a MIDI key signature count of sharps (negative for flats) and mode. */
 PlanKey motive_key_from_signature(int sharps_flats, PlanKeyMode mode);
 
+/*
+ * The step of the key's scale a MIDI pitch is on (7 to an octave, 0 the tonic's pitch class), and whether it is a
+ * raised degree (1) or on the degree (0); and the pitch at a step. A pitch outside the scale is on the degree below
+ * it, raised. The pitch is not range-checked.
+ */
+void motive_scale_position(const PlanKey *key, int pitch, long *position, int *alteration);
+int motive_position_pitch(const PlanKey *key, long position, int alteration);
+
 /* The files, filling a motive's notes and a document. */
 MotiveResult motive_read_midi(const unsigned char *data, size_t size, Motive *motive, MotiveDocument *document,
                               MotiveError *error);
