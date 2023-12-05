@@ -12,6 +12,8 @@
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "transform/contraction.h"
+#include "transform/fragmentation.h"
 #include "transform/intervallic_manipulation.h"
 #include "transform/inversion.h"
 #include "transform/retrograde.h"
@@ -275,6 +277,95 @@ static MotiveDevResult ursatz_interval_change(Bridge *bridge, const long *adjust
     return status;
 }
 
+/* The ids of the notes chosen, in the order of the notes; the array and the ids are the caller's. */
+static EntityID **chosen_ids(const bool *chosen, size_t count, size_t *out_count) {
+    EntityID **ids = calloc(count, sizeof(*ids));
+    size_t made = 0;
+    if (!ids) {
+        return NULL;
+    }
+    for (size_t i = 0; i < count; i++) {
+        char text[64];
+        if (!chosen[i]) {
+            continue;
+        }
+        snprintf(text, sizeof(text), "composer-motive-note-%zu", i);
+        if (entity_id_create(text, &ids[made]) != ENTITY_ID_OK) {
+            for (size_t k = 0; k < made; k++) {
+                entity_id_destroy(ids[k]);
+            }
+            free(ids);
+            return NULL;
+        }
+        made++;
+    }
+    *out_count = made;
+    return ids;
+}
+
+/*
+ * The notes chosen (a fragment, through Ursatz's Fragmentation) or all the others (a liquidation, through its
+ * Contraction), in the order they have in the motive. *count is how many there are.
+ */
+static MotiveDevResult ursatz_select(const Bridge *bridge, const bool *chosen, bool remove, PlanNote *notes,
+                                     size_t *count) {
+    EntityID *id = NULL;
+    EntityID *structure = NULL;
+    ProvenanceReference *provenance = NULL;
+    size_t named = 0;
+    EntityID **ids = chosen_ids(chosen, bridge->count, &named);
+    if (!ids) {
+        return MOTIVE_DEV_ERR_ALLOC;
+    }
+    MotiveDevResult status = MOTIVE_DEV_ERR_ALLOC;
+    if (transform_parts(remove ? "composer-develop-contraction" : "composer-develop-fragmentation", &id,
+                        &provenance) &&
+        entity_id_create("composer-motive", &structure) == ENTITY_ID_OK) {
+        TransformResult *result = NULL;
+        NoteEvent **events = (NoteEvent **)bridge->events;
+        if (remove) {
+            Contraction *contraction = NULL;
+            if (contraction_create(id, structure, ids, named, provenance, &contraction) == CONTRACTION_OK) {
+                id = NULL;
+                structure = NULL;
+                provenance = NULL;
+                ids = NULL;
+                if (contraction_apply(contraction, events, bridge->count, &result) == CONTRACTION_APPLY_OK) {
+                    *count = transform_result_event_count(result);
+                    status = *count == 0 ? MOTIVE_DEV_ERR_TOO_SHORT : read_result(bridge, result, *count, notes);
+                    transform_result_destroy(result);
+                }
+                contraction_destroy(contraction);
+            }
+        } else {
+            Fragmentation *fragmentation = NULL;
+            if (fragmentation_create(id, structure, ids, named, provenance, &fragmentation) == FRAGMENTATION_OK) {
+                id = NULL;
+                structure = NULL;
+                provenance = NULL;
+                ids = NULL;
+                if (fragmentation_apply(fragmentation, events, bridge->count, &result) == FRAGMENTATION_APPLY_OK) {
+                    *count = transform_result_event_count(result);
+                    status = read_result(bridge, result, *count, notes);
+                    transform_result_destroy(result);
+                }
+                fragmentation_destroy(fragmentation);
+            }
+        }
+    }
+    /* Whatever a create function did not take is still ours. */
+    entity_id_destroy(id);
+    entity_id_destroy(structure);
+    provenance_reference_destroy(provenance);
+    if (ids) {
+        for (size_t i = 0; i < named; i++) {
+            entity_id_destroy(ids[i]);
+        }
+        free(ids);
+    }
+    return status;
+}
+
 /* ------------------------------------------------------------------ tonal */
 
 static MotiveDevResult tonal_pitch(const Motive *source, long position, int alteration, int *pitch) {
@@ -317,6 +408,101 @@ static MotiveDevResult tonal_invert(const Motive *source, int axis, PlanNote *no
     return MOTIVE_DEV_OK;
 }
 
+/* How firmly a note sits in the bar: 2 on the downbeat, 1 on another beat, 0 off the beat. */
+static int note_strength(const Motive *motive, size_t index) {
+    PlanTime bar = motive_time(motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit);
+    PlanTime onset = motive->notes[index].offset;
+    long bar_index = onset.num * (long)bar.den / ((long)onset.den * bar.num);
+    PlanTime inside = motive_time(onset.num * (long)bar.den - bar_index * bar.num * (long)onset.den,
+                                  onset.den * bar.den);
+    if (inside.num == 0) {
+        return 2;
+    }
+    return motive_time(inside.num * motive->meter.beat_unit, inside.den).den == 1 ? 1 : 0;
+}
+
+static size_t minimum_length(const MotiveDevSpec *spec) {
+    return spec->min_length > 0 ? spec->min_length : MOTIVE_DEV_MIN_LENGTH;
+}
+
+static MotiveDevResult fragment_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes,
+                                      size_t *count) {
+    size_t total = source->note_count;
+    if (spec->length < minimum_length(spec)) {
+        return MOTIVE_DEV_ERR_TOO_SHORT;
+    }
+    if (spec->length >= total) {
+        return MOTIVE_DEV_ERR_NOT_APPLICABLE;
+    }
+    size_t first;
+    switch (spec->position) {
+    case PLAN_FRAGMENT_LEADING:
+        first = 0;
+        break;
+    case PLAN_FRAGMENT_TRAILING:
+        first = total - spec->length;
+        break;
+    case PLAN_FRAGMENT_MIDDLE:
+        first = (total - spec->length) / 2;
+        break;
+    default:
+        return MOTIVE_DEV_ERR_INVALID;
+    }
+    bool chosen[MOTIVE_MAX_NOTES] = {false};
+    for (size_t i = first; i < first + spec->length; i++) {
+        chosen[i] = true;
+    }
+    Bridge bridge;
+    if (!bridge_open(&bridge, source)) {
+        return MOTIVE_DEV_ERR_ALLOC;
+    }
+    MotiveDevResult status = ursatz_select(&bridge, chosen, false, notes, count);
+    bridge_close(&bridge);
+    if (status == MOTIVE_DEV_OK) {
+        PlanTime start = notes[0].offset;
+        for (size_t i = 0; i < *count; i++) {
+            notes[i].offset = motive_time_minus(notes[i].offset, start);
+        }
+    }
+    return status;
+}
+
+static MotiveDevResult liquidate_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes,
+                                       size_t *count) {
+    size_t total = source->note_count;
+    if (spec->drop == 0) {
+        return MOTIVE_DEV_ERR_INVALID;
+    }
+    if (spec->drop >= total || total - spec->drop < minimum_length(spec)) {
+        return MOTIVE_DEV_ERR_TOO_SHORT;
+    }
+    /* The weakest note goes first; of two equals, the later. */
+    bool dropped[MOTIVE_MAX_NOTES] = {false};
+    for (size_t step = 0; step < spec->drop; step++) {
+        size_t weakest = total;
+        for (size_t i = 0; i < total; i++) {
+            if (!dropped[i] && (weakest == total || note_strength(source, i) <= note_strength(source, weakest))) {
+                weakest = i;
+            }
+        }
+        dropped[weakest] = true;
+    }
+    Bridge bridge;
+    if (!bridge_open(&bridge, source)) {
+        return MOTIVE_DEV_ERR_ALLOC;
+    }
+    MotiveDevResult status = ursatz_select(&bridge, dropped, true, notes, count);
+    bridge_close(&bridge);
+    if (status == MOTIVE_DEV_OK && !spec->keep_rhythm) {
+        PlanTime at = motive_time(0, 1);
+        for (size_t i = 0; i < *count; i++) {
+            notes[i].offset = at;
+            at = motive_time_plus(at, notes[i].duration);
+        }
+    }
+    return status;
+}
+
 /* --------------------------------------------------------------- develop */
 
 /* The notes sorted by onset, which a retrograde does not keep. */
@@ -336,8 +522,17 @@ static int direction_of(int semitones) {
     return semitones > 0 ? 1 : (semitones < 0 ? -1 : 0);
 }
 
-static MotiveDevResult develop_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes) {
+/* The notes of the development; *out_count is how many (the source's, unless notes were taken out). */
+static MotiveDevResult develop_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes,
+                                     size_t *out_count) {
     size_t count = source->note_count;
+    *out_count = count;
+    if (spec->kind == MOTIVE_DEV_FRAGMENT) {
+        return fragment_notes(source, spec, notes, out_count);
+    }
+    if (spec->kind == MOTIVE_DEV_LIQUIDATE) {
+        return liquidate_notes(source, spec, notes, out_count);
+    }
     if ((spec->tonal && source->key_source == MOTIVE_KEY_UNSPECIFIED) &&
         (spec->kind == MOTIVE_DEV_TRANSPOSE || spec->kind == MOTIVE_DEV_INVERT)) {
         return MOTIVE_DEV_ERR_NO_KEY;
@@ -402,10 +597,12 @@ MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, 
         return MOTIVE_DEV_ERR_INVALID;
     }
     Motive result = *source;
-    MotiveDevResult status = develop_notes(source, spec, result.notes);
+    size_t count = source->note_count;
+    MotiveDevResult status = develop_notes(source, spec, result.notes, &count);
     if (status != MOTIVE_DEV_OK) {
         return status;
     }
+    result.note_count = count;
     sort_notes(result.notes, result.note_count);
     if (motive_check_notes(&result, &result.length, NULL) != MOTIVE_OK) {
         return MOTIVE_DEV_ERR_INVALID;
@@ -446,6 +643,14 @@ void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size) {
     case MOTIVE_DEV_RETROGRADE:
         snprintf(out, size, "retrograde");
         break;
+    case MOTIVE_DEV_FRAGMENT: {
+        static const char *const WHERE[] = {"any", "leading", "trailing", "middle"};
+        snprintf(out, size, "fragment %s %zu notes", WHERE[spec->position], spec->length);
+        break;
+    }
+    case MOTIVE_DEV_LIQUIDATE:
+        snprintf(out, size, "liquidate drop %zu%s", spec->drop, spec->keep_rhythm ? " (keep rhythm)" : "");
+        break;
     case MOTIVE_DEV_INTERVAL_CHANGE:
         if (spec->interval == 0) {
             snprintf(out, size, "interval change %+d on every interval%s", spec->amount,
@@ -459,7 +664,8 @@ void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size) {
 }
 
 static const char *const RESULT_NAMES[] = {"ok",        "null",      "alloc",          "no key",
-                                           "range",     "unchanged", "not applicable", "invalid"};
+                                           "range",     "unchanged", "not applicable", "too short",
+                                           "invalid"};
 
 const char *motive_dev_result_name(MotiveDevResult result) {
     return (size_t)result < sizeof(RESULT_NAMES) / sizeof(RESULT_NAMES[0]) ? RESULT_NAMES[result] : "unknown";

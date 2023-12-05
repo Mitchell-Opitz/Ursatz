@@ -25,6 +25,8 @@
      TRANSFORM_BIT(PLAN_TRANSFORM_INVERTED) | TRANSFORM_BIT(PLAN_TRANSFORM_RETROGRADE) |                    \
      TRANSFORM_BIT(PLAN_TRANSFORM_INTERVAL_CHANGED))
 
+#define FAMILY_FRAGMENT (TRANSFORM_BIT(PLAN_TRANSFORM_FRAGMENTED) | TRANSFORM_BIT(PLAN_TRANSFORM_LIQUIDATED))
+
 typedef struct {
     unsigned long magic;
     MotiveDevSpec spec;
@@ -299,6 +301,58 @@ static bool propose_restatements(Proposal *proposal, FillRng *rng) {
     }
 }
 
+/*
+ * Fragments: the positions and lengths the constraint leaves open are drawn, as many as the candidates asked for.
+ * Liquidations: every number of notes dropped, from one up to the most that leaves the minimum, since each is a step of
+ * the same progressive loss.
+ */
+static bool propose_fragments(Proposal *proposal, FillRng *rng) {
+    const PlanMotiveRef *ref = &proposal->request->ref;
+    size_t total = proposal->request->source.note_count;
+    size_t minimum = proposal->context->min_length > 0 ? proposal->context->min_length : MOTIVE_DEV_MIN_LENGTH;
+    MotiveDevSpec spec;
+    memset(&spec, 0, sizeof(spec));
+    spec.min_length = proposal->context->min_length;
+
+    if (ref->transform == PLAN_TRANSFORM_LIQUIDATED) {
+        spec.kind = MOTIVE_DEV_LIQUIDATE;
+        spec.keep_rhythm = ref->keep_rhythm;
+        if (ref->drop > 0) {
+            spec.drop = (size_t)ref->drop;
+            return try_spec(proposal, &spec);
+        }
+        for (size_t drop = 1; total > drop && total - drop >= minimum; drop++) {
+            spec.drop = drop;
+            if (!try_spec(proposal, &spec)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    spec.kind = MOTIVE_DEV_FRAGMENT;
+    if (ref->position != PLAN_FRAGMENT_ANY && ref->length > 0) {
+        spec.position = ref->position;
+        spec.length = (size_t)ref->length;
+        return try_spec(proposal, &spec);
+    }
+    if (total <= minimum) {
+        return true; /* no fragment is shorter than the source and long enough */
+    }
+    size_t goal = proposal->added + wanted(proposal->context);
+    for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
+        spec.position = ref->position != PLAN_FRAGMENT_ANY
+                            ? ref->position
+                            : (PlanFragmentPosition)(PLAN_FRAGMENT_LEADING + fill_rng_below(rng, 3));
+        spec.length = ref->length > 0 ? (size_t)ref->length
+                                      : minimum + (size_t)fill_rng_below(rng, (uint64_t)(total - minimum));
+        if (!try_spec(proposal, &spec)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /* ------------------------------------------------------------- the hooks */
 
 static bool restate_applies(const PiecePlan *plan, FillTarget target, void *context) {
@@ -315,6 +369,22 @@ static bool restate_generate(const PiecePlan *plan, FillTarget target, FillRng *
     }
     Proposal proposal = {&request, shared, out, 0};
     return propose_restatements(&proposal, rng);
+}
+
+static bool fragment_applies(const PiecePlan *plan, FillTarget target, void *context) {
+    Request request;
+    return read_request(plan, target, context_or_default(context), FAMILY_FRAGMENT, &request);
+}
+
+static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+                              FillCandidateList *out) {
+    const MotiveDevelopContext *shared = context_or_default(context);
+    Request request;
+    if (!read_request(plan, target, shared, FAMILY_FRAGMENT, &request)) {
+        return true;
+    }
+    Proposal proposal = {&request, shared, out, 0};
+    return propose_fragments(&proposal, rng);
 }
 
 static PlanResult develop_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
@@ -358,9 +428,14 @@ FillResult motive_develop_register(FillOperatorRegistry *registry, const MotiveD
     if (!registry) {
         return FILL_ERR_NULL;
     }
-    return register_operator(registry, MOTIVE_RESTATE_OPERATOR_NAME,
-                             "restatement by exact repetition, transposition, inversion, retrograde or interval change",
-                             restate_applies, restate_generate, context);
+    FillResult result =
+        register_operator(registry, MOTIVE_RESTATE_OPERATOR_NAME,
+                          "restatement by exact repetition, transposition, inversion, retrograde or interval change",
+                          restate_applies, restate_generate, context);
+    return result != FILL_OK ? result
+                             : register_operator(registry, MOTIVE_FRAGMENT_OPERATOR_NAME,
+                                                 "fragments and liquidations with a minimum length",
+                                                 fragment_applies, fragment_generate, context);
 }
 
 /* ------------------------------------------------------------ candidates */

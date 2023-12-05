@@ -28,8 +28,13 @@ typedef enum {
     MOTIVE_DEV_TRANSPOSE,     /* every pitch moved by amount: semitones, or steps of the key's scale when tonal */
     MOTIVE_DEV_INVERT,        /* mirrored about a pitch: real (in semitones) or tonal (in scale steps) */
     MOTIVE_DEV_RETROGRADE,    /* the notes in reverse order, each keeping its duration */
-    MOTIVE_DEV_INTERVAL_CHANGE /* an interval, or every one, widened or narrowed by amount semitones */
+    MOTIVE_DEV_INTERVAL_CHANGE, /* an interval, or every one, widened or narrowed by amount semitones */
+    MOTIVE_DEV_FRAGMENT,      /* a run of the notes: the first, the last or the middle ones */
+    MOTIVE_DEV_LIQUIDATE      /* the notes with the least important ones dropped */
 } MotiveDevKind;
+
+/* The shortest result, in notes, that a fragment or a liquidation may have when the spec does not say. */
+#define MOTIVE_DEV_MIN_LENGTH 2
 
 typedef struct {
     MotiveDevKind kind;
@@ -43,6 +48,21 @@ typedef struct {
     /* INTERVAL_CHANGE: the 1-based interval changed, or every one when 0; and whether a direction may not change. */
     int interval;
     bool keep_contour;
+    /*
+     * FRAGMENT: the position (not PLAN_FRAGMENT_ANY) and how many notes. The fragment starts at 0, so it opens on
+     * its first note.
+     */
+    PlanFragmentPosition position;
+    size_t length;
+    /*
+     * LIQUIDATE: how many notes to drop. The weakest go first: notes off the beat, then notes on a beat that is not
+     * the downbeat, then downbeats, the later of two equals first. With keep_rhythm the notes left keep their onsets
+     * and a dropped note is a rest (or a leading rest, if it was first); without it they follow one another from 0.
+     */
+    size_t drop;
+    bool keep_rhythm;
+    /* FRAGMENT, LIQUIDATE: the fewest notes the result may have; 0 means MOTIVE_DEV_MIN_LENGTH. */
+    size_t min_length;
 } MotiveDevSpec;
 
 typedef enum {
@@ -53,6 +73,7 @@ typedef enum {
     MOTIVE_DEV_ERR_RANGE,          /* a pitch would fall outside MIDI 0 to 127 */
     MOTIVE_DEV_ERR_UNCHANGED,      /* the result is the source */
     MOTIVE_DEV_ERR_NOT_APPLICABLE, /* nothing to do: one note has no intervals, the contour would change */
+    MOTIVE_DEV_ERR_TOO_SHORT,      /* a fragment or liquidation with fewer notes than the minimum */
     MOTIVE_DEV_ERR_INVALID         /* the spec asks for something that is not a parameter */
 } MotiveDevResult;
 
@@ -76,11 +97,14 @@ typedef struct {
     PlanKey key;
     /* How many candidates an operator proposes when the constraint leaves the parameters open. */
     size_t candidates;
+    /* The fewest notes a fragment or liquidation may have; 0 means MOTIVE_DEV_MIN_LENGTH. */
+    size_t min_length;
 } MotiveDevelopContext;
 
 void motive_develop_context_default(MotiveDevelopContext *context);
 
 #define MOTIVE_RESTATE_OPERATOR_NAME "motive-restate"
+#define MOTIVE_FRAGMENT_OPERATOR_NAME "motive-fragment"
 
 /*
  * Registers the motivic development operators with the fill loop. Each is a Grow operator for a Constrained motive
@@ -89,6 +113,7 @@ void motive_develop_context_default(MotiveDevelopContext *context);
  * of the result, and only when the result fits inside the target's span.
  *
  *   motive-restate   restated, transposed, inverted, retrograde, interval_changed
+ *   motive-fragment  fragmented, liquidated
  *
  * With the constraint's parameters left open (see PlanMotiveRef) an operator proposes context->candidates, their
  * parameters drawn from the run's seeded stream; with them set it proposes that one. context may be NULL for the
