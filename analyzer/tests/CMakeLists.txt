@@ -58,6 +58,7 @@ add_executable(test_report_snapshots test_report_snapshots.c)
 target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer)
 target_compile_definitions(test_report_snapshots PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
 
@@ -94,3 +95,25 @@ add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
 add_executable(test_outer_voices test_outer_voices.c)
 target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer cjson)
 add_test(NAME test_outer_voices COMMAND test_outer_voices)
+
+add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
+target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_musicxml_midi_agreement PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_musicxml_midi_agreement COMMAND test_musicxml_midi_agreement)
+
+add_executable(test_musicxml_input test_musicxml_input.c)
+target_link_libraries(test_musicxml_input PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_musicxml_input PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_musicxml_input COMMAND test_musicxml_input)
+
+add_test(NAME test_cli_input_formats
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DMIDI_FIXTURE=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
