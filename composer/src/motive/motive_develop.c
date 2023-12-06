@@ -12,13 +12,17 @@
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "transform/augmentation.h"
 #include "transform/contraction.h"
+#include "transform/diminution.h"
 #include "transform/fragmentation.h"
 #include "transform/intervallic_manipulation.h"
 #include "transform/inversion.h"
 #include "transform/retrograde.h"
 #include "transform/transform_result.h"
 #include "transform/transposition.h"
+
+#include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_internal.h"
 
@@ -503,6 +507,94 @@ static MotiveDevResult liquidate_notes(const Motive *source, const MotiveDevSpec
     return status;
 }
 
+/* ---------------------------------------------------------------- rhythm */
+
+/* A duration a note list can write, a plain or dotted value. */
+static bool notatable(PlanTime duration) {
+    char name[32];
+    motive_duration_name(duration, name, sizeof(name));
+    return strchr(name, '/') == NULL;
+}
+
+/* A whole number of beats of the motive's meter. */
+static bool whole_beats(const Motive *motive, PlanTime time) {
+    return motive_time(time.num * motive->meter.beat_unit, time.den).den == 1;
+}
+
+/*
+ * Scales the durations through Ursatz's Augmentation or Diminution, which keeps each note's onset, so the onsets are
+ * scaled here by the same ratio. The result is kept only if it can be written in the meter.
+ */
+static MotiveDevResult ursatz_scale(const Motive *source, const Bridge *bridge, bool augment, unsigned long num,
+                                    unsigned long den, PlanNote *notes) {
+    EntityID *id;
+    ProvenanceReference *provenance;
+    Augmentation *augmentation = NULL;
+    Diminution *diminution = NULL;
+    if (!transform_parts(augment ? "composer-develop-augment" : "composer-develop-diminish", &id, &provenance)) {
+        return MOTIVE_DEV_ERR_ALLOC;
+    }
+    bool created = augment ? augmentation_create(id, AUGMENTATION_DIMENSION_DURATIONS, num, den, provenance,
+                                                 &augmentation) == AUGMENTATION_OK
+                           : diminution_create(id, AUGMENTATION_DIMENSION_DURATIONS, num, den, provenance,
+                                               &diminution) == DIMINUTION_OK;
+    if (!created) {
+        entity_id_destroy(id);
+        provenance_reference_destroy(provenance);
+        return MOTIVE_DEV_ERR_INVALID;
+    }
+    MotiveDevResult status = MOTIVE_DEV_OK;
+    for (size_t i = 0; status == MOTIVE_DEV_OK && i < bridge->count; i++) {
+        TransformResult *result = NULL;
+        bool applied = augment ? augmentation_apply(augmentation, bridge->events[i], &result) ==
+                                     AUGMENTATION_APPLY_OK
+                               : diminution_apply(diminution, bridge->events[i], &result) == DIMINUTION_APPLY_OK;
+        if (!applied) {
+            status = MOTIVE_DEV_ERR_ALLOC;
+            break;
+        }
+        status = read_result(bridge, result, 1, &notes[i]);
+        transform_result_destroy(result);
+        notes[i].offset = motive_time(source->notes[i].offset.num * (long)num,
+                                      source->notes[i].offset.den * den);
+    }
+    augmentation_destroy(augmentation);
+    diminution_destroy(diminution);
+    if (status != MOTIVE_DEV_OK) {
+        return status;
+    }
+    for (size_t i = 0; i < bridge->count; i++) {
+        if (!notatable(notes[i].duration) || 32 % notes[i].offset.den != 0) {
+            return MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+        }
+    }
+    PlanTime end = motive_note_end(&notes[bridge->count - 1]);
+    if (whole_beats(source, source->length) && !whole_beats(source, end)) {
+        return MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+    }
+    return MOTIVE_DEV_OK;
+}
+
+static MotiveDevResult scale_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes) {
+    bool augment = spec->kind == MOTIVE_DEV_AUGMENT;
+    unsigned long num = spec->ratio_num;
+    unsigned long den = spec->ratio_den;
+    if (num == 0 && den == 0) {
+        num = augment ? 2 : 1;
+        den = augment ? 1 : 2;
+    }
+    if (num == 0 || den == 0 || (augment && num <= den) || (!augment && num >= den)) {
+        return MOTIVE_DEV_ERR_INVALID;
+    }
+    Bridge bridge;
+    if (!bridge_open(&bridge, source)) {
+        return MOTIVE_DEV_ERR_ALLOC;
+    }
+    MotiveDevResult status = ursatz_scale(source, &bridge, augment, num, den, notes);
+    bridge_close(&bridge);
+    return status;
+}
+
 /* --------------------------------------------------------------- develop */
 
 /* The notes sorted by onset, which a retrograde does not keep. */
@@ -532,6 +624,9 @@ static MotiveDevResult develop_notes(const Motive *source, const MotiveDevSpec *
     }
     if (spec->kind == MOTIVE_DEV_LIQUIDATE) {
         return liquidate_notes(source, spec, notes, out_count);
+    }
+    if (spec->kind == MOTIVE_DEV_AUGMENT || spec->kind == MOTIVE_DEV_DIMINISH) {
+        return scale_notes(source, spec, notes);
     }
     if ((spec->tonal && source->key_source == MOTIVE_KEY_UNSPECIFIED) &&
         (spec->kind == MOTIVE_DEV_TRANSPOSE || spec->kind == MOTIVE_DEV_INVERT)) {
@@ -648,6 +743,14 @@ void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size) {
         snprintf(out, size, "fragment %s %zu notes", WHERE[spec->position], spec->length);
         break;
     }
+    case MOTIVE_DEV_AUGMENT:
+    case MOTIVE_DEV_DIMINISH: {
+        bool augment = spec->kind == MOTIVE_DEV_AUGMENT;
+        unsigned long num = spec->ratio_num != 0 ? spec->ratio_num : (augment ? 2 : 1);
+        unsigned long den = spec->ratio_den != 0 ? spec->ratio_den : (augment ? 1 : 2);
+        snprintf(out, size, "%s %lu:%lu", augment ? "augment" : "diminish", num, den);
+        break;
+    }
     case MOTIVE_DEV_LIQUIDATE:
         snprintf(out, size, "liquidate drop %zu%s", spec->drop, spec->keep_rhythm ? " (keep rhythm)" : "");
         break;
@@ -665,7 +768,7 @@ void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size) {
 
 static const char *const RESULT_NAMES[] = {"ok",        "null",      "alloc",          "no key",
                                            "range",     "unchanged", "not applicable", "too short",
-                                           "invalid"};
+                                           "not expressible", "invalid"};
 
 const char *motive_dev_result_name(MotiveDevResult result) {
     return (size_t)result < sizeof(RESULT_NAMES) / sizeof(RESULT_NAMES[0]) ? RESULT_NAMES[result] : "unknown";

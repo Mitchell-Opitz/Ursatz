@@ -30,7 +30,9 @@ typedef enum {
     MOTIVE_DEV_RETROGRADE,    /* the notes in reverse order, each keeping its duration */
     MOTIVE_DEV_INTERVAL_CHANGE, /* an interval, or every one, widened or narrowed by amount semitones */
     MOTIVE_DEV_FRAGMENT,      /* a run of the notes: the first, the last or the middle ones */
-    MOTIVE_DEV_LIQUIDATE      /* the notes with the least important ones dropped */
+    MOTIVE_DEV_LIQUIDATE,     /* the notes with the least important ones dropped */
+    MOTIVE_DEV_AUGMENT,       /* every onset and duration longer by a ratio: 2:1 by default */
+    MOTIVE_DEV_DIMINISH       /* every onset and duration shorter by a ratio: 1:2 by default */
 } MotiveDevKind;
 
 /* The shortest result, in notes, that a fragment or a liquidation may have when the spec does not say. */
@@ -63,6 +65,15 @@ typedef struct {
     bool keep_rhythm;
     /* FRAGMENT, LIQUIDATE: the fewest notes the result may have; 0 means MOTIVE_DEV_MIN_LENGTH. */
     size_t min_length;
+    /*
+     * AUGMENT, DIMINISH: the factor times and durations are multiplied by, ratio_num:ratio_den. Augmentation needs
+     * it above 1 and diminution below 1; 0:0 means 2:1 and 1:2. The pitches and their order are not touched. The
+     * result must be expressible in the meter: every duration a plain or dotted value (w h q e s t with up to two
+     * dots, as a note list writes them), every onset a multiple of a thirty-second, and, when the source is a whole
+     * number of beats long, the result too. Otherwise MOTIVE_DEV_ERR_NOT_EXPRESSIBLE.
+     */
+    unsigned long ratio_num;
+    unsigned long ratio_den;
 } MotiveDevSpec;
 
 typedef enum {
@@ -74,6 +85,7 @@ typedef enum {
     MOTIVE_DEV_ERR_UNCHANGED,      /* the result is the source */
     MOTIVE_DEV_ERR_NOT_APPLICABLE, /* nothing to do: one note has no intervals, the contour would change */
     MOTIVE_DEV_ERR_TOO_SHORT,      /* a fragment or liquidation with fewer notes than the minimum */
+    MOTIVE_DEV_ERR_NOT_EXPRESSIBLE, /* the rhythm cannot be written in the meter, see MotiveDevSpec */
     MOTIVE_DEV_ERR_INVALID         /* the spec asks for something that is not a parameter */
 } MotiveDevResult;
 
@@ -105,6 +117,7 @@ void motive_develop_context_default(MotiveDevelopContext *context);
 
 #define MOTIVE_RESTATE_OPERATOR_NAME "motive-restate"
 #define MOTIVE_FRAGMENT_OPERATOR_NAME "motive-fragment"
+#define MOTIVE_RHYTHM_OPERATOR_NAME "motive-rhythm"
 
 /*
  * Registers the motivic development operators with the fill loop. Each is a Grow operator for a Constrained motive
@@ -114,6 +127,7 @@ void motive_develop_context_default(MotiveDevelopContext *context);
  *
  *   motive-restate   restated, transposed, inverted, retrograde, interval_changed
  *   motive-fragment  fragmented, liquidated
+ *   motive-rhythm    augmented, diminished
  *
  * With the constraint's parameters left open (see PlanMotiveRef) an operator proposes context->candidates, their
  * parameters drawn from the run's seeded stream; with them set it proposes that one. context may be NULL for the

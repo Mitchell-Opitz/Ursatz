@@ -27,6 +27,8 @@
 
 #define FAMILY_FRAGMENT (TRANSFORM_BIT(PLAN_TRANSFORM_FRAGMENTED) | TRANSFORM_BIT(PLAN_TRANSFORM_LIQUIDATED))
 
+#define FAMILY_RHYTHM (TRANSFORM_BIT(PLAN_TRANSFORM_AUGMENTED) | TRANSFORM_BIT(PLAN_TRANSFORM_DIMINISHED))
+
 typedef struct {
     unsigned long magic;
     MotiveDevSpec spec;
@@ -353,6 +355,30 @@ static bool propose_fragments(Proposal *proposal, FillRng *rng) {
     return true;
 }
 
+/* Augmentation and diminution: the ratio of the constraint, else each of a few usual ones. */
+static bool propose_rhythms(Proposal *proposal) {
+    static const unsigned long AUGMENTS[][2] = {{2, 1}, {3, 2}, {4, 1}};
+    static const unsigned long DIMINISHES[][2] = {{1, 2}, {2, 3}, {1, 4}};
+    const PlanMotiveRef *ref = &proposal->request->ref;
+    bool augment = ref->transform == PLAN_TRANSFORM_AUGMENTED;
+    MotiveDevSpec spec;
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = augment ? MOTIVE_DEV_AUGMENT : MOTIVE_DEV_DIMINISH;
+    if (ref->ratio_num > 0) {
+        spec.ratio_num = (unsigned long)ref->ratio_num;
+        spec.ratio_den = (unsigned long)ref->ratio_den;
+        return try_spec(proposal, &spec);
+    }
+    for (size_t i = 0; i < 3; i++) {
+        spec.ratio_num = augment ? AUGMENTS[i][0] : DIMINISHES[i][0];
+        spec.ratio_den = augment ? AUGMENTS[i][1] : DIMINISHES[i][1];
+        if (!try_spec(proposal, &spec)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /* ------------------------------------------------------------- the hooks */
 
 static bool restate_applies(const PiecePlan *plan, FillTarget target, void *context) {
@@ -385,6 +411,23 @@ static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng 
     }
     Proposal proposal = {&request, shared, out, 0};
     return propose_fragments(&proposal, rng);
+}
+
+static bool rhythm_applies(const PiecePlan *plan, FillTarget target, void *context) {
+    Request request;
+    return read_request(plan, target, context_or_default(context), FAMILY_RHYTHM, &request);
+}
+
+static bool rhythm_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+                            FillCandidateList *out) {
+    (void)rng;
+    const MotiveDevelopContext *shared = context_or_default(context);
+    Request request;
+    if (!read_request(plan, target, shared, FAMILY_RHYTHM, &request)) {
+        return true;
+    }
+    Proposal proposal = {&request, shared, out, 0};
+    return propose_rhythms(&proposal);
 }
 
 static PlanResult develop_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
@@ -432,10 +475,15 @@ FillResult motive_develop_register(FillOperatorRegistry *registry, const MotiveD
         register_operator(registry, MOTIVE_RESTATE_OPERATOR_NAME,
                           "restatement by exact repetition, transposition, inversion, retrograde or interval change",
                           restate_applies, restate_generate, context);
+    if (result == FILL_OK) {
+        result = register_operator(registry, MOTIVE_FRAGMENT_OPERATOR_NAME,
+                                   "fragments and liquidations with a minimum length", fragment_applies,
+                                   fragment_generate, context);
+    }
     return result != FILL_OK ? result
-                             : register_operator(registry, MOTIVE_FRAGMENT_OPERATOR_NAME,
-                                                 "fragments and liquidations with a minimum length",
-                                                 fragment_applies, fragment_generate, context);
+                             : register_operator(registry, MOTIVE_RHYTHM_OPERATOR_NAME,
+                                                 "augmentation and diminution re-fitted to the meter",
+                                                 rhythm_applies, rhythm_generate, context);
 }
 
 /* ------------------------------------------------------------ candidates */
