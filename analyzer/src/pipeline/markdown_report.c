@@ -267,7 +267,7 @@ static bool render_meter(StringBuilder *sb, const cJSON *document, const cJSON *
     bool ok = sb_append(sb, "## Meter\n\n") && sb_append(sb, "- **Time signature:** ") &&
               append_time_signature(sb, time_signature);
     if (inferred) {
-        ok = ok && sb_append(sb, " (inferred: the input has no time signature, so 4/4 is assumed)");
+        ok = ok && sb_append(sb, " (inferred: the file has no time signature, so 4/4 is assumed)");
     } else if (source && strcmp(source, "notated") == 0) {
         ok = ok && sb_append(sb, " (notated)");
     }
