@@ -1,5 +1,6 @@
 #include <ursatz_composer/motive_develop.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -40,6 +41,7 @@ void motive_develop_context_default(MotiveDevelopContext *context) {
     context->meter.beats_per_bar = 4;
     context->meter.beat_unit = 4;
     context->candidates = DEFAULT_CANDIDATES;
+    context->weights = motive_score_default_weights();
 }
 
 static const MotiveDevelopContext *context_or_default(const void *context) {
@@ -484,6 +486,41 @@ FillResult motive_develop_register(FillOperatorRegistry *registry, const MotiveD
                              : register_operator(registry, MOTIVE_RHYTHM_OPERATOR_NAME,
                                                  "augmentation and diminution re-fitted to the meter",
                                                  rhythm_applies, rhythm_generate, context);
+}
+
+/* ----------------------------------------------------------- the checker */
+
+bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                            const FillCandidate *candidate, void *context, FillCheck *out) {
+    (void)operator_;
+    memset(out, 0, sizeof(*out));
+    out->score_denominator = 1;
+    const Payload *payload = candidate ? candidate->payload : NULL;
+    if (!payload || payload->magic != PAYLOAD_MAGIC) {
+        return true;
+    }
+    const MotiveDevelopContext *shared = context_or_default(context);
+    Request request;
+    MotiveScoreWeights weights = shared->weights;
+    if (weights.contour + weights.intervals + weights.rhythm + weights.length == 0) {
+        weights = motive_score_default_weights();
+    }
+    MotiveRecognizability score;
+    if (!read_request(plan, target, shared, FAMILY_RESTATE | FAMILY_FRAGMENT | FAMILY_RHYTHM, &request) ||
+        !motive_recognizability(&request.source, &payload->result, &weights, &score)) {
+        out->hard_violation = true;
+        snprintf(out->reason, sizeof(out->reason), "no source motive to compare with");
+        return true;
+    }
+    out->score_numerator = score.total.numerator;
+    out->score_denominator = score.total.denominator;
+    if (shared->floor.denominator > 0 &&
+        (unsigned long long)score.total.numerator * shared->floor.denominator <
+            (unsigned long long)shared->floor.numerator * score.total.denominator) {
+        out->hard_violation = true;
+        snprintf(out->reason, sizeof(out->reason), "below the recognizability floor");
+    }
+    return true;
 }
 
 /* ------------------------------------------------------------ candidates */

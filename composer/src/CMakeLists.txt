@@ -36,6 +36,7 @@ add_library(ursatz_composer STATIC
     motive/motive_analysis.c
     motive/motive_develop.c
     motive/motive_develop_operator.c
+    motive/motive_recognizability.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

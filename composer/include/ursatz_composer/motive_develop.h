@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/motive.h>
 
@@ -98,6 +99,57 @@ void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size);
 /* "ok", "no key" and so on. */
 const char *motive_dev_result_name(MotiveDevResult result);
 
+/* --- recognizability ---------------------------------------------------- */
+
+/*
+ * How well a development can be recognized as its source: a score from 0 to 1 made from four parts, each from 0 to 1.
+ *
+ *   contour    the longest run of neighboring intervals whose directions (up, down, same) the two share, in the same
+ *              places or not, over the count of intervals in the longer of the two
+ *   intervals  how many intervals the two share by interval class (the size in semitones, an octave and more folded
+ *              to within one octave, and a size and its complement the same: 1 and 11, 2 and 10), counted as the
+ *              smaller of the two counts of each class, over the count of intervals in the longer of the two
+ *   rhythm     the longest run of neighboring ratios the two share, over the count of ratios in the longer of the two;
+ *              a ratio is one inter-onset interval (the last note's duration, for the last) over the next, so a
+ *              rhythm made twice as slow or fast still scores 1 and a rest counts for its length
+ *   length     the notes of the shorter over the notes of the longer
+ *
+ * When neither motive has intervals (or ratios), that part is 1; when only one has, 0.
+ *
+ *   score = (w.contour * contour + w.intervals * intervals + w.rhythm * rhythm + w.length * length)
+ *           / (w.contour + w.intervals + w.rhythm + w.length)
+ *
+ * The weights are whole numbers; the default is 3, 2, 2, 1, so that the contour counts most, the rhythm and the
+ * interval classes the same, and the length least. Every part and the score are exact fractions, as the fill loop's
+ * scores are.
+ */
+typedef struct {
+    unsigned long numerator;
+    unsigned long denominator; /* at least 1; the fraction is in lowest terms */
+} MotiveScore;
+
+typedef struct {
+    unsigned contour;
+    unsigned intervals;
+    unsigned rhythm;
+    unsigned length;
+} MotiveScoreWeights;
+
+/* 3, 2, 2, 1. */
+MotiveScoreWeights motive_score_default_weights(void);
+
+typedef struct {
+    MotiveScore contour;
+    MotiveScore intervals;
+    MotiveScore rhythm;
+    MotiveScore length;
+    MotiveScore total;
+} MotiveRecognizability;
+
+/* weights may be NULL for the default. False for a NULL motive or weights that are all 0; *out is untouched then. */
+bool motive_recognizability(const Motive *source, const Motive *development, const MotiveScoreWeights *weights,
+                            MotiveRecognizability *out);
+
 /*
  * What the operators know that the plan does not say. The key and meter of the source come from the plan's key and
  * meter lanes over its span when it has them, and from here otherwise. All-zero, set by
@@ -111,6 +163,9 @@ typedef struct {
     size_t candidates;
     /* The fewest notes a fragment or liquidation may have; 0 means MOTIVE_DEV_MIN_LENGTH. */
     size_t min_length;
+    /* For motive_develop_checker: the weights of the score (all 0 means the default) and a floor under it. */
+    MotiveScoreWeights weights;
+    MotiveScore floor; /* a development scoring below it is rejected; a denominator of 0 means no floor */
 } MotiveDevelopContext;
 
 void motive_develop_context_default(MotiveDevelopContext *context);
@@ -134,6 +189,16 @@ void motive_develop_context_default(MotiveDevelopContext *context);
  * defaults, and must outlive the registry otherwise. FILL_OK, or the registry's error.
  */
 FillResult motive_develop_register(FillOperatorRegistry *registry, const MotiveDevelopContext *context);
+
+/*
+ * The checker for the candidates of these operators; pass it as FillConfig.checker, with the MotiveDevelopContext as
+ * FillConfig.checker_context. The score of a candidate is its recognizability (motive_recognizability) against the
+ * source motive, with the context's weights: it ranks the candidates in the fill loop and is what the
+ * GenerationRecord and the suggestions carry. A candidate below the context's floor is a hard violation. A
+ * candidate of any other operator is accepted at 0/1, as the default checker does.
+ */
+bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                            const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* The motive and the spec of a candidate one of these operators proposed. NULL for any other candidate. */
 const Motive *motive_develop_candidate_motive(const FillCandidate *candidate);
