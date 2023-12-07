@@ -133,7 +133,7 @@ static void test_notated_metadata_and_pickup(void) {
     assert(strcmp(string(meter, "source"), "notated") == 0);
     assert(number(member(meter, "time_signature"), "numerator") == 4);
     assert(number(member(meter, "time_signature"), "denominator") == 4);
-    assert(number(meter, "measure_count") == 4);
+    assert(number(meter, "measure_count") == 5); /* the pickup counts as measure 0 */
     assert(cJSON_IsObject(member(meter, "pickup")));
     assert(number(meter, "last_measure") == 4);
 
