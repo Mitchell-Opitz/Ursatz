@@ -1,6 +1,6 @@
 # Ursatz-Analyzer
 
-A small C11 command-line tool that turns a MIDI file into a Markdown report and a JSON analysis
+A small C11 command-line tool that turns a MIDI or MusicXML file into a Markdown report and a JSON analysis
 document: the piece's time signature, measure count and pickup, its local keys over time (key
 regions, with the home key, tonicizations, modulations and pivot chords), and the most likely chord
 for each group of notes that start together, each located by measure and beat. It is a
@@ -38,6 +38,13 @@ Tests:
 - `test_chord_details`: inversion, runner-up present and absent, and four non-chord-tone types and
   an unclassified one, on small constructed files.
 - `test_cli_output_flags`: which files each output flag writes.
+- `test_musicxml_midi_agreement`: the five reference pieces from their MusicXML versions
+  (`tests/musicxml`) and from their MIDI files: key regions, measure count and meter must agree
+  exactly, chords and outer-voice scale degrees to the tolerance stated in the test, and the
+  measured agreement is printed.
+- `test_musicxml_input`: format choice, notated key and meter, a pickup, a multi-part score, notated
+  spelling (Db vs C#) and every error case.
+- `test_cli_input_formats`: `--input-format`, format detection and the error exits of the CLI.
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
@@ -45,7 +52,7 @@ Tests:
 ## Usage
 
 ```sh
-ursatz-analyzer [--json] [--markdown] <midi-file-path>
+ursatz-analyzer [--json] [--markdown] [--input-format midi|musicxml] <input-file-path>
 ```
 
 Writes two files next to the input file:
@@ -56,7 +63,8 @@ Writes two files next to the input file:
   [schema](schema/analysis-document.v6.schema.json).
 
 `--markdown` writes only the report, `--json` writes only the analysis document. No flag, or both,
-writes both. Flags can come before or after the path. Exits 1 with a message on an unknown flag, a
+writes both. `--input-format` forces the input format (see "Input formats"). Flags can come before or
+after the path. Exits 1 with a message on an unknown flag, a
 missing path, bad input, allocation failure, or write failure.
 
 ## Library
@@ -67,7 +75,10 @@ Its public include directory is `include/`, and consumers include headers as
 
 | Header | Purpose |
 | --- | --- |
-| `midi_pipeline.h` | Imports a MIDI file into `ImportedNotes`; `imported_notes_destroy` frees it. |
+| `input_pipeline.h` | The common input interface: `input_pipeline_import_file` reads a MIDI or MusicXML file (chosen by `InputFormat`, or detected) into `ImportedNotes`. |
+| `imported_notes.h` | `ImportedNotes`, what every input produces (notes, meter, key signatures, and an `ImportedSource` saying what the input states); `imported_notes_destroy` frees it. |
+| `midi_pipeline.h` | The MIDI backend of the input interface. |
+| `musicxml_pipeline.h` | The MusicXML backend of the input interface. |
 | `analysis_pipeline.h` | `run_analysis_pipeline` turns `ImportedNotes` into an `AnalysisReport`. |
 | `analysis_report.h` | `AnalysisReport` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalysisReport`, serializes it as JSON, and derives `<stem>.analysis.json`. |
@@ -89,7 +100,7 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
 
 ## Pipeline
 
-`main.c` runs `midi_pipeline` (MIDI import through Ursatz), then `analysis_pipeline`:
+`main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedNotes`), then `analysis_pipeline`:
 
 1. `segmentation`: cuts the notes into sonority segments with Ursatz's adaptive segmentation, on the
    beats of the file's meter, and builds each segment's members for chord identification.
@@ -102,6 +113,50 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
 `analysis_document` then builds the analysis document once. It is the single source of truth:
 the JSON file is its serialization, and `markdown_report` renders the report from it, never from
 the pipeline directly. `report_writer` writes each file.
+
+## Input formats
+
+The analyzer reads MIDI and MusicXML. Both go through the same pipeline: each input becomes the
+same `ImportedNotes` (notes, a `MeterMap`, key signature events), so every later stage is
+independent of the format, and the analyzer adds no parsing or music theory of its own. MusicXML is
+read by Ursatz's MusicXMLImporter.
+
+- **Supported files.** MIDI (`.mid`, `.midi`; SMF type 0 and 1) and uncompressed MusicXML
+  `score-partwise` (`.musicxml`, `.xml`).
+- **Choosing the format.** By extension first; when the extension says nothing, by the file's first
+  bytes (an `MThd` header is MIDI, an XML document is MusicXML). `--input-format midi|musicxml` forces
+  the format and overrides both. A file whose format cannot be told is an error that names the flag.
+- **What is notated and what is inferred.** MusicXML states what MIDI does not: pitch spelling, the
+  time and key signatures as written, the measures, a pickup, parts and voices. The report's Summary
+  says which input was read and whether the meter, the key signature and the pitch spelling were
+  *notated* (the score's own), *embedded in the file* (a MIDI event) or *inferred* (the input has none:
+  4/4 is assumed, or the key is found from the notes alone). The same is in the analysis document's
+  `metadata.input`. A key is always *detected* from the notes; a notated key signature is only a
+  boundary for the detection (see "Key regions"), for either input.
+- **Pitch spelling.** For a MusicXML score the chord roots and basses and the outer-voice pitch names
+  follow the score's spelling (`Db` stays `Db`, `C#` stays `C#`). For MIDI, which has none, they are
+  spelled by the pipeline's rule (flats in keys that read in flats). Key labels are always spelled by
+  the rule. Where a transposing part's written pitch is not the sounding pitch, the sounding pitch is
+  analyzed and the name falls back to the rule.
+- **Several parts.** All parts are analyzed together as one texture: none is dropped, and the soprano
+  and bass are the highest and lowest notes sounding in any part. Each note keeps its part, staff and
+  voice (`ImportedSource` in `imported_notes.h`), and `metadata.input.parts` lists the parts with their
+  note counts. Per-part and per-voice analysis is not done.
+- **Tempo, dynamics, articulation.** Tempo and dynamics markings are imported and counted
+  (`metadata.input.tempo`, `dynamics_count`) but not analyzed or reported beyond that. The importer
+  does not expose articulation.
+- **Errors.** Malformed XML, a root other than `score-partwise`, an unreadable value, a score with no
+  notes, a compressed file and an unreadable file each stop with a message on stderr and exit 1, and
+  no output file is written. Things the importer skips or rounds (a grace note, an unpitched note, a
+  fractional alteration) are warnings on stderr and are counted in `metadata.input.warning_count`.
+- **Not supported.** Compressed `.mxl` (the Ursatz importer reads uncompressed documents only; the
+  analyzer reports it as unsupported rather than unzipping it: export the score as uncompressed
+  MusicXML), `score-timewise`, grace notes, wedges (crescendo and diminuendo), additive meters
+  (summed) and senza-misura. Repeats and endings are not unfolded: the score is analyzed once, in
+  written order.
+- **Schema.** The analysis document is schema version 6 (see
+  [docs/analysis-document.md](docs/analysis-document.md)): `metadata.input` is new, and
+  `meter.source` can be `"notated"`.
 
 ## Chords and non-chord tones
 
@@ -177,7 +232,8 @@ report writes these as `m. N, beat B`.
   12/8. Beats count from 1. A fractional beat is shown as a decimal (`beat 2.5`); the document
   keeps the exact fraction.
 - A file with no time signature event gets the library's default 4/4. The report and the document
-  mark it as inferred, an assumption and not a fact about the piece.
+  mark it as inferred, an assumption and not a fact about the piece. A MusicXML score's time
+  signatures are its own `<time>` elements and are marked as notated.
 - The measure and beat are the file's: the analyzer does not check them against a printed score.
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
@@ -240,5 +296,8 @@ See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
   anticipation, appoggiatura, escape-tone and pedal rules. Many tones come back unclassified.
 - SMPTE-division MIDI files are rejected.
+- Compressed `.mxl` MusicXML is not read: the Ursatz importer takes uncompressed documents only.
+- MusicXML repeats and endings are not unfolded, and the pickup is found only when the first measure
+  is marked `implicit="yes"`.
 - Measure and beat follow the file's time signature events. A file that declares the wrong meter
   (for example, a minuet marked 4/4) is reported as declared.
