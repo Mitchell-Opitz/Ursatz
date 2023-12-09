@@ -28,6 +28,9 @@ which function, and which progressions make which cadence, is this framework's.
 
 `HarmonicFunction` (harmonic_function.h, tonic, predominant, dominant) is single-framework, so it lives in this module, not in `src/semantics/`.
 
+The **analysis adapter** (`analysis/`) turns chord segments into this framework's inputs and returns function,
+phrase model, six-four and prolongation Interpretations. See `docs/modules/standard-harmony-analysis.md`.
+
 ## Scope
 
 Every rule group has Rule/Constraint pairs referencing this Framework plus pure
