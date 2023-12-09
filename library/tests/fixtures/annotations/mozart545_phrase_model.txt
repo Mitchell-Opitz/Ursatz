@@ -1,0 +1,60 @@
+# Hand-marked phrase model zones in Mozart, Piano Sonata No. 16 in C major, K. 545 ("Sonata facile"), first
+# movement (Allegro), exposition, as encoded in tests/fixtures/framework-v1-corpus/"Mozart 545.mid".
+#
+# SOURCE: the Neue Mozart-Ausgabe (Barenreiter) edition of the sonata, and the IMSLP scan of the first edition
+# (Mozart's own catalogue entry, 1788). Neither was available when this file was written.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The marks are a hand reading of the harmony, made from
+# the pitch content of the MIDI file (the notes dumped beat by beat, measures 1-28) and the movement's well-known
+# form. They were NOT derived from the output of the chord identifier, the key estimator or the adapters, and the
+# zones are what a listener marks, not what the labeling rules produce. A human should confirm them against an
+# edition before this file is relied on. Measures are numbered as the MeterMap numbers them (the first measure
+# is 1, no pickup); the file plays the exposition's repeat out, so measures 1-28 are the first playing.
+#
+# Phrases and cadences do not exist as analysis yet, so the phrase spans and the cadence that ends each one are
+# part of this hand reading, and are what the test feeds the adapter as its phrase input.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   phrase <first measure> <last measure> <tonic> <authentic|half>   a phrase and its ending; tonic: C or G, major
+#   chord <measure> <beat> <numeral> <zone>   the chord that starts at the mark and sounds until the next mark of the
+#                                             phrase; beats are 1-based quarter notes (a half beat is .5); the numeral
+#                                             is in the phrase's key in ASCII: V, ii6, V4/3, IV6/4, V7, viio/V (an
+#                                             applied chord is a slash and the target); zone is Tb, PD, D, Te, or -
+#                                             (no label: the phrase model labels one chord per zone; a 6/4 that
+#                                             prolongs a harmony, an applied chord and a chord outside the model
+#                                             are -)
+#   cadential64 <measure> <beat>              a cadential 6/4 the test must find
+#
+# Reading of the three phrases (all in the first playing of the exposition):
+#   1-4    the opening phrase, C major. I at the downbeat; V4/3 in measure 2; IV6/4 over the tonic pedal in
+#          measure 3 (a neighbor 6/4); V6 and V4/3 in measure 4 and the tonic on beat 3, which ends the phrase on
+#          the tonic with E in the soprano (an imperfect authentic cadence)
+#   9-12   the transition, C major: ii6 and the leading-tone chord of V (F sharp A C in measure 10), then a G pedal
+#          in measures 11-12 over which a neighbor 6/4 (C E G) alternates with V; the phrase ends on V (half cadence)
+#   24-26  the closing section, G major: the 6/4 of the tonic (D in the bass) in measure 24, V7 in measure 25, the
+#          tonic in measure 26 (an authentic cadence)
+
+phrase 1 4 C authentic
+chord 1 1 I Tb
+chord 2 1 V4/3 -
+chord 2 3 I -
+chord 3 1 IV6/4 -
+chord 3 3 I -
+chord 4 1 V6 -
+chord 4 2 V4/3 D
+chord 4 3 I Te
+
+phrase 9 12 C half
+chord 9 1 ii6 PD
+chord 10 1 ii6 PD
+chord 10 4 viio/V -
+chord 11 1 V D
+chord 11 2 I6/4 -
+chord 11 3 V D
+chord 11 4 I6/4 -
+chord 12 1 V D
+
+phrase 24 26 G authentic
+chord 24 1 I6/4 -
+chord 25 1 V7 D
+chord 26 1 I Te
+cadential64 24 1
