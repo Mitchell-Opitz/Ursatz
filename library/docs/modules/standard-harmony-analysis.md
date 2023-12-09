@@ -30,7 +30,7 @@ One Interpretation per valid segment (`analysis_function.h`). A diatonic chord's
 
 `analysis_six_four.h`. Every valid diatonic triad in second inversion is a 6/4 segment; consecutive segments of the same chord are one run, judged by the chord before and after it. The existing classifier decides the type; the adapter supplies its inputs:
 
-- **Cadential**: a tonic 6/4 with the bass on degree 5, on a stronger beat than the V that follows, which also has the bass on 5. `harmony_analysis_prepare` sets the chord's `cadential` flag, so the function (dominant), phrase and six-four steps all read it. A 6/4 on a beat no stronger than its V (for example a whole measure of 6/4 and then V on the next downbeat) is not marked.
+- **Cadential**: a tonic 6/4 with the bass on degree 5, on a beat not weaker than the V that follows, which also has the bass on 5. Equal strengths count, so a 6/4 held over a whole measure that resolves to a V on the next downbeat is cadential (found on Mozart 545, measures 24-25). `harmony_analysis_prepare` sets the chord's `cadential` flag, so the function (dominant), phrase and six-four steps all read it. A 6/4 on a weaker beat than its V is not marked.
 - **Passing**: stepwise bass in one direction between chords of the same function, on a weak beat (weaker than the chord before, or weak).
 - **Neighbor**: static bass between the same root-position chord.
 - **Arpeggiating**: the bass leaps to the fifth of the same chord with the upper voices sustaining it.
@@ -55,6 +55,6 @@ For each interior segment: a `Relationship`, predicate `prolongs`, source = the 
 
 - Phrases and cadences are supplied by the caller until L3.6 and L3.3.
 - No modulation classification (`ModulationKind` is not used on real music; it needs cadences), and no strong/weak predominant reporting.
-- A cadential 6/4 needs a beat strictly stronger than its V; a 6/4 held over a whole measure before a V on the next downbeat is not marked.
+- A cadential 6/4 is recognised by its beat (not weaker than the V), its bass on 5 and the V after it; a 6/4 on a weaker beat than its V is read as another type or left unclassified.
 - The alto and tenor are not in the input, so a 6/4 whose inner voices move is read from the soprano alone.
 - Tonic lines are the framework's, so a tonic prolongation not of the listed kinds is not found, and dominant prolongation is limited as above.
