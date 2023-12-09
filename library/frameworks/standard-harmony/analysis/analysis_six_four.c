@@ -50,7 +50,7 @@ void harmony_analysis_mark_cadential(HarmonySegment *segments, size_t count) {
         if (is_tonic_six_four(&segments[first].chord) && start->bass_degree == 5 && last + 1 < count &&
             diatonic(&segments[last + 1]) && segments[last + 1].chord.degree == 5 &&
             segments[last + 1].chord.inversion == 0 && segments[last + 1].input->bass_degree == 5 &&
-            beat_strength_is_stronger(start->beat_strength, segments[last + 1].input->beat_strength)) {
+            !beat_strength_is_stronger(segments[last + 1].input->beat_strength, start->beat_strength)) {
             for (size_t s = first; s <= last; s++) {
                 segments[s].chord.cadential = true;
             }

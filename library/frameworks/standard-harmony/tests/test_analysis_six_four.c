@@ -30,7 +30,6 @@ static void test_cadential(void) {
     assert(segments[2].chord.cadential);
     expect(&results[2], SIX_FOUR_TYPE_CADENTIAL);
     assert(!results[3].is_six_four);
-    /* The cadential 6/4 has dominant function (harmony_functions.h): the prepared chord says so. */
     harmony_six_four_results_destroy(results, f.count);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -112,15 +111,16 @@ static void test_unclassified_and_runs(void) {
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
 
-    /* A cadential 6/4 over two segments: both are classified, once. */
+    /* A cadential 6/4 over two segments, on beats equal to the V's (weak, weak): both segments are classified. */
     fixture_init(&f);
     fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
-    fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 3);  /* beat 2: weak ... */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 3);  /* beat 2: weak */
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 3);
-    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 2);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 2);  /* beat 4: weak, the same strength */
     results = classify(&f, &segments);
-    /* ... weaker than a V on beat 4? No: beat 2 and beat 4 are both weak, so it is not cadential. */
-    assert(!segments[1].chord.cadential && !results[1].classified);
+    assert(segments[1].chord.cadential && segments[2].chord.cadential);
+    expect(&results[1], SIX_FOUR_TYPE_CADENTIAL);
+    expect(&results[2], SIX_FOUR_TYPE_CADENTIAL);
     harmony_six_four_results_destroy(results, f.count);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
