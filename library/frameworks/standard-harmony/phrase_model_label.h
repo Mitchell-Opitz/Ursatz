@@ -7,7 +7,7 @@
  * PhraseModelLabel (Value): the role a chord plays in the phrase model, where each
  * phrase gets one (and only one) set of the labels Tb, PD, D, Te. A plain enum: it
  * names a role and carries no EntityID, no chord, and no framework claim. It is not
- * HarmonicFunction (semantics/harmonic_function.h), which says what kind of chord
+ * HarmonicFunction (harmonic_function.h), which says what kind of chord
  * something is wherever it stands; this says which chord of one phrase fills each
  * place in the model.
  *

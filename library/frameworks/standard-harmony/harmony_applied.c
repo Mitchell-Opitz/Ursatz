@@ -54,6 +54,14 @@ bool harmony_applied_valid(HarmonyMode mode, const HarmonyAppliedChord *chord) {
            harmony_applied_target_valid(mode, chord->target);
 }
 
+bool harmony_applied_function(HarmonyMode mode, const HarmonyAppliedChord *chord, HarmonicFunction *out) {
+    if (out == NULL || !harmony_applied_valid(mode, chord)) {
+        return false;
+    }
+    *out = HARMONIC_FUNCTION_DOMINANT;
+    return true;
+}
+
 bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, char *out, size_t size) {
     if (out == NULL || !harmony_applied_valid(mode, chord)) {
         return false;

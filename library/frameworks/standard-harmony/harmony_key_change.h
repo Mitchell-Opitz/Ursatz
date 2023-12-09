@@ -8,7 +8,7 @@
 #include "harmony_pivot.h"
 #include "harmony_related_key.h"
 #include "semantics/key_change_extent.h"
-#include "semantics/modulation_kind.h"
+#include "modulation_kind.h"
 
 /*
  * Tonicization versus modulation, for standard-harmony-v1 (Extended Tonicization and

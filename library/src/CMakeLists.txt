@@ -95,13 +95,8 @@ add_library(ursatz
     semantics/schema_function.c
     semantics/scale_direction.c
     semantics/sequence_kind.c
-    semantics/harmonic_function.c
     semantics/cadence_type.c
-    semantics/seventh_resolution.c
-    semantics/phrase_model_label.c
-    semantics/six_four_type.c
     semantics/applied_chord_kind.c
-    semantics/modulation_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
     semantics/expected_length_basis.c

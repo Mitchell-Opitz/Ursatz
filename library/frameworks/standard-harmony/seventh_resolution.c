@@ -1,4 +1,4 @@
-#include "semantics/seventh_resolution.h"
+#include "seventh_resolution.h"
 
 #include <stddef.h>
 

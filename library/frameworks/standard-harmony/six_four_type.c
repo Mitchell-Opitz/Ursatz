@@ -1,4 +1,4 @@
-#include "semantics/six_four_type.h"
+#include "six_four_type.h"
 
 #include <stddef.h>
 

@@ -1,4 +1,4 @@
-#include "semantics/harmonic_function.h"
+#include "harmonic_function.h"
 
 #include <stddef.h>
 

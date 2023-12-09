@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/phrase_model_label.h"
+#include "phrase_model_label.h"
 
 static void test_validity(void) {
     for (int i = 0; i < PHRASE_MODEL_LABEL_COUNT; i++) {

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/harmonic_function.h"
+#include "harmonic_function.h"
 
 static void test_validity(void) {
     for (int i = 0; i < HARMONIC_FUNCTION_COUNT; i++) {

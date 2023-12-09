@@ -1,5 +1,10 @@
 add_library(standard_harmony
     harmony_framework.c
+    modulation_kind.c
+    six_four_type.c
+    phrase_model_label.c
+    seventh_resolution.c
+    harmonic_function.c
     harmony_rule_pair.c
     harmony_rule_table.c
     harmony_chord.c
@@ -46,9 +51,16 @@ add_library(standard_harmony
     harmony_phrygian_rules.c
     harmony_plagal.c
     harmony_plagal_rules.c
+    analysis/analysis_input.c
+    analysis/analysis_claim.c
+    analysis/analysis_function.c
+    analysis/analysis_phrase.c
+    analysis/analysis_six_four.c
+    analysis/analysis_prolongation.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${PROJECT_SOURCE_DIR}/frameworks
     ${PROJECT_SOURCE_DIR}/src
 )
