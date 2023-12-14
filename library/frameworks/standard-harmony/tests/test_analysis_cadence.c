@@ -155,6 +155,7 @@ static void test_cadence_points_and_config(void) {
         f.inputs[i].beat_length = half;
     }
     config = harmony_cadence_config_default();
+    config.soprano_rest_counts = false;
     assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
     assert(n == 0); /* one quarter is shorter than one half-note beat */
     duration_destroy(half);
