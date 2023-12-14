@@ -8,6 +8,7 @@
 #include "harmony_chord.h"
 #include "semantics/applied_chord_kind.h"
 #include "semantics/beat_strength.h"
+#include "time/duration.h"
 #include "time/metrical_position.h"
 #include "time/time_span.h"
 
@@ -40,6 +41,9 @@
  *   key_ref          the id of the key the chord is read in (non-empty); borrowed
  *   mode             the key's mode
  *   uncertainty      [0, 1], carried into every Interpretation made from the segment
+ *   beat_length      OPTIONAL: the length of one beat at the segment's start, a Duration in whole notes (a quarter
+ *                    in 4/4, a dotted quarter in 12/8), or NULL when not known (the cadence step then uses its
+ *                    configured default). The caller reads it from the meter
  *
  * Every pointer is borrowed: the caller keeps the TimeSpan, MetricalPosition and strings alive for as long as the
  * prepared segments are used. The module reads no other framework and never finds a chord itself.
@@ -66,6 +70,7 @@ typedef struct {
     const char *key_ref;
     HarmonyMode mode;
     double uncertainty;
+    const Duration *beat_length;
 } HarmonySegmentInput;
 
 
