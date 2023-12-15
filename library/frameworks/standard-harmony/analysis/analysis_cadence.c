@@ -184,20 +184,23 @@ static void dominant_unit(const HarmonySegment *segments, const HarmonyRun *runs
 }
 
 static bool classify_point(const HarmonySegment *segments, const HarmonyRun *runs, const InternalPoint *internal,
-                           Classified *out) {
+                           const HarmonyCadenceConfig *config, Classified *out) {
     const HarmonyCadencePoint *point = &internal->point;
     const HarmonySegment *arrival = &segments[point->arrival_first];
     const HarmonySegment *before = &segments[point->before_first];
     memset(out, 0, sizeof(*out));
     out->soprano_degree = arrival->input->soprano_degree;
 
-    /* Root-position V(7) to root-position I, by the existing rule. The soprano is not read yet: it is passed as 1
-       and only the authentic family of the answer is used. */
+    /* Root-position V(7) to root-position I, by the existing rule, which makes it perfect when the soprano is on 1
+       over the tonic and imperfect otherwise. With the soprano absent the rule cannot be asked: the cadence is
+       authentic and unspecified, and the penalty applies. */
     if (is_dominant_root(before) && is_tonic_root(arrival)) {
-        HarmonyCadence rule = {before->chord, arrival->chord, 1, false};
+        bool soprano = out->soprano_degree >= 1 && out->soprano_degree <= 7;
+        HarmonyCadence rule = {before->chord, arrival->chord, soprano ? out->soprano_degree : 1, false};
         CadenceType rule_type;
         if (harmony_cadence_classify(&rule, &rule_type) && cadence_type_is_authentic(rule_type)) {
-            out->type = CADENCE_TYPE_AUTHENTIC_UNSPECIFIED;
+            out->type = soprano ? rule_type : CADENCE_TYPE_AUTHENTIC_UNSPECIFIED;
+            out->penalty = soprano ? 0.0 : config->soprano_absent_penalty;
             dominant_unit(segments, runs, internal->arrival_run, out);
             return true;
         }
@@ -339,7 +342,7 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
     }
     for (size_t i = 0; i < point_count; i++) {
         Classified classified;
-        if (!classify_point(segments, runs, &points[i], &classified)) {
+        if (!classify_point(segments, runs, &points[i], config, &classified)) {
             continue;
         }
         if (!build_result(segments, &points[i].point, &classified, &found.items[found.count])) {

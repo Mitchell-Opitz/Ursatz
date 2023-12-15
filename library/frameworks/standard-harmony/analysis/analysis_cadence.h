@@ -33,8 +33,14 @@
  * L3.2 reads it.
  *
  * TYPES.
- *   AUTHENTIC_UNSPECIFIED  root-position V(7) to root-position I. The soprano decides PAC or IAC (a later step in this
- *                          file's history); with no soprano it stays unspecified
+ *   PERFECT_AUTHENTIC      root-position V(7) to root-position I with the soprano on scale degree 1 at the arrival
+ *   IMPERFECT_AUTHENTIC    the same with the soprano on any other degree (3 or 5 usually; the existing rule,
+ *                          harmony_cadence_classify, calls every other degree imperfect)
+ *   AUTHENTIC_UNSPECIFIED  the same with NO soprano at the arrival: PAC or IAC cannot be told, and the uncertainty
+ *                          carries config.soprano_absent_penalty (default 0.3). This is the only case left unclassified
+ *
+ * The soprano degree is the one of the arrival's first segment (the input's `soprano_degree`, from the outer voices);
+ * 0 means absent. viio to I is not an authentic cadence in standard-harmony's rule and is not found here.
  *
  * The result of each cadence is a Cadence (structure/cadence.h, the L5 shell: an id and event refs, here the segment
  * ids from the dominant's first segment to the arrival's last) and an Interpretation targeting the Cadence's id:
@@ -42,7 +48,8 @@
  * dominant's start to the arrival's end is carried as a TimeSpan on the result.
  *
  * UNCERTAINTY = 1 - (1 - u)(1 - penalty), u the largest input uncertainty of the chords involved (the dominant, a
- * cadential 6/4 in it, and the arrival), penalty 0 here.
+ * cadential 6/4 in it, and the arrival), penalty config.soprano_absent_penalty when the type is
+ * AUTHENTIC_UNSPECIFIED for want of a soprano, and 0 otherwise.
  */
 
 #define HARMONY_CADENCE_CLAIM_TYPE "standard-harmony/cadence"

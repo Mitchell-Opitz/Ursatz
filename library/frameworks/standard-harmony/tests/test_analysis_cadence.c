@@ -23,7 +23,7 @@ static void test_authentic_v_to_i_on_a_strong_enough_beat(void) {
     HarmonyCadences found = find(&f, &segments, NULL);
     assert(found.count == 1);
     const HarmonyCadenceResult *c = &found.items[0];
-    assert(c->type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED);
+    assert(c->type == CADENCE_TYPE_PERFECT_AUTHENTIC && c->soprano_degree == 1);
     assert(c->dominant_first == 1 && c->dominant_last == 1 && !c->has_six_four);
     assert(c->arrival_first == 2 && c->arrival_last == 2);
     assert(strcmp(c->key_ref, "C") == 0 && c->uncertainty == 0.0);
@@ -37,12 +37,57 @@ static void test_authentic_v_to_i_on_a_strong_enough_beat(void) {
     assert(interpretation_framework_reference(c->interpretation) != NULL);
     HarmonyCadenceClaim claim;
     assert(harmony_cadence_claim_read(c->interpretation, &claim));
-    assert(claim.type == (int)CADENCE_TYPE_AUTHENTIC_UNSPECIFIED && strcmp(claim.arrival_segment, "seg-2") == 0 &&
+    assert(claim.type == (int)CADENCE_TYPE_PERFECT_AUTHENTIC && claim.soprano_degree == 1 &&
+           strcmp(claim.arrival_segment, "seg-2") == 0 &&
            strcmp(claim.dominant_segment, "seg-1") == 0 && strcmp(claim.key_ref, "C") == 0);
 
     /* The TimeSpan runs from the dominant's start (1/4) to the arrival's end (3/4). */
     assert(musical_time_numerator(time_span_start(c->span)) == 1 && musical_time_denominator(time_span_start(c->span)) == 4);
     assert(musical_time_numerator(time_span_end(c->span)) == 3 && musical_time_denominator(time_span_end(c->span)) == 4);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static CadenceType type_with_soprano(int soprano_degree, double *uncertainty) {
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, soprano_degree);
+    HarmonySegment *segments = NULL;
+    HarmonyCadences found = find(&f, &segments, NULL);
+    assert(found.count == 1);
+    CadenceType type = found.items[0].type;
+    *uncertainty = found.items[0].uncertainty;
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+    return type;
+}
+
+static void test_pac_iac_by_the_soprano(void) {
+    double u;
+    assert(type_with_soprano(1, &u) == CADENCE_TYPE_PERFECT_AUTHENTIC && u == 0.0);
+    assert(type_with_soprano(3, &u) == CADENCE_TYPE_IMPERFECT_AUTHENTIC && u == 0.0);
+    assert(type_with_soprano(5, &u) == CADENCE_TYPE_IMPERFECT_AUTHENTIC && u == 0.0);
+}
+
+static void test_soprano_absent_is_authentic_unclassified_with_a_penalty(void) {
+    double u;
+    assert(type_with_soprano(0, &u) == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED);
+    assert(fabs(u - 0.3) < 1e-12); /* 1 - (1 - 0)(1 - 0.3) */
+
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7)->uncertainty = 0.5;
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 0);
+    HarmonySegment *segments = NULL;
+    HarmonyCadenceConfig config = harmony_cadence_config_default();
+    config.soprano_absent_penalty = 0.2;
+    HarmonyCadences found = find(&f, &segments, &config);
+    assert(found.count == 1 && fabs(found.items[0].uncertainty - (1.0 - 0.5 * 0.8)) < 1e-12);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -90,7 +135,7 @@ static void test_cadential_six_four_is_part_of_the_dominant(void) {
     HarmonyCadences found = find(&f, &segments, NULL);
     assert(found.count == 1);
     const HarmonyCadenceResult *c = &found.items[0];
-    assert(c->type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED && c->has_six_four);
+    assert(c->type == CADENCE_TYPE_PERFECT_AUTHENTIC && c->has_six_four);
     assert(c->six_four_first == 2 && c->six_four_last == 2);
     assert(c->dominant_first == 2 && c->dominant_last == 3 && c->arrival_first == 4);
     assert(cadence_event_id_count(c->cadence) == 3);
@@ -170,6 +215,8 @@ static void test_cadence_points_and_config(void) {
 
 int main(void) {
     test_authentic_v_to_i_on_a_strong_enough_beat();
+    test_pac_iac_by_the_soprano();
+    test_soprano_absent_is_authentic_unclassified_with_a_penalty();
     test_a_weak_beat_arrival_is_not_a_cadence();
     test_inverted_chords_are_not_cadences();
     test_cadential_six_four_is_part_of_the_dominant();
