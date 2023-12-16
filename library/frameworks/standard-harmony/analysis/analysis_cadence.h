@@ -39,7 +39,18 @@
  *   AUTHENTIC_UNSPECIFIED  the same with NO soprano at the arrival: PAC or IAC cannot be told, and the uncertainty
  *                          carries config.soprano_absent_penalty (default 0.3). This is the only case left unclassified
  *
- * The soprano degree is the one of the arrival's first segment (the input's `soprano_degree`, from the outer voices);
+ *   HALF                   an arrival on a root-position V (or V7: the framework's soft rule allows it) at a cadence
+ *                          point, preceded by a tonic or a predominant; a cadential 6/4 directly before the V is part
+ *                          of the dominant and the chord before the 6/4 is the one that counts
+ *   DECEPTIVE              root-position V(7) to the chord harmony_deceptive_of names: vi (VI in minor) or IV6
+ *   PLAGAL                 IV to I (harmony_plagal_progression_is), only when it directly follows a PERFECT authentic
+ *                          cadence: it is then marked `post_cadential`. Elsewhere IV to I is a prolongation, which
+ *                          is what standard-harmony says it is, and is not found here
+ *   SUBVERTED              a cadential dominant (V(7) after a predominant, or with a cadential 6/4) that resolves to I6
+ *                          or another chord that is not a tonic, the V again, a deceptive substitute or a 6/4. The
+ *                          dominant's own beat is not tested; the arrival must be at a cadence point
+ *
+ * A candidate that matches none of these is not a cadence. The soprano degree is the one of the arrival's first segment (the input's `soprano_degree`, from the outer voices);
  * 0 means absent. viio to I is not an authentic cadence in standard-harmony's rule and is not found here.
  *
  * The result of each cadence is a Cadence (structure/cadence.h, the L5 shell: an id and event refs, here the segment

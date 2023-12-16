@@ -9,6 +9,9 @@
 #include "analysis_runs.h"
 #include "core/value.h"
 #include "harmony_cadence_rules.h"
+#include "harmony_deceptive.h"
+#include "harmony_functions.h"
+#include "harmony_plagal.h"
 #include "identity/entity_id.h"
 #include "time/musical_time.h"
 
@@ -159,6 +162,7 @@ HarmonyCadenceAnalysisStatus harmony_analysis_cadence_points(const HarmonySegmen
 
 typedef struct {
     CadenceType type;
+    size_t dominant_first_run; /* the run index where the dominant unit starts (the 6/4's, when it has one) */
     size_t dominant_first;
     size_t dominant_last;
     bool has_six_four;
@@ -173,6 +177,7 @@ typedef struct {
 static void dominant_unit(const HarmonySegment *segments, const HarmonyRun *runs, size_t arrival_run,
                           Classified *out) {
     const HarmonyRun *dominant = &runs[arrival_run - 1];
+    out->dominant_first_run = arrival_run - 1;
     out->dominant_first = dominant->first;
     out->dominant_last = dominant->last;
     if (arrival_run >= 2 && is_cadential_six_four(&segments[runs[arrival_run - 2].first])) {
@@ -180,29 +185,112 @@ static void dominant_unit(const HarmonySegment *segments, const HarmonyRun *runs
         out->six_four_first = runs[arrival_run - 2].first;
         out->six_four_last = runs[arrival_run - 2].last;
         out->dominant_first = out->six_four_first;
+        out->dominant_first_run = arrival_run - 2;
     }
 }
 
+/* Whether the function of the chord at segment `index` is `function`. */
+static bool has_function(const HarmonySegment *segment, HarmonicFunction function) {
+    HarmonicFunction found;
+    return diatonic(segment) && harmony_function_of(segment->input->mode, &segment->chord, &found) &&
+           found == function;
+}
+
+/* The soprano degree to hand the rules: the real one, or 1 when absent (a type that does not read it). */
+static int soprano_or_one(int degree) {
+    return degree >= 1 && degree <= 7 ? degree : 1;
+}
+
 static bool classify_point(const HarmonySegment *segments, const HarmonyRun *runs, const InternalPoint *internal,
-                           const HarmonyCadenceConfig *config, Classified *out) {
+                           const bool *pac_arrival_run, const HarmonyCadenceConfig *config, Classified *out) {
     const HarmonyCadencePoint *point = &internal->point;
     const HarmonySegment *arrival = &segments[point->arrival_first];
     const HarmonySegment *before = &segments[point->before_first];
+    size_t r = internal->arrival_run;
     memset(out, 0, sizeof(*out));
     out->soprano_degree = arrival->input->soprano_degree;
+    bool soprano = out->soprano_degree >= 1 && out->soprano_degree <= 7;
 
-    /* Root-position V(7) to root-position I, by the existing rule, which makes it perfect when the soprano is on 1
-       over the tonic and imperfect otherwise. With the soprano absent the rule cannot be asked: the cadence is
-       authentic and unspecified, and the penalty applies. */
-    if (is_dominant_root(before) && is_tonic_root(arrival)) {
-        bool soprano = out->soprano_degree >= 1 && out->soprano_degree <= 7;
-        HarmonyCadence rule = {before->chord, arrival->chord, soprano ? out->soprano_degree : 1, false};
-        CadenceType rule_type;
-        if (harmony_cadence_classify(&rule, &rule_type) && cadence_type_is_authentic(rule_type)) {
-            out->type = soprano ? rule_type : CADENCE_TYPE_AUTHENTIC_UNSPECIFIED;
-            out->penalty = soprano ? 0.0 : config->soprano_absent_penalty;
-            dominant_unit(segments, runs, internal->arrival_run, out);
+    if (is_dominant_root(before)) {
+        /* The dominant before the arrival: V(7) in root position, with a cadential 6/4 before it when it has one. */
+        dominant_unit(segments, runs, r, out);
+        const HarmonySegment *prior =
+            out->dominant_first_run > 0 ? &segments[runs[out->dominant_first_run - 1].first] : NULL;
+
+        /* AUTHENTIC: V(7) to root-position I, by the existing rule: perfect when the soprano is on 1 over the tonic,
+           imperfect otherwise; with the soprano absent it cannot be asked and the penalty applies. */
+        if (is_tonic_root(arrival)) {
+            HarmonyCadence rule = {before->chord, arrival->chord, soprano_or_one(out->soprano_degree), false};
+            CadenceType rule_type;
+            if (harmony_cadence_classify(&rule, &rule_type) && cadence_type_is_authentic(rule_type)) {
+                out->type = soprano ? rule_type : CADENCE_TYPE_AUTHENTIC_UNSPECIFIED;
+                out->penalty = soprano ? 0.0 : config->soprano_absent_penalty;
+                return true;
+            }
+        }
+
+        /* DECEPTIVE: V(7) to the chord the existing rule names (vi, or IV6). */
+        HarmonyChord pair[2] = {before->chord, arrival->chord};
+        HarmonyDeceptiveKind kind;
+        if (diatonic(arrival) && harmony_deceptive_of(pair, &kind)) {
+            out->type = CADENCE_TYPE_DECEPTIVE;
             return true;
+        }
+
+        /* SUBVERTED: a cadential dominant (after a predominant, or with a cadential 6/4) that resolves to I6 or
+           another chord that is neither a tonic, the V again, a deceptive substitute nor a 6/4. */
+        bool cadential = out->has_six_four || (prior != NULL && has_function(prior, HARMONIC_FUNCTION_PREDOMINANT));
+        if (cadential && diatonic(arrival) && !arrival->chord.cadential && arrival->chord.degree != 5 &&
+            !is_tonic_root(arrival)) {
+            HarmonyCadence rule = {before->chord, arrival->chord, soprano_or_one(out->soprano_degree), true};
+            CadenceType rule_type;
+            out->type = CADENCE_TYPE_SUBVERTED;
+            if (arrival->chord.degree != 1 || harmony_cadence_classify(&rule, &rule_type)) {
+                return true;
+            }
+        }
+        memset(out, 0, sizeof(*out));
+        out->soprano_degree = arrival->input->soprano_degree;
+    }
+
+    /* PLAGAL: IV to I directly after a perfect authentic cadence (post-cadential), by the existing rule. */
+    if (is_tonic_root(arrival) && r >= 2 && pac_arrival_run[r - 2]) {
+        HarmonyChord pair[2] = {before->chord, arrival->chord};
+        if (diatonic(before) && harmony_plagal_progression_is(pair, HARMONY_PLAGAL_AFTER_CADENCE)) {
+            out->type = CADENCE_TYPE_PLAGAL;
+            out->post_cadential = true;
+            out->dominant_first_run = r - 1;
+            out->dominant_first = point->before_first;
+            out->dominant_last = point->before_last;
+            return true;
+        }
+    }
+
+    /* HALF: arrival on a root-position V (or V7) at a cadence point, preceded by a tonic or a predominant; a
+       cadential 6/4 directly before the V is part of the dominant and the chord before it is the one that counts. */
+    if (is_dominant_root(arrival)) {
+        bool six_four = is_cadential_six_four(before);
+        size_t unit_run = six_four ? r - 1 : r;
+        if (unit_run >= 1) {
+            const HarmonySegment *from = &segments[runs[unit_run - 1].first];
+            HarmonyCadence rule = {from->chord, arrival->chord, soprano_or_one(out->soprano_degree), false};
+            CadenceType rule_type;
+            if (diatonic(from) && !is_dominant_root(from) && !from->chord.cadential &&
+                (has_function(from, HARMONIC_FUNCTION_TONIC) || has_function(from, HARMONIC_FUNCTION_PREDOMINANT)) &&
+                harmony_cadence_classify(&rule, &rule_type) && rule_type == CADENCE_TYPE_HALF) {
+                out->type = CADENCE_TYPE_HALF;
+                out->dominant_first_run = r;
+                out->dominant_first = point->arrival_first;
+                out->dominant_last = point->arrival_last;
+                if (six_four) {
+                    out->has_six_four = true;
+                    out->six_four_first = point->before_first;
+                    out->six_four_last = point->before_last;
+                    out->dominant_first = point->before_first;
+                    out->dominant_first_run = r - 1;
+                }
+                return true;
+            }
         }
     }
     return false;
@@ -340,20 +428,31 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
             return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
         }
     }
+    bool *pac_arrival_run = (bool *)calloc(run_count > 0 ? run_count : 1, sizeof(bool));
+    if (pac_arrival_run == NULL) {
+        free(found.items);
+        free(runs);
+        free(points);
+        return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+    }
     for (size_t i = 0; i < point_count; i++) {
         Classified classified;
-        if (!classify_point(segments, runs, &points[i], config, &classified)) {
+        if (!classify_point(segments, runs, &points[i], pac_arrival_run, config, &classified)) {
             continue;
+        }
+        if (classified.type == CADENCE_TYPE_PERFECT_AUTHENTIC) {
+            pac_arrival_run[points[i].arrival_run] = true;
         }
         if (!build_result(segments, &points[i].point, &classified, &found.items[found.count])) {
             harmony_cadences_destroy(&found);
+            free(pac_arrival_run);
             free(runs);
             free(points);
             return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
         }
         found.count++;
     }
-    (void)run_count;
+    free(pac_arrival_run);
     free(runs);
     free(points);
     if (found.count == 0) {

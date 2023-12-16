@@ -106,15 +106,12 @@ static void test_a_weak_beat_arrival_is_not_a_cadence(void) {
     fixture_destroy(&f);
 }
 
-static void test_inverted_chords_are_not_cadences(void) {
+static void test_an_inverted_v_to_i_is_not_a_cadence(void) {
     Fixture f;
     fixture_init(&f);
     fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 1, 7, 7);   /* V6 */
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 3 */
-    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
-    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V (root position) */
-    fixture_add(&f, 1, TRIAD_MAJOR, 3, 1, 3, 3);   /* I6, measure 2 beat 2 */
     HarmonySegment *segments = NULL;
     HarmonyCadences found = find(&f, &segments, NULL);
     assert(found.count == 0);
@@ -160,6 +157,136 @@ static void test_uncertainty_is_the_largest_of_the_chords_involved(void) {
     assert(uncertainty_scalar_confidence_numerator(u) == 600000UL);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static CadenceType only_type(Fixture *f, bool *post_cadential, bool *six_four, size_t *count) {
+    HarmonySegment *segments = NULL;
+    HarmonyCadences found = find(f, &segments, NULL);
+    *count = found.count;
+    CadenceType type = found.count > 0 ? found.items[found.count - 1].type : CADENCE_TYPE_UNKNOWN;
+    *post_cadential = found.count > 0 ? found.items[found.count - 1].post_cadential : false;
+    *six_four = found.count > 0 ? found.items[found.count - 1].has_six_four : false;
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    return type;
+}
+
+static void test_half_cadence(void) {
+    bool post, six_four;
+    size_t n;
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 2 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 3 */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_HALF && n == 1 && !six_four);
+    fixture_destroy(&f);
+
+    /* After a tonic, and on a V7 (the framework's soft rule allows it). */
+    fixture_init(&f);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 5, SEVENTH_DOMINANT, 4, 0, 5, 7);
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_HALF && n == 1);
+    fixture_destroy(&f);
+
+    /* With a cadential 6/4 before the V: the 6/4 is part of the dominant. I6/4 on a strong beat, V on a medium one. */
+    fixture_init(&f);
+    for (int i = 0; i < 4; i++) {
+        fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    }
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 3);   /* measure 2 beat 1 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 3);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 2);   /* measure 2 beat 3 */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_HALF && n == 1 && six_four);
+    fixture_destroy(&f);
+
+    /* Not after a dominant, and not on a weak beat. */
+    fixture_init(&f);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 2);   /* beat 3, after the tonic: a half cadence */
+    fixture_add(&f, 2, TRIAD_MINOR, 3, 0, 2, 4);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* beat 1 of measure 2, after ii: another */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_HALF && n == 2);
+    fixture_destroy(&f);
+}
+
+static void test_deceptive(void) {
+    bool post, six_four;
+    size_t n;
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 6, TRIAD_MINOR, 3, 0, 6, 1);   /* vi, beat 3 */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_DECEPTIVE && n == 1);
+    fixture_destroy(&f);
+
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, SEVENTH_DOMINANT, 4, 0, 5, 7);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 1, 6, 6);   /* IV6, the less common substitute */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_DECEPTIVE && n == 1);
+    fixture_destroy(&f);
+}
+
+static void test_plagal_after_a_pac_is_post_cadential(void) {
+    bool post, six_four;
+    size_t n;
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 3: a PAC */
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 4 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, measure 2 beat 1 */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_PLAGAL && n == 2 && post);
+    fixture_destroy(&f);
+
+    /* After an imperfect authentic cadence, or after no cadence, IV to I is a prolongation, not found. */
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);   /* I with mi: an IAC */
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_IMPERFECT_AUTHENTIC && n == 1);
+    fixture_destroy(&f);
+
+    fixture_init(&f);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* beat 3 */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_UNKNOWN && n == 0);
+    fixture_destroy(&f);
+}
+
+static void test_subverted(void) {
+    bool post, six_four;
+    size_t n;
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* a predominant */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 1, 3, 3);   /* I6, beat 3 */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_SUBVERTED && n == 1);
+    fixture_destroy(&f);
+
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, root position: neither tonic nor deceptive */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_SUBVERTED && n == 1);
+    fixture_destroy(&f);
+
+    /* A V that is not cadential (after a tonic, no 6/4) resolving to I6 is not one. */
+    fixture_init(&f);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 1, 3, 3);
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_UNKNOWN && n == 0);
     fixture_destroy(&f);
 }
 
@@ -218,7 +345,11 @@ int main(void) {
     test_pac_iac_by_the_soprano();
     test_soprano_absent_is_authentic_unclassified_with_a_penalty();
     test_a_weak_beat_arrival_is_not_a_cadence();
-    test_inverted_chords_are_not_cadences();
+    test_an_inverted_v_to_i_is_not_a_cadence();
+    test_half_cadence();
+    test_deceptive();
+    test_plagal_after_a_pac_is_post_cadential();
+    test_subverted();
     test_cadential_six_four_is_part_of_the_dominant();
     test_uncertainty_is_the_largest_of_the_chords_involved();
     test_cadence_points_and_config();
