@@ -720,6 +720,8 @@ static void test_explicit_parameters(void) {
 
     /* Rhythm. */
     ref = ref_of(PLAN_TRANSFORM_AUGMENTED);
+    ref.ratio_num = 2;
+    ref.ratio_den = 1;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 65, 69, 74}));
     assert(is_time(result.notes[1].offset, 1, 2) && is_time(result.notes[1].duration, 1, 4) &&
@@ -733,6 +735,8 @@ static void test_explicit_parameters(void) {
            is_time(result.length, 3, 2));
     free(run.record_json);
     ref = ref_of(PLAN_TRANSFORM_DIMINISHED);
+    ref.ratio_num = 1;
+    ref.ratio_den = 2;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && is_time(result.notes[0].duration, 1, 8) && is_time(result.notes[1].offset, 1, 8) &&
            is_time(result.notes[2].offset, 3, 16) && is_time(result.notes[3].duration, 1, 4) &&
