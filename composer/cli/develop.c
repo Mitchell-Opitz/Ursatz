@@ -14,6 +14,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_develop.h>
+#include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
 #define EXIT_USAGE 1
@@ -236,17 +237,17 @@ typedef struct {
     long num;
     unsigned long den;
     const char *name;
-} Value;
+} LengthValue;
 
 /* The plain and single-dotted values a note list writes, longest first. */
-static const Value VALUES[] = {{1, 1, "w"},  {3, 4, "h."},  {1, 2, "h"},  {3, 8, "q."}, {1, 4, "q"},
+static const LengthValue VALUES[] = {{1, 1, "w"},  {3, 4, "h."},  {1, 2, "h"},  {3, 8, "q."}, {1, 4, "q"},
                                {3, 16, "e."}, {1, 8, "e"}, {3, 32, "s."}, {1, 16, "s"}, {1, 32, "t"}};
 
 /* A length as one or more tokens: "q", or "q~ q" for a note (tie true) when no one value is the length. */
 static void append_length(char *out, size_t size, size_t *used, const char *pitch, PlanTime length, bool tie) {
     bool first = true;
     while (length.num > 0) {
-        const Value *piece = NULL;
+        const LengthValue *piece = NULL;
         for (size_t i = 0; i < sizeof(VALUES) / sizeof(VALUES[0]) && !piece; i++) {
             PlanTime value;
             plan_time_make(VALUES[i].num, VALUES[i].den, &value);
