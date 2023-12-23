@@ -207,7 +207,7 @@ static void test_bad_arguments(void) {
     expect_failure(THEME " --op retrograde --suggest 0", 1, "--suggest must be");
     expect_failure(FIXTURE("motive_d_minor.txt") " --meter 4/4 --op restate --degree 3", 1, "needs a key");
     expect_failure(FIXTURE("motive_d_minor.txt") " --meter 4/4 --op restate --tonal", 1, "needs a key");
-    expect_failure(THEME " --op retrograde --key \"H major\"", 1, "unknown key");
+    expect_failure(FIXTURE("motive_d_minor.txt") " --meter 4/4 --op retrograde --key \"H major\"", 1, "unknown key");
     expect_failure(THEME " --op retrograde --nope", 1, "unknown option '--nope'");
     expect_failure(THEME " --op", 1, "--op needs a value");
 }
