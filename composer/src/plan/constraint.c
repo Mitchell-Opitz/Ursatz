@@ -21,7 +21,10 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_MOTIVE_REF: {
         const PlanMotiveRef *ref = &constraint->params.motive;
         return plan_has_node(plan, ref->motive) && plan_node_kind(plan, ref->motive) == PLAN_NODE_MOTIVE &&
-               ref->transform >= PLAN_TRANSFORM_NONE && ref->transform <= PLAN_TRANSFORM_FRAGMENTED;
+               ref->transform >= PLAN_TRANSFORM_NONE && ref->transform <= PLAN_TRANSFORM_LIQUIDATED &&
+               ref->position >= PLAN_FRAGMENT_ANY && ref->position <= PLAN_FRAGMENT_MIDDLE &&
+               ref->axis >= 0 && ref->axis <= 127 && ref->length >= 0 && ref->drop >= 0 && ref->interval >= 0 &&
+               ref->ratio_num >= 0 && ref->ratio_den >= 0 && (ref->ratio_num == 0) == (ref->ratio_den == 0);
     }
     case PLAN_CONSTRAINT_KEY:
         return constraint->params.key.tonic_pitch_class >= 0 && constraint->params.key.tonic_pitch_class <= 11 &&

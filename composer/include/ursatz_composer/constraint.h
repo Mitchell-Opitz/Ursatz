@@ -1,6 +1,7 @@
 #ifndef URSATZ_COMPOSER_CONSTRAINT_H
 #define URSATZ_COMPOSER_CONSTRAINT_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include <ursatz_composer/lanes.h>
@@ -39,8 +40,20 @@ typedef enum {
     PLAN_TRANSFORM_RETROGRADE,
     PLAN_TRANSFORM_AUGMENTED,
     PLAN_TRANSFORM_DIMINISHED,
-    PLAN_TRANSFORM_FRAGMENTED
+    PLAN_TRANSFORM_FRAGMENTED,
+    /* The transforms below were added after the first six; they keep the order of the plan format. */
+    PLAN_TRANSFORM_RESTATED,       /* exact repetition, or a transposition of it */
+    PLAN_TRANSFORM_INTERVAL_CHANGED,
+    PLAN_TRANSFORM_LIQUIDATED
 } PlanMotiveTransform;
+
+/* Where a fragment is taken from. PLAN_FRAGMENT_ANY leaves it to the operator. */
+typedef enum {
+    PLAN_FRAGMENT_ANY,
+    PLAN_FRAGMENT_LEADING,
+    PLAN_FRAGMENT_TRAILING,
+    PLAN_FRAGMENT_MIDDLE
+} PlanFragmentPosition;
 
 typedef enum {
     PLAN_ARCHETYPE_SENTENCE,
@@ -48,11 +61,42 @@ typedef enum {
     PLAN_ARCHETYPE_HYBRID
 } PlanArchetype;
 
-/* motive is a motive node in the same plan; semitones is used only by PLAN_TRANSFORM_TRANSPOSED. */
+/*
+ * motive is a motive node in the same plan. The constraint says how the node's motive is to be made from it.
+ *
+ * semitones is used only by PLAN_TRANSFORM_TRANSPOSED (a real transposition). The members after it are optional
+ * parameters for the motivic development operators (motive_develop.h); all-zero asks the operator to choose, so a
+ * constraint written without them reads as it always did:
+ *   tonal          transposed or inverted in the steps of the key's scale instead of in semitones
+ *   steps          transposed, tonal: diatonic steps up (negative: down)
+ *   has_axis, axis inverted: the MIDI pitch the motive is mirrored about (the first note by default)
+ *   interval, amount, keep_contour
+ *                  interval_changed: the 1-based interval to widen (negative amount: narrow) by amount semitones,
+ *                  or every interval when interval is 0; keep_contour refuses a result that changes a direction
+ *   position, length
+ *                  fragmented: leading, trailing or middle, and how many notes
+ *   drop, keep_rhythm
+ *                  liquidated: how many notes to drop; keep_rhythm leaves the dropped notes' time as rests
+ *   ratio_num, ratio_den
+ *                  augmented or diminished: the factor the durations are multiplied by (2:1 and 1:2 by default)
+ */
 typedef struct {
     NodeId motive;
     PlanMotiveTransform transform;
     int semitones;
+    bool tonal;
+    int steps;
+    bool has_axis;
+    int axis;
+    int interval;
+    int amount;
+    bool keep_contour;
+    PlanFragmentPosition position;
+    int length;
+    int drop;
+    bool keep_rhythm;
+    int ratio_num;
+    int ratio_den;
 } PlanMotiveRef;
 
 /*

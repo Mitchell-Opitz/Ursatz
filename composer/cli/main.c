@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "develop.h"
 #include "motive.h"
 #include "progression.h"
 
@@ -14,6 +15,7 @@ static void print_usage(FILE *out) {
     fprintf(out, "       ursatz-composer export <plan.json> [--midi <out.mid>] [--musicxml <out.xml>]\n");
     fprintf(out, "%s\n", PROGRESSION_USAGE_LINE);
     fprintf(out, "%s\n", MOTIVE_USAGE_LINE);
+    fprintf(out, "%s\n", DEVELOP_USAGE_LINE);
 }
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
@@ -94,6 +96,9 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "motive") == 0) {
         return run_motive(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "develop") == 0) {
+        return run_develop(argc, argv);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         printf("ursatz-composer %s\n", composer_version());

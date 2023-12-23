@@ -25,8 +25,10 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
-static const char *const TRANSFORM_NAMES[] = {"none",      "transposed", "inverted", "retrograde",
-                                              "augmented", "diminished", "fragmented"};
+static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
+                                              "augmented",  "diminished",      "fragmented", "restated",
+                                              "interval_changed", "liquidated"};
+static const char *const FRAGMENT_POSITION_NAMES[] = {"any", "leading", "trailing", "middle"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
@@ -82,6 +84,46 @@ static cJSON *span_json(PlanSpan span) {
     return object;
 }
 
+/* The development parameters of a motive_ref (see constraint.h), written only when set, so a plain one is unchanged. */
+static bool motive_ref_options_json(cJSON *object, const PlanMotiveRef *ref) {
+    bool ok = true;
+    if (ref->tonal) {
+        ok = ok && json_add(object, "tonal", cJSON_CreateBool(true));
+    }
+    if (ref->steps != 0) {
+        ok = ok && json_add(object, "steps", json_number(ref->steps));
+    }
+    if (ref->has_axis) {
+        ok = ok && json_add(object, "axis", json_number(ref->axis));
+    }
+    if (ref->interval != 0) {
+        ok = ok && json_add(object, "interval", json_number(ref->interval));
+    }
+    if (ref->amount != 0) {
+        ok = ok && json_add(object, "amount", json_number(ref->amount));
+    }
+    if (ref->keep_contour) {
+        ok = ok && json_add(object, "keep_contour", cJSON_CreateBool(true));
+    }
+    if (ref->position != PLAN_FRAGMENT_ANY) {
+        ok = ok && json_add(object, "position", cJSON_CreateString(FRAGMENT_POSITION_NAMES[ref->position]));
+    }
+    if (ref->length != 0) {
+        ok = ok && json_add(object, "length", json_number(ref->length));
+    }
+    if (ref->drop != 0) {
+        ok = ok && json_add(object, "drop", json_number(ref->drop));
+    }
+    if (ref->keep_rhythm) {
+        ok = ok && json_add(object, "keep_rhythm", cJSON_CreateBool(true));
+    }
+    if (ref->ratio_num != 0) {
+        ok = ok && json_add(object, "ratio_num", json_number(ref->ratio_num)) &&
+             json_add(object, "ratio_den", json_number(ref->ratio_den));
+    }
+    return ok;
+}
+
 static cJSON *constraint_json(const PlanConstraint *constraint) {
     cJSON *object = cJSON_CreateObject();
     if (!object) {
@@ -99,6 +141,7 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         ok = ok && json_add(object, "motive", json_number((long)constraint->params.motive.motive)) &&
              json_add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
              json_add(object, "semitones", json_number(constraint->params.motive.semitones));
+        ok = ok && motive_ref_options_json(object, &constraint->params.motive);
         break;
     case PLAN_CONSTRAINT_KEY:
         ok = ok && json_add(object, "tonic_pitch_class", json_number(constraint->params.key.tonic_pitch_class)) &&
@@ -591,6 +634,78 @@ bool json_read_span(JsonReader *reader, const cJSON *object, const char *path, P
     return true;
 }
 
+/* An optional boolean member; absent is false. */
+static bool read_optional_bool(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool *out) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    *out = false;
+    if (!item) {
+        return true;
+    }
+    if (!cJSON_IsBool(item)) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, key);
+        return json_bad_format(reader, at, "expected true or false");
+    }
+    *out = cJSON_IsTrue(item);
+    return true;
+}
+
+/* An optional integer member; absent is 0. */
+static bool read_optional_int(JsonReader *reader, const cJSON *object, const char *path, const char *key, long min,
+                              long max, int *out) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    *out = 0;
+    if (!item) {
+        return true;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    long value;
+    json_child_path(at, path, key);
+    if (!json_read_long(reader, item, at, min, max, &value)) {
+        return false;
+    }
+    *out = (int)value;
+    return true;
+}
+
+/* The development parameters of a motive_ref, all optional (see constraint.h). */
+static bool read_motive_ref_options(JsonReader *reader, const cJSON *item, const char *path, PlanMotiveRef *ref) {
+    int position = PLAN_FRAGMENT_ANY;
+    const cJSON *position_item = cJSON_GetObjectItemCaseSensitive(item, "position");
+    if (position_item) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "position");
+        if (!read_enum(reader, position_item, at, FRAGMENT_POSITION_NAMES, COUNT_OF(FRAGMENT_POSITION_NAMES),
+                       &position)) {
+            return false;
+        }
+    }
+    ref->position = (PlanFragmentPosition)position;
+    const cJSON *axis_item = cJSON_GetObjectItemCaseSensitive(item, "axis");
+    if (axis_item) {
+        ref->has_axis = true;
+        if (!read_optional_int(reader, item, path, "axis", 0, 127, &ref->axis)) {
+            return false;
+        }
+    }
+    if (!read_optional_bool(reader, item, path, "tonal", &ref->tonal) ||
+        !read_optional_bool(reader, item, path, "keep_contour", &ref->keep_contour) ||
+        !read_optional_bool(reader, item, path, "keep_rhythm", &ref->keep_rhythm) ||
+        !read_optional_int(reader, item, path, "steps", -127, 127, &ref->steps) ||
+        !read_optional_int(reader, item, path, "interval", 0, 127, &ref->interval) ||
+        !read_optional_int(reader, item, path, "amount", -127, 127, &ref->amount) ||
+        !read_optional_int(reader, item, path, "length", 0, 127, &ref->length) ||
+        !read_optional_int(reader, item, path, "drop", 0, 127, &ref->drop) ||
+        !read_optional_int(reader, item, path, "ratio_num", 0, 64, &ref->ratio_num) ||
+        !read_optional_int(reader, item, path, "ratio_den", 0, 64, &ref->ratio_den)) {
+        return false;
+    }
+    if ((ref->ratio_num == 0) != (ref->ratio_den == 0)) {
+        return json_bad_format(reader, path, "ratio_num and ratio_den go together");
+    }
+    return true;
+}
+
 static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object");
@@ -626,7 +741,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         out->params.motive.motive = (NodeId)number_value;
         out->params.motive.transform = (PlanMotiveTransform)value;
         out->params.motive.semitones = (int)semitones;
-        return true;
+        return read_motive_ref_options(reader, item, path, &out->params.motive);
     }
     case PLAN_CONSTRAINT_KEY:
         if (!json_read_int_member(reader, item, path, "tonic_pitch_class", 0, 11, &number_value) ||

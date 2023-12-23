@@ -81,3 +81,16 @@ target_compile_definitions(test_motive_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_F
                                                    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_motive_cli ursatz-composer)
 add_test(NAME test_motive_cli COMMAND test_motive_cli)
+
+add_executable(test_motive_develop test_motive_develop.c)
+target_link_libraries(test_motive_develop PRIVATE ursatz_composer)
+target_compile_options(test_motive_develop PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_develop COMMAND test_motive_develop)
+
+add_executable(test_develop_cli test_develop_cli.c)
+target_link_libraries(test_develop_cli PRIVATE ursatz_composer)
+target_compile_options(test_develop_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_develop_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_develop_cli ursatz-composer)
+add_test(NAME test_develop_cli COMMAND test_develop_cli)

@@ -78,6 +78,23 @@ static MotiveDegree degree_of(const Scale *scale, int relative) {
     return found;
 }
 
+/* The step of the key's scale a pitch is on: octaves of 7 from the tonic's pitch class, and the degree in the octave. */
+void motive_scale_position(const PlanKey *key, int pitch, long *position, int *alteration) {
+    Scale scale = scale_of(key->mode);
+    int relative = pitch - key->tonic_pitch_class;
+    long octave = floor_div(relative, 12);
+    MotiveDegree degree = degree_of(&scale, (int)(relative - octave * 12));
+    *position = octave * 7 + (degree.degree - 1);
+    *alteration = degree.alteration;
+}
+
+int motive_position_pitch(const PlanKey *key, long position, int alteration) {
+    Scale scale = scale_of(key->mode);
+    long octave = floor_div(position, 7);
+    int degree = (int)(position - octave * 7) + 1;
+    return (int)(key->tonic_pitch_class + octave * 12 + scale.semitones[degree] + alteration);
+}
+
 /* ---------------------------------------------------------------- contour */
 
 static MotiveShape shape_of(const ContourDirection *directions, size_t count, size_t note_count) {

@@ -52,6 +52,13 @@ ursatz-composer motive theme.txt --meter 4/4 --key "D minor"
 `motive` loads a motive from MIDI, MusicXML, a note list or JSON and prints its analysis. See
 [docs/cli-motive.md](docs/cli-motive.md).
 
+```sh
+ursatz-composer develop theme.txt --op restate --tonal --meter 4/4 --key "D minor" --suggest 3
+```
+
+`develop` makes motives related to a motive (restatements, fragments, rhythmic variants) and scores
+how recognizable each is. See [docs/cli-develop.md](docs/cli-develop.md).
+
 ## Plan format
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
