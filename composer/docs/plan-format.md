@@ -123,11 +123,31 @@ nothing checks them.
 | --- | --- |
 | `length_bars` | `bars`: integer, 1 or more. |
 | `cadence` | `type`: `pac`, `iac`, `hc`, `dc` or `pc`. |
-| `motive_ref` | `motive`: the id of a motive node; `transform`: `none`, `transposed`, `inverted`, `retrograde`, `augmented`, `diminished` or `fragmented`; `semitones`: used by `transposed`. |
+| `motive_ref` | `motive`: the id of a motive node; `transform`: `none`, `transposed`, `inverted`, `retrograde`, `augmented`, `diminished`, `fragmented`, `restated`, `interval_changed` or `liquidated`; `semitones`: used by `transposed`. Optional development parameters follow. |
 | `key` | `tonic_pitch_class` (0 to 11), `mode` (`major` or `minor`). |
 | `archetype` | `type`: `sentence`, `period` or `hybrid`. |
 | `embellish` | No fields. Marks a harmony lane span reopened for the embellishment pass. |
 | `schema` | `schema`: the name of a galant schema as Ursatz's galant-schemas framework names it (`romanesca`, `do-re-mi`, `fonte` and so on); `stage`: the index of the schema's stage the span sounds, from 0. The span's other voices are read from the framework's prototype. |
+
+### Motive development parameters
+
+A `motive_ref` on a motive node says how the node's motive is made from another motive node: the
+motivic development operators (`<ursatz_composer/motive_develop.h>`) read it and write the node's
+melody. Every member below is optional and is written only when set; a constraint without them leaves
+the choice to the operator, which draws it from the run's seed.
+
+| Member | Used by | Meaning |
+| --- | --- | --- |
+| `tonal` | `transposed`, `inverted` | `true`: move in steps of the key's scale instead of semitones. Needs a key. |
+| `steps` | `transposed`, tonal | Diatonic steps up; negative is down. |
+| `axis` | `inverted` | The MIDI pitch mirrored about; the source's first note when absent. |
+| `interval`, `amount`, `keep_contour` | `interval_changed` | The 1-based interval to widen by `amount` semitones (negative narrows); every interval when `interval` is absent. `keep_contour` refuses a result that changes a direction. |
+| `position`, `length` | `fragmented` | `leading`, `trailing` or `middle`; and how many notes. |
+| `drop`, `keep_rhythm` | `liquidated` | How many notes to drop, the weakest first. With `keep_rhythm` the notes left keep their onsets. |
+| `ratio_num`, `ratio_den` | `augmented`, `diminished` | The factor durations and onsets are multiplied by; both or neither. 2:1 and 1:2 when absent. |
+
+`restated` asks for the exact repetition or a transposition of it. The operators write only the
+Realized melody lane span of the node, and only when the result fits the node's span.
 
 ## Reading
 
