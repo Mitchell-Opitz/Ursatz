@@ -170,6 +170,7 @@ static bool read_target(const Scene *scene, const Source *source, Motive *out) {
     motive.length = span.length;
     assert(plan_lane_span_state(scene->plan, ids[0]) == PLAN_STATE_REALIZED);
     assert(plan_lane_span_lane(scene->plan, ids[0]) == PLAN_LANE_MELODY);
+    *out = motive;
     return true;
 }
 
