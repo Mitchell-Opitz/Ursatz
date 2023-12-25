@@ -48,7 +48,7 @@ typedef struct {
     bool diminished;
     int inversion;
     int applied_target;
-} Chord;
+} HandChord;
 
 typedef struct {
     double at;
@@ -61,7 +61,7 @@ typedef struct {
     long beat_num;
     long beat_den;
     int home;
-    Chord chords[64];
+    HandChord chords[64];
     size_t chord_count;
     Expected cadences[16];
     size_t cadence_count;
@@ -107,7 +107,7 @@ static int roman_degree(const char *letters, size_t length) {
     return -1;
 }
 
-static void parse_numeral(const char *text, Chord *chord) {
+static void parse_numeral(const char *text, HandChord *chord) {
     size_t n = 0;
     while (text[n] == 'I' || text[n] == 'V' || text[n] == 'i' || text[n] == 'v') {
         n++;
@@ -178,7 +178,7 @@ static Annotation load_annotation(const char *fixture) {
             char tonic[4] = "";
             char numeral[24] = "";
             assert(sscanf(line, "%*s %d %lf %3s %23s", &measure, &beat, tonic, numeral) == 4);
-            Chord *c = &a.chords[a.chord_count++];
+            HandChord *c = &a.chords[a.chord_count++];
             assert(a.chord_count <= 64 && a.beats > 0);
             c->at = time_of(&a, measure, beat);
             c->until = c->at;
@@ -212,7 +212,7 @@ static Annotation load_annotation(const char *fixture) {
 }
 
 /* The hand chord sounding at a time, or NULL outside every stretch. */
-static const Chord *chord_at(const Annotation *a, double t) {
+static const HandChord *chord_at(const Annotation *a, double t) {
     for (size_t i = 0; i < a->chord_count; i++) {
         if (a->chords[i].at <= t + 1e-9 && t < a->chords[i].until - 1e-9) {
             return &a->chords[i];
@@ -287,7 +287,7 @@ static void set_intervals(HarmonySegmentInput *input, const int *intervals, size
     input->interval_count = count;
 }
 
-static void input_from_chord(const Chord *chord, HarmonySegmentInput *input) {
+static void input_from_chord(const HandChord *chord, HarmonySegmentInput *input) {
     static const int MAJOR[3] = {0, 4, 7};
     static const int MINOR[3] = {0, 3, 7};
     static const int DIM[3] = {0, 3, 6};
@@ -427,7 +427,7 @@ static Score run_adapter_alone(const Piece *piece) {
                                standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
     Inputs in = make_inputs(&p, map, &a, count);
     for (size_t s = 0; s < count; s++) {
-        const Chord *chord = chord_at(&a, p.starts[s]);
+        const HandChord *chord = chord_at(&a, p.starts[s]);
         if (chord == NULL) {
             in.inputs[s].degree = 0; /* not a chord this framework reads */
             in.inputs[s].interval_count = 3;
