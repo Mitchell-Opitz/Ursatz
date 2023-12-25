@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdlib.h>
 
 #include "analysis_cadence.h"
 #include "analysis_test_util.h"
