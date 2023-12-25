@@ -41,7 +41,8 @@
  *
  *   HALF                   an arrival on a root-position V (or V7: the framework's soft rule allows it) at a cadence
  *                          point, preceded by a tonic or a predominant; a cadential 6/4 directly before the V is part
- *                          of the dominant and the chord before the 6/4 is the one that counts
+ *                          of the dominant and the chord before the 6/4 is the one that counts. A 6/4 (a triad in second
+ *                          inversion) is never the chord before the V: a neighbor 6/4 between two V is part of the V
  *   DECEPTIVE              root-position V(7) to the chord harmony_deceptive_of names: vi (VI in minor) or IV6
  *   PLAGAL                 IV to I (harmony_plagal_progression_is), only when it directly follows a PERFECT authentic
  *                          cadence: it is then marked `post_cadential`. Elsewhere IV to I is a prolongation, which

@@ -202,6 +202,17 @@ static void test_half_cadence(void) {
     assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_HALF && n == 1 && six_four);
     fixture_destroy(&f);
 
+    /* A neighbor 6/4 between two V is part of the V: the second V is not a half cadence. */
+    fixture_init(&f);
+    for (int i = 0; i < 4; i++) {
+        fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    }
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* measure 2 beat 1: the half cadence */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 2, 5, 1);   /* I6/4 on beat 2: weaker than the V after it, a neighbor */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* beat 3 */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_HALF && n == 1 && !six_four);
+    fixture_destroy(&f);
+
     /* Not after a dominant, and not on a weak beat. */
     fixture_init(&f);
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);

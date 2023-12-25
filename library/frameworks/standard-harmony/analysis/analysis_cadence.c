@@ -275,7 +275,8 @@ static bool classify_point(const HarmonySegment *segments, const HarmonyRun *run
             const HarmonySegment *from = &segments[runs[unit_run - 1].first];
             HarmonyCadence rule = {from->chord, arrival->chord, soprano_or_one(out->soprano_degree), false};
             CadenceType rule_type;
-            if (diatonic(from) && !is_dominant_root(from) && !from->chord.cadential &&
+            /* A 6/4 is never the chord that sets up a half cadence: a neighbor 6/4 between two V is part of the V. */
+            if (diatonic(from) && !is_dominant_root(from) && !from->chord.cadential && from->chord.inversion != 2 &&
                 (has_function(from, HARMONIC_FUNCTION_TONIC) || has_function(from, HARMONIC_FUNCTION_PREDOMINANT)) &&
                 harmony_cadence_classify(&rule, &rule_type) && rule_type == CADENCE_TYPE_HALF) {
                 out->type = CADENCE_TYPE_HALF;
