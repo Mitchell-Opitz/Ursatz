@@ -214,6 +214,16 @@ static void test_half_cadence(void) {
     assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_HALF && n == 1 && !six_four);
     fixture_destroy(&f);
 
+    /* A V that the next cadence resolves is that cadence's dominant, not a half cadence. */
+    fixture_init(&f);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V on beat 3 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, measure 2 beat 1: a PAC */
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_PERFECT_AUTHENTIC && n == 1);
+    fixture_destroy(&f);
+
     /* Not after a dominant, and not on a weak beat. */
     fixture_init(&f);
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);

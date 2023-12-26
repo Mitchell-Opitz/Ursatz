@@ -51,6 +51,9 @@
  *                          or another chord that is not a tonic, the V again, a deceptive substitute or a 6/4. The
  *                          dominant's own beat is not tested; the arrival must be at a cadence point
  *
+ * A half cadence is the END of a phrase on V: a V that the next cadence resolves (an authentic, deceptive or subverted
+ * cadence whose dominant is this V) is that cadence's dominant, and no half cadence is reported for it.
+ *
  * A candidate that matches none of these is not a cadence. The soprano degree is the one of the arrival's first segment (the input's `soprano_degree`, from the outer voices);
  * 0 means absent. viio to I is not an authentic cadence in standard-harmony's rule and is not found here.
  *

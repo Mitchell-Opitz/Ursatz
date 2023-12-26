@@ -430,23 +430,49 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
         }
     }
     bool *pac_arrival_run = (bool *)calloc(run_count > 0 ? run_count : 1, sizeof(bool));
-    if (pac_arrival_run == NULL) {
+    Classified *classified = (Classified *)calloc(point_count > 0 ? point_count : 1, sizeof(Classified));
+    bool *is_cadence = (bool *)calloc(point_count > 0 ? point_count : 1, sizeof(bool));
+    if (pac_arrival_run == NULL || classified == NULL || is_cadence == NULL) {
+        free(pac_arrival_run);
+        free(classified);
+        free(is_cadence);
         free(found.items);
         free(runs);
         free(points);
         return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
     }
     for (size_t i = 0; i < point_count; i++) {
-        Classified classified;
-        if (!classify_point(segments, runs, &points[i], pac_arrival_run, config, &classified)) {
-            continue;
-        }
-        if (classified.type == CADENCE_TYPE_PERFECT_AUTHENTIC) {
+        is_cadence[i] = classify_point(segments, runs, &points[i], pac_arrival_run, config, &classified[i]);
+        if (is_cadence[i] && classified[i].type == CADENCE_TYPE_PERFECT_AUTHENTIC) {
             pac_arrival_run[points[i].arrival_run] = true;
         }
-        if (!build_result(segments, &points[i].point, &classified, &found.items[found.count])) {
+    }
+    /* A half cadence arrival is the END of a phrase on V. A V that the very next cadence resolves (an authentic,
+       deceptive or subverted cadence whose dominant is this V) is the dominant of that cadence, not a half cadence
+       of its own, so the half cadence is dropped. */
+    for (size_t i = 0; i < point_count; i++) {
+        if (!is_cadence[i] || classified[i].type != CADENCE_TYPE_HALF) {
+            continue;
+        }
+        for (size_t j = 0; j < point_count; j++) {
+            if (is_cadence[j] && j != i && classified[j].dominant_last == points[i].point.arrival_last &&
+                (cadence_type_is_authentic(classified[j].type) ||
+                 classified[j].type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED ||
+                 classified[j].type == CADENCE_TYPE_DECEPTIVE || classified[j].type == CADENCE_TYPE_SUBVERTED)) {
+                is_cadence[i] = false;
+                break;
+            }
+        }
+    }
+    for (size_t i = 0; i < point_count; i++) {
+        if (!is_cadence[i]) {
+            continue;
+        }
+        if (!build_result(segments, &points[i].point, &classified[i], &found.items[found.count])) {
             harmony_cadences_destroy(&found);
             free(pac_arrival_run);
+            free(classified);
+            free(is_cadence);
             free(runs);
             free(points);
             return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
@@ -454,6 +480,8 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
         found.count++;
     }
     free(pac_arrival_run);
+    free(classified);
+    free(is_cadence);
     free(runs);
     free(points);
     if (found.count == 0) {

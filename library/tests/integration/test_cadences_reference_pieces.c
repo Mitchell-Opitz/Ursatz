@@ -37,7 +37,7 @@
  */
 
 #define TARGET 0.80
-#define CHAIN_RECALL_FLOOR 0.0
+#define CHAIN_RECALL_FLOOR 0.05 /* the whole chain found 1 of 10 when this was written */
 
 typedef struct {
     double at;    /* whole notes */
