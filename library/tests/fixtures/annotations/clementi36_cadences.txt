@@ -1,0 +1,34 @@
+# Hand-marked cadences in Clementi, Sonatina in C major, Op. 36 No. 1, first movement.
+#
+# SOURCE: the IMSLP scan of the first edition (Op. 36, 1797) and a modern urtext of the Op. 36 sonatinas. Neither was available when this file was written, so the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The numerals and cadences are a hand reading of the
+# harmony, made from the pitch content of tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (notes dumped beat by beat) and
+# the piece's known form. They were NOT derived from the output of the chord identifier, the key estimator or the
+# cadence adapter. A human should confirm them against an edition before this file is relied on.
+#
+# The reading follows standard-harmony's definitions, not every analyst's: a PAC or IAC is a root-position V (or V7)
+# to a root-position I, so a V6 or V4/3 to I is not marked (it prolongs); viio to I is not a cadence; a half cadence
+# arrives on a root-position V after a tonic or predominant (an applied chord before it does not count); and a
+# plagal IV-I is a cadence only directly after a PAC. A cadence on a weak offbeat is marked where the music puts it,
+# even though the adapter looks only for arrivals on at least a medium beat.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
+#   home <tonic>              the piece's key (major), for the whole-chain run: C Db D Eb E F F# G Ab A Bb B
+#   chord <measure> <beat> <tonic> <numeral>   a chord of the hand analysis, in the major key on <tonic>, sounding
+#                             until the next chord line (or the end line); beats are 1-based, a half beat is .5;
+#                             numerals are ASCII: V7, ii6, V4/3, I6/4, viio/V (an applied chord is a slash and the
+#                             degree it tonicizes)
+#   end <measure> <beat>      the end of the stretch of chords (chords outside a stretch are not read)
+#   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here
+#
+# The closing cadence of the movement (measures 36-38). Earlier cadences have inverted dominants (V4/3 over D, V4/2 over F)
+# and are not marked, by the definition above.
+
+meter 4 1/4
+home C
+chord 36 1 C IV
+chord 37 1 C V7
+chord 38 1 C I
+end 39 1
+cadence 38 1 pac

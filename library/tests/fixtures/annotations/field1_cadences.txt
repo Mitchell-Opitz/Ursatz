@@ -1,0 +1,45 @@
+# Hand-marked cadences in Field, Nocturne No. 1 in E-flat major (12/8).
+#
+# SOURCE: the Breitkopf and Haertel edition of the Nocturnes and the IMSLP scan. Neither was available when this file was written, so the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The numerals and cadences are a hand reading of the
+# harmony, made from the pitch content of tests/fixtures/framework-v1-corpus/"Field 1.mid" (notes dumped beat by beat) and
+# the piece's known form. They were NOT derived from the output of the chord identifier, the key estimator or the
+# cadence adapter. A human should confirm them against an edition before this file is relied on.
+#
+# The reading follows standard-harmony's definitions, not every analyst's: a PAC or IAC is a root-position V (or V7)
+# to a root-position I, so a V6 or V4/3 to I is not marked (it prolongs); viio to I is not a cadence; a half cadence
+# arrives on a root-position V after a tonic or predominant (an applied chord before it does not count); and a
+# plagal IV-I is a cadence only directly after a PAC. A cadence on a weak offbeat is marked where the music puts it,
+# even though the adapter looks only for arrivals on at least a medium beat.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
+#   home <tonic>              the piece's key (major), for the whole-chain run: C Db D Eb E F F# G Ab A Bb B
+#   chord <measure> <beat> <tonic> <numeral>   a chord of the hand analysis, in the major key on <tonic>, sounding
+#                             until the next chord line (or the end line); beats are 1-based, a half beat is .5;
+#                             numerals are ASCII: V7, ii6, V4/3, I6/4, viio/V (an applied chord is a slash and the
+#                             degree it tonicizes)
+#   end <measure> <beat>      the end of the stretch of chords (chords outside a stretch are not read)
+#   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here
+#
+# The progression of the opening, from tests/fixtures/annotations/field1_harmony.txt (itself a draft): I V7 I, IV V7 I
+# repeated. Four cadences, each a root-position V7 to a root-position I. The soprano over the tonic is mi in measure 12.
+
+meter 4 3/8
+home Eb
+chord 2 1 Eb I
+chord 3 1 Eb V7
+chord 4 1 Eb I
+chord 7 1 Eb V7
+chord 8 1 Eb I
+chord 10 1 Eb IV
+chord 11 1 Eb V7
+chord 12 1 Eb I
+chord 14 1 Eb IV
+chord 15 1 Eb V7
+chord 16 1 Eb I
+end 17 1
+cadence 4 1 pac
+cadence 8 1 pac
+cadence 12 1 iac
+cadence 16 1 pac

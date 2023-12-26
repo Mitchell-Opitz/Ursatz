@@ -1,0 +1,48 @@
+# Hand-marked cadences in Bach, Minuet in G, BWV Anh. 114 (Notebook for Anna Magdalena Bach, 1725).
+#
+# SOURCE: the Neue Bach-Ausgabe (V/4) and the IMSLP scan of the Notebook. Neither was available when this file was written, so the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The numerals and cadences are a hand reading of the
+# harmony, made from the pitch content of tests/fixtures/framework-v1-corpus/"Bach 114.mid" (notes dumped beat by beat) and
+# the piece's known form. They were NOT derived from the output of the chord identifier, the key estimator or the
+# cadence adapter. A human should confirm them against an edition before this file is relied on.
+#
+# The reading follows standard-harmony's definitions, not every analyst's: a PAC or IAC is a root-position V (or V7)
+# to a root-position I, so a V6 or V4/3 to I is not marked (it prolongs); viio to I is not a cadence; a half cadence
+# arrives on a root-position V after a tonic or predominant (an applied chord before it does not count); and a
+# plagal IV-I is a cadence only directly after a PAC. A cadence on a weak offbeat is marked where the music puts it,
+# even though the adapter looks only for arrivals on at least a medium beat.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
+#   home <tonic>              the piece's key (major), for the whole-chain run: C Db D Eb E F F# G Ab A Bb B
+#   chord <measure> <beat> <tonic> <numeral>   a chord of the hand analysis, in the major key on <tonic>, sounding
+#                             until the next chord line (or the end line); beats are 1-based, a half beat is .5;
+#                             numerals are ASCII: V7, ii6, V4/3, I6/4, viio/V (an applied chord is a slash and the
+#                             degree it tonicizes)
+#   end <measure> <beat>      the end of the stretch of chords (chords outside a stretch are not read)
+#   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here
+#
+# The score is 3/4 (the MIDI file declares 4/4, which is wrong). Measures 3-8 of the first strain are read; the
+# arrival chord of measure 5 has the third in the bass (I6), so it is not a cadence here, and the cadence of
+# measure 8 arrives on a half beat (a miss by design: it is on a weak offbeat).
+
+meter 3 1/4
+home G
+chord 3 1 G ii
+chord 3 2.5 G I
+chord 4 1 G V
+chord 4 1.5 G I6
+chord 4 3 G V7
+chord 5 1 G I6
+chord 5 2.5 G I
+chord 6 1 G IV
+chord 6 2.5 G I6
+chord 6 3 G IV
+chord 7 1 G ii
+chord 7 2 G V6
+chord 7 2.5 G I
+chord 8 1 G V4/2
+chord 8 2 G V
+chord 8 2.5 G I
+end 9 1
+cadence 8 2.5 pac

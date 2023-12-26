@@ -47,14 +47,36 @@ For each interior segment: a `Relationship`, predicate `prolongs`, source = the 
 
 `analysis_phrase.h`. Phrases and cadences do not exist yet, so the caller supplies `HarmonyPhraseSpan`s: segment index range plus the `CadenceType` that ends the phrase (authentic, or half). Within a span the existing `harmony_phrase_model_label` labels the phrase's chords: Tb the opening tonic, PD the first strong predominant of the run before the dominant, D the cadential dominant, Te the final tonic (none after a half cadence). Consecutive segments of the same chord are one chord and share its label; invalid segments, applied chords and prolonging 6/4s (passing, neighbor, arpeggiating) are left out of the chord list and take no label. A phrase that does not end as its cadence says is unlabeled.
 
+## Cadences
+
+`analysis_cadence.h`. Cadences are found from harmony and meter alone, since no phrases exist yet (L3.6). The classification is the existing rules' (`harmony_cadence_classify`, `harmony_deceptive_of`, `harmony_plagal_progression_is`, `harmony_function_of`); the adapter chooses candidates and supplies what they need. `harmony_analysis_cadence_points` returns the candidates; `harmony_analysis_find_cadences` classifies them.
+
+**Cadence points.** Chords are runs of consecutive segments making the same chord. A candidate is a diatonic chord, the arrival, directly after another diatonic chord, where the arrival starts on a beat at least as strong as `min_arrival_strength` (default MEDIUM) and lasts at least `arrival_min_beats` beats (default 1; a beat is the segment's optional `beat_length`, or `beat_length` in the config, default a quarter note), or the soprano rests right after it (`soprano_rest_counts`, default true).
+
+**Types.**
+- **PAC**: root-position V or V7 to root-position I with the soprano on 1 at the arrival.
+- **IAC**: the same with the soprano on any other degree (3 or 5 usually; the existing rule calls every other degree imperfect).
+- **AUTHENTIC_UNSPECIFIED**: the same with the soprano absent at the arrival. It is the only case left unclassified, and its uncertainty carries `soprano_absent_penalty` (default 0.3). PAC and IAC are otherwise distinguished by the soprano line.
+- **HALF**: arrival on a root-position V (V7 allowed by the framework's soft rule) after a tonic or a predominant; a cadential 6/4 directly before the V is part of the dominant and the chord before it counts. A 6/4 is never the chord before the V. A half cadence is the end of a phrase on V, so a V that the next cadence resolves (an authentic, deceptive or subverted cadence whose dominant is this V) is that cadence's dominant and no half cadence is reported for it.
+- **DECEPTIVE**: root-position V(7) to vi (VI in minor) or IV6 (`harmony_deceptive_of`).
+- **PLAGAL**: IV to I, only directly after a PAC, and then marked `post_cadential`. Elsewhere IV to I is a prolongation, as standard-harmony says, and is not a cadence here.
+- **SUBVERTED**: a cadential dominant (V(7) after a predominant, or with a cadential 6/4) resolving to I6 or another chord that is not a tonic, the V again, a deceptive substitute or a 6/4. `SUBVERTED` was already in `CadenceType` and ranks 0 in `harmony_cadence_strength`; nothing was added to the enum.
+
+An inverted V or an arrival on an inverted tonic is not a cadence (it prolongs, as L3.2 reads it), and viio to I is not an authentic cadence in the framework's rule. A candidate matching none of these gives no cadence.
+
+**Output.** One `Cadence` (the L5 shell: an id and the segment ids from the dominant's first segment to the arrival's last) and one `Interpretation` targeting the Cadence's id per cadence: FrameworkReference standard-harmony, claim = a `HarmonyCadenceClaim` (type, soprano degree, post-cadential, six-four, the arrival and dominant segment ids, key ref), and a `TimeSpan` from the dominant's start to the arrival's end on the result. The soprano degree is the one of the arrival's first segment.
+
+**Uncertainty** = 1 - (1 - u)(1 - penalty), u the largest input uncertainty of the chords involved (the dominant, a cadential 6/4 in it, the arrival), and penalty `soprano_absent_penalty` when the type is AUTHENTIC_UNSPECIFIED for want of a soprano, 0 otherwise.
+
 ## Relocated enums
 
 `HarmonicFunction`, `SeventhResolution`, `PhraseModelLabel`, `SixFourType` and `ModulationKind` were used only by standard-harmony and moved from `src/semantics/` into it, one commit each. `AppliedChordKind` (standard-tonality), `KeyChangeExtent` (common-practice-minimal), `CadenceType` and `BeatStrength` are shared and stay.
 
 ## Limits
 
-- Phrases and cadences are supplied by the caller until L3.6 and L3.3.
-- No modulation classification (`ModulationKind` is not used on real music; it needs cadences), and no strong/weak predominant reporting.
+- Phrases are supplied by the caller until L3.6. Cadences are now found from harmony and meter alone, with no phrase context: a cadence is a candidate at a cadence point, not the end of a known phrase.
+- The arrival thresholds (MEDIUM beat, one beat long, soprano rest) are stated defaults, not learned values. An arrival on a weak offbeat, an applied chord before a half cadence, and a dominant that is inverted are not found by design.
+- No modulation classification (`ModulationKind` is not used on real music; cadence-confirmed modulation is later work), and no strong/weak predominant reporting.
 - A cadential 6/4 is recognised by its beat (not weaker than the V), its bass on 5 and the V after it; a 6/4 on a weaker beat than its V is read as another type or left unclassified.
 - The alto and tenor are not in the input, so a 6/4 whose inner voices move is read from the soprano alone.
 - Tonic lines are the framework's, so a tonic prolongation not of the listed kinds is not found, and dominant prolongation is limited as above.
