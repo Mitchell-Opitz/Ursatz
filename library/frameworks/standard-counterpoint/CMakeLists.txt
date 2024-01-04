@@ -1,5 +1,6 @@
 add_library(standard_counterpoint
     framework.c
+    motion_type.c
     rule_pair.c
     rule_table.c
     species_aggregate.c

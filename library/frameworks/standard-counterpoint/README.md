@@ -10,7 +10,7 @@ depend on any other framework module.
 
 The rules are style-independent training rules for writing lines and
 combining them, not a claim about one repertoire. They use the
-`MotionType` value type (`src/semantics/motion_type.h`).
+`MotionType` value type (`motion_type.h`, in this module: only standard-counterpoint uses it, so it moved here from `src/semantics/`).
 
 ## Scope
 

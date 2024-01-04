@@ -6,7 +6,7 @@
 
 #include "analysis_grid.h"
 #include "interpretation/interpretation.h"
-#include "semantics/motion_type.h"
+#include "motion_type.h"
 #include "structure/structure.h"
 
 /*

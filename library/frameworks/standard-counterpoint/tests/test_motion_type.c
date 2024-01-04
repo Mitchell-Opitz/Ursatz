@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/motion_type.h"
+#include "motion_type.h"
 
 static void test_validity(void) {
     for (int i = 0; i < MOTION_TYPE_COUNT; i++) {

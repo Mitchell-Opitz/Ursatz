@@ -1,4 +1,4 @@
-#include "semantics/motion_type.h"
+#include "motion_type.h"
 
 #include <stddef.h>
 
