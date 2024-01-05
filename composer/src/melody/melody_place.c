@@ -60,16 +60,32 @@ static bool pick(const Option *options, size_t count, int max_distance, FillRng 
     return true;
 }
 
-/* The notes of the phrase: the motive's, then notes that fill the rest, one to a cell. */
+static MelodyNote *push(MelodyCandidate *out, long onset, long duration) {
+    if (out->count >= MELODY_MAX_NOTES) {
+        return NULL;
+    }
+    MelodyNote *note = &out->notes[out->count++];
+    note->onset = onset;
+    note->duration = duration;
+    note->motive_index = -1;
+    return note;
+}
+
+/*
+ * The notes of the phrase: the motive's, then notes that fill the rest. With a density the rest is notes of an
+ * even length, that many to a cell; without one it is the motive's rhythm over again, each note as long as the
+ * time from one onset of the motive to the next, the last as long as it is.
+ */
 static bool layout(const MelodyContext *context, const MelodyFillParams *params, MelodyCandidate *out) {
     long start = (long)params->start_cell * context->cell;
     if (context->motive_count == 0 || start + context->motive_length > context->length) {
         return false;
     }
     for (size_t k = 0; k < context->motive_count; k++) {
-        MelodyNote *note = &out->notes[out->count++];
-        note->onset = start + context->motive_onset[k];
-        note->duration = context->motive_duration[k];
+        MelodyNote *note = push(out, start + context->motive_onset[k], context->motive_duration[k]);
+        if (!note) {
+            return false;
+        }
         note->motive_index = (int)k;
     }
 
@@ -77,28 +93,29 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
     long at = start + context->motive_length;
     long last = context->chord_start[context->count - 1];
     long bound = last > at ? last : context->length;
+    long step = params->density > 0 && context->cell % (long)params->density == 0
+                    ? context->cell / (long)params->density
+                    : context->cell;
+    size_t k = 0;
     while (at < bound) {
-        long next = (at / context->cell + 1) * context->cell;
+        long next;
+        if (params->density == 0) {
+            size_t m = k++ % context->motive_count;
+            next = at + (m + 1 < context->motive_count ? context->motive_onset[m + 1] - context->motive_onset[m]
+                                                      : context->motive_duration[m]);
+        } else {
+            next = (at / step + 1) * step;
+        }
         if (next > bound) {
             next = bound;
         }
-        if (out->count >= MELODY_MAX_NOTES) {
+        if (!push(out, at, next - at)) {
             return false;
         }
-        MelodyNote *note = &out->notes[out->count++];
-        note->onset = at;
-        note->duration = next - at;
-        note->motive_index = -1;
         at = next;
     }
-    if (bound < context->length) {
-        if (out->count >= MELODY_MAX_NOTES) {
-            return false;
-        }
-        MelodyNote *note = &out->notes[out->count++];
-        note->onset = bound;
-        note->duration = context->length - bound;
-        note->motive_index = -1;
+    if (bound < context->length && !push(out, bound, context->length - bound)) {
+        return false;
     }
     for (size_t i = 0; i < out->count; i++) {
         out->notes[i].strong = out->notes[i].onset % context->cell == 0;
@@ -108,37 +125,56 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
 }
 
 /*
- * Gives every note a pitch. A note on a strong beat takes a chord tone, and so does every other note here. A
- * motive note takes the chord tone that keeps its interval to the note before nearest to the motive's own, within
- * the tolerance. The first takes the chord tone nearest the motive's first pitch, which is that pitch itself when it
- * is a chord tone of the first chord (its scale degree and octave kept) and a transposition of the motive otherwise.
- * A note after the motive takes a chord tone near the note before it, by a leap standard-counterpoint allows.
+ * A note that must be a chord tone: the first and the last, any on a strong beat, any as long as a cell, and any
+ * held into the next chord. The others, when non-chord tones are allowed, are filled in between these.
+ */
+static bool is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
+                      size_t i) {
+    const MelodyNote *note = &melody->notes[i];
+    return params->nct_types == 0 || i == 0 || i + 1 == melody->count || note->strong ||
+           note->duration >= context->cell || note->onset + note->duration > context->chord_start[note->chord + 1];
+}
+
+/*
+ * Gives every note a pitch. The anchors take chord tones. A motive anchor takes the chord tone that keeps its
+ * interval to the anchor before nearest to the motive's own between the same two notes, within the tolerance for
+ * each note between them. The first takes the chord tone nearest the motive's first pitch, which is that pitch
+ * itself when it is a chord tone of the first chord (its scale degree and octave kept) and a transposition of the
+ * motive otherwise. An anchor after the motive takes a chord tone near the one before it, by a leap
+ * standard-counterpoint allows. The notes between two anchors are then filled (melody_fill_between).
  */
 static bool assign(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out) {
     int low = params->range_low;
     int high = params->range_high;
+    size_t before = 0; /* the anchor before this one */
     for (size_t i = 0; i < out->count; i++) {
         MelodyNote *note = &out->notes[i];
         Option options[MAX_OPTIONS];
-        unsigned mask = melody_need_mask(context, params, note);
+        unsigned mask;
         int ideal;
         int reach = MAX_MOVE;
+        if (!is_anchor(context, params, out, i)) {
+            continue;
+        }
+        mask = melody_need_mask(context, params, note);
         if (i == 0) {
             ideal = context->motive_pitch[0];
             reach = 127;
-        } else if (note->motive_index >= 0) {
+        } else if (note->motive_index >= 0 && out->notes[before].motive_index >= 0) {
             size_t k = (size_t)note->motive_index;
-            ideal = out->notes[i - 1].pitch + context->motive_pitch[k] - context->motive_pitch[k - 1];
-            reach = params->tolerance;
+            size_t then = (size_t)out->notes[before].motive_index;
+            ideal = out->notes[before].pitch + context->motive_pitch[k] - context->motive_pitch[then];
+            reach = params->tolerance * (int)(i - before);
         } else {
-            ideal = out->notes[i - 1].pitch;
+            ideal = out->notes[before].pitch;
         }
         size_t count = options_for(mask, low, high, ideal, options);
         size_t kept = 0;
         for (size_t j = 0; j < count; j++) {
-            int move = options[j].pitch - (i > 0 ? out->notes[i - 1].pitch : options[j].pitch);
-            bool repeat = note->motive_index < 0 && i > 0 && move == 0;
-            if ((i > 0 && !leap_allowed(move)) || repeat) {
+            int move = options[j].pitch - out->notes[before].pitch;
+            bool adjacent = i > 0 && before + 1 == i;
+            bool repeat = note->motive_index < 0 && adjacent && move == 0;
+            if (i > 0 && ((adjacent && !leap_allowed(move)) || repeat)) {
                 continue;
             }
             options[kept++] = options[j];
@@ -146,6 +182,23 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         if (!pick(options, kept, reach, rng, &note->pitch)) {
             return false;
         }
+        if (i > 0 && before + 1 < i) {
+            int between[MELODY_MAX_NOTES];
+            for (size_t j = before + 1; j < i; j++) {
+                const MelodyNote *weak = &out->notes[j];
+                if (weak->motive_index >= 0 && out->notes[before].motive_index >= 0) {
+                    between[j] = out->notes[before].pitch + context->motive_pitch[weak->motive_index] -
+                                 context->motive_pitch[out->notes[before].motive_index];
+                } else {
+                    between[j] = out->notes[before].pitch +
+                                 (note->pitch - out->notes[before].pitch) * (int)(j - before) / (int)(i - before);
+                }
+            }
+            if (!melody_fill_between(context, params, out->notes, out->count, before, i, between, high, rng)) {
+                return false;
+            }
+        }
+        before = i;
     }
     return true;
 }

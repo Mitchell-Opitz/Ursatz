@@ -23,25 +23,41 @@
  * a pitch that keeps the motive's interval to the note before within params.tolerance, and a note on a strong
  * beat (the start of a cell: the places a chord may start) is a chord tone of the harmony lane's chord. The
  * motive is transposed so that its first note is a chord tone, keeping its scale degree when that degree is one.
- * The rest of the phrase is filled with notes that are chord tones. The melody is written as one Realized span
- * over the phrase.
+ * Between the notes on strong beats the notes of the weak beats are chord tones, or non-chord tones of a figure
+ * params.nct_types allows, approached and left as the NonChordTone framework defines the figure. After the motive
+ * the rhythm is the motive's again (params.density 0), or an even subdivision of the cell. The melody is written
+ * as one Realized span over the phrase.
  */
 
 #define MELODY_FILL_OPERATOR_NAME "melody-fill"
 
+/* The non-chord tones the operator may write, as bits of MelodyFillParams.nct_types. */
+#define MELODY_NCT_PASSING (1u << 0)
+#define MELODY_NCT_NEIGHBOR (1u << 1)      /* upper and lower */
+#define MELODY_NCT_APPOGGIATURA (1u << 2)  /* approached by leap, left by step the other way */
+#define MELODY_NCT_SUSPENSION (1u << 3)    /* held into the next chord, left by step down */
+#define MELODY_NCT_ANTICIPATION (1u << 4)  /* sounds the next chord's note early, then repeats it */
+
 /*
  * tolerance is how far, in semitones, an interval of the placed motive may differ from the motive's own interval
  * between the same two notes. range_low and range_high are MIDI pitches, both included. start_cell is the cell of
- * the phrase the motive starts on (0 is the first), the time before it a rest.
+ * the phrase the motive starts on (0 is the first), the time before it a rest. nct_types is the set of
+ * MELODY_NCT_ bits that may be written; none means every note is a chord tone. density is how many notes make
+ * up a cell after the motive, or 0 for the motive's own rhythm over again.
  */
 typedef struct {
     int tolerance;
     int range_low;
     int range_high;
     unsigned start_cell;
+    unsigned nct_types;
+    unsigned density;
 } MelodyFillParams;
 
-/* The defaults: tolerance 2, MIDI 60 to 79 (C4 to G5), start_cell 0. */
+/*
+ * The defaults: tolerance 2, MIDI 60 to 79 (C4 to G5), start_cell 0, passing and neighbor tones only, and the
+ * motive's rhythm after the motive (density 0).
+ */
 MelodyFillParams melody_fill_params_default(void);
 
 /*

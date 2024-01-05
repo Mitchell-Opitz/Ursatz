@@ -12,19 +12,22 @@
 #define DEFAULT_RANGE_LOW 60
 #define DEFAULT_RANGE_HIGH 79
 #define DEFAULT_START_CELL 0
+#define DEFAULT_NCT_TYPES (MELODY_NCT_PASSING | MELODY_NCT_NEIGHBOR)
+#define DEFAULT_DENSITY 0
 
 /* Melodies tried per call, and kept; ones that repeat an earlier one are dropped. */
 #define MELODY_ATTEMPTS 48
 #define MELODY_KEEP 6
 
 MelodyFillParams melody_fill_params_default(void) {
-    MelodyFillParams params = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL};
+    MelodyFillParams params = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
+                               DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY};
     return params;
 }
 
 static const MelodyFillParams *params_of(void *context) {
     static const MelodyFillParams defaults = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                                              DEFAULT_START_CELL};
+                                              DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY};
     return context ? context : &defaults;
 }
 
@@ -156,8 +159,8 @@ FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFill
     operator_.generator.name = MELODY_FILL_OPERATOR_NAME;
     operator_.generator.supported_inputs = "PiecePlan melody lane span over a written harmony and bass lane";
     operator_.generator.supported_outputs = "PiecePlan melody lane span";
-    operator_.generator.configuration_description = "interval tolerance, melody range and motive start cell";
-    operator_.generator.constraints_description = "chord tones on strong beats, the motive's rhythm and contour";
+    operator_.generator.configuration_description = "interval tolerance, melody range, motive start cell, non-chord tone types and density";
+    operator_.generator.constraints_description = "chord tones on strong beats, non-chord tones approached and left as the framework defines them";
     operator_.generator.deterministic = true;
     operator_.generator.version = "1";
     operator_.kind = FILL_OPERATOR_FILL;

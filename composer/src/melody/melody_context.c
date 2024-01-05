@@ -64,7 +64,10 @@ size_t melody_chord_at(const MelodyContext *context, long tick) {
 unsigned melody_need_mask(const MelodyContext *context, const MelodyFillParams *params, const MelodyNote *note) {
     unsigned mask = ~0u;
     long end = note->onset + note->duration;
-    (void)params;
+    /* A suspension is held into a chord it is not a tone of. */
+    if (params->nct_types & MELODY_NCT_SUSPENSION) {
+        return context->chord_mask[melody_chord_at(context, note->onset)];
+    }
     for (size_t c = melody_chord_at(context, note->onset); c < context->count && context->chord_start[c] < end; c++) {
         mask &= context->chord_mask[c];
     }

@@ -96,6 +96,26 @@ bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext
  */
 unsigned melody_need_mask(const MelodyContext *context, const MelodyFillParams *params, const MelodyNote *note);
 
+/* The pitch classes of the key's scale at chord (the seventh degree raised when the chord has the raised one). */
+unsigned melody_scale_mask(const MelodyContext *context, size_t chord);
+
+/*
+ * Whether note i of a melody is allowed: a chord tone of every chord it sounds through, or a non-chord tone of a
+ * figure params->nct_types allows (passing, neighbor, appoggiatura, suspension, anticipation), approached and left
+ * as NonChordTone defines the figure, and never on a strong beat but as an appoggiatura or a suspension. It reads
+ * the pitches of notes i - 1 and i + 1.
+ */
+bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *params, const MelodyNote *notes,
+                      size_t count, size_t i);
+
+/*
+ * Gives the notes between from and to, which are non-chord-tone candidates, pitches with the pitches of notes from
+ * and to fixed: chord tones, or the non-chord tones of figures that hold. ideal[j] is the pitch the note j would
+ * take if it could, and nothing above cap is used. False when no assignment holds.
+ */
+bool melody_fill_between(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes,
+                         size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng);
+
 /*
  * Builds one melody for the context, choosing only with rng. False when the motive cannot be placed (it does not
  * fit the phrase or the range, or a strong beat has no chord tone near enough to its contour).
