@@ -54,6 +54,7 @@ add_library(standard_counterpoint
     analysis/analysis_grid.c
     analysis/analysis_claim.c
     analysis/analysis_motion.c
+    analysis/analysis_perfects.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
