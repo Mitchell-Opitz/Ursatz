@@ -27,6 +27,11 @@
  * params.nct_types allows, approached and left as the NonChordTone framework defines the figure. After the motive
  * the rhythm is the motive's again (params.density 0), or an even subdivision of the cell. The melody is written
  * as one Realized span over the phrase.
+ *
+ * The phrase is shaped as one arch: a single highest note, the climax, placed about two thirds of the way through
+ * (params.climax_position), approached from below and left downward, with no other note as high. A leap of a
+ * fourth or more is followed by a step the other way where it can be, notes are not repeated needlessly, and no
+ * note leaves params.range_low to params.range_high.
  */
 
 #define MELODY_FILL_OPERATOR_NAME "melody-fill"
@@ -43,7 +48,8 @@
  * between the same two notes. range_low and range_high are MIDI pitches, both included. start_cell is the cell of
  * the phrase the motive starts on (0 is the first), the time before it a rest. nct_types is the set of
  * MELODY_NCT_ bits that may be written; none means every note is a chord tone. density is how many notes make
- * up a cell after the motive, or 0 for the motive's own rhythm over again.
+ * up a cell after the motive, or 0 for the motive's own rhythm over again. climax_position is how far through the
+ * phrase the climax falls, in thousandths of its length (values above 1000 count as 1000).
  */
 typedef struct {
     int tolerance;
@@ -52,11 +58,12 @@ typedef struct {
     unsigned start_cell;
     unsigned nct_types;
     unsigned density;
+    unsigned climax_position;
 } MelodyFillParams;
 
 /*
- * The defaults: tolerance 2, MIDI 60 to 79 (C4 to G5), start_cell 0, passing and neighbor tones only, and the
- * motive's rhythm after the motive (density 0).
+ * The defaults: tolerance 2, MIDI 60 to 79 (C4 to G5), start_cell 0, passing and neighbor tones only, the
+ * motive's rhythm after the motive (density 0), and the climax 667 thousandths of the way through.
  */
 MelodyFillParams melody_fill_params_default(void);
 

@@ -17,6 +17,8 @@
 #define MELODY_MAX_NOTES 256
 #define MELODY_MAX_BASS 256
 #define MELODY_PAYLOAD_MAGIC 0x4D454C31UL
+/* The smallest leap, in semitones, that a step the other way is asked to follow. */
+#define MELODY_RECOVER_FROM 5
 
 /* One note of the bass lane: when it sounds, its pitch, and the chord it sounds under. */
 typedef struct {
@@ -115,6 +117,40 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
  */
 bool melody_fill_between(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes,
                          size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng);
+
+/*
+ * A note that must be a chord tone: the first and the last, any on a strong beat, any as long as a cell, and any
+ * held into the next chord. The others, when non-chord tones are allowed, are filled in between these.
+ */
+bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
+                      size_t i);
+
+/*
+ * The shape of the phrase after the motive, planned once the motive's notes are placed: the note that is the
+ * climax and its pitch, and the highest pitch any other note after the motive may take.
+ */
+typedef struct {
+    bool made;
+    bool in_motive; /* the climax is in the motive; no note after it is as high */
+    size_t climax;  /* the index of the climax note, when it is after the motive */
+    int climax_pitch;
+    int cap;        /* the highest pitch of any other note after the motive */
+    int motive_top; /* the highest pitch of the motive's notes placed so far */
+} MelodyContour;
+
+/* Plans the contour at note first, the first note after the motive. False when no climax can be placed. */
+bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
+                         size_t first, FillRng *rng, MelodyContour *out);
+/* The pitch the arch would give anchor i, whose anchor before it is `before`. */
+int melody_contour_ideal(const MelodyContext *context, const MelodyContour *contour, const MelodyCandidate *melody,
+                         size_t i, size_t before);
+/* Whether exactly one note is the highest. */
+bool melody_contour_unique(const MelodyCandidate *melody);
+/*
+ * How many of the contour's soft rules hold: one climax, at about the asked place, leaps of a fourth or more
+ * recovered by a step the other way, and not many repeated notes. *held of *total.
+ */
+void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigned *total);
 
 /*
  * Builds one melody for the context, choosing only with rng. False when the motive cannot be placed (it does not

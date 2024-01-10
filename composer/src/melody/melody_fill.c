@@ -14,6 +14,7 @@
 #define DEFAULT_START_CELL 0
 #define DEFAULT_NCT_TYPES (MELODY_NCT_PASSING | MELODY_NCT_NEIGHBOR)
 #define DEFAULT_DENSITY 0
+#define DEFAULT_CLIMAX 667
 
 /* Melodies tried per call, and kept; ones that repeat an earlier one are dropped. */
 #define MELODY_ATTEMPTS 48
@@ -21,13 +22,13 @@
 
 MelodyFillParams melody_fill_params_default(void) {
     MelodyFillParams params = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                               DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY};
+                               DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX};
     return params;
 }
 
 static const MelodyFillParams *params_of(void *context) {
     static const MelodyFillParams defaults = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                                              DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY};
+                                              DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX};
     return context ? context : &defaults;
 }
 
