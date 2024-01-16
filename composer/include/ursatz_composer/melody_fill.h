@@ -5,6 +5,7 @@
 
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/fill_loop.h>
 
 /*
  * The melody operator: a Fill operator for the melody lane. It reads a harmony lane and a bass lane that are
@@ -66,6 +67,33 @@ typedef struct {
  * motive's rhythm after the motive (density 0), and the climax 667 thousandths of the way through.
  */
 MelodyFillParams melody_fill_params_default(void);
+
+/*
+ * The checker for this operator's candidates; pass it as FillConfig.checker. Hard rules reject a candidate and soft
+ * rules score it, the score being the share that hold. It calls the frameworks and does not write their rules again:
+ *   - NonChordTone: each melody note outside its chord is labeled by common-practice-minimal's labeler, and is
+ *     rejected unless it is a figure params.nct_types allows, approached and left as the framework defines it;
+ *   - standard-counterpoint melodic rules over the melody (forbidden leaps and outlines are hard; repeated notes,
+ *     leap density and the like score), and its harmonic rules between the melody and the bass (voice crossing and
+ *     parallel fifths and octaves are hard; direct perfects and the like score); a dissonance against the bass
+ *     is allowed only in a non-chord tone or the chord's seventh, and imperfect consonances on strong beats score;
+ *   - standard-harmony's resolution of the leading tone and of a chord's seventh from each chord to the next, the
+ *     melody being the outer voice;
+ * and the stable tone the cadence asks for at the end: the tonic for a PAC or a PC, the third for an IAC (the
+ * soprano the harmony operators' recognizer is told). The one climax, its place, recovered leaps and few repeated
+ * notes score. The strong beats must carry chord tones, and every note must be in the range. A candidate of
+ * another operator goes to harmony_phrase_checker.
+ */
+bool melody_fill_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                         const FillCandidate *candidate, void *context, FillCheck *out);
+
+/*
+ * Checks the melody lane over span, reading only what is in the plan: the harmony and bass lanes under it (which must
+ * be written, and tile the span), in key, with params (NULL for the defaults). The same rules the checker applies.
+ * True when the lane could be read, with *violation NULL if nothing is broken and otherwise the rule that is.
+ */
+bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const MelodyFillParams *params,
+                       const char **violation);
 
 /*
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params must

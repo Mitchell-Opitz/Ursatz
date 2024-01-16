@@ -86,6 +86,12 @@ bool melody_chord_mask(const PlanKey *key, const PhraseChord *chord, unsigned *m
 size_t melody_chord_at(const MelodyContext *context, long tick);
 
 /*
+ * Reads the harmony and bass under a phrase: the chord spans must tile the span exactly, none of them open, and
+ * the bass spans must tile it. The target and the motive are not read. False when the phrase cannot be read.
+ */
+bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, PlanKey key, MelodyContext *out);
+
+/*
  * Reads the harmony, bass and motive under a Constrained melody span: the chord spans must tile the span exactly,
  * none of them open, the bass spans must tile it, and a motive_ref constraint must name a motive with a melody.
  * False when the span is not one the melody operator applies to.
@@ -151,6 +157,17 @@ bool melody_contour_unique(const MelodyCandidate *melody);
  * recovered by a step the other way, and not many repeated notes. *held of *total.
  */
 void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigned *total);
+
+/* The pitch classes the last note may be: the cadence's stable tone (the tonic for a PAC, the third for an IAC). */
+unsigned melody_cadence_mask(const MelodyContext *context);
+
+/*
+ * Judges a melody: every rule of the checker (see melody_fill.h). Hard rules reject; soft rules score. False only
+ * when it fails itself (allocation).
+ */
+bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict);
+/* The checker's verdict on a melody candidate's payload. */
+bool melody_check(const void *payload, FillCheck *out);
 
 /*
  * Builds one melody for the context, choosing only with rng. False when the motive cannot be placed (it does not

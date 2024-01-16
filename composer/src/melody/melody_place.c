@@ -162,6 +162,9 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             continue;
         }
         mask = melody_need_mask(context, params, note);
+        if (i + 1 == out->count) {
+            mask &= melody_cadence_mask(context);
+        }
         if (note->motive_index < 0) {
             if (!contour.made && !melody_contour_plan(context, params, out, i, rng, &contour)) {
                 return false;

@@ -159,31 +159,20 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
     return true;
 }
 
-bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out) {
-    if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_MELODY ||
-        plan_lane_span_voice(plan, target) != 0 || plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED) {
-        return false;
-    }
-    MelodyContext *context = out;
+bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, PlanKey key, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
-    LaneSpanId melody[2];
     long cells = 0;
     memset(context, 0, sizeof(*context));
-    context->target = target;
-    context->owner = plan_lane_span_owner(plan, target);
-    context->span = plan_lane_span_span(plan, target);
-
-    /* The target is the only melody in the phrase. */
-    if (plan_lane_find(plan, PLAN_LANE_MELODY, 0, context->span, melody, 2) != 1 ||
-        !harmony_find_key(plan, target, context->owner, context->span, &context->key) ||
-        !harmony_read_lane(plan, context->span, context->key.mode, context->chords, &context->count,
-                           &context->metre) ||
-        !melody_ticks(context->span.length, &context->length) ||
-        !melody_ticks(context->metre.cell_length, &context->cell) || context->cell <= 0) {
+    context->owner = owner;
+    context->span = span;
+    context->key = key;
+    if (!harmony_read_lane(plan, span, key.mode, context->chords, &context->count, &context->metre) ||
+        !melody_ticks(span.length, &context->length) || !melody_ticks(context->metre.cell_length, &context->cell) ||
+        context->cell <= 0) {
         return false;
     }
     /* The harmony is written: no chord span under the melody is still open. */
-    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, context->span, ids, HARMONY_MAX_CHORDS);
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
     if (found != context->count || context->count == 0) {
         return false;
     }
@@ -201,9 +190,28 @@ bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext
         return false;
     }
     PlanConstraint cadence;
-    if (harmony_find_constraint(plan, ids[context->count - 1], context->owner, PLAN_CONSTRAINT_CADENCE, &cadence)) {
+    if (harmony_find_constraint(plan, ids[context->count - 1], owner, PLAN_CONSTRAINT_CADENCE, &cadence)) {
         context->has_cadence = true;
         context->cadence = cadence.params.cadence;
     }
-    return read_bass(plan, context) && read_motive(plan, context);
+    return read_bass(plan, context);
+}
+
+bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out) {
+    if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_MELODY ||
+        plan_lane_span_voice(plan, target) != 0 || plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED) {
+        return false;
+    }
+    NodeId owner = plan_lane_span_owner(plan, target);
+    PlanSpan span = plan_lane_span_span(plan, target);
+    LaneSpanId melody[2];
+    PlanKey key;
+
+    /* The target is the only melody in the phrase. */
+    if (plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, melody, 2) != 1 ||
+        !harmony_find_key(plan, target, owner, span, &key) || !melody_phrase_read(plan, owner, span, key, out)) {
+        return false;
+    }
+    out->target = target;
+    return read_motive(plan, out);
 }

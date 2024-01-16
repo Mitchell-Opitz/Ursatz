@@ -87,7 +87,16 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     }
     for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
         bool repeat = false;
+        PhraseVerdict verdict;
         if (!melody_build(read, params, rng, scratch)) {
+            continue;
+        }
+        /* Only melodies that pass the hard rules are proposed; none passing leaves the span open. */
+        if (!melody_judge(scratch, &verdict)) {
+            ok = false;
+            break;
+        }
+        if (verdict.hard) {
             continue;
         }
         for (size_t i = 0; i < kept_count; i++) {
@@ -161,7 +170,7 @@ FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFill
     operator_.generator.supported_inputs = "PiecePlan melody lane span over a written harmony and bass lane";
     operator_.generator.supported_outputs = "PiecePlan melody lane span";
     operator_.generator.configuration_description = "interval tolerance, melody range, motive start cell, non-chord tone types and density";
-    operator_.generator.constraints_description = "chord tones on strong beats, non-chord tones approached and left as the framework defines them";
+    operator_.generator.constraints_description = "chord tones on strong beats, NonChordTone figures, standard-counterpoint melodic and harmonic rules";
     operator_.generator.deterministic = true;
     operator_.generator.version = "1";
     operator_.kind = FILL_OPERATOR_FILL;
