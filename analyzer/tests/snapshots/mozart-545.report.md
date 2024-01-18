@@ -3,6 +3,7 @@
 ## Summary
 
 - **File:** Mozart 545.mid, 5598 notes.
+- **Input:** MIDI file. Meter: embedded in the file. Key signature: embedded in the file. Pitch spelling: by rule.
 - **Key:** G major, the key with the most time across 42 key regions.
 - **Chords:** 1095 chord events; 817 matched a chord (75%), 278 did not.
 - **Most frequent chords:** I (237), minor7 (131), V (81).

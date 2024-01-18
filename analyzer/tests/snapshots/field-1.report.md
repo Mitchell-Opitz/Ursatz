@@ -3,6 +3,7 @@
 ## Summary
 
 - **File:** Field 1.mid, 1191 notes.
+- **Input:** MIDI file. Meter: embedded in the file. Key signature: inferred. Pitch spelling: by rule.
 - **Key:** Eb major, the key with the most time across 4 key regions.
 - **Chords:** 268 chord events; 241 matched a chord (90%), 27 did not.
 - **Most frequent chords:** I (95), dominant7 (41), major7 (26).

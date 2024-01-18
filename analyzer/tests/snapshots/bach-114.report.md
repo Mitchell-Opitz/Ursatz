@@ -3,6 +3,7 @@
 ## Summary
 
 - **File:** Bach 114.mid, 430 notes.
+- **Input:** MIDI file. Meter: embedded in the file. Key signature: inferred. Pitch spelling: by rule.
 - **Key:** G major, the key with the most time across 2 key regions.
 - **Chords:** 155 chord events; 149 matched a chord (96%), 6 did not.
 - **Most frequent chords:** I (42), minor7 (24), IV (22).
