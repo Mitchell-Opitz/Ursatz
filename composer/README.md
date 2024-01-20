@@ -68,3 +68,6 @@ A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis d
 
 The engine that fills a plan with registered operators, seeded and recorded, with a suggestion mode.
 See [docs/fill-loop.md](docs/fill-loop.md).
+
+The melody operator writes a melody over a written harmony and bass, from a motive. See
+[docs/melody-fill.md](docs/melody-fill.md).
