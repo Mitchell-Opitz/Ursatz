@@ -26,6 +26,10 @@
 #define MAX_NOTES 256
 #define SIGNATURE_SIZE 16384
 
+/* What the sweep has seen, to show that it exercises developments and non-chord tones. */
+static int developments_written;
+static int non_chord_tones_written;
+
 typedef struct {
     int beats_per_bar;
     int beat_unit;
@@ -386,6 +390,9 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
             assert(plan_span_end(chord_span, &end) == PLAN_OK);
             if (plan_time_compare(notes[n].start, chord_span.start) >= 0 && plan_time_compare(notes[n].start, end) < 0) {
                 bool chord_start = plan_time_compare(notes[n].start, chord_span.start) == 0;
+                unsigned tones = chord_pcs(scenario->mode, scenario->tonic,
+                                           plan_lane_span_payload(fixture->plan, chords[c])->harmony.roman_numeral);
+                non_chord_tones_written += !(tones & (1u << (notes[n].pitch % 12)));
                 if (downbeat || chord_start) {
                     unsigned mask = chord_pcs(scenario->mode, scenario->tonic,
                                               plan_lane_span_payload(fixture->plan, chords[c])->harmony.roman_numeral);
@@ -484,6 +491,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
             if (step->chosen >= 0 && strcmp(step->considered[step->chosen].operator_name, MELODY_FILL_OPERATOR_NAME) == 0) {
                 snprintf(label, FILL_LABEL_MAX, "%s", step->considered[step->chosen].label);
                 assert(strncmp(label, is_developed ? "developed" : "original", is_developed ? 9 : 8) == 0);
+                developments_written += is_developed;
                 recorded = true;
             }
         }
@@ -540,6 +548,7 @@ static void test_sweep(void) {
     /* Most phrases have a melody; the rest are the ones no line follows without breaking a hard rule. */
     printf("melody written for %d of %d phrases\n", written, total);
     assert(written * 10 >= total * 3);
+    assert(developments_written > 0 && non_chord_tones_written > 0);
 }
 
 /* The parameters change what is written: with no non-chord tones every note is a chord tone. */
