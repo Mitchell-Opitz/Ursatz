@@ -29,7 +29,7 @@
  */
 
 #define TICKS_PER_WHOLE ((double)MELODY_TICKS)
-#define ID_SIZE 16
+#define ID_SIZE 24
 
 /* The voices of the labeler's members, told apart by address. */
 static const char MELODY_VOICE[] = "melody";
