@@ -335,6 +335,10 @@ the test:
   outlines a diminished fifth. The full form does not.
 - The D, E, full A, and both C melodies break no hard rule.
 
+## Analysis of real music
+
+`analysis/` reads a voice-pitch grid: motion classification between voice pairs and parallel fifths and octaves (all pairs) and direct perfects (outer pair, top voice leaping). See `docs/modules/voice-leading-analysis.md`. Doubling, spacing and voice-crossing checks are not there yet.
+
 ## Not covered
 
 Dissonance treatment beyond the figures above, three or more parts, and imitation. Note values and
