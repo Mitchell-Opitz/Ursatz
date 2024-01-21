@@ -44,6 +44,7 @@ add_library(ursatz_composer STATIC
     melody/melody_place.c
     melody/melody_fill.c
     form/form_hear.c
+    form/form_boundary.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
