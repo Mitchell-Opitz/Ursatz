@@ -97,14 +97,14 @@ typedef struct {
     const HarmonyVoiceGrid *grid;
     const HarmonyResolutionConfig *config;
     HarmonyResolutions *found;
-} Context;
+} ResolutionContext;
 
 static const HarmonyVoiceCell *cell_at(const HarmonyVoiceGrid *grid, size_t segment, size_t voice) {
     const HarmonyVoiceCell *cell = &grid->cells[segment * grid->voice_count + voice];
     return cell->present ? cell : NULL;
 }
 
-static bool emit(const Context *ctx, HarmonyResolutionRule rule, size_t voice, size_t from, size_t to, bool satisfied,
+static bool emit(const ResolutionContext *ctx, HarmonyResolutionRule rule, size_t voice, size_t from, size_t to, bool satisfied,
                  const HarmonyVoiceCell *a, const HarmonyVoiceCell *b) {
     HarmonyResolutionResult *result = &ctx->found->items[ctx->found->count];
     result->rule = rule;
@@ -151,7 +151,7 @@ static bool emit(const Context *ctx, HarmonyResolutionRule rule, size_t voice, s
 }
 
 /* Judges the voices at one chord change. false only on allocation failure. */
-static bool judge(const Context *ctx, size_t from, size_t to) {
+static bool judge(const ResolutionContext *ctx, size_t from, size_t to) {
     const HarmonySegment *from_segment = &ctx->segments[from];
     const HarmonySegment *to_segment = &ctx->segments[to];
     const HarmonyChord *chord = &from_segment->chord;
@@ -265,7 +265,7 @@ HarmonyResolutionStatus harmony_analysis_check_resolutions(const HarmonySegment 
         return HARMONY_RESOLUTION_ERR_ALLOC;
     }
     size_t run_count = harmony_analysis_build_runs(segments, count, runs);
-    Context ctx = {segments, grid, config, &found};
+    ResolutionContext ctx = {segments, grid, config, &found};
     for (size_t r = 0; r + 1 < run_count; r++) {
         size_t from = runs[r].last;
         size_t to = runs[r + 1].first;
