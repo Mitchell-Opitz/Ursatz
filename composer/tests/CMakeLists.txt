@@ -94,3 +94,8 @@ target_compile_definitions(test_develop_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_
                                                     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_develop_cli ursatz-composer)
 add_test(NAME test_develop_cli COMMAND test_develop_cli)
+
+add_executable(test_melody_fill test_melody_fill.c)
+target_link_libraries(test_melody_fill PRIVATE ursatz_composer)
+target_compile_options(test_melody_fill PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_melody_fill COMMAND test_melody_fill)

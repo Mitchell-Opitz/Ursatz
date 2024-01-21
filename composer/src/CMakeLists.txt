@@ -37,6 +37,12 @@ add_library(ursatz_composer STATIC
     motive/motive_develop.c
     motive/motive_develop_operator.c
     motive/motive_recognizability.c
+    melody/melody_check.c
+    melody/melody_context.c
+    melody/melody_contour.c
+    melody/melody_nct.c
+    melody/melody_place.c
+    melody/melody_fill.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
