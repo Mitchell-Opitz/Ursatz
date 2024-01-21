@@ -1,0 +1,25 @@
+# A short SATB progression in C major with SIX PLANTED voice-leading errors, and nothing else wrong, for the voice leading
+# adapters (frameworks/standard-counterpoint/analysis, frameworks/standard-harmony/analysis).
+#
+# SOURCE AND STATUS: SYNTHETIC. Written by hand for this fixture; it is not music from any edition and is not meant to be good
+# music. The six errors are planted, and the other motions were checked (by hand and with a small script that applies the
+# definitions) to contain no parallel or direct perfect interval and no unresolved seventh or leading tone.
+#
+# FORMAT: <part> <midi>:<duration> ... The parts are S (soprano, voice 0), A (alto, 1), T (tenor, 2), B (bass, 3), each one line
+# of consecutive notes with no rests, starting at time 0; midi is the MIDI note number (C4 = 60); duration is in eighth notes
+# (2 = a quarter note, one chord segment). H lists the chord of each quarter segment, a Roman numeral in C major (V7 is a
+# dominant seventh, a 6 an inversion with the third in the bass). "error" lines list the planted errors, which the test asserts
+# are found exactly:  error <rule> <segment from> <segment to> <upper voice> <lower voice or -1 for a single voice>
+#
+S 76:2 77:2 74:2 76:2 77:2 71:2 67:2 71:2 72:2 69:2 76:2 71:2 72:2
+A 72:2 72:2 71:2 72:2 69:2 67:2 64:2 65:2 65:2 65:2 67:2 67:2 67:2
+T 55:2 60:2 65:2 64:2 60:2 62:2 60:2 62:2 60:2 53:2 60:2 62:2 64:2
+B 48:2 53:2 55:2 48:2 53:2 55:2 52:2 55:2 48:2 50:2 52:2 55:2 48:2
+H I IV V7 I IV V I6 V7 I ii I6 V I
+# the planted errors (segments are 0-based quarter notes)
+error parallel-fifths 0 1 2 3
+error parallel-fifths 4 5 2 3
+error parallel-octaves 5 6 1 3
+error direct-perfects 9 10 0 3
+error seventh-resolves-down 7 8 1 -1
+error leading-tone-resolves 5 6 0 -1
