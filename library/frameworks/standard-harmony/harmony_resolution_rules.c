@@ -3,11 +3,13 @@
 #include "harmony_rule_table.h"
 #include "harmony_steps.h"
 
-static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolves-down", "leading-tone-resolves"};
+static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolves-down",
+                                                                 "leading-tone-resolves"};
 
 static HarmonyRulePair g_pairs[HARMONY_RESOLUTION_RULE_COUNT];
 static bool g_built[HARMONY_RESOLUTION_RULE_COUNT];
-static const HarmonyRuleTable TABLE = {"resolution", NAMES, HARMONY_RESOLUTION_RULE_COUNT, NULL, g_pairs, g_built};
+static const HarmonyRuleTable TABLE = {"resolution", NAMES,   HARMONY_RESOLUTION_RULE_COUNT,
+                                       NULL,         g_pairs, g_built};
 
 const Rule *harmony_resolution_rule(HarmonyResolutionRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -22,20 +24,19 @@ const char *harmony_resolution_rule_name(HarmonyResolutionRule which) {
 }
 
 bool harmony_resolution_valid(const HarmonyVoiceResolution *resolution) {
-    return resolution != NULL && harmony_mode_valid(resolution->mode) && harmony_chord_valid(&resolution->from) &&
-           harmony_chord_valid(&resolution->to);
+    return resolution != NULL && harmony_mode_valid(resolution->mode) &&
+           harmony_chord_valid(&resolution->from) && harmony_chord_valid(&resolution->to);
 }
 
 /* The degree of the seventh above a chord's root. */
-static int seventh_degree(const HarmonyChord *chord) {
-    return (chord->degree - 1 + 6) % 7 + 1;
-}
+static int seventh_degree(const HarmonyChord *chord) { return (chord->degree - 1 + 6) % 7 + 1; }
 
 static bool is_seventh_voice(const HarmonyVoiceResolution *r) {
     return r->from.seventh && harmony_step_degree(r->from_step) == seventh_degree(&r->from);
 }
 
-/* V, V7, vii-diminished and its seventh chord have the leading tone; in minor the vii is the one on the raised seventh. */
+/* V, V7, vii-diminished and its seventh chord have the leading tone; in minor the vii is the one on
+ * the raised seventh. */
 static bool chord_has_leading_tone(const HarmonyVoiceResolution *r) {
     if (r->from.degree == 5) {
         return true;
@@ -47,7 +48,8 @@ static bool is_leading_tone_voice(const HarmonyVoiceResolution *r) {
     return chord_has_leading_tone(r) && harmony_step_degree(r->from_step) == 7 && r->to.degree == 1;
 }
 
-bool harmony_resolution_rule_applies(HarmonyResolutionRule which, const HarmonyVoiceResolution *resolution) {
+bool harmony_resolution_rule_applies(HarmonyResolutionRule which,
+                                     const HarmonyVoiceResolution *resolution) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_resolution_valid(resolution)) {
         return false;
     }
@@ -55,7 +57,8 @@ bool harmony_resolution_rule_applies(HarmonyResolutionRule which, const HarmonyV
                                                              : is_leading_tone_voice(resolution);
 }
 
-bool harmony_resolution_rule_holds(HarmonyResolutionRule which, const HarmonyVoiceResolution *resolution) {
+bool harmony_resolution_rule_holds(HarmonyResolutionRule which,
+                                   const HarmonyVoiceResolution *resolution) {
     if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_resolution_valid(resolution)) {
         return false;
     }
@@ -70,6 +73,7 @@ bool harmony_resolution_rule_holds(HarmonyResolutionRule which, const HarmonyVoi
         return true;
     }
     /* the leading-tone drop: an inner voice of a complete V7 goes down a third to sol */
-    return !resolution->outer && resolution->complete_dominant_seventh && resolution->from.degree == 5 &&
-           move == -2 && harmony_step_degree(resolution->to_step) == 5;
+    return !resolution->outer && resolution->complete_dominant_seventh &&
+           resolution->from.seventh && resolution->from.degree == 5 && move == -2 &&
+           harmony_step_degree(resolution->to_step) == 5;
 }
