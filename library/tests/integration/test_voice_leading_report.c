@@ -119,8 +119,18 @@ static void test_planted_errors(void) {
 }
 
 /* The parallel fifths and octaves the chorale's true parts make, each verified by hand against the notes of
-   tests/fixtures/annotations/chorale_satb.txt: none, as of this writing (the list is empty). */
-static const char *const VERIFIED_PARALLELS[] = {NULL};
+   tests/fixtures/annotations/chorale_satb.txt (segments are the attack boundaries of all four parts; voices 0 S, 1 A, 2 T,
+   3 B). The fixture is a hand-written draft, so these are faults of the draft, not of the analysis. */
+static const char *const VERIFIED_PARALLELS[] = {
+    "parallel-octaves 1 2 0 3",   /* S C5-D5 over B C3-D3 */
+    "parallel-fifths 1 2 1 3",    /* A G4-A4 over B C3-D3 (twelfths) */
+    "parallel-octaves 8 9 0 3",   /* S G4-C5 over B G2-C3 */
+    "parallel-octaves 9 10 0 2",  /* S C5-B4 over T C4-B3 */
+    "parallel-fifths 11 12 1 3",  /* A D4-E4 over B G2-A2 (twelfths) */
+    "parallel-octaves 20 21 0 3", /* S C5-D5 over B C3-D3 */
+    "parallel-octaves 22 23 0 3", /* S D5-C5 over B D3-C3 */
+    "parallel-octaves 27 28 0 3", /* S C5-B4 over B C3-B2 */
+    NULL};
 
 static bool is_parallel(const char *key) {
     return strncmp(key, "parallel-", 9) == 0;
