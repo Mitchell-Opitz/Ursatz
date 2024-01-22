@@ -118,11 +118,12 @@ static inline void vl_load(const char *path, VlPiece *piece) {
             }
             piece->total = at;
         } else if (strncmp(line, "H ", 2) == 0) {
-            char *token = strtok(line + 2, " ");
+            char *save = NULL;
+            char *token = strtok_r(line + 2, " ", &save);
             while (token != NULL) {
                 snprintf(piece->chords[piece->chord_count++], sizeof(piece->chords[0]), "%s", token);
                 assert(piece->chord_count <= 64);
-                token = strtok(NULL, " ");
+                token = strtok_r(NULL, " ", &save);
             }
         } else if (strncmp(line, "error ", 6) == 0) {
             VlExpected *e = &piece->expected[piece->expected_count++];
