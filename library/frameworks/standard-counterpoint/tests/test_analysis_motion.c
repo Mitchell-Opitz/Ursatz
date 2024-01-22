@@ -129,10 +129,10 @@ static void test_a_held_note_is_one_note_id_and_a_spelling_wins(void) {
     /* A given spelling is used over the semitone: 61 spelled D-flat 4 is the letter D, not C-sharp. */
     PitchSpelling *d_flat = NULL;
     assert(pitch_spelling_create(PITCH_LETTER_D, -1, 4, &d_flat) == PITCH_SPELLING_OK);
-    g.cells[2].spelling = d_flat; /* the lower voice, segment 1: D-flat */
+    g.cells[2].spelling = d_flat; /* the upper voice, segment 1: D-flat */
     g.cells[2].pitch = NULL;
     assert(standard_counterpoint_grid_prepare(&g.grid, &prepared) == STANDARD_COUNTERPOINT_GRID_OK);
-    assert(pitch_spelling_letter(standard_counterpoint_grid_spelling(&prepared, 1, 1)) == PITCH_LETTER_D);
+    assert(pitch_spelling_letter(standard_counterpoint_grid_spelling(&prepared, 1, 0)) == PITCH_LETTER_D);
     assert(pitch_spelling_letter(standard_counterpoint_grid_spelling(&prepared, 0, 1)) == PITCH_LETTER_C);
     standard_counterpoint_grid_destroy(&prepared);
     pitch_spelling_destroy(d_flat);
