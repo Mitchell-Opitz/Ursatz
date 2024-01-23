@@ -10,7 +10,7 @@ depend on any other framework module.
 
 The rules are style-independent training rules for writing lines and
 combining them, not a claim about one repertoire. They use the
-`MotionType` value type (`src/semantics/motion_type.h`).
+`MotionType` value type (`motion_type.h`, in this module: only standard-counterpoint uses it, so it moved here from `src/semantics/`).
 
 ## Scope
 
@@ -334,6 +334,10 @@ the test:
 - The A melody without its first D (fig. 42) has a rising run, B3 to F4, that
   outlines a diminished fifth. The full form does not.
 - The D, E, full A, and both C melodies break no hard rule.
+
+## Analysis of real music
+
+`analysis/` reads a voice-pitch grid: motion classification between voice pairs and parallel fifths and octaves (all pairs) and direct perfects (outer pair, top voice leaping). See `docs/modules/voice-leading-analysis.md`. Doubling, spacing and voice-crossing checks are not there yet.
 
 ## Not covered
 

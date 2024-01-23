@@ -84,7 +84,6 @@ add_library(ursatz
     semantics/scale.c
     semantics/contour.c
     semantics/voice_part.c
-    semantics/motion_type.c
     semantics/counterpoint_species.c
     semantics/beat_strength.c
     semantics/non_chord_tone.c

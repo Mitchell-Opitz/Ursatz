@@ -8,7 +8,7 @@
 #include "pitch/pitch_spelling.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/motion_type.h"
+#include "motion_type.h"
 
 /*
  * Motion rules for standard-counterpoint-v1: how two parts move from one
@@ -27,7 +27,7 @@
  * "Distance" is counted in letter names (diatonic steps). The categories
  * are exclusive; same-direction motion is PARALLEL when the distances are
  * equal and SIMILAR otherwise (motion_type_is_same_direction is true for
- * both). The type itself is semantics/motion_type.h.
+ * both). The type itself is motion_type.h.
  */
 
 typedef enum {

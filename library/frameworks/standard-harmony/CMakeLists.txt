@@ -27,6 +27,7 @@ add_library(standard_harmony
     harmony_prolongation_chain.c
     harmony_six_four.c
     harmony_passing_rules.c
+    harmony_resolution_rules.c
     harmony_neighbor_rules.c
     harmony_arpeggiating_rules.c
     harmony_deceptive.c
@@ -57,6 +58,7 @@ add_library(standard_harmony
     analysis/analysis_phrase.c
     analysis/analysis_six_four.c
     analysis/analysis_prolongation.c
+    analysis/analysis_resolution.c
     analysis/analysis_runs.c
     analysis/analysis_cadence.c
 )

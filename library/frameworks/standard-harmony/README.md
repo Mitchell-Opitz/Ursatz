@@ -354,3 +354,7 @@ never called here.
 - **The strength of an IAC.** An imperfect authentic cadence can be made more or
   less strong by its melody, rhythm, and what follows; that is not modeled.
 - **Minor-mode melodic alterations** beyond the leading tone in V.
+
+## Voice leading analysis
+
+`analysis/analysis_resolution.h` checks seventh and leading-tone resolution per voice from a voice-pitch grid and a chord run list, using `harmony_resolution_rules.h`. See `docs/modules/voice-leading-analysis.md`.

@@ -18,7 +18,7 @@
  * itself is never called here -- see rule_pair.c).
  *
  * Scans every .h/.c file directly under frameworks/standard-counterpoint/
- * (not its tests/ subdirectory) and flags any local include ("...")
+ * (and its analysis/ subdirectory; not its tests/ subdirectory) and flags any local include ("...")
  * that does not point into an allowed prefix. Directory-driven rather
  * than a fixed file list, same pattern as
  * tests/rules/test_architecture_rules.c.
@@ -85,29 +85,33 @@ static int has_suffix(const char *name, const char *suffix) {
 }
 
 int main(void) {
-    const char *module_dir = "..";
-    DIR *d = opendir(module_dir);
-    if (d == NULL) {
-        printf("standard-counterpoint: directory not found, nothing to check\n");
-        return 0;
-    }
-
+    const char *module_dirs[] = {"..", "../analysis"};
     int total_violations = 0;
     int files_checked = 0;
-    struct dirent *entry;
 
-    while ((entry = readdir(d)) != NULL) {
-        if (!has_suffix(entry->d_name, ".h") && !has_suffix(entry->d_name, ".c")) {
+    for (size_t i = 0; i < sizeof(module_dirs) / sizeof(module_dirs[0]); i++) {
+        DIR *d = opendir(module_dirs[i]);
+        if (d == NULL) {
+            if (i == 0) {
+                printf("standard-counterpoint: directory not found, nothing to check\n");
+                return 0;
+            }
             continue;
         }
 
-        char path[512];
-        snprintf(path, sizeof(path), "%s/%s", module_dir, entry->d_name);
-        total_violations += check_file(path);
-        files_checked++;
-    }
+        struct dirent *entry;
+        while ((entry = readdir(d)) != NULL) {
+            if (!has_suffix(entry->d_name, ".h") && !has_suffix(entry->d_name, ".c")) {
+                continue;
+            }
 
-    closedir(d);
+            char path[512];
+            snprintf(path, sizeof(path), "%s/%s", module_dirs[i], entry->d_name);
+            total_violations += check_file(path);
+            files_checked++;
+        }
+        closedir(d);
+    }
 
     if (total_violations > 0) {
         fprintf(stderr, "%d architecture violation(s) found in standard-counterpoint\n", total_violations);

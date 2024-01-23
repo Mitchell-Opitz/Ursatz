@@ -1,5 +1,6 @@
 add_library(standard_counterpoint
     framework.c
+    motion_type.c
     rule_pair.c
     rule_table.c
     species_aggregate.c
@@ -50,9 +51,14 @@ add_library(standard_counterpoint
     fifth_species_ends_rules.c
     fifth_species_line_rules.c
     fifth_species_rules.c
+    analysis/analysis_grid.c
+    analysis/analysis_claim.c
+    analysis/analysis_motion.c
+    analysis/analysis_perfects.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${PROJECT_SOURCE_DIR}/src
 )
 target_link_libraries(standard_counterpoint PUBLIC ursatz)

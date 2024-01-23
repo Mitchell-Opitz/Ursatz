@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "interpretation/interpretation.h"
+#include "structure/structure.h"
 
 /*
  * Builds one standard-harmony Interpretation (the durable claim pattern: a generic Interpretation targeting an
@@ -20,5 +21,11 @@
 Interpretation *harmony_analysis_make_interpretation(const char *interpretation_id, const char *target_id,
                                                       const char *claim_type, const void *content, size_t size,
                                                       double uncertainty, const char *method);
+
+/*
+ * A Structure shell whose event refs are the given note ids (duplicates removed) under the id `shell_id`, for a claim about
+ * notes: the Interpretation of such a claim targets the shell's id. NULL on a NULL or empty argument or allocation failure.
+ */
+Structure *harmony_analysis_note_group(const char *shell_id, const char *const *note_ids, size_t count);
 
 #endif

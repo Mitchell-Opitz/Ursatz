@@ -1,0 +1,11 @@
+# The chord of each quarter note of tests/fixtures/annotations/chorale_satb.txt (G major, 4/4, eight measures, 32 quarters), for
+# the harmony half of the voice leading report.
+#
+# STATUS: DRAFT, HAND-LABELLED, NOT CHECKED AGAINST ANY EDITION. The chorale itself is a hand-written fixture in Bach's idiom, not an
+# edition (see its header), and these labels are a hand reading of its pitch content at each quarter note: the chord the four
+# parts spell on the beat, a passing eighth belonging to the chord of its quarter. They were NOT derived from the output of any
+# code. A chord with a missing third (quarter 11) is labelled by its root and fifth.
+#
+# FORMAT: H lists one Roman numeral per quarter, in G major (a 6 is an inversion with the third in the bass).
+#
+H I IV V I I V I I IV I ii vi V V I I I vi vi6 V V vi6 I I IV I6 V V V V I I

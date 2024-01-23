@@ -6,7 +6,7 @@
 #include "counterpoint_interval.h"
 #include "fifth_species_figure.h"
 #include "motion_rules.h"
-#include "semantics/motion_type.h"
+#include "motion_type.h"
 #include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIFTH_SPECIES_HARMONY_RULE_COUNT] = {
