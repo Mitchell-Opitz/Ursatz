@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <analysis_cadence.h>
 #include <analysis_input.h>
 #include <harmony_chord.h>
 #include <pitch/pitch_spelling.h>
@@ -103,6 +104,14 @@ bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, P
 
 /* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
 bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);
+
+/*
+ * Every cadence the recognizer hears over the harmony lane chords of span (read as harmony_read_lane does), the
+ * soprano over chord i being soprano[i], a scale degree or 0 for none; count must be the number of chords. On true,
+ * *out is the caller's (harmony_cadences_destroy), in order of arrival, its segment indices the chords'.
+ */
+bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
+                                size_t count, HarmonyCadences *out);
 
 /* How many strong beats a bar of the meter has, which is where a chord may start. False for a meter not supported. */
 bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);

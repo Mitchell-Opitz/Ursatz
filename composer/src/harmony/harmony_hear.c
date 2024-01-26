@@ -186,7 +186,8 @@ static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t ce
                                     &times->position) == METRICAL_POSITION_OK;
 }
 
-SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
+/* soprano[i] is the soprano degree over chord i, or NULL for the one the requested cadence implies. */
+static SegmentSet *segments_create(const HeardPhrase *phrase, const int *soprano) {
     if (!phrase || phrase->count == 0 || phrase->count > HARMONY_MAX_CHORDS || phrase->cells_per_bar == 0) {
         return NULL;
     }
@@ -223,7 +224,7 @@ SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
             input->inversion = chord->chord.inversion;
         }
         input->bass_degree = bass_degree_of(phrase->mode, chord);
-        input->soprano_degree = implied_soprano(phrase, i);
+        input->soprano_degree = soprano ? soprano[i] : implied_soprano(phrase, i);
         input->key_ref = HEARD_KEY_REF;
         input->mode = harmony_mode_of(phrase->mode);
         input->uncertainty = 0.0;
@@ -236,6 +237,10 @@ SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
         return NULL;
     }
     return set;
+}
+
+SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
+    return segments_create(phrase, NULL);
 }
 
 const HarmonySegment *harmony_segments_get(const SegmentSet *set, size_t *count) {
@@ -304,4 +309,24 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
     }
     HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL};
     return harmony_hear_phrase(&phrase, heard, at_end);
+}
+
+bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
+                                size_t count, HarmonyCadences *out) {
+    PhraseMetre metre;
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+    size_t found;
+    if (!soprano || !out || !harmony_read_lane(plan, span, mode, chords, &found, &metre) || found != count) {
+        return false;
+    }
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL};
+    SegmentSet *set = segments_create(&phrase, soprano);
+    if (!set) {
+        return false;
+    }
+    size_t segment_count;
+    const HarmonySegment *segments = harmony_segments_get(set, &segment_count);
+    bool ok = harmony_analysis_find_cadences(segments, segment_count, NULL, out) == HARMONY_CADENCE_ANALYSIS_OK;
+    harmony_segments_destroy(set);
+    return ok;
 }
