@@ -5,8 +5,8 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
 #include <ursatz_analyzer/report_writer.h>
 
 static bool write_markdown_report(const char *path, const AnalysisDocument *document) {
@@ -58,19 +58,25 @@ static bool write_analysis_document(const char *path, const AnalysisDocument *an
 }
 
 static void print_usage(const char *program) {
-    fprintf(stderr, "Usage: %s [--json] [--markdown] <midi-file-path>\n", program);
+    fprintf(stderr, "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] <input-file-path>\n", program);
 }
 
 int main(int argc, char *argv[]) {
     const char *path = NULL;
     bool want_json = false;
     bool want_markdown = false;
+    InputFormat input_format = INPUT_FORMAT_AUTO;
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
             want_json = true;
         } else if (strcmp(arg, "--markdown") == 0) {
             want_markdown = true;
+        } else if (strcmp(arg, "--input-format") == 0) {
+            if (i + 1 >= argc || !input_format_parse(argv[++i], &input_format)) {
+                print_usage(argv[0]);
+                return 1;
+            }
         } else if (arg[0] == '-' || path) {
             print_usage(argv[0]);
             return 1;
@@ -88,7 +94,7 @@ int main(int argc, char *argv[]) {
     }
 
     ImportedNotes notes;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK) {
+    if (input_pipeline_import_file(path, input_format, &notes) != INPUT_PIPELINE_OK) {
         return 1;
     }
 

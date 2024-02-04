@@ -151,6 +151,35 @@ static bool count_chord_labels(const cJSON *chords, LabelCount **out_counts, siz
     return true;
 }
 
+static const char *knowledge_phrase(const char *knowledge) {
+    if (knowledge && strcmp(knowledge, "notated") == 0) {
+        return "notated";
+    }
+    if (knowledge && strcmp(knowledge, "embedded") == 0) {
+        return "embedded in the file";
+    }
+    return "inferred";
+}
+
+/* The input type, and whether the meter, key and pitch spelling were notated, embedded in the file, or inferred. */
+static bool append_input_line(StringBuilder *sb, const cJSON *input) {
+    if (!cJSON_IsObject(input)) {
+        return true;
+    }
+    const char *format = string_member(input, "format");
+    bool score = format && strcmp(format, "musicxml") == 0;
+    size_t part_count = (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(input, "parts"));
+    const char *spelling = string_member(input, "spelling");
+    bool ok = sb_appendf(sb, "- **Input:** %s", score ? "MusicXML score" : "MIDI file");
+    if (score) {
+        ok = ok && sb_appendf(sb, ", %zu %s merged into one texture", part_count, plural(part_count, "part", "parts"));
+    }
+    return ok && sb_appendf(sb, ". Meter: %s. Key signature: %s. Pitch spelling: %s.\n",
+                            knowledge_phrase(string_member(input, "meter")),
+                            knowledge_phrase(string_member(input, "key")),
+                            spelling && strcmp(spelling, "notated") == 0 ? "notated" : "by rule");
+}
+
 /* A few plain-language lines for a composer: the piece, its key, how
    much of it resolved to chords, and the chords it leans on most. */
 static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON *metadata) {
@@ -159,6 +188,8 @@ static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON
     bool ok = sb_append(sb, "## Summary\n\n") &&
               sb_appendf(sb, "- **File:** %s, %zu %s.\n", source_file ? source_file : "", note_count,
                          plural(note_count, "note", "notes"));
+
+    ok = ok && append_input_line(sb, cJSON_GetObjectItemCaseSensitive(metadata, "input"));
 
     const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
     const char *home_label = string_member(cJSON_GetObjectItemCaseSensitive(keys, "home_key"), "label");
@@ -237,6 +268,8 @@ static bool render_meter(StringBuilder *sb, const cJSON *document, const cJSON *
               append_time_signature(sb, time_signature);
     if (inferred) {
         ok = ok && sb_append(sb, " (inferred: the file has no time signature, so 4/4 is assumed)");
+    } else if (source && strcmp(source, "notated") == 0) {
+        ok = ok && sb_append(sb, " (notated)");
     }
     ok = ok && sb_append(sb, "\n");
 

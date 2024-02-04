@@ -5,12 +5,13 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
 
 /*
  * Golden snapshots of the Markdown report for the five reference pieces
- * (Ursatz framework-v1 corpus). Each piece runs import -> pipeline ->
+ * (Ursatz framework-v1 corpus), from the MIDI files and from their MusicXML
+ * versions (tests/musicxml). Each piece runs import -> pipeline ->
  * analysis document -> Markdown and is compared byte for byte with
  * tests/snapshots/<slug>.report.md. On a mismatch the first differing
  * line is printed. With UPDATE_SNAPSHOTS=1 in the environment, the
@@ -23,17 +24,25 @@
 static const struct {
     const char *fixture;
     const char *slug;
+    bool musicxml;
 } PIECES[] = {
-    {"Bach 114.mid", "bach-114"}, {"Mozart 545.mid", "mozart-545"}, {"Clementi 36.mid", "clementi-36"},
-    {"Field 1.mid", "field-1"},   {"Field 5.mid", "field-5"},
+    {"Bach 114.mid", "bach-114", false},       {"Mozart 545.mid", "mozart-545", false},
+    {"Clementi 36.mid", "clementi-36", false}, {"Field 1.mid", "field-1", false},
+    {"Field 5.mid", "field-5", false},         {"bach-114.musicxml", "bach-114-musicxml", true},
+    {"mozart-545.musicxml", "mozart-545-musicxml", true}, {"clementi-36.musicxml", "clementi-36-musicxml", true},
+    {"field-1.musicxml", "field-1-musicxml", true},       {"field-5.musicxml", "field-5-musicxml", true},
 };
 
-static char *render_piece(const char *fixture) {
+static char *render_piece(const char *fixture, bool musicxml) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, fixture);
+    if (musicxml) {
+        snprintf(path, sizeof(path), "%s/%s", URSATZ_MUSICXML_DIR, fixture);
+    } else {
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, fixture);
+    }
 
     ImportedNotes notes;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK) {
+    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
         return NULL;
     }
     AnalysisReport report;
@@ -111,7 +120,7 @@ int main(void) {
         char snapshot_path[512];
         snprintf(snapshot_path, sizeof(snapshot_path), "%s/%s.report.md", URSATZ_SNAPSHOT_DIR, PIECES[i].slug);
 
-        char *actual = render_piece(PIECES[i].fixture);
+        char *actual = render_piece(PIECES[i].fixture, PIECES[i].musicxml);
         if (!actual) {
             fprintf(stderr, "%s: failed to render the report\n", PIECES[i].slug);
             failures++;

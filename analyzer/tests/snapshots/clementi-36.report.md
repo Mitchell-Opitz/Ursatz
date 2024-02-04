@@ -3,6 +3,7 @@
 ## Summary
 
 - **File:** Clementi 36.mid, 333 notes.
+- **Input:** MIDI file. Meter: embedded in the file. Key signature: embedded in the file. Pitch spelling: by rule.
 - **Key:** C major, the key with the most time across 5 key regions.
 - **Chords:** 205 chord events; 188 matched a chord (92%), 17 did not.
 - **Most frequent chords:** I (47), V (33), iii (25).

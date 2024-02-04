@@ -3,6 +3,7 @@
 ## Summary
 
 - **File:** Field 5.mid, 1083 notes.
+- **Input:** MIDI file. Meter: embedded in the file. Key signature: embedded in the file. Pitch spelling: by rule.
 - **Key:** Bb major, the key with the most time across 5 key regions.
 - **Chords:** 170 chord events; 147 matched a chord (86%), 23 did not.
 - **Most frequent chords:** I (58), minor7 (26), major7 (24).

@@ -8,6 +8,7 @@
 #include "key_vocabulary.h"
 #include "outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
+#include "pipeline/spelling_util.h"
 #include "segmentation_beat_grid.h"
 
 /* The position of the segment's member that is the entry's note, or segment->member_count when it is none. */
@@ -29,7 +30,7 @@ static char *pitch_name_create(int midi, bool prefer_flats) {
 }
 
 /* Fills one outer note from the library's entry for the segment. False on allocation failure. */
-static bool fill_note(const Segment *segment, const OuterVoiceEntry *entry, const AnalysisKeyRegion *region,
+static bool fill_note(const ImportedNotes *notes, const Segment *segment, const OuterVoiceEntry *entry, const AnalysisKeyRegion *region,
                       AnalysisOuterNote *out) {
     if (!entry->present) {
         out->status = entry->bridged ? ANALYSIS_OUTER_BRIDGED
@@ -45,7 +46,13 @@ static bool fill_note(const Segment *segment, const OuterVoiceEntry *entry, cons
     out->note_id = segment->note_indices[member];
     out->pitch = segment->members[member].pitch;
     out->held = segment->members[member].held;
-    out->pitch_name = pitch_name_create(out->pitch, region ? region->prefer_flats : false);
+    char spelled[16];
+    if (notes->source.spelling_notated &&
+        spelled_note_name(notes->events[out->note_id], out->pitch, true, spelled)) {
+        out->pitch_name = strdup(spelled);
+    } else {
+        out->pitch_name = pitch_name_create(out->pitch, region ? region->prefer_flats : false);
+    }
     if (!out->pitch_name) {
         return false;
     }
@@ -94,8 +101,8 @@ bool extract_outer_voices(const ImportedNotes *notes, const Segmentation *segmen
     }
     for (size_t i = 0; ok && i < count; i++) {
         const AnalysisKeyRegion *region = chords[i].in_region ? &regions[chords[i].region] : NULL;
-        ok = fill_note(&segmentation->segments[i], &lines.soprano[i], region, &entries[i].soprano) &&
-             fill_note(&segmentation->segments[i], &lines.bass[i], region, &entries[i].bass);
+        ok = fill_note(notes, &segmentation->segments[i], &lines.soprano[i], region, &entries[i].soprano) &&
+             fill_note(notes, &segmentation->segments[i], &lines.bass[i], region, &entries[i].bass);
     }
     outer_voice_lines_destroy(&lines);
     return ok;
