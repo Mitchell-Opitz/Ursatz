@@ -1030,6 +1030,27 @@ static cJSON *chord_outer_json(const AnalysisReport *report, const AnalysisRepor
     return outer;
 }
 
+/* The chord's Roman numeral: the library's label, the key region it is relative to (the region the segment
+   starts in, which is also the key the chord was read in), its scale degree and uncertainty; or null label with
+   the reason there is none. */
+static cJSON *roman_numeral_json(const AnalysisReport *report, const AnalysisReportEntry *entry) {
+    const AnalysisRomanNumeral *roman = &entry->roman;
+    bool in_region = entry->in_region && entry->region < report->key_region_count;
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "label", optional_string_json(roman->numeral)) &&
+          add(object, "key_region", in_region ? cJSON_CreateNumber((double)entry->region) : cJSON_CreateNull()) &&
+          add(object, "key", in_region ? cJSON_CreateString(report->key_regions[entry->region].label)
+                                       : cJSON_CreateNull()) &&
+          add(object, "degree", roman->labelled ? cJSON_CreateNumber(roman->degree) : cJSON_CreateNull()) &&
+          add(object, "uncertainty", roman->labelled ? cJSON_CreateNumber(roman->uncertainty) : cJSON_CreateNull()) &&
+          add(object, "unlabelled_reason", optional_string_json(roman->reason)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* One chord claim per report entry, in time order. */
 static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
@@ -1045,7 +1066,8 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
                                      entry->chord_label, entry->chord_confidence);
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
               add_chord_fields(claim, notes, entry, start, end) &&
-              add(claim, "outer", chord_outer_json(report, entry)))) {
+              add(claim, "outer", chord_outer_json(report, entry)) &&
+              add(claim, "roman_numeral", roman_numeral_json(report, entry)))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;

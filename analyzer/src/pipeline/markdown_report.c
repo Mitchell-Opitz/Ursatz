@@ -509,7 +509,26 @@ static double rational_member(const cJSON *object, const char *key) {
     return denominator == 0.0 ? 0.0 : number_member(rational, "num") / denominator;
 }
 
-static bool append_chord_row(StringBuilder *sb, const cJSON *chord) {
+/* The chord's Roman numeral cell. The key region is named on the first labelled chord and wherever it changes,
+   as "V (in G major)"; a chord the library gives no numeral is "unlabelled" with the reason. last_region is the
+   region of the last numeral that named its key, -1 before the first. */
+static bool append_numeral_cell(StringBuilder *sb, const cJSON *chord, long *last_region) {
+    const cJSON *roman = cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral");
+    const char *numeral = string_member(roman, "label");
+    if (!numeral) {
+        const char *reason = string_member(roman, "unlabelled_reason");
+        return sb_appendf(sb, "unlabelled: %s | ", reason ? reason : "no reason given");
+    }
+    const cJSON *region = cJSON_GetObjectItemCaseSensitive(roman, "key_region");
+    const char *key = string_member(roman, "key");
+    if (cJSON_IsNumber(region) && key && (long)region->valuedouble != *last_region) {
+        *last_region = (long)region->valuedouble;
+        return sb_appendf(sb, "%s (in %s) | ", numeral, key);
+    }
+    return sb_appendf(sb, "%s | ", numeral);
+}
+
+static bool append_chord_row(StringBuilder *sb, const cJSON *chord, long *last_region) {
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
     const char *label = string_member(chord, "label");
     const char *root = string_member(chord, "root");
@@ -517,7 +536,7 @@ static bool append_chord_row(StringBuilder *sb, const cJSON *chord) {
 
     bool ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
               sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
-              sb_appendf(sb, " | %s | ", label ? label : "");
+              sb_appendf(sb, " | %s | ", label ? label : "") && append_numeral_cell(sb, chord, last_region);
     if (!ok) {
         return false;
     }
@@ -568,17 +587,20 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
     }
     ok = ok &&
          sb_appendf(sb,
-                    " Duration is in beats. Confidence is the library's confidence in the chord. The runner-up "
+                    " Numeral is the Roman numeral in the local key region, which is named where it changes. "
+                    "Duration is in beats. Confidence is the library's confidence in the chord. The runner-up "
                     "is shown only when its score is within %.2f of the best chord's.\n\n",
                     RUNNER_UP_MARGIN_THRESHOLD) &&
-         sb_append(sb, "| Position | Chord | Root | Quality | Bass | Inversion | Beats | Confidence | Runner-up |\n"
-                       "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+         sb_append(sb, "| Position | Chord | Numeral | Root | Quality | Bass | Inversion | Beats | Confidence | "
+                       "Runner-up |\n"
+                       "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    long last_region = -1;
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
         if (!ok) {
             break;
         }
-        ok = append_chord_row(sb, chord);
+        ok = append_chord_row(sb, chord, &last_region);
     }
     return ok;
 }

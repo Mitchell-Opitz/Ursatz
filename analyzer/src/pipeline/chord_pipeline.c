@@ -150,6 +150,8 @@ static bool identify_in_region(const Segmentation *segmentation, size_t first, s
             common_practice_weighted_results_destroy(&results);
             return false;
         }
+        estimates[i].root_pitch_class = result->best.root_pitch_class;
+        estimates[i].interval_count = chord_offsets(&result->best, tonic, estimates[i].intervals);
         estimates[i].found = true;
     }
     common_practice_weighted_results_destroy(&results);

@@ -45,6 +45,18 @@ typedef struct {
                            segment lies in a key region */
 } AnalysisOuterNote;
 
+/* The Roman numeral the library's standard-tonality adapter gives a chord in the local key of the region it
+   lies in (analysis/roman_numeral_adapter.h), or why it gives none. The numeral is relative to the entry's
+   key region (entry.region), not the home key. */
+typedef struct {
+    bool labelled;      /* the library produced a numeral for the segment */
+    char *numeral;      /* owned; the library's label with its figure, e.g. "V6/5"; NULL unless labelled */
+    char *reason;       /* owned; why the segment has no numeral; NULL when labelled */
+    int degree;         /* 1..7: the chord's root as a degree of the local key; valid only when labelled */
+    double uncertainty; /* [0, 1], higher is LESS certain: the chord's and the key region's combined; valid only
+                           when labelled */
+} AnalysisRomanNumeral;
+
 typedef struct {
     long time_numerator; /* segment start, whole notes */
     unsigned long time_denominator;
@@ -61,10 +73,14 @@ typedef struct {
     AnalysisOuterNote bass;         /* the lowest sounding line in this segment */
     bool in_region;                 /* the segment lies in a key region */
     size_t region;                  /* index of that region in key_regions; valid only when in_region */
+    AnalysisRomanNumeral roman;     /* the chord's Roman numeral in that region's key */
 } AnalysisReportEntry;
 
 /* Frees an outer note's strings and clears it. */
 void analysis_outer_note_destroy(AnalysisOuterNote *note);
+
+/* Frees a Roman numeral's strings and clears it. */
+void analysis_roman_numeral_destroy(AnalysisRomanNumeral *roman);
 
 /* Frees a reading's strings and clears it. */
 void analysis_chord_reading_destroy(AnalysisChordReading *reading);
