@@ -26,6 +26,28 @@ ctest --test-dir build --output-on-failure
 
 If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`.
 
+### Submodules
+
+| Path | Pinned at |
+| --- | --- |
+| `external/ursatz` | Ursatz `main` at PR #142, the P1 analysis library (Framework v1). |
+| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #11. |
+
+## Structure
+
+| Directory | Holds |
+| --- | --- |
+| `include/ursatz_composer/` | The public headers. |
+| `src/plan/` | The piece plan, its lanes, states, constraints and JSON. |
+| `src/render/` | Rendering a plan to NoteEvents, MIDI and MusicXML. |
+| `src/fill/` | The fill loop, its operators, seeds and records. |
+| `src/harmony/` | The harmony operators and hearing cadences. |
+| `src/motive/` | Motives, their analysis and development. |
+| `src/melody/` | The melody operator. |
+| `src/form/` | Hearing the phrase form through standard-form. |
+| `cli/` | The `ursatz-composer` command. |
+| `tests/` | Tests and their fixtures. |
+
 ## Usage
 
 ```sh
@@ -71,3 +93,8 @@ See [docs/fill-loop.md](docs/fill-loop.md).
 
 The melody operator writes a melody over a written harmony and bass, from a motive. See
 [docs/melody-fill.md](docs/melody-fill.md).
+
+## Hearing the form
+
+`form_hear` hears the phrase-level form of a written plan with standard-form's analysis adapter. See
+[docs/form-hear.md](docs/form-hear.md).

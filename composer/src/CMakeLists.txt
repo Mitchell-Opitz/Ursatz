@@ -43,13 +43,15 @@ add_library(ursatz_composer STATIC
     melody/melody_nct.c
     melody/melody_place.c
     melody/melody_fill.c
+    form/form_hear.c
+    form/form_boundary.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_composer
-    PUBLIC ursatz ursatz_analyzer common_practice_minimal standard_harmony standard_counterpoint galant_schemas scale_harmonization
+    PUBLIC ursatz ursatz_analyzer common_practice_minimal standard_harmony standard_counterpoint standard_form galant_schemas scale_harmonization
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
