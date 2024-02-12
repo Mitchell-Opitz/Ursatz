@@ -605,6 +605,62 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
     return ok;
 }
 
+/* The applied chords, one row each, with the check against the tonicization claims. A disagreement is stated, not
+   resolved. Nothing is written when no chord is applied. */
+static bool render_applied_chords(StringBuilder *sb, const cJSON *document, const cJSON *chords) {
+    (void)document;
+    bool any = false;
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        any = any || cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(
+                         cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral"), "applied"));
+    }
+    if (!any) {
+        return true;
+    }
+    bool ok = sb_append(sb, "\n## Applied chords\n\n") &&
+              sb_append(sb, "Chords the library reads as applied (secondary) chords: the chord as it reads in the "
+                            "tonicized key, the chord it tonicizes and that chord's tonic. The last column checks "
+                            "each against the tonicization claims above for the same span; where they disagree both "
+                            "are shown and neither is changed.\n\n") &&
+              sb_append(sb, "| Position | Applied chord | Target | Resolution | Tonicization |\n"
+                            "| --- | --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(chord, chords) {
+        const cJSON *applied =
+            cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral"), "applied");
+        if (!ok) {
+            break;
+        }
+        if (!cJSON_IsObject(applied)) {
+            continue;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
+        const char *agreement = string_member(applied, "tonicization_agreement");
+        const char *tonicization_key = string_member(applied, "tonicization_key");
+        const char *target_tonic = string_member(applied, "target_tonic");
+        const char *kind = string_member(applied, "kind");
+        const char *resolution = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(applied, "deceptive"))
+                                     ? "deceptive"
+                                     : "to the target";
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+             sb_appendf(sb, " | %s (%s) | %s (%s) | %s | ", string_member(applied, "numeral"),
+                        kind ? kind : "-", string_member(applied, "target_numeral"),
+                        target_tonic ? target_tonic : "-", resolution);
+        if (!ok) {
+            break;
+        }
+        if (agreement && strcmp(agreement, "agrees") == 0) {
+            ok = sb_appendf(sb, "agrees: tonicization of %s |\n", tonicization_key ? tonicization_key : "-");
+        } else if (agreement && strcmp(agreement, "target_differs") == 0) {
+            ok = sb_appendf(sb, "DISAGREES: the tonicization is of %s |\n", tonicization_key ? tonicization_key : "-");
+        } else {
+            ok = sb_append(sb, "DISAGREES: no tonicization is reported here |\n");
+        }
+    }
+    return ok;
+}
+
 /* One voice's cells in the outer-voices table: its pitch and its degree, or what the library made of its
    absence. Appends " pitch | degree |". */
 static bool append_outer_voice_cells(StringBuilder *sb, const cJSON *voice) {
@@ -696,6 +752,7 @@ static const struct {
     {"modulations", render_modulations},
     {"pivot_chords", render_pivot_chords},
     {"chords", render_chords},
+    {"chords", render_applied_chords},
     {"chords", render_outer_voices},
     {"non_chord_tones", render_non_chord_tones},
 };

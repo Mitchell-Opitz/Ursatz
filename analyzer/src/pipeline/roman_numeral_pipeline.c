@@ -58,6 +58,27 @@ static bool fill_input(const Segmentation *segmentation, const ChordEstimate *ch
     return true;
 }
 
+/* The applied chord's parts, from the library's reading: the chord as it reads in the tonicized key and the
+   chord tonicized, each formatted by the library. */
+static bool fill_applied(const StandardTonalityRomanResult *result, AnalysisRomanNumeral *roman) {
+    StandardTonalityRomanReading chord_alone = result->reading;
+    chord_alone.applied = false;
+    char applied_text[STANDARD_TONALITY_ROMAN_LABEL_MAX];
+    char target_text[STANDARD_TONALITY_ROMAN_LABEL_MAX];
+    if (!standard_tonality_format_roman_reading(&chord_alone, applied_text, sizeof(applied_text)) ||
+        !standard_tonality_roman_numeral_format(&result->reading.applied_target, target_text, sizeof(target_text))) {
+        return false;
+    }
+    roman->applied_numeral = strdup(applied_text);
+    roman->target_numeral = strdup(target_text);
+    roman->applied = true;
+    roman->target_degree = result->claim.applied_target_degree;
+    roman->applied_kind = applied_chord_kind_name((AppliedChordKind)result->claim.applied_kind);
+    roman->resolution_entry = result->resolution_index;
+    roman->deceptive = result->deceptive;
+    return roman->applied_numeral != NULL && roman->target_numeral != NULL && roman->applied_kind != NULL;
+}
+
 static const char *unlabelled_reason(const ChordEstimate *chord, const AnalysisKeyRegion *regions) {
     if (!chord->in_region) {
         return REASON_NO_REGION;
@@ -99,7 +120,7 @@ bool assign_roman_numerals(const Segmentation *segmentation, const ChordEstimate
             roman->labelled = roman->numeral != NULL;
             roman->degree = results[i].claim.degree;
             roman->uncertainty = results[i].uncertainty;
-            ok = roman->labelled;
+            ok = roman->labelled && (!results[i].reading.applied || fill_applied(&results[i], roman));
         } else {
             roman->reason = strdup(unlabelled_reason(&chords[i], regions));
             ok = roman->reason != NULL;

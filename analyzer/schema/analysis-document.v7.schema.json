@@ -501,7 +501,31 @@
         "key": { "type": ["string", "null"] },
         "degree": { "type": ["integer", "null"], "minimum": 1, "maximum": 7 },
         "uncertainty": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
-        "unlabelled_reason": { "type": ["string", "null"] }
+        "unlabelled_reason": { "type": ["string", "null"] },
+        "applied": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["numeral", "target_numeral", "target_degree", "target_tonic", "kind", "resolves_to",
+                           "deceptive", "tonicization_agreement", "tonicization_index", "target_region",
+                           "tonicization_key"],
+              "properties": {
+                "numeral": { "type": "string" },
+                "target_numeral": { "type": "string" },
+                "target_degree": { "type": "integer", "minimum": 1, "maximum": 7 },
+                "target_tonic": { "type": ["string", "null"] },
+                "kind": { "enum": ["secondary-dominant", "secondary-leading-tone"] },
+                "resolves_to": { "type": "integer", "minimum": 0 },
+                "deceptive": { "type": "boolean" },
+                "tonicization_agreement": { "enum": ["agrees", "target_differs", "no_tonicization"] },
+                "tonicization_index": { "type": ["integer", "null"], "minimum": 0 },
+                "target_region": { "type": ["integer", "null"], "minimum": 0 },
+                "tonicization_key": { "type": ["string", "null"] }
+              }
+            }
+          ]
+        }
       }
     },
     "chord_claim": {

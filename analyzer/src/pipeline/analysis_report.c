@@ -17,7 +17,9 @@ void analysis_roman_numeral_destroy(AnalysisRomanNumeral *roman) {
     }
     free(roman->numeral);
     free(roman->reason);
-    *roman = (AnalysisRomanNumeral){false, NULL, NULL, 0, 0.0};
+    free(roman->applied_numeral);
+    free(roman->target_numeral);
+    *roman = (AnalysisRomanNumeral){false, NULL, NULL, 0, 0.0, false, NULL, NULL, 0, NULL, 0, false};
 }
 
 void analysis_chord_reading_destroy(AnalysisChordReading *reading) {

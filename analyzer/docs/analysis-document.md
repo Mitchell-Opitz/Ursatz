@@ -307,7 +307,33 @@ identified chord, the region's key and the segment's pitch-class weights.
 | `key` | string or null | That region's label, e.g. `"G major"`. |
 | `degree` | integer or null | The chord's root as a degree (1 to 7) of the local key (for an applied chord, of the tonicized key); `null` when unlabelled. |
 | `uncertainty` | number or null | The chord's and the key region's uncertainty combined, `1 - (1 - chord uncertainty) * (1 - key uncertainty)`, in [0, 1]; higher is LESS certain. `null` when unlabelled. |
+| `applied` | object or null | `null` unless the library reads the chord as an applied (secondary) chord. See below. |
 | `unlabelled_reason` | string or null | Why the chord has no numeral; `null` when it has one. A chord is never dropped or guessed at: it stays in `chords` with `label` `null`. The reasons are: no key region; the region is minor (the library's weighted chord vocabulary is the major-key set, so it identifies no chord there); the library identified no chord; and the library gives no numeral for the chord in its key (a chord that is not a degree of the key, or a quality the key does not give that degree). |
+
+An applied chord is the library's own reading (its applied-chord re-check: the chord's evidence outside the key,
+its score against the diatonic chord, and its resolution); the analyzer adds no rule for what counts as one. `label`
+is then the whole label (`"V6/5/V"`), and `applied` holds its parts:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `numeral` | string | The chord as it reads in the tonicized key, with its figure: `"V"`, `"V7"`, `"V6/5"`, `"vii°"`. |
+| `target_numeral` | string | The chord tonicized, as a numeral of the local key: `"V"`, `"ii"`. |
+| `target_degree` | integer | The degree (1 to 7) of the local key that is tonicized. |
+| `target_tonic` | string or null | The pitch class name of that degree in the local key (the tonic of the key tonicized). |
+| `kind` | string | `"secondary-dominant"` or `"secondary-leading-tone"`, the library's names. |
+| `resolves_to` | integer | Index into `chords` of the chord the library finds it resolving to. |
+| `deceptive` | boolean | The library finds it resolving to the target's submediant rather than the target. |
+| `tonicization_agreement` | string | The cross-reference to `tonicizations`: `"agrees"`, `"target_differs"` or `"no_tonicization"`. |
+| `tonicization_index` | integer or null | Index into `tonicizations` of the claim cross-referenced; `null` for `"no_tonicization"`. |
+| `target_region` | integer or null | Index into `keys.regions` of that claim's target region; `null` for `"no_tonicization"`. |
+| `tonicization_key` | string or null | That region's label. |
+
+The cross-reference looks at the tonicization claims whose span overlaps the chord's span or begins where it ends
+(the chord that leads into a tonicized key). A claim whose target key has the tonic `target_tonic` names makes it
+`"agrees"`; if only claims with another tonic touch the chord it is `"target_differs"`, and the claim it reports is
+the one that touches; if none touches it is `"no_tonicization"`. A disagreement is reported, never resolved: the
+chord keeps its applied reading and the tonicization claims are unchanged. The only scale arithmetic involved is
+locating the tonic a degree of the local key names (major scale; natural minor in a minor key).
 
 The runner-up is always recorded when the library provides one. The Markdown report shows it only
 when its score is within 0.10 of the best chord's.
