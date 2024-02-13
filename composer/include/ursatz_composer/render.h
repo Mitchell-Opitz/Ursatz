@@ -23,6 +23,9 @@
  *   - Meter spans, as a MeterMap: the time signature is beats_per_bar over
  *     beat_unit, from the start of each span.
  *   - Key spans, as key signatures from each span's start.
+ * A span owned by a section with a MATERIAL constraint, or by a node under one, is skipped with
+ * RENDER_SKIP_MATERIAL, whatever its lane or state: source material is not part of the piece. The piece ends
+ * where the last section that is not material ends (piece_end).
  * Only Given and Realized spans are rendered. A Constrained span is skipped,
  * whatever its lane, and so is every harmony span, which makes no sound until
  * accompaniment exists. Every skipped span is in the report.
@@ -58,7 +61,8 @@ typedef struct {
 
 typedef enum {
     RENDER_SKIP_NOT_REALIZED,   /* the span is Constrained */
-    RENDER_SKIP_LANE_NOT_RENDERED /* the lane makes no sound yet (harmony) */
+    RENDER_SKIP_LANE_NOT_RENDERED, /* the lane makes no sound yet (harmony) */
+    RENDER_SKIP_MATERIAL           /* the span belongs to a section marked as source material */
 } RenderSkipReason;
 
 typedef struct {
@@ -79,6 +83,7 @@ typedef struct {
     size_t key_count;
     RenderSkip *skipped;              /* owned; in lane span id order */
     size_t skipped_count;
+    PlanTime piece_end;               /* the end of the last section that is not material; 0 when the plan has none */
 } RenderedPlan;
 
 /* Renders plan into *out, which the caller destroys. On failure *out is empty and safe to destroy. */

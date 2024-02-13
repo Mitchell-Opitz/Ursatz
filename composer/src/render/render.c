@@ -15,6 +15,7 @@
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
 
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
@@ -42,6 +43,43 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
     free(rendered->keys);
     free(rendered->skipped);
     memset(rendered, 0, sizeof(*rendered));
+}
+
+/* ----------------------------------------------------------------- material */
+
+static bool section_is_material(const PiecePlan *plan, NodeId id) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
+        if (plan_node_constraint_at(plan, id, i)->kind == PLAN_CONSTRAINT_MATERIAL) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* True for a node that is, or sits under, a section marked MATERIAL. */
+static bool node_is_material(const PiecePlan *plan, NodeId id) {
+    for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
+        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section_is_material(plan, id)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The end of the last section that is not material; zero when the form has no such section. */
+static PlanTime piece_end_of(const PiecePlan *plan) {
+    PlanTime end = {0, 1};
+    NodeId root = plan_root(plan);
+    for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+        NodeId section = plan_node_child_at(plan, root, i);
+        PlanTime section_end;
+        if (plan_node_kind(plan, section) == PLAN_NODE_SECTION && !section_is_material(plan, section) &&
+            plan_span_end(plan_node_span(plan, section), &section_end) == PLAN_OK &&
+            plan_time_compare(section_end, end) > 0) {
+            end = section_end;
+        }
+    }
+    return end;
 }
 
 /* ----------------------------------------------------------------- keys */
@@ -323,7 +361,11 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
     /* Decide what is rendered and what is skipped. */
     for (LaneSpanId id = 1; result == PLAN_RENDER_OK && id <= span_count; id++) {
         PlanLaneKind lane = plan_lane_span_lane(plan, id);
-        if (lane == PLAN_LANE_HARMONY) {
+        if (node_is_material(plan, plan_lane_span_owner(plan, id))) {
+            if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane, RENDER_SKIP_MATERIAL)) {
+                result = PLAN_RENDER_ERR_ALLOC;
+            }
+        } else if (lane == PLAN_LANE_HARMONY) {
             if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane,
                           RENDER_SKIP_LANE_NOT_RENDERED)) {
                 result = PLAN_RENDER_ERR_ALLOC;
@@ -459,6 +501,7 @@ PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out) {
     if (!plan) {
         return PLAN_RENDER_ERR_NULL;
     }
+    out->piece_end = piece_end_of(plan);
     PlanRenderResult result = render_into(plan, out);
     if (result != PLAN_RENDER_OK) {
         rendered_plan_destroy(out);
