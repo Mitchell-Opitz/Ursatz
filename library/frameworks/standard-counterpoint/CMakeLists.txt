@@ -57,6 +57,8 @@ add_library(standard_counterpoint
     analysis/analysis_perfects.c
     analysis/analysis_melody_emit.c
     analysis/analysis_melody.c
+    analysis/analysis_melody_climax.c
+    analysis/analysis_melody_leaps.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
