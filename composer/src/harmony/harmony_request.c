@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
@@ -119,12 +121,13 @@ bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) 
     return true;
 }
 
-bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolongation, PhraseRequest *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY) {
         return false;
     }
     PhraseRequest request;
     PhraseMetre metre;
+    memset(&request, 0, sizeof(request));
     request.target = target;
     request.owner = plan_lane_span_owner(plan, target);
     request.span = plan_lane_span_span(plan, target);
@@ -147,15 +150,35 @@ bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, Phras
     }
 
     PlanConstraint constraint;
-    if (!harmony_find_constraint(plan, target, request.owner, PLAN_CONSTRAINT_CADENCE, &constraint)) {
+    request.has_shape = harmony_find_constraint(plan, target, request.owner, PLAN_CONSTRAINT_HARMONY_SHAPE, &constraint);
+    if (request.has_shape) {
+        request.shape = constraint.params.harmony_shape;
+    }
+    /* A prolongation is the prolongation operator's, and nothing else is. */
+    if (prolongation != (request.has_shape && request.shape.kind == PLAN_HARMONY_SHAPE_PROLONGATION)) {
         return false;
     }
-    request.cadence = constraint.params.cadence;
+    if (prolongation) {
+        request.cadence = PLAN_CADENCE_HC;
+    } else {
+        if (!harmony_find_constraint(plan, target, request.owner, PLAN_CONSTRAINT_CADENCE, &constraint)) {
+            return false;
+        }
+        request.cadence = constraint.params.cadence;
+    }
     if (!harmony_find_mode(plan, target, request.owner, request.span, &request.mode)) {
         return false;
     }
     *out = request;
     return true;
+}
+
+bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+    return read_request(plan, target, false, out);
+}
+
+bool harmony_prolong_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+    return read_request(plan, target, true, out);
 }
 
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out) {

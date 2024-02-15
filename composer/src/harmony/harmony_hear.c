@@ -307,7 +307,7 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
     if (!heard || !at_end || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL, false, false};
     return harmony_hear_phrase(&phrase, heard, at_end);
 }
 
@@ -319,7 +319,7 @@ bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMod
     if (!soprano || !out || !harmony_read_lane(plan, span, mode, chords, &found, &metre) || found != count) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL};
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false};
     SegmentSet *set = segments_create(&phrase, soprano);
     if (!set) {
         return false;
