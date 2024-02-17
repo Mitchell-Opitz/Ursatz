@@ -197,7 +197,206 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Plan
     return read_bass(plan, context);
 }
 
+/* ---------------------------------------------------------- idea targets */
+
+static PlanTime time_minus(PlanTime a, PlanTime b) {
+    PlanTime out = {0, 1};
+    if (plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, &out) != PLAN_OK) {
+        out.num = 0;
+        out.den = 1;
+    }
+    return out;
+}
+
+/* The nearest ancestor of node (itself included) that is a phrase. */
+static NodeId phrase_of(const PiecePlan *plan, NodeId node) {
+    for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
+        if (plan_node_kind(plan, node) == PLAN_NODE_PHRASE) {
+            return node;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* The bass notes under the target, from its start, the first and last clipped to it. */
+static bool read_idea_bass(const PiecePlan *plan, MelodyContext *context) {
+    LaneSpanId ids[HARMONY_MAX_CHORDS];
+    size_t found = plan_lane_find(plan, PLAN_LANE_BASS, 0, context->span, ids, HARMONY_MAX_CHORDS);
+    long origin;
+    long at = 0;
+    if (found == 0 || found > HARMONY_MAX_CHORDS || !melody_ticks(context->span.start, &origin)) {
+        return false;
+    }
+    for (size_t i = 0; i < found; i++) {
+        long base;
+        const PlanNotes *notes;
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED ||
+            !melody_ticks(plan_lane_span_span(plan, ids[i]).start, &base)) {
+            return false;
+        }
+        notes = &plan_lane_span_payload(plan, ids[i])->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            long offset;
+            long duration;
+            if (!melody_ticks(notes->notes[n].offset, &offset) || !melody_ticks(notes->notes[n].duration, &duration) ||
+                duration <= 0) {
+                return false;
+            }
+            long onset = base - origin + offset;
+            long end = onset + duration;
+            if (end <= 0 || onset >= context->length) {
+                continue;
+            }
+            onset = onset < 0 ? 0 : onset;
+            end = end > context->length ? context->length : end;
+            if (context->bass_count >= MELODY_MAX_BASS || onset != at) {
+                return false;
+            }
+            context->bass[context->bass_count].onset = onset;
+            context->bass[context->bass_count].end = end;
+            context->bass[context->bass_count].pitch = notes->notes[n].midi_pitch;
+            context->bass[context->bass_count].chord = melody_chord_at(context, onset);
+            context->bass_count++;
+            at = end;
+        }
+    }
+    return at == context->length;
+}
+
+/* The chords under the target: the written harmony spans that overlap it, the first and last clipped to it. */
+static bool read_idea_chords(const PiecePlan *plan, MelodyContext *context) {
+    LaneSpanId ids[HARMONY_MAX_CHORDS];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, context->span, ids, HARMONY_MAX_CHORDS);
+    long origin;
+    long position = 0;
+    if (found == 0 || found > HARMONY_MAX_CHORDS || !melody_ticks(context->span.start, &origin)) {
+        return false;
+    }
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
+        long start;
+        long length;
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED || !melody_ticks(chord_span.start, &start) ||
+            !melody_ticks(chord_span.length, &length) ||
+            !harmony_read_chord(plan, ids[i], context->key.mode, context->metre.cell_length, &context->chords[i]) ||
+            !melody_chord_mask(&context->key, &context->chords[i], &context->chord_mask[i],
+                               &context->chord_seventh[i])) {
+            return false;
+        }
+        start -= origin;
+        /* The chords run on from the start of the target to its end without a gap. */
+        if ((i == 0 ? start > 0 : start != position)) {
+            return false;
+        }
+        context->chord_start[i] = start < 0 ? 0 : start;
+        position = start + length;
+    }
+    context->count = found;
+    context->chord_start[found] = context->length;
+    return position >= context->length;
+}
+
+/* The pitches of the melody written right before the target, and the highest one written in its phrase. */
+static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, NodeId phrase) {
+    LaneSpanId ids[HARMONY_MAX_CHORDS];
+    PlanSpan phrase_span = phrase == PLAN_NODE_NONE ? context->span : plan_node_span(plan, phrase);
+    long origin;
+    long start;
+    if (!melody_ticks(context->span.start, &origin) || !melody_ticks(phrase_span.start, &start) ||
+        !melody_ticks(phrase_span.length, &context->phrase_length)) {
+        return false;
+    }
+    context->phrase_start = start - origin;
+
+    /* Ideas are written in time order: every melody span of the phrase before the target is written. */
+    if (plan_time_compare(phrase_span.start, context->span.start) < 0) {
+        PlanSpan before = {phrase_span.start, time_minus(context->span.start, phrase_span.start)};
+        size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, before, ids, HARMONY_MAX_CHORDS);
+        if (found > HARMONY_MAX_CHORDS) {
+            return false;
+        }
+        for (size_t i = 0; i < found; i++) {
+            if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED) {
+                return false;
+            }
+            const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
+            for (size_t n = 0; n < notes->note_count; n++) {
+                int pitch = notes->notes[n].midi_pitch;
+                context->phrase_top = !context->phrase_has_top || pitch > context->phrase_top ? pitch : context->phrase_top;
+                context->phrase_has_top = true;
+            }
+        }
+    }
+
+    /* The last notes of the span that ends where the target starts. */
+    PlanTime tick;
+    if (origin > 0 && melody_time(1, &tick) == PLAN_OK) {
+        PlanSpan last_tick = {time_minus(context->span.start, tick), tick};
+        size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, last_tick, ids, HARMONY_MAX_CHORDS);
+        if (found == 1 && plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED) {
+            const PlanNotes *notes = &plan_lane_span_payload(plan, ids[0])->notes;
+            size_t take = notes->note_count < 2 ? notes->note_count : 2;
+            for (size_t k = 0; k < take; k++) {
+                context->lead_in[k] = notes->notes[notes->note_count - take + k].midi_pitch;
+            }
+            context->lead_in_count = take;
+        }
+    }
+    return true;
+}
+
+/* A target that stands for an idea or a subphrase: it is one of several melody spans in its phrase. */
+static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *context) {
+    NodeId owner = plan_lane_span_owner(plan, target);
+    PlanSpan span = plan_lane_span_span(plan, target);
+    LaneSpanId meters[2];
+    PlanConstraint constraint;
+    long cell_phase;
+    memset(context, 0, sizeof(*context));
+    context->idea = true;
+    context->target = target;
+    context->owner = owner;
+    context->span = span;
+    if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, meters, 2) != 1 ||
+        !plan_span_contains(plan_lane_span_span(plan, meters[0]), span) ||
+        !harmony_find_key(plan, target, owner, span, &context->key)) {
+        return false;
+    }
+    PlanSpan meter_span = plan_lane_span_span(plan, meters[0]);
+    PhraseMetre *metre = &context->metre;
+    long origin;
+    long meter_start;
+    metre->meter = plan_lane_span_payload(plan, meters[0])->meter;
+    if (plan_time_make(metre->meter.beats_per_bar, (unsigned long)metre->meter.beat_unit, &metre->bar_length) !=
+            PLAN_OK ||
+        !harmony_rhythm_cells_per_bar(&metre->meter, &metre->cells_per_bar) ||
+        plan_time_make(metre->bar_length.num, metre->bar_length.den * metre->cells_per_bar, &metre->cell_length) !=
+            PLAN_OK ||
+        !melody_ticks(span.length, &context->length) || !melody_ticks(metre->cell_length, &context->cell) ||
+        context->cell <= 0 || context->length <= 0 || !melody_ticks(span.start, &origin) ||
+        !melody_ticks(meter_span.start, &meter_start)) {
+        return false;
+    }
+    cell_phase = (origin - meter_start) % context->cell;
+    context->phase = cell_phase < 0 ? cell_phase + context->cell : cell_phase;
+    NodeId phrase = phrase_of(plan, owner);
+
+    /* A cadence is asked for by the target, or by the idea it stands for; the chords' own cadence is the phrase's. */
+    if (harmony_find_constraint(plan, target, owner, PLAN_CONSTRAINT_CADENCE, &constraint)) {
+        context->has_cadence = true;
+        context->cadence = constraint.params.cadence;
+    }
+    return read_idea_chords(plan, context) && read_idea_bass(plan, context) &&
+           read_idea_melody(plan, context, phrase) && read_motive(plan, context);
+}
+
 bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out) {
+    if (plan && plan_has_lane_span(plan, target) && plan_lane_span_lane(plan, target) == PLAN_LANE_MELODY &&
+        plan_lane_span_voice(plan, target) == 0 && plan_lane_span_state(plan, target) == PLAN_STATE_CONSTRAINED &&
+        out && (plan_node_kind(plan, plan_lane_span_owner(plan, target)) == PLAN_NODE_IDEA ||
+                plan_node_kind(plan, plan_lane_span_owner(plan, target)) == PLAN_NODE_SUBPHRASE)) {
+        return melody_idea_read(plan, target, out);
+    }
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_MELODY ||
         plan_lane_span_voice(plan, target) != 0 || plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED) {
         return false;

@@ -114,7 +114,7 @@ static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) 
         const MelodyNote *note = &melody->notes[i];
         if (note->pitch < melody->params.range_low || note->pitch > melody->params.range_high) {
             verdict->hard = "outside the melody range";
-        } else if (note->onset % context->cell == 0 && !(context->chord_mask[note->chord] & (1u << pitch_class(note->pitch))) &&
+        } else if (melody_on_cell(context, note->onset) && !(context->chord_mask[note->chord] & (1u << pitch_class(note->pitch))) &&
                    !(melody->params.nct_types & strong_figures)) {
             verdict->hard = "strong beat without a chord tone";
         }
@@ -167,7 +167,7 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict) {
             member->pitch = bass ? context->bass[i - melody->count].pitch : melody->notes[i].pitch;
             member->held = onset < from;
             member->duration = (double)((end < to ? end : to) - (onset > from ? onset : from)) / TICKS_PER_WHOLE;
-            member->strength = onset % context->cell == 0 ? BEAT_STRENGTH_STRONG : BEAT_STRENGTH_WEAK;
+            member->strength = melody_on_cell(context, onset) ? BEAT_STRENGTH_STRONG : BEAT_STRENGTH_WEAK;
             member->voice_id = bass ? BASS_VOICE : MELODY_VOICE;
             member->onset = (double)onset / TICKS_PER_WHOLE;
             segments[s].member_count++;
@@ -223,16 +223,21 @@ static unsigned harmonic_soft_rules(void) {
 
 /* standard-counterpoint's melodic rules over the melody. */
 static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict) {
-    PitchSpelling **spellings = calloc(melody->count, sizeof(*spellings));
+    /* A target that follows written melody is read as one line with the last notes of it, so a leap or a run across
+       the join is judged like any other. */
+    size_t lead = melody->context.lead_in_count;
+    size_t total = lead + melody->count;
+    PitchSpelling **spellings = calloc(total, sizeof(*spellings));
     bool ok = spellings != NULL;
-    for (size_t i = 0; ok && !verdict->hard && i < melody->count; i++) {
-        spellings[i] = spell_melody(&melody->context.key, melody->notes[i].pitch);
+    for (size_t i = 0; ok && !verdict->hard && i < total; i++) {
+        int pitch = i < lead ? melody->context.lead_in[i] : melody->notes[i - lead].pitch;
+        spellings[i] = spell_melody(&melody->context.key, pitch);
         if (!spellings[i]) {
             verdict->hard = "a melody pitch cannot be spelled";
         }
     }
     if (ok && !verdict->hard) {
-        StandardCounterpointLine line = {(const PitchSpelling *const *)spellings, melody->count};
+        StandardCounterpointLine line = {(const PitchSpelling *const *)spellings, total};
         StandardCounterpointLimits limits = standard_counterpoint_default_limits();
         unsigned hard = 0;
         unsigned soft = 0;
@@ -251,7 +256,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
             verdict->soft_held += melodic_soft_rules() - bits_set(soft);
         }
     }
-    for (size_t i = 0; spellings && i < melody->count; i++) {
+    for (size_t i = 0; spellings && i < total; i++) {
         if (spellings[i]) {
             pitch_spelling_destroy(spellings[i]);
         }
@@ -319,7 +324,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
             (context->chord_mask[sounding] & pitch_bit) && !(context->chord_seventh[sounding] & pitch_bit)) {
             verdict->hard = "dissonance against the bass";
         }
-        strong[samples] = times[t] % context->cell == 0;
+        strong[samples] = melody_on_cell(context, times[t]);
         samples++;
     }
     if (ok && !verdict->hard && samples == 0) {
@@ -423,6 +428,17 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     if (ok && !verdict->hard) {
         check_tendency(melody, verdict);
     }
+    /* The target with the phrase's climax writes the phrase's single highest note. */
+    if (ok && !verdict->hard && melody->context.idea && melody->context.phrase_has_top &&
+        melody_role(&melody->context, &melody->params) == MELODY_ROLE_CLIMAX) {
+        int top = 0;
+        for (size_t i = 0; i < melody->count; i++) {
+            top = melody->notes[i].pitch > top ? melody->notes[i].pitch : top;
+        }
+        if (top <= melody->context.phrase_top) {
+            verdict->hard = "climax not above the phrase before it";
+        }
+    }
     /* The cadence arrives on its stable tone: the tonic for a PAC, the third for an IAC. */
     if (ok && !verdict->hard &&
         !(melody_cadence_mask(&melody->context) & (1u << pitch_class(melody->notes[melody->count - 1].pitch)))) {
@@ -501,7 +517,7 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const 
                 note->onset += base - origin;
                 note->pitch = notes->notes[n].midi_pitch;
                 note->motive_index = -1;
-                note->strong = note->onset % melody->context.cell == 0;
+                note->strong = melody_on_cell(&melody->context, note->onset);
                 note->chord = melody_chord_at(&melody->context, note->onset);
                 melody->count++;
             }

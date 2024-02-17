@@ -92,7 +92,7 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
     /* A note that ends the phrase starts with the last chord, so the cadence arrives with it. */
     long at = start + context->motive_length;
     long last = context->chord_start[context->count - 1];
-    long bound = last > at ? last : context->length;
+    long bound = context->has_cadence && last > at ? last : context->length;
     long step = params->density > 0 && context->cell % (long)params->density == 0
                     ? context->cell / (long)params->density
                     : context->cell;
@@ -118,7 +118,7 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
         return false;
     }
     for (size_t i = 0; i < out->count; i++) {
-        out->notes[i].strong = out->notes[i].onset % context->cell == 0;
+        out->notes[i].strong = melody_on_cell(context, out->notes[i].onset);
         out->notes[i].chord = melody_chord_at(context, out->notes[i].onset);
     }
     return true;
@@ -183,8 +183,9 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         } else {
             ideal = melody_contour_ideal(context, &contour, out, i, before);
             /* A leap of a fourth or more is answered by a step back, unless this is the climax or the end. */
-            if (adjacent && before > 0 && i + 1 < out->count) {
-                int leap = out->notes[before].pitch - out->notes[before - 1].pitch;
+            if (adjacent && (before > 0 || context->lead_in_count > 0) && i + 1 < out->count) {
+                int leap = out->notes[before].pitch -
+                           (before > 0 ? out->notes[before - 1].pitch : context->lead_in[context->lead_in_count - 1]);
                 if (leap >= MELODY_RECOVER_FROM || leap <= -MELODY_RECOVER_FROM) {
                     ideal = out->notes[before].pitch + (leap > 0 ? -2 : 2);
                 }
@@ -196,6 +197,11 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             int move = options[j].pitch - out->notes[before].pitch;
             bool repeat = note->motive_index < 0 && adjacent && move == 0;
             if (i > 0 && ((adjacent && !leap_allowed(move)) || repeat)) {
+                continue;
+            }
+            /* The first note of a target that follows written melody joins it by a leap standard-counterpoint allows. */
+            if (i == 0 && context->lead_in_count > 0 &&
+                !leap_allowed(options[j].pitch - context->lead_in[context->lead_in_count - 1])) {
                 continue;
             }
             options[kept++] = options[j];
@@ -235,11 +241,27 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
     return true;
 }
 
+/*
+ * The range a target keeps to in its phrase's arch: a target before the phrase's climax stays three semitones under
+ * the top of the range, so the climax has room above it; one after the climax stays under the climax note.
+ */
+static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFillParams *params) {
+    MelodyFillParams adjusted = *params;
+    MelodyRole role = melody_role(context, params);
+    if (role == MELODY_ROLE_BEFORE) {
+        adjusted.range_high = params->range_high - 3;
+    } else if (role == MELODY_ROLE_AFTER && context->phrase_has_top && context->phrase_top - 1 < adjusted.range_high) {
+        adjusted.range_high = context->phrase_top - 1;
+    }
+    return adjusted;
+}
+
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out) {
+    MelodyFillParams arch = arch_params(context, params);
     memset(out, 0, sizeof(*out));
     out->magic = MELODY_PAYLOAD_MAGIC;
     out->context = *context;
-    out->params = *params;
+    out->params = arch;
     /* A melody with two notes as high as its highest has no one climax. */
-    return layout(context, params, out) && assign(context, params, rng, out) && melody_contour_unique(out);
+    return layout(context, &arch, out) && assign(context, &arch, rng, out) && melody_contour_unique(out);
 }

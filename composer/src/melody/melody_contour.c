@@ -13,10 +13,32 @@ static int absolute(int value) {
     return value < 0 ? -value : value;
 }
 
+long melody_climax_tick(const MelodyContext *context, const MelodyFillParams *params) {
+    unsigned position = params->climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : params->climax_position;
+    if (!context->idea) {
+        return context->length * (long)position / CLIMAX_SCALE;
+    }
+    return context->phrase_start + context->phrase_length * (long)position / CLIMAX_SCALE;
+}
+
+MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params) {
+    if (!context->idea) {
+        return MELODY_ROLE_WHOLE;
+    }
+    long tick = melody_climax_tick(context, params);
+    /* The phrase's last tick belongs to the last target. */
+    bool at_phrase_end = context->phrase_start + context->phrase_length == context->length;
+    if (tick < 0) {
+        return MELODY_ROLE_AFTER;
+    }
+    return tick < context->length || (at_phrase_end && tick == context->length) ? MELODY_ROLE_CLIMAX
+                                                                                  : MELODY_ROLE_BEFORE;
+}
+
 bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                          size_t first, FillRng *rng, MelodyContour *out) {
-    unsigned position = params->climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : params->climax_position;
-    long wanted = context->length * (long)position / CLIMAX_SCALE;
+    long wanted = melody_climax_tick(context, params);
+    wanted = wanted < 0 ? 0 : (wanted > context->length ? context->length : wanted);
     size_t best = melody->count;
     long best_distance = 0;
     int top = 0;
@@ -26,6 +48,10 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
         top = melody->notes[i].pitch > top ? melody->notes[i].pitch : top;
     }
     out->motive_top = top;
+    /* The climax of a phrase is higher than every note of the phrase written before it. */
+    if (context->idea && context->phrase_has_top && context->phrase_top > top) {
+        top = context->phrase_top;
+    }
     out->in_motive = true;
     out->cap = top - 1;
 
@@ -103,8 +129,10 @@ void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigne
     }
     score += melody_contour_unique(melody);
 
-    /* The climax falls where it was asked to, within the slack. */
-    if (melody->count > 0 && melody->context.length > 0) {
+    /* The climax falls where it was asked to, within the slack. A target that is one idea of a phrase is not asked. */
+    if (melody->context.idea) {
+        score += 1;
+    } else if (melody->count > 0 && melody->context.length > 0) {
         long position = melody->notes[top].onset * CLIMAX_SCALE / melody->context.length;
         long asked = melody->params.climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : melody->params.climax_position;
         score += (position > asked ? position - asked : asked - position) <= POSITION_SLACK;
