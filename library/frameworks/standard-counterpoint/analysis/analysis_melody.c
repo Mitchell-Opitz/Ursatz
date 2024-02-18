@@ -85,6 +85,7 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_line_add_note(Stan
         note->alteration < -1 || note->alteration > 1 || !(note->confidence >= 0.0 && note->confidence <= 1.0) ||
         (note->has_strength && !beat_strength_valid(note->strength)) ||
         (unsigned)note->nct > (unsigned)STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE ||
+        (note->nct_ref != NULL && strlen(note->nct_ref) >= 128) ||
         (note->nct == STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE && !non_chord_tone_valid(note->nct_type))) {
         return STANDARD_COUNTERPOINT_MELODY_ERR_BAD_NOTE;
     }

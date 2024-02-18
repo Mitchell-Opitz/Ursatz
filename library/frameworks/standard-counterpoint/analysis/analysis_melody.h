@@ -103,7 +103,7 @@ typedef enum {
     STANDARD_COUNTERPOINT_MELODY_ERR_NULL_ARGUMENT,
     STANDARD_COUNTERPOINT_MELODY_ERR_BAD_NOTE, /* no id or pitch, a pitch that is not a whole semitone, a degree outside
                                                   0..7, an alteration outside -1..1, a confidence outside [0, 1], an
-                                                  invalid strength or NCT value */
+                                                  invalid strength or NCT value, an nct_ref of 128 characters or more */
     STANDARD_COUNTERPOINT_MELODY_ERR_BAD_SPAN,
     STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC
 } StandardCounterpointMelodyStatus;
