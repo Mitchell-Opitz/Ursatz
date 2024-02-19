@@ -13,6 +13,10 @@ static int absolute(int value) {
     return value < 0 ? -value : value;
 }
 
+static long absolute_long(long value) {
+    return value < 0 ? -value : value;
+}
+
 long melody_climax_tick(const MelodyContext *context, const MelodyFillParams *params) {
     unsigned position = params->climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : params->climax_position;
     if (!context->idea) {
@@ -39,8 +43,6 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
                          size_t first, FillRng *rng, MelodyContour *out) {
     long wanted = melody_climax_tick(context, params);
     wanted = wanted < 0 ? 0 : (wanted > context->length ? context->length : wanted);
-    size_t best = melody->count;
-    long best_distance = 0;
     int top = 0;
     memset(out, 0, sizeof(*out));
     out->made = true;
@@ -55,30 +57,59 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
     out->in_motive = true;
     out->cap = top - 1;
 
-    /* The climax is the anchor nearest the place asked for, other than the last note, which is the cadence's. */
-    for (size_t j = first; j + 1 < melody->count; j++) {
-        long distance = melody->notes[j].onset > wanted ? melody->notes[j].onset - wanted : wanted - melody->notes[j].onset;
-        if (melody_is_anchor(context, params, melody, j) && (best == melody->count || distance < best_distance)) {
-            best = j;
-            best_distance = distance;
+    /*
+     * The climax is the anchor nearest the place asked for, other than the last note, which is the cadence's. A target
+     * that is one idea of a phrase has the cadence's note only when it asks for a cadence, and takes the nearest anchor
+     * that has a chord tone to rise to.
+     */
+    /* An idea that is not the phrase's climax peaks only a little over its motive, so the climax has room above it. */
+    bool low_peak = context->idea && melody_role(context, params) != MELODY_ROLE_CLIMAX;
+    int peak = low_peak ? top + 1 + (int)fill_rng_below(rng, 2) : top + 2 + (int)fill_rng_below(rng, CLIMAX_RISE);
+    size_t order[MELODY_MAX_NOTES];
+    size_t candidates = 0;
+    bool idea_last = context->idea && !context->has_cadence;
+    for (size_t j = first; j < melody->count; j++) {
+        if ((j + 1 < melody->count || idea_last) && melody_is_anchor(context, params, melody, j)) {
+            order[candidates++] = j;
         }
     }
-    int peak = top + 2 + (int)fill_rng_below(rng, CLIMAX_RISE);
-    if (best == melody->count) {
-        return true;
-    }
-    unsigned mask = melody_need_mask(context, params, &melody->notes[best]);
-    int found = -1;
-    for (int pitch = top + 1; pitch <= params->range_high; pitch++) {
-        if (((mask >> (((pitch % 12) + 12) % 12)) & 1u) && (found < 0 || absolute(pitch - peak) < absolute(found - peak))) {
-            found = pitch;
+    /* Nearest the wanted place first; the sort is stable, so earlier notes win a tie. */
+    for (size_t a = 1; a < candidates; a++) {
+        size_t moving = order[a];
+        long moving_distance = absolute_long(melody->notes[moving].onset - wanted);
+        size_t at = a;
+        while (at > 0 && absolute_long(melody->notes[order[at - 1]].onset - wanted) > moving_distance) {
+            order[at] = order[at - 1];
+            at--;
         }
+        order[at] = moving;
     }
-    if (found >= 0) {
-        out->in_motive = false;
-        out->climax = best;
-        out->climax_pitch = found;
-        out->cap = found - 1;
+    size_t limit = context->idea ? candidates : (candidates > 0 ? 1 : 0);
+    /* An idea that is not the phrase's climax stays in the lower half of the range, if its motive allows, so the
+       climax has the upper half to rise in. */
+    int ceiling = params->range_high;
+    if (low_peak) {
+        int middle = (params->range_low + params->range_high) / 2;
+        ceiling = top + 2 > middle ? top + 2 : middle;
+        ceiling = ceiling < params->range_high ? ceiling : params->range_high;
+    }
+    for (size_t k = 0; k < limit; k++) {
+        size_t best = order[k];
+        unsigned mask = melody_need_mask(context, params, &melody->notes[best]);
+        int found = -1;
+        for (int pitch = top + 1; pitch <= ceiling; pitch++) {
+            if (((mask >> (((pitch % 12) + 12) % 12)) & 1u) &&
+                (found < 0 || absolute(pitch - peak) < absolute(found - peak))) {
+                found = pitch;
+            }
+        }
+        if (found >= 0) {
+            out->in_motive = false;
+            out->climax = best;
+            out->climax_pitch = found;
+            out->cap = found - 1;
+            break;
+        }
     }
     return true;
 }

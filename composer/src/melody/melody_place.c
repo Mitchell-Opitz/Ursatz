@@ -148,6 +148,7 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
     int high = params->range_high;
     MelodyContour contour;
     size_t before = 0; /* the anchor before this one */
+    int first_floor = -1; /* the lowest pitch the first note may take, for the target with the phrase's climax */
     memset(&contour, 0, sizeof(contour));
     for (size_t i = 0; i < out->count; i++) {
         MelodyNote *note = &out->notes[i];
@@ -175,6 +176,20 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         if (i == 0) {
             ideal = context->motive_pitch[0];
             reach = 127;
+            /* The target with the phrase's climax rises above every note the phrase has had, and the motive may be
+               all there is of it, so the motive is placed high enough to be that. */
+            if (context->idea && context->phrase_has_top && melody_role(context, params) == MELODY_ROLE_CLIMAX) {
+                int rise = 0;
+                for (size_t k = 1; k < context->motive_count; k++) {
+                    rise = context->motive_pitch[k] - context->motive_pitch[0] > rise
+                               ? context->motive_pitch[k] - context->motive_pitch[0]
+                               : rise;
+                }
+                int wanted_top = context->phrase_top + 1 + (int)fill_rng_below(rng, 3);
+                ideal = wanted_top - rise > ideal ? wanted_top - rise : ideal;
+                ideal = ideal + rise > params->range_high ? params->range_high - rise : ideal;
+                first_floor = context->phrase_top + 1 - rise;
+            }
         } else if (note->motive_index >= 0 && out->notes[before].motive_index >= 0) {
             size_t k = (size_t)note->motive_index;
             size_t then = (size_t)out->notes[before].motive_index;
@@ -197,6 +212,9 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             int move = options[j].pitch - out->notes[before].pitch;
             bool repeat = note->motive_index < 0 && adjacent && move == 0;
             if (i > 0 && ((adjacent && !leap_allowed(move)) || repeat)) {
+                continue;
+            }
+            if (i == 0 && first_floor >= 0 && options[j].pitch < first_floor) {
                 continue;
             }
             /* The first note of a target that follows written melody joins it by a leap standard-counterpoint allows. */
@@ -263,5 +281,9 @@ bool melody_build(const MelodyContext *context, const MelodyFillParams *params, 
     out->context = *context;
     out->params = arch;
     /* A melody with two notes as high as its highest has no one climax. */
-    return layout(context, &arch, out) && assign(context, &arch, rng, out) && melody_contour_unique(out);
+    bool assigned = layout(context, &arch, out) && assign(context, &arch, rng, out);
+    /* The phrase has one highest note: the whole phrase, or the target with its climax, has one. */
+    MelodyRole role = melody_role(context, &arch);
+    bool unique = assigned && ((role != MELODY_ROLE_WHOLE && role != MELODY_ROLE_CLIMAX) || melody_contour_unique(out));
+    return unique;
 }
