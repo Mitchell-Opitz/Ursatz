@@ -339,6 +339,8 @@ the test:
 
 `analysis/` reads a voice-pitch grid: motion classification between voice pairs and parallel fifths and octaves (all pairs) and direct perfects (outer pair, top voice leaping). See `docs/modules/voice-leading-analysis.md`. Doubling, spacing and voice-crossing checks are not there yet.
 
+The melody adapter (`analysis/analysis_melody*.h`) reads one line: melodic intervals and contour, the climax of each caller-supplied span, leap recovery and consecutive leaps by the cantus firmus rules, and the non-chord-tone result of each note attached by reference. See `docs/modules/melody-analysis.md`.
+
 ## Not covered
 
 Dissonance treatment beyond the figures above, three or more parts, and imitation. Note values and
