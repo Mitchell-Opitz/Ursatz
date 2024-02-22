@@ -267,3 +267,10 @@ PlanResult plan_walk(const PiecePlan *plan, PlanVisitFn visit, void *context) {
     }
     return PLAN_OK;
 }
+
+void plan_replace_contents(PiecePlan *dst, PiecePlan *src) {
+    PiecePlan old = *dst;
+    *dst = *src;
+    *src = old;
+    plan_destroy(src);
+}

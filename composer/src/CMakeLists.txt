@@ -49,6 +49,7 @@ add_library(ursatz_composer STATIC
     grow/grow_request.c
     grow/grow_theme.c
     grow/grow_check.c
+    grow/grow_run.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
