@@ -48,6 +48,7 @@ add_library(ursatz_composer STATIC
     form/form_boundary.c
     grow/grow_request.c
     grow/grow_theme.c
+    grow/grow_check.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
