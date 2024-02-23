@@ -58,6 +58,17 @@ static bool fill_input(const Segmentation *segmentation, const ChordEstimate *ch
     return true;
 }
 
+/* The numeral without its inversion figure, formatted by the library from the same reading. */
+static char *base_numeral_of(const StandardTonalityRomanResult *result) {
+    StandardTonalityRomanReading root_position = result->reading;
+    root_position.inversion = 0;
+    char text[STANDARD_TONALITY_ROMAN_LABEL_MAX];
+    if (!standard_tonality_format_roman_reading(&root_position, text, sizeof(text))) {
+        return NULL;
+    }
+    return strdup(text);
+}
+
 /* The applied chord's parts, from the library's reading: the chord as it reads in the tonicized key and the
    chord tonicized, each formatted by the library. */
 static bool fill_applied(const StandardTonalityRomanResult *result, AnalysisRomanNumeral *roman) {
@@ -117,7 +128,8 @@ bool assign_roman_numerals(const Segmentation *segmentation, const ChordEstimate
         AnalysisRomanNumeral *roman = &entries[i].roman;
         if (results[i].has_numeral) {
             roman->numeral = strdup(results[i].claim.label);
-            roman->labelled = roman->numeral != NULL;
+            roman->base_numeral = base_numeral_of(&results[i]);
+            roman->labelled = roman->numeral != NULL && roman->base_numeral != NULL;
             roman->degree = results[i].claim.degree;
             roman->uncertainty = results[i].uncertainty;
             ok = roman->labelled && (!results[i].reading.applied || fill_applied(&results[i], roman));

@@ -708,6 +708,109 @@ static bool render_outer_voices(StringBuilder *sb, const cJSON *document, const 
     return ok;
 }
 
+/* One table of vocabulary entries sharing a scope, group and level. */
+static bool append_vocabulary_table(StringBuilder *sb, const cJSON *entries, const char *scope_key, const char *group,
+                                    const char *level, const char *first_column) {
+    bool any = false;
+    const cJSON *entry;
+    cJSON_ArrayForEach(entry, entries) {
+        const char *entry_group = string_member(entry, "group");
+        const char *entry_level = string_member(entry, "level");
+        const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
+        bool in_scope = scope_key ? (cJSON_IsNumber(key_region) && (long)key_region->valuedouble == atol(scope_key))
+                                  : !cJSON_IsNumber(key_region);
+        if (!in_scope || !entry_group || strcmp(entry_group, group) != 0 || strcmp(entry_level, level) != 0) {
+            continue;
+        }
+        if (!any) {
+            if (!sb_appendf(sb, "| %s | Count | Runs | Beats | Share | First |\n| --- | --- | --- | --- | --- | --- |\n",
+                            first_column)) {
+                return false;
+            }
+            any = true;
+        }
+        const cJSON *duration = cJSON_GetObjectItemCaseSensitive(entry, "duration");
+        char beats_text[32] = "-";
+        if (cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(duration, "beats"))) {
+            format_number(rational_member(duration, "beats"), beats_text, sizeof(beats_text));
+        }
+        const cJSON *first = cJSON_GetObjectItemCaseSensitive(entry, "first");
+        if (!(sb_appendf(sb, "| %s | %d | %d | %s | %.1f%% | ", string_member(entry, "numeral"),
+                         (int)number_member(entry, "count"), (int)number_member(entry, "runs"), beats_text,
+                         number_member(entry, "share") * 100.0) &&
+              append_position(sb, cJSON_GetObjectItemCaseSensitive(first, "position")) && sb_append(sb, " |\n"))) {
+            return false;
+        }
+    }
+    return !any || sb_append(sb, "\n");
+}
+
+/* The groups and both levels for one scope. */
+static bool append_vocabulary_scope(StringBuilder *sb, const cJSON *entries, const char *scope_key) {
+    static const struct {
+        const char *group;
+        const char *title;
+    } GROUPS[] = {{"diatonic", "Diatonic chords"}, {"applied", "Applied chords"}, {"mixture", "Borrowed chords"}};
+    for (size_t g = 0; g < sizeof(GROUPS) / sizeof(GROUPS[0]); g++) {
+        bool present = false;
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, entries) {
+            const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
+            const char *group = string_member(entry, "group");
+            if (group && strcmp(group, GROUPS[g].group) == 0 &&
+                (scope_key ? (cJSON_IsNumber(key_region) && (long)key_region->valuedouble == atol(scope_key))
+                           : !cJSON_IsNumber(key_region))) {
+                present = true;
+            }
+        }
+        if (!present) {
+            continue;
+        }
+        if (!(sb_appendf(sb, "**%s**\n\n", GROUPS[g].title) &&
+              append_vocabulary_table(sb, entries, scope_key, GROUPS[g].group, "numeral", "Numeral") &&
+              sb_append(sb, "By base numeral (inversions together):\n\n") &&
+              append_vocabulary_table(sb, entries, scope_key, GROUPS[g].group, "base_numeral", "Base numeral"))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool render_chord_vocabulary(StringBuilder *sb, const cJSON *document, const cJSON *entries) {
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
+    const cJSON *regions = cJSON_GetObjectItemCaseSensitive(keys, "regions");
+    bool ok = sb_append(sb, "\n## Chord vocabulary\n\n") &&
+              sb_append(sb, "Each distinct Roman numeral of the chords the library numbered, for the whole piece and "
+                            "for each key region, sorted by count, then total length, then first appearance. Count "
+                            "is the number of chord rows with that numeral (every row in the Chords table is one). "
+                            "Runs counts a stretch of adjacent identical numerals in one key region once. Beats is "
+                            "the total length, Share its fraction of the scope's numbered chord length, and First "
+                            "where it first appears. Applied chords are listed on their own. Chords without a "
+                            "numeral are not counted.\n\n### Overall\n\n") &&
+              append_vocabulary_scope(sb, entries, NULL);
+    if (cJSON_GetArraySize(regions) < 2) {
+        return ok;
+    }
+    int index = 0;
+    const cJSON *region;
+    cJSON_ArrayForEach(region, regions) {
+        char scope_key[16];
+        snprintf(scope_key, sizeof(scope_key), "%d", index);
+        bool present = false;
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, entries) {
+            const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
+            present = present || (cJSON_IsNumber(key_region) && (int)key_region->valuedouble == index);
+        }
+        if (ok && present) {
+            ok = sb_appendf(sb, "### %s (region %d)\n\n", string_member(region, "label"), index) &&
+                 append_vocabulary_scope(sb, entries, scope_key);
+        }
+        index++;
+    }
+    return ok;
+}
+
 static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, const cJSON *tones) {
     (void)document;
     size_t unclassified = 0;
@@ -754,6 +857,7 @@ static const struct {
     {"chords", render_chords},
     {"chords", render_applied_chords},
     {"chords", render_outer_voices},
+    {"chord_vocabulary", render_chord_vocabulary},
     {"non_chord_tones", render_non_chord_tones},
 };
 

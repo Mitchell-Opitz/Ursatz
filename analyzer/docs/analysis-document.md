@@ -3,7 +3,7 @@
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v7.schema.json`](../schema/analysis-document.v7.schema.json)
+[`schema/analysis-document.v8.schema.json`](../schema/analysis-document.v8.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render` from
 `<ursatz_analyzer/analysis_document.h>`.
 
@@ -12,9 +12,9 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v7 content |
+| Key | Type | v8 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `7`. |
+| `schema_version` | integer | Always `8`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
@@ -22,6 +22,7 @@ newline. The same input and build always give the same bytes.
 | `modulations` | array of modulation claims | Filled. See below. |
 | `pivot_chords` | array of pivot chord claims | Filled. See below. |
 | `chords` | array of chord claims | Filled. |
+| `chord_vocabulary` | array of vocabulary entries | Filled: each distinct Roman numeral with its count and length. See below. |
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `outer_voices` | object | Filled: the soprano and bass lines. See below. |
 | `cadences` | array | Placeholder: `[]`. |
@@ -303,6 +304,7 @@ identified chord, the region's key and the segment's pitch-class weights.
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `label` | string or null | The library's label with its figure: case for quality (`"I"`, `"ii"`), the figures `6`, `6/4` for triads and `7`, `6/5`, `4/3`, `4/2` for sevenths (`"V6/5"`), and the library's quality marks (`"vii°"`, `"ii∅7"`). A chord the library reads as an applied chord carries its slash form (`"V7/V"`). `null` when the library gives no numeral. |
+| `base_numeral` | string or null | The same numeral in root position, formatted by the library with no inversion figure: `"V7"` for `"V6/5"`, `"I"` for `"I6/4"`, `"V7/V"` for `"V4/3/V"`. `null` when unlabelled. |
 | `key_region` | integer or null | Index into `keys.regions` of the region the numeral is relative to; `null` when the segment lies in no key region. |
 | `key` | string or null | That region's label, e.g. `"G major"`. |
 | `degree` | integer or null | The chord's root as a degree (1 to 7) of the local key (for an applied chord, of the tonicized key); `null` when unlabelled. |
@@ -337,6 +339,35 @@ locating the tonic a degree of the local key names (major scale; natural minor i
 
 The runner-up is always recorded when the library provides one. The Markdown report shows it only
 when its score is within 0.10 of the best chord's.
+
+### Chord vocabulary
+
+`chord_vocabulary` lists the Roman numerals of the piece, for the whole piece and for each key region. Only
+chords with a numeral are counted; the ones without stay in `chords` with their reason. Each entry:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `scope` | string | `"overall"` (the whole piece) or `"region"` (one key region). |
+| `key_region`, `key` | integer or null, string or null | For a region scope, the index into `keys.regions` and its label; `null` for `"overall"`. |
+| `group` | string | `"diatonic"`, `"applied"` (the chord's `roman_numeral.applied` is not null) or `"mixture"` (borrowed chords). A chord is in exactly one group. The library's Roman numeral adapter does not name borrowed chords yet, so nothing is placed in `"mixture"` today; a chord from outside the key has no numeral and is counted as unlabelled. |
+| `level` | string | `"numeral"`: the numeral as the library names it, inversion figure included (`"V6/5"`, `"I6/4"`). `"base_numeral"`: the same chords grouped by `base_numeral` (`"V7"`), so every inversion of a chord counts together. |
+| `numeral` | string | The numeral or base numeral. |
+| `count` | integer | The number of chord claims with it: the counting rule below. |
+| `runs` | integer | The number of runs of it: adjacent chord claims with the identical numeral in one key region counted once. |
+| `duration` | object | `{"whole_notes", "beats"}`: their total length, as in a chord claim; `beats` is `null` if any of them has none. |
+| `share` | number | `duration` over the total length of all numbered chords in the scope, in [0, 1]. Chords without a numeral are not in the total. |
+| `first` | object | `{"chord_index", "position"}`: the earliest chord claim with it (index into `chords`) and where it starts (measure, beat, subdivision, as `location.start`). |
+
+Counting rule. Every labelled chord claim counts once, whatever its length, so the `count`s of one scope, level and
+group-partition add up to the number of chords with a numeral in that scope. A chord claim is a sonority segment,
+so a chord held across a beat or re-struck over a moving bass is several claims; `runs` is the count with such
+repeats merged: a claim continues a run only when the claim immediately before it (no unlabelled claim between)
+has the same `numeral` and lies in the same key region. A key change therefore always starts a new run, and the
+per-region `runs` add up to the overall `runs`.
+
+Entries are ordered overall first, then by region; within a scope by level (`numeral`, then `base_numeral`), then by
+group (`diatonic`, `applied`, `mixture`); and within those by `count`, then `duration`, longest first, then `first`,
+earliest first. A scope, level or group with no chords has no entries.
 
 ### Outer voices
 
@@ -401,9 +432,12 @@ non-chord tones.
 
 ### Version history
 
+- **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
+  section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
   the key region it is relative to, and the reason when there is none). A required field is a breaking change
-  under the rule above.
+  under the rule above. `roman_numeral` also gains the optional `applied` member for applied chords, which did not
+  need a version of its own.
 - **6**: `metadata` gains the required `input` object (format, source type, whether meter, key and spelling are notated, embedded or inferred, parts, tempo), and `meter.source` gains `"notated"`. A required field is a breaking change under the rule above.
 - **5**: Adds the required `outer_voices` section (the soprano and bass lines) and the required `outer`
   field on every chord claim. A required section and a required field are breaking changes under the

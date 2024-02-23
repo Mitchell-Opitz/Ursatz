@@ -52,6 +52,8 @@ typedef struct {
     bool labelled;      /* the library produced a numeral for the segment */
     char *numeral;      /* owned; the library's label with its figure, e.g. "V6/5"; NULL unless labelled */
     char *reason;       /* owned; why the segment has no numeral; NULL when labelled */
+    char *base_numeral; /* owned; the same numeral in root position, the library's own formatting of it with
+                           no inversion figure: "V7" for "V6/5", "I" for "I6/4"; NULL unless labelled */
     int degree;         /* 1..7: the chord's root as a degree of the local key; valid only when labelled */
     double uncertainty; /* [0, 1], higher is LESS certain: the chord's and the key region's combined; valid only
                            when labelled */

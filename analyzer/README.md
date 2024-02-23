@@ -60,7 +60,7 @@ Writes two files next to the input file:
 - `<stem>.report.md`: the Markdown report.
 - `<stem>.analysis.json`: the analysis document. See
   [docs/analysis-document.md](docs/analysis-document.md) and the
-  [schema](schema/analysis-document.v7.schema.json).
+  [schema](schema/analysis-document.v8.schema.json).
 
 `--markdown` writes only the report, `--json` writes only the analysis document. No flag, or both,
 writes both. `--input-format` forces the input format (see "Input formats"). Flags can come before or
