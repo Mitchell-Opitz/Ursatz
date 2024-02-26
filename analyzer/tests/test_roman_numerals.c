@@ -472,7 +472,8 @@ static void test_applied(const char *path) {
 }
 
 /* A borrowed chord: the iv (F Ab C) where the IV belongs. The library's Roman numeral adapter names no borrowed
-   chord, so the chord is not given a mixture numeral. */
+   chord, and the weighted identification that feeds it has no candidate for this one, so the chord is reported
+   unlabelled ("the library identified no chord"); it is not given a mixture numeral or read as the IV. */
 static void test_borrowed(const char *path) {
     Chord i = MAJOR_I;
     Chord iv = MAJOR_IV;
@@ -492,8 +493,11 @@ static void test_borrowed(const char *path) {
         /* Never the minor iv: the library has no numeral for a borrowed chord. */
         CHECK(label == NULL || strcmp(label, "iv") != 0);
         CHECK(cJSON_IsNull(member(roman, "applied")));
+        /* The weighted identification finds no chord to number: F Ab C is not one of its diatonic candidates. */
+        CHECK(label == NULL);
         if (!label) {
-            CHECK(strstr(text(roman, "unlabelled_reason"), "no Roman numeral") != NULL);
+            const char *reason = text(roman, "unlabelled_reason");
+            CHECK(reason != NULL && strstr(reason, "identified no chord") != NULL);
         }
     }
     int mixture = 0;
