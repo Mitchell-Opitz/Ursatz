@@ -37,6 +37,11 @@ Tests:
   above 90% (marked `WILL_FAIL` until it is: see "Known limits"); the others must still produce chords. See "Chords and non-chord tones".
 - `test_chord_details`: inversion, runner-up present and absent, and four non-chord-tone types and
   an unclassified one, on small constructed files.
+- `test_roman_numerals`: hand-read numerals on constructed pieces (a major and a minor progression,
+  inversions and seventh-chord figures, an applied chord, a borrowed chord, a modulation) and the
+  chord vocabulary's invariants on those and the five reference pieces: counts add up to the
+  chords with a numeral, shares to one, entries sorted. See "Roman numerals and the chord
+  vocabulary".
 - `test_cli_output_flags`: which files each output flag writes.
 - `test_musicxml_midi_agreement`: the five reference pieces from their MusicXML versions
   (`tests/musicxml`) and from their MIDI files: key regions, measure count and meter must agree
@@ -109,6 +114,8 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
    with its runner-up and the segment's non-chord tones.
 4. `outer_voice_pipeline`: extracts the soprano and bass of each segment with Ursatz's outer-voice
    extraction and names their scale degrees in the segment's local key.
+5. `roman_numeral_pipeline`: gives each segment the Roman numeral Ursatz's standard-tonality adapter
+   reads for its chord in its local key, applied chords included.
 
 `analysis_document` then builds the analysis document once. It is the single source of truth:
 the JSON file is its serialization, and `markdown_report` renders the report from it, never from
@@ -186,6 +193,44 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's segm
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 
+## Roman numerals and the chord vocabulary
+
+The analyzer adds no music theory here either. `roman_numeral_pipeline` hands Ursatz's
+standard-tonality Roman numeral adapter (`standard_tonality_build_roman_numerals`) each segment's
+identified chord (root, tones above the root, bass), the tonic and mode of its key region and its
+pitch-class weights, in time order, and copies what comes back.
+
+- **Numerals are relative to the local key region**, not the home key: the same chord is V in the
+  key it dominates and I in the key it opens. The label, its case for quality, its inversion figure
+  (`6`, `6/4`; `7`, `6/5`, `4/3`, `4/2`) and its quality marks are the library's, exactly. A chord's
+  `roman_numeral` in the analysis document names the region it is relative to. In the Chords
+  table the Numeral column names the region on the first numeral and wherever it changes
+  ("V (in G major)").
+- **A chord with no numeral is reported, not dropped or guessed**: `unlabelled` with the reason. The
+  reasons are no key region, a minor region (the library's weighted chord vocabulary is the
+  major-key set, so it identifies no chord there), no chord identified, and a chord the library
+  gives no numeral in its key.
+- **Applied chords** are the library's own applied-chord re-check; the analyzer adds no rule for
+  what counts as one. They read `V/V`, `V7/V`, `V6/5/V`, `viio/V` (the library's `vii°`), with the
+  chord, its target numeral and the target's tonic, what it resolves to, and whether the resolution
+  is deceptive. Each is cross-referenced to the tonicization claims: the claim is the one whose span
+  overlaps the chord's or begins where it ends, and it agrees when its key is the one the target
+  names. A tonicization of another key, or none at all, is flagged as a disagreement in the document
+  (`tonicization_agreement`) and in the report's Applied chords section, and neither side is changed.
+  A single applied chord is usually not a tonicization region, so "no tonicization" is common.
+- **Chord vocabulary.** Each distinct numeral of the chords that have one, overall and per key
+  region: as the library names it (inversion included) and grouped by base numeral (the numeral in
+  root position, so `V6/5` and `V4/3` count as `V7`), with `count`, `runs`, total length in beats,
+  its share of the numbered chords' length and where it first appears, sorted by count, then
+  length, then first appearance. Diatonic, applied and borrowed chords are separate groups. The
+  library names no borrowed (modal mixture) chord yet, so that group is empty today.
+- **Counting rule.** `count` is the number of chord rows with the numeral: every sonority segment
+  counts once, whatever its length, so the counts of a scope add up to its chords with a numeral.
+  A chord held across a beat is several rows; `runs` counts adjacent rows with the identical
+  numeral in one key region once (an unlabelled row or a key change starts a new run).
+
+See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
+
 ## Outer voices
 
 The analyzer adds no music theory of its own here: it renders what Ursatz's outer-voice extraction
@@ -207,7 +252,7 @@ establish, in `src/pipeline/outer_voice_pipeline.c`.
   `uncertainty` in the analysis document is the library's uncertainty for that key region (0 clearly
   this key, 1 another key fits as well or better).
 - **Report layout.** The soprano and bass go in their own Outer voices table, one row per chord, and not
-  as columns of the Chords table, which already has nine. A chord's span is one segment, so each line has
+  as columns of the Chords table, which already has ten. A chord's span is one segment, so each line has
   one note per chord; the same note appears in consecutive rows when it is held across them.
 - **Crossing voices and texture.** The soprano is whatever is highest, whatever voice plays it: an inner
   voice that rises above the melody becomes the soprano for as long as it is highest. Where the melody
@@ -267,7 +312,7 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's key-
   chord is diatonic in both keys, within two measures. The analysis document gives the chord by root,
   quality, bass and inversion (no Roman numeral) with the two keys. A modulation with none is direct.
 
-Roman numerals, applied-chord notation and harmonic function are out of scope here.
+A pivot chord is named by root, quality, bass and inversion in the old key, not by Roman numeral.
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 
@@ -293,6 +338,13 @@ See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
   below the 90% it reached when read in one key: its regions include an F minor one, which gets no
   chords, and a Bb major one (uncertainty 0.97) that the detection is unsure of. Chromatic, applied and fully diminished chords are not candidates,
   so a segment built on one is matched to the nearest diatonic chord or not at all.
+- Roman numerals follow chord identification, so a chord has a numeral only where the weighted
+  identification found one: none in a minor region, and a chromatic chord is matched to the nearest
+  diatonic chord or not at all. The library's adapter reads a chord that is not a degree of its key,
+  or has a quality the key does not give that degree, as having no numeral; it names no borrowed
+  (modal mixture) chord, Neapolitan or augmented sixth, so the borrowed group of the vocabulary is
+  empty. It reads an applied chord only when the chord was identified as a diatonic neighbour and
+  resolves as the library requires.
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
   anticipation, appoggiatura, escape-tone and pedal rules. Many tones come back unclassified.
 - SMPTE-division MIDI files are rejected.
