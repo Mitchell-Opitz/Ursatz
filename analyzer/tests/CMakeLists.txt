@@ -92,6 +92,12 @@ add_test(NAME test_key_regions_mozart_545 COMMAND test_key_regions mozart)
 set_tests_properties(test_key_regions_clementi_36 test_key_regions_mozart_545 PROPERTIES WILL_FAIL TRUE)
 add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
 
+add_executable(test_roman_numerals test_roman_numerals.c)
+target_link_libraries(test_roman_numerals PRIVATE ursatz_analyzer cjson m)
+target_compile_definitions(test_roman_numerals PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_roman_numerals COMMAND test_roman_numerals)
+
 add_executable(test_outer_voices test_outer_voices.c)
 target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer cjson)
 add_test(NAME test_outer_voices COMMAND test_outer_voices)
