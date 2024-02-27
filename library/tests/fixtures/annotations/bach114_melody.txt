@@ -1,0 +1,44 @@
+# Hand-annotated melody facts of Bach, Minuet in G, BWV Anh. 114 (Notebook for Anna Magdalena Bach), measures 1-8 (3/4), for
+# the melody analysis test (standard-counterpoint's melody adapter, run on the soprano the outer-voice extractor produces).
+#
+# SOURCE AND STATUS: DRAFT, UNVERIFIED. There is no verified edition behind this file. The notes are those of
+# tests/fixtures/annotations/bach114_outer_voices.txt, itself a DRAFT transcription of tests/fixtures/framework-v1-corpus/
+# "Bach 114.mid" that was not checked against the printed score (the 1725 Notebook as engraved in the Neue Bach-Ausgabe, or
+# the IMSLP scan, should be used to confirm both). The facts below were read by hand from that transcription, with the
+# melody taken as the HIGHEST SOUNDING annotated note at each moment (the draft's own convention: the 24-tick ornament notes
+# at m2+144 and m2+168 sound under the held note, so are not the melody; the ornament notes at m2+1104 and m6+1104 sound above
+# the held G4, so are). They were NOT derived from the output of the melody adapter, and the phrase spans are PLACEHOLDERS
+# (measures 1-4 and 5-8, the two halves of the strain) to be replaced by real phrases when phrase segmentation (L3.6) exists.
+#
+# LEAPS: a leap is a melodic interval of a FOURTH or larger by letter names in G major (generic size 4 or more; F-sharp is
+# the letter F). STATUS is the existing cantus firmus rule's (frameworks/standard-counterpoint/cantus_firmus_rules.h
+# LEAP_RECOVERY): a leap of a fourth or larger is "recovered" when the next melodic interval is a STEP in the OPPOSITE
+# direction, and "unrecovered" otherwise (a leap, a repeated note, a step in the same direction). A leap with nothing after
+# it would be "not-judged"; there is none here. The leap is placed by the measure and tick offset of the note it ARRIVES on.
+#
+# FORMAT (ticks: 384 per quarter note, 1152 per 3/4 measure; beat = 1 + offset / 384):
+#   span <id> <first measure> <last measure>
+#   climax <span id> <measure> <offset ticks> <midi pitch>        the first note at the span's highest pitch
+#   top-count <span id> <number of notes at the highest pitch>
+#   range <span id> <lowest midi pitch> <highest midi pitch>
+#   leap <measure> <offset ticks> <from midi> <to midi> <recovered|unrecovered>
+#
+span phrase-1 1 4
+span phrase-2 5 8
+climax phrase-1 2 576 79
+climax phrase-2 6 576 79
+top-count phrase-1 1
+top-count phrase-2 1
+range phrase-1 67 79
+range phrase-2 66 79
+leap 1 192 74 67 recovered
+leap 1 768 74 67 unrecovered
+leap 2 0 67 76 unrecovered
+leap 2 768 79 67 unrecovered
+leap 2 1104 67 72 recovered
+leap 5 0 69 74 unrecovered
+leap 5 192 74 67 recovered
+leap 5 768 74 67 unrecovered
+leap 6 0 67 76 unrecovered
+leap 6 768 79 67 unrecovered
+leap 6 1104 67 72 recovered
