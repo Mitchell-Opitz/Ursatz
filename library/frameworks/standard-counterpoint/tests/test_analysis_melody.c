@@ -52,7 +52,7 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     assert(strcmp(entity_id_value(interpretation_target_id(item->interpretation)),
                   entity_id_value(entity_id(structure_entity(item->shell)))) == 0);
     assert(interpretation_framework_reference(item->interpretation) != NULL);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(item->interpretation)) == 1000000UL);
+    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(item->interpretation)) == 750000UL); /* approximate (no spelling or degree): the default penalty applies */
     StandardCounterpointMelodicIntervalClaim claim;
     assert(standard_counterpoint_melodic_interval_claim_read(item->interpretation, &claim));
     assert(claim.from == 0 && claim.to == 1 && claim.semitones == 7 && claim.leap == 1 && claim.step == 0);
@@ -119,7 +119,7 @@ static void test_generic_size_from_spellings(void) {
 
 static void test_generic_size_from_scale_degrees(void) {
     /* degrees of C major: 1 to 3 is a third; 5 up to 4 across the octave is a seventh... 7 to 1 up is a second;
-       3 down to 1 an octave below is a tenth */
+       1 down to 3 an octave below is a thirteenth */
     const int pitches[] = {60, 64, 71, 72, 52};
     const int degrees[] = {1, 3, 7, 1, 3};
     TestMelody m;
@@ -132,7 +132,7 @@ static void test_generic_size_from_scale_degrees(void) {
     assert(intervals.items[0].claim.generic_size == 3 && intervals.items[0].claim.leap == 1);
     assert(intervals.items[1].claim.generic_size == 5); /* E up to B: a fifth */
     assert(intervals.items[2].claim.generic_size == 2 && intervals.items[2].claim.step == 1);
-    assert(intervals.items[3].claim.generic_size == 10); /* C5 down to E3: a tenth */
+    assert(intervals.items[3].claim.generic_size == 13); /* C5 down to E3: a sixth and an octave, a thirteenth */
     for (size_t i = 0; i < intervals.count; i++) {
         assert(intervals.items[i].claim.generic_source == (int)STANDARD_COUNTERPOINT_GENERIC_DEGREE);
         assert(intervals.items[i].claim.approximate == 0);
