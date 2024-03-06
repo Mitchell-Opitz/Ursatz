@@ -68,6 +68,7 @@ typedef struct {
     int phrase_top;      /* the highest pitch of those */
     int lead_in[2];      /* the last notes of the written melody right before the target, oldest first */
     size_t lead_in_count;
+    bool restating;      /* the motive is the melody of the idea before, to be said again as it was */
 } MelodyContext;
 
 /* Whether a tick of the target is the start of a cell of the meter (a strong beat). */

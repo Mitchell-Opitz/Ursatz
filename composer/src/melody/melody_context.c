@@ -345,6 +345,48 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
     return true;
 }
 
+/*
+ * An idea that restates the one before it, exactly (a RESTATED motive_ref), has that idea's melody for its motive, all
+ * of it, so the two are heard as a repetition: the same intervals and the same rhythm, as far as the chords allow.
+ * Left alone when the idea before is not written or is not as long.
+ */
+static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
+    LaneSpanId before[2];
+    PlanTime tick;
+    long origin;
+    if (context->transform != PLAN_TRANSFORM_RESTATED || !melody_ticks(context->span.start, &origin) || origin <= 0 ||
+        melody_time(1, &tick) != PLAN_OK) {
+        return;
+    }
+    PlanSpan last_tick = {time_minus(context->span.start, tick), tick};
+    if (plan_lane_find(plan, PLAN_LANE_MELODY, 0, last_tick, before, 2) != 1 ||
+        plan_lane_span_state(plan, before[0]) == PLAN_STATE_CONSTRAINED ||
+        plan_time_compare(plan_lane_span_span(plan, before[0]).length, context->span.length) != 0) {
+        return;
+    }
+    const PlanNotes *notes = &plan_lane_span_payload(plan, before[0])->notes;
+    if (notes->note_count == 0 || notes->note_count > MOTIVE_MAX_NOTES) {
+        return;
+    }
+    long onset[MOTIVE_MAX_NOTES];
+    long duration[MOTIVE_MAX_NOTES];
+    for (size_t i = 0; i < notes->note_count; i++) {
+        if (!melody_ticks(notes->notes[i].offset, &onset[i]) || !melody_ticks(notes->notes[i].duration, &duration[i]) ||
+            duration[i] <= 0 || (i > 0 && onset[i] < onset[i - 1] + duration[i - 1])) {
+            return;
+        }
+    }
+    for (size_t i = 0; i < notes->note_count; i++) {
+        context->motive_pitch[i] = notes->notes[i].midi_pitch;
+        context->motive_onset[i] = onset[i];
+        context->motive_duration[i] = duration[i];
+    }
+    context->motive_count = notes->note_count;
+    context->motive_length = onset[notes->note_count - 1] + duration[notes->note_count - 1];
+    context->motive_given = false;
+    context->restating = true;
+}
+
 /* A target that stands for an idea or a subphrase: it is one of several melody spans in its phrase. */
 static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *context) {
     NodeId owner = plan_lane_span_owner(plan, target);
@@ -387,7 +429,8 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
         context->cadence = constraint.params.cadence;
     }
     return read_idea_chords(plan, context) && read_idea_bass(plan, context) &&
-           read_idea_melody(plan, context, phrase) && read_motive(plan, context);
+           read_idea_melody(plan, context, phrase) && read_motive(plan, context) &&
+           (restate_previous(plan, context), true);
 }
 
 bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out) {

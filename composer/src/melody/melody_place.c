@@ -46,8 +46,8 @@ static size_t options_for(unsigned mask, int low, int high, int ideal, Option *o
     return count;
 }
 
-/* Of the first options within max_distance, the nearest most often, else the next. */
-static bool pick(const Option *options, size_t count, int max_distance, FillRng *rng, int *pitch) {
+/* Of the first options within max_distance, the nearest most often, else the next; always the nearest when asked. */
+static bool pick(const Option *options, size_t count, int max_distance, FillRng *rng, bool nearest, int *pitch) {
     size_t usable = 0;
     while (usable < count && options[usable].distance <= max_distance) {
         usable++;
@@ -56,7 +56,7 @@ static bool pick(const Option *options, size_t count, int max_distance, FillRng 
     if (usable == 0) {
         return false;
     }
-    *pitch = options[usable > 1 && draw >= NEAREST_IN ? 1 : 0].pitch;
+    *pitch = options[usable > 1 && draw >= NEAREST_IN && !nearest ? 1 : 0].pitch;
     return true;
 }
 
@@ -229,7 +229,7 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
                 return false;
             }
-        } else if (!pick(options, kept, reach, rng, &note->pitch)) {
+        } else if (!pick(options, kept, reach, rng, context->restating, &note->pitch)) {
             return false;
         }
         if (i > 0 && before + 1 < i) {
