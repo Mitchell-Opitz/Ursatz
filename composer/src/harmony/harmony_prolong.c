@@ -150,6 +150,53 @@ static bool deal_figure(const PhraseRequest *request, const Figure *figure, Fill
     return true;
 }
 
+static bool same_shape(const PlanHarmonyShape *a, const PlanHarmonyShape *b) {
+    return a->kind == b->kind && a->starts_on == b->starts_on && a->ends_on == b->ends_on &&
+           a->max_cells_per_chord == b->max_cells_per_chord && a->split_at_bars == b->split_at_bars;
+}
+
+/*
+ * The chords written right before the span, when they fill as much time as the span, are the first span's shape and
+ * the same shape as the request's: a prolongation that goes on as the one before it did repeats it. False when there
+ * is nothing to repeat. The chords come back as the cells the request has, ready to be written again.
+ */
+static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request, PhraseChord *chords, size_t *count) {
+    LaneSpanId ids[HARMONY_MAX_CHORDS];
+    PlanTime before;
+    if (plan_time_make(request->span.start.num * (long)request->span.length.den -
+                           request->span.length.num * (long)request->span.start.den,
+                       request->span.start.den * request->span.length.den, &before) != PLAN_OK ||
+        before.num < 0) {
+        return false;
+    }
+    PlanSpan range = {before, request->span.length};
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, ids, HARMONY_MAX_CHORDS);
+    if (found == 0 || found > HARMONY_MAX_CHORDS) {
+        return false;
+    }
+    PlanTime position = before;
+    size_t cells = 0;
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        PlanTime end;
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED || plan_time_compare(span.start, position) != 0 ||
+            plan_span_end(span, &end) != PLAN_OK ||
+            !harmony_read_chord(plan, ids[i], request->mode, request->cell_length, &chords[i])) {
+            return false;
+        }
+        cells += chords[i].cells;
+        position = end;
+    }
+    PlanConstraint shape;
+    if (cells != request->cells || !harmony_find_constraint(plan, ids[0], plan_lane_span_owner(plan, ids[0]),
+                                                           PLAN_CONSTRAINT_HARMONY_SHAPE, &shape) ||
+        !same_shape(&shape.params.harmony_shape, &request->shape)) {
+        return false;
+    }
+    *count = found;
+    return true;
+}
+
 static bool same_progression(const PhraseProgression *a, const PhraseProgression *b) {
     if (a->count != b->count) {
         return false;
@@ -193,8 +240,34 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
             wanted[wanted_count++] = i;
         }
     }
-    PhraseProgression *kept[CANDIDATE_ATTEMPTS];
+    PhraseProgression *kept[CANDIDATE_ATTEMPTS + 1];
     size_t kept_count = 0;
+
+    /* First the chords of the span before, again, when there are some to repeat. */
+    PhraseChord again[HARMONY_MAX_CHORDS];
+    size_t again_count = 0;
+    bool repeatable = previous_chords(plan, &request, again, &again_count);
+    if (repeatable) {
+        PhraseProgression *payload = malloc(sizeof(*payload));
+        PhraseChord *chords = calloc(again_count, sizeof(PhraseChord));
+        if (!payload || !chords) {
+            free(payload);
+            free(chords);
+            return false;
+        }
+        memcpy(chords, again, again_count * sizeof(PhraseChord));
+        payload->request = request;
+        payload->chords = chords;
+        payload->count = again_count;
+        payload->repeatable = true;
+        payload->repeats = true;
+        char label[FILL_LABEL_MAX];
+        progression_label(payload, label, sizeof(label));
+        if (!fill_candidates_add(out, label, payload, harmony_progression_destroy)) {
+            return false;
+        }
+        kept[kept_count++] = payload;
+    }
     for (size_t attempt = 0; wanted_count && attempt < CANDIDATE_ATTEMPTS; attempt++) {
         const Figure *figure = &FIGURES[wanted[fill_rng_below(rng, wanted_count)]];
         PhraseProgression progression;
@@ -219,6 +292,8 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
             return false;
         }
         *payload = progression;
+        payload->repeatable = repeatable;
+        payload->repeats = false;
         char label[FILL_LABEL_MAX];
         progression_label(payload, label, sizeof(label));
         if (!fill_candidates_add(out, label, payload, harmony_progression_destroy)) {
@@ -281,6 +356,11 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
     }
     out->score_numerator = verdict.soft_held;
     out->score_denominator = verdict.soft_total ? verdict.soft_total : 1;
-    snprintf(out->reason, sizeof(out->reason), "prolongation");
+    /* Going on as the span before did is one more rule, held by the candidate that repeats it. */
+    if (progression->repeatable) {
+        out->score_numerator += progression->repeats ? 1 : 0;
+        out->score_denominator += 1;
+    }
+    snprintf(out->reason, sizeof(out->reason), progression->repeats ? "prolongation, repeated" : "prolongation");
     return true;
 }

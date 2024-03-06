@@ -60,6 +60,9 @@ typedef struct {
     PhraseRequest request;
     PhraseChord *chords;
     size_t count;
+    /* The prolongation operator: the span follows one of the same shape, and this candidate repeats its chords. */
+    bool repeatable;
+    bool repeats;
 } PhraseProgression;
 
 #define HARMONY_MAX_CHORDS 64
