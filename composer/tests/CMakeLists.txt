@@ -111,3 +111,8 @@ target_link_libraries(test_harmony_prolong PRIVATE ursatz_composer)
 target_include_directories(test_harmony_prolong PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_harmony_prolong PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_prolong COMMAND test_harmony_prolong)
+
+add_executable(test_grow_sentence test_grow_sentence.c)
+target_link_libraries(test_grow_sentence PRIVATE ursatz_composer)
+target_compile_options(test_grow_sentence PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_sentence COMMAND test_grow_sentence)
