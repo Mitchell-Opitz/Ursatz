@@ -1,0 +1,32 @@
+#include "server.h"
+
+#include <civetweb.h>
+
+#include "routes/health.h"
+
+struct mg_context *ursatz_gui_server_start(const char *listen_port,
+                                            const char *frontend_dir) {
+  const char *options[] = {
+      "listening_ports", listen_port,
+      "document_root", frontend_dir,
+      "num_threads", "4",
+      NULL,
+  };
+
+  struct mg_context *ctx = mg_start(NULL, NULL, options);
+  if (!ctx) {
+    return NULL;
+  }
+
+  /* Route registration: each tool module registers itself here. This is
+   * the only place that wires tool routes into the running server. */
+  ursatz_gui_health_register(ctx);
+
+  return ctx;
+}
+
+void ursatz_gui_server_stop(struct mg_context *ctx) {
+  if (ctx) {
+    mg_stop(ctx);
+  }
+}
