@@ -22,6 +22,32 @@ when it is Realized. The candidate's label begins `original` or `developed`, so 
 which. The loop never offers a Given span, so Given melody is never overwritten; the harmony and bass
 lanes are never touched. The result is one Realized span over the phrase.
 
+## Idea targets
+
+A melody span whose owner is an **idea** or a **subphrase** stands for that part of a phrase, not for the
+whole of it. The enclosing phrase node's span is the phrase. A phrase is then written idea by idea:
+
+- **Time order.** The operator applies to an idea target only when every melody span of the same phrase
+  before it is written. A later idea is refused (`FILL_STUCK_NO_OPERATOR` for that step) until the ones before
+  it are there.
+- **Chords and bass.** The harmony and bass lanes are read over the target only: the chord and bass spans that
+  overlap it, the first and the last clipped to it. A chord may begin before the idea or end after it, and an
+  idea may begin inside a cell (a half bar of 3/4); the strong beats are the cell lines of the meter, not the
+  idea's own start.
+- **Joins.** The last notes of the written melody span right before the target are read with the target's
+  notes as one line by standard-counterpoint's melodic rules: no forbidden leap or outline across the join,
+  and the first note is a leap the rules allow from the last. A leap into the target is answered by a step
+  the other way, where the chord allows.
+- **Climax.** The climax position (`climax_position`, thousandths of the phrase) falls in one target. That
+  target writes the phrase's single highest note, higher than every melody note before it in the phrase
+  (a hard rule); a target before it keeps every note at or below `range_high - 3`, and stays in the lower half
+  of the range where its motive allows; a target after it stays below the climax note.
+- **End tone.** The end tone rule applies only to a target with a cadence constraint, on the span or its
+  owner. A target without one has no end-tone rule, and its last note needs only to be a chord tone.
+- **Exact restatement.** A target whose `motive_ref` is `restated`, right after a written span of the same
+  length, takes that span's whole melody for its motive and says it again, choosing the nearest chord tone
+  each time. Two ideas of a presentation made so are heard by standard-form as a repetition.
+
 ## What it writes
 
 - **Placement.** The motive starts at `start_cell`. Each note keeps its interval to the note before

@@ -45,6 +45,7 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 | `src/motive/` | Motives, their analysis and development. |
 | `src/melody/` | The melody operator. |
 | `src/form/` | Hearing the phrase form through standard-form. |
+| `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
 | `cli/` | The `ursatz-composer` command. |
 | `tests/` | Tests and their fixtures. |
 
@@ -93,6 +94,11 @@ See [docs/fill-loop.md](docs/fill-loop.md).
 
 The melody operator writes a melody over a written harmony and bass, from a motive. See
 [docs/melody-fill.md](docs/melody-fill.md).
+
+## Growing a theme
+
+`grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a sentence of 8 or 4 bars from a motive:
+its structure, motives, harmony, bass and melody, in stages. See [docs/grow.md](docs/grow.md).
 
 ## Hearing the form
 
