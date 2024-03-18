@@ -52,17 +52,16 @@ logic (`app.js`) makes no styling decisions.
 ## Building
 
 ```
+git submodule update --init --recursive
 cmake -B build
 cmake --build build
 ctest --test-dir build
 ```
 
-By default the build fetches Ursatz from git. To develop against a local
-Ursatz checkout instead:
-
-```
-cmake -B build -DURSATZ_SOURCE_DIR=/path/to/ursatz
-```
+Ursatz is vendored as a git submodule at `external/ursatz`, same pattern
+as `ursatz-analyzer`. `git submodule update --init --recursive` (or
+`git clone --recurse-submodules` up front) is required before the first
+build.
 
 ## Out of scope for this scaffold
 
