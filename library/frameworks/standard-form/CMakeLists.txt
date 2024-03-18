@@ -16,9 +16,14 @@ add_library(standard_form
     length_rules.c
     internal_expansion_rules.c
     external_expansion_rules.c
+    analysis/analysis_time.c
+    analysis/analysis_input.c
+    analysis/analysis_claim.c
+    analysis/analysis_phrase.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${PROJECT_SOURCE_DIR}/src
 )
 target_link_libraries(standard_form PUBLIC ursatz standard_harmony)
