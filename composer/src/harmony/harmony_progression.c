@@ -94,6 +94,24 @@ size_t harmony_phrase_min_cells(PlanCadenceType cadence, size_t cells_per_bar) {
 
 /* Deals tried before a request is given up on, for a plagal cadence whose first tonic must land on a downbeat. */
 #define DEAL_ATTEMPTS 16
+/* More are tried when a harmony shape limits how the cells may be dealt. */
+#define SHAPED_DEAL_ATTEMPTS 96
+
+bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, size_t count, size_t cells_per_bar,
+                         bool exempt_last) {
+    size_t start = 0;
+    for (size_t i = 0; i < count; i++) {
+        bool last = i + 1 == count;
+        if (shape->max_cells_per_chord > 0 && cells[i] > (size_t)shape->max_cells_per_chord && !(last && exempt_last)) {
+            return false;
+        }
+        if (shape->split_at_bars && start % cells_per_bar + cells[i] > cells_per_bar) {
+            return false;
+        }
+        start += cells[i];
+    }
+    return true;
+}
 
 /*
  * One progression for the request, or false when the phrase has no room for the
@@ -105,7 +123,12 @@ size_t harmony_phrase_min_cells(PlanCadenceType cadence, size_t cells_per_bar) {
 static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseProgression *out) {
     bool half = request->cadence == PLAN_CADENCE_HC;
     bool plagal = request->cadence == PLAN_CADENCE_PC;
-    size_t fixed = 1 + (half ? 0 : 1) + (plagal ? 2 : 0);
+    /* A cadential progression has no opening tonic. */
+    bool opening_tonic = !(request->has_shape && request->shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL);
+    size_t cap = request->has_shape && request->shape.max_cells_per_chord > 0
+                     ? (size_t)request->shape.max_cells_per_chord
+                     : 0;
+    size_t fixed = (opening_tonic ? 1 : 0) + (half ? 0 : 1) + (plagal ? 2 : 0);
     size_t room = request->cells - request->cells_per_bar;
     if (room < fixed) {
         return false;
@@ -127,7 +150,9 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseP
 
     ChordSpec before[MAX_BEFORE_FINAL];
     size_t before_count = 0;
-    before[before_count++] = (ChordSpec){1, false};
+    if (opening_tonic) {
+        before[before_count++] = (ChordSpec){1, false};
+    }
     for (size_t i = 0; run && i < run->count; i++) {
         before[before_count++] = (ChordSpec){run->degrees[i], false};
     }
@@ -145,7 +170,29 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseP
         cells[i] = 1;
     }
     for (size_t left = room - before_count; left > 0; left--) {
-        cells[fill_rng_below(rng, before_count)]++;
+        /* A chord at its cap takes no more cells; the cells go to one that can. */
+        size_t open[MAX_BEFORE_FINAL];
+        size_t open_count = 0;
+        for (size_t i = 0; i < before_count; i++) {
+            if (cap == 0 || cells[i] < cap) {
+                open[open_count++] = i;
+            }
+        }
+        if (open_count == 0) {
+            return false;
+        }
+        cells[open[fill_rng_below(rng, open_count)]]++;
+    }
+    /* The last chord is the whole last bar, whatever the cap, so the cadence arrives on a downbeat. */
+    if (request->has_shape) {
+        size_t all[MAX_CHORDS];
+        for (size_t i = 0; i < before_count; i++) {
+            all[i] = cells[i];
+        }
+        all[before_count] = request->cells_per_bar;
+        if (!harmony_shape_keeps(&request->shape, all, before_count + 1, request->cells_per_bar, true)) {
+            return false;
+        }
     }
 
     if (plagal) {
@@ -179,7 +226,8 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseP
 }
 
 static bool build_progression(const PhraseRequest *request, FillRng *rng, PhraseProgression *out) {
-    for (size_t attempt = 0; attempt < DEAL_ATTEMPTS; attempt++) {
+    size_t attempts = request->has_shape ? SHAPED_DEAL_ATTEMPTS : DEAL_ATTEMPTS;
+    for (size_t attempt = 0; attempt < attempts; attempt++) {
         if (deal_progression(request, rng, out)) {
             return true;
         }

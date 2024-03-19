@@ -333,6 +333,8 @@ static MotiveDevResult ursatz_select(const Bridge *bridge, const bool *chosen, b
                 id = NULL;
                 structure = NULL;
                 provenance = NULL;
+                /* The ids are the contraction's now; the array that held them is still ours. */
+                free(ids);
                 ids = NULL;
                 if (contraction_apply(contraction, events, bridge->count, &result) == CONTRACTION_APPLY_OK) {
                     *count = transform_result_event_count(result);
@@ -347,6 +349,7 @@ static MotiveDevResult ursatz_select(const Bridge *bridge, const bool *chosen, b
                 id = NULL;
                 structure = NULL;
                 provenance = NULL;
+                free(ids);
                 ids = NULL;
                 if (fragmentation_apply(fragmentation, events, bridge->count, &result) == FRAGMENTATION_APPLY_OK) {
                     *count = transform_result_event_count(result);

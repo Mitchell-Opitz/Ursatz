@@ -158,7 +158,11 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
         HarmonyPhrase model_phrase = {harmony_mode_of(phrase->mode), model, model_count};
         unsigned phrase_hard = 0;
         unsigned phrase_soft = 0;
-        if (model_count == 0 || !harmony_phrase_check(&model_phrase, &phrase_hard, &phrase_soft) || phrase_hard) {
+        bool checked = model_count > 0 && harmony_phrase_check(&model_phrase, &phrase_hard, &phrase_soft);
+        if (phrase->no_opening_tonic) {
+            phrase_hard &= ~(1u << HARMONY_PHRASE_TONIC_THEN_DOMINANT);
+        }
+        if (!checked || phrase_hard) {
             hard = "phrase model broken";
         }
         soft_broken += bits_set(phrase_soft);
@@ -207,6 +211,17 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
         }
         harmony_cadences_destroy(&found);
     }
+    /* A prolongation hears no cadence anywhere in it, whatever the soprano. */
+    if (!hard && phrase->no_cadence) {
+        HarmonyCadences found = {NULL, 0};
+        if (harmony_analysis_find_cadences(segments, count, NULL, &found) != HARMONY_CADENCE_ANALYSIS_OK) {
+            ok = false;
+        } else if (found.count > 0) {
+            hard = "cadence heard in a prolongation";
+            heard = found.items[0].type;
+        }
+        harmony_cadences_destroy(&found);
+    }
     harmony_segments_destroy(set);
     verdict->hard = hard;
     verdict->heard = heard;
@@ -245,7 +260,9 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         }
         HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode,
                               progression->request.cadence, progression->request.cells_per_bar,
-                              progression->request.cell_length, false, NULL};
+                              progression->request.cell_length, false, NULL, false, false};
+        phrase.no_opening_tonic = progression->request.has_shape &&
+                                  progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL;
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_EMBELLISH_OPERATOR_NAME) == 0) {
@@ -264,7 +281,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
             return false;
         }
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
-                              edit->cell_length, false, NULL};
+                              edit->cell_length, false, NULL, false, false};
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {
@@ -291,7 +308,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL};
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -319,7 +336,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, 
         return false;
     }
     mark_schema_chords(plan, span, count, exempt);
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }

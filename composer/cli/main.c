@@ -24,7 +24,9 @@ static void report_skipped(const RenderedPlan *rendered) {
     for (size_t i = 0; i < rendered->skipped_count; i++) {
         const RenderSkip *skip = &rendered->skipped[i];
         fprintf(stderr, "Skipped lane span %zu (%s): %s\n", skip->span, LANE_NAMES[skip->lane],
-                skip->reason == RENDER_SKIP_NOT_REALIZED ? "not Given or Realized" : "lane is not rendered yet");
+                skip->reason == RENDER_SKIP_NOT_REALIZED ? "not Given or Realized"
+                : skip->reason == RENDER_SKIP_MATERIAL ? "source material"
+                                                         : "lane is not rendered yet");
     }
 }
 

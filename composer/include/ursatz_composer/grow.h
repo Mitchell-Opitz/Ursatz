@@ -1,0 +1,147 @@
+#ifndef URSATZ_COMPOSER_GROW_H
+#define URSATZ_COMPOSER_GROW_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <ursatz_composer/constraint.h>
+#include <ursatz_composer/fill_loop.h>
+#include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/fill_record.h>
+#include <ursatz_composer/form_hear.h>
+#include <ursatz_composer/melody_fill.h>
+#include <ursatz_composer/motive.h>
+#include <ursatz_composer/piece_plan.h>
+
+/*
+ * Growing a theme from a motive (R-047): the plan of a sentence, built from one motive, and the fill stages
+ * that write it. A request names the motive, the key, the meter, how many bars (8, with a two-bar basic idea, or
+ * 4, with a one-bar one), how the theme begins and ends, and the cadence it ends in.
+ *
+ * grow_build_plan makes the plan:
+ *   - a Form over the theme and the source material, with a meter and a key lane span, both Given, over all of it;
+ *   - a Section "theme" over the bars, Constrained, with an ARCHETYPE (sentence), a THEME_PAIRING (presentation and
+ *     continuation), the CADENCE and the KEY;
+ *   - a Section "material" after it, marked MATERIAL, so it is not part of the piece, holding the motive node "m0":
+ *     the motive as a Given melody lane span. The motives made from it go beside it.
+ *
+ * The stages, in order (grow_run), each one fill_run with only its operators registered and its own checker:
+ *   structure  grow-theme, which gives the Section its nodes, one motive node in the material for each idea after
+ *              the basic idea, and the open lane spans: harmony, bass and melody;
+ *   motives    the motive development operators write those motives from m0;
+ *   harmony    harmony-prolongation for the presentation, harmony-phrase-model for the continuation;
+ *   bass       harmony-bass under the chords;
+ *   melody     melody-fill, idea by idea, over harmony and bass.
+ * Stage k runs with the seed config.seed + k, so a stage's choices do not change when another stage's do.
+ *
+ * The theme of a sentence of 8 bars, in bars (4 bars halves every length):
+ *   Phrase                       0-8, with the cadence
+ *     Subphrase presentation     0-4
+ *       Idea basic idea          0-2
+ *       Idea repetition          2-4
+ *     Subphrase continuation     4-8
+ *       Idea fragment 1          4-5
+ *       Idea fragment 2          5-6
+ *       Idea cadential           6-8
+ */
+
+#define GROW_THEME_OPERATOR_NAME "grow-theme"
+
+typedef struct {
+    const Motive *motive;
+    PlanKey key;
+    PlanMeter meter;
+    size_t bars;              /* 4 or 8 */
+    PlanThemePairing pairing; /* B2 builds presentation + continuation only */
+    PlanCadenceType cadence;  /* PAC, IAC or HC */
+} GrowRequest;
+
+typedef enum {
+    GROW_OK = 0,
+    GROW_ERR_NULL,
+    GROW_ERR_ALLOC,
+    GROW_ERR_MOTIVE_TOO_LONG, /* the motive does not fit in one bar of the meter */
+    GROW_ERR_BAD_REQUEST,     /* a meter the harmony operators do not support, bars not 4 or 8, a pairing not built
+                                 yet, a cadence other than PAC, IAC or HC, a motive of one note */
+    GROW_ERR_STUCK            /* a stage left a target open (GrowOutcome.stuck_stage) */
+} GrowResult;
+
+const char *grow_result_name(GrowResult result);
+
+/* Builds the plan of the request into *out, which the caller destroys with plan_destroy. */
+GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out);
+
+/* --- the structure operator -------------------------------------------- */
+
+typedef struct {
+    size_t candidates; /* the structures grow-theme proposes; 0 means 4 */
+} GrowContext;
+
+#define GROW_DEFAULT_CANDIDATES 4
+
+void grow_context_default(GrowContext *context);
+
+/*
+ * Registers grow-theme: a Grow operator for a Constrained section with an ARCHETYPE and a THEME_PAIRING constraint,
+ * whose plan holds the motive m0. context may be NULL for the defaults and must outlive the registry otherwise.
+ */
+FillResult grow_register(FillOperatorRegistry *registry, const GrowContext *context);
+
+/*
+ * The checker for grow-theme's candidates, from standard-form's own rule functions on the planned structure.
+ * Hard: the subphrase roles in order, the phrase sentential, the pairing a sentence, the basic idea's length valid,
+ * every fragment shorter than the basic idea. Soft, the score being the share that hold: the sentence archetypal,
+ * the presentation of the usual length, the continuation balancing it, the repetition reading as one (its contour
+ * the basic idea's). A candidate of any other operator goes to harmony_phrase_checker.
+ */
+bool grow_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                  const FillCandidate *candidate, void *context, FillCheck *out);
+
+/* --- running the stages -------------------------------------------------- */
+
+typedef enum {
+    GROW_STAGE_STRUCTURE,
+    GROW_STAGE_MOTIVES,
+    GROW_STAGE_HARMONY,
+    GROW_STAGE_BASS,
+    GROW_STAGE_MELODY,
+    GROW_STAGE_COUNT
+} GrowStage;
+
+const char *grow_stage_name(GrowStage stage);
+
+/* All-zero is the default configuration (seed 0). */
+typedef struct {
+    unsigned long seed;
+    GrowContext context;
+    const MelodyFillParams *melody; /* NULL for the defaults; must outlive grow_run */
+    size_t max_iterations;          /* per stage; 0 means FILL_DEFAULT_MAX_ITERATIONS */
+} GrowConfig;
+
+typedef struct {
+    unsigned long numerator;
+    unsigned long denominator; /* at least 1 */
+} GrowScore;
+
+typedef struct {
+    FillRecord *records[GROW_STAGE_COUNT]; /* owned; NULL for a stage that did not run */
+    bool stuck;
+    GrowStage stuck_stage;                 /* the stage that left a target open, when stuck */
+    FormHearResult heard_result;           /* FORM_HEAR_ERR_NOT_WRITTEN when the run did not complete */
+    FormHeard heard;                       /* owned; the themes form_hear found over the theme section */
+    int heard_form;                        /* PhraseLevelForm of the first theme heard, -1 for none */
+    int requested_form;                    /* PhraseLevelForm the theme section asks for */
+    bool heard_as_requested;
+    GrowScore score;                       /* the share of the structure's soft rules and the heard form that hold */
+} GrowOutcome;
+
+void grow_outcome_destroy(GrowOutcome *outcome);
+
+/*
+ * Runs the stages on a plan made by grow_build_plan. GROW_OK with the plan complete, or GROW_ERR_STUCK with the
+ * stage that failed in outcome->stuck_stage (the plan is then partly filled). After a complete run the theme is
+ * heard (form_hear): heard as the requested form adds to the score; a mismatch is reported, not rejected.
+ */
+GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outcome);
+
+#endif

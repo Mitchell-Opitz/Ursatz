@@ -50,15 +50,15 @@ PlanResult harmony_move_cadence(PiecePlan *plan, LaneSpanId from, LaneSpanId to)
  * The target span becomes the first chord (it keeps its id) and one span is
  * added after it for each chord that follows, so the chords tile the phrase.
  */
-static PlanResult phrase_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate,
+                                     ReadRequestFn read_request) {
     const PhraseProgression *progression = candidate ? candidate->payload : NULL;
     PhraseRequest request;
-    (void)context;
     if (!is_target(target) || !progression || progression->count == 0) {
         return PLAN_ERR_NULL;
     }
     LaneSpanId first = (LaneSpanId)target.id;
-    if (!harmony_phrase_read_request(plan, first, &request) || request.cells != progression->request.cells) {
+    if (!read_request(plan, first, &request) || request.cells != progression->request.cells) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     size_t total = 0;
@@ -95,6 +95,11 @@ static PlanResult phrase_apply(PiecePlan *plan, FillTarget target, const FillCan
         cell += progression->chords[i].cells;
     }
     return result == PLAN_OK ? harmony_move_cadence(plan, first, last) : result;
+}
+
+static PlanResult phrase_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+    (void)context;
+    return harmony_progression_apply(plan, target, candidate, harmony_phrase_read_request);
 }
 
 FillResult harmony_phrase_register(FillOperatorRegistry *registry) {

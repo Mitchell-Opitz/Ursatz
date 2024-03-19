@@ -8,6 +8,7 @@
 #include "io/musicxml_importer.h"
 #include "pitch/pitch_spelling.h"
 
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
@@ -473,8 +474,69 @@ static void test_files_and_cli(void) {
     plan_destroy(plan);
 }
 
+/*
+ * A form of a theme (bars 0 to 4) and, after it, a section marked as material (bars 4 to 8) that holds a motive and
+ * a Realized melody. Only the theme sounds: the material is skipped for the reason RENDER_SKIP_MATERIAL, whatever
+ * its lane and state, and the piece ends where the theme does, in the exports as well.
+ */
+static void test_material_is_left_out(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "form");
+    NodeId theme = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "theme");
+    NodeId theme_phrase = add(plan, theme, PLAN_NODE_PHRASE, bars(0, 4), "phrase");
+    NodeId theme_idea = add(plan, theme_phrase, PLAN_NODE_IDEA, bars(0, 4), "idea");
+    NodeId material = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "material");
+    NodeId material_phrase = add(plan, material, PLAN_NODE_PHRASE, bars(4, 4), "phrase");
+    NodeId material_idea = add(plan, material_phrase, PLAN_NODE_IDEA, bars(4, 4), "idea");
+    NodeId motive = add(plan, material_idea, PLAN_NODE_MOTIVE, bars(4, 1), "m0");
+    PlanConstraint mark = {PLAN_CONSTRAINT_MATERIAL, {0}};
+    assert(plan_node_add_constraint(plan, material, &mark) == PLAN_OK);
+    add_meter_and_key(plan, form, bars(0, 8));
+
+    PlanNote theme_notes[] = {note(69, time_of(0, 1), time_of(4, 1))};
+    PlanNote source_notes[] = {note(72, time_of(0, 1), time_of(1, 1))};
+    PlanNote later_notes[] = {note(74, time_of(0, 1), time_of(1, 1))};
+    LaneSpanId sounding = add_notes(plan, theme_idea, PLAN_LANE_MELODY, 0, bars(0, 4), theme_notes, 1);
+    LaneSpanId source = add_notes(plan, motive, PLAN_LANE_MELODY, 0, bars(4, 1), source_notes, 1);
+    LaneSpanId developed = add_notes(plan, material_idea, PLAN_LANE_BASS, 0, bars(5, 1), later_notes, 1);
+    assert(plan_lane_span_set_state(plan, sounding, PLAN_STATE_REALIZED) == PLAN_OK);
+    assert(plan_lane_span_set_state(plan, source, PLAN_STATE_GIVEN) == PLAN_OK);
+    assert(plan_lane_span_set_state(plan, developed, PLAN_STATE_REALIZED) == PLAN_OK);
+
+    RenderedPlan rendered;
+    assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
+    assert(rendered.count == 1 && rendered.part_count == 1);
+    assert(rendered.skipped_count == 2);
+    for (size_t i = 0; i < rendered.skipped_count; i++) {
+        assert(rendered.skipped[i].reason == RENDER_SKIP_MATERIAL);
+    }
+    assert(rendered.skipped[0].span == source && rendered.skipped[1].span == developed);
+    assert(plan_time_compare(rendered.piece_end, time_of(4, 1)) == 0);
+
+    /* The score has the four bars of the theme and no more. */
+    char *xml = NULL;
+    PlanExportError error;
+    assert(rendered_plan_musicxml_text(&rendered, &xml, &error) == PLAN_EXPORT_OK);
+    size_t measures = 0;
+    for (const char *at = strstr(xml, "<measure "); at; at = strstr(at + 1, "<measure ")) {
+        measures++;
+    }
+    assert(measures == 4);
+    free(xml);
+    rendered_plan_destroy(&rendered);
+
+    /* Without the mark the same lanes sound. */
+    assert(plan_node_remove_constraint(plan, material, 0) == PLAN_OK);
+    assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
+    assert(rendered.count == 3);
+    assert(plan_time_compare(rendered.piece_end, time_of(8, 1)) == 0);
+    rendered_plan_destroy(&rendered);
+    plan_destroy(plan);
+}
+
 int main(void) {
     test_render();
+    test_material_is_left_out();
     test_midi_round_trip();
     test_musicxml_round_trip();
     test_constrained_is_skipped();

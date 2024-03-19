@@ -601,7 +601,210 @@ static void test_needs_harmony_and_bass(void) {
     plan_destroy(fixture.plan);
 }
 
+/*
+ * Ideas. A phrase of two ideas over one harmony span and one bass span; the melody is two spans, one for each idea,
+ * each asking for the motive, the second asking for the cadence. The chords cross the middle of the phrase where they
+ * like. What is held to, worked out here from the plan:
+ *   - the ideas are written in time order: the second is not offered until the first is written;
+ *   - the join: the leap from the last note of the first idea to the first note of the second is one
+ *     standard-counterpoint allows;
+ *   - the climax: the phrase has one highest note, in the idea the climax position falls in (the second), higher
+ *     than every note of the first, and the first keeps to three semitones under the top of the range;
+ *   - the end tone is asked of the idea with the cadence only: the second ends on the tonic, the first on any
+ *     chord tone.
+ */
+typedef struct {
+    PiecePlan *plan;
+    NodeId phrase;
+    NodeId source;
+    LaneSpanId first;
+    LaneSpanId second;
+    PlanSpan span;
+} IdeaFixture;
+
+static IdeaFixture build_ideas(int beats, int unit, PlanKeyMode mode, int tonic) {
+    IdeaFixture fixture;
+    PlanLanePayload payload;
+    LaneSpanId id;
+    NodeId form;
+    NodeId first_idea;
+    NodeId second_idea;
+    NodeId section;
+    NodeId material;
+    NodeId material_idea;
+    MotiveOptions options;
+    Motive motive;
+    PlanTime bar = fraction(beats, (unsigned long)unit);
+    PlanSpan form_span = {fraction(0, 1), fraction(beats * 5L, (unsigned long)unit)};
+    PlanSpan phrase_span = {fraction(0, 1), fraction(beats * 4L, (unsigned long)unit)};
+    PlanSpan first_span = {fraction(0, 1), fraction(beats * 2L, (unsigned long)unit)};
+    PlanSpan second_span = {first_span.length, first_span.length};
+    PlanSpan extra = {phrase_span.length, bar};
+    memset(&fixture, 0, sizeof(fixture));
+    fixture.plan = plan_create();
+    fixture.span = phrase_span;
+    assert(plan_add_node(fixture.plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form_span, NULL, &form) == PLAN_OK);
+    assert(plan_add_node(fixture.plan, form, PLAN_NODE_SECTION, phrase_span, NULL, &section) == PLAN_OK);
+    assert(plan_add_node(fixture.plan, section, PLAN_NODE_PHRASE, phrase_span, "phrase", &fixture.phrase) == PLAN_OK);
+    assert(plan_add_node(fixture.plan, fixture.phrase, PLAN_NODE_IDEA, first_span, "first", &first_idea) == PLAN_OK);
+    assert(plan_add_node(fixture.plan, fixture.phrase, PLAN_NODE_IDEA, second_span, "second", &second_idea) ==
+           PLAN_OK);
+    assert(plan_add_node(fixture.plan, form, PLAN_NODE_SECTION, extra, NULL, &material) == PLAN_OK);
+    assert(plan_add_node(fixture.plan, material, PLAN_NODE_PHRASE, extra, NULL, &material_idea) == PLAN_OK);
+    assert(plan_add_node(fixture.plan, material_idea, PLAN_NODE_IDEA, extra, NULL, &material_idea) == PLAN_OK);
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter.beats_per_bar = beats;
+    options.meter.beat_unit = unit;
+    assert(motive_from_notes_text(motive_text(beats, unit), &options, &motive, NULL) == MOTIVE_OK);
+    assert(motive_attach(fixture.plan, material_idea, extra.start, &motive, "m0", &fixture.source, NULL) == PLAN_OK);
+    for (NodeId node = 1; node <= plan_node_count(fixture.plan); node++) {
+        if (plan_node_kind(fixture.plan, node) != PLAN_NODE_MOTIVE) {
+            assert(plan_node_set_state(fixture.plan, node, PLAN_STATE_GIVEN) == PLAN_OK);
+        }
+    }
+
+    memset(&payload, 0, sizeof(payload));
+    payload.meter.beats_per_bar = beats;
+    payload.meter.beat_unit = unit;
+    assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
+    assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+    memset(&payload, 0, sizeof(payload));
+    payload.key.tonic_pitch_class = tonic;
+    payload.key.mode = mode;
+    assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
+    assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+
+    memset(&payload, 0, sizeof(payload));
+    strcpy(payload.harmony.roman_numeral, "I");
+    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    assert(plan_add_lane_span(fixture.plan, fixture.phrase, PLAN_LANE_HARMONY, 0, phrase_span, &payload, &id) ==
+           PLAN_OK);
+    PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
+    cadence.params.cadence = PLAN_CADENCE_PAC;
+    assert(plan_lane_span_add_constraint(fixture.plan, id, &cadence) == PLAN_OK);
+
+    PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    ref.params.motive.motive = fixture.source;
+    ref.params.motive.transform = PLAN_TRANSFORM_NONE;
+    fixture.first = add_notes(fixture.plan, first_idea, PLAN_LANE_MELODY, first_span, 60);
+    fixture.second = add_notes(fixture.plan, second_idea, PLAN_LANE_MELODY, second_span, 60);
+    assert(plan_lane_span_add_constraint(fixture.plan, fixture.first, &ref) == PLAN_OK);
+    assert(plan_lane_span_add_constraint(fixture.plan, fixture.second, &ref) == PLAN_OK);
+    assert(plan_lane_span_add_constraint(fixture.plan, fixture.second, &cadence) == PLAN_OK);
+    return fixture;
+}
+
+static bool leap_allowed(int distance) {
+    int size = distance < 0 ? -distance : distance;
+    return size <= 7 || size == 12 || distance == 8;
+}
+
+/* The melody notes of one span as MIDI pitches, in time order. */
+static size_t span_pitches(const IdeaFixture *fixture, LaneSpanId span, int *out, size_t capacity) {
+    const PlanNotes *notes = &plan_lane_span_payload(fixture->plan, span)->notes;
+    assert(notes->note_count <= capacity);
+    for (size_t i = 0; i < notes->note_count; i++) {
+        out[i] = notes->notes[i].midi_pitch;
+    }
+    return notes->note_count;
+}
+
+static void test_ideas_in_order(void) {
+    static const int meters[3][2] = {{4, 4}, {3, 4}, {6, 8}};
+    int completed = 0;
+    int first_ends_off_tonic = 0;
+    int stuck_second_first = 0;
+    for (int m = 0; m < 3; m++) {
+        for (int mode = 0; mode < 2; mode++) {
+            for (unsigned long seed = 1; seed <= 12; seed++) {
+                IdeaFixture fixture = build_ideas(meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                                                  mode ? 9 : 0);
+                Fixture harmony_only;
+                FillRecord *record = NULL;
+                memset(&harmony_only, 0, sizeof(harmony_only));
+                harmony_only.plan = fixture.plan;
+                harmony_only.owner = fixture.phrase;
+                harmony_only.span = fixture.span;
+                write_harmony_and_bass(&harmony_only, seed);
+                MelodyFillParams params = melody_fill_params_default();
+                FillOutcome outcome = run(&harmony_only, seed, false, false, false, &params, &record);
+                if (outcome.status != FILL_STATUS_COMPLETE) {
+                    /* An idea that cannot be placed leaves the span open; the first is never skipped for it. */
+                    assert(plan_lane_span_state(fixture.plan, fixture.second) == PLAN_STATE_CONSTRAINED ||
+                           plan_lane_span_state(fixture.plan, fixture.first) == PLAN_STATE_CONSTRAINED);
+                    assert(plan_lane_span_state(fixture.plan, fixture.first) != PLAN_STATE_CONSTRAINED ||
+                           plan_lane_span_state(fixture.plan, fixture.second) == PLAN_STATE_CONSTRAINED);
+                    fill_outcome_destroy(&outcome);
+                    fill_record_destroy(record);
+                    plan_destroy(fixture.plan);
+                    continue;
+                }
+                completed++;
+
+                /* Time order: the second idea is offered and refused until the first is written. */
+                size_t first_applied = record->step_count;
+                size_t second_applied = record->step_count;
+                bool second_refused_first = false;
+                for (size_t i = 0; i < record->step_count; i++) {
+                    const FillStep *step = &record->steps[i];
+                    if (step->outcome == FILL_STEP_APPLIED && step->target.id == fixture.first) {
+                        first_applied = i;
+                    } else if (step->outcome == FILL_STEP_APPLIED && step->target.id == fixture.second) {
+                        second_applied = i;
+                    } else if (step->outcome == FILL_STEP_NO_OPERATOR && step->target.id == fixture.second &&
+                               first_applied == record->step_count) {
+                        second_refused_first = true;
+                    }
+                }
+                assert(first_applied < second_applied);
+                stuck_second_first += second_refused_first;
+
+                int first[MAX_NOTES];
+                int second[MAX_NOTES];
+                size_t first_count = span_pitches(&fixture, fixture.first, first, MAX_NOTES);
+                size_t second_count = span_pitches(&fixture, fixture.second, second, MAX_NOTES);
+                assert(first_count > 0 && second_count > 0);
+
+                /* The join. */
+                assert(leap_allowed(second[0] - first[first_count - 1]));
+
+                /* One climax, in the second idea, above the first; the first leaves room for it. */
+                int first_top = 0;
+                int second_top = 0;
+                size_t at_top = 0;
+                for (size_t i = 0; i < first_count; i++) {
+                    first_top = first[i] > first_top ? first[i] : first_top;
+                    assert(first[i] >= 60 && first[i] <= 79 - 3);
+                }
+                for (size_t i = 0; i < second_count; i++) {
+                    second_top = second[i] > second_top ? second[i] : second_top;
+                    assert(second[i] >= 60 && second[i] <= 79);
+                }
+                for (size_t i = 0; i < second_count; i++) {
+                    at_top += second[i] == second_top;
+                }
+                assert(second_top > first_top && at_top == 1);
+
+                /* The end tone belongs to the idea with the cadence. */
+                int tonic = mode ? 9 : 0;
+                assert(((second[second_count - 1] - tonic) % 12 + 12) % 12 == 0);
+                first_ends_off_tonic += ((first[first_count - 1] - tonic) % 12 + 12) % 12 != 0;
+
+                fill_outcome_destroy(&outcome);
+                fill_record_destroy(record);
+                plan_destroy(fixture.plan);
+            }
+        }
+    }
+    /* Most phrases are written, the first idea is not made to end on the tonic, and the loop did offer the second early. */
+    assert(completed >= 18);
+    assert(first_ends_off_tonic > 0);
+    assert(stuck_second_first > 0);
+}
+
 int main(void) {
+    test_ideas_in_order();
     test_sweep();
     test_chord_tones_only();
     test_unplaceable_motive();

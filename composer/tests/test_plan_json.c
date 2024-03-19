@@ -124,6 +124,25 @@ static PiecePlan *build_sentence_plan(void) {
     schema.params.schema.stage = 9;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &schema) == PLAN_ERR_BAD_PAYLOAD);
 
+    /* The constraints a grown theme carries. */
+    PlanConstraint material = {PLAN_CONSTRAINT_MATERIAL, {0}};
+    assert(plan_node_add_constraint(plan, section, &material) == PLAN_OK);
+    PlanConstraint shape = {PLAN_CONSTRAINT_HARMONY_SHAPE, {0}};
+    shape.params.harmony_shape.kind = PLAN_HARMONY_SHAPE_PHRASE_MODEL;
+    shape.params.harmony_shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
+    shape.params.harmony_shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+    shape.params.harmony_shape.max_cells_per_chord = 2;
+    shape.params.harmony_shape.split_at_bars = true;
+    assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_OK);
+    shape.params.harmony_shape.max_cells_per_chord = -1;
+    assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_ERR_BAD_PAYLOAD);
+    PlanConstraint pairing = {PLAN_CONSTRAINT_THEME_PAIRING, {0}};
+    pairing.params.theme_pairing.beginning = PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA;
+    pairing.params.theme_pairing.ending = PLAN_THEME_ENDING_CADENTIAL;
+    assert(plan_node_add_constraint(plan, phrase, &pairing) == PLAN_OK);
+    pairing.params.theme_pairing.ending = (PlanThemeEnding)7;
+    assert(plan_node_add_constraint(plan, phrase, &pairing) == PLAN_ERR_BAD_PAYLOAD);
+
     assert(plan_node_set_state(plan, m1, PLAN_STATE_GIVEN) == PLAN_OK);
     assert(plan_node_set_state(plan, repetition, PLAN_STATE_REALIZED) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, meter_span, PLAN_STATE_GIVEN) == PLAN_OK);
@@ -157,6 +176,17 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return true;
     case PLAN_CONSTRAINT_SCHEMA:
         return a->params.schema.schema == b->params.schema.schema && a->params.schema.stage == b->params.schema.stage;
+    case PLAN_CONSTRAINT_MATERIAL:
+        return true;
+    case PLAN_CONSTRAINT_HARMONY_SHAPE:
+        return a->params.harmony_shape.kind == b->params.harmony_shape.kind &&
+               a->params.harmony_shape.starts_on == b->params.harmony_shape.starts_on &&
+               a->params.harmony_shape.ends_on == b->params.harmony_shape.ends_on &&
+               a->params.harmony_shape.max_cells_per_chord == b->params.harmony_shape.max_cells_per_chord &&
+               a->params.harmony_shape.split_at_bars == b->params.harmony_shape.split_at_bars;
+    case PLAN_CONSTRAINT_THEME_PAIRING:
+        return a->params.theme_pairing.beginning == b->params.theme_pairing.beginning &&
+               a->params.theme_pairing.ending == b->params.theme_pairing.ending;
     }
     return false;
 }
@@ -350,6 +380,37 @@ static void test_malformed_input(void) {
                  ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
                  "[{\"kind\":\"sparkle\"}]}}}",
                  PLAN_ERR_FORMAT, "form.composer.constraints[0].kind");
+    /* The constraints of a grown theme: a name that is not one is refused where it stands. */
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"harmony_shape\",\"shape\":\"waltz\"}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].shape");
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"harmony_shape\",\"shape\":\"prolongation\",\"starts_on\":\"mediant\"}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].starts_on");
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"theme_pairing\",\"beginning\":\"presentation\"}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].ending");
+    {
+        /* A pairing and a shape with their defaults leave out what is not asked for. */
+        PiecePlan *parsed_pairing = NULL;
+        assert(plan_from_json("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                              ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                              "[{\"kind\":\"theme_pairing\",\"beginning\":\"antecedent\",\"ending\":\"consequent\"},"
+                              "{\"kind\":\"harmony_shape\",\"shape\":\"cadential\"},{\"kind\":\"material\"}]}}}",
+                              &parsed_pairing, &error) == PLAN_OK);
+        const PlanConstraint *read = plan_node_constraint_at(parsed_pairing, 1, 0);
+        assert(read && read->params.theme_pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
+               read->params.theme_pairing.ending == PLAN_THEME_ENDING_CONSEQUENT);
+        read = plan_node_constraint_at(parsed_pairing, 1, 1);
+        assert(read && read->params.harmony_shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL &&
+               read->params.harmony_shape.starts_on == PLAN_HARMONY_ANCHOR_ANY &&
+               read->params.harmony_shape.max_cells_per_chord == 0 && !read->params.harmony_shape.split_at_bars);
+        assert(plan_node_constraint_at(parsed_pairing, 1, 2)->kind == PLAN_CONSTRAINT_MATERIAL);
+        plan_destroy(parsed_pairing);
+    }
     /* A section outside its parent's span. */
     expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
                  ",\"children\":[{\"kind\":\"section\",\"label\":null,"

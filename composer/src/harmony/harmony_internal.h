@@ -30,6 +30,8 @@ typedef struct {
     size_t cells_per_bar; /* the places in a bar where a chord may start */
     PlanTime cell_length;
     size_t cells;         /* bars * cells_per_bar */
+    bool has_shape;       /* a harmony shape constraint (PHRASE_MODEL, CADENTIAL or PROLONGATION) is on the span or its owner */
+    PlanHarmonyShape shape;
 } PhraseRequest;
 
 /* The meter under a phrase: its bars and the places in a bar where a chord may start. */
@@ -58,6 +60,9 @@ typedef struct {
     PhraseRequest request;
     PhraseChord *chords;
     size_t count;
+    /* The prolongation operator: the span follows one of the same shape, and this candidate repeats its chords. */
+    bool repeatable;
+    bool repeats;
 } PhraseProgression;
 
 #define HARMONY_MAX_CHORDS 64
@@ -94,6 +99,10 @@ typedef struct {
     bool open_ended;
     /* Chords, by index, that need no reason to be there beyond the phrase they are in: a schema's. NULL for none. */
     const bool *exempt;
+    /* A cadential progression, or a prolongation, has no opening tonic: the phrase model's tonic-then-dominant is not asked. */
+    bool no_opening_tonic;
+    /* A prolongation: no cadence may be heard anywhere in it. Used with open_ended and no_opening_tonic. */
+    bool no_cadence;
 } HeardPhrase;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
@@ -133,6 +142,20 @@ PlanResult harmony_cells_span(PlanTime start, PlanTime cell_length, size_t first
 
 /* Fills out from the plan. False when the span is not one this operator applies to. */
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+/* The same for the prolongation operator: a PROLONGATION shape, whole bars, a key, and no cadence asked for. */
+bool harmony_prolong_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+
+typedef bool (*ReadRequestFn)(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+/* Writes a progression candidate over its target span, one chord span each; the first keeps the target's id. */
+PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate,
+                                     ReadRequestFn read_request);
+
+/*
+ * Whether chords of the given lengths in cells, from cell 0, keep to the shape: none over max_cells_per_chord
+ * (when set; the last chord is exempt when exempt_last) and, with split_at_bars, none across a barline.
+ */
+bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, size_t count, size_t cells_per_bar,
+                         bool exempt_last);
 
 /* The span of cells [first_cell, first_cell + cells) of the request. */
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out);

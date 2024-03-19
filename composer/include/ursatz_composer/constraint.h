@@ -22,7 +22,10 @@ typedef enum {
     PLAN_CONSTRAINT_KEY,
     PLAN_CONSTRAINT_ARCHETYPE,
     PLAN_CONSTRAINT_EMBELLISH, /* no parameters: a harmony span reopened for the embellishment pass */
-    PLAN_CONSTRAINT_SCHEMA     /* the galant schema a span was made from, and which stage of it */
+    PLAN_CONSTRAINT_SCHEMA,    /* the galant schema a span was made from, and which stage of it */
+    PLAN_CONSTRAINT_MATERIAL,  /* no parameters: on a section node, its subtree is source material, not part of the piece */
+    PLAN_CONSTRAINT_HARMONY_SHAPE, /* the shape a harmony span is to take (R-050) */
+    PLAN_CONSTRAINT_THEME_PAIRING  /* how a theme begins and how it ends */
 } PlanConstraintKind;
 
 typedef enum {
@@ -109,6 +112,45 @@ typedef struct {
     int stage;
 } PlanSchemaRef;
 
+typedef enum {
+    PLAN_HARMONY_SHAPE_PROLONGATION, /* one harmony prolonged across the span, no cadence */
+    PLAN_HARMONY_SHAPE_PHRASE_MODEL, /* the phrase model, optionally with a faster harmonic rhythm */
+    PLAN_HARMONY_SHAPE_CADENTIAL     /* the cadential progression over the whole span */
+} PlanHarmonyShapeKind;
+
+typedef enum {
+    PLAN_HARMONY_ANCHOR_ANY,
+    PLAN_HARMONY_ANCHOR_TONIC,
+    PLAN_HARMONY_ANCHOR_DOMINANT
+} PlanHarmonyAnchor;
+
+/* max_cells_per_chord 0 means no limit; split_at_bars lets no chord cross a barline. */
+typedef struct {
+    PlanHarmonyShapeKind kind;
+    PlanHarmonyAnchor starts_on;
+    PlanHarmonyAnchor ends_on;
+    int max_cells_per_chord;
+    bool split_at_bars;
+} PlanHarmonyShape;
+
+typedef enum {
+    PLAN_THEME_BEGINNING_PRESENTATION,
+    PLAN_THEME_BEGINNING_ANTECEDENT,
+    PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA
+} PlanThemeBeginning;
+
+typedef enum {
+    PLAN_THEME_ENDING_CONTINUATION,
+    PLAN_THEME_ENDING_CONSEQUENT,
+    PLAN_THEME_ENDING_CADENTIAL
+} PlanThemeEnding;
+
+/* The nine pairings of a beginning and an ending; the standard-form theme types are made from them. */
+typedef struct {
+    PlanThemeBeginning beginning;
+    PlanThemeEnding ending;
+} PlanThemePairing;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -119,6 +161,8 @@ typedef struct {
         PlanKey key;
         PlanArchetype archetype;
         PlanSchemaRef schema;
+        PlanHarmonyShape harmony_shape;
+        PlanThemePairing theme_pairing;
     } params;
 } PlanConstraint;
 

@@ -335,8 +335,92 @@ static void test_cadence_on_owner(void) {
     plan_destroy(fixture.plan);
 }
 
+/* Adds a harmony shape to the target and runs the loop. */
+static FillOutcome run_shaped(const Fixture *fixture, PlanHarmonyShape shape, unsigned long seed) {
+    PlanConstraint constraint = {PLAN_CONSTRAINT_HARMONY_SHAPE, {0}};
+    constraint.params.harmony_shape = shape;
+    assert(plan_lane_span_add_constraint(fixture->plan, fixture->target, &constraint) == PLAN_OK);
+    return run(fixture, seed);
+}
+
+/* max_cells_per_chord caps every chord but the last, which takes the whole last bar; split_at_bars keeps chords off barlines. */
+static void test_phrase_model_shape(void) {
+    static const int meters[3][2] = {{4, 4}, {6, 8}, {3, 4}};
+    static const PlanCadenceType cadences[3] = {PLAN_CADENCE_PAC, PLAN_CADENCE_HC, PLAN_CADENCE_IAC};
+    for (int m = 0; m < 3; m++) {
+        for (int c = 0; c < 3; c++) {
+            for (int cap = 1; cap <= 3; cap++) {
+                for (unsigned long seed = 0; seed < 8; seed++) {
+                    Scenario scenario = {meters[m][0], meters[m][1], PLAN_MODE_MAJOR, 0, 6, cadences[c], seed};
+                    Fixture fixture = build(&scenario, CADENCE_ON_SPAN);
+                    PlanHarmonyShape shape;
+                    memset(&shape, 0, sizeof(shape));
+                    shape.kind = PLAN_HARMONY_SHAPE_PHRASE_MODEL;
+                    shape.max_cells_per_chord = cap;
+                    shape.split_at_bars = true;
+                    FillOutcome outcome = run_shaped(&fixture, shape, seed);
+                    size_t per_bar = cells_per_bar(meters[m][0], meters[m][1]);
+                    if (outcome.status == FILL_STATUS_COMPLETE) {
+                        check_progression(&fixture, &scenario);
+                        LaneSpanId ids[MAX_CHORDS];
+                        size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
+                        PlanTime cell = fraction(fixture.bar_length.num, fixture.bar_length.den * (unsigned long)per_bar);
+                        for (size_t i = 0; i < count; i++) {
+                            PlanSpan span = plan_lane_span_span(fixture.plan, ids[i]);
+                            /* Length in cells, and the cell it starts on in its bar. */
+                            long length = span.length.num * (long)cell.den / ((long)span.length.den * cell.num);
+                            long start = span.start.num * (long)cell.den / ((long)span.start.den * cell.num);
+                            if (i + 1 < count) {
+                                assert(length <= cap);
+                            }
+                            assert((size_t)(start % (long)per_bar) + (size_t)length <= per_bar);
+                        }
+                    } else {
+                        /* Only a phrase too tightly capped to be dealt is left open. */
+                        assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck_count == 1 &&
+                               outcome.stuck[0].reason == FILL_STUCK_ALL_REJECTED);
+                    }
+                    fill_outcome_destroy(&outcome);
+                    plan_destroy(fixture.plan);
+                }
+            }
+        }
+    }
+}
+
+/* A cadential progression has no opening tonic: it is the predominant, the dominant and the arrival, over the whole span. */
+static void test_cadential_shape(void) {
+    static const int meters[4][2] = {{4, 4}, {6, 8}, {3, 4}, {2, 4}};
+    for (int m = 0; m < 4; m++) {
+        for (int bars = 2; bars <= 4; bars++) {
+            for (unsigned long seed = 0; seed < 8; seed++) {
+                Scenario scenario = {meters[m][0], meters[m][1], PLAN_MODE_MAJOR, 0, bars, PLAN_CADENCE_PAC, seed};
+                Fixture fixture = build(&scenario, CADENCE_ON_SPAN);
+                PlanHarmonyShape shape;
+                memset(&shape, 0, sizeof(shape));
+                shape.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
+                FillOutcome outcome = run_shaped(&fixture, shape, seed);
+                assert(outcome.status == FILL_STATUS_COMPLETE);
+                LaneSpanId ids[MAX_CHORDS];
+                size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
+                assert(count >= 2);
+                assert(plan_lane_span_payload(fixture.plan, ids[0])->harmony.function != PLAN_FUNCTION_TONIC);
+                CadenceType heard;
+                bool at_end;
+                assert(harmony_hear_cadence(fixture.plan, fixture.span, PLAN_MODE_MAJOR, PLAN_CADENCE_PAC, &heard,
+                                            &at_end));
+                assert(heard == CADENCE_TYPE_PERFECT_AUTHENTIC && at_end);
+                fill_outcome_destroy(&outcome);
+                plan_destroy(fixture.plan);
+            }
+        }
+    }
+}
+
 int main(void) {
     test_sweep();
+    test_phrase_model_shape();
+    test_cadential_shape();
     test_seeds_vary();
     test_no_cadence_is_not_applicable();
     test_cadence_on_owner();

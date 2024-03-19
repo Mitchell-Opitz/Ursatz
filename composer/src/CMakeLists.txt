@@ -21,6 +21,7 @@ add_library(ursatz_composer STATIC
     harmony/harmony_hear.c
     harmony/harmony_check.c
     harmony/harmony_phrase.c
+    harmony/harmony_prolong.c
     harmony/harmony_context.c
     harmony/harmony_templates.c
     harmony/harmony_embellish.c
@@ -45,6 +46,10 @@ add_library(ursatz_composer STATIC
     melody/melody_fill.c
     form/form_hear.c
     form/form_boundary.c
+    grow/grow_request.c
+    grow/grow_theme.c
+    grow/grow_check.c
+    grow/grow_run.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

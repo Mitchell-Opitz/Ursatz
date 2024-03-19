@@ -54,7 +54,39 @@ typedef struct {
     long motive_onset[MOTIVE_MAX_NOTES];
     long motive_duration[MOTIVE_MAX_NOTES];
     long motive_length;
+
+    /*
+     * A target that stands for an idea or a subphrase of a phrase (not the whole phrase) reads the phrase it is in,
+     * and the melody written before it. Times are ticks from the start of the target, so the phrase starts at or
+     * before 0. The chord and bass lists are those under the target, the first and last clipped to it.
+     */
+    bool idea;
+    long phase;         /* ticks from the cell line at or before the target's start to the start (0 when it starts on one) */
+    long phrase_start;  /* ticks, at most 0 */
+    long phrase_length;
+    bool phrase_has_top; /* a melody note of the phrase is written before the target */
+    int phrase_top;      /* the highest pitch of those */
+    int lead_in[2];      /* the last notes of the written melody right before the target, oldest first */
+    size_t lead_in_count;
+    bool restating;      /* the motive is the melody of the idea before, to be said again as it was */
 } MelodyContext;
+
+/* Whether a tick of the target is the start of a cell of the meter (a strong beat). */
+static inline bool melody_on_cell(const MelodyContext *context, long tick) {
+    return (tick + context->phase) % context->cell == 0;
+}
+
+/* Where a target sits in its phrase's arch (see melody_role). A target that is the whole phrase is MELODY_ROLE_WHOLE. */
+typedef enum {
+    MELODY_ROLE_WHOLE,
+    MELODY_ROLE_BEFORE, /* the phrase's climax falls in a later target: no note above range_high - 3 */
+    MELODY_ROLE_CLIMAX, /* the phrase's climax falls in this target: it writes the phrase's highest note */
+    MELODY_ROLE_AFTER   /* the climax is written: every note is below it */
+} MelodyRole;
+
+/* The tick of the target at which the phrase's climax falls, which may lie before 0 or past the end. */
+long melody_climax_tick(const MelodyContext *context, const MelodyFillParams *params);
+MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params);
 
 /* One note of a candidate. motive_index is the motive note it carries, or -1 for a note that fills the phrase. */
 typedef struct {

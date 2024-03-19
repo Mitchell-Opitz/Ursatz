@@ -39,6 +39,21 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return prototype && constraint->params.schema.stage >= 0 &&
                (size_t)constraint->params.schema.stage < prototype->stage_count;
     }
+    case PLAN_CONSTRAINT_MATERIAL:
+        return true;
+    case PLAN_CONSTRAINT_HARMONY_SHAPE: {
+        const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
+        return shape->kind >= PLAN_HARMONY_SHAPE_PROLONGATION && shape->kind <= PLAN_HARMONY_SHAPE_CADENTIAL &&
+               shape->starts_on >= PLAN_HARMONY_ANCHOR_ANY && shape->starts_on <= PLAN_HARMONY_ANCHOR_DOMINANT &&
+               shape->ends_on >= PLAN_HARMONY_ANCHOR_ANY && shape->ends_on <= PLAN_HARMONY_ANCHOR_DOMINANT &&
+               shape->max_cells_per_chord >= 0;
+    }
+    case PLAN_CONSTRAINT_THEME_PAIRING: {
+        const PlanThemePairing *pairing = &constraint->params.theme_pairing;
+        return pairing->beginning >= PLAN_THEME_BEGINNING_PRESENTATION &&
+               pairing->beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA &&
+               pairing->ending >= PLAN_THEME_ENDING_CONTINUATION && pairing->ending <= PLAN_THEME_ENDING_CADENTIAL;
+    }
     }
     return false;
 }

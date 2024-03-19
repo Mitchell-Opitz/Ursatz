@@ -23,13 +23,18 @@ static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "mel
 static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
-static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema"};
+static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
+                                                  "material", "harmony_shape", "theme_pairing"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
                                               "interval_changed", "liquidated"};
 static const char *const FRAGMENT_POSITION_NAMES[] = {"any", "leading", "trailing", "middle"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
+static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "cadential"};
+static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant"};
+static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound_basic_idea"};
+static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
@@ -156,6 +161,22 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         ok = ok && json_add(object, "schema", cJSON_CreateString(galant_schema_name(
                                                     (GalantSchemaId)constraint->params.schema.schema))) &&
              json_add(object, "stage", json_number(constraint->params.schema.stage));
+        break;
+    case PLAN_CONSTRAINT_MATERIAL:
+        break;
+    case PLAN_CONSTRAINT_HARMONY_SHAPE: {
+        const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
+        ok = ok && json_add(object, "shape", cJSON_CreateString(SHAPE_KIND_NAMES[shape->kind])) &&
+             json_add(object, "starts_on", cJSON_CreateString(ANCHOR_NAMES[shape->starts_on])) &&
+             json_add(object, "ends_on", cJSON_CreateString(ANCHOR_NAMES[shape->ends_on])) &&
+             json_add(object, "max_cells_per_chord", json_number(shape->max_cells_per_chord)) &&
+             json_add(object, "split_at_bars", cJSON_CreateBool(shape->split_at_bars));
+        break;
+    }
+    case PLAN_CONSTRAINT_THEME_PAIRING:
+        ok = ok && json_add(object, "beginning",
+                            cJSON_CreateString(BEGINNING_NAMES[constraint->params.theme_pairing.beginning])) &&
+             json_add(object, "ending", cJSON_CreateString(ENDING_NAMES[constraint->params.theme_pairing.ending]));
         break;
     }
     if (!ok) {
@@ -785,6 +806,45 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         out->params.schema.schema = schema;
         out->params.schema.stage = (int)number_value;
+        return true;
+    }
+    case PLAN_CONSTRAINT_MATERIAL:
+        return true;
+    case PLAN_CONSTRAINT_HARMONY_SHAPE: {
+        PlanHarmonyShape *shape = &out->params.harmony_shape;
+        int anchor;
+        if (!read_enum_member(reader, item, path, "shape", SHAPE_KIND_NAMES, COUNT_OF(SHAPE_KIND_NAMES), &value)) {
+            return false;
+        }
+        shape->kind = (PlanHarmonyShapeKind)value;
+        const cJSON *starts = cJSON_GetObjectItemCaseSensitive(item, "starts_on");
+        const cJSON *ends = cJSON_GetObjectItemCaseSensitive(item, "ends_on");
+        char at[PLAN_JSON_PATH_MAX];
+        if (starts) {
+            json_child_path(at, path, "starts_on");
+            if (!read_enum(reader, starts, at, ANCHOR_NAMES, COUNT_OF(ANCHOR_NAMES), &anchor)) {
+                return false;
+            }
+            shape->starts_on = (PlanHarmonyAnchor)anchor;
+        }
+        if (ends) {
+            json_child_path(at, path, "ends_on");
+            if (!read_enum(reader, ends, at, ANCHOR_NAMES, COUNT_OF(ANCHOR_NAMES), &anchor)) {
+                return false;
+            }
+            shape->ends_on = (PlanHarmonyAnchor)anchor;
+        }
+        return read_optional_int(reader, item, path, "max_cells_per_chord", 0, 64, &shape->max_cells_per_chord) &&
+               read_optional_bool(reader, item, path, "split_at_bars", &shape->split_at_bars);
+    }
+    case PLAN_CONSTRAINT_THEME_PAIRING: {
+        int ending;
+        if (!read_enum_member(reader, item, path, "beginning", BEGINNING_NAMES, COUNT_OF(BEGINNING_NAMES), &value) ||
+            !read_enum_member(reader, item, path, "ending", ENDING_NAMES, COUNT_OF(ENDING_NAMES), &ending)) {
+            return false;
+        }
+        out->params.theme_pairing.beginning = (PlanThemeBeginning)value;
+        out->params.theme_pairing.ending = (PlanThemeEnding)ending;
         return true;
     }
     }
