@@ -2,6 +2,7 @@
  * and shuts down cleanly. */
 
 #include <civetweb.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
