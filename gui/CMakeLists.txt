@@ -23,6 +23,11 @@ add_subdirectory(external/ursatz)
 set(CIVETWEB_ENABLE_CXX OFF CACHE BOOL "" FORCE)
 set(CIVETWEB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(CIVETWEB_ENABLE_SSL OFF CACHE BOOL "" FORCE)
+# civetweb defaults this ON for Debug builds, which instruments it with
+# ASan/UBSan without linking the sanitizer runtime into consumers of the
+# library, breaking the final link. We don't want civetweb built with
+# sanitizers baked in as a fixed default, so turn it off explicitly.
+set(CIVETWEB_ENABLE_ASAN OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
   civetweb
