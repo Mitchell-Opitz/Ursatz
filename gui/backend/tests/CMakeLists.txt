@@ -14,4 +14,8 @@ target_link_libraries(test_health_route PRIVATE
   civetweb-c-library
 )
 
+if(WIN32)
+  target_link_libraries(test_health_route PRIVATE ws2_32)
+endif()
+
 add_test(NAME health_route COMMAND test_health_route)
