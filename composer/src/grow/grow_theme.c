@@ -14,24 +14,11 @@
 /* The pitch of the placeholder notes a bass and a melody span hold until the operators write them. */
 #define BASS_PLACEHOLDER 40
 #define MELODY_PLACEHOLDER 60
-/* Chords a phrase-model progression has before its last: a tonic, up to two predominants, a dominant. */
-#define PHRASE_MODEL_SLOTS 4
 
 /* ------------------------------------------------------------- the plan */
 
 /* The theme section, the lanes under it, and the motive m0. False when the target is not one grow-theme grows. */
-typedef struct {
-    NodeId section;
-    PlanSpan span;
-    PlanMeter meter;
-    PlanKey key;
-    PlanCadenceType cadence;
-    PlanThemePairing pairing;
-    NodeId source;
-    size_t bars;
-    size_t cells_per_bar;
-    PlanTime bar;
-} ThemeRequest;
+typedef GrowThemeRequest ThemeRequest;
 
 static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest *out) {
     ThemeRequest request;
@@ -103,7 +90,7 @@ static bool grow_applies(const PiecePlan *plan, FillTarget target, void *context
 
 /* ------------------------------------------------------------ the spec */
 
-static PlanTime scaled(PlanTime unit, size_t count) {
+PlanTime grow_scaled(PlanTime unit, size_t count) {
     PlanTime out = {0, 1};
     if (plan_time_make(unit.num * (long)count, unit.den, &out) != PLAN_OK) {
         out.num = 0;
@@ -111,10 +98,6 @@ static PlanTime scaled(PlanTime unit, size_t count) {
     }
     return out;
 }
-
-/* The length of an idea in units, and where it starts, for a sentence of eight units. */
-static const size_t IDEA_START[GROW_IDEA_COUNT] = {0, 2, 4, 5, 6};
-static const size_t IDEA_UNITS[GROW_IDEA_COUNT] = {2, 2, 1, 1, 2};
 
 static PlanTime unit_of(const ThemeRequest *request) {
     PlanTime unit = {0, 1};
@@ -185,20 +168,6 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowIdea idea, Motive *out) {
     return motive_develop(&spec->source, &dev, out) == MOTIVE_DEV_OK;
 }
 
-/* The longest leading fragment of at most `wanted` notes that fits an idea of `room`; 0 when none does. */
-static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, PlanTime room) {
-    GrowIdea idea = slot == 0 ? GROW_IDEA_FRAGMENT_1 : GROW_IDEA_FRAGMENT_2;
-    size_t most = spec->source.note_count - 1;
-    for (size_t length = wanted < most ? wanted : most; length >= 1; length--) {
-        Motive result;
-        spec->fragment_notes[slot] = length;
-        if (grow_idea_develop(spec, idea, &result) && plan_time_compare(result.length, room) <= 0) {
-            return length;
-        }
-    }
-    return 0;
-}
-
 /* Draws every choice of one candidate from rng. False when the draw does not make a sentence the motive fits. */
 static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     memset(spec, 0, sizeof(*spec));
@@ -212,48 +181,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
         spec->source.note_count < 2) {
         return false;
     }
-    PlanTime unit = unit_of(request);
-
-    /* Statement-response goes from tonic to dominant and back, which needs a cell for each. */
-    size_t basic_cells = IDEA_UNITS[GROW_IDEA_BASIC] * request->bars / 8 * request->cells_per_bar;
-    if (request->bars == 4) {
-        basic_cells = request->cells_per_bar;
-    }
-    bool can_respond = basic_cells >= 2;
-    uint64_t response = fill_rng_below(rng, 2);
-    spec->statement_response = can_respond && response == 1;
-
-    size_t first = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
-    size_t second = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
-    size_t count = spec->source.note_count;
-    size_t drop_most = count / 2 > 1 ? count / 2 : 1;
-    spec->liquidate_drop = 1 + (size_t)fill_rng_below(rng, drop_most);
-    if (spec->liquidate_drop >= count) {
-        spec->liquidate_drop = count - 1;
-    }
-    if (fitting_fragment(spec, 0, first, scaled(unit, IDEA_UNITS[GROW_IDEA_FRAGMENT_1])) == 0 ||
-        fitting_fragment(spec, 1, second, scaled(unit, IDEA_UNITS[GROW_IDEA_FRAGMENT_2])) == 0) {
-        return false;
-    }
-    for (GrowIdea idea = GROW_IDEA_REPETITION; idea < GROW_IDEA_COUNT; idea++) {
-        if (!grow_idea_develop(spec, idea, &spec->developed[idea]) ||
-            plan_time_compare(spec->developed[idea].length, scaled(unit, IDEA_UNITS[idea])) > 0) {
-            return false;
-        }
-        spec->has_developed[idea] = true;
-    }
-
-    /* The continuation is a phrase model if it has room for one, else the cadential progression alone. */
-    size_t cells = request->bars / 2 * request->cells_per_bar;
-    spec->continuation_shape = cells >= harmony_phrase_min_cells(request->cadence, request->cells_per_bar)
-                                   ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
-                                   : PLAN_HARMONY_SHAPE_CADENTIAL;
-    /* Its chords change at least twice as fast as the presentation's longest could, and still deal the cells out. */
-    size_t cap = basic_cells / 2 > 1 ? basic_cells / 2 : 1;
-    size_t room = cells > request->cells_per_bar ? cells - request->cells_per_bar : 1;
-    size_t least = (room + PHRASE_MODEL_SLOTS - 1) / PHRASE_MODEL_SLOTS;
-    spec->continuation_cap = (int)(cap > least ? cap : least);
-    return true;
+    /* The basic idea is two bars of eight, one of four. */
+    spec->basic_cells = request->bars == 4 ? request->cells_per_bar : 2 * request->cells_per_bar;
+    return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec);
 }
 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
@@ -309,27 +239,34 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
 
 /* ------------------------------------------------------------- applying */
 
-static PlanResult add_idea(PiecePlan *plan, NodeId parent, PlanTime section_start, PlanTime unit, GrowIdea idea,
-                           const char *name, NodeId *out) {
+PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
+                         const char *name, NodeId *out) {
     PlanSpan span;
-    PlanResult result = plan_time_add(section_start, scaled(unit, IDEA_START[idea]), &span.start);
-    span.length = scaled(unit, IDEA_UNITS[idea]);
+    PlanResult result = plan_time_add(build->request->span.start, grow_scaled(build->unit, start_unit), &span.start);
+    span.length = grow_scaled(build->unit, units);
     if (result == PLAN_OK) {
-        result = plan_add_node(plan, parent, PLAN_NODE_IDEA, span, name, out);
+        result = plan_add_node(build->plan, parent, kind, span, name, out);
     }
-    return result == PLAN_OK ? plan_node_set_state(plan, *out, PLAN_STATE_REALIZED) : result;
+    return result == PLAN_OK ? plan_node_set_state(build->plan, *out, PLAN_STATE_REALIZED) : result;
 }
 
-static PlanResult add_node_in(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanTime start, PlanTime length,
-                              const char *name, NodeId *out) {
-    PlanSpan span = {start, length};
-    PlanResult result = plan_add_node(plan, parent, kind, span, name, out);
-    return result == PLAN_OK ? plan_node_set_state(plan, *out, PLAN_STATE_REALIZED) : result;
+PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out) {
+    static const char *const MOTIVE_NAMES[GROW_IDEA_COUNT] = {"m0", "m1", "m2", "m3", "m4"};
+    PlanSpan span = {{0, 1}, build->request->bar};
+    PlanResult result = plan_time_add(build->material_span.start, grow_scaled(build->request->bar, slot), &span.start);
+    if (result == PLAN_OK) {
+        result = plan_add_node(build->plan, build->material, PLAN_NODE_MOTIVE, span, MOTIVE_NAMES[slot], out);
+    }
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
+    constraint.params.motive = *ref;
+    return result == PLAN_OK ? plan_node_add_constraint(build->plan, *out, &constraint) : result;
 }
 
-/* A harmony span and the bass span beside it, both open, over an idea or a subphrase. */
-static PlanResult add_chord_targets(PiecePlan *plan, NodeId owner, const PlanHarmonyShape *shape,
-                                    const PlanConstraint *cadence) {
+PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
+                                  const PlanConstraint *cadence) {
+    PiecePlan *plan = build->plan;
     PlanSpan span = plan_node_span(plan, owner);
     PlanLanePayload payload;
     PlanNote note;
@@ -361,9 +298,9 @@ static PlanResult add_chord_targets(PiecePlan *plan, NodeId owner, const PlanHar
     return result;
 }
 
-/* The open melody span of an idea, asking for the motive it is made from. */
-static PlanResult add_melody_target(PiecePlan *plan, NodeId idea, const PlanMotiveRef *ref,
-                                    const PlanConstraint *cadence) {
+PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
+                                  const PlanConstraint *cadence) {
+    PiecePlan *plan = build->plan;
     PlanSpan span = plan_node_span(plan, idea);
     PlanLanePayload payload;
     PlanNote note;
@@ -398,112 +335,19 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     if (!read_request(plan, target, &request) || request.bars != spec->bars) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
-    PlanTime unit = unit_of(&request);
-    PlanTime start = request.span.start;
-    PlanConstraint cadence;
-    memset(&cadence, 0, sizeof(cadence));
-    cadence.kind = PLAN_CONSTRAINT_CADENCE;
-    cadence.params.cadence = request.cadence;
-
-    NodeId phrase;
-    NodeId presentation;
-    NodeId continuation;
-    NodeId ideas[GROW_IDEA_COUNT];
-    NodeId motives[GROW_IDEA_COUNT];
-    PlanTime half;
-    PlanResult result = plan_time_add(start, scaled(unit, 4), &half);
-
-    /* The structure of the theme. */
-    if (result == PLAN_OK) {
-        result = add_node_in(plan, request.section, PLAN_NODE_PHRASE, start, request.span.length, "phrase", &phrase);
-    }
-    if (result == PLAN_OK) {
-        result = plan_node_add_constraint(plan, phrase, &cadence);
-    }
-    if (result == PLAN_OK) {
-        result = add_node_in(plan, phrase, PLAN_NODE_SUBPHRASE, start, scaled(unit, 4), "presentation", &presentation);
-    }
-    if (result == PLAN_OK) {
-        result = add_idea(plan, presentation, start, unit, GROW_IDEA_BASIC, "basic idea", &ideas[GROW_IDEA_BASIC]);
-    }
-    if (result == PLAN_OK) {
-        result = add_idea(plan, presentation, start, unit, GROW_IDEA_REPETITION, "repetition",
-                          &ideas[GROW_IDEA_REPETITION]);
-    }
-    if (result == PLAN_OK) {
-        result = add_node_in(plan, phrase, PLAN_NODE_SUBPHRASE, half, scaled(unit, 4), "continuation", &continuation);
-    }
-    if (result == PLAN_OK) {
-        result = add_idea(plan, continuation, start, unit, GROW_IDEA_FRAGMENT_1, "fragment 1",
-                          &ideas[GROW_IDEA_FRAGMENT_1]);
-    }
-    if (result == PLAN_OK) {
-        result = add_idea(plan, continuation, start, unit, GROW_IDEA_FRAGMENT_2, "fragment 2",
-                          &ideas[GROW_IDEA_FRAGMENT_2]);
-    }
-    if (result == PLAN_OK) {
-        result = add_idea(plan, continuation, start, unit, GROW_IDEA_CADENTIAL, "cadential",
-                          &ideas[GROW_IDEA_CADENTIAL]);
-    }
-
-    /* A motive in the material for each idea after the basic idea, each made from m0. */
-    NodeId material_idea = plan_node_parent(plan, request.source);
-    PlanSpan material = plan_node_span(plan, material_idea);
-    static const char *const MOTIVE_NAMES[GROW_IDEA_COUNT] = {"m0", "m1", "m2", "m3", "m4"};
-    PlanMotiveRef refs[GROW_IDEA_COUNT];
-    for (GrowIdea idea = GROW_IDEA_BASIC; result == PLAN_OK && idea < GROW_IDEA_COUNT; idea++) {
-        grow_idea_ref(spec, idea, request.source, &refs[idea]);
-        if (idea == GROW_IDEA_BASIC) {
-            motives[idea] = request.source;
-            continue;
-        }
-        PlanSpan span = {{0, 1}, request.bar};
-        result = plan_time_add(material.start, scaled(request.bar, (size_t)idea), &span.start);
-        if (result == PLAN_OK) {
-            result = plan_add_node(plan, material_idea, PLAN_NODE_MOTIVE, span, MOTIVE_NAMES[idea], &motives[idea]);
-        }
-        PlanConstraint constraint;
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
-        constraint.params.motive = refs[idea];
-        if (result == PLAN_OK) {
-            result = plan_node_add_constraint(plan, motives[idea], &constraint);
-        }
-    }
-
-    /* The harmony and bass to write, one pair for each of the presentation's ideas and one for the continuation. */
-    PlanHarmonyShape basic_shape;
-    PlanHarmonyShape repetition_shape;
-    PlanHarmonyShape continuation_shape;
-    memset(&basic_shape, 0, sizeof(basic_shape));
-    memset(&repetition_shape, 0, sizeof(repetition_shape));
-    memset(&continuation_shape, 0, sizeof(continuation_shape));
-    basic_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
-    basic_shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
-    basic_shape.ends_on = spec->statement_response ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
-    repetition_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
-    repetition_shape.starts_on = spec->statement_response ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
-    repetition_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
-    continuation_shape.kind = spec->continuation_shape;
-    continuation_shape.max_cells_per_chord = spec->continuation_cap;
-    continuation_shape.split_at_bars = true;
-    if (result == PLAN_OK) {
-        result = add_chord_targets(plan, ideas[GROW_IDEA_BASIC], &basic_shape, NULL);
-    }
-    if (result == PLAN_OK) {
-        result = add_chord_targets(plan, ideas[GROW_IDEA_REPETITION], &repetition_shape, NULL);
-    }
-    if (result == PLAN_OK) {
-        result = add_chord_targets(plan, continuation, &continuation_shape, &cadence);
-    }
-
-    /* The melody to write, one span for each idea, the last asking for the cadence. */
-    for (GrowIdea idea = GROW_IDEA_BASIC; result == PLAN_OK && idea < GROW_IDEA_COUNT; idea++) {
-        PlanMotiveRef ref = refs[idea];
-        ref.motive = motives[idea];
-        result = add_melody_target(plan, ideas[idea], &ref, idea == GROW_IDEA_CADENTIAL ? &cadence : NULL);
-    }
-    return result;
+    GrowBuild build;
+    memset(&build, 0, sizeof(build));
+    build.plan = plan;
+    build.spec = spec;
+    build.request = &request;
+    build.unit = unit_of(&request);
+    build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
+    build.cadence.params.cadence = request.cadence;
+    build.phrase = PLAN_NODE_NONE;
+    build.material = plan_node_parent(plan, request.source);
+    build.material_span = plan_node_span(plan, build.material);
+    PlanResult result = grow_beginning_build(&build);
+    return result == PLAN_OK ? grow_ending_build(&build) : result;
 }
 
 FillResult grow_register(FillOperatorRegistry *registry, const GrowContext *context) {

@@ -31,6 +31,7 @@ typedef struct {
     PlanKey key;
     PlanCadenceType cadence;
     PlanThemePairing pairing;
+    size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
     bool statement_response;               /* the repetition is a step up, the harmony goes tonic to dominant and back */
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
@@ -41,6 +42,53 @@ typedef struct {
     Motive developed[GROW_IDEA_COUNT];
     bool has_developed[GROW_IDEA_COUNT];
 } GrowThemeSpec;
+
+/* The theme section grow-theme grows, read from the plan. */
+typedef struct {
+    NodeId section;
+    PlanSpan span;
+    PlanMeter meter;
+    PlanKey key;
+    PlanCadenceType cadence;
+    PlanThemePairing pairing;
+    NodeId source;
+    size_t bars;
+    size_t cells_per_bar;
+    PlanTime bar;
+} GrowThemeRequest;
+
+/* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
+typedef struct {
+    PiecePlan *plan;
+    const GrowThemeSpec *spec;
+    const GrowThemeRequest *request;
+    PlanTime unit;           /* an eighth of the theme */
+    PlanConstraint cadence;  /* the theme's cadence */
+    NodeId phrase;           /* the phrase the parts go in, made by the beginning */
+    NodeId material;         /* the idea of the material section the motive nodes go in */
+    PlanSpan material_span;
+} GrowBuild;
+
+/* A length of count units. */
+PlanTime grow_scaled(PlanTime unit, size_t count);
+/* A node of the theme, Realized, from start_unit units after the theme's start and units long. */
+PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
+                         const char *name, NodeId *out);
+/* The motive node m<slot> in the material, made from the ref. */
+PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out);
+/* A harmony span and the bass span beside it, both open, over an idea or a subphrase. */
+PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
+                                  const PlanConstraint *cadence);
+/* The open melody span of an idea, asking for the motive it is made from. */
+PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
+                                  const PlanConstraint *cadence);
+
+/* The beginning of the theme: the choices it draws, and its nodes, motives and open lanes. */
+bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec);
+PlanResult grow_beginning_build(GrowBuild *build);
+/* The ending of the theme; false when the draw does not make an ending the motive fits. */
+bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec);
+PlanResult grow_ending_build(GrowBuild *build);
 
 /* The cells in a bar the harmony operators place chords on; false for a meter they do not support. */
 bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
