@@ -20,6 +20,8 @@ add_library(standard_form
     analysis/analysis_input.c
     analysis/analysis_claim.c
     analysis/analysis_phrase.c
+    analysis/analysis_similarity.c
+    analysis/analysis_ideas.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
