@@ -37,9 +37,23 @@ because it's a small, permissively licensed, single-purpose embedded HTTP
 library with a simple C API and no GPL/commercial dual-licensing
 complications.
 
-The backend exposes one route today: `GET /api/health/status`, which
-calls through the persistence service to confirm `persistence_open`
-succeeds against a test database path, and returns JSON.
+The backend exposes:
+
+- `GET /api/health/status`: calls through the persistence service to
+  confirm `persistence_open` succeeds against a test database path,
+  and returns JSON.
+- `POST /api/analyzer/pieces`: accepts a raw MIDI file as the request
+  body, runs it through Ursatz's `MIDIImporter`, `ChordIdentification`,
+  and `KeyEstimation` (against the `common-practice-minimal`
+  framework) via the analysis service, saves the resulting NoteEvent
+  sequence and Interpretations, and returns the new piece's id.
+- `GET /api/analyzer/pieces`: lists saved piece ids.
+
+Ursatz's persistence layer has no "piece" concept (one `note_events`
+table, one `interpretations` table, no grouping/filename metadata): the
+Analyzer tool works around this by saving each piece to its own SQLite
+file under `pieces/`, using the filename as the piece id. Listing scans
+that directory rather than querying a tracking table.
 
 ## Frontend
 
@@ -65,6 +79,6 @@ build.
 
 ## Out of scope for this scaffold
 
-Real add-MIDI/analyze/list-saved-pieces flows, native webview packaging,
-Generator tool code, and authentication are explicitly not part of this
-task.
+Native webview packaging, Generator tool code, re-running analysis on
+an already-saved piece, and authentication are explicitly not part of
+this task.

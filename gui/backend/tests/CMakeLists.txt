@@ -1,7 +1,9 @@
 add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
 )
 
 target_include_directories(test_health_route PRIVATE
@@ -11,6 +13,7 @@ target_include_directories(test_health_route PRIVATE
 
 target_link_libraries(test_health_route PRIVATE
   ursatz
+  common_practice_minimal
   civetweb-c-library
 )
 
