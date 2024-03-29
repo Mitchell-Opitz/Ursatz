@@ -1,11 +1,18 @@
 #include "analysis_service.h"
 
-#include <dirent.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <time.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#include <windows.h>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#endif
 
 #include <core/entity.h>
 #include <core/provenance_reference.h>
@@ -341,11 +348,18 @@ static void identify_and_store_chord(PersistenceHandle *handle, const SonorityGr
 }
 
 static bool ensure_dir_exists(const char *path) {
+#ifdef _WIN32
+    if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
+        return true;
+    }
+    return _mkdir(path) == 0;
+#else
     struct stat st;
     if (stat(path, &st) == 0) {
         return true;
     }
     return mkdir(path, 0755) == 0;
+#endif
 }
 
 static char *generate_piece_id(void) {
@@ -427,56 +441,86 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
+static void free_ids(char **ids, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        free(ids[i]);
+    }
+    free(ids);
+}
+
+/* Appends a newly allocated copy of a "<id>.db" filename's id part to
+ * *ids/*count (growing *capacity as needed with realloc). Returns
+ * false only on allocation failure. */
+static bool append_db_id(char ***ids, size_t *count, size_t *capacity, const char *filename) {
+    size_t len = strlen(filename);
+    if (len <= 3 || strcmp(filename + len - 3, ".db") != 0) {
+        return true;
+    }
+
+    if (*count == *capacity) {
+        size_t new_capacity = (*capacity == 0) ? 8 : (*capacity * 2);
+        char **grown = realloc(*ids, sizeof(char *) * new_capacity);
+        if (!grown) {
+            return false;
+        }
+        *ids = grown;
+        *capacity = new_capacity;
+    }
+
+    size_t id_len = len - 3;
+    char *id = malloc(id_len + 1);
+    if (!id) {
+        return false;
+    }
+    memcpy(id, filename, id_len);
+    id[id_len] = '\0';
+
+    (*ids)[*count] = id;
+    (*count)++;
+    return true;
+}
+
 UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, char ***out_ids, size_t *out_count) {
     *out_ids = NULL;
     *out_count = 0;
 
+    char **ids = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
+
+#ifdef _WIN32
+    char pattern[MAX_PATH];
+    snprintf(pattern, sizeof(pattern), "%s\\*.db", pieces_dir);
+
+    WIN32_FIND_DATAA find_data;
+    HANDLE find_handle = FindFirstFileA(pattern, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        return URSATZ_GUI_ANALYSIS_OK;
+    }
+    do {
+        if (!append_db_id(&ids, &count, &capacity, find_data.cFileName)) {
+            free_ids(ids, count);
+            FindClose(find_handle);
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+    } while (FindNextFileA(find_handle, &find_data) != 0);
+    FindClose(find_handle);
+#else
     DIR *dir = opendir(pieces_dir);
     if (!dir) {
         return URSATZ_GUI_ANALYSIS_OK;
     }
 
-    size_t count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
-        size_t len = strlen(entry->d_name);
-        if (len > 3 && strcmp(entry->d_name + len - 3, ".db") == 0) {
-            count++;
-        }
-    }
-    rewinddir(dir);
-
-    if (count == 0) {
-        closedir(dir);
-        return URSATZ_GUI_ANALYSIS_OK;
-    }
-
-    char **ids = malloc(sizeof(char *) * count);
-    if (!ids) {
-        closedir(dir);
-        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
-    }
-
-    size_t i = 0;
-    while ((entry = readdir(dir)) != NULL && i < count) {
-        size_t len = strlen(entry->d_name);
-        if (len > 3 && strcmp(entry->d_name + len - 3, ".db") == 0) {
-            size_t id_len = len - 3;
-            ids[i] = malloc(id_len + 1);
-            if (!ids[i]) {
-                for (size_t k = 0; k < i; k++) {
-                    free(ids[k]);
-                }
-                free(ids);
-                closedir(dir);
-                return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
-            }
-            memcpy(ids[i], entry->d_name, id_len);
-            ids[i][id_len] = '\0';
-            i++;
+        if (!append_db_id(&ids, &count, &capacity, entry->d_name)) {
+            free_ids(ids, count);
+            closedir(dir);
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
     }
     closedir(dir);
+#endif
 
     *out_ids = ids;
     *out_count = count;
