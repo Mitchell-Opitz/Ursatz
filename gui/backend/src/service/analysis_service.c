@@ -14,6 +14,8 @@
 #include <sys/stat.h>
 #endif
 
+#include <sqlite3.h>
+
 #include <core/entity.h>
 #include <core/provenance_reference.h>
 #include <core/value.h>
@@ -34,6 +36,70 @@
 #include <time/musical_time.h>
 #include <time/temporal_anchor.h>
 #include <time/time_span.h>
+
+/*
+ * ursatz-gui-owned interpretation index: a small table, in the same
+ * per-piece SQLite file Ursatz's PersistenceHandle manages, that records
+ * which Interpretation ids this module produced and their kind ("key" or
+ * "chord"). Ursatz's persistence layer has no way to enumerate the
+ * Interpretations stored for a piece (only load-by-id), so this index is
+ * what lets the detail route (GET /api/analyzer/pieces/<id>) know which
+ * ids to load. This is ursatz-gui's own schema, opened via a separate
+ * sqlite3 connection to db_path -- entirely outside Ursatz's schema/
+ * contract, never touching PersistenceHandle's internals.
+ */
+static const char *const kIndexTableName = "ursatz_gui_interpretations";
+static const char *const kIndexTypeKey = "key";
+static const char *const kIndexTypeChord = "chord";
+
+/* Opens (creating if absent) the ursatz-gui interpretation index table in
+ * the SQLite file at db_path. Returns NULL on failure. */
+static sqlite3 *open_interpretation_index(const char *db_path) {
+    sqlite3 *db = NULL;
+    if (sqlite3_open(db_path, &db) != SQLITE_OK) {
+        if (db) {
+            sqlite3_close(db);
+        }
+        return NULL;
+    }
+
+    char sql[256];
+    snprintf(sql, sizeof(sql),
+             "CREATE TABLE IF NOT EXISTS %s ("
+             "  interpretation_id TEXT PRIMARY KEY,"
+             "  interpretation_type TEXT NOT NULL"
+             ");",
+             kIndexTableName);
+    if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        return NULL;
+    }
+
+    return db;
+}
+
+/* Records that interpretation_id (of the given type) was produced for
+ * this piece. Best-effort: a failure here does not fail the analysis --
+ * the Interpretation is already durably stored by Ursatz's own
+ * persistence; only the index entry (used for later listing) is lost. */
+static void record_interpretation_id(sqlite3 *index_db, const char *interpretation_id, const char *type) {
+    if (!index_db) {
+        return;
+    }
+
+    char sql[256];
+    snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO %s (interpretation_id, interpretation_type) VALUES (?, ?);",
+             kIndexTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return;
+    }
+    sqlite3_bind_text(stmt, 1, interpretation_id, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, type, -1, SQLITE_TRANSIENT);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
 
 /* Semitone offset from tonic -> diatonic scale degree (1-7), or -1 if
  * the offset is not diatonic in that mode. Ported from ursatz-analyzer's
@@ -186,8 +252,9 @@ static Structure *build_whole_piece_region(NoteEvent *const *events, size_t coun
 /* Estimates one global key for the whole piece, persisting the winning
  * Interpretation (if any) directly. Mirrors ursatz-analyzer's
  * estimate_global_key (pipeline/key_pipeline.c). */
-static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, NoteEvent *const *events,
-                                                   PitchNumericValue *const *pitch_values, size_t count) {
+static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqlite3 *index_db,
+                                                   NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                                   size_t count) {
     KeyEstimate estimate = {false, 0, false};
     if (count == 0) {
         return estimate;
@@ -230,6 +297,8 @@ static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, Note
                 estimate.tonic_pitch_class = tonic;
                 estimate.is_major = (strstr(claim, "major") != NULL);
                 estimate.found = true;
+                record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)),
+                                          kIndexTypeKey);
             }
             analysis_result_destroy(result);
         }
@@ -298,8 +367,9 @@ static Sonority *build_sonority(const SonorityGroup *group, NoteEvent *const *ev
 /* Identifies and stores the chord Interpretation (if any) for one
  * onset-grouped SonorityGroup. Mirrors ursatz-analyzer's
  * identify_chord_for_group (pipeline/chord_pipeline.c). */
-static void identify_and_store_chord(PersistenceHandle *handle, const SonorityGroup *group, NoteEvent *const *events,
-                                       PitchNumericValue *const *pitch_values, const KeyEstimate *key) {
+static void identify_and_store_chord(PersistenceHandle *handle, sqlite3 *index_db, const SonorityGroup *group,
+                                       NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                       const KeyEstimate *key) {
     if (!key->found) {
         return;
     }
@@ -338,7 +408,10 @@ static void identify_and_store_chord(PersistenceHandle *handle, const SonorityGr
         AnalysisResult *result = NULL;
         if (chord_identification_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
             const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
-            persistence_store_interpretation(handle, interpretation);
+            if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
+                record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)),
+                                          kIndexTypeChord);
+            }
             analysis_result_destroy(result);
         }
     }
@@ -412,14 +485,20 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
         if (persistence_store_note_events(handle, events, count) != PERSISTENCE_NOTE_EVENTS_OK) {
             result = URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
         } else {
-            KeyEstimate key = estimate_and_store_global_key(handle, events, pitch_values, count);
+            sqlite3 *index_db = open_interpretation_index(db_path);
+
+            KeyEstimate key = estimate_and_store_global_key(handle, index_db, events, pitch_values, count);
 
             SonorityGrouping grouping;
             if (segment_by_onset(events, count, &grouping)) {
                 for (size_t i = 0; i < grouping.group_count; i++) {
-                    identify_and_store_chord(handle, &grouping.groups[i], events, pitch_values, &key);
+                    identify_and_store_chord(handle, index_db, &grouping.groups[i], events, pitch_values, &key);
                 }
                 sonority_grouping_destroy(&grouping);
+            }
+
+            if (index_db) {
+                sqlite3_close(index_db);
             }
         }
         persistence_close(handle);
