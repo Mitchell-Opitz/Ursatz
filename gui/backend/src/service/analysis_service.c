@@ -24,16 +24,12 @@
 #include <framework.h>
 #include <identity/entity_id.h>
 #include <identity/schema_version.h>
-#include <interpretation/chord.h>
 #include <interpretation/interpretation.h>
-#include <interpretation/key.h>
 #include <io/midi_importer.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
 #include <persistence/persistence.h>
-#include <persistence/persistence_chord.h>
 #include <persistence/persistence_interpretation.h>
-#include <persistence/persistence_key.h>
 #include <persistence/persistence_note_events.h>
 #include <pitch/pitch_numeric_value.h>
 #include <semantics/sonority.h>
@@ -712,29 +708,26 @@ static void interpretation_summary_destroy_contents(UrsatzGuiInterpretationSumma
  * with its label and produced_by author/method. Returns false if the
  * row could not be loaded (skipped by the caller, not fatal to the
  * overall piece detail). */
+/* Loads the raw Interpretation at interpretation_id and fills out with
+ * its claim (as the display label -- both key_vocabulary.c and
+ * triad_identification.c build their claim Value as a null-terminated
+ * label string, e.g. "C major", "V7") and its author/method as
+ * produced_by. This module stores Interpretations via
+ * persistence_store_interpretation directly (see
+ * estimate_and_store_global_key/identify_and_store_chord above), not
+ * via persistence_store_chord/persistence_store_key, so loading goes
+ * through the matching persistence_load_interpretation rather than
+ * persistence_load_chord/persistence_load_key (whose backing tables
+ * this module never populates). */
 static bool load_interpretation_summary(PersistenceHandle *handle, const char *interpretation_id, const char *type,
                                           UrsatzGuiInterpretationSummary *out) {
-    const Interpretation *interpretation = NULL;
-    const char *label = NULL;
-
-    Chord *chord = NULL;
-    Key *key = NULL;
-
-    if (strcmp(type, kIndexTypeChord) == 0) {
-        if (persistence_load_chord(handle, interpretation_id, &chord) != PERSISTENCE_CHORD_OK) {
-            return false;
-        }
-        interpretation = chord_interpretation(chord);
-        label = chord_label(chord);
-    } else if (strcmp(type, kIndexTypeKey) == 0) {
-        if (persistence_load_key(handle, interpretation_id, &key) != PERSISTENCE_KEY_OK) {
-            return false;
-        }
-        interpretation = key_interpretation(key);
-        label = key_label(key);
-    } else {
+    Interpretation *interpretation = NULL;
+    if (persistence_load_interpretation(handle, interpretation_id, &interpretation) != PERSISTENCE_INTERPRETATION_OK) {
         return false;
     }
+
+    size_t claim_size = 0;
+    const char *label = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
 
     bool ok = false;
     out->interpretation_id = dup_string(interpretation_id);
@@ -748,12 +741,7 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
         interpretation_summary_destroy_contents(out);
     }
 
-    if (chord) {
-        chord_destroy(chord);
-    }
-    if (key) {
-        key_destroy(key);
-    }
+    interpretation_destroy(interpretation);
     return ok;
 }
 
