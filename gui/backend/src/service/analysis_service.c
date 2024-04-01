@@ -1,5 +1,6 @@
 #include "analysis_service.h"
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -756,8 +757,28 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
     return ok;
 }
 
+/* id is generated server-side (generate_piece_id) for stored pieces, but
+ * this function's id comes from an HTTP path segment -- reject anything
+ * that is not a plain filename component before it reaches db_path, so
+ * a crafted id (e.g. containing "/" or "..") can't escape pieces_dir. */
+static bool is_valid_piece_id(const char *id) {
+    if (!id || id[0] == '\0') {
+        return false;
+    }
+    for (const char *c = id; *c; c++) {
+        if (!(isalnum((unsigned char)*c) || *c == '-' || *c == '_')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
                                                         UrsatzGuiPieceDetail **out_detail) {
+    if (!is_valid_piece_id(id)) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
     char db_path[320];
     snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
 
