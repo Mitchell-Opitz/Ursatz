@@ -23,12 +23,16 @@
 #include <framework.h>
 #include <identity/entity_id.h>
 #include <identity/schema_version.h>
+#include <interpretation/chord.h>
 #include <interpretation/interpretation.h>
+#include <interpretation/key.h>
 #include <io/midi_importer.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
 #include <persistence/persistence.h>
+#include <persistence/persistence_chord.h>
 #include <persistence/persistence_interpretation.h>
+#include <persistence/persistence_key.h>
 #include <persistence/persistence_note_events.h>
 #include <pitch/pitch_numeric_value.h>
 #include <semantics/sonority.h>
@@ -604,4 +608,242 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, char **
     *out_ids = ids;
     *out_count = count;
     return URSATZ_GUI_ANALYSIS_OK;
+}
+
+static bool db_path_exists(const char *db_path) {
+#ifdef _WIN32
+    return GetFileAttributesA(db_path) != INVALID_FILE_ATTRIBUTES;
+#else
+    struct stat st;
+    return stat(db_path, &st) == 0;
+#endif
+}
+
+static char *dup_string(const char *value) {
+    if (!value) {
+        return NULL;
+    }
+    size_t len = strlen(value) + 1;
+    char *copy = malloc(len);
+    if (copy) {
+        memcpy(copy, value, len);
+    }
+    return copy;
+}
+
+/* Reads every (interpretation_id, interpretation_type) row recorded by
+ * record_interpretation_id at analysis time. Returns false only on
+ * allocation failure; a missing/empty index yields *out_count == 0. */
+static bool read_interpretation_index(sqlite3 *index_db, char ***out_ids, char ***out_types, size_t *out_count) {
+    *out_ids = NULL;
+    *out_types = NULL;
+    *out_count = 0;
+
+    char sql[128];
+    snprintf(sql, sizeof(sql), "SELECT interpretation_id, interpretation_type FROM %s;", kIndexTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return true;
+    }
+
+    char **ids = NULL;
+    char **types = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
+
+    int step;
+    while ((step = sqlite3_step(stmt)) == SQLITE_ROW) {
+        if (count == capacity) {
+            size_t new_capacity = (capacity == 0) ? 8 : (capacity * 2);
+            char **grown_ids = realloc(ids, sizeof(char *) * new_capacity);
+            char **grown_types = realloc(types, sizeof(char *) * new_capacity);
+            if (!grown_ids || !grown_types) {
+                free(grown_ids ? grown_ids : ids);
+                free(grown_types ? grown_types : types);
+                free_ids(ids, count);
+                free_ids(types, count);
+                sqlite3_finalize(stmt);
+                return false;
+            }
+            ids = grown_ids;
+            types = grown_types;
+            capacity = new_capacity;
+        }
+
+        char *id_copy = dup_string((const char *)sqlite3_column_text(stmt, 0));
+        char *type_copy = dup_string((const char *)sqlite3_column_text(stmt, 1));
+        if (!id_copy || !type_copy) {
+            free(id_copy);
+            free(type_copy);
+            free_ids(ids, count);
+            free_ids(types, count);
+            sqlite3_finalize(stmt);
+            return false;
+        }
+        ids[count] = id_copy;
+        types[count] = type_copy;
+        count++;
+    }
+    sqlite3_finalize(stmt);
+
+    if (step != SQLITE_DONE) {
+        free_ids(ids, count);
+        free_ids(types, count);
+        return true;
+    }
+
+    *out_ids = ids;
+    *out_types = types;
+    *out_count = count;
+    return true;
+}
+
+static void interpretation_summary_destroy_contents(UrsatzGuiInterpretationSummary *summary) {
+    free(summary->interpretation_id);
+    free(summary->type);
+    free(summary->label);
+    free(summary->produced_by_author);
+    free(summary->produced_by_method);
+}
+
+/* Loads the Chord or Key at interpretation_id (per type) and fills out
+ * with its label and produced_by author/method. Returns false if the
+ * row could not be loaded (skipped by the caller, not fatal to the
+ * overall piece detail). */
+static bool load_interpretation_summary(PersistenceHandle *handle, const char *interpretation_id, const char *type,
+                                          UrsatzGuiInterpretationSummary *out) {
+    const Interpretation *interpretation = NULL;
+    const char *label = NULL;
+
+    Chord *chord = NULL;
+    Key *key = NULL;
+
+    if (strcmp(type, kIndexTypeChord) == 0) {
+        if (persistence_load_chord(handle, interpretation_id, &chord) != PERSISTENCE_CHORD_OK) {
+            return false;
+        }
+        interpretation = chord_interpretation(chord);
+        label = chord_label(chord);
+    } else if (strcmp(type, kIndexTypeKey) == 0) {
+        if (persistence_load_key(handle, interpretation_id, &key) != PERSISTENCE_KEY_OK) {
+            return false;
+        }
+        interpretation = key_interpretation(key);
+        label = key_label(key);
+    } else {
+        return false;
+    }
+
+    bool ok = false;
+    out->interpretation_id = dup_string(interpretation_id);
+    out->type = dup_string(type);
+    out->label = dup_string(label);
+    out->produced_by_author = dup_string(interpretation_author(interpretation));
+    out->produced_by_method = dup_string(interpretation_method(interpretation));
+    if (out->interpretation_id && out->type && out->label && out->produced_by_author && out->produced_by_method) {
+        ok = true;
+    } else {
+        interpretation_summary_destroy_contents(out);
+    }
+
+    if (chord) {
+        chord_destroy(chord);
+    }
+    if (key) {
+        key_destroy(key);
+    }
+    return ok;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
+                                                        UrsatzGuiPieceDetail **out_detail) {
+    char db_path[320];
+    snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
+
+    if (!db_path_exists(db_path)) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
+    PersistenceHandle *handle = NULL;
+    if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    NoteEvent **events = NULL;
+    size_t note_event_count = 0;
+    if (persistence_load_note_events(handle, &events, &note_event_count) != PERSISTENCE_NOTE_EVENTS_OK) {
+        persistence_close(handle);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+    for (size_t i = 0; i < note_event_count; i++) {
+        note_event_destroy(events[i]);
+    }
+    free(events);
+
+    sqlite3 *index_db = open_interpretation_index(db_path);
+    char **index_ids = NULL;
+    char **index_types = NULL;
+    size_t index_count = 0;
+    if (index_db) {
+        if (!read_interpretation_index(index_db, &index_ids, &index_types, &index_count)) {
+            sqlite3_close(index_db);
+            persistence_close(handle);
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+        sqlite3_close(index_db);
+    }
+
+    UrsatzGuiInterpretationSummary *summaries = NULL;
+    if (index_count > 0) {
+        summaries = calloc(index_count, sizeof(UrsatzGuiInterpretationSummary));
+        if (!summaries) {
+            free_ids(index_ids, index_count);
+            free_ids(index_types, index_count);
+            persistence_close(handle);
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+    }
+
+    size_t summary_count = 0;
+    for (size_t i = 0; i < index_count; i++) {
+        if (load_interpretation_summary(handle, index_ids[i], index_types[i], &summaries[summary_count])) {
+            summary_count++;
+        }
+    }
+    free_ids(index_ids, index_count);
+    free_ids(index_types, index_count);
+    persistence_close(handle);
+
+    UrsatzGuiPieceDetail *detail = malloc(sizeof(UrsatzGuiPieceDetail));
+    char *id_copy = dup_string(id);
+    if (!detail || !id_copy) {
+        free(detail);
+        free(id_copy);
+        for (size_t i = 0; i < summary_count; i++) {
+            interpretation_summary_destroy_contents(&summaries[i]);
+        }
+        free(summaries);
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+
+    detail->id = id_copy;
+    detail->note_event_count = note_event_count;
+    detail->interpretations = summaries;
+    detail->interpretation_count = summary_count;
+
+    *out_detail = detail;
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
+void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
+    if (!detail) {
+        return;
+    }
+    for (size_t i = 0; i < detail->interpretation_count; i++) {
+        interpretation_summary_destroy_contents(&detail->interpretations[i]);
+    }
+    free(detail->interpretations);
+    free(detail->id);
+    free(detail);
 }
