@@ -80,3 +80,8 @@ add_executable(test_standard_form_analysis_ideas test_analysis_ideas.c)
 target_link_libraries(test_standard_form_analysis_ideas PRIVATE standard_form)
 target_include_directories(test_standard_form_analysis_ideas PRIVATE ${PROJECT_SOURCE_DIR}/tests/integration)
 add_test(NAME standard_form_analysis_ideas COMMAND test_standard_form_analysis_ideas)
+
+add_executable(test_standard_form_analysis_theme test_analysis_theme.c)
+target_link_libraries(test_standard_form_analysis_theme PRIVATE standard_form)
+target_include_directories(test_standard_form_analysis_theme PRIVATE ${PROJECT_SOURCE_DIR}/tests/integration)
+add_test(NAME standard_form_analysis_theme COMMAND test_standard_form_analysis_theme)
