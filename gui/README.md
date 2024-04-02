@@ -48,12 +48,32 @@ The backend exposes:
   framework) via the analysis service, saves the resulting NoteEvent
   sequence and Interpretations, and returns the new piece's id.
 - `GET /api/analyzer/pieces`: lists saved piece ids.
+- `GET /api/analyzer/pieces/<id>`: returns one saved piece's detail --
+  its NoteEvent count and every Chord/Key Interpretation saved for it,
+  each with a `produced_by` field (`author`/`method`). `produced_by` is
+  analyzer/method identity only, not a full Provenance-object reference:
+  Ursatz's Interpretation carries a `ProvenanceReference`, but
+  `KeyEstimation`/`ChordIdentification` always construct it as
+  `PROVENANCE_REFERENCE_ABSENT`, and no resolvable Provenance record
+  type exists upstream in Ursatz yet to point it at even if it were
+  present. `author`/`method` are the only importer/analyzer identity
+  Ursatz's Interpretation actually persists today. Unknown id returns
+  `{"ok":false,...}`, same convention as the other Analyzer routes.
 
 Ursatz's persistence layer has no "piece" concept (one `note_events`
 table, one `interpretations` table, no grouping/filename metadata): the
 Analyzer tool works around this by saving each piece to its own SQLite
 file under `pieces/`, using the filename as the piece id. Listing scans
 that directory rather than querying a tracking table.
+
+Ursatz's persistence also has no way to enumerate the Interpretations
+stored for a piece (`persistence_load_interpretation` only loads by a
+known id). The analysis service works around this with its own small
+`ursatz_gui_interpretations` index table, added to the same per-piece
+SQLite file at analysis time -- ursatz-gui-owned schema, entirely
+outside Ursatz's own schema/contract, recording which Interpretation ids
+and types (`key`/`chord`) belong to that piece so the detail route knows
+what to load.
 
 ## Frontend
 
