@@ -127,9 +127,77 @@ static int handle_get(struct mg_connection *conn) {
   return 200;
 }
 
+static const char *kPieceDetailPrefix = "/api/analyzer/pieces/";
+
+static int handle_get_piece(struct mg_connection *conn, const char *id) {
+  UrsatzGuiPieceDetail *detail = NULL;
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail);
+
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    send_json(conn, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 200;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
+    return 200;
+  }
+
+  size_t capacity = 128 + strlen(detail->id);
+  for (size_t i = 0; i < detail->interpretation_count; i++) {
+    const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
+    capacity += 96 + strlen(summary->interpretation_id) + strlen(summary->type) + strlen(summary->label) +
+                strlen(summary->produced_by_author) + strlen(summary->produced_by_method);
+  }
+
+  char *body = malloc(capacity);
+  if (!body) {
+    ursatz_gui_piece_detail_destroy(detail);
+    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    return 200;
+  }
+
+  size_t offset = (size_t)snprintf(body, capacity,
+                                    "{\"ok\":true,\"id\":\"%s\",\"note_event_count\":%zu,\"interpretations\":[",
+                                    detail->id, detail->note_event_count);
+  for (size_t i = 0; i < detail->interpretation_count; i++) {
+    const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
+    offset += (size_t)snprintf(body + offset, capacity - offset,
+                                "%s{\"interpretation_id\":\"%s\",\"type\":\"%s\",\"label\":\"%s\","
+                                "\"produced_by\":{\"author\":\"%s\",\"method\":\"%s\"}}",
+                                i == 0 ? "" : ",", summary->interpretation_id, summary->type, summary->label,
+                                summary->produced_by_author, summary->produced_by_method);
+  }
+  offset += (size_t)snprintf(body + offset, capacity - offset, "]}");
+
+  ursatz_gui_piece_detail_destroy(detail);
+  send_json(conn, body);
+  free(body);
+  return 200;
+}
+
+/*
+ * civetweb routes both the exact "/api/analyzer/pieces" URI and any
+ * "/api/analyzer/pieces/<something>" URI to a single handler registered
+ * at "/api/analyzer/pieces" (its request-matching tries an exact match,
+ * then a "registered-uri/something" partial match, before ever trying
+ * wildcard patterns -- so a separate "/api/analyzer/pieces/*"
+ * registration would never actually be reached for a subpath GET).
+ * This handler itself distinguishes the two cases by local_uri.
+ */
 static int pieces_handler(struct mg_connection *conn, void *cbdata) {
   (void)cbdata;
   const struct mg_request_info *info = mg_get_request_info(conn);
+  const char *uri = info->local_uri;
+  size_t prefix_len = strlen(kPieceDetailPrefix);
+
+  if (strncmp(uri, kPieceDetailPrefix, prefix_len) == 0 && uri[prefix_len] != '\0') {
+    if (strcmp(info->request_method, "GET") != 0) {
+      mg_send_http_error(conn, 405, "Method Not Allowed");
+      return 405;
+    }
+    return handle_get_piece(conn, uri + prefix_len);
+  }
+
   if (strcmp(info->request_method, "POST") == 0) {
     return handle_post(conn);
   }
