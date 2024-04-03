@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <hybrid_rules.h>
+#include <phrase_beginning.h>
+#include <phrase_ending.h>
+#include <phrase_level_form.h>
+
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
@@ -33,22 +38,28 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
     bool archetype = false;
     bool pairing = false;
     bool cadence = false;
+    PlanArchetype requested = PLAN_ARCHETYPE_SENTENCE;
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
         if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
-            archetype = constraint->params.archetype == PLAN_ARCHETYPE_SENTENCE;
+            archetype = true;
+            requested = constraint->params.archetype;
         } else if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
             pairing = true;
             request.pairing = constraint->params.theme_pairing;
-        } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
+        } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence) {
+            /* The first cadence is the theme's; a second is the weak one an antecedent ends in. */
             cadence = true;
             request.cadence = constraint->params.cadence;
+        } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
+            request.has_first = true;
+            request.first_cadence = constraint->params.cadence;
         }
     }
     LaneSpanId lane[2];
-    if (!archetype || !pairing || !cadence ||
-        request.pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION ||
-        request.pairing.ending != PLAN_THEME_ENDING_CONTINUATION ||
+    if (!archetype || !pairing || !cadence || !grow_pairing_supported(&request.pairing) ||
+        grow_pairing_archetype(&request.pairing) != (int)requested ||
+        (request.pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) != request.has_first ||
         plan_lane_find(plan, PLAN_LANE_METER, 0, request.span, lane, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, lane[0]), request.span)) {
         return false;
@@ -99,7 +110,7 @@ PlanTime grow_scaled(PlanTime unit, size_t count) {
     return out;
 }
 
-static PlanTime unit_of(const ThemeRequest *request) {
+PlanTime grow_unit(const GrowThemeRequest *request) {
     PlanTime unit = {0, 1};
     if (plan_time_make(request->bar.num * (long)request->bars, request->bar.den * 8, &unit) != PLAN_OK) {
         unit.num = 0;
@@ -108,28 +119,141 @@ static PlanTime unit_of(const ThemeRequest *request) {
     return unit;
 }
 
-void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, PlanMotiveRef *out) {
-    memset(out, 0, sizeof(*out));
-    out->motive = source;
-    switch (idea) {
-    case GROW_IDEA_REPETITION:
-        if (spec->statement_response) {
-            out->transform = PLAN_TRANSFORM_TRANSPOSED;
-            out->tonal = true;
-            out->steps = 1;
-        } else {
-            out->transform = PLAN_TRANSFORM_RESTATED;
+static int direction(int semitones) {
+    return semitones > 0 ? 1 : (semitones < 0 ? -1 : 0);
+}
+
+bool grow_same_contour(const Motive *a, const Motive *b) {
+    if (a->note_count != b->note_count) {
+        return false;
+    }
+    for (size_t i = 1; i < a->note_count; i++) {
+        if (direction(a->notes[i].midi_pitch - a->notes[i - 1].midi_pitch) !=
+            direction(b->notes[i].midi_pitch - b->notes[i - 1].midi_pitch)) {
+            return false;
         }
-        break;
+    }
+    return true;
+}
+
+int grow_phrase_beginning(PlanThemeBeginning beginning) {
+    switch (beginning) {
+    case PLAN_THEME_BEGINNING_ANTECEDENT:
+        return PHRASE_BEGINNING_ANTECEDENT;
+    case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
+        return PHRASE_BEGINNING_COMPOUND_BASIC_IDEA;
+    case PLAN_THEME_BEGINNING_PRESENTATION:
+        return PHRASE_BEGINNING_PRESENTATION;
+    }
+    return PHRASE_BEGINNING_COUNT;
+}
+
+int grow_phrase_ending(PlanThemeEnding ending) {
+    switch (ending) {
+    case PLAN_THEME_ENDING_CONTINUATION:
+        return PHRASE_ENDING_CONTINUATION;
+    case PLAN_THEME_ENDING_CONSEQUENT:
+        return PHRASE_ENDING_CONSEQUENT;
+    case PLAN_THEME_ENDING_CADENTIAL:
+        return PHRASE_ENDING_CADENTIAL;
+    }
+    return PHRASE_ENDING_COUNT;
+}
+
+bool grow_pairing_supported(const PlanThemePairing *pairing) {
+    return (pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION ||
+            pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT) &&
+           pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
+}
+
+int grow_pairing_archetype(const PlanThemePairing *pairing) {
+    PhraseLevelForm form;
+    if (!standard_form_pairing_form(grow_phrase_beginning(pairing->beginning), grow_phrase_ending(pairing->ending),
+                                    &form)) {
+        return -1;
+    }
+    switch (form) {
+    case PHRASE_LEVEL_FORM_SENTENCE:
+        return PLAN_ARCHETYPE_SENTENCE;
+    case PHRASE_LEVEL_FORM_PERIOD:
+        return PLAN_ARCHETYPE_PERIOD;
+    case PHRASE_LEVEL_FORM_HYBRID:
+        return PLAN_ARCHETYPE_HYBRID;
+    default:
+        return -1;
+    }
+}
+
+bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev) {
+    memset(dev, 0, sizeof(*dev));
+    switch (idea) {
+    case GROW_IDEA_REPETITION: /* also the contrasting idea of the other beginnings */
+        if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
+            *dev = spec->contrast;
+        } else if (spec->statement_response) {
+            dev->kind = MOTIVE_DEV_TRANSPOSE;
+            dev->tonal = true;
+            dev->amount = 1;
+        } else {
+            dev->kind = MOTIVE_DEV_EXACT;
+        }
+        return true;
     case GROW_IDEA_FRAGMENT_1:
     case GROW_IDEA_FRAGMENT_2:
-        out->transform = PLAN_TRANSFORM_FRAGMENTED;
-        out->position = PLAN_FRAGMENT_LEADING;
-        out->length = (int)spec->fragment_notes[idea == GROW_IDEA_FRAGMENT_1 ? 0 : 1];
-        break;
+        dev->kind = MOTIVE_DEV_FRAGMENT;
+        dev->position = PLAN_FRAGMENT_LEADING;
+        dev->length = spec->fragment_notes[idea == GROW_IDEA_FRAGMENT_2];
+        dev->min_length = 1;
+        return true;
     case GROW_IDEA_CADENTIAL:
+        dev->kind = MOTIVE_DEV_LIQUIDATE;
+        dev->drop = spec->liquidate_drop;
+        dev->min_length = 1;
+        return true;
+    default:
+        return false;
+    }
+}
+
+void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, PlanMotiveRef *out) {
+    MotiveDevSpec dev;
+    memset(out, 0, sizeof(*out));
+    out->motive = source;
+    if (!grow_idea_dev(spec, idea, &dev)) {
+        out->transform = PLAN_TRANSFORM_NONE;
+        return;
+    }
+    switch (dev.kind) {
+    case MOTIVE_DEV_EXACT:
+        out->transform = PLAN_TRANSFORM_RESTATED;
+        break;
+    case MOTIVE_DEV_TRANSPOSE:
+        out->transform = PLAN_TRANSFORM_TRANSPOSED;
+        out->tonal = dev.tonal;
+        out->steps = dev.tonal ? dev.amount : 0;
+        out->semitones = dev.tonal ? 0 : dev.amount;
+        break;
+    case MOTIVE_DEV_INVERT:
+        out->transform = PLAN_TRANSFORM_INVERTED;
+        out->tonal = dev.tonal;
+        out->has_axis = dev.has_axis;
+        out->axis = dev.axis;
+        break;
+    case MOTIVE_DEV_INTERVAL_CHANGE:
+        out->transform = PLAN_TRANSFORM_INTERVAL_CHANGED;
+        out->interval = dev.interval;
+        out->amount = dev.amount;
+        out->keep_contour = dev.keep_contour;
+        break;
+    case MOTIVE_DEV_FRAGMENT:
+        out->transform = PLAN_TRANSFORM_FRAGMENTED;
+        out->position = dev.position;
+        out->length = (int)dev.length;
+        break;
+    case MOTIVE_DEV_LIQUIDATE:
         out->transform = PLAN_TRANSFORM_LIQUIDATED;
-        out->drop = (int)spec->liquidate_drop;
+        out->drop = (int)dev.drop;
+        out->keep_rhythm = dev.keep_rhythm;
         break;
     default:
         out->transform = PLAN_TRANSFORM_NONE;
@@ -139,33 +263,95 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, Plan
 
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowIdea idea, Motive *out) {
     MotiveDevSpec dev;
-    memset(&dev, 0, sizeof(dev));
-    switch (idea) {
-    case GROW_IDEA_REPETITION:
-        if (spec->statement_response) {
-            dev.kind = MOTIVE_DEV_TRANSPOSE;
-            dev.tonal = true;
-            dev.amount = 1;
-        } else {
-            dev.kind = MOTIVE_DEV_EXACT;
+    return grow_idea_dev(spec, idea, &dev) && motive_develop(&spec->source, &dev, out) == MOTIVE_DEV_OK;
+}
+
+bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, PlanCadenceType cadence) {
+    /* A tonic, the predominants the mode has (two in a major key, one in a minor), a dominant unless the cadence is half. */
+    size_t chords = (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (request->key.mode == PLAN_MODE_MINOR ? 1 : 2) +
+                    (cadence == PLAN_CADENCE_HC ? 0 : 1);
+    size_t cells = request->bars / 2 * request->cells_per_bar;
+    /* The last chord is the whole last bar. */
+    return cells <= request->cells_per_bar || cells - request->cells_per_bar <= chords * request->cells_per_bar;
+}
+
+/* Whether two developments are the same kind of change by the same amount. */
+static bool same_kind(const MotiveDevSpec *a, const MotiveDevSpec *b) {
+    return a->kind == b->kind && a->amount == b->amount && a->interval == b->interval &&
+           (a->kind != MOTIVE_DEV_INVERT || a->axis == b->axis);
+}
+
+/* The most developments of m0 one contrasting idea is chosen among: inversions, interval changes everywhere and one. */
+#define CONTRAST_MAX 160
+/* The widest the notes of a contrasting idea may go, so the melody has room to place it. */
+#define CONTRAST_LOW 58
+#define CONTRAST_HIGH 84
+
+/* Whether the last note of a development lands on the pitch class asked for (any when want is negative). */
+static bool lands_on(const Motive *result, int want) {
+    return want < 0 || ((result->notes[result->note_count - 1].midi_pitch % 12) + 12) % 12 == want;
+}
+
+bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec, int want_pc,
+                        const MotiveDevSpec *avoid, MotiveDevSpec *out) {
+    PlanTime room = grow_scaled(grow_unit(request), 2);
+    const Motive *source = &spec->source;
+    size_t intervals = source->note_count - 1;
+    MotiveDevSpec fits[CONTRAST_MAX];
+    MotiveDevSpec exact[CONTRAST_MAX];
+    size_t fit_count = 0;
+    size_t exact_count = 0;
+
+    for (int kind = 0; kind < 3; kind++) {
+        /* Mirrored in the key's steps about a note near the first, so the contour turns over; every interval
+           widened or narrowed; or the one interval changed. */
+        int first = source->notes[0].midi_pitch;
+        int low = kind == 0 ? first - 2 : (kind == 1 ? -2 : 1);
+        int high = kind == 0 ? first + 2 : (kind == 1 ? 2 : (int)intervals);
+        for (int value = low; value <= high; value++) {
+            for (int amount = (kind == 2 ? -4 : 0); amount <= (kind == 2 ? 4 : 0); amount++) {
+                MotiveDevSpec dev;
+                Motive result;
+                memset(&dev, 0, sizeof(dev));
+                if (kind == 0) {
+                    dev.kind = MOTIVE_DEV_INVERT;
+                    dev.tonal = true;
+                    dev.has_axis = true;
+                    dev.axis = value;
+                } else {
+                    dev.kind = MOTIVE_DEV_INTERVAL_CHANGE;
+                    dev.interval = kind == 1 ? 0 : value;
+                    dev.amount = kind == 1 ? value : amount;
+                }
+                if ((kind != 0 && dev.amount == 0) ||
+                    motive_develop(source, &dev, &result) != MOTIVE_DEV_OK || grow_same_contour(source, &result) ||
+                    plan_time_compare(result.length, room) > 0 || (avoid && same_kind(avoid, &dev))) {
+                    continue;
+                }
+                bool inside = true;
+                for (size_t k = 0; k < result.note_count; k++) {
+                    inside = inside && result.notes[k].midi_pitch >= CONTRAST_LOW && result.notes[k].midi_pitch <= CONTRAST_HIGH;
+                }
+                if (!inside) {
+                    continue;
+                }
+                if (fit_count < CONTRAST_MAX) {
+                    fits[fit_count++] = dev;
+                }
+                if (lands_on(&result, want_pc) && exact_count < CONTRAST_MAX) {
+                    exact[exact_count++] = dev;
+                }
+            }
         }
-        break;
-    case GROW_IDEA_FRAGMENT_1:
-    case GROW_IDEA_FRAGMENT_2:
-        dev.kind = MOTIVE_DEV_FRAGMENT;
-        dev.position = PLAN_FRAGMENT_LEADING;
-        dev.length = spec->fragment_notes[idea == GROW_IDEA_FRAGMENT_1 ? 0 : 1];
-        dev.min_length = 1;
-        break;
-    case GROW_IDEA_CADENTIAL:
-        dev.kind = MOTIVE_DEV_LIQUIDATE;
-        dev.drop = spec->liquidate_drop;
-        dev.min_length = 1;
-        break;
-    default:
+    }
+    /* One that lands where the cadence needs it, if there is one. */
+    const MotiveDevSpec *pool = exact_count > 0 ? exact : fits;
+    size_t count = exact_count > 0 ? exact_count : fit_count;
+    if (count == 0) {
         return false;
     }
-    return motive_develop(&spec->source, &dev, out) == MOTIVE_DEV_OK;
+    *out = pool[fill_rng_below(rng, count)];
+    return true;
 }
 
 /* Draws every choice of one candidate from rng. False when the draw does not make a sentence the motive fits. */
@@ -177,6 +363,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
     spec->key = request->key;
     spec->cadence = request->cadence;
     spec->pairing = request->pairing;
+    spec->first_cadence = request->first_cadence;
     if (!grow_read_motive(plan, request->source, &request->meter, &request->key, &spec->source) ||
         spec->source.note_count < 2) {
         return false;
@@ -188,13 +375,23 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
     return a->statement_response == b->statement_response && a->fragment_notes[0] == b->fragment_notes[0] &&
-           a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop;
+           a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop &&
+           same_kind(&a->contrast, &b->contrast);
+}
+
+static const char *dev_name(const MotiveDevSpec *dev) {
+    return dev->kind == MOTIVE_DEV_INVERT ? "inverted" : "intervals changed";
 }
 
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
-    snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
-             spec->statement_response ? "statement-response" : "exact", spec->fragment_notes[0],
-             spec->fragment_notes[1], spec->liquidate_drop);
+    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+        snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
+                 spec->statement_response ? "statement-response" : "exact", spec->fragment_notes[0],
+                 spec->fragment_notes[1], spec->liquidate_drop);
+        return;
+    }
+    snprintf(label, size, "antecedent + continuation %zu bars contrast %s fragments %zu+%zu drop %zu", spec->bars,
+             dev_name(&spec->contrast), spec->fragment_notes[0], spec->fragment_notes[1], spec->liquidate_drop);
 }
 
 static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
@@ -340,7 +537,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.plan = plan;
     build.spec = spec;
     build.request = &request;
-    build.unit = unit_of(&request);
+    build.unit = grow_unit(&request);
     build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
     build.cadence.params.cadence = request.cadence;
     build.phrase = PLAN_NODE_NONE;

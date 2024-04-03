@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+#include <harmony_cadence_rules.h>
+
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -62,11 +64,18 @@ static GrowResult from_plan(PlanResult result) {
     return result == PLAN_OK ? GROW_OK : (result == PLAN_ERR_ALLOC ? GROW_ERR_ALLOC : GROW_ERR_BAD_REQUEST);
 }
 
-/* Whether the continuation of the request has room for a cadence at all. */
-static bool continuation_fits(const GrowRequest *request, size_t cells_per_bar) {
+/* Whether half of the theme has room for a cadence at all. */
+static bool half_fits(const GrowRequest *request, size_t cells_per_bar, PlanCadenceType cadence) {
     size_t cells = request->bars / 2 * cells_per_bar;
     /* A cadential progression has no opening tonic, so it needs one cell fewer than the phrase model. */
-    return cells + 1 >= harmony_phrase_min_cells(request->cadence, cells_per_bar);
+    return cells + 1 >= harmony_phrase_min_cells(cadence, cells_per_bar);
+}
+
+/* Whether an antecedent can end in `first` below a theme that ends in `last`: weak, and weaker. */
+static bool cadences_ordered(PlanCadenceType first, PlanCadenceType last) {
+    return (first == PLAN_CADENCE_HC || first == PLAN_CADENCE_IAC) &&
+           harmony_cadence_strength(harmony_cadence_type_of(first)) <
+               harmony_cadence_strength(harmony_cadence_type_of(last));
 }
 
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
@@ -75,13 +84,17 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     }
     *out = NULL;
     size_t cells_per_bar;
+    /* An antecedent ends in a weak cadence, HC unless the request says IAC, and the theme in a stronger one. */
+    bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    PlanCadenceType first = request->first_cadence == PLAN_CADENCE_PAC ? PLAN_CADENCE_HC : request->first_cadence;
+    int archetype = grow_pairing_archetype(&request->pairing);
     if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || (request->bars != 4 && request->bars != 8) ||
-        request->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION ||
-        request->pairing.ending != PLAN_THEME_ENDING_CONTINUATION ||
+        archetype < 0 || !grow_pairing_supported(&request->pairing) ||
         (request->cadence != PLAN_CADENCE_PAC && request->cadence != PLAN_CADENCE_IAC &&
          request->cadence != PLAN_CADENCE_HC) ||
         request->motive->note_count < 2 || request->key.tonic_pitch_class < 0 || request->key.tonic_pitch_class > 11 ||
-        !continuation_fits(request, cells_per_bar)) {
+        !half_fits(request, cells_per_bar, request->cadence) ||
+        (antecedent && (!cadences_ordered(first, request->cadence) || !half_fits(request, cells_per_bar, first)))) {
         return GROW_ERR_BAD_REQUEST;
     }
     PlanTime bar = grow_bar_length(&request->meter);
@@ -135,7 +148,7 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     memset(&constraint, 0, sizeof(constraint));
     if (result == GROW_OK) {
         constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
-        constraint.params.archetype = PLAN_ARCHETYPE_SENTENCE;
+        constraint.params.archetype = (PlanArchetype)archetype;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
     if (result == GROW_OK) {
@@ -148,6 +161,13 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = request->cadence;
+        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
+    }
+    if (result == GROW_OK && antecedent) {
+        /* The second cadence of the theme is the antecedent's. */
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_CADENCE;
+        constraint.params.cadence = first;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
     if (result == GROW_OK) {

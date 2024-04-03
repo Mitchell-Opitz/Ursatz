@@ -16,8 +16,15 @@
 #include "plan/plan_internal.h"
 
 /* How many times the melody stage is run before it is given up on, and how far apart the seeds of the runs are. */
-#define GROW_MELODY_ATTEMPTS 4
+#define GROW_MELODY_ATTEMPTS 6
 #define GROW_ATTEMPT_STRIDE 1000UL
+/*
+ * Where in its phrase the melody's climax is asked for, by attempt (thousandths). The first attempt keeps what the
+ * configuration says; a theme other than a sentence whose climax falls on an idea that cannot carry it (a restated
+ * idea, an idea that ends in the cadence's tone and leaves no note above the rest) is written again with the climax
+ * elsewhere.
+ */
+static const unsigned CLIMAX_RETRIES[GROW_MELODY_ATTEMPTS] = {0, 250, 833, 400, 950, 560};
 /* How many runs, from the plan as given, before a stuck run is given up on, and how far apart their seeds are. */
 #define GROW_RUN_ROUNDS 12
 #define GROW_ROUND_STRIDE 100000UL
@@ -70,7 +77,7 @@ static bool stage_done(const PiecePlan *plan, GrowStage stage, NodeId theme, Pla
 }
 
 static FillResult register_stage(FillOperatorRegistry *registry, GrowStage stage, const GrowConfig *config,
-                                 const MotiveDevelopContext *motives) {
+                                 const MotiveDevelopContext *motives, const MelodyFillParams *melody) {
     FillResult result = FILL_OK;
     switch (stage) {
     case GROW_STAGE_STRUCTURE:
@@ -83,7 +90,7 @@ static FillResult register_stage(FillOperatorRegistry *registry, GrowStage stage
     case GROW_STAGE_BASS:
         return harmony_bass_register(registry, NULL);
     case GROW_STAGE_MELODY:
-        return melody_fill_register(registry, config->melody);
+        return melody_fill_register(registry, melody);
     case GROW_STAGE_COUNT:
         break;
     }
@@ -137,17 +144,26 @@ static void hear(const PiecePlan *plan, NodeId theme, PlanSpan span, GrowOutcome
     GrowScore structure = {0, 1};
     outcome->heard_form = -1;
     outcome->requested_form = -1;
+    outcome->requested_beginning = -1;
+    outcome->requested_ending = -1;
     for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
         if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
             outcome->requested_form = form_of(constraint->params.archetype);
+        } else if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
+            outcome->requested_beginning = grow_phrase_beginning(constraint->params.theme_pairing.beginning);
+            outcome->requested_ending = grow_phrase_ending(constraint->params.theme_pairing.ending);
         }
     }
     outcome->heard_result = form_hear(plan, span, &outcome->heard);
     if (outcome->heard_result == FORM_HEAR_OK && outcome->heard.count > 0) {
         outcome->heard_form = outcome->heard.themes[0].form;
     }
-    outcome->heard_as_requested = outcome->heard_form >= 0 && outcome->heard_form == outcome->requested_form;
+    /* A hybrid is heard as requested only with the beginning and the ending asked for. */
+    outcome->heard_as_requested = outcome->heard_form >= 0 && outcome->heard_form == outcome->requested_form &&
+                                  (outcome->requested_form != PHRASE_LEVEL_FORM_HYBRID ||
+                                   (outcome->heard.themes[0].beginning == outcome->requested_beginning &&
+                                    outcome->heard.themes[0].ending == outcome->requested_ending));
     if (!grow_record_score(outcome->records[GROW_STAGE_STRUCTURE], &structure)) {
         structure.numerator = 0;
         structure.denominator = 1;
@@ -179,6 +195,13 @@ static GrowResult run_once(PiecePlan *plan, const GrowConfig *config, unsigned l
         return GROW_ERR_BAD_REQUEST;
     }
     PlanSpan span = plan_node_span(plan, theme);
+    /* A sentence keeps the climax it is asked for: its fragments always have room for one. */
+    bool sentence = false;
+    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
+        sentence = sentence || (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE &&
+                                constraint->params.archetype == PLAN_ARCHETYPE_SENTENCE);
+    }
     /* Fragments of one note are allowed: grow-theme shortens a fragment to fit its idea. */
     MotiveDevelopContext motives;
     motive_develop_context_default(&motives);
@@ -202,7 +225,11 @@ static GrowResult run_once(PiecePlan *plan, const GrowConfig *config, unsigned l
             }
             fill_record_destroy(outcome->records[stage]);
             outcome->records[stage] = NULL;
-            FillResult registered = register_stage(registry, stage, config, &motives);
+            MelodyFillParams melody = config->melody ? *config->melody : melody_fill_params_default();
+            if (attempt > 0 && !sentence) {
+                melody.climax_position = CLIMAX_RETRIES[attempt];
+            }
+            FillResult registered = register_stage(registry, stage, config, &motives, &melody);
             FillResult ran = registered == FILL_OK
                                  ? fill_run(plan, registry, &fill, &fill_outcome, &outcome->records[stage])
                                  : registered;

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <harmony_cadence_rules.h>
 #include <hybrid_rules.h>
 #include <phrase_beginning.h>
 #include <phrase_ending.h>
@@ -15,8 +16,6 @@
 #include "grow/grow_internal.h"
 
 #define TICKS_PER_WHOLE 128L
-/* The soft rules grow_checker scores. */
-#define SOFT_RULES 4
 
 /* A length as a whole number of ticks, the unit the rules below are asked in; 0 when it is not a whole number. */
 static size_t ticks_of(PlanTime time) {
@@ -24,76 +23,31 @@ static size_t ticks_of(PlanTime time) {
     return time.den != 0 && scaled > 0 && scaled % (long)time.den == 0 ? (size_t)(scaled / (long)time.den) : 0;
 }
 
-static PhraseBeginning beginning_of(PlanThemeBeginning beginning) {
-    switch (beginning) {
-    case PLAN_THEME_BEGINNING_ANTECEDENT:
-        return PHRASE_BEGINNING_ANTECEDENT;
-    case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
-        return PHRASE_BEGINNING_COMPOUND_BASIC_IDEA;
-    case PLAN_THEME_BEGINNING_PRESENTATION:
-        return PHRASE_BEGINNING_PRESENTATION;
-    }
-    return PHRASE_BEGINNING_COUNT;
+/* The soft rules that hold, out of those asked. */
+typedef struct {
+    unsigned held;
+    unsigned total;
+} Soft;
+
+static void ask(Soft *soft, bool holds) {
+    soft->held += holds ? 1u : 0u;
+    soft->total++;
 }
 
-static PhraseEnding ending_of(PlanThemeEnding ending) {
-    switch (ending) {
-    case PLAN_THEME_ENDING_CONTINUATION:
-        return PHRASE_ENDING_CONTINUATION;
-    case PLAN_THEME_ENDING_CONSEQUENT:
-        return PHRASE_ENDING_CONSEQUENT;
-    case PLAN_THEME_ENDING_CADENTIAL:
-        return PHRASE_ENDING_CADENTIAL;
-    }
-    return PHRASE_ENDING_COUNT;
+static CadenceType cadence_of(PlanCadenceType cadence) {
+    return harmony_cadence_type_of(cadence);
 }
 
-static int direction(int semitones) {
-    return semitones > 0 ? 1 : (semitones < 0 ? -1 : 0);
-}
-
-/* Whether two motives go up and down in the same places. */
-static bool same_contour(const Motive *a, const Motive *b) {
-    if (a->note_count != b->note_count) {
-        return false;
-    }
-    for (size_t i = 1; i < a->note_count; i++) {
-        if (direction(a->notes[i].midi_pitch - a->notes[i - 1].midi_pitch) !=
-            direction(b->notes[i].midi_pitch - b->notes[i - 1].midi_pitch)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-/* The verdict on a planned sentence: standard-form's rule functions, called on the lengths the candidate plans. */
-static const char *judge(const GrowThemeSpec *spec, unsigned *soft_held) {
+/* The rules of a continuation: it fragments the basic idea, the fragments in their span and in their notes. */
+static const char *judge_continuation(const GrowThemeSpec *spec) {
     PlanTime bar = grow_bar_length(&spec->meter);
     PlanTime unit = {0, 1};
-    *soft_held = 0;
     if (plan_time_make(bar.num * (long)spec->bars, bar.den * 8, &unit) != PLAN_OK) {
         return "theme not measurable";
     }
     PlanTime basic = {unit.num * 2, unit.den};
     size_t basic_ticks = ticks_of(basic);
     size_t fragment_ticks = ticks_of(unit);
-    size_t measures = spec->bars / 4;
-    PhraseLevelForm form;
-
-    if (!standard_form_pairing_form(beginning_of(spec->pairing.beginning), ending_of(spec->pairing.ending), &form) ||
-        form != PHRASE_LEVEL_FORM_SENTENCE) {
-        return "pairing is not a sentence";
-    }
-    if (!standard_form_subphrase_roles_in_order(SUBPHRASE_ROLE_PRESENTATION, SUBPHRASE_ROLE_CONTINUATION)) {
-        return "subphrase roles out of order";
-    }
-    if (!standard_form_phrase_is_sentential(true, true)) {
-        return "phrase not sentential";
-    }
-    if (!standard_form_basic_idea_length_valid(measures)) {
-        return "basic idea length not valid";
-    }
-    /* Each fragment is shorter than the basic idea, in its span and in its notes. */
     if (basic_ticks == 0 || fragment_ticks == 0 || !standard_form_is_fragmentation(basic_ticks, fragment_ticks)) {
         return "continuation does not fragment";
     }
@@ -103,14 +57,90 @@ static const char *judge(const GrowThemeSpec *spec, unsigned *soft_held) {
             return "fragment not shorter than the basic idea";
         }
     }
-
-    size_t half = spec->bars / 2;
-    *soft_held += standard_form_sentence_is_archetypal(spec->bars, half, half, true);
-    *soft_held += standard_form_presentation_length_usual(half);
-    *soft_held += standard_form_continuation_balanced(half, half);
-    *soft_held += spec->has_developed[GROW_IDEA_REPETITION] &&
-                  standard_form_idea_reads_as_repetition(same_contour(&spec->source, &spec->developed[GROW_IDEA_REPETITION]));
     return NULL;
+}
+
+/* The verdict on a planned sentence: standard-form's rule functions, called on the lengths the candidate plans. */
+static const char *judge_sentence(const GrowThemeSpec *spec, Soft *soft) {
+    PhraseLevelForm form;
+    if (!standard_form_pairing_form(grow_phrase_beginning(spec->pairing.beginning),
+                                    grow_phrase_ending(spec->pairing.ending), &form) ||
+        form != PHRASE_LEVEL_FORM_SENTENCE) {
+        return "pairing is not a sentence";
+    }
+    if (!standard_form_subphrase_roles_in_order(SUBPHRASE_ROLE_PRESENTATION, SUBPHRASE_ROLE_CONTINUATION)) {
+        return "subphrase roles out of order";
+    }
+    if (!standard_form_phrase_is_sentential(true, true)) {
+        return "phrase not sentential";
+    }
+    if (!standard_form_basic_idea_length_valid(spec->bars / 4)) {
+        return "basic idea length not valid";
+    }
+    const char *hard = judge_continuation(spec);
+    if (hard) {
+        return hard;
+    }
+    size_t half = spec->bars / 2;
+    ask(soft, standard_form_sentence_is_archetypal(spec->bars, half, half, true));
+    ask(soft, standard_form_presentation_length_usual(half));
+    ask(soft, standard_form_continuation_balanced(half, half));
+    ask(soft, spec->has_developed[GROW_IDEA_REPETITION] &&
+                  standard_form_idea_reads_as_repetition(grow_same_contour(&spec->source, &spec->developed[GROW_IDEA_REPETITION])));
+    return NULL;
+}
+
+/* Whether the contrasting idea of a motive keeps the contour of m0 and so would read as its repetition. */
+static bool reads_as_repetition(const GrowThemeSpec *spec, GrowIdea idea) {
+    return standard_form_idea_reads_as_repetition(grow_same_contour(&spec->source, &spec->developed[idea]));
+}
+
+static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
+    int beginning = grow_phrase_beginning(spec->pairing.beginning);
+    int ending = grow_phrase_ending(spec->pairing.ending);
+    if (!standard_form_pairing_is_hybrid(beginning, ending)) {
+        return "pairing is not a hybrid";
+    }
+    const char *hard = spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION ? judge_continuation(spec) : NULL;
+    if (hard) {
+        return hard;
+    }
+    size_t half = spec->bars / 2;
+    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+        ask(soft, standard_form_presentation_length_usual(half));
+        ask(soft, spec->has_developed[GROW_IDEA_REPETITION] && reads_as_repetition(spec, GROW_IDEA_REPETITION));
+    }
+    if (spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
+        ask(soft, standard_form_continuation_balanced(half, half));
+    }
+    return NULL;
+}
+
+/* The rules of the beginning and the ending a pairing is made of, then those of the form it makes. */
+static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
+    memset(soft, 0, sizeof(*soft));
+    PhraseLevelForm form;
+    if (!standard_form_pairing_form(grow_phrase_beginning(spec->pairing.beginning),
+                                    grow_phrase_ending(spec->pairing.ending), &form)) {
+        return "pairing not known";
+    }
+    if (form == PHRASE_LEVEL_FORM_SENTENCE) {
+        return judge_sentence(spec, soft);
+    }
+    if (!standard_form_basic_idea_length_valid(spec->bars / 4)) {
+        return "basic idea length not valid";
+    }
+    /* A contrasting idea that keeps m0's contour would read as its repetition. */
+    if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION &&
+        (!spec->has_developed[GROW_IDEA_CONTRAST] || reads_as_repetition(spec, GROW_IDEA_CONTRAST))) {
+        return "contrasting idea reads as a repetition";
+    }
+    /* A theme with an antecedent ends in a cadence stronger than the antecedent's. */
+    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
+        harmony_cadence_strength(cadence_of(spec->first_cadence)) >= harmony_cadence_strength(cadence_of(spec->cadence))) {
+        return "ending cadence not stronger than the antecedent's";
+    }
+    return judge_hybrid(spec, soft);
 }
 
 bool grow_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
@@ -122,20 +152,22 @@ bool grow_checker(const PiecePlan *plan, FillTarget target, const FillOperator *
         return harmony_phrase_checker(plan, target, operator_, candidate, context, out);
     }
     const GrowThemeSpec *spec = candidate->payload;
-    unsigned held;
+    Soft soft;
     if (!spec || spec->magic != GROW_PAYLOAD_MAGIC) {
         return false;
     }
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;
-    const char *hard = judge(spec, &held);
+    const char *hard = judge(spec, &soft);
     if (hard) {
         out->hard_violation = true;
         snprintf(out->reason, sizeof(out->reason), "%s", hard);
         return true;
     }
-    out->score_numerator = held;
-    out->score_denominator = SOFT_RULES;
-    snprintf(out->reason, sizeof(out->reason), "sentence rules");
+    out->score_numerator = soft.held;
+    out->score_denominator = soft.total ? soft.total : 1;
+    static const char *const RULES[] = {"sentence rules", "period rules", "hybrid rules"};
+    int archetype = grow_pairing_archetype(&spec->pairing);
+    snprintf(out->reason, sizeof(out->reason), "%s", RULES[archetype < 0 ? 0 : archetype]);
     return true;
 }

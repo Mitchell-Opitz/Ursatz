@@ -52,8 +52,13 @@ typedef struct {
     PlanKey key;
     PlanMeter meter;
     size_t bars;              /* 4 or 8 */
-    PlanThemePairing pairing; /* B2 builds presentation + continuation only */
-    PlanCadenceType cadence;  /* PAC, IAC or HC */
+    PlanThemePairing pairing; /* any of the nine beginning and ending pairings */
+    PlanCadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
+    /*
+     * The weak cadence an antecedent beginning ends in: HC or IAC, and weaker than `cadence`. Zero (PAC) means the
+     * default, HC. Read only for an antecedent beginning.
+     */
+    PlanCadenceType first_cadence;
 } GrowRequest;
 
 typedef enum {
@@ -131,7 +136,9 @@ typedef struct {
     FormHeard heard;                       /* owned; the themes form_hear found over the theme section */
     int heard_form;                        /* PhraseLevelForm of the first theme heard, -1 for none */
     int requested_form;                    /* PhraseLevelForm the theme section asks for */
-    bool heard_as_requested;
+    int requested_beginning;               /* PhraseBeginning and PhraseEnding of the pairing it asks for, -1 for none */
+    int requested_ending;
+    bool heard_as_requested;               /* the requested form; for a hybrid, with the requested beginning and ending */
     GrowScore score;                       /* the share of the structure's soft rules and the heard form that hold */
 } GrowOutcome;
 
