@@ -17,8 +17,8 @@
  * The motives the ideas of a theme are made from, by slot: slot k is the motive node m<k> in the material. The slot
  * is the idea's place, and what an idea is depends on the pairing:
  *   1  a presentation's repetition, or the contrasting idea of an antecedent or a compound basic idea
- *   2  a continuation's first fragment
- *   3  a continuation's second fragment
+ *   2  a continuation's first fragment, or a consequent's restated basic idea
+ *   3  a continuation's second fragment, or a consequent's contrasting idea
  *   4  a continuation's cadential idea
  */
 typedef enum {
@@ -28,7 +28,9 @@ typedef enum {
     GROW_IDEA_FRAGMENT_2,
     GROW_IDEA_CADENTIAL,
     GROW_IDEA_COUNT,
-    GROW_IDEA_CONTRAST = GROW_IDEA_REPETITION
+    GROW_IDEA_CONTRAST = GROW_IDEA_REPETITION,
+    GROW_IDEA_RESTATED = GROW_IDEA_FRAGMENT_1,
+    GROW_IDEA_CONSEQUENT_CONTRAST = GROW_IDEA_FRAGMENT_2
 } GrowIdea;
 
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
@@ -43,6 +45,7 @@ typedef struct {
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
     bool beginning_split;                  /* no chord of the antecedent crosses a barline */
     MotiveDevSpec contrast;                /* the contrasting idea of an antecedent or a compound basic idea */
+    MotiveDevSpec consequent_contrast;     /* the contrasting idea of a consequent */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
     bool statement_response;               /* the repetition is a step up, the harmony goes tonic to dominant and back */
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */

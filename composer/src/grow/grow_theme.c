@@ -161,9 +161,8 @@ int grow_phrase_ending(PlanThemeEnding ending) {
 }
 
 bool grow_pairing_supported(const PlanThemePairing *pairing) {
-    return (pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION ||
-            pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT) &&
-           pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
+    return pairing->beginning != PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA &&
+           pairing->ending != PLAN_THEME_ENDING_CADENTIAL;
 }
 
 int grow_pairing_archetype(const PlanThemePairing *pairing) {
@@ -199,13 +198,26 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev)
         }
         return true;
     case GROW_IDEA_FRAGMENT_1:
-    case GROW_IDEA_FRAGMENT_2:
-        dev->kind = MOTIVE_DEV_FRAGMENT;
-        dev->position = PLAN_FRAGMENT_LEADING;
-        dev->length = spec->fragment_notes[idea == GROW_IDEA_FRAGMENT_2];
-        dev->min_length = 1;
+    case GROW_IDEA_FRAGMENT_2: {
+        size_t second = idea == GROW_IDEA_FRAGMENT_2;
+        if (spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
+            if (second) {
+                *dev = spec->consequent_contrast;
+            } else {
+                dev->kind = MOTIVE_DEV_EXACT;
+            }
+        } else {
+            dev->kind = MOTIVE_DEV_FRAGMENT;
+            dev->position = PLAN_FRAGMENT_LEADING;
+            dev->length = spec->fragment_notes[second];
+            dev->min_length = 1;
+        }
         return true;
+    }
     case GROW_IDEA_CADENTIAL:
+        if (spec->pairing.ending != PLAN_THEME_ENDING_CONTINUATION) {
+            return false;
+        }
         dev->kind = MOTIVE_DEV_LIQUIDATE;
         dev->drop = spec->liquidate_drop;
         dev->min_length = 1;
@@ -376,7 +388,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
     return a->statement_response == b->statement_response && a->fragment_notes[0] == b->fragment_notes[0] &&
            a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop &&
-           same_kind(&a->contrast, &b->contrast);
+           same_kind(&a->contrast, &b->contrast) && same_kind(&a->consequent_contrast, &b->consequent_contrast);
 }
 
 static const char *dev_name(const MotiveDevSpec *dev) {
@@ -384,14 +396,28 @@ static const char *dev_name(const MotiveDevSpec *dev) {
 }
 
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
-    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+    static const char *const BEGINNINGS[] = {"presentation", "antecedent"};
+    static const char *const ENDINGS[] = {"continuation", "consequent"};
+    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
+        spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
                  spec->statement_response ? "statement-response" : "exact", spec->fragment_notes[0],
                  spec->fragment_notes[1], spec->liquidate_drop);
         return;
     }
-    snprintf(label, size, "antecedent + continuation %zu bars contrast %s fragments %zu+%zu drop %zu", spec->bars,
-             dev_name(&spec->contrast), spec->fragment_notes[0], spec->fragment_notes[1], spec->liquidate_drop);
+    size_t used = (size_t)snprintf(label, size, "%s + %s %zu bars", BEGINNINGS[spec->pairing.beginning],
+                                   ENDINGS[spec->pairing.ending], spec->bars);
+    if (used < size && spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+        used += (size_t)snprintf(label + used, size - used, " %s", spec->statement_response ? "statement-response" : "exact");
+    } else if (used < size) {
+        used += (size_t)snprintf(label + used, size - used, " contrast %s", dev_name(&spec->contrast));
+    }
+    if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
+        snprintf(label + used, size - used, " fragments %zu+%zu drop %zu", spec->fragment_notes[0],
+                 spec->fragment_notes[1], spec->liquidate_drop);
+    } else if (used < size) {
+        snprintf(label + used, size - used, " consequent contrast %s", dev_name(&spec->consequent_contrast));
+    }
 }
 
 static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,

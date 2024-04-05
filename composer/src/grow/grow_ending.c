@@ -71,6 +71,27 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     return true;
 }
 
+/* A consequent restates the basic idea and ends with a contrasting idea that is not the antecedent's. */
+static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
+    const MotiveDevSpec *avoid = spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
+    /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
+    int tonic = request->key.tonic_pitch_class;
+    int want = request->cadence == PLAN_CADENCE_PAC ? tonic
+               : request->cadence == PLAN_CADENCE_IAC ? (tonic + (request->key.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
+                                                      : -1;
+    if (!keep_idea(spec, GROW_IDEA_RESTATED, unit, 2) ||
+        !grow_draw_contrast(request, rng, spec, want, avoid, &spec->consequent_contrast) ||
+        !keep_idea(spec, GROW_IDEA_CONSEQUENT_CONTRAST, unit, 2)) {
+        return false;
+    }
+    size_t cells = request->bars / 2 * request->cells_per_bar;
+    spec->ending_shape = cells >= harmony_phrase_min_cells(request->cadence, request->cells_per_bar)
+                             ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
+                             : PLAN_HARMONY_SHAPE_CADENTIAL;
+    spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
+    return true;
+}
+
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     PlanTime unit = grow_unit(request);
     if (unit.num == 0) {
@@ -80,6 +101,7 @@ bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSp
     case PLAN_THEME_ENDING_CONTINUATION:
         return draw_continuation(request, rng, spec, unit);
     case PLAN_THEME_ENDING_CONSEQUENT:
+        return draw_consequent(request, rng, spec, unit);
     case PLAN_THEME_ENDING_CADENTIAL:
         break;
     }
@@ -154,11 +176,31 @@ static PlanResult build_continuation(GrowBuild *build) {
                              : result;
 }
 
+/* The two ideas of a consequent: the two quarters of the second half, in eighths. */
+static const size_t HALF_START[GROW_IDEA_COUNT] = {0, 0, 4, 6, 0};
+static const size_t HALF_UNITS[GROW_IDEA_COUNT] = {0, 0, 2, 2, 0};
+
+static PlanResult build_consequent(GrowBuild *build) {
+    static const char *const NAMES[GROW_IDEA_COUNT] = {NULL, NULL, "consequent basic idea",
+                                                       "consequent contrasting idea", NULL};
+    NodeId consequent;
+    PlanHarmonyShape shape;
+    PlanResult result = make_container(build, "consequent", build->phrase == PLAN_NODE_NONE ? NULL : "consequent",
+                                       &consequent);
+    memset(&shape, 0, sizeof(shape));
+    shape.kind = build->spec->ending_shape;
+    shape.split_at_bars = build->spec->ending_split;
+    return result == PLAN_OK ? build_parts(build, consequent, &shape, NAMES, HALF_START, HALF_UNITS, GROW_IDEA_RESTATED,
+                                           GROW_IDEA_CONSEQUENT_CONTRAST)
+                             : result;
+}
+
 PlanResult grow_ending_build(GrowBuild *build) {
     switch (build->spec->pairing.ending) {
     case PLAN_THEME_ENDING_CONTINUATION:
         return build_continuation(build);
     case PLAN_THEME_ENDING_CONSEQUENT:
+        return build_consequent(build);
     case PLAN_THEME_ENDING_CADENTIAL:
         break;
     }

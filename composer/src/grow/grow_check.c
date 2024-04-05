@@ -5,9 +5,12 @@
 
 #include <harmony_cadence_rules.h>
 #include <hybrid_rules.h>
+#include <idea_label.h>
+#include <period_rules.h>
 #include <phrase_beginning.h>
 #include <phrase_ending.h>
 #include <phrase_level_form.h>
+#include <phrase_role.h>
 #include <semantics/subphrase_role.h>
 #include <sentence_rules.h>
 
@@ -95,6 +98,38 @@ static bool reads_as_repetition(const GrowThemeSpec *spec, GrowIdea idea) {
     return standard_form_idea_reads_as_repetition(grow_same_contour(&spec->source, &spec->developed[idea]));
 }
 
+static bool motives_differ(const Motive *a, const Motive *b) {
+    if (a->note_count != b->note_count) {
+        return true;
+    }
+    for (size_t i = 0; i < a->note_count; i++) {
+        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
+    size_t half = spec->bars / 2;
+    if (!standard_form_phrase_roles_in_order(PHRASE_ROLE_ANTECEDENT, PHRASE_ROLE_CONSEQUENT)) {
+        return "phrase roles out of order";
+    }
+    if (!standard_form_period_phrase_ideas_valid(IDEA_LABEL_BASIC_IDEA, IDEA_LABEL_CONTRASTING_IDEA)) {
+        return "phrase ideas not a basic idea and a contrasting idea";
+    }
+    if (!standard_form_period_cadences_valid(cadence_of(spec->first_cadence), cadence_of(spec->cadence))) {
+        return "period cadences not valid";
+    }
+    ask(soft, standard_form_antecedent_cadence_usual(cadence_of(spec->first_cadence)));
+    ask(soft, standard_form_consequent_cadence_usual(cadence_of(spec->cadence)));
+    ask(soft, standard_form_antecedent_length_usual(half));
+    ask(soft, standard_form_consequent_length_usual(half, half));
+    ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_IDEA_CONTRAST],
+                                                                     &spec->developed[GROW_IDEA_CONSEQUENT_CONTRAST])));
+    return NULL;
+}
+
 static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
     int beginning = grow_phrase_beginning(spec->pairing.beginning);
     int ending = grow_phrase_ending(spec->pairing.ending);
@@ -140,7 +175,7 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
         harmony_cadence_strength(cadence_of(spec->first_cadence)) >= harmony_cadence_strength(cadence_of(spec->cadence))) {
         return "ending cadence not stronger than the antecedent's";
     }
-    return judge_hybrid(spec, soft);
+    return form == PHRASE_LEVEL_FORM_PERIOD ? judge_period(spec, soft) : judge_hybrid(spec, soft);
 }
 
 bool grow_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
