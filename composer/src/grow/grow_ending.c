@@ -92,6 +92,21 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     return true;
 }
 
+/* A cadential ending is two ideas liquidated from m0, the second at least as much as the first. */
+static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
+    size_t count = spec->source.note_count;
+    size_t most = count - 1;
+    size_t drop_most = count / 2 > 1 ? count / 2 : 1;
+    size_t first = 1 + (size_t)fill_rng_below(rng, drop_most);
+    first = first > most ? most : first;
+    size_t second = first + (size_t)fill_rng_below(rng, most - first + 1);
+    spec->cadential_drop[0] = first;
+    spec->cadential_drop[1] = second;
+    spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;
+    spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
+    return keep_idea(spec, GROW_IDEA_CADENTIAL_1, unit, 2) && keep_idea(spec, GROW_IDEA_CADENTIAL_2, unit, 2);
+}
+
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     PlanTime unit = grow_unit(request);
     if (unit.num == 0) {
@@ -103,7 +118,7 @@ bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSp
     case PLAN_THEME_ENDING_CONSEQUENT:
         return draw_consequent(request, rng, spec, unit);
     case PLAN_THEME_ENDING_CADENTIAL:
-        break;
+        return draw_cadential(request, rng, spec, unit);
     }
     return false;
 }
@@ -176,7 +191,7 @@ static PlanResult build_continuation(GrowBuild *build) {
                              : result;
 }
 
-/* The two ideas of a consequent: the two quarters of the second half, in eighths. */
+/* The two ideas of a consequent or a cadential ending: the last two quarters of the second half, in eighths. */
 static const size_t HALF_START[GROW_IDEA_COUNT] = {0, 0, 4, 6, 0};
 static const size_t HALF_UNITS[GROW_IDEA_COUNT] = {0, 0, 2, 2, 0};
 
@@ -195,6 +210,19 @@ static PlanResult build_consequent(GrowBuild *build) {
                              : result;
 }
 
+static PlanResult build_cadential(GrowBuild *build) {
+    static const char *const NAMES[GROW_IDEA_COUNT] = {NULL, NULL, "cadential 1", "cadential 2", NULL};
+    NodeId cadential;
+    PlanHarmonyShape shape;
+    PlanResult result = make_container(build, "second phrase", "cadential", &cadential);
+    memset(&shape, 0, sizeof(shape));
+    shape.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
+    shape.split_at_bars = build->spec->ending_split;
+    return result == PLAN_OK ? build_parts(build, cadential, &shape, NAMES, HALF_START, HALF_UNITS, GROW_IDEA_CADENTIAL_1,
+                                           GROW_IDEA_CADENTIAL_2)
+                             : result;
+}
+
 PlanResult grow_ending_build(GrowBuild *build) {
     switch (build->spec->pairing.ending) {
     case PLAN_THEME_ENDING_CONTINUATION:
@@ -202,7 +230,7 @@ PlanResult grow_ending_build(GrowBuild *build) {
     case PLAN_THEME_ENDING_CONSEQUENT:
         return build_consequent(build);
     case PLAN_THEME_ENDING_CADENTIAL:
-        break;
+        return build_cadential(build);
     }
     return PLAN_ERR_BAD_PAYLOAD;
 }

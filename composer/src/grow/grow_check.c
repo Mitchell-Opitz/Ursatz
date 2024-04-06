@@ -141,6 +141,14 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
         return hard;
     }
     size_t half = spec->bars / 2;
+    StandardFormCommonality commonality;
+    if (!standard_form_pairing_commonality(beginning, ending, &commonality)) {
+        return "pairing has no commonality";
+    }
+    /* Commonality counts for what it is worth: a very common pairing in full, a rare one for nothing. */
+    for (int step = 0; step < STANDARD_FORM_COMMONALITY_COUNT - 1; step++) {
+        ask(soft, step < STANDARD_FORM_COMMONALITY_COUNT - 1 - (int)commonality);
+    }
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
         ask(soft, standard_form_presentation_length_usual(half));
         ask(soft, spec->has_developed[GROW_IDEA_REPETITION] && reads_as_repetition(spec, GROW_IDEA_REPETITION));

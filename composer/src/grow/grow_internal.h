@@ -17,8 +17,8 @@
  * The motives the ideas of a theme are made from, by slot: slot k is the motive node m<k> in the material. The slot
  * is the idea's place, and what an idea is depends on the pairing:
  *   1  a presentation's repetition, or the contrasting idea of an antecedent or a compound basic idea
- *   2  a continuation's first fragment, or a consequent's restated basic idea
- *   3  a continuation's second fragment, or a consequent's contrasting idea
+ *   2  a continuation's first fragment, a consequent's restated basic idea, or a cadential ending's first idea
+ *   3  a continuation's second fragment, a consequent's contrasting idea, or a cadential ending's second idea
  *   4  a continuation's cadential idea
  */
 typedef enum {
@@ -30,7 +30,9 @@ typedef enum {
     GROW_IDEA_COUNT,
     GROW_IDEA_CONTRAST = GROW_IDEA_REPETITION,
     GROW_IDEA_RESTATED = GROW_IDEA_FRAGMENT_1,
-    GROW_IDEA_CONSEQUENT_CONTRAST = GROW_IDEA_FRAGMENT_2
+    GROW_IDEA_CONSEQUENT_CONTRAST = GROW_IDEA_FRAGMENT_2,
+    GROW_IDEA_CADENTIAL_1 = GROW_IDEA_FRAGMENT_1,
+    GROW_IDEA_CADENTIAL_2 = GROW_IDEA_FRAGMENT_2
 } GrowIdea;
 
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
@@ -44,8 +46,10 @@ typedef struct {
     PlanCadenceType first_cadence;         /* the weak cadence an antecedent ends in */
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
     bool beginning_split;                  /* no chord of the antecedent crosses a barline */
+    PlanHarmonyAnchor compound_ends_on;    /* where a compound basic idea's prolongation ends */
     MotiveDevSpec contrast;                /* the contrasting idea of an antecedent or a compound basic idea */
     MotiveDevSpec consequent_contrast;     /* the contrasting idea of a consequent */
+    size_t cadential_drop[2];              /* notes the two ideas of a cadential ending drop of m0 */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
     bool statement_response;               /* the repetition is a step up, the harmony goes tonic to dominant and back */
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */
@@ -101,8 +105,6 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
 PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
                                   const PlanConstraint *cadence);
 
-/* Whether grow-theme builds the pairing yet. */
-bool grow_pairing_supported(const PlanThemePairing *pairing);
 /* The ARCHETYPE (PlanArchetype) a pairing is, or -1 for a pairing standard-form does not know. */
 int grow_pairing_archetype(const PlanThemePairing *pairing);
 /*

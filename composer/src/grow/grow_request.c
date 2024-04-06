@@ -89,7 +89,7 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     PlanCadenceType first = request->first_cadence == PLAN_CADENCE_PAC ? PLAN_CADENCE_HC : request->first_cadence;
     int archetype = grow_pairing_archetype(&request->pairing);
     if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || (request->bars != 4 && request->bars != 8) ||
-        archetype < 0 || !grow_pairing_supported(&request->pairing) ||
+        archetype < 0 ||
         (request->cadence != PLAN_CADENCE_PAC && request->cadence != PLAN_CADENCE_IAC &&
          request->cadence != PLAN_CADENCE_HC) ||
         request->motive->note_count < 2 || request->key.tonic_pitch_class < 0 || request->key.tonic_pitch_class > 11 ||

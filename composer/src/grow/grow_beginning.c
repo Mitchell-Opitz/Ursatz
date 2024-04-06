@@ -44,7 +44,8 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         spec->beginning_split = grow_split_possible(request, spec->beginning_shape, spec->first_cadence);
         return draw_contrasting_idea(request, rng, spec);
     case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
-        break;
+        spec->compound_ends_on = fill_rng_below(rng, 2) == 0 ? PLAN_HARMONY_ANCHOR_TONIC : PLAN_HARMONY_ANCHOR_DOMINANT;
+        return draw_contrasting_idea(request, rng, spec);
     }
     return false;
 }
@@ -166,6 +167,28 @@ static PlanResult build_antecedent(GrowBuild *build) {
     return result == PLAN_OK ? build_ideas(build, antecedent, &weak, ideas) : result;
 }
 
+/* A compound basic idea: a basic idea and a contrasting idea over one prolongation, no cadence. */
+static PlanResult build_compound_basic_idea(GrowBuild *build) {
+    const GrowThemeSpec *spec = build->spec;
+    NodeId compound;
+    NodeId ideas[2];
+    PlanHarmonyShape shape;
+
+    PlanResult result = make_phrase(build);
+    if (result == PLAN_OK) {
+        result = grow_add_node(build, build->phrase, PLAN_NODE_SUBPHRASE, 0, BEGINNING_UNITS, "compound basic idea",
+                               &compound);
+    }
+    memset(&shape, 0, sizeof(shape));
+    shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
+    shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
+    shape.ends_on = spec->compound_ends_on;
+    if (result == PLAN_OK) {
+        result = grow_add_chord_targets(build, compound, &shape, NULL);
+    }
+    return result == PLAN_OK ? build_ideas(build, compound, NULL, ideas) : result;
+}
+
 PlanResult grow_beginning_build(GrowBuild *build) {
     switch (build->spec->pairing.beginning) {
     case PLAN_THEME_BEGINNING_PRESENTATION:
@@ -173,7 +196,7 @@ PlanResult grow_beginning_build(GrowBuild *build) {
     case PLAN_THEME_BEGINNING_ANTECEDENT:
         return build_antecedent(build);
     case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
-        break;
+        return build_compound_basic_idea(build);
     }
     return PLAN_ERR_BAD_PAYLOAD;
 }

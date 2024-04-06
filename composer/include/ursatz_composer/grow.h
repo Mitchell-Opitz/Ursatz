@@ -14,14 +14,17 @@
 #include <ursatz_composer/piece_plan.h>
 
 /*
- * Growing a theme from a motive (R-047): the plan of a sentence, built from one motive, and the fill stages
- * that write it. A request names the motive, the key, the meter, how many bars (8, with a two-bar basic idea, or
- * 4, with a one-bar one), how the theme begins and ends, and the cadence it ends in.
+ * Growing a theme from a motive (R-047): the plan of a theme, built from one motive, and the fill stages that write
+ * it. A request names the motive, the key, the meter, how many bars (8, with a two-bar basic idea, or 4, with a
+ * one-bar one), how the theme begins and ends (any of the nine pairings of standard-form: a presentation, an
+ * antecedent or a compound basic idea, with a continuation, a consequent or a cadential ending), and the cadence it
+ * ends in.
  *
  * grow_build_plan makes the plan:
  *   - a Form over the theme and the source material, with a meter and a key lane span, both Given, over all of it;
- *   - a Section "theme" over the bars, Constrained, with an ARCHETYPE (sentence), a THEME_PAIRING (presentation and
- *     continuation), the CADENCE and the KEY;
+ *   - a Section "theme" over the bars, Constrained, with an ARCHETYPE (sentence for a presentation and a continuation,
+ *     period for an antecedent and a consequent, hybrid for the other seven), a THEME_PAIRING, the CADENCE and the
+ *     KEY; a theme with an antecedent has a second CADENCE, the weak one the antecedent ends in;
  *   - a Section "material" after it, marked MATERIAL, so it is not part of the piece, holding the motive node "m0":
  *     the motive as a Given melody lane span. The motives made from it go beside it.
  *
@@ -29,20 +32,21 @@
  *   structure  grow-theme, which gives the Section its nodes, one motive node in the material for each idea after
  *              the basic idea, and the open lane spans: harmony, bass and melody;
  *   motives    the motive development operators write those motives from m0;
- *   harmony    harmony-prolongation for the presentation, harmony-phrase-model for the continuation;
+ *   harmony    harmony-prolongation for the presentation, harmony-phrase-model for the rest;
  *   bass       harmony-bass under the chords;
  *   melody     melody-fill, idea by idea, over harmony and bass.
  * Stage k runs with the seed config.seed + k, so a stage's choices do not change when another stage's do.
  *
- * The theme of a sentence of 8 bars, in bars (4 bars halves every length):
- *   Phrase                       0-8, with the cadence
- *     Subphrase presentation     0-4
- *       Idea basic idea          0-2
- *       Idea repetition          2-4
- *     Subphrase continuation     4-8
- *       Idea fragment 1          4-5
- *       Idea fragment 2          5-6
- *       Idea cadential           6-8
+ * The theme of 8 bars, in bars (4 bars halves every length). The first half is one of:
+ *   presentation       Subphrase 0-4 in the theme's one Phrase: Ideas basic idea (0-2) and repetition (2-4)
+ *   antecedent         its own Phrase 0-4: Ideas basic idea (0-2) and contrasting idea (2-4), ending in a weak cadence
+ *   compound basic idea  Subphrase 0-4 in the one Phrase: Ideas basic idea (0-2) and contrasting idea (2-4)
+ * and the second half one of:
+ *   continuation       Subphrase 4-8: Ideas fragment 1 (4-5), fragment 2 (5-6) and cadential (6-8)
+ *   consequent         Subphrase 4-8, or its own Phrase after an antecedent: Ideas consequent basic idea (4-6) and
+ *                      consequent contrasting idea (6-8)
+ *   cadential          Subphrase 4-8: Ideas cadential 1 (4-6) and cadential 2 (6-8)
+ * A theme with an antecedent has two Phrases, the second holding the second half; any other has one Phrase of 8 bars.
  */
 
 #define GROW_THEME_OPERATOR_NAME "grow-theme"

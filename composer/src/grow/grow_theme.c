@@ -57,8 +57,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         }
     }
     LaneSpanId lane[2];
-    if (!archetype || !pairing || !cadence || !grow_pairing_supported(&request.pairing) ||
-        grow_pairing_archetype(&request.pairing) != (int)requested ||
+    if (!archetype || !pairing || !cadence || grow_pairing_archetype(&request.pairing) != (int)requested ||
         (request.pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) != request.has_first ||
         plan_lane_find(plan, PLAN_LANE_METER, 0, request.span, lane, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, lane[0]), request.span)) {
@@ -160,11 +159,6 @@ int grow_phrase_ending(PlanThemeEnding ending) {
     return PHRASE_ENDING_COUNT;
 }
 
-bool grow_pairing_supported(const PlanThemePairing *pairing) {
-    return pairing->beginning != PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA &&
-           pairing->ending != PLAN_THEME_ENDING_CADENTIAL;
-}
-
 int grow_pairing_archetype(const PlanThemePairing *pairing) {
     PhraseLevelForm form;
     if (!standard_form_pairing_form(grow_phrase_beginning(pairing->beginning), grow_phrase_ending(pairing->ending),
@@ -206,6 +200,10 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev)
             } else {
                 dev->kind = MOTIVE_DEV_EXACT;
             }
+        } else if (spec->pairing.ending == PLAN_THEME_ENDING_CADENTIAL) {
+            dev->kind = MOTIVE_DEV_LIQUIDATE;
+            dev->drop = spec->cadential_drop[second];
+            dev->min_length = 1;
         } else {
             dev->kind = MOTIVE_DEV_FRAGMENT;
             dev->position = PLAN_FRAGMENT_LEADING;
@@ -388,7 +386,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
     return a->statement_response == b->statement_response && a->fragment_notes[0] == b->fragment_notes[0] &&
            a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop &&
-           same_kind(&a->contrast, &b->contrast) && same_kind(&a->consequent_contrast, &b->consequent_contrast);
+           a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
+           same_kind(&a->consequent_contrast, &b->consequent_contrast) &&
+           a->cadential_drop[0] == b->cadential_drop[0] && a->cadential_drop[1] == b->cadential_drop[1];
 }
 
 static const char *dev_name(const MotiveDevSpec *dev) {
@@ -396,8 +396,8 @@ static const char *dev_name(const MotiveDevSpec *dev) {
 }
 
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
-    static const char *const BEGINNINGS[] = {"presentation", "antecedent"};
-    static const char *const ENDINGS[] = {"continuation", "consequent"};
+    static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
+    static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
         spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
@@ -415,8 +415,10 @@ static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         snprintf(label + used, size - used, " fragments %zu+%zu drop %zu", spec->fragment_notes[0],
                  spec->fragment_notes[1], spec->liquidate_drop);
-    } else if (used < size) {
+    } else if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
         snprintf(label + used, size - used, " consequent contrast %s", dev_name(&spec->consequent_contrast));
+    } else if (used < size) {
+        snprintf(label + used, size - used, " drops %zu+%zu", spec->cadential_drop[0], spec->cadential_drop[1]);
     }
 }
 
