@@ -23,6 +23,7 @@ add_library(standard_form
     analysis/analysis_similarity.c
     analysis/analysis_ideas.c
     analysis/analysis_theme.c
+    analysis/analysis_expansion.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
