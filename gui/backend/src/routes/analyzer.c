@@ -146,7 +146,8 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   for (size_t i = 0; i < detail->interpretation_count; i++) {
     const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
     capacity += 96 + strlen(summary->interpretation_id) + strlen(summary->type) + strlen(summary->label) +
-                strlen(summary->produced_by_author) + strlen(summary->produced_by_method);
+                strlen(summary->produced_by_author) + strlen(summary->produced_by_method) +
+                strlen(summary->provenance_state);
   }
 
   char *body = malloc(capacity);
@@ -163,9 +164,11 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
     const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
     offset += (size_t)snprintf(body + offset, capacity - offset,
                                 "%s{\"interpretation_id\":\"%s\",\"type\":\"%s\",\"label\":\"%s\","
-                                "\"produced_by\":{\"author\":\"%s\",\"method\":\"%s\"}}",
+                                "\"produced_by\":{\"author\":\"%s\",\"method\":\"%s\"},"
+                                "\"provenance_state\":\"%s\"}",
                                 i == 0 ? "" : ",", summary->interpretation_id, summary->type, summary->label,
-                                summary->produced_by_author, summary->produced_by_method);
+                                summary->produced_by_author, summary->produced_by_method,
+                                summary->provenance_state);
   }
   offset += (size_t)snprintf(body + offset, capacity - offset, "]}");
 

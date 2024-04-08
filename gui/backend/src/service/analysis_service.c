@@ -702,6 +702,7 @@ static void interpretation_summary_destroy_contents(UrsatzGuiInterpretationSumma
     free(summary->label);
     free(summary->produced_by_author);
     free(summary->produced_by_method);
+    free(summary->provenance_state);
 }
 
 /* Loads the Chord or Key at interpretation_id (per type) and fills out
@@ -729,13 +730,19 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
     size_t claim_size = 0;
     const char *label = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
 
+    ProvenanceReferenceState provenance_state = provenance_reference_state(interpretation_provenance(interpretation));
+    const char *provenance_state_str =
+        (provenance_state == PROVENANCE_REFERENCE_PRESENT) ? "present" : "absent";
+
     bool ok = false;
     out->interpretation_id = dup_string(interpretation_id);
     out->type = dup_string(type);
     out->label = dup_string(label);
     out->produced_by_author = dup_string(interpretation_author(interpretation));
     out->produced_by_method = dup_string(interpretation_method(interpretation));
-    if (out->interpretation_id && out->type && out->label && out->produced_by_author && out->produced_by_method) {
+    out->provenance_state = dup_string(provenance_state_str);
+    if (out->interpretation_id && out->type && out->label && out->produced_by_author && out->produced_by_method &&
+        out->provenance_state) {
         ok = true;
     } else {
         interpretation_summary_destroy_contents(out);

@@ -37,11 +37,15 @@ typedef enum {
  * One persisted Chord or Key Interpretation, as returned by
  * ursatz_gui_analysis_get_piece. produced_by (author/method) is the only
  * analyzer/importer identity Ursatz's Interpretation actually carries and
- * persists today -- NOT a full Provenance-object reference. Ursatz's
- * ProvenanceReference on these Interpretations is always
- * PROVENANCE_REFERENCE_ABSENT (see key_estimation.c/chord_identification.c),
- * and no resolvable Provenance record type exists upstream yet to point
- * it at even if it were present.
+ * persists today -- NOT a full Provenance-object reference.
+ *
+ * provenance_state reads the Interpretation's existing ProvenanceReference
+ * (interpretation_provenance()/provenance_reference_state()) as "present"
+ * or "absent". No analyzer upstream (in Ursatz or ursatz-analyzer) calls
+ * provenance_reference_create_present() today, so "absent" is the only
+ * value real output produces -- that reflects the current state of the
+ * upstream analyzers, not a limitation of this field, and no resolvable
+ * Provenance record type exists yet to point a "present" reference at.
  */
 typedef struct {
     char *interpretation_id;
@@ -49,6 +53,7 @@ typedef struct {
     char *label;              /* e.g. "D major", "V7" */
     char *produced_by_author; /* Interpretation's author field */
     char *produced_by_method; /* Interpretation's method field */
+    char *provenance_state;   /* "present" or "absent" */
 } UrsatzGuiInterpretationSummary;
 
 typedef struct {

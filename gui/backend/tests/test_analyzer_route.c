@@ -1,0 +1,298 @@
+/* Confirms GET /api/analyzer/pieces/<id> includes provenance_state for
+ * each interpretation summary, for both values it can take ("present"
+ * and "absent"). No analyzer upstream produces a "present"
+ * ProvenanceReference today (only provenance_reference_create_absent()
+ * has any callers), so both cases here hand-build an Interpretation
+ * directly against Ursatz's persistence API and record it into
+ * ursatz-gui's own interpretation index table (the same private
+ * schema/INSERT analysis_service.c uses), then load it back through the
+ * route. This only proves the serialization path, not real analyzer
+ * behavior. Uses a plain TCP socket for the HTTP request, same as
+ * test_health_route.c. */
+
+#include <civetweb.h>
+#include <sqlite3.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+typedef SOCKET socket_t;
+#define CLOSESOCK closesocket
+#else
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <time.h>
+#include <unistd.h>
+typedef int socket_t;
+#define CLOSESOCK close
+#define INVALID_SOCKET (-1)
+#endif
+
+#include <core/provenance_reference.h>
+#include <core/value.h>
+#include <identity/entity_id.h>
+#include <interpretation/interpretation.h>
+#include <interpretation/uncertainty.h>
+#include <persistence/persistence.h>
+#include <persistence/persistence_interpretation.h>
+
+#include "server.h"
+
+static void sleep_ms(int ms) {
+#ifdef _WIN32
+  Sleep((DWORD)ms);
+#else
+  struct timespec ts = {0, (long)ms * 1000 * 1000};
+  nanosleep(&ts, NULL);
+#endif
+}
+
+static int failures = 0;
+
+static void check(bool cond, const char *what) {
+  if (!cond) {
+    fprintf(stderr, "FAIL: %s\n", what);
+    failures++;
+  } else {
+    printf("PASS: %s\n", what);
+  }
+}
+
+/* Same private index table analysis_service.c maintains alongside
+ * Ursatz's own persistence, in the same per-piece SQLite file. Reused
+ * here (not reinvented) so the route's normal read path picks up the
+ * hand-built Interpretation below. */
+static const char *const kIndexTableName = "ursatz_gui_interpretations";
+
+static bool record_interpretation_id(const char *db_path, const char *interpretation_id, const char *type) {
+  sqlite3 *db = NULL;
+  if (sqlite3_open(db_path, &db) != SQLITE_OK) {
+    if (db) {
+      sqlite3_close(db);
+    }
+    return false;
+  }
+
+  char sql[256];
+  snprintf(sql, sizeof(sql),
+           "CREATE TABLE IF NOT EXISTS %s ("
+           "  interpretation_id TEXT PRIMARY KEY,"
+           "  interpretation_type TEXT NOT NULL"
+           ");",
+           kIndexTableName);
+  if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+    sqlite3_close(db);
+    return false;
+  }
+
+  snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO %s (interpretation_id, interpretation_type) VALUES (?, ?);",
+           kIndexTableName);
+  sqlite3_stmt *stmt = NULL;
+  bool ok = false;
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) == SQLITE_OK) {
+    sqlite3_bind_text(stmt, 1, interpretation_id, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, type, -1, SQLITE_TRANSIENT);
+    ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+  }
+  sqlite3_close(db);
+  return ok;
+}
+
+/* Hand-builds and stores one Key Interpretation into db_path, with a
+ * ProvenanceReference in the given state, and records it in the
+ * interpretation index so the detail route will pick it up. is_present
+ * selects provenance_reference_create_present() (needs a throwaway
+ * target EntityID) vs. provenance_reference_create_absent(). Returns
+ * false on any failure (caller treats that as a fatal setup failure). */
+static bool seed_interpretation(const char *db_path, const char *interpretation_id, bool is_present) {
+  bool ok = false;
+
+  EntityID *interp_id = NULL;
+  EntityID *target_id = NULL;
+  EntityID *provenance_target_id = NULL;
+  Value *claim = NULL;
+  Uncertainty *uncertainty = NULL;
+  ProvenanceReference *provenance = NULL;
+  Interpretation *interpretation = NULL;
+  PersistenceHandle *handle = NULL;
+
+  if (entity_id_create(interpretation_id, &interp_id) != ENTITY_ID_OK) {
+    goto done;
+  }
+  if (entity_id_create("test-target", &target_id) != ENTITY_ID_OK) {
+    goto done;
+  }
+
+  const char *claim_text = "D major";
+  if (value_create("chord-label", claim_text, strlen(claim_text) + 1, &claim) != VALUE_OK) {
+    goto done;
+  }
+  if (uncertainty_create_unknown(&uncertainty) != UNCERTAINTY_OK) {
+    goto done;
+  }
+
+  if (is_present) {
+    if (entity_id_create("test-provenance-target", &provenance_target_id) != ENTITY_ID_OK) {
+      goto done;
+    }
+    /* Takes ownership of provenance_target_id on success. */
+    if (provenance_reference_create_present(provenance_target_id, &provenance) != PROVENANCE_REFERENCE_OK) {
+      goto done;
+    }
+    provenance_target_id = NULL;
+  } else {
+    if (provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
+      goto done;
+    }
+  }
+
+  /* Takes ownership of interp_id, target_id, claim, uncertainty, provenance on success. */
+  if (interpretation_create(interp_id, target_id, claim, NULL, NULL, NULL, uncertainty, "test-author", "test-method",
+                             INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation) != INTERPRETATION_OK) {
+    goto done;
+  }
+  interp_id = NULL;
+  target_id = NULL;
+  claim = NULL;
+  uncertainty = NULL;
+  provenance = NULL;
+
+  if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
+    goto done;
+  }
+  if (persistence_store_interpretation(handle, interpretation) != PERSISTENCE_INTERPRETATION_OK) {
+    goto done;
+  }
+
+  ok = record_interpretation_id(db_path, interpretation_id, "key");
+
+done:
+  if (handle) {
+    persistence_close(handle);
+  }
+  if (interpretation) {
+    interpretation_destroy(interpretation);
+  } else {
+    if (provenance) {
+      provenance_reference_destroy(provenance);
+    }
+    if (uncertainty) {
+      uncertainty_destroy(uncertainty);
+    }
+    if (claim) {
+      value_destroy(claim);
+    }
+    if (target_id) {
+      entity_id_destroy(target_id);
+    }
+    if (interp_id) {
+      entity_id_destroy(interp_id);
+    }
+  }
+  if (provenance_target_id) {
+    entity_id_destroy(provenance_target_id);
+  }
+
+  return ok;
+}
+
+static bool http_get(const char *path, char *response, size_t response_capacity) {
+  socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) {
+    return false;
+  }
+
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(18766);
+  inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+    CLOSESOCK(sock);
+    return false;
+  }
+
+  char request[512];
+  snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n", path);
+  send(sock, request, (int)strlen(request), 0);
+
+  memset(response, 0, response_capacity);
+  size_t total = 0;
+  for (;;) {
+    int n = recv(sock, response + total, (int)(response_capacity - 1 - total), 0);
+    if (n <= 0) {
+      break;
+    }
+    total += (size_t)n;
+    if (total >= response_capacity - 1) {
+      break;
+    }
+  }
+
+  CLOSESOCK(sock);
+  return total > 0;
+}
+
+int main(void) {
+#ifdef _WIN32
+  WSADATA wsa_data;
+  WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif
+
+  const char *pieces_dir = "pieces";
+  const char *piece_id = "test-provenance-piece";
+  char db_path[320];
+  snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, piece_id);
+
+#ifdef _WIN32
+  _mkdir(pieces_dir);
+#else
+  mkdir(pieces_dir, 0755);
+#endif
+  remove(db_path);
+
+  check(seed_interpretation(db_path, "test-present-interpretation", true), "seed present-provenance interpretation");
+  check(seed_interpretation(db_path, "test-absent-interpretation", false), "seed absent-provenance interpretation");
+
+  struct mg_context *ctx = ursatz_gui_server_start("18766", ".");
+  check(ctx != NULL, "server starts");
+  if (!ctx) {
+    remove(db_path);
+    return 1;
+  }
+
+  sleep_ms(200);
+
+  char path[128];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", piece_id);
+
+  char response[8192];
+  bool got_response = http_get(path, response, sizeof(response));
+  check(got_response, "got a response");
+  if (got_response) {
+    check(strstr(response, "200") != NULL, "response is 200 OK");
+    check(strstr(response, "\"provenance_state\":\"present\"") != NULL,
+          "response contains provenance_state=present for hand-built interpretation");
+    check(strstr(response, "\"provenance_state\":\"absent\"") != NULL,
+          "response contains provenance_state=absent for hand-built interpretation");
+  }
+
+  ursatz_gui_server_stop(ctx);
+  check(true, "server stops cleanly");
+
+  remove(db_path);
+
+#ifdef _WIN32
+  WSACleanup();
+#endif
+
+  printf(failures == 0 ? "ALL TESTS PASSED\n" : "TESTS FAILED\n");
+  return failures == 0 ? 0 : 1;
+}
