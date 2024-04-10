@@ -94,16 +94,75 @@ async function renderAnalysisView() {
   }
 }
 
-// Placeholder for this branch — replaced with real piece detail
-// rendering in feat/analyzer-detail-view.
+const PROVENANCE_LABELS = {
+  present: "Analyzed",
+  absent: "Hand-entered",
+};
+
+function renderBackLink() {
+  const back = document.createElement("a");
+  back.textContent = "Back to list";
+  back.classList.add("back-link", "clickable");
+  back.addEventListener("click", () => renderAnalysisView());
+  return back;
+}
+
 function showPieceDetail(id) {
   const content = getContentEl();
   content.innerHTML = `
     <section class="panel">
       <h1>Piece Detail</h1>
-      <div>Loading piece ${id}...</div>
+      <div id="piece-detail-status" class="piece-detail-status">Loading piece ${id}...</div>
+      <div id="piece-detail-body"></div>
     </section>
   `;
+
+  const statusEl = document.getElementById("piece-detail-status");
+  const bodyEl = document.getElementById("piece-detail-body");
+
+  fetch(`/api/analyzer/pieces/${id}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data.ok) {
+        statusEl.textContent = data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found";
+        statusEl.classList.add("error");
+        bodyEl.appendChild(renderBackLink());
+        return;
+      }
+
+      statusEl.textContent = "";
+
+      const noteCount = document.createElement("div");
+      noteCount.textContent = `Note count: ${data.note_event_count}`;
+      bodyEl.appendChild(noteCount);
+
+      const list = document.createElement("ul");
+      list.classList.add("interpretation-list");
+      if (data.interpretations.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No interpretations yet.";
+        list.appendChild(li);
+      } else {
+        for (const interpretation of data.interpretations) {
+          const li = document.createElement("li");
+          const provenanceLabel = PROVENANCE_LABELS[interpretation.provenance_state] || interpretation.provenance_state;
+          li.textContent = `${interpretation.type}: ${interpretation.label} — `;
+          const flag = document.createElement("span");
+          flag.classList.add("provenance-flag");
+          flag.textContent = provenanceLabel;
+          li.appendChild(flag);
+          list.appendChild(li);
+        }
+      }
+      bodyEl.appendChild(list);
+
+      bodyEl.appendChild(renderBackLink());
+    })
+    .catch((err) => {
+      statusEl.textContent = `Could not reach backend: ${err}`;
+      statusEl.classList.add("error");
+      bodyEl.appendChild(renderBackLink());
+    });
 }
 
 renderToolList();
