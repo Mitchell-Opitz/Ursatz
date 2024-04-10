@@ -78,8 +78,7 @@ body {
   background: var(--bg-hover);
 }
 
-.tool-list li.clickable,
-.piece-list li.clickable {
+.clickable {
   cursor: pointer;
 }
 
@@ -140,4 +139,35 @@ body {
 
 .piece-list li:hover {
   background: var(--bg-hover);
+}
+
+.piece-detail-status {
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.piece-detail-status.error {
+  color: #f87171;
+}
+
+.interpretation-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.interpretation-list li {
+  padding: 4px 0;
+  color: var(--text);
+}
+
+.provenance-flag {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--accent);
 }
