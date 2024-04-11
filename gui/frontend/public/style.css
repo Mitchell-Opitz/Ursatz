@@ -171,3 +171,35 @@ body {
   margin-top: 12px;
   color: var(--accent);
 }
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.upload-controls button {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.upload-controls button:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.upload-status {
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+.upload-status.error {
+  color: #f87171;
+}

@@ -59,8 +59,15 @@ async function renderAnalysisView() {
       <h1>Analysis</h1>
       <div id="piece-list-status" class="piece-list-status">Loading pieces...</div>
       <ul id="piece-list" class="piece-list"></ul>
+      <div class="upload-controls">
+        <input type="file" id="upload-file" accept=".mid,.midi" />
+        <button id="upload-button" type="button">Upload</button>
+      </div>
+      <div id="upload-status" class="upload-status"></div>
     </section>
   `;
+
+  document.getElementById("upload-button").addEventListener("click", handleUpload);
 
   const statusEl = document.getElementById("piece-list-status");
   const listEl = document.getElementById("piece-list");
@@ -91,6 +98,43 @@ async function renderAnalysisView() {
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
+  }
+}
+
+async function handleUpload() {
+  const fileInput = document.getElementById("upload-file");
+  const uploadButton = document.getElementById("upload-button");
+  const statusEl = document.getElementById("upload-status");
+
+  const file = fileInput.files[0];
+  if (!file) {
+    statusEl.textContent = "Select a MIDI file first.";
+    statusEl.classList.add("error");
+    return;
+  }
+
+  statusEl.textContent = "";
+  statusEl.classList.remove("error");
+  uploadButton.disabled = true;
+  statusEl.textContent = "Uploading and analyzing...";
+
+  try {
+    const bytes = await file.arrayBuffer();
+    const res = await fetch("/api/analyzer/pieces", { method: "POST", body: bytes });
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Upload failed.";
+      statusEl.classList.add("error");
+      uploadButton.disabled = false;
+      return;
+    }
+
+    showPieceDetail(data.id);
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+    uploadButton.disabled = false;
   }
 }
 
