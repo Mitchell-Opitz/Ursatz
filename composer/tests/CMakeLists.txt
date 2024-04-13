@@ -124,3 +124,17 @@ add_test(NAME test_grow_sentence_heard COMMAND test_grow_sentence_heard)
 # The share of grown sentences standard-form hears as a sentence is below 100% (measured, with the cause, in docs/grow.md):
 # the test asserts all of them are, so it fails, and the failure is expected. Not tuned away, not skipped.
 set_tests_properties(test_grow_sentence_heard PROPERTIES WILL_FAIL TRUE)
+add_executable(test_grow_period test_grow_period.c)
+target_link_libraries(test_grow_period PRIVATE ursatz_composer)
+target_compile_options(test_grow_period PRIVATE -Wall -Wextra -Wpedantic)
+# One test for each of the nine pairings of a beginning and an ending (the order of PlanThemeBeginning and PlanThemeEnding).
+set(GROW_BEGINNINGS presentation antecedent compound_basic_idea)
+set(GROW_ENDINGS continuation consequent cadential)
+foreach(beginning RANGE 2)
+    foreach(ending RANGE 2)
+        list(GET GROW_BEGINNINGS ${beginning} beginning_name)
+        list(GET GROW_ENDINGS ${ending} ending_name)
+        add_test(NAME test_grow_period_${beginning_name}_${ending_name}
+                 COMMAND test_grow_period ${beginning} ${ending})
+    endforeach()
+endforeach()
