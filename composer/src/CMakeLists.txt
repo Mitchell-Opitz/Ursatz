@@ -48,6 +48,8 @@ add_library(ursatz_composer STATIC
     form/form_boundary.c
     grow/grow_request.c
     grow/grow_theme.c
+    grow/grow_beginning.c
+    grow/grow_ending.c
     grow/grow_check.c
     grow/grow_run.c
 )

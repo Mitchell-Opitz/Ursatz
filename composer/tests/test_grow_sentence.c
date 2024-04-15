@@ -346,9 +346,13 @@ static void test_bad_requests(void) {
     changed = request;
     changed.meter.beats_per_bar = 5;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    /* An antecedent ends in a cadence weaker than the theme's, and no cadence is weaker than a half cadence. */
     changed = request;
     changed.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
     changed.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+    changed.cadence = PLAN_CADENCE_HC;
+    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    changed.pairing.beginning = (PlanThemeBeginning)7;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
     changed = request;
     changed.cadence = PLAN_CADENCE_DC;

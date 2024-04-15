@@ -44,9 +44,12 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
   of the range where its motive allows; a target after it stays below the climax note.
 - **End tone.** The end tone rule applies only to a target with a cadence constraint, on the span or its
   owner. A target without one has no end-tone rule, and its last note needs only to be a chord tone.
-- **Exact restatement.** A target whose `motive_ref` is `restated`, right after a written span of the same
-  length, takes that span's whole melody for its motive and says it again, choosing the nearest chord tone
-  each time. Two ideas of a presentation made so are heard by standard-form as a repetition.
+- **Exact restatement.** A target whose `motive_ref` is `restated` takes the whole melody of the written span it
+  restates for its motive and says it again, choosing the nearest chord tone each time. The span restated is the
+  latest written one, before the target and as long, that asks for the motive the target's own motive is a
+  restatement of (a basic idea, however far back, as a consequent restates its antecedent's); failing that, the one
+  right before the target if it is as long. Two ideas of a presentation made so are heard by standard-form as a
+  repetition.
 
 ## What it writes
 

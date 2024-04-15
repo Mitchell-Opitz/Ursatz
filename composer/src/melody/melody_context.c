@@ -345,26 +345,67 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
     return true;
 }
 
+/* Melody spans looked through for the one a target restates. */
+#define MELODY_MAX_RESTATED 16
+
+/* The motive a motive node is made from, from its own motive_ref; PLAN_NODE_NONE when it has none. */
+static NodeId motive_source(const PiecePlan *plan, NodeId node) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+        if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
+            return constraint->params.motive.motive;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
 /*
- * An idea that restates the one before it, exactly (a RESTATED motive_ref), has that idea's melody for its motive, all
- * of it, so the two are heard as a repetition: the same intervals and the same rhythm, as far as the chords allow.
- * Left alone when the idea before is not written or is not as long.
+ * The written melody span, as long as the target and before it, that the target restates: the latest one that asks
+ * for the motive the target's own motive is a restatement of, else the one right before. False when there is none.
  */
-static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
-    LaneSpanId before[2];
+static bool restated_span(const PiecePlan *plan, const MelodyContext *context, LaneSpanId *out) {
+    LaneSpanId before[MELODY_MAX_RESTATED];
     PlanTime tick;
     long origin;
-    if (context->transform != PLAN_TRANSFORM_RESTATED || !melody_ticks(context->span.start, &origin) || origin <= 0 ||
-        melody_time(1, &tick) != PLAN_OK) {
-        return;
+    if (!melody_ticks(context->span.start, &origin) || origin <= 0 || melody_time(1, &tick) != PLAN_OK) {
+        return false;
+    }
+    NodeId source = motive_source(plan, context->motive_node);
+    PlanSpan earlier = {{0, 1}, context->span.start};
+    size_t found = source == PLAN_NODE_NONE ? 0 : plan_lane_find(plan, PLAN_LANE_MELODY, 0, earlier, before, MELODY_MAX_RESTATED);
+    for (size_t i = found; i > 0 && found <= MELODY_MAX_RESTATED; i--) {
+        LaneSpanId id = before[i - 1];
+        for (size_t k = 0; plan_lane_span_state(plan, id) != PLAN_STATE_CONSTRAINED &&
+                           plan_time_compare(plan_lane_span_span(plan, id).length, context->span.length) == 0 &&
+                           k < plan_lane_span_constraint_count(plan, id);
+             k++) {
+            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, k);
+            if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && constraint->params.motive.motive == source &&
+                constraint->params.motive.transform == PLAN_TRANSFORM_NONE) {
+                *out = id;
+                return true;
+            }
+        }
     }
     PlanSpan last_tick = {time_minus(context->span.start, tick), tick};
-    if (plan_lane_find(plan, PLAN_LANE_MELODY, 0, last_tick, before, 2) != 1 ||
-        plan_lane_span_state(plan, before[0]) == PLAN_STATE_CONSTRAINED ||
-        plan_time_compare(plan_lane_span_span(plan, before[0]).length, context->span.length) != 0) {
+    return plan_lane_find(plan, PLAN_LANE_MELODY, 0, last_tick, before, 2) == 1 &&
+           plan_lane_span_state(plan, before[0]) != PLAN_STATE_CONSTRAINED &&
+           plan_time_compare(plan_lane_span_span(plan, before[0]).length, context->span.length) == 0 &&
+           ((*out = before[0]), true);
+}
+
+/*
+ * An idea that restates another, exactly (a RESTATED motive_ref), has that idea's melody for its motive, all of it,
+ * so the two are heard as a repetition: the same intervals and the same rhythm, as far as the chords allow. The idea
+ * restated is the basic idea the motive comes from, however far back it is, else the idea right before. Left alone
+ * when it is not written or is not as long.
+ */
+static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
+    LaneSpanId before;
+    if (context->transform != PLAN_TRANSFORM_RESTATED || !restated_span(plan, context, &before)) {
         return;
     }
-    const PlanNotes *notes = &plan_lane_span_payload(plan, before[0])->notes;
+    const PlanNotes *notes = &plan_lane_span_payload(plan, before)->notes;
     if (notes->note_count == 0 || notes->note_count > MOTIVE_MAX_NOTES) {
         return;
     }
