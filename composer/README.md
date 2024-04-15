@@ -97,8 +97,9 @@ The melody operator writes a melody over a written harmony and bass, from a moti
 
 ## Growing a theme
 
-`grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a sentence of 8 or 4 bars from a motive:
-its structure, motives, harmony, bass and melody, in stages. See [docs/grow.md](docs/grow.md).
+`grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a theme of 8 or 4 bars from a motive, as a
+sentence, a period or a hybrid: its structure, motives, harmony, bass and melody, in stages. See
+[docs/grow.md](docs/grow.md).
 
 ## Hearing the form
 
