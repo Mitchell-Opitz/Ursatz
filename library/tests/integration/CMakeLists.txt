@@ -32,3 +32,12 @@ target_compile_definitions(test_melody_bach114 PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME melody_bach114 COMMAND test_melody_bach114)
+
+add_executable(test_form_reference_pieces test_form_reference_pieces.c)
+target_link_libraries(test_form_reference_pieces PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_form_reference_pieces PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_form_reference_pieces PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME form_reference_pieces COMMAND test_form_reference_pieces)
