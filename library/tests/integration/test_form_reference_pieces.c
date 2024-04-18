@@ -38,8 +38,8 @@
 
 #define FORM_TARGET_BOUNDARIES 0.80
 #define FORM_TARGET_THEMES 0.70
-/* The floors of the whole-chain run: what it measured, to be filled from the report (see the PR). */
-#define CHAIN_FLOOR_BOUNDARIES 0.0
+/* The floors of the whole-chain run, under what it measured when this was written (boundaries 57.9%, themes 0%; see the PR). */
+#define CHAIN_FLOOR_BOUNDARIES 0.50
 #define CHAIN_FLOOR_THEMES 0.0
 
 /* --- the annotation --- */
