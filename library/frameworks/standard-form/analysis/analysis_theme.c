@@ -63,7 +63,7 @@ typedef struct {
     const StandardFormPhrases *phrases;
     const StandardFormSegmentation *segmentation;
     const StandardFormConfig *config;
-} Context;
+} ThemeContext;
 
 typedef struct {
     PhraseBeginning beginning;
@@ -90,7 +90,7 @@ static IdeaLabel as_basic_or_contrast(int label) {
     return label == (int)IDEA_LABEL_BASIC_IDEA ? IDEA_LABEL_BASIC_IDEA : IDEA_LABEL_CONTRASTING_IDEA;
 }
 
-static const StandardFormIdea *ideas_of(const Context *ctx, size_t phrase, size_t *count) {
+static const StandardFormIdea *ideas_of(const ThemeContext *ctx, size_t phrase, size_t *count) {
     size_t first = 0;
     if (!standard_form_phrase_ideas(ctx->segmentation, (int)phrase, &first, count)) {
         *count = 0;
@@ -105,7 +105,7 @@ static StandardFormSimilarity similarity_of_claim(const StandardFormIdeaClaim *c
 }
 
 /* A one-phrase theme: a beginning subphrase and an ending subphrase, ending in a phrase-goal cadence. */
-static bool one_phrase(const Context *ctx, size_t p, Candidate *out) {
+static bool one_phrase(const ThemeContext *ctx, size_t p, Candidate *out) {
     const StandardFormPhrase *phrase = &ctx->phrases->items[p];
     size_t count = 0;
     const StandardFormIdea *ideas = ideas_of(ctx, p, &count);
@@ -160,7 +160,7 @@ static bool one_phrase(const Context *ctx, size_t p, Candidate *out) {
 }
 
 /* A two-phrase theme: an antecedent phrase and a phrase with a stronger cadence. */
-static bool two_phrase(const Context *ctx, size_t p, Candidate *out) {
+static bool two_phrase(const ThemeContext *ctx, size_t p, Candidate *out) {
     if (p + 1 >= ctx->phrases->count) {
         return false;
     }
@@ -214,7 +214,7 @@ static bool two_phrase(const Context *ctx, size_t p, Candidate *out) {
 }
 
 /* The notes of phrase p's ideas (the phrase proper). */
-static bool phrase_notes(const Context *ctx, size_t p, const StandardFormNote **notes, size_t *count) {
+static bool phrase_notes(const ThemeContext *ctx, size_t p, const StandardFormNote **notes, size_t *count) {
     size_t n = 0;
     const StandardFormIdea *ideas = ideas_of(ctx, p, &n);
     if (n == 0) {
@@ -230,7 +230,7 @@ static bool phrase_notes(const Context *ctx, size_t p, const StandardFormNote **
     return true;
 }
 
-static StandardFormAnalysisStatus emit_theme(const Context *ctx, StandardFormThemes *themes, StandardFormThemeClaim *claim,
+static StandardFormAnalysisStatus emit_theme(const ThemeContext *ctx, StandardFormThemes *themes, StandardFormThemeClaim *claim,
                                              double uncertainty, int note_first, int note_end, const char *part_a,
                                              const char *part_b) {
     StandardFormTheme *theme = &themes->items[themes->count];
@@ -299,7 +299,7 @@ static const char *subphrase_part_id(const StandardFormSubphrase *sub) {
     return sub != NULL && sub->shell != NULL ? entity_id_value(entity_id(structure_entity(sub->shell))) : NULL;
 }
 
-static StandardFormAnalysisStatus emit_one_phrase(const Context *ctx, StandardFormThemes *themes, size_t p, const Candidate *c,
+static StandardFormAnalysisStatus emit_one_phrase(const ThemeContext *ctx, StandardFormThemes *themes, size_t p, const Candidate *c,
                                                   bool part_of_compound) {
     const StandardFormPhrase *phrase = &ctx->phrases->items[p];
     StandardFormThemeClaim claim;
@@ -324,7 +324,7 @@ static StandardFormAnalysisStatus emit_one_phrase(const Context *ctx, StandardFo
                       subphrase_part_id(c->begin_part), subphrase_part_id(c->end_part));
 }
 
-static StandardFormAnalysisStatus emit_two_phrases(const Context *ctx, StandardFormThemes *themes, size_t p,
+static StandardFormAnalysisStatus emit_two_phrases(const ThemeContext *ctx, StandardFormThemes *themes, size_t p,
                                                    PhraseLevelForm form, const Candidate *c) {
     const StandardFormPhrase *first = &ctx->phrases->items[p];
     const StandardFormPhrase *second = &ctx->phrases->items[p + 1];
@@ -394,7 +394,7 @@ StandardFormAnalysisStatus standard_form_identify_themes(const StandardFormInput
     if (!standard_form_config_valid(effective)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG;
     }
-    Context ctx = {input, phrases, segmentation, effective};
+    ThemeContext ctx = {input, phrases, segmentation, effective};
     StandardFormThemes found = {NULL, 0};
     if (phrases->count > 0) {
         found.items = (StandardFormTheme *)calloc(phrases->count * 2, sizeof(StandardFormTheme));

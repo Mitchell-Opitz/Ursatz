@@ -6,6 +6,8 @@
 
 #include "analysis_phrase.h"
 #include "analysis_similarity.h"
+#include "interpretation/interpretation.h"
+#include "structure/structure.h"
 
 /*
  * Ideas and subphrases (the form adapter, step 2), by standard-form's length conventions (segmentation_rules.h IDEA_LENGTH,
