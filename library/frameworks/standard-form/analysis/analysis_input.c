@@ -7,12 +7,13 @@
 #include "analysis_time.h"
 
 #define DEFAULT_LEAP_SEMITONES 7
+#define DEFAULT_LOOKAHEAD 4
 #define DEFAULT_MAX_TAIL 8
 #define DEFAULT_SIMILARITY_MIN 0.75
 #define DEFAULT_NO_SIGNAL_UNCERTAINTY 0.5
 
 StandardFormConfig standard_form_config_default(void) {
-    StandardFormConfig config = {0, DEFAULT_LEAP_SEMITONES, DEFAULT_MAX_TAIL, DEFAULT_SIMILARITY_MIN,
+    StandardFormConfig config = {0, DEFAULT_LEAP_SEMITONES, DEFAULT_LOOKAHEAD, DEFAULT_MAX_TAIL, DEFAULT_SIMILARITY_MIN,
                                  DEFAULT_NO_SIGNAL_UNCERTAINTY};
     return config;
 }

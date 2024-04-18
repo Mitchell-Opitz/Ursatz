@@ -298,6 +298,14 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
         free(boundaries);
         return status;
     }
+    /* a break shortly before a goal cadence is inside the phrase that cadence closes */
+    for (size_t k = 0; k < point_count; k++) {
+        for (size_t j = k + 1; points[k].discontinuity && j < point_count && j <= k + effective->cadence_lookahead_measures; j++) {
+            if (points[j].cadence >= 0) {
+                points[k].discontinuity = false;
+            }
+        }
+    }
     for (size_t k = 0; k < point_count; k++) {
         detector_points[k].event = input->notes[points[k].note].event;
         detector_points[k].has_cadence = points[k].cadence >= 0;

@@ -155,6 +155,28 @@ static void test_a_leap_into_a_measure_is_a_discontinuity(void) {
     form_destroy(&f);
 }
 
+static void test_a_break_shortly_before_a_cadence_is_inside_the_phrase(void) {
+    FormFixture f;
+    form_init(&f, 4, 0);
+    const int low[4] = {60, 62, 64, 65};
+    const int high[4] = {77, 79, 81, 82};
+    form_measures(&f, 1, 9, low);
+    form_measures(&f, 10, 11, high); /* a leap into measure 10, and a cadence at measure 11 */
+    form_cadence(&f, "pac11", 11, 0, 4, PAC, 3, false, 0.1);
+    form_finish(&f);
+    StandardFormPhrases phrases = segment(&f, NULL);
+    assert(phrases.count == 1 && phrases.items[0].claim.end_measure == 11 && phrases.items[0].claim.length_measures == 11);
+    assert(phrases.items[0].claim.signal == (int)STANDARD_FORM_SIGNAL_CADENCE);
+    standard_form_phrases_destroy(&phrases);
+    StandardFormConfig config = standard_form_config_default();
+    config.cadence_lookahead_measures = 0; /* report every break: the kernel ends a phrase at measure 9 */
+    phrases = segment(&f, &config);
+    assert(phrases.count == 2 && phrases.items[0].claim.end_measure == 9 &&
+           phrases.items[0].claim.signal == (int)STANDARD_FORM_SIGNAL_DISCONTINUITY);
+    standard_form_phrases_destroy(&phrases);
+    form_destroy(&f);
+}
+
 static void test_a_tail_after_the_last_cadence(void) {
     FormFixture f;
     form_init(&f, 4, 0);
@@ -259,6 +281,7 @@ int main(void) {
     test_only_a_goal_cadence_ends_a_phrase();
     test_without_a_cadence_the_secondary_signal_applies_after_eight_measures();
     test_a_leap_into_a_measure_is_a_discontinuity();
+    test_a_break_shortly_before_a_cadence_is_inside_the_phrase();
     test_a_tail_after_the_last_cadence();
     test_the_phrase_ends_at_the_next_beat_after_the_arrival();
     test_a_pickup_measure_is_not_counted();

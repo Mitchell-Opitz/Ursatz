@@ -28,7 +28,8 @@
  *   discontinuity     the secondary signal, a break between measure m and the next point's measure: a measure with no note
  *                     between them, a rest at the barline before the next point's first note, or a leap of at least
  *                     config.discontinuity_leap_semitones into it. It is counted by the kernel only after
- *                     max_length_without_cadence points without a boundary
+ *                     max_length_without_cadence points without a boundary. A break within cadence_lookahead_measures points
+ *                     before a goal cadence is not reported: the cadence will close the phrase and the break is inside it
  *
  * THE BOUNDARIES. A phrase runs from the measure after the previous phrase to the end of the arrival chord of its cadence: the
  * arrival chord's end snapped to the next beat of the MeterMap (never past the measure's end). The measure of that time is the

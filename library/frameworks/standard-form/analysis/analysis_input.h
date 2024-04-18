@@ -107,6 +107,8 @@ void standard_form_input_destroy(StandardFormInput *input);
  *   max_length_without_cadence   measures a phrase may run before the secondary signal can end it (0: the kernel's default, 8)
  *   discontinuity_leap_semitones the secondary signal: a rest at a measure's start, or a leap of at least this many semitones
  *                                into its first note, is a break before it (default 7, a fifth)
+ *   cadence_lookahead_measures   a break within this many measures before a goal cadence is not reported as a discontinuity: the
+ *                                cadence will close the phrase, so the break is inside it (default 4; 0 reports every break)
  *   max_absorbed_tail            measures after the last cadence that extend the last phrase instead of forming one (default 8)
  *   similarity_min               idea similarity: the least share of matching intervals for a match (default 0.75)
  *   no_signal_uncertainty        the uncertainty of a phrase that ends with no cadence and no discontinuity, only at the end of
@@ -115,6 +117,7 @@ void standard_form_input_destroy(StandardFormInput *input);
 typedef struct {
     size_t max_length_without_cadence;
     long discontinuity_leap_semitones;
+    size_t cadence_lookahead_measures;
     size_t max_absorbed_tail;
     double similarity_min;
     double no_signal_uncertainty;
