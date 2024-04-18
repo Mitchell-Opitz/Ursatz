@@ -4,11 +4,51 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <direct.h>
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#endif
+
 #include <corpus/corpus_api.h>
 
 static CorpusStoreHandle *g_handle = NULL;
 
+/* Ensures db_path's parent directory exists before corpus_api_open tries
+ * to create the SQLite file in it, mirroring analysis_service.c's
+ * ensure_dir_exists (kept as its own copy here, same reasoning as
+ * ursatz_gui_corpus_is_valid_id above). db_path is expected to contain
+ * exactly one directory component, e.g. "data/corpus.db". */
+static void ensure_parent_dir_exists(const char *db_path) {
+    const char *slash = strrchr(db_path, '/');
+    if (!slash) {
+        return;
+    }
+
+    size_t dir_len = (size_t)(slash - db_path);
+    char dir[256];
+    if (dir_len >= sizeof(dir)) {
+        return;
+    }
+    memcpy(dir, db_path, dir_len);
+    dir[dir_len] = '\0';
+
+#ifdef _WIN32
+    if (GetFileAttributesA(dir) == INVALID_FILE_ATTRIBUTES) {
+        _mkdir(dir);
+    }
+#else
+    struct stat st;
+    if (stat(dir, &st) != 0) {
+        mkdir(dir, 0755);
+    }
+#endif
+}
+
 bool ursatz_gui_corpus_service_init(const char *db_path) {
+    ensure_parent_dir_exists(db_path);
+
     CorpusStoreHandle *handle = NULL;
     if (corpus_api_open(db_path, &handle) != CORPUS_API_OK) {
         return false;
