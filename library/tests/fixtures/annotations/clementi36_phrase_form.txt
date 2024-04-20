@@ -1,0 +1,38 @@
+# Hand analysis of the phrase form of Clementi, Sonatina in C major, Op. 36 No. 1, first movement, for the form adapter (frameworks/standard-form/analysis).
+#
+# SOURCE: the Breitkopf and Haertel edition of the Sonatinas Op. 36 and the IMSLP scan. Neither was available when this file was written, so the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. No score was available when this file was written. It is a hand
+# reading of tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (the top line and the bass of each measure, dumped beat by beat), of the
+# harmony as far as the bass and the top line show it, and of the piece's known form. It was NOT derived from the output of the
+# form adapter, the cadence adapter or the chord identifier. A human should confirm it against an edition before it is relied on.
+# # The first 38 measures are read: the exposition, the short development and the recapitulation up to its closing cadence.
+# The reading follows standard-form's definitions, not every analyst's: a phrase ends at a PAC, IAC or HC; a period is an antecedent
+# ending on a weaker cadence and a consequent ending on a stronger one; a sentence is a presentation (a basic idea and its repetition)
+# and a continuation to a cadence; a repeated phrase is a written-out repeat ending on the same cadence; a hybrid pairs a beginning
+# and an ending of different archetypes. Only what could be read with some confidence is listed: the lack of a line is not an
+# annotation that there is nothing there, and the run counts only what is listed.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
+#   range <first measure> <last measure>     the measures read; the run looks only at these
+#   phrase-end <measure> <pac|iac|hc>        a phrase ends in this measure (the measure its arrival chord ends in), with this cadence
+#   theme <sentence|period|hybrid|compound-period|repeated-phrase> <first measure> <last measure>   a theme of this form and extent
+#   expansion <internal|contraction|external> <first measure> <last measure> <measures>   a length change: the ending's measures
+#                                            (internal, contraction) or the extension's (external), and by how many measures
+#
+# Measures are the score's. A boundary or a theme edge is matched within one measure.
+
+meter 4 1/4
+range 1 38
+# the exposition: an antecedent of four measures on a half cadence, a consequent that modulates to G and ends on a PAC in G at measure 8; then a phrase of seven measures to a PAC in G at 15
+phrase-end 4 hc
+phrase-end 8 pac
+phrase-end 15 pac
+# the development ends on the dominant of C at measure 23; the recapitulation restates the opening: a half cadence at 27, and a consequent that stays in C and ends on a PAC at 38
+phrase-end 23 hc
+phrase-end 27 hc
+phrase-end 38 pac
+theme period 1 8
+theme period 24 38
+# the recapitulation's consequent (measures 28-38, eleven measures) against its antecedent's four: an expansion of seven measures
+expansion internal 28 38 7

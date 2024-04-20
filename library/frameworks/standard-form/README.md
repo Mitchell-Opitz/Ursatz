@@ -159,3 +159,7 @@ not use these rules yet (`phrase_segmentation`, `motif_detection`,
 `sentence_detection`, `period_detection`). Phrase expansion and contraction
 are rules over caller-supplied lengths only: detecting them in real music
 arrives with the form adapter (L3.6).
+
+## Analysis of real music
+
+`analysis/` finds phrases (feeding the kernel's Phrase Boundary Detection with real cadences, absorbing post-cadential extensions and snapping to the beat), ideas and subphrases by the length conventions above, themes (sentence, period, hybrid, compound period, repeated phrase) from idea similarity and cadences, and phrase expansion and contraction. See `docs/modules/form-analysis.md`.

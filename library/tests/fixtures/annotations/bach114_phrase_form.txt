@@ -1,0 +1,39 @@
+# Hand analysis of the phrase form of Bach, Minuet in G, BWV Anh. 114 (Notebook for Anna Magdalena Bach, 1725), for the form adapter (frameworks/standard-form/analysis).
+#
+# SOURCE: the Neue Bach-Ausgabe (V/4) and the IMSLP scan of the Notebook. Neither was available when this file was written, so the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. No score was available when this file was written. It is a hand
+# reading of tests/fixtures/framework-v1-corpus/"Bach 114.mid" (the top line and the bass of each measure, dumped beat by beat), of the
+# harmony as far as the bass and the top line show it, and of the piece's known form. It was NOT derived from the output of the
+# form adapter, the cadence adapter or the chord identifier. A human should confirm it against an edition before it is relied on.
+# # The score is 3/4 (the MIDI file declares 4/4, which is wrong). All 32 measures are read: the two repeats of each strain are written out in the file.
+# The reading follows standard-form's definitions, not every analyst's: a phrase ends at a PAC, IAC or HC; a period is an antecedent
+# ending on a weaker cadence and a consequent ending on a stronger one; a sentence is a presentation (a basic idea and its repetition)
+# and a continuation to a cadence; a repeated phrase is a written-out repeat ending on the same cadence; a hybrid pairs a beginning
+# and an ending of different archetypes. Only what could be read with some confidence is listed: the lack of a line is not an
+# annotation that there is nothing there, and the run counts only what is listed.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
+#   range <first measure> <last measure>     the measures read; the run looks only at these
+#   phrase-end <measure> <pac|iac|hc>        a phrase ends in this measure (the measure its arrival chord ends in), with this cadence
+#   theme <sentence|period|hybrid|compound-period|repeated-phrase> <first measure> <last measure>   a theme of this form and extent
+#   expansion <internal|contraction|external> <first measure> <last measure> <measures>   a length change: the ending's measures
+#                                            (internal, contraction) or the extension's (external), and by how many measures
+#
+# Measures are the score's. A boundary or a theme edge is matched within one measure.
+
+meter 3 1/4
+range 1 32
+# the first strain, measures 1-8 and its written-out repeat, 9-16: a half cadence on A over D at measures 4 and 12, a perfect authentic cadence in G at 8 and 16
+phrase-end 4 hc
+phrase-end 8 pac
+phrase-end 12 hc
+phrase-end 16 pac
+# the second strain, measures 17-24 and its repeat, 25-32: a perfect authentic cadence in D at 20 and 28 (the sequence reaches the tonic of D), in G at 24 and 32
+phrase-end 20 pac
+phrase-end 24 pac
+phrase-end 28 pac
+phrase-end 32 pac
+# measures 1-4 and 5-8 are an antecedent and a consequent that restates the same basic idea (m5-6 = m1-2): a period; so are 9-12 and 13-16
+theme period 1 8
+theme period 9 16

@@ -17,7 +17,7 @@
  * RuleEvaluation are not needed by this extension; constraint_evaluate
  * itself is never called here -- see rule_pair.c).
  *
- * Scans every .h/.c file directly under frameworks/standard-form/
+ * Scans every .h/.c file directly under frameworks/standard-form/ and its analysis/ subdirectory (not tests/)
  * (not its tests/ subdirectory) and flags any local include ("...")
  * that does not point into an allowed prefix. Directory-driven rather
  * than a fixed file list, same pattern as
@@ -85,29 +85,30 @@ static int has_suffix(const char *name, const char *suffix) {
 }
 
 int main(void) {
-    const char *module_dir = "..";
-    DIR *d = opendir(module_dir);
-    if (d == NULL) {
-        printf("standard-form: directory not found, nothing to check\n");
-        return 0;
-    }
-
+    const char *module_dirs[] = {"..", "../analysis"};
     int total_violations = 0;
     int files_checked = 0;
-    struct dirent *entry;
 
-    while ((entry = readdir(d)) != NULL) {
-        if (!has_suffix(entry->d_name, ".h") && !has_suffix(entry->d_name, ".c")) {
+    for (size_t i = 0; i < sizeof(module_dirs) / sizeof(module_dirs[0]); i++) {
+        const char *module_dir = module_dirs[i];
+        DIR *d = opendir(module_dir);
+        if (d == NULL) {
+            printf("standard-form: directory %s not found, nothing to check\n", module_dir);
             continue;
         }
+        struct dirent *entry;
+        while ((entry = readdir(d)) != NULL) {
+            if (!has_suffix(entry->d_name, ".h") && !has_suffix(entry->d_name, ".c")) {
+                continue;
+            }
 
-        char path[512];
-        snprintf(path, sizeof(path), "%s/%s", module_dir, entry->d_name);
-        total_violations += check_file(path);
-        files_checked++;
+            char path[512];
+            snprintf(path, sizeof(path), "%s/%s", module_dir, entry->d_name);
+            total_violations += check_file(path);
+            files_checked++;
+        }
+        closedir(d);
     }
-
-    closedir(d);
 
     if (total_violations > 0) {
         fprintf(stderr, "%d architecture violation(s) found in standard-form\n", total_violations);
