@@ -203,3 +203,14 @@ body {
 .upload-status.error {
   color: #f87171;
 }
+
+.piece-list li button {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
