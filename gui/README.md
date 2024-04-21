@@ -75,6 +75,34 @@ outside Ursatz's own schema/contract, recording which Interpretation ids
 and types (`key`/`chord`) belong to that piece so the detail route knows
 what to load.
 
+The Corpus tool wraps Ursatz's `corpus_api.h` (vendored via
+`external/ursatz`, same as Analyzer's Persistence/MIDIImporter usage):
+
+- `POST /api/corpus`: body `{"id":"<corpus-id>","name":"<name>"}`. Creates
+  a Corpus. Returns `{"ok":true}` or `{"ok":false,"message":...}`.
+- `GET /api/corpus`: lists all Corpora:
+  `{"ok":true,"corpora":[{"id":...,"name":...},...]}`.
+- `POST /api/corpus/<id>/pieces`: body `{"piece_id":"<EntityID>"}`. Adds a
+  piece ref to the named Corpus. Adding a ref already present fails, same
+  as corpus_api itself (fail-fast, not reinterpreted).
+- `DELETE /api/corpus/<id>/pieces/<piece_id>`: removes a piece ref.
+  Removing a ref that isn't a member fails the same way.
+- `GET /api/corpus/<id>/pieces`: lists piece refs in a Corpus:
+  `{"ok":true,"pieces":[{"id":...},...]}`.
+
+All Corpus routes return HTTP 200 with `{"ok":false,...}` on failure, same
+convention as Analyzer. `<id>`/`<piece_id>` path segments are validated
+against the same alnum/`-`/`_` whitelist Analyzer uses for piece ids
+(its own copy, kept local to `corpus_service.c` -- promoting it to a
+shared validator is a reasonable follow-up, out of scope here).
+
+Unlike Analyzer's per-piece SQLite files, Corpus uses one shared store,
+`data/corpus.db`, opened once when the server starts (`server.c`) and
+kept open for the life of the process rather than per-request. Corpus
+does not validate that a piece ref actually exists in Persistence when
+added -- corpus_api doesn't do this today, by design, and this route
+layer doesn't add it.
+
 ## Frontend
 
 Plain static HTML/JS/CSS served by the backend from `frontend/public/`.
@@ -82,6 +110,11 @@ No framework or build pipeline at this stage. Theming lives entirely in
 `style.css` as CSS custom properties on `:root`, so a future theme
 picker can swap colors without touching markup or `app.js`. Frontend
 logic (`app.js`) makes no styling decisions.
+
+The Corpus tool page lets you create a Corpus, list existing Corpora, and
+click into one to see, add, and remove piece refs. Piece refs are entered
+as plain id strings -- there is no cross-linking to the Analyzer piece
+list in this version.
 
 ## Building
 
