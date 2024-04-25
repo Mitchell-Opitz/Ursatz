@@ -110,7 +110,8 @@ static bool record_interpretation_id(const char *db_path, const char *interpreta
  * selects provenance_reference_create_present() (needs a throwaway
  * target EntityID) vs. provenance_reference_create_absent(). Returns
  * false on any failure (caller treats that as a fatal setup failure). */
-static bool seed_interpretation(const char *db_path, const char *interpretation_id, bool is_present) {
+static bool seed_interpretation_with_claim(const char *db_path, const char *interpretation_id, bool is_present,
+                                            const char *claim_text) {
   bool ok = false;
 
   EntityID *interp_id = NULL;
@@ -129,7 +130,6 @@ static bool seed_interpretation(const char *db_path, const char *interpretation_
     goto done;
   }
 
-  const char *claim_text = "D major";
   if (value_create("chord-label", claim_text, strlen(claim_text) + 1, &claim) != VALUE_OK) {
     goto done;
   }
@@ -202,6 +202,10 @@ done:
   return ok;
 }
 
+static bool seed_interpretation(const char *db_path, const char *interpretation_id, bool is_present) {
+  return seed_interpretation_with_claim(db_path, interpretation_id, is_present, "D major");
+}
+
 static bool http_get(const char *path, char *response, size_t response_capacity) {
   socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == INVALID_SOCKET) {
@@ -261,6 +265,33 @@ int main(void) {
   check(seed_interpretation(db_path, "test-present-interpretation", true), "seed present-provenance interpretation");
   check(seed_interpretation(db_path, "test-absent-interpretation", false), "seed absent-provenance interpretation");
 
+  /* Previously, handle_get_piece pre-sized its response buffer using a
+   * per-interpretation budget (96 bytes + field lengths) that was
+   * smaller than the format's actual fixed overhead (107 bytes). Once
+   * enough interpretations were present, that shortfall accumulated
+   * until an snprintf's offset overran the buffer's capacity, and the
+   * following (capacity - offset) size_t subtraction underflowed into
+   * a huge write size -- corrupting the heap and crashing the process.
+   * Thirty interpretations reliably overran the old buffer. */
+  const char *const many_ids[30] = {
+      "many-01", "many-02", "many-03", "many-04", "many-05", "many-06", "many-07", "many-08", "many-09", "many-10",
+      "many-11", "many-12", "many-13", "many-14", "many-15", "many-16", "many-17", "many-18", "many-19", "many-20",
+      "many-21", "many-22", "many-23", "many-24", "many-25", "many-26", "many-27", "many-28", "many-29", "many-30",
+  };
+  bool seeded_many = true;
+  for (size_t i = 0; i < 30; i++) {
+    if (!seed_interpretation_with_claim(db_path, many_ids[i], false, "D major")) {
+      seeded_many = false;
+    }
+  }
+  check(seeded_many, "seed enough interpretations to have overrun the old fixed-size buffer");
+
+  /* Also confirm arbitrary claim text -- including characters that must
+   * be JSON-escaped -- round-trips as valid JSON rather than corrupting
+   * the response, per issue #7 (truncated/invalid JSON on some pieces). */
+  check(seed_interpretation_with_claim(db_path, "escaping-interpretation", false, "V7 says \"resolve\" \\ now"),
+        "seed interpretation with a label needing JSON escaping");
+
   struct mg_context *ctx = ursatz_gui_server_start("18766", ".");
   check(ctx != NULL, "server starts");
   if (!ctx) {
@@ -273,7 +304,7 @@ int main(void) {
   char path[128];
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", piece_id);
 
-  char response[8192];
+  char response[65536];
   bool got_response = http_get(path, response, sizeof(response));
   check(got_response, "got a response");
   if (got_response) {
@@ -282,7 +313,18 @@ int main(void) {
           "response contains provenance_state=present for hand-built interpretation");
     check(strstr(response, "\"provenance_state\":\"absent\"") != NULL,
           "response contains provenance_state=absent for hand-built interpretation");
+    check(strstr(response, "\"interpretation_id\":\"many-30\"") != NULL,
+          "response includes the last of the 30 interpretations that used to overrun the buffer");
+    check(strstr(response, "\"label\":\"V7 says \\\"resolve\\\" \\\\ now\"") != NULL,
+          "response JSON-escapes a label containing quotes and a backslash");
   }
+
+  /* The server surviving to answer a second request (rather than the
+   * connection just dropping) confirms the earlier request didn't crash
+   * the backend process. */
+  char followup[256];
+  check(http_get("/api/analyzer/pieces", followup, sizeof(followup)) && strstr(followup, "200") != NULL,
+        "server is still alive and answering requests after the large piece detail response");
 
   ursatz_gui_server_stop(ctx);
   check(true, "server stops cleanly");
