@@ -139,8 +139,8 @@ async function handleUpload() {
 }
 
 const PROVENANCE_LABELS = {
-  present: "Analyzed",
-  absent: "Hand-entered",
+  present: "Hand-entered",
+  absent: "Analyzed",
 };
 
 function renderBackLink() {
