@@ -1,5 +1,6 @@
 #include "analyzer.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,6 +60,106 @@ static void send_json(struct mg_connection *conn, const char *body) {
   size_t len = strlen(body);
   mg_send_http_ok(conn, "application/json", (long)len);
   mg_write(conn, body, len);
+}
+
+/* Append-only buffer that grows as needed, used in place of a
+ * pre-sized malloc + snprintf/offset accumulation. That older pattern
+ * undersized its per-field capacity estimate for handle_get_piece's
+ * output: once snprintf started truncating, offset still advanced by
+ * the untruncated would-be length, so offset could exceed capacity and
+ * the following "capacity - offset" (both size_t) would underflow into
+ * a huge value passed as a write size -- a heap overflow that crashed
+ * the process on pieces with enough interpretations. */
+typedef struct {
+  char *data;
+  size_t length;
+  size_t capacity;
+  bool ok;
+} JsonBuffer;
+
+static void json_buffer_init(JsonBuffer *buf) {
+  buf->data = NULL;
+  buf->length = 0;
+  buf->capacity = 0;
+  buf->ok = true;
+}
+
+static void json_buffer_reserve(JsonBuffer *buf, size_t additional) {
+  if (!buf->ok) {
+    return;
+  }
+  size_t needed = buf->length + additional + 1; /* +1 for the NUL terminator */
+  if (needed <= buf->capacity) {
+    return;
+  }
+  size_t new_capacity = buf->capacity == 0 ? 256 : buf->capacity;
+  while (new_capacity < needed) {
+    new_capacity *= 2;
+  }
+  char *grown = realloc(buf->data, new_capacity);
+  if (!grown) {
+    buf->ok = false;
+    return;
+  }
+  buf->data = grown;
+  buf->capacity = new_capacity;
+}
+
+static void json_buffer_append(JsonBuffer *buf, const char *text) {
+  size_t len = strlen(text);
+  json_buffer_reserve(buf, len);
+  if (!buf->ok) {
+    return;
+  }
+  memcpy(buf->data + buf->length, text, len);
+  buf->length += len;
+  buf->data[buf->length] = '\0';
+}
+
+/* Appends value as a JSON string literal, including the surrounding
+ * quotes, escaping '"', '\\', and control characters so arbitrary
+ * piece/interpretation data can never produce invalid JSON. */
+static void json_buffer_append_string(JsonBuffer *buf, const char *value) {
+  json_buffer_reserve(buf, strlen(value) + 2);
+  if (!buf->ok) {
+    return;
+  }
+  json_buffer_append(buf, "\"");
+  for (const unsigned char *c = (const unsigned char *)value; *c; c++) {
+    switch (*c) {
+      case '"':
+        json_buffer_append(buf, "\\\"");
+        break;
+      case '\\':
+        json_buffer_append(buf, "\\\\");
+        break;
+      case '\n':
+        json_buffer_append(buf, "\\n");
+        break;
+      case '\r':
+        json_buffer_append(buf, "\\r");
+        break;
+      case '\t':
+        json_buffer_append(buf, "\\t");
+        break;
+      default:
+        if (*c < 0x20) {
+          char escaped[8];
+          snprintf(escaped, sizeof(escaped), "\\u%04x", *c);
+          json_buffer_append(buf, escaped);
+        } else {
+          char one[2] = {(char)*c, '\0'};
+          json_buffer_append(buf, one);
+        }
+        break;
+    }
+  }
+  json_buffer_append(buf, "\"");
+}
+
+static void json_buffer_destroy(JsonBuffer *buf) {
+  free(buf->data);
+  buf->data = NULL;
 }
 
 static int handle_post(struct mg_connection *conn) {
@@ -142,39 +243,48 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
     return 200;
   }
 
-  size_t capacity = 128 + strlen(detail->id);
+  JsonBuffer buf;
+  json_buffer_init(&buf);
+
+  json_buffer_append(&buf, "{\"ok\":true,\"id\":");
+  json_buffer_append_string(&buf, detail->id);
+  json_buffer_append(&buf, ",\"note_event_count\":");
+  char count_text[32];
+  snprintf(count_text, sizeof(count_text), "%zu", detail->note_event_count);
+  json_buffer_append(&buf, count_text);
+  json_buffer_append(&buf, ",\"interpretations\":[");
+
   for (size_t i = 0; i < detail->interpretation_count; i++) {
     const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
-    capacity += 96 + strlen(summary->interpretation_id) + strlen(summary->type) + strlen(summary->label) +
-                strlen(summary->produced_by_author) + strlen(summary->produced_by_method) +
-                strlen(summary->provenance_state);
+    if (i != 0) {
+      json_buffer_append(&buf, ",");
+    }
+    json_buffer_append(&buf, "{\"interpretation_id\":");
+    json_buffer_append_string(&buf, summary->interpretation_id);
+    json_buffer_append(&buf, ",\"type\":");
+    json_buffer_append_string(&buf, summary->type);
+    json_buffer_append(&buf, ",\"label\":");
+    json_buffer_append_string(&buf, summary->label);
+    json_buffer_append(&buf, ",\"produced_by\":{\"author\":");
+    json_buffer_append_string(&buf, summary->produced_by_author);
+    json_buffer_append(&buf, ",\"method\":");
+    json_buffer_append_string(&buf, summary->produced_by_method);
+    json_buffer_append(&buf, "},\"provenance_state\":");
+    json_buffer_append_string(&buf, summary->provenance_state);
+    json_buffer_append(&buf, "}");
   }
+  json_buffer_append(&buf, "]}");
 
-  char *body = malloc(capacity);
-  if (!body) {
-    ursatz_gui_piece_detail_destroy(detail);
+  ursatz_gui_piece_detail_destroy(detail);
+
+  if (!buf.ok) {
+    json_buffer_destroy(&buf);
     send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
-  size_t offset = (size_t)snprintf(body, capacity,
-                                    "{\"ok\":true,\"id\":\"%s\",\"note_event_count\":%zu,\"interpretations\":[",
-                                    detail->id, detail->note_event_count);
-  for (size_t i = 0; i < detail->interpretation_count; i++) {
-    const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
-    offset += (size_t)snprintf(body + offset, capacity - offset,
-                                "%s{\"interpretation_id\":\"%s\",\"type\":\"%s\",\"label\":\"%s\","
-                                "\"produced_by\":{\"author\":\"%s\",\"method\":\"%s\"},"
-                                "\"provenance_state\":\"%s\"}",
-                                i == 0 ? "" : ",", summary->interpretation_id, summary->type, summary->label,
-                                summary->produced_by_author, summary->produced_by_method,
-                                summary->provenance_state);
-  }
-  offset += (size_t)snprintf(body + offset, capacity - offset, "]}");
-
-  ursatz_gui_piece_detail_destroy(detail);
-  send_json(conn, body);
-  free(body);
+  send_json(conn, buf.data);
+  json_buffer_destroy(&buf);
   return 200;
 }
 
