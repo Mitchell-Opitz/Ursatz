@@ -58,17 +58,30 @@ typedef struct {
 
 typedef struct {
     char *id;
+    char *filename; /* original upload filename, or "" if none was given */
     size_t note_event_count;
     UrsatzGuiInterpretationSummary *interpretations;
     size_t interpretation_count;
 } UrsatzGuiPieceDetail;
 
 /*
+ * One entry in ursatz_gui_analysis_list's result: a saved piece's id
+ * plus the original filename it was uploaded as ("" if none was given).
+ */
+typedef struct {
+    char *id;
+    char *filename;
+} UrsatzGuiPieceSummary;
+
+/*
  * Imports midi_data[0..midi_size) via Ursatz's MIDIImporter, estimates
  * a single global key and identifies a chord for each onset-grouped
  * sonority against the common-practice-minimal framework, and saves
  * the resulting NoteEvent sequence plus every produced Interpretation
- * into a new SQLite file under pieces_dir.
+ * into a new SQLite file under pieces_dir. original_filename (the
+ * upload's client-supplied filename, may be NULL or "" if unknown) is
+ * persisted alongside the piece so it can be displayed later; it does
+ * not affect the generated id.
  *
  * On URSATZ_GUI_ANALYSIS_OK, *out_id is a newly allocated, caller-owned
  * id string (the saved piece's filename, without directory or ".db").
@@ -76,16 +89,19 @@ typedef struct {
  * NoteEvents only, no Interpretations).
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *midi_data,
-                                                              size_t midi_size, char **out_id);
+                                                              size_t midi_size, const char *original_filename,
+                                                              char **out_id);
 
 /*
- * Lists saved piece ids found in pieces_dir (filenames minus ".db").
- * On URSATZ_GUI_ANALYSIS_OK, *out_ids is a newly allocated array of
- * *out_count newly allocated id strings (caller frees each string,
+ * Lists saved pieces found in pieces_dir (filenames minus ".db"), each
+ * with its persisted original filename. On URSATZ_GUI_ANALYSIS_OK,
+ * *out_pieces is a newly allocated array of *out_count
+ * UrsatzGuiPieceSummary entries (caller frees each entry's id/filename,
  * then the array). A missing or empty pieces_dir yields *out_count ==
- * 0, *out_ids == NULL, still URSATZ_GUI_ANALYSIS_OK.
+ * 0, *out_pieces == NULL, still URSATZ_GUI_ANALYSIS_OK.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, char ***out_ids, size_t *out_count);
+UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzGuiPieceSummary **out_pieces,
+                                                  size_t *out_count);
 
 /*
  * Loads the detail view for one saved piece: its NoteEvent count plus

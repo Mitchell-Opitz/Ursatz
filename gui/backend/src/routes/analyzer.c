@@ -162,6 +162,38 @@ static void json_buffer_destroy(JsonBuffer *buf) {
   buf->data = NULL;
 }
 
+static char *empty_string_copy(void) {
+  char *copy = malloc(1);
+  if (copy) {
+    copy[0] = '\0';
+  }
+  return copy;
+}
+
+/* Reads the X-Filename request header (URL-encoded by the frontend
+ * since header values can't safely carry arbitrary filename bytes) and
+ * decodes it into a newly allocated, caller-owned string. Returns an
+ * allocated empty string if the header is absent, NULL only on
+ * allocation failure. */
+static char *read_filename_header(struct mg_connection *conn) {
+  const char *raw = mg_get_header(conn, "X-Filename");
+  if (!raw) {
+    return empty_string_copy();
+  }
+  size_t raw_len = strlen(raw);
+  char *decoded = malloc(raw_len + 1);
+  if (!decoded) {
+    return NULL;
+  }
+  int decoded_len = mg_url_decode(raw, (int)raw_len, decoded, (int)(raw_len + 1), 0);
+  if (decoded_len < 0) {
+    free(decoded);
+    return empty_string_copy();
+  }
+  decoded[decoded_len] = '\0';
+  return decoded;
+}
+
 static int handle_post(struct mg_connection *conn) {
   size_t midi_size = 0;
   unsigned char *midi_data = read_request_body(conn, &midi_size);
@@ -170,11 +202,20 @@ static int handle_post(struct mg_connection *conn) {
     return 400;
   }
 
+  char *filename = read_filename_header(conn);
+  if (!filename) {
+    free(midi_data);
+    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    return 200;
+  }
+
   char *id = NULL;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_import_and_save(kPiecesDir, midi_data, midi_size, &id);
+  UrsatzGuiAnalysisResult result =
+      ursatz_gui_analysis_import_and_save(kPiecesDir, midi_data, midi_size, filename, &id);
   free(midi_data);
 
   if (result != URSATZ_GUI_ANALYSIS_OK) {
+    free(filename);
     const char *message = (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED)
                                ? "failed to import MIDI file"
                                : "failed to save piece";
@@ -184,47 +225,69 @@ static int handle_post(struct mg_connection *conn) {
     return 200;
   }
 
-  char body[320];
-  snprintf(body, sizeof(body), "{\"ok\":true,\"id\":\"%s\"}", id);
+  JsonBuffer buf;
+  json_buffer_init(&buf);
+  json_buffer_append(&buf, "{\"ok\":true,\"id\":");
+  json_buffer_append_string(&buf, id);
+  json_buffer_append(&buf, ",\"filename\":");
+  json_buffer_append_string(&buf, filename);
+  json_buffer_append(&buf, "}");
   free(id);
-  send_json(conn, body);
+  free(filename);
+
+  if (!buf.ok) {
+    json_buffer_destroy(&buf);
+    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    return 200;
+  }
+
+  send_json(conn, buf.data);
+  json_buffer_destroy(&buf);
   return 200;
 }
 
+static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
+  for (size_t i = 0; i < count; i++) {
+    free(pieces[i].id);
+    free(pieces[i].filename);
+  }
+  free(pieces);
+}
+
 static int handle_get(struct mg_connection *conn) {
-  char **ids = NULL;
+  UrsatzGuiPieceSummary *pieces = NULL;
   size_t count = 0;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_list(kPiecesDir, &ids, &count);
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_list(kPiecesDir, &pieces, &count);
 
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
 
-  size_t capacity = 64;
+  JsonBuffer buf;
+  json_buffer_init(&buf);
+  json_buffer_append(&buf, "{\"ok\":true,\"pieces\":[");
   for (size_t i = 0; i < count; i++) {
-    capacity += strlen(ids[i]) + 16;
-  }
-  char *body = malloc(capacity);
-  if (!body) {
-    for (size_t i = 0; i < count; i++) {
-      free(ids[i]);
+    if (i != 0) {
+      json_buffer_append(&buf, ",");
     }
-    free(ids);
+    json_buffer_append(&buf, "{\"id\":");
+    json_buffer_append_string(&buf, pieces[i].id);
+    json_buffer_append(&buf, ",\"filename\":");
+    json_buffer_append_string(&buf, pieces[i].filename);
+    json_buffer_append(&buf, "}");
+  }
+  json_buffer_append(&buf, "]}");
+  free_pieces(pieces, count);
+
+  if (!buf.ok) {
+    json_buffer_destroy(&buf);
     send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
-  size_t offset = (size_t)snprintf(body, capacity, "{\"ok\":true,\"pieces\":[");
-  for (size_t i = 0; i < count; i++) {
-    offset += (size_t)snprintf(body + offset, capacity - offset, "%s{\"id\":\"%s\"}", i == 0 ? "" : ",", ids[i]);
-    free(ids[i]);
-  }
-  free(ids);
-  offset += (size_t)snprintf(body + offset, capacity - offset, "]}");
-
-  send_json(conn, body);
-  free(body);
+  send_json(conn, buf.data);
+  json_buffer_destroy(&buf);
   return 200;
 }
 
@@ -248,6 +311,8 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
 
   json_buffer_append(&buf, "{\"ok\":true,\"id\":");
   json_buffer_append_string(&buf, detail->id);
+  json_buffer_append(&buf, ",\"filename\":");
+  json_buffer_append_string(&buf, detail->filename);
   json_buffer_append(&buf, ",\"note_event_count\":");
   char count_text[32];
   snprintf(count_text, sizeof(count_text), "%zu", detail->note_event_count);
