@@ -69,6 +69,44 @@ static void check(bool cond, const char *what) {
  * hand-built Interpretation below. */
 static const char *const kIndexTableName = "ursatz_gui_interpretations";
 
+/* Same private piece-metadata table analysis_service.c maintains
+ * (original_filename), reused here so the route's normal read path
+ * picks up the hand-seeded filename below. */
+static const char *const kMetaTableName = "ursatz_gui_piece_meta";
+
+static bool seed_original_filename(const char *db_path, const char *filename) {
+  sqlite3 *db = NULL;
+  if (sqlite3_open(db_path, &db) != SQLITE_OK) {
+    if (db) {
+      sqlite3_close(db);
+    }
+    return false;
+  }
+
+  char sql[256];
+  snprintf(sql, sizeof(sql),
+           "CREATE TABLE IF NOT EXISTS %s ("
+           "  id INTEGER PRIMARY KEY CHECK (id = 0),"
+           "  original_filename TEXT NOT NULL"
+           ");",
+           kMetaTableName);
+  if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+    sqlite3_close(db);
+    return false;
+  }
+
+  snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO %s (id, original_filename) VALUES (0, ?);", kMetaTableName);
+  sqlite3_stmt *stmt = NULL;
+  bool ok = false;
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) == SQLITE_OK) {
+    sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_TRANSIENT);
+    ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+  }
+  sqlite3_close(db);
+  return ok;
+}
+
 static bool record_interpretation_id(const char *db_path, const char *interpretation_id, const char *type) {
   sqlite3 *db = NULL;
   if (sqlite3_open(db_path, &db) != SQLITE_OK) {
@@ -264,6 +302,8 @@ int main(void) {
 
   check(seed_interpretation(db_path, "test-present-interpretation", true), "seed present-provenance interpretation");
   check(seed_interpretation(db_path, "test-absent-interpretation", false), "seed absent-provenance interpretation");
+  check(seed_original_filename(db_path, "my \"draft\" \\ song.mid"),
+        "seed original filename, including characters needing JSON escaping");
 
   /* Previously, handle_get_piece pre-sized its response buffer using a
    * per-interpretation budget (96 bytes + field lengths) that was
@@ -317,6 +357,21 @@ int main(void) {
           "response includes the last of the 30 interpretations that used to overrun the buffer");
     check(strstr(response, "\"label\":\"V7 says \\\"resolve\\\" \\\\ now\"") != NULL,
           "response JSON-escapes a label containing quotes and a backslash");
+    check(strstr(response, "\"filename\":\"my \\\"draft\\\" \\\\ song.mid\"") != NULL,
+          "piece detail response includes the seeded original filename, JSON-escaped");
+  }
+
+  /* Confirms the same seeded filename round-trips through the piece
+   * list route too, not just piece detail. */
+  char list_response[65536];
+  bool got_list_response = http_get("/api/analyzer/pieces", list_response, sizeof(list_response));
+  check(got_list_response, "got a list response");
+  if (got_list_response) {
+    check(strstr(list_response, "200") != NULL, "list response is 200 OK");
+    check(strstr(list_response, "\"id\":\"test-provenance-piece\"") != NULL,
+          "list response includes the seeded piece id");
+    check(strstr(list_response, "\"filename\":\"my \\\"draft\\\" \\\\ song.mid\"") != NULL,
+          "list response includes the seeded original filename, JSON-escaped");
   }
 
   /* The server surviving to answer a second request (rather than the

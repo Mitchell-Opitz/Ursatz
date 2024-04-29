@@ -53,6 +53,15 @@ static const char *const kIndexTableName = "ursatz_gui_interpretations";
 static const char *const kIndexTypeKey = "key";
 static const char *const kIndexTypeChord = "chord";
 
+/*
+ * ursatz-gui-owned piece metadata table, in the same per-piece SQLite
+ * file as kIndexTableName above. Currently holds only the original
+ * upload filename; a single row keyed by a fixed id.
+ */
+static const char *const kMetaTableName = "ursatz_gui_piece_meta";
+
+static char *dup_string(const char *value);
+
 /* Opens (creating if absent) the ursatz-gui interpretation index table in
  * the SQLite file at db_path. Returns NULL on failure. */
 static sqlite3 *open_interpretation_index(const char *db_path) {
@@ -76,7 +85,63 @@ static sqlite3 *open_interpretation_index(const char *db_path) {
         return NULL;
     }
 
+    snprintf(sql, sizeof(sql),
+             "CREATE TABLE IF NOT EXISTS %s ("
+             "  id INTEGER PRIMARY KEY CHECK (id = 0),"
+             "  original_filename TEXT NOT NULL"
+             ");",
+             kMetaTableName);
+    if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        return NULL;
+    }
+
     return db;
+}
+
+/* Records original_filename ("" if NULL) for this piece. Best-effort,
+ * mirroring record_interpretation_id: a failure here does not fail the
+ * analysis, only the display of the filename later. */
+static void record_original_filename(sqlite3 *index_db, const char *original_filename) {
+    if (!index_db) {
+        return;
+    }
+
+    char sql[160];
+    snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO %s (id, original_filename) VALUES (0, ?);", kMetaTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return;
+    }
+    sqlite3_bind_text(stmt, 1, original_filename ? original_filename : "", -1, SQLITE_TRANSIENT);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
+
+/* Reads the original filename recorded by record_original_filename, or
+ * "" if none was recorded. Returns a newly allocated, caller-owned
+ * string, or NULL only on allocation failure. */
+static char *read_original_filename(sqlite3 *index_db) {
+    if (!index_db) {
+        return dup_string("");
+    }
+
+    char sql[128];
+    snprintf(sql, sizeof(sql), "SELECT original_filename FROM %s WHERE id = 0;", kMetaTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return dup_string("");
+    }
+
+    char *filename = NULL;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        filename = dup_string((const char *)sqlite3_column_text(stmt, 0));
+    }
+    sqlite3_finalize(stmt);
+
+    return filename ? filename : dup_string("");
 }
 
 /* Records that interpretation_id (of the given type) was produced for
@@ -446,7 +511,8 @@ static char *generate_piece_id(void) {
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *midi_data,
-                                                              size_t midi_size, char **out_id) {
+                                                              size_t midi_size, const char *original_filename,
+                                                              char **out_id) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
@@ -487,6 +553,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
             result = URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
         } else {
             sqlite3 *index_db = open_interpretation_index(db_path);
+            record_original_filename(index_db, original_filename);
 
             KeyEstimate key = estimate_and_store_global_key(handle, index_db, events, pitch_values, count);
 
@@ -560,8 +627,9 @@ static bool append_db_id(char ***ids, size_t *count, size_t *capacity, const cha
     return true;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, char ***out_ids, size_t *out_count) {
-    *out_ids = NULL;
+UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzGuiPieceSummary **out_pieces,
+                                                  size_t *out_count) {
+    *out_pieces = NULL;
     *out_count = 0;
 
     char **ids = NULL;
@@ -602,7 +670,41 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, char **
     closedir(dir);
 #endif
 
-    *out_ids = ids;
+    UrsatzGuiPieceSummary *pieces = NULL;
+    if (count > 0) {
+        pieces = calloc(count, sizeof(UrsatzGuiPieceSummary));
+        if (!pieces) {
+            free_ids(ids, count);
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        char db_path[320];
+        snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, ids[i]);
+        sqlite3 *index_db = open_interpretation_index(db_path);
+        char *filename = read_original_filename(index_db);
+        if (index_db) {
+            sqlite3_close(index_db);
+        }
+        if (!filename) {
+            for (size_t k = 0; k < i; k++) {
+                free(pieces[k].id);
+                free(pieces[k].filename);
+            }
+            free(pieces);
+            for (size_t k = i; k < count; k++) {
+                free(ids[k]);
+            }
+            free(ids);
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+        pieces[i].id = ids[i];
+        pieces[i].filename = filename;
+    }
+    free(ids);
+
+    *out_pieces = pieces;
     *out_count = count;
     return URSATZ_GUI_ANALYSIS_OK;
 }
@@ -798,12 +900,22 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     free(events);
 
     sqlite3 *index_db = open_interpretation_index(db_path);
+    char *filename = read_original_filename(index_db);
+    if (!filename) {
+        if (index_db) {
+            sqlite3_close(index_db);
+        }
+        persistence_close(handle);
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+
     char **index_ids = NULL;
     char **index_types = NULL;
     size_t index_count = 0;
     if (index_db) {
         if (!read_interpretation_index(index_db, &index_ids, &index_types, &index_count)) {
             sqlite3_close(index_db);
+            free(filename);
             persistence_close(handle);
             return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
@@ -836,6 +948,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     if (!detail || !id_copy) {
         free(detail);
         free(id_copy);
+        free(filename);
         for (size_t i = 0; i < summary_count; i++) {
             interpretation_summary_destroy_contents(&summaries[i]);
         }
@@ -844,6 +957,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     }
 
     detail->id = id_copy;
+    detail->filename = filename;
     detail->note_event_count = note_event_count;
     detail->interpretations = summaries;
     detail->interpretation_count = summary_count;
@@ -861,5 +975,6 @@ void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
     }
     free(detail->interpretations);
     free(detail->id);
+    free(detail->filename);
     free(detail);
 }
