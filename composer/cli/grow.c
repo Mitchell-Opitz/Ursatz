@@ -20,7 +20,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/render.h>
 
-#define MAX_FILES 3
+#define MAX_SUGGESTIONS 16
+#define MAX_FILES (3 * MAX_SUGGESTIONS)
 #define MAX_CHORDS 96
 #define MAX_LANE_SPANS 128
 
@@ -37,6 +38,7 @@ typedef struct {
     const char *cadence_text;
     const char *first_cadence_text;
     const char *seed_text;
+    const char *suggest_text;
     const char *out_path;
     const char *midi_path;
     const char *musicxml_path;
@@ -50,6 +52,7 @@ typedef struct {
     PlanCadenceType cadence;
     PlanCadenceType first_cadence;
     unsigned long seed;
+    unsigned long suggest;
     bool json;
 } Options;
 
@@ -73,6 +76,8 @@ static void print_help(FILE *out) {
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
+    fprintf(out, "  --suggest <n>        write n different themes (1 to %d) instead of one; with files, theme k goes to\n", MAX_SUGGESTIONS);
+    fprintf(out, "                       <name>-k.<extension>\n");
     fprintf(out, "  --out <file.json>    write the plan as JSON\n");
     fprintf(out, "  --midi <file>        write the melody and the bass as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the melody and the bass as MusicXML\n");
@@ -138,6 +143,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->first_cadence_text;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
+        } else if (strcmp(arg, "--suggest") == 0) {
+            target = &options->suggest_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
         } else if (strcmp(arg, "--midi") == 0) {
@@ -243,6 +250,12 @@ static int check_options(Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence must be HC or IAC, not '%s'", options->first_cadence_text);
         }
     }
+    options->suggest = 1;
+    if (options->suggest_text &&
+        (!cli_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
+        return cli_fail(CLI_EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
+                        options->suggest_text);
+    }
     if (options->seed_text) {
         if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
             return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
@@ -267,11 +280,13 @@ typedef struct {
     PiecePlan *plan;
     GrowOutcome outcome;
     unsigned long seed;
+    char *signature;
 } Theme;
 
 static void theme_destroy(Theme *theme) {
     plan_destroy(theme->plan);
     grow_outcome_destroy(&theme->outcome);
+    free(theme->signature);
     memset(theme, 0, sizeof(*theme));
 }
 
@@ -283,6 +298,76 @@ static NodeId find_node(const PiecePlan *plan, const char *name) {
         }
     }
     return PLAN_NODE_NONE;
+}
+
+typedef struct {
+    char *text;
+    size_t length;
+    size_t capacity;
+} Text;
+
+static bool text_append(Text *text, const char *format, ...) __attribute__((format(printf, 2, 3)));
+
+static bool text_append(Text *text, const char *format, ...) {
+    char piece[256];
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(piece, sizeof(piece), format, args);
+    va_end(args);
+    if (written < 0 || (size_t)written >= sizeof(piece)) {
+        return false;
+    }
+    if (text->length + (size_t)written + 1 > text->capacity) {
+        size_t capacity = text->capacity ? text->capacity * 2 : 1024;
+        while (capacity < text->length + (size_t)written + 1) {
+            capacity *= 2;
+        }
+        char *grown = realloc(text->text, capacity);
+        if (!grown) {
+            return false;
+        }
+        text->text = grown;
+        text->capacity = capacity;
+    }
+    memcpy(text->text + text->length, piece, (size_t)written + 1);
+    text->length += (size_t)written;
+    return true;
+}
+
+/* Everything the harmony, the bass and the melody say over the theme, as text: two themes with the same text are one. */
+static char *signature_of(const PiecePlan *plan, NodeId theme_node) {
+    static const PlanLaneKind LANES[3] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY};
+    PlanSpan span = plan_node_span(plan, theme_node);
+    Text text = {0};
+    for (int lane = 0; lane < 3; lane++) {
+        LaneSpanId ids[MAX_LANE_SPANS];
+        size_t count = plan_lane_find(plan, LANES[lane], 0, span, ids, MAX_LANE_SPANS);
+        for (size_t i = 0; i < count && i < MAX_LANE_SPANS; i++) {
+            PlanSpan at = plan_lane_span_span(plan, ids[i]);
+            const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
+            if (!text_append(&text, "|%d@%ld/%lu+%ld/%lu:", lane, at.start.num, at.start.den, at.length.num,
+                             at.length.den)) {
+                free(text.text);
+                return NULL;
+            }
+            if (LANES[lane] == PLAN_LANE_HARMONY) {
+                if (!text_append(&text, "%s", payload->harmony.roman_numeral)) {
+                    free(text.text);
+                    return NULL;
+                }
+                continue;
+            }
+            for (size_t n = 0; n < payload->notes.note_count; n++) {
+                const PlanNote *note = &payload->notes.notes[n];
+                if (!text_append(&text, "%d@%ld/%lu+%ld/%lu,", note->midi_pitch, note->offset.num, note->offset.den,
+                                 note->duration.num, note->duration.den)) {
+                    free(text.text);
+                    return NULL;
+                }
+            }
+        }
+    }
+    return text.text ? text.text : strdup("");
 }
 
 /* Builds the plan and runs the stages for one seed. GROW_ERR_STUCK is the only result a later seed can mend. */
@@ -306,6 +391,13 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
+    if (ran == GROW_OK) {
+        NodeId theme_node = find_node(theme->plan, "theme");
+        theme->signature = theme_node == PLAN_NODE_NONE ? NULL : signature_of(theme->plan, theme_node);
+        if (!theme->signature) {
+            ran = GROW_ERR_ALLOC;
+        }
+    }
     if (ran != GROW_OK) {
         theme_destroy(theme);
     }
@@ -677,7 +769,11 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
     }
     printf("\n");
     for (size_t k = 0; k < count; k++) {
-        printf("\n");
+        if (options->suggest > 1 || options->suggest_text) {
+            printf("\ntheme %zu of %zu\n", k + 1, count);
+        } else {
+            printf("\n");
+        }
         print_theme_text(options, &themes[k], bar);
     }
     for (size_t i = 0; i < file_count; i++) {
@@ -795,18 +891,27 @@ int run_grow(int argc, char **argv) {
                         motive_error.message);
     }
 
-    /* The seeds are tried one after another; a stuck run is passed over. A request no seed can mend ends the search
-       at once. */
-    Theme themes[1];
+    /* The seeds are tried one after another; a stuck run is passed over, and a theme that is the same as one already
+       made is not counted. A request no seed can mend ends the search at once. */
+    Theme themes[MAX_SUGGESTIONS];
     memset(themes, 0, sizeof(themes));
     size_t made = 0;
+    unsigned long tries = (unsigned long)CLI_MAX_SEED_TRIES * options.suggest;
     unsigned long last_seed = options.seed;
-    for (unsigned long attempt = 0; attempt < CLI_MAX_SEED_TRIES && made < 1; attempt++) {
+    for (unsigned long attempt = 0; attempt < tries && made < options.suggest; attempt++) {
         Theme theme;
         last_seed = (options.seed + attempt) & CLI_SEED_MAX;
         GrowResult result = grow_one(&options, &motive, last_seed, &theme);
         if (result == GROW_OK) {
-            themes[made++] = theme;
+            bool repeated = false;
+            for (size_t k = 0; k < made; k++) {
+                repeated = repeated || strcmp(themes[k].signature, theme.signature) == 0;
+            }
+            if (repeated) {
+                theme_destroy(&theme);
+            } else {
+                themes[made++] = theme;
+            }
         } else if (result != GROW_ERR_STUCK) {
             status = result == GROW_ERR_MOTIVE_TOO_LONG
                          ? cli_fail(CLI_EXIT_UNSATISFIABLE, "the motive does not fit in one bar of %s", options.meter_text)
@@ -824,6 +929,9 @@ int run_grow(int argc, char **argv) {
         status = cli_fail(CLI_EXIT_UNSATISFIABLE, "no theme could be grown for %s, %s, %zu bars, %s from seeds %lu to %lu",
                           options.key_text, options.meter_text, options.bars, options.into_text, options.seed,
                           last_seed);
+    }
+    if (status == 0 && made < options.suggest && options.suggest_text) {
+        fprintf(stderr, "Note: only %zu different theme%s found for this request\n", made, made == 1 ? "" : "s");
     }
 
     if (status == 0) {
