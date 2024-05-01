@@ -32,6 +32,7 @@
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
 #include <pitch/pitch_numeric_value.h>
+#include <relationship/relationship.h>
 #include <semantics/sonority.h>
 #include <structure/structure.h>
 #include <time/musical_time.h>
@@ -59,6 +60,22 @@ static const char *const kIndexTypeChord = "chord";
  * upload filename; a single row keyed by a fixed id.
  */
 static const char *const kMetaTableName = "ursatz_gui_piece_meta";
+
+/*
+ * ursatz-gui-owned relationship table, in the same per-piece SQLite file
+ * as kIndexTableName/kMetaTableName above. Ursatz's persistence layer
+ * (persistence/persistence.h) has no store/load path for Relationship
+ * (relationship/relationship.h) at all -- unlike Interpretation, there is
+ * no persistence_store_relationship anywhere in Ursatz to delegate to.
+ * Rather than block Period/Sentence/Form/Thematic Return Detection's
+ * Relationship-shaped output on a real Ursatz RelationshipRepository
+ * (Registry: Not Started), this mirrors the same stopgap pattern
+ * kIndexTableName already uses for Ursatz's other persistence gap
+ * (enumerating stored Interpretations): a small ursatz-gui-owned table
+ * recording each Relationship's (source, predicate, target) tuple by its
+ * own id, opened via the same separate sqlite3 connection to db_path.
+ */
+static const char *const kRelationshipTableName = "ursatz_gui_relationships";
 
 static char *dup_string(const char *value);
 
@@ -91,6 +108,19 @@ static sqlite3 *open_interpretation_index(const char *db_path) {
              "  original_filename TEXT NOT NULL"
              ");",
              kMetaTableName);
+    if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        return NULL;
+    }
+
+    snprintf(sql, sizeof(sql),
+             "CREATE TABLE IF NOT EXISTS %s ("
+             "  relationship_id TEXT PRIMARY KEY,"
+             "  source_id TEXT NOT NULL,"
+             "  predicate_name TEXT NOT NULL,"
+             "  target_id TEXT NOT NULL"
+             ");",
+             kRelationshipTableName);
     if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
         sqlite3_close(db);
         return NULL;
@@ -165,6 +195,125 @@ static void record_interpretation_id(sqlite3 *index_db, const char *interpretati
     sqlite3_bind_text(stmt, 2, type, -1, SQLITE_TRANSIENT);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
+}
+
+/* Records one Relationship's (source, predicate, target) tuple by its own
+ * id. Best-effort, mirroring record_interpretation_id: this is the only
+ * durable storage a Relationship built by this module gets (Ursatz's
+ * PersistenceHandle has no Relationship store), so a failure here loses
+ * the Relationship entirely -- but never fails the overall analysis. */
+static void record_relationship(sqlite3 *index_db, const Relationship *relationship) {
+    if (!index_db || !relationship) {
+        return;
+    }
+
+    char sql[256];
+    snprintf(sql, sizeof(sql),
+             "INSERT OR REPLACE INTO %s (relationship_id, source_id, predicate_name, target_id) "
+             "VALUES (?, ?, ?, ?);",
+             kRelationshipTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return;
+    }
+    sqlite3_bind_text(stmt, 1, entity_id_value(relationship_id(relationship)), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, entity_id_value(relationship_source_id(relationship)), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, relationship_predicate_name(relationship), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, entity_id_value(relationship_target_id(relationship)), -1, SQLITE_TRANSIENT);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
+
+/* Records every Relationship in relationships[0..count). Convenience
+ * wrapper around record_relationship for the analyzers that produce
+ * several Relationships per call (Sentence/Form Structure Detection). */
+static void record_relationships(sqlite3 *index_db, Relationship *const *relationships, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        record_relationship(index_db, relationships[i]);
+    }
+}
+
+typedef struct {
+    char *relationship_id;
+    char *source_id;
+    char *predicate_name;
+    char *target_id;
+} UrsatzGuiRelationshipRow;
+
+static void relationship_row_destroy_contents(UrsatzGuiRelationshipRow *row) {
+    free(row->relationship_id);
+    free(row->source_id);
+    free(row->predicate_name);
+    free(row->target_id);
+}
+
+/* Reads every relationship row recorded by record_relationship. Returns
+ * false only on allocation failure; a missing/empty table yields
+ * *out_count == 0. Mirrors read_interpretation_index's shape. */
+static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipRow **out_rows, size_t *out_count) {
+    *out_rows = NULL;
+    *out_count = 0;
+
+    char sql[160];
+    snprintf(sql, sizeof(sql), "SELECT relationship_id, source_id, predicate_name, target_id FROM %s;",
+             kRelationshipTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return true;
+    }
+
+    UrsatzGuiRelationshipRow *rows = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
+
+    int step;
+    while ((step = sqlite3_step(stmt)) == SQLITE_ROW) {
+        if (count == capacity) {
+            size_t new_capacity = (capacity == 0) ? 8 : (capacity * 2);
+            UrsatzGuiRelationshipRow *grown = realloc(rows, sizeof(UrsatzGuiRelationshipRow) * new_capacity);
+            if (!grown) {
+                for (size_t i = 0; i < count; i++) {
+                    relationship_row_destroy_contents(&rows[i]);
+                }
+                free(rows);
+                sqlite3_finalize(stmt);
+                return false;
+            }
+            rows = grown;
+            capacity = new_capacity;
+        }
+
+        UrsatzGuiRelationshipRow row = {0};
+        row.relationship_id = dup_string((const char *)sqlite3_column_text(stmt, 0));
+        row.source_id = dup_string((const char *)sqlite3_column_text(stmt, 1));
+        row.predicate_name = dup_string((const char *)sqlite3_column_text(stmt, 2));
+        row.target_id = dup_string((const char *)sqlite3_column_text(stmt, 3));
+        if (!row.relationship_id || !row.source_id || !row.predicate_name || !row.target_id) {
+            relationship_row_destroy_contents(&row);
+            for (size_t i = 0; i < count; i++) {
+                relationship_row_destroy_contents(&rows[i]);
+            }
+            free(rows);
+            sqlite3_finalize(stmt);
+            return false;
+        }
+        rows[count++] = row;
+    }
+    sqlite3_finalize(stmt);
+
+    if (step != SQLITE_DONE) {
+        for (size_t i = 0; i < count; i++) {
+            relationship_row_destroy_contents(&rows[i]);
+        }
+        free(rows);
+        return true;
+    }
+
+    *out_rows = rows;
+    *out_count = count;
+    return true;
 }
 
 /* Semitone offset from tonic -> diatonic scale degree (1-7), or -1 if
