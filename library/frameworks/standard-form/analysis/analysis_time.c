@@ -159,3 +159,16 @@ TimeSpan *standard_form_make_span(StandardFormQ start, StandardFormQ end) {
     musical_time_destroy(to);
     return span;
 }
+
+bool standard_form_on_beat(const MeterMap *map, StandardFormQ time) {
+    int measure = 0;
+    StandardFormQ start;
+    StandardFormQ beat;
+    if (!standard_form_measure_at(map, time, &measure) || !standard_form_measure_bounds(map, measure, &start, NULL) ||
+        !standard_form_beat_length(map, measure, &beat)) {
+        return false;
+    }
+    StandardFormQ offset = standard_form_q_sub(time, start);
+    /* offset / beat is a whole number */
+    return (offset.n * beat.d) % (offset.d * beat.n) == 0;
+}
