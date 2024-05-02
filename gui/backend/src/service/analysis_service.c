@@ -26,6 +26,7 @@
 #include <identity/schema_version.h>
 #include <interpretation/interpretation.h>
 #include <io/midi_importer.h>
+#include <analysis/cadence_classification.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
 #include <persistence/persistence.h>
@@ -53,6 +54,7 @@
 static const char *const kIndexTableName = "ursatz_gui_interpretations";
 static const char *const kIndexTypeKey = "key";
 static const char *const kIndexTypeChord = "chord";
+static const char *const kIndexTypeCadence = "cadence";
 
 /*
  * ursatz-gui-owned piece metadata table, in the same per-piece SQLite
@@ -635,6 +637,179 @@ static void identify_and_store_chord(PersistenceHandle *handle, sqlite3 *index_d
     free(degrees);
 }
 
+/* Diatonic scale degree (1-7) of the lowest-pitched note in group, or -1
+ * if none is diatonic in key. SCOPED BRANCH DEFAULT (not Registry-
+ * settled, same "flagged default" treatment the analyzer headers
+ * themselves use for their own caller-supplied dimensions): Cadence
+ * Classification needs a single root scale degree per chord, but
+ * ChordIdentification's degrees array (as already computed by
+ * identify_and_store_chord) has no notion of "the root" -- this treats
+ * the lowest sounding note's degree as the chord's root, a common
+ * bass-note heuristic, not a harmonic-inversion analysis. */
+static int group_root_degree(const SonorityGroup *group, PitchNumericValue *const *pitch_values,
+                              const KeyEstimate *key) {
+    if (!key->found) {
+        return -1;
+    }
+    const int *degree_table = key->is_major ? kMajorDegreeByOffset : kMinorDegreeByOffset;
+
+    long best_note = 0;
+    int best_degree = -1;
+    bool have_best = false;
+    for (size_t i = 0; i < group->note_index_count; i++) {
+        long note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[i]]);
+        int pitch_class = pitch_class_of(note_number);
+        int offset = ((pitch_class - key->tonic_pitch_class) % 12 + 12) % 12;
+        int degree = degree_table[offset];
+        if (degree == -1) {
+            continue;
+        }
+        if (!have_best || note_number < best_note) {
+            best_note = note_number;
+            best_degree = degree;
+            have_best = true;
+        }
+    }
+    return best_degree;
+}
+
+/* Builds a Structure region spanning exactly group's own events, for use
+ * as CadenceClassificationInput's region (the "arriving" chord). Mirrors
+ * build_whole_piece_region's construction but for one onset group. */
+static Structure *build_group_region(const SonorityGroup *group, NoteEvent *const *events) {
+    EntityID *region_id;
+    if (entity_id_create("ursatz-gui-analyzer-region-group", &region_id) != ENTITY_ID_OK) {
+        return NULL;
+    }
+    SchemaVersion *schema_version;
+    if (schema_version_create(1, &schema_version) != SCHEMA_VERSION_OK) {
+        entity_id_destroy(region_id);
+        return NULL;
+    }
+    ProvenanceReference *provenance;
+    if (provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
+        schema_version_destroy(schema_version);
+        entity_id_destroy(region_id);
+        return NULL;
+    }
+    Entity *entity;
+    if (entity_create(region_id, "Structure", schema_version, NULL, provenance, &entity) != ENTITY_OK) {
+        provenance_reference_destroy(provenance);
+        schema_version_destroy(schema_version);
+        entity_id_destroy(region_id);
+        return NULL;
+    }
+
+    EntityID **event_ids = malloc(sizeof(EntityID *) * group->note_index_count);
+    if (!event_ids) {
+        entity_destroy(entity);
+        return NULL;
+    }
+    for (size_t i = 0; i < group->note_index_count; i++) {
+        const NoteEvent *note = events[group->note_indices[i]];
+        if (entity_id_create(entity_id_value(note_event_id(note)), &event_ids[i]) != ENTITY_ID_OK) {
+            for (size_t k = 0; k < i; k++) {
+                entity_id_destroy(event_ids[k]);
+            }
+            free(event_ids);
+            entity_destroy(entity);
+            return NULL;
+        }
+    }
+
+    Structure *region;
+    if (structure_create(entity, event_ids, group->note_index_count, &region) != STRUCTURE_OK) {
+        for (size_t i = 0; i < group->note_index_count; i++) {
+            entity_id_destroy(event_ids[i]);
+        }
+        free(event_ids);
+        entity_destroy(entity);
+        return NULL;
+    }
+    free(event_ids);
+    return region;
+}
+
+/* Classifies the cadence (if any) at the harmonic motion from the
+ * previous onset group's root degree into this group's root degree, and
+ * persists the winning Interpretation. Returns a newly allocated copy of
+ * the winning candidate label ("unclassified" included -- a legitimate
+ * value per CadenceClassification's own contract), or NULL when no
+ * classification could be attempted (no previous group, or either root
+ * degree not diatonic in the estimated key). */
+static char *classify_and_store_cadence(PersistenceHandle *handle, sqlite3 *index_db, const SonorityGroup *group,
+                                          NoteEvent *const *events, int from_degree, int to_degree) {
+    if (from_degree < 1 || to_degree < 1) {
+        return NULL;
+    }
+
+    Structure *region = build_group_region(group, events);
+    if (!region) {
+        return NULL;
+    }
+
+    const Framework *framework = common_practice_minimal_framework();
+    char *label = NULL;
+    if (framework) {
+        CadenceClassificationInput input = {region, framework, from_degree, to_degree,
+                                              false, false, false, false, VOICE_LEADING_BASS_MOTION_SAME};
+        AnalysisResult *result = NULL;
+        if (cadence_classification_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+            const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
+            size_t claim_size = 0;
+            const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
+            if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
+                label = dup_string(claim);
+                record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)),
+                                          kIndexTypeCadence);
+            }
+            analysis_result_destroy(result);
+        }
+    }
+
+    structure_destroy(region);
+    return label;
+}
+
+/* Runs Cadence Classification over every adjacent pair of onset groups
+ * (group i-1's root degree "arriving into" group i), persisting each
+ * winning Interpretation. Returns a newly allocated array of
+ * grouping->group_count entries (caller frees each non-NULL entry, then
+ * the array): entry i is the cadence label that CLOSES group i (NULL if
+ * none was classified for that arrival), used as the phrase-boundary
+ * cadence signal for the next stage. */
+static char **run_cadence_classification(PersistenceHandle *handle, sqlite3 *index_db,
+                                           const SonorityGrouping *grouping, NoteEvent *const *events,
+                                           PitchNumericValue *const *pitch_values, const KeyEstimate *key) {
+    if (grouping->group_count == 0) {
+        return NULL;
+    }
+    char **cadence_types = calloc(grouping->group_count, sizeof(char *));
+    if (!cadence_types) {
+        return NULL;
+    }
+
+    int previous_degree = group_root_degree(&grouping->groups[0], pitch_values, key);
+    for (size_t i = 1; i < grouping->group_count; i++) {
+        int current_degree = group_root_degree(&grouping->groups[i], pitch_values, key);
+        cadence_types[i] =
+            classify_and_store_cadence(handle, index_db, &grouping->groups[i], events, previous_degree, current_degree);
+        previous_degree = current_degree;
+    }
+
+    return cadence_types;
+}
+
+static void free_cadence_types(char **cadence_types, size_t count) {
+    if (!cadence_types) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        free(cadence_types[i]);
+    }
+    free(cadence_types);
+}
+
 static bool ensure_dir_exists(const char *path) {
 #ifdef _WIN32
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
@@ -711,6 +886,11 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
                 for (size_t i = 0; i < grouping.group_count; i++) {
                     identify_and_store_chord(handle, index_db, &grouping.groups[i], events, pitch_values, &key);
                 }
+
+                char **cadence_types =
+                    run_cadence_classification(handle, index_db, &grouping, events, pitch_values, &key);
+
+                free_cadence_types(cadence_types, grouping.group_count);
                 sonority_grouping_destroy(&grouping);
             }
 
