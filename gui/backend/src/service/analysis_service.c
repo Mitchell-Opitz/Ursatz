@@ -29,12 +29,14 @@
 #include <analysis/cadence_classification.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
+#include <analysis/phrase_boundary_detection.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
 #include <pitch/pitch_numeric_value.h>
 #include <relationship/relationship.h>
 #include <semantics/sonority.h>
+#include <structure/phrase_occurrence.h>
 #include <structure/structure.h>
 #include <time/musical_time.h>
 #include <time/temporal_anchor.h>
@@ -55,6 +57,7 @@ static const char *const kIndexTableName = "ursatz_gui_interpretations";
 static const char *const kIndexTypeKey = "key";
 static const char *const kIndexTypeChord = "chord";
 static const char *const kIndexTypeCadence = "cadence";
+static const char *const kIndexTypePhrase = "phrase";
 
 /*
  * ursatz-gui-owned piece metadata table, in the same per-piece SQLite
@@ -810,6 +813,120 @@ static void free_cadence_types(char **cadence_types, size_t count) {
     free(cadence_types);
 }
 
+/* Persists one AnalysisResult's every Interpretation under the given
+ * index type. Shared by the framework-stage analyzers below, each of
+ * which (unlike KeyEstimation/ChordIdentification) can legitimately
+ * produce more than one Interpretation, or none, per call. */
+static void store_all_interpretations(PersistenceHandle *handle, sqlite3 *index_db, const AnalysisResult *result,
+                                        const char *type) {
+    size_t interpretation_count = analysis_result_interpretation_count(result);
+    for (size_t i = 0; i < interpretation_count; i++) {
+        const Interpretation *interpretation = analysis_result_interpretation_at(result, i);
+        if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
+            record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)), type);
+        }
+    }
+}
+
+/* Runs Phrase Boundary Detection over one point per onset group (the
+ * same onset-grouping already used for chord identification -- SCOPED
+ * BRANCH DEFAULT: phrase points are per onset group, not per individual
+ * note event, so a phrase's region_event_ids are its member groups'
+ * representative events, not every note). has_discontinuity is fixed
+ * false for every point (SCOPED BRANCH DEFAULT: this branch wires the
+ * cadence signal, real Interpretation output from run_cadence_
+ * classification; a contour/rhythm discontinuity signal would require
+ * pitch-direction/rest detection this module does not otherwise compute
+ * and is left for a later branch) -- boundaries are driven entirely by
+ * the real cadence_types signal.
+ *
+ * On success, persists the boundary and boundary-signal Interpretations
+ * under kIndexTypePhrase and returns the built PhraseOccurrence array via
+ * out_occurrences/out_occurrence_count (caller frees with
+ * phrase_boundary_detection_destroy_occurrences). Returns the points
+ * array actually used via out_points (caller frees with free()) so later
+ * stages can re-derive which onset group closed each phrase. */
+static void run_phrase_boundary_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                            const SonorityGrouping *grouping, NoteEvent *const *events,
+                                            char *const *cadence_types, PhraseBoundaryDetectionPoint **out_points,
+                                            PhraseOccurrence ***out_occurrences, size_t *out_occurrence_count) {
+    *out_points = NULL;
+    *out_occurrences = NULL;
+    *out_occurrence_count = 0;
+
+    if (grouping->group_count == 0) {
+        return;
+    }
+
+    PhraseBoundaryDetectionPoint *points = malloc(sizeof(PhraseBoundaryDetectionPoint) * grouping->group_count);
+    if (!points) {
+        return;
+    }
+    for (size_t i = 0; i < grouping->group_count; i++) {
+        const NoteEvent *representative = events[grouping->groups[i].note_indices[0]];
+        bool has_cadence = cadence_types[i] != NULL &&
+                            strlen(cadence_types[i]) < PHRASE_BOUNDARY_DETECTION_CADENCE_TYPE_BUFFER_SIZE;
+        points[i].event = representative;
+        points[i].has_cadence = has_cadence;
+        points[i].cadence_type = has_cadence ? cadence_types[i] : "";
+        points[i].has_discontinuity = false;
+    }
+
+    PhraseBoundaryDetectionInput input = {points, grouping->group_count, 0};
+
+    AnalysisResult *boundary_result = NULL;
+    if (phrase_boundary_detection_analyze(&input, NULL, NULL, &boundary_result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, boundary_result, kIndexTypePhrase);
+        analysis_result_destroy(boundary_result);
+    }
+
+    AnalysisResult *signal_result = NULL;
+    if (phrase_boundary_detection_signal_analyze(&input, NULL, NULL, &signal_result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, signal_result, kIndexTypePhrase);
+        analysis_result_destroy(signal_result);
+    }
+
+    PhraseOccurrence **occurrences = NULL;
+    size_t occurrence_count = 0;
+    phrase_boundary_detection_build_occurrences(points, grouping->group_count, 0, &occurrences, &occurrence_count);
+
+    *out_points = points;
+    *out_occurrences = occurrences;
+    *out_occurrence_count = occurrence_count;
+}
+
+/* Finds the onset group index whose representative event (the same one
+ * points[] was built from) has the given entity id, or SIZE_MAX if none
+ * matches -- used to look back up a PhraseOccurrence's closing cadence
+ * type from the group it ends on. */
+static size_t group_index_for_event_id(const SonorityGrouping *grouping, NoteEvent *const *events,
+                                         const EntityID *event_id) {
+    for (size_t i = 0; i < grouping->group_count; i++) {
+        const NoteEvent *representative = events[grouping->groups[i].note_indices[0]];
+        if (entity_id_equals(note_event_id(representative), event_id)) {
+            return i;
+        }
+    }
+    return (size_t)-1;
+}
+
+/* The cadence type (borrowed, from cadence_types) that closes phrase
+ * occurrence occ, or NULL if its closing event isn't a group
+ * representative or has no classified cadence. */
+static const char *closing_cadence_type(const PhraseOccurrence *occ, const SonorityGrouping *grouping,
+                                          NoteEvent *const *events, char *const *cadence_types) {
+    size_t region_count = phrase_occurrence_region_event_id_count(occ);
+    if (region_count == 0) {
+        return NULL;
+    }
+    const EntityID *last_id = phrase_occurrence_region_event_id_at(occ, region_count - 1);
+    size_t group_index = group_index_for_event_id(grouping, events, last_id);
+    if (group_index == (size_t)-1) {
+        return NULL;
+    }
+    return cadence_types[group_index];
+}
+
 static bool ensure_dir_exists(const char *path) {
 #ifdef _WIN32
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
@@ -889,6 +1006,19 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
 
                 char **cadence_types =
                     run_cadence_classification(handle, index_db, &grouping, events, pitch_values, &key);
+
+                PhraseBoundaryDetectionPoint *phrase_points = NULL;
+                PhraseOccurrence **phrase_occurrences = NULL;
+                size_t phrase_occurrence_count = 0;
+                if (cadence_types) {
+                    run_phrase_boundary_detection(handle, index_db, &grouping, events, cadence_types, &phrase_points,
+                                                   &phrase_occurrences, &phrase_occurrence_count);
+                }
+
+                if (phrase_occurrences) {
+                    phrase_boundary_detection_destroy_occurrences(phrase_occurrences, phrase_occurrence_count);
+                }
+                free(phrase_points);
 
                 free_cadence_types(cadence_types, grouping.group_count);
                 sonority_grouping_destroy(&grouping);
