@@ -29,15 +29,21 @@
 #include <analysis/cadence_classification.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
+#include <analysis/motif_detection.h>
+#include <analysis/motif_window_matching.h>
 #include <analysis/phrase_boundary_detection.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
 #include <pitch/pitch_numeric_value.h>
 #include <relationship/relationship.h>
+#include <semantics/contour.h>
+#include <semantics/rhythmic_pattern.h>
 #include <semantics/sonority.h>
+#include <structure/motif.h>
 #include <structure/phrase_occurrence.h>
 #include <structure/structure.h>
+#include <time/duration.h>
 #include <time/musical_time.h>
 #include <time/temporal_anchor.h>
 #include <time/time_span.h>
@@ -58,6 +64,7 @@ static const char *const kIndexTypeKey = "key";
 static const char *const kIndexTypeChord = "chord";
 static const char *const kIndexTypeCadence = "cadence";
 static const char *const kIndexTypePhrase = "phrase";
+static const char *const kIndexTypeMotif = "motif";
 
 /*
  * ursatz-gui-owned piece metadata table, in the same per-piece SQLite
@@ -927,6 +934,226 @@ static const char *closing_cadence_type(const PhraseOccurrence *occ, const Sonor
     return cadence_types[group_index];
 }
 
+static size_t event_index_by_id(NoteEvent *const *events, size_t count, const EntityID *id) {
+    for (size_t i = 0; i < count; i++) {
+        if (entity_id_equals(note_event_id(events[i]), id)) {
+            return i;
+        }
+    }
+    return (size_t)-1;
+}
+
+/* A Contour/RhythmicPattern/event-id window built (and owned) for one
+ * PhraseOccurrence's region events, ready to hand to
+ * motif_window_matching_find as a MotifWindow. */
+typedef struct {
+    Contour *contour;
+    RhythmicPattern *rhythm;
+    EntityID **event_ids;
+    size_t event_id_count;
+} OwnedMotifWindow;
+
+static void owned_motif_window_destroy(OwnedMotifWindow *window) {
+    if (window->contour) {
+        contour_destroy(window->contour);
+    }
+    if (window->rhythm) {
+        rhythmic_pattern_destroy(window->rhythm);
+    }
+    for (size_t i = 0; i < window->event_id_count; i++) {
+        entity_id_destroy(window->event_ids[i]);
+    }
+    free(window->event_ids);
+    memset(window, 0, sizeof(*window));
+}
+
+/* Builds a Contour (pitch-direction) + RhythmicPattern (duration)
+ * window over occ's own region events, in order -- the same real
+ * pitch/duration data this module already reads for key/chord
+ * identification, not a placeholder. Requires at least 2 region events
+ * (Contour's own minimum); shorter phrases produce no window (false).
+ */
+static bool build_motif_window(const PhraseOccurrence *occ, NoteEvent *const *events,
+                                 PitchNumericValue *const *pitch_values, size_t count, OwnedMotifWindow *out) {
+    memset(out, 0, sizeof(*out));
+    size_t region_count = phrase_occurrence_region_event_id_count(occ);
+    if (region_count < 2) {
+        return false;
+    }
+
+    size_t *indices = malloc(sizeof(size_t) * region_count);
+    if (!indices) {
+        return false;
+    }
+    for (size_t i = 0; i < region_count; i++) {
+        indices[i] = event_index_by_id(events, count, phrase_occurrence_region_event_id_at(occ, i));
+        if (indices[i] == (size_t)-1) {
+            free(indices);
+            return false;
+        }
+    }
+
+    PitchIdentity **pitch_ids = calloc(region_count, sizeof(PitchIdentity *));
+    ContourDirection *directions = malloc(sizeof(ContourDirection) * (region_count - 1));
+    Duration **durations = calloc(region_count, sizeof(Duration *));
+    EntityID **event_ids = calloc(region_count, sizeof(EntityID *));
+    bool ok = pitch_ids && directions && durations && event_ids;
+
+    for (size_t i = 0; ok && i < region_count; i++) {
+        size_t token_size = 0;
+        const void *token = pitch_identity_token(note_event_pitch(events[indices[i]]), &token_size);
+        if (pitch_identity_create(token, token_size, &pitch_ids[i]) != PITCH_IDENTITY_OK) {
+            ok = false;
+            break;
+        }
+        const Duration *duration = note_event_duration(events[indices[i]]);
+        if (duration_create(duration_numerator(duration), duration_denominator(duration), &durations[i]) !=
+            DURATION_OK) {
+            ok = false;
+            break;
+        }
+        if (entity_id_create(entity_id_value(phrase_occurrence_region_event_id_at(occ, i)), &event_ids[i]) !=
+            ENTITY_ID_OK) {
+            ok = false;
+            break;
+        }
+    }
+    for (size_t i = 0; ok && i + 1 < region_count; i++) {
+        long a = pitch_numeric_value_position_numerator(pitch_values[indices[i]]);
+        long b = pitch_numeric_value_position_numerator(pitch_values[indices[i + 1]]);
+        directions[i] = (b > a) ? CONTOUR_DIRECTION_UP : (b < a) ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME;
+    }
+    free(indices);
+
+    Contour *contour = NULL;
+    RhythmicPattern *rhythm = NULL;
+    if (ok && contour_create(pitch_ids, region_count, directions, region_count - 1, &contour) != CONTOUR_OK) {
+        ok = false;
+    }
+    if (ok && rhythmic_pattern_create(durations, region_count, &rhythm) != RHYTHMIC_PATTERN_OK) {
+        ok = false;
+    }
+
+    if (!ok) {
+        if (contour) {
+            contour_destroy(contour);
+        } else {
+            for (size_t i = 0; i < region_count && pitch_ids; i++) {
+                if (pitch_ids[i]) {
+                    pitch_identity_destroy(pitch_ids[i]);
+                }
+            }
+            free(pitch_ids);
+            free(directions);
+        }
+        if (!rhythm) {
+            for (size_t i = 0; i < region_count && durations; i++) {
+                if (durations[i]) {
+                    duration_destroy(durations[i]);
+                }
+            }
+            free(durations);
+        }
+        for (size_t i = 0; i < region_count && event_ids; i++) {
+            if (event_ids[i]) {
+                entity_id_destroy(event_ids[i]);
+            }
+        }
+        free(event_ids);
+        return false;
+    }
+
+    out->contour = contour;
+    out->rhythm = rhythm;
+    out->event_ids = event_ids;
+    out->event_id_count = region_count;
+    return true;
+}
+
+/* Runs MotifWindowMatching over every phrase occurrence's own window
+ * (real Contour/RhythmicPattern equality, not a stub), then
+ * MotifDetection over each matched window. SCOPED BRANCH DEFAULT: each
+ * matched window is reported as its own single-occurrence Motif (its
+ * matched_event_ids double as both the Motif's definition and its sole
+ * reported occurrence) -- clustering multiple matching windows under one
+ * shared Motif is a real refinement left for a later branch; this still
+ * exercises real repeat-detection (motif_window_matching_find) and real
+ * MotifDetection packaging, not a no-op. */
+static void run_motif_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                  PhraseOccurrence *const *phrase_occurrences, size_t phrase_occurrence_count,
+                                  NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count) {
+    if (phrase_occurrence_count == 0) {
+        return;
+    }
+
+    OwnedMotifWindow *owned = calloc(phrase_occurrence_count, sizeof(OwnedMotifWindow));
+    MotifWindow *windows = malloc(sizeof(MotifWindow) * phrase_occurrence_count);
+    if (!owned || !windows) {
+        free(owned);
+        free(windows);
+        return;
+    }
+
+    size_t window_count = 0;
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        if (build_motif_window(phrase_occurrences[i], events, pitch_values, count, &owned[window_count])) {
+            windows[window_count].contour = owned[window_count].contour;
+            windows[window_count].rhythm = owned[window_count].rhythm;
+            windows[window_count].event_ids = (const EntityID *const *)owned[window_count].event_ids;
+            windows[window_count].event_id_count = owned[window_count].event_id_count;
+            window_count++;
+        }
+    }
+
+    MotifDetectionOccurrence *matches = NULL;
+    size_t match_count = 0;
+    if (window_count > 0 &&
+        motif_window_matching_find(windows, window_count, &matches, &match_count) == MOTIF_WINDOW_MATCHING_OK) {
+        for (size_t m = 0; m < match_count; m++) {
+            EntityID *motif_id = NULL;
+            if (entity_id_create("ursatz-gui-analyzer-motif", &motif_id) != ENTITY_ID_OK) {
+                continue;
+            }
+
+            size_t event_id_count = matches[m].matched_event_id_count;
+            EntityID **motif_event_ids = calloc(event_id_count, sizeof(EntityID *));
+            bool ok = motif_event_ids != NULL;
+            for (size_t k = 0; ok && k < event_id_count; k++) {
+                if (entity_id_create(entity_id_value(matches[m].matched_event_ids[k]), &motif_event_ids[k]) !=
+                    ENTITY_ID_OK) {
+                    ok = false;
+                }
+            }
+
+            Motif *motif = NULL;
+            if (ok && motif_create(motif_id, motif_event_ids, event_id_count, &motif) == MOTIF_OK) {
+                MotifDetectionInput input = {motif, &matches[m], 1};
+                AnalysisResult *result = NULL;
+                if (motif_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+                    store_all_interpretations(handle, index_db, result, kIndexTypeMotif);
+                    analysis_result_destroy(result);
+                }
+                motif_destroy(motif);
+            } else {
+                entity_id_destroy(motif_id);
+                for (size_t k = 0; k < event_id_count && motif_event_ids; k++) {
+                    if (motif_event_ids[k]) {
+                        entity_id_destroy(motif_event_ids[k]);
+                    }
+                }
+                free(motif_event_ids);
+            }
+        }
+        motif_window_matching_destroy_occurrences(matches);
+    }
+
+    for (size_t i = 0; i < window_count; i++) {
+        owned_motif_window_destroy(&owned[i]);
+    }
+    free(owned);
+    free(windows);
+}
+
 static bool ensure_dir_exists(const char *path) {
 #ifdef _WIN32
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
@@ -1013,6 +1240,11 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
                 if (cadence_types) {
                     run_phrase_boundary_detection(handle, index_db, &grouping, events, cadence_types, &phrase_points,
                                                    &phrase_occurrences, &phrase_occurrence_count);
+                }
+
+                if (phrase_occurrence_count > 0) {
+                    run_motif_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count, events,
+                                        pitch_values, count);
                 }
 
                 if (phrase_occurrences) {
