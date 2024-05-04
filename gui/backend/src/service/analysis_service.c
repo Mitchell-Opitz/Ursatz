@@ -31,7 +31,9 @@
 #include <analysis/key_estimation.h>
 #include <analysis/motif_detection.h>
 #include <analysis/motif_window_matching.h>
+#include <analysis/period_detection.h>
 #include <analysis/phrase_boundary_detection.h>
+#include <analysis/sentence_detection.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
@@ -65,6 +67,8 @@ static const char *const kIndexTypeChord = "chord";
 static const char *const kIndexTypeCadence = "cadence";
 static const char *const kIndexTypePhrase = "phrase";
 static const char *const kIndexTypeMotif = "motif";
+static const char *const kIndexTypePeriod = "period";
+static const char *const kIndexTypeSentence = "sentence";
 
 /*
  * ursatz-gui-owned piece metadata table, in the same per-piece SQLite
@@ -1154,6 +1158,118 @@ static void run_motif_detection(PersistenceHandle *handle, sqlite3 *index_db,
     free(windows);
 }
 
+/* Runs Period Detection over every consecutive PhraseOccurrence pair
+ * (using their real closing cadence types from cadence_types) and
+ * Sentence Detection over every consecutive pair treated as a
+ * statement/repetition candidate. SCOPED BRANCH DEFAULT: Sentence
+ * Detection wants MotifOccurrence statement/repetition ids, but
+ * run_motif_detection (above) does not retain persisted MotifOccurrence
+ * ids across calls in this branch -- consecutive PhraseOccurrences'
+ * own ids stand in instead, with their own real Contour/RhythmicPattern
+ * windows (rebuilt the same way run_motif_detection builds them) as the
+ * statement/continuation windows SentenceContinuationMatching actually
+ * compares. A pair whose windows don't qualify produces no Sentence
+ * output, per the analyzer's own discipline -- not forced here. */
+static void run_period_and_sentence_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                                 PhraseOccurrence *const *phrase_occurrences,
+                                                 size_t phrase_occurrence_count, const SonorityGrouping *grouping,
+                                                 NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                                 size_t count, char *const *cadence_types) {
+    if (phrase_occurrence_count == 0) {
+        return;
+    }
+
+    PeriodDetectionEntry *period_entries = malloc(sizeof(PeriodDetectionEntry) * phrase_occurrence_count);
+    if (period_entries) {
+        for (size_t i = 0; i < phrase_occurrence_count; i++) {
+            period_entries[i].phrase_occurrence = phrase_occurrences[i];
+            period_entries[i].cadence_type = closing_cadence_type(phrase_occurrences[i], grouping, events, cadence_types);
+        }
+
+        PeriodDetectionInput input = {period_entries, phrase_occurrence_count};
+        AnalysisResult *result = NULL;
+        if (period_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+            store_all_interpretations(handle, index_db, result, kIndexTypePeriod);
+            analysis_result_destroy(result);
+        }
+
+        Relationship **relationships = NULL;
+        size_t relationship_count = 0;
+        if (period_detection_build_relationships(period_entries, phrase_occurrence_count, &relationships,
+                                                   &relationship_count) == PERIOD_DETECTION_REL_OK) {
+            record_relationships(index_db, relationships, relationship_count);
+            period_detection_destroy_relationships(relationships, relationship_count);
+        }
+        free(period_entries);
+    }
+
+    if (phrase_occurrence_count < 2) {
+        return;
+    }
+
+    OwnedMotifWindow *owned = calloc(phrase_occurrence_count, sizeof(OwnedMotifWindow));
+    MotifWindow *phrase_windows = calloc(phrase_occurrence_count, sizeof(MotifWindow));
+    bool *has_window = calloc(phrase_occurrence_count, sizeof(bool));
+    SentenceDetectionEntry *sentence_entries = malloc(sizeof(SentenceDetectionEntry) * (phrase_occurrence_count - 1));
+    if (!owned || !phrase_windows || !has_window || !sentence_entries) {
+        free(owned);
+        free(phrase_windows);
+        free(has_window);
+        free(sentence_entries);
+        return;
+    }
+
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        has_window[i] = build_motif_window(phrase_occurrences[i], events, pitch_values, count, &owned[i]);
+        if (has_window[i]) {
+            phrase_windows[i].contour = owned[i].contour;
+            phrase_windows[i].rhythm = owned[i].rhythm;
+            phrase_windows[i].event_ids = (const EntityID *const *)owned[i].event_ids;
+            phrase_windows[i].event_id_count = owned[i].event_id_count;
+        }
+    }
+
+    size_t sentence_entry_count = 0;
+    for (size_t i = 0; i + 1 < phrase_occurrence_count; i++) {
+        if (!has_window[i] || !has_window[i + 1]) {
+            continue;
+        }
+        SentenceDetectionEntry *entry = &sentence_entries[sentence_entry_count];
+        entry->statement_occurrence_id = phrase_occurrence_id(phrase_occurrences[i]);
+        entry->repetition_occurrence_id = phrase_occurrence_id(phrase_occurrences[i + 1]);
+        entry->statement_window = &phrase_windows[i];
+        entry->continuation_candidate = (i + 2 < phrase_occurrence_count && has_window[i + 2])
+                                              ? &phrase_windows[i + 2]
+                                              : NULL;
+        sentence_entry_count++;
+    }
+
+    SentenceDetectionInput input = {sentence_entries, sentence_entry_count};
+    AnalysisResult *result = NULL;
+    if (sentence_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, result, kIndexTypeSentence);
+        analysis_result_destroy(result);
+    }
+
+    Relationship **relationships = NULL;
+    size_t relationship_count = 0;
+    if (sentence_detection_build_relationships(sentence_entries, sentence_entry_count, &relationships,
+                                                 &relationship_count) == SENTENCE_DETECTION_REL_OK) {
+        record_relationships(index_db, relationships, relationship_count);
+        sentence_detection_destroy_relationships(relationships, relationship_count);
+    }
+    free(sentence_entries);
+
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        if (has_window[i]) {
+            owned_motif_window_destroy(&owned[i]);
+        }
+    }
+    free(owned);
+    free(phrase_windows);
+    free(has_window);
+}
+
 static bool ensure_dir_exists(const char *path) {
 #ifdef _WIN32
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
@@ -1245,6 +1361,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
                 if (phrase_occurrence_count > 0) {
                     run_motif_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count, events,
                                         pitch_values, count);
+                    run_period_and_sentence_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count,
+                                                       &grouping, events, pitch_values, count, cadence_types);
                 }
 
                 if (phrase_occurrences) {
