@@ -31,9 +31,11 @@
 #include <analysis/key_estimation.h>
 #include <analysis/motif_detection.h>
 #include <analysis/motif_window_matching.h>
+#include <analysis/form_structure_detection.h>
 #include <analysis/period_detection.h>
 #include <analysis/phrase_boundary_detection.h>
 #include <analysis/sentence_detection.h>
+#include <analysis/thematic_return_detection.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
@@ -69,6 +71,8 @@ static const char *const kIndexTypePhrase = "phrase";
 static const char *const kIndexTypeMotif = "motif";
 static const char *const kIndexTypePeriod = "period";
 static const char *const kIndexTypeSentence = "sentence";
+static const char *const kIndexTypeForm = "form";
+static const char *const kIndexTypeThematicReturn = "thematic_return";
 
 /*
  * ursatz-gui-owned piece metadata table, in the same per-piece SQLite
@@ -1270,6 +1274,109 @@ static void run_period_and_sentence_detection(PersistenceHandle *handle, sqlite3
     free(has_window);
 }
 
+/* Runs Form Structure Detection over every PhraseOccurrence (grouping
+ * them into Sections at structural cadences) and Thematic Return
+ * Detection over every PhraseOccurrence's own window. SCOPED BRANCH
+ * DEFAULT (same one run_period_and_sentence_detection documents):
+ * Thematic Return Detection wants ThemeOccurrence ids/windows, but this
+ * branch never constructs a distinct ThemeOccurrence -- each
+ * PhraseOccurrence's own id and real Contour/RhythmicPattern window
+ * stand in, at phrase granularity rather than theme granularity. Only
+ * Interpretations/Relationships are persisted; the Section objects
+ * Form Structure Detection can mint (form_structure_detection_build_
+ * sections) have no persistence path in this branch (no Structure
+ * store exists for them either), so they are not retained. */
+static void run_form_and_thematic_return_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                                       PhraseOccurrence *const *phrase_occurrences,
+                                                       size_t phrase_occurrence_count, const SonorityGrouping *grouping,
+                                                       NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                                       size_t count, char *const *cadence_types) {
+    if (phrase_occurrence_count == 0) {
+        return;
+    }
+
+    FormStructureDetectionEntry *form_entries = malloc(sizeof(FormStructureDetectionEntry) * phrase_occurrence_count);
+    if (form_entries) {
+        for (size_t i = 0; i < phrase_occurrence_count; i++) {
+            form_entries[i].phrase_occurrence = phrase_occurrences[i];
+            form_entries[i].cadence_type = closing_cadence_type(phrase_occurrences[i], grouping, events, cadence_types);
+        }
+
+        FormStructureDetectionInput input = {form_entries, phrase_occurrence_count};
+        AnalysisResult *result = NULL;
+        if (form_structure_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+            store_all_interpretations(handle, index_db, result, kIndexTypeForm);
+            analysis_result_destroy(result);
+        }
+
+        Relationship **relationships = NULL;
+        size_t relationship_count = 0;
+        if (form_structure_detection_build_relationships(form_entries, phrase_occurrence_count, &relationships,
+                                                             &relationship_count) == FORM_STRUCTURE_DETECTION_REL_OK) {
+            record_relationships(index_db, relationships, relationship_count);
+            form_structure_detection_destroy_relationships(relationships, relationship_count);
+        }
+        free(form_entries);
+    }
+
+    if (phrase_occurrence_count < 2) {
+        return;
+    }
+
+    OwnedMotifWindow *owned = calloc(phrase_occurrence_count, sizeof(OwnedMotifWindow));
+    MotifWindow *windows = calloc(phrase_occurrence_count, sizeof(MotifWindow));
+    bool *has_window = calloc(phrase_occurrence_count, sizeof(bool));
+    ThematicReturnDetectionEntry *entries = malloc(sizeof(ThematicReturnDetectionEntry) * phrase_occurrence_count);
+    if (!owned || !windows || !has_window || !entries) {
+        free(owned);
+        free(windows);
+        free(has_window);
+        free(entries);
+        return;
+    }
+
+    size_t entry_count = 0;
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        has_window[i] = build_motif_window(phrase_occurrences[i], events, pitch_values, count, &owned[i]);
+        if (!has_window[i]) {
+            continue;
+        }
+        windows[i].contour = owned[i].contour;
+        windows[i].rhythm = owned[i].rhythm;
+        windows[i].event_ids = (const EntityID *const *)owned[i].event_ids;
+        windows[i].event_id_count = owned[i].event_id_count;
+
+        entries[entry_count].theme_occurrence_id = phrase_occurrence_id(phrase_occurrences[i]);
+        entries[entry_count].window = &windows[i];
+        entry_count++;
+    }
+
+    ThematicReturnDetectionInput input = {entries, entry_count};
+    AnalysisResult *result = NULL;
+    if (thematic_return_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, result, kIndexTypeThematicReturn);
+        analysis_result_destroy(result);
+    }
+
+    Relationship **relationships = NULL;
+    size_t relationship_count = 0;
+    if (thematic_return_detection_build_relationships(entries, entry_count, &relationships, &relationship_count) ==
+        THEMATIC_RETURN_DETECTION_REL_OK) {
+        record_relationships(index_db, relationships, relationship_count);
+        thematic_return_detection_destroy_relationships(relationships, relationship_count);
+    }
+    free(entries);
+
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        if (has_window[i]) {
+            owned_motif_window_destroy(&owned[i]);
+        }
+    }
+    free(owned);
+    free(windows);
+    free(has_window);
+}
+
 static bool ensure_dir_exists(const char *path) {
 #ifdef _WIN32
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
@@ -1363,6 +1470,9 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
                                         pitch_values, count);
                     run_period_and_sentence_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count,
                                                        &grouping, events, pitch_values, count, cadence_types);
+                    run_form_and_thematic_return_detection(handle, index_db, phrase_occurrences,
+                                                            phrase_occurrence_count, &grouping, events, pitch_values,
+                                                            count, cadence_types);
                 }
 
                 if (phrase_occurrences) {
