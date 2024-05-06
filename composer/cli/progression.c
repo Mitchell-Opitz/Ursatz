@@ -1,5 +1,7 @@
 #include "progression.h"
 
+#include "cli_options.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -24,13 +26,12 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 
-#define EXIT_USAGE 1
-#define EXIT_UNSATISFIABLE 2
-#define EXIT_WRITE 3
+#define EXIT_USAGE CLI_EXIT_USAGE
+#define EXIT_UNSATISFIABLE CLI_EXIT_UNSATISFIABLE
+#define EXIT_WRITE CLI_EXIT_WRITE
 
 #define MAX_BARS 64
-/* The seeds tried, one after another from the one given, before a request is given up on. */
-#define MAX_SEED_TRIES 16
+#define MAX_SEED_TRIES CLI_MAX_SEED_TRIES
 #define MAX_CHORDS 64
 #define MAX_SUGGESTIONS 8
 #define MAX_FILES (3 * MAX_SUGGESTIONS)
@@ -112,126 +113,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz-composer progression --key \"A minor\" --meter 3/4 --bars 6 --cadence HC --suggest 3\n");
 }
 
-static int fail(int status, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
-    fprintf(stderr, "Error: ");
-    vfprintf(stderr, format, args);
-    fprintf(stderr, "\n");
-    va_end(args);
-    return status;
-}
-
 /* --- reading the options -------------------------------------------------- */
-
-static bool equals_ignore_case(const char *a, const char *b) {
-    for (; *a && *b; a++, b++) {
-        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
-            return false;
-        }
-    }
-    return *a == *b;
-}
-
-/* A tonic letter, an optional # or b, whitespace, then major or minor. */
-static bool parse_key(const char *text, PlanKey *key) {
-    static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
-    while (isspace((unsigned char)*text)) {
-        text++;
-    }
-    char letter = (char)toupper((unsigned char)*text);
-    if (letter < 'A' || letter > 'G') {
-        return false;
-    }
-    int pc = NATURAL[letter - 'A'];
-    text++;
-    if (*text == '#') {
-        pc++;
-        text++;
-    } else if (*text == 'b') {
-        pc--;
-        text++;
-    }
-    if (!isspace((unsigned char)*text)) {
-        return false;
-    }
-    while (isspace((unsigned char)*text)) {
-        text++;
-    }
-    char mode[8];
-    size_t length = 0;
-    while (text[length] && !isspace((unsigned char)text[length]) && length + 1 < sizeof(mode)) {
-        mode[length] = text[length];
-        length++;
-    }
-    mode[length] = '\0';
-    const char *rest = text + length;
-    while (isspace((unsigned char)*rest)) {
-        rest++;
-    }
-    if (*rest != '\0') {
-        return false;
-    }
-    if (equals_ignore_case(mode, "major")) {
-        key->mode = PLAN_MODE_MAJOR;
-    } else if (equals_ignore_case(mode, "minor")) {
-        key->mode = PLAN_MODE_MINOR;
-    } else {
-        return false;
-    }
-    key->tonic_pitch_class = (pc % 12 + 12) % 12;
-    return true;
-}
-
-static bool parse_whole_number(const char *text, unsigned long maximum, unsigned long *out) {
-    char *end = NULL;
-    if (!text || !isdigit((unsigned char)text[0])) {
-        return false;
-    }
-    errno = 0;
-    unsigned long value = strtoul(text, &end, 10);
-    if (errno != 0 || *end != '\0' || value > maximum) {
-        return false;
-    }
-    *out = value;
-    return true;
-}
-
-static bool parse_meter(const char *text, PlanMeter *meter) {
-    unsigned long beats;
-    unsigned long unit;
-    char first[16];
-    const char *slash = strchr(text, '/');
-    if (!slash || (size_t)(slash - text) >= sizeof(first)) {
-        return false;
-    }
-    memcpy(first, text, (size_t)(slash - text));
-    first[slash - text] = '\0';
-    if (!parse_whole_number(first, 64, &beats) || !parse_whole_number(slash + 1, 64, &unit) || beats == 0 ||
-        unit == 0) {
-        return false;
-    }
-    meter->beats_per_bar = (int)beats;
-    meter->beat_unit = (int)unit;
-    meter->bars_per_hyperbar = 0;
-    return true;
-}
-
-static bool parse_cadence(const char *text, PlanCadenceType *cadence) {
-    static const char *const NAMES[5] = {"PAC", "IAC", "HC", "DC", "PC"};
-    for (int i = 0; i < 5; i++) {
-        if (equals_ignore_case(text, NAMES[i])) {
-            *cadence = (PlanCadenceType)i;
-            return true;
-        }
-    }
-    return false;
-}
-
-static const char *cadence_name(PlanCadenceType cadence) {
-    static const char *const NAMES[5] = {"PAC", "IAC", "HC", "DC", "PC"};
-    return NAMES[cadence];
-}
 
 /*
  * A sequence continues something, and so do the schemas that are not opening gambits: for those the first bar
@@ -285,14 +167,14 @@ static int read_options(int argc, char **argv, Options *options) {
         } else if (strcmp(arg, "--musicxml") == 0) {
             target = &options->musicxml_path;
         } else {
-            return fail(EXIT_USAGE, "unexpected argument '%s' (see ursatz-composer progression --help)", arg);
+            return cli_fail(EXIT_USAGE, "unexpected argument '%s' (see ursatz-composer progression --help)", arg);
         }
         if (target) {
             if (i + 1 >= argc) {
-                return fail(EXIT_USAGE, "%s needs a value", arg);
+                return cli_fail(EXIT_USAGE, "%s needs a value", arg);
             }
             if (*target) {
-                return fail(EXIT_USAGE, "%s given twice", arg);
+                return cli_fail(EXIT_USAGE, "%s given twice", arg);
             }
             *target = argv[++i];
         }
@@ -301,85 +183,85 @@ static int read_options(int argc, char **argv, Options *options) {
         return 0;
     }
     if (!options->key_text || !options->meter_text || !options->bars_text || !options->cadence_text) {
-        return fail(EXIT_USAGE, "progression needs --key, --meter, --bars and --cadence (see --help)");
+        return cli_fail(EXIT_USAGE, "progression needs --key, --meter, --bars and --cadence (see --help)");
     }
-    if (!parse_key(options->key_text, &options->key)) {
-        return fail(EXIT_USAGE,
+    if (!cli_parse_key(options->key_text, &options->key)) {
+        return cli_fail(EXIT_USAGE,
                     "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                     "for example \"D minor\"",
                     options->key_text);
     }
-    if (!parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
-        return fail(EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
+    if (!cli_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
+        return cli_fail(EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
     }
     unsigned long bars;
-    if (!parse_whole_number(options->bars_text, MAX_BARS, &bars) || bars == 0) {
-        return fail(EXIT_USAGE, "--bars must be a whole number from 1 to %d, not '%s'", MAX_BARS, options->bars_text);
+    if (!cli_parse_whole_number(options->bars_text, MAX_BARS, &bars) || bars == 0) {
+        return cli_fail(EXIT_USAGE, "--bars must be a whole number from 1 to %d, not '%s'", MAX_BARS, options->bars_text);
     }
     options->bars = (long)bars;
-    if (!parse_cadence(options->cadence_text, &options->cadence)) {
-        return fail(EXIT_USAGE, "unknown cadence '%s'; use PAC, IAC, HC, DC or PC", options->cadence_text);
+    if (!cli_parse_cadence(options->cadence_text, &options->cadence)) {
+        return cli_fail(EXIT_USAGE, "unknown cadence '%s'; use PAC, IAC, HC, DC or PC", options->cadence_text);
     }
     if (options->seed_text) {
-        if (!parse_whole_number(options->seed_text, 4294967295UL, &options->seed)) {
-            return fail(EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options->seed_text);
+        if (!cli_parse_whole_number(options->seed_text, 4294967295UL, &options->seed)) {
+            return cli_fail(EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options->seed_text);
         }
     } else {
-        options->seed = ((unsigned long)time(NULL) * 2654435761UL + (unsigned long)clock()) & 0xFFFFFFFFUL;
+        options->seed = cli_default_seed();
     }
     options->embellish = EMBELLISH_NONE;
     if (options->embellish_text) {
         static const char *const LEVELS[4] = {"none", "low", "medium", "high"};
         bool found = false;
         for (int i = 0; i < 4; i++) {
-            if (equals_ignore_case(options->embellish_text, LEVELS[i])) {
+            if (cli_equals_ignore_case(options->embellish_text, LEVELS[i])) {
                 options->embellish = (EmbellishLevel)i;
                 found = true;
             }
         }
         if (!found) {
-            return fail(EXIT_USAGE, "--embellish must be none, low, medium or high, not '%s'", options->embellish_text);
+            return cli_fail(EXIT_USAGE, "--embellish must be none, low, medium or high, not '%s'", options->embellish_text);
         }
     }
     if (options->format_text) {
-        if (equals_ignore_case(options->format_text, "json")) {
+        if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!equals_ignore_case(options->format_text, "text")) {
-            return fail(EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
+        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
+            return cli_fail(EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
     if (options->schema_text) {
         if (!harmony_schema_find(options->schema_text, &options->schema)) {
-            return fail(EXIT_USAGE, "unknown schema '%s' (see --list-schemas)", options->schema_text);
+            return cli_fail(EXIT_USAGE, "unknown schema '%s' (see --list-schemas)", options->schema_text);
         }
         options->has_schema = true;
         if (!harmony_schema_available(options->schema, options->key.mode)) {
-            return fail(EXIT_UNSATISFIABLE, "the schema '%s' cannot be written in a %s key", options->schema_text,
+            return cli_fail(EXIT_UNSATISFIABLE, "the schema '%s' cannot be written in a %s key", options->schema_text,
                         options->key.mode == PLAN_MODE_MINOR ? "minor" : "major");
         }
     }
     if (options->sequence_text) {
         if (!harmony_sequence_find(options->sequence_text, &options->sequence)) {
-            return fail(EXIT_USAGE, "unknown sequence '%s' (see --list-schemas)", options->sequence_text);
+            return cli_fail(EXIT_USAGE, "unknown sequence '%s' (see --list-schemas)", options->sequence_text);
         }
         options->has_sequence = true;
     }
     if (options->suggest_text &&
-        (!parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
-        return fail(EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
+        (!cli_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
+        return cli_fail(EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
                     options->suggest_text);
     }
     if (!options->bass && (options->has_schema || options->has_sequence)) {
-        return fail(EXIT_USAGE, "--schema and --sequence write their own bass, so they cannot be used with --no-bass");
+        return cli_fail(EXIT_USAGE, "--schema and --sequence write their own bass, so they cannot be used with --no-bass");
     }
     if (!options->bass && (options->midi_path || options->musicxml_path)) {
-        return fail(EXIT_USAGE, "--midi and --musicxml write the bass line (harmony makes no sound yet), "
+        return cli_fail(EXIT_USAGE, "--midi and --musicxml write the bass line (harmony makes no sound yet), "
                                 "so they cannot be used with --no-bass");
     }
     size_t minimum = harmony_phrase_min_bars(options->cadence, &options->meter) + (needs_lead(options) ? 1 : 0);
     if ((size_t)options->bars < minimum) {
-        return fail(EXIT_UNSATISFIABLE, "%ld bar%s is too short for a %s in %s; at least %zu bars are needed",
-                    options->bars, options->bars == 1 ? "" : "s", cadence_name(options->cadence), options->meter_text,
+        return cli_fail(EXIT_UNSATISFIABLE, "%ld bar%s is too short for a %s in %s; at least %zu bars are needed",
+                    options->bars, options->bars == 1 ? "" : "s", cli_cadence_name(options->cadence), options->meter_text,
                     minimum);
     }
     return 0;
@@ -808,15 +690,6 @@ static const char *heard_name(const Options *options, const Built *built) {
     return "none";
 }
 
-static const char *key_name(const Options *options, char *out, size_t size) {
-    static const char *const MAJOR[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-    static const char *const MINOR[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
-    int pc = options->key.tonic_pitch_class;
-    snprintf(out, size, "%s %s", options->key.mode == PLAN_MODE_MINOR ? MINOR[pc] : MAJOR[pc],
-             options->key.mode == PLAN_MODE_MINOR ? "minor" : "major");
-    return out;
-}
-
 static void print_table(const Options *options, const Built *built) {
     Row rows[MAX_CHORDS];
     size_t count = collect_rows(options, built, rows);
@@ -824,7 +697,7 @@ static void print_table(const Options *options, const Built *built) {
     for (size_t i = 0; i < count; i++) {
         printf("%-4d %-4d %-10s %-12s %s\n", rows[i].bar, rows[i].beat, rows[i].roman, rows[i].function, rows[i].bass);
     }
-    printf("\ncadence %s (heard: %s)\n", cadence_name(options->cadence), heard_name(options, built));
+    printf("\ncadence %s (heard: %s)\n", cli_cadence_name(options->cadence), heard_name(options, built));
 }
 
 static void print_json_chords(const Options *options, const Built *built) {
@@ -841,10 +714,10 @@ static void print_json_chords(const Options *options, const Built *built) {
 static void print_result(const Options *options, const Built *alternatives, size_t count, unsigned long seed,
                          const char *const *files, size_t file_count) {
     char key[24];
-    key_name(options, key, sizeof(key));
+    cli_key_name(&options->key, key, sizeof(key));
     if (options->json) {
         printf("{\"key\":\"%s\",\"meter\":\"%d/%d\",\"bars\":%ld,\"cadence\":\"%s\",\"seed\":%lu,", key,
-               options->meter.beats_per_bar, options->meter.beat_unit, options->bars, cadence_name(options->cadence),
+               options->meter.beats_per_bar, options->meter.beat_unit, options->bars, cli_cadence_name(options->cadence),
                seed);
         if (options->suggest > 0) {
             printf("\"alternatives\":[");
@@ -866,7 +739,7 @@ static void print_result(const Options *options, const Built *alternatives, size
         return;
     }
     printf("key %s, meter %d/%d, %ld bars, cadence %s\n", key, options->meter.beats_per_bar, options->meter.beat_unit,
-           options->bars, cadence_name(options->cadence));
+           options->bars, cli_cadence_name(options->cadence));
     printf("seed %lu\n", seed);
     for (size_t k = 0; k < count; k++) {
         if (options->suggest > 0) {
@@ -894,19 +767,6 @@ static void discard(Pending *pending, size_t count) {
     }
 }
 
-/* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */
-static bool alternative_path(const char *path, size_t k, bool several, char *out, size_t size) {
-    if (!several) {
-        return snprintf(out, size, "%s", path) < (int)size;
-    }
-    const char *dot = strrchr(path, '.');
-    const char *slash = strrchr(path, '/');
-    if (!dot || (slash && dot < slash)) {
-        return snprintf(out, size, "%s-%zu", path, k) < (int)size;
-    }
-    return snprintf(out, size, "%.*s-%zu%s", (int)(dot - path), path, k, dot) < (int)size;
-}
-
 /*
  * Writes every output to a temporary file next to its final name, and renames them all only when every one was
  * written, so that an error leaves no output file behind.
@@ -924,24 +784,24 @@ static int write_files(const Options *options, const Built *alternatives, size_t
                 continue;
             }
             Pending *entry = &pending[*pending_count];
-            if (!alternative_path(paths[kind], k + 1, count > 1, entry->final_path, sizeof(entry->final_path)) ||
+            if (!cli_alternative_path(paths[kind], k + 1, count > 1, entry->final_path, sizeof(entry->final_path)) ||
                 snprintf(entry->temporary, sizeof(entry->temporary), "%s.tmp", entry->final_path) >=
                     (int)sizeof(entry->temporary)) {
-                status = fail(EXIT_WRITE, "file name '%s' is too long", paths[kind]);
+                status = cli_fail(EXIT_WRITE, "file name '%s' is too long", paths[kind]);
                 break;
             }
             (*pending_count)++;
             if (kind == 0) {
                 PlanJsonError error;
                 if (plan_write_json_file(alternatives[k].plan, entry->temporary, &error) != PLAN_OK) {
-                    status = fail(EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
+                    status = cli_fail(EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
                 }
                 continue;
             }
             PlanExportError error;
             if (!have_rendering) {
                 if (plan_render(alternatives[k].plan, &rendered) != PLAN_RENDER_OK) {
-                    status = fail(EXIT_WRITE, "cannot render the plan");
+                    status = cli_fail(EXIT_WRITE, "cannot render the plan");
                     break;
                 }
                 have_rendering = true;
@@ -949,7 +809,7 @@ static int write_files(const Options *options, const Built *alternatives, size_t
             PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, entry->temporary, &error)
                                                 : rendered_plan_export_musicxml(&rendered, entry->temporary, &error);
             if (result != PLAN_EXPORT_OK) {
-                status = fail(EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
+                status = cli_fail(EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
             }
         }
         if (have_rendering) {
@@ -962,7 +822,7 @@ static int write_files(const Options *options, const Built *alternatives, size_t
     }
     for (size_t i = 0; i < *pending_count; i++) {
         if (rename(pending[i].temporary, pending[i].final_path) != 0) {
-            status = fail(EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
+            status = cli_fail(EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
             break;
         }
     }
@@ -1036,13 +896,13 @@ int run_progression(int argc, char **argv) {
     }
     if (made == 0) {
         if (skeleton_unused) {
-            return fail(EXIT_UNSATISFIABLE, "%s could not be used for %s, %s, %ld bars, %s from seeds %lu to %lu",
+            return cli_fail(EXIT_UNSATISFIABLE, "%s could not be used for %s, %s, %ld bars, %s from seeds %lu to %lu",
                         options.has_schema ? "the schema" : "the sequence", options.key_text, options.meter_text,
-                        options.bars, cadence_name(options.cadence), options.seed,
+                        options.bars, cli_cadence_name(options.cadence), options.seed,
                         (options.seed + MAX_SEED_TRIES - 1) & 0xFFFFFFFFUL);
         }
-        return fail(EXIT_UNSATISFIABLE, "no valid progression for %s, %s, %ld bars, %s from seeds %lu to %lu",
-                    options.key_text, options.meter_text, options.bars, cadence_name(options.cadence), options.seed,
+        return cli_fail(EXIT_UNSATISFIABLE, "no valid progression for %s, %s, %ld bars, %s from seeds %lu to %lu",
+                    options.key_text, options.meter_text, options.bars, cli_cadence_name(options.cadence), options.seed,
                     (options.seed + MAX_SEED_TRIES - 1) & 0xFFFFFFFFUL);
     }
 

@@ -155,3 +155,11 @@ foreach(beginning RANGE 2)
         endif()
     endforeach()
 endforeach()
+
+add_executable(test_grow_cli test_grow_cli.c)
+target_link_libraries(test_grow_cli PRIVATE ursatz_composer)
+target_compile_options(test_grow_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_grow_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                 COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_grow_cli ursatz-composer)
+add_test(NAME test_grow_cli COMMAND test_grow_cli)

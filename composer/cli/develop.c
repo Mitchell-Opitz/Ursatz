@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cli_options.h"
 #include "generation/candidate.h"
 
 #include <ursatz_composer/export.h>
@@ -17,9 +18,9 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
-#define EXIT_USAGE 1
-#define EXIT_NOTHING 2
-#define EXIT_WRITE 3
+#define EXIT_USAGE CLI_EXIT_USAGE
+#define EXIT_NOTHING CLI_EXIT_UNSATISFIABLE
+#define EXIT_WRITE CLI_EXIT_WRITE
 
 #define DEFAULT_SUGGEST 5
 #define MAX_SUGGEST 16
@@ -108,16 +109,6 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz-composer develop theme.txt --op restate --tonal --meter 4/4 --key \"D minor\" --suggest 3\n");
 }
 
-static int fail(int status, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
-    fprintf(stderr, "Error: ");
-    vfprintf(stderr, format, args);
-    fprintf(stderr, "\n");
-    va_end(args);
-    return status;
-}
-
 /* --- reading the options -------------------------------------------------- */
 
 typedef struct {
@@ -172,18 +163,18 @@ static int read_options(int argc, char **argv, Options *options) {
             if (!spec->slot) {
                 *spec->toggle = true;
             } else if (i + 1 >= argc) {
-                return fail(EXIT_USAGE, "%s needs a value", argument);
+                return cli_fail(EXIT_USAGE, "%s needs a value", argument);
             } else if (*spec->slot) {
-                return fail(EXIT_USAGE, "%s given twice", argument);
+                return cli_fail(EXIT_USAGE, "%s given twice", argument);
             } else {
                 *spec->slot = argv[++i];
             }
         } else if (argument[0] == '-' && argument[1] != '\0') {
-            return fail(EXIT_USAGE, "unknown option '%s'", argument);
+            return cli_fail(EXIT_USAGE, "unknown option '%s'", argument);
         } else if (!options->input) {
             options->input = argument;
         } else {
-            return fail(EXIT_USAGE, "unexpected argument '%s'; the input is one file", argument);
+            return cli_fail(EXIT_USAGE, "unexpected argument '%s'; the input is one file", argument);
         }
     }
     return 0;
@@ -513,18 +504,18 @@ static int write_files(const Options *options, Scene *scene, const FillSuggestio
     }
     FillResult applied = fill_apply_suggestion(scene->plan, suggestions, 0);
     if (applied != FILL_OK) {
-        return fail(EXIT_WRITE, "cannot build the plan to write (fill result %d)", (int)applied);
+        return cli_fail(EXIT_WRITE, "cannot build the plan to write (fill result %d)", (int)applied);
     }
     PlanExportError error;
     if (options->midi_path) {
         if (plan_export_midi(scene->plan, options->midi_path, &error) != PLAN_EXPORT_OK) {
-            return fail(EXIT_WRITE, "MIDI export failed: %s", error.message);
+            return cli_fail(EXIT_WRITE, "MIDI export failed: %s", error.message);
         }
         printf("MIDI written to %s\n", options->midi_path);
     }
     if (options->musicxml_path) {
         if (plan_export_musicxml(scene->plan, options->musicxml_path, &error) != PLAN_EXPORT_OK) {
-            return fail(EXIT_WRITE, "MusicXML export failed: %s", error.message);
+            return cli_fail(EXIT_WRITE, "MusicXML export failed: %s", error.message);
         }
         printf("MusicXML written to %s\n", options->musicxml_path);
     }
@@ -564,15 +555,15 @@ int run_develop(int argc, char **argv) {
         return 0;
     }
     if (!options.input) {
-        return fail(EXIT_USAGE, "develop needs an input file\n%s", DEVELOP_USAGE_LINE);
+        return cli_fail(EXIT_USAGE, "develop needs an input file\n%s", DEVELOP_USAGE_LINE);
     }
     if (!options.op_text) {
-        return fail(EXIT_USAGE, "develop needs --op: restate, invert, retrograde, interval, fragment, liquidate, "
+        return cli_fail(EXIT_USAGE, "develop needs --op: restate, invert, retrograde, interval, fragment, liquidate, "
                                 "augment or diminish");
     }
     Op op;
     if (!parse_op(options.op_text, &op)) {
-        return fail(EXIT_USAGE, "unknown operation '%s'; use restate, invert, retrograde, interval, fragment, "
+        return cli_fail(EXIT_USAGE, "unknown operation '%s'; use restate, invert, retrograde, interval, fragment, "
                                 "liquidate, augment or diminish", options.op_text);
     }
     unsigned stray = options.given & ~OP_FLAGS[op];
@@ -582,7 +573,7 @@ int run_develop(int argc, char **argv) {
                                             "--keep-rhythm", "--ratio"};
         for (int bit = 0; bit < 13; bit++) {
             if (stray & (1u << bit)) {
-                return fail(EXIT_USAGE, "%s does not apply to %s", FLAGS[bit], OP_NAMES[op]);
+                return cli_fail(EXIT_USAGE, "%s does not apply to %s", FLAGS[bit], OP_NAMES[op]);
             }
         }
     }
@@ -590,24 +581,24 @@ int run_develop(int argc, char **argv) {
     long seed = 0;
     long suggest = DEFAULT_SUGGEST;
     if (options.seed_text && !parse_number(options.seed_text, 0, 4294967295L, &seed)) {
-        return fail(EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options.seed_text);
+        return cli_fail(EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options.seed_text);
     }
     if (options.suggest_text && !parse_number(options.suggest_text, 1, MAX_SUGGEST, &suggest)) {
-        return fail(EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGEST,
+        return cli_fail(EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGEST,
                     options.suggest_text);
     }
     MotiveOptions motive_options;
     memset(&motive_options, 0, sizeof(motive_options));
     if (options.meter_text) {
         if (!motive_parse_meter(options.meter_text, &motive_options.meter)) {
-            return fail(EXIT_USAGE, "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8",
+            return cli_fail(EXIT_USAGE, "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8",
                         options.meter_text);
         }
         motive_options.has_meter = true;
     }
     if (options.key_text) {
         if (!motive_parse_key(options.key_text, &motive_options.key)) {
-            return fail(EXIT_USAGE,
+            return cli_fail(EXIT_USAGE,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                         "for example \"D minor\"",
                         options.key_text);
@@ -616,14 +607,14 @@ int run_develop(int argc, char **argv) {
     }
     MotiveFormat format = MOTIVE_FORMAT_AUTO;
     if (options.format_text && !motive_format_parse(options.format_text, &format)) {
-        return fail(EXIT_USAGE, "--format must be auto, midi, musicxml, notes or json, not '%s'", options.format_text);
+        return cli_fail(EXIT_USAGE, "--format must be auto, midi, musicxml, notes or json, not '%s'", options.format_text);
     }
 
     Motive source;
     MotiveError error;
     MotiveResult loaded = motive_load_file(options.input, format, &motive_options, &source, &error);
     if (loaded != MOTIVE_OK) {
-        return fail(EXIT_NOTHING, "cannot load '%s' (%s)%s%s: %s", options.input, motive_result_name(loaded),
+        return cli_fail(EXIT_NOTHING, "cannot load '%s' (%s)%s%s: %s", options.input, motive_result_name(loaded),
                     error.location[0] ? " at " : "", error.location, error.message);
     }
 
@@ -637,14 +628,14 @@ int run_develop(int argc, char **argv) {
     char problem_text[160];
     const char *problem = NULL;
     if (!build_ref(&options, op, &source, &context.min_length, &ref, &problem, problem_text, sizeof(problem_text))) {
-        return fail(EXIT_USAGE, "%s", problem);
+        return cli_fail(EXIT_USAGE, "%s", problem);
     }
 
     Scene scene;
     FillOperatorRegistry *registry = fill_registry_create();
     if (!registry || motive_develop_register(registry, &context) != FILL_OK || !build_scene(&source, &ref, &scene)) {
         fill_registry_destroy(registry);
-        return fail(EXIT_NOTHING, "out of memory");
+        return cli_fail(EXIT_NOTHING, "out of memory");
     }
     FillConfig config;
     memset(&config, 0, sizeof(config));
@@ -656,7 +647,7 @@ int run_develop(int argc, char **argv) {
     if (fill_suggest(scene.plan, registry, &config, target, (size_t)suggest, &suggestions) != FILL_OK) {
         fill_registry_destroy(registry);
         plan_destroy(scene.plan);
-        return fail(EXIT_NOTHING, "the development could not be run");
+        return cli_fail(EXIT_NOTHING, "the development could not be run");
     }
 
     size_t count = fill_suggestions_count(suggestions);
@@ -664,7 +655,7 @@ int run_develop(int argc, char **argv) {
     motive_text(&source, text, sizeof(text));
     int exit_status = 0;
     if (count == 0) {
-        exit_status = fail(EXIT_NOTHING, "no %s development can be made from %s as asked", OP_NAMES[op], text);
+        exit_status = cli_fail(EXIT_NOTHING, "no %s development can be made from %s as asked", OP_NAMES[op], text);
     } else {
         printf("Source: %s\n", text);
         printf("Operation: %s (seed %ld)\n", OP_NAMES[op], seed);
@@ -673,7 +664,7 @@ int run_develop(int argc, char **argv) {
             const Candidate *candidate = candidate_set_candidate_at(set, i);
             Motive development;
             if (!suggestion_motive(&scene, suggestions, i, &source, &development)) {
-                exit_status = fail(EXIT_NOTHING, "cannot read candidate %zu", i + 1);
+                exit_status = cli_fail(EXIT_NOTHING, "cannot read candidate %zu", i + 1);
                 break;
             }
             motive_text(&development, text, sizeof(text));

@@ -1,0 +1,380 @@
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+
+#include "io/midi_importer.h"
+#include "io/musicxml_importer.h"
+#include "pitch/pitch_numeric_value.h"
+
+#include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_state.h>
+
+/*
+ * The `grow` command, run as a process: each form and a hybrid from the D minor motive fixture, the files it writes
+ * read back, the same seed giving the same output, the usage errors and exit codes, and --suggest giving different
+ * themes.
+ */
+
+#define FIXTURE(name) COMPOSER_FIXTURE_DIR "/" name
+#define BASE FIXTURE("motive_d_minor.txt") " --key \"D minor\" --meter 4/4"
+
+/* Runs the command with these arguments; stdout and stderr go to files. Returns the exit status. */
+static int run(const char *arguments, const char *out_file, const char *err_file) {
+    char command[2048];
+    snprintf(command, sizeof(command), "\"%s\" grow %s >%s 2>%s", COMPOSER_CLI_PATH, arguments, out_file, err_file);
+    int status = system(command);
+    assert(WIFEXITED(status));
+    return WEXITSTATUS(status);
+}
+
+static char *read_file(const char *path) {
+    FILE *file = fopen(path, "rb");
+    assert(file);
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *text = malloc((size_t)length + 1);
+    assert(text);
+    size_t read = fread(text, 1, (size_t)length, file);
+    assert(read == (size_t)length);
+    text[length] = '\0';
+    fclose(file);
+    return text;
+}
+
+/* The standard output of a command that must succeed. */
+static char *output_of(const char *arguments) {
+    int status = run(arguments, "grow_cli_out.txt", "grow_cli_err.txt");
+    if (status != 0) {
+        char *err = read_file("grow_cli_err.txt");
+        fprintf(stderr, "'%s' exited %d: %s\n", arguments, status, err);
+        free(err);
+    }
+    assert(status == 0);
+    return read_file("grow_cli_out.txt");
+}
+
+static void expect_failure(const char *arguments, int status, const char *message) {
+    int got = run(arguments, "grow_cli_out.txt", "grow_cli_err.txt");
+    char *err = read_file("grow_cli_err.txt");
+    if (got != status || strstr(err, message) == NULL) {
+        fprintf(stderr, "'%s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
+    }
+    assert(got == status);
+    assert(strstr(err, message) != NULL);
+    assert(strncmp(err, "Error: ", 7) == 0);
+    free(err);
+}
+
+static void write_text(const char *path, const char *text) {
+    FILE *file = fopen(path, "wb");
+    assert(file);
+    fputs(text, file);
+    fclose(file);
+}
+
+/* The seed printed for the first theme. */
+static unsigned long printed_seed(const char *out) {
+    const char *at = strstr(out, "\nseed ");
+    assert(at);
+    return strtoul(at + 6, NULL, 10);
+}
+
+static void test_each_form(void) {
+    static const struct {
+        const char *arguments;
+        const char *heading;
+        const char *nodes[3];
+    } FORMS[] = {
+        {"--into sentence", "sentence (presentation + continuation)", {"presentation (subphrase)", "continuation (subphrase)", NULL}},
+        {"--into period", "period (antecedent + consequent)", {"antecedent (phrase)", "consequent (phrase)", NULL}},
+        {"--into hybrid --hybrid cbi+continuation", "hybrid (compound basic idea + continuation)",
+         {"compound basic idea (subphrase)", "continuation (subphrase)", NULL}},
+        {"--into hybrid --hybrid presentation+consequent", "hybrid (presentation + consequent)",
+         {"presentation (subphrase)", "consequent (subphrase)", NULL}},
+        {"--into hybrid --hybrid antecedent+cadential", "hybrid (antecedent + cadential)",
+         {"antecedent (phrase)", "cadential (subphrase)", NULL}},
+    };
+    for (size_t i = 0; i < sizeof(FORMS) / sizeof(FORMS[0]); i++) {
+        char arguments[512];
+        snprintf(arguments, sizeof(arguments), BASE " %s --seed 3", FORMS[i].arguments);
+        char *out = output_of(arguments);
+        if (strstr(out, FORMS[i].heading) != &out[0]) {
+            fprintf(stderr, "'%s': expected heading '%s' in: %s\n", arguments, FORMS[i].heading, out);
+        }
+        assert(strstr(out, FORMS[i].heading) == &out[0]);
+        assert(strstr(out, "key D minor, meter 4/4, 8 bars, cadence PAC") != NULL);
+        assert(strstr(out, "\nseed ") != NULL);
+        assert(strstr(out, "theme (section) bars 0-8") != NULL && strstr(out, "basic idea (idea) bars 0-2") != NULL);
+        for (size_t n = 0; FORMS[i].nodes[n]; n++) {
+            assert(strstr(out, FORMS[i].nodes[n]) != NULL);
+        }
+        assert(strstr(out, "bar  beat chord") != NULL);
+        /* The first chord is the tonic, in bar 1, and the theme ends on one. */
+        assert(strstr(out, "\n1    1    i ") != NULL);
+        assert(strstr(out, "motive developments (m0 is the motive given)\n  m1 for ") != NULL);
+        assert(strstr(out, "standard-form rule score ") != NULL);
+        assert(strstr(out, "\nheard as ") != NULL || strstr(out, "\nno theme heard\n") != NULL);
+        free(out);
+    }
+
+    /* A period says its weak cadence, and a weaker one can be asked for. */
+    char *out = output_of(BASE " --into period --first-cadence IAC --seed 3");
+    assert(strstr(out, "first cadence IAC") != NULL);
+    free(out);
+    out = output_of(BASE " --into period --seed 3");
+    assert(strstr(out, "first cadence HC") != NULL);
+    free(out);
+
+    /* A sentence heard as one says so. */
+    out = output_of(BASE " --into sentence --seed 7");
+    assert(strstr(out, "\nheard as sentence\n") != NULL);
+    free(out);
+}
+
+/* All seven pairings of the hybrids can be grown. */
+static void test_every_hybrid(void) {
+    static const char *const BEGINNINGS[] = {"presentation", "antecedent", "cbi"};
+    static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
+    for (int b = 0; b < 3; b++) {
+        for (int e = 0; e < 3; e++) {
+            if ((b == 0 && e == 0) || (b == 1 && e == 1)) {
+                continue;
+            }
+            char arguments[512];
+            snprintf(arguments, sizeof(arguments), BASE " --into hybrid --hybrid %s+%s --seed 1", BEGINNINGS[b], ENDINGS[e]);
+            char *out = output_of(arguments);
+            assert(strstr(out, "standard-form rule score ") != NULL);
+            free(out);
+        }
+    }
+}
+
+static void test_four_bars_and_cadences(void) {
+    char *out = output_of(BASE " --into sentence --bars 4 --cadence IAC --seed 2");
+    assert(strstr(out, "4 bars, cadence IAC") != NULL && strstr(out, "theme (section) bars 0-4") != NULL);
+    free(out);
+    write_text("grow_cli_waltz.txt", "F4:q A4:e G4:e E4:q\n");
+    out = output_of("grow_cli_waltz.txt --into period --key \"D minor\" --meter 3/4 --seed 4");
+    assert(strstr(out, "key D minor, meter 3/4") != NULL);
+    free(out);
+}
+
+static void test_same_seed_same_output(void) {
+    char *first = output_of(BASE " --into period --seed 11");
+    char *again = output_of(BASE " --into period --seed 11");
+    assert(strcmp(first, again) == 0);
+    free(again);
+
+    /* The seed that worked is printed, and giving it again gives the same theme. */
+    unsigned long seed = printed_seed(first);
+    assert(seed >= 11 && seed < 11 + 16);
+    char arguments[256];
+    snprintf(arguments, sizeof(arguments), BASE " --into period --seed %lu", seed);
+    char *printed = output_of(arguments);
+    assert(strcmp(first, printed) == 0 || seed != 11);
+    char *from_printed = strstr(printed, "\nstructure");
+    char *from_first = strstr(first, "\nstructure");
+    assert(from_printed && from_first && strcmp(from_printed, from_first) == 0);
+    free(printed);
+
+    bool differs = false;
+    for (int other = 12; other <= 20 && !differs; other++) {
+        snprintf(arguments, sizeof(arguments), BASE " --into period --seed %d", other);
+        char *out = output_of(arguments);
+        differs = strcmp(strstr(out, "\nstructure"), from_first) != 0;
+        free(out);
+    }
+    assert(differs);
+    free(first);
+
+    /* Without a seed one is chosen and printed. */
+    char *chosen = output_of(BASE " --into sentence");
+    assert(strstr(chosen, "\nseed ") != NULL);
+    free(chosen);
+}
+
+static void test_files(void) {
+    remove("grow_cli.json");
+    remove("grow_cli.mid");
+    remove("grow_cli.xml");
+    char *out = output_of(BASE " --into sentence --seed 7 --out grow_cli.json --midi grow_cli.mid --musicxml grow_cli.xml");
+    assert(strstr(out, "wrote grow_cli.json") != NULL && strstr(out, "wrote grow_cli.mid") != NULL &&
+           strstr(out, "wrote grow_cli.xml") != NULL);
+    free(out);
+
+    PiecePlan *plan = NULL;
+    PlanJsonError error;
+    assert(plan_read_json_file("grow_cli.json", &plan, &error) == PLAN_OK);
+    NodeId theme = PLAN_NODE_NONE;
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *name = plan_node_name(plan, id);
+        if (name && strcmp(name, "theme") == 0) {
+            theme = id;
+        }
+    }
+    assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
+    LaneSpanId spans[64];
+    assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64) > 0);
+    assert(plan_lane_find(plan, PLAN_LANE_BASS, 0, plan_node_span(plan, theme), spans, 64) > 0);
+    plan_destroy(plan);
+
+    /* The melody and the bass, eight bars of them: nothing of the source material. */
+    char *midi_bytes = read_file("grow_cli.mid");
+    FILE *file = fopen("grow_cli.mid", "rb");
+    assert(file);
+    fseek(file, 0, SEEK_END);
+    size_t size = (size_t)ftell(file);
+    fclose(file);
+    NoteEvent **events = NULL;
+    PitchNumericValue **values = NULL;
+    size_t count = 0;
+    assert(midi_importer_import((const unsigned char *)midi_bytes, size, &events, &values, &count) == MIDI_IMPORT_OK);
+    assert(count > 8);
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(values[i]);
+    }
+    free(events);
+    free(values);
+    free(midi_bytes);
+
+    MusicXmlImport imported;
+    memset(&imported, 0, sizeof(imported));
+    assert(musicxml_import_file("grow_cli.xml", &imported) == MUSICXML_IMPORT_OK);
+    assert(imported.count == count);
+    musicxml_import_destroy(&imported);
+}
+
+static void test_suggest(void) {
+    char *out = output_of(BASE " --into sentence --seed 1 --suggest 3");
+    assert(strstr(out, "theme 1 of 3") && strstr(out, "theme 2 of 3") && strstr(out, "theme 3 of 3") &&
+           !strstr(out, "theme 4 of 3"));
+    /* Three seeds, all different. */
+    unsigned long seeds[3];
+    const char *at = out;
+    for (int k = 0; k < 3; k++) {
+        at = strstr(at, "\nseed ");
+        assert(at);
+        seeds[k] = strtoul(at + 6, NULL, 10);
+        at += 6;
+    }
+    assert(seeds[0] != seeds[1] && seeds[1] != seeds[2] && seeds[0] != seeds[2]);
+    free(out);
+
+    /* With files, theme k goes to <name>-k.<extension>, each a plan that reads back, and no two the same. */
+    out = output_of(BASE " --into sentence --seed 1 --suggest 3 --out grow_cli_s.json --midi grow_cli_s.mid");
+    free(out);
+    char *plans[3];
+    for (int k = 1; k <= 3; k++) {
+        char path[64];
+        snprintf(path, sizeof(path), "grow_cli_s-%d.json", k);
+        PiecePlan *plan = NULL;
+        PlanJsonError error;
+        assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+        plan_destroy(plan);
+        plans[k - 1] = read_file(path);
+        snprintf(path, sizeof(path), "grow_cli_s-%d.mid", k);
+        free(read_file(path));
+    }
+    assert(strcmp(plans[0], plans[1]) != 0 && strcmp(plans[1], plans[2]) != 0 && strcmp(plans[0], plans[2]) != 0);
+    for (int k = 0; k < 3; k++) {
+        free(plans[k]);
+    }
+
+    /* As JSON: one object, with the themes in it. */
+    out = output_of(BASE " --into period --seed 5 --suggest 2 --format json");
+    assert(out[0] == '{' && out[strlen(out) - 2] == '}' && out[strlen(out) - 1] == '\n');
+    assert(strstr(out, "\"themes\":[{\"seed\":") != NULL && strstr(out, "\"into\":\"period\"") != NULL);
+    assert(strstr(out, "\"first_cadence\":\"HC\"") != NULL && strstr(out, "\"heard_text\":") != NULL);
+    assert(strstr(out, "\"chords\":[{\"bar\":1,\"beat\":1,\"chord\":\"i\"") != NULL);
+    int seeds_seen = 0;
+    for (const char *p = strstr(out, "{\"seed\":"); p; p = strstr(p + 1, "{\"seed\":")) {
+        seeds_seen++;
+    }
+    assert(seeds_seen == 2);
+    free(out);
+}
+
+static void test_bad_arguments(void) {
+    expect_failure("", 1, "needs a motive input");
+    expect_failure(FIXTURE("motive_d_minor.txt"), 1, "needs --into, --key and --meter");
+    expect_failure(BASE, 1, "needs --into, --key and --meter");
+    expect_failure(BASE " --into rondo", 1, "--into must be sentence, period or hybrid, not 'rondo'");
+    expect_failure(BASE " --into hybrid", 1, "needs --hybrid");
+    expect_failure(BASE " --into sentence --hybrid cbi+cadential", 1, "--hybrid applies only to --into hybrid");
+    expect_failure(BASE " --into period --hybrid cbi+cadential", 1, "--hybrid applies only to --into hybrid");
+    expect_failure(BASE " --into hybrid --hybrid cbi", 1, "--hybrid must be a beginning");
+    expect_failure(BASE " --into hybrid --hybrid cbi+coda", 1, "--hybrid must be a beginning");
+    expect_failure(BASE " --into hybrid --hybrid motto+cadential", 1, "--hybrid must be a beginning");
+    expect_failure(BASE " --into hybrid --hybrid presentation+continuation", 1, "is a sentence, not a hybrid");
+    expect_failure(BASE " --into hybrid --hybrid antecedent+consequent", 1, "is a period, not a hybrid");
+    expect_failure(BASE " --into sentence --first-cadence HC", 1, "--first-cadence applies only");
+    expect_failure(BASE " --into hybrid --hybrid cbi+cadential --first-cadence HC", 1, "--first-cadence applies only");
+    expect_failure(BASE " --into period --first-cadence PAC", 1, "--first-cadence must be HC or IAC");
+    expect_failure(BASE " --into sentence --cadence DC", 1, "--cadence must be PAC, IAC or HC");
+    expect_failure(BASE " --into sentence --cadence perfect", 1, "--cadence must be PAC, IAC or HC");
+    expect_failure(BASE " --into sentence --bars 6", 1, "--bars must be 4 or 8");
+    expect_failure(BASE " --into sentence --bars x", 1, "--bars must be 4 or 8");
+    expect_failure(BASE " --into sentence --seed x", 1, "--seed must be");
+    expect_failure(BASE " --into sentence --suggest 0", 1, "--suggest must be a whole number from 1 to 16");
+    expect_failure(BASE " --into sentence --suggest 17", 1, "--suggest must be a whole number from 1 to 16");
+    expect_failure(BASE " --into sentence --format xml", 1, "--format must be text or json");
+    expect_failure(FIXTURE("motive_d_minor.txt") " --into sentence --key \"H major\" --meter 4/4", 1, "unknown key");
+    expect_failure(FIXTURE("motive_d_minor.txt") " --into sentence --key \"D minor\" --meter 5/4", 1, "not supported");
+    expect_failure(FIXTURE("motive_d_minor.txt") " --into sentence --key \"D minor\" --meter x", 1, "not supported");
+    expect_failure(BASE " --into sentence --nope", 1, "unknown option '--nope'");
+    expect_failure(BASE " --into sentence --seed", 1, "--seed needs a value");
+    expect_failure(BASE " --into sentence --seed 1 --seed 2", 1, "--seed given twice");
+    expect_failure(BASE " " BASE " --into sentence", 1, "unexpected argument");
+}
+
+static void test_cannot_be_satisfied(void) {
+    /* A motive longer than a bar. */
+    write_text("grow_cli_long.txt", "D4:w D4:q\n");
+    expect_failure("grow_cli_long.txt --into sentence --key \"D minor\" --meter 4/4", 2, "does not fit in one bar of 4/4");
+    /* One note is not a motive to grow a theme from. */
+    write_text("grow_cli_single.txt", "D4:q\n");
+    expect_failure("grow_cli_single.txt --into sentence --key \"D minor\" --meter 4/4", 2, "cannot be grown as asked");
+    /* An input that cannot be loaded as a motive. */
+    expect_failure(FIXTURE("no_such_file.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "cannot load");
+    expect_failure(FIXTURE("motive_polyphonic.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "polyphonic");
+    expect_failure(FIXTURE("motive_d_minor.txt") " --into sentence --key \"D minor\" --meter 3/4", 2, "does not fit in one bar of 3/4");
+    /* An antecedent cannot end more strongly than the theme. */
+    expect_failure(BASE " --into period --first-cadence IAC --cadence IAC", 2, "cannot be grown as asked");
+    expect_failure(BASE " --into period --cadence HC", 2, "cannot be grown as asked");
+    /* No file is left behind by a request that failed. */
+    remove("grow_cli_never.json");
+    expect_failure(BASE " --into period --cadence HC --out grow_cli_never.json", 2, "cannot be grown as asked");
+    assert(fopen("grow_cli_never.json", "rb") == NULL);
+}
+
+static void test_unwritable_file(void) {
+    expect_failure(BASE " --into sentence --seed 7 --out /no/such/directory/theme.json", 3, "cannot write");
+    expect_failure(BASE " --into sentence --seed 7 --midi /no/such/directory/theme.mid", 3, "cannot write");
+}
+
+static void test_help(void) {
+    assert(run("--help", "grow_cli_out.txt", "grow_cli_err.txt") == 0);
+    char *out = read_file("grow_cli_out.txt");
+    assert(strstr(out, "--into") != NULL && strstr(out, "--hybrid") != NULL && strstr(out, "--suggest") != NULL &&
+           strstr(out, "--first-cadence") != NULL);
+    free(out);
+}
+
+int main(void) {
+    test_each_form();
+    test_every_hybrid();
+    test_four_bars_and_cadences();
+    test_same_seed_same_output();
+    test_files();
+    test_suggest();
+    test_bad_arguments();
+    test_cannot_be_satisfied();
+    test_unwritable_file();
+    test_help();
+    puts("test_grow_cli: ok");
+    return 0;
+}
