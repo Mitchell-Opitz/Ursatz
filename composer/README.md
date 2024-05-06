@@ -82,6 +82,15 @@ ursatz-composer develop theme.txt --op restate --tonal --meter 4/4 --key "D mino
 `develop` makes motives related to a motive (restatements, fragments, rhythmic variants) and scores
 how recognizable each is. See [docs/cli-develop.md](docs/cli-develop.md).
 
+```sh
+ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --seed 7 --out theme.json --midi theme.mid
+```
+
+`grow` grows a theme from a motive: a sentence, a period or one of the seven hybrids, with its harmony,
+bass and melody, written as JSON, MIDI and MusicXML, and prints the form standard-form hears in it.
+With it the Composer reaches milestone M1: a motive, a key and a meter in, harmonized phrases out. See
+[docs/cli-grow.md](docs/cli-grow.md).
+
 ## Plan format
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
