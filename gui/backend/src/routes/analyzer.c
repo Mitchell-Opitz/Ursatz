@@ -338,6 +338,23 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
     json_buffer_append_string(&buf, summary->provenance_state);
     json_buffer_append(&buf, "}");
   }
+  json_buffer_append(&buf, "],\"relationships\":[");
+
+  for (size_t i = 0; i < detail->relationship_count; i++) {
+    const UrsatzGuiRelationshipSummary *relationship = &detail->relationships[i];
+    if (i != 0) {
+      json_buffer_append(&buf, ",");
+    }
+    json_buffer_append(&buf, "{\"relationship_id\":");
+    json_buffer_append_string(&buf, relationship->relationship_id);
+    json_buffer_append(&buf, ",\"source_id\":");
+    json_buffer_append_string(&buf, relationship->source_id);
+    json_buffer_append(&buf, ",\"predicate_name\":");
+    json_buffer_append_string(&buf, relationship->predicate_name);
+    json_buffer_append(&buf, ",\"target_id\":");
+    json_buffer_append_string(&buf, relationship->target_id);
+    json_buffer_append(&buf, "}");
+  }
   json_buffer_append(&buf, "]}");
 
   ursatz_gui_piece_detail_destroy(detail);
