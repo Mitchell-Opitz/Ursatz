@@ -25,7 +25,8 @@ typedef enum {
     PLAN_CONSTRAINT_SCHEMA,    /* the galant schema a span was made from, and which stage of it */
     PLAN_CONSTRAINT_MATERIAL,  /* no parameters: on a section node, its subtree is source material, not part of the piece */
     PLAN_CONSTRAINT_HARMONY_SHAPE, /* the shape a harmony span is to take (R-050) */
-    PLAN_CONSTRAINT_THEME_PAIRING  /* how a theme begins and how it ends */
+    PLAN_CONSTRAINT_THEME_PAIRING, /* how a theme begins and how it ends */
+    PLAN_CONSTRAINT_ACCOMPANIMENT  /* the accompaniment an inner voice span is to be written as */
 } PlanConstraintKind;
 
 typedef enum {
@@ -151,6 +152,30 @@ typedef struct {
     PlanThemeEnding ending;
 } PlanThemePairing;
 
+/*
+ * An accompaniment under a written melody and bass, in the inner voice lanes (R-065). The pattern is Composer
+ * vocabulary; ANY leaves it to the operator, which a texture target narrows. texture is a StandardTexture value
+ * (standard-texture's texture_rules.h) the written parts are to be heard as, or -1 for none. low and high are the
+ * MIDI pitches the accompaniment keeps to, 0 for the defaults 48 and 67.
+ */
+typedef enum {
+    PLAN_ACCOMPANIMENT_ANY,
+    PLAN_ACCOMPANIMENT_BLOCK,
+    PLAN_ACCOMPANIMENT_ARPEGGIATED,
+    PLAN_ACCOMPANIMENT_ALBERTI,
+    PLAN_ACCOMPANIMENT_OOM_PAH
+} PlanAccompanimentPattern;
+
+#define PLAN_ACCOMPANIMENT_DEFAULT_LOW 48
+#define PLAN_ACCOMPANIMENT_DEFAULT_HIGH 67
+
+typedef struct {
+    PlanAccompanimentPattern pattern;
+    int texture;
+    int low;
+    int high;
+} PlanAccompaniment;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -163,6 +188,7 @@ typedef struct {
         PlanSchemaRef schema;
         PlanHarmonyShape harmony_shape;
         PlanThemePairing theme_pairing;
+        PlanAccompaniment accompaniment;
     } params;
 } PlanConstraint;
 
