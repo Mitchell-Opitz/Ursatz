@@ -254,14 +254,7 @@ static void record_relationships(sqlite3 *index_db, Relationship *const *relatio
     }
 }
 
-typedef struct {
-    char *relationship_id;
-    char *source_id;
-    char *predicate_name;
-    char *target_id;
-} UrsatzGuiRelationshipRow;
-
-static void relationship_row_destroy_contents(UrsatzGuiRelationshipRow *row) {
+static void relationship_summary_destroy_contents(UrsatzGuiRelationshipSummary *row) {
     free(row->relationship_id);
     free(row->source_id);
     free(row->predicate_name);
@@ -271,7 +264,7 @@ static void relationship_row_destroy_contents(UrsatzGuiRelationshipRow *row) {
 /* Reads every relationship row recorded by record_relationship. Returns
  * false only on allocation failure; a missing/empty table yields
  * *out_count == 0. Mirrors read_interpretation_index's shape. */
-static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipRow **out_rows, size_t *out_count) {
+static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipSummary **out_rows, size_t *out_count) {
     *out_rows = NULL;
     *out_count = 0;
 
@@ -284,7 +277,7 @@ static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipRow 
         return true;
     }
 
-    UrsatzGuiRelationshipRow *rows = NULL;
+    UrsatzGuiRelationshipSummary *rows = NULL;
     size_t count = 0;
     size_t capacity = 0;
 
@@ -292,10 +285,10 @@ static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipRow 
     while ((step = sqlite3_step(stmt)) == SQLITE_ROW) {
         if (count == capacity) {
             size_t new_capacity = (capacity == 0) ? 8 : (capacity * 2);
-            UrsatzGuiRelationshipRow *grown = realloc(rows, sizeof(UrsatzGuiRelationshipRow) * new_capacity);
+            UrsatzGuiRelationshipSummary *grown = realloc(rows, sizeof(UrsatzGuiRelationshipSummary) * new_capacity);
             if (!grown) {
                 for (size_t i = 0; i < count; i++) {
-                    relationship_row_destroy_contents(&rows[i]);
+                    relationship_summary_destroy_contents(&rows[i]);
                 }
                 free(rows);
                 sqlite3_finalize(stmt);
@@ -305,15 +298,15 @@ static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipRow 
             capacity = new_capacity;
         }
 
-        UrsatzGuiRelationshipRow row = {0};
+        UrsatzGuiRelationshipSummary row = {0};
         row.relationship_id = dup_string((const char *)sqlite3_column_text(stmt, 0));
         row.source_id = dup_string((const char *)sqlite3_column_text(stmt, 1));
         row.predicate_name = dup_string((const char *)sqlite3_column_text(stmt, 2));
         row.target_id = dup_string((const char *)sqlite3_column_text(stmt, 3));
         if (!row.relationship_id || !row.source_id || !row.predicate_name || !row.target_id) {
-            relationship_row_destroy_contents(&row);
+            relationship_summary_destroy_contents(&row);
             for (size_t i = 0; i < count; i++) {
-                relationship_row_destroy_contents(&rows[i]);
+                relationship_summary_destroy_contents(&rows[i]);
             }
             free(rows);
             sqlite3_finalize(stmt);
@@ -325,7 +318,7 @@ static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipRow 
 
     if (step != SQLITE_DONE) {
         for (size_t i = 0; i < count; i++) {
-            relationship_row_destroy_contents(&rows[i]);
+            relationship_summary_destroy_contents(&rows[i]);
         }
         free(rows);
         return true;
@@ -1741,6 +1734,73 @@ static void interpretation_summary_destroy_contents(UrsatzGuiInterpretationSumma
  * through the matching persistence_load_interpretation rather than
  * persistence_load_chord/persistence_load_key (whose backing tables
  * this module never populates). */
+/* Decodes interpretation's claim into a display label. Key/Chord/
+ * Cadence claims are plain null-terminated strings (unchanged from
+ * before this branch); Motif/Phrase/Period/Sentence/Form Structure/
+ * Thematic Return Detection's claims are structs (see each analyzer's
+ * own header) -- value_type() (the type tag every analyzer sets when it
+ * builds its claim Value, e.g. "motif-detection-claim") is what
+ * distinguishes them, since claim itself is opaque bytes. Falls back to
+ * treating the content as a string for any type not recognized here
+ * (covers key/chord/cadence without needing to special-case them). */
+static char *format_claim_label(const Interpretation *interpretation) {
+    const Value *claim = interpretation_claim(interpretation);
+    const char *claim_type = value_type(claim);
+    size_t claim_size = 0;
+    const void *content = value_content(claim, &claim_size);
+    char buf[384];
+
+    if (strcmp(claim_type, "motif-detection-claim") == 0 && claim_size == sizeof(MotifDetectionClaim)) {
+        const MotifDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "motif occurrence: %zu matched event(s)", c->matched_event_id_count);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "phrase-segmentation-claim") == 0 &&
+        claim_size == sizeof(PhraseSegmentationClaim)) {
+        const PhraseSegmentationClaim *c = content;
+        return dup_string(c->is_boundary ? "phrase boundary" : "not a phrase boundary");
+    }
+    if (claim_type && strcmp(claim_type, "phrase-boundary-detection-signal-claim") == 0 &&
+        claim_size == sizeof(PhraseBoundaryDetectionSignalClaim)) {
+        const PhraseBoundaryDetectionSignalClaim *c = content;
+        if (c->signal == PHRASE_BOUNDARY_SIGNAL_CADENCE) {
+            snprintf(buf, sizeof(buf), "boundary signal: cadence (%s)", c->cadence_type);
+        } else {
+            snprintf(buf, sizeof(buf), "boundary signal: contour/rhythm discontinuity");
+        }
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "period-detection-claim") == 0 && claim_size == sizeof(PeriodDetectionClaim)) {
+        const PeriodDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "period: %s (%s) -> %s (%s)", c->antecedent_phrase_occurrence_id,
+                 c->antecedent_cadence_type, c->consequent_phrase_occurrence_id, c->consequent_cadence_type);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "sentence-detection-claim") == 0 &&
+        claim_size == sizeof(SentenceDetectionClaim)) {
+        const SentenceDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "sentence: %s -> %s -> %s", c->statement_occurrence_id,
+                 c->repetition_occurrence_id, c->continuation_occurrence_id);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "form-structure-detection-claim") == 0 &&
+        claim_size == sizeof(FormStructureDetectionClaim)) {
+        const FormStructureDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "form: %s -[%s]-> %s", c->earlier_section_id,
+                 c->earlier_section_closing_cadence_type, c->later_section_id);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "thematic-return-detection-claim") == 0 &&
+        claim_size == sizeof(ThematicReturnDetectionClaim)) {
+        const ThematicReturnDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "thematic return: %s resembles %s", c->later_theme_occurrence_id,
+                 c->earlier_theme_occurrence_id);
+        return dup_string(buf);
+    }
+
+    return dup_string((const char *)content);
+}
+
 static bool load_interpretation_summary(PersistenceHandle *handle, const char *interpretation_id, const char *type,
                                           UrsatzGuiInterpretationSummary *out) {
     Interpretation *interpretation = NULL;
@@ -1748,8 +1808,7 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
         return false;
     }
 
-    size_t claim_size = 0;
-    const char *label = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
+    char *label = format_claim_label(interpretation);
 
     ProvenanceReferenceState provenance_state = provenance_reference_state(interpretation_provenance(interpretation));
     const char *provenance_state_str =
@@ -1758,7 +1817,7 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
     bool ok = false;
     out->interpretation_id = dup_string(interpretation_id);
     out->type = dup_string(type);
-    out->label = dup_string(label);
+    out->label = label;
     out->produced_by_author = dup_string(interpretation_author(interpretation));
     out->produced_by_method = dup_string(interpretation_method(interpretation));
     out->provenance_state = dup_string(provenance_state_str);
@@ -1831,10 +1890,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     char **index_ids = NULL;
     char **index_types = NULL;
     size_t index_count = 0;
+    UrsatzGuiRelationshipSummary *relationships = NULL;
+    size_t relationship_count = 0;
     if (index_db) {
-        if (!read_interpretation_index(index_db, &index_ids, &index_types, &index_count)) {
+        if (!read_interpretation_index(index_db, &index_ids, &index_types, &index_count) ||
+            !read_relationship_index(index_db, &relationships, &relationship_count)) {
             sqlite3_close(index_db);
             free(filename);
+            free_ids(index_ids, index_count);
+            free_ids(index_types, index_count);
             persistence_close(handle);
             return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
@@ -1872,6 +1936,10 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
             interpretation_summary_destroy_contents(&summaries[i]);
         }
         free(summaries);
+        for (size_t i = 0; i < relationship_count; i++) {
+            relationship_summary_destroy_contents(&relationships[i]);
+        }
+        free(relationships);
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
 
@@ -1880,6 +1948,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     detail->note_event_count = note_event_count;
     detail->interpretations = summaries;
     detail->interpretation_count = summary_count;
+    detail->relationships = relationships;
+    detail->relationship_count = relationship_count;
 
     *out_detail = detail;
     return URSATZ_GUI_ANALYSIS_OK;
@@ -1893,6 +1963,10 @@ void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
         interpretation_summary_destroy_contents(&detail->interpretations[i]);
     }
     free(detail->interpretations);
+    for (size_t i = 0; i < detail->relationship_count; i++) {
+        relationship_summary_destroy_contents(&detail->relationships[i]);
+    }
+    free(detail->relationships);
     free(detail->id);
     free(detail->filename);
     free(detail);
