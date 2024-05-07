@@ -217,6 +217,21 @@ function showPieceDetail(id) {
       }
       bodyEl.appendChild(list);
 
+      const relationshipList = document.createElement("ul");
+      relationshipList.classList.add("relationship-list");
+      if (!data.relationships || data.relationships.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No relationships yet.";
+        relationshipList.appendChild(li);
+      } else {
+        for (const relationship of data.relationships) {
+          const li = document.createElement("li");
+          li.textContent = `${relationship.source_id} —${relationship.predicate_name}→ ${relationship.target_id}`;
+          relationshipList.appendChild(li);
+        }
+      }
+      bodyEl.appendChild(relationshipList);
+
       bodyEl.appendChild(renderBackLink());
     })
     .catch((err) => {
