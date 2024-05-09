@@ -688,8 +688,17 @@ static int group_root_degree(const SonorityGroup *group, PitchNumericValue *cons
  * as CadenceClassificationInput's region (the "arriving" chord). Mirrors
  * build_whole_piece_region's construction but for one onset group. */
 static Structure *build_group_region(const SonorityGroup *group, NoteEvent *const *events) {
+    /* Suffixed with the group's own first event's id so each onset
+     * group gets a distinct region id -- a fixed id here would give
+     * every cadence classification call the same target, colliding on
+     * the derived Interpretation id and silently failing every
+     * persistence_store_interpretation call after the first. */
+    char region_id_value[192];
+    snprintf(region_id_value, sizeof(region_id_value), "ursatz-gui-analyzer-region-group-%s",
+             entity_id_value(note_event_id(events[group->note_indices[0]])));
+
     EntityID *region_id;
-    if (entity_id_create("ursatz-gui-analyzer-region-group", &region_id) != ENTITY_ID_OK) {
+    if (entity_id_create(region_id_value, &region_id) != ENTITY_ID_OK) {
         return NULL;
     }
     SchemaVersion *schema_version;
