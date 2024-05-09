@@ -1757,7 +1757,7 @@ static char *format_claim_label(const Interpretation *interpretation) {
     const char *claim_type = value_type(claim);
     size_t claim_size = 0;
     const void *content = value_content(claim, &claim_size);
-    char buf[384];
+    char buf[512];
 
     if (strcmp(claim_type, "motif-detection-claim") == 0 && claim_size == sizeof(MotifDetectionClaim)) {
         const MotifDetectionClaim *c = content;
