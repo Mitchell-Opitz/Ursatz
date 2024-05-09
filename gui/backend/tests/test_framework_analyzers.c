@@ -97,8 +97,17 @@ static void append_group(unsigned char *track, size_t *pos, const unsigned char 
 
 static unsigned char *build_fixture(size_t *out_size) {
     /* group index: 0 1  2 3  4 5  6  7 8  9 */
-    unsigned char c4_triad[] = {60, 64, 67}; /* C major, root C4 */
-    unsigned char c5_triad[] = {72, 76, 79}; /* C major, root C5 */
+    /* Global Key Estimation (key_identification.c) requires every one of
+     * the 7 major-scale pitch classes to appear SOMEWHERE across the
+     * whole piece for its tonic to match (extra non-diatonic pitch
+     * classes, like the C# bridges below, don't prevent a match -- only
+     * a MISSING diatonic one does). The root-position triads below only
+     * ever touch scale degrees 1/3/5/7/2 on their own, so the first C
+     * major triad also carries F (degree 4) and A (degree 6) as extra
+     * upper tones purely to complete that set; they don't change which
+     * note is each group's lowest/root. */
+    unsigned char c4_triad[] = {60, 64, 67};         /* C major, root C4 */
+    unsigned char c5_triad[] = {72, 76, 79, 77, 81}; /* C major, root C5, + F5/A5 to complete the scale */
     unsigned char g4_triad[] = {67, 71, 74}; /* G major, root G4 */
     unsigned char g5_triad[] = {79, 83, 86}; /* G major, root G5 */
     unsigned char bridge[] = {61};           /* C#, non-diatonic in C major */
@@ -108,14 +117,14 @@ static unsigned char *build_fixture(size_t *out_size) {
 
     append_group(track, &pos, c4_triad, 3, true);  /* group 0: C  (deg 1) */
     append_group(track, &pos, bridge, 1, false);   /* group 1: bridge     */
-    append_group(track, &pos, c5_triad, 3, false); /* group 2: C  (deg 1) */
+    append_group(track, &pos, c5_triad, 5, false); /* group 2: C  (deg 1) */
     append_group(track, &pos, g5_triad, 3, false); /* group 3: G  (deg 5) -- closes phrase A: half cadence */
     append_group(track, &pos, bridge, 1, false);   /* group 4: bridge     */
     append_group(track, &pos, g4_triad, 3, false); /* group 5: G  (deg 5) */
-    append_group(track, &pos, c5_triad, 3, false); /* group 6: C  (deg 1) -- closes phrase B: authentic (unclassified) */
+    append_group(track, &pos, c5_triad, 5, false); /* group 6: C  (deg 1) -- closes phrase B: authentic (unclassified) */
     append_group(track, &pos, bridge, 1, false);   /* group 7: bridge     */
     append_group(track, &pos, g4_triad, 3, false); /* group 8: G  (deg 5) */
-    append_group(track, &pos, c5_triad, 3, false); /* group 9: C  (deg 1) -- closes phrase C: authentic (unclassified) */
+    append_group(track, &pos, c5_triad, 5, false); /* group 9: C  (deg 1) -- closes phrase C: authentic (unclassified) */
 
     unsigned char end_of_track[3] = {0xFF, 0x2F, 0x00};
     unsigned char delta0 = 0x00;
