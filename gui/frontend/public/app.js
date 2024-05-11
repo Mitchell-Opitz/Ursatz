@@ -90,11 +90,43 @@ async function renderAnalysisView() {
     statusEl.textContent = "";
     for (const piece of data.pieces) {
       const li = document.createElement("li");
-      li.textContent = formatPieceLabel(piece.id, piece.filename);
-      li.classList.add("clickable");
-      li.addEventListener("click", () => showPieceDetail(piece.id));
+
+      const label = document.createElement("span");
+      label.textContent = formatPieceLabel(piece.id, piece.filename);
+      label.classList.add("clickable");
+      label.addEventListener("click", () => showPieceDetail(piece.id));
+      li.appendChild(label);
+
+      li.appendChild(document.createTextNode(" "));
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.textContent = "Delete";
+      deleteButton.addEventListener("click", () => handleDeletePiece(piece.id, li));
+      li.appendChild(deleteButton);
+
       listEl.appendChild(li);
     }
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
+async function handleDeletePiece(id, liEl) {
+  const statusEl = document.getElementById("piece-list-status");
+
+  try {
+    const res = await fetch(`/api/analyzer/pieces/${id}`, { method: "DELETE" });
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Delete failed.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    liEl.remove();
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
