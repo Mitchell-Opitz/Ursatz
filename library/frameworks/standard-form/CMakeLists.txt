@@ -25,6 +25,7 @@ add_library(standard_form
     analysis/analysis_theme.c
     analysis/analysis_expansion.c
     analysis/analysis_motive_shape.c
+    analysis/analysis_motive_match.c
     analysis/analysis_motive.c
 )
 target_include_directories(standard_form PUBLIC

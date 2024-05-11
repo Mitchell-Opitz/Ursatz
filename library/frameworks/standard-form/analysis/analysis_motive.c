@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "analysis_claim.h"
+#include "analysis_motive_match.h"
 #include "analysis_motive_shape.h"
 #include "analysis_time.h"
 #include "core/occurrence.h"
@@ -300,6 +301,160 @@ static StandardFormAnalysisStatus discover(const StandardFormMotiveLine *line, c
     }
     free(cands);
     return status;
+}
+
+/* --- the transformed occurrences --- */
+
+typedef struct {
+    size_t fam;
+    int line;
+    Occ occ;
+} Rec;
+
+static int compare_recs_by_window(const void *a, const void *b) {
+    const Rec *left = (const Rec *)a;
+    const Rec *right = (const Rec *)b;
+    if (left->line != right->line) {
+        return left->line - right->line;
+    }
+    if (left->occ.first != right->occ.first) {
+        return left->occ.first < right->occ.first ? -1 : 1;
+    }
+    if (left->occ.n != right->occ.n) {
+        return left->occ.n < right->occ.n ? -1 : 1;
+    }
+    int rank_left = standard_form_motive_kind_rank((StandardFormMotiveKind)left->occ.kind);
+    int rank_right = standard_form_motive_kind_rank((StandardFormMotiveKind)right->occ.kind);
+    if (rank_left != rank_right) {
+        return rank_left - rank_right;
+    }
+    if (left->occ.score != right->occ.score) {
+        return left->occ.score > right->occ.score ? -1 : 1;
+    }
+    return (left->fam > right->fam) - (left->fam < right->fam);
+}
+
+/* The order a family takes its occurrences in: the best kind first, then the longer, the better score, the earlier. */
+static int compare_recs_by_quality(const void *a, const void *b) {
+    const Rec *left = (const Rec *)a;
+    const Rec *right = (const Rec *)b;
+    if (left->fam != right->fam) {
+        return left->fam < right->fam ? -1 : 1;
+    }
+    int rank_left = standard_form_motive_kind_rank((StandardFormMotiveKind)left->occ.kind);
+    int rank_right = standard_form_motive_kind_rank((StandardFormMotiveKind)right->occ.kind);
+    if (rank_left != rank_right) {
+        return rank_left - rank_right;
+    }
+    if (left->occ.n != right->occ.n) {
+        return left->occ.n > right->occ.n ? -1 : 1;
+    }
+    if (left->occ.score != right->occ.score) {
+        return left->occ.score > right->occ.score ? -1 : 1;
+    }
+    return (left->occ.first > right->occ.first) - (left->occ.first < right->occ.first);
+}
+
+static int compare_occ_by_first(const void *a, const void *b) {
+    const Occ *left = (const Occ *)a;
+    const Occ *right = (const Occ *)b;
+    return (left->first > right->first) - (left->first < right->first);
+}
+
+static bool overlaps(const Fam *fam, size_t first, size_t n) {
+    for (size_t k = 0; k < fam->occ_count; k++) {
+        if (first < fam->occ[k].first + fam->occ[k].n && fam->occ[k].first < first + n) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool is_exact_window(const Fam *families, size_t family_count, int line, size_t first, size_t n) {
+    for (size_t f = 0; f < family_count; f++) {
+        if (families[f].line != line) {
+            continue;
+        }
+        for (size_t k = 0; k < families[f].occ_count; k++) {
+            if (families[f].occ[k].first == first && families[f].occ[k].n == n) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* Adds to each family the windows that are its prototype under a transformation. A window that is already an exact, real or tonal
+   occurrence of a family stays with it; each other window goes to the one family it matches best; within a family, occurrences do not
+   overlap, the better kind first. */
+static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fam *families, size_t family_count,
+                                         const StandardFormConfig *config) {
+    size_t capacity = 0;
+    Rec *recs = NULL;
+    size_t rec_count = 0;
+    for (size_t f = 0; f < family_count; f++) {
+        const Fam *fam = &families[f];
+        const StandardFormMotiveLine *line = &lines[fam->line];
+        for (size_t first = 0; first < line->count; first++) {
+            StandardFormMotiveShape shape;
+            StandardFormMotiveMatch match;
+            if (!line->can_start[first] || !standard_form_motive_shape(line, first, fam->proto_n, fam->generic, &shape) ||
+                is_exact_window(families, family_count, fam->line, first, fam->proto_n) ||
+                !standard_form_motive_classify(&fam->proto, &shape, config->varied_max_mismatch, &match) ||
+                match.kind <= (int)STANDARD_FORM_MOTIVE_TONAL) {
+                continue;
+            }
+            if (rec_count == capacity) {
+                capacity = capacity == 0 ? 64 : capacity * 2;
+                Rec *grown = (Rec *)realloc(recs, capacity * sizeof(Rec));
+                if (grown == NULL) {
+                    free(recs);
+                    return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+                }
+                recs = grown;
+            }
+            Rec *rec = &recs[rec_count++];
+            memset(rec, 0, sizeof(*rec));
+            rec->fam = f;
+            rec->line = fam->line;
+            rec->occ.first = first;
+            rec->occ.n = fam->proto_n;
+            rec->occ.kind = match.kind;
+            rec->occ.score = match.score;
+            rec->occ.mismatches = match.mismatches;
+            rec->occ.intervals = match.intervals;
+            rec->occ.rhythm_factor = match.rhythm_factor;
+            rec->occ.fragment_part = -1;
+        }
+    }
+    if (rec_count > 0) {
+        /* a window goes to one family: the best claim on it */
+        qsort(recs, rec_count, sizeof(Rec), compare_recs_by_window);
+        size_t kept = 0;
+        for (size_t i = 0; i < rec_count; i++) {
+            if (kept > 0 && recs[kept - 1].line == recs[i].line && recs[kept - 1].occ.first == recs[i].occ.first &&
+                recs[kept - 1].occ.n == recs[i].occ.n) {
+                continue;
+            }
+            recs[kept++] = recs[i];
+        }
+        rec_count = kept;
+        qsort(recs, rec_count, sizeof(Rec), compare_recs_by_quality);
+        for (size_t i = 0; i < rec_count; i++) {
+            Fam *fam = &families[recs[i].fam];
+            if (!overlaps(fam, recs[i].occ.first, recs[i].occ.n) && !push_occ(fam, &recs[i].occ)) {
+                free(recs);
+                return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+            }
+        }
+        for (size_t f = 0; f < family_count; f++) {
+            if (families[f].occ_count > 2) {
+                qsort(families[f].occ + 1, families[f].occ_count - 1, sizeof(Occ), compare_occ_by_first);
+            }
+        }
+    }
+    free(recs);
+    return STANDARD_FORM_ANALYSIS_OK;
 }
 
 /* --- the kernel's window matching, injected --- */
@@ -701,6 +856,9 @@ StandardFormAnalysisStatus standard_form_find_motives(const StandardFormInput *i
     }
     if (status == STANDARD_FORM_ANALYSIS_OK) {
         status = check_with_kernel(lines, families, family_count, matcher, matcher_context);
+    }
+    if (status == STANDARD_FORM_ANALYSIS_OK) {
+        status = expand(lines, families, family_count, effective);
     }
     if (status == STANDARD_FORM_ANALYSIS_OK && family_count > 0) {
         found.families = (StandardFormMotiveFamily *)calloc(family_count, sizeof(StandardFormMotiveFamily));

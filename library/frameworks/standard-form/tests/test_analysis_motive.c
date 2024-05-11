@@ -2,6 +2,7 @@
 
 #include "analysis_motive.h"
 #include "form_test_util.h"
+#include "interpretation/uncertainty.h"
 
 /* Motives of the soprano: windows of notes grouped by interval pattern and rhythm, the kernel's window matching as the first test,
    maximality, the kinds exact, real and tonal, and the claims and links of the output. */
@@ -255,6 +256,149 @@ static void test_an_occurrence_outside_every_idea_is_contained_in_the_phrase(voi
     piece_destroy(&p);
 }
 
+
+/* A figure at the given quarter starts, each note lasting until the next, the last a short one (so a rest follows). */
+static void chain(Piece *p, const double *starts, const int *pitches, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        form_note(&p->f, starts[i], i + 1 < count ? starts[i + 1] - starts[i] : 0.5, pitches[i]);
+        p->degrees[p->degree_count++] = 0;
+    }
+}
+
+/* Two exact copies of `a` (4 quarters, at 0 and 5) and then a third figure; the family of a has a third, transformed occurrence. */
+static const StandardFormMotiveFamily *family_of_notes(const StandardFormMotives *m, int note_count) {
+    for (size_t i = 0; i < m->family_count; i++) {
+        if (m->families[i].claim.note_count == note_count) {
+            return &m->families[i];
+        }
+    }
+    return NULL;
+}
+
+static void test_an_inversion_joins_the_family(void) {
+    Piece p;
+    piece_init(&p, false);
+    const int a[4] = {60, 62, 64, 60};
+    const int inverted[4] = {72, 70, 68, 72};
+    const double steady[4] = {10, 11, 12, 13};
+    figure(&p, 0.0, a, NULL, 4);
+    figure(&p, 5.0, a, NULL, 4);
+    chain(&p, steady, inverted, 4);
+    StandardFormMotives m = find(&p, NULL);
+    const StandardFormMotiveFamily *f = family_of_notes(&m, 4);
+    assert(m.family_count == 1 && f != NULL && f->occurrence_count == 3);
+    assert(f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_INVERTED && f->occurrences[2].claim.note_first == 8);
+    assert(f->occurrences[2].claim.score == 1.0 && f->occurrences[2].uncertainty == 0.0);
+    standard_form_motives_destroy(&m);
+    piece_destroy(&p);
+}
+
+static void test_a_retrograde_joins_the_family(void) {
+    Piece p;
+    piece_init(&p, false);
+    const int a[4] = {60, 62, 65, 64};
+    const int back[4] = {64, 65, 62, 60};
+    const double steady[4] = {10, 11, 12, 13};
+    figure(&p, 0.0, a, NULL, 4);
+    figure(&p, 5.0, a, NULL, 4);
+    chain(&p, steady, back, 4);
+    StandardFormMotives m = find(&p, NULL);
+    const StandardFormMotiveFamily *f = family_of_notes(&m, 4);
+    assert(f != NULL && f->occurrence_count == 3 && f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_RETROGRADE);
+    standard_form_motives_destroy(&m);
+    piece_destroy(&p);
+}
+
+static void test_an_augmentation_and_a_diminution_join_the_family(void) {
+    Piece p;
+    piece_init(&p, false);
+    const int a[4] = {60, 62, 64, 60};
+    const double doubled[4] = {10, 12, 14, 16};
+    const double halved[4] = {30, 30.5, 31, 31.5};
+    figure(&p, 0.0, a, NULL, 4);
+    figure(&p, 5.0, a, NULL, 4);
+    chain(&p, doubled, a, 4);
+    chain(&p, halved, a, 4);
+    StandardFormMotives m = find(&p, NULL);
+    const StandardFormMotiveFamily *f = family_of_notes(&m, 4);
+    assert(f != NULL && f->occurrence_count == 4);
+    assert(f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_AUGMENTED && f->occurrences[2].claim.note_first == 8);
+    assert(f->occurrences[3].claim.kind == (int)STANDARD_FORM_MOTIVE_DIMINISHED && f->occurrences[3].claim.note_first == 12);
+    standard_form_motives_destroy(&m);
+    piece_destroy(&p);
+}
+
+static void test_a_varied_motive_has_a_score_below_one(void) {
+    Piece p;
+    piece_init(&p, false);
+    const int a[5] = {60, 62, 64, 65, 67};
+    const int varied[5] = {60, 62, 64, 65, 69}; /* the last interval changed */
+    figure(&p, 0.0, a, NULL, 5);
+    figure(&p, 6.0, a, NULL, 5);
+    figure(&p, 12.0, varied, NULL, 5);
+    StandardFormMotives m = find(&p, NULL);
+    const StandardFormMotiveFamily *f = family_of_notes(&m, 5);
+    assert(f != NULL && f->occurrence_count == 3);
+    const StandardFormMotiveOccurrence *o = &f->occurrences[2];
+    assert(o->claim.kind == (int)STANDARD_FORM_MOTIVE_VARIED && o->claim.mismatches == 1 && o->claim.intervals == 4);
+    assert(fabs(o->claim.score - 0.75) < 1e-12 && fabs(o->uncertainty - 0.25) < 1e-12 && o->claim.rhythm_factor == 1.0);
+    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(o->interpretation)) == 750000UL);
+    standard_form_motives_destroy(&m);
+
+    /* two changed intervals are more than the default allows, and a bigger allowance takes them */
+    Piece q;
+    piece_init(&q, false);
+    const int two[5] = {60, 62, 64, 66, 69};
+    figure(&q, 0.0, a, NULL, 5);
+    figure(&q, 6.0, a, NULL, 5);
+    figure(&q, 12.0, two, NULL, 5);
+    m = find(&q, NULL);
+    f = family_of_notes(&m, 5);
+    assert(f != NULL && f->occurrence_count == 2);
+    standard_form_motives_destroy(&m);
+    piece_destroy(&q);
+    piece_init(&q, false);
+    figure(&q, 0.0, a, NULL, 5);
+    figure(&q, 6.0, a, NULL, 5);
+    figure(&q, 12.0, two, NULL, 5);
+    StandardFormConfig config = standard_form_config_default();
+    config.varied_max_mismatch = 2;
+    m = find(&q, &config);
+    f = family_of_notes(&m, 5);
+    assert(f != NULL && f->occurrence_count == 3 && f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_VARIED &&
+           fabs(f->occurrences[2].claim.score - 0.5) < 1e-12);
+    standard_form_motives_destroy(&m);
+    piece_destroy(&q);
+    piece_destroy(&p);
+}
+
+static void test_an_exact_window_is_not_also_a_transformation(void) {
+    Piece p;
+    piece_init(&p, false);
+    const int a[4] = {60, 62, 64, 60};
+    const int inverted[4] = {72, 70, 68, 72};
+    const double steady[4] = {10, 11, 12, 13};
+    const double later[4] = {15, 16, 17, 18};
+    figure(&p, 0.0, a, NULL, 4);
+    figure(&p, 5.0, a, NULL, 4);
+    chain(&p, steady, inverted, 4);
+    chain(&p, later, inverted, 4); /* the inversion repeats: it is a motive of its own */
+    StandardFormMotives m = find(&p, NULL);
+    /* the inverted figures are an exact pair of a pattern; the window goes to the family where it is exact, not as an inversion of A */
+    size_t exact_pairs = 0;
+    for (size_t i = 0; i < m.family_count; i++) {
+        for (size_t j = 0; j < m.families[i].occurrence_count; j++) {
+            if (m.families[i].occurrences[j].claim.note_first == 8 || m.families[i].occurrences[j].claim.note_first == 12) {
+                assert(m.families[i].occurrences[j].claim.kind <= (int)STANDARD_FORM_MOTIVE_TONAL);
+                exact_pairs++;
+            }
+        }
+    }
+    assert(exact_pairs == 2);
+    standard_form_motives_destroy(&m);
+    piece_destroy(&p);
+}
+
 static void test_bad_calls_are_refused(void) {
     Piece p;
     piece_init(&p, false);
@@ -288,6 +432,11 @@ int main(void) {
     test_the_config_limits_the_length();
     test_the_output_is_shells_interpretations_and_links();
     test_an_occurrence_outside_every_idea_is_contained_in_the_phrase();
+    test_an_inversion_joins_the_family();
+    test_a_retrograde_joins_the_family();
+    test_an_augmentation_and_a_diminution_join_the_family();
+    test_a_varied_motive_has_a_score_below_one();
+    test_an_exact_window_is_not_also_a_transformation();
     test_bad_calls_are_refused();
     printf("test_standard_form_analysis_motive: ok\n");
     return 0;
