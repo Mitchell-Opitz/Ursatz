@@ -244,7 +244,7 @@ static bool seed_interpretation(const char *db_path, const char *interpretation_
   return seed_interpretation_with_claim(db_path, interpretation_id, is_present, "D major");
 }
 
-static bool http_get(const char *path, char *response, size_t response_capacity) {
+static bool http_request(const char *method, const char *path, char *response, size_t response_capacity) {
   socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == INVALID_SOCKET) {
     return false;
@@ -262,7 +262,7 @@ static bool http_get(const char *path, char *response, size_t response_capacity)
   }
 
   char request[512];
-  snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n", path);
+  snprintf(request, sizeof(request), "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n", method, path);
   send(sock, request, (int)strlen(request), 0);
 
   memset(response, 0, response_capacity);
@@ -280,6 +280,14 @@ static bool http_get(const char *path, char *response, size_t response_capacity)
 
   CLOSESOCK(sock);
   return total > 0;
+}
+
+static bool http_get(const char *path, char *response, size_t response_capacity) {
+  return http_request("GET", path, response, response_capacity);
+}
+
+static bool http_delete(const char *path, char *response, size_t response_capacity) {
+  return http_request("DELETE", path, response, response_capacity);
 }
 
 int main(void) {
@@ -380,6 +388,42 @@ int main(void) {
   char followup[256];
   check(http_get("/api/analyzer/pieces", followup, sizeof(followup)) && strstr(followup, "200") != NULL,
         "server is still alive and answering requests after the large piece detail response");
+
+  /* DELETE /api/analyzer/pieces/<id>. Every piece is one SQLite file
+   * (see analysis_service.c's db_path), holding NoteEvents, the
+   * hand-seeded Interpretations above, and the
+   * ursatz_gui_interpretations/ursatz_gui_piece_meta index tables --
+   * so confirming the file itself is gone confirms all of that
+   * cascaded data is gone too, not just the piece's top-level record. */
+  char delete_response[4096];
+  bool got_delete_response = http_delete(path, delete_response, sizeof(delete_response));
+  check(got_delete_response, "got a response to DELETE");
+  if (got_delete_response) {
+    check(strstr(delete_response, "200") != NULL, "delete response is 200 OK");
+    check(strstr(delete_response, "\"ok\":true") != NULL, "delete response reports ok:true");
+  }
+
+  FILE *db_file_after_delete = fopen(db_path, "rb");
+  check(db_file_after_delete == NULL, "piece's SQLite file (NoteEvents/Interpretations/index tables) is gone after delete");
+  if (db_file_after_delete) {
+    fclose(db_file_after_delete);
+  }
+
+  char get_after_delete[4096];
+  bool got_get_after_delete = http_get(path, get_after_delete, sizeof(get_after_delete));
+  check(got_get_after_delete, "got a response to GET after delete");
+  if (got_get_after_delete) {
+    check(strstr(get_after_delete, "\"message\":\"piece not found\"") != NULL,
+          "deleted piece is no longer found by GET");
+  }
+
+  char delete_missing_response[4096];
+  bool got_delete_missing_response = http_delete("/api/analyzer/pieces/no-such-piece", delete_missing_response,
+                                                  sizeof(delete_missing_response));
+  check(got_delete_missing_response, "got a response to DELETE of a nonexistent piece");
+  if (got_delete_missing_response) {
+    check(strstr(delete_missing_response, "404") != NULL, "deleting a nonexistent piece returns 404");
+  }
 
   ursatz_gui_server_stop(ctx);
   check(true, "server stops cleanly");

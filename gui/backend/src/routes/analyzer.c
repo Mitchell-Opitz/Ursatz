@@ -370,6 +370,22 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   return 200;
 }
 
+static int handle_delete_piece(struct mg_connection *conn, const char *id) {
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_delete_piece(kPiecesDir, id);
+
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to delete piece\"}");
+    return 200;
+  }
+
+  send_json(conn, "{\"ok\":true}");
+  return 200;
+}
+
 /*
  * civetweb routes both the exact "/api/analyzer/pieces" URI and any
  * "/api/analyzer/pieces/<something>" URI to a single handler registered
@@ -386,11 +402,14 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
   size_t prefix_len = strlen(kPieceDetailPrefix);
 
   if (strncmp(uri, kPieceDetailPrefix, prefix_len) == 0 && uri[prefix_len] != '\0') {
-    if (strcmp(info->request_method, "GET") != 0) {
-      mg_send_http_error(conn, 405, "Method Not Allowed");
-      return 405;
+    if (strcmp(info->request_method, "GET") == 0) {
+      return handle_get_piece(conn, uri + prefix_len);
     }
-    return handle_get_piece(conn, uri + prefix_len);
+    if (strcmp(info->request_method, "DELETE") == 0) {
+      return handle_delete_piece(conn, uri + prefix_len);
+    }
+    mg_send_http_error(conn, 405, "Method Not Allowed");
+    return 405;
   }
 
   if (strcmp(info->request_method, "POST") == 0) {

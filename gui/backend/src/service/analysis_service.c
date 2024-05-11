@@ -1964,6 +1964,25 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
+UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id) {
+    if (!is_valid_piece_id(id)) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
+    char db_path[320];
+    snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
+
+    if (!db_path_exists(db_path)) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
+    if (remove(db_path) != 0) {
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
 void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
     if (!detail) {
         return;
