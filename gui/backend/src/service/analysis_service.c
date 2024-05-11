@@ -26,14 +26,28 @@
 #include <identity/schema_version.h>
 #include <interpretation/interpretation.h>
 #include <io/midi_importer.h>
+#include <analysis/cadence_classification.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
+#include <analysis/motif_detection.h>
+#include <analysis/motif_window_matching.h>
+#include <analysis/form_structure_detection.h>
+#include <analysis/period_detection.h>
+#include <analysis/phrase_boundary_detection.h>
+#include <analysis/sentence_detection.h>
+#include <analysis/thematic_return_detection.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
 #include <pitch/pitch_numeric_value.h>
+#include <relationship/relationship.h>
+#include <semantics/contour.h>
+#include <semantics/rhythmic_pattern.h>
 #include <semantics/sonority.h>
+#include <structure/motif.h>
+#include <structure/phrase_occurrence.h>
 #include <structure/structure.h>
+#include <time/duration.h>
 #include <time/musical_time.h>
 #include <time/temporal_anchor.h>
 #include <time/time_span.h>
@@ -52,6 +66,13 @@
 static const char *const kIndexTableName = "ursatz_gui_interpretations";
 static const char *const kIndexTypeKey = "key";
 static const char *const kIndexTypeChord = "chord";
+static const char *const kIndexTypeCadence = "cadence";
+static const char *const kIndexTypePhrase = "phrase";
+static const char *const kIndexTypeMotif = "motif";
+static const char *const kIndexTypePeriod = "period";
+static const char *const kIndexTypeSentence = "sentence";
+static const char *const kIndexTypeForm = "form";
+static const char *const kIndexTypeThematicReturn = "thematic_return";
 
 /*
  * ursatz-gui-owned piece metadata table, in the same per-piece SQLite
@@ -59,6 +80,22 @@ static const char *const kIndexTypeChord = "chord";
  * upload filename; a single row keyed by a fixed id.
  */
 static const char *const kMetaTableName = "ursatz_gui_piece_meta";
+
+/*
+ * ursatz-gui-owned relationship table, in the same per-piece SQLite file
+ * as kIndexTableName/kMetaTableName above. Ursatz's persistence layer
+ * (persistence/persistence.h) has no store/load path for Relationship
+ * (relationship/relationship.h) at all -- unlike Interpretation, there is
+ * no persistence_store_relationship anywhere in Ursatz to delegate to.
+ * Rather than block Period/Sentence/Form/Thematic Return Detection's
+ * Relationship-shaped output on a real Ursatz RelationshipRepository
+ * (Registry: Not Started), this mirrors the same stopgap pattern
+ * kIndexTableName already uses for Ursatz's other persistence gap
+ * (enumerating stored Interpretations): a small ursatz-gui-owned table
+ * recording each Relationship's (source, predicate, target) tuple by its
+ * own id, opened via the same separate sqlite3 connection to db_path.
+ */
+static const char *const kRelationshipTableName = "ursatz_gui_relationships";
 
 static char *dup_string(const char *value);
 
@@ -91,6 +128,19 @@ static sqlite3 *open_interpretation_index(const char *db_path) {
              "  original_filename TEXT NOT NULL"
              ");",
              kMetaTableName);
+    if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        return NULL;
+    }
+
+    snprintf(sql, sizeof(sql),
+             "CREATE TABLE IF NOT EXISTS %s ("
+             "  relationship_id TEXT PRIMARY KEY,"
+             "  source_id TEXT NOT NULL,"
+             "  predicate_name TEXT NOT NULL,"
+             "  target_id TEXT NOT NULL"
+             ");",
+             kRelationshipTableName);
     if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
         sqlite3_close(db);
         return NULL;
@@ -165,6 +215,118 @@ static void record_interpretation_id(sqlite3 *index_db, const char *interpretati
     sqlite3_bind_text(stmt, 2, type, -1, SQLITE_TRANSIENT);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
+}
+
+/* Records one Relationship's (source, predicate, target) tuple by its own
+ * id. Best-effort, mirroring record_interpretation_id: this is the only
+ * durable storage a Relationship built by this module gets (Ursatz's
+ * PersistenceHandle has no Relationship store), so a failure here loses
+ * the Relationship entirely -- but never fails the overall analysis. */
+static void record_relationship(sqlite3 *index_db, const Relationship *relationship) {
+    if (!index_db || !relationship) {
+        return;
+    }
+
+    char sql[256];
+    snprintf(sql, sizeof(sql),
+             "INSERT OR REPLACE INTO %s (relationship_id, source_id, predicate_name, target_id) "
+             "VALUES (?, ?, ?, ?);",
+             kRelationshipTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return;
+    }
+    sqlite3_bind_text(stmt, 1, entity_id_value(relationship_id(relationship)), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, entity_id_value(relationship_source_id(relationship)), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, relationship_predicate_name(relationship), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, entity_id_value(relationship_target_id(relationship)), -1, SQLITE_TRANSIENT);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
+
+/* Records every Relationship in relationships[0..count). Convenience
+ * wrapper around record_relationship for the analyzers that produce
+ * several Relationships per call (Sentence/Form Structure Detection). */
+static void record_relationships(sqlite3 *index_db, Relationship *const *relationships, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        record_relationship(index_db, relationships[i]);
+    }
+}
+
+static void relationship_summary_destroy_contents(UrsatzGuiRelationshipSummary *row) {
+    free(row->relationship_id);
+    free(row->source_id);
+    free(row->predicate_name);
+    free(row->target_id);
+}
+
+/* Reads every relationship row recorded by record_relationship. Returns
+ * false only on allocation failure; a missing/empty table yields
+ * *out_count == 0. Mirrors read_interpretation_index's shape. */
+static bool read_relationship_index(sqlite3 *index_db, UrsatzGuiRelationshipSummary **out_rows, size_t *out_count) {
+    *out_rows = NULL;
+    *out_count = 0;
+
+    char sql[160];
+    snprintf(sql, sizeof(sql), "SELECT relationship_id, source_id, predicate_name, target_id FROM %s;",
+             kRelationshipTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return true;
+    }
+
+    UrsatzGuiRelationshipSummary *rows = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
+
+    int step;
+    while ((step = sqlite3_step(stmt)) == SQLITE_ROW) {
+        if (count == capacity) {
+            size_t new_capacity = (capacity == 0) ? 8 : (capacity * 2);
+            UrsatzGuiRelationshipSummary *grown = realloc(rows, sizeof(UrsatzGuiRelationshipSummary) * new_capacity);
+            if (!grown) {
+                for (size_t i = 0; i < count; i++) {
+                    relationship_summary_destroy_contents(&rows[i]);
+                }
+                free(rows);
+                sqlite3_finalize(stmt);
+                return false;
+            }
+            rows = grown;
+            capacity = new_capacity;
+        }
+
+        UrsatzGuiRelationshipSummary row = {0};
+        row.relationship_id = dup_string((const char *)sqlite3_column_text(stmt, 0));
+        row.source_id = dup_string((const char *)sqlite3_column_text(stmt, 1));
+        row.predicate_name = dup_string((const char *)sqlite3_column_text(stmt, 2));
+        row.target_id = dup_string((const char *)sqlite3_column_text(stmt, 3));
+        if (!row.relationship_id || !row.source_id || !row.predicate_name || !row.target_id) {
+            relationship_summary_destroy_contents(&row);
+            for (size_t i = 0; i < count; i++) {
+                relationship_summary_destroy_contents(&rows[i]);
+            }
+            free(rows);
+            sqlite3_finalize(stmt);
+            return false;
+        }
+        rows[count++] = row;
+    }
+    sqlite3_finalize(stmt);
+
+    if (step != SQLITE_DONE) {
+        for (size_t i = 0; i < count; i++) {
+            relationship_summary_destroy_contents(&rows[i]);
+        }
+        free(rows);
+        return true;
+    }
+
+    *out_rows = rows;
+    *out_count = count;
+    return true;
 }
 
 /* Semitone offset from tonic -> diatonic scale degree (1-7), or -1 if
@@ -486,6 +648,737 @@ static void identify_and_store_chord(PersistenceHandle *handle, sqlite3 *index_d
     free(degrees);
 }
 
+/* Diatonic scale degree (1-7) of the lowest-pitched note in group, or -1
+ * if none is diatonic in key. SCOPED BRANCH DEFAULT (not Registry-
+ * settled, same "flagged default" treatment the analyzer headers
+ * themselves use for their own caller-supplied dimensions): Cadence
+ * Classification needs a single root scale degree per chord, but
+ * ChordIdentification's degrees array (as already computed by
+ * identify_and_store_chord) has no notion of "the root" -- this treats
+ * the lowest sounding note's degree as the chord's root, a common
+ * bass-note heuristic, not a harmonic-inversion analysis. */
+static int group_root_degree(const SonorityGroup *group, PitchNumericValue *const *pitch_values,
+                              const KeyEstimate *key) {
+    if (!key->found) {
+        return -1;
+    }
+    const int *degree_table = key->is_major ? kMajorDegreeByOffset : kMinorDegreeByOffset;
+
+    long best_note = 0;
+    int best_degree = -1;
+    bool have_best = false;
+    for (size_t i = 0; i < group->note_index_count; i++) {
+        long note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[i]]);
+        int pitch_class = pitch_class_of(note_number);
+        int offset = ((pitch_class - key->tonic_pitch_class) % 12 + 12) % 12;
+        int degree = degree_table[offset];
+        if (degree == -1) {
+            continue;
+        }
+        if (!have_best || note_number < best_note) {
+            best_note = note_number;
+            best_degree = degree;
+            have_best = true;
+        }
+    }
+    return best_degree;
+}
+
+/* Builds a Structure region spanning exactly group's own events, for use
+ * as CadenceClassificationInput's region (the "arriving" chord). Mirrors
+ * build_whole_piece_region's construction but for one onset group. */
+static Structure *build_group_region(const SonorityGroup *group, NoteEvent *const *events) {
+    /* Suffixed with the group's own first event's id so each onset
+     * group gets a distinct region id -- a fixed id here would give
+     * every cadence classification call the same target, colliding on
+     * the derived Interpretation id and silently failing every
+     * persistence_store_interpretation call after the first. */
+    char region_id_value[192];
+    snprintf(region_id_value, sizeof(region_id_value), "ursatz-gui-analyzer-region-group-%s",
+             entity_id_value(note_event_id(events[group->note_indices[0]])));
+
+    EntityID *region_id;
+    if (entity_id_create(region_id_value, &region_id) != ENTITY_ID_OK) {
+        return NULL;
+    }
+    SchemaVersion *schema_version;
+    if (schema_version_create(1, &schema_version) != SCHEMA_VERSION_OK) {
+        entity_id_destroy(region_id);
+        return NULL;
+    }
+    ProvenanceReference *provenance;
+    if (provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
+        schema_version_destroy(schema_version);
+        entity_id_destroy(region_id);
+        return NULL;
+    }
+    Entity *entity;
+    if (entity_create(region_id, "Structure", schema_version, NULL, provenance, &entity) != ENTITY_OK) {
+        provenance_reference_destroy(provenance);
+        schema_version_destroy(schema_version);
+        entity_id_destroy(region_id);
+        return NULL;
+    }
+
+    EntityID **event_ids = malloc(sizeof(EntityID *) * group->note_index_count);
+    if (!event_ids) {
+        entity_destroy(entity);
+        return NULL;
+    }
+    for (size_t i = 0; i < group->note_index_count; i++) {
+        const NoteEvent *note = events[group->note_indices[i]];
+        if (entity_id_create(entity_id_value(note_event_id(note)), &event_ids[i]) != ENTITY_ID_OK) {
+            for (size_t k = 0; k < i; k++) {
+                entity_id_destroy(event_ids[k]);
+            }
+            free(event_ids);
+            entity_destroy(entity);
+            return NULL;
+        }
+    }
+
+    Structure *region;
+    if (structure_create(entity, event_ids, group->note_index_count, &region) != STRUCTURE_OK) {
+        for (size_t i = 0; i < group->note_index_count; i++) {
+            entity_id_destroy(event_ids[i]);
+        }
+        free(event_ids);
+        entity_destroy(entity);
+        return NULL;
+    }
+    free(event_ids);
+    return region;
+}
+
+/* Classifies the cadence (if any) at the harmonic motion from the
+ * previous onset group's root degree into this group's root degree, and
+ * persists the winning Interpretation. Returns a newly allocated copy of
+ * the winning candidate label ("unclassified" included -- a legitimate
+ * value per CadenceClassification's own contract), or NULL when no
+ * classification could be attempted (no previous group, or either root
+ * degree not diatonic in the estimated key). */
+static char *classify_and_store_cadence(PersistenceHandle *handle, sqlite3 *index_db, const SonorityGroup *group,
+                                          NoteEvent *const *events, int from_degree, int to_degree) {
+    if (from_degree < 1 || to_degree < 1) {
+        return NULL;
+    }
+
+    Structure *region = build_group_region(group, events);
+    if (!region) {
+        return NULL;
+    }
+
+    const Framework *framework = common_practice_minimal_framework();
+    char *label = NULL;
+    if (framework) {
+        CadenceClassificationInput input = {region, framework, from_degree, to_degree,
+                                              false, false, false, false, VOICE_LEADING_BASS_MOTION_SAME};
+        AnalysisResult *result = NULL;
+        if (cadence_classification_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+            const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
+            size_t claim_size = 0;
+            const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
+            if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
+                label = dup_string(claim);
+                record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)),
+                                          kIndexTypeCadence);
+            }
+            analysis_result_destroy(result);
+        }
+    }
+
+    structure_destroy(region);
+    return label;
+}
+
+/* Runs Cadence Classification over every adjacent pair of onset groups
+ * (group i-1's root degree "arriving into" group i), persisting each
+ * winning Interpretation. Returns a newly allocated array of
+ * grouping->group_count entries (caller frees each non-NULL entry, then
+ * the array): entry i is the cadence label that CLOSES group i (NULL if
+ * none was classified for that arrival), used as the phrase-boundary
+ * cadence signal for the next stage. */
+static char **run_cadence_classification(PersistenceHandle *handle, sqlite3 *index_db,
+                                           const SonorityGrouping *grouping, NoteEvent *const *events,
+                                           PitchNumericValue *const *pitch_values, const KeyEstimate *key) {
+    if (grouping->group_count == 0) {
+        return NULL;
+    }
+    char **cadence_types = calloc(grouping->group_count, sizeof(char *));
+    if (!cadence_types) {
+        return NULL;
+    }
+
+    int previous_degree = group_root_degree(&grouping->groups[0], pitch_values, key);
+    for (size_t i = 1; i < grouping->group_count; i++) {
+        int current_degree = group_root_degree(&grouping->groups[i], pitch_values, key);
+        cadence_types[i] =
+            classify_and_store_cadence(handle, index_db, &grouping->groups[i], events, previous_degree, current_degree);
+        previous_degree = current_degree;
+    }
+
+    return cadence_types;
+}
+
+static void free_cadence_types(char **cadence_types, size_t count) {
+    if (!cadence_types) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        free(cadence_types[i]);
+    }
+    free(cadence_types);
+}
+
+/* Persists one AnalysisResult's every Interpretation under the given
+ * index type. Shared by the framework-stage analyzers below, each of
+ * which (unlike KeyEstimation/ChordIdentification) can legitimately
+ * produce more than one Interpretation, or none, per call. */
+static void store_all_interpretations(PersistenceHandle *handle, sqlite3 *index_db, const AnalysisResult *result,
+                                        const char *type) {
+    size_t interpretation_count = analysis_result_interpretation_count(result);
+    for (size_t i = 0; i < interpretation_count; i++) {
+        const Interpretation *interpretation = analysis_result_interpretation_at(result, i);
+        if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
+            record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)), type);
+        }
+    }
+}
+
+/* Runs Phrase Boundary Detection over one point per onset group (the
+ * same onset-grouping already used for chord identification -- SCOPED
+ * BRANCH DEFAULT: phrase points are per onset group, not per individual
+ * note event, so a phrase's region_event_ids are its member groups'
+ * representative events, not every note). has_discontinuity is fixed
+ * false for every point (SCOPED BRANCH DEFAULT: this branch wires the
+ * cadence signal, real Interpretation output from run_cadence_
+ * classification; a contour/rhythm discontinuity signal would require
+ * pitch-direction/rest detection this module does not otherwise compute
+ * and is left for a later branch) -- boundaries are driven entirely by
+ * the real cadence_types signal.
+ *
+ * On success, persists the boundary and boundary-signal Interpretations
+ * under kIndexTypePhrase and returns the built PhraseOccurrence array via
+ * out_occurrences/out_occurrence_count (caller frees with
+ * phrase_boundary_detection_destroy_occurrences). Returns the points
+ * array actually used via out_points (caller frees with free()) so later
+ * stages can re-derive which onset group closed each phrase. */
+static void run_phrase_boundary_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                            const SonorityGrouping *grouping, NoteEvent *const *events,
+                                            char *const *cadence_types, PhraseBoundaryDetectionPoint **out_points,
+                                            PhraseOccurrence ***out_occurrences, size_t *out_occurrence_count) {
+    *out_points = NULL;
+    *out_occurrences = NULL;
+    *out_occurrence_count = 0;
+
+    if (grouping->group_count == 0) {
+        return;
+    }
+
+    PhraseBoundaryDetectionPoint *points = malloc(sizeof(PhraseBoundaryDetectionPoint) * grouping->group_count);
+    if (!points) {
+        return;
+    }
+    for (size_t i = 0; i < grouping->group_count; i++) {
+        const NoteEvent *representative = events[grouping->groups[i].note_indices[0]];
+        bool has_cadence = cadence_types[i] != NULL &&
+                            strlen(cadence_types[i]) < PHRASE_BOUNDARY_DETECTION_CADENCE_TYPE_BUFFER_SIZE;
+        points[i].event = representative;
+        points[i].has_cadence = has_cadence;
+        points[i].cadence_type = has_cadence ? cadence_types[i] : "";
+        points[i].has_discontinuity = false;
+    }
+
+    PhraseBoundaryDetectionInput input = {points, grouping->group_count, 0};
+
+    AnalysisResult *boundary_result = NULL;
+    if (phrase_boundary_detection_analyze(&input, NULL, NULL, &boundary_result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, boundary_result, kIndexTypePhrase);
+        analysis_result_destroy(boundary_result);
+    }
+
+    AnalysisResult *signal_result = NULL;
+    if (phrase_boundary_detection_signal_analyze(&input, NULL, NULL, &signal_result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, signal_result, kIndexTypePhrase);
+        analysis_result_destroy(signal_result);
+    }
+
+    PhraseOccurrence **occurrences = NULL;
+    size_t occurrence_count = 0;
+    phrase_boundary_detection_build_occurrences(points, grouping->group_count, 0, &occurrences, &occurrence_count);
+
+    *out_points = points;
+    *out_occurrences = occurrences;
+    *out_occurrence_count = occurrence_count;
+}
+
+/* Finds the onset group index whose representative event (the same one
+ * points[] was built from) has the given entity id, or SIZE_MAX if none
+ * matches -- used to look back up a PhraseOccurrence's closing cadence
+ * type from the group it ends on. */
+static size_t group_index_for_event_id(const SonorityGrouping *grouping, NoteEvent *const *events,
+                                         const EntityID *event_id) {
+    for (size_t i = 0; i < grouping->group_count; i++) {
+        const NoteEvent *representative = events[grouping->groups[i].note_indices[0]];
+        if (entity_id_equals(note_event_id(representative), event_id)) {
+            return i;
+        }
+    }
+    return (size_t)-1;
+}
+
+/* The cadence type (borrowed, from cadence_types) that closes phrase
+ * occurrence occ, or NULL if its closing event isn't a group
+ * representative or has no classified cadence. */
+static const char *closing_cadence_type(const PhraseOccurrence *occ, const SonorityGrouping *grouping,
+                                          NoteEvent *const *events, char *const *cadence_types) {
+    size_t region_count = phrase_occurrence_region_event_id_count(occ);
+    if (region_count == 0) {
+        return NULL;
+    }
+    const EntityID *last_id = phrase_occurrence_region_event_id_at(occ, region_count - 1);
+    size_t group_index = group_index_for_event_id(grouping, events, last_id);
+    if (group_index == (size_t)-1) {
+        return NULL;
+    }
+    return cadence_types[group_index];
+}
+
+static size_t event_index_by_id(NoteEvent *const *events, size_t count, const EntityID *id) {
+    for (size_t i = 0; i < count; i++) {
+        if (entity_id_equals(note_event_id(events[i]), id)) {
+            return i;
+        }
+    }
+    return (size_t)-1;
+}
+
+/* A Contour/RhythmicPattern/event-id window built (and owned) for one
+ * PhraseOccurrence's region events, ready to hand to
+ * motif_window_matching_find as a MotifWindow. */
+typedef struct {
+    Contour *contour;
+    RhythmicPattern *rhythm;
+    EntityID **event_ids;
+    size_t event_id_count;
+} OwnedMotifWindow;
+
+static void owned_motif_window_destroy(OwnedMotifWindow *window) {
+    if (window->contour) {
+        contour_destroy(window->contour);
+    }
+    if (window->rhythm) {
+        rhythmic_pattern_destroy(window->rhythm);
+    }
+    for (size_t i = 0; i < window->event_id_count; i++) {
+        entity_id_destroy(window->event_ids[i]);
+    }
+    free(window->event_ids);
+    memset(window, 0, sizeof(*window));
+}
+
+/* Builds a Contour (pitch-direction) + RhythmicPattern (duration)
+ * window over occ's own region events, in order -- the same real
+ * pitch/duration data this module already reads for key/chord
+ * identification, not a placeholder. Requires at least 2 region events
+ * (Contour's own minimum); shorter phrases produce no window (false).
+ */
+static bool build_motif_window(const PhraseOccurrence *occ, NoteEvent *const *events,
+                                 PitchNumericValue *const *pitch_values, size_t count, OwnedMotifWindow *out) {
+    memset(out, 0, sizeof(*out));
+    size_t region_count = phrase_occurrence_region_event_id_count(occ);
+    if (region_count < 2) {
+        return false;
+    }
+
+    size_t *indices = malloc(sizeof(size_t) * region_count);
+    if (!indices) {
+        return false;
+    }
+    for (size_t i = 0; i < region_count; i++) {
+        indices[i] = event_index_by_id(events, count, phrase_occurrence_region_event_id_at(occ, i));
+        if (indices[i] == (size_t)-1) {
+            free(indices);
+            return false;
+        }
+    }
+
+    PitchIdentity **pitch_ids = calloc(region_count, sizeof(PitchIdentity *));
+    ContourDirection *directions = malloc(sizeof(ContourDirection) * (region_count - 1));
+    Duration **durations = calloc(region_count, sizeof(Duration *));
+    EntityID **event_ids = calloc(region_count, sizeof(EntityID *));
+    bool ok = pitch_ids && directions && durations && event_ids;
+
+    for (size_t i = 0; ok && i < region_count; i++) {
+        size_t token_size = 0;
+        const void *token = pitch_identity_token(note_event_pitch(events[indices[i]]), &token_size);
+        if (pitch_identity_create(token, token_size, &pitch_ids[i]) != PITCH_IDENTITY_OK) {
+            ok = false;
+            break;
+        }
+        const Duration *duration = note_event_duration(events[indices[i]]);
+        if (duration_create(duration_numerator(duration), duration_denominator(duration), &durations[i]) !=
+            DURATION_OK) {
+            ok = false;
+            break;
+        }
+        if (entity_id_create(entity_id_value(phrase_occurrence_region_event_id_at(occ, i)), &event_ids[i]) !=
+            ENTITY_ID_OK) {
+            ok = false;
+            break;
+        }
+    }
+    for (size_t i = 0; ok && i + 1 < region_count; i++) {
+        long a = pitch_numeric_value_position_numerator(pitch_values[indices[i]]);
+        long b = pitch_numeric_value_position_numerator(pitch_values[indices[i + 1]]);
+        directions[i] = (b > a) ? CONTOUR_DIRECTION_UP : (b < a) ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME;
+    }
+    free(indices);
+
+    Contour *contour = NULL;
+    RhythmicPattern *rhythm = NULL;
+    if (ok && contour_create(pitch_ids, region_count, directions, region_count - 1, &contour) != CONTOUR_OK) {
+        ok = false;
+    }
+    if (ok && rhythmic_pattern_create(durations, region_count, &rhythm) != RHYTHMIC_PATTERN_OK) {
+        ok = false;
+    }
+
+    if (!ok) {
+        if (contour) {
+            contour_destroy(contour);
+        } else {
+            for (size_t i = 0; i < region_count && pitch_ids; i++) {
+                if (pitch_ids[i]) {
+                    pitch_identity_destroy(pitch_ids[i]);
+                }
+            }
+            free(pitch_ids);
+            free(directions);
+        }
+        if (!rhythm) {
+            for (size_t i = 0; i < region_count && durations; i++) {
+                if (durations[i]) {
+                    duration_destroy(durations[i]);
+                }
+            }
+            free(durations);
+        }
+        for (size_t i = 0; i < region_count && event_ids; i++) {
+            if (event_ids[i]) {
+                entity_id_destroy(event_ids[i]);
+            }
+        }
+        free(event_ids);
+        return false;
+    }
+
+    out->contour = contour;
+    out->rhythm = rhythm;
+    out->event_ids = event_ids;
+    out->event_id_count = region_count;
+    return true;
+}
+
+/* Runs MotifWindowMatching over every phrase occurrence's own window
+ * (real Contour/RhythmicPattern equality, not a stub), then
+ * MotifDetection over each matched window. SCOPED BRANCH DEFAULT: each
+ * matched window is reported as its own single-occurrence Motif (its
+ * matched_event_ids double as both the Motif's definition and its sole
+ * reported occurrence) -- clustering multiple matching windows under one
+ * shared Motif is a real refinement left for a later branch; this still
+ * exercises real repeat-detection (motif_window_matching_find) and real
+ * MotifDetection packaging, not a no-op. */
+static void run_motif_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                  PhraseOccurrence *const *phrase_occurrences, size_t phrase_occurrence_count,
+                                  NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count) {
+    if (phrase_occurrence_count == 0) {
+        return;
+    }
+
+    OwnedMotifWindow *owned = calloc(phrase_occurrence_count, sizeof(OwnedMotifWindow));
+    MotifWindow *windows = malloc(sizeof(MotifWindow) * phrase_occurrence_count);
+    if (!owned || !windows) {
+        free(owned);
+        free(windows);
+        return;
+    }
+
+    size_t window_count = 0;
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        if (build_motif_window(phrase_occurrences[i], events, pitch_values, count, &owned[window_count])) {
+            windows[window_count].contour = owned[window_count].contour;
+            windows[window_count].rhythm = owned[window_count].rhythm;
+            windows[window_count].event_ids = (const EntityID *const *)owned[window_count].event_ids;
+            windows[window_count].event_id_count = owned[window_count].event_id_count;
+            window_count++;
+        }
+    }
+
+    MotifDetectionOccurrence *matches = NULL;
+    size_t match_count = 0;
+    if (window_count > 0 &&
+        motif_window_matching_find(windows, window_count, &matches, &match_count) == MOTIF_WINDOW_MATCHING_OK) {
+        for (size_t m = 0; m < match_count; m++) {
+            EntityID *motif_id = NULL;
+            if (entity_id_create("ursatz-gui-analyzer-motif", &motif_id) != ENTITY_ID_OK) {
+                continue;
+            }
+
+            size_t event_id_count = matches[m].matched_event_id_count;
+            EntityID **motif_event_ids = calloc(event_id_count, sizeof(EntityID *));
+            bool ok = motif_event_ids != NULL;
+            for (size_t k = 0; ok && k < event_id_count; k++) {
+                if (entity_id_create(entity_id_value(matches[m].matched_event_ids[k]), &motif_event_ids[k]) !=
+                    ENTITY_ID_OK) {
+                    ok = false;
+                }
+            }
+
+            Motif *motif = NULL;
+            if (ok && motif_create(motif_id, motif_event_ids, event_id_count, &motif) == MOTIF_OK) {
+                MotifDetectionInput input = {motif, &matches[m], 1};
+                AnalysisResult *result = NULL;
+                if (motif_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+                    store_all_interpretations(handle, index_db, result, kIndexTypeMotif);
+                    analysis_result_destroy(result);
+                }
+                motif_destroy(motif);
+            } else {
+                entity_id_destroy(motif_id);
+                for (size_t k = 0; k < event_id_count && motif_event_ids; k++) {
+                    if (motif_event_ids[k]) {
+                        entity_id_destroy(motif_event_ids[k]);
+                    }
+                }
+                free(motif_event_ids);
+            }
+        }
+        motif_window_matching_destroy_occurrences(matches);
+    }
+
+    for (size_t i = 0; i < window_count; i++) {
+        owned_motif_window_destroy(&owned[i]);
+    }
+    free(owned);
+    free(windows);
+}
+
+/* Runs Period Detection over every consecutive PhraseOccurrence pair
+ * (using their real closing cadence types from cadence_types) and
+ * Sentence Detection over every consecutive pair treated as a
+ * statement/repetition candidate. SCOPED BRANCH DEFAULT: Sentence
+ * Detection wants MotifOccurrence statement/repetition ids, but
+ * run_motif_detection (above) does not retain persisted MotifOccurrence
+ * ids across calls in this branch -- consecutive PhraseOccurrences'
+ * own ids stand in instead, with their own real Contour/RhythmicPattern
+ * windows (rebuilt the same way run_motif_detection builds them) as the
+ * statement/continuation windows SentenceContinuationMatching actually
+ * compares. A pair whose windows don't qualify produces no Sentence
+ * output, per the analyzer's own discipline -- not forced here. */
+static void run_period_and_sentence_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                                 PhraseOccurrence *const *phrase_occurrences,
+                                                 size_t phrase_occurrence_count, const SonorityGrouping *grouping,
+                                                 NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                                 size_t count, char *const *cadence_types) {
+    if (phrase_occurrence_count == 0) {
+        return;
+    }
+
+    PeriodDetectionEntry *period_entries = malloc(sizeof(PeriodDetectionEntry) * phrase_occurrence_count);
+    if (period_entries) {
+        for (size_t i = 0; i < phrase_occurrence_count; i++) {
+            period_entries[i].phrase_occurrence = phrase_occurrences[i];
+            period_entries[i].cadence_type = closing_cadence_type(phrase_occurrences[i], grouping, events, cadence_types);
+        }
+
+        PeriodDetectionInput input = {period_entries, phrase_occurrence_count};
+        AnalysisResult *result = NULL;
+        if (period_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+            store_all_interpretations(handle, index_db, result, kIndexTypePeriod);
+            analysis_result_destroy(result);
+        }
+
+        Relationship **relationships = NULL;
+        size_t relationship_count = 0;
+        if (period_detection_build_relationships(period_entries, phrase_occurrence_count, &relationships,
+                                                   &relationship_count) == PERIOD_DETECTION_REL_OK) {
+            record_relationships(index_db, relationships, relationship_count);
+            period_detection_destroy_relationships(relationships, relationship_count);
+        }
+        free(period_entries);
+    }
+
+    if (phrase_occurrence_count < 2) {
+        return;
+    }
+
+    OwnedMotifWindow *owned = calloc(phrase_occurrence_count, sizeof(OwnedMotifWindow));
+    MotifWindow *phrase_windows = calloc(phrase_occurrence_count, sizeof(MotifWindow));
+    bool *has_window = calloc(phrase_occurrence_count, sizeof(bool));
+    SentenceDetectionEntry *sentence_entries = malloc(sizeof(SentenceDetectionEntry) * (phrase_occurrence_count - 1));
+    if (!owned || !phrase_windows || !has_window || !sentence_entries) {
+        free(owned);
+        free(phrase_windows);
+        free(has_window);
+        free(sentence_entries);
+        return;
+    }
+
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        has_window[i] = build_motif_window(phrase_occurrences[i], events, pitch_values, count, &owned[i]);
+        if (has_window[i]) {
+            phrase_windows[i].contour = owned[i].contour;
+            phrase_windows[i].rhythm = owned[i].rhythm;
+            phrase_windows[i].event_ids = (const EntityID *const *)owned[i].event_ids;
+            phrase_windows[i].event_id_count = owned[i].event_id_count;
+        }
+    }
+
+    size_t sentence_entry_count = 0;
+    for (size_t i = 0; i + 1 < phrase_occurrence_count; i++) {
+        if (!has_window[i] || !has_window[i + 1]) {
+            continue;
+        }
+        SentenceDetectionEntry *entry = &sentence_entries[sentence_entry_count];
+        entry->statement_occurrence_id = phrase_occurrence_id(phrase_occurrences[i]);
+        entry->repetition_occurrence_id = phrase_occurrence_id(phrase_occurrences[i + 1]);
+        entry->statement_window = &phrase_windows[i];
+        entry->continuation_candidate = (i + 2 < phrase_occurrence_count && has_window[i + 2])
+                                              ? &phrase_windows[i + 2]
+                                              : NULL;
+        sentence_entry_count++;
+    }
+
+    SentenceDetectionInput input = {sentence_entries, sentence_entry_count};
+    AnalysisResult *result = NULL;
+    if (sentence_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, result, kIndexTypeSentence);
+        analysis_result_destroy(result);
+    }
+
+    Relationship **relationships = NULL;
+    size_t relationship_count = 0;
+    if (sentence_detection_build_relationships(sentence_entries, sentence_entry_count, &relationships,
+                                                 &relationship_count) == SENTENCE_DETECTION_REL_OK) {
+        record_relationships(index_db, relationships, relationship_count);
+        sentence_detection_destroy_relationships(relationships, relationship_count);
+    }
+    free(sentence_entries);
+
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        if (has_window[i]) {
+            owned_motif_window_destroy(&owned[i]);
+        }
+    }
+    free(owned);
+    free(phrase_windows);
+    free(has_window);
+}
+
+/* Runs Form Structure Detection over every PhraseOccurrence (grouping
+ * them into Sections at structural cadences) and Thematic Return
+ * Detection over every PhraseOccurrence's own window. SCOPED BRANCH
+ * DEFAULT (same one run_period_and_sentence_detection documents):
+ * Thematic Return Detection wants ThemeOccurrence ids/windows, but this
+ * branch never constructs a distinct ThemeOccurrence -- each
+ * PhraseOccurrence's own id and real Contour/RhythmicPattern window
+ * stand in, at phrase granularity rather than theme granularity. Only
+ * Interpretations/Relationships are persisted; the Section objects
+ * Form Structure Detection can mint (form_structure_detection_build_
+ * sections) have no persistence path in this branch (no Structure
+ * store exists for them either), so they are not retained. */
+static void run_form_and_thematic_return_detection(PersistenceHandle *handle, sqlite3 *index_db,
+                                                       PhraseOccurrence *const *phrase_occurrences,
+                                                       size_t phrase_occurrence_count, const SonorityGrouping *grouping,
+                                                       NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                                       size_t count, char *const *cadence_types) {
+    if (phrase_occurrence_count == 0) {
+        return;
+    }
+
+    FormStructureDetectionEntry *form_entries = malloc(sizeof(FormStructureDetectionEntry) * phrase_occurrence_count);
+    if (form_entries) {
+        for (size_t i = 0; i < phrase_occurrence_count; i++) {
+            form_entries[i].phrase_occurrence = phrase_occurrences[i];
+            form_entries[i].cadence_type = closing_cadence_type(phrase_occurrences[i], grouping, events, cadence_types);
+        }
+
+        FormStructureDetectionInput input = {form_entries, phrase_occurrence_count};
+        AnalysisResult *result = NULL;
+        if (form_structure_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+            store_all_interpretations(handle, index_db, result, kIndexTypeForm);
+            analysis_result_destroy(result);
+        }
+
+        Relationship **relationships = NULL;
+        size_t relationship_count = 0;
+        if (form_structure_detection_build_relationships(form_entries, phrase_occurrence_count, &relationships,
+                                                             &relationship_count) == FORM_STRUCTURE_DETECTION_REL_OK) {
+            record_relationships(index_db, relationships, relationship_count);
+            form_structure_detection_destroy_relationships(relationships, relationship_count);
+        }
+        free(form_entries);
+    }
+
+    if (phrase_occurrence_count < 2) {
+        return;
+    }
+
+    OwnedMotifWindow *owned = calloc(phrase_occurrence_count, sizeof(OwnedMotifWindow));
+    MotifWindow *windows = calloc(phrase_occurrence_count, sizeof(MotifWindow));
+    bool *has_window = calloc(phrase_occurrence_count, sizeof(bool));
+    ThematicReturnDetectionEntry *entries = malloc(sizeof(ThematicReturnDetectionEntry) * phrase_occurrence_count);
+    if (!owned || !windows || !has_window || !entries) {
+        free(owned);
+        free(windows);
+        free(has_window);
+        free(entries);
+        return;
+    }
+
+    size_t entry_count = 0;
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        has_window[i] = build_motif_window(phrase_occurrences[i], events, pitch_values, count, &owned[i]);
+        if (!has_window[i]) {
+            continue;
+        }
+        windows[i].contour = owned[i].contour;
+        windows[i].rhythm = owned[i].rhythm;
+        windows[i].event_ids = (const EntityID *const *)owned[i].event_ids;
+        windows[i].event_id_count = owned[i].event_id_count;
+
+        entries[entry_count].theme_occurrence_id = phrase_occurrence_id(phrase_occurrences[i]);
+        entries[entry_count].window = &windows[i];
+        entry_count++;
+    }
+
+    ThematicReturnDetectionInput input = {entries, entry_count};
+    AnalysisResult *result = NULL;
+    if (thematic_return_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
+        store_all_interpretations(handle, index_db, result, kIndexTypeThematicReturn);
+        analysis_result_destroy(result);
+    }
+
+    Relationship **relationships = NULL;
+    size_t relationship_count = 0;
+    if (thematic_return_detection_build_relationships(entries, entry_count, &relationships, &relationship_count) ==
+        THEMATIC_RETURN_DETECTION_REL_OK) {
+        record_relationships(index_db, relationships, relationship_count);
+        thematic_return_detection_destroy_relationships(relationships, relationship_count);
+    }
+    free(entries);
+
+    for (size_t i = 0; i < phrase_occurrence_count; i++) {
+        if (has_window[i]) {
+            owned_motif_window_destroy(&owned[i]);
+        }
+    }
+    free(owned);
+    free(windows);
+    free(has_window);
+}
+
 static bool ensure_dir_exists(const char *path) {
 #ifdef _WIN32
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
@@ -562,6 +1455,34 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
                 for (size_t i = 0; i < grouping.group_count; i++) {
                     identify_and_store_chord(handle, index_db, &grouping.groups[i], events, pitch_values, &key);
                 }
+
+                char **cadence_types =
+                    run_cadence_classification(handle, index_db, &grouping, events, pitch_values, &key);
+
+                PhraseBoundaryDetectionPoint *phrase_points = NULL;
+                PhraseOccurrence **phrase_occurrences = NULL;
+                size_t phrase_occurrence_count = 0;
+                if (cadence_types) {
+                    run_phrase_boundary_detection(handle, index_db, &grouping, events, cadence_types, &phrase_points,
+                                                   &phrase_occurrences, &phrase_occurrence_count);
+                }
+
+                if (phrase_occurrence_count > 0) {
+                    run_motif_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count, events,
+                                        pitch_values, count);
+                    run_period_and_sentence_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count,
+                                                       &grouping, events, pitch_values, count, cadence_types);
+                    run_form_and_thematic_return_detection(handle, index_db, phrase_occurrences,
+                                                            phrase_occurrence_count, &grouping, events, pitch_values,
+                                                            count, cadence_types);
+                }
+
+                if (phrase_occurrences) {
+                    phrase_boundary_detection_destroy_occurrences(phrase_occurrences, phrase_occurrence_count);
+                }
+                free(phrase_points);
+
+                free_cadence_types(cadence_types, grouping.group_count);
                 sonority_grouping_destroy(&grouping);
             }
 
@@ -822,6 +1743,73 @@ static void interpretation_summary_destroy_contents(UrsatzGuiInterpretationSumma
  * through the matching persistence_load_interpretation rather than
  * persistence_load_chord/persistence_load_key (whose backing tables
  * this module never populates). */
+/* Decodes interpretation's claim into a display label. Key/Chord/
+ * Cadence claims are plain null-terminated strings (unchanged from
+ * before this branch); Motif/Phrase/Period/Sentence/Form Structure/
+ * Thematic Return Detection's claims are structs (see each analyzer's
+ * own header) -- value_type() (the type tag every analyzer sets when it
+ * builds its claim Value, e.g. "motif-detection-claim") is what
+ * distinguishes them, since claim itself is opaque bytes. Falls back to
+ * treating the content as a string for any type not recognized here
+ * (covers key/chord/cadence without needing to special-case them). */
+static char *format_claim_label(const Interpretation *interpretation) {
+    const Value *claim = interpretation_claim(interpretation);
+    const char *claim_type = value_type(claim);
+    size_t claim_size = 0;
+    const void *content = value_content(claim, &claim_size);
+    char buf[512];
+
+    if (strcmp(claim_type, "motif-detection-claim") == 0 && claim_size == sizeof(MotifDetectionClaim)) {
+        const MotifDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "motif occurrence: %zu matched event(s)", c->matched_event_id_count);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "phrase-segmentation-claim") == 0 &&
+        claim_size == sizeof(PhraseSegmentationClaim)) {
+        const PhraseSegmentationClaim *c = content;
+        return dup_string(c->is_boundary ? "phrase boundary" : "not a phrase boundary");
+    }
+    if (claim_type && strcmp(claim_type, "phrase-boundary-detection-signal-claim") == 0 &&
+        claim_size == sizeof(PhraseBoundaryDetectionSignalClaim)) {
+        const PhraseBoundaryDetectionSignalClaim *c = content;
+        if (c->signal == PHRASE_BOUNDARY_SIGNAL_CADENCE) {
+            snprintf(buf, sizeof(buf), "boundary signal: cadence (%s)", c->cadence_type);
+        } else {
+            snprintf(buf, sizeof(buf), "boundary signal: contour/rhythm discontinuity");
+        }
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "period-detection-claim") == 0 && claim_size == sizeof(PeriodDetectionClaim)) {
+        const PeriodDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "period: %s (%s) -> %s (%s)", c->antecedent_phrase_occurrence_id,
+                 c->antecedent_cadence_type, c->consequent_phrase_occurrence_id, c->consequent_cadence_type);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "sentence-detection-claim") == 0 &&
+        claim_size == sizeof(SentenceDetectionClaim)) {
+        const SentenceDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "sentence: %s -> %s -> %s", c->statement_occurrence_id,
+                 c->repetition_occurrence_id, c->continuation_occurrence_id);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "form-structure-detection-claim") == 0 &&
+        claim_size == sizeof(FormStructureDetectionClaim)) {
+        const FormStructureDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "form: %s -[%s]-> %s", c->earlier_section_id,
+                 c->earlier_section_closing_cadence_type, c->later_section_id);
+        return dup_string(buf);
+    }
+    if (claim_type && strcmp(claim_type, "thematic-return-detection-claim") == 0 &&
+        claim_size == sizeof(ThematicReturnDetectionClaim)) {
+        const ThematicReturnDetectionClaim *c = content;
+        snprintf(buf, sizeof(buf), "thematic return: %s resembles %s", c->later_theme_occurrence_id,
+                 c->earlier_theme_occurrence_id);
+        return dup_string(buf);
+    }
+
+    return dup_string((const char *)content);
+}
+
 static bool load_interpretation_summary(PersistenceHandle *handle, const char *interpretation_id, const char *type,
                                           UrsatzGuiInterpretationSummary *out) {
     Interpretation *interpretation = NULL;
@@ -829,8 +1817,7 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
         return false;
     }
 
-    size_t claim_size = 0;
-    const char *label = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
+    char *label = format_claim_label(interpretation);
 
     ProvenanceReferenceState provenance_state = provenance_reference_state(interpretation_provenance(interpretation));
     const char *provenance_state_str =
@@ -839,7 +1826,7 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
     bool ok = false;
     out->interpretation_id = dup_string(interpretation_id);
     out->type = dup_string(type);
-    out->label = dup_string(label);
+    out->label = label;
     out->produced_by_author = dup_string(interpretation_author(interpretation));
     out->produced_by_method = dup_string(interpretation_method(interpretation));
     out->provenance_state = dup_string(provenance_state_str);
@@ -912,10 +1899,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     char **index_ids = NULL;
     char **index_types = NULL;
     size_t index_count = 0;
+    UrsatzGuiRelationshipSummary *relationships = NULL;
+    size_t relationship_count = 0;
     if (index_db) {
-        if (!read_interpretation_index(index_db, &index_ids, &index_types, &index_count)) {
+        if (!read_interpretation_index(index_db, &index_ids, &index_types, &index_count) ||
+            !read_relationship_index(index_db, &relationships, &relationship_count)) {
             sqlite3_close(index_db);
             free(filename);
+            free_ids(index_ids, index_count);
+            free_ids(index_types, index_count);
             persistence_close(handle);
             return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
@@ -953,6 +1945,10 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
             interpretation_summary_destroy_contents(&summaries[i]);
         }
         free(summaries);
+        for (size_t i = 0; i < relationship_count; i++) {
+            relationship_summary_destroy_contents(&relationships[i]);
+        }
+        free(relationships);
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
 
@@ -961,6 +1957,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     detail->note_event_count = note_event_count;
     detail->interpretations = summaries;
     detail->interpretation_count = summary_count;
+    detail->relationships = relationships;
+    detail->relationship_count = relationship_count;
 
     *out_detail = detail;
     return URSATZ_GUI_ANALYSIS_OK;
@@ -974,6 +1972,10 @@ void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
         interpretation_summary_destroy_contents(&detail->interpretations[i]);
     }
     free(detail->interpretations);
+    for (size_t i = 0; i < detail->relationship_count; i++) {
+        relationship_summary_destroy_contents(&detail->relationships[i]);
+    }
+    free(detail->relationships);
     free(detail->id);
     free(detail->filename);
     free(detail);

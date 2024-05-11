@@ -78,3 +78,20 @@ if(WIN32)
 endif()
 
 add_test(NAME corpus_route COMMAND test_corpus_route)
+
+add_executable(test_framework_analyzers test_framework_analyzers.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+)
+
+target_include_directories(test_framework_analyzers PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/include
+  ${CMAKE_SOURCE_DIR}/backend/src
+  ${CMAKE_SOURCE_DIR}/backend/src/service
+)
+
+target_link_libraries(test_framework_analyzers PRIVATE
+  ursatz
+  common_practice_minimal
+)
+
+add_test(NAME framework_analyzers COMMAND test_framework_analyzers)

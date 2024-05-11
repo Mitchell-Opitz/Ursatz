@@ -56,12 +56,29 @@ typedef struct {
     char *provenance_state;   /* "present" or "absent" */
 } UrsatzGuiInterpretationSummary;
 
+/*
+ * One persisted Relationship, as returned by ursatz_gui_analysis_get_piece.
+ * Period/Sentence/Form Structure/Thematic Return Detection's output is
+ * Relationship-shaped (a source/predicate/target link between two other
+ * ids), not a simple label like key/chord -- see analysis_service.c's
+ * kRelationshipTableName for how/why this module persists Relationships
+ * itself (Ursatz's persistence layer has no Relationship store).
+ */
+typedef struct {
+    char *relationship_id;
+    char *source_id;
+    char *predicate_name;
+    char *target_id;
+} UrsatzGuiRelationshipSummary;
+
 typedef struct {
     char *id;
     char *filename; /* original upload filename, or "" if none was given */
     size_t note_event_count;
     UrsatzGuiInterpretationSummary *interpretations;
     size_t interpretation_count;
+    UrsatzGuiRelationshipSummary *relationships;
+    size_t relationship_count;
 } UrsatzGuiPieceDetail;
 
 /*
