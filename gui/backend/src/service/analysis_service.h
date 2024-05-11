@@ -135,4 +135,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
 
 void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail);
 
+/*
+ * Deletes a saved piece's entire SQLite file under pieces_dir, removing
+ * its NoteEvents, Interpretations, and the ursatz-gui-owned
+ * interpretation index/meta/relationship tables in one step -- all of
+ * it lives in that one per-piece file (see analysis_service.c's
+ * kIndexTableName/kMetaTableName/kRelationshipTableName), so there is
+ * no separate per-table cascade to perform.
+ *
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
+ * under pieces_dir.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
+
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */
