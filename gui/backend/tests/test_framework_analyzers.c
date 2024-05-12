@@ -197,7 +197,15 @@ int main(void) {
     check(count_type(detail, "motif") >= 2, "both matching motif windows (phrases B and C) were persisted");
     check(count_type(detail, "period") >= 1, "the (A, B) period pair was persisted");
     check(count_type(detail, "sentence") >= 2, "the A/B/C sentence (statement/repetition/continuation) was persisted");
-    check(count_type(detail, "thematic_return") >= 1, "phrase C's thematic return to phrase B was persisted");
+    /* Phrase B and C's windows are both just the shared 3-event cadential
+     * approach (bridge -> V -> I) every phrase in this fixture closes
+     * with, not distinctive recurring material. Since
+     * THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH (4) was introduced,
+     * windows this short are correctly excluded from thematic-return
+     * matching -- this used to assert on a false positive the old
+     * no-floor comparison wrongly produced. */
+    check(count_type(detail, "thematic_return") == 0,
+          "phrase C's cadential-formula window is too short/generic to count as a thematic return");
 
     /* Form Structure Detection never finds a structural cadence in this
      * branch's wiring (it requires a plain "authentic (PAC)"/"authentic
@@ -212,7 +220,8 @@ int main(void) {
 
     check(count_predicate(detail, "precedes") >= 1, "a period Relationship (precedes) was persisted");
     check(count_predicate(detail, "transformed_from") >= 2, "sentence Relationships (transformed_from) were persisted");
-    check(count_predicate(detail, "resembles") >= 1, "a thematic return Relationship (resembles) was persisted");
+    check(count_predicate(detail, "resembles") == 0,
+          "no resembles Relationship was persisted for the too-short cadential-formula window");
 
     ursatz_gui_piece_detail_destroy(detail);
 
