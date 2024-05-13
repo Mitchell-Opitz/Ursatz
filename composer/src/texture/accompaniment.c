@@ -239,6 +239,12 @@ void accomp_judge(const AccompContext *context, const AccompCandidate *candidate
     }
     verdict->total = 1;
     verdict->held = changes == 0 || moved < SMOOTH_LIMIT * changes ? 1 : 0;
+    /* Heard: the texture the target asks for. A candidate the analysis cannot be run on does not hold. */
+    if (context->texture >= 0) {
+        bool heard = false;
+        verdict->total++;
+        verdict->held += accomp_hear(context, candidate, &heard) && heard ? 1 : 0;
+    }
 }
 
 /* ------------------------------------------------------- the operator */

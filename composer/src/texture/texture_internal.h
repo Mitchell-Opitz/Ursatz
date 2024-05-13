@@ -85,6 +85,14 @@ const char *accomp_pattern_name(PlanAccompanimentPattern pattern);
 /* Builds one accompaniment in the pattern, choosing only with rng. False when a beat cannot be voiced. */
 bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern, FillRng *rng, AccompCandidate *out);
 
+/*
+ * Whether standard-texture's analysis hears the melody, the bass and the candidate, as three tracks (the melody the
+ * first, the bass the second, the accompaniment the third, its voices the voices of the track), as the texture the
+ * target asks for or its category in every measure of the span. *heard is meaningful on true; false when the analysis
+ * could not be run.
+ */
+bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate, bool *heard);
+
 /* Judges a candidate against the plan: hard rules, and the soft ones held of those that apply. */
 typedef struct {
     const char *hard; /* NULL when no hard rule is broken, else which */

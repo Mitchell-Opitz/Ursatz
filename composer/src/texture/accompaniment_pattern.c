@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <texture_rules.h>
+
 #include "texture/texture_internal.h"
 
 /* The widest a voicing of three notes spans, in semitones, and the narrowest gap between two of its notes. */
@@ -29,6 +31,15 @@ bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPatte
     }
     if (context->pattern != PLAN_ACCOMPANIMENT_ANY) {
         return pattern == context->pattern;
+    }
+    if (context->texture >= 0) {
+        StandardTexture texture = (StandardTexture)context->texture;
+        if (!standard_texture_is_homophonic(texture)) {
+            return false;
+        }
+        if (texture == STANDARD_TEXTURE_HOMORHYTHM) {
+            return pattern == PLAN_ACCOMPANIMENT_BLOCK;
+        }
     }
     return pattern >= PLAN_ACCOMPANIMENT_BLOCK && pattern <= PLAN_ACCOMPANIMENT_OOM_PAH;
 }

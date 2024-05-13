@@ -54,6 +54,7 @@ add_library(ursatz_composer STATIC
     grow/grow_run.c
     texture/accompaniment.c
     texture/accompaniment_pattern.c
+    texture/accompaniment_hear.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
