@@ -1199,12 +1199,13 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
         }
         char list_path[PLAN_JSON_PATH_MAX];
         json_child_path(list_path, path, "notes");
-        if (!cJSON_IsArray(list) || cJSON_GetArraySize(list) == 0) {
+        /* An inner voice may be silent over its span: an empty array. */
+        if (!cJSON_IsArray(list) || (cJSON_GetArraySize(list) == 0 && lane != PLAN_LANE_INNER_VOICE)) {
             return json_bad_format(reader, list_path, "expected a non-empty array");
         }
         size_t count = (size_t)cJSON_GetArraySize(list);
-        PlanNote *notes = calloc(count, sizeof(PlanNote));
-        if (!notes) {
+        PlanNote *notes = count ? calloc(count, sizeof(PlanNote)) : NULL;
+        if (count && !notes) {
             return json_fail(reader, PLAN_ERR_ALLOC, list_path, "out of memory");
         }
         *notes_storage = notes;

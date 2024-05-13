@@ -1,0 +1,97 @@
+#ifndef URSATZ_COMPOSER_TEXTURE_INTERNAL_H
+#define URSATZ_COMPOSER_TEXTURE_INTERNAL_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <ursatz_composer/accompaniment.h>
+
+#include "melody/melody_internal.h"
+
+/* Time inside the operator is ticks from the start of the target, MELODY_TICKS to a whole note. */
+#define ACCOMP_VOICES 3
+#define ACCOMP_MAX_NOTES 256
+#define ACCOMP_MAX_LINE 256
+#define ACCOMP_MAX_BEATS 64
+#define ACCOMP_PAYLOAD_MAGIC 0x41434331UL
+/* An eighth note, the grid of the arpeggiated and Alberti figures. */
+#define ACCOMP_EIGHTH (MELODY_TICKS / 8)
+
+/* One sounding note of the bass or the melody, clipped to the target. */
+typedef struct {
+    long onset;
+    long end;
+    int pitch;
+} AccompLine;
+
+/* What the operator reads from the plan: the target, the chords, the bass and the melody it is written under. */
+typedef struct {
+    LaneSpanId target;
+    NodeId owner;
+    PlanSpan span;
+    PlanKey key;
+    PlanMeter meter;
+    PlanAccompanimentPattern pattern; /* as asked: ANY or one */
+    int texture;                      /* a StandardTexture, or -1 */
+    int low;
+    int high;
+    bool compound;
+    long length;
+    long beat;  /* the pattern's beat: a quarter, or the dotted quarter of a compound meter */
+    long bar;
+    long phase; /* ticks from the bar line at or before the target's start to its start */
+    size_t chord_count;
+    long chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the length */
+    int chord_pcs[HARMONY_MAX_CHORDS][4];     /* root, third, fifth and seventh, as pitch classes */
+    size_t chord_pc_count[HARMONY_MAX_CHORDS];
+    unsigned chord_mask[HARMONY_MAX_CHORDS];
+    AccompLine bass[ACCOMP_MAX_LINE];
+    size_t bass_count;
+    AccompLine melody[ACCOMP_MAX_LINE];
+    size_t melody_count;
+    LaneSpanId voice_span[ACCOMP_VOICES]; /* the span of each voice that is there to be written, else none */
+} AccompContext;
+
+typedef struct {
+    long onset;
+    long duration;
+    int pitch;
+} AccompNote;
+
+/* A candidate's payload: the pattern, the notes of each voice (index 0 is voice 1, the top), and how it was voiced. */
+typedef struct {
+    unsigned long magic;
+    PlanAccompanimentPattern pattern;
+    size_t voices; /* how many voices the pattern writes */
+    size_t note_count[ACCOMP_VOICES];
+    AccompNote notes[ACCOMP_VOICES][ACCOMP_MAX_NOTES];
+    size_t beat_count;
+    bool voiced[ACCOMP_MAX_BEATS];
+    int voicing[ACCOMP_MAX_BEATS][ACCOMP_VOICES]; /* low to high, as the pitches of the three voices on each beat */
+} AccompCandidate;
+
+/* Reads a target; false when it is not one the operator applies to. */
+bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out);
+
+/* The index of the chord sounding at a tick of the target. */
+size_t accomp_chord_at(const AccompContext *context, long tick);
+
+/* Whether the pattern can be written in the meter, and under the texture asked for when the pattern is ANY. */
+bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPattern pattern);
+/* How many voices the pattern writes: three for a block and an oom-pah, one for the lines. */
+size_t accomp_pattern_voices(PlanAccompanimentPattern pattern);
+const char *accomp_pattern_name(PlanAccompanimentPattern pattern);
+
+/* Builds one accompaniment in the pattern, choosing only with rng. False when a beat cannot be voiced. */
+bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern, FillRng *rng, AccompCandidate *out);
+
+/* Judges a candidate against the plan: hard rules, and the soft ones held of those that apply. */
+typedef struct {
+    const char *hard; /* NULL when no hard rule is broken, else which */
+    unsigned held;
+    unsigned total;
+} AccompVerdict;
+
+void accomp_judge(const AccompContext *context, const AccompCandidate *candidate, AccompVerdict *verdict);
+
+#endif
