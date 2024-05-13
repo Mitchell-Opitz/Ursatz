@@ -370,6 +370,130 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   return 200;
 }
 
+/* Extracts the string value of a top-level "field":"value" pair from a
+ * flat JSON object body. Minimal by design (no nesting, no escapes) --
+ * mirrors corpus.c's extract_json_string_field; this route's PATCH body
+ * is the same kind of flat single-field object. Returns a newly
+ * allocated, caller-owned string, or NULL if the field is absent or
+ * malformed. */
+static char *extract_json_string_field(const char *body, const char *field) {
+  char needle[64];
+  snprintf(needle, sizeof(needle), "\"%s\"", field);
+
+  const char *key = strstr(body, needle);
+  if (!key) {
+    return NULL;
+  }
+
+  const char *colon = strchr(key + strlen(needle), ':');
+  if (!colon) {
+    return NULL;
+  }
+
+  const char *quote_start = strchr(colon, '"');
+  if (!quote_start) {
+    return NULL;
+  }
+  quote_start++;
+
+  const char *quote_end = strchr(quote_start, '"');
+  if (!quote_end) {
+    return NULL;
+  }
+
+  size_t len = (size_t)(quote_end - quote_start);
+  char *value = malloc(len + 1);
+  if (!value) {
+    return NULL;
+  }
+  memcpy(value, quote_start, len);
+  value[len] = '\0';
+  return value;
+}
+
+static char *read_patch_body(struct mg_connection *conn) {
+  size_t capacity = 4096;
+  char *buffer = malloc(capacity);
+  if (!buffer) {
+    return NULL;
+  }
+
+  size_t total = 0;
+  for (;;) {
+    if (total == capacity) {
+      char *grown = realloc(buffer, capacity * 2);
+      if (!grown) {
+        free(buffer);
+        return NULL;
+      }
+      buffer = grown;
+      capacity *= 2;
+    }
+
+    int n = mg_read(conn, buffer + total, capacity - total - 1);
+    if (n < 0) {
+      free(buffer);
+      return NULL;
+    }
+    if (n == 0) {
+      break;
+    }
+    total += (size_t)n;
+  }
+
+  buffer[total] = '\0';
+  return buffer;
+}
+
+static int handle_patch_piece(struct mg_connection *conn, const char *id) {
+  char *body = read_patch_body(conn);
+  if (!body) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
+    return 200;
+  }
+
+  char *filename = extract_json_string_field(body, "filename");
+  free(body);
+
+  if (!filename || filename[0] == '\0') {
+    free(filename);
+    send_json(conn, "{\"ok\":false,\"message\":\"invalid filename\"}");
+    return 200;
+  }
+
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_rename_piece(kPiecesDir, id, filename);
+
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    free(filename);
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    free(filename);
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to rename piece\"}");
+    return 200;
+  }
+
+  JsonBuffer buf;
+  json_buffer_init(&buf);
+  json_buffer_append(&buf, "{\"ok\":true,\"id\":");
+  json_buffer_append_string(&buf, id);
+  json_buffer_append(&buf, ",\"filename\":");
+  json_buffer_append_string(&buf, filename);
+  json_buffer_append(&buf, "}");
+  free(filename);
+
+  if (!buf.ok) {
+    json_buffer_destroy(&buf);
+    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    return 200;
+  }
+
+  send_json(conn, buf.data);
+  json_buffer_destroy(&buf);
+  return 200;
+}
+
 static int handle_delete_piece(struct mg_connection *conn, const char *id) {
   UrsatzGuiAnalysisResult result = ursatz_gui_analysis_delete_piece(kPiecesDir, id);
 
@@ -407,6 +531,9 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
     }
     if (strcmp(info->request_method, "DELETE") == 0) {
       return handle_delete_piece(conn, uri + prefix_len);
+    }
+    if (strcmp(info->request_method, "PATCH") == 0) {
+      return handle_patch_piece(conn, uri + prefix_len);
     }
     mg_send_http_error(conn, 405, "Method Not Allowed");
     return 405;
