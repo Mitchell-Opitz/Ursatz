@@ -5,6 +5,7 @@
 
 #include <phrase_level_form.h>
 
+#include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
@@ -70,6 +71,19 @@ static bool stage_done(const PiecePlan *plan, GrowStage stage, NodeId theme, Pla
         return lane_written(plan, PLAN_LANE_BASS, span);
     case GROW_STAGE_MELODY:
         return lane_written(plan, PLAN_LANE_MELODY, span);
+    case GROW_STAGE_TEXTURE: {
+        /* No inner voice span over the theme is still open (there may be none: nothing was asked for). */
+        LaneSpanId ids[64];
+        for (int voice = 1; voice <= 3; voice++) {
+            size_t count = plan_lane_find(plan, PLAN_LANE_INNER_VOICE, voice, span, ids, 64);
+            for (size_t i = 0; i < count && i < 64; i++) {
+                if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
     case GROW_STAGE_COUNT:
         break;
     }
@@ -77,7 +91,8 @@ static bool stage_done(const PiecePlan *plan, GrowStage stage, NodeId theme, Pla
 }
 
 static FillResult register_stage(FillOperatorRegistry *registry, GrowStage stage, const GrowConfig *config,
-                                 const MotiveDevelopContext *motives, const MelodyFillParams *melody) {
+                                 const MotiveDevelopContext *motives, const MelodyFillParams *melody,
+                                 const AccompanimentParams *accompaniment) {
     FillResult result = FILL_OK;
     switch (stage) {
     case GROW_STAGE_STRUCTURE:
@@ -91,6 +106,8 @@ static FillResult register_stage(FillOperatorRegistry *registry, GrowStage stage
         return harmony_bass_register(registry, NULL);
     case GROW_STAGE_MELODY:
         return melody_fill_register(registry, melody);
+    case GROW_STAGE_TEXTURE:
+        return accompaniment_register(registry, accompaniment);
     case GROW_STAGE_COUNT:
         break;
     }
@@ -109,6 +126,8 @@ static FillCheckerFn checker_of(GrowStage stage) {
         return harmony_phrase_checker;
     case GROW_STAGE_MELODY:
         return melody_fill_checker;
+    case GROW_STAGE_TEXTURE:
+        return accompaniment_checker;
     case GROW_STAGE_COUNT:
         break;
     }
@@ -206,6 +225,7 @@ static GrowResult run_once(PiecePlan *plan, const GrowConfig *config, unsigned l
     MotiveDevelopContext motives;
     motive_develop_context_default(&motives);
     motives.min_length = 1;
+    AccompanimentParams accompaniment = accompaniment_params_default();
 
     for (GrowStage stage = GROW_STAGE_STRUCTURE; stage < GROW_STAGE_COUNT; stage++) {
         /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
@@ -229,7 +249,7 @@ static GrowResult run_once(PiecePlan *plan, const GrowConfig *config, unsigned l
             if (attempt > 0 && !sentence) {
                 melody.climax_position = CLIMAX_RETRIES[attempt];
             }
-            FillResult registered = register_stage(registry, stage, config, &motives, &melody);
+            FillResult registered = register_stage(registry, stage, config, &motives, &melody, &accompaniment);
             FillResult ran = registered == FILL_OK
                                  ? fill_run(plan, registry, &fill, &fill_outcome, &outcome->records[stage])
                                  : registered;

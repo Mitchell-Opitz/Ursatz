@@ -34,7 +34,8 @@
  *   motives    the motive development operators write those motives from m0;
  *   harmony    harmony-prolongation for the presentation, harmony-phrase-model for the rest;
  *   bass       harmony-bass under the chords;
- *   melody     melody-fill, idea by idea, over harmony and bass.
+ *   melody     melody-fill, idea by idea, over harmony and bass;
+ *   texture    accompaniment, over the melody and the bass, when the request asks for one (else it has nothing to do).
  * Stage k runs with the seed config.seed + k, so a stage's choices do not change when another stage's do.
  *
  * The theme of 8 bars, in bars (4 bars halves every length). The first half is one of:
@@ -63,6 +64,12 @@ typedef struct {
      * default, HC. Read only for an antecedent beginning.
      */
     PlanCadenceType first_cadence;
+    /*
+     * An accompaniment under the melody and bass, in the inner voices (accompaniment.h). Read only with
+     * has_accompaniment; a texture of -1 asks for none in particular, and one that is not homophonic is refused.
+     */
+    PlanAccompaniment accompaniment;
+    bool has_accompaniment;
 } GrowRequest;
 
 typedef enum {
@@ -71,7 +78,8 @@ typedef enum {
     GROW_ERR_ALLOC,
     GROW_ERR_MOTIVE_TOO_LONG, /* the motive does not fit in one bar of the meter */
     GROW_ERR_BAD_REQUEST,     /* a meter the harmony operators do not support, bars not 4 or 8, a pairing not built
-                                 yet, a cadence other than PAC, IAC or HC, a motive of one note */
+                                 yet, a cadence other than PAC, IAC or HC, a motive of one note, an accompaniment
+                                 that is not valid or is Alberti in a compound meter */
     GROW_ERR_STUCK            /* a stage left a target open (GrowOutcome.stuck_stage) */
 } GrowResult;
 
@@ -114,6 +122,7 @@ typedef enum {
     GROW_STAGE_HARMONY,
     GROW_STAGE_BASS,
     GROW_STAGE_MELODY,
+    GROW_STAGE_TEXTURE,
     GROW_STAGE_COUNT
 } GrowStage;
 
