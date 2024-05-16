@@ -67,7 +67,9 @@ typedef struct {
     AccompNote notes[ACCOMP_VOICES][ACCOMP_MAX_NOTES];
     size_t beat_count;
     bool voiced[ACCOMP_MAX_BEATS];
-    int voicing[ACCOMP_MAX_BEATS][ACCOMP_VOICES]; /* low to high, as the pitches of the three voices on each beat */
+    /* How each beat was voiced, low to high: three notes, or two where the window leaves no room for three. */
+    size_t voicing_size[ACCOMP_MAX_BEATS];
+    int voicing[ACCOMP_MAX_BEATS][ACCOMP_VOICES];
 } AccompCandidate;
 
 /* Reads a target; false when it is not one the operator applies to. */
@@ -81,6 +83,9 @@ bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPatte
 /* How many voices the pattern writes: three for a block and an oom-pah, one for the lines. */
 size_t accomp_pattern_voices(PlanAccompanimentPattern pattern);
 const char *accomp_pattern_name(PlanAccompanimentPattern pattern);
+
+/* The distance in semitones between two voicings, voice by voice from the top. */
+long accomp_voicing_distance(const int *a, size_t a_size, const int *b, size_t b_size);
 
 /* Builds one accompaniment in the pattern, choosing only with rng. False when a beat cannot be voiced. */
 bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern, FillRng *rng, AccompCandidate *out);

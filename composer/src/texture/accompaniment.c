@@ -222,6 +222,7 @@ void accomp_judge(const AccompContext *context, const AccompCandidate *candidate
     long moved = 0;
     long changes = 0;
     const int *previous = NULL;
+    size_t previous_size = 0;
     size_t previous_chord = 0;
     for (size_t b = 0; b < candidate->beat_count; b++) {
         if (!candidate->voiced[b]) {
@@ -229,12 +230,12 @@ void accomp_judge(const AccompContext *context, const AccompCandidate *candidate
         }
         size_t chord = accomp_chord_at(context, (long)b * context->beat);
         if (previous && chord != previous_chord) {
-            for (int v = 0; v < 3; v++) {
-                moved += labs((long)candidate->voicing[b][v] - previous[v]);
-            }
-            changes += 3;
+            size_t voices = candidate->voicing_size[b] < previous_size ? candidate->voicing_size[b] : previous_size;
+            moved += accomp_voicing_distance(candidate->voicing[b], candidate->voicing_size[b], previous, previous_size);
+            changes += (long)voices;
         }
         previous = candidate->voicing[b];
+        previous_size = candidate->voicing_size[b];
         previous_chord = chord;
     }
     verdict->total = 1;
@@ -289,8 +290,8 @@ static void candidate_label(const AccompCandidate *candidate, char *label, size_
     int used = snprintf(label, size, "%s", accomp_pattern_name(candidate->pattern));
     for (size_t b = 0; used > 0 && (size_t)used + 1 < size && b < candidate->beat_count && b < 3; b++) {
         if (candidate->voiced[b]) {
-            used += snprintf(label + used, size - (size_t)used, " %d-%d-%d", candidate->voicing[b][0],
-                             candidate->voicing[b][1], candidate->voicing[b][2]);
+            used += snprintf(label + used, size - (size_t)used, candidate->voicing_size[b] == 3 ? " %d-%d-%d" : " %d-%d",
+                             candidate->voicing[b][0], candidate->voicing[b][1], candidate->voicing[b][2]);
         }
     }
 }
