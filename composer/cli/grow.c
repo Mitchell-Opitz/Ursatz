@@ -9,6 +9,7 @@
 #include <phrase_beginning.h>
 #include <phrase_ending.h>
 #include <phrase_level_form.h>
+#include <texture_rules.h>
 
 #include "cli_options.h"
 
@@ -37,6 +38,8 @@ typedef struct {
     const char *bars_text;
     const char *cadence_text;
     const char *first_cadence_text;
+    const char *accompaniment_text;
+    const char *texture_text;
     const char *seed_text;
     const char *suggest_text;
     const char *out_path;
@@ -51,6 +54,8 @@ typedef struct {
     size_t bars;
     PlanCadenceType cadence;
     PlanCadenceType first_cadence;
+    bool has_accompaniment;
+    PlanAccompaniment accompaniment;
     unsigned long seed;
     unsigned long suggest;
     bool json;
@@ -73,14 +78,18 @@ static void print_help(FILE *out) {
     fprintf(out, "  --cadence <type>     PAC (default), IAC or HC: the cadence the theme ends in\n");
     fprintf(out, "  --first-cadence <t>  HC (default) or IAC: the weaker cadence an antecedent ends in (a period or a hybrid\n");
     fprintf(out, "                       that begins with an antecedent only)\n");
+    fprintf(out, "  --accompaniment <p>  write an accompaniment in the inner voices: block, arpeggiated, alberti (not in 6/8),\n");
+    fprintf(out, "                       oom-pah or any (the pattern is chosen from the seed)\n");
+    fprintf(out, "  --texture <name>     the texture the accompaniment is to be heard as: \"homophony\", \"homorhythm\" (block\n");
+    fprintf(out, "                       chords only) or \"melody and accompaniment\"; implies --accompaniment any\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
     fprintf(out, "  --suggest <n>        write n different themes (1 to %d) instead of one; with files, theme k goes to\n", MAX_SUGGESTIONS);
     fprintf(out, "                       <name>-k.<extension>\n");
     fprintf(out, "  --out <file.json>    write the plan as JSON\n");
-    fprintf(out, "  --midi <file>        write the melody and the bass as a MIDI file\n");
-    fprintf(out, "  --musicxml <file>    write the melody and the bass as MusicXML\n");
+    fprintf(out, "  --midi <file>        write the melody, the bass and the accompaniment as a MIDI file\n");
+    fprintf(out, "  --musicxml <file>    write the melody, the bass and the accompaniment as MusicXML\n");
     fprintf(out, "  --format <text|json> how to print the theme on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "The form heard in the result (by Ursatz's standard-form) is printed with it; a theme need not be heard as\n");
@@ -94,6 +103,7 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
+static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
 static const char *const BEGINNING_WORDS[] = {"presentation", "antecedent", "cbi"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
@@ -141,6 +151,10 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->cadence_text;
         } else if (strcmp(arg, "--first-cadence") == 0) {
             target = &options->first_cadence_text;
+        } else if (strcmp(arg, "--accompaniment") == 0) {
+            target = &options->accompaniment_text;
+        } else if (strcmp(arg, "--texture") == 0) {
+            target = &options->texture_text;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
         } else if (strcmp(arg, "--suggest") == 0) {
@@ -248,6 +262,41 @@ static int check_options(Options *options) {
         if (!cli_parse_cadence(options->first_cadence_text, &options->first_cadence) ||
             (options->first_cadence != PLAN_CADENCE_HC && options->first_cadence != PLAN_CADENCE_IAC)) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence must be HC or IAC, not '%s'", options->first_cadence_text);
+        }
+    }
+    if (options->accompaniment_text || options->texture_text) {
+        PlanAccompaniment *accompaniment = &options->accompaniment;
+        options->has_accompaniment = true;
+        accompaniment->pattern = PLAN_ACCOMPANIMENT_ANY;
+        accompaniment->texture = -1;
+        if (options->accompaniment_text) {
+            bool found = false;
+            for (int p = 0; p < 5 && !found; p++) {
+                found = cli_equals_ignore_case(options->accompaniment_text, ACCOMPANIMENT_WORDS[p]);
+                accompaniment->pattern = found ? (PlanAccompanimentPattern)p : accompaniment->pattern;
+            }
+            if (!found) {
+                return cli_fail(CLI_EXIT_USAGE, "--accompaniment must be block, arpeggiated, alberti, oom-pah or any, not '%s'",
+                                options->accompaniment_text);
+            }
+        }
+        if (options->texture_text) {
+            bool found = false;
+            for (int t = 0; t < (int)STANDARD_TEXTURE_COUNT && !found; t++) {
+                found = cli_equals_ignore_case(options->texture_text, standard_texture_name((StandardTexture)t));
+                accompaniment->texture = found ? t : accompaniment->texture;
+            }
+            if (!found) {
+                return cli_fail(CLI_EXIT_USAGE, "--texture must be a texture name of standard-texture, for example "
+                                                "\"melody and accompaniment\", not '%s'", options->texture_text);
+            }
+            if (!standard_texture_is_homophonic((StandardTexture)accompaniment->texture)) {
+                return cli_fail(CLI_EXIT_USAGE, "--texture '%s' is not one an accompaniment can have; use homophony, "
+                                                "homorhythm or \"melody and accompaniment\"", options->texture_text);
+            }
+        }
+        if (accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI && options->meter.beat_unit == 8) {
+            return cli_fail(CLI_EXIT_USAGE, "--accompaniment alberti needs a simple meter, not %s", options->meter_text);
         }
     }
     options->suggest = 1;
@@ -381,6 +430,8 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     request.pairing = options->pairing;
     request.cadence = options->cadence;
     request.first_cadence = options->first_cadence;
+    request.has_accompaniment = options->has_accompaniment;
+    request.accompaniment = options->accompaniment;
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
     GrowResult built = grow_build_plan(&request, &theme->plan);
@@ -749,6 +800,12 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
         if (options->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
             printf(",\"first_cadence\":\"%s\"", cli_cadence_name(options->first_cadence));
         }
+        if (options->has_accompaniment) {
+            printf(",\"accompaniment\":\"%s\"", ACCOMPANIMENT_WORDS[options->accompaniment.pattern]);
+            if (options->accompaniment.texture >= 0) {
+                printf(",\"texture\":\"%s\"", standard_texture_name((StandardTexture)options->accompaniment.texture));
+            }
+        }
         printf(",\"themes\":[");
         for (size_t k = 0; k < count; k++) {
             printf("%s", k ? "," : "");
@@ -766,6 +823,12 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
            options->meter.beats_per_bar, options->meter.beat_unit, options->bars, cli_cadence_name(options->cadence));
     if (options->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
         printf(", first cadence %s", cli_cadence_name(options->first_cadence));
+    }
+    if (options->has_accompaniment) {
+        printf(", accompaniment %s", ACCOMPANIMENT_WORDS[options->accompaniment.pattern]);
+        if (options->accompaniment.texture >= 0) {
+            printf(" (%s)", standard_texture_name((StandardTexture)options->accompaniment.texture));
+        }
     }
     printf("\n");
     for (size_t k = 0; k < count; k++) {
