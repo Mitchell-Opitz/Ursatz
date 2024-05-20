@@ -3,6 +3,7 @@
 
 const TOOLS = [
   { id: "analysis", label: "Analysis", active: true, render: renderAnalysisView },
+  { id: "library", label: "Library", active: false, render: renderLibraryView },
   { id: "corpus", label: "Corpus", active: false, render: renderCorpusView },
   { id: "generator", label: "Generator", active: false, comingSoon: true },
 ];
