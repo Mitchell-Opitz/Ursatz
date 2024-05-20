@@ -214,3 +214,64 @@ body {
   font-size: 12px;
   cursor: pointer;
 }
+
+.library-panel {
+  max-width: 900px;
+}
+
+.library-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.library-table th {
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.library-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.library-table tr:hover {
+  background: var(--bg-hover);
+}
+
+.library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.library-table button {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.library-table button:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.library-table td input[type="text"] {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: inherit;
+  margin-right: 6px;
+}

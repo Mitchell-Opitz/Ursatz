@@ -133,6 +133,195 @@ async function handleDeletePiece(id, liEl) {
   }
 }
 
+async function renderLibraryView() {
+  const content = getContentEl();
+  content.innerHTML = `
+    <section class="panel library-panel">
+      <h1>Library</h1>
+      <div id="library-status" class="piece-list-status">Loading pieces...</div>
+      <table id="library-table" class="library-table" hidden>
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="library-table-body"></tbody>
+      </table>
+    </section>
+  `;
+
+  await loadLibraryPieces();
+}
+
+async function loadLibraryPieces() {
+  const statusEl = document.getElementById("library-status");
+  const tableEl = document.getElementById("library-table");
+  const bodyEl = document.getElementById("library-table-body");
+
+  statusEl.textContent = "Loading pieces...";
+  statusEl.classList.remove("error");
+  tableEl.hidden = true;
+  bodyEl.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/analyzer/pieces");
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = `Failed to load pieces: ${data.message || "unknown error"}`;
+      statusEl.classList.add("error");
+      return;
+    }
+
+    if (data.pieces.length === 0) {
+      statusEl.textContent = "No pieces yet.";
+      return;
+    }
+
+    statusEl.textContent = "";
+    tableEl.hidden = false;
+    for (const piece of data.pieces) {
+      bodyEl.appendChild(buildLibraryRow(piece));
+    }
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
+function buildDisabledActionButton(label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.disabled = true;
+  button.title = "Not yet available";
+  return button;
+}
+
+function buildLibraryRow(piece) {
+  const row = document.createElement("tr");
+
+  const filenameCell = document.createElement("td");
+  filenameCell.appendChild(renderLibraryFilenameCell(piece));
+  row.appendChild(filenameCell);
+
+  const actionsCell = document.createElement("td");
+  actionsCell.classList.add("library-actions");
+
+  actionsCell.appendChild(buildDisabledActionButton("Play"));
+
+  const renameButton = document.createElement("button");
+  renameButton.type = "button";
+  renameButton.textContent = "Rename";
+  renameButton.addEventListener("click", () => startLibraryRename(row, piece));
+  actionsCell.appendChild(renameButton);
+
+  actionsCell.appendChild(buildDisabledActionButton("Re-run analysis"));
+  actionsCell.appendChild(buildDisabledActionButton("Import from URL"));
+  actionsCell.appendChild(buildDisabledActionButton("Delete analysis"));
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.textContent = "Delete";
+  deleteButton.addEventListener("click", () => handleDeleteLibraryPiece(piece.id, row));
+  actionsCell.appendChild(deleteButton);
+
+  row.appendChild(actionsCell);
+  return row;
+}
+
+function renderLibraryFilenameCell(piece) {
+  const span = document.createElement("span");
+  span.textContent = piece.filename || piece.id;
+  return span;
+}
+
+function startLibraryRename(row, piece) {
+  const filenameCell = row.querySelector("td");
+  filenameCell.innerHTML = "";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = piece.filename || "";
+  filenameCell.appendChild(input);
+  input.focus();
+
+  const saveButton = document.createElement("button");
+  saveButton.type = "button";
+  saveButton.textContent = "Save";
+  saveButton.addEventListener("click", () => handleLibraryRename(row, piece, input.value.trim()));
+  filenameCell.appendChild(saveButton);
+
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.textContent = "Cancel";
+  cancelButton.addEventListener("click", () => {
+    filenameCell.innerHTML = "";
+    filenameCell.appendChild(renderLibraryFilenameCell(piece));
+  });
+  filenameCell.appendChild(cancelButton);
+}
+
+async function handleLibraryRename(row, piece, newFilename) {
+  const statusEl = document.getElementById("library-status");
+
+  if (!newFilename) {
+    statusEl.textContent = "Enter a filename.";
+    statusEl.classList.add("error");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/analyzer/pieces/${piece.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: newFilename }),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Rename failed.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    statusEl.textContent = "";
+    statusEl.classList.remove("error");
+    piece.filename = data.filename;
+    const filenameCell = row.querySelector("td");
+    filenameCell.innerHTML = "";
+    filenameCell.appendChild(renderLibraryFilenameCell(piece));
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
+async function handleDeleteLibraryPiece(id, rowEl) {
+  if (!window.confirm("Delete this piece? This removes the file and all of its analyses.")) {
+    return;
+  }
+
+  const statusEl = document.getElementById("library-status");
+
+  try {
+    const res = await fetch(`/api/analyzer/pieces/${id}`, { method: "DELETE" });
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Delete failed.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    rowEl.remove();
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
 async function handleUpload() {
   const fileInput = document.getElementById("upload-file");
   const uploadButton = document.getElementById("upload-button");
