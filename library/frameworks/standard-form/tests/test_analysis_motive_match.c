@@ -239,6 +239,53 @@ static void test_precedence_picks_the_strongest_kind(void) {
     assert(strcmp(standard_form_motive_kind_name(STANDARD_FORM_MOTIVE_TONAL), "tonal-transposed") == 0);
 }
 
+
+static void test_a_fragment_is_a_prefix_or_a_suffix_of_enough_of_the_motive(void) {
+    Notes n;
+    notes_init(&n);
+    const double s0[5] = {0, 1, 2, 3, 4};
+    const int whole[5] = {60, 62, 64, 65, 67}; /* +2 +2 +1 +2 */
+    const double s3[3] = {10, 11, 12};
+    const int prefix3[3] = {60, 62, 64};
+    const double s4[3] = {20, 21, 22};
+    const int suffix3[3] = {64, 65, 67};
+    const double s5[2] = {30, 31};
+    const int two[2] = {60, 62};
+    const double s6[3] = {40, 41, 42};
+    const int other[3] = {60, 64, 65};
+    const double s7[3] = {50, 51, 53}; /* the prefix's intervals, but the second gap is 2 */
+    const double s8[4] = {60, 61, 62, 63};
+    const int prefix4[4] = {60, 62, 64, 65};
+    figure(&n, s0, whole, 5);
+    figure(&n, s3, prefix3, 3);
+    figure(&n, s4, suffix3, 3);
+    figure(&n, s5, two, 2);
+    figure(&n, s6, other, 3);
+    figure(&n, s7, prefix3, 3);
+    figure(&n, s8, prefix4, 4);
+    notes_done(&n);
+    StandardFormMotiveShape proto = shape_of(&n, 0, 5);
+    StandardFormMotiveMatch match;
+    StandardFormMotiveShape cand = shape_of(&n, 5, 3);
+    assert(standard_form_motive_match_fragment(&proto, &cand, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_FRAGMENTED &&
+           match.fragment_part == 0 && match.fragment_intervals == 2 && match.score == 1.0);
+    cand = shape_of(&n, 8, 3);
+    assert(standard_form_motive_match_fragment(&proto, &cand, &match) && match.fragment_part == 1 && match.fragment_intervals == 2);
+    cand = shape_of(&n, 11, 2); /* one interval: less than the least a fragment may be */
+    assert(!standard_form_motive_match_fragment(&proto, &cand, &match));
+    cand = shape_of(&n, 13, 3);
+    assert(!standard_form_motive_match_fragment(&proto, &cand, &match));
+    cand = shape_of(&n, 16, 3); /* the rhythm differs */
+    assert(!standard_form_motive_match_fragment(&proto, &cand, &match));
+    cand = shape_of(&n, 19, 4); /* three intervals: a longer prefix */
+    assert(standard_form_motive_match_fragment(&proto, &cand, &match) && match.fragment_part == 0 && match.fragment_intervals == 3);
+    assert(!standard_form_motive_match_fragment(&proto, &proto, &match)); /* the whole is no fragment */
+    assert(standard_form_motive_fragment_min_intervals(1) == 2 && standard_form_motive_fragment_min_intervals(2) == 2 &&
+           standard_form_motive_fragment_min_intervals(4) == 2 && standard_form_motive_fragment_min_intervals(5) == 3 &&
+           standard_form_motive_fragment_min_intervals(7) == 4);
+    notes_destroy(&n);
+}
+
 static void test_shapes_of_different_dimensions_or_lengths_do_not_compare(void) {
     Notes n;
     notes_init(&n);
@@ -267,6 +314,7 @@ int main(void) {
     test_augmentation_doubles_and_diminution_halves_the_onset_gaps();
     test_a_varied_motive_changes_an_interval_or_the_rhythm();
     test_precedence_picks_the_strongest_kind();
+    test_a_fragment_is_a_prefix_or_a_suffix_of_enough_of_the_motive();
     test_shapes_of_different_dimensions_or_lengths_do_not_compare();
     printf("test_standard_form_analysis_motive_match: ok\n");
     return 0;

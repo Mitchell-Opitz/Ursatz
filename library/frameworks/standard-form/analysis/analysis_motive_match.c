@@ -12,6 +12,8 @@ static void full(StandardFormMotiveMatch *out, StandardFormMotiveKind kind, size
     out->intervals = intervals;
     out->rhythm_factor = 1.0;
     out->score = 1.0;
+    out->fragment_part = -1;
+    out->fragment_intervals = 0;
 }
 
 static bool same_rhythm(const StandardFormMotiveShape *a, const StandardFormMotiveShape *b) {
@@ -114,7 +116,41 @@ bool standard_form_motive_match_varied(const StandardFormMotiveShape *prototype,
     out->intervals = prototype->intervals;
     out->rhythm_factor = rhythm ? 1.0 : 0.8;
     out->score = (1.0 - (double)mismatches / (double)prototype->intervals) * out->rhythm_factor;
+    out->fragment_part = -1;
+    out->fragment_intervals = 0;
     return true;
+}
+
+size_t standard_form_motive_fragment_min_intervals(size_t intervals) {
+    size_t half = (intervals + 1) / 2;
+    return half > 2 ? half : 2;
+}
+
+bool standard_form_motive_match_fragment(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                         StandardFormMotiveMatch *out) {
+    if (out == NULL || prototype == NULL || candidate == NULL || prototype->generic != candidate->generic) {
+        return false;
+    }
+    size_t whole = prototype->intervals;
+    size_t length = candidate->intervals;
+    if (length >= whole || length < standard_form_motive_fragment_min_intervals(whole)) {
+        return false;
+    }
+    for (int part = 0; part < 2; part++) {
+        size_t offset = part == 0 ? 0 : whole - length;
+        bool same = true;
+        for (size_t i = 0; same && i < length; i++) {
+            same = candidate->steps[i] == prototype->steps[offset + i] &&
+                   standard_form_q_compare(candidate->ioi[i], prototype->ioi[offset + i]) == 0;
+        }
+        if (same) {
+            full(out, STANDARD_FORM_MOTIVE_FRAGMENTED, length);
+            out->fragment_part = part;
+            out->fragment_intervals = length;
+            return true;
+        }
+    }
+    return false;
 }
 
 bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,

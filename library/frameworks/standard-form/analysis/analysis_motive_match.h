@@ -26,6 +26,9 @@
  * kind but a varied one. Retrograde inversion is not defined by standard-form's motive rules and is not matched. Displacement and
  * embellishment are not detected.
  *
+ * FRAGMENTS (step 3): a window shorter than the motive that equals its first or last intervals and onset gaps, at least 2 intervals and at
+ * least half the motive's, is a FRAGMENTED occurrence (prefix or suffix).
+ *
  * PRECEDENCE when several kinds apply to one window: exact > transposed (real, tonal) > inverted and retrograde > augmented and
  * diminished > fragmented > varied (standard_form_motive_kind_rank); within a rank the order of the list above.
  */
@@ -36,6 +39,8 @@ typedef struct {
     size_t intervals;
     double rhythm_factor;
     double score;
+    int fragment_part;          /* a fragment: 0 prefix, 1 suffix; else -1 */
+    size_t fragment_intervals;  /* a fragment: its intervals */
 } StandardFormMotiveMatch;
 
 bool standard_form_motive_match_pattern(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
@@ -54,6 +59,15 @@ bool standard_form_motive_match_diminution(const StandardFormMotiveShape *protot
                                            StandardFormMotiveMatch *out);
 bool standard_form_motive_match_varied(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
                                        size_t max_mismatch, StandardFormMotiveMatch *out);
+
+/* The fewest intervals of a fragment of a motive of `intervals` intervals: at least 2, and at least half the motive. */
+size_t standard_form_motive_fragment_min_intervals(size_t intervals);
+/* The candidate (a shorter window, of the same dimension) is a contiguous PREFIX or SUFFIX of the prototype: its intervals and onset gaps
+   equal the prototype's first or last ones, in order, and it has at least standard_form_motive_fragment_min_intervals of them and fewer
+   than the prototype. The prefix is tried first. Kind FRAGMENTED, with the part and its length; score 1. A fragment is of the pattern
+   itself (no transformation of it is matched). */
+bool standard_form_motive_match_fragment(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                         StandardFormMotiveMatch *out);
 
 /* The kind that applies to the candidate by the precedence rule, with its match. False when none applies. */
 bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,

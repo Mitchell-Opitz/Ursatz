@@ -8,6 +8,7 @@
 #include "analysis_motive_match.h"
 #include "analysis_motive_shape.h"
 #include "analysis_time.h"
+#include "semantics/phrase_ending.h"
 #include "core/occurrence.h"
 #include "core/value.h"
 #include "pitch/pitch_identity.h"
@@ -346,6 +347,9 @@ static int compare_recs_by_quality(const void *a, const void *b) {
     if (rank_left != rank_right) {
         return rank_left - rank_right;
     }
+    if (left->occ.in_continuation != right->occ.in_continuation) {
+        return left->occ.in_continuation ? -1 : 1; /* a fragment in a continuation is searched first */
+    }
     if (left->occ.n != right->occ.n) {
         return left->occ.n > right->occ.n ? -1 : 1;
     }
@@ -370,9 +374,10 @@ static bool overlaps(const Fam *fam, size_t first, size_t n) {
     return false;
 }
 
-static bool is_exact_window(const Fam *families, size_t family_count, int line, size_t first, size_t n) {
+/* True when another family whose pattern is as long as this one's or longer already holds the window as one of its occurrences. */
+static bool held_by_equal_or_longer(const Fam *families, size_t family_count, size_t self, size_t first, size_t n) {
     for (size_t f = 0; f < family_count; f++) {
-        if (families[f].line != line) {
+        if (f == self || families[f].line != families[self].line || families[f].proto_n < families[self].proto_n) {
             continue;
         }
         for (size_t k = 0; k < families[f].occ_count; k++) {
@@ -384,48 +389,144 @@ static bool is_exact_window(const Fam *families, size_t family_count, int line, 
     return false;
 }
 
-/* Adds to each family the windows that are its prototype under a transformation. A window that is already an exact, real or tonal
-   occurrence of a family stays with it; each other window goes to the one family it matches best; within a family, occurrences do not
-   overlap, the better kind first. */
-static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fam *families, size_t family_count,
-                                         const StandardFormConfig *config) {
+typedef struct {
+    int first;
+    int last;
+} MeasureSpan;
+
+/* The measures of the continuations of the themes: the second part of a theme whose ending is a continuation. */
+static MeasureSpan *continuation_spans(const StandardFormThemes *themes, size_t *count) {
+    *count = 0;
+    if (themes == NULL || themes->count == 0 || themes->items == NULL) {
+        return NULL;
+    }
+    MeasureSpan *spans = (MeasureSpan *)calloc(themes->count, sizeof(MeasureSpan));
+    if (spans == NULL) {
+        return NULL;
+    }
+    for (size_t t = 0; t < themes->count; t++) {
+        const StandardFormThemeClaim *claim = &themes->items[t].claim;
+        if (claim->ending == (int)PHRASE_ENDING_CONTINUATION && claim->second_part_last_measure >= claim->second_part_first_measure) {
+            spans[*count].first = claim->second_part_first_measure;
+            spans[*count].last = claim->second_part_last_measure;
+            (*count)++;
+        }
+    }
+    return spans;
+}
+
+static bool window_in_spans(const StandardFormMotiveLine *line, size_t first, size_t n, const MeasureSpan *spans, size_t span_count) {
+    for (size_t k = 0; k < span_count; k++) {
+        if (line->first_measure[first] >= spans[k].first && line->first_measure[first + n - 1] <= spans[k].last) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool push_rec(Rec **recs, size_t *count, size_t *capacity, const Rec *rec) {
+    if (*count == *capacity) {
+        size_t grown_capacity = *capacity == 0 ? 64 : *capacity * 2;
+        Rec *grown = (Rec *)realloc(*recs, grown_capacity * sizeof(Rec));
+        if (grown == NULL) {
+            return false;
+        }
+        *recs = grown;
+        *capacity = grown_capacity;
+    }
+    (*recs)[(*count)++] = *rec;
+    return true;
+}
+
+static void fill_rec(Rec *rec, size_t fam, int line, size_t first, size_t n, const StandardFormMotiveMatch *match) {
+    memset(rec, 0, sizeof(*rec));
+    rec->fam = fam;
+    rec->line = line;
+    rec->occ.first = first;
+    rec->occ.n = n;
+    rec->occ.kind = match->kind;
+    rec->occ.score = match->score;
+    rec->occ.mismatches = match->mismatches;
+    rec->occ.intervals = match->intervals;
+    rec->occ.rhythm_factor = match->rhythm_factor;
+    rec->occ.fragment_part = match->fragment_part;
+    rec->occ.fragment_intervals = match->fragment_intervals;
+}
+
+static size_t exact_count(const Fam *fam) {
+    size_t count = 0;
+    for (size_t k = 0; k < fam->occ_count; k++) {
+        count += fam->occ[k].kind <= (int)STANDARD_FORM_MOTIVE_TONAL ? 1 : 0;
+    }
+    return count;
+}
+
+static int compare_fam_length_desc(const void *a, const void *b) {
+    const Fam *const *left = (const Fam *const *)a;
+    const Fam *const *right = (const Fam *const *)b;
+    if ((*left)->proto_n != (*right)->proto_n) {
+        return (*left)->proto_n < (*right)->proto_n ? 1 : -1;
+    }
+    return ((*left)->proto_first > (*right)->proto_first) - ((*left)->proto_first < (*right)->proto_first);
+}
+
+/* Adds to each family the windows that are its prototype under a transformation or a fragment of it, and then drops the families the
+   longer ones explain. A window that is an occurrence of another family with a pattern as long or longer stays there; each other
+   window goes to the one family it matches best (and leaves a shorter family it was an occurrence of); within a family, occurrences do
+   not overlap, the better kind first and, among fragments, those inside a continuation first. A family is then dropped when it has
+   fewer than two exact, real or tonal occurrences left, or when every one of its occurrences lies inside an occurrence of a kept
+   family with a longer pattern. */
+static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fam *families, size_t *family_count_io,
+                                         const StandardFormConfig *config, const StandardFormThemes *themes) {
+    size_t family_count = *family_count_io;
+    size_t span_count = 0;
+    MeasureSpan *spans = continuation_spans(themes, &span_count);
     size_t capacity = 0;
     Rec *recs = NULL;
     size_t rec_count = 0;
-    for (size_t f = 0; f < family_count; f++) {
+    StandardFormAnalysisStatus status = STANDARD_FORM_ANALYSIS_OK;
+    for (size_t f = 0; f < family_count && status == STANDARD_FORM_ANALYSIS_OK; f++) {
         const Fam *fam = &families[f];
         const StandardFormMotiveLine *line = &lines[fam->line];
-        for (size_t first = 0; first < line->count; first++) {
-            StandardFormMotiveShape shape;
-            StandardFormMotiveMatch match;
-            if (!line->can_start[first] || !standard_form_motive_shape(line, first, fam->proto_n, fam->generic, &shape) ||
-                is_exact_window(families, family_count, fam->line, first, fam->proto_n) ||
-                !standard_form_motive_classify(&fam->proto, &shape, config->varied_max_mismatch, &match) ||
-                match.kind <= (int)STANDARD_FORM_MOTIVE_TONAL) {
+        size_t whole = fam->proto.intervals;
+        size_t shortest = standard_form_motive_fragment_min_intervals(whole);
+        for (size_t first = 0; first < line->count && status == STANDARD_FORM_ANALYSIS_OK; first++) {
+            if (!line->can_start[first]) {
                 continue;
             }
-            if (rec_count == capacity) {
-                capacity = capacity == 0 ? 64 : capacity * 2;
-                Rec *grown = (Rec *)realloc(recs, capacity * sizeof(Rec));
-                if (grown == NULL) {
-                    free(recs);
-                    return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+            StandardFormMotiveShape shape;
+            StandardFormMotiveMatch match;
+            Rec rec;
+            /* the whole motive under a transformation */
+            if (standard_form_motive_shape(line, first, fam->proto_n, fam->generic, &shape) &&
+                !held_by_equal_or_longer(families, family_count, f, first, fam->proto_n) &&
+                standard_form_motive_classify(&fam->proto, &shape, config->varied_max_mismatch, &match) &&
+                match.kind > (int)STANDARD_FORM_MOTIVE_TONAL) {
+                fill_rec(&rec, f, fam->line, first, fam->proto_n, &match);
+                if (!push_rec(&recs, &rec_count, &capacity, &rec)) {
+                    status = STANDARD_FORM_ANALYSIS_ERR_ALLOC;
                 }
-                recs = grown;
             }
-            Rec *rec = &recs[rec_count++];
-            memset(rec, 0, sizeof(*rec));
-            rec->fam = f;
-            rec->line = fam->line;
-            rec->occ.first = first;
-            rec->occ.n = fam->proto_n;
-            rec->occ.kind = match.kind;
-            rec->occ.score = match.score;
-            rec->occ.mismatches = match.mismatches;
-            rec->occ.intervals = match.intervals;
-            rec->occ.rhythm_factor = match.rhythm_factor;
-            rec->occ.fragment_part = -1;
+            /* a prefix or a suffix of it */
+            for (size_t length = shortest; status == STANDARD_FORM_ANALYSIS_OK && length < whole; length++) {
+                size_t n = length + 1;
+                if (!standard_form_motive_shape(line, first, n, fam->generic, &shape) ||
+                    held_by_equal_or_longer(families, family_count, f, first, n) ||
+                    !standard_form_motive_match_fragment(&fam->proto, &shape, &match)) {
+                    continue;
+                }
+                fill_rec(&rec, f, fam->line, first, n, &match);
+                rec.occ.in_continuation = window_in_spans(line, first, n, spans, span_count);
+                if (!push_rec(&recs, &rec_count, &capacity, &rec)) {
+                    status = STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+                }
+            }
         }
+    }
+    free(spans);
+    if (status != STANDARD_FORM_ANALYSIS_OK) {
+        free(recs);
+        return status;
     }
     if (rec_count > 0) {
         /* a window goes to one family: the best claim on it */
@@ -442,9 +543,27 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
         qsort(recs, rec_count, sizeof(Rec), compare_recs_by_quality);
         for (size_t i = 0; i < rec_count; i++) {
             Fam *fam = &families[recs[i].fam];
-            if (!overlaps(fam, recs[i].occ.first, recs[i].occ.n) && !push_occ(fam, &recs[i].occ)) {
+            if (overlaps(fam, recs[i].occ.first, recs[i].occ.n)) {
+                continue;
+            }
+            if (!push_occ(fam, &recs[i].occ)) {
                 free(recs);
                 return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+            }
+            /* the window leaves a shorter family it was an occurrence of (never that family's prototype) */
+            for (size_t g = 0; g < family_count; g++) {
+                Fam *shorter = &families[g];
+                if (g == recs[i].fam || shorter->line != fam->line || shorter->proto_n >= fam->proto_n) {
+                    continue;
+                }
+                for (size_t k = 1; k < shorter->occ_count; k++) {
+                    if (shorter->occ[k].first == recs[i].occ.first && shorter->occ[k].n == recs[i].occ.n &&
+                        shorter->occ[k].kind <= (int)STANDARD_FORM_MOTIVE_TONAL) {
+                        memmove(&shorter->occ[k], &shorter->occ[k + 1], (shorter->occ_count - k - 1) * sizeof(Occ));
+                        shorter->occ_count--;
+                        break;
+                    }
+                }
             }
         }
         for (size_t f = 0; f < family_count; f++) {
@@ -454,6 +573,52 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
         }
     }
     free(recs);
+
+    /* the families the longer ones explain */
+    const Fam **order = (const Fam **)calloc(family_count > 0 ? family_count : 1, sizeof(Fam *));
+    bool *dropped = (bool *)calloc(family_count > 0 ? family_count : 1, sizeof(bool));
+    if (order == NULL || dropped == NULL) {
+        free(order);
+        free(dropped);
+        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    for (size_t f = 0; f < family_count; f++) {
+        order[f] = &families[f];
+    }
+    qsort(order, family_count, sizeof(Fam *), compare_fam_length_desc);
+    for (size_t i = 0; i < family_count; i++) {
+        const Fam *fam = order[i];
+        size_t self = (size_t)(fam - families);
+        bool all_covered = fam->occ_count > 0;
+        for (size_t k = 0; all_covered && k < fam->occ_count; k++) {
+            bool covered_here = false;
+            for (size_t h = 0; !covered_here && h < family_count; h++) {
+                if (h == self || dropped[h] || families[h].line != fam->line || families[h].proto_n <= fam->proto_n) {
+                    continue;
+                }
+                for (size_t m = 0; !covered_here && m < families[h].occ_count; m++) {
+                    covered_here = families[h].occ[m].first <= fam->occ[k].first &&
+                                   fam->occ[k].first + fam->occ[k].n <= families[h].occ[m].first + families[h].occ[m].n;
+                }
+            }
+            all_covered = covered_here;
+        }
+        dropped[self] = exact_count(fam) < 2 || all_covered;
+    }
+    size_t kept_families = 0;
+    for (size_t f = 0; f < family_count; f++) {
+        if (dropped[f]) {
+            free(families[f].occ);
+            continue;
+        }
+        if (kept_families != f) {
+            families[kept_families] = families[f];
+        }
+        kept_families++;
+    }
+    *family_count_io = kept_families;
+    free(order);
+    free(dropped);
     return STANDARD_FORM_ANALYSIS_OK;
 }
 
@@ -808,7 +973,6 @@ StandardFormAnalysisStatus standard_form_find_motives(const StandardFormInput *i
                                                       const StandardFormThemes *themes, const StandardFormConfig *config,
                                                       StandardFormWindowMatcher matcher, void *matcher_context,
                                                       StandardFormMotives *out) {
-    (void)themes;
     if (input == NULL || out == NULL || input->map == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
@@ -851,14 +1015,14 @@ StandardFormAnalysisStatus standard_form_find_motives(const StandardFormInput *i
     for (size_t l = 0; l < line_total && status == STANDARD_FORM_ANALYSIS_OK; l++) {
         status = discover(&lines[l], effective, &families, &family_count, &family_capacity);
     }
+    if (status == STANDARD_FORM_ANALYSIS_OK) {
+        status = expand(lines, families, &family_count, effective, themes);
+    }
     if (status == STANDARD_FORM_ANALYSIS_OK && family_count > 1) {
         qsort(families, family_count, sizeof(Fam), compare_families);
     }
     if (status == STANDARD_FORM_ANALYSIS_OK) {
         status = check_with_kernel(lines, families, family_count, matcher, matcher_context);
-    }
-    if (status == STANDARD_FORM_ANALYSIS_OK) {
-        status = expand(lines, families, family_count, effective);
     }
     if (status == STANDARD_FORM_ANALYSIS_OK && family_count > 0) {
         found.families = (StandardFormMotiveFamily *)calloc(family_count, sizeof(StandardFormMotiveFamily));
