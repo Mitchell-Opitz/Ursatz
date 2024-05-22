@@ -282,12 +282,63 @@ static bool http_request(const char *method, const char *path, char *response, s
   return total > 0;
 }
 
+/* Same shape as http_request, but writes a request body with a
+ * Content-Length header -- used for PATCH, whose route reads the body
+ * via mg_read the same way the POST upload route does. */
+static bool http_request_with_body(const char *method, const char *path, const char *body, char *response,
+                                    size_t response_capacity) {
+  socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) {
+    return false;
+  }
+
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(18766);
+  inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+    CLOSESOCK(sock);
+    return false;
+  }
+
+  size_t body_len = strlen(body);
+  char request[1024];
+  int header_len = snprintf(request, sizeof(request),
+                             "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n"
+                             "Content-Length: %zu\r\nConnection: close\r\n\r\n",
+                             method, path, body_len);
+  send(sock, request, header_len, 0);
+  send(sock, body, (int)body_len, 0);
+
+  memset(response, 0, response_capacity);
+  size_t total = 0;
+  for (;;) {
+    int n = recv(sock, response + total, (int)(response_capacity - 1 - total), 0);
+    if (n <= 0) {
+      break;
+    }
+    total += (size_t)n;
+    if (total >= response_capacity - 1) {
+      break;
+    }
+  }
+
+  CLOSESOCK(sock);
+  return total > 0;
+}
+
 static bool http_get(const char *path, char *response, size_t response_capacity) {
   return http_request("GET", path, response, response_capacity);
 }
 
 static bool http_delete(const char *path, char *response, size_t response_capacity) {
   return http_request("DELETE", path, response, response_capacity);
+}
+
+static bool http_patch(const char *path, const char *body, char *response, size_t response_capacity) {
+  return http_request_with_body("PATCH", path, body, response, response_capacity);
 }
 
 int main(void) {
@@ -388,6 +439,50 @@ int main(void) {
   char followup[256];
   check(http_get("/api/analyzer/pieces", followup, sizeof(followup)) && strstr(followup, "200") != NULL,
         "server is still alive and answering requests after the large piece detail response");
+
+  /* PATCH /api/analyzer/pieces/<id>. Renames the piece's persisted
+   * original_filename, and only that -- it must not disturb the
+   * NoteEvents/Interpretations already checked above. Plain filename
+   * here (no quotes/backslashes): the route's extract_json_string_field
+   * is a minimal flat-object parser with no escape support, same
+   * documented limitation as corpus.c's -- escaping is already covered
+   * separately, by the seeded-filename checks above. */
+  char rename_response[4096];
+  bool got_rename_response = http_patch(path, "{\"filename\":\"renamed-song.mid\"}", rename_response,
+                                         sizeof(rename_response));
+  check(got_rename_response, "got a response to PATCH");
+  if (got_rename_response) {
+    check(strstr(rename_response, "200") != NULL, "rename response is 200 OK");
+    check(strstr(rename_response, "\"ok\":true") != NULL, "rename response reports ok:true");
+    check(strstr(rename_response, "\"filename\":\"renamed-song.mid\"") != NULL,
+          "rename response includes the new filename");
+  }
+
+  char get_after_rename[65536];
+  bool got_get_after_rename = http_get(path, get_after_rename, sizeof(get_after_rename));
+  check(got_get_after_rename, "got a response to GET after rename");
+  if (got_get_after_rename) {
+    check(strstr(get_after_rename, "\"filename\":\"renamed-song.mid\"") != NULL,
+          "renamed piece's new filename is visible via GET");
+    check(strstr(get_after_rename, "\"provenance_state\":\"present\"") != NULL,
+          "renamed piece's interpretations are untouched by the rename");
+  }
+
+  char rename_missing_response[4096];
+  bool got_rename_missing_response = http_patch("/api/analyzer/pieces/no-such-piece", "{\"filename\":\"x.mid\"}",
+                                                 rename_missing_response, sizeof(rename_missing_response));
+  check(got_rename_missing_response, "got a response to PATCH of a nonexistent piece");
+  if (got_rename_missing_response) {
+    check(strstr(rename_missing_response, "404") != NULL, "renaming a nonexistent piece returns 404");
+  }
+
+  char rename_empty_response[4096];
+  bool got_rename_empty_response =
+      http_patch(path, "{\"filename\":\"\"}", rename_empty_response, sizeof(rename_empty_response));
+  check(got_rename_empty_response, "got a response to PATCH with an empty filename");
+  if (got_rename_empty_response) {
+    check(strstr(rename_empty_response, "\"ok\":false") != NULL, "an empty filename in the PATCH body is rejected");
+  }
 
   /* DELETE /api/analyzer/pieces/<id>. Every piece is one SQLite file
    * (see analysis_service.c's db_path), holding NoteEvents, the
