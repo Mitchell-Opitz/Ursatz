@@ -59,6 +59,12 @@ The backend exposes:
   present. `author`/`method` are the only importer/analyzer identity
   Ursatz's Interpretation actually persists today. Unknown id returns
   `{"ok":false,...}`, same convention as the other Analyzer routes.
+- `PATCH /api/analyzer/pieces/<id>`: body `{"filename":"<name>"}`. Updates
+  the piece's persisted original filename (the same field `GET` returns
+  and the Library view displays) -- does not touch NoteEvents,
+  Interpretations, or re-run any analysis. Returns
+  `{"ok":true,"id":...,"filename":...}`, or `{"ok":false,...}` for an
+  unknown id (404) or an empty filename.
 
 Ursatz's persistence layer has no "piece" concept (one `note_events`
 table, one `interpretations` table, no grouping/filename metadata): the
