@@ -163,3 +163,10 @@ target_compile_definitions(test_grow_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FIL
                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_grow_cli ursatz-composer)
 add_test(NAME test_grow_cli COMMAND test_grow_cli)
+
+add_executable(test_accompaniment test_accompaniment.c)
+target_link_libraries(test_accompaniment PRIVATE ursatz_composer)
+target_include_directories(test_accompaniment PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_accompaniment PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_accompaniment PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_test(NAME test_accompaniment COMMAND test_accompaniment)
