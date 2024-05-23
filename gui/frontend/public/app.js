@@ -137,8 +137,37 @@ async function handleDeletePiece(id, liEl) {
 async function renderLibraryView() {
   const content = getContentEl();
   content.innerHTML = `
+    <h1 class="view-title">Library</h1>
+    <div class="upload-box">
+      <div class="upload-box-text">
+        <div class="upload-box-heading">Drop a MIDI or MusicXML file to analyze</div>
+        <div class="upload-box-subheading">.mid · .midi · .musicxml</div>
+      </div>
+      <div class="upload-box-controls">
+        <input type="file" id="library-upload-file" accept=".mid,.midi,.musicxml" />
+        <button id="library-upload-button" type="button">Upload MIDI</button>
+        <button type="button" disabled title="Not yet available">Import from URL</button>
+      </div>
+    </div>
+    <div id="library-upload-status" class="upload-status"></div>
+    <div class="filter-row">
+      <label class="filter-field">
+        Filter
+        <select disabled>
+          <option>All composers</option>
+        </select>
+      </label>
+      <select disabled>
+        <option>All statuses</option>
+      </select>
+      <label class="filter-field">
+        Sort
+        <select disabled>
+          <option>Date added</option>
+        </select>
+      </label>
+    </div>
     <section class="panel library-panel">
-      <h1>Library</h1>
       <div id="library-status" class="piece-list-status">Loading pieces...</div>
       <table id="library-table" class="library-table" hidden>
         <thead>
@@ -152,7 +181,52 @@ async function renderLibraryView() {
     </section>
   `;
 
+  document.getElementById("library-upload-button").addEventListener("click", handleLibraryUpload);
+
   await loadLibraryPieces();
+}
+
+async function handleLibraryUpload() {
+  const fileInput = document.getElementById("library-upload-file");
+  const uploadButton = document.getElementById("library-upload-button");
+  const statusEl = document.getElementById("library-upload-status");
+
+  const file = fileInput.files[0];
+  if (!file) {
+    statusEl.textContent = "Select a file first.";
+    statusEl.classList.add("error");
+    return;
+  }
+
+  statusEl.textContent = "";
+  statusEl.classList.remove("error");
+  uploadButton.disabled = true;
+  statusEl.textContent = "Uploading and analyzing...";
+
+  try {
+    const bytes = await file.arrayBuffer();
+    const res = await fetch("/api/analyzer/pieces", {
+      method: "POST",
+      headers: { "X-Filename": encodeURIComponent(file.name) },
+      body: bytes,
+    });
+    const data = await res.json();
+
+    uploadButton.disabled = false;
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Upload failed.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    statusEl.textContent = `Uploaded ${formatPieceLabel(data.id, data.filename)}.`;
+    fileInput.value = "";
+    await loadLibraryPieces();
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+    uploadButton.disabled = false;
+  }
 }
 
 async function loadLibraryPieces() {
