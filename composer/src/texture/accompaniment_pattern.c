@@ -65,54 +65,67 @@ long accomp_voicing_distance(const int *a, size_t a_size, const int *b, size_t b
     return distance;
 }
 
+/* Adds the voicing p of `size` notes to out when every note is a chord tone and, of two or more, one is the third. */
+static size_t consider(const int p[3], size_t size, const int pcs[3], const int *previous, size_t previous_size,
+                       int center, Voicing *out, size_t count) {
+    unsigned used = 0;
+    for (size_t k = 0; k < size; k++) {
+        bool tone = false;
+        for (int c = 0; c < 3; c++) {
+            if (p[k] % 12 == pcs[c]) {
+                tone = true;
+                used |= 1u << c;
+            }
+        }
+        if (!tone) {
+            return count;
+        }
+    }
+    if ((size >= 2 && !(used & 2u)) || count >= VOICING_MAX) {
+        return count;
+    }
+    Voicing *voicing = &out[count];
+    memset(voicing->pitch, 0, sizeof(voicing->pitch));
+    memcpy(voicing->pitch, p, size * sizeof(int));
+    voicing->size = size;
+    int missing = 3 - (int)((used & 1u) + ((used >> 1) & 1u) + ((used >> 2) & 1u));
+    voicing->cost = (long)missing * MISSING_PENALTY;
+    if (previous) {
+        voicing->cost += accomp_voicing_distance(voicing->pitch, size, previous, previous_size);
+    } else {
+        long sum = 0;
+        for (size_t k = 0; k < size; k++) {
+            sum += p[k];
+        }
+        voicing->cost += labs(sum - (long)size * center) + (p[size - 1] - p[0]);
+    }
+    return count + 1;
+}
+
 /*
- * Every voicing of `size` chord tones in the window, low to high, with its cost. The third is always in it (it gives
- * the chord its quality); the root may be left out, since the bass sounds it, and a tone may be doubled, but each tone
- * left out of the root, third and fifth (the seventh in place of the fifth) costs MISSING_PENALTY, so a voicing of
- * all three is chosen unless the window leaves no room for one. Returns how many.
+ * Every voicing of `size` chord tones in the window, low to high, with its cost. Of two or more, the third is always
+ * in it (it gives the chord its quality); the root may be left out, since the bass sounds it, and a tone may be
+ * doubled, but each tone left out of the root, third and fifth (the seventh in place of the fifth) costs
+ * MISSING_PENALTY, so a voicing of all three is chosen unless the window leaves no room for one. Returns how many.
  */
 static size_t voicings(const int pcs[3], size_t size, int low, int high, int gap, const int *previous,
                        size_t previous_size, int center, Voicing *out) {
     size_t count = 0;
     for (int p1 = low; p1 <= high; p1++) {
+        if (size == 1) {
+            int p[3] = {p1, 0, 0};
+            count = consider(p, size, pcs, previous, previous_size, center, out, count);
+            continue;
+        }
         for (int p2 = p1 + gap; p2 <= high; p2++) {
-            for (int p3 = size == 3 ? p2 + gap : p2; p3 <= high && p3 - p1 <= VOICING_SPAN; p3++) {
+            if (size == 2) {
+                int p[3] = {p1, p2, 0};
+                count = consider(p, size, pcs, previous, previous_size, center, out, count);
+                continue;
+            }
+            for (int p3 = p2 + gap; p3 <= high && p3 - p1 <= VOICING_SPAN; p3++) {
                 int p[3] = {p1, p2, p3};
-                unsigned used = 0;
-                bool tones = true;
-                for (size_t k = 0; k < size; k++) {
-                    bool tone = false;
-                    for (int c = 0; c < 3; c++) {
-                        if (p[k] % 12 == pcs[c]) {
-                            tone = true;
-                            used |= 1u << c;
-                        }
-                    }
-                    tones = tones && tone;
-                }
-                if (!tones || !(used & 2u) || count >= VOICING_MAX) {
-                    if (size == 2) {
-                        break;
-                    }
-                    continue;
-                }
-                Voicing *voicing = &out[count++];
-                memcpy(voicing->pitch, p, sizeof(p));
-                voicing->size = size;
-                int missing = 3 - (int)((used & 1u) + ((used >> 1) & 1u) + ((used >> 2) & 1u));
-                voicing->cost = (long)missing * MISSING_PENALTY;
-                if (previous) {
-                    voicing->cost += accomp_voicing_distance(voicing->pitch, size, previous, previous_size);
-                } else {
-                    long sum = 0;
-                    for (size_t k = 0; k < size; k++) {
-                        sum += p[k];
-                    }
-                    voicing->cost += labs(sum - (long)size * center) + (p[size - 1] - p1);
-                }
-                if (size == 2) {
-                    break;
-                }
+                count = consider(p, size, pcs, previous, previous_size, center, out, count);
             }
         }
     }
@@ -120,9 +133,10 @@ static size_t voicings(const int pcs[3], size_t size, int low, int high, int gap
 }
 
 /*
- * The voicing of a chord in the window: three notes, or two when the window has no room for three, the one nearest the
- * previous voicing (or, for the first, the middle of the window), a tie settled by rng. slack lets a voicing that much
- * worse than the best be drawn instead.
+ * The voicing of a chord in the window: three notes, or two or one when the window, which the bass and the melody
+ * close in, has no room for more, or none (*out_size 0) when it has no chord tone at all: the accompaniment is silent
+ * for the beat. The voicing is the one nearest the previous voicing (or, for the first, the middle of the window), a
+ * tie settled by rng. slack lets a voicing that much worse than the best be drawn instead.
  */
 static bool choose_voicing(const int pcs[3], int low, int high, const int *previous, size_t previous_size, long slack,
                            FillRng *rng, int out[3], size_t *out_size) {
@@ -132,17 +146,18 @@ static bool choose_voicing(const int pcs[3], int low, int high, const int *previ
     if (!all) {
         return false;
     }
-    for (; count == 0 && size >= 2; size--) {
+    *out_size = 0;
+    for (; count == 0 && size >= 1; size--) {
         for (int gap = VOICING_GAP; count == 0 && gap >= 1; gap--) {
             count = voicings(pcs, size, low, high, gap, previous, previous_size, (low + high) / 2, all);
-        }
-        if (count == 0 && size == 2) {
-            break;
+            if (size == 1) {
+                break;
+            }
         }
     }
     if (count == 0) {
         free(all);
-        return false;
+        return true;
     }
     long best = all[0].cost;
     for (size_t i = 1; i < count; i++) {
@@ -237,6 +252,9 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
                             &out->voicing_size[b])) {
             return false;
         }
+        if (out->voicing_size[b] == 0) {
+            continue;
+        }
         out->voiced[b] = true;
         previous = out->voicing[b];
         previous_size = out->voicing_size[b];
@@ -261,8 +279,12 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         for (long at = 0; at < context->length; at += ACCOMP_EIGHTH) {
             long eighth = ((at + context->phase) % context->bar) / ACCOMP_EIGHTH;
             size_t b = (size_t)(at / context->beat);
-            /* A voicing of two notes is the low one and the high one over again. */
-            int index = out->voicing_size[b] == 3 ? figure[eighth % 4] : (int)(eighth % 2);
+            /* A voicing of two notes is the low one and the high one over again, one of a single note. */
+            size_t size = out->voicing_size[b];
+            int index = size == 3 ? figure[eighth % 4] : (size == 2 ? (int)(eighth % 2) : 0);
+            if (!out->voiced[b]) {
+                continue;
+            }
             if (!add_note(out, 0, at, ACCOMP_EIGHTH, out->voicing[b][index])) {
                 return false;
             }
