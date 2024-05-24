@@ -172,7 +172,7 @@ async function renderLibraryView() {
       <table id="library-table" class="library-table" hidden>
         <thead>
           <tr>
-            <th>Filename</th>
+            <th>Title</th>
             <th>Actions</th>
           </tr>
         </thead>
