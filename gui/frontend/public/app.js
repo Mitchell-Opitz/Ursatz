@@ -68,7 +68,7 @@ async function renderAnalysisView() {
     </section>
   `;
 
-  document.getElementById("upload-button").addEventListener("click", handleUpload);
+  wireUploadControl("upload", (data) => showPieceDetail(data.id));
 
   const statusEl = document.getElementById("piece-list-status");
   const listEl = document.getElementById("piece-list");
@@ -181,52 +181,11 @@ async function renderLibraryView() {
     </section>
   `;
 
-  document.getElementById("library-upload-button").addEventListener("click", handleLibraryUpload);
+  wireUploadControl("library-upload", async () => {
+    await loadLibraryPieces();
+  });
 
   await loadLibraryPieces();
-}
-
-async function handleLibraryUpload() {
-  const fileInput = document.getElementById("library-upload-file");
-  const uploadButton = document.getElementById("library-upload-button");
-  const statusEl = document.getElementById("library-upload-status");
-
-  const file = fileInput.files[0];
-  if (!file) {
-    statusEl.textContent = "Select a file first.";
-    statusEl.classList.add("error");
-    return;
-  }
-
-  statusEl.textContent = "";
-  statusEl.classList.remove("error");
-  uploadButton.disabled = true;
-  statusEl.textContent = "Uploading and analyzing...";
-
-  try {
-    const bytes = await file.arrayBuffer();
-    const res = await fetch("/api/analyzer/pieces", {
-      method: "POST",
-      headers: { "X-Filename": encodeURIComponent(file.name) },
-      body: bytes,
-    });
-    const data = await res.json();
-
-    uploadButton.disabled = false;
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Upload failed.";
-      statusEl.classList.add("error");
-      return;
-    }
-
-    statusEl.textContent = `Uploaded ${formatPieceLabel(data.id, data.filename)}.`;
-    fileInput.value = "";
-    await loadLibraryPieces();
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
-    uploadButton.disabled = false;
-  }
 }
 
 async function loadLibraryPieces() {
@@ -397,14 +356,27 @@ async function handleDeleteLibraryPiece(id, rowEl) {
   }
 }
 
-async function handleUpload() {
-  const fileInput = document.getElementById("upload-file");
-  const uploadButton = document.getElementById("upload-button");
-  const statusEl = document.getElementById("upload-status");
+/* Wires the "<idPrefix>-file"/"<idPrefix>-button"/"<idPrefix>-status"
+ * upload control markup already in the DOM (see renderAnalysisView's
+ * .upload-controls and renderLibraryView's .upload-box) to the shared
+ * upload handler below. onUploaded(data) runs after a successful
+ * upload, once, with the parsed response body -- each view decides what
+ * "uploaded" means for it (jump to the new piece's detail, or just
+ * refresh a list) without duplicating the fetch/status-message logic. */
+function wireUploadControl(idPrefix, onUploaded) {
+  document
+    .getElementById(`${idPrefix}-button`)
+    .addEventListener("click", () => handleUpload(idPrefix, onUploaded));
+}
+
+async function handleUpload(idPrefix, onUploaded) {
+  const fileInput = document.getElementById(`${idPrefix}-file`);
+  const uploadButton = document.getElementById(`${idPrefix}-button`);
+  const statusEl = document.getElementById(`${idPrefix}-status`);
 
   const file = fileInput.files[0];
   if (!file) {
-    statusEl.textContent = "Select a MIDI file first.";
+    statusEl.textContent = "Select a file first.";
     statusEl.classList.add("error");
     return;
   }
@@ -423,15 +395,16 @@ async function handleUpload() {
     });
     const data = await res.json();
 
+    uploadButton.disabled = false;
     if (!data.ok) {
       statusEl.textContent = data.message || "Upload failed.";
       statusEl.classList.add("error");
-      uploadButton.disabled = false;
       return;
     }
 
     statusEl.textContent = `Uploaded ${formatPieceLabel(data.id, data.filename)}.`;
-    showPieceDetail(data.id);
+    fileInput.value = "";
+    await onUploaded(data);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
