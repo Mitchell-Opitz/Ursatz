@@ -243,35 +243,49 @@ function buildActionButton({ icon, label, disabled, onClick }) {
   return button;
 }
 
-function buildLibraryRow(piece) {
+/* Shared piece-row visual style (filename cell + actions cell), reused by
+ * any view that lists pieces in this table layout. Each caller supplies
+ * its own action buttons via buildActions(row, actionsCell, piece) --
+ * this function owns only the markup/styling, not what a view can do to
+ * a piece. */
+function buildPieceRow(piece, buildActions) {
   const row = document.createElement("tr");
 
   const filenameCell = document.createElement("td");
-  filenameCell.appendChild(renderLibraryFilenameCell(piece));
+  filenameCell.appendChild(renderPieceFilenameCell(piece));
   row.appendChild(filenameCell);
 
   const actionsCell = document.createElement("td");
   actionsCell.classList.add("library-actions");
-
-  actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
-  actionsCell.appendChild(
-    buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, piece) }),
-  );
-  actionsCell.appendChild(buildActionButton({ icon: "↻", label: "Re-run analysis", disabled: true }));
-  actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
-  actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
-  actionsCell.appendChild(
-    buildActionButton({ icon: "🗑", label: "Delete piece", onClick: () => handleDeleteLibraryPiece(piece.id, row) }),
-  );
-
+  buildActions(row, actionsCell, piece);
   row.appendChild(actionsCell);
+
   return row;
 }
 
-function renderLibraryFilenameCell(piece) {
+function renderPieceFilenameCell(piece) {
   const span = document.createElement("span");
   span.textContent = piece.filename || piece.id;
   return span;
+}
+
+function buildLibraryRow(piece) {
+  return buildPieceRow(piece, (row, actionsCell, rowPiece) => {
+    actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
+    actionsCell.appendChild(
+      buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, rowPiece) }),
+    );
+    actionsCell.appendChild(buildActionButton({ icon: "↻", label: "Re-run analysis", disabled: true }));
+    actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
+    actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
+    actionsCell.appendChild(
+      buildActionButton({
+        icon: "🗑",
+        label: "Delete piece",
+        onClick: () => handleDeleteLibraryPiece(rowPiece.id, row),
+      }),
+    );
+  });
 }
 
 function startLibraryRename(row, piece) {
@@ -295,7 +309,7 @@ function startLibraryRename(row, piece) {
   cancelButton.textContent = "Cancel";
   cancelButton.addEventListener("click", () => {
     filenameCell.innerHTML = "";
-    filenameCell.appendChild(renderLibraryFilenameCell(piece));
+    filenameCell.appendChild(renderPieceFilenameCell(piece));
   });
   filenameCell.appendChild(cancelButton);
 }
@@ -328,7 +342,7 @@ async function handleLibraryRename(row, piece, newFilename) {
     piece.filename = data.filename;
     const filenameCell = row.querySelector("td");
     filenameCell.innerHTML = "";
-    filenameCell.appendChild(renderLibraryFilenameCell(piece));
+    filenameCell.appendChild(renderPieceFilenameCell(piece));
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
