@@ -214,3 +214,152 @@ body {
   font-size: 12px;
   cursor: pointer;
 }
+
+.view-title {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.upload-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--bg-panel);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 16px 20px;
+  max-width: 900px;
+}
+
+.upload-box-heading {
+  font-weight: 700;
+}
+
+.upload-box-subheading {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.upload-box-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-box-controls button {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.upload-box-controls button:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 900px;
+  margin: 16px 0;
+}
+
+.filter-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.filter-row select {
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.library-panel {
+  max-width: 900px;
+}
+
+.library-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.library-table th {
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.library-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.library-table tr:hover {
+  background: var(--bg-hover);
+}
+
+.library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.library-table button {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.library-table button:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px !important;
+  line-height: 1;
+}
+
+.library-table td input[type="text"] {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: inherit;
+  margin-right: 6px;
+}

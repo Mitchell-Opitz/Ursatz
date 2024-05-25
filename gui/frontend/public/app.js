@@ -3,6 +3,7 @@
 
 const TOOLS = [
   { id: "analysis", label: "Analysis", active: true, render: renderAnalysisView },
+  { id: "library", label: "Library", active: false, render: renderLibraryView },
   { id: "corpus", label: "Corpus", active: false, render: renderCorpusView },
   { id: "generator", label: "Generator", active: false, comingSoon: true },
 ];
@@ -67,7 +68,7 @@ async function renderAnalysisView() {
     </section>
   `;
 
-  document.getElementById("upload-button").addEventListener("click", handleUpload);
+  wireUploadControl("upload", (data) => showPieceDetail(data.id));
 
   const statusEl = document.getElementById("piece-list-status");
   const listEl = document.getElementById("piece-list");
@@ -133,14 +134,252 @@ async function handleDeletePiece(id, liEl) {
   }
 }
 
-async function handleUpload() {
-  const fileInput = document.getElementById("upload-file");
-  const uploadButton = document.getElementById("upload-button");
-  const statusEl = document.getElementById("upload-status");
+async function renderLibraryView() {
+  const content = getContentEl();
+  content.innerHTML = `
+    <h1 class="view-title">Library</h1>
+    <div class="upload-box">
+      <div class="upload-box-text">
+        <div class="upload-box-heading">Drop a MIDI or MusicXML file to analyze</div>
+        <div class="upload-box-subheading">.mid · .midi · .musicxml</div>
+      </div>
+      <div class="upload-box-controls">
+        <input type="file" id="library-upload-file" accept=".mid,.midi,.musicxml" />
+        <button id="library-upload-button" type="button">Upload MIDI</button>
+        <button type="button" disabled title="Not yet available">Import from URL</button>
+      </div>
+    </div>
+    <div id="library-upload-status" class="upload-status"></div>
+    <div class="filter-row">
+      <label class="filter-field">
+        Filter
+        <select disabled>
+          <option>All composers</option>
+        </select>
+      </label>
+      <select disabled>
+        <option>All statuses</option>
+      </select>
+      <label class="filter-field">
+        Sort
+        <select disabled>
+          <option>Date added</option>
+        </select>
+      </label>
+    </div>
+    <section class="panel library-panel">
+      <div id="library-status" class="piece-list-status">Loading pieces...</div>
+      <table id="library-table" class="library-table" hidden>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="library-table-body"></tbody>
+      </table>
+    </section>
+  `;
+
+  wireUploadControl("library-upload", async () => {
+    await loadLibraryPieces();
+  });
+
+  await loadLibraryPieces();
+}
+
+async function loadLibraryPieces() {
+  const statusEl = document.getElementById("library-status");
+  const tableEl = document.getElementById("library-table");
+  const bodyEl = document.getElementById("library-table-body");
+
+  statusEl.textContent = "Loading pieces...";
+  statusEl.classList.remove("error");
+  tableEl.hidden = true;
+  bodyEl.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/analyzer/pieces");
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = `Failed to load pieces: ${data.message || "unknown error"}`;
+      statusEl.classList.add("error");
+      return;
+    }
+
+    if (data.pieces.length === 0) {
+      statusEl.textContent = "No pieces yet.";
+      return;
+    }
+
+    statusEl.textContent = "";
+    tableEl.hidden = false;
+    for (const piece of data.pieces) {
+      bodyEl.appendChild(buildLibraryRow(piece));
+    }
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
+/* Icon-only action button. icon is a single glyph (no icon font/CDN --
+ * plain Unicode, consistent with this app's no-external-assets style);
+ * label is the accessible name, shown as both aria-label and a hover
+ * tooltip so the icon-only button stays identifiable. */
+function buildActionButton({ icon, label, disabled, onClick }) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.classList.add("icon-button");
+  button.textContent = icon;
+  button.setAttribute("aria-label", label);
+  button.title = disabled ? "Not yet available" : label;
+  if (disabled) {
+    button.disabled = true;
+  } else if (onClick) {
+    button.addEventListener("click", onClick);
+  }
+  return button;
+}
+
+function buildLibraryRow(piece) {
+  const row = document.createElement("tr");
+
+  const filenameCell = document.createElement("td");
+  filenameCell.appendChild(renderLibraryFilenameCell(piece));
+  row.appendChild(filenameCell);
+
+  const actionsCell = document.createElement("td");
+  actionsCell.classList.add("library-actions");
+
+  actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
+  actionsCell.appendChild(
+    buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, piece) }),
+  );
+  actionsCell.appendChild(buildActionButton({ icon: "↻", label: "Re-run analysis", disabled: true }));
+  actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
+  actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
+  actionsCell.appendChild(
+    buildActionButton({ icon: "🗑", label: "Delete piece", onClick: () => handleDeleteLibraryPiece(piece.id, row) }),
+  );
+
+  row.appendChild(actionsCell);
+  return row;
+}
+
+function renderLibraryFilenameCell(piece) {
+  const span = document.createElement("span");
+  span.textContent = piece.filename || piece.id;
+  return span;
+}
+
+function startLibraryRename(row, piece) {
+  const filenameCell = row.querySelector("td");
+  filenameCell.innerHTML = "";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = piece.filename || "";
+  filenameCell.appendChild(input);
+  input.focus();
+
+  const saveButton = document.createElement("button");
+  saveButton.type = "button";
+  saveButton.textContent = "Save";
+  saveButton.addEventListener("click", () => handleLibraryRename(row, piece, input.value.trim()));
+  filenameCell.appendChild(saveButton);
+
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.textContent = "Cancel";
+  cancelButton.addEventListener("click", () => {
+    filenameCell.innerHTML = "";
+    filenameCell.appendChild(renderLibraryFilenameCell(piece));
+  });
+  filenameCell.appendChild(cancelButton);
+}
+
+async function handleLibraryRename(row, piece, newFilename) {
+  const statusEl = document.getElementById("library-status");
+
+  if (!newFilename) {
+    statusEl.textContent = "Enter a filename.";
+    statusEl.classList.add("error");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/analyzer/pieces/${piece.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: newFilename }),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Rename failed.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    statusEl.textContent = "";
+    statusEl.classList.remove("error");
+    piece.filename = data.filename;
+    const filenameCell = row.querySelector("td");
+    filenameCell.innerHTML = "";
+    filenameCell.appendChild(renderLibraryFilenameCell(piece));
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
+async function handleDeleteLibraryPiece(id, rowEl) {
+  if (!window.confirm("Delete this piece? This removes the file and all of its analyses.")) {
+    return;
+  }
+
+  const statusEl = document.getElementById("library-status");
+
+  try {
+    const res = await fetch(`/api/analyzer/pieces/${id}`, { method: "DELETE" });
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Delete failed.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    rowEl.remove();
+  } catch (err) {
+    statusEl.textContent = `Could not reach backend: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
+/* Wires the "<idPrefix>-file"/"<idPrefix>-button"/"<idPrefix>-status"
+ * upload control markup already in the DOM (see renderAnalysisView's
+ * .upload-controls and renderLibraryView's .upload-box) to the shared
+ * upload handler below. onUploaded(data) runs after a successful
+ * upload, once, with the parsed response body -- each view decides what
+ * "uploaded" means for it (jump to the new piece's detail, or just
+ * refresh a list) without duplicating the fetch/status-message logic. */
+function wireUploadControl(idPrefix, onUploaded) {
+  document
+    .getElementById(`${idPrefix}-button`)
+    .addEventListener("click", () => handleUpload(idPrefix, onUploaded));
+}
+
+async function handleUpload(idPrefix, onUploaded) {
+  const fileInput = document.getElementById(`${idPrefix}-file`);
+  const uploadButton = document.getElementById(`${idPrefix}-button`);
+  const statusEl = document.getElementById(`${idPrefix}-status`);
 
   const file = fileInput.files[0];
   if (!file) {
-    statusEl.textContent = "Select a MIDI file first.";
+    statusEl.textContent = "Select a file first.";
     statusEl.classList.add("error");
     return;
   }
@@ -159,15 +398,16 @@ async function handleUpload() {
     });
     const data = await res.json();
 
+    uploadButton.disabled = false;
     if (!data.ok) {
       statusEl.textContent = data.message || "Upload failed.";
       statusEl.classList.add("error");
-      uploadButton.disabled = false;
       return;
     }
 
     statusEl.textContent = `Uploaded ${formatPieceLabel(data.id, data.filename)}.`;
-    showPieceDetail(data.id);
+    fileInput.value = "";
+    await onUploaded(data);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");

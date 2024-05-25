@@ -148,4 +148,16 @@ void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail);
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
 
+/*
+ * Updates the persisted original_filename (see kMetaTableName) for the
+ * saved piece at id -- the display name shown in the Library view. Does
+ * not touch NoteEvents, Interpretations, or the interpretation index.
+ *
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
+ * under pieces_dir. Caller is responsible for rejecting an empty
+ * new_filename before calling; this function stores whatever it is given.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
+                                                          const char *new_filename);
+
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */
