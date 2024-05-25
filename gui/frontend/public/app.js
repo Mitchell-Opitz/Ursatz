@@ -224,12 +224,22 @@ async function loadLibraryPieces() {
   }
 }
 
-function buildDisabledActionButton(label) {
+/* Icon-only action button. icon is a single glyph (no icon font/CDN --
+ * plain Unicode, consistent with this app's no-external-assets style);
+ * label is the accessible name, shown as both aria-label and a hover
+ * tooltip so the icon-only button stays identifiable. */
+function buildActionButton({ icon, label, disabled, onClick }) {
   const button = document.createElement("button");
   button.type = "button";
-  button.textContent = label;
-  button.disabled = true;
-  button.title = "Not yet available";
+  button.classList.add("icon-button");
+  button.textContent = icon;
+  button.setAttribute("aria-label", label);
+  button.title = disabled ? "Not yet available" : label;
+  if (disabled) {
+    button.disabled = true;
+  } else if (onClick) {
+    button.addEventListener("click", onClick);
+  }
   return button;
 }
 
@@ -243,23 +253,16 @@ function buildLibraryRow(piece) {
   const actionsCell = document.createElement("td");
   actionsCell.classList.add("library-actions");
 
-  actionsCell.appendChild(buildDisabledActionButton("Play"));
-
-  const renameButton = document.createElement("button");
-  renameButton.type = "button";
-  renameButton.textContent = "Rename";
-  renameButton.addEventListener("click", () => startLibraryRename(row, piece));
-  actionsCell.appendChild(renameButton);
-
-  actionsCell.appendChild(buildDisabledActionButton("Re-run analysis"));
-  actionsCell.appendChild(buildDisabledActionButton("Import from URL"));
-  actionsCell.appendChild(buildDisabledActionButton("Delete analysis"));
-
-  const deleteButton = document.createElement("button");
-  deleteButton.type = "button";
-  deleteButton.textContent = "Delete";
-  deleteButton.addEventListener("click", () => handleDeleteLibraryPiece(piece.id, row));
-  actionsCell.appendChild(deleteButton);
+  actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
+  actionsCell.appendChild(
+    buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, piece) }),
+  );
+  actionsCell.appendChild(buildActionButton({ icon: "↻", label: "Re-run analysis", disabled: true }));
+  actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
+  actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
+  actionsCell.appendChild(
+    buildActionButton({ icon: "🗑", label: "Delete piece", onClick: () => handleDeleteLibraryPiece(piece.id, row) }),
+  );
 
   row.appendChild(actionsCell);
   return row;
