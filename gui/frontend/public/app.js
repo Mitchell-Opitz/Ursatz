@@ -4,7 +4,7 @@
 const TOOLS = [
   { id: "analysis", label: "Analysis", active: true, render: renderAnalysisView },
   { id: "library", label: "Library", active: false, render: renderLibraryView },
-  { id: "corpus", label: "Corpus", active: false, render: renderCorpusView },
+  { id: "corpus", label: "Collections", active: false, render: renderCorpusView },
   { id: "generator", label: "Generator", active: false, comingSoon: true },
 ];
 
@@ -530,51 +530,69 @@ function showPieceDetail(id) {
 async function renderCorpusView() {
   const content = getContentEl();
   content.innerHTML = `
-    <section class="panel">
-      <h1>Corpus</h1>
-      <div id="corpus-list-status" class="piece-list-status">Loading corpora...</div>
-      <ul id="corpus-list" class="piece-list"></ul>
-      <div class="upload-controls">
-        <input type="text" id="corpus-id-input" placeholder="id" />
-        <input type="text" id="corpus-name-input" placeholder="name" />
-        <button id="corpus-create-button" type="button">Create</button>
-      </div>
-      <div id="corpus-create-status" class="upload-status"></div>
-    </section>
+    <div class="collections-header">
+      <h1 class="view-title">Collections</h1>
+      <button id="corpus-new-button" type="button">New Collection</button>
+    </div>
+    <div id="corpus-create-form" class="upload-controls" hidden>
+      <input type="text" id="corpus-id-input" placeholder="id" />
+      <input type="text" id="corpus-name-input" placeholder="name" />
+      <button id="corpus-create-button" type="button">Create</button>
+    </div>
+    <div id="corpus-create-status" class="upload-status"></div>
+    <div id="corpus-list-status" class="piece-list-status">Loading collections...</div>
+    <div id="corpus-grid" class="collections-grid"></div>
   `;
 
+  document.getElementById("corpus-new-button").addEventListener("click", () => {
+    document.getElementById("corpus-create-form").hidden = false;
+    document.getElementById("corpus-id-input").focus();
+  });
   document.getElementById("corpus-create-button").addEventListener("click", handleCreateCorpus);
 
   const statusEl = document.getElementById("corpus-list-status");
-  const listEl = document.getElementById("corpus-list");
+  const gridEl = document.getElementById("corpus-grid");
 
   try {
     const res = await fetch("/api/corpus");
     const data = await res.json();
 
     if (!data.ok) {
-      statusEl.textContent = `Failed to load corpora: ${data.message || "unknown error"}`;
+      statusEl.textContent = `Failed to load collections: ${data.message || "unknown error"}`;
       statusEl.classList.add("error");
       return;
     }
 
     if (data.corpora.length === 0) {
-      statusEl.textContent = "No corpora yet.";
+      statusEl.textContent = "No collections yet.";
       return;
     }
 
     statusEl.textContent = "";
     for (const corpus of data.corpora) {
-      const li = document.createElement("li");
-      li.textContent = `${corpus.name} (${corpus.id})`;
-      li.classList.add("clickable");
-      li.addEventListener("click", () => showCorpusDetail(corpus.id, corpus.name));
-      listEl.appendChild(li);
+      gridEl.appendChild(buildCollectionCard(corpus));
     }
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
   }
+}
+
+function buildCollectionCard(corpus) {
+  const card = document.createElement("div");
+  card.classList.add("collection-card", "clickable");
+  card.addEventListener("click", () => showCorpusDetail(corpus.id, corpus.name));
+
+  const cover = document.createElement("div");
+  cover.classList.add("collection-card-cover");
+  card.appendChild(cover);
+
+  const name = document.createElement("div");
+  name.classList.add("collection-card-name");
+  name.textContent = corpus.name;
+  card.appendChild(name);
+
+  return card;
 }
 
 async function handleCreateCorpus() {
