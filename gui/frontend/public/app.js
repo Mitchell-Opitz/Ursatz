@@ -647,17 +647,25 @@ function renderCorpusBackLink() {
 function showCorpusDetail(id, name) {
   const content = getContentEl();
   content.innerHTML = `
-    <section class="panel">
-      <h1>${name}</h1>
+    <div id="corpus-back-container"></div>
+    <h1 class="view-title">${name}</h1>
+    <section class="panel library-panel">
       <div id="corpus-piece-status" class="piece-list-status">Loading pieces...</div>
-      <ul id="corpus-piece-list" class="piece-list"></ul>
-      <div class="upload-controls">
-        <input type="text" id="corpus-piece-input" placeholder="piece id" />
-        <button id="corpus-add-piece-button" type="button">Add</button>
-      </div>
-      <div id="corpus-piece-add-status" class="upload-status"></div>
-      <div id="corpus-back-container"></div>
+      <table id="corpus-piece-table" class="library-table" hidden>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="corpus-piece-table-body"></tbody>
+      </table>
     </section>
+    <div class="upload-controls">
+      <input type="text" id="corpus-piece-input" placeholder="piece id" />
+      <button id="corpus-add-piece-button" type="button">Add</button>
+    </div>
+    <div id="corpus-piece-add-status" class="upload-status"></div>
   `;
 
   document.getElementById("corpus-back-container").appendChild(renderCorpusBackLink());
@@ -666,16 +674,27 @@ function showCorpusDetail(id, name) {
   loadCorpusPieces(id, name);
 }
 
+/* Corpus piece refs only carry an id (see corpus_service.h) -- this joins
+ * them against /api/analyzer/pieces so the shared row component can show
+ * the same filename Library shows, falling back to the bare id exactly
+ * as Library's row does when a piece isn't found (e.g. deleted from the
+ * Library since being added here). */
 async function loadCorpusPieces(id, name) {
   const statusEl = document.getElementById("corpus-piece-status");
-  const listEl = document.getElementById("corpus-piece-list");
+  const tableEl = document.getElementById("corpus-piece-table");
+  const bodyEl = document.getElementById("corpus-piece-table-body");
   statusEl.textContent = "Loading pieces...";
   statusEl.classList.remove("error");
-  listEl.innerHTML = "";
+  tableEl.hidden = true;
+  bodyEl.innerHTML = "";
 
   try {
-    const res = await fetch(`/api/corpus/${id}/pieces`);
-    const data = await res.json();
+    const [corpusRes, libraryRes] = await Promise.all([
+      fetch(`/api/corpus/${id}/pieces`),
+      fetch("/api/analyzer/pieces"),
+    ]);
+    const data = await corpusRes.json();
+    const libraryData = await libraryRes.json();
 
     if (!data.ok) {
       statusEl.textContent = `Failed to load pieces: ${data.message || "unknown error"}`;
@@ -688,24 +707,27 @@ async function loadCorpusPieces(id, name) {
       return;
     }
 
+    const filenamesById = new Map();
+    if (libraryData.ok) {
+      for (const piece of libraryData.pieces) {
+        filenamesById.set(piece.id, piece.filename);
+      }
+    }
+
     statusEl.textContent = "";
+    tableEl.hidden = false;
     for (const piece of data.pieces) {
-      const li = document.createElement("li");
-      li.textContent = piece.id;
-
-      const removeButton = document.createElement("button");
-      removeButton.type = "button";
-      removeButton.textContent = "Remove";
-      removeButton.addEventListener("click", () => handleRemovePiece(id, name, piece.id));
-
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(removeButton);
-      listEl.appendChild(li);
+      const enrichedPiece = { id: piece.id, filename: filenamesById.get(piece.id) };
+      bodyEl.appendChild(buildCollectionPieceRow(enrichedPiece, id, name));
     }
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
   }
+}
+
+function buildCollectionPieceRow(piece, corpusId, corpusName) {
+  return buildPieceRow(piece, () => {});
 }
 
 async function handleAddPiece(corpusId, corpusName) {
