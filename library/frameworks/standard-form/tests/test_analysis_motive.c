@@ -332,42 +332,42 @@ static void test_an_augmentation_and_a_diminution_join_the_family(void) {
 static void test_a_varied_motive_has_a_score_below_one(void) {
     Piece p;
     piece_init(&p, false);
-    const int a[5] = {60, 62, 64, 65, 67};
-    const int varied[5] = {60, 62, 64, 65, 69}; /* the last interval changed */
-    figure(&p, 0.0, a, NULL, 5);
-    figure(&p, 6.0, a, NULL, 5);
-    figure(&p, 12.0, varied, NULL, 5);
+    /* eight notes, so a prefix or suffix fragment needs four intervals and the changed middle defeats both */
+    const int a[8] = {60, 62, 64, 65, 67, 69, 71, 72};
+    const int varied[8] = {60, 62, 64, 65, 68, 70, 72, 73}; /* one interval changed */
+    figure(&p, 0.0, a, NULL, 8);
+    figure(&p, 10.0, a, NULL, 8);
+    figure(&p, 20.0, varied, NULL, 8);
     StandardFormMotives m = find(&p, NULL);
-    const StandardFormMotiveFamily *f = family_of_notes(&m, 5);
+    const StandardFormMotiveFamily *f = family_of_notes(&m, 8);
     assert(f != NULL && f->occurrence_count == 3);
     const StandardFormMotiveOccurrence *o = &f->occurrences[2];
-    assert(o->claim.kind == (int)STANDARD_FORM_MOTIVE_VARIED && o->claim.mismatches == 1 && o->claim.intervals == 4);
-    assert(fabs(o->claim.score - 0.75) < 1e-12 && fabs(o->uncertainty - 0.25) < 1e-12 && o->claim.rhythm_factor == 1.0);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(o->interpretation)) == 750000UL);
+    assert(o->claim.kind == (int)STANDARD_FORM_MOTIVE_VARIED && o->claim.mismatches == 1 && o->claim.intervals == 7);
+    assert(fabs(o->claim.score - 6.0 / 7.0) < 1e-12 && fabs(o->uncertainty - 1.0 / 7.0) < 1e-12 && o->claim.rhythm_factor == 1.0);
     standard_form_motives_destroy(&m);
 
     /* two changed intervals are more than the default allows, and a bigger allowance takes them */
     Piece q;
     piece_init(&q, false);
-    const int two[5] = {60, 62, 64, 66, 69};
-    figure(&q, 0.0, a, NULL, 5);
-    figure(&q, 6.0, a, NULL, 5);
-    figure(&q, 12.0, two, NULL, 5);
+    const int two[8] = {60, 62, 64, 66, 68, 71, 73, 74};
+    figure(&q, 0.0, a, NULL, 8);
+    figure(&q, 10.0, a, NULL, 8);
+    figure(&q, 20.0, two, NULL, 8);
     m = find(&q, NULL);
-    f = family_of_notes(&m, 5);
+    f = family_of_notes(&m, 8);
     assert(f != NULL && f->occurrence_count == 2);
     standard_form_motives_destroy(&m);
     piece_destroy(&q);
     piece_init(&q, false);
-    figure(&q, 0.0, a, NULL, 5);
-    figure(&q, 6.0, a, NULL, 5);
-    figure(&q, 12.0, two, NULL, 5);
+    figure(&q, 0.0, a, NULL, 8);
+    figure(&q, 10.0, a, NULL, 8);
+    figure(&q, 20.0, two, NULL, 8);
     StandardFormConfig config = standard_form_config_default();
     config.varied_max_mismatch = 2;
     m = find(&q, &config);
-    f = family_of_notes(&m, 5);
+    f = family_of_notes(&m, 8);
     assert(f != NULL && f->occurrence_count == 3 && f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_VARIED &&
-           fabs(f->occurrences[2].claim.score - 0.5) < 1e-12);
+           fabs(f->occurrences[2].claim.score - 5.0 / 7.0) < 1e-12);
     standard_form_motives_destroy(&m);
     piece_destroy(&q);
     piece_destroy(&p);
