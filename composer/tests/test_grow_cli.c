@@ -356,11 +356,77 @@ static void test_unwritable_file(void) {
     expect_failure(BASE " --into sentence --seed 7 --midi /no/such/directory/theme.mid", 3, "cannot write");
 }
 
+/* How many times a text, which may hold NUL bytes, occurs in a file. */
+static size_t occurrences(const char *path, const char *needle) {
+    FILE *file = fopen(path, "rb");
+    size_t found = 0;
+    size_t length = strlen(needle);
+    size_t matched = 0;
+    int c;
+    assert(file);
+    while ((c = fgetc(file)) != EOF) {
+        matched = c == needle[matched] ? matched + 1 : (c == needle[0] ? 1 : 0);
+        if (matched == length) {
+            found++;
+            matched = 0;
+        }
+    }
+    fclose(file);
+    return found;
+}
+
+/* An accompaniment is written in the files as a part of its own: a MIDI track and a MusicXML part more. */
+static void test_accompaniment(void) {
+    remove("grow_cli_plain.mid");
+    remove("grow_cli_plain.xml");
+    remove("grow_cli_alberti.json");
+    remove("grow_cli_alberti.mid");
+    remove("grow_cli_alberti.xml");
+    free(output_of(BASE " --into sentence --seed 7 --midi grow_cli_plain.mid --musicxml grow_cli_plain.xml"));
+    char *out = output_of(BASE " --into sentence --seed 7 --accompaniment alberti --out grow_cli_alberti.json "
+                               "--midi grow_cli_alberti.mid --musicxml grow_cli_alberti.xml");
+    assert(strstr(out, "accompaniment alberti") != NULL);
+    free(out);
+
+    /* The melody and the bass, and now voice 1: three parts, after the track of the tempo and the meter. */
+    assert(occurrences("grow_cli_plain.mid", "MTrk") == 3 && occurrences("grow_cli_alberti.mid", "MTrk") == 4);
+    assert(occurrences("grow_cli_plain.xml", "<part id=") == 2 && occurrences("grow_cli_alberti.xml", "<part id=") == 3);
+
+    PiecePlan *plan = NULL;
+    PlanJsonError error;
+    assert(plan_read_json_file("grow_cli_alberti.json", &plan, &error) == PLAN_OK);
+    PlanSpan all = plan_node_span(plan, plan_root(plan));
+    LaneSpanId spans[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_INNER_VOICE, 1, all, spans, 64);
+    assert(found > 0 && found <= 64);
+    for (size_t i = 0; i < found; i++) {
+        assert(plan_lane_span_state(plan, spans[i]) == PLAN_STATE_REALIZED);
+        assert(plan_lane_span_payload(plan, spans[i])->notes.note_count > 0);
+    }
+    assert(plan_lane_find(plan, PLAN_LANE_INNER_VOICE, 2, all, spans, 64) == 0);
+    plan_destroy(plan);
+
+    /* A texture alone asks for an accompaniment of any pattern; the name is any case. */
+    out = output_of(BASE " --into sentence --seed 7 --texture \"Melody and accompaniment\"");
+    assert(strstr(out, "accompaniment any (melody and accompaniment)") != NULL);
+    free(out);
+    out = output_of(BASE " --into sentence --seed 7 --accompaniment block --texture homorhythm --format json");
+    assert(strstr(out, "\"accompaniment\":\"block\"") != NULL && strstr(out, "\"texture\":\"homorhythm\"") != NULL);
+    free(out);
+
+    expect_failure(BASE " --into sentence --accompaniment waltz", 1, "--accompaniment must be");
+    expect_failure(BASE " --into sentence --texture polyphony", 1, "is not one an accompaniment can have");
+    expect_failure(BASE " --into sentence --texture nonsense", 1, "--texture must be");
+    expect_failure(FIXTURE("motive_d_minor.txt") " --key \"D minor\" --meter 6/8 --into sentence --accompaniment alberti", 1,
+                   "needs a simple meter");
+}
+
 static void test_help(void) {
     assert(run("--help", "grow_cli_out.txt", "grow_cli_err.txt") == 0);
     char *out = read_file("grow_cli_out.txt");
     assert(strstr(out, "--into") != NULL && strstr(out, "--hybrid") != NULL && strstr(out, "--suggest") != NULL &&
-           strstr(out, "--first-cadence") != NULL);
+           strstr(out, "--first-cadence") != NULL && strstr(out, "--accompaniment") != NULL &&
+           strstr(out, "--texture") != NULL);
     free(out);
 }
 
@@ -370,6 +436,7 @@ int main(void) {
     test_four_bars_and_cadences();
     test_same_seed_same_output();
     test_files();
+    test_accompaniment();
     test_suggest();
     test_bad_arguments();
     test_cannot_be_satisfied();
