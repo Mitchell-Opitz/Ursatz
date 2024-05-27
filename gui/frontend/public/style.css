@@ -353,6 +353,65 @@ body {
   line-height: 1;
 }
 
+.collections-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 900px;
+  margin-bottom: 16px;
+}
+
+.collections-header .view-title {
+  margin: 0;
+}
+
+.collections-header button {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  max-width: 900px;
+  margin-top: 16px;
+}
+
+.collection-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.collection-card:hover {
+  background: var(--bg-hover);
+}
+
+.collection-card-cover {
+  height: 90px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow:
+    4px 4px 0 -2px var(--bg-panel),
+    4px 4px 0 -1px var(--border),
+    8px 8px 0 -3px var(--bg-panel),
+    8px 8px 0 -2px var(--border);
+  margin-bottom: 24px;
+}
+
+.collection-card-name {
+  font-size: 14px;
+}
+
 .library-table td input[type="text"] {
   background: var(--bg);
   color: var(--text);
