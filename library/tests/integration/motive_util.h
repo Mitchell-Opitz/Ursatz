@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis_time.h"
 #include "form_util.h"
 #include "outer_scale_degrees.h"
 #include "time/duration.h"

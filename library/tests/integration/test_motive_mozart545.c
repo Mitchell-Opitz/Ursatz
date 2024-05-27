@@ -1,4 +1,5 @@
 #include "analysis_motive.h"
+#include "harmony_cadence_rules.h"
 #include "motive_util.h"
 
 /*
