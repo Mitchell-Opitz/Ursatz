@@ -54,6 +54,8 @@ typedef struct {
     bool has_next;
     long semitones_to_next;
     int direction_to_next; /* ContourDirection; meaningful only when has_next */
+    int degree;            /* the scale degree 1..7 when known (0: unknown), set by standard_form_input_set_degree */
+    int alteration;        /* -1, 0 or +1: a flat or sharp degree */
 } StandardFormNote;
 
 typedef struct {
@@ -74,6 +76,9 @@ typedef struct {
     StandardFormSegment *segments;
     size_t segment_count;
     size_t segment_capacity;
+    StandardFormNote *bass_notes; /* the optional bass line, same shape as the soprano's */
+    size_t bass_count;
+    size_t bass_capacity;
     bool finished;
 } StandardFormInput;
 
@@ -95,6 +100,14 @@ StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *in
 StandardFormAnalysisStatus standard_form_input_add_note(StandardFormInput *input, const char *note_id,
                                                         const NoteEvent *event, const TimeSpan *span,
                                                         const MetricalPosition *position, long semitone);
+/* The optional BASS line (used only when config.include_bass is set): the same as the soprano's notes, in time order. */
+StandardFormAnalysisStatus standard_form_input_add_bass_note(StandardFormInput *input, const char *note_id,
+                                                             const NoteEvent *event, const TimeSpan *span,
+                                                             const MetricalPosition *position, long semitone);
+/* The scale degree (1..7) and alteration (-1, 0, +1) of note `index` of the soprano (bass false) or the bass line. Degrees give the
+   motive analysis a generic (scale-step) interval, so a diatonic sequence matches. BAD_INPUT for an index out of range. */
+StandardFormAnalysisStatus standard_form_input_set_degree(StandardFormInput *input, bool bass, size_t index, int degree,
+                                                          int alteration);
 StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *input, const char *id,
                                                            const TimeSpan *span, int function, int phrase_model_label);
 /* Fills the interval and contour to the next note and sorts the cadences by arrival. Call once, after the last add. */
@@ -113,6 +126,7 @@ void standard_form_input_destroy(StandardFormInput *input);
  *   similarity_min               idea similarity: the least share of matching intervals for a match (default 0.75)
  *   no_signal_uncertainty        the uncertainty of a phrase that ends with no cadence and no discontinuity, only at the end of
  *                                the input (default 0.5)
+ *   motive_min_notes, motive_max_notes, varied_max_mismatch, include_bass   the motive analysis (analysis_motive.h): 3, 8, 1, false
  */
 typedef struct {
     size_t max_length_without_cadence;
@@ -121,6 +135,10 @@ typedef struct {
     size_t max_absorbed_tail;
     double similarity_min;
     double no_signal_uncertainty;
+    size_t motive_min_notes;      /* the fewest notes of a motive (default 3) */
+    size_t motive_max_notes;      /* the most (default 8) */
+    size_t varied_max_mismatch;   /* interval mismatches a varied motive allows (default 1) */
+    bool include_bass;            /* also look for motives in the bass line, apart from the soprano's (default false) */
 } StandardFormConfig;
 
 StandardFormConfig standard_form_config_default(void);

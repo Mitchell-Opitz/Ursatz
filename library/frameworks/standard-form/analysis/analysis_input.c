@@ -14,14 +14,15 @@
 
 StandardFormConfig standard_form_config_default(void) {
     StandardFormConfig config = {0, DEFAULT_LEAP_SEMITONES, DEFAULT_LOOKAHEAD, DEFAULT_MAX_TAIL, DEFAULT_SIMILARITY_MIN,
-                                 DEFAULT_NO_SIGNAL_UNCERTAINTY};
+                                 DEFAULT_NO_SIGNAL_UNCERTAINTY, 3, 8, 1, false};
     return config;
 }
 
 bool standard_form_config_valid(const StandardFormConfig *config) {
     return config != NULL && config->discontinuity_leap_semitones > 0 && isfinite(config->similarity_min) &&
            config->similarity_min > 0.0 && config->similarity_min <= 1.0 && isfinite(config->no_signal_uncertainty) &&
-           config->no_signal_uncertainty >= 0.0 && config->no_signal_uncertainty <= 1.0;
+           config->no_signal_uncertainty >= 0.0 && config->no_signal_uncertainty <= 1.0 && config->motive_min_notes >= 3 &&
+           config->motive_max_notes >= config->motive_min_notes && config->motive_max_notes <= 32;
 }
 
 void standard_form_input_init(StandardFormInput *input, const MeterMap *map) {
@@ -39,6 +40,7 @@ void standard_form_input_destroy(StandardFormInput *input) {
     free(input->cadences);
     free(input->notes);
     free(input->segments);
+    free(input->bass_notes);
     const MeterMap *map = input->map;
     memset(input, 0, sizeof(*input));
     input->map = map;
@@ -128,6 +130,62 @@ StandardFormAnalysisStatus standard_form_input_add_note(StandardFormInput *input
     return STANDARD_FORM_ANALYSIS_OK;
 }
 
+static StandardFormAnalysisStatus add_to_line(StandardFormNote **items, size_t *count, size_t *capacity, const char *note_id,
+                                              const NoteEvent *event, const TimeSpan *span,
+                                              const MetricalPosition *position, long semitone) {
+    StandardFormQ start;
+    if (event == NULL || span == NULL || !standard_form_span_q(span, &start, NULL)) {
+        return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
+    }
+    if (*count > 0) {
+        StandardFormQ previous;
+        standard_form_span_q((*items)[*count - 1].span, &previous, NULL);
+        if (standard_form_q_compare(start, previous) < 0) {
+            return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
+        }
+    }
+    if (!grow((void **)items, capacity, *count, sizeof(StandardFormNote))) {
+        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    StandardFormNote *note = &(*items)[*count];
+    memset(note, 0, sizeof(*note));
+    if (!copy_id(note->note_id, sizeof(note->note_id), note_id)) {
+        return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
+    }
+    note->event = event;
+    note->span = span;
+    note->position = position;
+    note->semitone = semitone;
+    (*count)++;
+    return STANDARD_FORM_ANALYSIS_OK;
+}
+
+StandardFormAnalysisStatus standard_form_input_add_bass_note(StandardFormInput *input, const char *note_id,
+                                                             const NoteEvent *event, const TimeSpan *span,
+                                                             const MetricalPosition *position, long semitone) {
+    if (input == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    input->finished = false;
+    return add_to_line(&input->bass_notes, &input->bass_count, &input->bass_capacity, note_id, event, span, position,
+                       semitone);
+}
+
+StandardFormAnalysisStatus standard_form_input_set_degree(StandardFormInput *input, bool bass, size_t index, int degree,
+                                                          int alteration) {
+    if (input == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    size_t count = bass ? input->bass_count : input->note_count;
+    StandardFormNote *items = bass ? input->bass_notes : input->notes;
+    if (index >= count || degree < 0 || degree > 7 || alteration < -1 || alteration > 1) {
+        return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
+    }
+    items[index].degree = degree;
+    items[index].alteration = alteration;
+    return STANDARD_FORM_ANALYSIS_OK;
+}
+
 StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *input, const char *id,
                                                            const TimeSpan *span, int function, int phrase_model_label) {
     if (input == NULL) {
@@ -166,22 +224,26 @@ StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input) 
     if (input->cadence_count > 1) {
         qsort(input->cadences, input->cadence_count, sizeof(StandardFormCadence), compare_cadences);
     }
-    for (size_t i = 0; i < input->note_count; i++) {
-        StandardFormNote *note = &input->notes[i];
-        note->has_next = false;
-        note->semitones_to_next = 0;
-        note->direction_to_next = (int)CONTOUR_DIRECTION_SAME;
-        if (i + 1 < input->note_count) {
-            StandardFormQ end;
-            StandardFormQ next_start;
-            standard_form_span_q(note->span, NULL, &end);
-            standard_form_span_q(input->notes[i + 1].span, &next_start, NULL);
-            if (standard_form_q_compare(end, next_start) >= 0) {
-                long delta = input->notes[i + 1].semitone - note->semitone;
-                note->has_next = true;
-                note->semitones_to_next = delta;
-                note->direction_to_next = delta > 0 ? (int)CONTOUR_DIRECTION_UP
-                                                    : (delta < 0 ? (int)CONTOUR_DIRECTION_DOWN : (int)CONTOUR_DIRECTION_SAME);
+    for (int line = 0; line < 2; line++) {
+        StandardFormNote *items = line == 0 ? input->notes : input->bass_notes;
+        size_t count = line == 0 ? input->note_count : input->bass_count;
+        for (size_t i = 0; i < count; i++) {
+            StandardFormNote *note = &items[i];
+            note->has_next = false;
+            note->semitones_to_next = 0;
+            note->direction_to_next = (int)CONTOUR_DIRECTION_SAME;
+            if (i + 1 < count) {
+                StandardFormQ end;
+                StandardFormQ next_start;
+                standard_form_span_q(note->span, NULL, &end);
+                standard_form_span_q(items[i + 1].span, &next_start, NULL);
+                if (standard_form_q_compare(end, next_start) >= 0) {
+                    long delta = items[i + 1].semitone - note->semitone;
+                    note->has_next = true;
+                    note->semitones_to_next = delta;
+                    note->direction_to_next = delta > 0 ? (int)CONTOUR_DIRECTION_UP
+                                                        : (delta < 0 ? (int)CONTOUR_DIRECTION_DOWN : (int)CONTOUR_DIRECTION_SAME);
+                }
             }
         }
     }

@@ -34,6 +34,9 @@ bool standard_form_beat_length(const MeterMap *map, int index, StandardFormQ *be
 /* The first beat of measure `index` at or after `time`, never later than the measure's end. */
 bool standard_form_snap_to_beat(const MeterMap *map, int index, StandardFormQ time, StandardFormQ *snapped);
 
+/* True when `time` falls on a beat of its measure (the measure's start included). */
+bool standard_form_on_beat(const MeterMap *map, StandardFormQ time);
+
 /* A new left-closed TimeSpan [start, end) the caller destroys, or NULL. */
 TimeSpan *standard_form_make_span(StandardFormQ start, StandardFormQ end);
 

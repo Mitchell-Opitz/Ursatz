@@ -4,7 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis/motif_window_matching.h"
 #include "analysis/phrase_boundary_detection.h"
+#include "analysis_motive.h"
 #include "analysis_phrase.h"
 #include "core/value.h"
 #include "interpretation/interpretation.h"
@@ -76,6 +78,49 @@ static inline StandardFormAnalysisStatus form_kernel_detect(const StandardFormBo
     analysis_result_destroy(boundary_result);
     analysis_result_destroy(signal_result);
     free(kernel_points);
+    return status;
+}
+
+/*
+ * The same for the motive analysis (analysis_motive.h): standard-form's injected window matcher calls the kernel's Motif Window Matching,
+ * which finds the windows whose Contour direction sequence and RhythmicPattern both equal another window's. The kernel returns one
+ * MotifDetectionOccurrence per window that matched, borrowing the window's event ids, which is how a window is found again here.
+ */
+static inline StandardFormAnalysisStatus form_kernel_match_windows(const StandardFormMotifWindow *windows, size_t count,
+                                                                   bool *matched, void *context) {
+    (void)context;
+    if (count > 0 && (windows == NULL || matched == NULL)) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    memset(matched, 0, count * sizeof(bool));
+    if (count == 0) {
+        return STANDARD_FORM_ANALYSIS_OK;
+    }
+    MotifWindow *kernel = (MotifWindow *)calloc(count, sizeof(MotifWindow));
+    if (kernel == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < count; i++) {
+        kernel[i].contour = windows[i].contour;
+        kernel[i].rhythm = windows[i].rhythm;
+        kernel[i].event_ids = windows[i].event_ids;
+        kernel[i].event_id_count = windows[i].event_id_count;
+    }
+    MotifDetectionOccurrence *found = NULL;
+    size_t found_count = 0;
+    StandardFormAnalysisStatus status = STANDARD_FORM_ANALYSIS_ERR_DETECTOR;
+    if (motif_window_matching_find(kernel, count, &found, &found_count) == MOTIF_WINDOW_MATCHING_OK) {
+        status = STANDARD_FORM_ANALYSIS_OK;
+        for (size_t j = 0; j < found_count; j++) {
+            for (size_t i = 0; i < count; i++) {
+                if (found[j].matched_event_ids == windows[i].event_ids) {
+                    matched[i] = true;
+                }
+            }
+        }
+    }
+    motif_window_matching_destroy_occurrences(found);
+    free(kernel);
     return status;
 }
 

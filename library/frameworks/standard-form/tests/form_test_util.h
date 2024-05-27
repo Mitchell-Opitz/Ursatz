@@ -104,6 +104,13 @@ static inline void form_note(FormFixture *f, double start_quarters, double durat
     f->note_count++;
 }
 
+/* The scale degrees of the soprano notes added so far, in order (0 for a note with none); alterations 0. */
+static inline void form_degrees(FormFixture *f, const int *degrees) {
+    for (size_t i = 0; i < f->note_count; i++) {
+        assert(standard_form_input_set_degree(&f->input, false, i, degrees[i], 0) == STANDARD_FORM_ANALYSIS_OK);
+    }
+}
+
 /* The first quarter of measure m (1-based; 0 is the pickup). */
 static inline double form_measure_start(const FormFixture *f, int m) {
     return m == 0 ? 0.0 : (double)f->pickup + (double)(m - 1) * (double)f->top;
