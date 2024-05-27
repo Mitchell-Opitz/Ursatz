@@ -163,3 +163,5 @@ arrives with the form adapter (L3.6).
 ## Analysis of real music
 
 `analysis/` finds phrases (feeding the kernel's Phrase Boundary Detection with real cadences, absorbing post-cadential extensions and snapping to the beat), ideas and subphrases by the length conventions above, themes (sentence, period, hybrid, compound period, repeated phrase) from idea similarity and cadences, and phrase expansion and contraction. See `docs/modules/form-analysis.md`.
+
+`analysis/` also finds motives: recurring short note groups of the outer lines, grouped into families by transposition-invariant interval and rhythm, with inversion, retrograde, augmentation, diminution, fragmentation and variation matched against each family's prototype. See `docs/modules/motive-analysis.md`.
