@@ -117,10 +117,20 @@ No framework or build pipeline at this stage. Theming lives entirely in
 picker can swap colors without touching markup or `app.js`. Frontend
 logic (`app.js`) makes no styling decisions.
 
-The Corpus tool page lets you create a Corpus, list existing Corpora, and
-click into one to see, add, and remove piece refs. Piece refs are entered
-as plain id strings -- there is no cross-linking to the Analyzer piece
-list in this version.
+The Corpus tool page is displayed as "Collections" in the sidebar and view
+title -- the API/module/route naming stays `corpus`, only the label shown
+to the user changed. It renders a grid of Collection cards (name only; the
+API has no piece-count or last-updated field, so neither is shown on the
+card). Clicking a card opens a detail view listing that Collection's piece
+refs, reusing the same row component/styling as the Library view: each
+row's filename is looked up by joining the piece ref's id against
+`/api/analyzer/pieces`, falling back to the bare id when no match is
+found. The only action on a Collection's piece row is removing it from
+the Collection (`DELETE /api/corpus/<id>/pieces/<piece_id>`) -- Library's
+piece-management actions (rename, delete, etc.) are not carried over,
+since a Collection row represents membership, not the piece itself. New
+piece refs are still added as plain id strings via the id input below the
+list, and a piece may belong to any number of Collections.
 
 ## Building
 
