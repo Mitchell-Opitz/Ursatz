@@ -1,7 +1,7 @@
 # grow command
 
 ```sh
-ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
+ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
@@ -33,10 +33,12 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--bars <4\|8>` | Length of the theme. 8 by default, with a two-bar basic idea; 4 has a one-bar basic idea. |
 | `--cadence <type>` | PAC (default), IAC or HC: the cadence the theme ends in. |
 | `--first-cadence <type>` | HC (default) or IAC: the weak cadence of an antecedent. Only for a period or a hybrid that begins with an antecedent. |
+| `--accompaniment <pattern>` | Write an accompaniment in the inner voices: `block`, `arpeggiated`, `alberti` (not in 6/8), `oom-pah`, or `any`, which chooses from the seed. See [accompaniment.md](accompaniment.md). |
+| `--texture <name>` | The texture the accompaniment is to be heard as, a standard-texture name in any case: `homophony`, `homorhythm` (block chords only) or `melody and accompaniment`. Alone it implies `--accompaniment any`. Other textures are refused. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same input, options and seed give the same output. |
 | `--suggest <n>` | 1 to 16 different themes instead of one. |
 | `--out <file.json>` | The plan as JSON, as `plan_write_json_file` writes it. |
-| `--midi <file>`, `--musicxml <file>` | The melody and the bass of the theme. The source material is not part of the piece. |
+| `--midi <file>`, `--musicxml <file>` | The melody and the bass of the theme, and the accompaniment, one part for each voice of it. The source material is not part of the piece. |
 | `--format <text\|json>` | How the result is printed on stdout. Text by default. |
 
 ## Seeds
@@ -80,7 +82,7 @@ change the exit status. Most periods are heard as hybrids and every theme of 4 b
 theme (see [grow.md](grow.md)).
 
 `--format json` prints the same as one object: the request (`key`, `meter`, `bars`, `into`,
-`pairing`, `cadence`, and `first_cadence` for an antecedent), `themes` (each with `seed`, `structure`,
+`pairing`, `cadence`, `first_cadence` for an antecedent, and `accompaniment` and `texture` when asked for), `themes` (each with `seed`, `structure`,
 `chords`, `developments`, `score`, `requested`, `heard`, `heard_as_requested` and `heard_text`) and
 `files`.
 
@@ -99,4 +101,6 @@ theme (see [grow.md](grow.md)).
 ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --seed 7 --out theme.json --midi theme.mid
 ursatz-composer grow theme.txt --into period --first-cadence IAC --key "D minor" --meter 4/4 --suggest 3 --out period.json
 ursatz-composer grow theme.txt --into hybrid --hybrid antecedent+continuation --key "D minor" --meter 4/4
+ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --accompaniment alberti --midi theme.mid
+ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --texture "melody and accompaniment"
 ```

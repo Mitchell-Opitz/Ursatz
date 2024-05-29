@@ -2,7 +2,7 @@
 
 `grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a theme from one motive: its structure (a
 sentence, a period or one of the seven hybrids), then the motives made from the motive, the harmony, the bass and the
-melody, each through the fill loop. This is a library API; the `grow` command comes later.
+melody, and, when asked, an accompaniment, each through the fill loop. The [grow command](cli-grow.md) runs it.
 
 ```c
 GrowRequest request = {.motive = &motive, .key = key, .meter = meter, .bars = 8,
@@ -26,11 +26,13 @@ if (grow_build_plan(&request, &plan) == GROW_OK && grow_run(plan, &config, &outc
 | `pairing` | Any of the nine pairings of a beginning (presentation, antecedent, compound basic idea) and an ending (continuation, consequent, cadential). Presentation and continuation make a sentence, antecedent and consequent a period, the other seven a hybrid (`standard_form_pairing_form`). |
 | `cadence` | PAC, IAC or HC: the cadence the theme ends in. |
 | `first_cadence` | The weak cadence an antecedent ends in, HC or IAC and weaker than `cadence` by `harmony_cadence_strength`. Zero (PAC) means the default, HC. Read only for an antecedent. |
+| `has_accompaniment`, `accompaniment` | An accompaniment under the melody and bass ([accompaniment.md](accompaniment.md)): a `PlanAccompaniment` with a pattern (`ANY` for any), a texture (`-1` for none) and a range (0 for the defaults 48 and 67). Without `has_accompaniment` the theme has no inner voice. The theme section carries it as an `accompaniment` constraint. |
 
 `GROW_ERR_BAD_REQUEST` is also the result for a meter the harmony operators do not support, bars other than 4 or 8, a
 cadence other than those three, a motive of one note, a half of the theme too short for its cadence, and an antecedent
 whose cadences cannot be ordered: a theme that ends in HC has nothing weaker for the antecedent, `first_cadence` DC or
-PC is not a weak cadence, and equal cadences are not a period.
+PC is not a weak cadence, and equal cadences are not a period. An accompaniment is refused when its pattern is not one,
+its texture is not homophonic, its range has no room (`low` not below `high`), or it is Alberti in a compound meter.
 
 ## The plan
 
@@ -56,6 +58,10 @@ with the stage in `GrowOutcome.stuck_stage`. `GrowOutcome.records` keeps the `Fi
 | harmony | `harmony-prolongation`, `harmony-phrase-model` | `harmony_prolong_checker` |
 | bass | `harmony-bass` | `harmony_phrase_checker` |
 | melody | `melody-fill` | `melody_fill_checker` |
+| texture | `accompaniment` | `accompaniment_checker` |
+
+The texture stage (`GROW_STAGE_TEXTURE`, seed `config.seed + 5`) writes the inner voice spans `grow-theme` opened, and has
+nothing to do, and an empty record, when the request asked for no accompaniment.
 
 Two things make a run more reliable than one pass of the stages. A melody that gets stuck is written again from the
 seed `+ 1000` up to 5 more times (the spans are reopened; the chords stay). A theme other than a sentence asks for
@@ -99,6 +105,10 @@ its own, `consequent` for a consequent (its ideas directly in it, as the anteced
 others (the continuation or cadential subphrase inside it), carrying the theme's cadence. Any other beginning makes one
 Phrase of 8 bars with the two halves as subphrases. The ideas of a consequent are named for it because a theme has
 a `basic idea` and a `contrasting idea` in its first half already.
+
+With an accompaniment, every harmony span `grow-theme` opens (the "harmony" rows above) also opens, over the same
+time and under the same owner, Constrained inner voice spans: voice 1, with the `accompaniment` constraint, and voices 2
+and 3 for a block, an oom-pah or `any` (an arpeggiated or Alberti accompaniment is voice 1 alone).
 
 And in the material section, one motive node for each idea after the basic idea, with a `motive_ref` to `m0`: `m1` for
 the repetition or the contrasting idea of the first half, then `m2` to `m4` for the second half (the fragments and the
