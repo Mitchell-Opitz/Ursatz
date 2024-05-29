@@ -8,6 +8,7 @@
 #include <cJSON.h>
 #include <ursatz_composer/composer.h>
 #include <galant_prototypes.h>
+#include <texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
@@ -24,7 +25,7 @@ static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
-                                                  "material", "harmony_shape", "theme_pairing"};
+                                                  "material", "harmony_shape", "theme_pairing", "accompaniment"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -35,6 +36,7 @@ static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "
 static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound_basic_idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
+static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
 static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
@@ -178,6 +180,21 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
                             cJSON_CreateString(BEGINNING_NAMES[constraint->params.theme_pairing.beginning])) &&
              json_add(object, "ending", cJSON_CreateString(ENDING_NAMES[constraint->params.theme_pairing.ending]));
         break;
+    case PLAN_CONSTRAINT_ACCOMPANIMENT: {
+        const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
+        ok = ok && json_add(object, "pattern", cJSON_CreateString(ACCOMPANIMENT_NAMES[accompaniment->pattern]));
+        if (accompaniment->texture >= 0) {
+            ok = ok && json_add(object, "texture",
+                                cJSON_CreateString(standard_texture_name((StandardTexture)accompaniment->texture)));
+        }
+        if (accompaniment->low != 0) {
+            ok = ok && json_add(object, "low", json_number(accompaniment->low));
+        }
+        if (accompaniment->high != 0) {
+            ok = ok && json_add(object, "high", json_number(accompaniment->high));
+        }
+        break;
+    }
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -847,6 +864,29 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         out->params.theme_pairing.ending = (PlanThemeEnding)ending;
         return true;
     }
+    case PLAN_CONSTRAINT_ACCOMPANIMENT: {
+        PlanAccompaniment *accompaniment = &out->params.accompaniment;
+        const cJSON *texture = cJSON_GetObjectItemCaseSensitive(item, "texture");
+        accompaniment->texture = -1;
+        if (!read_enum_member(reader, item, path, "pattern", ACCOMPANIMENT_NAMES, COUNT_OF(ACCOMPANIMENT_NAMES), &value)) {
+            return false;
+        }
+        accompaniment->pattern = (PlanAccompanimentPattern)value;
+        if (texture) {
+            char at[PLAN_JSON_PATH_MAX];
+            StandardTexture named;
+            json_child_path(at, path, "texture");
+            if (!cJSON_IsString(texture)) {
+                return json_bad_format(reader, at, "expected a texture name");
+            }
+            if (!standard_texture_from_name(texture->valuestring, &named)) {
+                return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown texture '%.40s'", texture->valuestring);
+            }
+            accompaniment->texture = (int)named;
+        }
+        return read_optional_int(reader, item, path, "low", 0, 127, &accompaniment->low) &&
+               read_optional_int(reader, item, path, "high", 0, 127, &accompaniment->high);
+    }
     }
     return false;
 }
@@ -1159,12 +1199,13 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
         }
         char list_path[PLAN_JSON_PATH_MAX];
         json_child_path(list_path, path, "notes");
-        if (!cJSON_IsArray(list) || cJSON_GetArraySize(list) == 0) {
+        /* An inner voice may be silent over its span: an empty array. */
+        if (!cJSON_IsArray(list) || (cJSON_GetArraySize(list) == 0 && lane != PLAN_LANE_INNER_VOICE)) {
             return json_bad_format(reader, list_path, "expected a non-empty array");
         }
         size_t count = (size_t)cJSON_GetArraySize(list);
-        PlanNote *notes = calloc(count, sizeof(PlanNote));
-        if (!notes) {
+        PlanNote *notes = count ? calloc(count, sizeof(PlanNote)) : NULL;
+        if (count && !notes) {
             return json_fail(reader, PLAN_ERR_ALLOC, list_path, "out of memory");
         }
         *notes_storage = notes;

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <galant_prototypes.h>
+#include <texture_rules.h>
 
 #include "plan/plan_internal.h"
 
@@ -53,6 +54,15 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return pairing->beginning >= PLAN_THEME_BEGINNING_PRESENTATION &&
                pairing->beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA &&
                pairing->ending >= PLAN_THEME_ENDING_CONTINUATION && pairing->ending <= PLAN_THEME_ENDING_CADENTIAL;
+    }
+    case PLAN_CONSTRAINT_ACCOMPANIMENT: {
+        const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
+        int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
+        int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
+        return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_OOM_PAH &&
+               accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
+               accompaniment->low >= 0 && accompaniment->low <= 127 && accompaniment->high >= 0 &&
+               accompaniment->high <= 127 && low < high;
     }
     }
     return false;

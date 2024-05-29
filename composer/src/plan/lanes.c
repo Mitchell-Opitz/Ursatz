@@ -68,7 +68,8 @@ bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePaylo
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
     case PLAN_LANE_INNER_VOICE:
-        if (payload->notes.note_count == 0 || !payload->notes.notes) {
+        /* An inner voice may be silent over its span: no notes. */
+        if (payload->notes.note_count == 0 ? lane != PLAN_LANE_INNER_VOICE : !payload->notes.notes) {
             return false;
         }
         for (size_t i = 0; i < payload->notes.note_count; i++) {
@@ -110,11 +111,13 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     PlanLanePayload stored = *payload;
     if (is_note_lane(lane)) {
         size_t bytes = payload->notes.note_count * sizeof(PlanNote);
-        PlanNote *copy = malloc(bytes);
-        if (!copy) {
+        PlanNote *copy = bytes ? malloc(bytes) : NULL;
+        if (bytes && !copy) {
             return PLAN_ERR_ALLOC;
         }
-        memcpy(copy, payload->notes.notes, bytes);
+        if (bytes) {
+            memcpy(copy, payload->notes.notes, bytes);
+        }
         stored.notes.notes = copy;
     }
 

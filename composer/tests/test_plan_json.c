@@ -187,6 +187,11 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     case PLAN_CONSTRAINT_THEME_PAIRING:
         return a->params.theme_pairing.beginning == b->params.theme_pairing.beginning &&
                a->params.theme_pairing.ending == b->params.theme_pairing.ending;
+    case PLAN_CONSTRAINT_ACCOMPANIMENT:
+        return a->params.accompaniment.pattern == b->params.accompaniment.pattern &&
+               a->params.accompaniment.texture == b->params.accompaniment.texture &&
+               a->params.accompaniment.low == b->params.accompaniment.low &&
+               a->params.accompaniment.high == b->params.accompaniment.high;
     }
     return false;
 }

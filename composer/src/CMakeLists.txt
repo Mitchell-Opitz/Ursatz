@@ -52,13 +52,16 @@ add_library(ursatz_composer STATIC
     grow/grow_ending.c
     grow/grow_check.c
     grow/grow_run.c
+    texture/accompaniment.c
+    texture/accompaniment_pattern.c
+    texture/accompaniment_hear.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_composer
-    PUBLIC ursatz ursatz_analyzer common_practice_minimal standard_harmony standard_counterpoint standard_form galant_schemas scale_harmonization
+    PUBLIC ursatz ursatz_analyzer common_practice_minimal standard_harmony standard_counterpoint standard_form standard_texture galant_schemas scale_harmonization
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE

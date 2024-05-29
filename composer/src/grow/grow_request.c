@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <harmony_cadence_rules.h>
+#include <texture_rules.h>
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
@@ -29,7 +30,7 @@ const char *grow_result_name(GrowResult result) {
 }
 
 const char *grow_stage_name(GrowStage stage) {
-    static const char *const NAMES[GROW_STAGE_COUNT] = {"structure", "motives", "harmony", "bass", "melody"};
+    static const char *const NAMES[GROW_STAGE_COUNT] = {"structure", "motives", "harmony", "bass", "melody", "texture"};
     return stage >= 0 && stage < GROW_STAGE_COUNT ? NAMES[stage] : "unknown";
 }
 
@@ -78,6 +79,19 @@ static bool cadences_ordered(PlanCadenceType first, PlanCadenceType last) {
                harmony_cadence_strength(harmony_cadence_type_of(last));
 }
 
+/* Whether the accompaniment asked for can be written in the meter, as a texture that has one. */
+static bool accompaniment_valid(const GrowRequest *request) {
+    const PlanAccompaniment *accompaniment = &request->accompaniment;
+    bool compound = request->meter.beat_unit == 8 && request->meter.beats_per_bar % 3 == 0;
+    int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
+    int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
+    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_OOM_PAH &&
+           accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
+           (accompaniment->texture < 0 || standard_texture_is_homophonic((StandardTexture)accompaniment->texture)) &&
+           low >= 0 && high <= 127 && low < high &&
+           !(accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI && compound);
+}
+
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     if (!request || !request->motive || !out) {
         return GROW_ERR_NULL;
@@ -94,7 +108,8 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
          request->cadence != PLAN_CADENCE_HC) ||
         request->motive->note_count < 2 || request->key.tonic_pitch_class < 0 || request->key.tonic_pitch_class > 11 ||
         !half_fits(request, cells_per_bar, request->cadence) ||
-        (antecedent && (!cadences_ordered(first, request->cadence) || !half_fits(request, cells_per_bar, first)))) {
+        (antecedent && (!cadences_ordered(first, request->cadence) || !half_fits(request, cells_per_bar, first))) ||
+        (request->has_accompaniment && !accompaniment_valid(request))) {
         return GROW_ERR_BAD_REQUEST;
     }
     PlanTime bar = grow_bar_length(&request->meter);
@@ -174,6 +189,13 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_KEY;
         constraint.params.key = request->key;
+        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
+    }
+
+    if (result == GROW_OK && request->has_accompaniment) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
+        constraint.params.accompaniment = request->accompaniment;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 

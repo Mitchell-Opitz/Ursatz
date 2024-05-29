@@ -60,11 +60,13 @@ PlanResult plan_lane_span_write(PiecePlan *plan, LaneSpanId id, const PlanLanePa
                      entry->lane == PLAN_LANE_INNER_VOICE;
     if (note_lane) {
         size_t bytes = payload->notes.note_count * sizeof(PlanNote);
-        PlanNote *copy = malloc(bytes);
-        if (!copy) {
+        PlanNote *copy = bytes ? malloc(bytes) : NULL;
+        if (bytes && !copy) {
             return PLAN_ERR_ALLOC;
         }
-        memcpy(copy, payload->notes.notes, bytes);
+        if (bytes) {
+            memcpy(copy, payload->notes.notes, bytes);
+        }
         stored.notes.notes = copy;
         free((void *)entry->payload.notes.notes);
     }

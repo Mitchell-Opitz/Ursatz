@@ -77,6 +77,8 @@ typedef struct {
     size_t bars;
     size_t cells_per_bar;
     PlanTime bar;
+    bool has_accompaniment;
+    PlanAccompaniment accompaniment;
 } GrowThemeRequest;
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */

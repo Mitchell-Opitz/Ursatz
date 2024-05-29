@@ -16,9 +16,10 @@
 
 /* How many candidates are drawn for each one asked for before the search is given up. */
 #define DRAWS_PER_CANDIDATE 6
-/* The pitch of the placeholder notes a bass and a melody span hold until the operators write them. */
+/* The pitch of the placeholder notes a bass, a melody and an inner voice span hold until the operators write them. */
 #define BASS_PLACEHOLDER 40
 #define MELODY_PLACEHOLDER 60
+#define INNER_PLACEHOLDER 55
 
 /* ------------------------------------------------------------- the plan */
 
@@ -54,6 +55,9 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
             request.has_first = true;
             request.first_cadence = constraint->params.cadence;
+        } else if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
+            request.has_accompaniment = true;
+            request.accompaniment = constraint->params.accompaniment;
         }
     }
     LaneSpanId lane[2];
@@ -489,6 +493,40 @@ PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *r
     return result == PLAN_OK ? plan_node_add_constraint(build->plan, *out, &constraint) : result;
 }
 
+/*
+ * The open inner voice spans an accompaniment is written in, over the same time as a harmony span: voice 1 with the
+ * constraint, and the voices 2 and 3 a block, an oom-pah or ANY writes. The pattern says how many are needed; for ANY
+ * all three are opened, and the ones the pattern chosen does not use are written empty.
+ */
+static PlanResult add_accompaniment_targets(GrowBuild *build, NodeId owner, PlanSpan span) {
+    const PlanAccompaniment *accompaniment = &build->request->accompaniment;
+    int voices = accompaniment->pattern == PLAN_ACCOMPANIMENT_ARPEGGIATED ||
+                         accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI
+                     ? 1
+                     : 3;
+    PlanResult result = PLAN_OK;
+    for (int voice = 1; result == PLAN_OK && voice <= voices; voice++) {
+        PlanLanePayload payload;
+        PlanNote note;
+        LaneSpanId id;
+        memset(&payload, 0, sizeof(payload));
+        note.midi_pitch = INNER_PLACEHOLDER;
+        note.offset = (PlanTime){0, 1};
+        note.duration = span.length;
+        payload.notes.notes = &note;
+        payload.notes.note_count = 1;
+        result = plan_add_lane_span(build->plan, owner, PLAN_LANE_INNER_VOICE, voice, span, &payload, &id);
+        if (result == PLAN_OK && voice == 1) {
+            PlanConstraint constraint;
+            memset(&constraint, 0, sizeof(constraint));
+            constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
+            constraint.params.accompaniment = *accompaniment;
+            result = plan_lane_span_add_constraint(build->plan, id, &constraint);
+        }
+    }
+    return result;
+}
+
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                   const PlanConstraint *cadence) {
     PiecePlan *plan = build->plan;
@@ -519,6 +557,9 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
     payload.notes.note_count = 1;
     if (result == PLAN_OK) {
         result = plan_add_lane_span(plan, owner, PLAN_LANE_BASS, 0, span, &payload, &bass);
+    }
+    if (result == PLAN_OK && build->request->has_accompaniment) {
+        result = add_accompaniment_targets(build, owner, span);
     }
     return result;
 }
