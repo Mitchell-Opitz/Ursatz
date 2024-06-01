@@ -125,42 +125,6 @@ body {
   color: #f87171;
 }
 
-.piece-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.piece-list li {
-  padding: 6px 8px;
-  border-radius: 4px;
-  color: var(--text);
-}
-
-.piece-list li:hover {
-  background: var(--bg-hover);
-}
-
-.piece-detail-status {
-  color: var(--text-dim);
-  margin-bottom: 8px;
-}
-
-.piece-detail-status.error {
-  color: #f87171;
-}
-
-.interpretation-list {
-  list-style: none;
-  margin: 8px 0;
-  padding: 0;
-}
-
-.interpretation-list li {
-  padding: 4px 0;
-  color: var(--text);
-}
-
 .provenance-flag {
   color: var(--text-dim);
   font-size: 12px;
@@ -202,17 +166,6 @@ body {
 
 .upload-status.error {
   color: #f87171;
-}
-
-.piece-list li button {
-  background: var(--bg-hover);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
 }
 
 .view-title {

@@ -2,8 +2,7 @@
 // index.html already defines. Theming lives entirely in style.css.
 
 const TOOLS = [
-  { id: "analysis", label: "Analysis", active: true, render: renderAnalysisView },
-  { id: "library", label: "Library", active: false, render: renderLibraryView },
+  { id: "library", label: "Library", active: true, render: renderLibraryView },
   { id: "corpus", label: "Collections", active: false, render: renderCorpusView },
   { id: "generator", label: "Generator", active: false, comingSoon: true },
 ];
@@ -50,87 +49,6 @@ async function checkHealth() {
   } catch (err) {
     el.textContent = `Could not reach backend: ${err}`;
     el.classList.add("error");
-  }
-}
-
-async function renderAnalysisView() {
-  const content = getContentEl();
-  content.innerHTML = `
-    <section class="panel">
-      <h1>Analysis</h1>
-      <div id="piece-list-status" class="piece-list-status">Loading pieces...</div>
-      <ul id="piece-list" class="piece-list"></ul>
-      <div class="upload-controls">
-        <input type="file" id="upload-file" accept=".mid,.midi" />
-        <button id="upload-button" type="button">Upload</button>
-      </div>
-      <div id="upload-status" class="upload-status"></div>
-    </section>
-  `;
-
-  wireUploadControl("upload", (data) => showPieceDetail(data.id));
-
-  const statusEl = document.getElementById("piece-list-status");
-  const listEl = document.getElementById("piece-list");
-
-  try {
-    const res = await fetch("/api/analyzer/pieces");
-    const data = await res.json();
-
-    if (!data.ok) {
-      statusEl.textContent = `Failed to load pieces: ${data.message || "unknown error"}`;
-      statusEl.classList.add("error");
-      return;
-    }
-
-    if (data.pieces.length === 0) {
-      statusEl.textContent = "No pieces yet.";
-      return;
-    }
-
-    statusEl.textContent = "";
-    for (const piece of data.pieces) {
-      const li = document.createElement("li");
-
-      const label = document.createElement("span");
-      label.textContent = formatPieceLabel(piece.id, piece.filename);
-      label.classList.add("clickable");
-      label.addEventListener("click", () => showPieceDetail(piece.id));
-      li.appendChild(label);
-
-      li.appendChild(document.createTextNode(" "));
-
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.textContent = "Delete";
-      deleteButton.addEventListener("click", () => handleDeletePiece(piece.id, li));
-      li.appendChild(deleteButton);
-
-      listEl.appendChild(li);
-    }
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
-  }
-}
-
-async function handleDeletePiece(id, liEl) {
-  const statusEl = document.getElementById("piece-list-status");
-
-  try {
-    const res = await fetch(`/api/analyzer/pieces/${id}`, { method: "DELETE" });
-    const data = await res.json();
-
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Delete failed.";
-      statusEl.classList.add("error");
-      return;
-    }
-
-    liEl.remove();
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
   }
 }
 
@@ -383,8 +301,8 @@ async function handleDeleteLibraryPiece(id, rowEl) {
 }
 
 /* Wires the "<idPrefix>-file"/"<idPrefix>-button"/"<idPrefix>-status"
- * upload control markup already in the DOM (see renderAnalysisView's
- * .upload-controls and renderLibraryView's .upload-box) to the shared
+ * upload control markup already in the DOM (see renderLibraryView's
+ * .upload-box) to the shared
  * upload handler below. onUploaded(data) runs after a successful
  * upload, once, with the parsed response body -- each view decides what
  * "uploaded" means for it (jump to the new piece's detail, or just
@@ -448,92 +366,6 @@ const PROVENANCE_LABELS = {
  * alone gives no clue which uploaded file it came from. */
 function formatPieceLabel(id, filename) {
   return filename ? `${filename} (${id})` : id;
-}
-
-function renderBackLink() {
-  const back = document.createElement("a");
-  back.textContent = "Back to list";
-  back.classList.add("back-link", "clickable");
-  back.addEventListener("click", () => renderAnalysisView());
-  return back;
-}
-
-function showPieceDetail(id) {
-  const content = getContentEl();
-  content.innerHTML = `
-    <section class="panel">
-      <h1>Piece Detail</h1>
-      <div id="piece-detail-status" class="piece-detail-status">Loading piece ${id}...</div>
-      <div id="piece-detail-body"></div>
-    </section>
-  `;
-
-  const statusEl = document.getElementById("piece-detail-status");
-  const bodyEl = document.getElementById("piece-detail-body");
-
-  fetch(`/api/analyzer/pieces/${id}`)
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.ok) {
-        statusEl.textContent = data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found";
-        statusEl.classList.add("error");
-        bodyEl.appendChild(renderBackLink());
-        return;
-      }
-
-      statusEl.textContent = "";
-
-      const heading = bodyEl.parentElement.querySelector("h1");
-      if (heading) {
-        heading.textContent = `Piece Detail: ${formatPieceLabel(data.id, data.filename)}`;
-      }
-
-      const noteCount = document.createElement("div");
-      noteCount.textContent = `Note count: ${data.note_event_count}`;
-      bodyEl.appendChild(noteCount);
-
-      const list = document.createElement("ul");
-      list.classList.add("interpretation-list");
-      if (data.interpretations.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "No interpretations yet.";
-        list.appendChild(li);
-      } else {
-        for (const interpretation of data.interpretations) {
-          const li = document.createElement("li");
-          const provenanceLabel = PROVENANCE_LABELS[interpretation.provenance_state] || interpretation.provenance_state;
-          li.textContent = `${interpretation.type}: ${interpretation.label} — `;
-          const flag = document.createElement("span");
-          flag.classList.add("provenance-flag");
-          flag.textContent = provenanceLabel;
-          li.appendChild(flag);
-          list.appendChild(li);
-        }
-      }
-      bodyEl.appendChild(list);
-
-      const relationshipList = document.createElement("ul");
-      relationshipList.classList.add("relationship-list");
-      if (!data.relationships || data.relationships.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "No relationships yet.";
-        relationshipList.appendChild(li);
-      } else {
-        for (const relationship of data.relationships) {
-          const li = document.createElement("li");
-          li.textContent = `${relationship.source_id} —${relationship.predicate_name}→ ${relationship.target_id}`;
-          relationshipList.appendChild(li);
-        }
-      }
-      bodyEl.appendChild(relationshipList);
-
-      bodyEl.appendChild(renderBackLink());
-    })
-    .catch((err) => {
-      statusEl.textContent = `Could not reach backend: ${err}`;
-      statusEl.classList.add("error");
-      bodyEl.appendChild(renderBackLink());
-    });
 }
 
 async function renderCorpusView() {
