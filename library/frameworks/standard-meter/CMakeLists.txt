@@ -10,6 +10,7 @@ add_library(standard_meter
     borrowed_rules.c
     hypermeter_rules.c
     syncopation_rules.c
+    hemiola_rules.c
     metric_position_rules.c
     segmentation_beat_grid.c
     beat_grid.c
