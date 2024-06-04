@@ -368,6 +368,166 @@ function formatPieceLabel(id, filename) {
   return filename ? `${filename} (${id})` : id;
 }
 
+/* Analysis view tabs, each mapped to the real interpretation `type`
+ * values GET /api/analyzer/pieces/<id> returns (see analysis_service.c's
+ * kIndexType* constants) -- Form folds in thematic_return (Thematic
+ * Return Detection shares Form Structure Detection's Relationship-typed
+ * lineage) and Periods/Sentences folds in both period and sentence,
+ * each pair sharing one tab and one count badge. */
+const ANALYSIS_TABS = [
+  { id: "chords", label: "Chords", types: ["chord"] },
+  { id: "keys", label: "Keys", types: ["key"] },
+  { id: "cadences", label: "Cadences", types: ["cadence"] },
+  { id: "motifs", label: "Motifs", types: ["motif"] },
+  { id: "phrases", label: "Phrases", types: ["phrase"] },
+  { id: "form", label: "Form", types: ["form", "thematic_return"] },
+  { id: "periods-sentences", label: "Periods/Sentences", types: ["period", "sentence"] },
+];
+
+/* No analyzer-registry endpoint exists yet -- this mirrors the static
+ * name/version list shown in the mockup rather than fetching real
+ * analyzer identity. */
+const ANALYZERS = [
+  { name: "harmony", version: "2.4.1" },
+  { name: "keyfinder", version: "1.8.0" },
+  { name: "phrasing", version: "0.6.3" },
+  { name: "form", version: "0.3.0" },
+];
+
+function renderAnalysisBackLink() {
+  const back = document.createElement("a");
+  back.textContent = "← Library";
+  back.classList.add("back-link", "clickable");
+  back.addEventListener("click", () => selectTool("library"));
+  return back;
+}
+
+function renderAnalyzersList() {
+  const listEl = document.getElementById("analysis-analyzers");
+  listEl.innerHTML = "";
+  for (const analyzer of ANALYZERS) {
+    const li = document.createElement("li");
+    li.textContent = `${analyzer.name} ${analyzer.version}`;
+    listEl.appendChild(li);
+  }
+}
+
+/* Buckets interpretations by ANALYSIS_TABS entry; an interpretation
+ * whose type matches no tab (none do today) is silently dropped. */
+function groupClaimsByTab(interpretations) {
+  const groups = new Map();
+  for (const tab of ANALYSIS_TABS) {
+    groups.set(tab.id, []);
+  }
+  for (const interpretation of interpretations) {
+    const tab = ANALYSIS_TABS.find((candidate) => candidate.types.includes(interpretation.type));
+    if (tab) {
+      groups.get(tab.id).push(interpretation);
+    }
+  }
+  return groups;
+}
+
+function showAnalysisView(id) {
+  const content = getContentEl();
+  content.innerHTML = `
+    <div id="analysis-back-container"></div>
+    <h1 class="view-title" id="analysis-title">Loading...</h1>
+    <div class="analysis-layout">
+      <aside class="analysis-sidebar">
+        <div class="sidebar-label">Analyzers</div>
+        <ul id="analysis-analyzers" class="analyzers-list"></ul>
+      </aside>
+      <div class="analysis-main">
+        <div id="analysis-status" class="piece-list-status">Loading piece ${id}...</div>
+        <div id="analysis-tabs" class="analysis-tabs" hidden></div>
+        <div id="analysis-claims" class="analysis-claims"></div>
+        <div id="analysis-detail" class="analysis-detail" hidden></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("analysis-back-container").appendChild(renderAnalysisBackLink());
+  renderAnalyzersList();
+
+  fetch(`/api/analyzer/pieces/${id}`)
+    .then((res) => res.json())
+    .then((data) => {
+      const statusEl = document.getElementById("analysis-status");
+      if (!data.ok) {
+        statusEl.textContent = data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "";
+      document.getElementById("analysis-title").textContent = data.filename || data.id;
+      renderAnalysisTabs(data);
+    })
+    .catch((err) => {
+      const statusEl = document.getElementById("analysis-status");
+      statusEl.textContent = `Could not reach backend: ${err}`;
+      statusEl.classList.add("error");
+    });
+}
+
+function renderAnalysisTabs(data) {
+  const tabsEl = document.getElementById("analysis-tabs");
+  const claimsEl = document.getElementById("analysis-claims");
+  const detailEl = document.getElementById("analysis-detail");
+  const groups = groupClaimsByTab(data.interpretations || []);
+
+  tabsEl.innerHTML = "";
+  tabsEl.hidden = false;
+
+  function selectTab(tabId) {
+    for (const button of tabsEl.querySelectorAll("button")) {
+      button.classList.toggle("active", button.dataset.tabId === tabId);
+    }
+    detailEl.hidden = true;
+    renderClaimList(claimsEl, groups.get(tabId) || [], detailEl);
+  }
+
+  for (const tab of ANALYSIS_TABS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.tabId = tab.id;
+    button.textContent = `${tab.label} ${groups.get(tab.id).length}`;
+    button.addEventListener("click", () => selectTab(tab.id));
+    tabsEl.appendChild(button);
+  }
+
+  selectTab(ANALYSIS_TABS[0].id);
+}
+
+function renderClaimList(claimsEl, claims, detailEl) {
+  claimsEl.innerHTML = "";
+
+  if (claims.length === 0) {
+    const empty = document.createElement("div");
+    empty.classList.add("piece-list-status");
+    empty.textContent = "No claims in this category.";
+    claimsEl.appendChild(empty);
+    return;
+  }
+
+  const list = document.createElement("ul");
+  list.classList.add("claim-list");
+  for (const claim of claims) {
+    const li = document.createElement("li");
+    li.classList.add("clickable");
+
+    li.textContent = `${claim.label} — `;
+    const flag = document.createElement("span");
+    flag.classList.add("provenance-flag");
+    flag.textContent = PROVENANCE_LABELS[claim.provenance_state] || claim.provenance_state;
+    li.appendChild(flag);
+
+    list.appendChild(li);
+  }
+  claimsEl.appendChild(list);
+}
+
 async function renderCorpusView() {
   const content = getContentEl();
   content.innerHTML = `
