@@ -523,9 +523,64 @@ function renderClaimList(claimsEl, claims, detailEl) {
     flag.textContent = PROVENANCE_LABELS[claim.provenance_state] || claim.provenance_state;
     li.appendChild(flag);
 
+    li.addEventListener("click", () => renderClaimDetail(detailEl, claim));
     list.appendChild(li);
   }
   claimsEl.appendChild(list);
+}
+
+/* Evidence is always empty (no Evidence data exists behind this
+ * endpoint -- Registry marks Evidence Not Started) and Provenance is
+ * limited to produced_by.author/method and provenance_state (no full
+ * Provenance record -- see UrsatzGuiInterpretationSummary in
+ * analysis_service.h). Rendered explicitly rather than omitted so the
+ * empty state is visible, not silently missing. */
+function renderClaimDetail(detailEl, claim) {
+  detailEl.hidden = false;
+  detailEl.innerHTML = "";
+
+  const summary = document.createElement("div");
+  summary.classList.add("claim-detail-summary");
+  summary.textContent = `${claim.type}: ${claim.label}`;
+  detailEl.appendChild(summary);
+
+  const evidenceHeading = document.createElement("div");
+  evidenceHeading.classList.add("sidebar-label");
+  evidenceHeading.textContent = "Evidence";
+  detailEl.appendChild(evidenceHeading);
+
+  const evidenceBody = document.createElement("div");
+  evidenceBody.classList.add("claim-detail-empty");
+  evidenceBody.textContent = "No evidence data returned by the analyzer.";
+  detailEl.appendChild(evidenceBody);
+
+  const provenanceHeading = document.createElement("div");
+  provenanceHeading.classList.add("sidebar-label");
+  provenanceHeading.textContent = "Provenance";
+  detailEl.appendChild(provenanceHeading);
+
+  const provenanceBody = document.createElement("div");
+  provenanceBody.textContent = `${claim.produced_by.author} / ${claim.produced_by.method} (${claim.provenance_state})`;
+  detailEl.appendChild(provenanceBody);
+
+  const actions = document.createElement("div");
+  actions.classList.add("claim-detail-actions");
+
+  const acceptButton = document.createElement("button");
+  acceptButton.type = "button";
+  acceptButton.textContent = "Accept";
+  acceptButton.disabled = true;
+  acceptButton.title = "Not yet available";
+  actions.appendChild(acceptButton);
+
+  const disputeButton = document.createElement("button");
+  disputeButton.type = "button";
+  disputeButton.textContent = "Dispute";
+  disputeButton.disabled = true;
+  disputeButton.title = "Not yet available";
+  actions.appendChild(disputeButton);
+
+  detailEl.appendChild(actions);
 }
 
 async function renderCorpusView() {
