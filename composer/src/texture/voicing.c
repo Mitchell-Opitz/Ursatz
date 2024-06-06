@@ -1,0 +1,427 @@
+#include <ursatz_composer/voicing.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <range_rules.h>
+#include <voicing_pitch.h>
+#include <semantics/voice_part.h>
+
+#include <ursatz_composer/plan_state.h>
+
+#include "texture/voicing_internal.h"
+
+/* The pitches a spelling table covers. */
+#define TABLE_LOW 24
+#define TABLE_HIGH 108
+
+VoicingParams voicing_params_default(void) {
+    VoicingParams params = {VOICING_DEFAULT_CANDIDATES, VOICING_DEFAULT_BEAM};
+    return params;
+}
+
+/* ------------------------------------------------------------ reading */
+
+void voicing_context_free(VoicingContext *context) {
+    if (!context) {
+        return;
+    }
+    for (size_t i = 0; i < VOICING_MAX_CHORDS; i++) {
+        for (size_t k = 0; k < 4; k++) {
+            pitch_spelling_destroy(context->tone[i][k]);
+        }
+        for (size_t p = 0; p < 128; p++) {
+            pitch_spelling_destroy(context->spell[i][p]);
+        }
+    }
+    pitch_spelling_destroy(context->key_leading);
+    pitch_spelling_destroy(context->key_tonic);
+    memset(context, 0, sizeof(*context));
+}
+
+/* The melody over the span when it is to be written: one open span over the same time as the target. */
+static bool read_melody_span(const PiecePlan *plan, PlanSpan span, LaneSpanId *out) {
+    LaneSpanId ids[2];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 2);
+    if (found != 1 || plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED) {
+        return false;
+    }
+    PlanSpan other = plan_lane_span_span(plan, ids[0]);
+    if (plan_time_compare(other.start, span.start) != 0 || plan_time_compare(other.length, span.length) != 0) {
+        return false;
+    }
+    *out = ids[0];
+    return true;
+}
+
+/* The pitch of the line sounding at a tick, or -1 for none. */
+static int line_pitch_at(const AccompLine *lines, size_t count, long tick) {
+    for (size_t i = 0; i < count; i++) {
+        if (lines[i].onset <= tick && tick < lines[i].end) {
+            return lines[i].pitch;
+        }
+    }
+    return -1;
+}
+
+static bool read_chords(const PiecePlan *plan, VoicingContext *out) {
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+    PhraseMetre metre;
+    LaneSpanId harmony[HARMONY_MAX_CHORDS];
+    size_t count;
+    long origin;
+    long cell;
+    long bar;
+    if (!harmony_read_lane(plan, out->span, out->key.mode, chords, &count, &metre) || count == 0 ||
+        count > HARMONY_MAX_CHORDS ||
+        plan_lane_find(plan, PLAN_LANE_HARMONY, 0, out->span, harmony, HARMONY_MAX_CHORDS) != count ||
+        !melody_ticks(out->span.length, &out->length) || !melody_ticks(out->span.start, &origin) ||
+        !melody_ticks(metre.cell_length, &cell) || !melody_ticks(metre.bar_length, &bar) || cell <= 0 || out->length <= 0) {
+        return false;
+    }
+    long at = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED) {
+            return false;
+        }
+        out->chord[i] = chords[i];
+        out->chord_start[i] = at;
+        at += (long)chords[i].cells * cell;
+    }
+    out->chord_count = count;
+    out->chord_start[count] = at;
+    return at == out->length;
+}
+
+/* The tones of chord i, their spellings, and the leading tone to tell standard-voicing of. */
+static bool read_tones(VoicingContext *out, size_t i) {
+    const PhraseChord *chord = &out->chord[i];
+    int root_degree;
+    if (!accomp_chord_tones(&out->key, chord, out->pcs[i], &out->tone_count[i])) {
+        return false;
+    }
+    root_degree = chord->applied ? harmony_applied_root_degree(harmony_mode_of(out->key.mode), &chord->applied_chord)
+                                 : chord->chord.degree;
+    if (root_degree < 1 || root_degree > 7) {
+        return false;
+    }
+    for (size_t k = 0; k < out->tone_count[i]; k++) {
+        out->tone_degree[i][k] = (root_degree - 1 + 2 * (int)k) % 7 + 1;
+        out->tone[i][k] = harmony_spell_pitch(&out->key, out->tone_degree[i][k], 60 + out->pcs[i][k]);
+        if (!out->tone[i][k]) {
+            return false;
+        }
+    }
+    for (int pitch = TABLE_LOW; pitch <= TABLE_HIGH; pitch++) {
+        for (size_t k = 0; k < out->tone_count[i]; k++) {
+            if (pitch % 12 == out->pcs[i][k]) {
+                out->spell[i][pitch] = harmony_spell_pitch(&out->key, out->tone_degree[i][k], pitch);
+                if (!out->spell[i][pitch]) {
+                    return false;
+                }
+            }
+        }
+    }
+    out->leading[i] = out->key_leading;
+    if (chord->applied) {
+        out->leading[i] = chord->applied_chord.kind == APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE ? out->tone[i][0]
+                                                                                                    : out->tone[i][1];
+    }
+    return true;
+}
+
+bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out) {
+    PlanConstraint constraint;
+    AccompLine melody[ACCOMP_MAX_LINE];
+    AccompLine bass[ACCOMP_MAX_LINE];
+    size_t melody_count = 0;
+    size_t bass_count = 0;
+    long origin;
+    if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_INNER_VOICE ||
+        plan_lane_span_voice(plan, target) != 1 || plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    out->target = target;
+    out->owner = plan_lane_span_owner(plan, target);
+    out->span = plan_lane_span_span(plan, target);
+    if (!harmony_find_constraint(plan, target, out->owner, PLAN_CONSTRAINT_VOICING, &constraint) ||
+        !harmony_find_key(plan, target, out->owner, out->span, &out->key)) {
+        return false;
+    }
+    out->write_soprano = constraint.params.voicing.write_soprano;
+    if (!read_chords(plan, out) || !melody_ticks(out->span.start, &origin) ||
+        !accomp_read_line(plan, PLAN_LANE_BASS, out->span, origin, out->length, bass, &bass_count) ||
+        !accomp_read_voice(plan, 2, out->span, &out->tenor_span)) {
+        return false;
+    }
+    if (out->write_soprano ? !read_melody_span(plan, out->span, &out->melody_span)
+                           : !accomp_read_line(plan, PLAN_LANE_MELODY, out->span, origin, out->length, melody,
+                                               &melody_count)) {
+        return false;
+    }
+    out->key_tonic = harmony_spell_tonic(&out->key, 4);
+    out->key_leading = harmony_spell_pitch(&out->key, 7, 60 + (out->key.tonic_pitch_class + 11) % 12);
+    if (!out->key_tonic || !out->key_leading) {
+        return false;
+    }
+    for (size_t i = 0; i < out->chord_count; i++) {
+        int bass_pc;
+        long start = out->chord_start[i];
+        long end = out->chord_start[i + 1];
+        if (!read_tones(out, i)) {
+            return false;
+        }
+        out->bass[i] = line_pitch_at(bass, bass_count, start);
+        out->inversion[i] = -1;
+        out->soprano[i] = -1;
+        out->chord_ok[i] = out->bass[i] >= TABLE_LOW && out->bass[i] <= TABLE_HIGH;
+        bass_pc = out->bass[i] % 12;
+        for (size_t k = 0; out->chord_ok[i] && k < out->tone_count[i]; k++) {
+            if (out->pcs[i][k] == bass_pc) {
+                out->inversion[i] = (int)k;
+            }
+        }
+        out->chord_ok[i] = out->chord_ok[i] && out->inversion[i] >= 0;
+        if (out->write_soprano) {
+            continue;
+        }
+        /* The melody sounding at the start of the chord, else the first chord tone that sounds in it. */
+        for (size_t pass = 0; pass < 2 && out->soprano[i] < 0; pass++) {
+            for (size_t n = 0; n < melody_count && out->soprano[i] < 0; n++) {
+                const AccompLine *line = &melody[n];
+                bool sounds = pass == 0 ? line->onset <= start && start < line->end
+                                        : line->onset > start && line->onset < end;
+                if (sounds && line->pitch >= TABLE_LOW && line->pitch <= TABLE_HIGH && out->spell[i][line->pitch]) {
+                    out->soprano[i] = line->pitch;
+                }
+            }
+        }
+        out->chord_ok[i] = out->chord_ok[i] && out->soprano[i] >= 0;
+    }
+    return true;
+}
+
+/* ------------------------------------------------------- enumeration */
+
+bool voicing_options(const VoicingContext *context, size_t chord, VoicingOption *out, size_t max, size_t *count) {
+    int range[VOICING_PARTS][2];
+    VoicePart parts[VOICING_PARTS] = {VOICE_PART_SOPRANO, VOICE_PART_ALTO, VOICE_PART_TENOR};
+    size_t found = 0;
+    *count = 0;
+    if (chord >= context->chord_count || !context->chord_ok[chord]) {
+        return false;
+    }
+    for (size_t part = 0; part < VOICING_PARTS; part++) {
+        if (!standard_voicing_range_semitones(parts[part], &range[part][0], &range[part][1])) {
+            return false;
+        }
+        /* standard-voicing counts semitones from C0 (C4 is 48), MIDI from C-1 (C4 is 60). */
+        range[part][0] += STANDARD_VOICING_SEMITONES_PER_OCTAVE;
+        range[part][1] += STANDARD_VOICING_SEMITONES_PER_OCTAVE;
+    }
+    if (!context->write_soprano) {
+        range[VOICING_SOPRANO][0] = range[VOICING_SOPRANO][1] = context->soprano[chord];
+    }
+    for (int s = range[VOICING_SOPRANO][0]; s <= range[VOICING_SOPRANO][1]; s++) {
+        if (!context->spell[chord][s]) {
+            continue;
+        }
+        for (int a = range[VOICING_ALTO][0]; a <= range[VOICING_ALTO][1] && a <= s; a++) {
+            if (!context->spell[chord][a]) {
+                continue;
+            }
+            for (int t = range[VOICING_TENOR][0]; t <= range[VOICING_TENOR][1] && t <= a; t++) {
+                int pitch[VOICING_PARTS] = {s, a, t};
+                if (!context->spell[chord][t] || !voicing_chord_valid(context, chord, pitch)) {
+                    continue;
+                }
+                if (found == max) {
+                    return false;
+                }
+                memcpy(out[found++].pitch, pitch, sizeof(pitch));
+            }
+        }
+    }
+    *count = found;
+    return true;
+}
+
+/* ------------------------------------------------------- the operator */
+
+static bool operator_applies(const PiecePlan *plan, FillTarget target, void *context) {
+    VoicingContext *read;
+    bool applies;
+    (void)context;
+    if (target.kind != FILL_TARGET_LANE_SPAN) {
+        return false;
+    }
+    read = calloc(1, sizeof(*read));
+    applies = read && voicing_read(plan, (LaneSpanId)target.id, read);
+    voicing_context_free(read);
+    free(read);
+    return applies;
+}
+
+static bool same_pitches(const VoicingCandidate *a, const VoicingCandidate *b) {
+    return a->chord_count == b->chord_count && memcmp(a->pitch, b->pitch, a->chord_count * sizeof(a->pitch[0])) == 0;
+}
+
+static void candidate_label(const VoicingCandidate *candidate, char *label, size_t size) {
+    int used = snprintf(label, size, "satb");
+    for (size_t i = 0; used > 0 && (size_t)used + 1 < size && i < candidate->chord_count && i < 3; i++) {
+        used += snprintf(label + used, size - (size_t)used, " %d-%d-%d", candidate->pitch[i][VOICING_SOPRANO],
+                         candidate->pitch[i][VOICING_ALTO], candidate->pitch[i][VOICING_TENOR]);
+    }
+}
+
+/* How many complete voicings are drawn at random for each one asked for, before the search takes over. */
+#define DRAWS_PER_CANDIDATE 400
+
+static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+                              FillCandidateList *out) {
+    const VoicingParams *params = context;
+    size_t wanted = params && params->candidates > 0 ? params->candidates : VOICING_DEFAULT_CANDIDATES;
+    VoicingContext *read = calloc(1, sizeof(*read));
+    VoicingOption *scratch = malloc(VOICING_MAX_OPTIONS * sizeof(*scratch));
+    VoicingOption *options[VOICING_MAX_CHORDS] = {NULL};
+    size_t option_count[VOICING_MAX_CHORDS] = {0};
+    VoicingCandidate *kept[16];
+    size_t kept_count = 0;
+    bool ok = read && scratch && target.kind == FILL_TARGET_LANE_SPAN && voicing_read(plan, (LaneSpanId)target.id, read);
+    bool voiceable = ok;
+    if (wanted > 16) {
+        wanted = 16;
+    }
+    for (size_t i = 0; ok && voiceable && i < read->chord_count; i++) {
+        voiceable = voicing_options(read, i, scratch, VOICING_MAX_OPTIONS, &option_count[i]) && option_count[i] > 0;
+        if (voiceable) {
+            options[i] = malloc(option_count[i] * sizeof(**options));
+            ok = options[i] != NULL;
+            if (ok) {
+                memcpy(options[i], scratch, option_count[i] * sizeof(**options));
+            }
+        }
+    }
+    for (size_t attempt = 0; ok && voiceable && attempt < wanted * DRAWS_PER_CANDIDATE && kept_count < wanted; attempt++) {
+        VoicingCandidate drawn;
+        VoicingVerdict verdict;
+        bool repeat = false;
+        memset(&drawn, 0, sizeof(drawn));
+        drawn.magic = VOICING_PAYLOAD_MAGIC;
+        drawn.chord_count = read->chord_count;
+        for (size_t i = 0; i < read->chord_count; i++) {
+            const VoicingOption *option = &options[i][fill_rng_below(rng, option_count[i])];
+            memcpy(drawn.pitch[i], option->pitch, sizeof(option->pitch));
+        }
+        voicing_judge(read, &drawn, &verdict);
+        for (size_t i = 0; i < kept_count; i++) {
+            repeat = repeat || same_pitches(kept[i], &drawn);
+        }
+        if (verdict.hard || repeat) {
+            continue;
+        }
+        VoicingCandidate *payload = malloc(sizeof(*payload));
+        char label[FILL_LABEL_MAX];
+        if (!payload) {
+            ok = false;
+            break;
+        }
+        *payload = drawn;
+        candidate_label(payload, label, sizeof(label));
+        ok = fill_candidates_add(out, label, payload, free);
+        kept[kept_count++] = payload;
+    }
+    for (size_t i = 0; i < VOICING_MAX_CHORDS; i++) {
+        free(options[i]);
+    }
+    free(scratch);
+    voicing_context_free(read);
+    free(read);
+    return ok;
+}
+
+/* The notes of one part as lane notes, one a chord, held for the chord. */
+static PlanResult part_payload(const VoicingContext *context, const VoicingCandidate *candidate, size_t part,
+                               PlanNote *notes, PlanLanePayload *payload) {
+    for (size_t i = 0; i < candidate->chord_count; i++) {
+        notes[i].midi_pitch = candidate->pitch[i][part];
+        PlanResult result = melody_time(context->chord_start[i], &notes[i].offset);
+        if (result == PLAN_OK) {
+            result = melody_time(context->chord_start[i + 1] - context->chord_start[i], &notes[i].duration);
+        }
+        if (result != PLAN_OK) {
+            return result;
+        }
+    }
+    memset(payload, 0, sizeof(*payload));
+    payload->notes.notes = notes;
+    payload->notes.note_count = candidate->chord_count;
+    return PLAN_OK;
+}
+
+/* The target keeps its id and takes the alto; the tenor and, when written, the soprano go in the spans over the same time. */
+static PlanResult operator_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+    const VoicingCandidate *voicing = candidate ? candidate->payload : NULL;
+    VoicingContext *read;
+    PlanNote *notes;
+    PlanResult result = PLAN_OK;
+    (void)context;
+    if (target.kind != FILL_TARGET_LANE_SPAN || !voicing || voicing->magic != VOICING_PAYLOAD_MAGIC) {
+        return PLAN_ERR_NULL;
+    }
+    read = calloc(1, sizeof(*read));
+    notes = calloc(VOICING_MAX_CHORDS, sizeof(*notes));
+    if (!read || !notes) {
+        free(read);
+        free(notes);
+        return PLAN_ERR_ALLOC;
+    }
+    /* The plan must still be what the voicing was made for. */
+    if (!voicing_read(plan, (LaneSpanId)target.id, read) || voicing->chord_count != read->chord_count) {
+        result = PLAN_ERR_BAD_PAYLOAD;
+    }
+    for (size_t part = VOICING_SOPRANO; result == PLAN_OK && part < VOICING_PARTS; part++) {
+        PlanLanePayload payload;
+        LaneSpanId id = part == VOICING_ALTO ? (LaneSpanId)target.id
+                        : part == VOICING_TENOR ? read->tenor_span : read->melody_span;
+        if (part == VOICING_SOPRANO && !read->write_soprano) {
+            continue;
+        }
+        result = part_payload(read, voicing, part, notes, &payload);
+        if (result != PLAN_OK) {
+            break;
+        }
+        if (id != PLAN_LANE_SPAN_NONE) {
+            result = plan_lane_span_write(plan, id, &payload);
+        } else {
+            result = plan_add_lane_span(plan, read->owner, PLAN_LANE_INNER_VOICE, 2, read->span, &payload, &id);
+            if (result == PLAN_OK) {
+                result = plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED);
+            }
+        }
+    }
+    voicing_context_free(read);
+    free(read);
+    free(notes);
+    return result;
+}
+
+FillResult voicing_register(FillOperatorRegistry *registry, const VoicingParams *params) {
+    FillOperator operator_;
+    memset(&operator_, 0, sizeof(operator_));
+    operator_.generator.name = VOICING_OPERATOR_NAME;
+    operator_.generator.supported_inputs = "PiecePlan inner voice lane span over a written harmony and bass";
+    operator_.generator.supported_outputs = "PiecePlan inner voice lane spans, and a melody lane span";
+    operator_.generator.configuration_description = "the number of candidates and the width of the beam";
+    operator_.generator.constraints_description = "standard-voicing for every chord, standard-counterpoint and standard-harmony between them";
+    operator_.generator.deterministic = true;
+    operator_.generator.version = "1";
+    operator_.kind = FILL_OPERATOR_FILL;
+    operator_.applies = operator_applies;
+    operator_.generate = operator_generate;
+    operator_.apply = operator_apply;
+    operator_.context = (void *)params;
+    return fill_registry_register(registry, &operator_);
+}

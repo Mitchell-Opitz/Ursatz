@@ -55,6 +55,8 @@ add_library(ursatz_composer STATIC
     texture/accompaniment.c
     texture/accompaniment_pattern.c
     texture/accompaniment_hear.c
+    texture/voicing.c
+    texture/voicing_check.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

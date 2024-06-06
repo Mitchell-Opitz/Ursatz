@@ -29,7 +29,7 @@ size_t accomp_chord_at(const AccompContext *context, long tick) {
 }
 
 /* The pitch classes of a chord in the key, root first. */
-static bool chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
+bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
     int intervals[4];
     int root;
     if (chord->applied) {
@@ -56,7 +56,7 @@ static bool chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4]
 }
 
 /* The notes of a lane over the target that sound inside it, from its start. False if any span there is open. */
-static bool read_line(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, long origin, long length, AccompLine *out,
+bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, long origin, long length, AccompLine *out,
                       size_t *count) {
     LaneSpanId ids[ACCOMP_MAX_LINE];
     size_t found = plan_lane_find(plan, lane, 0, span, ids, ACCOMP_MAX_LINE);
@@ -97,7 +97,7 @@ static bool read_line(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, l
 }
 
 /* The span of voice (2 or 3) that is to be written with the target: none, or an open one over the same time. */
-static bool read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpanId *out) {
+bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpanId *out) {
     LaneSpanId ids[2];
     size_t found = plan_lane_find(plan, PLAN_LANE_INNER_VOICE, voice, span, ids, 2);
     *out = PLAN_LANE_SPAN_NONE;
@@ -165,7 +165,7 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     for (size_t i = 0; i < count; i++) {
         unsigned seventh;
         if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED ||
-            !chord_tones(&out->key, &chords[i], out->chord_pcs[i], &out->chord_pc_count[i]) ||
+            !accomp_chord_tones(&out->key, &chords[i], out->chord_pcs[i], &out->chord_pc_count[i]) ||
             !melody_chord_mask(&out->key, &chords[i], &out->chord_mask[i], &seventh)) {
             return false;
         }
@@ -179,11 +179,11 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     }
 
     /* The bass and the melody are written. */
-    if (!read_line(plan, PLAN_LANE_BASS, out->span, origin, out->length, out->bass, &out->bass_count) ||
-        !read_line(plan, PLAN_LANE_MELODY, out->span, origin, out->length, out->melody, &out->melody_count)) {
+    if (!accomp_read_line(plan, PLAN_LANE_BASS, out->span, origin, out->length, out->bass, &out->bass_count) ||
+        !accomp_read_line(plan, PLAN_LANE_MELODY, out->span, origin, out->length, out->melody, &out->melody_count)) {
         return false;
     }
-    return read_voice(plan, 2, out->span, &out->voice_span[1]) && read_voice(plan, 3, out->span, &out->voice_span[2]);
+    return accomp_read_voice(plan, 2, out->span, &out->voice_span[1]) && accomp_read_voice(plan, 3, out->span, &out->voice_span[2]);
 }
 
 /* ------------------------------------------------------------ judging */
