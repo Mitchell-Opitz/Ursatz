@@ -132,6 +132,28 @@ since a Collection row represents membership, not the piece itself. New
 piece refs are still added as plain id strings via the id input below the
 list, and a piece may belong to any number of Collections.
 
+Clicking a piece's filename in the Library view opens the Analysis view
+for that piece, replacing the old top-level "Analysis" nav tool and its
+flat Piece Detail view (removed). The Analysis view shows: a header
+(title/filename only -- no status, composer, opus, or meter, none of
+which the API returns); a sidebar of analyzer name/version pairs (static
+placeholder data, since no analyzer-registry endpoint exists); and a tab
+bar over Chords, Keys, Cadences, Motifs, Phrases, Form, and
+Periods/Sentences, each with a count badge. Tabs group real
+`interpretations` by their `type` field (`GET /api/analyzer/pieces/<id>`)
+-- Form's badge includes both `form` and `thematic_return` claims, and
+Periods/Sentences' includes both `period` and `sentence`, since each pair
+shares one tab. Selecting a tab renders a plain-text list of that
+category's claims (label + provenance flag only -- the API returns no
+span, confidence, or uncertainty fields to show). Clicking a claim opens
+a detail panel: a claim summary, an Evidence section (always rendered as
+an explicit empty state, since no Evidence data exists behind this
+endpoint -- Registry marks Evidence Not Started), a Provenance section
+(`produced_by.author`/`produced_by.method`/`provenance_state`, the only
+provenance data an Interpretation actually carries -- not a full
+Provenance record), and disabled Accept/Dispute buttons (no Promotion
+endpoint exists yet).
+
 ## Building
 
 ```
