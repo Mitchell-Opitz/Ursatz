@@ -264,10 +264,6 @@ static bool operator_applies(const PiecePlan *plan, FillTarget target, void *con
     return applies;
 }
 
-static bool same_pitches(const VoicingCandidate *a, const VoicingCandidate *b) {
-    return a->chord_count == b->chord_count && memcmp(a->pitch, b->pitch, a->chord_count * sizeof(a->pitch[0])) == 0;
-}
-
 static void candidate_label(const VoicingCandidate *candidate, char *label, size_t size) {
     int used = snprintf(label, size, "satb");
     for (size_t i = 0; used > 0 && (size_t)used + 1 < size && i < candidate->chord_count && i < 3; i++) {
@@ -276,67 +272,27 @@ static void candidate_label(const VoicingCandidate *candidate, char *label, size
     }
 }
 
-/* How many complete voicings are drawn at random for each one asked for, before the search takes over. */
-#define DRAWS_PER_CANDIDATE 400
+#define MAX_CANDIDATES 16
 
 static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
     const VoicingParams *params = context;
     size_t wanted = params && params->candidates > 0 ? params->candidates : VOICING_DEFAULT_CANDIDATES;
+    size_t beam = params && params->beam > 0 ? params->beam : VOICING_DEFAULT_BEAM;
     VoicingContext *read = calloc(1, sizeof(*read));
-    VoicingOption *scratch = malloc(VOICING_MAX_OPTIONS * sizeof(*scratch));
-    VoicingOption *options[VOICING_MAX_CHORDS] = {NULL};
-    size_t option_count[VOICING_MAX_CHORDS] = {0};
-    VoicingCandidate *kept[16];
-    size_t kept_count = 0;
-    bool ok = read && scratch && target.kind == FILL_TARGET_LANE_SPAN && voicing_read(plan, (LaneSpanId)target.id, read);
-    bool voiceable = ok;
-    if (wanted > 16) {
-        wanted = 16;
+    VoicingCandidate *found[MAX_CANDIDATES];
+    size_t found_count = 0;
+    bool ok = read && target.kind == FILL_TARGET_LANE_SPAN && voicing_read(plan, (LaneSpanId)target.id, read);
+    if (wanted > MAX_CANDIDATES) {
+        wanted = MAX_CANDIDATES;
     }
-    for (size_t i = 0; ok && voiceable && i < read->chord_count; i++) {
-        voiceable = voicing_options(read, i, scratch, VOICING_MAX_OPTIONS, &option_count[i]) && option_count[i] > 0;
-        if (voiceable) {
-            options[i] = malloc(option_count[i] * sizeof(**options));
-            ok = options[i] != NULL;
-            if (ok) {
-                memcpy(options[i], scratch, option_count[i] * sizeof(**options));
-            }
-        }
-    }
-    for (size_t attempt = 0; ok && voiceable && attempt < wanted * DRAWS_PER_CANDIDATE && kept_count < wanted; attempt++) {
-        VoicingCandidate drawn;
-        VoicingVerdict verdict;
-        bool repeat = false;
-        memset(&drawn, 0, sizeof(drawn));
-        drawn.magic = VOICING_PAYLOAD_MAGIC;
-        drawn.chord_count = read->chord_count;
-        for (size_t i = 0; i < read->chord_count; i++) {
-            const VoicingOption *option = &options[i][fill_rng_below(rng, option_count[i])];
-            memcpy(drawn.pitch[i], option->pitch, sizeof(option->pitch));
-        }
-        voicing_judge(read, &drawn, &verdict);
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_pitches(kept[i], &drawn);
-        }
-        if (verdict.hard || repeat) {
-            continue;
-        }
-        VoicingCandidate *payload = malloc(sizeof(*payload));
+    ok = ok && voicing_search(read, rng, wanted, beam, found, &found_count);
+    for (size_t i = 0; i < found_count; i++) {
         char label[FILL_LABEL_MAX];
-        if (!payload) {
-            ok = false;
-            break;
-        }
-        *payload = drawn;
-        candidate_label(payload, label, sizeof(label));
-        ok = fill_candidates_add(out, label, payload, free);
-        kept[kept_count++] = payload;
+        candidate_label(found[i], label, sizeof(label));
+        /* The candidate list owns the payload, also when it cannot be added. */
+        ok = fill_candidates_add(out, label, found[i], free) && ok;
     }
-    for (size_t i = 0; i < VOICING_MAX_CHORDS; i++) {
-        free(options[i]);
-    }
-    free(scratch);
     voicing_context_free(read);
     free(read);
     return ok;

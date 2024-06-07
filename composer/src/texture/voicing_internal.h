@@ -108,4 +108,12 @@ typedef struct {
 
 void voicing_judge(const VoicingContext *context, const VoicingCandidate *candidate, VoicingVerdict *verdict);
 
+/*
+ * Proposes up to wanted complete voicings of all the chords, cheapest first, as VoicingCandidate payloads in out, which
+ * the caller frees; *count is how many. None when a chord cannot be voiced or no path joins the chords. Ties in cost
+ * are ordered by rng. False only on allocation failure. wanted is at most the size of out.
+ */
+bool voicing_search(const VoicingContext *context, FillRng *rng, size_t wanted, size_t beam, VoicingCandidate **out,
+                    size_t *count);
+
 #endif
