@@ -3,9 +3,16 @@
 
 const TOOLS = [
   { id: "library", label: "Library", active: true, render: renderLibraryView },
+  { id: "analysis", label: "Analysis", active: false, render: renderAnalysisTool },
   { id: "corpus", label: "Collections", active: false, render: renderCorpusView },
   { id: "generator", label: "Generator", active: false, comingSoon: true },
 ];
+
+/* The piece id last opened in the Analysis view (via a Library filename
+ * click, or by returning to this tab), so the top-level Analysis nav
+ * entry can reopen it instead of showing a blank page. null until a
+ * piece has been opened at least once this session. */
+let lastAnalysisPieceId = null;
 
 function renderToolList() {
   const list = document.getElementById("tool-list");
@@ -24,11 +31,15 @@ function renderToolList() {
   }
 }
 
-function selectTool(toolId) {
+function setActiveTool(toolId) {
   for (const tool of TOOLS) {
     tool.active = tool.id === toolId;
   }
   renderToolList();
+}
+
+function selectTool(toolId) {
+  setActiveTool(toolId);
   const selected = TOOLS.find((tool) => tool.id === toolId);
   if (selected && selected.render) {
     selected.render();
@@ -428,7 +439,30 @@ function groupClaimsByTab(interpretations) {
   return groups;
 }
 
+/* Entry point for the top-level Analysis nav tab: reopens whichever
+ * piece was last viewed (via a Library filename click, or a prior visit
+ * to this tab) so the tab isn't blank on return. Before any piece has
+ * been opened this session, there is nothing to reopen -- shows a
+ * prompt pointing at Library instead of guessing a piece. */
+function renderAnalysisTool() {
+  if (lastAnalysisPieceId) {
+    showAnalysisView(lastAnalysisPieceId);
+    return;
+  }
+
+  const content = getContentEl();
+  content.innerHTML = `
+    <h1 class="view-title">Analysis</h1>
+    <div id="analysis-empty-container"></div>
+    <div class="piece-list-status">No piece selected yet. Open one from the Library to see its analysis here.</div>
+  `;
+  document.getElementById("analysis-empty-container").appendChild(renderAnalysisBackLink());
+}
+
 function showAnalysisView(id) {
+  lastAnalysisPieceId = id;
+  setActiveTool("analysis");
+
   const content = getContentEl();
   content.innerHTML = `
     <div id="analysis-back-container"></div>

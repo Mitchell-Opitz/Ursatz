@@ -133,8 +133,11 @@ piece refs are still added as plain id strings via the id input below the
 list, and a piece may belong to any number of Collections.
 
 Clicking a piece's filename in the Library view opens the Analysis view
-for that piece, replacing the old top-level "Analysis" nav tool and its
-flat Piece Detail view (removed). The Analysis view shows: a header
+for that piece. The top-level "Analysis" nav tab reopens whichever piece
+was last viewed this session; before any piece has been opened it shows
+a prompt pointing at Library instead of guessing a piece. The old flat
+Piece Detail view this replaces has been removed. The Analysis view
+shows: a header
 (title/filename only -- no status, composer, opus, or meter, none of
 which the API returns); a sidebar of analyzer name/version pairs (static
 placeholder data, since no analyzer-registry endpoint exists); and a tab

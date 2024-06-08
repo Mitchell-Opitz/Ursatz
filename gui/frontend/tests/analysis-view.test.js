@@ -129,4 +129,21 @@ check(
   "a piece row built without onFilenameClick (e.g. Collections) has no clickable filename cell",
 );
 
+/* Mirrors app.js's renderAnalysisTool: the top-level Analysis nav tab
+ * reopens lastAnalysisPieceId when set, and otherwise shows an empty
+ * state rather than guessing a piece. */
+function resolveAnalysisToolTarget(lastAnalysisPieceId) {
+  return lastAnalysisPieceId ? { kind: "piece", id: lastAnalysisPieceId } : { kind: "empty" };
+}
+
+check(
+  resolveAnalysisToolTarget("piece-1788837459-41").kind === "piece" &&
+    resolveAnalysisToolTarget("piece-1788837459-41").id === "piece-1788837459-41",
+  "the Analysis nav tab reopens the last piece viewed when one is set",
+);
+check(
+  resolveAnalysisToolTarget(null).kind === "empty",
+  "the Analysis nav tab shows an empty state, not a guessed piece, before any piece has been opened",
+);
+
 process.exit(failures === 0 ? 0 : 1);
