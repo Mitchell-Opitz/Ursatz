@@ -125,42 +125,6 @@ body {
   color: #f87171;
 }
 
-.piece-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.piece-list li {
-  padding: 6px 8px;
-  border-radius: 4px;
-  color: var(--text);
-}
-
-.piece-list li:hover {
-  background: var(--bg-hover);
-}
-
-.piece-detail-status {
-  color: var(--text-dim);
-  margin-bottom: 8px;
-}
-
-.piece-detail-status.error {
-  color: #f87171;
-}
-
-.interpretation-list {
-  list-style: none;
-  margin: 8px 0;
-  padding: 0;
-}
-
-.interpretation-list li {
-  padding: 4px 0;
-  color: var(--text);
-}
-
 .provenance-flag {
   color: var(--text-dim);
   font-size: 12px;
@@ -202,17 +166,6 @@ body {
 
 .upload-status.error {
   color: #f87171;
-}
-
-.piece-list li button {
-  background: var(--bg-hover);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
 }
 
 .view-title {
@@ -421,4 +374,112 @@ body {
   font-family: inherit;
   font-size: inherit;
   margin-right: 6px;
+}
+
+.analysis-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.analysis-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+}
+
+.analyzers-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.analyzers-list li {
+  padding: 2px 0;
+}
+
+.analysis-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.analysis-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.analysis-tabs button {
+  background: none;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.analysis-tabs button.active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.claim-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.claim-list li {
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.claim-list li:hover {
+  background: var(--bg-hover);
+}
+
+.analysis-detail {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+}
+
+.claim-detail-summary {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.claim-detail-empty {
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.claim-detail-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.claim-detail-actions button {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: default;
 }

@@ -2,11 +2,17 @@
 // index.html already defines. Theming lives entirely in style.css.
 
 const TOOLS = [
-  { id: "analysis", label: "Analysis", active: true, render: renderAnalysisView },
-  { id: "library", label: "Library", active: false, render: renderLibraryView },
+  { id: "library", label: "Library", active: true, render: renderLibraryView },
+  { id: "analysis", label: "Analysis", active: false, render: renderAnalysisTool },
   { id: "corpus", label: "Collections", active: false, render: renderCorpusView },
   { id: "generator", label: "Generator", active: false, comingSoon: true },
 ];
+
+/* The piece id last opened in the Analysis view (via a Library filename
+ * click, or by returning to this tab), so the top-level Analysis nav
+ * entry can reopen it instead of showing a blank page. null until a
+ * piece has been opened at least once this session. */
+let lastAnalysisPieceId = null;
 
 function renderToolList() {
   const list = document.getElementById("tool-list");
@@ -25,11 +31,15 @@ function renderToolList() {
   }
 }
 
-function selectTool(toolId) {
+function setActiveTool(toolId) {
   for (const tool of TOOLS) {
     tool.active = tool.id === toolId;
   }
   renderToolList();
+}
+
+function selectTool(toolId) {
+  setActiveTool(toolId);
   const selected = TOOLS.find((tool) => tool.id === toolId);
   if (selected && selected.render) {
     selected.render();
@@ -50,87 +60,6 @@ async function checkHealth() {
   } catch (err) {
     el.textContent = `Could not reach backend: ${err}`;
     el.classList.add("error");
-  }
-}
-
-async function renderAnalysisView() {
-  const content = getContentEl();
-  content.innerHTML = `
-    <section class="panel">
-      <h1>Analysis</h1>
-      <div id="piece-list-status" class="piece-list-status">Loading pieces...</div>
-      <ul id="piece-list" class="piece-list"></ul>
-      <div class="upload-controls">
-        <input type="file" id="upload-file" accept=".mid,.midi" />
-        <button id="upload-button" type="button">Upload</button>
-      </div>
-      <div id="upload-status" class="upload-status"></div>
-    </section>
-  `;
-
-  wireUploadControl("upload", (data) => showPieceDetail(data.id));
-
-  const statusEl = document.getElementById("piece-list-status");
-  const listEl = document.getElementById("piece-list");
-
-  try {
-    const res = await fetch("/api/analyzer/pieces");
-    const data = await res.json();
-
-    if (!data.ok) {
-      statusEl.textContent = `Failed to load pieces: ${data.message || "unknown error"}`;
-      statusEl.classList.add("error");
-      return;
-    }
-
-    if (data.pieces.length === 0) {
-      statusEl.textContent = "No pieces yet.";
-      return;
-    }
-
-    statusEl.textContent = "";
-    for (const piece of data.pieces) {
-      const li = document.createElement("li");
-
-      const label = document.createElement("span");
-      label.textContent = formatPieceLabel(piece.id, piece.filename);
-      label.classList.add("clickable");
-      label.addEventListener("click", () => showPieceDetail(piece.id));
-      li.appendChild(label);
-
-      li.appendChild(document.createTextNode(" "));
-
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.textContent = "Delete";
-      deleteButton.addEventListener("click", () => handleDeletePiece(piece.id, li));
-      li.appendChild(deleteButton);
-
-      listEl.appendChild(li);
-    }
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
-  }
-}
-
-async function handleDeletePiece(id, liEl) {
-  const statusEl = document.getElementById("piece-list-status");
-
-  try {
-    const res = await fetch(`/api/analyzer/pieces/${id}`, { method: "DELETE" });
-    const data = await res.json();
-
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Delete failed.";
-      statusEl.classList.add("error");
-      return;
-    }
-
-    liEl.remove();
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
   }
 }
 
@@ -248,11 +177,16 @@ function buildActionButton({ icon, label, disabled, onClick }) {
  * its own action buttons via buildActions(row, actionsCell, piece) --
  * this function owns only the markup/styling, not what a view can do to
  * a piece. */
-function buildPieceRow(piece, buildActions) {
+function buildPieceRow(piece, buildActions, onFilenameClick) {
   const row = document.createElement("tr");
 
   const filenameCell = document.createElement("td");
-  filenameCell.appendChild(renderPieceFilenameCell(piece));
+  const filenameEl = renderPieceFilenameCell(piece);
+  if (onFilenameClick) {
+    filenameEl.classList.add("clickable");
+    filenameEl.addEventListener("click", () => onFilenameClick(piece));
+  }
+  filenameCell.appendChild(filenameEl);
   row.appendChild(filenameCell);
 
   const actionsCell = document.createElement("td");
@@ -270,22 +204,26 @@ function renderPieceFilenameCell(piece) {
 }
 
 function buildLibraryRow(piece) {
-  return buildPieceRow(piece, (row, actionsCell, rowPiece) => {
-    actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
-    actionsCell.appendChild(
-      buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, rowPiece) }),
-    );
-    actionsCell.appendChild(buildActionButton({ icon: "↻", label: "Re-run analysis", disabled: true }));
-    actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
-    actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
-    actionsCell.appendChild(
-      buildActionButton({
-        icon: "🗑",
-        label: "Delete piece",
-        onClick: () => handleDeleteLibraryPiece(rowPiece.id, row),
-      }),
-    );
-  });
+  return buildPieceRow(
+    piece,
+    (row, actionsCell, rowPiece) => {
+      actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
+      actionsCell.appendChild(
+        buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, rowPiece) }),
+      );
+      actionsCell.appendChild(buildActionButton({ icon: "↻", label: "Re-run analysis", disabled: true }));
+      actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
+      actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
+      actionsCell.appendChild(
+        buildActionButton({
+          icon: "🗑",
+          label: "Delete piece",
+          onClick: () => handleDeleteLibraryPiece(rowPiece.id, row),
+        }),
+      );
+    },
+    (rowPiece) => showAnalysisView(rowPiece.id),
+  );
 }
 
 function startLibraryRename(row, piece) {
@@ -374,8 +312,8 @@ async function handleDeleteLibraryPiece(id, rowEl) {
 }
 
 /* Wires the "<idPrefix>-file"/"<idPrefix>-button"/"<idPrefix>-status"
- * upload control markup already in the DOM (see renderAnalysisView's
- * .upload-controls and renderLibraryView's .upload-box) to the shared
+ * upload control markup already in the DOM (see renderLibraryView's
+ * .upload-box) to the shared
  * upload handler below. onUploaded(data) runs after a successful
  * upload, once, with the parsed response body -- each view decides what
  * "uploaded" means for it (jump to the new piece's detail, or just
@@ -441,90 +379,242 @@ function formatPieceLabel(id, filename) {
   return filename ? `${filename} (${id})` : id;
 }
 
-function renderBackLink() {
+/* Analysis view tabs, each mapped to the real interpretation `type`
+ * values GET /api/analyzer/pieces/<id> returns (see analysis_service.c's
+ * kIndexType* constants) -- Form folds in thematic_return (Thematic
+ * Return Detection shares Form Structure Detection's Relationship-typed
+ * lineage) and Periods/Sentences folds in both period and sentence,
+ * each pair sharing one tab and one count badge. */
+const ANALYSIS_TABS = [
+  { id: "chords", label: "Chords", types: ["chord"] },
+  { id: "keys", label: "Keys", types: ["key"] },
+  { id: "cadences", label: "Cadences", types: ["cadence"] },
+  { id: "motifs", label: "Motifs", types: ["motif"] },
+  { id: "phrases", label: "Phrases", types: ["phrase"] },
+  { id: "form", label: "Form", types: ["form", "thematic_return"] },
+  { id: "periods-sentences", label: "Periods/Sentences", types: ["period", "sentence"] },
+];
+
+/* No analyzer-registry endpoint exists yet -- this mirrors the static
+ * name/version list shown in the mockup rather than fetching real
+ * analyzer identity. */
+const ANALYZERS = [
+  { name: "harmony", version: "2.4.1" },
+  { name: "keyfinder", version: "1.8.0" },
+  { name: "phrasing", version: "0.6.3" },
+  { name: "form", version: "0.3.0" },
+];
+
+function renderAnalysisBackLink() {
   const back = document.createElement("a");
-  back.textContent = "Back to list";
+  back.textContent = "← Library";
   back.classList.add("back-link", "clickable");
-  back.addEventListener("click", () => renderAnalysisView());
+  back.addEventListener("click", () => selectTool("library"));
   return back;
 }
 
-function showPieceDetail(id) {
+function renderAnalyzersList() {
+  const listEl = document.getElementById("analysis-analyzers");
+  listEl.innerHTML = "";
+  for (const analyzer of ANALYZERS) {
+    const li = document.createElement("li");
+    li.textContent = `${analyzer.name} ${analyzer.version}`;
+    listEl.appendChild(li);
+  }
+}
+
+/* Buckets interpretations by ANALYSIS_TABS entry; an interpretation
+ * whose type matches no tab (none do today) is silently dropped. */
+function groupClaimsByTab(interpretations) {
+  const groups = new Map();
+  for (const tab of ANALYSIS_TABS) {
+    groups.set(tab.id, []);
+  }
+  for (const interpretation of interpretations) {
+    const tab = ANALYSIS_TABS.find((candidate) => candidate.types.includes(interpretation.type));
+    if (tab) {
+      groups.get(tab.id).push(interpretation);
+    }
+  }
+  return groups;
+}
+
+/* Entry point for the top-level Analysis nav tab: reopens whichever
+ * piece was last viewed (via a Library filename click, or a prior visit
+ * to this tab) so the tab isn't blank on return. Before any piece has
+ * been opened this session, there is nothing to reopen -- shows a
+ * prompt pointing at Library instead of guessing a piece. */
+function renderAnalysisTool() {
+  if (lastAnalysisPieceId) {
+    showAnalysisView(lastAnalysisPieceId);
+    return;
+  }
+
   const content = getContentEl();
   content.innerHTML = `
-    <section class="panel">
-      <h1>Piece Detail</h1>
-      <div id="piece-detail-status" class="piece-detail-status">Loading piece ${id}...</div>
-      <div id="piece-detail-body"></div>
-    </section>
+    <h1 class="view-title">Analysis</h1>
+    <div id="analysis-empty-container"></div>
+    <div class="piece-list-status">No piece selected yet. Open one from the Library to see its analysis here.</div>
+  `;
+  document.getElementById("analysis-empty-container").appendChild(renderAnalysisBackLink());
+}
+
+function showAnalysisView(id) {
+  lastAnalysisPieceId = id;
+  setActiveTool("analysis");
+
+  const content = getContentEl();
+  content.innerHTML = `
+    <div id="analysis-back-container"></div>
+    <h1 class="view-title" id="analysis-title">Loading...</h1>
+    <div class="analysis-layout">
+      <aside class="analysis-sidebar">
+        <div class="sidebar-label">Analyzers</div>
+        <ul id="analysis-analyzers" class="analyzers-list"></ul>
+      </aside>
+      <div class="analysis-main">
+        <div id="analysis-status" class="piece-list-status">Loading piece ${id}...</div>
+        <div id="analysis-tabs" class="analysis-tabs" hidden></div>
+        <div id="analysis-claims" class="analysis-claims"></div>
+        <div id="analysis-detail" class="analysis-detail" hidden></div>
+      </div>
+    </div>
   `;
 
-  const statusEl = document.getElementById("piece-detail-status");
-  const bodyEl = document.getElementById("piece-detail-body");
+  document.getElementById("analysis-back-container").appendChild(renderAnalysisBackLink());
+  renderAnalyzersList();
 
   fetch(`/api/analyzer/pieces/${id}`)
     .then((res) => res.json())
     .then((data) => {
+      const statusEl = document.getElementById("analysis-status");
       if (!data.ok) {
         statusEl.textContent = data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found";
         statusEl.classList.add("error");
-        bodyEl.appendChild(renderBackLink());
         return;
       }
 
       statusEl.textContent = "";
-
-      const heading = bodyEl.parentElement.querySelector("h1");
-      if (heading) {
-        heading.textContent = `Piece Detail: ${formatPieceLabel(data.id, data.filename)}`;
-      }
-
-      const noteCount = document.createElement("div");
-      noteCount.textContent = `Note count: ${data.note_event_count}`;
-      bodyEl.appendChild(noteCount);
-
-      const list = document.createElement("ul");
-      list.classList.add("interpretation-list");
-      if (data.interpretations.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "No interpretations yet.";
-        list.appendChild(li);
-      } else {
-        for (const interpretation of data.interpretations) {
-          const li = document.createElement("li");
-          const provenanceLabel = PROVENANCE_LABELS[interpretation.provenance_state] || interpretation.provenance_state;
-          li.textContent = `${interpretation.type}: ${interpretation.label} — `;
-          const flag = document.createElement("span");
-          flag.classList.add("provenance-flag");
-          flag.textContent = provenanceLabel;
-          li.appendChild(flag);
-          list.appendChild(li);
-        }
-      }
-      bodyEl.appendChild(list);
-
-      const relationshipList = document.createElement("ul");
-      relationshipList.classList.add("relationship-list");
-      if (!data.relationships || data.relationships.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "No relationships yet.";
-        relationshipList.appendChild(li);
-      } else {
-        for (const relationship of data.relationships) {
-          const li = document.createElement("li");
-          li.textContent = `${relationship.source_id} —${relationship.predicate_name}→ ${relationship.target_id}`;
-          relationshipList.appendChild(li);
-        }
-      }
-      bodyEl.appendChild(relationshipList);
-
-      bodyEl.appendChild(renderBackLink());
+      document.getElementById("analysis-title").textContent = data.filename || data.id;
+      renderAnalysisTabs(data);
     })
     .catch((err) => {
+      const statusEl = document.getElementById("analysis-status");
       statusEl.textContent = `Could not reach backend: ${err}`;
       statusEl.classList.add("error");
-      bodyEl.appendChild(renderBackLink());
     });
+}
+
+function renderAnalysisTabs(data) {
+  const tabsEl = document.getElementById("analysis-tabs");
+  const claimsEl = document.getElementById("analysis-claims");
+  const detailEl = document.getElementById("analysis-detail");
+  const groups = groupClaimsByTab(data.interpretations || []);
+
+  tabsEl.innerHTML = "";
+  tabsEl.hidden = false;
+
+  function selectTab(tabId) {
+    for (const button of tabsEl.querySelectorAll("button")) {
+      button.classList.toggle("active", button.dataset.tabId === tabId);
+    }
+    detailEl.hidden = true;
+    renderClaimList(claimsEl, groups.get(tabId) || [], detailEl);
+  }
+
+  for (const tab of ANALYSIS_TABS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.tabId = tab.id;
+    button.textContent = `${tab.label} ${groups.get(tab.id).length}`;
+    button.addEventListener("click", () => selectTab(tab.id));
+    tabsEl.appendChild(button);
+  }
+
+  selectTab(ANALYSIS_TABS[0].id);
+}
+
+function renderClaimList(claimsEl, claims, detailEl) {
+  claimsEl.innerHTML = "";
+
+  if (claims.length === 0) {
+    const empty = document.createElement("div");
+    empty.classList.add("piece-list-status");
+    empty.textContent = "No claims in this category.";
+    claimsEl.appendChild(empty);
+    return;
+  }
+
+  const list = document.createElement("ul");
+  list.classList.add("claim-list");
+  for (const claim of claims) {
+    const li = document.createElement("li");
+    li.classList.add("clickable");
+
+    li.textContent = `${claim.label} — `;
+    const flag = document.createElement("span");
+    flag.classList.add("provenance-flag");
+    flag.textContent = PROVENANCE_LABELS[claim.provenance_state] || claim.provenance_state;
+    li.appendChild(flag);
+
+    li.addEventListener("click", () => renderClaimDetail(detailEl, claim));
+    list.appendChild(li);
+  }
+  claimsEl.appendChild(list);
+}
+
+/* Evidence is always empty (no Evidence data exists behind this
+ * endpoint -- Registry marks Evidence Not Started) and Provenance is
+ * limited to produced_by.author/method and provenance_state (no full
+ * Provenance record -- see UrsatzGuiInterpretationSummary in
+ * analysis_service.h). Rendered explicitly rather than omitted so the
+ * empty state is visible, not silently missing. */
+function renderClaimDetail(detailEl, claim) {
+  detailEl.hidden = false;
+  detailEl.innerHTML = "";
+
+  const summary = document.createElement("div");
+  summary.classList.add("claim-detail-summary");
+  summary.textContent = `${claim.type}: ${claim.label}`;
+  detailEl.appendChild(summary);
+
+  const evidenceHeading = document.createElement("div");
+  evidenceHeading.classList.add("sidebar-label");
+  evidenceHeading.textContent = "Evidence";
+  detailEl.appendChild(evidenceHeading);
+
+  const evidenceBody = document.createElement("div");
+  evidenceBody.classList.add("claim-detail-empty");
+  evidenceBody.textContent = "No evidence data returned by the analyzer.";
+  detailEl.appendChild(evidenceBody);
+
+  const provenanceHeading = document.createElement("div");
+  provenanceHeading.classList.add("sidebar-label");
+  provenanceHeading.textContent = "Provenance";
+  detailEl.appendChild(provenanceHeading);
+
+  const provenanceBody = document.createElement("div");
+  provenanceBody.textContent = `${claim.produced_by.author} / ${claim.produced_by.method} (${claim.provenance_state})`;
+  detailEl.appendChild(provenanceBody);
+
+  const actions = document.createElement("div");
+  actions.classList.add("claim-detail-actions");
+
+  const acceptButton = document.createElement("button");
+  acceptButton.type = "button";
+  acceptButton.textContent = "Accept";
+  acceptButton.disabled = true;
+  acceptButton.title = "Not yet available";
+  actions.appendChild(acceptButton);
+
+  const disputeButton = document.createElement("button");
+  disputeButton.type = "button";
+  disputeButton.textContent = "Dispute";
+  disputeButton.disabled = true;
+  disputeButton.title = "Not yet available";
+  actions.appendChild(disputeButton);
+
+  detailEl.appendChild(actions);
 }
 
 async function renderCorpusView() {
