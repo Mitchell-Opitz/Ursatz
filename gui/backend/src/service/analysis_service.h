@@ -1,6 +1,7 @@
 #ifndef URSATZ_GUI_ANALYSIS_SERVICE_H
 #define URSATZ_GUI_ANALYSIS_SERVICE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 /*
@@ -159,5 +160,23 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir,
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
                                                           const char *new_filename);
+
+/*
+ * Opens the saved piece's PersistenceHandle via the same lookup path
+ * ursatz_gui_analysis_get_piece uses (pieces_dir/id.db), then exports
+ * it to MusicXML via Ursatz's musicxml_export_write. On
+ * URSATZ_GUI_ANALYSIS_OK, *out_xml is a newly allocated, caller-owned,
+ * NUL-terminated MusicXML document (free() it), and *out_cosmetic_meter
+ * reports whether the export used a synthetic 4/4 grid rather than an
+ * authored meter (see musicxml_export.h -- true today for every piece,
+ * since Meter/MeterMap is not populated anywhere in Ursatz yet).
+ *
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
+ * under pieces_dir. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if
+ * musicxml_export_write itself fails (e.g. a NoteEvent missing pitch
+ * spelling, or overlapping notes -- see musicxml_export.h).
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
+                                                                char **out_xml, bool *out_cosmetic_meter);
 
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */
