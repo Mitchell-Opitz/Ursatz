@@ -77,9 +77,9 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out);
 
 /* The pitch classes of a chord in the key, root first (3 or 4 of them). */
 bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
-/* The notes of a lane over a span that sound inside it, ticks from origin; false if any span there is open. */
-bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, long origin, long length, AccompLine *out,
-                      size_t *count);
+/* The notes of a lane and voice over a span that sound inside it, ticks from origin; false if any span there is open. */
+bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, long origin, long length,
+                      AccompLine *out, size_t *count);
 /* The span of an inner voice (2 or 3) that is to be written with a target: none, or an open one over the same time. */
 bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpanId *out);
 

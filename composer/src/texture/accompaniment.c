@@ -56,10 +56,10 @@ bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4]
 }
 
 /* The notes of a lane over the target that sound inside it, from its start. False if any span there is open. */
-bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, long origin, long length, AccompLine *out,
-                      size_t *count) {
+bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, long origin, long length,
+                      AccompLine *out, size_t *count) {
     LaneSpanId ids[ACCOMP_MAX_LINE];
-    size_t found = plan_lane_find(plan, lane, 0, span, ids, ACCOMP_MAX_LINE);
+    size_t found = plan_lane_find(plan, lane, voice, span, ids, ACCOMP_MAX_LINE);
     *count = 0;
     if (found == 0 || found > ACCOMP_MAX_LINE) {
         return false;
@@ -179,8 +179,8 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     }
 
     /* The bass and the melody are written. */
-    if (!accomp_read_line(plan, PLAN_LANE_BASS, out->span, origin, out->length, out->bass, &out->bass_count) ||
-        !accomp_read_line(plan, PLAN_LANE_MELODY, out->span, origin, out->length, out->melody, &out->melody_count)) {
+    if (!accomp_read_line(plan, PLAN_LANE_BASS, 0, out->span, origin, out->length, out->bass, &out->bass_count) ||
+        !accomp_read_line(plan, PLAN_LANE_MELODY, 0, out->span, origin, out->length, out->melody, &out->melody_count)) {
         return false;
     }
     return accomp_read_voice(plan, 2, out->span, &out->voice_span[1]) && accomp_read_voice(plan, 3, out->span, &out->voice_span[2]);

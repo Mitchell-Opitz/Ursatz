@@ -58,6 +58,7 @@ add_library(ursatz_composer STATIC
     texture/voicing.c
     texture/voicing_check.c
     texture/voicing_search.c
+    texture/voice_hear.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include

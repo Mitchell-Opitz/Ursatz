@@ -152,12 +152,12 @@ bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out)
     }
     out->write_soprano = constraint.params.voicing.write_soprano;
     if (!read_chords(plan, out) || !melody_ticks(out->span.start, &origin) ||
-        !accomp_read_line(plan, PLAN_LANE_BASS, out->span, origin, out->length, bass, &bass_count) ||
+        !accomp_read_line(plan, PLAN_LANE_BASS, 0, out->span, origin, out->length, bass, &bass_count) ||
         !accomp_read_voice(plan, 2, out->span, &out->tenor_span)) {
         return false;
     }
     if (out->write_soprano ? !read_melody_span(plan, out->span, &out->melody_span)
-                           : !accomp_read_line(plan, PLAN_LANE_MELODY, out->span, origin, out->length, melody,
+                           : !accomp_read_line(plan, PLAN_LANE_MELODY, 0, out->span, origin, out->length, melody,
                                                &melody_count)) {
         return false;
     }
