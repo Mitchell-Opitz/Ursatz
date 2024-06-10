@@ -477,6 +477,7 @@ function showAnalysisView(id) {
         <div id="analysis-tabs" class="analysis-tabs" hidden></div>
         <div id="analysis-claims" class="analysis-claims"></div>
         <div id="analysis-detail" class="analysis-detail" hidden></div>
+        <div id="analysis-score" class="analysis-score" hidden></div>
       </div>
     </div>
   `;
@@ -509,16 +510,32 @@ function renderAnalysisTabs(data) {
   const tabsEl = document.getElementById("analysis-tabs");
   const claimsEl = document.getElementById("analysis-claims");
   const detailEl = document.getElementById("analysis-detail");
+  const scoreEl = document.getElementById("analysis-score");
   const groups = groupClaimsByTab(data.interpretations || []);
 
   tabsEl.innerHTML = "";
   tabsEl.hidden = false;
+  let scoreLoaded = false;
 
   function selectTab(tabId) {
     for (const button of tabsEl.querySelectorAll("button")) {
       button.classList.toggle("active", button.dataset.tabId === tabId);
     }
+
+    if (tabId === "score") {
+      claimsEl.hidden = true;
+      detailEl.hidden = true;
+      scoreEl.hidden = false;
+      if (!scoreLoaded) {
+        scoreLoaded = true;
+        renderScoreTab(scoreEl, data.id);
+      }
+      return;
+    }
+
+    claimsEl.hidden = false;
     detailEl.hidden = true;
+    scoreEl.hidden = true;
     renderClaimList(claimsEl, groups.get(tabId) || [], detailEl);
   }
 
@@ -531,7 +548,57 @@ function renderAnalysisTabs(data) {
     tabsEl.appendChild(button);
   }
 
+  const scoreButton = document.createElement("button");
+  scoreButton.type = "button";
+  scoreButton.dataset.tabId = "score";
+  scoreButton.textContent = "Score";
+  scoreButton.addEventListener("click", () => selectTab("score"));
+  tabsEl.appendChild(scoreButton);
+
   selectTab(ANALYSIS_TABS[0].id);
+}
+
+/* Score tab: fetches the piece's MusicXML export and renders it with
+ * OSMD (vendored under vendor/opensheetmusicdisplay/, loaded globally
+ * as window.opensheetmusicdisplay -- see index.html). Fetches the
+ * /musicxml/meta sibling separately for the cosmetic-meter flag rather
+ * than parsing it out of the XML itself -- OSMD already parses the
+ * document to render it, a second client-side XML parse just for one
+ * flag would be redundant. */
+function renderScoreTab(scoreEl, pieceId) {
+  scoreEl.innerHTML = `
+    <div id="analysis-score-caption" class="analysis-score-caption" hidden></div>
+    <div id="analysis-score-status" class="piece-list-status">Loading score...</div>
+    <div id="analysis-score-container" class="analysis-score-container"></div>
+  `;
+
+  const statusEl = document.getElementById("analysis-score-status");
+  const captionEl = document.getElementById("analysis-score-caption");
+  const containerEl = document.getElementById("analysis-score-container");
+
+  fetch(`/api/analyzer/pieces/${pieceId}/musicxml/meta`)
+    .then((res) => res.json())
+    .then((meta) => {
+      if (meta.ok && meta.cosmetic_meter) {
+        captionEl.textContent = "Barlines are approximate, not authored meter.";
+        captionEl.hidden = false;
+      }
+    })
+    .catch(() => {});
+
+  fetch(`/api/analyzer/pieces/${pieceId}/musicxml`)
+    .then((res) => res.text())
+    .then((xmlText) => {
+      const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(containerEl);
+      return osmd.load(xmlText).then(() => {
+        osmd.render();
+        statusEl.textContent = "";
+      });
+    })
+    .catch((err) => {
+      statusEl.textContent = `Could not load score: ${err}`;
+      statusEl.classList.add("error");
+    });
 }
 
 function renderClaimList(claimsEl, claims, detailEl) {
