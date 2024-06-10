@@ -35,11 +35,18 @@ typedef int socket_t;
 
 #include <core/provenance_reference.h>
 #include <core/value.h>
+#include <events/note_event.h>
 #include <identity/entity_id.h>
 #include <interpretation/interpretation.h>
 #include <interpretation/uncertainty.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
+#include <persistence/persistence_note_events.h>
+#include <pitch/pitch_identity.h>
+#include <pitch/pitch_spelling.h>
+#include <time/duration.h>
+#include <time/musical_time.h>
+#include <time/temporal_anchor.h>
 
 #include "server.h"
 
@@ -341,6 +348,47 @@ static bool http_patch(const char *path, const char *body, char *response, size_
   return http_request_with_body("PATCH", path, body, response, response_capacity);
 }
 
+/* Seeds a fresh piece with a single spelled NoteEvent so
+ * musicxml_export_write has something real to serialize -- same
+ * hand-built-NoteEvent style as ursatz's own
+ * tests/export/test_musicxml_export.c, since MIDIImporter fixtures are
+ * more machinery than this route test needs. */
+static bool seed_note_event_piece(const char *db_path) {
+  EntityID *id = NULL;
+  if (entity_id_create("test-musicxml-note", &id) != ENTITY_ID_OK) {
+    return false;
+  }
+  MusicalTime *position = NULL;
+  musical_time_create(0, 1, &position);
+  TemporalAnchor *anchor = NULL;
+  temporal_anchor_create(position, &anchor);
+  Duration *duration = NULL;
+  duration_create(1, 4, &duration);
+  PitchIdentity *pitch = NULL;
+  unsigned char token[1] = {60};
+  pitch_identity_create(token, sizeof(token), &pitch);
+  ProvenanceReference *provenance = NULL;
+  provenance_reference_create_absent(&provenance);
+  PitchSpelling *spelling = NULL;
+  pitch_spelling_create(PITCH_LETTER_C, 0, 4, &spelling);
+
+  NoteEvent *event = NULL;
+  if (note_event_create(id, anchor, duration, pitch, spelling, NULL, provenance, &event) != NOTE_EVENT_OK) {
+    return false;
+  }
+
+  PersistenceHandle *handle = NULL;
+  if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
+    note_event_destroy(event);
+    return false;
+  }
+  NoteEvent *events[1] = {event};
+  bool ok = persistence_store_note_events(handle, events, 1) == PERSISTENCE_NOTE_EVENTS_OK;
+  persistence_close(handle);
+  note_event_destroy(event);
+  return ok;
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -391,6 +439,12 @@ int main(void) {
   check(seed_interpretation_with_claim(db_path, "escaping-interpretation", false, "V7 says \"resolve\" \\ now"),
         "seed interpretation with a label needing JSON escaping");
 
+  const char *musicxml_piece_id = "test-musicxml-piece";
+  char musicxml_db_path[320];
+  snprintf(musicxml_db_path, sizeof(musicxml_db_path), "%s/%s.db", pieces_dir, musicxml_piece_id);
+  remove(musicxml_db_path);
+  check(seed_note_event_piece(musicxml_db_path), "seed piece with a spelled NoteEvent for MusicXML export");
+
   struct mg_context *ctx = ursatz_gui_server_start("18766", ".");
   check(ctx != NULL, "server starts");
   if (!ctx) {
@@ -439,6 +493,40 @@ int main(void) {
   char followup[256];
   check(http_get("/api/analyzer/pieces", followup, sizeof(followup)) && strstr(followup, "200") != NULL,
         "server is still alive and answering requests after the large piece detail response");
+
+  /* GET /api/analyzer/pieces/<id>/musicxml and its /meta sibling. */
+  char musicxml_path[160];
+  snprintf(musicxml_path, sizeof(musicxml_path), "/api/analyzer/pieces/%s/musicxml", musicxml_piece_id);
+  char musicxml_response[65536];
+  bool got_musicxml_response = http_get(musicxml_path, musicxml_response, sizeof(musicxml_response));
+  check(got_musicxml_response, "got a response to GET .../musicxml");
+  if (got_musicxml_response) {
+    check(strstr(musicxml_response, "200") != NULL, "musicxml response is 200 OK");
+    check(strstr(musicxml_response, "<score-partwise") != NULL, "musicxml response body is a MusicXML document");
+    check(strstr(musicxml_response, "ursatz:synthetic-meter") != NULL,
+          "musicxml response flags the synthetic-meter miscellaneous field");
+  }
+
+  char musicxml_meta_path[160];
+  snprintf(musicxml_meta_path, sizeof(musicxml_meta_path), "/api/analyzer/pieces/%s/musicxml/meta", musicxml_piece_id);
+  char musicxml_meta_response[4096];
+  bool got_musicxml_meta_response = http_get(musicxml_meta_path, musicxml_meta_response, sizeof(musicxml_meta_response));
+  check(got_musicxml_meta_response, "got a response to GET .../musicxml/meta");
+  if (got_musicxml_meta_response) {
+    check(strstr(musicxml_meta_response, "200") != NULL, "musicxml meta response is 200 OK");
+    check(strstr(musicxml_meta_response, "\"cosmetic_meter\":true") != NULL,
+          "musicxml meta response reports cosmetic_meter:true");
+  }
+
+  char musicxml_missing_response[4096];
+  bool got_musicxml_missing_response =
+      http_get("/api/analyzer/pieces/no-such-piece/musicxml", musicxml_missing_response, sizeof(musicxml_missing_response));
+  check(got_musicxml_missing_response, "got a response to GET .../musicxml for a nonexistent piece");
+  if (got_musicxml_missing_response) {
+    check(strstr(musicxml_missing_response, "404") != NULL, "musicxml export of a nonexistent piece returns 404");
+  }
+
+  remove(musicxml_db_path);
 
   /* PATCH /api/analyzer/pieces/<id>. Renames the piece's persisted
    * original_filename, and only that -- it must not disturb the
