@@ -66,7 +66,7 @@ target_include_directories(ursatz_composer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_composer
-    PUBLIC ursatz ursatz_analyzer common_practice_minimal standard_harmony standard_counterpoint standard_form standard_texture galant_schemas scale_harmonization
+    PUBLIC ursatz ursatz_analyzer common_practice_minimal standard_harmony standard_counterpoint standard_form standard_texture standard_voicing galant_schemas scale_harmonization
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
