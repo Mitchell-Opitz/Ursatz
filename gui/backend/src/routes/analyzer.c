@@ -510,6 +510,49 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
   return 200;
 }
 
+static const char *kMusicXmlSuffix = "/musicxml";
+static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
+
+static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
+  char *xml = NULL;
+  bool cosmetic_meter = false;
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter);
+
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to export piece\"}");
+    return 200;
+  }
+
+  size_t len = strlen(xml);
+  mg_send_http_ok(conn, "application/xml", (long)len);
+  mg_write(conn, xml, len);
+  free(xml);
+  return 200;
+}
+
+static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
+  char *xml = NULL;
+  bool cosmetic_meter = false;
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter);
+
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to export piece\"}");
+    return 200;
+  }
+  free(xml);
+
+  send_json(conn, cosmetic_meter ? "{\"ok\":true,\"cosmetic_meter\":true}" : "{\"ok\":true,\"cosmetic_meter\":false}");
+  return 200;
+}
+
 /*
  * civetweb routes both the exact "/api/analyzer/pieces" URI and any
  * "/api/analyzer/pieces/<something>" URI to a single handler registered
@@ -526,6 +569,37 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
   size_t prefix_len = strlen(kPieceDetailPrefix);
 
   if (strncmp(uri, kPieceDetailPrefix, prefix_len) == 0 && uri[prefix_len] != '\0') {
+    const char *rest = uri + prefix_len;
+    size_t rest_len = strlen(rest);
+    size_t meta_suffix_len = strlen(kMusicXmlMetaSuffix);
+    size_t xml_suffix_len = strlen(kMusicXmlSuffix);
+
+    if (strcmp(info->request_method, "GET") == 0 && rest_len > meta_suffix_len &&
+        strcmp(rest + rest_len - meta_suffix_len, kMusicXmlMetaSuffix) == 0) {
+      char id[256];
+      size_t id_len = rest_len - meta_suffix_len;
+      if (id_len >= sizeof(id)) {
+        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+        return 404;
+      }
+      memcpy(id, rest, id_len);
+      id[id_len] = '\0';
+      return handle_get_piece_musicxml_meta(conn, id);
+    }
+
+    if (strcmp(info->request_method, "GET") == 0 && rest_len > xml_suffix_len &&
+        strcmp(rest + rest_len - xml_suffix_len, kMusicXmlSuffix) == 0) {
+      char id[256];
+      size_t id_len = rest_len - xml_suffix_len;
+      if (id_len >= sizeof(id)) {
+        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+        return 404;
+      }
+      memcpy(id, rest, id_len);
+      id[id_len] = '\0';
+      return handle_get_piece_musicxml(conn, id);
+    }
+
     if (strcmp(info->request_method, "GET") == 0) {
       return handle_get_piece(conn, uri + prefix_len);
     }

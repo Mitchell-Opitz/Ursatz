@@ -36,6 +36,7 @@
 #include <analysis/phrase_boundary_detection.h>
 #include <analysis/sentence_detection.h>
 #include <analysis/thematic_return_detection.h>
+#include <export/musicxml_export.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
@@ -2003,6 +2004,37 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
     record_original_filename(index_db, new_filename);
     sqlite3_close(index_db);
 
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
+                                                                char **out_xml, bool *out_cosmetic_meter) {
+    if (!is_valid_piece_id(id)) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
+    char db_path[320];
+    snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
+
+    if (!db_path_exists(db_path)) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
+    PersistenceHandle *handle = NULL;
+    if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    char *xml = NULL;
+    MusicXmlExportResult result = musicxml_export_write(handle, &xml);
+    persistence_close(handle);
+
+    if (result != MUSICXML_EXPORT_OK) {
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    *out_xml = xml;
+    *out_cosmetic_meter = strstr(xml, "ursatz:synthetic-meter") != NULL;
     return URSATZ_GUI_ANALYSIS_OK;
 }
 

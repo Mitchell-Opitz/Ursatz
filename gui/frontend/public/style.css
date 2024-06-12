@@ -457,6 +457,19 @@ body {
   background: var(--bg-panel);
 }
 
+.analysis-score-caption {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.analysis-score-container {
+  background: #fff;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
 .claim-detail-summary {
   font-size: 14px;
   margin-bottom: 12px;
