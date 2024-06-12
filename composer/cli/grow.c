@@ -40,6 +40,7 @@ typedef struct {
     const char *first_cadence_text;
     const char *accompaniment_text;
     const char *texture_text;
+    bool voicing_flag;
     const char *seed_text;
     const char *suggest_text;
     const char *out_path;
@@ -56,6 +57,8 @@ typedef struct {
     PlanCadenceType first_cadence;
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
+    bool has_voicing;
+    PlanVoicing voicing;
     unsigned long seed;
     unsigned long suggest;
     bool json;
@@ -81,7 +84,11 @@ static void print_help(FILE *out) {
     fprintf(out, "  --accompaniment <p>  write an accompaniment in the inner voices: block, arpeggiated, alberti (not in 6/8),\n");
     fprintf(out, "                       oom-pah or any (the pattern is chosen from the seed)\n");
     fprintf(out, "  --texture <name>     the texture the accompaniment is to be heard as: \"homophony\", \"homorhythm\" (block\n");
-    fprintf(out, "                       chords only) or \"melody and accompaniment\"; implies --accompaniment any\n");
+    fprintf(out, "                       chords only) or \"melody and accompaniment\"; implies --accompaniment any. Or\n");
+    fprintf(out, "                       \"chorale\": four parts in a note a chord, the melody written with the other three\n");
+    fprintf(out, "                       (standard voicing rules), instead of the grown melody\n");
+    fprintf(out, "  --voicing            keep the grown melody as the soprano and add an alto and a tenor under it, voiced\n");
+    fprintf(out, "                       over the bass by the standard voicing rules (not with --accompaniment)\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
@@ -155,6 +162,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->accompaniment_text;
         } else if (strcmp(arg, "--texture") == 0) {
             target = &options->texture_text;
+        } else if (strcmp(arg, "--voicing") == 0) {
+            options->voicing_flag = true;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
         } else if (strcmp(arg, "--suggest") == 0) {
@@ -264,7 +273,19 @@ static int check_options(Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence must be HC or IAC, not '%s'", options->first_cadence_text);
         }
     }
-    if (options->accompaniment_text || options->texture_text) {
+    /* A chorale is four parts with the melody written too: a voicing, not an accompaniment. */
+    bool chorale = options->texture_text && cli_equals_ignore_case(options->texture_text, "chorale");
+    if (chorale || options->voicing_flag) {
+        if (options->accompaniment_text || (options->texture_text && !chorale)) {
+            return cli_fail(CLI_EXIT_USAGE, "--voicing and --texture chorale write the inner voices themselves; they cannot "
+                                            "be combined with --accompaniment or another --texture");
+        }
+        if (chorale && options->voicing_flag) {
+            return cli_fail(CLI_EXIT_USAGE, "--texture chorale writes the melody, --voicing keeps the grown one; use one");
+        }
+        options->has_voicing = true;
+        options->voicing.write_soprano = chorale;
+    } else if (options->accompaniment_text || options->texture_text) {
         PlanAccompaniment *accompaniment = &options->accompaniment;
         options->has_accompaniment = true;
         accompaniment->pattern = PLAN_ACCOMPANIMENT_ANY;
@@ -432,6 +453,8 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     request.first_cadence = options->first_cadence;
     request.has_accompaniment = options->has_accompaniment;
     request.accompaniment = options->accompaniment;
+    request.has_voicing = options->has_voicing;
+    request.voicing = options->voicing;
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
     GrowResult built = grow_build_plan(&request, &theme->plan);
@@ -806,6 +829,9 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
                 printf(",\"texture\":\"%s\"", standard_texture_name((StandardTexture)options->accompaniment.texture));
             }
         }
+        if (options->has_voicing) {
+            printf(",\"voicing\":\"%s\"", options->voicing.write_soprano ? "chorale" : "satb");
+        }
         printf(",\"themes\":[");
         for (size_t k = 0; k < count; k++) {
             printf("%s", k ? "," : "");
@@ -829,6 +855,9 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
         if (options->accompaniment.texture >= 0) {
             printf(" (%s)", standard_texture_name((StandardTexture)options->accompaniment.texture));
         }
+    }
+    if (options->has_voicing) {
+        printf(", %s", options->voicing.write_soprano ? "chorale (four parts)" : "voiced in four parts");
     }
     printf("\n");
     for (size_t k = 0; k < count; k++) {

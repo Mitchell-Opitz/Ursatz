@@ -79,6 +79,8 @@ typedef struct {
     PlanTime bar;
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
+    bool has_voicing;
+    PlanVoicing voicing;
 } GrowThemeRequest;
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */

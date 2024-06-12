@@ -109,7 +109,8 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         request->motive->note_count < 2 || request->key.tonic_pitch_class < 0 || request->key.tonic_pitch_class > 11 ||
         !half_fits(request, cells_per_bar, request->cadence) ||
         (antecedent && (!cadences_ordered(first, request->cadence) || !half_fits(request, cells_per_bar, first))) ||
-        (request->has_accompaniment && !accompaniment_valid(request))) {
+        (request->has_accompaniment && !accompaniment_valid(request)) ||
+        (request->has_accompaniment && request->has_voicing)) {
         return GROW_ERR_BAD_REQUEST;
     }
     PlanTime bar = grow_bar_length(&request->meter);
@@ -196,6 +197,13 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
         constraint.params.accompaniment = request->accompaniment;
+        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
+    }
+
+    if (result == GROW_OK && request->has_voicing) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_VOICING;
+        constraint.params.voicing = request->voicing;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 

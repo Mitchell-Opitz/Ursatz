@@ -57,6 +57,8 @@ typedef struct {
     int inversion[VOICING_MAX_CHORDS];
     /* The soprano of each chord when it is written: its pitch, or -1 when no chord tone sounds in the chord. */
     int soprano[VOICING_MAX_CHORDS];
+    /* The pitch classes a soprano the voicing writes may take, as a bit mask: all but over the last chord of a cadence. */
+    unsigned soprano_mask[VOICING_MAX_CHORDS];
     bool chord_ok[VOICING_MAX_CHORDS]; /* the bass (and a written soprano) are tones of the chord */
 } VoicingContext;
 

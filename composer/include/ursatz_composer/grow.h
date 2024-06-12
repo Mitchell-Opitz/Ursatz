@@ -35,7 +35,9 @@
  *   harmony    harmony-prolongation for the presentation, harmony-phrase-model for the rest;
  *   bass       harmony-bass under the chords;
  *   melody     melody-fill, idea by idea, over harmony and bass;
- *   texture    accompaniment, over the melody and the bass, when the request asks for one (else it has nothing to do).
+ *   texture    accompaniment, over the melody and the bass, when the request asks for one; or voicing-satb, over the
+ *              harmony and the bass, when it asks for a voicing: it writes the alto and the tenor under the melody, or
+ *              all three upper voices of a chorale, the melody too (else the stage has nothing to do).
  * Stage k runs with the seed config.seed + k, so a stage's choices do not change when another stage's do.
  *
  * The theme of 8 bars, in bars (4 bars halves every length). The first half is one of:
@@ -70,6 +72,13 @@ typedef struct {
      */
     PlanAccompaniment accompaniment;
     bool has_accompaniment;
+    /*
+     * A four-part voicing of the harmony and bass (voicing.h), in the alto and the tenor. Read only with has_voicing,
+     * and refused together with an accompaniment. With write_soprano the voicing writes the melody too, in one note a
+     * chord (a chorale texture), and the melody stage has nothing to do; the form is then heard from that soprano.
+     */
+    PlanVoicing voicing;
+    bool has_voicing;
 } GrowRequest;
 
 typedef enum {
@@ -79,7 +88,8 @@ typedef enum {
     GROW_ERR_MOTIVE_TOO_LONG, /* the motive does not fit in one bar of the meter */
     GROW_ERR_BAD_REQUEST,     /* a meter the harmony operators do not support, bars not 4 or 8, a pairing not built
                                  yet, a cadence other than PAC, IAC or HC, a motive of one note, an accompaniment
-                                 that is not valid or is Alberti in a compound meter */
+                                 that is not valid or is Alberti in a compound meter, an accompaniment and a
+                                 voicing together */
     GROW_ERR_STUCK            /* a stage left a target open (GrowOutcome.stuck_stage) */
 } GrowResult;
 

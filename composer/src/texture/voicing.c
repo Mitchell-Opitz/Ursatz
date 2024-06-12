@@ -131,6 +131,28 @@ static bool read_tones(VoicingContext *out, size_t i) {
     return true;
 }
 
+/*
+ * A soprano the voicing writes ends the cadence the melody span asks for, as the recognizer hears it: a perfect authentic
+ * cadence on the tonic, an imperfect one on the third of the tonic chord.
+ */
+static void limit_cadence_soprano(const PiecePlan *plan, VoicingContext *out) {
+    size_t last = out->chord_count - 1;
+    for (size_t i = 0; i < out->chord_count; i++) {
+        out->soprano_mask[i] = 0xFFFu;
+    }
+    for (size_t i = 0; i < plan_lane_span_constraint_count(plan, out->melody_span); i++) {
+        const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, out->melody_span, i);
+        if (constraint->kind != PLAN_CONSTRAINT_CADENCE) {
+            continue;
+        }
+        if (constraint->params.cadence == PLAN_CADENCE_PAC) {
+            out->soprano_mask[last] = 1u << out->key.tonic_pitch_class;
+        } else if (constraint->params.cadence == PLAN_CADENCE_IAC) {
+            out->soprano_mask[last] = 1u << ((out->key.tonic_pitch_class + (out->key.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12);
+        }
+    }
+}
+
 bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out) {
     PlanConstraint constraint;
     AccompLine melody[ACCOMP_MAX_LINE];
@@ -160,6 +182,9 @@ bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out)
                            : !accomp_read_line(plan, PLAN_LANE_MELODY, 0, out->span, origin, out->length, melody,
                                                &melody_count)) {
         return false;
+    }
+    if (out->write_soprano) {
+        limit_cadence_soprano(plan, out);
     }
     out->key_tonic = harmony_spell_tonic(&out->key, 4);
     out->key_leading = harmony_spell_pitch(&out->key, 7, 60 + (out->key.tonic_pitch_class + 11) % 12);
