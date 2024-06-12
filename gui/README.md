@@ -65,6 +65,20 @@ The backend exposes:
   Interpretations, or re-run any analysis. Returns
   `{"ok":true,"id":...,"filename":...}`, or `{"ok":false,...}` for an
   unknown id (404) or an empty filename.
+- `GET /api/analyzer/pieces/<id>/musicxml`: opens the piece's
+  `PersistenceHandle` via the same `pieces/<id>.db` lookup the other
+  piece routes use, and returns Ursatz's `musicxml_export_write` output
+  as the response body, `Content-Type: application/xml` (plain XML, not
+  `application/vnd.recordare.musicxml+xml` -- this is an uncompressed
+  single document, not a zipped `.mxl` package). Unknown id returns 404.
+  `musicxml_export_write` lays barlines on a synthetic 4/4 grid (Ursatz
+  has no Meter/MeterMap data yet) and flags this via an
+  `ursatz:synthetic-meter` `<miscellaneous-field>` -- see
+  `external/ursatz/src/export/musicxml_export.h`.
+- `GET /api/analyzer/pieces/<id>/musicxml/meta`: same export, but returns
+  `{"ok":true,"cosmetic_meter":<bool>}` instead of the XML body, so the
+  frontend can read the synthetic-meter flag without a second client-side
+  XML parse (OSMD already parses the full document to render it).
 
 Ursatz's persistence layer has no "piece" concept (one `note_events`
 table, one `interpretations` table, no grouping/filename metadata): the
@@ -156,6 +170,20 @@ endpoint -- Registry marks Evidence Not Started), a Provenance section
 provenance data an Interpretation actually carries -- not a full
 Provenance record), and disabled Accept/Dispute buttons (no Promotion
 endpoint exists yet).
+
+The tab bar also includes a Score tab, alongside the claim-list tabs
+rather than replacing any of them. Selecting it fetches
+`GET /api/analyzer/pieces/<id>/musicxml` and renders it with
+[OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/), vendored as
+a static UMD build under `frontend/public/vendor/opensheetmusicdisplay/`
+and loaded via a plain `<script>` tag in `index.html` -- `frontend/`
+has no `package.json`/bundler, so this matches the existing no-build-tool
+pattern rather than introducing one. A caption below the score
+("Barlines are approximate, not authored meter.") is shown whenever
+`GET .../musicxml/meta` reports `cosmetic_meter: true`, which is every
+piece today (see the route description above) -- there is no
+claim-highlight overlay linking claims to score regions in this tab;
+that is a separate, later piece of work.
 
 ## Building
 
