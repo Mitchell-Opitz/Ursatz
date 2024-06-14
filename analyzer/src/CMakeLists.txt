@@ -9,6 +9,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/key_region_pipeline.c
     pipeline/chord_pipeline.c
     pipeline/outer_voice_pipeline.c
+    pipeline/roman_numeral_pipeline.c
     pipeline/analysis_report.c
     pipeline/analysis_pipeline.c
     pipeline/markdown_report.c
@@ -21,7 +22,7 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz common_practice_minimal standard_meter
+    PUBLIC ursatz common_practice_minimal standard_meter standard_tonality
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_analyzer PRIVATE

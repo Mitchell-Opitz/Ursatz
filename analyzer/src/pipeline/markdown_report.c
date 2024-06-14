@@ -509,7 +509,26 @@ static double rational_member(const cJSON *object, const char *key) {
     return denominator == 0.0 ? 0.0 : number_member(rational, "num") / denominator;
 }
 
-static bool append_chord_row(StringBuilder *sb, const cJSON *chord) {
+/* The chord's Roman numeral cell. The key region is named on the first labelled chord and wherever it changes,
+   as "V (in G major)"; a chord the library gives no numeral is "unlabelled" with the reason. last_region is the
+   region of the last numeral that named its key, -1 before the first. */
+static bool append_numeral_cell(StringBuilder *sb, const cJSON *chord, long *last_region) {
+    const cJSON *roman = cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral");
+    const char *numeral = string_member(roman, "label");
+    if (!numeral) {
+        const char *reason = string_member(roman, "unlabelled_reason");
+        return sb_appendf(sb, "unlabelled: %s | ", reason ? reason : "no reason given");
+    }
+    const cJSON *region = cJSON_GetObjectItemCaseSensitive(roman, "key_region");
+    const char *key = string_member(roman, "key");
+    if (cJSON_IsNumber(region) && key && (long)region->valuedouble != *last_region) {
+        *last_region = (long)region->valuedouble;
+        return sb_appendf(sb, "%s (in %s) | ", numeral, key);
+    }
+    return sb_appendf(sb, "%s | ", numeral);
+}
+
+static bool append_chord_row(StringBuilder *sb, const cJSON *chord, long *last_region) {
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
     const char *label = string_member(chord, "label");
     const char *root = string_member(chord, "root");
@@ -517,7 +536,7 @@ static bool append_chord_row(StringBuilder *sb, const cJSON *chord) {
 
     bool ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
               sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
-              sb_appendf(sb, " | %s | ", label ? label : "");
+              sb_appendf(sb, " | %s | ", label ? label : "") && append_numeral_cell(sb, chord, last_region);
     if (!ok) {
         return false;
     }
@@ -568,17 +587,76 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
     }
     ok = ok &&
          sb_appendf(sb,
-                    " Duration is in beats. Confidence is the library's confidence in the chord. The runner-up "
+                    " Numeral is the Roman numeral in the local key region, which is named where it changes. "
+                    "Duration is in beats. Confidence is the library's confidence in the chord. The runner-up "
                     "is shown only when its score is within %.2f of the best chord's.\n\n",
                     RUNNER_UP_MARGIN_THRESHOLD) &&
-         sb_append(sb, "| Position | Chord | Root | Quality | Bass | Inversion | Beats | Confidence | Runner-up |\n"
-                       "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+         sb_append(sb, "| Position | Chord | Numeral | Root | Quality | Bass | Inversion | Beats | Confidence | "
+                       "Runner-up |\n"
+                       "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    long last_region = -1;
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
         if (!ok) {
             break;
         }
-        ok = append_chord_row(sb, chord);
+        ok = append_chord_row(sb, chord, &last_region);
+    }
+    return ok;
+}
+
+/* The applied chords, one row each, with the check against the tonicization claims. A disagreement is stated, not
+   resolved. Nothing is written when no chord is applied. */
+static bool render_applied_chords(StringBuilder *sb, const cJSON *document, const cJSON *chords) {
+    (void)document;
+    bool any = false;
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        any = any || cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(
+                         cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral"), "applied"));
+    }
+    if (!any) {
+        return true;
+    }
+    bool ok = sb_append(sb, "\n## Applied chords\n\n") &&
+              sb_append(sb, "Chords the library reads as applied (secondary) chords: the chord as it reads in the "
+                            "tonicized key, the chord it tonicizes and that chord's tonic. The last column checks "
+                            "each against the tonicization claims above for the same span; where they disagree both "
+                            "are shown and neither is changed.\n\n") &&
+              sb_append(sb, "| Position | Applied chord | Target | Resolution | Tonicization |\n"
+                            "| --- | --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(chord, chords) {
+        const cJSON *applied =
+            cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral"), "applied");
+        if (!ok) {
+            break;
+        }
+        if (!cJSON_IsObject(applied)) {
+            continue;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
+        const char *agreement = string_member(applied, "tonicization_agreement");
+        const char *tonicization_key = string_member(applied, "tonicization_key");
+        const char *target_tonic = string_member(applied, "target_tonic");
+        const char *kind = string_member(applied, "kind");
+        const char *resolution = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(applied, "deceptive"))
+                                     ? "deceptive"
+                                     : "to the target";
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
+             sb_appendf(sb, " | %s (%s) | %s (%s) | %s | ", string_member(applied, "numeral"),
+                        kind ? kind : "-", string_member(applied, "target_numeral"),
+                        target_tonic ? target_tonic : "-", resolution);
+        if (!ok) {
+            break;
+        }
+        if (agreement && strcmp(agreement, "agrees") == 0) {
+            ok = sb_appendf(sb, "agrees: tonicization of %s |\n", tonicization_key ? tonicization_key : "-");
+        } else if (agreement && strcmp(agreement, "target_differs") == 0) {
+            ok = sb_appendf(sb, "DISAGREES: the tonicization is of %s |\n", tonicization_key ? tonicization_key : "-");
+        } else {
+            ok = sb_append(sb, "DISAGREES: no tonicization is reported here |\n");
+        }
     }
     return ok;
 }
@@ -630,6 +708,109 @@ static bool render_outer_voices(StringBuilder *sb, const cJSON *document, const 
     return ok;
 }
 
+/* One table of vocabulary entries sharing a scope, group and level. */
+static bool append_vocabulary_table(StringBuilder *sb, const cJSON *entries, const char *scope_key, const char *group,
+                                    const char *level, const char *first_column) {
+    bool any = false;
+    const cJSON *entry;
+    cJSON_ArrayForEach(entry, entries) {
+        const char *entry_group = string_member(entry, "group");
+        const char *entry_level = string_member(entry, "level");
+        const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
+        bool in_scope = scope_key ? (cJSON_IsNumber(key_region) && (long)key_region->valuedouble == atol(scope_key))
+                                  : !cJSON_IsNumber(key_region);
+        if (!in_scope || !entry_group || strcmp(entry_group, group) != 0 || strcmp(entry_level, level) != 0) {
+            continue;
+        }
+        if (!any) {
+            if (!sb_appendf(sb, "| %s | Count | Runs | Beats | Share | First |\n| --- | --- | --- | --- | --- | --- |\n",
+                            first_column)) {
+                return false;
+            }
+            any = true;
+        }
+        const cJSON *duration = cJSON_GetObjectItemCaseSensitive(entry, "duration");
+        char beats_text[32] = "-";
+        if (cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(duration, "beats"))) {
+            format_number(rational_member(duration, "beats"), beats_text, sizeof(beats_text));
+        }
+        const cJSON *first = cJSON_GetObjectItemCaseSensitive(entry, "first");
+        if (!(sb_appendf(sb, "| %s | %d | %d | %s | %.1f%% | ", string_member(entry, "numeral"),
+                         (int)number_member(entry, "count"), (int)number_member(entry, "runs"), beats_text,
+                         number_member(entry, "share") * 100.0) &&
+              append_position(sb, cJSON_GetObjectItemCaseSensitive(first, "position")) && sb_append(sb, " |\n"))) {
+            return false;
+        }
+    }
+    return !any || sb_append(sb, "\n");
+}
+
+/* The groups and both levels for one scope. */
+static bool append_vocabulary_scope(StringBuilder *sb, const cJSON *entries, const char *scope_key) {
+    static const struct {
+        const char *group;
+        const char *title;
+    } GROUPS[] = {{"diatonic", "Diatonic chords"}, {"applied", "Applied chords"}, {"mixture", "Borrowed chords"}};
+    for (size_t g = 0; g < sizeof(GROUPS) / sizeof(GROUPS[0]); g++) {
+        bool present = false;
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, entries) {
+            const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
+            const char *group = string_member(entry, "group");
+            if (group && strcmp(group, GROUPS[g].group) == 0 &&
+                (scope_key ? (cJSON_IsNumber(key_region) && (long)key_region->valuedouble == atol(scope_key))
+                           : !cJSON_IsNumber(key_region))) {
+                present = true;
+            }
+        }
+        if (!present) {
+            continue;
+        }
+        if (!(sb_appendf(sb, "**%s**\n\n", GROUPS[g].title) &&
+              append_vocabulary_table(sb, entries, scope_key, GROUPS[g].group, "numeral", "Numeral") &&
+              sb_append(sb, "By base numeral (inversions together):\n\n") &&
+              append_vocabulary_table(sb, entries, scope_key, GROUPS[g].group, "base_numeral", "Base numeral"))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool render_chord_vocabulary(StringBuilder *sb, const cJSON *document, const cJSON *entries) {
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
+    const cJSON *regions = cJSON_GetObjectItemCaseSensitive(keys, "regions");
+    bool ok = sb_append(sb, "\n## Chord vocabulary\n\n") &&
+              sb_append(sb, "Each distinct Roman numeral of the chords the library numbered, for the whole piece and "
+                            "for each key region, sorted by count, then total length, then first appearance. Count "
+                            "is the number of chord rows with that numeral (every row in the Chords table is one). "
+                            "Runs counts a stretch of adjacent identical numerals in one key region once. Beats is "
+                            "the total length, Share its fraction of the scope's numbered chord length, and First "
+                            "where it first appears. Applied chords are listed on their own. Chords without a "
+                            "numeral are not counted.\n\n### Overall\n\n") &&
+              append_vocabulary_scope(sb, entries, NULL);
+    if (cJSON_GetArraySize(regions) < 2) {
+        return ok;
+    }
+    int index = 0;
+    const cJSON *region;
+    cJSON_ArrayForEach(region, regions) {
+        char scope_key[16];
+        snprintf(scope_key, sizeof(scope_key), "%d", index);
+        bool present = false;
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, entries) {
+            const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
+            present = present || (cJSON_IsNumber(key_region) && (int)key_region->valuedouble == index);
+        }
+        if (ok && present) {
+            ok = sb_appendf(sb, "### %s (region %d)\n\n", string_member(region, "label"), index) &&
+                 append_vocabulary_scope(sb, entries, scope_key);
+        }
+        index++;
+    }
+    return ok;
+}
+
 static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, const cJSON *tones) {
     (void)document;
     size_t unclassified = 0;
@@ -674,7 +855,9 @@ static const struct {
     {"modulations", render_modulations},
     {"pivot_chords", render_pivot_chords},
     {"chords", render_chords},
+    {"chords", render_applied_chords},
     {"chords", render_outer_voices},
+    {"chord_vocabulary", render_chord_vocabulary},
     {"non_chord_tones", render_non_chord_tones},
 };
 

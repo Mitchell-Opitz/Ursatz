@@ -1030,6 +1030,112 @@ static cJSON *chord_outer_json(const AnalysisReport *report, const AnalysisRepor
     return outer;
 }
 
+/* Semitones above the tonic of each degree 1..7 of the major scale and the natural minor scale: the key a
+   degree names. This only locates the key the library's applied-chord target degree points at, to compare it
+   with a tonicization's key; what is an applied chord is the library's. */
+static int degree_semitones(bool major, int degree) {
+    static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
+    static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 10};
+    return (major ? MAJOR : MINOR)[degree - 1];
+}
+
+static bool rational_equal(Rational a, Rational b) {
+    return !rational_less(a, b) && !rational_less(b, a);
+}
+
+/* Whether a chord's span lies in, or runs straight into, the span of a region: the tonicization region the
+   chord belongs to, or the one it leads to. */
+static bool span_touches(Rational chord_start, Rational chord_end, Rational start, Rational end) {
+    return (rational_less(chord_start, end) && rational_less(start, chord_end)) || rational_equal(chord_end, start);
+}
+
+/* The chord's applied reading and its cross-reference to the tonicization claims, or null for a chord that is
+   not applied. The tonicization claims are numbered as in "tonicizations". Among the claims whose span touches the
+   chord's (see span_touches), one whose key has the tonic the applied target names is the agreeing one; if
+   only claims with another tonic touch it, the two disagree; if none touches, there is no tonicization.
+   Neither side is changed to fit the other. */
+static cJSON *applied_json(const AnalysisReport *report, const AnalysisReportEntry *entry) {
+    const AnalysisRomanNumeral *roman = &entry->roman;
+    if (!roman->applied) {
+        return cJSON_CreateNull();
+    }
+    bool in_region = entry->in_region && entry->region < report->key_region_count;
+    int target_tonic = -1;
+    if (in_region) {
+        const AnalysisKeyRegion *local = &report->key_regions[entry->region];
+        target_tonic = (local->tonic_pitch_class + degree_semitones(local->is_major, roman->target_degree)) % 12;
+    }
+    Rational chord_start = rational_make(entry->time_numerator, entry->time_denominator);
+    Rational chord_end = rational_make(entry->end_numerator, entry->end_denominator);
+
+    bool touching = false;
+    size_t touching_index = 0;
+    size_t touching_region = 0;
+    bool agrees = false;
+    size_t tonicization_index = 0;
+    for (size_t i = 0; i < report->key_change_count && !agrees; i++) {
+        const AnalysisKeyChange *change = &report->key_changes[i];
+        if (!change_is_tonicization(change) || change->is_return) {
+            continue;
+        }
+        const AnalysisKeyRegion *target = &report->key_regions[change->to_region];
+        if (span_touches(chord_start, chord_end, region_start(target), region_end(target))) {
+            if (!touching || target->tonic_pitch_class == target_tonic) {
+                touching = true;
+                touching_index = tonicization_index;
+                touching_region = change->to_region;
+                agrees = target->tonic_pitch_class == target_tonic;
+            }
+        }
+        tonicization_index++;
+    }
+
+    const char *agreement = agrees ? "agrees" : (touching ? "target_differs" : "no_tonicization");
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "numeral", cJSON_CreateString(roman->applied_numeral)) &&
+          add(object, "target_numeral", cJSON_CreateString(roman->target_numeral)) &&
+          add(object, "target_degree", cJSON_CreateNumber(roman->target_degree)) &&
+          add(object, "target_tonic", target_tonic >= 0 ? cJSON_CreateString(pitch_class_name(
+                                          target_tonic, report->key_regions[entry->region].prefer_flats))
+                                                         : cJSON_CreateNull()) &&
+          add(object, "kind", cJSON_CreateString(roman->applied_kind)) &&
+          add(object, "resolves_to", cJSON_CreateNumber((double)roman->resolution_entry)) &&
+          add(object, "deceptive", cJSON_CreateBool(roman->deceptive)) &&
+          add(object, "tonicization_agreement", cJSON_CreateString(agreement)) &&
+          add(object, "tonicization_index", touching ? cJSON_CreateNumber((double)touching_index) : cJSON_CreateNull()) &&
+          add(object, "target_region", touching ? cJSON_CreateNumber((double)touching_region) : cJSON_CreateNull()) &&
+          add(object, "tonicization_key", touching ? cJSON_CreateString(report->key_regions[touching_region].label)
+                                                   : cJSON_CreateNull()))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The chord's Roman numeral: the library's label, the key region it is relative to (the region the segment
+   starts in, which is also the key the chord was read in), its scale degree and uncertainty; or null label with
+   the reason there is none. */
+static cJSON *roman_numeral_json(const AnalysisReport *report, const AnalysisReportEntry *entry) {
+    const AnalysisRomanNumeral *roman = &entry->roman;
+    bool in_region = entry->in_region && entry->region < report->key_region_count;
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "label", optional_string_json(roman->numeral)) &&
+          add(object, "base_numeral", optional_string_json(roman->base_numeral)) &&
+          add(object, "key_region", in_region ? cJSON_CreateNumber((double)entry->region) : cJSON_CreateNull()) &&
+          add(object, "key", in_region ? cJSON_CreateString(report->key_regions[entry->region].label)
+                                       : cJSON_CreateNull()) &&
+          add(object, "degree", roman->labelled ? cJSON_CreateNumber(roman->degree) : cJSON_CreateNull()) &&
+          add(object, "uncertainty", roman->labelled ? cJSON_CreateNumber(roman->uncertainty) : cJSON_CreateNull()) &&
+          add(object, "unlabelled_reason", optional_string_json(roman->reason)) &&
+          add(object, "applied", applied_json(report, entry)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* One chord claim per report entry, in time order. */
 static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
@@ -1045,7 +1151,8 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
                                      entry->chord_label, entry->chord_confidence);
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
               add_chord_fields(claim, notes, entry, start, end) &&
-              add(claim, "outer", chord_outer_json(report, entry)))) {
+              add(claim, "outer", chord_outer_json(report, entry)) &&
+              add(claim, "roman_numeral", roman_numeral_json(report, entry)))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;
@@ -1189,6 +1296,237 @@ static cJSON *outer_voices_json(const ImportedNotes *notes, const AnalysisReport
     return outer;
 }
 
+/* ---- Chord vocabulary ---- */
+
+/* The groups a labelled chord falls in. Applied is the library's applied reading. The library's Roman numeral
+   adapter does not yet name borrowed (modal mixture) chords, so no chord is placed in the mixture group today. */
+typedef enum { GROUP_DIATONIC = 0, GROUP_APPLIED, GROUP_MIXTURE, GROUP_COUNT } VocabularyGroup;
+static const char *const GROUP_NAMES[GROUP_COUNT] = {"diatonic", "applied", "mixture"};
+static const char *const LEVEL_NAMES[2] = {"numeral", "base_numeral"};
+#define SCOPE_OVERALL (-2L)
+
+/* One labelled chord, read back from its chord claim. */
+typedef struct {
+    size_t index;
+    long region; /* -1 when the chord lies in no key region */
+    int group;
+    const char *label;
+    const char *base;
+    Rational whole;
+    bool has_beats;
+    Rational beats;
+    bool starts_run; /* not a repeat of the chord before it */
+    const cJSON *position; /* location.start */
+} VocabularyChord;
+
+typedef struct {
+    const char *name;
+    size_t count;
+    size_t runs;
+    Rational whole;
+    Rational beats;
+    bool beats_known;
+    size_t first; /* index of its first chord claim */
+    const cJSON *position;
+} VocabularyTally;
+
+static const char *json_string(const cJSON *object, const char *key) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    return cJSON_IsString(item) ? item->valuestring : NULL;
+}
+
+static Rational rational_add(Rational a, Rational b) {
+    return rational_make(a.num * (long long)b.den + b.num * (long long)a.den, a.den * b.den);
+}
+
+static Rational rational_read(const cJSON *object) {
+    const cJSON *num = cJSON_GetObjectItemCaseSensitive(object, "num");
+    const cJSON *den = cJSON_GetObjectItemCaseSensitive(object, "den");
+    long long denominator = cJSON_IsNumber(den) ? (long long)den->valuedouble : 1;
+    return rational_make(cJSON_IsNumber(num) ? (long long)num->valuedouble : 0,
+                         denominator > 0 ? (unsigned long long)denominator : 1);
+}
+
+/* The labelled chords of the chords section, in time order. *count is how many. NULL on allocation failure. */
+static VocabularyChord *vocabulary_chords(const cJSON *chords, size_t *count) {
+    size_t total = (size_t)cJSON_GetArraySize(chords);
+    VocabularyChord *records = calloc(total > 0 ? total : 1, sizeof(VocabularyChord));
+    if (!records) {
+        return NULL;
+    }
+    *count = 0;
+    const VocabularyChord *previous = NULL;
+    size_t index = 0;
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        const cJSON *roman = cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral");
+        const char *label = json_string(roman, "label");
+        const char *base = json_string(roman, "base_numeral");
+        if (label && base) {
+            const cJSON *region = cJSON_GetObjectItemCaseSensitive(roman, "key_region");
+            const cJSON *duration = cJSON_GetObjectItemCaseSensitive(chord, "duration");
+            const cJSON *beats = cJSON_GetObjectItemCaseSensitive(duration, "beats");
+            VocabularyChord *record = &records[(*count)++];
+            record->index = index;
+            record->region = cJSON_IsNumber(region) ? (long)region->valuedouble : -1;
+            record->group = cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(roman, "applied")) ? GROUP_APPLIED
+                                                                                                 : GROUP_DIATONIC;
+            record->label = label;
+            record->base = base;
+            record->whole = rational_read(cJSON_GetObjectItemCaseSensitive(duration, "whole_notes"));
+            record->has_beats = cJSON_IsObject(beats);
+            record->beats = record->has_beats ? rational_read(beats) : rational_make(0, 1);
+            record->position = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "location"),
+                                                                "start");
+            record->starts_run = !(previous && previous->index + 1 == index && previous->region == record->region &&
+                                   strcmp(previous->label, label) == 0);
+            previous = record;
+        } else {
+            previous = NULL;
+        }
+        index++;
+    }
+    return records;
+}
+
+/* Most chords first, then the longest, then the earliest. */
+static int compare_tallies(const void *a, const void *b) {
+    const VocabularyTally *left = a;
+    const VocabularyTally *right = b;
+    if (left->count != right->count) {
+        return left->count > right->count ? -1 : 1;
+    }
+    if (rational_less(right->whole, left->whole)) {
+        return -1;
+    }
+    if (rational_less(left->whole, right->whole)) {
+        return 1;
+    }
+    return left->first < right->first ? -1 : (left->first > right->first ? 1 : 0);
+}
+
+static cJSON *vocabulary_duration_json(const VocabularyTally *tally) {
+    cJSON *duration = cJSON_CreateObject();
+    if (duration && !(add(duration, "whole_notes", rational_json(tally->whole)) &&
+                      add(duration, "beats", tally->beats_known ? rational_json(tally->beats) : cJSON_CreateNull()))) {
+        cJSON_Delete(duration);
+        return NULL;
+    }
+    return duration;
+}
+
+static cJSON *vocabulary_first_json(const VocabularyTally *tally) {
+    cJSON *first = cJSON_CreateObject();
+    if (first && !(add(first, "chord_index", cJSON_CreateNumber((double)tally->first)) &&
+                   add(first, "position", cJSON_Duplicate(tally->position, true)))) {
+        cJSON_Delete(first);
+        return NULL;
+    }
+    return first;
+}
+
+static cJSON *vocabulary_entry_json(const AnalysisReport *report, long scope, int group, int level,
+                                    const VocabularyTally *tally, Rational total) {
+    bool in_region = scope >= 0 && (size_t)scope < report->key_region_count;
+    double share = total.num > 0 ? ((double)tally->whole.num / (double)tally->whole.den) /
+                                       ((double)total.num / (double)total.den)
+                                 : 0.0;
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "scope", cJSON_CreateString(scope == SCOPE_OVERALL ? "overall" : "region")) &&
+          add(object, "key_region", in_region ? cJSON_CreateNumber((double)scope) : cJSON_CreateNull()) &&
+          add(object, "key", in_region ? cJSON_CreateString(report->key_regions[scope].label) : cJSON_CreateNull()) &&
+          add(object, "group", cJSON_CreateString(GROUP_NAMES[group])) &&
+          add(object, "level", cJSON_CreateString(LEVEL_NAMES[level])) &&
+          add(object, "numeral", cJSON_CreateString(tally->name)) &&
+          add(object, "count", cJSON_CreateNumber((double)tally->count)) &&
+          add(object, "runs", cJSON_CreateNumber((double)tally->runs)) &&
+          add(object, "duration", vocabulary_duration_json(tally)) &&
+          add(object, "share", cJSON_CreateNumber(share)) && add(object, "first", vocabulary_first_json(tally)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The entries of one scope, level and group, sorted, appended to list. False on allocation failure. */
+static bool append_tallies(cJSON *list, const AnalysisReport *report, const VocabularyChord *records, size_t count,
+                           long scope, int group, int level, Rational total) {
+    VocabularyTally *tallies = calloc(count > 0 ? count : 1, sizeof(VocabularyTally));
+    if (!tallies) {
+        return false;
+    }
+    size_t distinct = 0;
+    for (size_t i = 0; i < count; i++) {
+        const VocabularyChord *record = &records[i];
+        if (record->group != group || (scope != SCOPE_OVERALL && record->region != scope)) {
+            continue;
+        }
+        const char *name = level == 0 ? record->label : record->base;
+        size_t t = 0;
+        while (t < distinct && strcmp(tallies[t].name, name) != 0) {
+            t++;
+        }
+        VocabularyTally *tally = &tallies[t];
+        if (t == distinct) {
+            *tally = (VocabularyTally){name, 0, 0, rational_make(0, 1), rational_make(0, 1), true, record->index,
+                                       record->position};
+            distinct++;
+        }
+        tally->count++;
+        tally->runs += record->starts_run ? 1 : 0;
+        tally->whole = rational_add(tally->whole, record->whole);
+        tally->beats_known = tally->beats_known && record->has_beats;
+        if (tally->beats_known) {
+            tally->beats = rational_add(tally->beats, record->beats);
+        }
+    }
+    qsort(tallies, distinct, sizeof(VocabularyTally), compare_tallies);
+    bool ok = true;
+    for (size_t t = 0; ok && t < distinct; t++) {
+        cJSON *entry = vocabulary_entry_json(report, scope, group, level, &tallies[t], total);
+        ok = entry && append(list, entry);
+    }
+    free(tallies);
+    return ok;
+}
+
+/* The chord vocabulary: for the whole piece and for each key region, each distinct Roman numeral of the labelled
+   chords in three groups (diatonic, applied, mixture), once as the library names it (inversion figure included)
+   and once by base numeral (the same numeral in root position). count is the number of chord claims with the
+   numeral; runs counts a stretch of adjacent claims with the identical numeral in one key region once. duration is
+   their total length, share its fraction of the scope's total labelled chord duration, and first the earliest.
+   Entries are sorted by count, then duration, then first occurrence. Chords without a numeral are not counted. */
+static cJSON *chord_vocabulary_json(const AnalysisReport *report, const cJSON *chords) {
+    cJSON *list = cJSON_CreateArray();
+    size_t count = 0;
+    VocabularyChord *records = list ? vocabulary_chords(chords, &count) : NULL;
+    if (!records) {
+        cJSON_Delete(list);
+        return NULL;
+    }
+    bool ok = true;
+    for (long scope = SCOPE_OVERALL; ok && scope < (long)report->key_region_count; scope = scope == SCOPE_OVERALL ? 0 : scope + 1) {
+        Rational total = rational_make(0, 1);
+        for (size_t i = 0; i < count; i++) {
+            if (scope == SCOPE_OVERALL || records[i].region == scope) {
+                total = rational_add(total, records[i].whole);
+            }
+        }
+        for (int level = 0; ok && level < 2; level++) {
+            for (int group = 0; ok && group < GROUP_COUNT; group++) {
+                ok = append_tallies(list, report, records, count, scope, group, level, total);
+            }
+        }
+    }
+    free(records);
+    if (!ok) {
+        cJSON_Delete(list);
+        return NULL;
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -1199,6 +1537,8 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "modulations", modulations_json(notes, report)) &&
           add(document, "pivot_chords", pivot_chords_json(notes, report)) &&
           add(document, "chords", chords_json(notes, report)) &&
+          add(document, "chord_vocabulary",
+              chord_vocabulary_json(report, cJSON_GetObjectItemCaseSensitive(document, "chords"))) &&
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cJSON_CreateArray()) &&

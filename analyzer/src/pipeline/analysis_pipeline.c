@@ -6,6 +6,7 @@
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/key_region_pipeline.h"
 #include "pipeline/outer_voice_pipeline.h"
+#include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/segmentation.h"
 #include "pipeline/spelling_util.h"
 
@@ -120,7 +121,12 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
         }
     }
 
-    if (!extract_outer_voices(notes, &segmentation, chords, regions, entries)) {
+    for (size_t i = 0; i < segmentation.segment_count; i++) {
+        entries[i].in_region = chords[i].in_region;
+        entries[i].region = chords[i].region;
+    }
+    if (!assign_roman_numerals(&segmentation, chords, regions, region_count, entries) ||
+        !extract_outer_voices(notes, &segmentation, chords, regions, entries)) {
         AnalysisReport partial = {entries, segmentation.segment_count, NULL, 0, NULL, 0, NULL, 0, 0, 0, 1};
         analysis_report_destroy(&partial);
         analysis_report_destroy(&keys);

@@ -11,6 +11,18 @@ void analysis_outer_note_destroy(AnalysisOuterNote *note) {
     *note = (AnalysisOuterNote){ANALYSIS_OUTER_ABSENT, 0, 0, false, NULL, NULL};
 }
 
+void analysis_roman_numeral_destroy(AnalysisRomanNumeral *roman) {
+    if (!roman) {
+        return;
+    }
+    free(roman->numeral);
+    free(roman->reason);
+    free(roman->base_numeral);
+    free(roman->applied_numeral);
+    free(roman->target_numeral);
+    *roman = (AnalysisRomanNumeral){false, NULL, NULL, NULL, 0, 0.0, false, NULL, NULL, 0, NULL, 0, false};
+}
+
 void analysis_chord_reading_destroy(AnalysisChordReading *reading) {
     if (!reading) {
         return;
@@ -34,6 +46,7 @@ void analysis_report_destroy(AnalysisReport *report) {
         analysis_chord_reading_destroy(&report->entries[i].runner_up);
         analysis_outer_note_destroy(&report->entries[i].soprano);
         analysis_outer_note_destroy(&report->entries[i].bass);
+        analysis_roman_numeral_destroy(&report->entries[i].roman);
     }
     free(report->entries);
     for (size_t i = 0; i < report->non_chord_tone_count; i++) {
