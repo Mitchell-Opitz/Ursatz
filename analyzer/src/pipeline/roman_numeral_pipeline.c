@@ -28,6 +28,7 @@ static bool fill_input(const Segmentation *segmentation, const ChordEstimate *ch
     const Segment *segment = &segmentation->segments[index];
     input->segment_id = segmentation->segment_ids[index];
     input->bass_pitch_class = segment_bass_pitch_class(segment);
+    input->sounding_bass_pitch_class = input->bass_pitch_class;
 
     CommonPracticeWeights weights;
     if (common_practice_weight_segment(segment->members, segment->member_count, weighting, &weights) !=
@@ -111,6 +112,7 @@ bool assign_roman_numerals(const Segmentation *segmentation, const ChordEstimate
     CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
     for (size_t i = 0; i < count; i++) {
         inputs[i].bass_pitch_class = -1;
+        inputs[i].sounding_bass_pitch_class = -1;
         if (!fill_input(segmentation, &chords[i], regions, &entries[i], &weighting, i, &inputs[i])) {
             free(inputs);
             return false;
