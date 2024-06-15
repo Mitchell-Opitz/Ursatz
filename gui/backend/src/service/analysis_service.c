@@ -98,7 +98,49 @@ static const char *const kMetaTableName = "ursatz_gui_piece_meta";
  */
 static const char *const kRelationshipTableName = "ursatz_gui_relationships";
 
+/*
+ * ursatz-gui-owned note-target table, in the same per-piece SQLite file
+ * as kIndexTableName above. Holds one row per (interpretation_id,
+ * note xml:id) pair for "cadence"/"motif" claims, whose Interpretation
+ * target_id names a Structure/Occurrence that Ursatz never persists
+ * (transient, destroyed once its id is copied into the Interpretation --
+ * see classify_and_store_cadence/the MotifDetectionInput call site
+ * below). That object's event ids are only ever available while it is
+ * alive during analysis, so they are captured and stored here then;
+ * GET-time resolution reads this table instead of attempting to reload
+ * a Structure/Occurrence that does not exist in persistence. Pieces
+ * analyzed before this table existed simply have no rows here for their
+ * cadence/motif claims -- not an error, just nothing to highlight.
+ */
+static const char *const kNoteTargetTableName = "ursatz_gui_interpretation_note_targets";
+
 static char *dup_string(const char *value);
+
+/*
+ * Derives the same MusicXML xml:id token export/musicxml_export.c's
+ * (static, non-exported) xml_id_from_entity would derive for a NoteEvent
+ * EntityID: prefixes with 'n' if raw doesn't start with a letter or
+ * underscore, replaces any character outside [A-Za-z0-9_.-] with '_'.
+ * Duplicated here (rather than exported from ursatz) because it's a
+ * small, pure, deterministic string transform and the two call sites
+ * need to agree on the same id for the same NoteEvent -- ursatz-gui
+ * cannot reach into that file's internals. Writes into out (must be at
+ * least strlen(raw) + 2 bytes).
+ */
+static void xml_id_from_entity_value(const char *raw, char *out, size_t out_size) {
+    size_t pos = 0;
+    bool needs_prefix = !((raw[0] >= 'A' && raw[0] <= 'Z') || (raw[0] >= 'a' && raw[0] <= 'z') || raw[0] == '_');
+    if (needs_prefix && pos + 1 < out_size) {
+        out[pos++] = 'n';
+    }
+    for (size_t i = 0; raw[i] != '\0' && pos + 1 < out_size; i++) {
+        char c = raw[i];
+        bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' ||
+                  c == '.' || c == '-';
+        out[pos++] = ok ? c : '_';
+    }
+    out[pos] = '\0';
+}
 
 /* Opens (creating if absent) the ursatz-gui interpretation index table in
  * the SQLite file at db_path. Returns NULL on failure. */
@@ -147,7 +189,109 @@ static sqlite3 *open_interpretation_index(const char *db_path) {
         return NULL;
     }
 
+    snprintf(sql, sizeof(sql),
+             "CREATE TABLE IF NOT EXISTS %s ("
+             "  interpretation_id TEXT NOT NULL,"
+             "  note_xml_id TEXT NOT NULL,"
+             "  ord INTEGER NOT NULL"
+             ");",
+             kNoteTargetTableName);
+    if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        return NULL;
+    }
+
     return db;
+}
+
+/* Records the xml:id (derived via xml_id_from_entity_value) of every
+ * event in event_ids under interpretation_id, preserving order.
+ * Best-effort, mirroring record_interpretation_id: a failure here does
+ * not fail the analysis, only the highlight for this one claim. */
+static void record_interpretation_note_targets(sqlite3 *index_db, const char *interpretation_id,
+                                                 const EntityID *const *event_ids, size_t event_id_count) {
+    if (!index_db || !interpretation_id || event_id_count == 0) {
+        return;
+    }
+
+    char sql[192];
+    snprintf(sql, sizeof(sql), "INSERT INTO %s (interpretation_id, note_xml_id, ord) VALUES (?, ?, ?);",
+             kNoteTargetTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return;
+    }
+    for (size_t i = 0; i < event_id_count; i++) {
+        char xml_id[80];
+        xml_id_from_entity_value(entity_id_value(event_ids[i]), xml_id, sizeof(xml_id));
+
+        sqlite3_bind_text(stmt, 1, interpretation_id, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 2, xml_id, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(stmt, 3, (int)i);
+        sqlite3_step(stmt);
+        sqlite3_reset(stmt);
+    }
+    sqlite3_finalize(stmt);
+}
+
+/* Reads the note xml:ids recorded by record_interpretation_note_targets
+ * for interpretation_id, in original order. On success, *out_ids is a
+ * newly allocated, caller-owned array of *out_count newly allocated
+ * strings (may be *out_count == 0, *out_ids == NULL). Returns false only
+ * on allocation failure. */
+static bool read_interpretation_note_targets(sqlite3 *index_db, const char *interpretation_id, char ***out_ids,
+                                               size_t *out_count) {
+    *out_ids = NULL;
+    *out_count = 0;
+    if (!index_db) {
+        return true;
+    }
+
+    char sql[192];
+    snprintf(sql, sizeof(sql), "SELECT note_xml_id FROM %s WHERE interpretation_id = ? ORDER BY ord;",
+             kNoteTargetTableName);
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(index_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return true;
+    }
+    sqlite3_bind_text(stmt, 1, interpretation_id, -1, SQLITE_TRANSIENT);
+
+    char **ids = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
+    bool ok = true;
+    while (ok && sqlite3_step(stmt) == SQLITE_ROW) {
+        if (count == capacity) {
+            capacity = capacity == 0 ? 4 : capacity * 2;
+            char **grown = realloc(ids, sizeof(char *) * capacity);
+            if (!grown) {
+                ok = false;
+                break;
+            }
+            ids = grown;
+        }
+        char *value = dup_string((const char *)sqlite3_column_text(stmt, 0));
+        if (!value) {
+            ok = false;
+            break;
+        }
+        ids[count++] = value;
+    }
+    sqlite3_finalize(stmt);
+
+    if (!ok) {
+        for (size_t i = 0; i < count; i++) {
+            free(ids[i]);
+        }
+        free(ids);
+        return false;
+    }
+
+    *out_ids = ids;
+    *out_count = count;
+    return true;
 }
 
 /* Records original_filename ("" if NULL) for this piece. Best-effort,
@@ -781,8 +925,19 @@ static char *classify_and_store_cadence(PersistenceHandle *handle, sqlite3 *inde
             const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
             if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
                 label = dup_string(claim);
-                record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)),
-                                          kIndexTypeCadence);
+                const char *cadence_interpretation_id = entity_id_value(interpretation_id(interpretation));
+                record_interpretation_id(index_db, cadence_interpretation_id, kIndexTypeCadence);
+
+                size_t region_event_id_count = structure_event_id_count(region);
+                const EntityID **region_event_ids = malloc(sizeof(EntityID *) * region_event_id_count);
+                if (region_event_ids) {
+                    for (size_t k = 0; k < region_event_id_count; k++) {
+                        region_event_ids[k] = structure_event_id_at(region, k);
+                    }
+                    record_interpretation_note_targets(index_db, cadence_interpretation_id, region_event_ids,
+                                                        region_event_id_count);
+                    free(region_event_ids);
+                }
             }
             analysis_result_destroy(result);
         }
@@ -1142,6 +1297,13 @@ static void run_motif_detection(PersistenceHandle *handle, sqlite3 *index_db,
                 AnalysisResult *result = NULL;
                 if (motif_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
                     store_all_interpretations(handle, index_db, result, kIndexTypeMotif);
+                    if (analysis_result_interpretation_count(result) > 0) {
+                        const char *motif_interpretation_id =
+                            entity_id_value(interpretation_id(analysis_result_interpretation_at(result, 0)));
+                        record_interpretation_note_targets(index_db, motif_interpretation_id,
+                                                            matches[m].matched_event_ids,
+                                                            matches[m].matched_event_id_count);
+                    }
                     analysis_result_destroy(result);
                 }
                 motif_destroy(motif);
@@ -1727,6 +1889,10 @@ static void interpretation_summary_destroy_contents(UrsatzGuiInterpretationSumma
     free(summary->produced_by_author);
     free(summary->produced_by_method);
     free(summary->provenance_state);
+    for (size_t i = 0; i < summary->highlighted_note_id_count; i++) {
+        free(summary->highlighted_note_ids[i]);
+    }
+    free(summary->highlighted_note_ids);
 }
 
 /* Loads the Chord or Key at interpretation_id (per type) and fills out
@@ -1811,8 +1977,54 @@ static char *format_claim_label(const Interpretation *interpretation) {
     return dup_string((const char *)content);
 }
 
-static bool load_interpretation_summary(PersistenceHandle *handle, const char *interpretation_id, const char *type,
-                                          UrsatzGuiInterpretationSummary *out) {
+/*
+ * Resolves out->highlighted_note_ids/count for interpretation, per type:
+ * "phrase" targets a NoteEvent directly (interpretation_target_id IS the
+ * NoteEvent id -- see phrase_segmentation.c/phrase_boundary_detection.c
+ * in ursatz), so it is derived on the fly with no lookup needed.
+ * "cadence"/"motif" targets a Structure/Occurrence that only ever
+ * existed at analysis time (see kNoteTargetTableName above); those are
+ * looked up by interpretation_id in index_db, which may have no rows
+ * (piece analyzed before this table existed, or index_db is NULL) --
+ * that is not an error, just an empty highlight set. Every other type
+ * (key/chord/period/sentence/form/thematic_return) is left empty this
+ * pass. Returns false only on allocation failure.
+ */
+static bool resolve_highlighted_note_ids(sqlite3 *index_db, const Interpretation *interpretation, const char *type,
+                                           const char *interpretation_id, char ***out_ids, size_t *out_count) {
+    *out_ids = NULL;
+    *out_count = 0;
+
+    if (strcmp(type, kIndexTypePhrase) == 0) {
+        const EntityID *target_id = interpretation_target_id(interpretation);
+        if (!target_id) {
+            return true;
+        }
+        char **ids = malloc(sizeof(char *));
+        if (!ids) {
+            return false;
+        }
+        char xml_id[80];
+        xml_id_from_entity_value(entity_id_value(target_id), xml_id, sizeof(xml_id));
+        ids[0] = dup_string(xml_id);
+        if (!ids[0]) {
+            free(ids);
+            return false;
+        }
+        *out_ids = ids;
+        *out_count = 1;
+        return true;
+    }
+
+    if (strcmp(type, kIndexTypeCadence) == 0 || strcmp(type, kIndexTypeMotif) == 0) {
+        return read_interpretation_note_targets(index_db, interpretation_id, out_ids, out_count);
+    }
+
+    return true;
+}
+
+static bool load_interpretation_summary(PersistenceHandle *handle, sqlite3 *index_db, const char *interpretation_id,
+                                          const char *type, UrsatzGuiInterpretationSummary *out) {
     Interpretation *interpretation = NULL;
     if (persistence_load_interpretation(handle, interpretation_id, &interpretation) != PERSISTENCE_INTERPRETATION_OK) {
         return false;
@@ -1824,6 +2036,12 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
     const char *provenance_state_str =
         (provenance_state == PROVENANCE_REFERENCE_PRESENT) ? "present" : "absent";
 
+    char **highlighted_note_ids = NULL;
+    size_t highlighted_note_id_count = 0;
+    bool highlight_ok =
+        resolve_highlighted_note_ids(index_db, interpretation, type, interpretation_id, &highlighted_note_ids,
+                                      &highlighted_note_id_count);
+
     bool ok = false;
     out->interpretation_id = dup_string(interpretation_id);
     out->type = dup_string(type);
@@ -1831,8 +2049,10 @@ static bool load_interpretation_summary(PersistenceHandle *handle, const char *i
     out->produced_by_author = dup_string(interpretation_author(interpretation));
     out->produced_by_method = dup_string(interpretation_method(interpretation));
     out->provenance_state = dup_string(provenance_state_str);
-    if (out->interpretation_id && out->type && out->label && out->produced_by_author && out->produced_by_method &&
-        out->provenance_state) {
+    out->highlighted_note_ids = highlighted_note_ids;
+    out->highlighted_note_id_count = highlighted_note_id_count;
+    if (highlight_ok && out->interpretation_id && out->type && out->label && out->produced_by_author &&
+        out->produced_by_method && out->provenance_state) {
         ok = true;
     } else {
         interpretation_summary_destroy_contents(out);
@@ -1912,13 +2132,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
             persistence_close(handle);
             return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
-        sqlite3_close(index_db);
     }
 
     UrsatzGuiInterpretationSummary *summaries = NULL;
     if (index_count > 0) {
         summaries = calloc(index_count, sizeof(UrsatzGuiInterpretationSummary));
         if (!summaries) {
+            if (index_db) {
+                sqlite3_close(index_db);
+            }
             free_ids(index_ids, index_count);
             free_ids(index_types, index_count);
             persistence_close(handle);
@@ -1928,9 +2150,12 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
 
     size_t summary_count = 0;
     for (size_t i = 0; i < index_count; i++) {
-        if (load_interpretation_summary(handle, index_ids[i], index_types[i], &summaries[summary_count])) {
+        if (load_interpretation_summary(handle, index_db, index_ids[i], index_types[i], &summaries[summary_count])) {
             summary_count++;
         }
+    }
+    if (index_db) {
+        sqlite3_close(index_db);
     }
     free_ids(index_ids, index_count);
     free_ids(index_types, index_count);

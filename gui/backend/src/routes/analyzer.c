@@ -336,7 +336,14 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
     json_buffer_append_string(&buf, summary->produced_by_method);
     json_buffer_append(&buf, "},\"provenance_state\":");
     json_buffer_append_string(&buf, summary->provenance_state);
-    json_buffer_append(&buf, "}");
+    json_buffer_append(&buf, ",\"highlighted_note_ids\":[");
+    for (size_t j = 0; j < summary->highlighted_note_id_count; j++) {
+      if (j != 0) {
+        json_buffer_append(&buf, ",");
+      }
+      json_buffer_append_string(&buf, summary->highlighted_note_ids[j]);
+    }
+    json_buffer_append(&buf, "]}");
   }
   json_buffer_append(&buf, "],\"relationships\":[");
 
