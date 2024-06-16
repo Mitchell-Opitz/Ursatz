@@ -181,3 +181,9 @@ add_test(NAME test_grow_accompaniment_heard COMMAND test_grow_accompaniment hear
 # in docs/accompaniment.md): the test asserts that it does, so it fails, and the failure is expected. Not tuned away, not
 # skipped.
 set_tests_properties(test_grow_accompaniment_heard PROPERTIES WILL_FAIL TRUE)
+
+add_executable(test_voicing test_voicing.c)
+target_link_libraries(test_voicing PRIVATE ursatz_composer)
+target_include_directories(test_voicing PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_voicing PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_voicing COMMAND test_voicing)
