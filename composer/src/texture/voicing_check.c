@@ -48,6 +48,18 @@ bool voicing_chord_valid(const VoicingContext *context, size_t chord, const int 
         return false;
     }
     violations &= ~(1u << STANDARD_VOICING_RULE_RANGE);
+    /*
+     * A written melody over a written bass can double a note between them that the rules forbid doubled (the leading
+     * tone in a first-inversion V under a melody on the leading tone). That is not the voicing's to mend: when it is the
+     * only note doubled, the doubling rule is not asked of the chord.
+     */
+    if ((violations & (1u << STANDARD_VOICING_RULE_DOUBLING)) && !context->write_soprano) {
+        int forced = pitch[VOICING_SOPRANO] % 12;
+        if (forced == context->bass[chord] % 12 && pitch[VOICING_ALTO] % 12 != forced && pitch[VOICING_TENOR] % 12 != forced &&
+            pitch[VOICING_ALTO] % 12 != pitch[VOICING_TENOR] % 12) {
+            violations &= ~(1u << STANDARD_VOICING_RULE_DOUBLING);
+        }
+    }
     return violations == 0;
 }
 
@@ -158,6 +170,10 @@ bool voicing_connection_ok(const VoicingContext *context, size_t chord, const in
     }
     for (size_t upper = 0; upper < VOICING_VOICES; upper++) {
         for (size_t lower = upper + 1; lower < VOICING_VOICES; lower++) {
+            /* A written melody over a written bass makes the motion between them; the voicing cannot change it. */
+            if (!context->write_soprano && upper == VOICING_SOPRANO && lower == VOICING_BASS) {
+                continue;
+            }
             if (!pair_holds(context, chord, from, to, upper, lower, STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_FIFTHS)) {
                 if (why) {
                     *why = "parallel fifths";
@@ -180,7 +196,8 @@ bool voicing_connection_ok(const VoicingContext *context, size_t chord, const in
         }
         return false;
     }
-    for (size_t voice = 0; voice < VOICING_PARTS; voice++) {
+    /* A written melody is not the voicing's to mend: what it does with a seventh or a leading tone is left to it. */
+    for (size_t voice = context->write_soprano ? VOICING_SOPRANO : VOICING_ALTO; voice < VOICING_PARTS; voice++) {
         if (!voice_resolves(context, chord, from, to, voice, why)) {
             return false;
         }
