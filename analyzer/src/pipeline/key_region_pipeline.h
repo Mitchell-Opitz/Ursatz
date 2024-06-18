@@ -8,6 +8,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "pipeline/segmentation.h"
+#include "time/musical_time.h"
 
 /*
  * The local keys of the piece, from Ursatz's key-region detection
@@ -28,9 +29,13 @@
  * library failing to find regions (no segments, a segment it cannot weight) is not an error: it leaves
  * *region_count at 0, as a piece with no key. Returns false only on allocation failure.
  *
+ * boundaries are phrase boundary times (NULL with boundary_count 0 for none), which the library snaps the
+ * region edges to (CommonPracticeKeyRegionsConfig.phrase_boundaries).
+ *
  * The pivot reading of each change is left empty; identify_pivot_chords (chord_pipeline.h) fills it.
  */
-bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation, AnalysisKeyRegion **regions,
+bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation,
+                          const MusicalTime *const *boundaries, size_t boundary_count, AnalysisKeyRegion **regions,
                           size_t *region_count, AnalysisKeyChange **changes, size_t *change_count);
 
 /*

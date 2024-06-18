@@ -11,6 +11,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/outer_voice_pipeline.c
     pipeline/roman_numeral_pipeline.c
     pipeline/analysis_report.c
+    pipeline/chain.c
     pipeline/analysis_pipeline.c
     pipeline/markdown_report.c
     pipeline/report_writer.c

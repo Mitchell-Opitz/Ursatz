@@ -80,7 +80,8 @@ static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange
     out->pivot = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 }
 
-bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation, AnalysisKeyRegion **regions,
+bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation,
+                          const MusicalTime *const *boundaries, size_t boundary_count, AnalysisKeyRegion **regions,
                           size_t *region_count, AnalysisKeyChange **changes, size_t *change_count) {
     *regions = NULL;
     *region_count = 0;
@@ -109,9 +110,12 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
 
     bool library_ok = true;
     bool ok = build_key_segments(segmentation, segments, times, &library_ok);
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.phrase_boundaries = boundaries;
+    config.phrase_boundary_count = boundary_count;
     CommonPracticeKeyRegions found = {0};
     if (ok && library_ok &&
-        key_regions_estimate(segments, segment_count, notes->meter.meter_map, events, event_count, NULL, &found) !=
+        key_regions_estimate(segments, segment_count, notes->meter.meter_map, events, event_count, &config, &found) !=
             COMMON_PRACTICE_KEY_REGIONS_OK) {
         library_ok = false;
     }
