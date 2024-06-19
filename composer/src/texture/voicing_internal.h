@@ -38,8 +38,16 @@ typedef struct {
     PlanKey key;
     bool write_soprano;
     long length;
+    /*
+     * When the harmony span before the target has been voiced already (the target before it in the plan), its chord is
+     * chord 0, a fixed one: lead holds its soprano, alto and tenor, and first is 1, the first chord to be written. The
+     * connection to it is held to the same rules as any other, so the voicing carries on from what is written. Else
+     * first is 0 and every chord is the target's.
+     */
+    size_t first;
+    int lead[3];
     size_t chord_count;
-    long chord_start[VOICING_MAX_CHORDS + 1]; /* the last entry is the length */
+    long chord_start[VOICING_MAX_CHORDS + 1]; /* the last entry is the length; a lead-in chord starts before 0 */
     PhraseChord chord[VOICING_MAX_CHORDS];
     /* The tones of each chord, root first, as pitch classes, scale degrees and spellings (octave 4, unused). */
     int pcs[VOICING_MAX_CHORDS][4];

@@ -235,6 +235,10 @@ void voicing_judge(const VoicingContext *context, const VoicingCandidate *candid
     for (size_t i = 0; i < context->chord_count && !verdict->hard; i++) {
         if (!context->chord_ok[i]) {
             verdict->hard = "a chord that the bass or the melody leaves no voicing for";
+        } else if (i < context->first) {
+            if (memcmp(candidate->pitch[i], context->lead, sizeof(context->lead)) != 0) {
+                verdict->hard = "not the voicing the chord before it was written with";
+            }
         } else if (!context->write_soprano && candidate->pitch[i][VOICING_SOPRANO] != context->soprano[i]) {
             verdict->hard = "a soprano that is not the written melody";
         } else if (!voicing_chord_valid(context, i, candidate->pitch[i])) {
