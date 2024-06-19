@@ -132,7 +132,11 @@ int main(int argc, char **argv) {
            "%zu unresolved sevenths, %zu unresolved leading tones\n",
            write_soprano ? "chorale" : "voicing", themes - dirty, themes, incomplete, rows, fifths, octaves, sevenths,
            leading);
-    assert(dirty == 0);
+    /* The run is dirty by exit status, not by assert, so it fails the way a test marked WILL_FAIL can. */
+    if (dirty > 0) {
+        printf("test_voicing_heard: %zu of %zu themes not clean\n", dirty, themes);
+        return 1;
+    }
     printf("test_voicing_heard: ok\n");
     return 0;
 }
