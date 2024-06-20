@@ -2,7 +2,7 @@
 
 `grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a theme from one motive: its structure (a
 sentence, a period or one of the seven hybrids), then the motives made from the motive, the harmony, the bass and the
-melody, and, when asked, an accompaniment, each through the fill loop. The [grow command](cli-grow.md) runs it.
+melody, and, when asked, an accompaniment or a four-part voicing, each through the fill loop. The [grow command](cli-grow.md) runs it.
 
 ```c
 GrowRequest request = {.motive = &motive, .key = key, .meter = meter, .bars = 8,
@@ -27,12 +27,13 @@ if (grow_build_plan(&request, &plan) == GROW_OK && grow_run(plan, &config, &outc
 | `cadence` | PAC, IAC or HC: the cadence the theme ends in. |
 | `first_cadence` | The weak cadence an antecedent ends in, HC or IAC and weaker than `cadence` by `harmony_cadence_strength`. Zero (PAC) means the default, HC. Read only for an antecedent. |
 | `has_accompaniment`, `accompaniment` | An accompaniment under the melody and bass ([accompaniment.md](accompaniment.md)): a `PlanAccompaniment` with a pattern (`ANY` for any), a texture (`-1` for none) and a range (0 for the defaults 48 and 67). Without `has_accompaniment` the theme has no inner voice. The theme section carries it as an `accompaniment` constraint. |
+| `has_voicing`, `voicing` | A four-part voicing of the harmony and bass ([voicing.md](voicing.md)): a `PlanVoicing`, whose `write_soprano` has the voicing write the melody too, a note a chord (a chorale), instead of the melody stage. The alto and the tenor are the inner voices 1 and 2. The theme section carries it as a `voicing` constraint. Refused together with an accompaniment. |
 
 `GROW_ERR_BAD_REQUEST` is also the result for a meter the harmony operators do not support, bars other than 4 or 8, a
 cadence other than those three, a motive of one note, a half of the theme too short for its cadence, and an antecedent
 whose cadences cannot be ordered: a theme that ends in HC has nothing weaker for the antecedent, `first_cadence` DC or
 PC is not a weak cadence, and equal cadences are not a period. An accompaniment is refused when its pattern is not one,
-its texture is not homophonic, its range has no room (`low` not below `high`), or it is Alberti in a compound meter.
+its texture is not homophonic, its range has no room (`low` not below `high`), or it is Alberti in a compound meter, and a request for both an accompaniment and a voicing.
 
 ## The plan
 
@@ -58,10 +59,12 @@ with the stage in `GrowOutcome.stuck_stage`. `GrowOutcome.records` keeps the `Fi
 | harmony | `harmony-prolongation`, `harmony-phrase-model` | `harmony_prolong_checker` |
 | bass | `harmony-bass` | `harmony_phrase_checker` |
 | melody | `melody-fill` | `melody_fill_checker` |
-| texture | `accompaniment` | `accompaniment_checker` |
+| texture | `accompaniment`, `voicing-satb` | `texture_checker` |
 
 The texture stage (`GROW_STAGE_TEXTURE`, seed `config.seed + 5`) writes the inner voice spans `grow-theme` opened, and has
-nothing to do, and an empty record, when the request asked for no accompaniment.
+nothing to do, and an empty record, when the request asked for no accompaniment and no voicing. With a voicing that
+writes the soprano the melody stage has nothing to do (its spans are never made) and the texture stage writes the melody
+with the alto and the tenor.
 
 Two things make a run more reliable than one pass of the stages. A melody that gets stuck is written again from the
 seed `+ 1000` up to 5 more times (the spans are reopened; the chords stay). A theme other than a sentence asks for
@@ -109,6 +112,11 @@ a `basic idea` and a `contrasting idea` in its first half already.
 With an accompaniment, every harmony span `grow-theme` opens (the "harmony" rows above) also opens, over the same
 time and under the same owner, Constrained inner voice spans: voice 1, with the `accompaniment` constraint, and voices 2
 and 3 for a block, an oom-pah or `any` (an arpeggiated or Alberti accompaniment is voice 1 alone).
+
+With a voicing, every such harmony span opens a Constrained alto (voice 1, with the `voicing` constraint) and tenor
+(voice 2) over the same time, and, when the voicing writes the soprano, a Constrained melody span there too with the
+cadence the harmony span ends in, in place of the melody span of each idea (those ideas have no melody span, and the
+form is heard from the voiced soprano). See [voicing.md](voicing.md).
 
 And in the material section, one motive node for each idea after the basic idea, with a `motive_ref` to `m0`: `m1` for
 the repetition or the contrasting idea of the first half, then `m2` to `m4` for the second half (the fragments and the

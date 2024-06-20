@@ -45,7 +45,7 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 | `src/motive/` | Motives, their analysis and development. |
 | `src/melody/` | The melody operator. |
 | `src/form/` | Hearing the phrase form through standard-form. |
-| `src/texture/` | The accompaniment operator, its patterns and its voicing. |
+| `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
 | `cli/` | The `ursatz-composer` command. |
 | `tests/` | Tests and their fixtures. |
@@ -90,7 +90,8 @@ ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --see
 `grow` grows a theme from a motive: a sentence, a period or one of the seven hybrids, with its harmony,
 bass and melody, written as JSON, MIDI and MusicXML, and prints the form standard-form hears in it.
 With it the Composer reaches milestone M1: a motive, a key and a meter in, harmonized phrases out. See
-[docs/cli-grow.md](docs/cli-grow.md). `--accompaniment` and `--texture` add an accompaniment in the inner voices.
+[docs/cli-grow.md](docs/cli-grow.md). `--accompaniment` and `--texture` add an accompaniment in the inner voices; `--voicing` and `--texture chorale` voice the
+harmony in four parts.
 
 ## Plan format
 
@@ -109,6 +110,12 @@ The melody operator writes a melody over a written harmony and bass, from a moti
 
 The accompaniment operator writes block chords, arpeggios, Alberti figures or oom-pah under a written melody and bass,
 chosen by pattern or by the texture it is to be heard as. See [docs/accompaniment.md](docs/accompaniment.md).
+
+## Voicing
+
+The voicing operator voices a written progression in four parts, soprano, alto, tenor and bass, by the standard voicing
+rules with smooth voice leading and no parallels, and `voice_hear` hears the voice leading of a written plan. See
+[docs/voicing.md](docs/voicing.md).
 
 ## Growing a theme
 
