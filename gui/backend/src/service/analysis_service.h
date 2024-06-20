@@ -48,6 +48,19 @@ typedef enum {
  * upstream analyzers, not a limitation of this field, and no resolvable
  * Provenance record type exists yet to point a "present" reference at.
  */
+/*
+ * highlighted_note_ids: the MusicXML xml:id of every NoteEvent this
+ * claim's target resolves to, empty for types where no resolution
+ * exists yet. For type "phrase" the target is directly a NoteEvent id
+ * (resolved on the fly from the Interpretation's own target_id). For
+ * "cadence"/"motif" the target is a transient Structure/Occurrence that
+ * is never itself persisted (see kNoteTargetTableName in
+ * analysis_service.c) -- its event ids are captured at analysis time,
+ * while that object is still alive, and looked up here by
+ * interpretation_id. Relationship-shaped types (period/sentence/form/
+ * thematic_return) and key/chord are not resolved this pass; this array
+ * is empty for those, not an error.
+ */
 typedef struct {
     char *interpretation_id;
     char *type;              /* "key" or "chord" */
@@ -55,6 +68,8 @@ typedef struct {
     char *produced_by_author; /* Interpretation's author field */
     char *produced_by_method; /* Interpretation's method field */
     char *provenance_state;   /* "present" or "absent" */
+    char **highlighted_note_ids;
+    size_t highlighted_note_id_count;
 } UrsatzGuiInterpretationSummary;
 
 /*

@@ -49,8 +49,9 @@ The backend exposes:
   sequence and Interpretations, and returns the new piece's id.
 - `GET /api/analyzer/pieces`: lists saved piece ids.
 - `GET /api/analyzer/pieces/<id>`: returns one saved piece's detail --
-  its NoteEvent count and every Chord/Key Interpretation saved for it,
-  each with a `produced_by` field (`author`/`method`). `produced_by` is
+  its NoteEvent count and every Chord/Key/Cadence/Motif/Phrase/Period/
+  Sentence/Form/Thematic Return Interpretation saved for it, each with a
+  `produced_by` field (`author`/`method`). `produced_by` is
   analyzer/method identity only, not a full Provenance-object reference:
   Ursatz's Interpretation carries a `ProvenanceReference`, but
   `KeyEstimation`/`ChordIdentification` always construct it as
@@ -59,6 +60,34 @@ The backend exposes:
   present. `author`/`method` are the only importer/analyzer identity
   Ursatz's Interpretation actually persists today. Unknown id returns
   `{"ok":false,...}`, same convention as the other Analyzer routes.
+
+  Each claim also carries `highlighted_note_ids`: the MusicXML `xml:id`
+  (see the `musicxml` route below) of every NoteEvent its target
+  resolves to, used by the Analysis view's Score tab to highlight the
+  claim's notes. This resolves two different ways depending on type:
+  - `phrase`: the Interpretation's `target_id` *is* a NoteEvent id
+    directly (Phrase Segmentation/Boundary Detection target the event
+    itself), so this is derived on the fly from `target_id` -- no extra
+    storage needed.
+  - `cadence`/`motif`: the target is a `Structure`/`MotifOccurrence`
+    that Ursatz never persists -- it is transient, created and destroyed
+    within a single analysis run (confirmed: no
+    `persistence_load_structure`/`persistence_load_motif` exists
+    anywhere in `external/ursatz`). Its event ids are captured while
+    that object is still alive, at analysis time, into a small
+    ursatz-gui-owned table (`ursatz_gui_interpretation_note_targets`,
+    keyed by `interpretation_id`, alongside the existing
+    `ursatz_gui_interpretations` index table below) and served back from
+    there. **Pieces analyzed before this table existed have no
+    `highlighted_note_ids` for their cadence/motif claims** -- empty,
+    not an error -- until reanalyzed (no backfill).
+  - `key`/`chord`/`period`/`sentence`/`form`/`thematic_return`:
+    `highlighted_note_ids` is always empty this pass.
+    Period/Sentence/Form/Thematic Return claims are Relationship-shaped
+    (their target chains 2-3 hops through further occurrence/section ids
+    before reaching any NoteEvent, with no single note-range object at
+    any point) -- excluded from highlighting for now, tracked as a
+    follow-up; they still list normally in their claim-list tab.
 - `PATCH /api/analyzer/pieces/<id>`: body `{"filename":"<name>"}`. Updates
   the piece's persisted original filename (the same field `GET` returns
   and the Library view displays) -- does not touch NoteEvents,
@@ -74,7 +103,12 @@ The backend exposes:
   `musicxml_export_write` lays barlines on a synthetic 4/4 grid (Ursatz
   has no Meter/MeterMap data yet) and flags this via an
   `ursatz:synthetic-meter` `<miscellaneous-field>` -- see
-  `external/ursatz/src/export/musicxml_export.h`.
+  `external/ursatz/src/export/musicxml_export.h`. Every exported `<note>`
+  carries an `xml:id` derived from its NoteEvent's EntityID (a NoteEvent
+  split across the synthetic barline grid exports as several `<note>`
+  elements, one base id plus `_a`/`_b`/... suffixed fragment ids) -- this
+  is what `highlighted_note_ids` above and the Score tab's highlighting
+  match against.
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`: same export, but returns
   `{"ok":true,"cosmetic_meter":<bool>}` instead of the XML body, so the
   frontend can read the synthetic-meter flag without a second client-side
@@ -92,8 +126,14 @@ known id). The analysis service works around this with its own small
 `ursatz_gui_interpretations` index table, added to the same per-piece
 SQLite file at analysis time -- ursatz-gui-owned schema, entirely
 outside Ursatz's own schema/contract, recording which Interpretation ids
-and types (`key`/`chord`) belong to that piece so the detail route knows
-what to load.
+and types (`key`/`chord`/`cadence`/`motif`/`phrase`/`period`/`sentence`/
+`form`/`thematic_return`) belong to that piece so the detail route knows
+what to load. A sibling table,
+`ursatz_gui_interpretation_note_targets`, records the captured
+NoteEvent xml:ids behind `cadence`/`motif` claims' `highlighted_note_ids`
+(see the `GET /api/analyzer/pieces/<id>` description above) -- the same
+kind of ursatz-gui-owned workaround for a gap in what Ursatz itself
+persists.
 
 The Corpus tool wraps Ursatz's `corpus_api.h` (vendored via
 `external/ursatz`, same as Analyzer's Persistence/MIDIImporter usage):
@@ -181,9 +221,21 @@ has no `package.json`/bundler, so this matches the existing no-build-tool
 pattern rather than introducing one. A caption below the score
 ("Barlines are approximate, not authored meter.") is shown whenever
 `GET .../musicxml/meta` reports `cosmetic_meter: true`, which is every
-piece today (see the route description above) -- there is no
-claim-highlight overlay linking claims to score regions in this tab;
-that is a separate, later piece of work.
+piece today (see the route description above).
+
+Clicking a claim in a claim-list tab also highlights its target note(s)
+in the Score tab (notehead color, via OSMD's `Note.NoteheadColor`) --
+selection-from-claim-list only, not the reverse. OSMD's own graphical
+model does not retain MusicXML `xml:id` (checked against the vendored
+build), so matching correlates document order between the fetched
+MusicXML and OSMD's own note traversal instead (see
+`buildScoreNoteIndex`/`collectGraphicalNotesInOrder` in `app.js`) --
+valid only because this app's export is single-voice/single-part; it
+would need to become genuinely id-based if that ever changes. A claim
+with no `highlighted_note_ids` (`key`/`chord`/`period`/`sentence`/
+`form`/`thematic_return`) clears any previous highlight and otherwise
+does nothing -- it still appears normally in its tab, just with no
+highlight action.
 
 ## Building
 

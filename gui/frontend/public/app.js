@@ -513,6 +513,11 @@ function renderAnalysisTabs(data) {
   const scoreEl = document.getElementById("analysis-score");
   const groups = groupClaimsByTab(data.interpretations || []);
 
+  currentScoreOsmd = null;
+  currentScoreNoteIndex = null;
+  currentHighlightedNotes = [];
+  pendingHighlightClaim = null;
+
   tabsEl.innerHTML = "";
   tabsEl.hidden = false;
   let scoreLoaded = false;
@@ -558,6 +563,139 @@ function renderAnalysisTabs(data) {
   selectTab(ANALYSIS_TABS[0].id);
 }
 
+/* Claim-selection -> score highlighting state, reset per piece load (see
+ * renderAnalysisTabs). currentScoreNoteIndex maps a MusicXML xml:id (as
+ * parsed from the same document OSMD rendered) to the GraphicalNote(s)
+ * OSMD built for it -- built once when the Score tab first loads (see
+ * renderScoreTab), since OSMD's own model does not retain xml:id
+ * (confirmed against the vendored bundle: no xml:id/XmlId property
+ * anywhere in it), so ids are correlated by matching document order
+ * between the raw MusicXML and OSMD's graphical note traversal -- valid
+ * for this app's current single-voice/single-part export only (see
+ * musicxml_export.c). pendingHighlightClaim holds a claim selected
+ * before the Score tab (and therefore the index) has loaded yet, so it
+ * can be applied as soon as it does. */
+let currentScoreOsmd = null;
+let currentScoreNoteIndex = null;
+let currentHighlightedNotes = [];
+let pendingHighlightClaim = null;
+
+const HIGHLIGHT_NOTEHEAD_COLOR = "#e07a00";
+
+/* Walks OSMD's GraphicSheet measure-by-measure/staff-entry-by-staff-
+ * entry/voice-entry-by-voice-entry to collect every GraphicalNote in the
+ * same left-to-right document order MusicXML export writes <note>
+ * elements in (single voice/part only -- see module comment above). */
+function collectGraphicalNotesInOrder(osmd) {
+  const notes = [];
+  const measureList = (osmd.GraphicSheet && osmd.GraphicSheet.MeasureList) || [];
+  for (const measureRow of measureList) {
+    for (const measure of measureRow) {
+      if (!measure || !measure.staffEntries) {
+        continue;
+      }
+      for (const staffEntry of measure.staffEntries) {
+        for (const voiceEntry of staffEntry.graphicalVoiceEntries || []) {
+          for (const note of voiceEntry.notes || []) {
+            notes.push(note);
+          }
+        }
+      }
+    }
+  }
+  return notes;
+}
+
+/* Parses every <note xml:id="..."> in xmlText, in document order (some
+ * entries may be null -- a <note> ursatz-gui's export did not assign an
+ * xml:id to, e.g. an export produced by an older ursatz submodule
+ * version). */
+function parseNoteXmlIdsInOrder(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+  const noteEls = Array.from(doc.getElementsByTagName("note"));
+  return noteEls.map(
+    (el) => el.getAttributeNS("http://www.w3.org/XML/1998/namespace", "id") || el.getAttribute("xml:id")
+  );
+}
+
+/* Builds the xml:id -> GraphicalNote[] index described above by zipping
+ * the two same-order lists together. */
+function buildScoreNoteIndex(osmd, xmlText) {
+  const ids = parseNoteXmlIdsInOrder(xmlText);
+  const graphicalNotes = collectGraphicalNotesInOrder(osmd);
+  const index = new Map();
+  const count = Math.min(ids.length, graphicalNotes.length);
+  for (let i = 0; i < count; i++) {
+    const id = ids[i];
+    if (!id) {
+      continue;
+    }
+    if (!index.has(id)) {
+      index.set(id, []);
+    }
+    index.get(id).push(graphicalNotes[i]);
+  }
+  return index;
+}
+
+/* A claim's highlighted_note_ids are base NoteEvent ids; a NoteEvent
+ * split across the synthetic barline grid exports as several <note>
+ * elements suffixed "_a", "_b", ... (see write_run in musicxml_export.c)
+ * -- so a base id matches its own exact xml:id plus every "<base>_<one
+ * lowercase letter>" fragment id. */
+function findNotesForHighlightId(noteIndex, baseId) {
+  const matches = [];
+  if (noteIndex.has(baseId)) {
+    matches.push(...noteIndex.get(baseId));
+  }
+  const fragmentPrefix = `${baseId}_`;
+  for (const [id, notes] of noteIndex) {
+    if (id !== baseId && id.startsWith(fragmentPrefix) && /^[a-z]$/.test(id.slice(fragmentPrefix.length))) {
+      matches.push(...notes);
+    }
+  }
+  return matches;
+}
+
+function clearScoreHighlight() {
+  for (const note of currentHighlightedNotes) {
+    if (note.sourceNote) {
+      note.sourceNote.NoteheadColor = undefined;
+    }
+  }
+  currentHighlightedNotes = [];
+  if (currentScoreOsmd) {
+    currentScoreOsmd.render();
+  }
+}
+
+/* Applies pendingHighlightClaim once the Score tab (and its note index)
+ * is ready; a no-op claim (absent/empty highlighted_note_ids -- key/
+ * chord/period/sentence/form/thematic_return claims) just clears any
+ * previous highlight, matching scope item 4 (those claim types still
+ * list normally, with no highlight action). */
+function applyPendingHighlight() {
+  if (!currentScoreOsmd || !currentScoreNoteIndex) {
+    return;
+  }
+  clearScoreHighlight();
+  const claim = pendingHighlightClaim;
+  if (!claim || !claim.highlighted_note_ids || claim.highlighted_note_ids.length === 0) {
+    return;
+  }
+  const notes = [];
+  for (const baseId of claim.highlighted_note_ids) {
+    notes.push(...findNotesForHighlightId(currentScoreNoteIndex, baseId));
+  }
+  for (const note of notes) {
+    if (note.sourceNote) {
+      note.sourceNote.NoteheadColor = HIGHLIGHT_NOTEHEAD_COLOR;
+    }
+  }
+  currentHighlightedNotes = notes;
+  currentScoreOsmd.render();
+}
+
 /* Score tab: fetches the piece's MusicXML export and renders it with
  * OSMD (vendored under vendor/opensheetmusicdisplay/, loaded globally
  * as window.opensheetmusicdisplay -- see index.html). Fetches the
@@ -593,6 +731,9 @@ function renderScoreTab(scoreEl, pieceId) {
       return osmd.load(xmlText).then(() => {
         osmd.render();
         statusEl.textContent = "";
+        currentScoreOsmd = osmd;
+        currentScoreNoteIndex = buildScoreNoteIndex(osmd, xmlText);
+        applyPendingHighlight();
       });
     })
     .catch((err) => {
@@ -624,7 +765,11 @@ function renderClaimList(claimsEl, claims, detailEl) {
     flag.textContent = PROVENANCE_LABELS[claim.provenance_state] || claim.provenance_state;
     li.appendChild(flag);
 
-    li.addEventListener("click", () => renderClaimDetail(detailEl, claim));
+    li.addEventListener("click", () => {
+      renderClaimDetail(detailEl, claim);
+      pendingHighlightClaim = claim;
+      applyPendingHighlight();
+    });
     list.appendChild(li);
   }
   claimsEl.appendChild(list);

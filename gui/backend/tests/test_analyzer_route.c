@@ -114,6 +114,55 @@ static bool seed_original_filename(const char *db_path, const char *filename) {
   return ok;
 }
 
+/* Same private note-target table analysis_service.c maintains for
+ * "cadence"/"motif" claims (see kNoteTargetTableName in
+ * analysis_service.c) -- their Interpretation's target_id names a
+ * Structure/Occurrence Ursatz never persists, so their highlighted note
+ * ids are captured at analysis time into this table instead of being
+ * resolvable from target_id alone at GET time. */
+static const char *const kNoteTargetTableName = "ursatz_gui_interpretation_note_targets";
+
+static bool seed_note_targets(const char *db_path, const char *interpretation_id, const char *const *note_xml_ids,
+                               size_t count) {
+  sqlite3 *db = NULL;
+  if (sqlite3_open(db_path, &db) != SQLITE_OK) {
+    if (db) {
+      sqlite3_close(db);
+    }
+    return false;
+  }
+
+  char sql[256];
+  snprintf(sql, sizeof(sql),
+           "CREATE TABLE IF NOT EXISTS %s ("
+           "  interpretation_id TEXT NOT NULL,"
+           "  note_xml_id TEXT NOT NULL,"
+           "  ord INTEGER NOT NULL"
+           ");",
+           kNoteTargetTableName);
+  if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+    sqlite3_close(db);
+    return false;
+  }
+
+  snprintf(sql, sizeof(sql), "INSERT INTO %s (interpretation_id, note_xml_id, ord) VALUES (?, ?, ?);",
+           kNoteTargetTableName);
+  sqlite3_stmt *stmt = NULL;
+  bool ok = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) == SQLITE_OK;
+  for (size_t i = 0; ok && i < count; i++) {
+    sqlite3_bind_text(stmt, 1, interpretation_id, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, note_xml_ids[i], -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 3, (int)i);
+    ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_reset(stmt);
+  }
+  if (stmt) {
+    sqlite3_finalize(stmt);
+  }
+  sqlite3_close(db);
+  return ok;
+}
+
 static bool record_interpretation_id(const char *db_path, const char *interpretation_id, const char *type) {
   sqlite3 *db = NULL;
   if (sqlite3_open(db_path, &db) != SQLITE_OK) {
@@ -249,6 +298,88 @@ done:
 
 static bool seed_interpretation(const char *db_path, const char *interpretation_id, bool is_present) {
   return seed_interpretation_with_claim(db_path, interpretation_id, is_present, "D major");
+}
+
+/* Hand-builds and stores one Interpretation targeting target_id_value
+ * directly, under the given index type (not "key" like the helpers
+ * above) -- used to exercise highlighted_note_ids resolution for
+ * "phrase" (resolved on the fly from target_id, see
+ * resolve_highlighted_note_ids in analysis_service.c) and as the base
+ * seed for "cadence"/"period" claims (whose highlighted_note_ids, if
+ * any, come from kNoteTargetTableName instead -- see seed_note_targets
+ * above). */
+static bool seed_typed_interpretation(const char *db_path, const char *interpretation_id, const char *type,
+                                       const char *target_id_value, const char *claim_text) {
+  bool ok = false;
+
+  EntityID *interp_id = NULL;
+  EntityID *target_id = NULL;
+  Value *claim = NULL;
+  Uncertainty *uncertainty = NULL;
+  ProvenanceReference *provenance = NULL;
+  Interpretation *interpretation = NULL;
+  PersistenceHandle *handle = NULL;
+
+  if (entity_id_create(interpretation_id, &interp_id) != ENTITY_ID_OK) {
+    goto done;
+  }
+  if (entity_id_create(target_id_value, &target_id) != ENTITY_ID_OK) {
+    goto done;
+  }
+  if (value_create("chord-label", claim_text, strlen(claim_text) + 1, &claim) != VALUE_OK) {
+    goto done;
+  }
+  if (uncertainty_create_unknown(&uncertainty) != UNCERTAINTY_OK) {
+    goto done;
+  }
+  if (provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
+    goto done;
+  }
+
+  if (interpretation_create(interp_id, target_id, claim, NULL, NULL, NULL, uncertainty, "test-author", "test-method",
+                             INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation) != INTERPRETATION_OK) {
+    goto done;
+  }
+  interp_id = NULL;
+  target_id = NULL;
+  claim = NULL;
+  uncertainty = NULL;
+  provenance = NULL;
+
+  if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
+    goto done;
+  }
+  if (persistence_store_interpretation(handle, interpretation) != PERSISTENCE_INTERPRETATION_OK) {
+    goto done;
+  }
+
+  ok = record_interpretation_id(db_path, interpretation_id, type);
+
+done:
+  if (handle) {
+    persistence_close(handle);
+  }
+  if (interpretation) {
+    interpretation_destroy(interpretation);
+  } else {
+    if (provenance) {
+      provenance_reference_destroy(provenance);
+    }
+    if (uncertainty) {
+      uncertainty_destroy(uncertainty);
+    }
+    if (claim) {
+      value_destroy(claim);
+    }
+    if (target_id) {
+      entity_id_destroy(target_id);
+    }
+    if (interp_id) {
+      entity_id_destroy(interp_id);
+    }
+  }
+
+  return ok;
 }
 
 static bool http_request(const char *method, const char *path, char *response, size_t response_capacity) {
@@ -439,6 +570,21 @@ int main(void) {
   check(seed_interpretation_with_claim(db_path, "escaping-interpretation", false, "V7 says \"resolve\" \\ now"),
         "seed interpretation with a label needing JSON escaping");
 
+  check(seed_typed_interpretation(db_path, "phrase-interpretation", "phrase", "test-phrase-target-note",
+                                   "phrase-test-label"),
+        "seed phrase interpretation targeting a NoteEvent directly");
+
+  check(seed_typed_interpretation(db_path, "cadence-interpretation", "cadence", "test-cadence-region",
+                                   "cadence-test-label"),
+        "seed cadence interpretation targeting a transient region");
+  const char *cadence_note_ids[2] = {"test-cadence-note-1", "test-cadence-note-2"};
+  check(seed_note_targets(db_path, "cadence-interpretation", cadence_note_ids, 2),
+        "seed the cadence interpretation's captured note targets");
+
+  check(seed_typed_interpretation(db_path, "period-interpretation", "period", "test-period-relationship",
+                                   "period-test-label"),
+        "seed period interpretation with no note targets (excluded this pass)");
+
   const char *musicxml_piece_id = "test-musicxml-piece";
   char musicxml_db_path[320];
   snprintf(musicxml_db_path, sizeof(musicxml_db_path), "%s/%s.db", pieces_dir, musicxml_piece_id);
@@ -472,6 +618,20 @@ int main(void) {
           "response JSON-escapes a label containing quotes and a backslash");
     check(strstr(response, "\"filename\":\"my \\\"draft\\\" \\\\ song.mid\"") != NULL,
           "piece detail response includes the seeded original filename, JSON-escaped");
+    check(strstr(response,
+                 "\"label\":\"phrase-test-label\",\"produced_by\":{\"author\":\"test-author\",\"method\":"
+                 "\"test-method\"},\"provenance_state\":\"absent\",\"highlighted_note_ids\":[\"test-phrase-target-"
+                 "note\"]") != NULL,
+          "phrase claim's highlighted_note_ids resolves directly from its NoteEvent target_id");
+    check(strstr(response,
+                 "\"label\":\"cadence-test-label\",\"produced_by\":{\"author\":\"test-author\",\"method\":"
+                 "\"test-method\"},\"provenance_state\":\"absent\",\"highlighted_note_ids\":[\"test-cadence-note-1\","
+                 "\"test-cadence-note-2\"]") != NULL,
+          "cadence claim's highlighted_note_ids is read back from the captured note-target table");
+    check(strstr(response,
+                 "\"label\":\"period-test-label\",\"produced_by\":{\"author\":\"test-author\",\"method\":"
+                 "\"test-method\"},\"provenance_state\":\"absent\",\"highlighted_note_ids\":[]") != NULL,
+          "period claim (excluded this pass) serializes with an empty highlighted_note_ids, not an error");
   }
 
   /* Confirms the same seeded filename round-trips through the piece
