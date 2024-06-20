@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <export/musicxml_export.h>
+
 /*
  * Shared analysis service: import + analyze + persist a MIDI piece.
  *
@@ -189,9 +191,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
  * under pieces_dir. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if
  * musicxml_export_write itself fails (e.g. a NoteEvent missing pitch
- * spelling, or overlapping notes -- see musicxml_export.h).
+ * spelling, or overlapping notes -- see musicxml_export.h); in that case
+ * *out_export_error is set to the specific MusicXmlExportResult
+ * musicxml_export_write returned, so callers can surface it instead of
+ * just the generic PERSISTENCE_FAILED. Left as MUSICXML_EXPORT_OK for
+ * every other outcome, including success.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
-                                                                char **out_xml, bool *out_cosmetic_meter);
+                                                                char **out_xml, bool *out_cosmetic_meter,
+                                                                MusicXmlExportResult *out_export_error);
 
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */

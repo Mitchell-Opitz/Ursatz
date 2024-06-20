@@ -2233,7 +2233,10 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
-                                                                char **out_xml, bool *out_cosmetic_meter) {
+                                                                char **out_xml, bool *out_cosmetic_meter,
+                                                                MusicXmlExportResult *out_export_error) {
+    *out_export_error = MUSICXML_EXPORT_OK;
+
     if (!is_valid_piece_id(id)) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
@@ -2255,6 +2258,10 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
     persistence_close(handle);
 
     if (result != MUSICXML_EXPORT_OK) {
+        fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: musicxml_export_write failed for piece '%s' "
+                         "with MusicXmlExportResult=%d\n",
+                id, (int)result);
+        *out_export_error = result;
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
