@@ -66,6 +66,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     }
     case PLAN_CONSTRAINT_VOICING:
         return true;
+    case PLAN_CONSTRAINT_COUNTERPOINT:
+        return constraint->params.counterpoint.species >= 1 && constraint->params.counterpoint.species <= 4;
     }
     return false;
 }

@@ -25,7 +25,7 @@ static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
-                                                  "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing"};
+                                                  "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -197,6 +197,10 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
     }
     case PLAN_CONSTRAINT_VOICING:
         ok = ok && json_add(object, "write_soprano", cJSON_CreateBool(constraint->params.voicing.write_soprano));
+        break;
+    case PLAN_CONSTRAINT_COUNTERPOINT:
+        ok = ok && json_add(object, "species", json_number(constraint->params.counterpoint.species)) &&
+             json_add(object, "above", cJSON_CreateBool(constraint->params.counterpoint.above));
         break;
     }
     if (!ok) {
@@ -892,6 +896,14 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     }
     case PLAN_CONSTRAINT_VOICING:
         return read_optional_bool(reader, item, path, "write_soprano", &out->params.voicing.write_soprano);
+    case PLAN_CONSTRAINT_COUNTERPOINT:
+        if (!cJSON_GetObjectItemCaseSensitive(item, "species")) {
+            char at[PLAN_JSON_PATH_MAX];
+            json_child_path(at, path, "species");
+            return json_bad_format(reader, at, "missing species");
+        }
+        return read_optional_int(reader, item, path, "species", 1, 4, &out->params.counterpoint.species) &&
+               read_optional_bool(reader, item, path, "above", &out->params.counterpoint.above);
     }
     return false;
 }
