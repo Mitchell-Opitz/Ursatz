@@ -62,6 +62,33 @@ static void send_json(struct mg_connection *conn, const char *body) {
   mg_write(conn, body, len);
 }
 
+/* Raw MusicXmlExportResult enum name, for the API's "code" field -- kept
+ * unshortened so it is directly greppable against musicxml_export.h. */
+static const char *musicxml_export_error_code(MusicXmlExportResult error) {
+  switch (error) {
+    case MUSICXML_EXPORT_ERR_NULL_ARG:
+      return "MUSICXML_EXPORT_ERR_NULL_ARG";
+    case MUSICXML_EXPORT_ERR_LOAD_FAILED:
+      return "MUSICXML_EXPORT_ERR_LOAD_FAILED";
+    case MUSICXML_EXPORT_ERR_MISSING_SPELLING:
+      return "MUSICXML_EXPORT_ERR_MISSING_SPELLING";
+    case MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES:
+      return "MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES";
+    case MUSICXML_EXPORT_ERR_ALLOC:
+      return "MUSICXML_EXPORT_ERR_ALLOC";
+    case MUSICXML_EXPORT_OK:
+    default:
+      return "MUSICXML_EXPORT_UNKNOWN";
+  }
+}
+
+static void send_musicxml_export_error(struct mg_connection *conn, MusicXmlExportResult export_error) {
+  char body[160];
+  snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
+           musicxml_export_error_code(export_error));
+  send_json(conn, body);
+}
+
 /* Append-only buffer that grows as needed, used in place of a
  * pre-sized malloc + snprintf/offset accumulation. That older pattern
  * undersized its per-field capacity estimate for handle_get_piece's
@@ -523,14 +550,16 @@ static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
   bool cosmetic_meter = false;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter);
+  MusicXmlExportResult export_error = MUSICXML_EXPORT_OK;
+  UrsatzGuiAnalysisResult result =
+      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter, &export_error);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to export piece\"}");
+    send_musicxml_export_error(conn, export_error);
     return 200;
   }
 
@@ -544,14 +573,16 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
   bool cosmetic_meter = false;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter);
+  MusicXmlExportResult export_error = MUSICXML_EXPORT_OK;
+  UrsatzGuiAnalysisResult result =
+      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter, &export_error);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to export piece\"}");
+    send_musicxml_export_error(conn, export_error);
     return 200;
   }
   free(xml);
