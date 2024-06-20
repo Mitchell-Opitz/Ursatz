@@ -25,7 +25,7 @@ static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
-                                                  "material", "harmony_shape", "theme_pairing", "accompaniment"};
+                                                  "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -195,6 +195,9 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         }
         break;
     }
+    case PLAN_CONSTRAINT_VOICING:
+        ok = ok && json_add(object, "write_soprano", cJSON_CreateBool(constraint->params.voicing.write_soprano));
+        break;
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -887,6 +890,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         return read_optional_int(reader, item, path, "low", 0, 127, &accompaniment->low) &&
                read_optional_int(reader, item, path, "high", 0, 127, &accompaniment->high);
     }
+    case PLAN_CONSTRAINT_VOICING:
+        return read_optional_bool(reader, item, path, "write_soprano", &out->params.voicing.write_soprano);
     }
     return false;
 }

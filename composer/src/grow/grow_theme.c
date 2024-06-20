@@ -58,6 +58,9 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         } else if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
             request.has_accompaniment = true;
             request.accompaniment = constraint->params.accompaniment;
+        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
+            request.has_voicing = true;
+            request.voicing = constraint->params.voicing;
         }
     }
     LaneSpanId lane[2];
@@ -527,6 +530,51 @@ static PlanResult add_accompaniment_targets(GrowBuild *build, NodeId owner, Plan
     return result;
 }
 
+/*
+ * The open spans a four-part voicing is written in, over the same time as a harmony span: the alto (voice 1) with the
+ * constraint, the tenor (voice 2), and, when the voicing writes the soprano, the melody, with the cadence the harmony
+ * ends in so the voicing can end the soprano on it.
+ */
+static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan span, const PlanConstraint *cadence) {
+    const PlanVoicing *voicing = &build->request->voicing;
+    PlanResult result = PLAN_OK;
+    for (int voice = 1; result == PLAN_OK && voice <= 2; voice++) {
+        PlanLanePayload payload;
+        PlanNote note;
+        LaneSpanId id;
+        memset(&payload, 0, sizeof(payload));
+        note.midi_pitch = INNER_PLACEHOLDER;
+        note.offset = (PlanTime){0, 1};
+        note.duration = span.length;
+        payload.notes.notes = &note;
+        payload.notes.note_count = 1;
+        result = plan_add_lane_span(build->plan, owner, PLAN_LANE_INNER_VOICE, voice, span, &payload, &id);
+        if (result == PLAN_OK && voice == 1) {
+            PlanConstraint constraint;
+            memset(&constraint, 0, sizeof(constraint));
+            constraint.kind = PLAN_CONSTRAINT_VOICING;
+            constraint.params.voicing = *voicing;
+            result = plan_lane_span_add_constraint(build->plan, id, &constraint);
+        }
+    }
+    if (result == PLAN_OK && voicing->write_soprano) {
+        PlanLanePayload payload;
+        PlanNote note;
+        LaneSpanId id;
+        memset(&payload, 0, sizeof(payload));
+        note.midi_pitch = MELODY_PLACEHOLDER;
+        note.offset = (PlanTime){0, 1};
+        note.duration = span.length;
+        payload.notes.notes = &note;
+        payload.notes.note_count = 1;
+        result = plan_add_lane_span(build->plan, owner, PLAN_LANE_MELODY, 0, span, &payload, &id);
+        if (result == PLAN_OK && cadence) {
+            result = plan_lane_span_add_constraint(build->plan, id, cadence);
+        }
+    }
+    return result;
+}
+
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                   const PlanConstraint *cadence) {
     PiecePlan *plan = build->plan;
@@ -561,12 +609,19 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
     if (result == PLAN_OK && build->request->has_accompaniment) {
         result = add_accompaniment_targets(build, owner, span);
     }
+    if (result == PLAN_OK && build->request->has_voicing) {
+        result = add_voicing_targets(build, owner, span, cadence);
+    }
     return result;
 }
 
 PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
                                   const PlanConstraint *cadence) {
     PiecePlan *plan = build->plan;
+    /* A voicing that writes the soprano takes the place of the melody: its spans are made with the chords. */
+    if (build->request->has_voicing && build->request->voicing.write_soprano) {
+        return PLAN_OK;
+    }
     PlanSpan span = plan_node_span(plan, idea);
     PlanLanePayload payload;
     PlanNote note;

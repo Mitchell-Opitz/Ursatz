@@ -64,6 +64,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                accompaniment->low >= 0 && accompaniment->low <= 127 && accompaniment->high >= 0 &&
                accompaniment->high <= 127 && low < high;
     }
+    case PLAN_CONSTRAINT_VOICING:
+        return true;
     }
     return false;
 }

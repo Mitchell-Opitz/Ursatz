@@ -26,7 +26,8 @@ typedef enum {
     PLAN_CONSTRAINT_MATERIAL,  /* no parameters: on a section node, its subtree is source material, not part of the piece */
     PLAN_CONSTRAINT_HARMONY_SHAPE, /* the shape a harmony span is to take (R-050) */
     PLAN_CONSTRAINT_THEME_PAIRING, /* how a theme begins and how it ends */
-    PLAN_CONSTRAINT_ACCOMPANIMENT  /* the accompaniment an inner voice span is to be written as */
+    PLAN_CONSTRAINT_ACCOMPANIMENT, /* the accompaniment an inner voice span is to be written as */
+    PLAN_CONSTRAINT_VOICING        /* the four-part voicing an inner voice span is to be written as */
 } PlanConstraintKind;
 
 typedef enum {
@@ -176,6 +177,16 @@ typedef struct {
     int high;
 } PlanAccompaniment;
 
+/*
+ * A four-part voicing of a written progression (R-066). It is on a Constrained inner voice span, voice 1 (the alto);
+ * the tenor is inner voice 2. With write_soprano the melody span over the same time is Constrained too and the
+ * voicing writes it, one soprano note per chord; without it the soprano is the written melody note sounding at the
+ * start of each chord.
+ */
+typedef struct {
+    bool write_soprano;
+} PlanVoicing;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -189,6 +200,7 @@ typedef struct {
         PlanHarmonyShape harmony_shape;
         PlanThemePairing theme_pairing;
         PlanAccompaniment accompaniment;
+        PlanVoicing voicing;
     } params;
 } PlanConstraint;
 

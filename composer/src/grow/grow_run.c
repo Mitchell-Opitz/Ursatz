@@ -12,6 +12,8 @@
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/texture_check.h>
+#include <ursatz_composer/voicing.h>
 
 #include "grow/grow_internal.h"
 #include "plan/plan_internal.h"
@@ -53,6 +55,17 @@ static bool lane_written(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span
     return count > 0;
 }
 
+/* Whether the theme asks for a voicing that writes the soprano, which is then the melody. */
+static bool soprano_voiced(const PiecePlan *plan, NodeId theme) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
+        if (constraint->kind == PLAN_CONSTRAINT_VOICING && constraint->params.voicing.write_soprano) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* What a stage was to do, read from the plan: its own targets are all filled. */
 static bool stage_done(const PiecePlan *plan, GrowStage stage, NodeId theme, PlanSpan span) {
     switch (stage) {
@@ -70,7 +83,8 @@ static bool stage_done(const PiecePlan *plan, GrowStage stage, NodeId theme, Pla
     case GROW_STAGE_BASS:
         return lane_written(plan, PLAN_LANE_BASS, span);
     case GROW_STAGE_MELODY:
-        return lane_written(plan, PLAN_LANE_MELODY, span);
+        /* A voiced soprano is written by the texture stage. */
+        return soprano_voiced(plan, theme) || lane_written(plan, PLAN_LANE_MELODY, span);
     case GROW_STAGE_TEXTURE: {
         /* No inner voice span over the theme is still open (there may be none: nothing was asked for). */
         LaneSpanId ids[64];
@@ -82,7 +96,7 @@ static bool stage_done(const PiecePlan *plan, GrowStage stage, NodeId theme, Pla
                 }
             }
         }
-        return true;
+        return !soprano_voiced(plan, theme) || lane_written(plan, PLAN_LANE_MELODY, span);
     }
     case GROW_STAGE_COUNT:
         break;
@@ -92,7 +106,8 @@ static bool stage_done(const PiecePlan *plan, GrowStage stage, NodeId theme, Pla
 
 static FillResult register_stage(FillOperatorRegistry *registry, GrowStage stage, const GrowConfig *config,
                                  const MotiveDevelopContext *motives, const MelodyFillParams *melody,
-                                 const AccompanimentParams *accompaniment) {
+                                 const AccompanimentParams *accompaniment,
+                                 const VoicingParams *voicing) {
     FillResult result = FILL_OK;
     switch (stage) {
     case GROW_STAGE_STRUCTURE:
@@ -107,7 +122,8 @@ static FillResult register_stage(FillOperatorRegistry *registry, GrowStage stage
     case GROW_STAGE_MELODY:
         return melody_fill_register(registry, melody);
     case GROW_STAGE_TEXTURE:
-        return accompaniment_register(registry, accompaniment);
+        result = accompaniment_register(registry, accompaniment);
+        return result == FILL_OK ? voicing_register(registry, voicing) : result;
     case GROW_STAGE_COUNT:
         break;
     }
@@ -127,7 +143,7 @@ static FillCheckerFn checker_of(GrowStage stage) {
     case GROW_STAGE_MELODY:
         return melody_fill_checker;
     case GROW_STAGE_TEXTURE:
-        return accompaniment_checker;
+        return texture_checker;
     case GROW_STAGE_COUNT:
         break;
     }
@@ -226,6 +242,7 @@ static GrowResult run_once(PiecePlan *plan, const GrowConfig *config, unsigned l
     motive_develop_context_default(&motives);
     motives.min_length = 1;
     AccompanimentParams accompaniment = accompaniment_params_default();
+    VoicingParams voicing = voicing_params_default();
 
     for (GrowStage stage = GROW_STAGE_STRUCTURE; stage < GROW_STAGE_COUNT; stage++) {
         /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
@@ -249,7 +266,7 @@ static GrowResult run_once(PiecePlan *plan, const GrowConfig *config, unsigned l
             if (attempt > 0 && !sentence) {
                 melody.climax_position = CLIMAX_RETRIES[attempt];
             }
-            FillResult registered = register_stage(registry, stage, config, &motives, &melody, &accompaniment);
+            FillResult registered = register_stage(registry, stage, config, &motives, &melody, &accompaniment, &voicing);
             FillResult ran = registered == FILL_OK
                                  ? fill_run(plan, registry, &fill, &fill_outcome, &outcome->records[stage])
                                  : registered;
