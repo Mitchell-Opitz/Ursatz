@@ -112,7 +112,11 @@ The backend exposes:
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`: same export, but returns
   `{"ok":true,"cosmetic_meter":<bool>}` instead of the XML body, so the
   frontend can read the synthetic-meter flag without a second client-side
-  XML parse (OSMD already parses the full document to render it).
+  XML parse (OSMD already parses the full document to render it). Both
+  endpoints call into the same `musicxml_export_write`, which can fail
+  with `MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES` for some pieces --
+  reproduces with no concurrency involved, root cause not yet found;
+  tracked as its own investigation in ursatz, not fixed here.
 
 Ursatz's persistence layer has no "piece" concept (one `note_events`
 table, one `interpretations` table, no grouping/filename metadata): the
