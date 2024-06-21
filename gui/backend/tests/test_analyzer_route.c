@@ -520,6 +520,43 @@ static bool seed_note_event_piece(const char *db_path) {
   return ok;
 }
 
+/* Same as seed_note_event_piece but with no PitchSpelling, so
+ * musicxml_export_write fails with MUSICXML_EXPORT_ERR_MISSING_SPELLING
+ * -- exercises the route's export-error code propagation path. */
+static bool seed_unspelled_note_event_piece(const char *db_path) {
+  EntityID *id = NULL;
+  if (entity_id_create("test-unspelled-note", &id) != ENTITY_ID_OK) {
+    return false;
+  }
+  MusicalTime *position = NULL;
+  musical_time_create(0, 1, &position);
+  TemporalAnchor *anchor = NULL;
+  temporal_anchor_create(position, &anchor);
+  Duration *duration = NULL;
+  duration_create(1, 4, &duration);
+  PitchIdentity *pitch = NULL;
+  unsigned char token[1] = {60};
+  pitch_identity_create(token, sizeof(token), &pitch);
+  ProvenanceReference *provenance = NULL;
+  provenance_reference_create_absent(&provenance);
+
+  NoteEvent *event = NULL;
+  if (note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, &event) != NOTE_EVENT_OK) {
+    return false;
+  }
+
+  PersistenceHandle *handle = NULL;
+  if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
+    note_event_destroy(event);
+    return false;
+  }
+  NoteEvent *events[1] = {event};
+  bool ok = persistence_store_note_events(handle, events, 1) == PERSISTENCE_NOTE_EVENTS_OK;
+  persistence_close(handle);
+  note_event_destroy(event);
+  return ok;
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -590,6 +627,14 @@ int main(void) {
   snprintf(musicxml_db_path, sizeof(musicxml_db_path), "%s/%s.db", pieces_dir, musicxml_piece_id);
   remove(musicxml_db_path);
   check(seed_note_event_piece(musicxml_db_path), "seed piece with a spelled NoteEvent for MusicXML export");
+
+  const char *musicxml_unspelled_piece_id = "test-musicxml-unspelled-piece";
+  char musicxml_unspelled_db_path[320];
+  snprintf(musicxml_unspelled_db_path, sizeof(musicxml_unspelled_db_path), "%s/%s.db", pieces_dir,
+           musicxml_unspelled_piece_id);
+  remove(musicxml_unspelled_db_path);
+  check(seed_unspelled_note_event_piece(musicxml_unspelled_db_path),
+        "seed piece with an unspelled NoteEvent to trigger a MusicXML export error");
 
   struct mg_context *ctx = ursatz_gui_server_start("18766", ".");
   check(ctx != NULL, "server starts");
@@ -687,6 +732,39 @@ int main(void) {
   }
 
   remove(musicxml_db_path);
+
+  /* GET .../musicxml and its /meta sibling against a piece whose sole
+   * NoteEvent has no pitch spelling: musicxml_export_write fails with
+   * MUSICXML_EXPORT_ERR_MISSING_SPELLING, and the route must surface
+   * that specific code rather than a generic failure message. */
+  char musicxml_unspelled_path[160];
+  snprintf(musicxml_unspelled_path, sizeof(musicxml_unspelled_path), "/api/analyzer/pieces/%s/musicxml",
+           musicxml_unspelled_piece_id);
+  char musicxml_unspelled_response[4096];
+  bool got_musicxml_unspelled_response =
+      http_get(musicxml_unspelled_path, musicxml_unspelled_response, sizeof(musicxml_unspelled_response));
+  check(got_musicxml_unspelled_response, "got a response to GET .../musicxml for an unspelled-note piece");
+  if (got_musicxml_unspelled_response) {
+    check(strstr(musicxml_unspelled_response, "200") != NULL, "unspelled-note musicxml export responds 200");
+    check(strstr(musicxml_unspelled_response, "\"ok\":false") != NULL,
+          "unspelled-note musicxml export reports ok:false");
+    check(strstr(musicxml_unspelled_response, "\"code\":\"MUSICXML_EXPORT_ERR_MISSING_SPELLING\"") != NULL,
+          "unspelled-note musicxml export reports the specific MusicXmlExportResult code");
+  }
+
+  char musicxml_unspelled_meta_path[160];
+  snprintf(musicxml_unspelled_meta_path, sizeof(musicxml_unspelled_meta_path), "/api/analyzer/pieces/%s/musicxml/meta",
+           musicxml_unspelled_piece_id);
+  char musicxml_unspelled_meta_response[4096];
+  bool got_musicxml_unspelled_meta_response = http_get(musicxml_unspelled_meta_path, musicxml_unspelled_meta_response,
+                                                         sizeof(musicxml_unspelled_meta_response));
+  check(got_musicxml_unspelled_meta_response, "got a response to GET .../musicxml/meta for an unspelled-note piece");
+  if (got_musicxml_unspelled_meta_response) {
+    check(strstr(musicxml_unspelled_meta_response, "\"code\":\"MUSICXML_EXPORT_ERR_MISSING_SPELLING\"") != NULL,
+          "unspelled-note musicxml/meta export reports the specific MusicXmlExportResult code");
+  }
+
+  remove(musicxml_unspelled_db_path);
 
   /* PATCH /api/analyzer/pieces/<id>. Renames the piece's persisted
    * original_filename, and only that -- it must not disturb the
