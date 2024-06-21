@@ -26,6 +26,7 @@
 #include <identity/schema_version.h>
 #include <interpretation/interpretation.h>
 #include <io/midi_importer.h>
+#include <io/midi_key_signature.h>
 #include <analysis/cadence_classification.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
@@ -627,7 +628,8 @@ static Structure *build_whole_piece_region(NoteEvent *const *events, size_t coun
  * estimate_global_key (pipeline/key_pipeline.c). */
 static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqlite3 *index_db,
                                                    NoteEvent *const *events, PitchNumericValue *const *pitch_values,
-                                                   size_t count) {
+                                                   size_t count, MidiKeySignature key_signature) {
+    (void)key_signature;
     KeyEstimate estimate = {false, 0, false};
     if (count == 0) {
         return estimate;
@@ -1576,6 +1578,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
+    /* A malformed key signature meta-event doesn't fail an otherwise-valid
+       import -- it just means no key signature is reported, same as a
+       file that never had one. */
+    MidiKeySignature key_signature = {false, 0, false};
+    if (midi_key_signature_scan(midi_data, midi_size, &key_signature) != MIDI_KEY_SIGNATURE_OK) {
+        key_signature = (MidiKeySignature){false, 0, false};
+    }
+
     if (!ensure_dir_exists(pieces_dir)) {
         for (size_t i = 0; i < count; i++) {
             note_event_destroy(events[i]);
@@ -1611,7 +1621,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
             sqlite3 *index_db = open_interpretation_index(db_path);
             record_original_filename(index_db, original_filename);
 
-            KeyEstimate key = estimate_and_store_global_key(handle, index_db, events, pitch_values, count);
+            KeyEstimate key =
+                estimate_and_store_global_key(handle, index_db, events, pitch_values, count, key_signature);
 
             SonorityGrouping grouping;
             if (segment_by_onset(events, count, &grouping)) {
