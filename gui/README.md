@@ -100,6 +100,15 @@ The backend exposes:
   as the response body, `Content-Type: application/xml` (plain XML, not
   `application/vnd.recordare.musicxml+xml` -- this is an uncompressed
   single document, not a zipped `.mxl` package). Unknown id returns 404.
+  If `musicxml_export_write` itself fails (e.g. a NoteEvent missing pitch
+  spelling, or overlapping notes in the same voice), the response is
+  `{"ok":false,"message":"failed to export piece","code":"<name>"}`,
+  where `code` is the specific `MusicXmlExportResult` enum member name
+  (`MUSICXML_EXPORT_ERR_NULL_ARG`, `MUSICXML_EXPORT_ERR_LOAD_FAILED`,
+  `MUSICXML_EXPORT_ERR_MISSING_SPELLING`,
+  `MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES`, or `MUSICXML_EXPORT_ERR_ALLOC`
+  -- see `external/ursatz/src/export/musicxml_export.h`) that
+  `musicxml_export_write` returned, also logged server-side.
   `musicxml_export_write` lays barlines on a synthetic 4/4 grid (Ursatz
   has no Meter/MeterMap data yet) and flags this via an
   `ursatz:synthetic-meter` `<miscellaneous-field>` -- see
@@ -113,7 +122,8 @@ The backend exposes:
   `{"ok":true,"cosmetic_meter":<bool>}` instead of the XML body, so the
   frontend can read the synthetic-meter flag without a second client-side
   XML parse (OSMD already parses the full document to render it). Both
-  endpoints call into the same `musicxml_export_write`.
+  endpoints call into the same `musicxml_export_write`, and report the
+  same `code` field on export failure described above.
 
 Ursatz's persistence layer has no "piece" concept (one `note_events`
 table, one `interpretations` table, no grouping/filename metadata): the
