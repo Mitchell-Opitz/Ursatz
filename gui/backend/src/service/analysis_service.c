@@ -564,6 +564,23 @@ static int pitch_class_of(long midi_note_number) {
     return (int)remainder;
 }
 
+/* Bass pitch class of a SonorityGroup: the pitch class of its lowest
+   MIDI note number. Used as a tonic guess when no key signature is
+   present -- the closing chord is tried before the opening chord, since
+   a piece almost always ends on its tonic but can just as easily open
+   on an anacrusis, a pickup, or a non-tonic harmony. Mirrors
+   ursatz-analyzer's pipeline/analysis_pipeline.c. */
+static int bass_pitch_class(const SonorityGroup *group, PitchNumericValue *const *pitch_values) {
+    long lowest_note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[0]]);
+    for (size_t i = 1; i < group->note_index_count; i++) {
+        long note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[i]]);
+        if (note_number < lowest_note_number) {
+            lowest_note_number = note_number;
+        }
+    }
+    return pitch_class_of(lowest_note_number);
+}
+
 typedef struct {
     bool found;
     int tonic_pitch_class;
@@ -680,15 +697,24 @@ static bool try_tonic_and_store(PersistenceHandle *handle, sqlite3 *index_db, St
 
 /* Estimates one global key for the whole piece, persisting the winning
  * Interpretation (if any) directly. Mirrors ursatz-analyzer's
- * estimate_global_key (pipeline/key_pipeline.c): tries the MIDI key
- * signature meta-event's tonic first (if present and plausible), then
- * falls back to a brute-force scan of all 12 pitch classes in order
- * (C, C#, D, ...) -- the fallback exists as a safety net for the rare
- * case where a key signature is present but doesn't actually match the
- * piece's pitch content (e.g. a mid-piece modulation). */
+ * estimate_global_key (pipeline/key_pipeline.c). Precedence:
+ *
+ *   1. The MIDI key signature meta-event's tonic, if present and
+ *      plausible -- no pitch-class scanning at all in the normal case.
+ *   2. priority_tonics (priority_tonic_count entries, each 0-11), in
+ *      order -- the caller's best guess at the tonic when no key
+ *      signature is present (the bass pitch class of the piece's
+ *      closing and opening chord).
+ *   3. A brute-force scan of all 12 pitch classes in order (C, C#, D,
+ *      ...), tried only if every candidate above misses -- this also
+ *      serves as a safety net for the rare case where a key signature
+ *      is present but doesn't actually match the piece's pitch content
+ *      (e.g. a mid-piece modulation).
+ */
 static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqlite3 *index_db,
                                                    NoteEvent *const *events, PitchNumericValue *const *pitch_values,
-                                                   size_t count, MidiKeySignature key_signature) {
+                                                   size_t count, MidiKeySignature key_signature,
+                                                   const int *priority_tonics, size_t priority_tonic_count) {
     static const char *const kPitchClassNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
     KeyEstimate estimate = {false, 0, false};
@@ -717,6 +743,15 @@ static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqli
     if (tonic_from_key_signature(key_signature, &key_signature_tonic)) {
         try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, key_signature_tonic,
                              kPitchClassNames[key_signature_tonic], &estimate);
+    }
+
+    for (size_t p = 0; p < priority_tonic_count && !estimate.found; p++) {
+        int tonic = priority_tonics[p];
+        if (tonic < 0 || tonic > 11) {
+            continue;
+        }
+        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, tonic,
+                             kPitchClassNames[tonic], &estimate);
     }
 
     for (int tonic = 0; tonic < 12 && !estimate.found; tonic++) {
@@ -1666,11 +1701,19 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
             sqlite3 *index_db = open_interpretation_index(db_path);
             record_original_filename(index_db, original_filename);
 
-            KeyEstimate key =
-                estimate_and_store_global_key(handle, index_db, events, pitch_values, count, key_signature);
-
             SonorityGrouping grouping;
             if (segment_by_onset(events, count, &grouping)) {
+                int priority_tonics[2];
+                size_t priority_tonic_count = 0;
+                priority_tonics[priority_tonic_count++] =
+                    bass_pitch_class(&grouping.groups[grouping.group_count - 1], pitch_values);
+                if (grouping.group_count > 1) {
+                    priority_tonics[priority_tonic_count++] = bass_pitch_class(&grouping.groups[0], pitch_values);
+                }
+
+                KeyEstimate key = estimate_and_store_global_key(handle, index_db, events, pitch_values, count,
+                                                                 key_signature, priority_tonics, priority_tonic_count);
+
                 for (size_t i = 0; i < grouping.group_count; i++) {
                     identify_and_store_chord(handle, index_db, &grouping.groups[i], events, pitch_values, &key);
                 }
