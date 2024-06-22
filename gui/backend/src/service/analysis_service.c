@@ -716,6 +716,8 @@ static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqli
                                                    size_t count, MidiKeySignature key_signature,
                                                    const int *priority_tonics, size_t priority_tonic_count) {
     static const char *const kPitchClassNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    static const char *const kPitchClassNamesFlat[12] = {"C", "Db", "D", "Eb", "E", "F",
+                                                           "Gb", "G", "Ab", "A", "Bb", "B"};
 
     KeyEstimate estimate = {false, 0, false};
     if (count == 0) {
@@ -741,8 +743,10 @@ static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqli
 
     int key_signature_tonic;
     if (tonic_from_key_signature(key_signature, &key_signature_tonic)) {
+        const char *tonic_name = key_signature.sharps_flats < 0 ? kPitchClassNamesFlat[key_signature_tonic]
+                                                                 : kPitchClassNames[key_signature_tonic];
         try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, key_signature_tonic,
-                             kPitchClassNames[key_signature_tonic], &estimate);
+                             tonic_name, &estimate);
     }
 
     for (size_t p = 0; p < priority_tonic_count && !estimate.found; p++) {
