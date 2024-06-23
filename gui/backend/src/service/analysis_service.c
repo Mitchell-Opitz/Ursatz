@@ -648,6 +648,38 @@ static Structure *build_whole_piece_region(NoteEvent *const *events, size_t coun
 static const int kSharpsMajorTonic[8] = {0, 7, 2, 9, 4, 11, 6, 1};  /* C G D A E B F# C# */
 static const int kFlatsMajorTonic[8] = {0, 5, 10, 3, 8, 1, 6, 11};  /* C F Bb Eb Ab Db Gb Cb */
 
+#define NO_ACCIDENTAL_COUNT 99
+
+static int sharps_needed_for_tonic(int tonic_pitch_class) {
+    for (int count = 0; count < 8; count++) {
+        if (kSharpsMajorTonic[count] == tonic_pitch_class) {
+            return count;
+        }
+    }
+    return NO_ACCIDENTAL_COUNT;
+}
+
+static int flats_needed_for_tonic(int tonic_pitch_class) {
+    for (int count = 0; count < 8; count++) {
+        if (kFlatsMajorTonic[count] == tonic_pitch_class) {
+            return count;
+        }
+    }
+    return NO_ACCIDENTAL_COUNT;
+}
+
+/* Whether tonic_pitch_class reads more naturally in flats than sharps,
+   absent any other signal (e.g. no key signature to defer to): true
+   when its flat-side circle-of-fifths count is strictly lower than its
+   sharp-side count -- the spelling that avoids double sharps/flats.
+   Natural-letter tonics (C, D, E, F, G, A, B) have identical sharp and
+   flat spellings, so the tie there is harmless either way. The one
+   real tie, F#/Gb (6 of each), defaults to sharp (F#) per common
+   notation convention. Mirrors ursatz-analyzer's pipeline/key_pipeline.c. */
+static bool prefers_flat_spelling(int tonic_pitch_class) {
+    return flats_needed_for_tonic(tonic_pitch_class) < sharps_needed_for_tonic(tonic_pitch_class);
+}
+
 /* Derives the tonic pitch class a MIDI key signature meta-event names,
    or returns false (out untouched) for an absent or out-of-range one. */
 static bool tonic_from_key_signature(MidiKeySignature key_signature, int *out_tonic) {
@@ -754,13 +786,15 @@ static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqli
         if (tonic < 0 || tonic > 11) {
             continue;
         }
-        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, tonic,
-                             kPitchClassNames[tonic], &estimate);
+        const char *tonic_name = prefers_flat_spelling(tonic) ? kPitchClassNamesFlat[tonic] : kPitchClassNames[tonic];
+        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, tonic, tonic_name,
+                             &estimate);
     }
 
     for (int tonic = 0; tonic < 12 && !estimate.found; tonic++) {
-        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, tonic,
-                             kPitchClassNames[tonic], &estimate);
+        const char *tonic_name = prefers_flat_spelling(tonic) ? kPitchClassNamesFlat[tonic] : kPitchClassNames[tonic];
+        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, tonic, tonic_name,
+                             &estimate);
     }
 
     free(relative);
