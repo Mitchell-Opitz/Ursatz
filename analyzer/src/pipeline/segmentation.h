@@ -42,11 +42,15 @@ typedef struct {
 /*
  * Cuts notes into sonority segments on the beat grid of the file's
  * MeterMap using Ursatz's adaptive segmentation, and builds the weighted
- * identification members for each. On success *out is owned by the
+ * identification members for each, and each library segment's beat
+ * (segments inside one beat share one non-zero value). The chord
+ * segments merge over unchanged harmony; the voice segments, which the
+ * outer-voice extraction reads, do not (one segment per melody note), as
+ * merge_unchanged_harmony says. On success *out is owned by the
  * caller (release with segmentation_destroy). Returns false on a library
  * or allocation failure, with *out left empty.
  */
-bool segment_notes(const ImportedNotes *notes, Segmentation *out);
+bool segment_notes(const ImportedNotes *notes, bool merge_unchanged_harmony, Segmentation *out);
 void segmentation_destroy(Segmentation *segmentation);
 
 /* Pitch class (0-11) of the lowest note sounding in a segment. */

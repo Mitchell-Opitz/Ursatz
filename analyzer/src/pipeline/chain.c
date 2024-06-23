@@ -16,7 +16,7 @@ bool chain_init(AnalysisChain *chain, const ImportedNotes *notes) {
     if (notes->count == 0) {
         return true;
     }
-    return segment_notes(notes, &chain->segmentation);
+    return segment_notes(notes, true, &chain->segmentation) && segment_notes(notes, false, &chain->voice_segmentation);
 }
 
 /* Names the roots and basses of the readings as the notated score spells them. */
@@ -36,6 +36,22 @@ static bool respell_chords(AnalysisChain *chain) {
         }
     }
     return true;
+}
+
+static AnalysisChordContext chord_context(const ChordEstimate *chord) {
+    if (!chord->found) {
+        return ANALYSIS_CHORD_CONTEXT_NONE;
+    }
+    switch (chord->context) {
+        case COMMON_PRACTICE_CONTEXT_PREVIOUS:
+            return ANALYSIS_CHORD_CONTEXT_PREVIOUS;
+        case COMMON_PRACTICE_CONTEXT_NEXT:
+            return ANALYSIS_CHORD_CONTEXT_NEXT;
+        case COMMON_PRACTICE_CONTEXT_ARPEGGIO:
+            return ANALYSIS_CHORD_CONTEXT_ARPEGGIO;
+        default:
+            return ANALYSIS_CHORD_CONTEXT_NONE;
+    }
 }
 
 /* One entry per chord segment: its span, notes, key and chord. The readings move out of the estimates. */
@@ -61,6 +77,7 @@ static bool build_entries(AnalysisChain *chain) {
         entry->chord_confidence = chord->best.confidence;
         entry->chord = chord->best;
         entry->runner_up = chord->runner_up;
+        entry->chord_context = chord_context(chord);
         chord->best = NO_READING;
         chord->runner_up = NO_READING;
         entry->in_region = chord->in_region;
@@ -121,7 +138,8 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
     if (!build_entries(chain) ||
         !assign_roman_numerals(segmentation, chain->chords, report->key_regions, report->key_region_count,
                                report->entries) ||
-        !extract_outer_voices(chain->notes, segmentation, chain->chords, report->key_regions, report->entries) ||
+        !extract_outer_voices(chain->notes, &chain->voice_segmentation, segmentation, chain->chords,
+                              report->key_regions, report->entries, &chain->lines) ||
         !collect_non_chord_tones(chain)) {
         return false;
     }
@@ -135,6 +153,8 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
 void chain_pass_destroy(AnalysisChain *chain) {
     chord_estimates_destroy(chain->chords, chain->segmentation.segment_count);
     chain->chords = NULL;
+    outer_voice_lines_destroy(&chain->lines);
+    chain->lines = (OuterVoiceLines){NULL, NULL, 0};
     analysis_report_destroy(&chain->report);
     memset(&chain->report, 0, sizeof(chain->report));
     chain->report.home_duration_denominator = 1;
@@ -143,4 +163,5 @@ void chain_pass_destroy(AnalysisChain *chain) {
 void chain_destroy(AnalysisChain *chain) {
     chain_pass_destroy(chain);
     segmentation_destroy(&chain->segmentation);
+    segmentation_destroy(&chain->voice_segmentation);
 }

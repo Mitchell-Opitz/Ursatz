@@ -10,17 +10,10 @@
 #include "semantics/non_chord_tone.h"
 #include "weighted_chord_identification.h"
 
-/* Root-relative semitone offsets of the chord's tones, ascending (which is the stack-of-thirds order for
-   every chord in the library's vocabulary), from the pitch-class mask the library reports for it. */
-static size_t chord_offsets(const CommonPracticeRankedChord *candidate, int tonic_pitch_class, int offsets[4]) {
-    unsigned mask = common_practice_ranked_chord_mask(candidate, tonic_pitch_class);
-    size_t count = 0;
-    for (int offset = 0; offset < 12 && count < 4; offset++) {
-        if (mask & (1u << ((candidate->root_pitch_class + offset) % 12))) {
-            offsets[count++] = offset;
-        }
-    }
-    return count;
+/* Root-relative semitone offsets of the chord's tones, ascending (the stack-of-thirds order for every chord in
+   the library's vocabulary), as the library reports them. */
+static size_t chord_offsets(const CommonPracticeRankedChord *candidate, int offsets[4]) {
+    return common_practice_ranked_chord_intervals(candidate, offsets);
 }
 
 /* Quality of a triad from its offsets; NULL for a set the library does not build. */
@@ -37,6 +30,9 @@ static const char *triad_quality(const int offsets[4], size_t count) {
     if (offsets[1] == 3 && offsets[2] == 6) {
         return "diminished";
     }
+    if (offsets[1] == 4 && offsets[2] == 8) {
+        return "augmented";
+    }
     return NULL;
 }
 
@@ -52,10 +48,9 @@ static int inversion_of(const int offsets[4], size_t count, int root_pitch_class
 }
 
 static bool fill_reading(const CommonPracticeRankedChord *candidate, const Chord *chord, double score,
-                         int tonic_pitch_class, int bass_pitch_class, bool prefer_flats,
-                         AnalysisChordReading *out) {
+                         int bass_pitch_class, bool prefer_flats, AnalysisChordReading *out) {
     int offsets[4];
-    size_t offset_count = chord_offsets(candidate, tonic_pitch_class, offsets);
+    size_t offset_count = chord_offsets(candidate, offsets);
     const char *quality = candidate->is_seventh ? common_practice_seventh_label(candidate->seventh)
                                                 : triad_quality(offsets, offset_count);
     out->label = strdup(chord_label(chord));
@@ -124,12 +119,10 @@ static bool rational_at_most(long long a, unsigned long long b, long long c, uns
    on allocation failure. */
 static bool identify_in_region(const Segmentation *segmentation, size_t first, size_t count,
                                const AnalysisKeyRegion *region, ChordEstimate *estimates) {
-    if (!region->is_major) {
-        return true;
-    }
+    CommonPracticeKeyMode mode = region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR;
     CommonPracticeWeightedResults results = {0};
     if (common_practice_identify_weighted_sequence(segmentation->library_segments + first, count,
-                                                   region->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR, NULL,
+                                                   region->tonic_pitch_class, mode, NULL,
                                                    &results) != COMMON_PRACTICE_WEIGHTED_OK) {
         return true;
     }
@@ -139,19 +132,19 @@ static bool identify_in_region(const Segmentation *segmentation, size_t first, s
         if (!result->matched) {
             continue;
         }
-        int tonic = region->tonic_pitch_class;
         int bass = segment_bass_pitch_class(&segmentation->segments[i]);
-        if (!fill_reading(&result->best, result->best_chord, result->best_score, tonic, bass, region->prefer_flats,
+        if (!fill_reading(&result->best, result->best_chord, result->best_score, bass, region->prefer_flats,
                           &estimates[i].best) ||
             (result->runner_up_chord &&
-             !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, tonic, bass,
+             !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, bass,
                            region->prefer_flats, &estimates[i].runner_up)) ||
             !fill_tones(&segmentation->segments[i], result, &estimates[i])) {
             common_practice_weighted_results_destroy(&results);
             return false;
         }
         estimates[i].root_pitch_class = result->best.root_pitch_class;
-        estimates[i].interval_count = chord_offsets(&result->best, tonic, estimates[i].intervals);
+        estimates[i].interval_count = chord_offsets(&result->best, estimates[i].intervals);
+        estimates[i].context = result->context;
         estimates[i].found = true;
     }
     common_practice_weighted_results_destroy(&results);
@@ -212,19 +205,19 @@ bool identify_pivot_chords(const Segmentation *segmentation, const AnalysisKeyRe
         if (!change->has_pivot || change->pivot_entry >= segmentation->segment_count) {
             continue;
         }
-        /* The library reads the pivot in the old key's major collection: a minor old key reads in its relative
-           major (a minor third above the tonic), as key_regions_estimate does when it finds the pivot. */
-        int tonic = old_region->is_major ? old_region->tonic_pitch_class : (old_region->tonic_pitch_class + 3) % 12;
+        /* The library reads the pivot in the old key and its own mode, as key_regions_estimate does when it finds
+           the pivot. */
+        CommonPracticeKeyMode mode = old_region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR;
         CommonPracticeWeightedResult result = {0};
-        if (common_practice_identify_weighted(&segmentation->library_segments[change->pivot_entry], tonic,
-                                              COMMON_PRACTICE_KEY_MAJOR, NULL, &result) !=
+        if (common_practice_identify_weighted(&segmentation->library_segments[change->pivot_entry],
+                                              old_region->tonic_pitch_class, mode, NULL, &result) !=
             COMMON_PRACTICE_WEIGHTED_OK) {
             continue;
         }
         bool ok = true;
         if (result.matched) {
             int bass = segment_bass_pitch_class(&segmentation->segments[change->pivot_entry]);
-            ok = fill_reading(&result.best, result.best_chord, result.best_score, tonic, bass, old_region->prefer_flats,
+            ok = fill_reading(&result.best, result.best_chord, result.best_score, bass, old_region->prefer_flats,
                               &change->pivot);
         }
         common_practice_weighted_result_destroy(&result);

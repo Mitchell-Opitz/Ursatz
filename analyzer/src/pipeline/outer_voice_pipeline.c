@@ -70,8 +70,30 @@ static bool fill_note(const ImportedNotes *notes, const Segment *segment, const 
     return true;
 }
 
-bool extract_outer_voices(const ImportedNotes *notes, const Segmentation *segmentation, const ChordEstimate *chords,
-                          const AnalysisKeyRegion *regions, AnalysisReportEntry *entries) {
+/* a/b < c/d for positive denominators. */
+static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
+    return (long long)a * (long long)d < (long long)c * (long long)b;
+}
+
+/* The voice segment holding the chord segment's start: the line's entry at the chord's onset. voices->segment_count
+   when none does. */
+static size_t voice_segment_at(const Segmentation *voices, const Segment *chord, size_t from) {
+    for (size_t v = from; v < voices->segment_count; v++) {
+        const Segment *voice = &voices->segments[v];
+        if (!rational_less(chord->start_numerator, chord->start_denominator, voice->start_numerator,
+                           voice->start_denominator) &&
+            rational_less(chord->start_numerator, chord->start_denominator, voice->end_numerator,
+                          voice->end_denominator)) {
+            return v;
+        }
+    }
+    return voices->segment_count;
+}
+
+bool extract_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
+                          const ChordEstimate *chords, const AnalysisKeyRegion *regions, AnalysisReportEntry *entries,
+                          OuterVoiceLines *lines) {
+    *lines = (OuterVoiceLines){NULL, NULL, 0};
     size_t count = segmentation->segment_count;
     for (size_t i = 0; i < count; i++) {
         entries[i].in_region = chords[i].in_region;
@@ -79,31 +101,33 @@ bool extract_outer_voices(const ImportedNotes *notes, const Segmentation *segmen
         entries[i].soprano.status = ANALYSIS_OUTER_ABSENT;
         entries[i].bass.status = ANALYSIS_OUTER_ABSENT;
     }
-    if (count == 0) {
+    if (count == 0 || voices->segment_count == 0) {
         return true;
     }
 
-    OuterVoiceLines lines = {NULL, NULL, 0};
-    OuterVoiceResult result = outer_voice_extract(&segmentation->sonorities, notes->events, notes->pitch_values,
+    OuterVoiceResult result = outer_voice_extract(&voices->sonorities, notes->events, notes->pitch_values,
                                                    notes->count, notes->meter.meter_map,
-                                                   standard_meter_segmentation_beat_grid, NULL, NULL, &lines);
+                                                   standard_meter_segmentation_beat_grid, NULL, NULL, lines);
     if (result == OUTER_VOICE_ERR_ALLOC) {
         return false;
     }
-    if (result != OUTER_VOICE_OK) {
+    if (result != OUTER_VOICE_OK || lines->count != voices->segment_count) {
+        outer_voice_lines_destroy(lines);
+        *lines = (OuterVoiceLines){NULL, NULL, 0};
         return true; /* the library declined this piece: every line stays absent */
     }
 
     bool ok = true;
-    if (lines.count != count) {
-        outer_voice_lines_destroy(&lines);
-        return true;
-    }
+    size_t v = 0;
     for (size_t i = 0; ok && i < count; i++) {
+        v = voice_segment_at(voices, &segmentation->segments[i], v);
+        if (v >= voices->segment_count) {
+            v = 0;
+            continue;
+        }
         const AnalysisKeyRegion *region = chords[i].in_region ? &regions[chords[i].region] : NULL;
-        ok = fill_note(notes, &segmentation->segments[i], &lines.soprano[i], region, &entries[i].soprano) &&
-             fill_note(notes, &segmentation->segments[i], &lines.bass[i], region, &entries[i].bass);
+        ok = fill_note(notes, &voices->segments[v], &lines->soprano[v], region, &entries[i].soprano) &&
+             fill_note(notes, &voices->segments[v], &lines->bass[v], region, &entries[i].bass);
     }
-    outer_voice_lines_destroy(&lines);
     return ok;
 }

@@ -7,6 +7,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
+#include "analysis/outer_voice.h"
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/segmentation.h"
 #include "time/musical_time.h"
@@ -23,10 +24,12 @@
  */
 typedef struct AnalysisChain {
     const ImportedNotes *notes;
-    Segmentation segmentation; /* the chord segments */
+    Segmentation segmentation;       /* the chord segments, merged over unchanged harmony */
+    Segmentation voice_segmentation; /* the voice segments, not merged: one per melody note, for the outer voices */
 
     /* one pass */
     ChordEstimate *chords;   /* segmentation.segment_count of them */
+    OuterVoiceLines lines;   /* one entry per voice segment */
     AnalysisReport report;   /* the pass's results: entries, non-chord tones, key regions and changes */
 } AnalysisChain;
 

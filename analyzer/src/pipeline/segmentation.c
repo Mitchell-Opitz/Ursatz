@@ -10,6 +10,7 @@
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
 #include "time/exact_rational.h"
+#include "time/meter_map.h"
 #include "time/metrical_position.h"
 #include "time/temporal_anchor.h"
 #include "time/time_span.h"
@@ -80,6 +81,45 @@ static bool build_member(const NoteEvent *note, const MeterMap *map, ExactRation
     return true;
 }
 
+/* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or
+   the grid cannot be read: segments inside one beat share one value (CommonPracticeSegment.beat). False only on
+   allocation failure. */
+static bool beat_index(const MeterMap *map, ExactRational start, ExactRational end, long *out) {
+    *out = 0;
+    MusicalTime *at = er_to_time(start);
+    if (!at) {
+        return false;
+    }
+    int measure = 0;
+    bool found = meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
+    musical_time_destroy(at);
+    MusicalTime **starts = NULL;
+    size_t count = 0;
+    if (!found || !standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count)) {
+        return true;
+    }
+    TimeSpan *span = NULL;
+    if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
+        ExactRational measure_end = er_of_time(time_span_end(span));
+        for (size_t b = 0; b < count; b++) {
+            ExactRational beat_start = er_of_time(starts[b]);
+            ExactRational beat_end = b + 1 < count ? er_of_time(starts[b + 1]) : measure_end;
+            if (er_cmp(beat_start, start) <= 0 && er_cmp(start, beat_end) < 0) {
+                if (er_cmp(end, beat_end) <= 0) {
+                    *out = ((long)measure + 1) * 1000 + (long)b + 1;
+                }
+                break;
+            }
+        }
+        time_span_destroy(span);
+    }
+    for (size_t b = 0; b < count; b++) {
+        musical_time_destroy(starts[b]);
+    }
+    free(starts);
+    return true;
+}
+
 static bool fill_segments(const ImportedNotes *notes, const AdaptiveSonorities *sonorities, Segmentation *out) {
     const MeterMap *map = notes->meter.meter_map;
 
@@ -137,20 +177,26 @@ static bool fill_segments(const ImportedNotes *notes, const AdaptiveSonorities *
         out->library_segments[s].members = segment->members;
         out->library_segments[s].member_count = count;
         out->library_segments[s].id = out->segment_ids[s];
+        if (!beat_index(map, start, end, &out->library_segments[s].beat)) {
+            free(keys);
+            return false;
+        }
     }
     free(keys);
     return true;
 }
 
-bool segment_notes(const ImportedNotes *notes, Segmentation *out) {
+bool segment_notes(const ImportedNotes *notes, bool merge_unchanged_harmony, Segmentation *out) {
     *out = (Segmentation){NULL, 0, NULL, NULL, {NULL, 0}};
     if (notes->count == 0) {
         return true;
     }
 
+    AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
+    config.merge_unchanged_harmony = merge_unchanged_harmony;
     AdaptiveSonorities sonorities = {NULL, 0};
     if (sonority_builder_build_adaptive(notes->events, notes->count, notes->meter.meter_map,
-                                        standard_meter_segmentation_beat_grid, NULL, NULL,
+                                        standard_meter_segmentation_beat_grid, NULL, &config,
                                         &sonorities) != AD_SEGMENTATION_OK) {
         return false;
     }

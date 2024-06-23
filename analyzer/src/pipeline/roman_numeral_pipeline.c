@@ -9,7 +9,6 @@
 #include "weighted_identification.h"
 
 #define REASON_NO_REGION "no key region"
-#define REASON_MINOR_REGION "the library's chord identification names chords in major keys only"
 #define REASON_NO_CHORD "the library identified no chord"
 #define REASON_NO_NUMERAL "the library gives no Roman numeral for this chord in its key"
 
@@ -91,12 +90,12 @@ static bool fill_applied(const StandardTonalityRomanResult *result, AnalysisRoma
     return roman->applied_numeral != NULL && roman->target_numeral != NULL && roman->applied_kind != NULL;
 }
 
-static const char *unlabelled_reason(const ChordEstimate *chord, const AnalysisKeyRegion *regions) {
+static const char *unlabelled_reason(const ChordEstimate *chord) {
     if (!chord->in_region) {
         return REASON_NO_REGION;
     }
     if (!chord->found) {
-        return regions[chord->region].is_major ? REASON_NO_CHORD : REASON_MINOR_REGION;
+        return REASON_NO_CHORD;
     }
     return REASON_NO_NUMERAL;
 }
@@ -136,7 +135,7 @@ bool assign_roman_numerals(const Segmentation *segmentation, const ChordEstimate
             roman->uncertainty = results[i].uncertainty;
             ok = roman->labelled && (!results[i].reading.applied || fill_applied(&results[i], roman));
         } else {
-            roman->reason = strdup(unlabelled_reason(&chords[i], regions));
+            roman->reason = strdup(unlabelled_reason(&chords[i]));
             ok = roman->reason != NULL;
         }
     }

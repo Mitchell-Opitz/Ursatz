@@ -17,9 +17,8 @@
  * chord the weighted identification found (root, tones above the root, bass), the key region's tonic and mode,
  * and the segment's pitch-class weights, in time order, and copies what comes back.
  *
- * A segment is left unlabelled, with a reason, when it lies in no key region, when its region is minor (the
- * library's weighted chord vocabulary is the major-key set, so it names no chord there), when the library
- * identified no chord, or when the adapter returns no numeral for the chord in that key.
+ * A segment is left unlabelled, with a reason, when it lies in no key region, when the library identified no
+ * chord, or when the adapter returns no numeral for the chord in that key.
  *
  * entries must hold segmentation->segment_count entries whose chord confidence and region are filled in.
  * Returns false only on allocation or library failure.
