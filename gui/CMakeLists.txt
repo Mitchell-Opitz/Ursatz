@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(ursatz-gui C)
 
 set(CMAKE_C_STANDARD 11)
@@ -17,6 +17,7 @@ include(FetchContent)
 # add_subdirectory. Ursatz's own CMakeLists.txt guards its test suite with
 # `if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)` so it doesn't
 # try to build its tests when consumed this way.
+set(URSATZ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/ursatz)
 
 # --- civetweb (HTTP server library) ---------------------------------------
