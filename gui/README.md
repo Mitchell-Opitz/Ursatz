@@ -43,10 +43,19 @@ The backend exposes:
   confirm `persistence_open` succeeds against a test database path,
   and returns JSON.
 - `POST /api/analyzer/pieces`: accepts a raw MIDI file as the request
-  body, runs it through Ursatz's `MIDIImporter`, `ChordIdentification`,
+  body, runs it through Ursatz's `MIDIImporter`, `ChordIdentification`
   and `KeyEstimation` (against the `common-practice-minimal`
-  framework) via the analysis service, saves the resulting NoteEvent
-  sequence and Interpretations, and returns the new piece's id.
+  framework), and the Cadence, Motif, Phrase, Period, Sentence, Form and
+  Thematic Return analyzers via the analysis service, saves the
+  resulting NoteEvent sequence and Interpretations, and returns the new
+  piece's id.
+
+  The global key is chosen in the same order as Ursatz-Analyzer: the
+  MIDI key-signature meta-event, then the closing chord's bass, then the
+  opening chord's bass, then a brute-force scan of all twelve tonics.
+  `estimate_global_key` in `service/analysis_service.c` is a copy of
+  Ursatz-Analyzer's `key_pipeline.c`, not a shared library call, so any
+  fix there must be ported here by hand.
 - `GET /api/analyzer/pieces`: lists saved piece ids.
 - `GET /api/analyzer/pieces/<id>`: returns one saved piece's detail --
   its NoteEvent count and every Chord/Key/Cadence/Motif/Phrase/Period/
@@ -215,8 +224,8 @@ shares one tab. Selecting a tab renders a plain-text list of that
 category's claims (label + provenance flag only -- the API returns no
 span, confidence, or uncertainty fields to show). Clicking a claim opens
 a detail panel: a claim summary, an Evidence section (always rendered as
-an explicit empty state, since no Evidence data exists behind this
-endpoint -- Registry marks Evidence Not Started), a Provenance section
+an explicit empty state, since no Evidence is persisted or returned by
+this endpoint, even though Ursatz has an `Evidence` type), a Provenance section
 (`produced_by.author`/`produced_by.method`/`provenance_state`, the only
 provenance data an Interpretation actually carries -- not a full
 Provenance record), and disabled Accept/Dispute buttons (no Promotion
@@ -241,8 +250,10 @@ model does not retain MusicXML `xml:id` (checked against the vendored
 build), so matching correlates document order between the fetched
 MusicXML and OSMD's own note traversal instead (see
 `buildScoreNoteIndex`/`collectGraphicalNotesInOrder` in `app.js`) --
-valid only because this app's export is single-voice/single-part; it
-would need to become genuinely id-based if that ever changes. A claim
+valid only while document order matches between the two. The export is
+single-part, but it can hold several voices per measure since Ursatz
+PR #43, so this should be rechecked on multi-voice pieces and made
+id-based if it drifts. A claim
 with no `highlighted_note_ids` (`key`/`chord`/`period`/`sentence`/
 `form`/`thematic_return`) clears any previous highlight and otherwise
 does nothing -- it still appears normally in its tab, just with no
@@ -262,8 +273,8 @@ as `ursatz-analyzer`. `git submodule update --init --recursive` (or
 `git clone --recurse-submodules` up front) is required before the first
 build.
 
-## Out of scope for this scaffold
+## Out of scope
 
-Native webview packaging, Generator tool code, re-running analysis on
-an already-saved piece, and authentication are explicitly not part of
-this task.
+Native webview packaging, Generator tool code, and authentication.
+Re-running analysis on an already-saved piece is not built yet (the
+Library's "Re-run analysis" button is disabled).
