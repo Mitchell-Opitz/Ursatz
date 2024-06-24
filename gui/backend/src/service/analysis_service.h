@@ -21,7 +21,13 @@
  * ChordIdentification/KeyEstimation mirrors ursatz-analyzer's pipeline
  * (src/pipeline/segmentation.c, key_pipeline.c, chord_pipeline.c),
  * used as a reference call sequence only -- this module does not link
- * against or call ursatz-analyzer.
+ * against or call ursatz-analyzer. This includes global key
+ * estimation's precedence order (a MIDI key signature meta-event's
+ * tonic, then the bass pitch class of the piece's closing and opening
+ * chord, then a brute-force pitch-class scan as a last resort) and its
+ * flat/sharp spelling rules -- kept in sync by hand, not by any
+ * mechanism that enforces it, so a future fix to ursatz-analyzer's
+ * key_pipeline.c needs a matching port here too.
  *
  * Ursatz's persistence has no "piece" concept (persistence.h): each
  * piece is its own SQLite file, id == filename (without extension).
