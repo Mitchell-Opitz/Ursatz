@@ -26,6 +26,7 @@
 #include <identity/schema_version.h>
 #include <interpretation/interpretation.h>
 #include <io/midi_importer.h>
+#include <io/midi_key_signature.h>
 #include <analysis/cadence_classification.h>
 #include <analysis/chord_identification.h>
 #include <analysis/key_estimation.h>
@@ -563,6 +564,23 @@ static int pitch_class_of(long midi_note_number) {
     return (int)remainder;
 }
 
+/* Bass pitch class of a SonorityGroup: the pitch class of its lowest
+   MIDI note number. Used as a tonic guess when no key signature is
+   present -- the closing chord is tried before the opening chord, since
+   a piece almost always ends on its tonic but can just as easily open
+   on an anacrusis, a pickup, or a non-tonic harmony. Mirrors
+   ursatz-analyzer's pipeline/analysis_pipeline.c. */
+static int bass_pitch_class(const SonorityGroup *group, PitchNumericValue *const *pitch_values) {
+    long lowest_note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[0]]);
+    for (size_t i = 1; i < group->note_index_count; i++) {
+        long note_number = pitch_numeric_value_position_numerator(pitch_values[group->note_indices[i]]);
+        if (note_number < lowest_note_number) {
+            lowest_note_number = note_number;
+        }
+    }
+    return pitch_class_of(lowest_note_number);
+}
+
 typedef struct {
     bool found;
     int tonic_pitch_class;
@@ -622,12 +640,117 @@ static Structure *build_whole_piece_region(NoteEvent *const *events, size_t coun
     return region;
 }
 
+/* Major-key tonic pitch class for each sharps/flats count 0-7, per the
+   circle of fifths (index 0 = C, no accidentals). The minor tonic
+   pitch class for the same count is always 9 semitones above the
+   major tonic (the relative minor), regardless of sharps/flats sign.
+   Mirrors ursatz-analyzer's pipeline/key_pipeline.c. */
+static const int kSharpsMajorTonic[8] = {0, 7, 2, 9, 4, 11, 6, 1};  /* C G D A E B F# C# */
+static const int kFlatsMajorTonic[8] = {0, 5, 10, 3, 8, 1, 6, 11};  /* C F Bb Eb Ab Db Gb Cb */
+
+#define NO_ACCIDENTAL_COUNT 99
+
+static int sharps_needed_for_tonic(int tonic_pitch_class) {
+    for (int count = 0; count < 8; count++) {
+        if (kSharpsMajorTonic[count] == tonic_pitch_class) {
+            return count;
+        }
+    }
+    return NO_ACCIDENTAL_COUNT;
+}
+
+static int flats_needed_for_tonic(int tonic_pitch_class) {
+    for (int count = 0; count < 8; count++) {
+        if (kFlatsMajorTonic[count] == tonic_pitch_class) {
+            return count;
+        }
+    }
+    return NO_ACCIDENTAL_COUNT;
+}
+
+/* Whether tonic_pitch_class reads more naturally in flats than sharps,
+   absent any other signal (e.g. no key signature to defer to): true
+   when its flat-side circle-of-fifths count is strictly lower than its
+   sharp-side count -- the spelling that avoids double sharps/flats.
+   Natural-letter tonics (C, D, E, F, G, A, B) have identical sharp and
+   flat spellings, so the tie there is harmless either way. The one
+   real tie, F#/Gb (6 of each), defaults to sharp (F#) per common
+   notation convention. Mirrors ursatz-analyzer's pipeline/key_pipeline.c. */
+static bool prefers_flat_spelling(int tonic_pitch_class) {
+    return flats_needed_for_tonic(tonic_pitch_class) < sharps_needed_for_tonic(tonic_pitch_class);
+}
+
+/* Derives the tonic pitch class a MIDI key signature meta-event names,
+   or returns false (out untouched) for an absent or out-of-range one. */
+static bool tonic_from_key_signature(MidiKeySignature key_signature, int *out_tonic) {
+    if (!key_signature.found || key_signature.sharps_flats < -7 || key_signature.sharps_flats > 7) {
+        return false;
+    }
+    int abs_count = key_signature.sharps_flats < 0 ? -key_signature.sharps_flats : key_signature.sharps_flats;
+    int major_tonic = key_signature.sharps_flats >= 0 ? kSharpsMajorTonic[abs_count] : kFlatsMajorTonic[abs_count];
+    *out_tonic = key_signature.is_minor ? (major_tonic + 9) % 12 : major_tonic;
+    return true;
+}
+
+/* Tries one candidate tonic against KeyEstimation and, on a match,
+ * persists the winning Interpretation and fills *estimate. Returns
+ * true on a match, false otherwise. relative must have room for count
+ * entries; it is overwritten on every call regardless of outcome. */
+static bool try_tonic_and_store(PersistenceHandle *handle, sqlite3 *index_db, Structure *region,
+                                 const Framework *framework, PitchNumericValue *const *pitch_values, size_t count,
+                                 int *relative, int tonic, const char *tonic_name, KeyEstimate *estimate) {
+    for (size_t i = 0; i < count; i++) {
+        long note_number = pitch_numeric_value_position_numerator(pitch_values[i]);
+        int pitch_class = pitch_class_of(note_number);
+        relative[i] = ((pitch_class - tonic) % 12 + 12) % 12;
+    }
+
+    KeyEstimationInput input = {region, framework, tonic_name, relative, count};
+    AnalysisResult *result = NULL;
+    if (key_estimation_analyze(&input, NULL, NULL, &result) != ANALYZER_OK) {
+        return false;
+    }
+
+    const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
+    size_t claim_size;
+    const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
+
+    bool stored = false;
+    if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
+        estimate->tonic_pitch_class = tonic;
+        estimate->is_major = (strstr(claim, "major") != NULL);
+        estimate->found = true;
+        record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)), kIndexTypeKey);
+        stored = true;
+    }
+    analysis_result_destroy(result);
+    return stored;
+}
+
 /* Estimates one global key for the whole piece, persisting the winning
  * Interpretation (if any) directly. Mirrors ursatz-analyzer's
- * estimate_global_key (pipeline/key_pipeline.c). */
+ * estimate_global_key (pipeline/key_pipeline.c). Precedence:
+ *
+ *   1. The MIDI key signature meta-event's tonic, if present and
+ *      plausible -- no pitch-class scanning at all in the normal case.
+ *   2. priority_tonics (priority_tonic_count entries, each 0-11), in
+ *      order -- the caller's best guess at the tonic when no key
+ *      signature is present (the bass pitch class of the piece's
+ *      closing and opening chord).
+ *   3. A brute-force scan of all 12 pitch classes in order (C, C#, D,
+ *      ...), tried only if every candidate above misses -- this also
+ *      serves as a safety net for the rare case where a key signature
+ *      is present but doesn't actually match the piece's pitch content
+ *      (e.g. a mid-piece modulation).
+ */
 static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqlite3 *index_db,
                                                    NoteEvent *const *events, PitchNumericValue *const *pitch_values,
-                                                   size_t count) {
+                                                   size_t count, MidiKeySignature key_signature,
+                                                   const int *priority_tonics, size_t priority_tonic_count) {
+    static const char *const kPitchClassNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    static const char *const kPitchClassNamesFlat[12] = {"C", "Db", "D", "Eb", "E", "F",
+                                                           "Gb", "G", "Ab", "A", "Bb", "B"};
+
     KeyEstimate estimate = {false, 0, false};
     if (count == 0) {
         return estimate;
@@ -644,37 +767,34 @@ static KeyEstimate estimate_and_store_global_key(PersistenceHandle *handle, sqli
         return estimate;
     }
 
-    static const char *const kPitchClassNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-
     int *relative = malloc(sizeof(int) * count);
     if (!relative) {
         structure_destroy(region);
         return estimate;
     }
 
+    int key_signature_tonic;
+    if (tonic_from_key_signature(key_signature, &key_signature_tonic)) {
+        const char *tonic_name = key_signature.sharps_flats < 0 ? kPitchClassNamesFlat[key_signature_tonic]
+                                                                 : kPitchClassNames[key_signature_tonic];
+        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, key_signature_tonic,
+                             tonic_name, &estimate);
+    }
+
+    for (size_t p = 0; p < priority_tonic_count && !estimate.found; p++) {
+        int tonic = priority_tonics[p];
+        if (tonic < 0 || tonic > 11) {
+            continue;
+        }
+        const char *tonic_name = prefers_flat_spelling(tonic) ? kPitchClassNamesFlat[tonic] : kPitchClassNames[tonic];
+        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, tonic, tonic_name,
+                             &estimate);
+    }
+
     for (int tonic = 0; tonic < 12 && !estimate.found; tonic++) {
-        for (size_t i = 0; i < count; i++) {
-            long note_number = pitch_numeric_value_position_numerator(pitch_values[i]);
-            int pitch_class = pitch_class_of(note_number);
-            relative[i] = ((pitch_class - tonic) % 12 + 12) % 12;
-        }
-
-        KeyEstimationInput input = {region, framework, kPitchClassNames[tonic], relative, count};
-        AnalysisResult *result = NULL;
-        if (key_estimation_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
-            const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
-            size_t claim_size;
-            const char *claim = (const char *)value_content(interpretation_claim(interpretation), &claim_size);
-
-            if (persistence_store_interpretation(handle, interpretation) == PERSISTENCE_INTERPRETATION_OK) {
-                estimate.tonic_pitch_class = tonic;
-                estimate.is_major = (strstr(claim, "major") != NULL);
-                estimate.found = true;
-                record_interpretation_id(index_db, entity_id_value(interpretation_id(interpretation)),
-                                          kIndexTypeKey);
-            }
-            analysis_result_destroy(result);
-        }
+        const char *tonic_name = prefers_flat_spelling(tonic) ? kPitchClassNamesFlat[tonic] : kPitchClassNames[tonic];
+        try_tonic_and_store(handle, index_db, region, framework, pitch_values, count, relative, tonic, tonic_name,
+                             &estimate);
     }
 
     free(relative);
@@ -1576,6 +1696,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
+    /* A malformed key signature meta-event doesn't fail an otherwise-valid
+       import -- it just means no key signature is reported, same as a
+       file that never had one. */
+    MidiKeySignature key_signature = {false, 0, false};
+    if (midi_key_signature_scan(midi_data, midi_size, &key_signature) != MIDI_KEY_SIGNATURE_OK) {
+        key_signature = (MidiKeySignature){false, 0, false};
+    }
+
     if (!ensure_dir_exists(pieces_dir)) {
         for (size_t i = 0; i < count; i++) {
             note_event_destroy(events[i]);
@@ -1611,10 +1739,19 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
             sqlite3 *index_db = open_interpretation_index(db_path);
             record_original_filename(index_db, original_filename);
 
-            KeyEstimate key = estimate_and_store_global_key(handle, index_db, events, pitch_values, count);
-
             SonorityGrouping grouping;
             if (segment_by_onset(events, count, &grouping)) {
+                int priority_tonics[2];
+                size_t priority_tonic_count = 0;
+                priority_tonics[priority_tonic_count++] =
+                    bass_pitch_class(&grouping.groups[grouping.group_count - 1], pitch_values);
+                if (grouping.group_count > 1) {
+                    priority_tonics[priority_tonic_count++] = bass_pitch_class(&grouping.groups[0], pitch_values);
+                }
+
+                KeyEstimate key = estimate_and_store_global_key(handle, index_db, events, pitch_values, count,
+                                                                 key_signature, priority_tonics, priority_tonic_count);
+
                 for (size_t i = 0; i < grouping.group_count; i++) {
                     identify_and_store_chord(handle, index_db, &grouping.groups[i], events, pitch_values, &key);
                 }

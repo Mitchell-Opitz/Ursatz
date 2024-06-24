@@ -95,3 +95,21 @@ target_link_libraries(test_framework_analyzers PRIVATE
 )
 
 add_test(NAME framework_analyzers COMMAND test_framework_analyzers)
+
+add_executable(test_corpus_key_estimation test_corpus_key_estimation.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+)
+
+target_include_directories(test_corpus_key_estimation PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/include
+  ${CMAKE_SOURCE_DIR}/backend/src
+  ${CMAKE_SOURCE_DIR}/backend/src/service
+)
+
+target_link_libraries(test_corpus_key_estimation PRIVATE
+  ursatz
+  common_practice_minimal
+)
+
+add_test(NAME corpus_key_estimation COMMAND test_corpus_key_estimation
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
