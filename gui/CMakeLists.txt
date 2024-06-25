@@ -41,3 +41,5 @@ add_subdirectory(backend)
 
 enable_testing()
 add_subdirectory(backend/tests)
+
+add_subdirectory(frontend/tests)
