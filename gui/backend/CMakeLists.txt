@@ -17,6 +17,7 @@ target_include_directories(ursatz-gui-backend PRIVATE
 target_link_libraries(ursatz-gui-backend PRIVATE
   ursatz
   common_practice_minimal
+  standard_harmony
   civetweb-c-library
 )
 

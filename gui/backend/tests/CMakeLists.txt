@@ -16,6 +16,7 @@ target_include_directories(test_health_route PRIVATE
 target_link_libraries(test_health_route PRIVATE
   ursatz
   common_practice_minimal
+  standard_harmony
   civetweb-c-library
 )
 
@@ -43,6 +44,7 @@ target_include_directories(test_analyzer_route PRIVATE
 target_link_libraries(test_analyzer_route PRIVATE
   ursatz
   common_practice_minimal
+  standard_harmony
   civetweb-c-library
 )
 
@@ -70,6 +72,7 @@ target_include_directories(test_corpus_route PRIVATE
 target_link_libraries(test_corpus_route PRIVATE
   ursatz
   common_practice_minimal
+  standard_harmony
   civetweb-c-library
 )
 
@@ -92,6 +95,7 @@ target_include_directories(test_framework_analyzers PRIVATE
 target_link_libraries(test_framework_analyzers PRIVATE
   ursatz
   common_practice_minimal
+  standard_harmony
 )
 
 add_test(NAME framework_analyzers COMMAND test_framework_analyzers)
@@ -109,6 +113,7 @@ target_include_directories(test_corpus_key_estimation PRIVATE
 target_link_libraries(test_corpus_key_estimation PRIVATE
   ursatz
   common_practice_minimal
+  standard_harmony
 )
 
 add_test(NAME corpus_key_estimation COMMAND test_corpus_key_estimation

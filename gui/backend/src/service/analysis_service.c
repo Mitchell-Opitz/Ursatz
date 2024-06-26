@@ -22,6 +22,7 @@
 #include <core/value.h>
 #include <events/note_event.h>
 #include <framework.h>
+#include <harmony_cadence_rules.h>
 #include <identity/entity_id.h>
 #include <identity/schema_version.h>
 #include <interpretation/interpretation.h>
@@ -43,6 +44,7 @@
 #include <persistence/persistence_note_events.h>
 #include <pitch/pitch_numeric_value.h>
 #include <relationship/relationship.h>
+#include <semantics/cadence_type.h>
 #include <semantics/contour.h>
 #include <semantics/rhythmic_pattern.h>
 #include <semantics/sonority.h>
@@ -1203,21 +1205,37 @@ static size_t group_index_for_event_id(const SonorityGrouping *grouping, NoteEve
     return (size_t)-1;
 }
 
-/* The cadence type (borrowed, from cadence_types) that closes phrase
- * occurrence occ, or NULL if its closing event isn't a group
- * representative or has no classified cadence. */
-static const char *closing_cadence_type(const PhraseOccurrence *occ, const SonorityGrouping *grouping,
+/* The CadenceType for a cadence label as the classifier stores it
+ * (cadence_type_label). CADENCE_TYPE_UNKNOWN for NULL or an unrecognized
+ * label: Ursatz now takes a CadenceType, not the label string. */
+static CadenceType cadence_type_from_label(const char *label) {
+    if (!label) {
+        return CADENCE_TYPE_UNKNOWN;
+    }
+    for (int t = 0; t < (int)CADENCE_TYPE_COUNT; t++) {
+        const char *candidate = cadence_type_label((CadenceType)t);
+        if (candidate && strcmp(candidate, label) == 0) {
+            return (CadenceType)t;
+        }
+    }
+    return CADENCE_TYPE_UNKNOWN;
+}
+
+/* The cadence type that closes phrase occurrence occ, or
+ * CADENCE_TYPE_UNKNOWN if its closing event isn't a group representative
+ * or has no classified cadence. */
+static CadenceType closing_cadence_type(const PhraseOccurrence *occ, const SonorityGrouping *grouping,
                                           NoteEvent *const *events, char *const *cadence_types) {
     size_t region_count = phrase_occurrence_region_event_id_count(occ);
     if (region_count == 0) {
-        return NULL;
+        return CADENCE_TYPE_UNKNOWN;
     }
     const EntityID *last_id = phrase_occurrence_region_event_id_at(occ, region_count - 1);
     size_t group_index = group_index_for_event_id(grouping, events, last_id);
     if (group_index == (size_t)-1) {
-        return NULL;
+        return CADENCE_TYPE_UNKNOWN;
     }
-    return cadence_types[group_index];
+    return cadence_type_from_label(cadence_types[group_index]);
 }
 
 static size_t event_index_by_id(NoteEvent *const *events, size_t count, const EntityID *id) {
@@ -1475,7 +1493,8 @@ static void run_period_and_sentence_detection(PersistenceHandle *handle, sqlite3
             period_entries[i].cadence_type = closing_cadence_type(phrase_occurrences[i], grouping, events, cadence_types);
         }
 
-        PeriodDetectionInput input = {period_entries, phrase_occurrence_count};
+        /* Ursatz PR #142: the caller supplies the cadence ranking function. */
+        PeriodDetectionInput input = {period_entries, phrase_occurrence_count, harmony_cadence_strength};
         AnalysisResult *result = NULL;
         if (period_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK) {
             store_all_interpretations(handle, index_db, result, kIndexTypePeriod);
@@ -1484,7 +1503,8 @@ static void run_period_and_sentence_detection(PersistenceHandle *handle, sqlite3
 
         Relationship **relationships = NULL;
         size_t relationship_count = 0;
-        if (period_detection_build_relationships(period_entries, phrase_occurrence_count, &relationships,
+        if (period_detection_build_relationships(period_entries, phrase_occurrence_count,
+                                                   harmony_cadence_strength, &relationships,
                                                    &relationship_count) == PERIOD_DETECTION_REL_OK) {
             record_relationships(index_db, relationships, relationship_count);
             period_detection_destroy_relationships(relationships, relationship_count);
@@ -2086,7 +2106,8 @@ static char *format_claim_label(const Interpretation *interpretation) {
     if (claim_type && strcmp(claim_type, "period-detection-claim") == 0 && claim_size == sizeof(PeriodDetectionClaim)) {
         const PeriodDetectionClaim *c = content;
         snprintf(buf, sizeof(buf), "period: %s (%s) -> %s (%s)", c->antecedent_phrase_occurrence_id,
-                 c->antecedent_cadence_type, c->consequent_phrase_occurrence_id, c->consequent_cadence_type);
+                 cadence_type_name(c->antecedent_cadence_type), c->consequent_phrase_occurrence_id,
+                 cadence_type_name(c->consequent_cadence_type));
         return dup_string(buf);
     }
     if (claim_type && strcmp(claim_type, "sentence-detection-claim") == 0 &&
@@ -2100,7 +2121,7 @@ static char *format_claim_label(const Interpretation *interpretation) {
         claim_size == sizeof(FormStructureDetectionClaim)) {
         const FormStructureDetectionClaim *c = content;
         snprintf(buf, sizeof(buf), "form: %s -[%s]-> %s", c->earlier_section_id,
-                 c->earlier_section_closing_cadence_type, c->later_section_id);
+                 cadence_type_name(c->earlier_section_closing_cadence_type), c->later_section_id);
         return dup_string(buf);
     }
     if (claim_type && strcmp(claim_type, "thematic-return-detection-claim") == 0 &&
@@ -2403,7 +2424,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
     }
 
     *out_xml = xml;
-    *out_cosmetic_meter = strstr(xml, "ursatz:synthetic-meter") != NULL;
+    /* Ursatz PR #142 renamed the marker ursatz:synthetic-meter to ursatz:meter-defaulted. */
+    *out_cosmetic_meter = strstr(xml, "ursatz:meter-defaulted") != NULL;
     return URSATZ_GUI_ANALYSIS_OK;
 }
 

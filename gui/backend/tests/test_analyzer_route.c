@@ -708,8 +708,9 @@ int main(void) {
   if (got_musicxml_response) {
     check(strstr(musicxml_response, "200") != NULL, "musicxml response is 200 OK");
     check(strstr(musicxml_response, "<score-partwise") != NULL, "musicxml response body is a MusicXML document");
-    check(strstr(musicxml_response, "ursatz:synthetic-meter") != NULL,
-          "musicxml response flags the synthetic-meter miscellaneous field");
+    /* Ursatz PR #142 renamed the marker ursatz:synthetic-meter to ursatz:meter-defaulted. */
+    check(strstr(musicxml_response, "ursatz:meter-defaulted") != NULL,
+          "musicxml response flags the meter-defaulted miscellaneous field");
   }
 
   char musicxml_meta_path[160];

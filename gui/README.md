@@ -268,10 +268,20 @@ cmake --build build
 ctest --test-dir build
 ```
 
-Ursatz is vendored as a git submodule at `external/ursatz`, same pattern
-as `ursatz-analyzer`. `git submodule update --init --recursive` (or
-`git clone --recurse-submodules` up front) is required before the first
-build.
+Requires CMake 3.20 or newer, a C11 compiler, SQLite development headers
+and pkg-config. Ursatz is vendored as a git submodule at `external/ursatz`,
+pinned at PR #142 (`ffd8a19`), the commit the Analyzer and Composer pin.
+`git submodule update --init --recursive` (or `git clone --recurse-submodules`
+up front) is required before the first build. Ursatz's own tests are not
+built (`URSATZ_BUILD_TESTS` is OFF).
+
+`ctest` runs the backend tests and, when `node` is installed, the frontend
+tests too (`frontend/tests/*.test.js`, registered as `frontend_<name>`).
+Without node CMake prints one status line and skips them.
+
+CI (`.github/workflows/ci.yml`) builds and runs `ctest` on every push and
+pull request. The private submodules are checked out through the
+`URSATZ_SUBMODULE_TOKEN` repository secret, which must be set.
 
 ## Out of scope
 
