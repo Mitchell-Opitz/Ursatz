@@ -1,4 +1,5 @@
 #include "analysis_service.h"
+#include "id_service.h"
 
 #include <ctype.h>
 #include <stdbool.h>
@@ -1697,13 +1698,34 @@ static bool ensure_dir_exists(const char *path) {
 #endif
 }
 
-static char *generate_piece_id(void) {
-    char *id = malloc(64);
-    if (!id) {
-        return NULL;
+static bool path_exists(const char *path) {
+#ifdef _WIN32
+    return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+#else
+    struct stat st;
+    return stat(path, &st) == 0;
+#endif
+}
+
+#define PIECE_ID_MAX_TRIES 8
+
+/* Draws ids until pieces_dir/<id>.db does not exist. Returns OK, ERR_ALLOC or
+   ERR_PERSISTENCE_FAILED (every try collided). */
+static UrsatzGuiAnalysisResult generate_piece_id(const char *pieces_dir, char **out_id) {
+    for (int attempt = 0; attempt < PIECE_ID_MAX_TRIES; attempt++) {
+        char *id = ursatz_gui_new_id("piece");
+        if (!id) {
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+        char db_path[320];
+        snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
+        if (!path_exists(db_path)) {
+            *out_id = id;
+            return URSATZ_GUI_ANALYSIS_OK;
+        }
+        free(id);
     }
-    snprintf(id, 64, "piece-%ld-%d", (long)time(NULL), rand());
-    return id;
+    return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *midi_data,
@@ -1734,15 +1756,16 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
-    char *id = generate_piece_id();
-    if (!id) {
+    char *id = NULL;
+    UrsatzGuiAnalysisResult id_result = generate_piece_id(pieces_dir, &id);
+    if (id_result != URSATZ_GUI_ANALYSIS_OK) {
         for (size_t i = 0; i < count; i++) {
             note_event_destroy(events[i]);
             pitch_numeric_value_destroy(pitch_values[i]);
         }
         free(events);
         free(pitch_values);
-        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        return id_result;
     }
 
     char db_path[320];

@@ -3,6 +3,7 @@ add_executable(ursatz-gui-backend
   src/server.c
   src/service/persistence_service.c
   src/service/analysis_service.c
+  src/service/id_service.c
   src/service/corpus_service.c
   src/routes/health.c
   src/routes/analyzer.c
