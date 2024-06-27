@@ -18,14 +18,12 @@ typedef struct {
     bool found;
     AnalysisChordReading best;
     AnalysisChordReading runner_up;
-    int root_pitch_class;        /* the best chord's root, 0-11; valid only when found */
-    int intervals[4];            /* the best chord's tones above its root, ascending; valid only when found */
-    size_t interval_count;
     CommonPracticeContextReading context; /* where the library took the reading from; valid only when found */
     AnalysisNonChordTone *tones; /* owned; the segment's non-chord tones, chord_index unset */
     size_t tone_count;
     bool in_region; /* the segment lies in a key region */
     size_t region;  /* index of that region; valid only when in_region */
+    CommonPracticeWeightedResult result; /* owned; the library's own result (its Chords), zeroed outside every region */
 } ChordEstimate;
 
 /*

@@ -9,6 +9,7 @@
 
 #include "analysis/outer_voice.h"
 #include "pipeline/chord_pipeline.h"
+#include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/segmentation.h"
 #include "time/musical_time.h"
 
@@ -28,7 +29,9 @@ typedef struct AnalysisChain {
     Segmentation voice_segmentation; /* the voice segments, not merged: one per melody note, for the outer voices */
 
     /* one pass */
+    CommonPracticeKeyRegions key_regions; /* the library's regions and changes, parallel to report's */
     ChordEstimate *chords;   /* segmentation.segment_count of them */
+    RomanNumerals romans;    /* the Roman numeral inputs and results, one per chord segment */
     OuterVoiceLines lines;   /* one entry per voice segment */
     AnalysisReport report;   /* the pass's results: entries, non-chord tones, key regions and changes */
 } AnalysisChain;

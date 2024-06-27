@@ -126,7 +126,8 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         return true;
     }
 
-    if (!estimate_key_regions(chain->notes, segmentation, boundaries, boundary_count, &report->key_regions,
+    if (!estimate_key_regions(chain->notes, segmentation, boundaries, boundary_count, &chain->key_regions,
+                              &report->key_regions,
                               &report->key_region_count, &report->key_changes, &report->key_change_count) ||
         !identify_pivot_chords(segmentation, report->key_regions, report->key_changes, report->key_change_count) ||
         !identify_chords(segmentation, report->key_regions, report->key_region_count, &chain->chords)) {
@@ -136,8 +137,8 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         return false;
     }
     if (!build_entries(chain) ||
-        !assign_roman_numerals(segmentation, chain->chords, report->key_regions, report->key_region_count,
-                               report->entries) ||
+        !build_roman_numerals(segmentation, chain->chords, &chain->key_regions, &chain->romans) ||
+        !assign_roman_numerals(&chain->romans, chain->chords, report->entries) ||
         !extract_outer_voices(chain->notes, &chain->voice_segmentation, segmentation, chain->chords,
                               report->key_regions, report->entries, &chain->lines) ||
         !collect_non_chord_tones(chain)) {
@@ -153,6 +154,9 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
 void chain_pass_destroy(AnalysisChain *chain) {
     chord_estimates_destroy(chain->chords, chain->segmentation.segment_count);
     chain->chords = NULL;
+    roman_numerals_destroy(&chain->romans);
+    common_practice_key_regions_destroy(&chain->key_regions);
+    chain->key_regions = (CommonPracticeKeyRegions){0};
     outer_voice_lines_destroy(&chain->lines);
     chain->lines = (OuterVoiceLines){NULL, NULL, 0};
     analysis_report_destroy(&chain->report);

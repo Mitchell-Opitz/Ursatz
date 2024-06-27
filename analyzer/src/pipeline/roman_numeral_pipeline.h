@@ -7,23 +7,44 @@
 #include <ursatz_analyzer/analysis_report.h>
 
 #include "pipeline/chord_pipeline.h"
+#include "chord_input.h"
+#include "key_regions.h"
 #include "pipeline/segmentation.h"
+#include "roman_numeral_adapter.h"
 
 /*
- * Gives every chord segment the Roman numeral Ursatz's standard-tonality adapter
- * (standard_tonality_build_roman_numerals) reads for it in the key of the region it starts in, or the reason
- * the library gives none. Numerals are relative to that local key, not the home key. The label, its figure
- * (6, 6/4, 6/5, 4/3, 4/2), quality marks and the applied form V/x are the library's; this only hands it the
- * chord the weighted identification found (root, tones above the root, bass), the key region's tonic and mode,
- * and the segment's pitch-class weights, in time order, and copies what comes back.
- *
- * A segment is left unlabelled, with a reason, when it lies in no key region, when the library identified no
- * chord, or when the adapter returns no numeral for the chord in that key.
- *
- * entries must hold segmentation->segment_count entries whose chord confidence and region are filled in.
- * Returns false only on allocation or library failure.
+ * The Roman numeral of every chord segment, from Ursatz's standard-tonality adapter: the chord inputs
+ * (standard_tonality_build_chord_inputs) from the library's own chords, key regions, the segments' pitch-class
+ * weights and their sounding pitches, then the numerals (standard_tonality_build_roman_numerals). Each segment
+ * is read in the key region it starts in, so numerals are relative to that local key, not the home key. The
+ * label, its figure (6, 6/4, 6/5, 4/3, 4/2), the chord bass the figure is read from (the lowest sounding chord
+ * tone), quality marks and the applied form V/x are the library's; this only builds the neutral inputs and keeps
+ * what comes back.
  */
-bool assign_roman_numerals(const Segmentation *segmentation, const ChordEstimate *chords,
-                           const AnalysisKeyRegion *regions, size_t region_count, AnalysisReportEntry *entries);
+typedef struct {
+    StandardTonalityKeyRegionInput *regions;  /* owned; one per key region */
+    StandardTonalitySegmentInput *segments;   /* owned; one per chord segment */
+    MusicalTime **starts;                     /* owned; the segments' starts, which segments borrow */
+    double (*weights)[12];                    /* owned; the segments' weights, which segments borrow */
+    int *pitches;                             /* owned; the segments' sounding pitches, which segments borrow */
+    size_t segment_count;
+    StandardTonalityChordInput *inputs;       /* owned; the adapter's inputs, one per chord segment */
+    StandardTonalityRomanResult *results;     /* owned; one per chord segment */
+    size_t count;
+} RomanNumerals;
+
+/* Builds the inputs and the numerals. found holds the key regions the chords were read in. On false *out holds
+   what was built (release with roman_numerals_destroy). Returns false only on allocation or library failure. */
+bool build_roman_numerals(const Segmentation *segmentation, const ChordEstimate *chords,
+                          const CommonPracticeKeyRegions *found, RomanNumerals *out);
+
+/*
+ * Copies each segment's numeral into its entry, or the reason the library gives none: the segment lies in no
+ * key region, the library identified no chord, or the adapter returns no numeral for the chord in that key.
+ * Returns false only on allocation failure.
+ */
+bool assign_roman_numerals(const RomanNumerals *romans, const ChordEstimate *chords, AnalysisReportEntry *entries);
+
+void roman_numerals_destroy(RomanNumerals *romans);
 
 #endif

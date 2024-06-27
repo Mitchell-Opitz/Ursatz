@@ -78,6 +78,7 @@ void chord_estimates_destroy(ChordEstimate *estimates, size_t count) {
             free(estimates[i].tones[t].type);
         }
         free(estimates[i].tones);
+        common_practice_weighted_result_destroy(&estimates[i].result);
     }
     free(estimates);
 }
@@ -142,12 +143,13 @@ static bool identify_in_region(const Segmentation *segmentation, size_t first, s
             common_practice_weighted_results_destroy(&results);
             return false;
         }
-        estimates[i].root_pitch_class = result->best.root_pitch_class;
-        estimates[i].interval_count = chord_offsets(&result->best, estimates[i].intervals);
         estimates[i].context = result->context;
         estimates[i].found = true;
     }
-    common_practice_weighted_results_destroy(&results);
+    for (size_t k = 0; k < count; k++) {
+        estimates[first + k].result = results.items[k];
+    }
+    free(results.items);
     return true;
 }
 
