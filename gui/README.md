@@ -56,6 +56,12 @@ The backend exposes:
   `estimate_global_key` in `service/analysis_service.c` is a copy of
   Ursatz-Analyzer's `key_pipeline.c`, not a shared library call, so any
   fix there must be ported here by hand.
+  Piece ids have the form `piece-<16 lowercase hex>`. They come from
+  `ursatz_gui_new_id` in `service/id_service.c`, the one place every store
+  draws ids from: 8 bytes of `/dev/urandom`, or, when that cannot be
+  opened, a hash of the time, clock, process id and a counter. A new piece
+  id is redrawn if `pieces/<id>.db` already exists (at most 8 tries).
+  Ids are opaque; pieces saved with older ids keep working.
 - `GET /api/analyzer/pieces`: lists saved piece ids.
 - `GET /api/analyzer/pieces/<id>`: returns one saved piece's detail --
   its NoteEvent count and every Chord/Key/Cadence/Motif/Phrase/Period/

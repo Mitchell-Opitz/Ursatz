@@ -2,6 +2,7 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
@@ -30,6 +31,7 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
@@ -58,6 +60,7 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
@@ -84,6 +87,7 @@ add_test(NAME corpus_route COMMAND test_corpus_route)
 
 add_executable(test_framework_analyzers test_framework_analyzers.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
 )
 
 target_include_directories(test_framework_analyzers PRIVATE
@@ -102,6 +106,7 @@ add_test(NAME framework_analyzers COMMAND test_framework_analyzers)
 
 add_executable(test_corpus_key_estimation test_corpus_key_estimation.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
 )
 
 target_include_directories(test_corpus_key_estimation PRIVATE
@@ -118,3 +123,13 @@ target_link_libraries(test_corpus_key_estimation PRIVATE
 
 add_test(NAME corpus_key_estimation COMMAND test_corpus_key_estimation
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_id_service test_id_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+)
+
+target_include_directories(test_id_service PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+add_test(NAME id_service COMMAND test_id_service)
