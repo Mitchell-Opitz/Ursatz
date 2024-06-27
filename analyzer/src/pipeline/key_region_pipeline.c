@@ -81,7 +81,8 @@ static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange
 }
 
 bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation,
-                          const MusicalTime *const *boundaries, size_t boundary_count, CommonPracticeKeyRegions *found,
+                          const CommonPracticeKeyChord *chords, const MusicalTime *const *boundaries,
+                          size_t boundary_count, CommonPracticeKeyRegions *found,
                           AnalysisKeyRegion **regions, size_t *region_count, AnalysisKeyChange **changes,
                           size_t *change_count) {
     *found = (CommonPracticeKeyRegions){0};
@@ -112,6 +113,9 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
 
     bool library_ok = true;
     bool ok = build_key_segments(segmentation, segments, times, &library_ok);
+    for (size_t i = 0; chords && i < segment_count; i++) {
+        segments[i].chord = chords[i];
+    }
     CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
     config.phrase_boundaries = boundaries;
     config.phrase_boundary_count = boundary_count;

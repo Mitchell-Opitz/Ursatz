@@ -126,9 +126,9 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         return true;
     }
 
-    if (!estimate_key_regions(chain->notes, segmentation, boundaries, boundary_count, &chain->key_regions,
-                              &report->key_regions,
-                              &report->key_region_count, &report->key_changes, &report->key_change_count) ||
+    if (!estimate_key_regions(chain->notes, segmentation, chain->key_chords, boundaries, boundary_count,
+                              &chain->key_regions, &report->key_regions, &report->key_region_count,
+                              &report->key_changes, &report->key_change_count) ||
         !identify_pivot_chords(segmentation, report->key_regions, report->key_changes, report->key_change_count) ||
         !identify_chords(segmentation, report->key_regions, report->key_region_count, &chain->chords)) {
         return false;
@@ -151,6 +151,23 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
     return true;
 }
 
+bool chain_keep_chord_evidence(AnalysisChain *chain) {
+    size_t count = chain->segmentation.segment_count;
+    if (count == 0 || !chain->chords) {
+        return true;
+    }
+    if (!chain->key_chords) {
+        chain->key_chords = calloc(count, sizeof(CommonPracticeKeyChord));
+        if (!chain->key_chords) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < count; i++) {
+        chain->key_chords[i] = common_practice_key_chord_of(&chain->chords[i].result);
+    }
+    return true;
+}
+
 void chain_pass_destroy(AnalysisChain *chain) {
     chord_estimates_destroy(chain->chords, chain->segmentation.segment_count);
     chain->chords = NULL;
@@ -168,4 +185,6 @@ void chain_destroy(AnalysisChain *chain) {
     chain_pass_destroy(chain);
     segmentation_destroy(&chain->segmentation);
     segmentation_destroy(&chain->voice_segmentation);
+    free(chain->key_chords);
+    chain->key_chords = NULL;
 }

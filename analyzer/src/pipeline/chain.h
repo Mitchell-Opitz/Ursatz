@@ -27,6 +27,8 @@ typedef struct AnalysisChain {
     const ImportedNotes *notes;
     Segmentation segmentation;       /* the chord segments, merged over unchanged harmony */
     Segmentation voice_segmentation; /* the voice segments, not merged: one per melody note, for the outer voices */
+    CommonPracticeKeyChord *key_chords; /* owned; each chord segment's chord from an earlier pass, as functional
+                                           evidence for the key regions; NULL before chain_keep_chord_evidence */
 
     /* one pass */
     CommonPracticeKeyRegions key_regions; /* the library's regions and changes, parallel to report's */
@@ -41,6 +43,9 @@ bool chain_init(AnalysisChain *chain, const ImportedNotes *notes);
 /* Runs the stages from the key regions on. boundaries are phrase boundary times for the key regions (any
    order, borrowed for the call), or NULL with boundary_count 0. */
 bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count);
+
+/* Keeps the pass's chords as functional evidence for the key regions of every later pass (R-043). */
+bool chain_keep_chord_evidence(AnalysisChain *chain);
 
 /* Releases one pass's results, leaving the segments for the next pass. */
 void chain_pass_destroy(AnalysisChain *chain);
