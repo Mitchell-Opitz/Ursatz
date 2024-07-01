@@ -2,6 +2,7 @@
 #include "id_service.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,9 +15,15 @@
 #else
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 #include <sqlite3.h>
+
+#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/input_pipeline.h>
 
 #include <core/entity.h>
 #include <core/provenance_reference.h>
@@ -1709,143 +1716,223 @@ static bool path_exists(const char *path) {
 
 #define PIECE_ID_MAX_TRIES 8
 
-/* Draws ids until pieces_dir/<id>.db does not exist. Returns OK, ERR_ALLOC or
-   ERR_PERSISTENCE_FAILED (every try collided). */
-static UrsatzGuiAnalysisResult generate_piece_id(const char *pieces_dir, char **out_id) {
+/* Creates one directory. Returns 1 if created, 0 if it already exists, -1 on
+   any other failure. */
+static int make_dir(const char *path) {
+#ifdef _WIN32
+    int rc = _mkdir(path);
+#else
+    int rc = mkdir(path, 0755);
+#endif
+    if (rc == 0) {
+        return 1;
+    }
+    return errno == EEXIST ? 0 : -1;
+}
+
+/* Writes data to "<path>.tmp", then renames it over path. */
+static bool write_file_atomic(const char *path, const void *data, size_t size) {
+    char tmp_path[400];
+    if (snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
+        return false;
+    }
+    FILE *file = fopen(tmp_path, "wb");
+    if (!file) {
+        return false;
+    }
+    bool ok = size == 0 || fwrite(data, 1, size, file) == size;
+    ok = (fclose(file) == 0) && ok;
+    if (!ok) {
+        remove(tmp_path);
+        return false;
+    }
+#ifdef _WIN32
+    remove(path);
+#endif
+    if (rename(tmp_path, path) != 0) {
+        remove(tmp_path);
+        return false;
+    }
+    return true;
+}
+
+/* Removes every file in a piece directory, then the directory. */
+static void remove_piece_dir(const char *dir_path) {
+#ifdef _WIN32
+    char pattern[MAX_PATH];
+    snprintf(pattern, sizeof(pattern), "%s\\*", dir_path);
+    WIN32_FIND_DATAA find_data;
+    HANDLE find_handle = FindFirstFileA(pattern, &find_data);
+    if (find_handle != INVALID_HANDLE_VALUE) {
+        do {
+            if (strcmp(find_data.cFileName, ".") != 0 && strcmp(find_data.cFileName, "..") != 0) {
+                char file_path[400];
+                snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, find_data.cFileName);
+                remove(file_path);
+            }
+        } while (FindNextFileA(find_handle, &find_data) != 0);
+        FindClose(find_handle);
+    }
+    _rmdir(dir_path);
+#else
+    DIR *dir = opendir(dir_path);
+    if (dir) {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                char file_path[400];
+                snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry->d_name);
+                remove(file_path);
+            }
+        }
+        closedir(dir);
+    }
+    rmdir(dir_path);
+#endif
+}
+
+static bool has_extension(const char *filename, const char *extension) {
+    if (!filename) {
+        return false;
+    }
+    size_t name_len = strlen(filename);
+    size_t ext_len = strlen(extension);
+    if (name_len < ext_len) {
+        return false;
+    }
+    for (size_t i = 0; i < ext_len; i++) {
+        if (tolower((unsigned char)filename[name_len - ext_len + i]) != extension[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The stored source file's name: source.mid for MIDI; for MusicXML
+   source.xml / source.mxl when the upload had that extension, else
+   source.musicxml. */
+static const char *source_file_name(InputFormat format, const char *original_filename) {
+    if (format == INPUT_FORMAT_MIDI) {
+        return "source.mid";
+    }
+    if (has_extension(original_filename, ".xml")) {
+        return "source.xml";
+    }
+    if (has_extension(original_filename, ".mxl")) {
+        return "source.mxl";
+    }
+    return "source.musicxml";
+}
+
+/* Imports the source file and runs it through the Analyzer. On OK,
+   *out_json is the analysis document (caller frees). */
+static UrsatzGuiAnalysisResult analyze_source_file(const char *source_path, InputFormat format, char **out_json) {
+    ImportedNotes notes;
+    if (input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+    }
+
+    AnalysisReport report;
+    if (!run_analysis_pipeline(&notes, &report)) {
+        imported_notes_destroy(&notes);
+        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+    }
+
+    AnalysisDocument *document = analysis_document_build(source_path, &notes, &report);
+    analysis_report_destroy(&report);
+    imported_notes_destroy(&notes);
+    if (!document) {
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    char *json = analysis_document_to_json(document);
+    analysis_document_destroy(document);
+    if (!json) {
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    *out_json = json;
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
+/* Creates pieces_dir/<id>/ with a fresh id, re-drawing while the directory
+   exists. Returns OK, ERR_ALLOC or ERR_PERSISTENCE_FAILED. */
+static UrsatzGuiAnalysisResult create_piece_dir(const char *pieces_dir, char **out_id) {
     for (int attempt = 0; attempt < PIECE_ID_MAX_TRIES; attempt++) {
         char *id = ursatz_gui_new_id("piece");
         if (!id) {
             return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
-        char db_path[320];
-        snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
-        if (!path_exists(db_path)) {
+        char dir_path[320];
+        snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
+        int made = make_dir(dir_path);
+        if (made > 0) {
             *out_id = id;
             return URSATZ_GUI_ANALYSIS_OK;
         }
         free(id);
+        if (made < 0) {
+            return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+        }
     }
     return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *midi_data,
-                                                              size_t midi_size, const char *original_filename,
+UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
+                                                              size_t size, const char *original_filename,
                                                               char **out_id) {
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitch_values = NULL;
-    size_t count = 0;
-    if (midi_importer_import(midi_data, midi_size, &events, &pitch_values, &count) != MIDI_IMPORT_OK) {
-        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
-    }
-
-    /* A malformed key signature meta-event doesn't fail an otherwise-valid
-       import -- it just means no key signature is reported, same as a
-       file that never had one. */
-    MidiKeySignature key_signature = {false, 0, false};
-    if (midi_key_signature_scan(midi_data, midi_size, &key_signature) != MIDI_KEY_SIGNATURE_OK) {
-        key_signature = (MidiKeySignature){false, 0, false};
-    }
-
     if (!ensure_dir_exists(pieces_dir)) {
-        for (size_t i = 0; i < count; i++) {
-            note_event_destroy(events[i]);
-            pitch_numeric_value_destroy(pitch_values[i]);
-        }
-        free(events);
-        free(pitch_values);
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
     char *id = NULL;
-    UrsatzGuiAnalysisResult id_result = generate_piece_id(pieces_dir, &id);
-    if (id_result != URSATZ_GUI_ANALYSIS_OK) {
-        for (size_t i = 0; i < count; i++) {
-            note_event_destroy(events[i]);
-            pitch_numeric_value_destroy(pitch_values[i]);
-        }
-        free(events);
-        free(pitch_values);
-        return id_result;
-    }
-
-    char db_path[320];
-    snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
-
-    PersistenceHandle *handle = NULL;
-    UrsatzGuiAnalysisResult result = URSATZ_GUI_ANALYSIS_OK;
-    if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
-        result = URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
-    } else {
-        if (persistence_store_note_events(handle, events, count) != PERSISTENCE_NOTE_EVENTS_OK) {
-            result = URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
-        } else {
-            sqlite3 *index_db = open_interpretation_index(db_path);
-            record_original_filename(index_db, original_filename);
-
-            SonorityGrouping grouping;
-            if (segment_by_onset(events, count, &grouping)) {
-                int priority_tonics[2];
-                size_t priority_tonic_count = 0;
-                priority_tonics[priority_tonic_count++] =
-                    bass_pitch_class(&grouping.groups[grouping.group_count - 1], pitch_values);
-                if (grouping.group_count > 1) {
-                    priority_tonics[priority_tonic_count++] = bass_pitch_class(&grouping.groups[0], pitch_values);
-                }
-
-                KeyEstimate key = estimate_and_store_global_key(handle, index_db, events, pitch_values, count,
-                                                                 key_signature, priority_tonics, priority_tonic_count);
-
-                for (size_t i = 0; i < grouping.group_count; i++) {
-                    identify_and_store_chord(handle, index_db, &grouping.groups[i], events, pitch_values, &key);
-                }
-
-                char **cadence_types =
-                    run_cadence_classification(handle, index_db, &grouping, events, pitch_values, &key);
-
-                PhraseBoundaryDetectionPoint *phrase_points = NULL;
-                PhraseOccurrence **phrase_occurrences = NULL;
-                size_t phrase_occurrence_count = 0;
-                if (cadence_types) {
-                    run_phrase_boundary_detection(handle, index_db, &grouping, events, cadence_types, &phrase_points,
-                                                   &phrase_occurrences, &phrase_occurrence_count);
-                }
-
-                if (phrase_occurrence_count > 0) {
-                    run_motif_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count, events,
-                                        pitch_values, count);
-                    run_period_and_sentence_detection(handle, index_db, phrase_occurrences, phrase_occurrence_count,
-                                                       &grouping, events, pitch_values, count, cadence_types);
-                    run_form_and_thematic_return_detection(handle, index_db, phrase_occurrences,
-                                                            phrase_occurrence_count, &grouping, events, pitch_values,
-                                                            count, cadence_types);
-                }
-
-                if (phrase_occurrences) {
-                    phrase_boundary_detection_destroy_occurrences(phrase_occurrences, phrase_occurrence_count);
-                }
-                free(phrase_points);
-
-                free_cadence_types(cadence_types, grouping.group_count);
-                sonority_grouping_destroy(&grouping);
-            }
-
-            if (index_db) {
-                sqlite3_close(index_db);
-            }
-        }
-        persistence_close(handle);
-    }
-
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitch_values[i]);
-    }
-    free(events);
-    free(pitch_values);
-
+    UrsatzGuiAnalysisResult result = create_piece_dir(pieces_dir, &id);
     if (result != URSATZ_GUI_ANALYSIS_OK) {
+        return result;
+    }
+
+    char dir_path[320];
+    snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
+
+    /* The bytes go to disk unchanged under a neutral name first: the format
+       is detected from the content, and the final name depends on it. */
+    char upload_path[400];
+    snprintf(upload_path, sizeof(upload_path), "%s/source.upload", dir_path);
+    if (!write_file_atomic(upload_path, data, size)) {
+        remove_piece_dir(dir_path);
+        free(id);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    InputFormat format = input_format_detect(upload_path);
+    if (format == INPUT_FORMAT_AUTO) {
+        remove_piece_dir(dir_path);
+        free(id);
+        return URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT;
+    }
+
+    char source_path[400];
+    snprintf(source_path, sizeof(source_path), "%s/%s", dir_path, source_file_name(format, original_filename));
+    if (rename(upload_path, source_path) != 0) {
+        remove_piece_dir(dir_path);
+        free(id);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    char *document_json = NULL;
+    result = analyze_source_file(source_path, format, &document_json);
+    if (result != URSATZ_GUI_ANALYSIS_OK) {
+        remove_piece_dir(dir_path);
         free(id);
         return result;
+    }
+
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    bool written = write_file_atomic(analysis_path, document_json, strlen(document_json));
+    free(document_json);
+    if (!written) {
+        remove_piece_dir(dir_path);
+        free(id);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
     *out_id = id;

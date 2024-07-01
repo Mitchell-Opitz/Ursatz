@@ -62,6 +62,16 @@ static void send_json(struct mg_connection *conn, const char *body) {
   mg_write(conn, body, len);
 }
 
+/* Sends body as application/json with a non-200 status line. */
+static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
+  size_t len = strlen(body);
+  mg_printf(conn,
+            "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
+            status, reason, len);
+  mg_write(conn, body, len);
+  return status;
+}
+
 /* Raw MusicXmlExportResult enum name, for the API's "code" field -- kept
  * unshortened so it is directly greppable against musicxml_export.h. */
 static const char *musicxml_export_error_code(MusicXmlExportResult error) {
@@ -222,33 +232,36 @@ static char *read_filename_header(struct mg_connection *conn) {
 }
 
 static int handle_post(struct mg_connection *conn) {
-  size_t midi_size = 0;
-  unsigned char *midi_data = read_request_body(conn, &midi_size);
-  if (!midi_data) {
+  size_t body_size = 0;
+  unsigned char *body_data = read_request_body(conn, &body_size);
+  if (!body_data) {
     send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
     return 400;
   }
 
   char *filename = read_filename_header(conn);
   if (!filename) {
-    free(midi_data);
+    free(body_data);
     send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
   char *id = NULL;
   UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_import_and_save(kPiecesDir, midi_data, midi_size, filename, &id);
-  free(midi_data);
+      ursatz_gui_analysis_import_and_save(kPiecesDir, body_data, body_size, filename, &id);
+  free(body_data);
 
+  if (result == URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT) {
+    free(filename);
+    return send_json_status(conn, 415, "Unsupported Media Type", "{\"error\": \"unsupported format\"}");
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+    free(filename);
+    return send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
+  }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     free(filename);
-    const char *message = (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED)
-                               ? "failed to import MIDI file"
-                               : "failed to save piece";
-    char body[256];
-    snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"%s\"}", message);
-    send_json(conn, body);
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to save piece\"}");
     return 200;
   }
 

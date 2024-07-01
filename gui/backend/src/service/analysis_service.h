@@ -39,7 +39,8 @@ typedef enum {
     URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED,
     URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED,
     URSATZ_GUI_ANALYSIS_ERR_ALLOC,
-    URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND
+    URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND,
+    URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT
 } UrsatzGuiAnalysisResult;
 
 /*
@@ -115,22 +116,19 @@ typedef struct {
 } UrsatzGuiPieceSummary;
 
 /*
- * Imports midi_data[0..midi_size) via Ursatz's MIDIImporter, estimates
- * a single global key and identifies a chord for each onset-grouped
- * sonority against the common-practice-minimal framework, and saves
- * the resulting NoteEvent sequence plus every produced Interpretation
- * into a new SQLite file under pieces_dir. original_filename (the
- * upload's client-supplied filename, may be NULL or "" if unknown) is
- * persisted alongside the piece so it can be displayed later; it does
- * not affect the generated id.
+ * Stores data[0..size) (a MIDI or MusicXML file) unchanged as the source of
+ * a new piece, imports it through the Analyzer library, and saves the
+ * Analyzer's analysis document next to it, all under pieces_dir/<id>/.
+ * original_filename (may be NULL or "") only picks the extension of a
+ * stored MusicXML source and is recorded as the piece's display name.
  *
- * On URSATZ_GUI_ANALYSIS_OK, *out_id is a newly allocated, caller-owned
- * id string (the saved piece's filename, without directory or ".db").
- * A piece with no recognizable key still saves successfully (its
- * NoteEvents only, no Interpretations).
+ * On URSATZ_GUI_ANALYSIS_OK, *out_id is a newly allocated, caller-owned id.
+ * URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT if the bytes are neither MIDI
+ * nor MusicXML; URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the import or the
+ * analysis failed. On any error the piece directory is removed.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *midi_data,
-                                                              size_t midi_size, const char *original_filename,
+UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
+                                                              size_t size, const char *original_filename,
                                                               char **out_id);
 
 /*
