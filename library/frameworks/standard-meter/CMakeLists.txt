@@ -21,6 +21,7 @@ add_library(standard_meter
     analysis/meter_analysis_claim.c
     analysis/meter_analysis_syncopation.c
     analysis/meter_analysis_hemiola.c
+    analysis/meter_analysis_hypermeter.c
 )
 target_include_directories(standard_meter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
