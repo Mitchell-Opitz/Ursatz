@@ -98,21 +98,20 @@ typedef struct {
 
 typedef struct {
     char *id;
-    char *filename; /* original upload filename, or "" if none was given */
-    size_t note_event_count;
-    UrsatzGuiInterpretationSummary *interpretations;
-    size_t interpretation_count;
-    UrsatzGuiRelationshipSummary *relationships;
-    size_t relationship_count;
+    char *filename;    /* upload name, or "" if none was given */
+    char *format;      /* "midi" or "musicxml" */
+    char *uploaded_at; /* ISO 8601 UTC */
+    char *document_json; /* the Analyzer's analysis document, as stored */
+    char **note_xml_ids; /* note_xml_ids[i]: the <note xml:id> the score export writes for note i */
+    size_t note_count;
 } UrsatzGuiPieceDetail;
 
-/*
- * One entry in ursatz_gui_analysis_list's result: a saved piece's id
- * plus the original filename it was uploaded as ("" if none was given).
- */
+/* One entry in ursatz_gui_analysis_list's result. */
 typedef struct {
     char *id;
     char *filename;
+    char *format;
+    char *uploaded_at;
 } UrsatzGuiPieceSummary;
 
 /*
@@ -132,25 +131,24 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
                                                               char **out_id);
 
 /*
- * Lists saved pieces found in pieces_dir (filenames minus ".db"), each
- * with its persisted original filename. On URSATZ_GUI_ANALYSIS_OK,
- * *out_pieces is a newly allocated array of *out_count
- * UrsatzGuiPieceSummary entries (caller frees each entry's id/filename,
- * then the array). A missing or empty pieces_dir yields *out_count ==
- * 0, *out_pieces == NULL, still URSATZ_GUI_ANALYSIS_OK.
+ * Lists the pieces in pieces_dir: every pieces_dir/<id>/ directory with a
+ * readable meta.json, newest upload first, then by id. Anything else in
+ * pieces_dir (old "<id>.db" pieces, stray files) is ignored. On
+ * URSATZ_GUI_ANALYSIS_OK, *out_pieces is a newly allocated array of
+ * *out_count entries (caller frees each entry's strings, then the array).
+ * A missing or empty pieces_dir yields *out_count == 0, *out_pieces == NULL.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzGuiPieceSummary **out_pieces,
                                                   size_t *out_count);
 
 /*
- * Loads the detail view for one saved piece: its NoteEvent count plus
- * every Chord/Key Interpretation produced for it (via the
- * ursatz-gui-owned interpretation index recorded at analysis time -- see
- * analysis_service.c), each with its produced_by author/method.
+ * Loads one piece: its meta.json fields, its stored analysis document, and
+ * the xml:id the score export writes for each note of the source, in the
+ * order of the document's note_ids (R-085).
  *
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
- * under pieces_dir. On URSATZ_GUI_ANALYSIS_OK, *out_detail is newly
- * allocated and caller-owned (free with ursatz_gui_piece_detail_destroy).
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. On
+ * URSATZ_GUI_ANALYSIS_OK, *out_detail is newly allocated and caller-owned
+ * (free with ursatz_gui_piece_detail_destroy).
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
                                                        UrsatzGuiPieceDetail **out_detail);
@@ -158,26 +156,16 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
 void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail);
 
 /*
- * Deletes a saved piece's entire SQLite file under pieces_dir, removing
- * its NoteEvents, Interpretations, and the ursatz-gui-owned
- * interpretation index/meta/relationship tables in one step -- all of
- * it lives in that one per-piece file (see analysis_service.c's
- * kIndexTableName/kMetaTableName/kRelationshipTableName), so there is
- * no separate per-table cascade to perform.
- *
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
- * under pieces_dir.
+ * Deletes a piece's directory and every file in it.
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
 
 /*
- * Updates the persisted original_filename (see kMetaTableName) for the
- * saved piece at id -- the display name shown in the Library view. Does
- * not touch NoteEvents, Interpretations, or the interpretation index.
- *
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
- * under pieces_dir. Caller is responsible for rejecting an empty
- * new_filename before calling; this function stores whatever it is given.
+ * Rewrites the filename in the piece's meta.json (the display name shown in
+ * the Library view). The source and the analysis are untouched.
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. The
+ * caller rejects an empty new_filename; this stores whatever it is given.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
                                                           const char *new_filename);

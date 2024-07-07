@@ -290,6 +290,8 @@ static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
   for (size_t i = 0; i < count; i++) {
     free(pieces[i].id);
     free(pieces[i].filename);
+    free(pieces[i].format);
+    free(pieces[i].uploaded_at);
   }
   free(pieces);
 }
@@ -315,6 +317,10 @@ static int handle_get(struct mg_connection *conn) {
     json_buffer_append_string(&buf, pieces[i].id);
     json_buffer_append(&buf, ",\"filename\":");
     json_buffer_append_string(&buf, pieces[i].filename);
+    json_buffer_append(&buf, ",\"format\":");
+    json_buffer_append_string(&buf, pieces[i].format);
+    json_buffer_append(&buf, ",\"uploaded_at\":");
+    json_buffer_append_string(&buf, pieces[i].uploaded_at);
     json_buffer_append(&buf, "}");
   }
   json_buffer_append(&buf, "]}");
@@ -353,56 +359,21 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   json_buffer_append_string(&buf, detail->id);
   json_buffer_append(&buf, ",\"filename\":");
   json_buffer_append_string(&buf, detail->filename);
-  json_buffer_append(&buf, ",\"note_event_count\":");
-  char count_text[32];
-  snprintf(count_text, sizeof(count_text), "%zu", detail->note_event_count);
-  json_buffer_append(&buf, count_text);
-  json_buffer_append(&buf, ",\"interpretations\":[");
-
-  for (size_t i = 0; i < detail->interpretation_count; i++) {
-    const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
+  json_buffer_append(&buf, ",\"format\":");
+  json_buffer_append_string(&buf, detail->format);
+  json_buffer_append(&buf, ",\"uploaded_at\":");
+  json_buffer_append_string(&buf, detail->uploaded_at);
+  json_buffer_append(&buf, ",\"note_xml_ids\":[");
+  for (size_t i = 0; i < detail->note_count; i++) {
     if (i != 0) {
       json_buffer_append(&buf, ",");
     }
-    json_buffer_append(&buf, "{\"interpretation_id\":");
-    json_buffer_append_string(&buf, summary->interpretation_id);
-    json_buffer_append(&buf, ",\"type\":");
-    json_buffer_append_string(&buf, summary->type);
-    json_buffer_append(&buf, ",\"label\":");
-    json_buffer_append_string(&buf, summary->label);
-    json_buffer_append(&buf, ",\"produced_by\":{\"author\":");
-    json_buffer_append_string(&buf, summary->produced_by_author);
-    json_buffer_append(&buf, ",\"method\":");
-    json_buffer_append_string(&buf, summary->produced_by_method);
-    json_buffer_append(&buf, "},\"provenance_state\":");
-    json_buffer_append_string(&buf, summary->provenance_state);
-    json_buffer_append(&buf, ",\"highlighted_note_ids\":[");
-    for (size_t j = 0; j < summary->highlighted_note_id_count; j++) {
-      if (j != 0) {
-        json_buffer_append(&buf, ",");
-      }
-      json_buffer_append_string(&buf, summary->highlighted_note_ids[j]);
-    }
-    json_buffer_append(&buf, "]}");
+    json_buffer_append_string(&buf, detail->note_xml_ids[i]);
   }
-  json_buffer_append(&buf, "],\"relationships\":[");
-
-  for (size_t i = 0; i < detail->relationship_count; i++) {
-    const UrsatzGuiRelationshipSummary *relationship = &detail->relationships[i];
-    if (i != 0) {
-      json_buffer_append(&buf, ",");
-    }
-    json_buffer_append(&buf, "{\"relationship_id\":");
-    json_buffer_append_string(&buf, relationship->relationship_id);
-    json_buffer_append(&buf, ",\"source_id\":");
-    json_buffer_append_string(&buf, relationship->source_id);
-    json_buffer_append(&buf, ",\"predicate_name\":");
-    json_buffer_append_string(&buf, relationship->predicate_name);
-    json_buffer_append(&buf, ",\"target_id\":");
-    json_buffer_append_string(&buf, relationship->target_id);
-    json_buffer_append(&buf, "}");
-  }
-  json_buffer_append(&buf, "]}");
+  /* The stored document is already JSON; it is inlined as is. */
+  json_buffer_append(&buf, "],\"document\":");
+  json_buffer_append(&buf, detail->document_json);
+  json_buffer_append(&buf, "}");
 
   ursatz_gui_piece_detail_destroy(detail);
 
