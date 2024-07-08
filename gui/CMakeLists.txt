@@ -20,6 +20,14 @@ include(FetchContent)
 set(URSATZ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/ursatz)
 
+# --- Ursatz Analyzer dependency ------------------------------------------
+#
+# The Analyzer is the only analysis path (R-084). It skips its own
+# add_subdirectory(external/ursatz) because the ursatz target already
+# exists here.
+set(URSATZ_ANALYZER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/ursatz-analyzer)
+
 # --- civetweb (HTTP server library) ---------------------------------------
 set(CIVETWEB_ENABLE_CXX OFF CACHE BOOL "" FORCE)
 set(CIVETWEB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
@@ -36,6 +44,14 @@ FetchContent_Declare(
   GIT_TAG v1.16
 )
 FetchContent_MakeAvailable(civetweb)
+
+# The Analyzer defines its version privately; read it from its project()
+# line so meta.json can record it.
+file(STRINGS external/ursatz-analyzer/CMakeLists.txt URSATZ_GUI_ANALYZER_PROJECT_LINE
+     REGEX "^project\\(UrsatzAnalyzer VERSION [0-9.]+")
+if(URSATZ_GUI_ANALYZER_PROJECT_LINE MATCHES "VERSION ([0-9.]+)")
+  add_compile_definitions(URSATZ_ANALYZER_VERSION="${CMAKE_MATCH_1}")
+endif()
 
 add_subdirectory(backend)
 

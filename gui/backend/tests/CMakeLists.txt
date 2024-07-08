@@ -15,6 +15,8 @@ target_include_directories(test_health_route PRIVATE
 )
 
 target_link_libraries(test_health_route PRIVATE
+  ursatz_analyzer
+  cjson
   ursatz
   common_practice_minimal
   standard_harmony
@@ -44,6 +46,8 @@ target_include_directories(test_analyzer_route PRIVATE
 )
 
 target_link_libraries(test_analyzer_route PRIVATE
+  ursatz_analyzer
+  cjson
   ursatz
   common_practice_minimal
   standard_harmony
@@ -73,6 +77,8 @@ target_include_directories(test_corpus_route PRIVATE
 )
 
 target_link_libraries(test_corpus_route PRIVATE
+  ursatz_analyzer
+  cjson
   ursatz
   common_practice_minimal
   standard_harmony
@@ -97,6 +103,8 @@ target_include_directories(test_framework_analyzers PRIVATE
 )
 
 target_link_libraries(test_framework_analyzers PRIVATE
+  ursatz_analyzer
+  cjson
   ursatz
   common_practice_minimal
   standard_harmony
@@ -116,6 +124,8 @@ target_include_directories(test_corpus_key_estimation PRIVATE
 )
 
 target_link_libraries(test_corpus_key_estimation PRIVATE
+  ursatz_analyzer
+  cjson
   ursatz
   common_practice_minimal
   standard_harmony
