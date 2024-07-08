@@ -171,26 +171,22 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
                                                           const char *new_filename);
 
 /*
- * Opens the saved piece's PersistenceHandle via the same lookup path
- * ursatz_gui_analysis_get_piece uses (pieces_dir/id.db), then exports
- * it to MusicXML via Ursatz's musicxml_export_write. On
+ * Imports the piece's stored source and exports it to MusicXML with Ursatz's
+ * musicxml_export_write_score: the source's parts and staves, its meter
+ * (the MIDI time signatures or the score's own) and its key signatures in
+ * part 0; tempo markings and dynamics are left out. On
  * URSATZ_GUI_ANALYSIS_OK, *out_xml is a newly allocated, caller-owned,
- * NUL-terminated MusicXML document (free() it), and *out_cosmetic_meter
- * reports whether the export used a synthetic 4/4 grid rather than an
- * authored meter (see musicxml_export.h -- true today for every piece,
- * since Meter/MeterMap is not populated anywhere in Ursatz yet).
+ * NUL-terminated MusicXML document (free() it) and *out_meter_defaulted
+ * says the source gave no meter, so the barlines come from a default 4/4.
  *
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists
- * under pieces_dir. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if
- * musicxml_export_write itself fails (e.g. a NoteEvent missing pitch
- * spelling, or overlapping notes -- see musicxml_export.h); in that case
- * *out_export_error is set to the specific MusicXmlExportResult
- * musicxml_export_write returned, so callers can surface it instead of
- * just the generic PERSISTENCE_FAILED. Left as MUSICXML_EXPORT_OK for
- * every other outcome, including success.
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no longer
+ * imports. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if the export itself
+ * fails; *out_export_error is then the MusicXmlExportResult it returned and
+ * is MUSICXML_EXPORT_OK for every other outcome.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
-                                                                char **out_xml, bool *out_cosmetic_meter,
+                                                                char **out_xml, bool *out_meter_defaulted,
                                                                 MusicXmlExportResult *out_export_error);
 
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */

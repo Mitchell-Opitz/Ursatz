@@ -2,7 +2,7 @@
  * renderScoreTab): the tab is a sibling alongside the claim-list tabs
  * (not folded into their group/count loop), and the synthetic-meter
  * caption is shown only when the /musicxml/meta endpoint reports
- * cosmetic_meter:true. Plain Node script, no framework/deps, mirrors
+ * meter_defaulted:true. Plain Node script, no framework/deps, mirrors
  * app.js's logic manually since these are DOM-free scripts with no
  * access to app.js's module scope (same convention as
  * analysis-view.test.js). Run directly:
@@ -46,22 +46,22 @@ check(
 );
 
 /* Mirrors app.js's renderScoreTab caption logic: the caption is shown
- * only when the meta fetch succeeds and reports cosmetic_meter:true,
+ * only when the meta fetch succeeds and reports meter_defaulted:true,
  * never presented as if it were authored meter with no caveat. */
 function resolveScoreCaption(meta) {
-  if (meta && meta.ok && meta.cosmetic_meter) {
+  if (meta && meta.ok && meta.meter_defaulted) {
     return "Barlines are approximate, not authored meter.";
   }
   return null;
 }
 
 check(
-  resolveScoreCaption({ ok: true, cosmetic_meter: true }) === "Barlines are approximate, not authored meter.",
-  "the synthetic-meter caption is shown when /musicxml/meta reports cosmetic_meter:true",
+  resolveScoreCaption({ ok: true, meter_defaulted: true }) === "Barlines are approximate, not authored meter.",
+  "the synthetic-meter caption is shown when /musicxml/meta reports meter_defaulted:true",
 );
 check(
-  resolveScoreCaption({ ok: true, cosmetic_meter: false }) === null,
-  "no caption is shown when cosmetic_meter is false",
+  resolveScoreCaption({ ok: true, meter_defaulted: false }) === null,
+  "no caption is shown when meter_defaulted is false",
 );
 check(resolveScoreCaption({ ok: false }) === null, "no caption is shown when the meta fetch reports ok:false");
 

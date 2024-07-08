@@ -699,7 +699,7 @@ function applyPendingHighlight() {
 /* Score tab: fetches the piece's MusicXML export and renders it with
  * OSMD (vendored under vendor/opensheetmusicdisplay/, loaded globally
  * as window.opensheetmusicdisplay -- see index.html). Fetches the
- * /musicxml/meta sibling separately for the cosmetic-meter flag rather
+ * /musicxml/meta sibling separately for the meter-defaulted flag rather
  * than parsing it out of the XML itself -- OSMD already parses the
  * document to render it, a second client-side XML parse just for one
  * flag would be redundant. */
@@ -717,7 +717,7 @@ function renderScoreTab(scoreEl, pieceId) {
   fetch(`/api/analyzer/pieces/${pieceId}/musicxml/meta`)
     .then((res) => res.json())
     .then((meta) => {
-      if (meta.ok && meta.cosmetic_meter) {
+      if (meta.ok && meta.meter_defaulted) {
         captionEl.textContent = "Barlines are approximate, not authored meter.";
         captionEl.hidden = false;
       }

@@ -49,6 +49,7 @@
 #include <analysis/sentence_detection.h>
 #include <analysis/thematic_return_detection.h>
 #include <export/musicxml_export.h>
+#include <time/meter_map.h>
 #include <persistence/persistence.h>
 #include <persistence/persistence_interpretation.h>
 #include <persistence/persistence_note_events.h>
@@ -2692,33 +2693,95 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
 
+static MusicXmlExportMode export_mode_from_hint(MidiModeHint hint) {
+    switch (hint) {
+        case MIDI_MODE_HINT_MAJOR:
+            return MUSICXML_EXPORT_MODE_MAJOR;
+        case MIDI_MODE_HINT_MINOR:
+            return MUSICXML_EXPORT_MODE_MINOR;
+        case MIDI_MODE_HINT_UNKNOWN:
+        default:
+            return MUSICXML_EXPORT_MODE_UNKNOWN;
+    }
+}
+
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
-                                                                char **out_xml, bool *out_cosmetic_meter,
+                                                                char **out_xml, bool *out_meter_defaulted,
                                                                 MusicXmlExportResult *out_export_error) {
     *out_export_error = MUSICXML_EXPORT_OK;
 
-    if (!is_valid_piece_id(id)) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
-
-    char db_path[320];
-    snprintf(db_path, sizeof(db_path), "%s/%s.db", pieces_dir, id);
-
-    if (!db_path_exists(db_path)) {
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
+    const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
+    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    cJSON_Delete(meta);
 
-    PersistenceHandle *handle = NULL;
-    if (persistence_open(db_path, &handle) != PERSISTENCE_OK) {
-        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    char source_path[400];
+    ImportedNotes notes;
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
+        input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
+
+    /* The score is written from the imported notes: their parts and staves,
+       the source's own meter, and its key signatures in part 0. Tempo
+       markings and dynamics are left out. */
+    MusicXmlExportPart *parts = NULL;
+    if (notes.source.part_count > 0) {
+        parts = calloc(notes.source.part_count, sizeof(MusicXmlExportPart));
+    }
+    MusicXmlExportKeySignature *keys = NULL;
+    size_t key_count = notes.key_signature_events.count;
+    if (key_count > 0) {
+        keys = calloc(key_count, sizeof(MusicXmlExportKeySignature));
+    }
+    if ((notes.source.part_count > 0 && !parts) || (key_count > 0 && !keys)) {
+        free(parts);
+        free(keys);
+        imported_notes_destroy(&notes);
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < notes.source.part_count; i++) {
+        parts[i].id = notes.source.parts[i].id;
+        parts[i].name = notes.source.parts[i].name;
+        parts[i].staff_count = notes.source.parts[i].staff_count;
+    }
+    for (size_t i = 0; i < key_count; i++) {
+        const MidiKeySignatureEvent *event = &notes.key_signature_events.events[i];
+        keys[i].sharps_flats = event->sharps_flats;
+        keys[i].mode = export_mode_from_hint(event->mode_hint);
+        keys[i].position = event->position;
+        keys[i].part_index = 0;
+    }
+
+    MusicXmlExportScore score;
+    memset(&score, 0, sizeof(score));
+    score.events = notes.events;
+    score.pitch_values = notes.pitch_values;
+    score.count = notes.count;
+    score.part_index = notes.source.part_index;
+    score.staff = notes.source.staff;
+    score.parts = parts;
+    score.part_count = notes.source.part_count;
+    score.meter_map = notes.meter.meter_map;
+    score.key_signatures = keys;
+    score.key_signature_count = key_count;
 
     char *xml = NULL;
-    MusicXmlExportResult result = musicxml_export_write(handle, &xml);
-    persistence_close(handle);
+    MusicXmlExportResult result = musicxml_export_write_score(&score, &xml);
+    bool meter_defaulted = notes.meter.meter_map ? meter_map_is_defaulted(notes.meter.meter_map) : true;
+    free(parts);
+    free(keys);
+    imported_notes_destroy(&notes);
 
     if (result != MUSICXML_EXPORT_OK) {
-        fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: musicxml_export_write failed for piece '%s' "
+        fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: musicxml_export_write_score failed for piece '%s' "
                          "with MusicXmlExportResult=%d\n",
                 id, (int)result);
         *out_export_error = result;
@@ -2726,8 +2789,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
     }
 
     *out_xml = xml;
-    /* Ursatz PR #142 renamed the marker ursatz:synthetic-meter to ursatz:meter-defaulted. */
-    *out_cosmetic_meter = strstr(xml, "ursatz:meter-defaulted") != NULL;
+    *out_meter_defaulted = meter_defaulted;
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
