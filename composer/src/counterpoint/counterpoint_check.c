@@ -144,6 +144,10 @@ static bool eval_first(const CounterpointContext *context, const StandardCounter
         hard = (base.hard_violations | first.hard_violations) & ~CANTUS_GROUP_BIT;
         soft = (base.soft_violations | first.soft_violations) & ~CANTUS_GROUP_BIT;
         verdict->hard = first_group_name(hard, first_species_name);
+        verdict->groups = STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_COUNT;
+        verdict->hard_groups = hard;
+        verdict->soft_groups = soft;
+        verdict->group_name = first_species_name;
         verdict->total = STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_COUNT - 1;
         verdict->held = verdict->total - bits_set(soft);
         return true;
@@ -215,6 +219,10 @@ static bool eval_slots(const CounterpointContext *context, const StandardCounter
         /* The pair check compares note with note and does not fit more than one note to a bar: the species' own check, which
            runs the common spacing rules on every note, takes its place. */
         verdict->hard = first_group_name(result.hard_violations & ~CANTUS_GROUP_BIT, species->group_name);
+        verdict->groups = species->groups;
+        verdict->hard_groups = result.hard_violations & ~CANTUS_GROUP_BIT;
+        verdict->soft_groups = result.soft_violations & ~CANTUS_GROUP_BIT;
+        verdict->group_name = species->group_name;
         verdict->total = species->groups - 1;
         verdict->held = verdict->total - bits_set(result.soft_violations & ~CANTUS_GROUP_BIT);
         return true;
@@ -307,5 +315,32 @@ bool counterpoint_checker(const PiecePlan *plan, FillTarget target, const FillOp
     }
     counterpoint_context_free(read);
     free(read);
+    return ok;
+}
+
+/* ------------------------------------------------------------- the report */
+
+bool counterpoint_report(const PiecePlan *plan, LaneSpanId target, CounterpointReport *out) {
+    CounterpointContext *read = calloc(1, sizeof(*read));
+    CounterpointCandidate *line = calloc(1, sizeof(*line));
+    CounterpointVerdict verdict;
+    bool ok = read && line && out && counterpoint_read_written(plan, target, read, line, NULL) &&
+              counterpoint_eval(read, read->count, line->kind, line->pitch, true, &verdict);
+    if (ok) {
+        memset(out, 0, sizeof(*out));
+        out->species = read->species;
+        for (unsigned group = 1; group < verdict.groups && out->count < COUNTERPOINT_REPORT_MAX_GROUPS; group++) {
+            out->name[out->count] = verdict.group_name ? verdict.group_name(group) : "group";
+            out->hard_ok[out->count] = !(verdict.hard_groups & (1u << group));
+            out->soft_ok[out->count] = !(verdict.soft_groups & (1u << group));
+            out->count++;
+        }
+        out->hard_ok_all = verdict.hard == NULL;
+    }
+    if (ok) {
+        counterpoint_context_free(read);
+    }
+    free(read);
+    free(line);
     return ok;
 }

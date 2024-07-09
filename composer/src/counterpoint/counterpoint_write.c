@@ -136,7 +136,8 @@ static bool read_cantus(const PiecePlan *plan, CounterpointContext *out, const c
     return true;
 }
 
-bool counterpoint_read(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out, const char **why) {
+static bool read_target(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out, const char **why,
+                        bool written) {
     PlanConstraint constraint;
     const char *reason = "";
     int low;
@@ -149,7 +150,9 @@ bool counterpoint_read(const PiecePlan *plan, LaneSpanId target, CounterpointCon
         return false;
     }
     if (!plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_INNER_VOICE ||
-        plan_lane_span_voice(plan, target) != 1 || plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED) {
+        plan_lane_span_voice(plan, target) != 1 ||
+        (written ? plan_lane_span_state(plan, target) == PLAN_STATE_CONSTRAINED
+                 : plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED)) {
         *why = "not an open span of the inner voice 1";
         return false;
     }
@@ -202,6 +205,46 @@ bool counterpoint_read(const PiecePlan *plan, LaneSpanId target, CounterpointCon
             const PitchSpelling *upper = out->above ? out->spell[pitch] : out->spell[out->line[i]];
             bool ordered = out->above ? pitch >= out->line[i] : pitch <= out->line[i];
             out->consonant[i][pitch] = out->spell[pitch] && ordered && standard_counterpoint_pitches_consonant(lower, upper);
+        }
+    }
+    return true;
+}
+
+bool counterpoint_read(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out, const char **why) {
+    return read_target(plan, target, out, why, false);
+}
+
+bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out,
+                               CounterpointCandidate *line, const char **why) {
+    const PlanNotes *notes;
+    const char *reason = "";
+    long slot_ticks;
+    if (!why) {
+        why = &reason;
+    }
+    if (!line || !read_target(plan, target, out, why, true)) {
+        return false;
+    }
+    notes = &plan_lane_span_payload(plan, target)->notes;
+    slot_ticks = out->per_bar == 1 ? 0 : out->bar / (long)out->per_bar;
+    memset(line, 0, sizeof(*line));
+    line->magic = CP_PAYLOAD_MAGIC;
+    line->slots = out->count * out->per_bar;
+    for (size_t slot = 0; slot < line->slots; slot++) {
+        long at = out->per_bar == 1 ? out->onset[slot] : (long)slot * slot_ticks;
+        line->kind[slot] = CP_SLOT_REST;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            long onset;
+            long duration;
+            if (!melody_ticks(notes->notes[n].offset, &onset) || !melody_ticks(notes->notes[n].duration, &duration)) {
+                *why = "a note of the counter-melody is not a whole number of ticks";
+                counterpoint_context_free(out);
+                return false;
+            }
+            if (onset <= at && at < onset + duration) {
+                line->kind[slot] = onset == at ? CP_SLOT_ATTACK : CP_SLOT_TIE;
+                line->pitch[slot] = notes->notes[n].midi_pitch;
+            }
         }
     }
     return true;

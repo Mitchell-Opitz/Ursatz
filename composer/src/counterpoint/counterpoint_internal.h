@@ -54,6 +54,9 @@ typedef struct {
 
 /* Reads a target; false when it is not one the operator applies to, and then *why is the reason when it is not NULL. */
 bool counterpoint_read(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out, const char **why);
+/* The same for a target that is written already (Realized or Given): its counter-melody is read from the span. */
+bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out,
+                               CounterpointCandidate *line, const char **why);
 void counterpoint_context_free(CounterpointContext *context);
 
 /* How the slots of the counter-melody are laid out in the given line's notes: the note a slot sounds with. */
@@ -64,6 +67,12 @@ typedef struct {
     const char *hard; /* NULL when no hard rule is broken, else which */
     unsigned held;    /* the soft groups with no violation, of total */
     unsigned total;
+    /* With final true: the groups asked, from 1 (0 is the given line's own, which is not judged), and the groups with a
+       hard or a soft rule broken, bit g for group g. */
+    unsigned groups;
+    unsigned hard_groups;
+    unsigned soft_groups;
+    const char *(*group_name)(unsigned group);
 } CounterpointVerdict;
 
 /*

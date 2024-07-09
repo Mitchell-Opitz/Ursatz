@@ -57,6 +57,25 @@ const char *counterpoint_why_not(const PiecePlan *plan, LaneSpanId target);
 bool counterpoint_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                           const FillCandidate *candidate, void *context, FillCheck *out);
 
+#define COUNTERPOINT_REPORT_MAX_GROUPS 8
+
+/* The rule groups standard-counterpoint asked of a written counter-melody, with whether each held. */
+typedef struct {
+    int species;
+    size_t count;
+    const char *name[COUNTERPOINT_REPORT_MAX_GROUPS];
+    bool hard_ok[COUNTERPOINT_REPORT_MAX_GROUPS]; /* no hard rule of the group is broken */
+    bool soft_ok[COUNTERPOINT_REPORT_MAX_GROUPS]; /* no soft rule of the group is broken */
+    bool hard_ok_all;
+} CounterpointReport;
+
+/*
+ * Judges the counter-melody written in a target (Realized or Given, with its counterpoint constraint) the way the checker
+ * does, group by group. The group of the given line itself is not judged and not listed. False when the target is not a
+ * written counter-melody the operator reads.
+ */
+bool counterpoint_report(const PiecePlan *plan, LaneSpanId target, CounterpointReport *out);
+
 /*
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params must outlive
  * it (NULL means the defaults).
