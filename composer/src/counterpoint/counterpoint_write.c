@@ -39,8 +39,8 @@ size_t counterpoint_slot_note(const CounterpointContext *context, size_t slot) {
 /* The scale degree of a pitch class above the tonic, 1 to 7, or 0 when the key's scale has no such note. */
 static int scale_degree(PlanKeyMode mode, int above_tonic) {
     static const int MAJOR[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
-    /* The minor scale as it is written in counterpoint: the natural minor, and the raised seventh for the cadence. */
-    static const int MINOR[12] = {1, 0, 2, 3, 0, 4, 0, 5, 6, 0, 7, 7};
+    /* The minor scale as it is written in counterpoint: the natural minor, with the raised sixth and seventh. */
+    static const int MINOR[12] = {1, 0, 2, 3, 0, 4, 0, 5, 6, 6, 7, 7};
     return mode == PLAN_MODE_MINOR ? MINOR[above_tonic] : MAJOR[above_tonic];
 }
 
