@@ -153,6 +153,51 @@ typedef struct {
     unsigned char kind[CHILD_ADD_MAX];
 } Bar;
 
+/* The pitch of a slot of the line being written: the state's, or the bar's own. */
+static int pitch_of(const Bar *bar, size_t slot) {
+    return slot < bar->gen->state->slots ? bar->gen->state->pitch[slot] : bar->pitch[slot - bar->first];
+}
+
+/*
+ * The rules of a downbeat that look back, as the species states them, so that the library is not asked about lines that
+ * break them: no tritone or seventh between downbeats; in species 2 neither the same perfect interval on two downbeats nor
+ * on a weak beat and the downbeat after it; in species 3 no perfect fifth or octave on a downbeat when beats of the bar
+ * before made it, no beat 4 and downbeat making the same perfect interval, and no downbeat reaching a perfect interval by
+ * similar motion with the given line.
+ */
+static bool downbeat_ok(const Bar *bar, size_t slot, size_t note, int pitch) {
+    const CounterpointContext *context = bar->gen->context;
+    size_t per_bar = context->per_bar;
+    int earlier = pitch_of(bar, slot - per_bar);
+    int last = pitch_of(bar, slot - 1);
+    int now = absolute(pitch - context->line[note]) % 12;
+    int size = absolute(pitch - earlier);
+    bool perfect = now == 0 || now == 7;
+    if (size == 6 || size == 10 || size == 11) {
+        return false;
+    }
+    if (context->species == 2) {
+        int was = absolute(earlier - context->line[note - 1]) % 12;
+        int weak = absolute(last - context->line[note - 1]) % 12;
+        return !(perfect && (was == now || weak == now));
+    }
+    if (perfect) {
+        int before = absolute(last - context->line[note - 1]) % 12;
+        bool similar = (pitch - last > 0 && context->line[note] - context->line[note - 1] > 0) ||
+                       (pitch - last < 0 && context->line[note] - context->line[note - 1] < 0);
+        if (before == now || similar) {
+            return false;
+        }
+        for (size_t beat = 1; beat < per_bar; beat++) {
+            int heard = absolute(pitch_of(bar, slot - per_bar + beat) - context->line[note - 1]) % 12;
+            if ((now == 7 && beat >= 2 && heard == 7) || (now == 0 && heard == 0)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 static void descend_bar(Bar *bar, size_t at, int prev, long cost) {
     const CounterpointContext *context = bar->gen->context;
     const State *state = bar->gen->state;
@@ -170,8 +215,15 @@ static void descend_bar(Bar *bar, size_t at, int prev, long cost) {
         if (!context->spell[pitch] || (final && !on_tonic(context, pitch))) {
             continue;
         }
+        /* No note is more than a twelfth from the given line. */
+        if (absolute(pitch - context->line[note]) > 19) {
+            continue;
+        }
         if (strong) {
             if (!context->consonant[note][pitch]) {
+                continue;
+            }
+            if (note > 0 && !downbeat_ok(bar, slot, note, pitch)) {
                 continue;
             }
         } else if (!context->consonant[note][pitch]) {
