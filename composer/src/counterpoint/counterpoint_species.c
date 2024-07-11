@@ -325,10 +325,15 @@ static size_t assemble(const CounterpointContext *context, const State *state, u
         *notes = slots;
     } else if (context->species == 4) {
         if (slots < 2 * context->count) {
+            /* A leading tone goes up to the tonic, so the stand-in bar after it sounds the tonic. */
+            int stand_in = pitch[slots - 1];
+            if (((stand_in + 1 - context->key.tonic_pitch_class) % 12 + 12) % 12 == 0) {
+                stand_in++;
+            }
             kind[slots] = CP_SLOT_ATTACK;
-            pitch[slots] = pitch[slots - 1];
+            pitch[slots] = stand_in;
             kind[slots + 1] = CP_SLOT_TIE;
-            pitch[slots + 1] = pitch[slots - 1];
+            pitch[slots + 1] = stand_in;
             slots += 2;
         }
         *notes = slots / 2;
@@ -385,27 +390,55 @@ bool counterpoint_search(const CounterpointContext *context, FillRng *rng, size_
             break;
         }
         qsort(gen.children, gen.count, sizeof(*gen.children), compare_children);
-        for (size_t n = 0; n < gen.count && kept < beam && n < beam * CHECKS_PER_BEAM; n++) {
-            const Child *child = &gen.children[n];
-            State *made = &next[kept];
-            unsigned char kind[CP_MAX_SLOTS + 4];
-            int pitch[CP_MAX_SLOTS + 4];
-            CounterpointVerdict verdict;
-            size_t notes;
-            *made = layer[child->parent];
-            memcpy(made->kind + made->slots, child->kind, child->add);
-            memcpy(made->pitch + made->slots, child->pitch, child->add * sizeof(int));
-            made->slots += child->add;
-            made->cost = child->cost;
-            assemble(context, made, kind, pitch, &notes);
-            if (!counterpoint_eval(context, notes, kind, pitch, complete(context, made), &verdict)) {
-                ok = false;
-                break;
+        /*
+         * The cheapest children the library allows. A line is kept for the way it ends: a first pass takes at most a share
+         * of the beam for each last note, so that the notes the ending needs are not crowded out by cheaper ones, and a
+         * second pass fills what is left.
+         */
+        {
+            unsigned char *skipped = calloc(gen.count ? gen.count : 1, 1);
+            size_t per_note[128] = {0};
+            size_t share = beam / 24 > 2 ? beam / 24 : 2;
+            size_t checks = 0;
+            ok = skipped != NULL;
+            for (size_t pass = 0; ok && pass < 2; pass++) {
+                for (size_t n = 0; ok && n < gen.count && kept < beam && checks < beam * CHECKS_PER_BEAM; n++) {
+                    const Child *child = &gen.children[n];
+                    State *made = &next[kept];
+                    unsigned char kind[CP_MAX_SLOTS + 4];
+                    int pitch[CP_MAX_SLOTS + 4];
+                    CounterpointVerdict verdict;
+                    size_t notes;
+                    int last = 0;
+                    if (pass == 1 && !skipped[n]) {
+                        continue;
+                    }
+                    for (size_t k = 0; k < child->add; k++) {
+                        last = child->kind[k] == CP_SLOT_ATTACK ? child->pitch[k] : last;
+                    }
+                    if (pass == 0 && per_note[last & 127] >= share) {
+                        skipped[n] = 1;
+                        continue;
+                    }
+                    *made = layer[child->parent];
+                    memcpy(made->kind + made->slots, child->kind, child->add);
+                    memcpy(made->pitch + made->slots, child->pitch, child->add * sizeof(int));
+                    made->slots += child->add;
+                    made->cost = child->cost;
+                    assemble(context, made, kind, pitch, &notes);
+                    checks++;
+                    if (!counterpoint_eval(context, notes, kind, pitch, complete(context, made), &verdict)) {
+                        ok = false;
+                    } else if (!verdict.hard) {
+                        per_note[last & 127]++;
+                        kept++;
+                    }
+                }
             }
-            if (verdict.hard) {
-                continue;
-            }
-            kept++;
+            free(skipped);
+        }
+        if (!ok) {
+            break;
         }
         {
             State *swap = layer;
