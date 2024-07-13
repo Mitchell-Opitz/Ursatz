@@ -50,3 +50,12 @@ target_compile_definitions(test_motive_mozart545 PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME motive_mozart545 COMMAND test_motive_mozart545)
+
+add_executable(test_rhythm_field5 test_rhythm_field5.c)
+target_link_libraries(test_rhythm_field5 PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_rhythm_field5 PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_rhythm_field5 PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME rhythm_field5 COMMAND test_rhythm_field5)
