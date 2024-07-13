@@ -69,16 +69,20 @@ typedef struct {
 } StandardMeterChordChange;
 
 /*
- * Configuration. `onset_grid_denominator` and `onset_tolerance_denominator` are the snap: an attack or release time within
- * 1/onset_tolerance_denominator of a whole note of a multiple of 1/onset_grid_denominator is read as that multiple. It carries
- * a performed file's small timing differences into the metric grid without moving a time that is on another grid (a triplet).
- * Exact input is unchanged by it.
+ * Configuration. `onset_grid_denominator`, `onset_tolerance_denominator` and `release_tolerance_denominator` are the snap: an
+ * attack time within 1/onset_tolerance_denominator of a whole note of a multiple of 1/onset_grid_denominator is read as that
+ * multiple, and so is a release time within 1/release_tolerance_denominator of one. It carries a performed file's small timing
+ * differences into the metric grid without moving a time that is on another grid (a triplet). Releases get the wider tolerance
+ * because a performer lets a note run on into the next (a legato overlap) or lifts early (staccato), by more than an attack is
+ * ever late, and neither changes where the written note ends. The release tolerance may not be wider than half a grid step
+ * (denominator at least twice the grid's), so no time has two nearest multiples. Exact input is unchanged by the snap.
  */
 typedef struct {
     bool syncopation_all_notes;   /* false: each line is read on its own; true: all notes as one stream */
     unsigned hemiola_min_evidence; /* evidence types that must agree for a hemiola (default 2) */
     unsigned onset_grid_denominator;
     unsigned onset_tolerance_denominator;
+    unsigned release_tolerance_denominator;
 } StandardMeterConfig;
 
 typedef struct {
@@ -94,7 +98,7 @@ typedef struct {
     size_t chord_change_capacity;
 } StandardMeterInput;
 
-/* The defaults: per line, 2 evidence types, a 1/32 grid with a 1/256 tolerance. */
+/* The defaults: per line, 2 evidence types, a 1/32 grid with a 1/256 tolerance for attacks and 1/64 for releases. */
 StandardMeterConfig standard_meter_config_default(void);
 bool standard_meter_config_valid(const StandardMeterConfig *config);
 

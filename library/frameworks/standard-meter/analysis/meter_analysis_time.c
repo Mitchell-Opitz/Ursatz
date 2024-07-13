@@ -72,11 +72,12 @@ bool standard_meter_span_q(const TimeSpan *span, StandardMeterQ *start, Standard
     return true;
 }
 
-StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMeterQ time, bool *changed) {
+StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMeterQ time, bool release, bool *changed) {
     if (changed != NULL) {
         *changed = false;
     }
-    if (config == NULL || config->onset_grid_denominator == 0 || config->onset_tolerance_denominator == 0) {
+    if (config == NULL || config->onset_grid_denominator == 0 || config->onset_tolerance_denominator == 0 ||
+        config->release_tolerance_denominator == 0) {
         return time;
     }
     long long grid = (long long)config->onset_grid_denominator;
@@ -96,7 +97,8 @@ StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMe
     if (gap.n < 0) {
         gap.n = -gap.n;
     }
-    StandardMeterQ tolerance = standard_meter_q(1, (long long)config->onset_tolerance_denominator);
+    StandardMeterQ tolerance = standard_meter_q(
+        1, (long long)(release ? config->release_tolerance_denominator : config->onset_tolerance_denominator));
     if (standard_meter_q_compare(gap, tolerance) <= 0) {
         if (changed != NULL) {
             *changed = standard_meter_q_compare(time, nearest) != 0;

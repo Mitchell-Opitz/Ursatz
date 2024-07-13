@@ -4,13 +4,14 @@
 #include <string.h>
 
 StandardMeterConfig standard_meter_config_default(void) {
-    StandardMeterConfig config = {false, 2, 32, 256};
+    StandardMeterConfig config = {false, 2, 32, 256, 64};
     return config;
 }
 
 bool standard_meter_config_valid(const StandardMeterConfig *config) {
     return config != NULL && config->hemiola_min_evidence >= 1 && config->hemiola_min_evidence <= 3 &&
-           config->onset_grid_denominator >= 1 && config->onset_tolerance_denominator > 2 * config->onset_grid_denominator;
+           config->onset_grid_denominator >= 1 && config->onset_tolerance_denominator >= 2 * config->onset_grid_denominator &&
+           config->release_tolerance_denominator >= 2 * config->onset_grid_denominator;
 }
 
 StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map) {

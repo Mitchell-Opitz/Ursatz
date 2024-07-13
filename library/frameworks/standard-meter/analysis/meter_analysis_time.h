@@ -27,8 +27,9 @@ double standard_meter_q_double(StandardMeterQ a);
 StandardMeterQ standard_meter_q_of_time(const MusicalTime *time);
 bool standard_meter_span_q(const TimeSpan *span, StandardMeterQ *start, StandardMeterQ *end);
 
-/* The time snapped per the configuration; *changed (when not NULL) is set when the time moved. */
-StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMeterQ time, bool *changed);
+/* The time snapped per the configuration (an attack, or a release with the wider tolerance); *changed (when not NULL) is set when
+   the time moved. */
+StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMeterQ time, bool release, bool *changed);
 
 /* The measure that contains `time` (a barline is the measure that starts there). */
 bool standard_meter_measure_at(const MeterMap *map, StandardMeterQ time, int *measure);

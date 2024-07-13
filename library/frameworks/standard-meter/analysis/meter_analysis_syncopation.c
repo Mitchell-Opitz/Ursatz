@@ -181,15 +181,14 @@ StandardMeterAnalysisStatus standard_meter_find_syncopations(const StandardMeter
             continue;
         }
         bool moved_start = false;
-        bool moved_end = false;
-        start = standard_meter_snap(config, start, &moved_start);
-        end = standard_meter_snap(config, end, &moved_end);
+        start = standard_meter_snap(config, start, false, &moved_start);
+        end = standard_meter_snap(config, end, true, NULL);
         if (standard_meter_q_compare(end, start) <= 0) {
             continue;
         }
         items[usable].start = start;
         items[usable].end = end;
-        items[usable].snapped = moved_start || moved_end;
+        items[usable].snapped = moved_start;
         items[usable].note = i;
         usable++;
         lines[line_count++] = input->notes[i].line;

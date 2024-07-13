@@ -203,8 +203,8 @@ StandardMeterAnalysisStatus standard_meter_find_densities(const StandardMeterInp
             if (!standard_meter_span_q(input->notes[i].span, &note_start, &note_end)) {
                 continue;
             }
-            note_start = standard_meter_snap(config, note_start, NULL);
-            note_end = standard_meter_snap(config, note_end, NULL);
+            note_start = standard_meter_snap(config, note_start, false, NULL);
+            note_end = standard_meter_snap(config, note_end, true, NULL);
             if (standard_meter_q_compare(note_start, start) < 0 || standard_meter_q_compare(note_start, end) >= 0 ||
                 standard_meter_q_compare(note_end, note_start) <= 0) {
                 continue;

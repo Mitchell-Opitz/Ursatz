@@ -147,8 +147,8 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
         if (!standard_meter_span_q(input->notes[i].span, &start, &end)) {
             continue;
         }
-        start = standard_meter_snap(config, start, NULL);
-        end = standard_meter_snap(config, end, NULL);
+        start = standard_meter_snap(config, start, false, NULL);
+        end = standard_meter_snap(config, end, true, NULL);
         if (standard_meter_q_compare(end, start) <= 0) {
             continue;
         }
@@ -162,7 +162,7 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
     }
     size_t change_count = 0;
     for (size_t i = 0; i < input->chord_change_count; i++) {
-        changes[change_count++] = standard_meter_snap(config, standard_meter_q_of_time(input->chord_changes[i].time), NULL);
+        changes[change_count++] = standard_meter_snap(config, standard_meter_q_of_time(input->chord_changes[i].time), false, NULL);
     }
     qsort(items, count, sizeof(Item), compare_items);
     qsort(changes, change_count, sizeof(StandardMeterQ), compare_times);

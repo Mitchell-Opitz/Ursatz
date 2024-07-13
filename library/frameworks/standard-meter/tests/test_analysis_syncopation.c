@@ -100,6 +100,23 @@ static void test_a_half_note_on_beat_two_and_a_snapped_time(void) {
     piece_destroy(&piece);
 }
 
+static void test_a_legato_overlap_is_not_a_sustain(void) {
+    Piece piece;
+    piece_init(&piece, 4, 2);
+    /* an "and" that ends 15/1024 of a whole note past beat 2, with no attack there: a performer letting the note run on, not a tie */
+    piece_note(&piece, 0, 1, 8, 271, 1024);
+    StandardMeterSyncopations found = find(&piece, NULL);
+    assert(found.count == 0);
+    standard_meter_syncopations_destroy(&found);
+    /* with the release tolerance as narrow as the attack's, the same note is read as held over the beat */
+    StandardMeterConfig narrow = standard_meter_config_default();
+    narrow.release_tolerance_denominator = narrow.onset_tolerance_denominator;
+    found = find(&piece, &narrow);
+    assert(found.count == 1 && found.items[0].claim.through_level == (int)STANDARD_METER_LEVEL_BEAT);
+    standard_meter_syncopations_destroy(&found);
+    piece_destroy(&piece);
+}
+
 static void test_bad_calls(void) {
     StandardMeterSyncopations found = {NULL, 0};
     assert(standard_meter_find_syncopations(NULL, NULL, &found) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
@@ -108,6 +125,9 @@ static void test_bad_calls(void) {
     assert(standard_meter_find_syncopations(&piece.input, NULL, NULL) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
     StandardMeterConfig bad = standard_meter_config_default();
     bad.hemiola_min_evidence = 0;
+    assert(standard_meter_find_syncopations(&piece.input, &bad, &found) == STANDARD_METER_ANALYSIS_ERR_INVALID);
+    bad = standard_meter_config_default();
+    bad.release_tolerance_denominator = 16; /* wider than half a grid step */
     assert(standard_meter_find_syncopations(&piece.input, &bad, &found) == STANDARD_METER_ANALYSIS_ERR_INVALID);
     assert(standard_meter_input_add_note(&piece.input, "", piece_span(&piece, 0, 1, 1, 4), 60, 0) ==
            STANDARD_METER_ANALYSIS_ERR_INVALID);
@@ -124,6 +144,7 @@ int main(void) {
     test_no_syncopation_when_the_stronger_position_is_attacked();
     test_streams_per_line_and_together();
     test_a_half_note_on_beat_two_and_a_snapped_time();
+    test_a_legato_overlap_is_not_a_sustain();
     test_bad_calls();
     printf("test_analysis_syncopation (standard-meter): ok\n");
     return 0;
