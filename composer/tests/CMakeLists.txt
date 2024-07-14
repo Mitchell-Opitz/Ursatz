@@ -196,3 +196,12 @@ add_test(NAME test_voicing_heard_voicing COMMAND test_voicing_heard voicing)
 # The voice leading of grown themes is not heard as clean in every run (measured, with the causes, in docs/voicing.md):
 # each test asserts that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
 set_tests_properties(test_voicing_heard_chorale test_voicing_heard_voicing PROPERTIES WILL_FAIL TRUE)
+
+add_executable(test_counterpoint test_counterpoint.c)
+target_link_libraries(test_counterpoint PRIVATE ursatz_composer)
+target_include_directories(test_counterpoint PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_counterpoint PRIVATE -Wall -Wextra -Wpedantic)
+foreach(species 1 2 3 4)
+    add_test(NAME test_counterpoint_species_${species} COMMAND test_counterpoint ${species})
+endforeach()
+add_test(NAME test_counterpoint_not_applicable COMMAND test_counterpoint na)
