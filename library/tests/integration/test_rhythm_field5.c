@@ -1,6 +1,5 @@
-#define main form_pieces_unused_main
+#define URSATZ_FORM_PIECES_AS_LIBRARY
 #include "test_form_reference_pieces.c"
-#undef main
 
 #include <math.h>
 

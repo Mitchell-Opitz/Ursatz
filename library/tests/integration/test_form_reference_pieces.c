@@ -437,6 +437,7 @@ static double ratio(size_t a, size_t b) {
     return b == 0 ? 1.0 : (double)a / (double)b;
 }
 
+#ifndef URSATZ_FORM_PIECES_AS_LIBRARY /* defined by a test that includes this file for its helpers (test_rhythm_field5.c) */
 int main(void) {
     FormScore alone;
     FormScore chain;
@@ -465,3 +466,4 @@ int main(void) {
     printf("test_form_reference_pieces: ok\n");
     return 0;
 }
+#endif
