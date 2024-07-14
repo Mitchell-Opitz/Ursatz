@@ -3,6 +3,7 @@
 
 #include "analysis_test_util.h"
 #include "meter_analysis_syncopation.h"
+#include "metric_position_rules.h"
 #include "interpretation/interpretation.h"
 
 static StandardMeterSyncopations find(Piece *piece, const StandardMeterConfig *config) {
