@@ -72,15 +72,15 @@ static void test_the_histogram_is_capped(void) {
     Piece piece;
     piece_init(&piece, 4, 2);
     piece_phrase(&piece, 0, 1, 40, 1, false, 0, 1, 1, 1, STANDARD_METER_EXPANSION_NONE, 0, false);
-    /* twenty notes, each a different length: 1/2, 1/3, ... 1/21 of a whole note, one every two bars */
+    /* twenty notes, each a different length: 1/32, 2/32, ... 20/32 of a whole note (on the 1/32 grid releases are read at), one every two bars */
     for (long i = 0; i < 20; i++) {
-        piece_note(&piece, 0, 2 * i, 1, 2 * i * (i + 2) + 1, (unsigned long)(i + 2));
+        piece_note(&piece, 0, 2 * i, 1, 64 * i + i + 1, 32);
     }
     StandardMeterDensities found = {NULL, 0};
     assert(standard_meter_find_densities(&piece.input, NULL, &found) == STANDARD_METER_ANALYSIS_OK);
     const StandardMeterDensityClaim *all = &found.items[0].claim;
     assert(all->notes == 20 && all->bin_count == STANDARD_METER_DENSITY_BINS && all->bins_truncated == 1);
-    assert(all->bins[0].numerator == 1 && all->bins[0].denominator == 21 && all->bins[0].count == 1); /* the shortest first */
+    assert(all->bins[0].numerator == 1 && all->bins[0].denominator == 32 && all->bins[0].count == 1); /* the shortest first */
     standard_meter_densities_destroy(&found);
     piece_destroy(&piece);
 }
