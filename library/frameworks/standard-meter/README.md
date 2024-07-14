@@ -54,11 +54,22 @@ the two numbers and nothing more; this framework reads them):
   syllables: a triplet is "1 la li", a duplet "1 +".
 - **Hypermeter** (`hypermeter_rules.h`): groups of measures counted like
   beats (duple, triple, quadruple hypermeter); the first is accented, and
-  in quadruple the third also is. Pure counting on a measure index.
+  in quadruple the third also is. Pure counting on a measure index. It also
+  states how a phrase is heard in hypermeasures: a length of 2 or 4 measures
+  scored by how whole hypermeasures fill the phrase and hold the cadence's
+  arrival in the last one (`LENGTH`), how an expansion changes a hypermeasure
+  (`EXPANSION`), and how an elided cadence counts twice, "4 = 1" (`ELISION`).
 - **Syncopation** (`syncopation_rules.h`): off-beat accents, made by a
   note sustained from off the beat across the next beat line (ties and
   dots), a rest on the beat with notes only off it, or an accent on an
   off-beat note. Inputs are plain positions, lengths, and an accent flag.
+  `THROUGH_STRONGER` is the general form on metric levels: a note attacked at
+  a weaker level and held through a stronger one, its strength the difference
+  of the two levels.
+- **Hemiola** (`hemiola_rules.h`): six pulses grouped 3 + 3 and heard 2 + 2
+  + 2. It stands in a simple triple meter (two measures of 3/4 or 3/2) and in
+  6/8 (one measure), and is read from three kinds of evidence, the attacks,
+  the chord changes and the long-note accents, of which a minimum must agree.
 - **Metric position** (`metric_position_rules.h`): reads a `MetricalPosition`
   (`time/metrical_position.h`: a measure number and an exact offset in whole
   notes, no beat claim) together with a `TimeSignature`, using the meter
@@ -120,3 +131,7 @@ and compound),
 and engraving craft. That simple quadruple can feel like two groups of two
 is a perceptual ambiguity and is not asserted as a rule. Counting is
 American only; the syllables are a table so another system can be added.
+
+## Analysis of real music
+
+`analysis/` reads real music against these rules: syncopation per line, hemiola, hypermeter inferred from phrase and cadence placement, and a rhythmic density profile per phrase. The input is neutral structs the caller fills; standard-meter includes no other framework. See `docs/modules/rhythm-meter-analysis.md`.

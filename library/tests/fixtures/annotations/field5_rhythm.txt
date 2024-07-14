@@ -1,0 +1,43 @@
+# Hand analysis of the rhythm and meter of Field, Nocturne No. 5 in B-flat major, H. 37, for the rhythm adapter (frameworks/standard-meter/analysis).
+#
+# SOURCE: the Breitkopf and Haertel edition of the Nocturnes and the IMSLP scan. Neither was available when this file was written, so the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. It is a hand reading of tests/fixtures/framework-v1-corpus/"Field 5.mid" (every note dumped by measure and by eighth-note position
+# within the measure, with its performed length), and NOT derived from the output of the rhythm adapter, the form adapter or the cadence adapter. The file is in 12/8 (a measure of four dotted-quarter beats, twelve
+# eighth notes), its onsets lie on the eighth-note grid, and its notes are performed a little short or a little long of their written lengths (a staccato accompaniment at about 130 of 128 ticks, melody notes held to
+# 15 ticks past the next attack); the written lengths were read from the dump. A human should confirm all of it against an edition before it is relied on.
+#
+# What is listed is what could be read with some confidence: the lack of a line is not an annotation that there is nothing there. The rest of the piece (the measures 13 to 17 around the long note of measure 16, the
+# bridge from measure 31 on) was not read: its phrase ends could not be told apart from its figuration.
+#
+# SYNCOPATION is read on the melody, the notes of the top line that carry the tune (the accompaniment is a staccato arpeggio of eighth notes, attacked on every division): a melody note attacked on a weaker metric position and held through a stronger
+# one that the melody does not attack. In this part of the piece that is one place only: the note on the second beat of measure 14 (its tied value runs through the third beat, the secondary beat of 12/8, where only the bass attacks).
+# HEMIOLA: none. 12/8 is a quadruple compound meter, where standard-meter has no hemiola (hemiola_rules.h covers simple triple meters and 6/8), so nothing is listed.
+# HYPERMETER is read from the repetition of the four-measure melody (measures 1-4 return in 9-12, 23-26 and, with a flourish, 27-30), whose cadence falls in the fourth measure, the one of 5-8 and of 23-26 being
+# answered in the next phrase's first measure. The rising run of measures 18 to 21 is read as two groups of two (two measures of one figure, two of its answer) that arrive on the downbeat of measure 22.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
+#   range <first measure> <last measure>     the measures read; the run looks only at these
+#   phrase <first measure> <last measure> <arrival measure or 0 for none> [elided]   a phrase, its cadence's arrival measure and whether that arrival is the next phrase's first measure
+#   syncopation <measure> <beat>     a syncopated melody note attacked at this beat (1 is the downbeat, 2.5 is half a beat after the second)
+#   hemiola <first measure> <last measure>
+#   hyperdownbeat <measure>   the first measure of a hypermeasure
+#   reinterpretation <measure>   a measure that ends one hypermeasure and starts the next ("4 = 1")
+meter 4 3/8
+range 1 30
+phrase 1 4 4
+phrase 5 8 9 elided
+phrase 9 12 12
+phrase 18 22 22
+phrase 23 26 26
+phrase 27 30 0
+syncopation 14 2.0
+hyperdownbeat 1
+hyperdownbeat 5
+hyperdownbeat 9
+hyperdownbeat 18
+hyperdownbeat 20
+hyperdownbeat 22
+hyperdownbeat 23
+hyperdownbeat 27
+reinterpretation 9

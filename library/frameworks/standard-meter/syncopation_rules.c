@@ -5,7 +5,8 @@
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_METER_SYNCOPATION_RULE_COUNT] = {
-    "syncopation-off-beat", "syncopation-sustain", "syncopation-rest", "syncopation-accent"};
+    "syncopation-off-beat", "syncopation-sustain", "syncopation-rest", "syncopation-accent",
+    "syncopation-through-stronger"};
 
 static StandardMeterRulePair g_pairs[STANDARD_METER_SYNCOPATION_RULE_COUNT];
 static bool g_built[STANDARD_METER_SYNCOPATION_RULE_COUNT];
@@ -58,4 +59,16 @@ bool standard_meter_syncopated_by_rest(const TimeSignature *time_signature, cons
 
 bool standard_meter_syncopated_by_accent(const TimeSignature *time_signature, const Duration *onset, bool accented) {
     return accented && standard_meter_is_off_beat(time_signature, onset);
+}
+
+bool standard_meter_syncopated_through_stronger(StandardMeterLevel attack, StandardMeterLevel sustained,
+                                                unsigned *out_strength) {
+    if (attack < STANDARD_METER_LEVEL_DOWNBEAT || attack > STANDARD_METER_LEVEL_FINER ||
+        sustained < STANDARD_METER_LEVEL_DOWNBEAT || sustained > STANDARD_METER_LEVEL_FINER || sustained >= attack) {
+        return false;
+    }
+    if (out_strength != NULL) {
+        *out_strength = (unsigned)(attack - sustained);
+    }
+    return true;
 }

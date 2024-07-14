@@ -10,14 +10,23 @@ add_library(standard_meter
     borrowed_rules.c
     hypermeter_rules.c
     syncopation_rules.c
+    hemiola_rules.c
     metric_position_rules.c
     segmentation_beat_grid.c
     beat_grid.c
     beaming_rules.c
     beat_tie_rules.c
+    analysis/meter_analysis_time.c
+    analysis/meter_analysis_input.c
+    analysis/meter_analysis_claim.c
+    analysis/meter_analysis_syncopation.c
+    analysis/meter_analysis_hemiola.c
+    analysis/meter_analysis_hypermeter.c
+    analysis/meter_analysis_density.c
 )
 target_include_directories(standard_meter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${PROJECT_SOURCE_DIR}/src
 )
 target_link_libraries(standard_meter PUBLIC ursatz)
