@@ -133,6 +133,7 @@ nothing checks them.
 | `theme_pairing` | How a theme begins and ends. `beginning`: `presentation`, `antecedent` or `compound_basic_idea`; `ending`: `continuation`, `consequent` or `cadential`. The nine pairings make the sentence, the period and the seven hybrids of standard-form. |
 | `accompaniment` | The accompaniment an inner voice span (voice 1) is to be written as. `pattern`: `block`, `arpeggiated`, `alberti`, `oom-pah` or `any`; `texture`: a standard-texture name (`homophony`, `homorhythm`, `melody and accompaniment` and the others the library names), absent for none; `low` and `high`: MIDI pitches, absent for 48 and 67. `high` must be above `low`. See [accompaniment.md](accompaniment.md). |
 | `voicing` | The four-part voicing an inner voice span (voice 1, the alto) is to be written as. `write_soprano`: true when the voicing writes the melody span over the same time too (optional, false). See [voicing.md](voicing.md). |
+| `counterpoint` | The counter-melody an inner voice span (voice 1) is to be written as. `species`: 1 to 4 (required). `above`: true when the given line is the bass and the counter-melody sounds above it, false when the given line is the melody (optional, false). See [counterpoint.md](counterpoint.md). |
 
 ### Motive development parameters
 
