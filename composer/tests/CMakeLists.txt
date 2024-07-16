@@ -205,3 +205,11 @@ foreach(species 1 2 3 4)
     add_test(NAME test_counterpoint_species_${species} COMMAND test_counterpoint ${species})
 endforeach()
 add_test(NAME test_counterpoint_not_applicable COMMAND test_counterpoint na)
+
+add_executable(test_counterpoint_cli test_counterpoint_cli.c)
+target_link_libraries(test_counterpoint_cli PRIVATE ursatz_composer)
+target_compile_options(test_counterpoint_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_counterpoint_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                         COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_counterpoint_cli ursatz-composer)
+add_test(NAME test_counterpoint_cli COMMAND test_counterpoint_cli)
