@@ -27,7 +27,8 @@ typedef enum {
     PLAN_CONSTRAINT_HARMONY_SHAPE, /* the shape a harmony span is to take (R-050) */
     PLAN_CONSTRAINT_THEME_PAIRING, /* how a theme begins and how it ends */
     PLAN_CONSTRAINT_ACCOMPANIMENT, /* the accompaniment an inner voice span is to be written as */
-    PLAN_CONSTRAINT_VOICING        /* the four-part voicing an inner voice span is to be written as */
+    PLAN_CONSTRAINT_VOICING,       /* the four-part voicing an inner voice span is to be written as */
+    PLAN_CONSTRAINT_COUNTERPOINT   /* the counter-melody an inner voice span is to be written as */
 } PlanConstraintKind;
 
 typedef enum {
@@ -187,6 +188,16 @@ typedef struct {
     bool write_soprano;
 } PlanVoicing;
 
+/*
+ * A counter-melody against a given line (R-067). It is on a Constrained inner voice span, voice 1. species is 1 to 4.
+ * With above false the given line is the melody lane and the counter-melody sounds below it; with above true the
+ * given line is the bass lane (the cantus) and the counter-melody sounds above it.
+ */
+typedef struct {
+    int species;
+    bool above;
+} PlanCounterpoint;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -201,6 +212,7 @@ typedef struct {
         PlanThemePairing theme_pairing;
         PlanAccompaniment accompaniment;
         PlanVoicing voicing;
+        PlanCounterpoint counterpoint;
     } params;
 } PlanConstraint;
 

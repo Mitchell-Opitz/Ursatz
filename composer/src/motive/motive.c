@@ -336,6 +336,19 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
         return MOTIVE_ERR_VALUE;
     }
 
+    if (options && options->max_bars > 0) {
+        /* The notes end at motive->length; the limit is that many whole bars of the meter. */
+        PlanTime bar;
+        PlanTime limit;
+        if (plan_time_make((long)motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit, &bar) != PLAN_OK ||
+            plan_time_make((long)options->max_bars * bar.num, bar.den, &limit) != PLAN_OK ||
+            plan_time_compare(motive->length, limit) > 0) {
+            motive_set_error(error, "", "the notes fill more than %zu bars of %d/%d", options->max_bars,
+                             motive->meter.beats_per_bar, motive->meter.beat_unit);
+            return MOTIVE_ERR_VALUE;
+        }
+    }
+
     PlanKey key;
     if (options && options->has_key) {
         key = options->key;

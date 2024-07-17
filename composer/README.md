@@ -45,6 +45,7 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 | `src/motive/` | Motives, their analysis and development. |
 | `src/melody/` | The melody operator. |
 | `src/form/` | Hearing the phrase form through standard-form. |
+| `src/counterpoint/` | The counter-melody operator: species 1 to 4 against a given line, its search and its check. |
 | `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
 | `cli/` | The `ursatz-composer` command. |
@@ -116,6 +117,12 @@ chosen by pattern or by the texture it is to be heard as. See [docs/accompanimen
 The voicing operator voices a written progression in four parts, soprano, alto, tenor and bass, by the standard voicing
 rules with smooth voice leading and no parallels, and `voice_hear` hears the voice leading of a written plan. See
 [docs/voicing.md](docs/voicing.md).
+
+## Two-part counterpoint
+
+The counterpoint operator writes a counter-melody against a given line in the first to fourth species, checked by the
+standard-counterpoint rules; `ursatz-composer counterpoint` runs it from the command line. See
+[docs/counterpoint.md](docs/counterpoint.md) and [docs/cli-counterpoint.md](docs/cli-counterpoint.md).
 
 ## Growing a theme
 

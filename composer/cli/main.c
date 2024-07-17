@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "counterpoint.h"
 #include "develop.h"
 #include "grow.h"
 #include "motive.h"
@@ -18,6 +19,7 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", MOTIVE_USAGE_LINE);
     fprintf(out, "%s\n", DEVELOP_USAGE_LINE);
     fprintf(out, "%s\n", GROW_USAGE_LINE);
+    fprintf(out, "%s\n", COUNTERPOINT_USAGE_LINE);
 }
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
@@ -106,6 +108,9 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "grow") == 0) {
         return run_grow(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "counterpoint") == 0) {
+        return run_counterpoint(argc, argv);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         printf("ursatz-composer %s\n", composer_version());

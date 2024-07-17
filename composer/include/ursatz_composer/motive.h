@@ -84,6 +84,9 @@ typedef struct {
     PlanMeter meter;
     bool has_key;
     PlanKey key;
+    /* The most bars the notes may fill, or 0 for no limit. The readers themselves set none: a line of any length up to
+       MOTIVE_MAX_NOTES notes is read, and the commands that take a one-bar motive check it after. */
+    size_t max_bars;
 } MotiveOptions;
 
 /* Filled on failure. Pass NULL when the details are not wanted. */

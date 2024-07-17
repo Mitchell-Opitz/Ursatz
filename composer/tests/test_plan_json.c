@@ -194,6 +194,9 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.accompaniment.high == b->params.accompaniment.high;
     case PLAN_CONSTRAINT_VOICING:
         return a->params.voicing.write_soprano == b->params.voicing.write_soprano;
+    case PLAN_CONSTRAINT_COUNTERPOINT:
+        return a->params.counterpoint.species == b->params.counterpoint.species &&
+               a->params.counterpoint.above == b->params.counterpoint.above;
     }
     return false;
 }

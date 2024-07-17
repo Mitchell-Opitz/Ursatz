@@ -60,6 +60,9 @@ add_library(ursatz_composer STATIC
     texture/voicing_search.c
     texture/voice_hear.c
     texture/texture_check.c
+    counterpoint/counterpoint_write.c
+    counterpoint/counterpoint_species.c
+    counterpoint/counterpoint_check.c
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
