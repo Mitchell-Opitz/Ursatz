@@ -25,7 +25,8 @@ static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
-                                                  "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint"};
+                                                  "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
+                                                  "return", "layers", "section_letter"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -37,6 +38,7 @@ static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound_basic_idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
+static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
 static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
@@ -202,6 +204,27 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         ok = ok && json_add(object, "species", json_number(constraint->params.counterpoint.species)) &&
              json_add(object, "above", cJSON_CreateBool(constraint->params.counterpoint.above));
         break;
+    case PLAN_CONSTRAINT_RETURN:
+        ok = ok && json_add(object, "section", json_number((long)constraint->params.section_return.section)) &&
+             json_add(object, "variation",
+                      cJSON_CreateString(RETURN_VARIATION_NAMES[constraint->params.section_return.variation]));
+        break;
+    case PLAN_CONSTRAINT_LAYERS: {
+        cJSON *lanes = cJSON_CreateArray();
+        ok = ok && json_add(object, "lanes", lanes);
+        for (size_t lane = 0; ok && lane < COUNT_OF(LANE_NAMES); lane++) {
+            if (constraint->params.layers.lanes & PLAN_LAYER_BIT(lane)) {
+                ok = json_append(lanes, cJSON_CreateString(LANE_NAMES[lane]));
+            }
+        }
+        break;
+    }
+    case PLAN_CONSTRAINT_SECTION_LETTER: {
+        char letter[PLAN_SECTION_LETTER_MAX];
+        snprintf(letter, sizeof(letter), "%s", constraint->params.letter);
+        ok = ok && json_add(object, "letter", cJSON_CreateString(letter));
+        break;
+    }
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -904,6 +927,54 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         return read_optional_int(reader, item, path, "species", 1, 4, &out->params.counterpoint.species) &&
                read_optional_bool(reader, item, path, "above", &out->params.counterpoint.above);
+    case PLAN_CONSTRAINT_RETURN:
+        if (!json_read_int_member(reader, item, path, "section", 1, TIME_LIMIT, &number_value) ||
+            !read_enum_member(reader, item, path, "variation", RETURN_VARIATION_NAMES,
+                              COUNT_OF(RETURN_VARIATION_NAMES), &value)) {
+            return false;
+        }
+        out->params.section_return.section = (NodeId)number_value;
+        out->params.section_return.variation = (PlanReturnVariation)value;
+        return true;
+    case PLAN_CONSTRAINT_LAYERS: {
+        const cJSON *lanes = json_member(reader, item, path, "lanes", true);
+        if (!lanes) {
+            return false;
+        }
+        char lanes_path[PLAN_JSON_PATH_MAX];
+        json_child_path(lanes_path, path, "lanes");
+        if (!cJSON_IsArray(lanes)) {
+            return json_bad_format(reader, lanes_path, "expected an array of lane names");
+        }
+        size_t index = 0;
+        const cJSON *lane;
+        cJSON_ArrayForEach(lane, lanes) {
+            char at[PLAN_JSON_PATH_MAX];
+            json_index_path(at, lanes_path, index++);
+            if (!read_enum(reader, lane, at, LANE_NAMES, COUNT_OF(LANE_NAMES), &value)) {
+                return false;
+            }
+            out->params.layers.lanes |= PLAN_LAYER_BIT(value);
+        }
+        if (out->params.layers.lanes == 0) {
+            return json_bad_format(reader, lanes_path, "a layer sounds at least one lane");
+        }
+        return true;
+    }
+    case PLAN_CONSTRAINT_SECTION_LETTER: {
+        const cJSON *letter = json_member(reader, item, path, "letter", true);
+        if (!letter) {
+            return false;
+        }
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "letter");
+        if (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' ||
+            strlen(letter->valuestring) >= PLAN_SECTION_LETTER_MAX) {
+            return json_bad_format(reader, at, "expected one to three characters");
+        }
+        snprintf(out->params.letter, PLAN_SECTION_LETTER_MAX, "%s", letter->valuestring);
+        return true;
+    }
     }
     return false;
 }
