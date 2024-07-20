@@ -38,6 +38,7 @@ add_library(ursatz_composer STATIC
     motive/motive_develop.c
     motive/motive_develop_operator.c
     motive/motive_recognizability.c
+    motive/motive_invent.c
     melody/melody_check.c
     melody/melody_context.c
     melody/melody_contour.c

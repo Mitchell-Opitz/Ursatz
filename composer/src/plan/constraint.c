@@ -80,6 +80,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         size_t length = strnlen(constraint->params.letter, PLAN_SECTION_LETTER_MAX);
         return length > 0 && length < PLAN_SECTION_LETTER_MAX;
     }
+    case PLAN_CONSTRAINT_INVENT_MOTIVE:
+        return true;
     }
     return false;
 }

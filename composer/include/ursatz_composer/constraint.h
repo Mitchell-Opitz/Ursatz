@@ -31,7 +31,8 @@ typedef enum {
     PLAN_CONSTRAINT_COUNTERPOINT,  /* the counter-melody an inner voice span is to be written as */
     PLAN_CONSTRAINT_RETURN,        /* on a section node: the earlier section it returns, and how it varies it */
     PLAN_CONSTRAINT_LAYERS,        /* on a section node: which lanes sound in it */
-    PLAN_CONSTRAINT_SECTION_LETTER /* on a section node: its form letter ("A", "B", "A'") */
+    PLAN_CONSTRAINT_SECTION_LETTER, /* on a section node: its form letter ("A", "B", "A'") */
+    PLAN_CONSTRAINT_INVENT_MOTIVE   /* no parameters: a motive's melody span to be invented (motive-invent) */
 } PlanConstraintKind;
 
 typedef enum {

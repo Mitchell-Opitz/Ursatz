@@ -26,7 +26,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter"};
+                                                  "return", "layers", "section_letter", "invent_motive"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -225,6 +225,8 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         ok = ok && json_add(object, "letter", cJSON_CreateString(letter));
         break;
     }
+    case PLAN_CONSTRAINT_INVENT_MOTIVE:
+        break;
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -975,6 +977,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         snprintf(out->params.letter, PLAN_SECTION_LETTER_MAX, "%s", letter->valuestring);
         return true;
     }
+    case PLAN_CONSTRAINT_INVENT_MOTIVE:
+        return true;
     }
     return false;
 }

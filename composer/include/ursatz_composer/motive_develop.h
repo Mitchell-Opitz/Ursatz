@@ -204,4 +204,33 @@ bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const Fill
 const Motive *motive_develop_candidate_motive(const FillCandidate *candidate);
 const MotiveDevSpec *motive_develop_candidate_spec(const FillCandidate *candidate);
 
+/* --- invention ---------------------------------------------------------- */
+
+#define MOTIVE_INVENT_OPERATOR_NAME "motive-invent"
+
+/*
+ * Registers motive-invent, a Fill operator for a Constrained melody lane span (voice 0) of a motive node that carries
+ * an invent_motive constraint and is one bar of its meter long, starting on a barline. It proposes
+ * context->candidates motives drawn from the run's seeded stream, each of 3 to 6 notes filling the bar: the rhythm
+ * from the meter's cells (a beat of a simple meter, a dotted quarter of 6/8, each one note or two, the last note
+ * allowed to hold the last cells), the first note on scale degree 1, 3 or 5, then steps and leaps of at most a sixth
+ * in the key's scale, every pitch from C4 to C6. The key and meter are the plan's lanes over the span, else the
+ * context's. Applying a candidate writes the notes to the span and marks the motive node Realized. context may be
+ * NULL for the defaults and must outlive the registry otherwise.
+ */
+FillResult motive_invent_register(FillOperatorRegistry *registry, const MotiveDevelopContext *context);
+
+/*
+ * The checker for motive-invent's candidates. Hard: standard-counterpoint's hard melodic rules on the motive as one
+ * line (melodic_rules.h: no forbidden leap or outline; the clausula vera is not asked). Soft: the motive's
+ * recognizability, the mean of motive_recognizability against the three developments the form templates make of it
+ * (a tonal inversion, a diminution, the first interval widened by a semitone), a development that cannot be made
+ * counting 0, with the context's weights. A candidate of any other operator is accepted at 0/1.
+ */
+bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                           const FillCandidate *candidate, void *context, FillCheck *out);
+
+/* The motive a motive-invent candidate proposes. NULL for any other candidate. */
+const Motive *motive_invent_candidate_motive(const FillCandidate *candidate);
+
 #endif
