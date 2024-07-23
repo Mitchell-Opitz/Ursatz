@@ -60,7 +60,6 @@ static PlanResult make_phrase(GrowBuild *build) {
 /* A presentation: a basic idea and its repetition, each over a prolongation. */
 static PlanResult build_presentation(GrowBuild *build) {
     const GrowThemeSpec *spec = build->spec;
-    const GrowThemeRequest *request = build->request;
     NodeId presentation;
     NodeId ideas[2];
     NodeId motive;
@@ -79,7 +78,7 @@ static PlanResult build_presentation(GrowBuild *build) {
                                &ideas[1]);
     }
     for (GrowIdea idea = GROW_IDEA_BASIC; idea <= GROW_IDEA_REPETITION; idea++) {
-        grow_idea_ref(spec, idea, request->source, &refs[idea]);
+        grow_idea_ref(spec, idea, build->source, &refs[idea]);
     }
     if (result == PLAN_OK) {
         result = grow_add_motive(build, GROW_IDEA_REPETITION, &refs[GROW_IDEA_REPETITION], &motive);
@@ -127,7 +126,7 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
                                &ideas[1]);
     }
     for (GrowIdea idea = GROW_IDEA_BASIC; idea <= GROW_IDEA_CONTRAST; idea++) {
-        grow_idea_ref(spec, idea, build->request->source, &refs[idea]);
+        grow_idea_ref(spec, idea, build->source, &refs[idea]);
     }
     if (result == PLAN_OK) {
         result = grow_add_motive(build, GROW_IDEA_CONTRAST, &refs[GROW_IDEA_CONTRAST], &motive);

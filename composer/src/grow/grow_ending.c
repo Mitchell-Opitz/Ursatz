@@ -162,7 +162,7 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     }
     /* A motive in the material for each idea, each made from m0. */
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
-        grow_idea_ref(spec, (GrowIdea)slot, build->request->source, &refs[slot]);
+        grow_idea_ref(spec, (GrowIdea)slot, build->source, &refs[slot]);
         result = grow_add_motive(build, slot, &refs[slot], &motives[slot]);
     }
     if (result == PLAN_OK) {
