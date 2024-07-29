@@ -148,6 +148,16 @@ PlanResult grow_beginning_build(GrowBuild *build);
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec);
 PlanResult grow_ending_build(GrowBuild *build);
 
+/*
+ * Whether grow-theme can build a theme of these bars, pairing and cadence in the meter: a supported meter, 4 or 8
+ * bars, a pairing standard-form knows, a PAC, IAC or HC with room in half the theme, and for an antecedent a weaker
+ * first cadence (HC or IAC) that has room too.
+ */
+bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                          PlanCadenceType cadence, PlanCadenceType first);
+/* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
+bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
+
 /* The cells in a bar the harmony operators place chords on; false for a meter they do not support. */
 bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
 
