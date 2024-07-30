@@ -103,6 +103,41 @@ static bool ternary(size_t bars, FormTemplate *out) {
     return true;
 }
 
+#define VARIATIONS_DEFAULT 3
+#define VARIATIONS_MAX 8
+
+/*
+ * Theme and variations: the theme, then n variations of 8 bars, each returning the theme. Variation k's motive is m0
+ * diminished (k odd) or with an interval changed (k even), so each sounds unlike the one before; the return is an
+ * ornament of the theme for a diminution and a reharmonization for an interval change (B6 makes them so).
+ */
+static bool variations(size_t bars, size_t count, FormTemplate *out) {
+    if (count == 0 && bars == 0) {
+        count = VARIATIONS_DEFAULT;
+    } else if (count == 0) {
+        if (bars % 8 != 0 || bars < 16) {
+            return false;
+        }
+        count = bars / 8 - 1;
+    }
+    if (count < 1 || count > VARIATIONS_MAX || (bars != 0 && bars != 8 * (1 + count))) {
+        return false;
+    }
+    add_section(out, "T", "theme", 8, PERIOD, PLAN_CADENCE_PAC);
+    for (size_t k = 1; k <= count; k++) {
+        char letter[PLAN_SECTION_LETTER_MAX];
+        char name[FORM_TEMPLATE_NAME_MAX];
+        snprintf(letter, sizeof(letter), "V%zu", k);
+        snprintf(name, sizeof(name), "variation %zu", k);
+        FormTemplateSection *section = add_section(out, letter, name, 8, PERIOD, PLAN_CADENCE_PAC);
+        bool odd = k % 2 == 1;
+        returns_to(out, section, 0, odd ? PLAN_RETURN_ORNAMENT : PLAN_RETURN_REHARMONIZE);
+        section->motive = odd ? PLAN_TRANSFORM_DIMINISHED : PLAN_TRANSFORM_INTERVAL_CHANGED;
+        section->motive_tonal = false;
+    }
+    return true;
+}
+
 bool form_template_layout(FormTemplateKind kind, size_t bars, size_t count, FormTemplate *out) {
     if (!out) {
         return false;
@@ -127,6 +162,9 @@ bool form_template_layout(FormTemplateKind kind, size_t bars, size_t count, Form
     case FORM_TEMPLATE_TERNARY:
         ok = ternary(bars, out);
         break;
+    case FORM_TEMPLATE_VARIATIONS:
+        ok = variations(bars, count, out);
+        break;
     default:
         ok = false;
         break;
@@ -135,6 +173,9 @@ bool form_template_layout(FormTemplateKind kind, size_t bars, size_t count, Form
         memset(out, 0, sizeof(*out));
         return false;
     }
-    out->bars = bars;
+    out->bars = 0;
+    for (size_t i = 0; i < out->section_count; i++) {
+        out->bars += out->sections[i].bars;
+    }
     return true;
 }

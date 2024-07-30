@@ -17,8 +17,12 @@
  *                   A' 4 (returns A, PAC); 24 = A 8, B 8, A' 8.
  *   ternary         24 = A 8 (antecedent + consequent, PAC), B 8 (presentation + continuation, PAC), A 8 (returns A);
  *                   12 = 4 each.
+ *   variations      8 x (1 + n), n from 1 to 8 (3 by default): the theme 8 (antecedent + consequent, PAC), then
+ *                   variations 1 to n, each the same and returning the theme (an ornament for k odd, a
+ *                   reharmonization for k even).
  *
- * Motives: a B section is made from m0 inverted (tonal); every other section, returning sections included, from m0 itself (a returning section takes its
+ * Motives: a B section is made from m0 inverted (tonal); variation k from m0 diminished (k odd) or with an interval
+ * changed (k even); every other section, returning sections included, from m0 itself (a returning section takes its
  * source's motive).
  */
 
