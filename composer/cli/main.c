@@ -30,6 +30,7 @@ static void report_skipped(const RenderedPlan *rendered) {
         fprintf(stderr, "Skipped lane span %zu (%s): %s\n", skip->span, LANE_NAMES[skip->lane],
                 skip->reason == RENDER_SKIP_NOT_REALIZED ? "not Given or Realized"
                 : skip->reason == RENDER_SKIP_MATERIAL ? "source material"
+                : skip->reason == RENDER_SKIP_LAYER    ? "not in the layer"
                                                          : "lane is not rendered yet");
     }
 }

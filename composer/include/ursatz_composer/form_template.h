@@ -20,6 +20,13 @@
  *   variations      8 x (1 + n), n from 1 to 8 (3 by default): the theme 8 (antecedent + consequent, PAC), then
  *                   variations 1 to n, each the same and returning the theme (an ornament for k odd, a
  *                   reharmonization for k even).
+ *   loop            8 = one section (presentation + continuation, HC, so the end leads back to the first bar);
+ *                   16 = A 8 (IAC), B 8 (HC).
+ *   layered         8 x layers, 2 to 4 layers (4 by default): layer 1 (presentation + continuation, HC), then each
+ *                   later layer returning layer 1. The LAYERS masks build up: layer 1 the bass, layer 2 the bass and
+ *                   the accompaniment, layer 3 adds the melody, the last layer everything. Every layer is grown in
+ *                   full, with an accompaniment (pattern ANY when the request has none); the mask decides what
+ *                   sounds (render.h).
  *
  * Motives: a B section is made from m0 inverted (tonal); variation k from m0 diminished (k odd) or with an interval
  * changed (k even); every other section, returning sections included, from m0 itself (a returning section takes its

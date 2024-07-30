@@ -138,6 +138,62 @@ static bool variations(size_t bars, size_t count, FormTemplate *out) {
     return true;
 }
 
+/*
+ * A loop for game and media music: it ends on a half cadence so its last bar leads back to its first. One section of
+ * 8 bars, or A ending in an IAC and B ending in the HC.
+ */
+static bool loop(size_t bars, FormTemplate *out) {
+    if (bars == 8) {
+        add_section(out, "A", "loop", 8, SENTENCE, PLAN_CADENCE_HC);
+        return true;
+    }
+    if (bars == 16) {
+        add_section(out, "A", "A", 8, SENTENCE, PLAN_CADENCE_IAC);
+        contrast_motive(add_section(out, "B", "B", 8, SENTENCE, PLAN_CADENCE_HC));
+        return true;
+    }
+    return false;
+}
+
+#define LAYERS_DEFAULT 4
+#define LAYERS_MIN 2
+#define LAYERS_MAX 4
+
+/*
+ * A layered form: one 8-bar section heard with more lanes each time, every later layer returning the first. The
+ * masks build up from the bass: the bass alone, then with the accompaniment, then with the melody, and the last layer
+ * everything. With fewer than four layers the last is everything and the ones before it follow the same order.
+ */
+static bool layered(size_t bars, size_t count, FormTemplate *out) {
+    static const unsigned BUILD_UP[LAYERS_MAX - 1] = {
+        PLAN_LAYER_BIT(PLAN_LANE_BASS),
+        PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE),
+        PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE) | PLAN_LAYER_BIT(PLAN_LANE_MELODY)};
+    if (count == 0 && bars == 0) {
+        count = LAYERS_DEFAULT;
+    } else if (count == 0) {
+        if (bars % 8 != 0) {
+            return false;
+        }
+        count = bars / 8;
+    }
+    if (count < LAYERS_MIN || count > LAYERS_MAX || (bars != 0 && bars != 8 * count)) {
+        return false;
+    }
+    for (size_t k = 1; k <= count; k++) {
+        char letter[PLAN_SECTION_LETTER_MAX];
+        char name[FORM_TEMPLATE_NAME_MAX];
+        snprintf(letter, sizeof(letter), "L%zu", k);
+        snprintf(name, sizeof(name), "layer %zu", k);
+        FormTemplateSection *section = add_section(out, letter, name, 8, SENTENCE, PLAN_CADENCE_HC);
+        if (k > 1) {
+            returns_to(out, section, 0, PLAN_RETURN_EXACT);
+        }
+        section->layers = k == count ? PLAN_LAYERS_ALL : BUILD_UP[k - 1];
+    }
+    return true;
+}
+
 bool form_template_layout(FormTemplateKind kind, size_t bars, size_t count, FormTemplate *out) {
     if (!out) {
         return false;
@@ -165,8 +221,11 @@ bool form_template_layout(FormTemplateKind kind, size_t bars, size_t count, Form
     case FORM_TEMPLATE_VARIATIONS:
         ok = variations(bars, count, out);
         break;
-    default:
-        ok = false;
+    case FORM_TEMPLATE_LOOP:
+        ok = loop(bars, out);
+        break;
+    case FORM_TEMPLATE_LAYERED:
+        ok = layered(bars, count, out);
         break;
     }
     if (!ok) {
