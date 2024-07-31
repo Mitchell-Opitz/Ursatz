@@ -377,14 +377,44 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
 /*
  * The section's own motive: the section's MOTIVE_REF made concrete, every parameter it leaves open drawn from rng, so
  * the motive operators propose exactly this one (an inversion about the first note, a diminution or augmentation by
- * half or double, an interval changed by a semitone or two, a tonal transposition by up to three steps). The result
- * must fit one bar and have two notes or more. False when the ref asks for a transform a basic idea is not made
- * from (a fragment, a liquidation) or the draw does not come out.
+ * half or double, or by the next ratio the meter can write, an interval changed by a semitone or two, a tonal transposition by up to three steps). The result
+ * must fit one bar and have two notes or more. A diminution or augmentation no usual ratio can write in the meter is
+ * made an interval change instead. False when the ref asks for a transform a basic idea is not made from (a fragment,
+ * a liquidation) or the draw does not come out.
  */
 #define SECTION_MOTIVE_DRAWS 8
 
+static const int AUGMENT_RATIOS[][2] = {{2, 1}, {3, 2}, {4, 3}};
+static const int DIMINISH_RATIOS[][2] = {{1, 2}, {2, 3}, {3, 4}};
+#define RHYTHM_RATIOS 3
+
+/* Whether any usual ratio augments or diminishes the motive into a rhythm the meter can write. */
+static bool rhythm_writable(const Motive *m0, bool augment) {
+    MotiveDevSpec dev;
+    Motive result;
+    memset(&dev, 0, sizeof(dev));
+    dev.kind = augment ? MOTIVE_DEV_AUGMENT : MOTIVE_DEV_DIMINISH;
+    for (size_t r = 0; r < RHYTHM_RATIOS; r++) {
+        dev.ratio_num = (unsigned long)(augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][0];
+        dev.ratio_den = (unsigned long)(augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][1];
+        if (motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const Motive *m0, GrowThemeSpec *spec) {
+    PlanMotiveRef rhythm_fallback;
     const PlanMotiveRef *asked = &request->motive_ref;
+    if ((asked->transform == PLAN_TRANSFORM_AUGMENTED || asked->transform == PLAN_TRANSFORM_DIMINISHED) &&
+        asked->ratio_num == 0 && !rhythm_writable(m0, asked->transform == PLAN_TRANSFORM_AUGMENTED)) {
+        /* No usual ratio can be written in the meter (a whole bar of 3/4 has no diminution without triplets): the
+           section still sounds unlike m0, with an interval changed. */
+        rhythm_fallback = *asked;
+        rhythm_fallback.transform = PLAN_TRANSFORM_INTERVAL_CHANGED;
+        asked = &rhythm_fallback;
+    }
     for (size_t draw = 0; draw < SECTION_MOTIVE_DRAWS; draw++) {
         PlanMotiveRef ref = *asked;
         MotiveDevSpec dev;
@@ -435,12 +465,19 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
             break;
         case PLAN_TRANSFORM_AUGMENTED:
         case PLAN_TRANSFORM_DIMINISHED: {
+            /* The ratio asked for, else the first of the usual ones the meter can write. */
             bool augment = asked->transform == PLAN_TRANSFORM_AUGMENTED;
+            const int(*ratios)[2] = augment ? AUGMENT_RATIOS : DIMINISH_RATIOS;
             dev.kind = augment ? MOTIVE_DEV_AUGMENT : MOTIVE_DEV_DIMINISH;
-            ref.ratio_num = asked->ratio_num > 0 ? asked->ratio_num : (augment ? 2 : 1);
-            ref.ratio_den = asked->ratio_den > 0 ? asked->ratio_den : (augment ? 1 : 2);
-            dev.ratio_num = (unsigned long)ref.ratio_num;
-            dev.ratio_den = (unsigned long)ref.ratio_den;
+            for (size_t r = 0; r < RHYTHM_RATIOS; r++) {
+                ref.ratio_num = asked->ratio_num > 0 ? asked->ratio_num : ratios[r][0];
+                ref.ratio_den = asked->ratio_den > 0 ? asked->ratio_den : ratios[r][1];
+                dev.ratio_num = (unsigned long)ref.ratio_num;
+                dev.ratio_den = (unsigned long)ref.ratio_den;
+                if (asked->ratio_num > 0 || motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
+                    break;
+                }
+            }
             break;
         }
         default:
