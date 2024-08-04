@@ -439,6 +439,35 @@ function groupClaimsByTab(interpretations) {
   return groups;
 }
 
+/* The Chords and Keys claims of a piece, read from the stored analysis
+ * document (data.document): each chord and each key region becomes a
+ * claim with its label and location. Every other tab stays empty until
+ * the tabs follow the document's own sections. */
+function formatDocumentLocation(location) {
+  const start = location && location.start;
+  return start ? `m. ${start.measure}, beat ${start.beat}` : "";
+}
+
+function claimsFromDocument(document) {
+  const claims = [];
+  const sections = [
+    { type: "key", entries: (document && document.keys && document.keys.regions) || [] },
+    { type: "chord", entries: (document && document.chords) || [] },
+  ];
+  for (const section of sections) {
+    for (const entry of section.entries) {
+      const where = formatDocumentLocation(entry.location);
+      claims.push({
+        type: section.type,
+        label: where ? `${entry.label} (${where})` : entry.label,
+        provenance_state: "absent",
+        highlighted_note_ids: [],
+      });
+    }
+  }
+  return claims;
+}
+
 /* Entry point for the top-level Analysis nav tab: reopens whichever
  * piece was last viewed (via a Library filename click, or a prior visit
  * to this tab) so the tab isn't blank on return. Before any piece has
@@ -511,7 +540,7 @@ function renderAnalysisTabs(data) {
   const claimsEl = document.getElementById("analysis-claims");
   const detailEl = document.getElementById("analysis-detail");
   const scoreEl = document.getElementById("analysis-score");
-  const groups = groupClaimsByTab(data.interpretations || []);
+  const groups = groupClaimsByTab(claimsFromDocument(data.document));
 
   currentScoreOsmd = null;
   currentScoreNoteIndex = null;

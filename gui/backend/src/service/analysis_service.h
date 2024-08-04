@@ -7,30 +7,19 @@
 #include <export/musicxml_export.h>
 
 /*
- * Shared analysis service: import + analyze + persist a MIDI piece.
+ * Shared analysis service: import, analyze and store a piece.
  *
- * This is the ONLY place outside persistence_service.c allowed to call
- * into Ursatz. It wraps Ursatz's MIDIImporter, ChordIdentification and
- * KeyEstimation (both run against the common-practice-minimal
- * framework), and the NoteEvent/Interpretation persistence functions
- * into operations the Analyzer tool's route code can call directly,
- * per the boundary tool.h/README describe.
+ * This is the ONLY place outside persistence_service.c and
+ * corpus_service.c allowed to call into Ursatz or the Analyzer. Every
+ * analysis goes through the Analyzer library (input_pipeline_import_file,
+ * run_analysis_pipeline, analysis_document_build); the GUI keeps no
+ * analysis code of its own (R-084).
  *
- * The Sonority-grouping (by onset) and scale-degree/tonic-relative
- * pitch-class computation this module does before calling
- * ChordIdentification/KeyEstimation mirrors ursatz-analyzer's pipeline
- * (src/pipeline/segmentation.c, key_pipeline.c, chord_pipeline.c),
- * used as a reference call sequence only -- this module does not link
- * against or call ursatz-analyzer. This includes global key
- * estimation's precedence order (a MIDI key signature meta-event's
- * tonic, then the bass pitch class of the piece's closing and opening
- * chord, then a brute-force pitch-class scan as a last resort) and its
- * flat/sharp spelling rules -- kept in sync by hand, not by any
- * mechanism that enforces it, so a future fix to ursatz-analyzer's
- * key_pipeline.c needs a matching port here too.
- *
- * Ursatz's persistence has no "piece" concept (persistence.h): each
- * piece is its own SQLite file, id == filename (without extension).
+ * A piece is a directory pieces_dir/<id>/ holding:
+ *   source.mid | source.musicxml | source.xml | source.mxl   the upload, unchanged
+ *   analysis.json                                            the Analyzer's document
+ *   meta.json                                                filename, format, uploaded_at,
+ *                                                            analyzer_version, document_schema_version
  * pieces_dir is created if it does not already exist.
  */
 
@@ -42,59 +31,6 @@ typedef enum {
     URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND,
     URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT
 } UrsatzGuiAnalysisResult;
-
-/*
- * One persisted Chord or Key Interpretation, as returned by
- * ursatz_gui_analysis_get_piece. produced_by (author/method) is the only
- * analyzer/importer identity Ursatz's Interpretation actually carries and
- * persists today -- NOT a full Provenance-object reference.
- *
- * provenance_state reads the Interpretation's existing ProvenanceReference
- * (interpretation_provenance()/provenance_reference_state()) as "present"
- * or "absent". No analyzer upstream (in Ursatz or ursatz-analyzer) calls
- * provenance_reference_create_present() today, so "absent" is the only
- * value real output produces -- that reflects the current state of the
- * upstream analyzers, not a limitation of this field, and no resolvable
- * Provenance record type exists yet to point a "present" reference at.
- */
-/*
- * highlighted_note_ids: the MusicXML xml:id of every NoteEvent this
- * claim's target resolves to, empty for types where no resolution
- * exists yet. For type "phrase" the target is directly a NoteEvent id
- * (resolved on the fly from the Interpretation's own target_id). For
- * "cadence"/"motif" the target is a transient Structure/Occurrence that
- * is never itself persisted (see kNoteTargetTableName in
- * analysis_service.c) -- its event ids are captured at analysis time,
- * while that object is still alive, and looked up here by
- * interpretation_id. Relationship-shaped types (period/sentence/form/
- * thematic_return) and key/chord are not resolved this pass; this array
- * is empty for those, not an error.
- */
-typedef struct {
-    char *interpretation_id;
-    char *type;              /* "key" or "chord" */
-    char *label;              /* e.g. "D major", "V7" */
-    char *produced_by_author; /* Interpretation's author field */
-    char *produced_by_method; /* Interpretation's method field */
-    char *provenance_state;   /* "present" or "absent" */
-    char **highlighted_note_ids;
-    size_t highlighted_note_id_count;
-} UrsatzGuiInterpretationSummary;
-
-/*
- * One persisted Relationship, as returned by ursatz_gui_analysis_get_piece.
- * Period/Sentence/Form Structure/Thematic Return Detection's output is
- * Relationship-shaped (a source/predicate/target link between two other
- * ids), not a simple label like key/chord -- see analysis_service.c's
- * kRelationshipTableName for how/why this module persists Relationships
- * itself (Ursatz's persistence layer has no Relationship store).
- */
-typedef struct {
-    char *relationship_id;
-    char *source_id;
-    char *predicate_name;
-    char *target_id;
-} UrsatzGuiRelationshipSummary;
 
 typedef struct {
     char *id;

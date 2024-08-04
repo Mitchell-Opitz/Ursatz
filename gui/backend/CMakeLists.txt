@@ -19,8 +19,6 @@ target_link_libraries(ursatz-gui-backend PRIVATE
   ursatz_analyzer
   cjson
   ursatz
-  common_practice_minimal
-  standard_harmony
   civetweb-c-library
 )
 

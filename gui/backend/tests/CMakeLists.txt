@@ -18,8 +18,6 @@ target_link_libraries(test_health_route PRIVATE
   ursatz_analyzer
   cjson
   ursatz
-  common_practice_minimal
-  standard_harmony
   civetweb-c-library
 )
 
@@ -49,8 +47,6 @@ target_link_libraries(test_analyzer_route PRIVATE
   ursatz_analyzer
   cjson
   ursatz
-  common_practice_minimal
-  standard_harmony
   civetweb-c-library
 )
 
@@ -80,8 +76,6 @@ target_link_libraries(test_corpus_route PRIVATE
   ursatz_analyzer
   cjson
   ursatz
-  common_practice_minimal
-  standard_harmony
   civetweb-c-library
 )
 
@@ -90,49 +84,6 @@ if(WIN32)
 endif()
 
 add_test(NAME corpus_route COMMAND test_corpus_route)
-
-add_executable(test_framework_analyzers test_framework_analyzers.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
-)
-
-target_include_directories(test_framework_analyzers PRIVATE
-  ${CMAKE_SOURCE_DIR}/backend/include
-  ${CMAKE_SOURCE_DIR}/backend/src
-  ${CMAKE_SOURCE_DIR}/backend/src/service
-)
-
-target_link_libraries(test_framework_analyzers PRIVATE
-  ursatz_analyzer
-  cjson
-  ursatz
-  common_practice_minimal
-  standard_harmony
-)
-
-add_test(NAME framework_analyzers COMMAND test_framework_analyzers)
-
-add_executable(test_corpus_key_estimation test_corpus_key_estimation.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
-)
-
-target_include_directories(test_corpus_key_estimation PRIVATE
-  ${CMAKE_SOURCE_DIR}/backend/include
-  ${CMAKE_SOURCE_DIR}/backend/src
-  ${CMAKE_SOURCE_DIR}/backend/src/service
-)
-
-target_link_libraries(test_corpus_key_estimation PRIVATE
-  ursatz_analyzer
-  cjson
-  ursatz
-  common_practice_minimal
-  standard_harmony
-)
-
-add_test(NAME corpus_key_estimation COMMAND test_corpus_key_estimation
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(test_id_service test_id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
