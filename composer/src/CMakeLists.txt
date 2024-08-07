@@ -55,6 +55,7 @@ add_library(ursatz_composer STATIC
     grow/grow_run.c
     piece/form_template.c
     piece/piece_request.c
+    piece/compose_run.c
     texture/accompaniment.c
     texture/accompaniment_pattern.c
     texture/accompaniment_hear.c
