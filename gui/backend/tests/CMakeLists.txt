@@ -54,7 +54,17 @@ if(WIN32)
   target_link_libraries(test_analyzer_route PRIVATE ws2_32)
 endif()
 
-add_test(NAME analyzer_route COMMAND test_analyzer_route)
+# The test compares the stored analysis with what the Analyzer CLI writes for the same file, in its own
+# working directory (pieces/ and cli/ are created there).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
+add_dependencies(test_analyzer_route ursatz-analyzer)
+target_compile_definitions(test_analyzer_route PRIVATE
+  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
+  URSATZ_GUI_TEST_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>"
+)
+
+add_test(NAME analyzer_route COMMAND test_analyzer_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 
 add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
