@@ -21,7 +21,7 @@
 
 #define INVENT_PAYLOAD_MAGIC 0x4D494E56UL
 #define DEFAULT_CANDIDATES 6
-#define ATTEMPTS_PER_CANDIDATE 16
+#define ATTEMPTS_PER_CANDIDATE 64
 #define MIN_NOTES 3
 #define MAX_NOTES 6
 #define RANGE_LOW 60  /* C4 */
@@ -347,7 +347,15 @@ static bool invent_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     size_t added = 0;
     for (size_t attempt = 0; added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
         Motive motive;
+        const char *fault;
         if (!draw_motive(&request, rng, &motive) || invent_already(out, &motive)) {
+            continue;
+        }
+        /* Only motives that keep the hard melodic rules are proposed, as melody-fill proposes its melodies. */
+        if (!invent_melodic_fault(&motive, &fault)) {
+            return false;
+        }
+        if (fault) {
             continue;
         }
         InventPayload *payload = calloc(1, sizeof(*payload));
