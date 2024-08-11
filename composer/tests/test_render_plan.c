@@ -534,9 +534,53 @@ static void test_material_is_left_out(void) {
     plan_destroy(plan);
 }
 
+/*
+ * A layer sounds only the lanes its LAYERS mask names: the bass layer leaves out the melody and the inner voice, the
+ * full layer sounds them all, and a section with no mask sounds everything.
+ */
+static void test_layers_are_masked(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 12), "layered");
+    NodeId sections[3];
+    LaneSpanId spans[3][3];
+    static const PlanLaneKind LANES[3] = {PLAN_LANE_MELODY, PLAN_LANE_BASS, PLAN_LANE_INNER_VOICE};
+    static const int PITCHES[3] = {72, 48, 60};
+    PlanNote notes[3][1];
+    add_meter_and_key(plan, form, bars(0, 12));
+    for (int s = 0; s < 3; s++) {
+        sections[s] = add(plan, form, PLAN_NODE_SECTION, bars(4 * s, 4), NULL);
+        for (int l = 0; l < 3; l++) {
+            notes[l][0] = note(PITCHES[l], time_of(0, 1), time_of(4, 1));
+            spans[s][l] = add_notes(plan, sections[s], LANES[l], LANES[l] == PLAN_LANE_INNER_VOICE ? 1 : 0,
+                                    bars(4 * s, 4), notes[l], 1);
+            assert(plan_lane_span_set_state(plan, spans[s][l], PLAN_STATE_REALIZED) == PLAN_OK);
+        }
+    }
+    PlanConstraint layer = {PLAN_CONSTRAINT_LAYERS, {0}};
+    layer.params.layers.lanes = PLAN_LAYER_BIT(PLAN_LANE_BASS);
+    assert(plan_node_add_constraint(plan, sections[0], &layer) == PLAN_OK);
+    layer.params.layers.lanes = PLAN_LAYERS_ALL;
+    assert(plan_node_add_constraint(plan, sections[1], &layer) == PLAN_OK);
+
+    RenderedPlan rendered;
+    assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
+    /* Bass alone in the first layer, three parts in the second and the unmasked third. */
+    assert(rendered.count == 7);
+    assert(rendered.part_count == 3);
+    assert(rendered.skipped_count == 2);
+    assert(rendered.skipped[0].span == spans[0][0] && rendered.skipped[0].reason == RENDER_SKIP_LAYER &&
+           rendered.skipped[0].lane == PLAN_LANE_MELODY);
+    assert(rendered.skipped[1].span == spans[0][2] && rendered.skipped[1].reason == RENDER_SKIP_LAYER &&
+           rendered.skipped[1].lane == PLAN_LANE_INNER_VOICE);
+    assert(plan_time_compare(rendered.piece_end, time_of(12, 1)) == 0);
+    rendered_plan_destroy(&rendered);
+    plan_destroy(plan);
+}
+
 int main(void) {
     test_render();
     test_material_is_left_out();
+    test_layers_are_masked();
     test_midi_round_trip();
     test_musicxml_round_trip();
     test_constrained_is_skipped();
