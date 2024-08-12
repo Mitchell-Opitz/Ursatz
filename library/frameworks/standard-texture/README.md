@@ -53,3 +53,8 @@ source gives no algorithm for it. The listening examples in the source are
 recordings, not rules; the tests model them as feature sets. Other
 textures and finer distinctions (counterpoint species, orchestration, the
 kinds of polyphony such as imitative or free) are not in this framework.
+
+## Analysis of real music
+
+`analysis/` measures texture features per measure from separated voices, classifies each measure with the rules above (no category is added) and merges the measures into passages with change points. The input is a neutral struct the caller fills; standard-texture includes no other framework. Accompaniment patterns (Alberti, arpeggiated, block chords, oom-pah) are not categories or subtypes here, so none is classified; the repeated-pattern score is measured and reported as evidence for them. See `docs/modules/texture-analysis.md`.
+
