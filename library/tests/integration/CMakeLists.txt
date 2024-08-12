@@ -59,3 +59,12 @@ target_compile_definitions(test_rhythm_field5 PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME rhythm_field5 COMMAND test_rhythm_field5)
+
+add_executable(test_texture_field1 test_texture_field1.c)
+target_link_libraries(test_texture_field1 PRIVATE standard_texture standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_texture_field1 PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_texture_field1 PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME texture_field1 COMMAND test_texture_field1)

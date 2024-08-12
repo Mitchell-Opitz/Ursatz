@@ -1,0 +1,26 @@
+# Hand analysis of the texture of Field, Nocturne No. 1 in E-flat major, H. 24, for the texture adapter (frameworks/standard-texture/analysis).
+#
+# SOURCE: the Breitkopf and Haertel edition of the Nocturnes and the IMSLP scan. Neither was available when this file was written, so the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. It is a hand reading of tests/framework-v1-corpus/"Field 1.mid" (every note of both tracks dumped by measure and by eighth-note position within the measure, with its performed length),
+# and NOT derived from the output of the texture adapter, the voice separation or the form adapter. The file is in 12/8 (a measure of twelve eighth notes), a right-hand track (the melody) and a left-hand track (an arpeggiated accompaniment of
+# eighth notes that runs through nearly the whole piece), and is an expressive performance, so its measures may not line up with the printed score exactly. A human should confirm all of it against an edition before it is relied on.
+#
+# The categories are standard-texture's (texture_rules.h): monophony, heterophony, homophony, polyphony. Homophony is the category of both homorhythm and melody and accompaniment, and the reading is at that level: the right hand's melody over the left hand's
+# arpeggio is homophony whether the melody moves slower than the accompaniment (melody and accompaniment) or at the same pace in the running passages (homorhythm). What is listed is what could be read with some confidence: the lack of a measure is not an
+# annotation that there is nothing there, and only the listed measures are scored. Left out: measure 20 (a cadenza-like bar of single notes in both hands, several of them far below the staff) and measure 51 (the melody all but silent, the arpeggio alone for most
+# of the bar), whose texture could not be read.
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
+#   range <first measure> <last measure>     the measures read; the run looks only at these
+#   passage <first measure> <last measure> <monophony|heterophony|homophony|polyphony>   the measures have this texture category
+#   change <measure>     the texture changes at this measure: the first measure of the new passage
+meter 4 3/8
+range 1 67
+passage 1 1 monophony
+passage 2 19 homophony
+passage 21 50 homophony
+passage 52 66 homophony
+passage 67 67 monophony
+change 2
+change 67
