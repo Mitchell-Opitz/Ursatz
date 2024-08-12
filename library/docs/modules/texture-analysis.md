@@ -21,7 +21,7 @@ Adapter in `frameworks/standard-texture/analysis/` (`texture_analysis_*.c`). It 
 `StandardTextureConfig` holds the snap and the thresholds.
 
 - Snap: `onset_grid_denominator` (32), `onset_tolerance_denominator` (256), `release_tolerance_denominator` (64). An onset within 1/256 of a whole note of a multiple of 1/32 is read as that multiple, a release within 1/64 is. Near-simultaneous attacks of a performed file are then simultaneous. The release tolerance may not be wider than half a grid step.
-- Thresholds, below.
+- Thresholds, below, and `pattern_min` (0.5).
 
 ## Windows and passages
 
@@ -30,6 +30,10 @@ Adapter in `frameworks/standard-texture/analysis/` (`texture_analysis_*.c`). It 
 - A window with no texture (no note sounding, or features between the thresholds) takes the texture of the window before it; leading ones take the first window's.
 - A passage is a maximal run of windows with the same texture. A change point is the first measure of a passage after the first; it falls on a barline because windows are measures.
 - A piece with no window that has a texture has no passage.
+
+## Voices as lines
+
+The separation gives voices that sound together, so a hand's arpeggio (its notes ring into each other) or a melody whose notes overlap a little comes as several voices. For texture a line is what attacks in turn. Within a window, the voices of one track that never attack at the same time are consolidated into one voice: voices are taken in order of mean pitch from the top, each joining the first line of its track it does not attack together with. A voice with no attack in the window is left alone. Voices of different tracks are never consolidated (a piano track is a hand), and two voices that ever attack together (a chord) stay two. Every feature below is measured on the consolidated voices.
 
 ## Features
 
@@ -45,6 +49,7 @@ Each feature is its own function in `texture_analysis_features.h`, over the even
 | register span, spacing | highest − lowest sounding pitch; the mean gap between adjacent voices (each at its highest sounding pitch) at each attack time and the window start |
 | density | attack times per beat |
 | pattern score | per voice with ≥ 3 attacks: the share of its (interval, inter-onset) pairs covered by the cell of 1 to 4 pairs, ≤ 1 beat long, that repeats most (occurrences left to right, no overlap, at least 2); the mean and the maximum over voices |
+| voice pattern | the pattern score of the top voice (`pattern_top`) and the greatest among the other voices that attack (`pattern_support`) |
 | unison | the share of times with ≥ 2 voices sounding at which every voice has the same pitch class; unison when that is 1 and synchrony is 1 |
 | voice confidence | the mean voice confidence of the attacking events (1 with none) |
 
@@ -57,7 +62,7 @@ Each feature is its own function in `texture_analysis_features.h`, over the even
 | voice_count | voices_max |
 | unison | the window's unison flag |
 | rhythmic_unison | two or more voices and synchrony ≥ 0.75 |
-| predominant_melody | not unison, two or more voices, prominence ≥ 1.5 and top gap ≥ 3 semitones |
+| predominant_melody | not unison, two or more voices, top gap ≥ 3 semitones, and either prominence ≥ 1.5 or the top voice is above an accompaniment figure: another voice's pattern score ≥ `pattern_min` and the top voice's is lower |
 | independent_lines | not unison and not predominant melody, a pair of attacking voices, mean independence ≥ 0.6, and synchrony < 0.5 |
 | shared_melody | never (see Limits) |
 
@@ -65,7 +70,7 @@ An independent line must not be a predominant melody: a melody over an accompani
 
 ## Confidence
 
-The margin m (0 to 1) is how far the deciding measurement is from its threshold, as a share of the room it has (the least of them when several decided it): 1 for monophony; (synchrony − 0.75) / 0.25 for homorhythm; for polyphony the least of the independence, synchrony and not-prominent margins; for melody and accompaniment the least of the prominence and gap margins. The texture confidence is 0.5 + 0.5 m (a window right on a threshold is a coin flip). The window's confidence is that times the mean voice confidence of its attacking notes, so an uncertain voice separation lowers it. A passage's confidence is the mean of its classified windows'; its uncertainty is 1 − confidence.
+The margin m (0 to 1) is how far the deciding measurement is from its threshold, as a share of the room it has (the least of them when several decided it): 1 for monophony; (synchrony − 0.75) / 0.25 for homorhythm; for polyphony the least of the independence, synchrony and not-prominent margins; for melody and accompaniment the least of the gap margin and the larger of the prominence and figure margins. The texture confidence is 0.5 + 0.5 m (a window right on a threshold is a coin flip). The window's confidence is that times the mean voice confidence of its attacking notes, so an uncertain voice separation lowers it. A passage's confidence is the mean of its classified windows'; its uncertainty is 1 − confidence.
 
 ## Output
 
