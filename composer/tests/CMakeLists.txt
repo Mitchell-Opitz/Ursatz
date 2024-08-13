@@ -213,3 +213,8 @@ target_compile_definitions(test_counterpoint_cli PRIVATE COMPOSER_CLI_PATH="$<TA
                                                          COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_counterpoint_cli ursatz-composer)
 add_test(NAME test_counterpoint_cli COMMAND test_counterpoint_cli)
+
+add_executable(test_motive_invent test_motive_invent.c)
+target_link_libraries(test_motive_invent PRIVATE ursatz_composer)
+target_compile_options(test_motive_invent PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_invent COMMAND test_motive_invent)
