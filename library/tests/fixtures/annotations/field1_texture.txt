@@ -10,6 +10,10 @@
 # annotation that there is nothing there, and only the listed measures are scored. Left out: measure 20 (a cadenza-like bar of single notes in both hands, several of them far below the staff) and measure 51 (the melody all but silent, the arpeggio alone for most
 # of the bar), whose texture could not be read.
 #
+# CORRECTED after the first run of the adapter, on a reading error of this file's own, not on the adapter's output: measure 67 was first read as the arpeggio alone (monophony, with a change at measure 67), because the dump put the two right-hand
+# notes that end the piece (a held chord, 79 and 87) at the end of measure 66, where the performance starts them a few ticks before the barline. They sound from the start of measure 67 and are held over the whole bar, so the bar is the held chord over the
+# arpeggio, homophony. The listed measures and the one change point are those of the corrected reading.
+#
 # FORMAT, one per line (lines starting with # and blank lines are ignored):
 #   meter <beats per measure> <beat length as a fraction of a whole note>   e.g. 3 1/4 (3/4), 4 3/8 (12/8)
 #   range <first measure> <last measure>     the measures read; the run looks only at these
@@ -20,7 +24,5 @@ range 1 67
 passage 1 1 monophony
 passage 2 19 homophony
 passage 21 50 homophony
-passage 52 66 homophony
-passage 67 67 monophony
+passage 52 67 homophony
 change 2
-change 67
