@@ -62,6 +62,16 @@ static void send_json(struct mg_connection *conn, const char *body) {
   mg_write(conn, body, len);
 }
 
+/* Sends body as application/json with a non-200 status line. */
+static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
+  size_t len = strlen(body);
+  mg_printf(conn,
+            "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
+            status, reason, len);
+  mg_write(conn, body, len);
+  return status;
+}
+
 /* Raw MusicXmlExportResult enum name, for the API's "code" field -- kept
  * unshortened so it is directly greppable against musicxml_export.h. */
 static const char *musicxml_export_error_code(MusicXmlExportResult error) {
@@ -76,6 +86,18 @@ static const char *musicxml_export_error_code(MusicXmlExportResult error) {
       return "MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES";
     case MUSICXML_EXPORT_ERR_ALLOC:
       return "MUSICXML_EXPORT_ERR_ALLOC";
+    case MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT:
+      return "MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT";
+    case MUSICXML_EXPORT_ERR_UNKNOWN_PART:
+      return "MUSICXML_EXPORT_ERR_UNKNOWN_PART";
+    case MUSICXML_EXPORT_ERR_BAD_STAFF:
+      return "MUSICXML_EXPORT_ERR_BAD_STAFF";
+    case MUSICXML_EXPORT_ERR_UNKNOWN_EVENT:
+      return "MUSICXML_EXPORT_ERR_UNKNOWN_EVENT";
+    case MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE:
+      return "MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE";
+    case MUSICXML_EXPORT_ERR_DIVISIONS_OVERFLOW:
+      return "MUSICXML_EXPORT_ERR_DIVISIONS_OVERFLOW";
     case MUSICXML_EXPORT_OK:
     default:
       return "MUSICXML_EXPORT_UNKNOWN";
@@ -83,7 +105,7 @@ static const char *musicxml_export_error_code(MusicXmlExportResult error) {
 }
 
 static void send_musicxml_export_error(struct mg_connection *conn, MusicXmlExportResult export_error) {
-  char body[160];
+  char body[192];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
            musicxml_export_error_code(export_error));
   send_json(conn, body);
@@ -222,33 +244,36 @@ static char *read_filename_header(struct mg_connection *conn) {
 }
 
 static int handle_post(struct mg_connection *conn) {
-  size_t midi_size = 0;
-  unsigned char *midi_data = read_request_body(conn, &midi_size);
-  if (!midi_data) {
+  size_t body_size = 0;
+  unsigned char *body_data = read_request_body(conn, &body_size);
+  if (!body_data) {
     send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
     return 400;
   }
 
   char *filename = read_filename_header(conn);
   if (!filename) {
-    free(midi_data);
+    free(body_data);
     send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
   char *id = NULL;
   UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_import_and_save(kPiecesDir, midi_data, midi_size, filename, &id);
-  free(midi_data);
+      ursatz_gui_analysis_import_and_save(kPiecesDir, body_data, body_size, filename, &id);
+  free(body_data);
 
+  if (result == URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT) {
+    free(filename);
+    return send_json_status(conn, 415, "Unsupported Media Type", "{\"error\": \"unsupported format\"}");
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+    free(filename);
+    return send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
+  }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     free(filename);
-    const char *message = (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED)
-                               ? "failed to import MIDI file"
-                               : "failed to save piece";
-    char body[256];
-    snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"%s\"}", message);
-    send_json(conn, body);
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to save piece\"}");
     return 200;
   }
 
@@ -277,6 +302,8 @@ static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
   for (size_t i = 0; i < count; i++) {
     free(pieces[i].id);
     free(pieces[i].filename);
+    free(pieces[i].format);
+    free(pieces[i].uploaded_at);
   }
   free(pieces);
 }
@@ -302,6 +329,10 @@ static int handle_get(struct mg_connection *conn) {
     json_buffer_append_string(&buf, pieces[i].id);
     json_buffer_append(&buf, ",\"filename\":");
     json_buffer_append_string(&buf, pieces[i].filename);
+    json_buffer_append(&buf, ",\"format\":");
+    json_buffer_append_string(&buf, pieces[i].format);
+    json_buffer_append(&buf, ",\"uploaded_at\":");
+    json_buffer_append_string(&buf, pieces[i].uploaded_at);
     json_buffer_append(&buf, "}");
   }
   json_buffer_append(&buf, "]}");
@@ -340,56 +371,21 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   json_buffer_append_string(&buf, detail->id);
   json_buffer_append(&buf, ",\"filename\":");
   json_buffer_append_string(&buf, detail->filename);
-  json_buffer_append(&buf, ",\"note_event_count\":");
-  char count_text[32];
-  snprintf(count_text, sizeof(count_text), "%zu", detail->note_event_count);
-  json_buffer_append(&buf, count_text);
-  json_buffer_append(&buf, ",\"interpretations\":[");
-
-  for (size_t i = 0; i < detail->interpretation_count; i++) {
-    const UrsatzGuiInterpretationSummary *summary = &detail->interpretations[i];
+  json_buffer_append(&buf, ",\"format\":");
+  json_buffer_append_string(&buf, detail->format);
+  json_buffer_append(&buf, ",\"uploaded_at\":");
+  json_buffer_append_string(&buf, detail->uploaded_at);
+  json_buffer_append(&buf, ",\"note_xml_ids\":[");
+  for (size_t i = 0; i < detail->note_count; i++) {
     if (i != 0) {
       json_buffer_append(&buf, ",");
     }
-    json_buffer_append(&buf, "{\"interpretation_id\":");
-    json_buffer_append_string(&buf, summary->interpretation_id);
-    json_buffer_append(&buf, ",\"type\":");
-    json_buffer_append_string(&buf, summary->type);
-    json_buffer_append(&buf, ",\"label\":");
-    json_buffer_append_string(&buf, summary->label);
-    json_buffer_append(&buf, ",\"produced_by\":{\"author\":");
-    json_buffer_append_string(&buf, summary->produced_by_author);
-    json_buffer_append(&buf, ",\"method\":");
-    json_buffer_append_string(&buf, summary->produced_by_method);
-    json_buffer_append(&buf, "},\"provenance_state\":");
-    json_buffer_append_string(&buf, summary->provenance_state);
-    json_buffer_append(&buf, ",\"highlighted_note_ids\":[");
-    for (size_t j = 0; j < summary->highlighted_note_id_count; j++) {
-      if (j != 0) {
-        json_buffer_append(&buf, ",");
-      }
-      json_buffer_append_string(&buf, summary->highlighted_note_ids[j]);
-    }
-    json_buffer_append(&buf, "]}");
+    json_buffer_append_string(&buf, detail->note_xml_ids[i]);
   }
-  json_buffer_append(&buf, "],\"relationships\":[");
-
-  for (size_t i = 0; i < detail->relationship_count; i++) {
-    const UrsatzGuiRelationshipSummary *relationship = &detail->relationships[i];
-    if (i != 0) {
-      json_buffer_append(&buf, ",");
-    }
-    json_buffer_append(&buf, "{\"relationship_id\":");
-    json_buffer_append_string(&buf, relationship->relationship_id);
-    json_buffer_append(&buf, ",\"source_id\":");
-    json_buffer_append_string(&buf, relationship->source_id);
-    json_buffer_append(&buf, ",\"predicate_name\":");
-    json_buffer_append_string(&buf, relationship->predicate_name);
-    json_buffer_append(&buf, ",\"target_id\":");
-    json_buffer_append_string(&buf, relationship->target_id);
-    json_buffer_append(&buf, "}");
-  }
-  json_buffer_append(&buf, "]}");
+  /* The stored document is already JSON; it is inlined as is. */
+  json_buffer_append(&buf, "],\"document\":");
+  json_buffer_append(&buf, detail->document_json);
+  json_buffer_append(&buf, "}");
 
   ursatz_gui_piece_detail_destroy(detail);
 
@@ -549,10 +545,10 @@ static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
 
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
-  bool cosmetic_meter = false;
+  bool meter_defaulted = false;
   MusicXmlExportResult export_error = MUSICXML_EXPORT_OK;
   UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter, &export_error);
+      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, &export_error);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -572,10 +568,10 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
 
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
-  bool cosmetic_meter = false;
+  bool meter_defaulted = false;
   MusicXmlExportResult export_error = MUSICXML_EXPORT_OK;
   UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &cosmetic_meter, &export_error);
+      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, &export_error);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -587,7 +583,7 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
   }
   free(xml);
 
-  send_json(conn, cosmetic_meter ? "{\"ok\":true,\"cosmetic_meter\":true}" : "{\"ok\":true,\"cosmetic_meter\":false}");
+  send_json(conn, meter_defaulted ? "{\"ok\":true,\"meter_defaulted\":true}" : "{\"ok\":true,\"meter_defaulted\":false}");
   return 200;
 }
 

@@ -8,7 +8,8 @@ independent tool modules, not a monolithic application.
 Three layers, in order of how rarely they should change:
 
 - **Shared service layer** (`backend/src/service/`) — the only code
-  allowed to call into Ursatz's persistence/query functions. Every tool
+  allowed to call into Ursatz's persistence/query functions or the
+  Analyzer library. Every tool
   goes through this layer; nothing calls Ursatz directly from route code.
   This boundary is the one thing this scaffold is strict about, because
   it is expensive to untangle later.
@@ -42,127 +43,66 @@ The backend exposes:
 - `GET /api/health/status`: calls through the persistence service to
   confirm `persistence_open` succeeds against a test database path,
   and returns JSON.
-- `POST /api/analyzer/pieces`: accepts a raw MIDI file as the request
-  body, runs it through Ursatz's `MIDIImporter`, `ChordIdentification`
-  and `KeyEstimation` (against the `common-practice-minimal`
-  framework), and the Cadence, Motif, Phrase, Period, Sentence, Form and
-  Thematic Return analyzers via the analysis service, saves the
-  resulting NoteEvent sequence and Interpretations, and returns the new
-  piece's id.
+- `POST /api/analyzer/pieces`: accepts a MIDI or MusicXML file (`.mid`,
+  `.midi`, `.musicxml`, `.xml`, `.mxl`) as the raw request body, the
+  filename URL-encoded in the `X-Filename` header. The format is detected
+  from the content (`input_format_detect`), not from the filename. The
+  file is analyzed by the Analyzer library and stored as a piece (below).
+  Returns `{"ok":true,"id":...,"filename":...}`. A body that is neither
+  MIDI nor MusicXML gives `415` with `{"error": "unsupported format"}`; a
+  file the Analyzer cannot import or analyze gives `422` with
+  `{"error": "import failed"}`; nothing is stored in either case.
+- `GET /api/analyzer/pieces`: lists the stored pieces, newest upload
+  first, then by id:
+  `{"ok":true,"pieces":[{"id","filename","format","uploaded_at"}]}`.
+- `GET /api/analyzer/pieces/<id>`: one piece:
+  `{"ok":true,"id","filename","format","uploaded_at","note_xml_ids":[...],"document":{...}}`.
+  `document` is the Analyzer's analysis document (schema v9), inlined as
+  stored. `note_xml_ids[i]` is the `<note xml:id>` the score export writes
+  for note `i` of the source, in the order of the document's `note_ids`
+  (a claim's `note_ids` are indices into this array). Unknown id returns
+  `{"ok":false,"message":"piece not found"}`.
+- `PATCH /api/analyzer/pieces/<id>`: body `{"filename":"<name>"}`. Rewrites
+  the filename in the piece's `meta.json`; the source and the analysis are
+  untouched. Returns `{"ok":true,"id":...,"filename":...}`, `404` for an
+  unknown id, or `{"ok":false,...}` for an empty filename.
+- `DELETE /api/analyzer/pieces/<id>`: removes the piece's directory.
+- `GET /api/analyzer/pieces/<id>/musicxml`: the piece's score as MusicXML
+  (`Content-Type: application/xml`), written by Ursatz's
+  `musicxml_export_write_score` from the stored source: its parts and
+  staves, its real meter (the MIDI time signatures or the score's own) and
+  its key signatures. Tempo markings and dynamics are left out. Unknown id
+  returns `404`. If the export fails the response is
+  `{"ok":false,"message":"failed to export piece","code":"<MusicXmlExportResult name>"}`.
+- `GET /api/analyzer/pieces/<id>/musicxml/meta`:
+  `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no
+  meter and the barlines come from a default 4/4 (the export then carries
+  `ursatz:meter-defaulted`). Same errors as the export route.
 
-  The global key is chosen in the same order as Ursatz-Analyzer: the
-  MIDI key-signature meta-event, then the closing chord's bass, then the
-  opening chord's bass, then a brute-force scan of all twelve tonics.
-  `estimate_global_key` in `service/analysis_service.c` is a copy of
-  Ursatz-Analyzer's `key_pipeline.c`, not a shared library call, so any
-  fix there must be ported here by hand.
-  Piece ids have the form `piece-<16 lowercase hex>`. They come from
-  `ursatz_gui_new_id` in `service/id_service.c`, the one place every store
-  draws ids from: 8 bytes of `/dev/urandom`, or, when that cannot be
-  opened, a hash of the time, clock, process id and a counter. A new piece
-  id is redrawn if `pieces/<id>.db` already exists (at most 8 tries).
-  Ids are opaque; pieces saved with older ids keep working.
-- `GET /api/analyzer/pieces`: lists saved piece ids.
-- `GET /api/analyzer/pieces/<id>`: returns one saved piece's detail --
-  its NoteEvent count and every Chord/Key/Cadence/Motif/Phrase/Period/
-  Sentence/Form/Thematic Return Interpretation saved for it, each with a
-  `produced_by` field (`author`/`method`). `produced_by` is
-  analyzer/method identity only, not a full Provenance-object reference:
-  Ursatz's Interpretation carries a `ProvenanceReference`, but
-  `KeyEstimation`/`ChordIdentification` always construct it as
-  `PROVENANCE_REFERENCE_ABSENT`, and no resolvable Provenance record
-  type exists upstream in Ursatz yet to point it at even if it were
-  present. `author`/`method` are the only importer/analyzer identity
-  Ursatz's Interpretation actually persists today. Unknown id returns
-  `{"ok":false,...}`, same convention as the other Analyzer routes.
+The Analyzer library (`external/ursatz-analyzer`, linked as
+`ursatz_analyzer`) is the only analysis path: `analysis_service.c` calls
+`input_pipeline_import_file`, `run_analysis_pipeline` and
+`analysis_document_build`, and the GUI keeps no analysis code of its own.
+Analysis therefore changes only when the Analyzer submodule is bumped.
 
-  Each claim also carries `highlighted_note_ids`: the MusicXML `xml:id`
-  (see the `musicxml` route below) of every NoteEvent its target
-  resolves to, used by the Analysis view's Score tab to highlight the
-  claim's notes. This resolves two different ways depending on type:
-  - `phrase`: the Interpretation's `target_id` *is* a NoteEvent id
-    directly (Phrase Segmentation/Boundary Detection target the event
-    itself), so this is derived on the fly from `target_id` -- no extra
-    storage needed.
-  - `cadence`/`motif`: the target is a `Structure`/`MotifOccurrence`
-    that Ursatz never persists -- it is transient, created and destroyed
-    within a single analysis run (confirmed: no
-    `persistence_load_structure`/`persistence_load_motif` exists
-    anywhere in `external/ursatz`). Its event ids are captured while
-    that object is still alive, at analysis time, into a small
-    ursatz-gui-owned table (`ursatz_gui_interpretation_note_targets`,
-    keyed by `interpretation_id`, alongside the existing
-    `ursatz_gui_interpretations` index table below) and served back from
-    there. **Pieces analyzed before this table existed have no
-    `highlighted_note_ids` for their cadence/motif claims** -- empty,
-    not an error -- until reanalyzed (no backfill).
-  - `key`/`chord`/`period`/`sentence`/`form`/`thematic_return`:
-    `highlighted_note_ids` is always empty this pass.
-    Period/Sentence/Form/Thematic Return claims are Relationship-shaped
-    (their target chains 2-3 hops through further occurrence/section ids
-    before reaching any NoteEvent, with no single note-range object at
-    any point) -- excluded from highlighting for now, tracked as a
-    follow-up; they still list normally in their claim-list tab.
-- `PATCH /api/analyzer/pieces/<id>`: body `{"filename":"<name>"}`. Updates
-  the piece's persisted original filename (the same field `GET` returns
-  and the Library view displays) -- does not touch NoteEvents,
-  Interpretations, or re-run any analysis. Returns
-  `{"ok":true,"id":...,"filename":...}`, or `{"ok":false,...}` for an
-  unknown id (404) or an empty filename.
-- `GET /api/analyzer/pieces/<id>/musicxml`: opens the piece's
-  `PersistenceHandle` via the same `pieces/<id>.db` lookup the other
-  piece routes use, and returns Ursatz's `musicxml_export_write` output
-  as the response body, `Content-Type: application/xml` (plain XML, not
-  `application/vnd.recordare.musicxml+xml` -- this is an uncompressed
-  single document, not a zipped `.mxl` package). Unknown id returns 404.
-  If `musicxml_export_write` itself fails (e.g. a NoteEvent missing pitch
-  spelling, or overlapping notes in the same voice), the response is
-  `{"ok":false,"message":"failed to export piece","code":"<name>"}`,
-  where `code` is the specific `MusicXmlExportResult` enum member name
-  (`MUSICXML_EXPORT_ERR_NULL_ARG`, `MUSICXML_EXPORT_ERR_LOAD_FAILED`,
-  `MUSICXML_EXPORT_ERR_MISSING_SPELLING`,
-  `MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES`, or `MUSICXML_EXPORT_ERR_ALLOC`
-  -- see `external/ursatz/src/export/musicxml_export.h`) that
-  `musicxml_export_write` returned, also logged server-side.
-  `musicxml_export_write` lays barlines on a synthetic 4/4 grid (Ursatz
-  has no Meter/MeterMap data yet) and flags this via an
-  `ursatz:synthetic-meter` `<miscellaneous-field>` -- see
-  `external/ursatz/src/export/musicxml_export.h`. Every exported `<note>`
-  carries an `xml:id` derived from its NoteEvent's EntityID (a NoteEvent
-  split across the synthetic barline grid exports as several `<note>`
-  elements, one base id plus `_a`/`_b`/... suffixed fragment ids) -- this
-  is what `highlighted_note_ids` above and the Score tab's highlighting
-  match against.
-- `GET /api/analyzer/pieces/<id>/musicxml/meta`: same export, but returns
-  `{"ok":true,"cosmetic_meter":<bool>}` instead of the XML body, so the
-  frontend can read the synthetic-meter flag without a second client-side
-  XML parse (OSMD already parses the full document to render it). Both
-  endpoints call into the same `musicxml_export_write`, and report the
-  same `code` field on export failure described above.
+Each piece is a directory `pieces/<id>/` (ids are `piece-<16 lowercase hex>`
+from `ursatz_gui_new_id` in `service/id_service.c`, redrawn if the
+directory exists, at most 8 tries):
 
-Ursatz's persistence layer has no "piece" concept (one `note_events`
-table, one `interpretations` table, no grouping/filename metadata): the
-Analyzer tool works around this by saving each piece to its own SQLite
-file under `pieces/`, using the filename as the piece id. Listing scans
-that directory rather than querying a tracking table.
+- `source.mid` or `source.musicxml`: the upload's bytes, written
+  unchanged. A `.xml` or `.mxl` upload keeps its extension
+  (`source.xml`, `source.mxl`).
+- `analysis.json`: the Analyzer's analysis document.
+- `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
+  (ISO 8601 UTC), "analyzer_version", "document_schema_version"}`.
 
-Ursatz's persistence also has no way to enumerate the Interpretations
-stored for a piece (`persistence_load_interpretation` only loads by a
-known id). The analysis service works around this with its own small
-`ursatz_gui_interpretations` index table, added to the same per-piece
-SQLite file at analysis time -- ursatz-gui-owned schema, entirely
-outside Ursatz's own schema/contract, recording which Interpretation ids
-and types (`key`/`chord`/`cadence`/`motif`/`phrase`/`period`/`sentence`/
-`form`/`thematic_return`) belong to that piece so the detail route knows
-what to load. A sibling table,
-`ursatz_gui_interpretation_note_targets`, records the captured
-NoteEvent xml:ids behind `cadence`/`motif` claims' `highlighted_note_ids`
-(see the `GET /api/analyzer/pieces/<id>` description above) -- the same
-kind of ursatz-gui-owned workaround for a gap in what Ursatz itself
-persists.
+Every file is written to `<name>.tmp` and renamed, and a failed analysis
+removes the directory. Pieces saved by earlier versions (`pieces/<id>.db`)
+are ignored: they are not listed and cannot be opened, so upload those files
+again.
 
 The Corpus tool wraps Ursatz's `corpus_api.h` (vendored via
-`external/ursatz`, same as Analyzer's Persistence/MIDIImporter usage):
+`external/ursatz`):
 
 - `POST /api/corpus`: body `{"id":"<corpus-id>","name":"<name>"}`. Creates
   a Corpus. Returns `{"ok":true}` or `{"ok":false,"message":...}`.
@@ -222,20 +162,14 @@ shows: a header
 which the API returns); a sidebar of analyzer name/version pairs (static
 placeholder data, since no analyzer-registry endpoint exists); and a tab
 bar over Chords, Keys, Cadences, Motifs, Phrases, Form, and
-Periods/Sentences, each with a count badge. Tabs group real
-`interpretations` by their `type` field (`GET /api/analyzer/pieces/<id>`)
--- Form's badge includes both `form` and `thematic_return` claims, and
-Periods/Sentences' includes both `period` and `sentence`, since each pair
-shares one tab. Selecting a tab renders a plain-text list of that
-category's claims (label + provenance flag only -- the API returns no
-span, confidence, or uncertainty fields to show). Clicking a claim opens
-a detail panel: a claim summary, an Evidence section (always rendered as
-an explicit empty state, since no Evidence is persisted or returned by
-this endpoint, even though Ursatz has an `Evidence` type), a Provenance section
-(`produced_by.author`/`produced_by.method`/`provenance_state`, the only
-provenance data an Interpretation actually carries -- not a full
-Provenance record), and disabled Accept/Dispute buttons (no Promotion
-endpoint exists yet).
+Periods/Sentences, each with a count badge. Until the tabs follow the
+analysis document's own sections, only Chords and Keys have content: they
+list the document's `chords` and `keys.regions` (label and location, with
+an "Analyzed" flag); the other tabs are empty. Selecting a tab renders a
+plain-text list of that category's claims. Clicking a claim opens a detail
+panel: a claim summary, an Evidence section (always rendered as an
+explicit empty state), a Provenance section, and disabled Accept/Dispute
+buttons (no Promotion endpoint exists yet).
 
 The tab bar also includes a Score tab, alongside the claim-list tabs
 rather than replacing any of them. Selecting it fetches
@@ -246,8 +180,8 @@ and loaded via a plain `<script>` tag in `index.html` -- `frontend/`
 has no `package.json`/bundler, so this matches the existing no-build-tool
 pattern rather than introducing one. A caption below the score
 ("Barlines are approximate, not authored meter.") is shown whenever
-`GET .../musicxml/meta` reports `cosmetic_meter: true`, which is every
-piece today (see the route description above).
+`GET .../musicxml/meta` reports `meter_defaulted: true`, that is, when
+the source file gave no meter.
 
 Clicking a claim in a claim-list tab also highlights its target note(s)
 in the Score tab (notehead color, via OSMD's `Note.NoteheadColor`) --
@@ -276,7 +210,9 @@ ctest --test-dir build
 
 Requires CMake 3.20 or newer, a C11 compiler, SQLite development headers
 and pkg-config. Ursatz is vendored as a git submodule at `external/ursatz`,
-pinned at PR #142 (`ffd8a19`), the commit the Analyzer and Composer pin.
+pinned at PR #142 (`ffd8a19`), the commit the Analyzer and Composer pin. The
+Analyzer is a second submodule, `external/ursatz-analyzer`, pinned at PR #36
+(`11263b7`).
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF).
