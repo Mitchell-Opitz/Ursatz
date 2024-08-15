@@ -33,6 +33,8 @@
  *                              independence_max_synchrony (0.5), is independent lines (0.6)
  *   prominence_min             top-voice prominence at or above this, with the pitch gap below, is a predominant melody (1.5)
  *   prominence_gap_semitones   the mean pitch gap of the top voice to the next voice (3)
+ *   pattern_min                a voice whose repeated-pattern score is at least this is an accompaniment figure; a top voice above one
+ *                              (its own score lower) is a predominant melody whatever its rhythm (0.5)
  */
 
 #define STANDARD_TEXTURE_ID_MAX 64
@@ -63,6 +65,7 @@ typedef struct {
     double independence_max_synchrony;
     double prominence_min;
     double prominence_gap_semitones;
+    double pattern_min;
 } StandardTextureConfig;
 
 typedef struct {

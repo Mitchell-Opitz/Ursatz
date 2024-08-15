@@ -83,6 +83,13 @@ static inline StandardTextureEvent event(long on_n, long on_d, long off_n, long 
     return e;
 }
 
+/* An event of a track. */
+static inline StandardTextureEvent event_in_track(long on_n, long on_d, long off_n, long off_d, long pitch, size_t voice, size_t track,
+                                                  double confidence) {
+    StandardTextureEvent e = {tq(on_n, on_d), tq(off_n, off_d), pitch, voice, confidence, track};
+    return e;
+}
+
 /* The window of one measure of 4/4: [0, 1) with a quarter-note beat. */
 static inline StandardTextureWindow window_four_four(void) {
     StandardTextureWindow window = {tq(0, 1), tq(1, 1), tq(1, 4)};

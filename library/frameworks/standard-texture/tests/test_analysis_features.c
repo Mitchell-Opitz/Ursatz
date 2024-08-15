@@ -206,6 +206,60 @@ static void test_all_features_of_a_window(void) {
     assert(near(f.voice_confidence, 0.9) && !f.unison);
 }
 
+static void test_voices_that_attack_in_turn_are_one_line(void) {
+    StandardTextureWindow window = window_four_four();
+    StandardTextureEvent merged[4];
+    /* a melody that overlaps itself a little (the separation put it in two voices): one line */
+    StandardTextureEvent split[3] = {event_in_track(0, 1, 1, 2, 72, 0, 0, 1.0), event_in_track(1, 2, 3, 4, 74, 1, 0, 1.0),
+                                     event_in_track(3, 4, 1, 1, 71, 0, 0, 1.0)};
+    assert(standard_texture_consolidate_voices(split, 3, &window, merged) == 3);
+    assert(merged[0].voice == merged[1].voice && merged[1].voice == merged[2].voice);
+    StandardTextureWindowFeatures f;
+    standard_texture_measure_features(split, 3, &window, 1, &f);
+    assert(f.voices_max == 1 && near(f.synchrony, 0.0) && f.pair_count == 0);
+    /* an arpeggio whose notes ring into each other: attacks in turn, one line */
+    StandardTextureEvent ringing[3] = {event_in_track(0, 1, 1, 2, 48, 0, 1, 1.0), event_in_track(1, 8, 1, 2, 55, 1, 1, 1.0),
+                                       event_in_track(1, 4, 1, 2, 64, 2, 1, 1.0)};
+    standard_texture_measure_features(ringing, 3, &window, 1, &f);
+    assert(f.voices_max == 1);
+    /* two voices of a hand that ever attack together stay two (a chord) */
+    StandardTextureEvent chord[4] = {event_in_track(0, 1, 1, 2, 72, 0, 0, 1.0), event_in_track(0, 1, 1, 2, 64, 1, 0, 1.0),
+                                     event_in_track(1, 2, 1, 1, 74, 0, 0, 1.0), event_in_track(1, 2, 1, 1, 65, 1, 0, 1.0)};
+    standard_texture_measure_features(chord, 4, &window, 1, &f);
+    assert(f.voices_max == 2 && near(f.synchrony, 1.0));
+    /* voices of different tracks are never joined, however they alternate */
+    StandardTextureEvent hands[2] = {event_in_track(0, 1, 1, 2, 72, 0, 0, 1.0), event_in_track(1, 2, 1, 1, 48, 1, 1, 1.0)};
+    standard_texture_measure_features(hands, 2, &window, 1, &f);
+    assert(f.voices_max == 1 && f.attack_times == 2); /* never sound together here, but two lines: no consolidation across tracks */
+    assert(standard_texture_consolidate_voices(hands, 2, &window, merged) == 2 && merged[0].voice != merged[1].voice);
+    /* a voice that does not attack in the window (a held note) is left alone */
+    StandardTextureEvent held[2] = {event_in_track(-1, 2, 1, 2, 72, 0, 0, 1.0), event_in_track(0, 1, 1, 1, 60, 1, 0, 1.0)};
+    standard_texture_measure_features(held, 2, &window, 1, &f);
+    assert(f.voices_max == 2);
+}
+
+static void test_the_pattern_of_the_top_voice_and_of_the_others(void) {
+    StandardTextureWindow window = window_four_four();
+    /* a melody that repeats nothing over an arpeggio that repeats a cell */
+    StandardTextureEvent events[12];
+    const long melody[4] = {72, 74, 71, 76};
+    for (long i = 0; i < 4; i++) {
+        events[i] = event_in_track(i, 4, i + 1, 4, melody[i], 0, 0, 1.0);
+    }
+    const long arpeggio[8] = {48, 55, 64, 55, 48, 55, 64, 55};
+    for (long i = 0; i < 8; i++) {
+        events[4 + i] = event_in_track(i, 8, i + 1, 8, arpeggio[i], 1, 1, 1.0);
+    }
+    StandardTextureWindowFeatures f;
+    standard_texture_measure_features(events, 12, &window, 1, &f);
+    assert(f.voices_max == 2 && near(f.pattern_top, 0.0) && near(f.pattern_support, 4.0 / 7.0));
+    assert(near(standard_texture_feature_voice_pattern(events, 12, &window, 0), 0.0));
+    assert(near(standard_texture_feature_voice_pattern(events, 12, &window, 1), 4.0 / 7.0));
+    /* a single line has no support */
+    standard_texture_measure_features(events, 4, &window, 1, &f);
+    assert(near(f.pattern_support, 0.0));
+}
+
 static void test_the_windows_of_an_input(void) {
     Piece piece;
     piece_init(&piece, 4, 2);
@@ -276,6 +330,8 @@ int main(void) {
     test_unison();
     test_voice_confidence();
     test_all_features_of_a_window();
+    test_voices_that_attack_in_turn_are_one_line();
+    test_the_pattern_of_the_top_voice_and_of_the_others();
     test_the_windows_of_an_input();
     test_a_performed_chord_is_one_attack();
     test_bad_calls();

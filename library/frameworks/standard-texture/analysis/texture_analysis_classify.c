@@ -33,8 +33,9 @@ bool standard_texture_features_of_window(const StandardTextureWindowFeatures *wi
     out->voice_count = window->voices_max < 1 ? 1 : window->voices_max;
     out->unison = window->unison;
     out->rhythmic_unison = out->voice_count >= 2 && window->synchrony >= config->rhythmic_unison_synchrony;
-    out->predominant_melody = !out->unison && out->voice_count >= 2 && window->prominence >= config->prominence_min &&
-                              window->top_gap >= config->prominence_gap_semitones;
+    bool above_a_figure = window->pattern_support >= config->pattern_min && window->pattern_top < window->pattern_support;
+    out->predominant_melody = !out->unison && out->voice_count >= 2 && window->top_gap >= config->prominence_gap_semitones &&
+                              (window->prominence >= config->prominence_min || above_a_figure);
     out->independent_lines = !out->unison && !out->predominant_melody && window->pair_count >= 1 &&
                              window->independence_mean >= config->independence_min &&
                              window->synchrony < config->independence_max_synchrony;
@@ -61,7 +62,10 @@ static double margin_of(StandardTexture texture, const StandardTextureWindowFeat
     }
     case STANDARD_TEXTURE_MELODY_AND_ACCOMPANIMENT: {
         double room = c->prominence_gap_semitones > 1.0 ? c->prominence_gap_semitones : 1.0;
-        return least(clip((w->prominence - c->prominence_min) / c->prominence_min), clip((w->top_gap - c->prominence_gap_semitones) / room));
+        double by_prominence = clip((w->prominence - c->prominence_min) / c->prominence_min);
+        double by_figure = clip((w->pattern_support - c->pattern_min) / (1.0 - c->pattern_min + 1e-12));
+        double evidence = by_prominence > by_figure ? by_prominence : by_figure;
+        return least(evidence, clip((w->top_gap - c->prominence_gap_semitones) / room));
     }
     default:
         (void)f;

@@ -4,7 +4,7 @@
 #include <string.h>
 
 StandardTextureConfig standard_texture_config_default(void) {
-    StandardTextureConfig config = {32, 256, 64, 0.75, 0.6, 0.5, 1.5, 3.0};
+    StandardTextureConfig config = {32, 256, 64, 0.75, 0.6, 0.5, 1.5, 3.0, 0.5};
     return config;
 }
 
@@ -15,7 +15,7 @@ bool standard_texture_config_valid(const StandardTextureConfig *config) {
            config->rhythmic_unison_synchrony > 0.0 && config->rhythmic_unison_synchrony <= 1.0 &&
            config->independence_min > 0.0 && config->independence_min <= 1.0 && config->independence_max_synchrony > 0.0 &&
            config->independence_max_synchrony <= config->rhythmic_unison_synchrony && config->prominence_min > 1.0 &&
-           config->prominence_gap_semitones >= 0.0;
+           config->prominence_gap_semitones >= 0.0 && config->pattern_min > 0.0 && config->pattern_min <= 1.0;
 }
 
 StandardTextureAnalysisStatus standard_texture_input_init(StandardTextureInput *input, const MeterMap *map) {

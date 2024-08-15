@@ -17,7 +17,9 @@
  *   voice_count         the most voices sounding at once (voices_max)
  *   unison              the window's unison flag (every voice the same pitch class whenever two or more sound, attacking together)
  *   rhythmic_unison     two or more voices and synchrony >= rhythmic_unison_synchrony
- *   predominant_melody  not unison, two or more voices, prominence >= prominence_min and the top voice's pitch gap >= prominence_gap_semitones
+ *   predominant_melody  not unison, two or more voices, the top voice's pitch gap >= prominence_gap_semitones, and either prominence >=
+ *                       prominence_min (its attack density differs) or the top voice stands above an accompaniment figure: another voice
+ *                       repeats a short cell (pattern score >= pattern_min) and the top voice does so less
  *   independent_lines   not unison and not a predominant melody (lines of equal prominence), a pair of voices that attack, mean independence
  *                       >= independence_min and synchrony < independence_max_synchrony
  *   shared_melody       never: the source gives no way to measure that voices are variants of one line, so heterophony is not found
@@ -31,8 +33,8 @@
  *                       (independence_max_synchrony - synchrony) / independence_max_synchrony, and how far the top voice is from being
  *                       prominent: the larger of (prominence_min - prominence) / (prominence_min - 1) and
  *                       (prominence_gap_semitones - gap) / prominence_gap_semitones
- *   melody and accomp.  the least of (prominence - prominence_min) / prominence_min and
- *                       (gap - prominence_gap_semitones) / max(prominence_gap_semitones, 1)
+ *   melody and accomp.  the least of the larger of (prominence - prominence_min) / prominence_min and (pattern_support - pattern_min) /
+ *                       (1 - pattern_min), and (gap - prominence_gap_semitones) / max(prominence_gap_semitones, 1)
  * The texture confidence is 0.5 + 0.5 m (a window right on a threshold is a coin flip), and the window's confidence is that times the
  * mean voice confidence of its attacking notes, so an uncertain voice separation lowers it.
  *

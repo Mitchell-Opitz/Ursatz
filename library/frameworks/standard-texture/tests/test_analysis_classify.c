@@ -52,6 +52,19 @@ static void two_lines(Piece *piece, int measure) {
     }
 }
 
+/* A melody of six notes an eighth long, a sixteenth after the beat of the arpeggio's attacks, over the left-hand arpeggio of eighths. */
+static void offset_melody_over_arpeggio(Piece *piece, int measure) {
+    const long melody[6] = {72, 74, 71, 76, 73, 77};
+    long base = (long)(measure - 1) * 16;
+    for (int k = 0; k < 6; k++) {
+        piece_note(piece, 0, 0, melody[k], base + 1 + 2 * k, 16, base + 3 + 2 * k, 16, 1.0);
+    }
+    const long arpeggio[4] = {48, 55, 64, 55};
+    for (int i = 0; i < 8; i++) {
+        note(piece, measure, 1, 0, arpeggio[i % 4], i, i + 1, 1.0);
+    }
+}
+
 static StandardTextureAnalysis analyze(Piece *piece, const StandardTextureConfig *config) {
     StandardTextureAnalysis analysis;
     memset(&analysis, 0, sizeof(analysis));
@@ -146,6 +159,25 @@ static void test_a_change_from_homophony_to_melody_and_accompaniment(void) {
     block_chords(&piece, 2);
     analysis = analyze(&piece, NULL);
     assert(analysis.passage_count == 2 && analysis.changes[0].claim.category_changed == 1);
+    standard_texture_analysis_destroy(&analysis);
+    piece_destroy(&piece);
+}
+
+static void test_a_melody_above_an_accompaniment_figure_needs_no_other_rhythm(void) {
+    /* the melody attacks about as often as the arpeggio (prominence 1.33), never with it: independent lines by density alone */
+    Piece piece;
+    piece_init(&piece, 4, 2);
+    offset_melody_over_arpeggio(&piece, 1);
+    StandardTextureAnalysis analysis = analyze(&piece, NULL);
+    const StandardTextureWindowFeatures *w = &analysis.windows.items[0];
+    assert(w->prominence < 1.5 && near(w->synchrony, 0.0) && w->pattern_support >= 0.5 && w->pattern_top < w->pattern_support);
+    assert(analysis.passage_count == 1 && analysis.passages[0].claim.texture == STANDARD_TEXTURE_MELODY_AND_ACCOMPANIMENT);
+    standard_texture_analysis_destroy(&analysis);
+    /* the same window with a figure threshold the arpeggio does not reach: two independent lines */
+    StandardTextureConfig strict = standard_texture_config_default();
+    strict.pattern_min = 0.9;
+    analysis = analyze(&piece, &strict);
+    assert(analysis.passage_count == 1 && analysis.passages[0].claim.texture == STANDARD_TEXTURE_POLYPHONY);
     standard_texture_analysis_destroy(&analysis);
     piece_destroy(&piece);
 }
@@ -261,6 +293,7 @@ int main(void) {
     test_homophony_of_block_chords();
     test_melody_and_accompaniment();
     test_two_independent_lines();
+    test_a_melody_above_an_accompaniment_figure_needs_no_other_rhythm();
     test_a_change_from_homophony_to_melody_and_accompaniment();
     test_confidence_follows_the_voice_confidence();
     test_confidence_follows_the_margin();

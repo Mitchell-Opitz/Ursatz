@@ -533,6 +533,27 @@ static double voice_pattern_score(const Attack *attacks, size_t n, StandardTextu
     return (double)best / (double)m;
 }
 
+/* The distinct attacks of `voice` in the window, in order (one per onset, the highest pitch), in `attacks` (room for n). */
+static size_t voice_attacks(const StandardTextureEvent *in, size_t n, const StandardTextureWindow *window, size_t voice,
+                            Attack *attacks) {
+    size_t m = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (in[i].voice == voice && attacks_in_window(&in[i], window)) {
+            attacks[m].onset = in[i].onset;
+            attacks[m].pitch = in[i].pitch;
+            m++;
+        }
+    }
+    qsort(attacks, m, sizeof(Attack), compare_attacks);
+    size_t distinct = 0;
+    for (size_t i = 0; i < m; i++) {
+        if (i == 0 || standard_texture_q_compare(attacks[i].onset, attacks[distinct - 1].onset) != 0) {
+            attacks[distinct++] = attacks[i];
+        }
+    }
+    return distinct;
+}
+
 double standard_texture_feature_pattern(const StandardTextureEvent *events, size_t count, const StandardTextureWindow *window,
                                         double *out_max, size_t *out_voices) {
     if (out_max != NULL) {
@@ -550,21 +571,7 @@ double standard_texture_feature_pattern(const StandardTextureEvent *events, size
     double most = 0.0;
     size_t scored = 0;
     for (size_t v = 0; attacks != NULL && v < voice_count; v++) {
-        size_t m = 0;
-        for (size_t i = 0; i < n; i++) {
-            if (in[i].voice == voices[v] && attacks_in_window(&in[i], window)) {
-                attacks[m].onset = in[i].onset;
-                attacks[m].pitch = in[i].pitch;
-                m++;
-            }
-        }
-        qsort(attacks, m, sizeof(Attack), compare_attacks);
-        size_t distinct = 0;
-        for (size_t i = 0; i < m; i++) {
-            if (i == 0 || standard_texture_q_compare(attacks[i].onset, attacks[distinct - 1].onset) != 0) {
-                attacks[distinct++] = attacks[i];
-            }
-        }
+        size_t distinct = voice_attacks(in, n, window, voices[v], attacks);
         if (distinct < 3) {
             continue;
         }
@@ -582,6 +589,124 @@ double standard_texture_feature_pattern(const StandardTextureEvent *events, size
     free(attacks);
     free(in);
     return scored > 0 ? total / (double)scored : 0.0;
+}
+
+double standard_texture_feature_voice_pattern(const StandardTextureEvent *events, size_t count, const StandardTextureWindow *window,
+                                              size_t voice) {
+    size_t n = 0;
+    StandardTextureEvent *in = filtered(events, count, window, &n);
+    Attack *attacks = (Attack *)malloc((n == 0 ? 1 : n) * sizeof(Attack));
+    double score = 0.0;
+    if (in != NULL && attacks != NULL) {
+        size_t distinct = voice_attacks(in, n, window, voice, attacks);
+        score = distinct >= 3 ? voice_pattern_score(attacks, distinct, window->beat) : 0.0;
+    }
+    free(attacks);
+    free(in);
+    return score;
+}
+
+static int compare_by_mean_pitch(const void *a, const void *b) {
+    const double *left = (const double *)a;
+    const double *right = (const double *)b;
+    /* rows of {mean pitch, voice id}: higher pitch first, then the lower id */
+    if (left[0] != right[0]) {
+        return left[0] > right[0] ? -1 : 1;
+    }
+    return (left[1] > right[1]) - (left[1] < right[1]);
+}
+
+size_t standard_texture_consolidate_voices(const StandardTextureEvent *events, size_t count, const StandardTextureWindow *window,
+                                           StandardTextureEvent *out) {
+    size_t n = 0;
+    StandardTextureEvent *in = filtered(events, count, window, &n);
+    if (in == NULL || out == NULL) {
+        free(in);
+        return 0;
+    }
+    memcpy(out, in, n * sizeof(StandardTextureEvent));
+    free(in);
+
+    /* the voices: id, track, mean pitch, whether it attacks in the window */
+    size_t ids[STANDARD_TEXTURE_MAX_VOICES];
+    size_t tracks[STANDARD_TEXTURE_MAX_VOICES];
+    double pitch_sum[STANDARD_TEXTURE_MAX_VOICES];
+    size_t pitch_count[STANDARD_TEXTURE_MAX_VOICES];
+    bool attacks[STANDARD_TEXTURE_MAX_VOICES];
+    size_t voices = 0;
+    for (size_t i = 0; i < n; i++) {
+        size_t k = 0;
+        while (k < voices && ids[k] != out[i].voice) {
+            k++;
+        }
+        if (k == voices) {
+            if (voices == STANDARD_TEXTURE_MAX_VOICES) {
+                continue;
+            }
+            ids[voices] = out[i].voice;
+            tracks[voices] = out[i].track;
+            pitch_sum[voices] = 0.0;
+            pitch_count[voices] = 0;
+            attacks[voices] = false;
+            voices++;
+        }
+        pitch_sum[k] += (double)out[i].pitch;
+        pitch_count[k]++;
+        attacks[k] = attacks[k] || attacks_in_window(&out[i], window);
+    }
+    double order[STANDARD_TEXTURE_MAX_VOICES][2];
+    for (size_t k = 0; k < voices; k++) {
+        order[k][0] = pitch_sum[k] / (double)pitch_count[k];
+        order[k][1] = (double)k;
+    }
+    qsort(order, voices, sizeof(order[0]), compare_by_mean_pitch);
+
+    /* the lines: each takes the voices of its track it never attacks together with */
+    size_t line_of[STANDARD_TEXTURE_MAX_VOICES];
+    size_t line_track[STANDARD_TEXTURE_MAX_VOICES];
+    Mask line_members[STANDARD_TEXTURE_MAX_VOICES];
+    bool line_open[STANDARD_TEXTURE_MAX_VOICES]; /* made of voices that attack: only these take another voice */
+    size_t lines = 0;
+    for (size_t r = 0; r < voices; r++) {
+        size_t v = (size_t)order[r][1];
+        size_t chosen = lines;
+        for (size_t g = 0; attacks[v] && g < lines; g++) {
+            if (!line_open[g] || line_track[g] != tracks[v]) {
+                continue;
+            }
+            bool together = false;
+            for (size_t i = 0; !together && i < n; i++) {
+                if (out[i].voice != ids[v] || !attacks_in_window(&out[i], window)) {
+                    continue;
+                }
+                for (size_t j = 0; !together && j < n; j++) {
+                    together = (line_members[g] & voice_bit(out[j].voice)) != 0 && attacks_in_window(&out[j], window) &&
+                               standard_texture_q_compare(out[j].onset, out[i].onset) == 0;
+                }
+            }
+            if (!together) {
+                chosen = g;
+                break;
+            }
+        }
+        if (chosen == lines) {
+            line_track[lines] = tracks[v];
+            line_members[lines] = 0;
+            line_open[lines] = attacks[v];
+            lines++;
+        }
+        line_of[v] = chosen;
+        line_members[chosen] |= voice_bit(ids[v]);
+    }
+    for (size_t i = 0; i < n; i++) {
+        for (size_t v = 0; v < voices; v++) {
+            if (ids[v] == out[i].voice) {
+                out[i].voice = line_of[v];
+                break;
+            }
+        }
+    }
+    return n;
 }
 
 double standard_texture_feature_unison(const StandardTextureEvent *events, size_t count, const StandardTextureWindow *window,
@@ -662,27 +787,41 @@ void standard_texture_measure_features(const StandardTextureEvent *events, size_
     out->measure = measure;
     out->start = window->start;
     out->end = window->end;
-    size_t sounding = 0;
-    for (size_t i = 0; events != NULL && i < count; i++) {
-        if (standard_texture_event_in_window(&events[i], window)) {
-            sounding++;
-            if (attacks_in_window(&events[i], window)) {
-                out->attacks++;
-            }
+    out->voice_confidence = 1.0;
+    StandardTextureEvent *lines = (StandardTextureEvent *)malloc((count == 0 ? 1 : count) * sizeof(StandardTextureEvent));
+    if (lines == NULL) {
+        return;
+    }
+    size_t n = events == NULL ? 0 : standard_texture_consolidate_voices(events, count, window, lines);
+    out->events = n;
+    for (size_t i = 0; i < n; i++) {
+        if (attacks_in_window(&lines[i], window)) {
+            out->attacks++;
         }
     }
-    out->events = sounding;
-    standard_texture_feature_voice_counts(events, count, window, &out->voices_max, &out->voices_mean);
-    out->synchrony = standard_texture_feature_synchrony(events, count, window, &out->attack_times);
-    out->pair_count = standard_texture_feature_independence(events, count, window, NULL, 0, &out->independence_mean,
-                                                            &out->independence_min);
-    out->prominence = standard_texture_feature_prominence(events, count, window, &out->prominence_ratio, &out->top_gap,
-                                                          &out->top_voice);
-    out->spacing = standard_texture_feature_register(events, count, window, &out->register_span);
-    out->density = standard_texture_feature_density(events, count, window);
-    out->pattern_mean = standard_texture_feature_pattern(events, count, window, &out->pattern_max, &out->pattern_voices);
-    out->unison_share = standard_texture_feature_unison(events, count, window, out->synchrony, &out->unison);
-    out->voice_confidence = standard_texture_feature_confidence(events, count, window);
+    standard_texture_feature_voice_counts(lines, n, window, &out->voices_max, &out->voices_mean);
+    out->synchrony = standard_texture_feature_synchrony(lines, n, window, &out->attack_times);
+    out->pair_count = standard_texture_feature_independence(lines, n, window, NULL, 0, &out->independence_mean, &out->independence_min);
+    out->prominence = standard_texture_feature_prominence(lines, n, window, &out->prominence_ratio, &out->top_gap, &out->top_voice);
+    out->spacing = standard_texture_feature_register(lines, n, window, &out->register_span);
+    out->density = standard_texture_feature_density(lines, n, window);
+    out->pattern_mean = standard_texture_feature_pattern(lines, n, window, &out->pattern_max, &out->pattern_voices);
+    out->unison_share = standard_texture_feature_unison(lines, n, window, out->synchrony, &out->unison);
+    out->voice_confidence = standard_texture_feature_confidence(lines, n, window);
+
+    /* the top voice's pattern, and the greatest among the voices that accompany it */
+    size_t top = n > 0 ? lines[0].voice : 0;
+    if (out->voices_max >= 2) {
+        top = out->top_voice;
+    }
+    out->pattern_top = standard_texture_feature_voice_pattern(lines, n, window, top);
+    for (size_t i = 0; i < n; i++) {
+        if (lines[i].voice != top && attacks_in_window(&lines[i], window)) {
+            double score = standard_texture_feature_voice_pattern(lines, n, window, lines[i].voice);
+            out->pattern_support = score > out->pattern_support ? score : out->pattern_support;
+        }
+    }
+    free(lines);
 }
 
 typedef struct {
@@ -760,6 +899,7 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
         events[usable].pitch = input->notes[i].pitch;
         events[usable].voice = (size_t)(at - keys);
         events[usable].confidence = input->notes[i].voice_confidence;
+        events[usable].track = input->notes[i].track;
         if (usable == 0 || standard_texture_q_compare(onset, first) < 0) {
             first = onset;
         }
