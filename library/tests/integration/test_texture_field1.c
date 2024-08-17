@@ -82,7 +82,9 @@ int main(void) {
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, "Field 1.mid", NULL);
     const MeterMap *map = p.meter.meter_map;
     TextureBuild build;
-    texture_build_from_import(&build, &p, map);
+    char midi_path[1024];
+    snprintf(midi_path, sizeof(midi_path), "%s/Field 1.mid", URSATZ_CORPUS_DIR);
+    texture_build_from_import(&build, &p, map, midi_path);
     printf("Field 1, measures %d-%d (draft hand analysis): %zu notes in %zu track(s)\n", annotation.range_first, annotation.range_last,
            build.input.note_count, build.stream_count);
     size_t per_track[8] = {0};
@@ -119,9 +121,12 @@ int main(void) {
         if (found_category == want) {
             right++;
         } else {
-            printf("    measure %d: annotated %s, found %s (%s%s)\n", measure, standard_texture_name(want),
-                   standard_texture_name(found_category), standard_texture_name((StandardTexture)analysis.window_texture[w]),
-                   analysis.classes[w].has_texture ? "" : ", taken from a neighbour");
+            const StandardTextureWindowFeatures *f = &analysis.windows.items[w];
+            printf("    measure %d: annotated %s, found %s (%s%s); voices %d, synchrony %.2f, independence %.2f, prominence %.2f, gap %.1f, pattern %.2f\n",
+                   measure, standard_texture_name(want), standard_texture_name(found_category),
+                   standard_texture_name((StandardTexture)analysis.window_texture[w]),
+                   analysis.classes[w].has_texture ? "" : ", taken from a neighbour", f->voices_max, f->synchrony, f->independence_mean,
+                   f->prominence, f->top_gap, f->pattern_max);
         }
     }
     double rate = scored == 0 ? 0.0 : (double)right / (double)scored;
