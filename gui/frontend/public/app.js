@@ -379,21 +379,8 @@ function formatPieceLabel(id, filename) {
   return filename ? `${filename} (${id})` : id;
 }
 
-/* Analysis view tabs, each mapped to the real interpretation `type`
- * values GET /api/analyzer/pieces/<id> returns (see analysis_service.c's
- * kIndexType* constants) -- Form folds in thematic_return (Thematic
- * Return Detection shares Form Structure Detection's Relationship-typed
- * lineage) and Periods/Sentences folds in both period and sentence,
- * each pair sharing one tab and one count badge. */
-const ANALYSIS_TABS = [
-  { id: "chords", label: "Chords", types: ["chord"] },
-  { id: "keys", label: "Keys", types: ["key"] },
-  { id: "cadences", label: "Cadences", types: ["cadence"] },
-  { id: "motifs", label: "Motifs", types: ["motif"] },
-  { id: "phrases", label: "Phrases", types: ["phrase"] },
-  { id: "form", label: "Form", types: ["form", "thematic_return"] },
-  { id: "periods-sentences", label: "Periods/Sentences", types: ["period", "sentence"] },
-];
+/* The tabs and their rows come from analysis-tabs.js (ANALYSIS_TABS,
+ * buildAllTabStates), loaded before this file. */
 
 /* No analyzer-registry endpoint exists yet -- this mirrors the static
  * name/version list shown in the mockup rather than fetching real
@@ -421,51 +408,6 @@ function renderAnalyzersList() {
     li.textContent = `${analyzer.name} ${analyzer.version}`;
     listEl.appendChild(li);
   }
-}
-
-/* Buckets interpretations by ANALYSIS_TABS entry; an interpretation
- * whose type matches no tab (none do today) is silently dropped. */
-function groupClaimsByTab(interpretations) {
-  const groups = new Map();
-  for (const tab of ANALYSIS_TABS) {
-    groups.set(tab.id, []);
-  }
-  for (const interpretation of interpretations) {
-    const tab = ANALYSIS_TABS.find((candidate) => candidate.types.includes(interpretation.type));
-    if (tab) {
-      groups.get(tab.id).push(interpretation);
-    }
-  }
-  return groups;
-}
-
-/* The Chords and Keys claims of a piece, read from the stored analysis
- * document (data.document): each chord and each key region becomes a
- * claim with its label and location. Every other tab stays empty until
- * the tabs follow the document's own sections. */
-function formatDocumentLocation(location) {
-  const start = location && location.start;
-  return start ? `m. ${start.measure}, beat ${start.beat}` : "";
-}
-
-function claimsFromDocument(document) {
-  const claims = [];
-  const sections = [
-    { type: "key", entries: (document && document.keys && document.keys.regions) || [] },
-    { type: "chord", entries: (document && document.chords) || [] },
-  ];
-  for (const section of sections) {
-    for (const entry of section.entries) {
-      const where = formatDocumentLocation(entry.location);
-      claims.push({
-        type: section.type,
-        label: where ? `${entry.label} (${where})` : entry.label,
-        provenance_state: "absent",
-        highlighted_note_ids: [],
-      });
-    }
-  }
-  return claims;
 }
 
 /* Entry point for the top-level Analysis nav tab: reopens whichever
@@ -500,9 +442,12 @@ function showAnalysisView(id) {
       <aside class="analysis-sidebar">
         <div class="sidebar-label">Analyzers</div>
         <ul id="analysis-analyzers" class="analyzers-list"></ul>
+        <div class="sidebar-label">Provenance</div>
+        <dl id="analysis-provenance" class="provenance-list"></dl>
       </aside>
       <div class="analysis-main">
         <div id="analysis-status" class="piece-list-status">Loading piece ${id}...</div>
+        <div id="analysis-header" class="analysis-header" hidden></div>
         <div id="analysis-tabs" class="analysis-tabs" hidden></div>
         <div id="analysis-claims" class="analysis-claims"></div>
         <div id="analysis-detail" class="analysis-detail" hidden></div>
@@ -526,6 +471,8 @@ function showAnalysisView(id) {
 
       statusEl.textContent = "";
       document.getElementById("analysis-title").textContent = data.filename || data.id;
+      renderAnalysisHeader(data);
+      renderProvenancePanel(data.document);
       renderAnalysisTabs(data);
     })
     .catch((err) => {
@@ -535,12 +482,43 @@ function showAnalysisView(id) {
     });
 }
 
+/* Filename, format, analyzer version, Ursatz commit, note and measure
+ * counts above the tabs (buildAnalysisHeader in analysis-tabs.js). */
+function renderAnalysisHeader(data) {
+  const header = buildAnalysisHeader(data);
+  const headerEl = document.getElementById("analysis-header");
+  const parts = [
+    header.filename,
+    header.format,
+    header.analyzerVersion ? `analyzer ${header.analyzerVersion}` : "",
+    header.ursatzCommit ? `ursatz ${header.ursatzCommit}` : "",
+    `${header.noteCount} notes`,
+    header.measureCount === null ? "" : `${header.measureCount} measures`,
+  ];
+  headerEl.textContent = parts.filter((part) => part !== "").join(" · ");
+  headerEl.hidden = false;
+}
+
+/* The metadata fields of the analysis document (buildProvenanceFields). */
+function renderProvenancePanel(analysisDocument) {
+  const listEl = document.getElementById("analysis-provenance");
+  listEl.innerHTML = "";
+  for (const [label, value] of buildProvenanceFields(analysisDocument)) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    listEl.appendChild(term);
+    listEl.appendChild(detail);
+  }
+}
+
 function renderAnalysisTabs(data) {
   const tabsEl = document.getElementById("analysis-tabs");
   const claimsEl = document.getElementById("analysis-claims");
   const detailEl = document.getElementById("analysis-detail");
   const scoreEl = document.getElementById("analysis-score");
-  const groups = groupClaimsByTab(claimsFromDocument(data.document));
+  const states = buildAllTabStates(data.document);
 
   currentScoreOsmd = null;
   currentScoreNoteIndex = null;
@@ -570,15 +548,20 @@ function renderAnalysisTabs(data) {
     claimsEl.hidden = false;
     detailEl.hidden = true;
     scoreEl.hidden = true;
-    renderClaimList(claimsEl, groups.get(tabId) || [], detailEl);
+    renderTabBlocks(claimsEl, states.find((state) => state.tab.id === tabId), detailEl, data.note_xml_ids);
   }
 
-  for (const tab of ANALYSIS_TABS) {
+  for (const state of states) {
     const button = document.createElement("button");
     button.type = "button";
-    button.dataset.tabId = tab.id;
-    button.textContent = `${tab.label} ${groups.get(tab.id).length}`;
-    button.addEventListener("click", () => selectTab(tab.id));
+    button.dataset.tabId = state.tab.id;
+    if (state.empty) {
+      button.textContent = `${state.tab.label} (none)`;
+      button.disabled = true;
+    } else {
+      button.textContent = `${state.tab.label} ${state.rowCount}`;
+      button.addEventListener("click", () => selectTab(state.tab.id));
+    }
     tabsEl.appendChild(button);
   }
 
@@ -589,7 +572,8 @@ function renderAnalysisTabs(data) {
   scoreButton.addEventListener("click", () => selectTab("score"));
   tabsEl.appendChild(scoreButton);
 
-  selectTab(ANALYSIS_TABS[0].id);
+  const firstFilled = states.find((state) => !state.empty);
+  selectTab(firstFilled ? firstFilled.tab.id : "score");
 }
 
 /* Claim-selection -> score highlighting state, reset per piece load (see
@@ -771,37 +755,83 @@ function renderScoreTab(scoreEl, pieceId) {
     });
 }
 
-function renderClaimList(claimsEl, claims, detailEl) {
+/* One tab: for each document section, a heading, the section's JSON block
+ * when it is an object, and its rows. A row is a claim: label, where it
+ * is, and a toggle for its remaining fields. Selecting a row with
+ * note_ids sets the pending highlight to those notes' xml:ids. */
+function renderTabBlocks(claimsEl, state, detailEl, noteXmlIds) {
   claimsEl.innerHTML = "";
 
-  if (claims.length === 0) {
-    const empty = document.createElement("div");
-    empty.classList.add("piece-list-status");
-    empty.textContent = "No claims in this category.";
-    claimsEl.appendChild(empty);
-    return;
-  }
+  for (const block of state.blocks) {
+    if (block.kind === "empty") {
+      continue;
+    }
 
+    const heading = document.createElement("div");
+    heading.classList.add("sidebar-label");
+    heading.textContent = block.name;
+    claimsEl.appendChild(heading);
+
+    if (block.kind === "object") {
+      const pre = document.createElement("pre");
+      pre.classList.add("json-block");
+      pre.textContent = block.text;
+      claimsEl.appendChild(pre);
+    }
+
+    if (block.rows.length > 0) {
+      claimsEl.appendChild(buildClaimRows(block.rows, detailEl, noteXmlIds));
+    }
+  }
+}
+
+function buildClaimRows(rows, detailEl, noteXmlIds) {
   const list = document.createElement("ul");
   list.classList.add("claim-list");
-  for (const claim of claims) {
+  for (const row of rows) {
     const li = document.createElement("li");
-    li.classList.add("clickable");
+    li.classList.add("clickable", "claim-row");
 
-    li.textContent = `${claim.label} — `;
-    const flag = document.createElement("span");
-    flag.classList.add("provenance-flag");
-    flag.textContent = PROVENANCE_LABELS[claim.provenance_state] || claim.provenance_state;
-    li.appendChild(flag);
+    const line = document.createElement("div");
+    line.classList.add("claim-row-line");
+    const label = document.createElement("span");
+    label.classList.add("claim-row-label");
+    label.textContent = row.label;
+    const where = document.createElement("span");
+    where.classList.add("claim-row-where");
+    where.textContent = row.where;
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.classList.add("claim-row-toggle");
+    toggle.textContent = "Fields";
+    line.appendChild(label);
+    line.appendChild(where);
+    line.appendChild(toggle);
+    li.appendChild(line);
 
+    const json = document.createElement("pre");
+    json.classList.add("json-block");
+    json.textContent = row.detail;
+    json.hidden = true;
+    li.appendChild(json);
+
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      json.hidden = !json.hidden;
+    });
     li.addEventListener("click", () => {
-      renderClaimDetail(detailEl, claim);
-      pendingHighlightClaim = claim;
+      renderClaimDetail(detailEl, {
+        type: row.section,
+        label: row.label,
+        produced_by: { author: "ursatz-analyzer", method: row.framework || "analysis document" },
+        provenance_state: "absent",
+      });
+      pendingHighlightClaim = { highlighted_note_ids: mapNoteIdsToXmlIds(row.noteIds, noteXmlIds) };
       applyPendingHighlight();
     });
     list.appendChild(li);
   }
-  claimsEl.appendChild(list);
+  return list;
 }
 
 /* Evidence is always empty (no Evidence data exists behind this
