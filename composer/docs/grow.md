@@ -16,6 +16,10 @@ if (grow_build_plan(&request, &plan) == GROW_OK && grow_run(plan, &config, &outc
 }
 ```
 
+`grow_run` is a [compose run](piece.md) over the plan's one theme section: the stages, seeds, retries and records below are
+the compose run's, and `GrowOutcome` is filled from its `ComposeOutcome`. The stage seeds are unchanged (seed + 0 to
+seed + 5; the compose run's invention stage takes seed + 6), so a grown theme is the same as before.
+
 ## The request
 
 | Field | Meaning |
