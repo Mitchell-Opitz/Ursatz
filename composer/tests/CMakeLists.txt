@@ -231,10 +231,11 @@ foreach(template ${FORM_TEMPLATES})
     add_test(NAME test_form_templates_${template}_heard COMMAND test_form_templates heard ${template})
     # Every template has runs that get stuck and, but for variations, a share heard as requested below grow's measured
     # shares (measured, with the causes, in docs/piece.md): those tests assert the target, so they fail, and the failure
-    # is expected.
-    # Variations are the one exception for the share: grow hears none of the periods it is made of either, so 0 meets
-    # the target and that test passes.
-    set_tests_properties(test_form_templates_${template}_compose PROPERTIES WILL_FAIL TRUE)
+    # is expected. Variations are the one exception for the share: grow hears none of the periods it is made of either,
+    # so 0 meets the target and that test passes. The sweeps take minutes: label "slow", so CI can leave them out
+    # (ctest -LE slow) and a full ctest run before a push keeps them.
+    set_tests_properties(test_form_templates_${template}_compose PROPERTIES WILL_FAIL TRUE LABELS slow)
+    set_tests_properties(test_form_templates_${template}_heard PROPERTIES LABELS slow)
     if(NOT template STREQUAL "variations")
         set_tests_properties(test_form_templates_${template}_heard PROPERTIES WILL_FAIL TRUE)
     endif()
