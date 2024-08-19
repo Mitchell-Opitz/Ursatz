@@ -197,6 +197,15 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     case PLAN_CONSTRAINT_COUNTERPOINT:
         return a->params.counterpoint.species == b->params.counterpoint.species &&
                a->params.counterpoint.above == b->params.counterpoint.above;
+    case PLAN_CONSTRAINT_RETURN:
+        return a->params.section_return.section == b->params.section_return.section &&
+               a->params.section_return.variation == b->params.section_return.variation;
+    case PLAN_CONSTRAINT_LAYERS:
+        return a->params.layers.lanes == b->params.layers.lanes;
+    case PLAN_CONSTRAINT_SECTION_LETTER:
+        return strcmp(a->params.letter, b->params.letter) == 0;
+    case PLAN_CONSTRAINT_INVENT_MOTIVE:
+        return true;
     }
     return false;
 }
@@ -320,6 +329,82 @@ static void test_round_trip(void) {
     plan_destroy(from_file);
 }
 
+/*
+ * The constraints of a piece plan: a section's letter, the section it returns and how, the lanes a layer sounds, and a
+ * motive to invent. They round-trip, and malformed ones are refused.
+ */
+static void test_section_constraints(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 13), "rounded-binary");
+    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
+    NodeId b = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "B");
+    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(8, 4), "A'");
+    NodeId phrase = add(plan, a, PLAN_NODE_PHRASE, bars(0, 4), "phrase");
+    NodeId material = add(plan, form, PLAN_NODE_SECTION, bars(12, 1), "material");
+    NodeId material_phrase = add(plan, material, PLAN_NODE_PHRASE, bars(12, 1), "material");
+    NodeId material_idea = add(plan, material_phrase, PLAN_NODE_IDEA, bars(12, 1), "material");
+    NodeId m0 = add(plan, material_idea, PLAN_NODE_MOTIVE, bars(12, 1), "m0");
+    PlanNote placeholder = {60, {0, 1}, {1, 1}};
+    PlanLanePayload melody;
+    memset(&melody, 0, sizeof(melody));
+    melody.notes.notes = &placeholder;
+    melody.notes.note_count = 1;
+    LaneSpanId open = add_lane(plan, m0, PLAN_LANE_MELODY, 0, bars(12, 1), &melody);
+
+    static const char *const LETTERS[] = {"A", "B", "A'"};
+    NodeId sections[] = {a, b, a2};
+    for (size_t i = 0; i < 3; i++) {
+        PlanConstraint letter = {PLAN_CONSTRAINT_SECTION_LETTER, {0}};
+        strcpy(letter.params.letter, LETTERS[i]);
+        assert(plan_node_add_constraint(plan, sections[i], &letter) == PLAN_OK);
+    }
+    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
+    back.params.section_return.section = a;
+    back.params.section_return.variation = PLAN_RETURN_ORNAMENT;
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
+    PlanConstraint layers = {PLAN_CONSTRAINT_LAYERS, {0}};
+    layers.params.layers.lanes = PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE);
+    assert(plan_node_add_constraint(plan, b, &layers) == PLAN_OK);
+    PlanConstraint invent = {PLAN_CONSTRAINT_INVENT_MOTIVE, {0}};
+    assert(plan_lane_span_add_constraint(plan, open, &invent) == PLAN_OK);
+
+    /* A return names a section; a layer sounds a lane there is; a letter is one to three characters. */
+    back.params.section_return.section = phrase;
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
+    back.params.section_return.section = 99;
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
+    back.params.section_return.section = a;
+    back.params.section_return.variation = (PlanReturnVariation)9;
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
+    layers.params.layers.lanes = 0;
+    assert(plan_node_add_constraint(plan, b, &layers) == PLAN_ERR_BAD_PAYLOAD);
+    layers.params.layers.lanes = 1u << 9;
+    assert(plan_node_add_constraint(plan, b, &layers) == PLAN_ERR_BAD_PAYLOAD);
+    PlanConstraint letter = {PLAN_CONSTRAINT_SECTION_LETTER, {0}};
+    assert(plan_node_add_constraint(plan, a, &letter) == PLAN_ERR_BAD_PAYLOAD);
+    memcpy(letter.params.letter, "ABCD", PLAN_SECTION_LETTER_MAX);
+    assert(plan_node_add_constraint(plan, a, &letter) == PLAN_ERR_BAD_PAYLOAD);
+
+    PlanJsonError error;
+    char *text = plan_to_json(plan, &error);
+    assert(text != NULL);
+    assert(strstr(text, "\"variation\": \"ornament\"") != NULL);
+    assert(strstr(text, "\"letter\": \"A'\"") != NULL);
+    assert(strstr(text, "\"invent_motive\"") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    const PlanConstraint *read = plan_node_constraint_at(parsed, b, 1);
+    assert(read && read->kind == PLAN_CONSTRAINT_LAYERS &&
+           read->params.layers.lanes == (PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE)));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+    free(text);
+    free(again);
+    plan_destroy(parsed);
+    plan_destroy(plan);
+}
+
 static void test_empty_plan(void) {
     PiecePlan *plan = plan_create();
     PlanJsonError error;
@@ -421,6 +506,27 @@ static void test_malformed_input(void) {
         assert(plan_node_constraint_at(parsed_pairing, 1, 2)->kind == PLAN_CONSTRAINT_MATERIAL);
         plan_destroy(parsed_pairing);
     }
+    /* The constraints of a piece plan. */
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"return\",\"section\":1,\"variation\":\"remix\"}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].variation");
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"return\",\"section\":1,\"variation\":\"exact\"}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0]");
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"layers\",\"lanes\":[\"bass\",\"drums\"]}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].lanes[1]");
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"layers\",\"lanes\":[]}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].lanes");
+    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
+                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
+                 "[{\"kind\":\"section_letter\",\"letter\":\"ABCD\"}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].letter");
     /* A section outside its parent's span. */
     expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
                  ",\"children\":[{\"kind\":\"section\",\"label\":null,"
@@ -537,6 +643,7 @@ static void test_analysis_document_errors(void) {
 
 int main(void) {
     test_round_trip();
+    test_section_constraints();
     test_empty_plan();
     test_malformed_input();
     test_load_analysis_document();

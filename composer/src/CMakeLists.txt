@@ -38,6 +38,7 @@ add_library(ursatz_composer STATIC
     motive/motive_develop.c
     motive/motive_develop_operator.c
     motive/motive_recognizability.c
+    motive/motive_invent.c
     melody/melody_check.c
     melody/melody_context.c
     melody/melody_contour.c
@@ -52,6 +53,9 @@ add_library(ursatz_composer STATIC
     grow/grow_ending.c
     grow/grow_check.c
     grow/grow_run.c
+    piece/form_template.c
+    piece/piece_request.c
+    piece/compose_run.c
     texture/accompaniment.c
     texture/accompaniment_pattern.c
     texture/accompaniment_hear.c

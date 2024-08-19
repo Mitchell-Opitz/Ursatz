@@ -28,7 +28,11 @@ typedef enum {
     PLAN_CONSTRAINT_THEME_PAIRING, /* how a theme begins and how it ends */
     PLAN_CONSTRAINT_ACCOMPANIMENT, /* the accompaniment an inner voice span is to be written as */
     PLAN_CONSTRAINT_VOICING,       /* the four-part voicing an inner voice span is to be written as */
-    PLAN_CONSTRAINT_COUNTERPOINT   /* the counter-melody an inner voice span is to be written as */
+    PLAN_CONSTRAINT_COUNTERPOINT,  /* the counter-melody an inner voice span is to be written as */
+    PLAN_CONSTRAINT_RETURN,        /* on a section node: the earlier section it returns, and how it varies it */
+    PLAN_CONSTRAINT_LAYERS,        /* on a section node: which lanes sound in it */
+    PLAN_CONSTRAINT_SECTION_LETTER, /* on a section node: its form letter ("A", "B", "A'") */
+    PLAN_CONSTRAINT_INVENT_MOTIVE   /* no parameters: a motive's melody span to be invented (motive-invent) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -198,6 +202,36 @@ typedef struct {
     bool above;
 } PlanCounterpoint;
 
+/*
+ * A returning section (R-068, R-070): section is the section node it returns, variation how the return differs
+ * from it. The constraint must name a section node.
+ */
+typedef enum {
+    PLAN_RETURN_EXACT,
+    PLAN_RETURN_ORNAMENT,
+    PLAN_RETURN_REHARMONIZE,
+    PLAN_RETURN_REREGISTER
+} PlanReturnVariation;
+
+typedef struct {
+    NodeId section;
+    PlanReturnVariation variation;
+} PlanReturn;
+
+/*
+ * The lanes that sound in a layer section: bit (1u << lane) for each PlanLaneKind. A layer section is grown in
+ * full; the mask decides only what is rendered. At least one bit, none past PLAN_LANE_INNER_VOICE.
+ */
+#define PLAN_LAYER_BIT(lane) (1u << (unsigned)(lane))
+#define PLAN_LAYERS_ALL (PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE + 1) - 1u)
+
+typedef struct {
+    unsigned lanes;
+} PlanLayers;
+
+/* A section's form letter: one to three characters, NUL-terminated ("A", "B", "A'", "V1"). */
+#define PLAN_SECTION_LETTER_MAX 4
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -213,6 +247,9 @@ typedef struct {
         PlanAccompaniment accompaniment;
         PlanVoicing voicing;
         PlanCounterpoint counterpoint;
+        PlanReturn section_return;
+        PlanLayers layers;
+        char letter[PLAN_SECTION_LETTER_MAX];
     } params;
 } PlanConstraint;
 

@@ -47,6 +47,7 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 | `src/form/` | Hearing the phrase form through standard-form. |
 | `src/counterpoint/` | The counter-melody operator: species 1 to 4 against a given line, its search and its check. |
 | `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
+| `src/piece/` | Form templates, the piece plan and the compose run over its sections. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
 | `cli/` | The `ursatz-composer` command. |
 | `tests/` | Tests and their fixtures. |
@@ -127,8 +128,14 @@ standard-counterpoint rules; `ursatz-composer counterpoint` runs it from the com
 ## Growing a theme
 
 `grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a theme of 8 or 4 bars from a motive, as a
-sentence, a period or a hybrid: its structure, motives, harmony, bass and melody, in stages. See
+sentence, a period or a hybrid: its structure, motives, harmony, bass and melody, in stages (a compose run over one section). See
 [docs/grow.md](docs/grow.md).
+
+## Pieces from form templates
+
+`piece_build_plan` and `compose_run` (`<ursatz_composer/piece.h>`, `<ursatz_composer/compose.h>`) plan a short piece from a
+named form (binary, rounded binary, ternary, theme and variations, loop, layered), invent a motive when none is given,
+and fill every section with the grow stages. See [docs/piece.md](docs/piece.md).
 
 ## Hearing the form
 

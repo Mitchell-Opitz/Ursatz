@@ -68,6 +68,20 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return true;
     case PLAN_CONSTRAINT_COUNTERPOINT:
         return constraint->params.counterpoint.species >= 1 && constraint->params.counterpoint.species <= 4;
+    case PLAN_CONSTRAINT_RETURN: {
+        const PlanReturn *section_return = &constraint->params.section_return;
+        return plan_has_node(plan, section_return->section) &&
+               plan_node_kind(plan, section_return->section) == PLAN_NODE_SECTION &&
+               section_return->variation >= PLAN_RETURN_EXACT && section_return->variation <= PLAN_RETURN_REREGISTER;
+    }
+    case PLAN_CONSTRAINT_LAYERS:
+        return constraint->params.layers.lanes != 0 && (constraint->params.layers.lanes & ~PLAN_LAYERS_ALL) == 0;
+    case PLAN_CONSTRAINT_SECTION_LETTER: {
+        size_t length = strnlen(constraint->params.letter, PLAN_SECTION_LETTER_MAX);
+        return length > 0 && length < PLAN_SECTION_LETTER_MAX;
+    }
+    case PLAN_CONSTRAINT_INVENT_MOTIVE:
+        return true;
     }
     return false;
 }

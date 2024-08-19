@@ -66,6 +66,26 @@ static bool node_is_material(const PiecePlan *plan, NodeId id) {
     return false;
 }
 
+/*
+ * Whether the lane sounds where the node is: false only when the section the node is in carries a LAYERS constraint
+ * whose mask leaves the lane out (a layer of a layered form). A section with no LAYERS sounds every lane.
+ */
+static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) {
+    for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
+        if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
+            continue;
+        }
+        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
+            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
+            if (constraint->kind == PLAN_CONSTRAINT_LAYERS) {
+                return (constraint->params.layers.lanes & PLAN_LAYER_BIT(lane)) != 0;
+            }
+        }
+        return true;
+    }
+    return true;
+}
+
 /* The end of the last section that is not material; zero when the form has no such section. */
 static PlanTime piece_end_of(const PiecePlan *plan) {
     PlanTime end = {0, 1};
@@ -368,6 +388,10 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
         } else if (lane == PLAN_LANE_HARMONY) {
             if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane,
                           RENDER_SKIP_LANE_NOT_RENDERED)) {
+                result = PLAN_RENDER_ERR_ALLOC;
+            }
+        } else if (!lane_sounds_in(plan, plan_lane_span_owner(plan, id), lane)) {
+            if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane, RENDER_SKIP_LAYER)) {
                 result = PLAN_RENDER_ERR_ALLOC;
             }
         } else if (plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED) {

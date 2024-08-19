@@ -66,8 +66,8 @@ static GrowResult from_plan(PlanResult result) {
 }
 
 /* Whether half of the theme has room for a cadence at all. */
-static bool half_fits(const GrowRequest *request, size_t cells_per_bar, PlanCadenceType cadence) {
-    size_t cells = request->bars / 2 * cells_per_bar;
+static bool half_fits(size_t bars, size_t cells_per_bar, PlanCadenceType cadence) {
+    size_t cells = bars / 2 * cells_per_bar;
     /* A cadential progression has no opening tonic, so it needs one cell fewer than the phrase model. */
     return cells + 1 >= harmony_phrase_min_cells(cadence, cells_per_bar);
 }
@@ -79,10 +79,8 @@ static bool cadences_ordered(PlanCadenceType first, PlanCadenceType last) {
                harmony_cadence_strength(harmony_cadence_type_of(last));
 }
 
-/* Whether the accompaniment asked for can be written in the meter, as a texture that has one. */
-static bool accompaniment_valid(const GrowRequest *request) {
-    const PlanAccompaniment *accompaniment = &request->accompaniment;
-    bool compound = request->meter.beat_unit == 8 && request->meter.beats_per_bar % 3 == 0;
+bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment) {
+    bool compound = meter->beat_unit == 8 && meter->beats_per_bar % 3 == 0;
     int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
     int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
     return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_OOM_PAH &&
@@ -92,24 +90,29 @@ static bool accompaniment_valid(const GrowRequest *request) {
            !(accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI && compound);
 }
 
+bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                          PlanCadenceType cadence, PlanCadenceType first) {
+    size_t cells_per_bar;
+    bool antecedent = pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    return grow_cells_per_bar(meter, &cells_per_bar) && (bars == 4 || bars == 8) &&
+           grow_pairing_archetype(pairing) >= 0 &&
+           (cadence == PLAN_CADENCE_PAC || cadence == PLAN_CADENCE_IAC || cadence == PLAN_CADENCE_HC) &&
+           half_fits(bars, cells_per_bar, cadence) &&
+           (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars, cells_per_bar, first)));
+}
+
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     if (!request || !request->motive || !out) {
         return GROW_ERR_NULL;
     }
     *out = NULL;
-    size_t cells_per_bar;
     /* An antecedent ends in a weak cadence, HC unless the request says IAC, and the theme in a stronger one. */
     bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
     PlanCadenceType first = request->first_cadence == PLAN_CADENCE_PAC ? PLAN_CADENCE_HC : request->first_cadence;
     int archetype = grow_pairing_archetype(&request->pairing);
-    if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || (request->bars != 4 && request->bars != 8) ||
-        archetype < 0 ||
-        (request->cadence != PLAN_CADENCE_PAC && request->cadence != PLAN_CADENCE_IAC &&
-         request->cadence != PLAN_CADENCE_HC) ||
+    if (!grow_theme_buildable(&request->meter, request->bars, &request->pairing, request->cadence, first) ||
         request->motive->note_count < 2 || request->key.tonic_pitch_class < 0 || request->key.tonic_pitch_class > 11 ||
-        !half_fits(request, cells_per_bar, request->cadence) ||
-        (antecedent && (!cadences_ordered(first, request->cadence) || !half_fits(request, cells_per_bar, first))) ||
-        (request->has_accompaniment && !accompaniment_valid(request)) ||
+        (request->has_accompaniment && !grow_accompaniment_valid(&request->meter, &request->accompaniment)) ||
         (request->has_accompaniment && request->has_voicing)) {
         return GROW_ERR_BAD_REQUEST;
     }

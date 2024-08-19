@@ -57,7 +57,13 @@ typedef struct {
     PlanHarmonyShapeKind ending_shape;
     bool ending_split;                     /* no chord of the ending crosses a barline */
     int ending_cap;                        /* max_cells_per_chord of the ending; 0 for none */
-    Motive source;                         /* m0, with the meter and key of the plan */
+    Motive source;                         /* the motive the ideas are made from: m0, or the section's own */
+    /*
+     * A section with a MOTIVE_REF has a motive of its own, made from m0 as section_ref says (every parameter set, so
+     * the motive operators make exactly it); source is then that motive. Without one source is m0.
+     */
+    bool has_section_motive;
+    PlanMotiveRef section_ref;
     /* The motives the ideas after the basic idea are made from m0 as, planned here to be checked. */
     Motive developed[GROW_IDEA_COUNT];
     bool has_developed[GROW_IDEA_COUNT];
@@ -81,6 +87,8 @@ typedef struct {
     PlanAccompaniment accompaniment;
     bool has_voicing;
     PlanVoicing voicing;
+    bool has_motive_ref;     /* the section names the motive its basic idea is made from */
+    PlanMotiveRef motive_ref; /* to m0, with a transform; parameters left open are drawn by grow-theme */
 } GrowThemeRequest;
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
@@ -93,6 +101,8 @@ typedef struct {
     NodeId phrase;           /* the phrase the parts go in, made by the beginning */
     NodeId material;         /* the idea of the material section the motive nodes go in */
     PlanSpan material_span;
+    NodeId source;           /* the motive node the ideas are made from: m0, or the section's own motive */
+    size_t slot_base;        /* the bar of the material motive slot 1 goes in; slot k goes k - 1 bars after it */
 } GrowBuild;
 
 /* A length of count units. */
@@ -100,7 +110,7 @@ PlanTime grow_scaled(PlanTime unit, size_t count);
 /* A node of the theme, Realized, from start_unit units after the theme's start and units long. */
 PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
                          const char *name, NodeId *out);
-/* The motive node m<slot> in the material, made from the ref. */
+/* The motive node m<slot> in the material, made from the ref, at bar slot_base + slot - 1 of the material. */
 PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out);
 /* A harmony span and the bass span beside it, both open, over an idea or a subphrase. */
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
@@ -137,6 +147,16 @@ PlanResult grow_beginning_build(GrowBuild *build);
 /* The ending of the theme; false when the draw does not make an ending the motive fits. */
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec);
 PlanResult grow_ending_build(GrowBuild *build);
+
+/*
+ * Whether grow-theme can build a theme of these bars, pairing and cadence in the meter: a supported meter, 4 or 8
+ * bars, a pairing standard-form knows, a PAC, IAC or HC with room in half the theme, and for an antecedent a weaker
+ * first cadence (HC or IAC) that has room too.
+ */
+bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                          PlanCadenceType cadence, PlanCadenceType first);
+/* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
+bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
 
 /* The cells in a bar the harmony operators place chords on; false for a meter they do not support. */
 bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
