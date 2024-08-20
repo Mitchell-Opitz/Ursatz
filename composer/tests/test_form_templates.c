@@ -176,6 +176,22 @@ static size_t sizes_of(FormTemplateKind kind, Size *out) {
     return n;
 }
 
+/*
+ * The sizes the compose and heard sweeps run: every size, except that variations run 1, 2 and 5 variations (16, 24 and
+ * 48 bars). Past that a run only repeats what the shortest ones show, and its stuck runs make the sweep take minutes.
+ */
+static size_t sweep_sizes_of(FormTemplateKind kind, Size *out) {
+    if (kind != FORM_TEMPLATE_VARIATIONS) {
+        return sizes_of(kind, out);
+    }
+    static const size_t COUNTS[] = {1, 2, 5};
+    size_t n = 0;
+    for (size_t i = 0; i < sizeof(COUNTS) / sizeof(COUNTS[0]); i++) {
+        out[n++] = (Size){8 * (1 + COUNTS[i]), COUNTS[i]};
+    }
+    return n;
+}
+
 /* ------------------------------------------------------------- the plan */
 
 static Motive scenario_motive(const Scenario *scenario) {
@@ -401,7 +417,7 @@ typedef struct {
 
 static void compose_all(FormTemplateKind kind, Tally *total) {
     Size sizes[16];
-    size_t size_count = sizes_of(kind, sizes);
+    size_t size_count = sweep_sizes_of(kind, sizes);
     memset(total, 0, sizeof(*total));
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         Motive motive = scenario_motive(&SCENARIOS[s]);
