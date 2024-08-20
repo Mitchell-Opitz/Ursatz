@@ -223,10 +223,12 @@ add_executable(test_form_templates test_form_templates.c)
 target_link_libraries(test_form_templates PRIVATE ursatz_composer)
 target_compile_options(test_form_templates PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_templates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# Three tests for each template: the plan's structure, the compose run, and the share heard as requested.
+# Four tests for each template: the plan's structure, a quick compose run, the compose sweep, and the share heard as
+# requested.
 set(FORM_TEMPLATES binary rounded-binary ternary variations loop layered)
 foreach(template ${FORM_TEMPLATES})
     add_test(NAME test_form_templates_${template} COMMAND test_form_templates structure ${template})
+    add_test(NAME test_form_templates_${template}_smoke COMMAND test_form_templates smoke ${template})
     add_test(NAME test_form_templates_${template}_compose COMMAND test_form_templates compose ${template})
     add_test(NAME test_form_templates_${template}_heard COMMAND test_form_templates heard ${template})
     # The sweeps take minutes: label them "slow", so CI can leave them out (ctest -LE slow) and a full ctest run

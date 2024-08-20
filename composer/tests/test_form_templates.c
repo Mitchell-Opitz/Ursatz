@@ -19,6 +19,7 @@
  *                         cadences, the section each return names, the layers), and sizes not in the table are refused
  *   compose <template>    seeds 1 to 5: how many runs complete and how many theme sections form_hear runs on; neither
  *                         is below its baseline; the runs that do not complete are printed
+ *   smoke <template>      the smallest size in C major 4/4, invented: one of seeds 1 to 5 composes and is heard (quick)
  *   heard <template>      seeds 1 to 5: how many sections are heard as the form they ask for is printed with grow's
  *                         measured shares (docs/grow.md) and is not below its baseline
  */
@@ -519,10 +520,54 @@ static int test_heard(FormTemplateKind kind) {
     return total.as_requested >= baseline->as_requested ? 0 : 1;
 }
 
+/*
+ * A quick check that the compose run works for the template: the smallest size in C major 4/4 with an invented motive,
+ * the first of seeds 1 to SEEDS that completes (some seeds get stuck, see docs/piece.md), every section heard.
+ */
+static int test_smoke(FormTemplateKind kind) {
+    Size sizes[16];
+    size_t size_count = sizes_of(kind, sizes);
+    Size smallest = sizes[0];
+    for (size_t i = 1; i < size_count; i++) {
+        if (sizes[i].bars < smallest.bars) {
+            smallest = sizes[i];
+        }
+    }
+    Motive motive = scenario_motive(&SCENARIOS[0]);
+    Expected expected[MAX_EXPECTED];
+    size_t count = expected_sections(kind, smallest, expected);
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        PieceRequest request = scenario_request(&SCENARIOS[0], kind, smallest, &motive);
+        PiecePlan *plan = NULL;
+        assert(piece_build_plan(&request, &plan) == PIECE_OK);
+        ComposeConfig config;
+        ComposeOutcome outcome;
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        PieceResult ran = compose_run(plan, &config, &outcome);
+        size_t heard = 0;
+        if (ran == PIECE_OK) {
+            assert(outcome.section_count == count);
+            for (size_t i = 0; i < count; i++) {
+                heard += outcome.sections[i].heard_result == FORM_HEAR_OK;
+            }
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+        if (ran == PIECE_OK && heard == count) {
+            printf("%s: %zu bars composed with seed %lu, %zu sections heard\n", form_template_name(kind),
+                   smallest.bars, seed, heard);
+            return 0;
+        }
+    }
+    printf("%s: no seed of 1 to %d composed %zu bars\n", form_template_name(kind), SEEDS, smallest.bars);
+    return 1;
+}
+
 int main(int argc, char **argv) {
     FormTemplateKind kind;
     if (argc != 3 || !form_template_from_name(argv[2], &kind)) {
-        fprintf(stderr, "usage: test_form_templates structure|compose|heard <template>\n");
+        fprintf(stderr, "usage: test_form_templates structure|compose|heard|smoke <template>\n");
         return 2;
     }
     if (strcmp(argv[1], "structure") == 0) {
@@ -535,6 +580,9 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "heard") == 0) {
         return test_heard(kind);
     }
-    fprintf(stderr, "usage: test_form_templates structure|compose|heard <template>\n");
+    if (strcmp(argv[1], "smoke") == 0) {
+        return test_smoke(kind);
+    }
+    fprintf(stderr, "usage: test_form_templates structure|compose|heard|smoke <template>\n");
     return 2;
 }
