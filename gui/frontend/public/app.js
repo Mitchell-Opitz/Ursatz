@@ -70,11 +70,11 @@ async function renderLibraryView() {
     <div class="upload-box">
       <div class="upload-box-text">
         <div class="upload-box-heading">Drop a MIDI or MusicXML file to analyze</div>
-        <div class="upload-box-subheading">.mid · .midi · .musicxml</div>
+        <div class="upload-box-subheading">.mid · .midi · .musicxml · .xml · .mxl</div>
       </div>
       <div class="upload-box-controls">
-        <input type="file" id="library-upload-file" accept=".mid,.midi,.musicxml" />
-        <button id="library-upload-button" type="button">Upload MIDI</button>
+        <input type="file" id="library-upload-file" accept=".mid,.midi,.musicxml,.xml,.mxl" />
+        <button id="library-upload-button" type="button">Upload file</button>
         <button type="button" disabled title="Not yet available">Import from URL</button>
       </div>
     </div>
