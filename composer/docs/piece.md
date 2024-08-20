@@ -94,24 +94,34 @@ skipped with `RENDER_SKIP_LAYER`, which the command line names in its skip repor
 every layer has every lane and the mask decides what sounds: layer 1 the bass, layer 2 the bass and the accompaniment,
 layer 3 adds the melody, layer 4 everything.
 
-## Heard results
+## Tests and measured results
 
-Measured with `test_form_templates heard <template>`: seeds 1 to 5, C major 4/4 and A minor 3/4, with and without a
-given motive. Sections heard as requested, against the number grow's own measured shares give for the same sections:
+Four tests for each template (`tests/test_form_templates.c`):
 
-| Template | Heard as requested | Share | Expected from grow's shares |
-| --- | --- | --- | --- |
-| binary | 15 of 80 | 19% | 26 |
-| rounded binary | 24 of 120 | 20% | 58 |
-| ternary | 7 of 120 | 6% | 13 |
-| loop | 12 of 60 | 20% | 39 |
-| layered | 14 of 180 | 8% | 117 |
-| variations | 0 of 880 | 0% | 0 |
+| Test | What it checks | Label |
+| --- | --- | --- |
+| `structure` | The sections tile the form with the table's letters, bars, pairings and cadences. | |
+| `smoke` | The smallest size in C major 4/4 with an invented motive composes with one of seeds 1 to 5, and every section is heard. Under a second. | |
+| `compose` | Seeds 1 to 5, C major 4/4 and A minor 3/4, with and without a given motive, every size (variations: 1, 2 and 5 variations, 16, 24 and 48 bars): the runs that complete and the sections heard are not below the baseline. | `slow` |
+| `heard` | The same sweep: the sections heard as the form they ask for are not below the baseline. | `slow` |
 
-Variations: 0 of 880 sections heard, which is also what grow gives, since every section is a period and grow never hears one (0 of 40). Its share test passes. Runs get stuck more the longer the form: in C major 4/4 every run completes up to 48 bars, in A minor 3/4 with a given motive none does at any size.
+CI runs `ctest -LE slow`. The slow sweeps run in the full `ctest` before a push. The sweeps are deterministic, so a
+baseline is an exact measurement; a test fails when a count falls below it, passes when it holds or rises, and the
+baseline is raised in `BASELINES` when a change lifts it.
 
-The `_compose` tests of all six templates and the `_heard` tests of the other five are `WILL_FAIL`, because runs get stuck and the shares are below what grow's give; the
-`structure` tests (sections tile the form with the table's letters, bars, pairings and cadences) pass.
+Baselines, with grow's measured shares for the same sections for comparison:
+
+| Template | Runs complete | Heard as requested | Share | Expected from grow's shares |
+| --- | --- | --- | --- | --- |
+| binary | 21 of 40 | 15 of 80 | 19% | 26 |
+| rounded binary | 28 of 40 | 24 of 120 | 20% | 58 |
+| ternary | 28 of 40 | 7 of 120 | 6% | 13 |
+| loop | 15 of 40 | 12 of 60 | 20% | 39 |
+| layered | 17 of 60 | 14 of 180 | 8% | 117 |
+| variations | 36 of 60 | 0 of 220 | 0% | 0 |
+
+Variations hear none, as grow does, since every section is a period and grow never hears one (0 of 40). Its runs get
+stuck more the longer the form: in A minor 3/4 with a given motive none of the sizes completes.
 
 Causes:
 
