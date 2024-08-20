@@ -540,6 +540,38 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
   return 200;
 }
 
+static const char *kReanalyzeSuffix = "/reanalyze";
+
+static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_reanalyze(kPiecesDir, id);
+
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+    return send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to analyze piece again\"}");
+    return 200;
+  }
+
+  JsonBuffer buf;
+  json_buffer_init(&buf);
+  json_buffer_append(&buf, "{\"ok\":true,\"id\":");
+  json_buffer_append_string(&buf, id);
+  json_buffer_append(&buf, "}");
+  if (!buf.ok) {
+    json_buffer_destroy(&buf);
+    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    return 200;
+  }
+  send_json(conn, buf.data);
+  json_buffer_destroy(&buf);
+  return 200;
+}
+
 static const char *kMusicXmlSuffix = "/musicxml";
 static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
 
@@ -607,6 +639,20 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
     size_t rest_len = strlen(rest);
     size_t meta_suffix_len = strlen(kMusicXmlMetaSuffix);
     size_t xml_suffix_len = strlen(kMusicXmlSuffix);
+    size_t reanalyze_suffix_len = strlen(kReanalyzeSuffix);
+
+    if (strcmp(info->request_method, "POST") == 0 && rest_len > reanalyze_suffix_len &&
+        strcmp(rest + rest_len - reanalyze_suffix_len, kReanalyzeSuffix) == 0) {
+      char id[256];
+      size_t id_len = rest_len - reanalyze_suffix_len;
+      if (id_len >= sizeof(id)) {
+        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+        return 404;
+      }
+      memcpy(id, rest, id_len);
+      id[id_len] = '\0';
+      return handle_reanalyze_piece(conn, id);
+    }
 
     if (strcmp(info->request_method, "GET") == 0 && rest_len > meta_suffix_len &&
         strcmp(rest + rest_len - meta_suffix_len, kMusicXmlMetaSuffix) == 0) {

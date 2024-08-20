@@ -211,7 +211,13 @@ function buildLibraryRow(piece) {
       actionsCell.appendChild(
         buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, rowPiece) }),
       );
-      actionsCell.appendChild(buildActionButton({ icon: "↻", label: "Re-run analysis", disabled: true }));
+      actionsCell.appendChild(
+        buildActionButton({
+          icon: "↻",
+          label: "Re-run analysis",
+          onClick: () => handleLibraryReanalyze(rowPiece.id),
+        }),
+      );
       actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
       actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
       actionsCell.appendChild(
@@ -285,6 +291,41 @@ async function handleLibraryRename(row, piece, newFilename) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
   }
+}
+
+/* Runs the Analyzer again on the piece's stored source
+ * (POST /api/analyzer/pieces/<id>/reanalyze). Resolves to an error message,
+ * or null on success. */
+async function reanalyzePiece(id) {
+  try {
+    const res = await fetch(`/api/analyzer/pieces/${id}/reanalyze`, { method: "POST" });
+    const data = await res.json();
+    if (res.status === 404) {
+      return "Piece not found.";
+    }
+    if (res.status === 422) {
+      return "The stored file could not be analyzed.";
+    }
+    if (!data.ok) {
+      return data.message || "Re-run failed.";
+    }
+    return null;
+  } catch (err) {
+    return `Could not reach backend: ${err}`;
+  }
+}
+
+async function handleLibraryReanalyze(id) {
+  const statusEl = document.getElementById("library-status");
+  statusEl.textContent = "Re-running analysis...";
+  statusEl.classList.remove("error");
+  const error = await reanalyzePiece(id);
+  if (error) {
+    statusEl.textContent = error;
+    statusEl.classList.add("error");
+    return;
+  }
+  statusEl.textContent = "Analysis updated.";
 }
 
 async function handleDeleteLibraryPiece(id, rowEl) {
@@ -438,6 +479,9 @@ function showAnalysisView(id) {
   content.innerHTML = `
     <div id="analysis-back-container"></div>
     <h1 class="view-title" id="analysis-title">Loading...</h1>
+    <div class="analysis-actions">
+      <button id="analysis-reanalyze-button" type="button">Re-run analysis</button>
+    </div>
     <div class="analysis-layout">
       <aside class="analysis-sidebar">
         <div class="sidebar-label">Analyzers</div>
@@ -458,6 +502,22 @@ function showAnalysisView(id) {
 
   document.getElementById("analysis-back-container").appendChild(renderAnalysisBackLink());
   renderAnalyzersList();
+
+  const reanalyzeButton = document.getElementById("analysis-reanalyze-button");
+  reanalyzeButton.addEventListener("click", async () => {
+    const statusEl = document.getElementById("analysis-status");
+    reanalyzeButton.disabled = true;
+    statusEl.textContent = "Re-running analysis...";
+    statusEl.classList.remove("error");
+    const error = await reanalyzePiece(id);
+    if (error) {
+      reanalyzeButton.disabled = false;
+      statusEl.textContent = error;
+      statusEl.classList.add("error");
+      return;
+    }
+    showAnalysisView(id);
+  });
 
   fetch(`/api/analyzer/pieces/${id}`)
     .then((res) => res.json())

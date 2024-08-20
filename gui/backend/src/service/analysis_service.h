@@ -107,6 +107,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
                                                           const char *new_filename);
 
 /*
+ * Runs the Analyzer again on the piece's stored source and rewrites
+ * analysis.json, then the analyzer_version and document_schema_version in
+ * meta.json (filename, format and uploaded_at stay). The piece is unchanged
+ * unless the new analysis succeeded.
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no longer
+ * imports or the analysis fails.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id);
+
+/*
  * Imports the piece's stored source and exports it to MusicXML with Ursatz's
  * musicxml_export_write_score: the source's parts and staves, its meter
  * (the MIDI time signatures or the score's own) and its key signatures in
