@@ -21,8 +21,12 @@ git clone --recurse-submodules https://github.com/Mitchell-Opitz/Ursatz-Composer
 cd Ursatz-Composer
 cmake -S . -B build
 cmake --build build
-ctest --test-dir build --output-on-failure
+ctest --test-dir build --output-on-failure -LE slow
 ```
+
+The tests labeled `slow` (the compose and heard sweeps of the form templates, about 3 minutes in all when run in
+parallel) are left out of that command and of CI. Run them all, with plain `ctest --test-dir build -j8
+--output-on-failure`, before pushing a branch.
 
 If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`.
 

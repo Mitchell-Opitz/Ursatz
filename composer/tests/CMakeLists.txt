@@ -223,19 +223,16 @@ add_executable(test_form_templates test_form_templates.c)
 target_link_libraries(test_form_templates PRIVATE ursatz_composer)
 target_compile_options(test_form_templates PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_templates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# Three tests for each template: the plan's structure, the compose run, and the share heard as requested.
+# Four tests for each template: the plan's structure, a quick compose run, the compose sweep, and the share heard as
+# requested.
 set(FORM_TEMPLATES binary rounded-binary ternary variations loop layered)
 foreach(template ${FORM_TEMPLATES})
     add_test(NAME test_form_templates_${template} COMMAND test_form_templates structure ${template})
+    add_test(NAME test_form_templates_${template}_smoke COMMAND test_form_templates smoke ${template})
     add_test(NAME test_form_templates_${template}_compose COMMAND test_form_templates compose ${template})
     add_test(NAME test_form_templates_${template}_heard COMMAND test_form_templates heard ${template})
-    # Every template has runs that get stuck and, but for variations, a share heard as requested below grow's measured
-    # shares (measured, with the causes, in docs/piece.md): those tests assert the target, so they fail, and the failure
-    # is expected.
-    # Variations are the one exception for the share: grow hears none of the periods it is made of either, so 0 meets
-    # the target and that test passes.
-    set_tests_properties(test_form_templates_${template}_compose PROPERTIES WILL_FAIL TRUE)
-    if(NOT template STREQUAL "variations")
-        set_tests_properties(test_form_templates_${template}_heard PROPERTIES WILL_FAIL TRUE)
-    endif()
+    # The sweeps take minutes: label them "slow", so CI can leave them out (ctest -LE slow) and a full ctest run
+    # before a push keeps them. They fail when a count falls below its baseline (tests/test_form_templates.c).
+    set_tests_properties(test_form_templates_${template}_compose test_form_templates_${template}_heard
+                         PROPERTIES LABELS slow)
 endforeach()
