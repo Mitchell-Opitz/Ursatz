@@ -99,7 +99,6 @@ function buildRow(sectionName, item, index) {
     label: claimLabel(claim, index),
     where: formatLocation(claim.location),
     noteIds: Array.isArray(claim.note_ids) ? claim.note_ids : [],
-    framework: typeof claim.framework === "string" ? claim.framework : "",
     detail: claimDetailJson(claim),
   };
 }
