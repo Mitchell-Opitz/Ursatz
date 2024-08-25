@@ -15,16 +15,17 @@
  * accompaniment if one is wanted, and the motive, or none to have one invented.
  *
  * piece_build_plan makes the plan:
- *   - a Form over the sections and the material, with a meter and a key lane span, both Given, over all of it;
+ *   - a Form over the sections and the material, with a meter lane span and the key lane spans, all Given, over all of it;
  *   - the template's sections in order, each Constrained and asking for what grow-theme builds: ARCHETYPE,
- *     THEME_PAIRING, CADENCE, KEY (home: this branch plans no other keys), an antecedent's second CADENCE (HC), the
+ *     THEME_PAIRING, CADENCE, KEY (home, or the key the section ends in), an antecedent's second CADENCE (HC), the
  *     ACCOMPANIMENT when the piece has one; and SECTION_LETTER, RETURN for a returning section, MOTIVE_REF (to m0,
  *     with the template's transform) for a section whose motive is not m0 itself, LAYERS in a layered form;
  *   - a Section "material" after them, marked MATERIAL, holding the motive node "m0": the motive as a Given melody
  *     lane span, or, with no motive, a Constrained one-bar melody span with an INVENT_MOTIVE constraint for
  *     motive-invent. The material has room for each section's own motive and the motives grow-theme makes for it.
- * Section keys and cadence plans other than home and the template's defaults are a later branch's (B5); a returning
- * section is grown afresh from its motive, its RETURN stored only (B6).
+ * The form's key lane is Given, over the sections and the material: one span in the home key, or with `modulate` the
+ * spans piece_plan_keys plans (piece_plan_keys.h); a returning section is grown afresh from its motive, its RETURN
+ * stored only (B6).
  */
 
 typedef struct {
@@ -36,6 +37,13 @@ typedef struct {
     const Motive *motive;  /* NULL to have one invented */
     bool has_accompaniment;
     PlanAccompaniment accompaniment; /* read only with has_accompaniment; a layered form has one in any case */
+    /*
+     * Keys (R-069): with modulate the sections' keys are planned from seed (piece_plan_keys): home, or a closely
+     * related key reached by a pivot chord, and the cadences across the sections follow (piece_plan_cadences). Without
+     * it every section is in the home key and the cadences are the template's, as before.
+     */
+    bool modulate;
+    unsigned long seed;
 } PieceRequest;
 
 typedef enum {

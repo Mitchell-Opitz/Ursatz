@@ -2,7 +2,9 @@
 
 #include <string.h>
 
+#include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
@@ -265,21 +267,12 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         result = from_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, form_template_name(layout.kind),
                                          &form_id));
     }
-    /* The meter and the key are Given over the piece and the material. */
+    /* The meter is Given over the piece and the material; the key lane comes with the sections (piece_plan_keys). */
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.meter = request->meter;
         result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
         result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
-    }
-    if (result == PIECE_OK) {
-        memset(&payload, 0, sizeof(payload));
-        payload.key = request->key;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
-    }
-    if (result == PIECE_OK) {
-        result = from_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
     }
     /* The sections in order, then the material; the sections' motive references name m0, so they come last. */
     PlanTime start = {0, 1};
@@ -296,6 +289,16 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     }
     for (size_t i = 0; result == PIECE_OK && i < layout.section_count; i++) {
         result = add_section_motive(plan, &layout.sections[i], sections[i], source);
+    }
+    /* The keys are planned from the request's seed, home only unless it asks to modulate; then the form is Given. */
+    if (result == PIECE_OK) {
+        PieceKeyPlan keys;
+        FillRng rng;
+        fill_rng_seed(&rng, request->seed);
+        result = piece_plan_keys(plan, request->modulate ? &rng : NULL, &keys);
+    }
+    if (result == PIECE_OK) {
+        result = from_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
     }
     if (result != PIECE_OK) {
         plan_destroy(plan);
