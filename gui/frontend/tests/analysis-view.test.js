@@ -1,9 +1,22 @@
-/* Confirms the Analysis view's tab grouping (app.js's ANALYSIS_TABS/
- * groupClaimsByTab), claim-list formatting, claim-detail panel content,
- * and the Library filename-click navigation added alongside it.
- * Supersedes framework-analyzer-rendering.test.js, which covered the old
- * flat Piece Detail view removed in this branch. Plain Node script, no
- * framework/deps, run directly: `node frontend/tests/analysis-view.test.js`. */
+/* Confirms the Analysis view's data logic (analysis-tabs.js, loaded here
+ * directly) against a real analysis document: the tab table, a row for every
+ * item of a tab's sections, disabled empty tabs, row labels and locations,
+ * the header and provenance fields, and the mapping of a claim's note_ids to
+ * xml:ids. Also checks that app.js no longer carries the claim actions that
+ * have no backend, and the Library/Analysis navigation decisions.
+ *
+ * Fixture: frontend/tests/fixtures/mozart545.analysis.json is the Analyzer
+ * CLI's document (`ursatz-analyzer --json`, schema v9) for
+ * external/ursatz/tests/fixtures/framework-v1-corpus/Mozart 545.mid, cut to
+ * its first 6 items per array (and 6 note_ids per claim) to stay small; the
+ * structure is untouched.
+ *
+ * Plain Node script, no framework/deps, run directly:
+ * `node frontend/tests/analysis-view.test.js`. */
+
+const fs = require("fs");
+const path = require("path");
+const tabs = require("../public/analysis-tabs.js");
 
 let failures = 0;
 
@@ -16,101 +29,158 @@ function check(cond, what) {
   }
 }
 
-/* Mirrors app.js's ANALYSIS_TABS -- kept in sync manually since these
- * are plain Node scripts with no access to app.js's module scope. */
-const ANALYSIS_TABS = [
-  { id: "chords", label: "Chords", types: ["chord"] },
-  { id: "keys", label: "Keys", types: ["key"] },
-  { id: "cadences", label: "Cadences", types: ["cadence"] },
-  { id: "motifs", label: "Motifs", types: ["motif"] },
-  { id: "phrases", label: "Phrases", types: ["phrase"] },
-  { id: "form", label: "Form", types: ["form", "thematic_return"] },
-  { id: "periods-sentences", label: "Periods/Sentences", types: ["period", "sentence"] },
-];
+const doc = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "mozart545.analysis.json"), "utf8"));
+const states = tabs.buildAllTabStates(doc);
+const byId = new Map(states.map((state) => [state.tab.id, state]));
 
-/* Mirrors app.js's groupClaimsByTab. */
-function groupClaimsByTab(interpretations) {
-  const groups = new Map();
-  for (const tab of ANALYSIS_TABS) {
-    groups.set(tab.id, []);
-  }
-  for (const interpretation of interpretations) {
-    const tab = ANALYSIS_TABS.find((candidate) => candidate.types.includes(interpretation.type));
-    if (tab) {
-      groups.get(tab.id).push(interpretation);
+/* The tab table: order, labels and sections. */
+const expectedTabs = [
+  ["Keys", ["keys", "tonicizations", "modulations", "pivot_chords"]],
+  ["Chords", ["chords", "chord_vocabulary", "non_chord_tones", "prolongations"]],
+  ["Cadences", ["cadences"]],
+  ["Progressions", ["progressions", "harmonic_rhythm"]],
+  ["Phrases", ["phrases"]],
+  ["Themes and form", ["themes", "form"]],
+  ["Motives", ["motives"]],
+  ["Melody", ["melody", "outer_voices"]],
+  ["Rhythm and meter", ["meter", "rhythm"]],
+  ["Texture", ["texture", "voice_leading"]],
+  ["Schemas", ["schemas"]],
+  ["Markings", ["markings"]],
+  ["Counterpoint", ["counterpoint_check"]],
+  ["Notes", ["notes"]],
+];
+check(
+  tabs.ANALYSIS_TABS.length === expectedTabs.length &&
+    tabs.ANALYSIS_TABS.every(
+      (tab, i) => tab.label === expectedTabs[i][0] && JSON.stringify(tab.sections) === JSON.stringify(expectedTabs[i][1]),
+    ),
+  "the tabs are the document's sections grouped in the specified order, with the specified labels",
+);
+
+/* Row counts: an array section gives one row per item; an object section
+ * gives one row per item of its arrays of claims. */
+function arrayLength(value) {
+  return Array.isArray(value) ? value.length : 0;
+}
+function claimArrayRows(value) {
+  let total = 0;
+  for (const member of Object.values(value || {})) {
+    if (Array.isArray(member) && member.length > 0 && member.every((item) => item && ("span" in item || "location" in item))) {
+      total += member.length;
     }
   }
-  return groups;
+  return total;
 }
-
-const sampleInterpretations = [
-  { type: "key", label: "C major" },
-  { type: "chord", label: "V7" },
-  { type: "chord", label: "I" },
-  { type: "cadence", label: "authentic (unclassified: PAC/IAC)" },
-  { type: "motif", label: "motif occurrence: 3 matched event(s)" },
-  { type: "phrase", label: "phrase boundary" },
-  { type: "form", label: "form: section-a -[authentic (PAC)]-> section-b" },
-  { type: "thematic_return", label: "thematic return: phrase-c resembles phrase-b" },
-  { type: "period", label: "period: phrase-a (half cadence (HC)) -> phrase-b (authentic (unclassified: PAC/IAC))" },
-  { type: "sentence", label: "sentence: phrase-a -> phrase-b -> phrase-c" },
-];
-
-const groups = groupClaimsByTab(sampleInterpretations);
-
-check(groups.get("chords").length === 2, "chord-typed claims are grouped under the Chords tab");
-check(groups.get("keys").length === 1, "key-typed claims are grouped under the Keys tab");
-check(groups.get("cadences").length === 1, "cadence-typed claims are grouped under the Cadences tab");
-check(groups.get("motifs").length === 1, "motif-typed claims are grouped under the Motifs tab");
-check(groups.get("phrases").length === 1, "phrase-typed claims are grouped under the Phrases tab");
-check(
-  groups.get("form").length === 2,
-  "the Form tab's count badge includes both form and thematic_return claims",
-);
-check(
-  groups.get("periods-sentences").length === 2,
-  "the Periods/Sentences tab's count badge includes both period and sentence claims",
-);
-
-/* Mirrors app.js's claim <li> text: `${label} — ` plus a provenance flag. */
-const PROVENANCE_LABELS = {
-  present: "Hand-entered",
-  absent: "Analyzed",
-};
-
-function formatClaimLine(claim) {
-  return `${claim.label} — ${PROVENANCE_LABELS[claim.provenance_state] || claim.provenance_state}`;
+function expectedRowCount(sections) {
+  return sections.reduce((total, name) => {
+    const value = doc[name];
+    return total + (Array.isArray(value) ? arrayLength(value) : claimArrayRows(value));
+  }, 0);
 }
-
-check(
-  formatClaimLine({ label: "V7", provenance_state: "absent" }) === "V7 — Analyzed",
-  "a claim row renders its label and provenance flag",
-);
-
-/* Mirrors app.js's renderClaimDetail provenance line -- the only
- * Provenance data the API actually returns (produced_by.author/method
- * and provenance_state; no full Provenance record). */
-function formatProvenanceLine(claim) {
-  return `${claim.produced_by.author} / ${claim.produced_by.method} (${claim.provenance_state})`;
+for (const tab of tabs.ANALYSIS_TABS) {
+  check(
+    byId.get(tab.id).rowCount === expectedRowCount(tab.sections),
+    `the ${tab.label} tab has one row per item of its sections (${expectedRowCount(tab.sections)})`,
+  );
 }
-
-const sampleClaim = {
-  type: "chord",
-  label: "V7",
-  produced_by: { author: "ursatz-gui", method: "triad-identification" },
-  provenance_state: "absent",
-};
-
+check(byId.get("cadences").rowCount === doc.cadences.length && doc.cadences.length > 0, "Cadences rows equal doc.cadences");
 check(
-  formatProvenanceLine(sampleClaim) === "ursatz-gui / triad-identification (absent)",
-  "claim detail's Provenance section shows produced_by.author/method and provenance_state",
+  byId.get("chords").rowCount ===
+    doc.chords.length + doc.chord_vocabulary.length + doc.non_chord_tones.length + doc.prolongations.length,
+  "Chords rows are chords + chord_vocabulary + non_chord_tones + prolongations",
+);
+check(
+  byId.get("keys").rowCount ===
+    doc.keys.regions.length + doc.tonicizations.length + doc.modulations.length + doc.pivot_chords.length,
+  "Keys rows are the key regions + tonicizations + modulations + pivot_chords",
 );
 
-const evidenceEmptyMessage = "No evidence data returned by the analyzer.";
+/* Empty tabs. */
+check(byId.get("counterpoint").empty === true, "a tab whose only section is null is empty (disabled)");
+check(byId.get("keys").empty === false && byId.get("chords").empty === false, "tabs with content are not empty");
+const emptyDocument = {};
+for (const tab of tabs.ANALYSIS_TABS) {
+  for (const name of tab.sections) {
+    emptyDocument[name] = name === "keys" || name === "form" ? null : [];
+  }
+}
 check(
-  evidenceEmptyMessage === "No evidence data returned by the analyzer.",
-  "claim detail's Evidence section renders an explicit empty state, not fabricated fields",
+  tabs.buildAllTabStates(emptyDocument).every((state) => state.empty && state.rowCount === 0),
+  "a document whose sections are all empty arrays or null disables every tab",
 );
+check(
+  tabs.buildAllTabStates(null).every((state) => state.empty),
+  "no document at all disables every tab",
+);
+
+/* Object sections: a JSON block plus rows for the claim arrays inside. */
+const keysBlock = byId.get("keys").blocks[0];
+check(keysBlock.kind === "object" && keysBlock.rows.length === doc.keys.regions.length, "keys is an object block with a row per region");
+check(
+  keysBlock.text.includes("home_key") && !keysBlock.text.includes('"regions"'),
+  "an object block shows the object without its claim arrays",
+);
+const formBlock = byId.get("themes-form").blocks[1];
+check(
+  formBlock.kind === "object" && formBlock.rows.length === doc.form.sections.length + doc.form.returns.length,
+  "form is an object block with rows for its sections and returns",
+);
+const meterBlock = byId.get("rhythm-meter").blocks[0];
+check(meterBlock.kind === "object" && meterBlock.rows.length === 0 && meterBlock.text.includes("time_signature"), "meter is one JSON block");
+
+/* Row labels and locations. */
+const chordRow = byId.get("chords").blocks[0].rows[0];
+check(chordRow.label === doc.chords[0].label && chordRow.label !== "", `a chord row shows the chord's label (${chordRow.label})`);
+const cadenceRow = byId.get("cadences").blocks[0].rows[0];
+check(cadenceRow.label === doc.cadences[0].label, `a cadence row shows the cadence's label (${cadenceRow.label})`);
+const keyRow = keysBlock.rows[0];
+check(keyRow.label === doc.keys.regions[0].label, `a key row shows the region's label (${keyRow.label})`);
+check(/^m\d+ b[\d.]+ to m\d+ b[\d.]+$/.test(chordRow.where), `a chord row shows where it is (${chordRow.where})`);
+check(
+  tabs.claimLabel({ type: "half" }, 0) === "half" &&
+    tabs.claimLabel({ key: "G major" }, 0) === "G major" &&
+    tabs.claimLabel({ numeral: "V7" }, 0) === "V7" &&
+    tabs.claimLabel({}, 4) === "#5",
+  "an item without a label is named by its numeral, type or key, else by position",
+);
+check(tabs.formatLocation(null) === "-" && tabs.formatLocation({ start: null, end: null }) === "-", "a null location is shown as -");
+check(
+  tabs.formatPosition({ measure: 3, beat: 2, subdivision: { num: 1, den: 2 } }) === "m3 b2.5",
+  "a position past the beat adds the subdivision",
+);
+const chordDetail = JSON.parse(chordRow.detail);
+check(!("label" in chordDetail) && !("location" in chordDetail), "a row's toggle shows the fields other than label and location");
+check("note_ids" in chordDetail && "span" in chordDetail, "a row's toggle shows the remaining fields (span and note_ids among them)");
+
+/* Header and provenance. */
+const header = tabs.buildAnalysisHeader({ id: "piece-1", filename: "Mozart 545.mid", format: "midi", document: doc, note_xml_ids: [] });
+check(header.filename === "Mozart 545.mid" && header.format === "midi", "the header has the filename and format");
+check(header.analyzerVersion === doc.metadata.analyzer_version, "the header has the analyzer version");
+check(header.ursatzCommit === doc.metadata.ursatz_commit.slice(0, 7) && header.ursatzCommit.length === 7, "the header has the first 7 characters of the Ursatz commit");
+check(header.noteCount === doc.metadata.note_count && header.measureCount === doc.meter.measure_count, "the header has the note count and meter.measure_count");
+const provenance = tabs.buildProvenanceFields(doc);
+check(
+  provenance.some(([label, value]) => label === "Analyzer version" && value === doc.metadata.analyzer_version) &&
+    provenance.some(([label, value]) => label === "Input format" && value === "midi"),
+  "the provenance panel lists the document's metadata fields",
+);
+
+/* note_ids to xml:ids. */
+check(
+  JSON.stringify(tabs.mapNoteIdsToXmlIds([0, 2], ["midi-note-0", "midi-note-1", "midi-note-2"])) ===
+    JSON.stringify(["midi-note-0", "midi-note-2"]),
+  "a claim's note_ids are mapped through note_xml_ids",
+);
+check(tabs.mapNoteIdsToXmlIds([9], ["midi-note-0"]).length === 0, "a note id past the end of note_xml_ids is skipped");
+check(tabs.mapNoteIdsToXmlIds(undefined, undefined).length === 0, "a claim without note_ids maps to no notes");
+
+/* app.js carries no claim actions without a backend. */
+const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
+check(!/Accept|Dispute/.test(appSource), "app.js has no Accept or Dispute buttons");
+check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "app.js has no static analyzer list");
+check(appSource.includes('accept=".mid,.midi,.musicxml,.xml,.mxl"'), "the upload picker accepts MusicXML files");
+check(appSource.includes("/reanalyze"), "app.js calls the reanalyze route");
 
 /* Mirrors app.js's buildPieceRow onFilenameClick wiring -- Library rows
  * call showAnalysisView(piece.id) on filename click; Collections rows

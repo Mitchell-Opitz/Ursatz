@@ -540,6 +540,64 @@ int main(void) {
         "a list entry has id, filename, format and uploaded_at");
   free(list);
 
+  /* Re-run the analysis: the document is rebuilt from the stored source and
+     the versions in meta.json are rewritten; the rest of meta.json stays. */
+  if (mozart_id) {
+    char analysis_path[512];
+    char meta_path[512];
+    snprintf(analysis_path, sizeof(analysis_path), "pieces/%s/analysis.json", mozart_id);
+    snprintf(meta_path, sizeof(meta_path), "pieces/%s/meta.json", mozart_id);
+    char *document_before = read_file(analysis_path, NULL);
+    char *meta_text = read_file(meta_path, NULL);
+    cJSON *meta = meta_text ? cJSON_Parse(meta_text) : NULL;
+    free(meta_text);
+    const cJSON *uploaded_before = meta ? cJSON_GetObjectItemCaseSensitive(meta, "uploaded_at") : NULL;
+    char uploaded_at_before[32] = "";
+    if (cJSON_IsString(uploaded_before)) {
+      snprintf(uploaded_at_before, sizeof(uploaded_at_before), "%s", uploaded_before->valuestring);
+    }
+    if (meta) {
+      cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString("old"));
+      cJSON_ReplaceItemInObjectCaseSensitive(meta, "document_schema_version", cJSON_CreateNumber(1));
+      char *stale_meta = cJSON_Print(meta);
+      write_file(meta_path, stale_meta, strlen(stale_meta));
+      free(stale_meta);
+      cJSON_Delete(meta);
+    }
+    write_file(analysis_path, "{}", 2);
+
+    char path[256];
+    snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", mozart_id);
+    response = http_exchange("POST", path, NULL, NULL, 0);
+    check(response_has_status(response, 200) && strstr(response_body(response), "\"ok\":true") != NULL,
+          "POST reanalyze is 200 OK");
+    free(response);
+
+    char *document_after = read_file(analysis_path, NULL);
+    check(document_before && document_after && strcmp(document_before, document_after) == 0,
+          "re-running the analysis rebuilds the same document for the same Analyzer");
+    free(document_before);
+    free(document_after);
+
+    meta_text = read_file(meta_path, NULL);
+    meta = meta_text ? cJSON_Parse(meta_text) : NULL;
+    free(meta_text);
+    const cJSON *version = meta ? cJSON_GetObjectItemCaseSensitive(meta, "analyzer_version") : NULL;
+    const cJSON *schema = meta ? cJSON_GetObjectItemCaseSensitive(meta, "document_schema_version") : NULL;
+    const cJSON *uploaded_after = meta ? cJSON_GetObjectItemCaseSensitive(meta, "uploaded_at") : NULL;
+    const cJSON *filename = meta ? cJSON_GetObjectItemCaseSensitive(meta, "filename") : NULL;
+    check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
+              schema->valuedouble == 9,
+          "re-running the analysis rewrites the versions in meta.json");
+    check(cJSON_IsString(uploaded_after) && strcmp(uploaded_after->valuestring, uploaded_at_before) == 0 &&
+              cJSON_IsString(filename) && strcmp(filename->valuestring, "Mozart 545.mid") == 0,
+          "re-running the analysis keeps the filename and uploaded_at");
+    cJSON_Delete(meta);
+  }
+  response = http_exchange("POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0);
+  check(response_has_status(response, 404), "reanalyze of an unknown id gives 404");
+  free(response);
+
   /* Rename. */
   if (mozart_id) {
     char path[256];

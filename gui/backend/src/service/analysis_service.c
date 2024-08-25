@@ -207,21 +207,24 @@ static void iso_utc_now(char *out, size_t out_size) {
     strftime(out, out_size, "%Y-%m-%dT%H:%M:%SZ", &parts);
 }
 
+static const char *analyzer_version_string(void) {
+#ifdef URSATZ_ANALYZER_VERSION
+    return URSATZ_ANALYZER_VERSION;
+#else
+    return "unknown";
+#endif
+}
+
 /* Writes <dir_path>/meta.json. */
 static bool write_meta_file(const char *dir_path, const char *filename, const char *format, const char *uploaded_at) {
     cJSON *meta = cJSON_CreateObject();
     if (!meta) {
         return false;
     }
-#ifdef URSATZ_ANALYZER_VERSION
-    const char *analyzer_version = URSATZ_ANALYZER_VERSION;
-#else
-    const char *analyzer_version = "unknown";
-#endif
     cJSON_AddStringToObject(meta, "filename", filename ? filename : "");
     cJSON_AddStringToObject(meta, "format", format);
     cJSON_AddStringToObject(meta, "uploaded_at", uploaded_at);
-    cJSON_AddStringToObject(meta, "analyzer_version", analyzer_version);
+    cJSON_AddStringToObject(meta, "analyzer_version", analyzer_version_string());
     cJSON_AddNumberToObject(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
     char *text = cJSON_Print(meta);
     cJSON_Delete(meta);
@@ -731,6 +734,75 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
     bool ok = write_file_atomic(meta_path, text, strlen(text));
+    free(text);
+    return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+}
+
+/* Sets a string member of meta in place (keeping its position), adding it
+   when absent. */
+static bool meta_set_string(cJSON *meta, const char *key, const char *value) {
+    cJSON *item = cJSON_CreateString(value);
+    if (!item) {
+        return false;
+    }
+    if (cJSON_ReplaceItemInObjectCaseSensitive(meta, key, item)) {
+        return true;
+    }
+    cJSON_AddItemToObject(meta, key, item);
+    return true;
+}
+
+static bool meta_set_number(cJSON *meta, const char *key, double value) {
+    cJSON *item = cJSON_CreateNumber(value);
+    if (!item) {
+        return false;
+    }
+    if (cJSON_ReplaceItemInObjectCaseSensitive(meta, key, item)) {
+        return true;
+    }
+    cJSON_AddItemToObject(meta, key, item);
+    return true;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
+    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+
+    char source_path[400];
+    if (!find_source_path(dir_path, source_path, sizeof(source_path))) {
+        cJSON_Delete(meta);
+        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+    }
+    char *document_json = NULL;
+    UrsatzGuiAnalysisResult result = analyze_source_file(source_path, format, &document_json);
+    if (result != URSATZ_GUI_ANALYSIS_OK) {
+        cJSON_Delete(meta);
+        return result;
+    }
+
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    bool ok = write_file_atomic(analysis_path, document_json, strlen(document_json));
+    free(document_json);
+
+    ok = ok && meta_set_string(meta, "analyzer_version", analyzer_version_string()) &&
+         meta_set_number(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    char *text = ok ? cJSON_Print(meta) : NULL;
+    cJSON_Delete(meta);
+    if (!text) {
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+    char meta_path[400];
+    snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
+    ok = write_file_atomic(meta_path, text, strlen(text));
     free(text);
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
