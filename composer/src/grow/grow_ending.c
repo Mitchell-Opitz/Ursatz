@@ -68,16 +68,18 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     size_t least = (room + PHRASE_MODEL_SLOTS - 1) / PHRASE_MODEL_SLOTS;
     spec->ending_cap = (int)(cap > least ? cap : least);
     spec->ending_split = true;
-    return true;
+    /* A key opens on a phrase model's pivot chord. */
+    return !request->has_end_change || spec->ending_shape == PLAN_HARMONY_SHAPE_PHRASE_MODEL;
 }
 
 /* A consequent restates the basic idea and ends with a contrasting idea that is not the antecedent's. */
 static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
     const MotiveDevSpec *avoid = spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
     /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
-    int tonic = request->key.tonic_pitch_class;
+    PlanKey ends_in = request->has_end_change ? request->end_key : request->key;
+    int tonic = ends_in.tonic_pitch_class;
     int want = request->cadence == PLAN_CADENCE_PAC ? tonic
-               : request->cadence == PLAN_CADENCE_IAC ? (tonic + (request->key.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
+               : request->cadence == PLAN_CADENCE_IAC ? (tonic + (ends_in.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
                                                       : -1;
     if (!keep_idea(spec, GROW_IDEA_RESTATED, unit, 2) ||
         !grow_draw_contrast(request, rng, spec, want, avoid, &spec->consequent_contrast) ||
@@ -89,7 +91,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
                              ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                              : PLAN_HARMONY_SHAPE_CADENTIAL;
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
-    return true;
+    return !request->has_end_change || spec->ending_shape == PLAN_HARMONY_SHAPE_PHRASE_MODEL;
 }
 
 /* A cadential ending is two ideas liquidated from m0, the second at least as much as the first. */
@@ -104,7 +106,9 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
     spec->cadential_drop[1] = second;
     spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
-    return keep_idea(spec, GROW_IDEA_CADENTIAL_1, unit, 2) && keep_idea(spec, GROW_IDEA_CADENTIAL_2, unit, 2);
+    /* A cadential progression has no pivot to open a key with. */
+    return !request->has_end_change && keep_idea(spec, GROW_IDEA_CADENTIAL_1, unit, 2) &&
+           keep_idea(spec, GROW_IDEA_CADENTIAL_2, unit, 2);
 }
 
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
@@ -184,6 +188,7 @@ static PlanResult build_continuation(GrowBuild *build) {
     PlanResult result = make_container(build, "second phrase", "continuation", &continuation);
     memset(&shape, 0, sizeof(shape));
     shape.kind = build->spec->ending_shape;
+    shape.starts_on = build->request->has_end_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;
     shape.max_cells_per_chord = build->spec->ending_cap;
     shape.split_at_bars = build->spec->ending_split;
     return result == PLAN_OK ? build_parts(build, continuation, &shape, NAMES, IDEA_START, IDEA_UNITS,
@@ -204,6 +209,7 @@ static PlanResult build_consequent(GrowBuild *build) {
                                        &consequent);
     memset(&shape, 0, sizeof(shape));
     shape.kind = build->spec->ending_shape;
+    shape.starts_on = build->request->has_end_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;
     shape.split_at_bars = build->spec->ending_split;
     return result == PLAN_OK ? build_parts(build, consequent, &shape, NAMES, HALF_START, HALF_UNITS, GROW_IDEA_RESTATED,
                                            GROW_IDEA_CONSEQUENT_CONTRAST)

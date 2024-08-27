@@ -25,6 +25,8 @@ typedef struct {
 } PredominantRun;
 
 static const PredominantRun MAJOR_PREDOMINANTS[] = {{1, {4}}, {1, {2}}, {2, {4, 2}}};
+/* What may follow a predominant that opens the phrase as a pivot chord: ii after IV. */
+static const PredominantRun AFTER_IV[] = {{1, {2}}};
 /* The root-position ii in a minor key is a diminished chord that standard-harmony prefers in first inversion. */
 static const PredominantRun MINOR_PREDOMINANTS[] = {{1, {4}}};
 
@@ -118,9 +120,11 @@ bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, siz
  * chords its cadence needs. Every chord before the last gets at least one cell;
  * the last gets the whole last bar, so the cadence arrives on a downbeat. The
  * cells left over are dealt out to the other chords at random. In a plagal
- * cadence the tonic that ends the authentic cadence also lands on a downbeat.
+ * cadence the tonic that ends the authentic cadence also lands on a downbeat. A request that opens a new key starts
+ * on a pivot chord, the degree given, in the place of the opening tonic; a predominant pivot is the phrase's
+ * predominant (only ii may follow IV).
  */
-static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseProgression *out) {
+static bool deal_progression(const PhraseRequest *request, FillRng *rng, int pivot, PhraseProgression *out) {
     bool half = request->cadence == PLAN_CADENCE_HC;
     bool plagal = request->cadence == PLAN_CADENCE_PC;
     /* A cadential progression has no opening tonic. */
@@ -134,9 +138,17 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseP
         return false;
     }
 
+    ChordSpec opening = {pivot > 0 ? pivot : 1, false};
+    PhraseChord probe;
+    bool pivot_predominant = pivot > 0 && make_chord(request->mode, opening, 1, &probe) &&
+                             probe.function == PLAN_FUNCTION_PREDOMINANT;
     const PredominantRun *runs = request->mode == PLAN_MODE_MINOR ? MINOR_PREDOMINANTS : MAJOR_PREDOMINANTS;
     size_t run_count = request->mode == PLAN_MODE_MINOR ? sizeof(MINOR_PREDOMINANTS) / sizeof(MINOR_PREDOMINANTS[0])
                                                         : sizeof(MAJOR_PREDOMINANTS) / sizeof(MAJOR_PREDOMINANTS[0]);
+    if (pivot_predominant) {
+        runs = AFTER_IV;
+        run_count = pivot == 4 && request->mode == PLAN_MODE_MAJOR ? 1 : 0;
+    }
     /* A phrase usually has a predominant; it goes only when there is no room for one. */
     size_t fitting[3];
     size_t fitting_count = 0;
@@ -151,7 +163,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseP
     ChordSpec before[MAX_BEFORE_FINAL];
     size_t before_count = 0;
     if (opening_tonic) {
-        before[before_count++] = (ChordSpec){1, false};
+        before[before_count++] = opening;
     }
     for (size_t i = 0; run && i < run->count; i++) {
         before[before_count++] = (ChordSpec){run->degrees[i], false};
@@ -225,10 +237,10 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, PhraseP
     return true;
 }
 
-static bool build_progression(const PhraseRequest *request, FillRng *rng, PhraseProgression *out) {
+static bool build_progression(const PhraseRequest *request, FillRng *rng, int pivot, PhraseProgression *out) {
     size_t attempts = request->has_shape ? SHAPED_DEAL_ATTEMPTS : DEAL_ATTEMPTS;
     for (size_t attempt = 0; attempt < attempts; attempt++) {
-        if (deal_progression(request, rng, out)) {
+        if (deal_progression(request, rng, pivot, out)) {
             return true;
         }
     }
@@ -264,7 +276,13 @@ bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCand
     size_t kept_count = 0;
     for (size_t attempt = 0; attempt < CANDIDATE_ATTEMPTS; attempt++) {
         PhraseProgression progression;
-        if (!build_progression(request, rng, &progression)) {
+        /* The first candidate opens on the best pivot, the others on the other pivots in turn. */
+        int pivot = request->pivot ? request->pivot_degrees[attempt % request->pivot_count] : 0;
+        if (!build_progression(request, rng, pivot, &progression)) {
+            /* A pivot that leaves too few chords for the shape is passed over; without a pivot, none fits. */
+            if (request->pivot) {
+                continue;
+            }
             break;
         }
         bool repeat = false;

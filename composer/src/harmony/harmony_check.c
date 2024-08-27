@@ -263,6 +263,19 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
                               progression->request.cell_length, false, NULL, false, false};
         phrase.no_opening_tonic = progression->request.has_shape &&
                                   progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL;
+        if (progression->request.pivot) {
+            /* A phrase that opens a new key starts on a chord both keys have, which need not be a tonic. */
+            phrase.no_opening_tonic = true;
+            if (progression->chords[0].applied ||
+                !harmony_pivot_chord_valid(progression->request.from_key, progression->request.key,
+                                           &progression->chords[0].chord)) {
+                memset(out, 0, sizeof(*out));
+                out->score_denominator = 1;
+                out->hard_violation = true;
+                snprintf(out->reason, sizeof(out->reason), "first chord is not a pivot chord");
+                return true;
+            }
+        }
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_EMBELLISH_OPERATOR_NAME) == 0) {

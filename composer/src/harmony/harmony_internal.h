@@ -7,6 +7,7 @@
 #include <analysis_cadence.h>
 #include <analysis_input.h>
 #include <harmony_chord.h>
+#include <harmony_pivot.h>
 #include <pitch/pitch_spelling.h>
 #include <semantics/beat_strength.h>
 #include <semantics/cadence_type.h>
@@ -32,6 +33,13 @@ typedef struct {
     size_t cells;         /* bars * cells_per_bar */
     bool has_shape;       /* a harmony shape constraint (PHRASE_MODEL, CADENTIAL or PROLONGATION) is on the span or its owner */
     PlanHarmonyShape shape;
+    /* The span opens a new key (shape.starts_on is PIVOT): the key before it, and the degrees in the new key that a
+       pivot chord can be, best first. The key lane over the span is the new key. */
+    bool pivot;
+    PlanKey from_key;
+    PlanKey key;
+    size_t pivot_count;
+    int pivot_degrees[HARMONY_PIVOT_MAX];
 } PhraseRequest;
 
 /* The meter under a phrase: its bars and the places in a bar where a chord may start. */
@@ -135,6 +143,16 @@ bool harmony_span_has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConst
 bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKeyMode *out);
 /* The key of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKey *out);
+/* The key of the key lane that ends where start is, when the span of the lane after it starts there. */
+bool harmony_key_before(const PiecePlan *plan, PlanTime start, PlanKey *out);
+/*
+ * The degrees in the key `to` of the chords a pivot from the key `from` can be: triads of both (harmony_pivot_find), the
+ * best of harmony_pivot_rank first, with the chords a phrase cannot open on left out (a dominant in either key, a
+ * diminished triad, and in minor the minor v). 0 when the keys are not closely related.
+ */
+size_t harmony_pivot_degrees(PlanKey from, PlanKey to, int degrees[HARMONY_PIVOT_MAX]);
+/* Whether the chord is a pivot chord from the key `from` into the key `to`: a root-position triad both keys have. */
+bool harmony_pivot_chord_valid(PlanKey from, PlanKey to, const HarmonyChord *chord);
 /* The meter under span, which must lie in one meter lane span, start on a barline and be whole bars long. */
 bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out);
 /* The span of cells [first_cell, first_cell + cells) counted from start. */

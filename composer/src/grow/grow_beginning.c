@@ -27,6 +27,10 @@ static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng,
 bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     switch (spec->pairing.beginning) {
     case PLAN_THEME_BEGINNING_PRESENTATION: {
+        /* A key opens on a phrase model's pivot chord; a presentation's prolongations have none. */
+        if (request->has_start_change) {
+            return false;
+        }
         /* Statement-response goes from tonic to dominant and back, which needs a cell for each. */
         bool can_respond = spec->basic_cells >= 2;
         uint64_t response = fill_rng_below(rng, 2);
@@ -42,8 +46,14 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
     case PLAN_THEME_BEGINNING_ANTECEDENT:
         spec->beginning_shape = shape_for(request, spec->first_cadence);
         spec->beginning_split = grow_split_possible(request, spec->beginning_shape, spec->first_cadence);
+        if (request->has_start_change && spec->beginning_shape != PLAN_HARMONY_SHAPE_PHRASE_MODEL) {
+            return false;
+        }
         return draw_contrasting_idea(request, rng, spec);
     case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
+        if (request->has_start_change) {
+            return false;
+        }
         spec->compound_ends_on = fill_rng_below(rng, 2) == 0 ? PLAN_HARMONY_ANCHOR_TONIC : PLAN_HARMONY_ANCHOR_DOMINANT;
         return draw_contrasting_idea(request, rng, spec);
     }
@@ -159,6 +169,7 @@ static PlanResult build_antecedent(GrowBuild *build) {
     }
     memset(&shape, 0, sizeof(shape));
     shape.kind = spec->beginning_shape;
+    shape.starts_on = build->request->has_start_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;
     shape.split_at_bars = spec->beginning_split;
     if (result == PLAN_OK) {
         result = grow_add_chord_targets(build, antecedent, &shape, &weak);
