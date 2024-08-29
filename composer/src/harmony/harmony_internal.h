@@ -111,6 +111,12 @@ typedef struct {
     bool no_opening_tonic;
     /* A prolongation: no cadence may be heard anywhere in it. Used with open_ended and no_opening_tonic. */
     bool no_cadence;
+    /*
+     * Chords across key changes (R-069): the mode of the key each chord is in, and a number for that key (the
+     * recognizer's key reference). NULL for a phrase in one key, which is `mode` for every chord.
+     */
+    const PlanKeyMode *chord_modes;
+    const unsigned *chord_keys;
 } HeardPhrase;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
@@ -118,6 +124,13 @@ HarmonyMode harmony_mode_of(PlanKeyMode mode);
 /* Reads the chords of the harmony lane over span, which must tile it exactly. False if it cannot be read. */
 bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre);
+
+/*
+ * The same lane with each chord read in the key of the key lane under it (the mode given is for a chord under no key),
+ * that key's mode in modes[i] and its number in keys[i]. A phrase in one key reads as harmony_read_lane does.
+ */
+bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
+                            PhraseMetre *metre, PlanKeyMode *modes, unsigned *keys);
 
 /* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
 bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);

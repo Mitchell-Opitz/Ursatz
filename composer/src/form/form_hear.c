@@ -161,6 +161,50 @@ static PlanTime time_of(const MusicalTime *time) {
     return out;
 }
 
+/* The key lane over the range, in order: each span's extent and key. */
+#define MAX_KEY_SPANS 32
+
+typedef struct {
+    PlanSpan span[MAX_KEY_SPANS];
+    PlanKey key[MAX_KEY_SPANS];
+    size_t count;
+} KeyMap;
+
+/* Reads the key spans over the range; they must follow each other and hold all of it. False otherwise. */
+static bool key_map_read(const PiecePlan *plan, PlanSpan range, KeyMap *map) {
+    LaneSpanId ids[MAX_KEY_SPANS];
+    PlanTime range_end;
+    PlanTime at = range.start;
+    map->count = plan_lane_find(plan, PLAN_LANE_KEY, 0, range, ids, MAX_KEY_SPANS);
+    if (map->count == 0 || map->count > MAX_KEY_SPANS || plan_span_end(range, &range_end) != PLAN_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < map->count; i++) {
+        PlanTime end;
+        map->span[i] = plan_lane_span_span(plan, ids[i]);
+        map->key[i] = plan_lane_span_payload(plan, ids[i])->key;
+        /* The first span may start before the range; each next one starts where the one before ends. */
+        if (plan_span_end(map->span[i], &end) != PLAN_OK ||
+            (i == 0 ? plan_time_compare(map->span[i].start, range.start) > 0
+                    : plan_time_compare(map->span[i].start, at) != 0)) {
+            return false;
+        }
+        at = end;
+    }
+    return plan_time_compare(at, range_end) >= 0;
+}
+
+/* The key at a time of the range. */
+static PlanKey key_at(const KeyMap *map, PlanTime time) {
+    for (size_t i = 0; i < map->count; i++) {
+        PlanTime end;
+        if (plan_span_end(map->span[i], &end) == PLAN_OK && plan_time_compare(time, end) < 0) {
+            return map->key[i];
+        }
+    }
+    return map->key[map->count - 1];
+}
+
 /* One rendered note of a part over the span. */
 typedef struct {
     size_t event;
@@ -207,7 +251,7 @@ static bool collect_notes(const RenderedPlan *rendered, PlanLaneKind lane, PlanS
 }
 
 /* Adds a part's notes to the input with their degrees: the soprano, or the bass. */
-static FormHearResult add_line(HearRun *run, PlanKey key, const HeardNote *notes, size_t count, bool bass) {
+static FormHearResult add_line(HearRun *run, const KeyMap *keys, const HeardNote *notes, size_t count, bool bass) {
     for (size_t i = 0; i < count; i++) {
         const NoteEvent *event = run->rendered.events[notes[i].event];
         const TimeSpan *span = pool_span(&run->spans, notes[i].start, notes[i].end);
@@ -220,7 +264,8 @@ static FormHearResult add_line(HearRun *run, PlanKey key, const HeardNote *notes
                  : standard_form_input_add_note(&run->input, id, event, span, NULL, notes[i].midi);
         int degree;
         int alteration;
-        degree_of(key, notes[i].midi, &degree, &alteration);
+        /* The degree is in the key under the note's start. */
+        degree_of(key_at(keys, notes[i].start), notes[i].midi, &degree, &alteration);
         if (status == STANDARD_FORM_ANALYSIS_OK) {
             status = standard_form_input_set_degree(&run->input, bass, i, degree, alteration);
         }
@@ -232,7 +277,7 @@ static FormHearResult add_line(HearRun *run, PlanKey key, const HeardNote *notes
 }
 
 /* The soprano degree over each chord: the melody note sounding at its start, or 0 for none. */
-static void soprano_over_chords(const PiecePlan *plan, PlanKey key, const LaneSpanId *chords, size_t chord_count,
+static void soprano_over_chords(const PiecePlan *plan, const KeyMap *keys, const LaneSpanId *chords, size_t chord_count,
                                 const HeardNote *melody, size_t melody_count, int *soprano) {
     for (size_t c = 0; c < chord_count; c++) {
         PlanTime start = plan_lane_span_span(plan, chords[c]).start;
@@ -240,7 +285,7 @@ static void soprano_over_chords(const PiecePlan *plan, PlanKey key, const LaneSp
         for (size_t n = 0; n < melody_count; n++) {
             if (plan_time_compare(melody[n].start, start) <= 0 && plan_time_compare(start, melody[n].end) < 0) {
                 int alteration;
-                degree_of(key, melody[n].midi, &soprano[c], &alteration);
+                degree_of(key_at(keys, melody[n].start), melody[n].midi, &soprano[c], &alteration);
             }
         }
     }
@@ -319,7 +364,7 @@ static FormHearResult copy_themes(const HearRun *run, FormHeard *out) {
 }
 
 /* Everything after the checks: the lanes as the adapter's input, then its three steps. */
-static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, PlanKey key, FormHeard *out) {
+static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, const KeyMap *keys, FormHeard *out) {
     PlanRenderResult rendered = plan_render(plan, &run->rendered);
     if (rendered != PLAN_RENDER_OK) {
         return rendered == PLAN_RENDER_ERR_ALLOC ? FORM_HEAR_ERR_ALLOC : FORM_HEAR_ERR_ANALYSIS;
@@ -342,8 +387,8 @@ static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, P
     FormHearResult result = FORM_HEAR_ERR_ALLOC;
     if (collect_notes(&run->rendered, PLAN_LANE_MELODY, span, &melody, &melody_count) &&
         collect_notes(&run->rendered, PLAN_LANE_BASS, span, &bass, &bass_count)) {
-        soprano_over_chords(plan, key, chords, chord_count, melody, melody_count, soprano);
-        result = harmony_hear_lane_cadences(plan, span, key.mode, soprano, chord_count, &run->cadences)
+        soprano_over_chords(plan, keys, chords, chord_count, melody, melody_count, soprano);
+        result = harmony_hear_lane_cadences(plan, span, keys->key[0].mode, soprano, chord_count, &run->cadences)
                      ? FORM_HEAR_OK
                      : FORM_HEAR_ERR_ANALYSIS;
     }
@@ -353,10 +398,10 @@ static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, P
         result = add_harmony(run, plan, chords, chord_count);
     }
     if (result == FORM_HEAR_OK) {
-        result = add_line(run, key, melody, melody_count, false);
+        result = add_line(run, keys, melody, melody_count, false);
     }
     if (result == FORM_HEAR_OK) {
-        result = add_line(run, key, bass, bass_count, true);
+        result = add_line(run, keys, bass, bass_count, true);
     }
     free(melody);
     free(bass);
@@ -399,16 +444,14 @@ FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {
     if (!harmony_read_metre(plan, span, &metre)) {
         return FORM_HEAR_ERR_METER;
     }
-    /* The key lane only: one key span over the whole range. */
-    LaneSpanId keys[2];
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, keys[0]), span)) {
+    /* The key lane holds the whole range, in one key or several: a degree is read in the key at its start. */
+    KeyMap keys;
+    if (!key_map_read(plan, span, &keys)) {
         return FORM_HEAR_ERR_ANALYSIS;
     }
-    PlanKey key = plan_lane_span_payload(plan, keys[0])->key;
     HearRun run;
     memset(&run, 0, sizeof(run));
-    FormHearResult result = hear(&run, plan, span, key, out);
+    FormHearResult result = hear(&run, plan, span, &keys, out);
     run_destroy(&run);
     if (result != FORM_HEAR_OK) {
         form_heard_destroy(out);
