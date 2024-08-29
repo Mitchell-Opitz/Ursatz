@@ -7,9 +7,13 @@ add_library(galant_schemas
     galant_prototypes.c
     galant_matching_rules.c
     galant_classification.c
+    analysis/galant_analysis_input.c
+    analysis/galant_analysis_claim.c
+    analysis/galant_analysis_match.c
 )
 target_include_directories(galant_schemas PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${PROJECT_SOURCE_DIR}/frameworks
     ${PROJECT_SOURCE_DIR}/src
 )
