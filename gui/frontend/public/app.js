@@ -693,8 +693,9 @@ function renderScoreTab(scoreEl, pieceId) {
   fetch(`/api/analyzer/pieces/${pieceId}/musicxml/meta`)
     .then((res) => res.json())
     .then((meta) => {
-      if (meta.ok && meta.meter_defaulted) {
-        captionEl.textContent = "Barlines are approximate, not authored meter.";
+      const caption = ScoreNotes.meterCaption(meta);
+      if (caption) {
+        captionEl.textContent = caption;
         captionEl.hidden = false;
       }
     })

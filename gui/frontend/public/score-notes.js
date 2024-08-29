@@ -209,7 +209,17 @@
     return matches;
   }
 
+  /* The caption under the score: only when the file declares no time
+   * signature (meter_defaulted from /musicxml/meta), else null. */
+  function meterCaption(meta) {
+    if (meta && meta.ok && meta.meter_defaulted === true) {
+      return "This file declares no time signature; shown in 4/4";
+    }
+    return null;
+  }
+
   const api = {
+    meterCaption,
     buildMusicXmlNoteKeys,
     osmdNoteKey,
     collectGraphicalNotes,
