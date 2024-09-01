@@ -48,4 +48,31 @@ typedef struct {
  */
 PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out);
 
+/*
+ * The cadences across the sections (R-069), set on the plan after its keys. In binary, rounded binary, ternary and
+ * variations, which close:
+ *   - the last section ends in a PAC;
+ *   - a section that ends in another key ends in a PAC there (an IAC would do as well);
+ *   - a section that ends on the dominant ends in an HC: a binary A that stays home, which would otherwise close in
+ *     the home key before the piece does;
+ *   - every other section keeps the template's cadence.
+ * Loop and layered forms end open on purpose and are left as the template has them. Only the first CADENCE constraint of
+ * a section, the one it ends in, is changed.
+ */
+PieceResult piece_plan_cadences(PiecePlan *plan, const PieceKeyPlan *keys);
+
+typedef struct {
+    bool ok;
+    char reason[96]; /* what is broken, when it is not ok */
+} PieceCadenceCheck;
+
+/*
+ * Checks the cadences of the plan against standard-harmony's strength order (harmony_cadence_strength, R-010), reading
+ * the sections' CADENCE and KEY constraints and the key lane: the last section's cadence is a PAC, so the strongest of
+ * the piece; a section that ends in another key ends in a PAC or IAC; and no section before the last closes in the home
+ * key with a PAC unless the template marks it closed (ternary A, every variation and the theme, rounded binary A).
+ * True when the plan could be read; the result is in out. A loop or layered form has nothing to check.
+ */
+bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out);
+
 #endif

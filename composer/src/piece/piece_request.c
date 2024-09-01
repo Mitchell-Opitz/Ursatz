@@ -290,12 +290,14 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     for (size_t i = 0; result == PIECE_OK && i < layout.section_count; i++) {
         result = add_section_motive(plan, &layout.sections[i], sections[i], source);
     }
-    /* The keys are planned from the request's seed, home only unless it asks to modulate; then the form is Given. */
+    /* The keys and the cadences across them are planned from the request's seed, home only unless it asks to modulate;
+   then the form is Given. */
     if (result == PIECE_OK) {
         PieceKeyPlan keys;
         FillRng rng;
         fill_rng_seed(&rng, request->seed);
         result = piece_plan_keys(plan, request->modulate ? &rng : NULL, &keys);
+        result = result == PIECE_OK && request->modulate ? piece_plan_cadences(plan, &keys) : result;
     }
     if (result == PIECE_OK) {
         result = from_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
