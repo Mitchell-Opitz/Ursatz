@@ -69,16 +69,29 @@ Fetches `GET /api/analyzer/pieces/<id>/musicxml` and renders it with
 [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/), vendored as a
 static UMD build under `frontend/public/vendor/opensheetmusicdisplay/` and
 loaded by a plain `<script>` tag (`frontend/` has no `package.json` or
-bundler). A caption below the score ("Barlines are approximate, not authored
-meter.") shows when `GET .../musicxml/meta` reports `meter_defaulted: true`,
-that is, when the source file gave no meter.
+bundler). A caption below the score ("This file declares no time signature;
+shown in 4/4") shows when `GET .../musicxml/meta` reports
+`meter_defaulted: true`, that is, when the source file gave no meter.
 
 Selecting a row colors its notes' noteheads (OSMD's `Note.NoteheadColor`). A
 row's `note_ids` are mapped to `<note xml:id>` values through the piece's
 `note_xml_ids`. OSMD does not keep `xml:id`, so the score tab finds each
-note by correlating the order of the MusicXML notes with OSMD's own note
-order, which holds for a single voice only. Multi-voice scores need matching
-by position and pitch.
+note by its position and pitch (`frontend/public/score-notes.js`, no DOM,
+loaded by `index.html` before `app.js` and by the frontend tests):
+
+- The key is `<part index>|<measure number>|<staff>|<voice>|<onset>|<pitch>`.
+  Onset is the position in the measure as a reduced fraction of a whole note
+  (`1/4`); pitch is step, alter and octave (`E-1/5`). Rests have no key.
+- The key is built from the MusicXML text (`<divisions>`, `<duration>`,
+  `<backup>`, `<forward>`, `<chord/>`) and from each OSMD `GraphicalNote`
+  (`ParentStaff` for part and staff, measure number, voice id, `Timestamp`,
+  `Pitch`). Equal keys are the same note, so multi-part, multi-voice scores
+  highlight exactly the claim's notes.
+- OSMD 3.10.1's voice ids equal the MusicXML `<voice>` numbers, so the voice
+  is part of the key and there is no voice-less fallback.
+- A claim's note id also matches its barline fragments (`<id>_a`, `<id>_2`).
+- Rendered notes whose key matches no `xml:id` are counted; the count is
+  logged once per score with `console.warn`.
 
 ## Architecture
 

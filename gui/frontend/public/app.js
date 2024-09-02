@@ -605,17 +605,12 @@ function renderAnalysisTabs(data) {
 }
 
 /* Claim-selection -> score highlighting state, reset per piece load (see
- * renderAnalysisTabs). currentScoreNoteIndex maps a MusicXML xml:id (as
- * parsed from the same document OSMD rendered) to the GraphicalNote(s)
- * OSMD built for it -- built once when the Score tab first loads (see
- * renderScoreTab), since OSMD's own model does not retain xml:id
- * (confirmed against the vendored bundle: no xml:id/XmlId property
- * anywhere in it), so ids are correlated by matching document order
- * between the raw MusicXML and OSMD's graphical note traversal -- valid
- * for this app's current single-voice/single-part export only (see
- * musicxml_export.c). pendingHighlightClaim holds a claim selected
- * before the Score tab (and therefore the index) has loaded yet, so it
- * can be applied as soon as it does. */
+ * renderAnalysisTabs). currentScoreNoteIndex maps a MusicXML xml:id to the
+ * GraphicalNote(s) OSMD built for it, found by position and pitch (see
+ * score-notes.js), built once when the Score tab loads (see
+ * renderScoreTab). pendingHighlightClaim holds a claim selected before the
+ * Score tab (and therefore the index) has loaded yet, so it can be applied
+ * as soon as it does. */
 let currentScoreOsmd = null;
 let currentScoreNoteIndex = null;
 let currentHighlightedNotes = [];
@@ -623,80 +618,20 @@ let pendingHighlightClaim = null;
 
 const HIGHLIGHT_NOTEHEAD_COLOR = "#e07a00";
 
-/* Walks OSMD's GraphicSheet measure-by-measure/staff-entry-by-staff-
- * entry/voice-entry-by-voice-entry to collect every GraphicalNote in the
- * same left-to-right document order MusicXML export writes <note>
- * elements in (single voice/part only -- see module comment above). */
-function collectGraphicalNotesInOrder(osmd) {
-  const notes = [];
-  const measureList = (osmd.GraphicSheet && osmd.GraphicSheet.MeasureList) || [];
-  for (const measureRow of measureList) {
-    for (const measure of measureRow) {
-      if (!measure || !measure.staffEntries) {
-        continue;
-      }
-      for (const staffEntry of measure.staffEntries) {
-        for (const voiceEntry of staffEntry.graphicalVoiceEntries || []) {
-          for (const note of voiceEntry.notes || []) {
-            notes.push(note);
-          }
-        }
-      }
-    }
-  }
-  return notes;
-}
-
-/* Parses every <note xml:id="..."> in xmlText, in document order (some
- * entries may be null -- a <note> ursatz-gui's export did not assign an
- * xml:id to, e.g. an export produced by an older ursatz submodule
- * version). */
-function parseNoteXmlIdsInOrder(xmlText) {
-  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
-  const noteEls = Array.from(doc.getElementsByTagName("note"));
-  return noteEls.map(
-    (el) => el.getAttributeNS("http://www.w3.org/XML/1998/namespace", "id") || el.getAttribute("xml:id")
-  );
-}
-
-/* Builds the xml:id -> GraphicalNote[] index described above by zipping
- * the two same-order lists together. */
+/* Builds the xml:id -> GraphicalNote[] index from the MusicXML text and
+ * the rendered OSMD instance; warns once with the number of rendered notes
+ * that matched no xml:id. */
 function buildScoreNoteIndex(osmd, xmlText) {
-  const ids = parseNoteXmlIdsInOrder(xmlText);
-  const graphicalNotes = collectGraphicalNotesInOrder(osmd);
-  const index = new Map();
-  const count = Math.min(ids.length, graphicalNotes.length);
-  for (let i = 0; i < count; i++) {
-    const id = ids[i];
-    if (!id) {
-      continue;
-    }
-    if (!index.has(id)) {
-      index.set(id, []);
-    }
-    index.get(id).push(graphicalNotes[i]);
+  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+  const xmlEntries = ScoreNotes.buildMusicXmlNoteKeys(doc.documentElement);
+  const { index, unmatched } = ScoreNotes.buildNoteIndex(xmlEntries, ScoreNotes.collectGraphicalNotes(osmd));
+  if (unmatched > 0) {
+    console.warn(`Score: ${unmatched} rendered note(s) matched no xml:id; claims cannot highlight them.`);
   }
   return index;
 }
 
-/* A claim's highlighted_note_ids are base NoteEvent ids; a NoteEvent
- * split across the synthetic barline grid exports as several <note>
- * elements suffixed "_a", "_b", ... (see write_run in musicxml_export.c)
- * -- so a base id matches its own exact xml:id plus every "<base>_<one
- * lowercase letter>" fragment id. */
-function findNotesForHighlightId(noteIndex, baseId) {
-  const matches = [];
-  if (noteIndex.has(baseId)) {
-    matches.push(...noteIndex.get(baseId));
-  }
-  const fragmentPrefix = `${baseId}_`;
-  for (const [id, notes] of noteIndex) {
-    if (id !== baseId && id.startsWith(fragmentPrefix) && /^[a-z]$/.test(id.slice(fragmentPrefix.length))) {
-      matches.push(...notes);
-    }
-  }
-  return matches;
-}
+const findNotesForHighlightId = ScoreNotes.findNotesForHighlightId;
 
 function clearScoreHighlight() {
   for (const note of currentHighlightedNotes) {
@@ -758,8 +693,9 @@ function renderScoreTab(scoreEl, pieceId) {
   fetch(`/api/analyzer/pieces/${pieceId}/musicxml/meta`)
     .then((res) => res.json())
     .then((meta) => {
-      if (meta.ok && meta.meter_defaulted) {
-        captionEl.textContent = "Barlines are approximate, not authored meter.";
+      const caption = ScoreNotes.meterCaption(meta);
+      if (caption) {
+        captionEl.textContent = caption;
         captionEl.hidden = false;
       }
     })
