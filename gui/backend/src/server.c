@@ -3,6 +3,7 @@
 #include <civetweb.h>
 
 #include "routes/analyzer.h"
+#include "routes/composer.h"
 #include "routes/corpus.h"
 #include "routes/health.h"
 #include "service/corpus_service.h"
@@ -36,6 +37,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
   ursatz_gui_health_register(ctx);
   ursatz_gui_analyzer_register(ctx);
   ursatz_gui_corpus_register(ctx);
+  ursatz_gui_composer_register(ctx);
 
   return ctx;
 }

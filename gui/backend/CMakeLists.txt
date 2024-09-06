@@ -5,9 +5,11 @@ add_executable(ursatz-gui-backend
   src/service/analysis_service.c
   src/service/id_service.c
   src/service/corpus_service.c
+  src/service/composer_service.c
   src/routes/health.c
   src/routes/analyzer.c
   src/routes/corpus.c
+  src/routes/composer.c
 )
 
 target_include_directories(ursatz-gui-backend PRIVATE
