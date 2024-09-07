@@ -48,6 +48,24 @@ typedef struct {
  */
 PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out);
 
+typedef struct {
+    bool ok;
+    size_t changes;     /* the key changes in the key lane (a span in another key than the one before it) */
+    size_t modulations; /* of them, those that open a key a section ends in and are confirmed as a modulation */
+    char reason[96];    /* the first change that is not, when it is not ok */
+} PieceKeyCheck;
+
+/*
+ * Checks the keys of a composed piece against standard-harmony (R-069): every key is closely related to the home
+ * key (the key of the first span), and every key change that opens a key a section ends in is a modulation, not a
+ * tonicization. The change is classified on its length and what follows the cadence (harmony_key_change_classify:
+ * the chords in the new key, the planned cadence in it, whether the key goes on after it), then confirmed by the
+ * cadences heard (harmony_key_change_confirm): an authentic cadence must arrive inside the new key's span, as form_hear
+ * hears it in the key of its chord. The plan's sections must be written. True when the plan could be read; the result
+ * is in out.
+ */
+bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out);
+
 /*
  * The cadences across the sections (R-069), set on the plan after its keys. In binary, rounded binary, ternary and
  * variations, which close:

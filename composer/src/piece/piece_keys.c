@@ -2,10 +2,15 @@
 
 #include <string.h>
 
+#include <stdio.h>
+
 #include <harmony_chord.h>
+#include <harmony_key_change.h>
 #include <harmony_related_key.h>
+#include <semantics/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/plan_state.h>
 
 /* A key lane span before it is added: its key and where it lies. */
@@ -239,4 +244,173 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
         }
     }
     return result;
+}
+
+/* ------------------------------------------------------------- the check */
+
+#define MAX_ARRIVALS 256
+
+/* The key lane over the whole plan, in order. */
+typedef struct {
+    PlanSpan span[MAX_SEGMENTS];
+    PlanKey key[MAX_SEGMENTS];
+    size_t count;
+} KeyLane;
+
+static bool read_key_lane(const PiecePlan *plan, KeyLane *lane) {
+    LaneSpanId ids[MAX_SEGMENTS];
+    PlanSpan everything = {{0, 1}, {1000000, 1}};
+    lane->count = plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, ids, MAX_SEGMENTS);
+    if (lane->count == 0 || lane->count > MAX_SEGMENTS) {
+        return false;
+    }
+    for (size_t i = 0; i < lane->count; i++) {
+        lane->span[i] = plan_lane_span_span(plan, ids[i]);
+        lane->key[i] = plan_lane_span_payload(plan, ids[i])->key;
+    }
+    return true;
+}
+
+/* Whether the key is the home key's or one of its closely related keys. */
+static bool related_to_home(PlanKey home, PlanKey key) {
+    HarmonyMode home_mode = mode_of(home.mode);
+    HarmonyMode mode = mode_of(key.mode);
+    if (same_key(home, key)) {
+        return true;
+    }
+    int semitone = ((key.tonic_pitch_class - home.tonic_pitch_class) % 12 + 12) % 12;
+    for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
+        HarmonyRelatedKey related;
+        if (harmony_related_key_at(home_mode, i, &related) && related.mode == mode &&
+            harmony_related_key_semitone(home_mode, &related) == semitone) {
+            return harmony_key_is_closely_related(home_mode, &related);
+        }
+    }
+    return false;
+}
+
+static double as_double(PlanTime time) {
+    return (double)time.num / (double)time.den;
+}
+
+/* The arrival of every authentic cadence heard in the sections, in whole notes. False when a section is not readable. */
+static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, size_t count, double *arrivals,
+                               size_t *arrival_count) {
+    *arrival_count = 0;
+    for (size_t s = 0; s < count; s++) {
+        FormHeard heard;
+        if (form_hear(plan, plan_node_span(plan, sections[s]), &heard) != FORM_HEAR_OK) {
+            return false;
+        }
+        for (size_t i = 0; i < heard.cadence_count && *arrival_count < MAX_ARRIVALS; i++) {
+            int type = heard.cadences[i].type;
+            if (type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
+                type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) {
+                arrivals[(*arrival_count)++] = as_double(heard.cadences[i].arrival);
+            }
+        }
+        form_heard_destroy(&heard);
+    }
+    return true;
+}
+
+static bool constraint_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
+    const PlanConstraint *constraint = find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
+    if (constraint) {
+        *out = constraint->params.key;
+    }
+    return constraint != NULL;
+}
+
+static size_t chords_between(const PiecePlan *plan, PlanTime start, PlanTime end) {
+    PlanSpan range = {start, {0, 1}};
+    PlanTime negative = {-start.num, start.den};
+    if (plan_time_compare(end, start) <= 0 || plan_time_add(end, negative, &range.length) != PLAN_OK) {
+        return 0;
+    }
+    return plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, NULL, 0);
+}
+
+bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
+    if (!plan || !out) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    out->ok = true;
+    NodeId form = plan_root(plan);
+    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+    size_t section_count = 0;
+    PlanTime piece_end = {0, 1};
+    for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
+        NodeId child = plan_node_child_at(plan, form, i);
+        if (find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+            piece_end = plan_node_span(plan, child).start;
+        } else if (section_count < FORM_TEMPLATE_MAX_SECTIONS) {
+            sections[section_count++] = child;
+        }
+    }
+    KeyLane lane;
+    double arrivals[MAX_ARRIVALS + 1];
+    size_t arrival_count;
+    if (section_count == 0 || piece_end.num == 0 || !read_key_lane(plan, &lane) ||
+        !authentic_arrivals(plan, sections, section_count, arrivals, &arrival_count)) {
+        return false;
+    }
+    PlanKey home = lane.key[0];
+    for (size_t k = 0; k < lane.count; k++) {
+        if (!related_to_home(home, lane.key[k]) && out->ok) {
+            out->ok = false;
+            snprintf(out->reason, sizeof(out->reason), "key span %zu is not closely related to the home key", k);
+        }
+    }
+    for (size_t k = 1; k < lane.count; k++) {
+        if (same_key(lane.key[k], lane.key[k - 1])) {
+            continue;
+        }
+        out->changes++;
+        PlanTime span_end;
+        PlanTime region_end = piece_end;
+        PlanTime cadence_end = {0, 1};
+        bool planned = false;
+        if (plan_span_end(lane.span[k], &span_end) != PLAN_OK) {
+            return false;
+        }
+        region_end = plan_time_compare(span_end, piece_end) < 0 ? span_end : piece_end;
+        /* A section planned to end in the new key, inside the span: the last of them is where the cadence is. */
+        for (size_t s = 0; s < section_count; s++) {
+            PlanKey ends_in;
+            PlanTime end;
+            if (!constraint_key(plan, sections[s], &ends_in) ||
+                plan_span_end(plan_node_span(plan, sections[s]), &end) != PLAN_OK) {
+                return false;
+            }
+            if (same_key(ends_in, lane.key[k]) && plan_time_compare(end, lane.span[k].start) > 0 &&
+                plan_time_compare(end, region_end) <= 0 && plan_time_compare(end, cadence_end) > 0) {
+                cadence_end = end;
+                planned = true;
+            }
+        }
+        if (!planned) {
+            continue;
+        }
+        HarmonyKeyChange change;
+        change.chords_in_new_key = (int)chords_between(plan, lane.span[k].start, region_end);
+        change.cadence_in_new_key = true;
+        change.continues_after_cadence = chords_between(plan, cadence_end, region_end) > 0;
+        KeyChangeExtent length_extent;
+        KeyChangeExtent extent;
+        if (!harmony_key_change_classify(&change, &length_extent) ||
+            !harmony_key_change_confirm(length_extent, as_double(lane.span[k].start), as_double(region_end), arrivals,
+                                        arrival_count, &extent)) {
+            return false;
+        }
+        if (key_change_extent_is_modulation(extent)) {
+            out->modulations++;
+        } else if (out->ok) {
+            out->ok = false;
+            snprintf(out->reason, sizeof(out->reason), "the key change at %ld/%lu is a %s, not a modulation",
+                     lane.span[k].start.num, lane.span[k].start.den, key_change_extent_name(extent));
+        }
+    }
+    return true;
 }

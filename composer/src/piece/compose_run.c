@@ -1,5 +1,6 @@
 #include <ursatz_composer/compose.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -456,6 +457,28 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     return result;
 }
 
+/* Whether the plan changes key: its key lane has more than one span. */
+static bool has_key_changes(const PiecePlan *plan) {
+    PlanSpan everything = {{0, 1}, {1000000, 1}};
+    return plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, NULL, 0) > 1;
+}
+
+/* The checks of a plan with several keys; PIECE_ERR_STUCK, marked in the outcome, when it fails them. */
+static PieceResult check_keys(const PiecePlan *plan, ComposeOutcome *outcome) {
+    bool read = piece_check_keys(plan, &outcome->key_check) && piece_check_cadences(plan, &outcome->cadence_check);
+    if (read && outcome->key_check.ok && outcome->cadence_check.ok) {
+        return PIECE_OK;
+    }
+    if (!read) {
+        outcome->key_check.ok = false;
+        snprintf(outcome->key_check.reason, sizeof(outcome->key_check.reason), "the keys could not be read");
+    }
+    outcome->stuck = true;
+    outcome->stuck_stage = COMPOSE_STAGE_TEXTURE;
+    outcome->key_rejected = true;
+    return PIECE_ERR_STUCK;
+}
+
 PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
     if (!plan || !config || !outcome) {
         return PIECE_ERR_NULL;
@@ -478,6 +501,9 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
             plan_replace_contents(plan, fresh);
         }
         result = run_once(plan, config, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome);
+        if (result == PIECE_OK && has_key_changes(plan)) {
+            result = check_keys(plan, outcome);
+        }
         if (result != PIECE_ERR_STUCK) {
             break;
         }

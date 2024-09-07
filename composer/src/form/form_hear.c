@@ -65,6 +65,7 @@ void form_heard_destroy(FormHeard *heard) {
         return;
     }
     free(heard->themes);
+    free(heard->cadences);
     memset(heard, 0, sizeof(*heard));
 }
 
@@ -333,6 +334,24 @@ static FormHearResult add_harmony(HearRun *run, const PiecePlan *plan, const Lan
     return FORM_HEAR_OK;
 }
 
+/* The cadences the recognizer heard, with where each arrives. */
+static FormHearResult copy_cadences(const HearRun *run, const PiecePlan *plan, const LaneSpanId *chords,
+                                    FormHeard *out) {
+    if (run->cadences.count == 0) {
+        return FORM_HEAR_OK;
+    }
+    out->cadences = calloc(run->cadences.count, sizeof(*out->cadences));
+    if (!out->cadences) {
+        return FORM_HEAR_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < run->cadences.count; i++) {
+        out->cadences[i].arrival = plan_lane_span_span(plan, chords[run->cadences.items[i].arrival_first]).start;
+        out->cadences[i].type = run->cadences.items[i].type;
+    }
+    out->cadence_count = run->cadences.count;
+    return FORM_HEAR_OK;
+}
+
 /* The adapter's themes as heard themes. */
 static FormHearResult copy_themes(const HearRun *run, FormHeard *out) {
     out->phrase_count = run->phrases.count;
@@ -425,7 +444,8 @@ static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, c
     if (status != STANDARD_FORM_ANALYSIS_OK) {
         return result_of(status);
     }
-    return copy_themes(run, out);
+    FormHearResult copied = copy_cadences(run, plan, chords, out);
+    return copied == FORM_HEAR_OK ? copy_themes(run, out) : copied;
 }
 
 FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {

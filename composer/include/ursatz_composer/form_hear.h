@@ -41,10 +41,18 @@ typedef struct {
     bool has_fragmentation;
 } FormHeardTheme;
 
+/* A cadence heard over the range, as the recognizer found it, in the key of the chord it arrives on. */
+typedef struct {
+    PlanTime arrival; /* where the chord the cadence arrives on starts, in whole notes from the start of the plan */
+    int type;         /* CadenceType */
+} FormHeardCadence;
+
 typedef struct {
     FormHeardTheme *themes; /* owned; in the adapter's order; NULL when none */
     size_t count;
     size_t phrase_count;    /* the phrases standard-form segmented, with a theme or not */
+    FormHeardCadence *cadences; /* owned; in order of arrival; NULL when none */
+    size_t cadence_count;
 } FormHeard;
 
 void form_heard_destroy(FormHeard *heard);
