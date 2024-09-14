@@ -68,3 +68,14 @@ target_compile_definitions(test_texture_field1 PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME texture_field1 COMMAND test_texture_field1)
+
+add_executable(test_schema_sequence test_schema_sequence.c)
+target_link_libraries(test_schema_sequence PRIVATE galant_schemas scale_harmonization standard_harmony standard_tonality
+                      common_practice_minimal standard_meter)
+target_include_directories(test_schema_sequence PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_schema_sequence PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/galant"
+    URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
+add_test(NAME schema_sequence COMMAND test_schema_sequence)
