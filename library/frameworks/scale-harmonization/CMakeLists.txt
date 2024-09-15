@@ -6,9 +6,12 @@ add_library(scale_harmonization
     scale_patterns.c
     scale_sequence_rules.c
     scale_octave_rules.c
+    analysis/scale_analysis_claim.c
+    analysis/scale_analysis_detect.c
 )
 target_include_directories(scale_harmonization PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${PROJECT_SOURCE_DIR}/frameworks
     ${PROJECT_SOURCE_DIR}/src
 )

@@ -78,3 +78,7 @@ check function. A rule that states what the pattern requires is hard; "avoid" an
 - **Rhythm.** A harmonization is stages, not durations.
 - **Finding the stages.** The caller says which pitches are the bass and the upper
   voices at each stage.
+
+## Analysis of real music
+
+`analysis/` detects harmonic sequences (a model repeated transposed by a constant diatonic interval) in the outer voices and Roman numerals of a run of segments, and assigns their kind with the patterns and rules above. It reads galant-schemas' neutral segment struct. A cycle of fifths has no pattern here, so it is reported with its existing kind and marked as not rule-backed. See `docs/modules/schema-sequence-analysis.md`.
