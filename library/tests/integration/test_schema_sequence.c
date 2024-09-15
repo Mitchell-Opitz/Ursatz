@@ -22,7 +22,7 @@
  * Nothing is tuned to the fixture: every default is the library's.
  */
 
-#define CHAIN_FLOOR_FOUND 0
+#define CHAIN_FLOOR_FOUND 4 /* the whole chain found 5 of 9 when this was written */
 
 typedef struct {
     bool schema;
