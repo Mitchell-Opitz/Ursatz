@@ -93,3 +93,7 @@ here.
 - **Theory.** The third sense of "schema", the explanation of
   how an exemplar functions in a passage, is not modeled beyond the match
   itself.
+
+## Analysis of real music
+
+`analysis/` matches the prototypes against the outer-voice degrees of a run of segments: stage sequences with embellishment gaps, metric fit, key-relative stages and a bass-only allowance, with the overlaps resolved by confidence. The input is a neutral per-segment struct the caller fills; the adapter includes no framework but `standard-counterpoint`. See `docs/modules/schema-sequence-analysis.md`.
