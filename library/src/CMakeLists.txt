@@ -89,8 +89,6 @@ add_library(ursatz
     semantics/non_chord_tone.c
     semantics/imitation_answer.c
     semantics/fugue_role.c
-    semantics/ostinato_type.c
-    semantics/imitative_role.c
     semantics/schema_function.c
     semantics/scale_direction.c
     semantics/sequence_kind.c

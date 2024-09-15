@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/imitative_role.h"
+#include "imitative_role.h"
 
 static void test_validity(void) {
     for (int i = 0; i < IMITATIVE_ROLE_COUNT; i++) {

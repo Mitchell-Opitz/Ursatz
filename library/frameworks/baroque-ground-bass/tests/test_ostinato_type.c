@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/ostinato_type.h"
+#include "ostinato_type.h"
 
 static void test_validity(void) {
     for (int i = 0; i < OSTINATO_TYPE_COUNT; i++) {

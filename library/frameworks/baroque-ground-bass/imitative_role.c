@@ -1,4 +1,4 @@
-#include "semantics/imitative_role.h"
+#include "imitative_role.h"
 
 #include <stddef.h>
 

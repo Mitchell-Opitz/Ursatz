@@ -1,4 +1,4 @@
-#include "semantics/ostinato_type.h"
+#include "ostinato_type.h"
 
 #include <stddef.h>
 

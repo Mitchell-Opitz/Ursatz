@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 #include "pitch/pitch_spelling.h"
-#include "semantics/imitative_role.h"
-#include "semantics/ostinato_type.h"
+#include "imitative_role.h"
+#include "ostinato_type.h"
 #include "standard-counterpoint/counterpoint_slots.h"
 
 /*
