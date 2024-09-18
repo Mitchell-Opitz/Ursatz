@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/schema_function.h"
+#include "schema_function.h"
 
 static void test_validity(void) {
     for (int i = 0; i < SCHEMA_FUNCTION_COUNT; i++) {

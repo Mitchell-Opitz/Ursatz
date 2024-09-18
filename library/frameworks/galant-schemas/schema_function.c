@@ -1,4 +1,4 @@
-#include "semantics/schema_function.h"
+#include "schema_function.h"
 
 #include <stddef.h>
 

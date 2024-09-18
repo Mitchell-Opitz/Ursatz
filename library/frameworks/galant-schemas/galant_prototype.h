@@ -7,7 +7,7 @@
 #include "galant_degree.h"
 #include "galant_exemplar.h"
 #include "semantics/beat_strength.h"
-#include "semantics/schema_function.h"
+#include "schema_function.h"
 
 /*
  * A prototype for galant-schemas-v1: the idealized version of a

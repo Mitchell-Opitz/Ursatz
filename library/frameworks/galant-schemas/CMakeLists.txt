@@ -10,6 +10,7 @@ add_library(galant_schemas
     analysis/galant_analysis_input.c
     analysis/galant_analysis_claim.c
     analysis/galant_analysis_match.c
+    schema_function.c
 )
 target_include_directories(galant_schemas PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
