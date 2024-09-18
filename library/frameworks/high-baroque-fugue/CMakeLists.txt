@@ -7,6 +7,7 @@ add_library(high_baroque_fugue
     fugue_answer_rules.c
     fugue_countersubject_rules.c
     fugue_rules.c
+    fugue_role.c
 )
 target_include_directories(high_baroque_fugue PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

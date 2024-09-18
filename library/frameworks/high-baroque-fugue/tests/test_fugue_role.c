@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/fugue_role.h"
+#include "fugue_role.h"
 
 static void test_validity(void) {
     for (int i = 0; i < FUGUE_ROLE_COUNT; i++) {

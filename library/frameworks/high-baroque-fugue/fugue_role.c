@@ -1,4 +1,4 @@
-#include "semantics/fugue_role.h"
+#include "fugue_role.h"
 
 #include <stddef.h>
 
