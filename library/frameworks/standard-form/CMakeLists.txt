@@ -30,6 +30,7 @@ add_library(standard_form
     alternative_path_kind.c
     continuation_trait.c
     expansion_placement.c
+    external_expansion_kind.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

@@ -7,7 +7,7 @@
 #include "rules/constraint.h"
 #include "rules/rule.h"
 #include "expansion_placement.h"
-#include "semantics/external_expansion_kind.h"
+#include "external_expansion_kind.h"
 
 /*
  * External expansion rules for standard-form-v1. An external expansion adds length outside the

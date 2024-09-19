@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/external_expansion_kind.h"
+#include "external_expansion_kind.h"
 
 static void test_validity(void) {
     for (int i = 0; i < EXTERNAL_EXPANSION_KIND_COUNT; i++) {

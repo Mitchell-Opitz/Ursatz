@@ -5,7 +5,7 @@
 #include "external_expansion_rules.h"
 #include "internal_expansion_rules.h"
 #include "expansion_placement.h"
-#include "semantics/external_expansion_kind.h"
+#include "external_expansion_kind.h"
 #include "semantics/internal_expansion_technique.h"
 #include "semantics/phrase_length_change.h"
 #include "semantics/phrase_level_form.h"

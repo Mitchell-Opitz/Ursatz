@@ -11,7 +11,7 @@
 #include "external_expansion_rules.h"
 #include "identity/entity_id.h"
 #include "phrase_rules.h"
-#include "semantics/external_expansion_kind.h"
+#include "external_expansion_kind.h"
 
 #define DISCONTINUITY_UNCERTAINTY 0.25
 

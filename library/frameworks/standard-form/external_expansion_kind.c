@@ -1,4 +1,4 @@
-#include "semantics/external_expansion_kind.h"
+#include "external_expansion_kind.h"
 
 #include <stddef.h>
 
