@@ -1,4 +1,4 @@
-#include "semantics/alternative_path_kind.h"
+#include "alternative_path_kind.h"
 
 #include <stddef.h>
 

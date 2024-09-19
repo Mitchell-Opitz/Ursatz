@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/alternative_path_kind.h"
+#include "alternative_path_kind.h"
 
 static void test_validity(void) {
     for (int i = 0; i < ALTERNATIVE_PATH_KIND_COUNT; i++) {

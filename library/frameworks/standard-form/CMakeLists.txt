@@ -27,6 +27,7 @@ add_library(standard_form
     analysis/analysis_motive_shape.c
     analysis/analysis_motive_match.c
     analysis/analysis_motive.c
+    alternative_path_kind.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

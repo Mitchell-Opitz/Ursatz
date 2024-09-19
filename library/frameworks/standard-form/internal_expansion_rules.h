@@ -6,7 +6,7 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/alternative_path_kind.h"
+#include "alternative_path_kind.h"
 #include "semantics/internal_expansion_technique.h"
 
 /*
