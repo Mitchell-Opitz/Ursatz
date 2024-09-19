@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/continuation_trait.h"
+#include "continuation_trait.h"
 
 static void test_validity(void) {
     for (int i = 0; i < CONTINUATION_TRAIT_COUNT; i++) {

@@ -1,4 +1,4 @@
-#include "semantics/continuation_trait.h"
+#include "continuation_trait.h"
 
 #include <stddef.h>
 
