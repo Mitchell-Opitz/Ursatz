@@ -29,6 +29,7 @@ add_library(standard_form
     analysis/analysis_motive.c
     alternative_path_kind.c
     continuation_trait.c
+    expansion_placement.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/expansion_placement.h"
+#include "expansion_placement.h"
 
 static void test_validity(void) {
     for (int i = 0; i < EXPANSION_PLACEMENT_COUNT; i++) {

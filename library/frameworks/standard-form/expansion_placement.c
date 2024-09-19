@@ -1,4 +1,4 @@
-#include "semantics/expansion_placement.h"
+#include "expansion_placement.h"
 
 #include <stddef.h>
 

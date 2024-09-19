@@ -4,7 +4,7 @@
 #include "form_test_util.h"
 #include "external_expansion_rules.h"
 #include "internal_expansion_rules.h"
-#include "semantics/expansion_placement.h"
+#include "expansion_placement.h"
 #include "semantics/external_expansion_kind.h"
 #include "semantics/internal_expansion_technique.h"
 #include "semantics/phrase_length_change.h"

@@ -6,7 +6,7 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/expansion_placement.h"
+#include "expansion_placement.h"
 #include "semantics/phrase_length_change.h"
 
 /*

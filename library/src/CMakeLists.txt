@@ -93,7 +93,6 @@ add_library(ursatz
     semantics/expected_length_basis.c
     semantics/external_expansion_kind.c
     semantics/internal_expansion_technique.c
-    semantics/expansion_placement.c
     semantics/phrase_length_change.c
     semantics/phrase_ending.c
     semantics/phrase_beginning.c
