@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "pitch/pitch_spelling.h"
-#include "semantics/scale_direction.h"
+#include "scale_direction.h"
 
 /*
  * The subject of every rule in scale-harmonization-v1: a harmonization of a

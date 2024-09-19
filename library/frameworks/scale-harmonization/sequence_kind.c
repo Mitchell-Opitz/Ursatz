@@ -1,4 +1,4 @@
-#include "semantics/sequence_kind.h"
+#include "sequence_kind.h"
 
 #include <stddef.h>
 

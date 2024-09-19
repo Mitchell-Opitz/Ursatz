@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/scale_direction.h"
+#include "scale_direction.h"
 
 static void test_validity(void) {
     for (int i = 0; i < SCALE_DIRECTION_COUNT; i++) {

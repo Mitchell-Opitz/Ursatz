@@ -88,8 +88,6 @@ add_library(ursatz
     semantics/beat_strength.c
     semantics/non_chord_tone.c
     semantics/imitation_answer.c
-    semantics/scale_direction.c
-    semantics/sequence_kind.c
     semantics/cadence_type.c
     semantics/applied_chord_kind.c
     semantics/key_change_extent.c

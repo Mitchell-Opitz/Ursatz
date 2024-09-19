@@ -1,4 +1,4 @@
-#include "semantics/scale_direction.h"
+#include "scale_direction.h"
 
 #include <stddef.h>
 

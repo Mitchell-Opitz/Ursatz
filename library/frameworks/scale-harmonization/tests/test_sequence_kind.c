@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/sequence_kind.h"
+#include "sequence_kind.h"
 
 static void test_validity(void) {
     for (int i = 0; i < SEQUENCE_KIND_COUNT; i++) {
