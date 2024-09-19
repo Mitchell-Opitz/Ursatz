@@ -97,7 +97,6 @@ add_library(ursatz
     semantics/phrase_role.c
     semantics/subphrase_role.c
     semantics/phrase_level_form.c
-    semantics/motive_kind.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c

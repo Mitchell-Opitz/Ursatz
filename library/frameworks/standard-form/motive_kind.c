@@ -1,4 +1,4 @@
-#include "semantics/motive_kind.h"
+#include "motive_kind.h"
 
 #include <stddef.h>
 

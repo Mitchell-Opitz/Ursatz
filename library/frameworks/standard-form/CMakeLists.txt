@@ -33,6 +33,7 @@ add_library(standard_form
     external_expansion_kind.c
     idea_label.c
     internal_expansion_technique.c
+    motive_kind.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/motive_kind.h"
+#include "motive_kind.h"
 
 static void test_validity(void) {
     for (int i = 0; i < MOTIVE_KIND_COUNT; i++) {
