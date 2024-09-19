@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/counterpoint_species.h"
+#include "counterpoint_species.h"
 
 static void test_validity(void) {
     for (int i = 0; i < COUNTERPOINT_SPECIES_COUNT; i++) {

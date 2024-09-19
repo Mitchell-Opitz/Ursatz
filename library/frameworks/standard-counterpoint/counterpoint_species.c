@@ -1,4 +1,4 @@
-#include "semantics/counterpoint_species.h"
+#include "counterpoint_species.h"
 
 #include <stddef.h>
 
