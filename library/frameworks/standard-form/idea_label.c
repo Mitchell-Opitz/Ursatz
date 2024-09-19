@@ -1,4 +1,4 @@
-#include "semantics/idea_label.h"
+#include "idea_label.h"
 
 #include <stddef.h>
 

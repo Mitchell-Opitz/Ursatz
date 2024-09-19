@@ -8,7 +8,7 @@
 #include "rules/rule.h"
 #include "phrase_rules.h"
 #include "semantics/cadence_type.h"
-#include "semantics/idea_label.h"
+#include "idea_label.h"
 #include "semantics/phrase_role.h"
 
 /*

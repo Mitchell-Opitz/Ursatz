@@ -6,7 +6,7 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/idea_label.h"
+#include "idea_label.h"
 #include "semantics/phrase_beginning.h"
 
 /*

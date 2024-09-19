@@ -8,7 +8,7 @@
 #include "analysis_time.h"
 #include "core/value.h"
 #include "segmentation_rules.h"
-#include "semantics/idea_label.h"
+#include "idea_label.h"
 #include "sentence_rules.h"
 
 static double combine(double a, double b) {

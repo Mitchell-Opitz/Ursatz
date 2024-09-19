@@ -95,7 +95,6 @@ add_library(ursatz
     semantics/phrase_length_change.c
     semantics/phrase_ending.c
     semantics/phrase_beginning.c
-    semantics/idea_label.c
     semantics/phrase_role.c
     semantics/subphrase_role.c
     semantics/phrase_level_form.c

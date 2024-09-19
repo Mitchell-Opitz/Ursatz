@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/idea_label.h"
+#include "idea_label.h"
 
 static void test_validity(void) {
     for (int i = 0; i < IDEA_LABEL_COUNT; i++) {
