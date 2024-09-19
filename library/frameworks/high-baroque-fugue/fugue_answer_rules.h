@@ -7,7 +7,7 @@
 #include "fugue_exposition.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/imitation_answer.h"
+#include "standard-counterpoint/imitation_answer.h"
 
 /*
  * Answer rules for high-baroque-fugue-v1. The answer is a transposition of

@@ -7,7 +7,7 @@
 #include "century_score.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/imitation_answer.h"
+#include "standard-counterpoint/imitation_answer.h"
 
 /*
  * Imitation rules for sixteenth-century-style-v1. Imitation is two or more

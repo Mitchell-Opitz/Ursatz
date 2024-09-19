@@ -1,4 +1,4 @@
-#include "semantics/imitation_answer.h"
+#include "imitation_answer.h"
 
 #include <stddef.h>
 

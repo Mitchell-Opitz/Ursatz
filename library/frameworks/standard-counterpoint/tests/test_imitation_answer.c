@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/imitation_answer.h"
+#include "imitation_answer.h"
 
 static void test_validity(void) {
     for (int i = 0; i < IMITATION_ANSWER_COUNT; i++) {
