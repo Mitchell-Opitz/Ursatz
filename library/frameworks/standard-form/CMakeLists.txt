@@ -32,6 +32,7 @@ add_library(standard_form
     expansion_placement.c
     external_expansion_kind.c
     idea_label.c
+    internal_expansion_technique.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

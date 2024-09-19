@@ -1,4 +1,4 @@
-#include "semantics/internal_expansion_technique.h"
+#include "internal_expansion_technique.h"
 
 #include <stddef.h>
 

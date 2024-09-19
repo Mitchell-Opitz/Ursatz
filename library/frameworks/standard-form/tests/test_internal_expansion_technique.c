@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/internal_expansion_technique.h"
+#include "internal_expansion_technique.h"
 
 static void test_validity(void) {
     for (int i = 0; i < INTERNAL_EXPANSION_TECHNIQUE_COUNT; i++) {
