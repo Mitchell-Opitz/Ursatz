@@ -36,6 +36,7 @@ add_library(standard_form
     motive_kind.c
     phrase_beginning.c
     phrase_ending.c
+    phrase_length_change.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

@@ -13,7 +13,7 @@
 #include "expansion_placement.h"
 #include "external_expansion_kind.h"
 #include "internal_expansion_technique.h"
-#include "semantics/phrase_length_change.h"
+#include "phrase_length_change.h"
 #include "semantics/phrase_level_form.h"
 
 static void destroy_expansion(StandardFormExpansion *expansion) {

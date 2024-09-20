@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/phrase_length_change.h"
+#include "phrase_length_change.h"
 
 static void test_validity(void) {
     for (int i = 0; i < PHRASE_LENGTH_CHANGE_COUNT; i++) {

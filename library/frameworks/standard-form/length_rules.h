@@ -7,7 +7,7 @@
 #include "rules/constraint.h"
 #include "rules/rule.h"
 #include "expansion_placement.h"
-#include "semantics/phrase_length_change.h"
+#include "phrase_length_change.h"
 
 /*
  * Length rules for standard-form-v1: expansion and contraction, the ways a composer plays with

@@ -7,7 +7,7 @@
 #include "expansion_placement.h"
 #include "external_expansion_kind.h"
 #include "internal_expansion_technique.h"
-#include "semantics/phrase_length_change.h"
+#include "phrase_length_change.h"
 #include "semantics/phrase_level_form.h"
 
 /* Expansion and contraction from the theme's own balance (an ending as long as its beginning), the internal technique evidence,

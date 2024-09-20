@@ -1,4 +1,4 @@
-#include "semantics/phrase_length_change.h"
+#include "phrase_length_change.h"
 
 #include <stddef.h>
 
