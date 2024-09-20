@@ -17,7 +17,10 @@
  * Hearing the phrase form of a written plan. Two hand-written Realized themes are heard as what they
  * were written as: an 8-bar sentence in C major ending in a PAC, and an 8-bar period in A minor, a
  * half cadence then a PAC. A stretch with no cadence hears no theme, and a Constrained melody is not
- * heard at all.
+ * heard at all. A third theme modulates (R-069): the sentence in C major whose continuation is in G major from bar 5
+ * (tests/fixtures/sentence_c_to_g.json, its second half the first one's moved a fifth up, I V6/5 I V6/5 then IV ii V I
+ * in G, IV being the pivot) is heard as a sentence ending in a PAC, the PAC in G: its soprano is G, the tonic of the key
+ * under the last chord, which in C would be the fifth and make the cadence imperfect.
  */
 
 static PiecePlan *load(const char *name) {
@@ -73,6 +76,36 @@ static void test_period(void) {
     plan_destroy(plan);
 }
 
+static void test_modulating_sentence(void) {
+    PiecePlan *plan = load("sentence_c_to_g.json");
+    LaneSpanId keys[3];
+    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, bars(0, 8), keys, 3) == 2);
+    FormHeard heard;
+    assert(form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
+    assert(heard.phrase_count == 1);
+    assert(heard.count == 1);
+    const FormHeardTheme *theme = &heard.themes[0];
+    assert(theme->form == PHRASE_LEVEL_FORM_SENTENCE);
+    assert(theme->beginning == PHRASE_BEGINNING_PRESENTATION);
+    assert(theme->ending == PHRASE_ENDING_CONTINUATION);
+    assert(theme->first_bar == 0 && theme->bars == 8);
+    assert(theme->first_cadence == -1);
+    assert(theme->second_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    /* The one cadence heard arrives on the last chord, bar 8, and is perfect in G. */
+    assert(heard.cadence_count == 1);
+    assert(heard.cadences[0].type == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    assert(heard.cadences[0].arrival.num == 7 && heard.cadences[0].arrival.den == 1);
+    form_heard_destroy(&heard);
+    /* Heard bar by bar, each half in its own key: the first half has no cadence, the second has the PAC. */
+    assert(form_hear(plan, bars(0, 4), &heard) == FORM_HEAR_OK);
+    assert(heard.count == 0 && heard.cadence_count == 0);
+    form_heard_destroy(&heard);
+    assert(form_hear(plan, bars(4, 4), &heard) == FORM_HEAR_OK);
+    assert(heard.cadence_count == 1 && heard.cadences[0].type == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    form_heard_destroy(&heard);
+    plan_destroy(plan);
+}
+
 /* The sentence's presentation alone (I V6/5 I V6/5) has no cadence, so no theme. */
 static void test_no_cadence(void) {
     PiecePlan *plan = load("sentence_c_major.json");
@@ -105,6 +138,7 @@ int main(void) {
     test_sentence();
     test_period();
     test_no_cadence();
+    test_modulating_sentence();
     test_constrained_melody();
     test_names_and_null();
     return 0;
