@@ -1,4 +1,4 @@
-#include "semantics/phrase_role.h"
+#include "phrase_role.h"
 
 #include <stddef.h>
 

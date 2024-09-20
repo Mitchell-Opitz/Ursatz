@@ -38,6 +38,7 @@ add_library(standard_form
     phrase_ending.c
     phrase_length_change.c
     phrase_level_form.c
+    phrase_role.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

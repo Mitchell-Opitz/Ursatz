@@ -91,7 +91,6 @@ add_library(ursatz
     semantics/key_change_extent.c
     semantics/form_level.c
     semantics/expected_length_basis.c
-    semantics/phrase_role.c
     semantics/subphrase_role.c
     relationship/relationship.c
     relationship/predicate_definition.c

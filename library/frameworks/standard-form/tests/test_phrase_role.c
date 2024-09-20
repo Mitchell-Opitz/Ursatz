@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/phrase_role.h"
+#include "phrase_role.h"
 
 static void test_validity(void) {
     for (int i = 0; i < PHRASE_ROLE_COUNT; i++) {
