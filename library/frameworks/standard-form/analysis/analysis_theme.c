@@ -13,7 +13,7 @@
 #include "period_rules.h"
 #include "phrase_rules.h"
 #include "idea_label.h"
-#include "semantics/phrase_beginning.h"
+#include "phrase_beginning.h"
 #include "semantics/phrase_ending.h"
 #include "semantics/phrase_level_form.h"
 #include "sentence_rules.h"

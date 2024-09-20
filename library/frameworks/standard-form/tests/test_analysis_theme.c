@@ -3,7 +3,7 @@
 #include "analysis_theme.h"
 #include "form_test_util.h"
 #include "hybrid_rules.h"
-#include "semantics/phrase_beginning.h"
+#include "phrase_beginning.h"
 #include "semantics/phrase_ending.h"
 #include "semantics/phrase_level_form.h"
 

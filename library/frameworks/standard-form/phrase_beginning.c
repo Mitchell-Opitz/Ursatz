@@ -1,4 +1,4 @@
-#include "semantics/phrase_beginning.h"
+#include "phrase_beginning.h"
 
 #include <stddef.h>
 

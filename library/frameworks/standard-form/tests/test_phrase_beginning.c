@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/phrase_beginning.h"
+#include "phrase_beginning.h"
 
 static void test_validity(void) {
     for (int i = 0; i < PHRASE_BEGINNING_COUNT; i++) {

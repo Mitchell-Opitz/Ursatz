@@ -93,7 +93,6 @@ add_library(ursatz
     semantics/expected_length_basis.c
     semantics/phrase_length_change.c
     semantics/phrase_ending.c
-    semantics/phrase_beginning.c
     semantics/phrase_role.c
     semantics/subphrase_role.c
     semantics/phrase_level_form.c
