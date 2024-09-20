@@ -1,4 +1,4 @@
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 
 #include <stddef.h>
 

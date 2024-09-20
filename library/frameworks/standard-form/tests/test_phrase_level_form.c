@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 
 static void test_validity(void) {
     for (int i = 0; i < PHRASE_LEVEL_FORM_COUNT; i++) {

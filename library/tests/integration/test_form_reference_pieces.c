@@ -34,7 +34,7 @@
 #include "analysis_theme.h"
 #include "form_util.h"
 #include "harmony_cadence_rules.h"
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 
 #define FORM_TARGET_BOUNDARIES 0.80
 #define FORM_TARGET_THEMES 0.70

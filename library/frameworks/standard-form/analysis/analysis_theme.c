@@ -15,7 +15,7 @@
 #include "idea_label.h"
 #include "phrase_beginning.h"
 #include "phrase_ending.h"
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 #include "sentence_rules.h"
 
 static double combine(double a, double b) {

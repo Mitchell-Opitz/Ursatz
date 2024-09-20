@@ -8,7 +8,7 @@
 #include "rules/rule.h"
 #include "phrase_beginning.h"
 #include "phrase_ending.h"
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 #include "semantics/subphrase_role.h"
 
 /*

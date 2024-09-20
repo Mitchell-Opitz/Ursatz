@@ -14,7 +14,7 @@
 #include "external_expansion_kind.h"
 #include "internal_expansion_technique.h"
 #include "phrase_length_change.h"
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 
 static void destroy_expansion(StandardFormExpansion *expansion) {
     interpretation_destroy(expansion->interpretation);

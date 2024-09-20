@@ -8,7 +8,7 @@
 #include "rules/rule.h"
 #include "period_rules.h"
 #include "semantics/cadence_type.h"
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 
 /*
  * Combination rules for standard-form-v1: the ways two phrases combine, beyond the period
