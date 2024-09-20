@@ -3,7 +3,7 @@
 #include "analysis_motive.h"
 #include "form_test_util.h"
 #include "interpretation/uncertainty.h"
-#include "semantics/phrase_ending.h"
+#include "phrase_ending.h"
 
 /* Motives of the soprano: windows of notes grouped by interval pattern and rhythm, the kernel's window matching as the first test,
    maximality, the kinds exact, real and tonal, and the claims and links of the output. */

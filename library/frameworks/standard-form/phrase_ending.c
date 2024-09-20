@@ -1,4 +1,4 @@
-#include "semantics/phrase_ending.h"
+#include "phrase_ending.h"
 
 #include <stddef.h>
 

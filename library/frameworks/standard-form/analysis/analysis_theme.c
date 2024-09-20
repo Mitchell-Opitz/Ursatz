@@ -14,7 +14,7 @@
 #include "phrase_rules.h"
 #include "idea_label.h"
 #include "phrase_beginning.h"
-#include "semantics/phrase_ending.h"
+#include "phrase_ending.h"
 #include "semantics/phrase_level_form.h"
 #include "sentence_rules.h"
 

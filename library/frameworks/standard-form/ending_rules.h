@@ -8,7 +8,7 @@
 #include "rules/rule.h"
 #include "phrase_rules.h"
 #include "semantics/cadence_type.h"
-#include "semantics/phrase_ending.h"
+#include "phrase_ending.h"
 
 /*
  * Ending rules for standard-form-v1. A hybrid phrase-level form pairs the beginning of one

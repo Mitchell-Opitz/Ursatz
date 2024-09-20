@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "semantics/phrase_ending.h"
+#include "phrase_ending.h"
 
 static void test_validity(void) {
     for (int i = 0; i < PHRASE_ENDING_COUNT; i++) {

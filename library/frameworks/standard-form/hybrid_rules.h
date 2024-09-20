@@ -7,7 +7,7 @@
 #include "rules/constraint.h"
 #include "rules/rule.h"
 #include "phrase_beginning.h"
-#include "semantics/phrase_ending.h"
+#include "phrase_ending.h"
 #include "semantics/phrase_level_form.h"
 #include "semantics/subphrase_role.h"
 

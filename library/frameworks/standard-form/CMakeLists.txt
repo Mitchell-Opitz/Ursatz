@@ -35,6 +35,7 @@ add_library(standard_form
     internal_expansion_technique.c
     motive_kind.c
     phrase_beginning.c
+    phrase_ending.c
 )
 target_include_directories(standard_form PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
