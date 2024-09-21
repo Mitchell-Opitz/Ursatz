@@ -20,7 +20,7 @@ The subject of every rule is `FugueExposition` (`fugue_exposition.h`): the
 voices of a fugue, listed from the highest to the lowest (soprano, alto,
 tenor, bass in four voices), each a slotted line (attacks, ties, and rests) on
 one common grid; the statements the caller identifies in them, each a voice,
-a start slot, a `FugueRole` (`src/semantics/fugue_role.h`), and a number of
+a start slot, a `FugueRole` (`fugue_role.h`), and a number of
 notes; the number of slots in a bar; the tonic; whether the countersubject is
 declared invertible; and the limits behind the soft rules.
 
@@ -46,7 +46,7 @@ they begin; entries beyond the number of voices are redundant entries
   Hard: the answer begins a perfect fifth or fourth from the subject; a subject
   on the tonic is answered on the dominant, and a subject on sol is answered
   on do, not re; the answer is real or tonal (`ImitationAnswer`,
-  `src/semantics/imitation_answer.h`; `fugue_answer_kind`), never free; and it
+  `standard-counterpoint/imitation_answer.h`; `fugue_answer_kind`), never free; and it
   keeps the subject's rhythm. Soft: it is altered as little as possible, with
   at most `max_altered_intervals` (default 2, in `FugueLimits`) intervals of a
   different generic size.
@@ -84,3 +84,9 @@ they begin; entries beyond the number of voices are redundant entries
   bass is `frameworks/baroque-ground-bass`.
 - **Finding the statements.** The caller says where each subject, answer, and
   countersubject is.
+
+## Vocabulary enums
+
+Owned here (moved from `src/semantics/`; type names and values unchanged):
+
+- `FugueRole` is a plain enum value naming the part a passage of one voice plays in a fugue: subject (the main theme), answer (a transposition of it, sometimes altered), countersubject (a line sounded with the subject or answer), free counterpoint (an accompanying part that need not recur), link (a short interpolation between entries), or episode (a longer passage between statements). `fugue_role_is_entry` is true for the subject and the answer. It carries no `EntityID`, pitches, or framework claim. Which roles appear where is a convention of a framework (`frameworks/high-baroque-fugue`).

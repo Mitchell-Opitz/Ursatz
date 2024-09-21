@@ -67,7 +67,7 @@ called here.
   the index of its first note, and the number of notes. Hard: every answer
   keeps the leader's rhythm and its direction of motion through the first three
   notes. Soft: every answer is a real or tonal answer rather than a free one
-  (`ImitationAnswer`, `src/semantics/imitation_answer.h`;
+  (`ImitationAnswer`, `standard-counterpoint/imitation_answer.h`;
   `sixteenth_century_point_answer`), the second entry sounds a perfect
   consonance from the first, answers begin at a comparable metric position, and
   every entry begins before the point has finished in the one before it.

@@ -20,9 +20,9 @@ The subject of every rule is `GroundBassPiece` (`ground_piece.h`): the voices
 of the piece, each a slotted line (attacks, ties, and rests) on one common
 grid; which voice is the bass; the number of slots in an iteration of the
 ground and in a bar; the number of beats in a bar; the kind of ostinato
-(`OstinatoType`, `src/semantics/ostinato_type.h`); the imitations the caller
+(`OstinatoType`, `ostinato_type.h`); the imitations the caller
 identifies, each a voice, a start slot, an `ImitativeRole`
-(`src/semantics/imitative_role.h`), and a number of notes; and the limits
+(`imitative_role.h`), and a number of notes; and the limits
 behind the soft rules. A piece has one meter.
 
 Every rule has a Rule/Constraint pair referencing this Framework plus a pure
@@ -71,3 +71,10 @@ iteration it begins in, and only whole iterations are judged.
 - **Changes of meter.** A piece has one meter, so the change to compound time
   that often marks a new iteration is not modeled.
 - **Imitation by finding it.** The caller says where each dux and comes is.
+
+## Vocabulary enums
+
+Owned here (moved from `src/semantics/`; type names and values unchanged):
+
+- `OstinatoType` is a plain enum value naming the kind of repeating pattern a work or section is built on, from broad to specific: ostinato (any pattern that repeats throughout in one voice), ground bass (an ostinato in the bass), chaconne, and passacaglia (the Baroque sub-genres of the ground bass, in triple meter). `ostinato_type_is_ground_bass` is true for the ground bass, chaconne, and passacaglia, and `ostinato_type_is_triple_meter_form` for the last two. It carries no `EntityID`, pitches, or framework claim. What a framework asks of each kind is its own convention (`frameworks/baroque-ground-bass`).
+- `ImitativeRole` is a plain enum value naming the part a voice plays in an imitation: dux (the leader, which states the melody first) or comes (the follower, which imitates it). It carries no `EntityID`, pitches, or framework claim, and is neither `ImitationAnswer` (how closely an entry follows) nor `FugueRole` (the part a passage plays in a fugue).

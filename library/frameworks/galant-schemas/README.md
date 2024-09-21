@@ -23,7 +23,7 @@ This framework holds the prototypes and decides whether an exemplar resembles on
 - A prototype (`galant_prototype.h`) is two or more stages, each with the
   strength of the beat it falls on (`BeatStrength`, strong or weak), the scale
   degrees of the melody and the bass, the figures, and the Roman numeral, and
-  where it typically appears (`SchemaFunction`, `src/semantics/schema_function.h`).
+  where it typically appears (`SchemaFunction`, `schema_function.h`).
 - An exemplar (`galant_exemplar.h`) is the pitches of the melody and the bass
   and the strength of the beat at each stage, and the tonic. The caller says which
   notes are the stages.
@@ -97,3 +97,9 @@ here.
 ## Analysis of real music
 
 `analysis/` matches the prototypes against the outer-voice degrees of a run of segments: stage sequences with embellishment gaps, metric fit, key-relative stages and a bass-only allowance, with the overlaps resolved by confidence. The input is a neutral per-segment struct the caller fills; the adapter includes no framework but `standard-counterpoint`. See `docs/modules/schema-sequence-analysis.md`.
+
+## Vocabulary enums
+
+Owned here (moved from `src/semantics/`; type names and values unchanged):
+
+- `SchemaFunction` is a plain enum value naming where a Galant schema typically appears in a piece, in the order they occur: opening gambit (to start a piece), continuation (after an opening, as a response to it or to carry the music on: the answer, process, and transition schemas), pre-cadential (just before the cadence, to lead into it), cadence (to conclude), or post-cadential (after the cadence). It carries no `EntityID`, pitches, or framework claim. Which schemas have which function is a convention of a framework (`frameworks/galant-schemas`).

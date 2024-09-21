@@ -65,7 +65,7 @@ referencing this Framework plus a pure check function.
 ### First species
 
 Note against note counterpoint (`CounterpointSpecies` first,
-`src/semantics/counterpoint_species.h`) stacks stricter rules on the common
+`counterpoint_species.h`) stacks stricter rules on the common
 ones above. The caller supplies the tonic and which part is the cantus firmus;
 the counterpoint is the other part. Where the common rules treat something as
 advice, first species can make it hard.
@@ -104,7 +104,7 @@ advice, first species can make it hard.
 ### Second species
 
 Two notes against one (`CounterpointSpecies` second,
-`src/semantics/counterpoint_species.h`). There is no rhythm model, so the
+`counterpoint_species.h`). There is no rhythm model, so the
 counterpoint is a list of slots, two per bar (`second_species_exercise.h`):
 the first slot is the strong beat (`BeatStrength`,
 `src/semantics/beat_strength.h`), the second the weak beat. A slot is an
@@ -151,7 +151,7 @@ which part is the cantus firmus, and the tonic.
 ### Third species
 
 Four notes against one (`CounterpointSpecies` third,
-`src/semantics/counterpoint_species.h`). The counterpoint is a list of slots
+`counterpoint_species.h`). The counterpoint is a list of slots
 (`counterpoint_slots.h`), four per bar, with the strengths strong, weak, medium,
 weak (`BeatStrength`, `src/semantics/beat_strength.h`). A bar is four quarter
 notes (the first may be a quarter rest and three notes) or a whole note (an
@@ -197,7 +197,7 @@ exercise, which says which part is the cantus firmus, and the tonic.
 ### Fourth species
 
 Syncopated counterpoint (`CounterpointSpecies` fourth,
-`src/semantics/counterpoint_species.h`). The counterpoint is a list of slots
+`counterpoint_species.h`). The counterpoint is a list of slots
 (`counterpoint_slots.h`), two per bar, strong then weak. The weak-beat note is
 tied across the bar line to the next strong beat. The first bar is a half rest
 and a note, a middle bar is a new note on the weak beat and a tie (or a new
@@ -242,7 +242,7 @@ which part is the cantus firmus, and the tonic.
 ### Fifth species
 
 Florid counterpoint (`CounterpointSpecies` fifth,
-`src/semantics/counterpoint_species.h`). The counterpoint mixes the note values
+`counterpoint_species.h`). The counterpoint mixes the note values
 of the first four species, and adds eighth notes. It is a list of slots
 (`counterpoint_slots.h`) on an eighth-note grid, eight per bar, with the
 strengths strong, medium (the third beat), and weak. A note is an attack and
@@ -350,3 +350,10 @@ beyond the melodic arch tendency. Choosing a counterpoint for a cantus
 firmus. The perfect fourth between two upper parts is consonant, but this
 framework has two parts only. Three or more parts and imitation in the style of
 16th-century choral polyphony are in `frameworks/sixteenth-century-style`.
+
+## Vocabulary enums
+
+Owned here (moved from `src/semantics/`; type names and values unchanged):
+
+- `CounterpointSpecies` is a plain enum value naming one of the five species of strict counterpoint (first through fifth, ordered simplest to most elaborate), with a helper for the counterpoint notes against each cantus firmus note (1, 2, 4, 2, and 0 for the fifth, which mixes ratios). It carries no `EntityID`, rules, or framework claim. What each species requires of a line is a convention of `frameworks/standard-counterpoint`.
+- `ImitationAnswer` is a plain enum value naming how a later entry of a melody answers an earlier one in imitative writing: real (every interval kept at a fixed transposition), tonal (adjusted by a step to stay in the key), or free (keeps the rhythm and opening shape, then goes its own way). `imitation_answer_keeps_intervals` is true only for the real answer. It carries no `EntityID`, pitches, or framework claim. Which answer a style expects, and how closely it is kept, is a convention of a framework (`frameworks/sixteenth-century-style`).

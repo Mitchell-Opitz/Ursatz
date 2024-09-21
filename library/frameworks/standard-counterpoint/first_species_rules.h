@@ -30,7 +30,7 @@
  * broken. An exercise is valid when no hard rule is broken. The number of
  * counterpoint notes against each cantus firmus note is one for first
  * species (counterpoint_species_notes_per_cantus_note in
- * semantics/counterpoint_species.h), which equal-length lines already
+ * counterpoint_species.h), which equal-length lines already
  * give.
  */
 
