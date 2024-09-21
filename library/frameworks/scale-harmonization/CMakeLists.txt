@@ -8,6 +8,8 @@ add_library(scale_harmonization
     scale_octave_rules.c
     analysis/scale_analysis_claim.c
     analysis/scale_analysis_detect.c
+    scale_direction.c
+    sequence_kind.c
 )
 target_include_directories(scale_harmonization PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

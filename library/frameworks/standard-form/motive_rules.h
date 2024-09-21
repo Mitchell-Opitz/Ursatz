@@ -6,7 +6,7 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/motive_kind.h"
+#include "motive_kind.h"
 
 /*
  * Motive rules for standard-form-v1. A motive is a short, regularly recurring snippet of

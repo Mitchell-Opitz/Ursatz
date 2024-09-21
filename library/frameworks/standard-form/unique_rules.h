@@ -6,7 +6,7 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/phrase_level_form.h"
+#include "phrase_level_form.h"
 
 /*
  * Unique form rules for standard-form-v1. Sentences and periods are the archetypes of

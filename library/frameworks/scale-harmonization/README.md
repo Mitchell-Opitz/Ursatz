@@ -18,12 +18,12 @@ frameworks' headers on the include path.
 The subject of every rule is `ScaleHarmonization` (`scale_harmonization.h`): a
 run of stages, one for each bass note (or for each harmony, where two sit over one
 bass note), each with the bass and the upper voices, and the direction the bass
-runs (`ScaleDirection`, `src/semantics/scale_direction.h`) and the tonic. Rhythm
+runs (`ScaleDirection`, `scale_direction.h`) and the tonic. Rhythm
 is not modeled.
 
 The Rule of the Octave is a cheat sheet for harmonizing bass lines, one chord for
 each scale degree, in an ascending and a descending form. A sequence
-(`SequenceKind`, `src/semantics/sequence_kind.h`) is a pattern of one or more
+(`SequenceKind`, `sequence_kind.h`) is a pattern of one or more
 harmonies that repeats in the direction of the scale.
 
 Every rule has a Rule/Constraint pair referencing this Framework plus a pure
@@ -82,3 +82,10 @@ check function. A rule that states what the pattern requires is hard; "avoid" an
 ## Analysis of real music
 
 `analysis/` detects harmonic sequences (a model repeated transposed by a constant diatonic interval) in the outer voices and Roman numerals of a run of segments, and assigns their kind with the patterns and rules above. It reads galant-schemas' neutral segment struct. A cycle of fifths has no pattern here, so it is reported with its existing kind and marked as not rule-backed. See `docs/modules/schema-sequence-analysis.md`.
+
+## Vocabulary enums
+
+Owned here (moved from `src/semantics/`; type names and values unchanged):
+
+- `ScaleDirection` is a plain enum value naming the direction a scale or a bass line runs: ascending or descending. `scale_direction_opposite` gives the other. It carries no `EntityID`, pitches, or framework claim, and is not `ContourDirection` (`semantics/contour.h`), which also has a "same" direction and describes the change between two pitches of a `Contour`.
+- `SequenceKind` is a plain enum value naming a kind of sequential harmonization of a bass scale, a pattern of one or more harmonies that repeats in the direction of the scale: parallel chords, 5-6, 7-6 (a chain of suspensions), cycle of fifths, or 2-3 (the inversion of the 7-6, also a chain of suspensions; `sequence_kind_is_suspension_chain` is true for these two). It carries no `EntityID`, pitches, or framework claim. Which patterns a framework encodes, and their intervals above the bass, are its own convention (`frameworks/scale-harmonization`).

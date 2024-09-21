@@ -6,7 +6,7 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/continuation_trait.h"
+#include "continuation_trait.h"
 #include "semantics/subphrase_role.h"
 
 /*

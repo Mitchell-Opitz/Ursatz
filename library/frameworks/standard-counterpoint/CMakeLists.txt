@@ -60,6 +60,8 @@ add_library(standard_counterpoint
     analysis/analysis_melody_climax.c
     analysis/analysis_melody_leaps.c
     analysis/analysis_melody_nct.c
+    counterpoint_species.c
+    imitation_answer.c
 )
 target_include_directories(standard_counterpoint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

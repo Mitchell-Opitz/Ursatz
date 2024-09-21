@@ -6,8 +6,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
-#include "semantics/idea_label.h"
-#include "semantics/phrase_beginning.h"
+#include "idea_label.h"
+#include "phrase_beginning.h"
 
 /*
  * Beginning rules for standard-form-v1. A hybrid phrase-level form pairs the beginning of one

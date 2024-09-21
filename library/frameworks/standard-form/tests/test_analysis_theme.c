@@ -3,9 +3,9 @@
 #include "analysis_theme.h"
 #include "form_test_util.h"
 #include "hybrid_rules.h"
-#include "semantics/phrase_beginning.h"
-#include "semantics/phrase_ending.h"
-#include "semantics/phrase_level_form.h"
+#include "phrase_beginning.h"
+#include "phrase_ending.h"
+#include "phrase_level_form.h"
 
 /* Themes from segmented phrases: the framework's beginning, ending and pairing rules over idea similarity and the cadences. */
 

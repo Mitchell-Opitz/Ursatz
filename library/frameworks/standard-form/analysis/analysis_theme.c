@@ -12,10 +12,10 @@
 #include "hybrid_rules.h"
 #include "period_rules.h"
 #include "phrase_rules.h"
-#include "semantics/idea_label.h"
-#include "semantics/phrase_beginning.h"
-#include "semantics/phrase_ending.h"
-#include "semantics/phrase_level_form.h"
+#include "idea_label.h"
+#include "phrase_beginning.h"
+#include "phrase_ending.h"
+#include "phrase_level_form.h"
 #include "sentence_rules.h"
 
 static double combine(double a, double b) {

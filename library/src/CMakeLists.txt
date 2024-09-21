@@ -84,34 +84,14 @@ add_library(ursatz
     semantics/scale.c
     semantics/contour.c
     semantics/voice_part.c
-    semantics/counterpoint_species.c
     semantics/beat_strength.c
     semantics/non_chord_tone.c
-    semantics/imitation_answer.c
-    semantics/fugue_role.c
-    semantics/ostinato_type.c
-    semantics/imitative_role.c
-    semantics/schema_function.c
-    semantics/scale_direction.c
-    semantics/sequence_kind.c
     semantics/cadence_type.c
     semantics/applied_chord_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
     semantics/expected_length_basis.c
-    semantics/external_expansion_kind.c
-    semantics/alternative_path_kind.c
-    semantics/internal_expansion_technique.c
-    semantics/expansion_placement.c
-    semantics/phrase_length_change.c
-    semantics/phrase_ending.c
-    semantics/phrase_beginning.c
-    semantics/continuation_trait.c
-    semantics/idea_label.c
-    semantics/phrase_role.c
     semantics/subphrase_role.c
-    semantics/phrase_level_form.c
-    semantics/motive_kind.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c

@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "pitch/pitch_spelling.h"
-#include "semantics/fugue_role.h"
+#include "fugue_role.h"
 #include "semantics/voice_part.h"
 #include "standard-counterpoint/counterpoint_slots.h"
 

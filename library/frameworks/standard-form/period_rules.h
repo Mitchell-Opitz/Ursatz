@@ -8,8 +8,8 @@
 #include "rules/rule.h"
 #include "phrase_rules.h"
 #include "semantics/cadence_type.h"
-#include "semantics/idea_label.h"
-#include "semantics/phrase_role.h"
+#include "idea_label.h"
+#include "phrase_role.h"
 
 /*
  * Period rules for standard-form-v1. A period is a phrase-level form of two phrases, an

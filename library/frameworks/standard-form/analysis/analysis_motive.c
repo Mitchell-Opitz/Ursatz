@@ -8,7 +8,7 @@
 #include "analysis_motive_match.h"
 #include "analysis_motive_shape.h"
 #include "analysis_time.h"
-#include "semantics/phrase_ending.h"
+#include "phrase_ending.h"
 #include "core/occurrence.h"
 #include "core/value.h"
 #include "pitch/pitch_identity.h"

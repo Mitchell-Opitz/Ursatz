@@ -7,6 +7,8 @@ add_library(baroque_ground_bass
     ground_variety_rules.c
     ground_imitation_rules.c
     ground_rules.c
+    imitative_role.c
+    ostinato_type.c
 )
 target_include_directories(baroque_ground_bass PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

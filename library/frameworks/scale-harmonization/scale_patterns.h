@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "semantics/scale_direction.h"
-#include "semantics/sequence_kind.h"
+#include "scale_direction.h"
+#include "sequence_kind.h"
 
 /*
  * The sequential harmonizations of a bass scale encoded by
