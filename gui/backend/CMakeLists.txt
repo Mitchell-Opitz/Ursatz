@@ -6,6 +6,7 @@ add_executable(ursatz-gui-backend
   src/service/id_service.c
   src/service/corpus_service.c
   src/service/composer_service.c
+  src/service/composition_service.c
   src/routes/health.c
   src/routes/analyzer.c
   src/routes/corpus.c

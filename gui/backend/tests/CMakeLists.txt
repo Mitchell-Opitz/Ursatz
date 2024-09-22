@@ -5,6 +5,7 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
@@ -36,6 +37,7 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
@@ -77,6 +79,7 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c

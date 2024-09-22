@@ -9,8 +9,12 @@
 #include <cJSON.h>
 
 #include "../service/composer_service.h"
+#include "../service/composition_service.h"
 
 static const char *kComposerPrefix = "/api/composer";
+static const char *kCompositionsDir = "compositions";
+static const size_t kMaxRequestBodySize = 64 * 1024;
+#define MAX_SEGMENTS 8
 
 /* Sends body as application/json with the given status line. */
 static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
@@ -119,6 +123,188 @@ static int handle_status(struct mg_connection *conn) {
   return send_object(conn, 200, object);
 }
 
+/* Reads the request body into a NUL-terminated buffer (caller frees), or NULL
+ * on a read error or a body over kMaxRequestBodySize. */
+static char *read_request_body(struct mg_connection *conn) {
+  size_t capacity = 4096;
+  char *buffer = malloc(capacity);
+  if (!buffer) {
+    return NULL;
+  }
+
+  size_t total = 0;
+  for (;;) {
+    if (total + 1 == capacity) {
+      if (capacity >= kMaxRequestBodySize) {
+        free(buffer);
+        return NULL;
+      }
+      char *grown = realloc(buffer, capacity * 2);
+      if (!grown) {
+        free(buffer);
+        return NULL;
+      }
+      buffer = grown;
+      capacity *= 2;
+    }
+
+    int n = mg_read(conn, buffer + total, capacity - total - 1);
+    if (n < 0) {
+      free(buffer);
+      return NULL;
+    }
+    if (n == 0) {
+      break;
+    }
+    total += (size_t)n;
+  }
+
+  buffer[total] = '\0';
+  return buffer;
+}
+
+/* Reads the body as a JSON object. NULL (and a 400 already sent) otherwise. */
+static cJSON *read_json_body(struct mg_connection *conn, int *status) {
+  char *text = read_request_body(conn);
+  cJSON *body = text ? cJSON_Parse(text) : NULL;
+  free(text);
+  if (!body || !cJSON_IsObject(body)) {
+    cJSON_Delete(body);
+    *status = send_error(conn, 400, "invalid json body");
+    return NULL;
+  }
+  return body;
+}
+
+static int send_response(struct mg_connection *conn, UrsatzGuiCompositionResponse response) {
+  int status = send_json_status(conn, response.status, reason_phrase(response.status),
+                                response.body ? response.body : "{\"error\":\"out of memory\"}");
+  ursatz_gui_composition_response_destroy(&response);
+  return status;
+}
+
+/* Sends file bytes. attachment_name, when not NULL, makes it a download. */
+static int send_bytes(struct mg_connection *conn, const char *content_type, const char *attachment_name,
+                      const char *data, size_t size) {
+  if (attachment_name) {
+    mg_printf(conn,
+              "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Disposition: attachment; filename=\"%s\"\r\n"
+              "Content-Length: %zu\r\nConnection: close\r\n\r\n",
+              content_type, attachment_name, size);
+  } else {
+    mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
+              content_type, size);
+  }
+  mg_write(conn, data, size);
+  return 200;
+}
+
+/* GET .../compositions/<id>/versions/<n>/plan | musicxml | midi. */
+static int handle_version_file(struct mg_connection *conn, const char *id, const char *version, const char *what) {
+  UrsatzGuiCompositionFile file;
+  const char *content_type;
+  const char *extension;
+  bool attachment = false;
+  if (strcmp(what, "plan") == 0) {
+    file = URSATZ_GUI_COMPOSITION_FILE_PLAN;
+    content_type = "application/json";
+    extension = "json";
+  } else if (strcmp(what, "musicxml") == 0) {
+    file = URSATZ_GUI_COMPOSITION_FILE_MUSICXML;
+    content_type = "application/xml";
+    extension = "musicxml";
+  } else if (strcmp(what, "midi") == 0) {
+    file = URSATZ_GUI_COMPOSITION_FILE_MIDI;
+    content_type = "audio/midi";
+    extension = "mid";
+    attachment = true;
+  } else {
+    return send_error(conn, 404, "not found");
+  }
+
+  size_t size = 0;
+  char *data = ursatz_gui_composition_read_version_file(kCompositionsDir, id, version, file, &size);
+  if (!data) {
+    return send_error(conn, 404, "not found");
+  }
+  char name[160];
+  snprintf(name, sizeof(name), "%s-v%s.%s", id, version, extension);
+  int status = send_bytes(conn, content_type, attachment ? name : NULL, data, size);
+  free(data);
+  return status;
+}
+
+/* Splits rest at '/' into segments (in place). Returns the count, or 0 when
+ * there are more than MAX_SEGMENTS or an empty one. */
+static size_t split_path(char *rest, char *segments[MAX_SEGMENTS]) {
+  size_t count = 0;
+  char *start = rest;
+  for (;;) {
+    char *slash = strchr(start, '/');
+    if (*start == '\0' || slash == start || count == MAX_SEGMENTS) {
+      return 0;
+    }
+    segments[count++] = start;
+    if (!slash) {
+      return count;
+    }
+    *slash = '\0';
+    start = slash + 1;
+  }
+}
+
+static int handle_compositions(struct mg_connection *conn, const char *method, char *segments[], size_t count) {
+  if (count == 1) {
+    if (strcmp(method, "GET") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    return send_response(conn, ursatz_gui_composition_list(kCompositionsDir));
+  }
+
+  const char *id = segments[1];
+  if (count == 2) {
+    if (strcmp(method, "GET") == 0) {
+      return send_response(conn, ursatz_gui_composition_get(kCompositionsDir, id));
+    }
+    if (strcmp(method, "DELETE") == 0) {
+      return send_response(conn, ursatz_gui_composition_delete(kCompositionsDir, id));
+    }
+    if (strcmp(method, "PATCH") == 0) {
+      int status = 0;
+      cJSON *body = read_json_body(conn, &status);
+      if (!body) {
+        return status;
+      }
+      UrsatzGuiCompositionResponse response = ursatz_gui_composition_rename(kCompositionsDir, id, body);
+      cJSON_Delete(body);
+      return send_response(conn, response);
+    }
+    return send_error(conn, 405, "method not allowed");
+  }
+
+  if (count == 5 && strcmp(segments[2], "versions") == 0) {
+    if (strcmp(method, "GET") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    return handle_version_file(conn, id, segments[3], segments[4]);
+  }
+
+  return send_error(conn, 404, "not found");
+}
+
+/* POST /api/composer/grow and /api/composer/plan. */
+static int handle_create(struct mg_connection *conn, bool grow) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  UrsatzGuiCompositionResponse response =
+      grow ? ursatz_gui_composition_grow(kCompositionsDir, body) : ursatz_gui_composition_plan(kCompositionsDir, body);
+  cJSON_Delete(body);
+  return send_response(conn, response);
+}
+
 /*
  * Single handler registered at kComposerPrefix ("/api/composer"). civetweb
  * routes the prefix and every "prefix/something" URI to it (see the note in
@@ -134,13 +320,31 @@ static int composer_handler(struct mg_connection *conn, void *cbdata) {
   if (strncmp(uri, kComposerPrefix, prefix_len) != 0 || uri[prefix_len] != '/') {
     return send_error(conn, 404, "not found");
   }
-  const char *rest = uri + prefix_len + 1;
 
-  if (strcmp(rest, "status") == 0) {
+  char rest[256];
+  if (snprintf(rest, sizeof(rest), "%s", uri + prefix_len + 1) >= (int)sizeof(rest)) {
+    return send_error(conn, 404, "not found");
+  }
+  char *segments[MAX_SEGMENTS];
+  size_t count = split_path(rest, segments);
+  if (count == 0) {
+    return send_error(conn, 404, "not found");
+  }
+
+  if (count == 1 && strcmp(segments[0], "status") == 0) {
     if (strcmp(method, "GET") != 0) {
       return send_error(conn, 405, "method not allowed");
     }
     return handle_status(conn);
+  }
+  if (count == 1 && (strcmp(segments[0], "grow") == 0 || strcmp(segments[0], "plan") == 0)) {
+    if (strcmp(method, "POST") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    return handle_create(conn, strcmp(segments[0], "grow") == 0);
+  }
+  if (strcmp(segments[0], "compositions") == 0) {
+    return handle_compositions(conn, method, segments, count);
   }
 
   return send_error(conn, 404, "not found");
