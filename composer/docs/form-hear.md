@@ -25,8 +25,18 @@ constraint does not make a cadence: the notes and chords must.
 | Melody, voice 0 | The soprano, rendered by `plan_render`. |
 | Bass | The bass line, rendered by `plan_render`. |
 | Meter | The MeterMap the adapter counts measures in. |
-| Key | The scale degree and alteration of every note. |
+| Key | The scale degree and alteration of every note, in the key span under the note's start; the key of every chord. |
 | Harmony | One segment per chord, and the chords the cadences are heard over. |
+
+## Several keys
+
+The key lane may hold the span in one key span or several (a modulation, R-069). A span in one key is heard as it always
+was. With several, a note's scale degree is read in the key under its start and so is the soprano over each chord, and
+each chord is read in the key under it (its numeral in that key's mode), with its own key reference for the recognizer.
+A cadence is therefore recognized in the key of the chord it arrives on: a PAC in G has G as its soprano, which in C
+would be the fifth and make the cadence imperfect. The key spans must follow each other and hold the whole span; a chord
+may not cross a key change. `FormHeard.cadences` lists the cadences heard, each with where its arrival chord starts and
+its `CadenceType`.
 
 A note belongs to the span when it starts inside it.
 
@@ -52,14 +62,14 @@ and has fragmentation. `form_hear_form_name` gives standard-form's own name for 
 | --- | --- |
 | `FORM_HEAR_ERR_NOT_WRITTEN` | A melody, bass or harmony span over the range is Constrained. |
 | `FORM_HEAR_ERR_METER` | The span is not in one meter span, does not start on a barline, or is not whole bars. |
-| `FORM_HEAR_ERR_ANALYSIS` | No single key span covers the span, the chords do not tile it in whole strong beats, or an analysis step failed. |
+| `FORM_HEAR_ERR_ANALYSIS` | The key spans do not hold the span, the chords do not tile it in whole strong beats, or an analysis step failed. |
 
 ## Limits
 
 These are the limits of the input the adapter is given and of the adapter itself. They are written
 here, not worked around.
 
-- One key and one meter over the span, and at most 64 chords.
+- One meter over the span, any number of key spans that follow each other, and at most 64 chords.
 - standard-harmony hears a half cadence only at the END of a phrase on V: a root-position V that
   the next chord resolves as a cadence's dominant is that cadence's. An antecedent's V followed by a
   root-position tonic is heard as an authentic cadence into the consequent, and a V reached from a
@@ -75,11 +85,12 @@ here, not worked around.
 
 ## Fixtures
 
-`tests/test_form_hear.c` hears two hand-written Realized themes. Both are heard as written.
+`tests/test_form_hear.c` hears three hand-written Realized themes. All are heard as written.
 
 | Fixture | Written | Heard |
 | --- | --- | --- |
 | `sentence_c_major.json` | 8 bars, 4/4: presentation I V6/5 I V6/5, continuation IV ii V I, PAC | sentence, bars 0 to 7, presentation + continuation, PAC |
 | `period_a_minor.json` | 8 bars, 4/4: antecedent i V6 i V (HC), consequent i6 V6 iv V i (PAC) | period, bars 0 to 7, antecedent + consequent, HC then PAC |
+| `sentence_c_to_g.json` | 8 bars, 4/4: the C major sentence with its continuation moved a fifth up, in G major from bar 5: presentation in C, then IV (the pivot) ii V I in G | sentence, bars 0 to 7, presentation + continuation, PAC (in G) |
 
 The presentation alone (bars 0 to 3) hears no theme, having no cadence.
