@@ -1031,8 +1031,6 @@ fail:
     return response;
 }
 
-/* ---- reading the store ---------------------------------------------- */
-
 /* A composition directory from a request id, or false when the id is not
    valid or the directory does not exist. */
 static bool find_composition(const char *compositions_dir, const char *id, char *comp_dir, size_t size) {
@@ -1043,6 +1041,595 @@ static bool find_composition(const char *compositions_dir, const char *id, char 
     }
     return path_is_dir(comp_dir);
 }
+
+/* A version or variation number from a URL: digits only, 1 to MAX_VERSION. */
+static bool parse_number(const char *text, long *out) {
+    if (!text || text[0] == '\0' || strlen(text) > 4) {
+        return false;
+    }
+    for (const char *c = text; *c; c++) {
+        if (!isdigit((unsigned char)*c)) {
+            return false;
+        }
+    }
+    long value = strtol(text, NULL, 10);
+    if (value < 1 || value > MAX_VERSION) {
+        return false;
+    }
+    *out = value;
+    return true;
+}
+
+/* ---- changing a composition ----------------------------------------- */
+
+/* The version a request names, with its composition. */
+typedef struct {
+    char comp_dir[PATH_SIZE];
+    char plan_path[PATH_SIZE];
+    char version_dir[PATH_SIZE];
+    cJSON *meta;
+    long version;
+} Source;
+
+static const cJSON *versions_of(const cJSON *meta) {
+    const cJSON *versions = cJSON_GetObjectItemCaseSensitive(meta, "versions");
+    return cJSON_IsArray(versions) ? versions : NULL;
+}
+
+static bool has_version(const cJSON *meta, long number) {
+    const cJSON *item;
+    cJSON_ArrayForEach(item, versions_of(meta)) {
+        const cJSON *n = cJSON_GetObjectItemCaseSensitive(item, "n");
+        if (cJSON_IsNumber(n) && (long)n->valuedouble == number) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static long highest_version(const cJSON *meta) {
+    long highest = 0;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, versions_of(meta)) {
+        const cJSON *n = cJSON_GetObjectItemCaseSensitive(item, "n");
+        if (cJSON_IsNumber(n) && (long)n->valuedouble > highest) {
+            highest = (long)n->valuedouble;
+        }
+    }
+    return highest;
+}
+
+static void source_destroy(Source *source) {
+    cJSON_Delete(source->meta);
+    source->meta = NULL;
+}
+
+/* Finds the composition and the version of request. False with *failure set:
+   404 for a composition or version that is not there, 400 for a bad number. */
+static bool open_source(const char *compositions_dir, const char *id, const cJSON *request, Source *source,
+                        UrsatzGuiCompositionResponse *failure) {
+    memset(source, 0, sizeof(*source));
+    if (!find_composition(compositions_dir, id, source->comp_dir, sizeof(source->comp_dir))) {
+        *failure = respond_not_found("composition not found");
+        return false;
+    }
+    Validation v = {{0}};
+    bool present = false;
+    long long number = 0;
+    if (!cJSON_IsObject(request)) {
+        *failure = respond_error(400, "invalid request", NULL);
+        return false;
+    }
+    if (!integer_value(request, "version", 1, MAX_VERSION, &present, &number, &v) || !present) {
+        *failure = respond_error(400, "invalid version", NULL);
+        return false;
+    }
+    source->version = (long)number;
+    source->meta = read_meta(source->comp_dir);
+    if (!source->meta || !has_version(source->meta, source->version) ||
+        !join_path(source->version_dir, sizeof(source->version_dir), "%s/v%ld", source->comp_dir, source->version) ||
+        !join_path(source->plan_path, sizeof(source->plan_path), "%s/plan.json", source->version_dir) ||
+        !path_is_file(source->plan_path)) {
+        source_destroy(source);
+        *failure = respond_not_found("version not found");
+        return false;
+    }
+    return true;
+}
+
+/* Makes the directory of the next version. Returns its number, 0 on failure.
+   mkdir settles two requests that pick the same number. */
+static long reserve_version(const char *comp_dir, const cJSON *meta, char *version_dir, size_t size) {
+    for (long number = highest_version(meta) + 1; number <= MAX_VERSION; number++) {
+        if (!join_path(version_dir, size, "%s/v%ld", comp_dir, number)) {
+            return 0;
+        }
+        int made = make_dir(version_dir);
+        if (made == 1) {
+            return number;
+        }
+        if (made < 0) {
+            return 0;
+        }
+    }
+    return 0;
+}
+
+/* Adds a version to meta.json, in order of its number. Takes ownership. */
+static bool append_version(const char *comp_dir, cJSON *version) {
+    if (!version) {
+        return false;
+    }
+    pthread_mutex_lock(&meta_mutex);
+    cJSON *meta = read_meta(comp_dir);
+    cJSON *versions = meta ? cJSON_GetObjectItemCaseSensitive(meta, "versions") : NULL;
+    bool ok = false;
+    if (cJSON_IsArray(versions)) {
+        const cJSON *number = cJSON_GetObjectItemCaseSensitive(version, "n");
+        int position = 0;
+        const cJSON *item;
+        cJSON_ArrayForEach(item, versions) {
+            const cJSON *n = cJSON_GetObjectItemCaseSensitive(item, "n");
+            if (cJSON_IsNumber(n) && cJSON_IsNumber(number) && n->valuedouble > number->valuedouble) {
+                break;
+            }
+            position++;
+        }
+        ok = cJSON_InsertItemInArray(versions, position, version);
+        if (ok) {
+            version = NULL;
+            ok = write_meta(comp_dir, meta);
+        }
+    }
+    pthread_mutex_unlock(&meta_mutex);
+    cJSON_Delete(version);
+    cJSON_Delete(meta);
+    return ok;
+}
+
+static void args_append(ArgList *args, const ArgList *more) {
+    for (size_t i = 0; i < more->count; i++) {
+        args_add(args, more->items[i]);
+    }
+    args->ok = args->ok && more->ok;
+}
+
+/* The tempo the composition was made with, so a new version sounds at the
+   same speed. It was checked when the composition was made. */
+static void add_stored_tempo(ArgList *args, const Source *source) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(source->meta, "request");
+    Validation ignored = {{0}};
+    if (cJSON_IsObject(request)) {
+        add_tempo(args, request, &ignored);
+    }
+}
+
+/* --node <id> | --section <letter>, and --lane. Exactly one of node and
+   section; lane and node are refused when only a section is allowed. */
+static bool add_target(ArgList *args, const cJSON *request, bool section_only, Validation *v) {
+    const cJSON *node = field(request, "node");
+    const cJSON *section = field(request, "section");
+    if ((node != NULL) == (section != NULL) || (section_only && (node || field(request, "lane")))) {
+        invalid(v, "target");
+        return false;
+    }
+    if (node) {
+        if (!add_integer(args, request, "node", "--node", 1, 999999, v)) {
+            return false;
+        }
+    } else if (!add_text(args, request, "section", "--section", valid_letter, true, v)) {
+        return false;
+    }
+    static const char *const lanes[] = {"harmony", "bass", "melody", "inner", NULL};
+    const cJSON *lane = field(request, "lane");
+    if (lane && (!cJSON_IsString(lane) || !lane->valuestring || !one_of(lane->valuestring, lanes))) {
+        invalid(v, "lane");
+        return false;
+    }
+    if (lane) {
+        args_add(args, "--lane");
+        args_add(args, lane->valuestring);
+    }
+    return true;
+}
+
+static bool add_required_integer(ArgList *args, const cJSON *request, const char *key, const char *flag,
+                                 long long low, long long high, Validation *v) {
+    if (!field(request, key)) {
+        invalid(v, key);
+        return false;
+    }
+    return add_integer(args, request, key, flag, low, high, v);
+}
+
+/* Runs args, whose --out is in version_dir, and records the result as version
+   `number` of the composition. A failure removes version_dir and leaves
+   meta.json as it was. copy_piece takes the piece files from the source
+   version (lock changes the plan only). */
+static UrsatzGuiCompositionResponse finish_version(const Source *source, const char *id, const char *action,
+                                                   const ArgList *args, const char *version_dir, long number,
+                                                   bool copy_piece) {
+    UrsatzGuiComposerOutput output;
+    UrsatzGuiCompositionResponse response;
+    if (!run_composer(args, &output, &response)) {
+        remove_tree(version_dir);
+        return response;
+    }
+    cJSON *summary = parse_output(&output);
+    ursatz_gui_composer_output_destroy(&output);
+    if (!summary) {
+        remove_tree(version_dir);
+        return respond_error(500, "composer output unreadable", NULL);
+    }
+
+    bool copied = true;
+    if (copy_piece) {
+        static const char *const pieces[] = {"piece.mid", "piece.musicxml"};
+        for (size_t i = 0; i < 2; i++) {
+            char from[PATH_SIZE];
+            char to[PATH_SIZE];
+            copied = copied && join_path(from, sizeof(from), "%s/%s", source->version_dir, pieces[i]) &&
+                     join_path(to, sizeof(to), "%s/%s", version_dir, pieces[i]) && copy_file(from, to);
+        }
+    }
+    cJSON *version = copied ? make_version(number, action, args, source->comp_dir, cJSON_Duplicate(summary, true))
+                            : NULL;
+    if (!append_version(source->comp_dir, version)) {
+        cJSON_Delete(summary);
+        remove_tree(version_dir);
+        return respond_failed();
+    }
+
+    cJSON *object = cJSON_CreateObject();
+    if (!object) {
+        cJSON_Delete(summary);
+        return respond(500, NULL);
+    }
+    cJSON_AddTrueToObject(object, "ok");
+    cJSON_AddStringToObject(object, "id", id);
+    cJSON_AddNumberToObject(object, "version", (double)number);
+    cJSON_AddItemToObject(object, "summary", summary);
+    return respond(200, object);
+}
+
+/* lock and regenerate: <command> <plan> <target> --out <new plan> ... */
+static UrsatzGuiCompositionResponse change_plan(const char *compositions_dir, const char *id,
+                                                const cJSON *request, bool lock) {
+    Source source;
+    UrsatzGuiCompositionResponse response;
+    if (!open_source(compositions_dir, id, request, &source, &response)) {
+        return response;
+    }
+
+    Validation v = {{0}};
+    ArgList target;
+    args_init(&target);
+    if (!add_target(&target, request, false, &v) || (!lock && !add_seed(&target, request, &v))) {
+        args_destroy(&target);
+        source_destroy(&source);
+        return respond_error(400, v.message, NULL);
+    }
+
+    char version_dir[PATH_SIZE];
+    long number = reserve_version(source.comp_dir, source.meta, version_dir, sizeof(version_dir));
+    if (number == 0) {
+        args_destroy(&target);
+        source_destroy(&source);
+        return respond_failed();
+    }
+
+    ArgList args;
+    args_init(&args);
+    args_add(&args, lock ? "lock" : "regenerate");
+    args_add(&args, source.plan_path);
+    args_append(&args, &target);
+    args_add(&args, "--out");
+    args_addf(&args, "%s/plan.json", version_dir);
+    if (!lock) {
+        args_add(&args, "--midi");
+        args_addf(&args, "%s/piece.mid", version_dir);
+        args_add(&args, "--musicxml");
+        args_addf(&args, "%s/piece.musicxml", version_dir);
+        add_stored_tempo(&args, &source);
+    }
+    args_add(&args, "--format");
+    args_add(&args, "json");
+
+    response = finish_version(&source, id, lock ? "lock" : "regenerate", &args, version_dir, number, lock);
+    args_destroy(&args);
+    args_destroy(&target);
+    source_destroy(&source);
+    return response;
+}
+
+UrsatzGuiCompositionResponse ursatz_gui_composition_lock(const char *compositions_dir, const char *id,
+                                                         const cJSON *request) {
+    return change_plan(compositions_dir, id, request, true);
+}
+
+UrsatzGuiCompositionResponse ursatz_gui_composition_regenerate(const char *compositions_dir, const char *id,
+                                                               const cJSON *request) {
+    return change_plan(compositions_dir, id, request, false);
+}
+
+/* variations-<k> as a directory name; false for any other name. */
+static bool variation_set_number(const char *name, long *out) {
+    return strncmp(name, "variations-", 11) == 0 && parse_number(name + 11, out);
+}
+
+/* The directory of variations set `set`, in whichever version it was made
+   from. False when there is none. */
+static bool find_variation_dir(const char *comp_dir, const cJSON *meta, long set, char *out, size_t size,
+                               long *from_version) {
+    const cJSON *item;
+    cJSON_ArrayForEach(item, versions_of(meta)) {
+        const cJSON *n = cJSON_GetObjectItemCaseSensitive(item, "n");
+        if (!cJSON_IsNumber(n)) {
+            continue;
+        }
+        if (join_path(out, size, "%s/v%ld/variations-%ld", comp_dir, (long)n->valuedouble, set) && path_is_dir(out)) {
+            *from_version = (long)n->valuedouble;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Makes v<version>/variations-<k> with the next k of the whole composition,
+   so a set is named by k alone. Returns k, 0 on failure. */
+static long reserve_variation_dir(const Source *source, char *dir, size_t size) {
+    pthread_mutex_lock(&meta_mutex);
+    long highest = 0;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, versions_of(source->meta)) {
+        const cJSON *n = cJSON_GetObjectItemCaseSensitive(item, "n");
+        char version_path[PATH_SIZE];
+        if (!cJSON_IsNumber(n) ||
+            !join_path(version_path, sizeof(version_path), "%s/v%ld", source->comp_dir, (long)n->valuedouble)) {
+            continue;
+        }
+        DIR *handle = opendir(version_path);
+        struct dirent *entry;
+        while (handle && (entry = readdir(handle)) != NULL) {
+            long set = 0;
+            if (variation_set_number(entry->d_name, &set) && set > highest) {
+                highest = set;
+            }
+        }
+        if (handle) {
+            closedir(handle);
+        }
+    }
+    long set = highest + 1;
+    bool made = set <= MAX_VERSION && join_path(dir, size, "%s/variations-%ld", source->version_dir, set) &&
+                make_dir(dir) == 1;
+    pthread_mutex_unlock(&meta_mutex);
+    return made ? set : 0;
+}
+
+UrsatzGuiCompositionResponse ursatz_gui_composition_variations(const char *compositions_dir, const char *id,
+                                                               const cJSON *request) {
+    Source source;
+    UrsatzGuiCompositionResponse response;
+    if (!open_source(compositions_dir, id, request, &source, &response)) {
+        return response;
+    }
+
+    Validation v = {{0}};
+    bool harmonize = false;
+    ArgList target;
+    args_init(&target);
+    if (!flag_value(request, "harmonize", &harmonize, &v) || !add_target(&target, request, harmonize, &v) ||
+        !add_required_integer(&target, request, "count", "--count", 1, 16, &v) || !add_seed(&target, request, &v)) {
+        args_destroy(&target);
+        source_destroy(&source);
+        return respond_error(400, v.message, NULL);
+    }
+
+    char set_dir[PATH_SIZE];
+    long set = reserve_variation_dir(&source, set_dir, sizeof(set_dir));
+    if (set == 0) {
+        args_destroy(&target);
+        source_destroy(&source);
+        return respond_failed();
+    }
+
+    ArgList args;
+    args_init(&args);
+    args_add(&args, harmonize ? "harmonize" : "variations");
+    args_add(&args, source.plan_path);
+    args_append(&args, &target);
+    args_add(&args, "--out-dir");
+    args_add(&args, set_dir);
+    args_add(&args, "--midi");
+    args_add(&args, "--musicxml");
+    add_stored_tempo(&args, &source);
+    args_add(&args, "--format");
+    args_add(&args, "json");
+
+    UrsatzGuiComposerOutput output;
+    cJSON *result = NULL;
+    if (run_composer(&args, &output, &response)) {
+        result = parse_output(&output);
+        ursatz_gui_composer_output_destroy(&output);
+        if (!result) {
+            response = respond_error(500, "composer output unreadable", NULL);
+        }
+    }
+
+    if (result) {
+        /* result.json keeps each variation's seed and heard form for choose. */
+        char result_path[PATH_SIZE];
+        char *text = cJSON_Print(result);
+        bool saved = text && join_path(result_path, sizeof(result_path), "%s/result.json", set_dir) &&
+                     write_file_atomic(result_path, text, strlen(text));
+        free(text);
+
+        cJSON *object = cJSON_CreateObject();
+        cJSON *list = cJSON_CreateArray();
+        const cJSON *variations = cJSON_GetObjectItemCaseSensitive(result, "variations");
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, variations) {
+            cJSON *item = cJSON_CreateObject();
+            if (item) {
+                cJSON_AddItemToObject(item, "index", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(entry, "index"), true));
+                cJSON_AddItemToObject(item, "seed", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(entry, "seed"), true));
+                cJSON_AddItemToObject(item, "sections", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(entry, "sections"), true));
+                cJSON_AddItemToArray(list, item);
+            }
+        }
+        if (saved && object && list) {
+            cJSON_AddTrueToObject(object, "ok");
+            cJSON_AddStringToObject(object, "id", id);
+            cJSON_AddNumberToObject(object, "version", (double)source.version);
+            cJSON_AddNumberToObject(object, "set", (double)set);
+            cJSON_AddItemToObject(object, "variations", list);
+            static const char *const counts[] = {"kept", "requested", "seeds_tried"};
+            for (size_t i = 0; i < 3; i++) {
+                cJSON_AddItemToObject(object, counts[i],
+                                      cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(result, counts[i]), true));
+            }
+            response = respond(200, object);
+        } else {
+            cJSON_Delete(object);
+            cJSON_Delete(list);
+            response = respond_failed();
+        }
+        cJSON_Delete(result);
+    }
+    if (response.status != 200) {
+        remove_tree(set_dir);
+    }
+
+    args_destroy(&args);
+    args_destroy(&target);
+    source_destroy(&source);
+    return response;
+}
+
+/* A variation's files and its entry in result.json. */
+static bool open_variation(const char *compositions_dir, const char *id, const char *set_text,
+                           const char *index_text, Source *source, char *set_dir, size_t size, long *index,
+                           long *set, cJSON **entry) {
+    long from_version = 0;
+    if (!parse_number(set_text, set) || !parse_number(index_text, index) ||
+        !find_composition(compositions_dir, id, source->comp_dir, sizeof(source->comp_dir))) {
+        return false;
+    }
+    source->meta = read_meta(source->comp_dir);
+    if (!source->meta || !find_variation_dir(source->comp_dir, source->meta, *set, set_dir, size, &from_version)) {
+        source_destroy(source);
+        return false;
+    }
+    source->version = from_version;
+    char path[PATH_SIZE];
+    char *text = join_path(path, sizeof(path), "%s/result.json", set_dir) ? read_whole_file(path, NULL) : NULL;
+    cJSON *result = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    const cJSON *kept = result ? cJSON_GetObjectItemCaseSensitive(result, "variations") : NULL;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, kept) {
+        const cJSON *number = cJSON_GetObjectItemCaseSensitive(item, "index");
+        if (cJSON_IsNumber(number) && (long)number->valuedouble == *index) {
+            *entry = cJSON_Duplicate(item, true);
+            break;
+        }
+    }
+    cJSON_Delete(result);
+    if (!*entry) {
+        source_destroy(source);
+        return false;
+    }
+    return true;
+}
+
+UrsatzGuiCompositionResponse ursatz_gui_composition_choose(const char *compositions_dir, const char *id,
+                                                           const char *set_text, const char *index_text) {
+    Source source;
+    memset(&source, 0, sizeof(source));
+    char set_dir[PATH_SIZE];
+    long index = 0;
+    long set = 0;
+    cJSON *entry = NULL;
+    if (!open_variation(compositions_dir, id, set_text, index_text, &source, set_dir, sizeof(set_dir), &index, &set,
+                        &entry)) {
+        return respond_not_found("variation not found");
+    }
+
+    char version_dir[PATH_SIZE];
+    long number = reserve_version(source.comp_dir, source.meta, version_dir, sizeof(version_dir));
+    static const char *const from_names[] = {"json", "mid", "musicxml"};
+    static const char *const to_names[] = {"plan.json", "piece.mid", "piece.musicxml"};
+    bool copied = number != 0;
+    for (size_t i = 0; copied && i < 3; i++) {
+        char from[PATH_SIZE];
+        char to[PATH_SIZE];
+        copied = join_path(from, sizeof(from), "%s/variation-%ld.%s", set_dir, index, from_names[i]) &&
+                 join_path(to, sizeof(to), "%s/%s", version_dir, to_names[i]) && copy_file(from, to);
+    }
+
+    cJSON *summary = cJSON_CreateObject();
+    cJSON *version = NULL;
+    if (copied && summary) {
+        cJSON_AddNumberToObject(summary, "from_version", (double)source.version);
+        cJSON_AddNumberToObject(summary, "set", (double)set);
+        cJSON_AddNumberToObject(summary, "index", (double)index);
+        cJSON_AddItemToObject(summary, "seed", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(entry, "seed"), true));
+        cJSON_AddItemToObject(summary, "sections",
+                              cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(entry, "sections"), true));
+        ArgList none;
+        args_init(&none);
+        version = make_version(number, "choose", &none, source.comp_dir, cJSON_Duplicate(summary, true));
+        args_destroy(&none);
+    }
+    cJSON_Delete(entry);
+    if (!append_version(source.comp_dir, version)) {
+        cJSON_Delete(summary);
+        if (number != 0) {
+            remove_tree(version_dir);
+        }
+        source_destroy(&source);
+        return respond_failed();
+    }
+    source_destroy(&source);
+
+    cJSON *object = cJSON_CreateObject();
+    if (!object) {
+        cJSON_Delete(summary);
+        return respond(500, NULL);
+    }
+    cJSON_AddTrueToObject(object, "ok");
+    cJSON_AddStringToObject(object, "id", id);
+    cJSON_AddNumberToObject(object, "version", (double)number);
+    cJSON_AddItemToObject(object, "summary", summary);
+    return respond(200, object);
+}
+
+char *ursatz_gui_composition_read_variation_file(const char *compositions_dir, const char *id, const char *set_text,
+                                                 const char *index_text, UrsatzGuiCompositionFile file,
+                                                 size_t *out_size) {
+    static const char *const extensions[] = {"json", "musicxml", "mid"};
+    Source source;
+    memset(&source, 0, sizeof(source));
+    char set_dir[PATH_SIZE];
+    long index = 0;
+    long set = 0;
+    cJSON *entry = NULL;
+    if (!open_variation(compositions_dir, id, set_text, index_text, &source, set_dir, sizeof(set_dir), &index, &set,
+                        &entry)) {
+        return NULL;
+    }
+    cJSON_Delete(entry);
+    source_destroy(&source);
+    char path[PATH_SIZE];
+    if (!join_path(path, sizeof(path), "%s/variation-%ld.%s", set_dir, index, extensions[file]) ||
+        !path_is_file(path)) {
+        return NULL;
+    }
+    return read_whole_file(path, out_size);
+}
+
+/* ---- reading the store ---------------------------------------------- */
 
 static const char *text_of(const cJSON *object, const char *key) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -1202,24 +1789,6 @@ UrsatzGuiCompositionResponse ursatz_gui_composition_delete(const char *compositi
         cJSON_AddTrueToObject(object, "ok");
     }
     return respond(200, object);
-}
-
-/* A version or variation number from a URL: digits only, 1 to MAX_VERSION. */
-static bool parse_number(const char *text, long *out) {
-    if (!text || text[0] == '\0' || strlen(text) > 4) {
-        return false;
-    }
-    for (const char *c = text; *c; c++) {
-        if (!isdigit((unsigned char)*c)) {
-            return false;
-        }
-    }
-    long value = strtol(text, NULL, 10);
-    if (value < 1 || value > MAX_VERSION) {
-        return false;
-    }
-    *out = value;
-    return true;
 }
 
 char *ursatz_gui_composition_read_version_file(const char *compositions_dir, const char *id, const char *version,

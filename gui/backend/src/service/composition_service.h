@@ -43,6 +43,34 @@ UrsatzGuiCompositionResponse ursatz_gui_composition_rename(const char *compositi
 
 UrsatzGuiCompositionResponse ursatz_gui_composition_delete(const char *compositions_dir, const char *id);
 
+/* The four commands below work on one version of a composition, named by
+ * request "version", and write the next one (the others leave v<version>
+ * as it is). The target is "node" (a plan node id) or "section" (a form
+ * letter), and optionally "lane" (harmony, bass, melody, inner). */
+
+/* request: {version, node|section, lane?}. Only the plan changes, so the new
+ * version copies the piece files of the one it locks. */
+UrsatzGuiCompositionResponse ursatz_gui_composition_lock(const char *compositions_dir, const char *id,
+                                                         const cJSON *request);
+
+/* request: {version, node|section, lane?, seed?}. */
+UrsatzGuiCompositionResponse ursatz_gui_composition_regenerate(const char *compositions_dir, const char *id,
+                                                               const cJSON *request);
+
+/* request: {version, node|section, lane?, count, seed?, harmonize?}. Writes
+ * v<version>/variations-<k>/variation-<i>.{json,mid,musicxml}; harmonize
+ * takes a section and no lane. Returns k and the variations that were kept. */
+UrsatzGuiCompositionResponse ursatz_gui_composition_variations(const char *compositions_dir, const char *id,
+                                                               const cJSON *request);
+
+/* Makes variation i of variations set k the next version. */
+UrsatzGuiCompositionResponse ursatz_gui_composition_choose(const char *compositions_dir, const char *id,
+                                                           const char *set, const char *index);
+
+/* The bytes of one file of variation i of set k (caller frees), or NULL. */
+char *ursatz_gui_composition_read_variation_file(const char *compositions_dir, const char *id, const char *set,
+                                                 const char *index, UrsatzGuiCompositionFile file, size_t *out_size);
+
 /* The bytes of one file of version n (caller frees), or NULL when the
  * composition, the version or the file does not exist. */
 char *ursatz_gui_composition_read_version_file(const char *compositions_dir, const char *id, const char *version,

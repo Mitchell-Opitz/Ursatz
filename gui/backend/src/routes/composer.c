@@ -199,39 +199,77 @@ static int send_bytes(struct mg_connection *conn, const char *content_type, cons
   return 200;
 }
 
+/* The file a download name stands for: plan, musicxml or midi (a download). */
+static bool file_kind(const char *what, UrsatzGuiCompositionFile *file, const char **content_type,
+                      const char **extension, bool *attachment) {
+  *attachment = false;
+  if (strcmp(what, "plan") == 0) {
+    *file = URSATZ_GUI_COMPOSITION_FILE_PLAN;
+    *content_type = "application/json";
+    *extension = "json";
+  } else if (strcmp(what, "musicxml") == 0) {
+    *file = URSATZ_GUI_COMPOSITION_FILE_MUSICXML;
+    *content_type = "application/xml";
+    *extension = "musicxml";
+  } else if (strcmp(what, "midi") == 0) {
+    *file = URSATZ_GUI_COMPOSITION_FILE_MIDI;
+    *content_type = "audio/midi";
+    *extension = "mid";
+    *attachment = true;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+/* Sends data (malloc'd, freed here) as the file `what`, named name_stem.<ext>. */
+static int send_file(struct mg_connection *conn, char *data, size_t size, const char *what, const char *name_stem) {
+  UrsatzGuiCompositionFile file;
+  const char *content_type;
+  const char *extension;
+  bool attachment;
+  if (!data || !file_kind(what, &file, &content_type, &extension, &attachment)) {
+    free(data);
+    return send_error(conn, 404, "not found");
+  }
+  char name[200];
+  snprintf(name, sizeof(name), "%s.%s", name_stem, extension);
+  int status = send_bytes(conn, content_type, attachment ? name : NULL, data, size);
+  free(data);
+  return status;
+}
+
 /* GET .../compositions/<id>/versions/<n>/plan | musicxml | midi. */
 static int handle_version_file(struct mg_connection *conn, const char *id, const char *version, const char *what) {
   UrsatzGuiCompositionFile file;
   const char *content_type;
   const char *extension;
-  bool attachment = false;
-  if (strcmp(what, "plan") == 0) {
-    file = URSATZ_GUI_COMPOSITION_FILE_PLAN;
-    content_type = "application/json";
-    extension = "json";
-  } else if (strcmp(what, "musicxml") == 0) {
-    file = URSATZ_GUI_COMPOSITION_FILE_MUSICXML;
-    content_type = "application/xml";
-    extension = "musicxml";
-  } else if (strcmp(what, "midi") == 0) {
-    file = URSATZ_GUI_COMPOSITION_FILE_MIDI;
-    content_type = "audio/midi";
-    extension = "mid";
-    attachment = true;
-  } else {
+  bool attachment;
+  if (!file_kind(what, &file, &content_type, &extension, &attachment)) {
     return send_error(conn, 404, "not found");
   }
-
   size_t size = 0;
   char *data = ursatz_gui_composition_read_version_file(kCompositionsDir, id, version, file, &size);
-  if (!data) {
+  char stem[160];
+  snprintf(stem, sizeof(stem), "%s-v%s", id, version);
+  return send_file(conn, data, size, what, stem);
+}
+
+/* GET .../compositions/<id>/variations/<k>/<i>/plan | musicxml | midi. */
+static int handle_variation_file(struct mg_connection *conn, const char *id, const char *set, const char *index,
+                                 const char *what) {
+  UrsatzGuiCompositionFile file;
+  const char *content_type;
+  const char *extension;
+  bool attachment;
+  if (!file_kind(what, &file, &content_type, &extension, &attachment)) {
     return send_error(conn, 404, "not found");
   }
-  char name[160];
-  snprintf(name, sizeof(name), "%s-v%s.%s", id, version, extension);
-  int status = send_bytes(conn, content_type, attachment ? name : NULL, data, size);
-  free(data);
-  return status;
+  size_t size = 0;
+  char *data = ursatz_gui_composition_read_variation_file(kCompositionsDir, id, set, index, file, &size);
+  char stem[160];
+  snprintf(stem, sizeof(stem), "%s-variation-%s-%s", id, set, index);
+  return send_file(conn, data, size, what, stem);
 }
 
 /* Splits rest at '/' into segments (in place). Returns the count, or 0 when
@@ -282,11 +320,47 @@ static int handle_compositions(struct mg_connection *conn, const char *method, c
     return send_error(conn, 405, "method not allowed");
   }
 
+  if (count == 3 && (strcmp(segments[2], "lock") == 0 || strcmp(segments[2], "regenerate") == 0 ||
+                     strcmp(segments[2], "variations") == 0)) {
+    if (strcmp(method, "POST") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    int status = 0;
+    cJSON *body = read_json_body(conn, &status);
+    if (!body) {
+      return status;
+    }
+    UrsatzGuiCompositionResponse response;
+    if (strcmp(segments[2], "lock") == 0) {
+      response = ursatz_gui_composition_lock(kCompositionsDir, id, body);
+    } else if (strcmp(segments[2], "regenerate") == 0) {
+      response = ursatz_gui_composition_regenerate(kCompositionsDir, id, body);
+    } else {
+      response = ursatz_gui_composition_variations(kCompositionsDir, id, body);
+    }
+    cJSON_Delete(body);
+    return send_response(conn, response);
+  }
+
   if (count == 5 && strcmp(segments[2], "versions") == 0) {
     if (strcmp(method, "GET") != 0) {
       return send_error(conn, 405, "method not allowed");
     }
     return handle_version_file(conn, id, segments[3], segments[4]);
+  }
+
+  /* .../variations/<k>/<i>/choose, or the files of variation i of set k. */
+  if (count == 6 && strcmp(segments[2], "variations") == 0) {
+    if (strcmp(segments[5], "choose") == 0) {
+      if (strcmp(method, "POST") != 0) {
+        return send_error(conn, 405, "method not allowed");
+      }
+      return send_response(conn, ursatz_gui_composition_choose(kCompositionsDir, id, segments[3], segments[4]));
+    }
+    if (strcmp(method, "GET") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    return handle_variation_file(conn, id, segments[3], segments[4], segments[5]);
   }
 
   return send_error(conn, 404, "not found");
