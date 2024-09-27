@@ -28,3 +28,6 @@ target_link_libraries(ursatz-gui-backend PRIVATE
 target_compile_definitions(ursatz-gui-backend PRIVATE
   URSATZ_GUI_FRONTEND_DIR="${CMAKE_SOURCE_DIR}/frontend/public"
 )
+
+# The Composer command the backend runs (composer_service.c).
+add_dependencies(ursatz-gui-backend ursatz_composer_cli)
