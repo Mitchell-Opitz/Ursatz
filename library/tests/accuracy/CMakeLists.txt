@@ -1,0 +1,7 @@
+add_library(accuracy_support STATIC romantext.c)
+target_include_directories(accuracy_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(accuracy_support PUBLIC ursatz)
+
+add_executable(test_accuracy_romantext test_romantext.c)
+target_link_libraries(test_accuracy_romantext PRIVATE accuracy_support)
+add_test(NAME accuracy_romantext COMMAND test_accuracy_romantext)
