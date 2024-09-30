@@ -25,6 +25,7 @@ if (piece_build_plan(&request, &plan) == PIECE_OK && compose_run(plan, &config, 
 | `count` | The variations or the layers, instead of `bars`. 0 for the default. |
 | `motive` | The motive, or NULL to have one invented. |
 | `has_accompaniment`, `accompaniment` | An accompaniment under every section, as in grow. A layered form has one in any case (pattern `ANY`). |
+| `modulate`, `seed` | With `modulate`, the sections' keys and the cadences across them are planned from `seed` (see Keys and cadences). Without it every section is in the home key with the template's cadences, as before. |
 
 ## The templates
 
@@ -48,6 +49,49 @@ other than the table's are not planned yet.
 The return defaults: A' of the rounded binary and the second A of the ternary are `exact`, Var k is `ornament` for odd k
 and `reharmonize` for even k, a layer is `exact`. A `return` is stored only: a returning section is grown afresh from
 its motive, not copied from its source.
+
+## Keys and cadences
+
+With `modulate`, `piece_build_plan` runs `piece_plan_keys` and `piece_plan_cadences` (`<ursatz_composer/piece_plan_keys.h>`)
+with `seed`. A key is the home key or one of its closely related keys (`harmony_related_key_at`, kept only when
+`harmony_key_is_closely_related`). A fixed share of seeds, one in three, stays home. Otherwise:
+
+| Template | Keys |
+| --- | --- |
+| binary | A ends in V (major) or III (minor), B starts there and returns home. |
+| rounded binary | The same for A and B; A' is home. |
+| ternary | A home; B starts home and ends in IV, vi or V (major), III, iv or VI (minor); A home again. |
+| variations | All home, except with three variations or more the middle one, wholly in the relative key (vi in major, III in minor). The parallel mode is not closely related and has no pivot, so it is not used. |
+| loop, layered | Home. |
+
+The key lane is Given and owned by the form. A section that changes key halfway has its first half in the key it starts
+in and its second in the key it ends in (4 of 8 bars, 2 of 4); spans that follow each other in one key are one span, so
+a plan in one key has one span, as it always had. The KEY constraint of a section that ends in another key is that key.
+
+A key opens where a span starts after another. The harmony target that starts there has `starts_on` `pivot`
+(`PLAN_HARMONY_ANCHOR_PIVOT`): `harmony-phrase-model` writes a pivot chord first, one `harmony_pivot_find` gives between
+the two keys, as its numeral in the new key. The candidates are the pivots by `harmony_pivot_rank` (best first), without
+a dominant, a diminished triad, or in minor the minor v; the first candidate opens on the best, the others on the
+others. A predominant pivot is the phrase's predominant (only ii may follow IV). `harmony_phrase_checker` rejects a
+candidate whose first chord is not `harmony_pivot_valid` and does not ask for an opening tonic. Because the target is in
+the new key, the cadence the checker hears is heard in it. Only a phrase model has a pivot, so grow-theme opens a key
+only in the second half of a section (a continuation or a consequent) and at the start of an antecedent; a presentation
+or a compound basic idea never opens a key, and the planner never asks them to.
+
+`piece_plan_cadences` sets each section's cadence in a closing form (binary, rounded binary, ternary, variations): the
+last section PAC; a section that ends in another key PAC; a binary A that stays home HC, since it would otherwise close
+in the home key before the piece does; every other section the template's. Loop and layered forms end open by design and
+keep the template's cadences. `piece_check_cadences` checks the plan against `harmony_cadence_strength`: the last
+cadence is a PAC, so the strongest; a section ending in another key ends in a PAC or IAC; no section before the last
+closes in the home key with a PAC unless it is `closed` (ternary A, rounded binary A, the theme and every variation).
+
+After a complete run, `compose_run` of a plan with several key spans runs `piece_check_keys`: every key is closely
+related to the home key, and each key change a section ends in is classified from its length and what follows the
+cadence (`harmony_key_change_classify`) and confirmed by the authentic cadences `form_hear` heard (an authentic cadence
+must arrive inside the new key's span, `harmony_key_change_confirm`); it must be a modulation or a weak modulation, not
+a tonicization. A run that fails the key or cadence check is rejected like a stuck one and starts again from the plan as
+given with other seeds, up to the same 12 rounds; the check of the last run is in `ComposeOutcome.key_check`
+and `.cadence_check`, with `key_rejected` set. No run of the sweeps below was rejected by it.
 
 ## Motives
 
@@ -122,6 +166,36 @@ Baselines, with grow's measured shares for the same sections for comparison:
 
 Variations hear none, as grow does, since every section is a period and grow never hears one (0 of 40). Its runs get
 stuck more the longer the form: in A minor 3/4 with a given motive none of the sizes completes.
+
+### Keys
+
+`tests/test_piece_keys.c`: every template, C major and A minor 4/4, an invented motive, seeds 1 to 10, with `modulate`.
+
+| Test | What it checks | Label |
+| --- | --- | --- |
+| `plan` | The key lane tiles the piece, every key is closely related, a section's KEY constraint is the key it ends in, the cadences pass `piece_check_cadences`, loop and layered keep one key. 64 of the 120 plans change key (8 of 10 for each of the four templates that can). | |
+| `smoke` | Binary in C major: the first of seeds 1 to 5 composes, changes key and passes the checks. | |
+| `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
+
+Every completed run passes every check. The share of runs that complete is below 100% for every template but rounded
+binary, so those five tests are `WILL_FAIL`, with the measured shares:
+
+| Template | Runs complete | Of them change key | Stuck at |
+| --- | --- | --- | --- |
+| binary | 13 of 20 (65%) | 11 | melody 4, bass 1, harmony 2 |
+| rounded binary | 20 of 20 (100%) | 16 | |
+| ternary | 16 of 20 (80%) | 14 | A minor only: harmony 2, melody 2 |
+| variations | 14 of 20 (70%) | 11 | A minor only, all melody |
+| loop | 10 of 20 (50%) | 0 | A minor only, all harmony |
+| layered | 7 of 20 (35%) | 0 | C major: melody 2, bass 1; A minor: harmony 10 |
+
+Loop and layered have one key; they are stuck in A minor 4/4 without `modulate` too (B4's sweeps ran A minor in 3/4),
+and are in the table because the test runs every template. For binary, 5 of the 7 stuck runs complete with the same seeds
+without `modulate` (C major 4, 5, 8, 10; A minor 7), so a key change or a pivot chord is what leaves them stuck, at the
+melody, bass or harmony stage; the other two (A minor 3 and 6) are stuck without it. The causes of the stuck runs of
+ternary and variations were not investigated. None is a run the key check rejected.
+
+## Test notes
 
 Causes:
 

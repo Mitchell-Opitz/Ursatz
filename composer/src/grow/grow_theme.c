@@ -26,6 +26,68 @@
 /* The theme section, the lanes under it, and the motive m0. False when the target is not one grow-theme grows. */
 typedef GrowThemeRequest ThemeRequest;
 
+/* The most key spans read before a section: the ones of the piece up to its end, with a few to spare. */
+#define MAX_KEY_SPANS 32
+
+/*
+ * The key lane over the section (R-069): one key, or the key it starts in and a second key from its half; and, when the
+ * key lane has a span that ends where the section starts, the key before it. Spans are contiguous. False when the
+ * lane does not tile the section that way.
+ */
+static bool read_keys(const PiecePlan *plan, ThemeRequest *request) {
+    LaneSpanId spans[MAX_KEY_SPANS];
+    PlanTime end;
+    PlanTime half;
+    PlanSpan up_to = {{0, 1}, {0, 1}};
+    if (plan_span_end(request->span, &end) != PLAN_OK || plan_time_make(end.num, end.den, &up_to.length) != PLAN_OK ||
+        plan_time_make(request->span.length.num, request->span.length.den * 2, &half) != PLAN_OK ||
+        plan_time_add(request->span.start, half, &half) != PLAN_OK) {
+        return false;
+    }
+    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, up_to, spans, MAX_KEY_SPANS);
+    if (found == 0 || found > MAX_KEY_SPANS) {
+        return false;
+    }
+    size_t at = found;
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan span = plan_lane_span_span(plan, spans[i]);
+        PlanTime span_end;
+        if (plan_span_end(span, &span_end) == PLAN_OK && plan_time_compare(span.start, request->span.start) <= 0 &&
+            plan_time_compare(request->span.start, span_end) < 0) {
+            at = i;
+        }
+    }
+    if (at == found) {
+        return false;
+    }
+    PlanSpan first = plan_lane_span_span(plan, spans[at]);
+    PlanTime first_end;
+    if (plan_span_end(first, &first_end) != PLAN_OK) {
+        return false;
+    }
+    request->key = plan_lane_span_payload(plan, spans[at])->key;
+    if (at > 0 && plan_time_compare(first.start, request->span.start) == 0) {
+        request->has_start_change = true;
+        request->from_key = plan_lane_span_payload(plan, spans[at - 1])->key;
+    }
+    if (plan_time_compare(first_end, end) >= 0) {
+        return at + 1 == found || plan_time_compare(plan_lane_span_span(plan, spans[at + 1]).start, end) >= 0;
+    }
+    /* A second span starts at the half and holds the rest of the section. */
+    if (at + 1 >= found || plan_time_compare(first_end, half) != 0) {
+        return false;
+    }
+    PlanSpan second = plan_lane_span_span(plan, spans[at + 1]);
+    PlanTime second_end;
+    if (plan_time_compare(second.start, half) != 0 || plan_span_end(second, &second_end) != PLAN_OK ||
+        plan_time_compare(second_end, end) < 0) {
+        return false;
+    }
+    request->has_end_change = true;
+    request->end_key = plan_lane_span_payload(plan, spans[at + 1])->key;
+    return true;
+}
+
 static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest *out) {
     ThemeRequest request;
     memset(&request, 0, sizeof(request));
@@ -74,11 +136,9 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     request.meter = plan_lane_span_payload(plan, lane[0])->meter;
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, request.span, lane, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, lane[0]), request.span)) {
+    if (!read_keys(plan, &request)) {
         return false;
     }
-    request.key = plan_lane_span_payload(plan, lane[0])->key;
     request.bar = grow_bar_length(&request.meter);
     request.source = request.has_motive_ref ? request.motive_ref.motive : grow_find_source(plan);
     if (request.source == PLAN_NODE_NONE || !grow_cells_per_bar(&request.meter, &request.cells_per_bar) ||

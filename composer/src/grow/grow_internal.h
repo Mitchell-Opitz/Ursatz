@@ -74,7 +74,11 @@ typedef struct {
     NodeId section;
     PlanSpan span;
     PlanMeter meter;
-    PlanKey key;
+    PlanKey key;                   /* the key the section starts in */
+    bool has_start_change;         /* the key before the section is another, which the section opens */
+    PlanKey from_key;              /* that key; read only with has_start_change */
+    bool has_end_change;           /* the second half of the section is in another key, which it opens */
+    PlanKey end_key;               /* that key; read only with has_end_change */
     PlanCadenceType cadence;
     PlanCadenceType first_cadence; /* meaningful when has_first */
     bool has_first;

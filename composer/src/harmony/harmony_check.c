@@ -260,9 +260,22 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         }
         HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode,
                               progression->request.cadence, progression->request.cells_per_bar,
-                              progression->request.cell_length, false, NULL, false, false};
+                              progression->request.cell_length, false, NULL, false, false, NULL, NULL};
         phrase.no_opening_tonic = progression->request.has_shape &&
                                   progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL;
+        if (progression->request.pivot) {
+            /* A phrase that opens a new key starts on a chord both keys have, which need not be a tonic. */
+            phrase.no_opening_tonic = true;
+            if (progression->chords[0].applied ||
+                !harmony_pivot_chord_valid(progression->request.from_key, progression->request.key,
+                                           &progression->chords[0].chord)) {
+                memset(out, 0, sizeof(*out));
+                out->score_denominator = 1;
+                out->hard_violation = true;
+                snprintf(out->reason, sizeof(out->reason), "first chord is not a pivot chord");
+                return true;
+            }
+        }
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_EMBELLISH_OPERATOR_NAME) == 0) {
@@ -281,7 +294,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
             return false;
         }
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
-                              edit->cell_length, false, NULL, false, false};
+                              edit->cell_length, false, NULL, false, false, NULL, NULL};
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {
@@ -308,7 +321,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false};
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -336,7 +349,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, 
         return false;
     }
     mark_schema_chords(plan, span, count, exempt);
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }

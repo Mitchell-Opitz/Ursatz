@@ -125,10 +125,16 @@ typedef enum {
     PLAN_HARMONY_SHAPE_CADENTIAL     /* the cadential progression over the whole span */
 } PlanHarmonyShapeKind;
 
+/*
+ * Where a harmony span starts or ends. PIVOT is for starts_on of a phrase-model span (R-069) that opens a new key: the
+ * key lane changes where the span starts, and its first chord is a pivot chord, one both keys have as a triad
+ * (standard-harmony's harmony_pivot_find), written as its numeral in the new key. It is not an end anchor.
+ */
 typedef enum {
     PLAN_HARMONY_ANCHOR_ANY,
     PLAN_HARMONY_ANCHOR_TONIC,
-    PLAN_HARMONY_ANCHOR_DOMINANT
+    PLAN_HARMONY_ANCHOR_DOMINANT,
+    PLAN_HARMONY_ANCHOR_PIVOT
 } PlanHarmonyAnchor;
 
 /* max_cells_per_chord 0 means no limit; split_at_bars lets no chord cross a barline. */

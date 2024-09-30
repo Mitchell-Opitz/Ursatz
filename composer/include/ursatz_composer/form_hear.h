@@ -11,7 +11,7 @@
  * music. Only the plan's written lanes over the span are read, never its constraints or its nodes:
  *
  *   - the melody lane (voice 0) is the soprano, the bass lane the bass, each rendered by plan_render;
- *   - the meter lane gives the MeterMap, the key lane the scale degree of every note;
+ *   - the meter lane gives the MeterMap, the key lane the scale degree of every note and the key of every chord;
  *   - each harmony lane chord is one segment;
  *   - the cadences are what standard-harmony's cadence recognizer hears over the chords, the soprano of
  *     each chord being the melody note sounding at its start (not the soprano a cadence constraint
@@ -20,8 +20,10 @@
  * Then standard-form segments the phrases (through the kernel's Phrase Boundary Detection), divides them
  * into ideas and identifies the themes, with its default configuration and the bass included.
  *
- * The span must lie in one meter lane span and one key lane span, start on a barline and be whole bars
- * long, and its chords must tile it, each a whole number of strong beats.
+ * The span must lie in one meter lane span, start on a barline and be whole bars long, and its chords must tile it,
+ * each a whole number of strong beats. The key lane may hold it in one key span or several (R-069, a modulation): each
+ * note's scale degree is read in the key under its start, each chord in the key under it, so a cadence is
+ * recognized in the key of the chord it arrives on. A span in one key is heard as it always was.
  */
 
 /* One theme heard. Bars are 0-based from the start of the plan. */
@@ -39,10 +41,18 @@ typedef struct {
     bool has_fragmentation;
 } FormHeardTheme;
 
+/* A cadence heard over the range, as the recognizer found it, in the key of the chord it arrives on. */
+typedef struct {
+    PlanTime arrival; /* where the chord the cadence arrives on starts, in whole notes from the start of the plan */
+    int type;         /* CadenceType */
+} FormHeardCadence;
+
 typedef struct {
     FormHeardTheme *themes; /* owned; in the adapter's order; NULL when none */
     size_t count;
     size_t phrase_count;    /* the phrases standard-form segmented, with a theme or not */
+    FormHeardCadence *cadences; /* owned; in order of arrival; NULL when none */
+    size_t cadence_count;
 } FormHeard;
 
 void form_heard_destroy(FormHeard *heard);
