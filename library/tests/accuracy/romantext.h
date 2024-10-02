@@ -87,12 +87,33 @@ typedef enum {
     ROMANTEXT_ERR_ALLOC
 } RomanTextStatus;
 
-/* Parses text (NUL-terminated) against the score's MeterMap. On OK, *out owns its arrays (romantext_destroy);
+/*
+ * Where a measure and a beat fall in the score. time_at gives the MusicalTime of beat `beat_thousandths` (1000 is
+ * beat 1) of measure `measure`, or false when the score has no such place. The measure grid may be a MeterMap
+ * (romantext_meter_map_grid) or the measure layout read from a score (score_layout.h), whose measures need not
+ * be regular: a split measure, a pickup or a fermata break all sit where the score put them.
+ */
+typedef bool (*RomanTextTimeAt)(const void *context, int measure, long beat_thousandths, MusicalTime **out_time);
+
+typedef struct {
+    RomanTextTimeAt time_at;
+    const void *context;
+} RomanTextGrid;
+
+/* The grid of a MeterMap: its measures, laid by its time signatures. */
+RomanTextGrid romantext_meter_map_grid(const MeterMap *map);
+
+/* The offset from the start of a measure of `beat_thousandths` in a signature top/bottom, as a fraction of a
+   whole note (the beat is the bottom note, or a dotted note in a compound signature). False for a beat below 1. */
+bool romantext_beat_offset(unsigned top, unsigned bottom, long beat_thousandths, long *numerator,
+                           unsigned long *denominator);
+
+/* Parses text (NUL-terminated) on the score's grid. On OK, *out owns its arrays (romantext_destroy);
    otherwise it holds only error_message. */
-RomanTextStatus romantext_parse(const char *text, const MeterMap *map, RomanTextAnalysis *out);
+RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, RomanTextAnalysis *out);
 
 /* As romantext_parse, reading the file at path. */
-RomanTextStatus romantext_load(const char *path, const MeterMap *map, RomanTextAnalysis *out);
+RomanTextStatus romantext_load(const char *path, const RomanTextGrid *grid, RomanTextAnalysis *out);
 
 void romantext_destroy(RomanTextAnalysis *analysis);
 

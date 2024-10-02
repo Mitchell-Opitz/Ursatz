@@ -1,7 +1,11 @@
-add_library(accuracy_support STATIC romantext.c)
+add_library(accuracy_support STATIC romantext.c score_layout.c)
 target_include_directories(accuracy_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(accuracy_support PUBLIC ursatz)
 
 add_executable(test_accuracy_romantext test_romantext.c)
 target_link_libraries(test_accuracy_romantext PRIVATE accuracy_support)
 add_test(NAME accuracy_romantext COMMAND test_accuracy_romantext)
+
+add_executable(test_accuracy_score_layout test_score_layout.c)
+target_link_libraries(test_accuracy_score_layout PRIVATE accuracy_support)
+add_test(NAME accuracy_score_layout COMMAND test_accuracy_score_layout)

@@ -242,24 +242,36 @@ static void read_time_signature(const char *value, int *top, int *bottom) {
     }
 }
 
-/* The time of (measure, beat in thousandths) on the map. */
-static bool position_time(const MeterMap *map, int measure, long thousandths, MusicalTime **time) {
-    const TimeSignature *signature = NULL;
-    if (metrical_position_reading_signature(map, measure, &signature) != METRICAL_POSITION_OK) {
-        return false;
-    }
-    unsigned top = time_signature_top_number(signature);
-    unsigned bottom = time_signature_bottom_number(signature);
+bool romantext_beat_offset(unsigned top, unsigned bottom, long beat_thousandths, long *numerator,
+                           unsigned long *denominator) {
     unsigned long unit_n = 1;
     if (top > 3 && top % 3 == 0 && bottom >= 8) {
         unit_n = 3; /* compound: the beat is a dotted note */
     }
-    long beats_after_first = thousandths - 1000;
-    if (beats_after_first < 0) {
+    long beats_after_first = beat_thousandths - 1000;
+    if (beats_after_first < 0 || bottom == 0) {
+        return false;
+    }
+    *numerator = beats_after_first * (long)unit_n;
+    *denominator = 1000ul * bottom;
+    return true;
+}
+
+/* The time of (measure, beat in thousandths) on a MeterMap. */
+static bool meter_map_time_at(const void *context, int measure, long thousandths, MusicalTime **time) {
+    const MeterMap *map = (const MeterMap *)context;
+    const TimeSignature *signature = NULL;
+    if (metrical_position_reading_signature(map, measure, &signature) != METRICAL_POSITION_OK) {
+        return false;
+    }
+    long numerator = 0;
+    unsigned long denominator = 0;
+    if (!romantext_beat_offset(time_signature_top_number(signature), time_signature_bottom_number(signature),
+                               thousandths, &numerator, &denominator)) {
         return false;
     }
     Duration *offset = NULL;
-    if (duration_create(beats_after_first * (long)unit_n, 1000ul * bottom, &offset) != DURATION_OK) {
+    if (duration_create(numerator, denominator, &offset) != DURATION_OK) {
         return false;
     }
     MetricalPosition *position = NULL;
@@ -271,6 +283,11 @@ static bool position_time(const MeterMap *map, int measure, long thousandths, Mu
     MetricalPositionResult converted = metrical_position_to_time(map, position, time);
     metrical_position_destroy(position);
     return converted == METRICAL_POSITION_OK;
+}
+
+RomanTextGrid romantext_meter_map_grid(const MeterMap *map) {
+    RomanTextGrid grid = {meter_map_time_at, map};
+    return grid;
 }
 
 static bool before(const MusicalTime *a, const MusicalTime *b) {
@@ -307,8 +324,8 @@ RomanTextStatus romantext_parse_metadata(const char *text, RomanTextAnalysis *ou
     return ROMANTEXT_OK;
 }
 
-RomanTextStatus romantext_parse(const char *text, const MeterMap *map, RomanTextAnalysis *out) {
-    if (text == NULL || map == NULL || out == NULL) {
+RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, RomanTextAnalysis *out) {
+    if (text == NULL || grid == NULL || grid->time_at == NULL || out == NULL) {
         return ROMANTEXT_ERR_NULL_ARGUMENT;
     }
     memset(out, 0, sizeof(*out));
@@ -394,7 +411,7 @@ RomanTextStatus romantext_parse(const char *text, const MeterMap *map, RomanText
             }
             MusicalTime *time = NULL;
             if (parse_key_token(token, &tonic, &minor)) {
-                if (!position_time(map, measure, beat, &time)) {
+                if (!grid->time_at(grid->context, measure, beat, &time)) {
                     set_error(out, "line %d: position of \"%s\" is outside the score's measures", line_number, token);
                     status = ROMANTEXT_ERR_BAD_POSITION;
                     break;
@@ -405,7 +422,7 @@ RomanTextStatus romantext_parse(const char *text, const MeterMap *map, RomanText
                 }
                 continue;
             }
-            if (!position_time(map, measure, beat, &time)) {
+            if (!grid->time_at(grid->context, measure, beat, &time)) {
                 set_error(out, "line %d: position of \"%s\" is outside the score's measures", line_number, token);
                 status = ROMANTEXT_ERR_BAD_POSITION;
                 break;
@@ -448,8 +465,8 @@ RomanTextStatus romantext_parse(const char *text, const MeterMap *map, RomanText
     return status;
 }
 
-RomanTextStatus romantext_load(const char *path, const MeterMap *map, RomanTextAnalysis *out) {
-    if (path == NULL || map == NULL || out == NULL) {
+RomanTextStatus romantext_load(const char *path, const RomanTextGrid *grid, RomanTextAnalysis *out) {
+    if (path == NULL || grid == NULL || out == NULL) {
         return ROMANTEXT_ERR_NULL_ARGUMENT;
     }
     FILE *file = fopen(path, "rb");
@@ -469,7 +486,7 @@ RomanTextStatus romantext_load(const char *path, const MeterMap *map, RomanTextA
     size_t got = fread(buffer, 1, (size_t)size, file);
     fclose(file);
     buffer[got] = '\0';
-    RomanTextStatus status = romantext_parse(buffer, map, out);
+    RomanTextStatus status = romantext_parse(buffer, grid, out);
     free(buffer);
     return status;
 }

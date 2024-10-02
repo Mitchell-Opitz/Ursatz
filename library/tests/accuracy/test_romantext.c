@@ -42,13 +42,14 @@ static void test_metadata(void) {
 
 static void test_chords_keys_and_beats(void) {
     MeterMap *map = make_map(4, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     const char *text =
         "Composer: X\nTime Signature: 4/4\n\n"
         "m1 G: I b2 V6 b3 IV b3.5 viio6\n"
         "m2 V7 b3 V65 b4 I64 ||\n"
         "m3 a: i b2 ii%7 b3 V43\n";
     RomanTextAnalysis a;
-    assert(romantext_parse(text, map, &a) == ROMANTEXT_OK);
+    assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(a.key_count == 2 && a.chord_count == 10 && a.unsupported_count == 0);
     assert(a.keys[0].tonic_pitch_class == 7 && !a.keys[0].minor);
     assert(a.keys[1].tonic_pitch_class == 9 && a.keys[1].minor);
@@ -72,9 +73,10 @@ static void test_chords_keys_and_beats(void) {
 
 static void test_applied_and_altered(void) {
     MeterMap *map = make_map(3, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     const char *text = "m1 V7/V b2 viio65/ii b3 bVII\nm2 #iv6 b2 bII6/V\n";
     RomanTextAnalysis a;
-    assert(romantext_parse(text, map, &a) == ROMANTEXT_OK);
+    assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(a.chord_count == 5 && a.key_count == 0);
     assert(a.keys == NULL);
     assert(a.chords[0].key_index == (size_t)-1);
@@ -91,9 +93,10 @@ static void test_applied_and_altered(void) {
 
 static void test_slashed_figures_and_keys(void) {
     MeterMap *map = make_map(3, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     const char *text = "m1 Bb: I b2 vi6/5 b3 V4/3\nm2 f#: i6/4 b2 V4/2 b3 V7/IV\n";
     RomanTextAnalysis a;
-    assert(romantext_parse(text, map, &a) == ROMANTEXT_OK);
+    assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(a.key_count == 2 && a.keys[0].tonic_pitch_class == 10 && a.keys[1].tonic_pitch_class == 6 && a.keys[1].minor);
     assert(a.chords[1].degree == 6 && a.chords[1].seventh && a.chords[1].inversion == 1 && !a.chords[1].applied);
     assert(a.chords[2].seventh && a.chords[2].inversion == 2);
@@ -107,10 +110,11 @@ static void test_slashed_figures_and_keys(void) {
 
 static void test_pickup(void) {
     MeterMap *map = make_map(3, 2, true); /* a quarter-note pickup, then 3/4 */
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     assert(meter_map_has_pickup(map));
     const char *text = "m0 b3 G: I\nm1 IV b2 V\n";
     RomanTextAnalysis a;
-    assert(romantext_parse(text, map, &a) == ROMANTEXT_OK);
+    assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(a.chord_count == 3);
     assert(time_is(a.chords[0].time, 0, 1)); /* the pickup starts the piece */
     assert(time_is(a.chords[1].time, 1, 4));
@@ -122,9 +126,10 @@ static void test_pickup(void) {
 
 static void test_compound_meter(void) {
     MeterMap *map = make_map(6, 3, false); /* 6/8: two dotted-quarter beats */
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     const char *text = "m1 D: I b2 V\nm2 I\n";
     RomanTextAnalysis a;
-    assert(romantext_parse(text, map, &a) == ROMANTEXT_OK);
+    assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(time_is(a.chords[1].time, 3, 8));
     assert(time_is(a.chords[2].time, 3, 4));
     romantext_destroy(&a);
@@ -133,6 +138,7 @@ static void test_compound_meter(void) {
 
 static void test_unsupported_tokens_are_kept_and_counted(void) {
     MeterMap *map = make_map(4, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     const char *text =
         "m1 C: I b2 Ger65 b3 N6 b4 Cad64\n"
         "m2 V7[no5] b2 V9 b3 V/V/V\n"
@@ -140,7 +146,7 @@ static void test_unsupported_tokens_are_kept_and_counted(void) {
         "m4-5 I\n"
         "m6 I\n";
     RomanTextAnalysis a;
-    assert(romantext_parse(text, map, &a) == ROMANTEXT_OK);
+    assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(a.chord_count == 8);
     assert(a.unsupported_chords == 6);
     assert(a.unsupported_count == 8); /* six chords, the repeat line and the range line */
@@ -154,13 +160,14 @@ static void test_unsupported_tokens_are_kept_and_counted(void) {
 
 static void test_ignored_tokens_and_lines(void) {
     MeterMap *map = make_map(4, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     const char *text =
         "Note: a comment\n"
         "m1 C: I || b3 V :||\n"
         "Phrase: something\n"
         "m2 var1 IV b3 ||: I\n";
     RomanTextAnalysis a;
-    assert(romantext_parse(text, map, &a) == ROMANTEXT_OK);
+    assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(a.chord_count == 4 && a.unsupported_count == 0);
     romantext_destroy(&a);
     meter_map_destroy(map);
@@ -168,13 +175,14 @@ static void test_ignored_tokens_and_lines(void) {
 
 static void test_errors(void) {
     MeterMap *map = make_map(3, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
     RomanTextAnalysis a;
-    assert(romantext_parse("m1 b5 I\n", map, &a) == ROMANTEXT_ERR_BAD_POSITION);
+    assert(romantext_parse("m1 b5 I\n", &grid, &a) == ROMANTEXT_ERR_BAD_POSITION);
     assert(strstr(a.error_message, "line 1") != NULL);
     assert(a.chords == NULL);
-    assert(romantext_parse("m2 I\nm1 V\n", map, &a) == ROMANTEXT_ERR_BAD_POSITION);
-    assert(romantext_parse(NULL, map, &a) == ROMANTEXT_ERR_NULL_ARGUMENT);
-    assert(romantext_load("/nonexistent/x.rntxt", map, &a) == ROMANTEXT_ERR_IO);
+    assert(romantext_parse("m2 I\nm1 V\n", &grid, &a) == ROMANTEXT_ERR_BAD_POSITION);
+    assert(romantext_parse(NULL, &grid, &a) == ROMANTEXT_ERR_NULL_ARGUMENT);
+    assert(romantext_load("/nonexistent/x.rntxt", &grid, &a) == ROMANTEXT_ERR_IO);
     meter_map_destroy(map);
 }
 
