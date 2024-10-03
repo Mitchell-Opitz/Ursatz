@@ -4,3 +4,6 @@
 [submodule "external/ursatz-analyzer"]
 	path = external/ursatz-analyzer
 	url = https://github.com/Mitchell-Opitz/Ursatz-Analyzer
+[submodule "external/ursatz-composer"]
+	path = external/ursatz-composer
+	url = https://github.com/Mitchell-Opitz/Ursatz-Composer

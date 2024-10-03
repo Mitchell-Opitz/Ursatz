@@ -15,7 +15,8 @@ a monolithic application.
   viewed last this session; before any piece has been opened it points at
   the Library.
 - **Collections**: named groups of piece ids (the Corpus tool, below).
-- **Generator**: not built yet.
+- **Generator**: not built yet. Its backend is the Composer tool (see Composer
+  routes below); the view comes after it.
 
 ### Analysis view
 
@@ -103,7 +104,7 @@ Three layers, in order of how rarely they should change:
   from route code. This boundary is the one thing the scaffold is strict
   about, because it is expensive to untangle later.
 - **Tool modules** (`backend/src/routes/`): independent GUI features
-  (Analysis and Corpus now, Generator later). Each tool registers its own
+  (Analysis, Corpus and Composer). Each tool registers its own
   HTTP routes under an `/api/<tool_name>/...` prefix and never calls another
   tool directly. See `backend/include/ursatz_gui/tool.h` for the
   registration convention and `backend/src/routes/health.c` as the reference
@@ -211,6 +212,89 @@ piece ref exists in the piece store when added; `corpus_api` does not either.
 `GET /api/health/status` calls the persistence service to confirm
 `persistence_open` succeeds against a test database path, and returns JSON.
 
+### Composer routes
+
+The Composer tool grows themes, plans and fills pieces, and makes variations.
+It does not link the Composer library: `composer_service.c` is the only code
+that starts the Composer, and it runs the `ursatz-composer` command line with
+`posix_spawn` and an argument array (never a shell), capturing stdout and
+stderr. The Composer brings its own copies of Ursatz and the Analyzer, so
+linking it would put two versions of each into one build; as a command it is
+built in its own tree (`external/ursatz-composer`, an `ExternalProject` named
+`ursatz_composer_cli`) and its targets never meet the GUI's (R-086). Every
+path in the arguments is absolute and the working directory is never changed.
+A run is stopped with `SIGKILL` after 120 seconds.
+
+- `URSATZ_GUI_COMPOSER`: the Composer executable to run instead of the one
+  built beside the backend (`build/composer/cli/ursatz-composer`).
+- `URSATZ_GUI_COMPOSER_TIMEOUT`: the time limit in seconds (default 120).
+
+Every request field is checked against a fixed pattern or range before it
+reaches an argument list: keys (`D`, `F#`, `Bb`, `D minor`), meters
+(`2/4`, `3/4`, `4/4`, `6/8`), numbers in range, form letters
+(`^[A-Z]'*$`), lanes, node ids, tempos (20 to 400, whole or `n/d`) and
+note-list text. Anything else is 400 and starts nothing.
+
+Compositions are stored in `compositions/<id>/` (`comp-<16 hex>`):
+
+- `meta.json`: `{"name", "created_at", "kind": "grow"|"plan", "request",
+  "versions": [{"n", "action", "args", "created_at", "seed", "summary"}]}`.
+  `request` is the body that made the composition; `summary` is the command's
+  JSON output (for `plan`, `{"plan": ..., "fill": ...}`, with the `fill`
+  command's arguments in `fill_args`). `args` paths are relative to the
+  composition.
+- `v<n>/plan.json`, `v<n>/piece.mid`, `v<n>/piece.musicxml`: one directory per
+  version. Every step is a new version; earlier versions are never changed.
+- `motive.txt`, `given-melody.txt`: the note lists the request gave.
+- `v<n>/variations-<k>/`: a set of variations (`variation-<i>.json`, `.mid`,
+  `.musicxml`, and `result.json`, the command's output).
+
+A command that fails adds no version and leaves nothing behind. A new version
+or composition is written with the tempo the composition was made with.
+
+Routes (bodies are JSON; success bodies have `"ok":true`):
+
+- `GET /api/composer/status`: `{"ok":true,"available":true,"version":"..."}`,
+  or 503 when the binary is missing.
+- `POST /api/composer/grow`: `{name, motive, into, hybrid?, key, meter,
+  bars?, cadence?, first_cadence?, accompaniment?, texture?, check?, seed?,
+  tempo?}`. `motive` is a note list (`D4:q F4:e A4:e D5:h`); `hybrid` is
+  required when `into` is `hybrid`. Makes version 1. Returns
+  `{"ok":true,"id","version":1,"summary"}`.
+- `POST /api/composer/plan`: `{name, form, key, meter, bars?, count?,
+  modulate?, motive?, given_melody? {notes, at}, accompaniment?, texture?,
+  seed?, check?, tempo?}`. Runs `plan`, then `fill` with the same seed, into
+  version 1.
+- `GET /api/composer/compositions`: `{"ok":true,"compositions":[{id, name,
+  kind, created_at, versions}]}`, newest first.
+- `GET /api/composer/compositions/<id>`: `meta.json` with `ok` and `id`.
+- `PATCH /api/composer/compositions/<id>`: `{name}`. `DELETE` removes the
+  composition.
+- `GET /api/composer/compositions/<id>/versions/<n>/plan | musicxml | midi`:
+  the file (`application/json`, `application/xml`, `audio/midi` as an
+  attachment).
+- `POST .../<id>/lock`: `{version, node | section, lane?}`. Writes the next
+  version; only the plan changes, so it copies the piece files of `version`.
+- `POST .../<id>/regenerate`: `{version, node | section, lane?, seed?}`.
+  Writes the next version with its piece files. A grow plan has no form
+  letters; address its nodes by `node` (the `composer.id` in `plan.json`).
+- `POST .../<id>/variations`: `{version, node | section, lane?, count (1 to
+  16), seed?, harmonize?}`. Writes `v<version>/variations-<k>/` and returns
+  `{"ok":true,"id","version","set":<k>,"variations":[{index, seed,
+  sections}],"kept","requested","seeds_tried"}`. `harmonize` runs
+  `harmonize` and takes a `section` only, with a section whose melody is all
+  Given. `k` is counted over the whole composition.
+- `POST .../<id>/variations/<k>/<i>/choose`: makes variation `i` of set `k`
+  the next version.
+- `GET .../<id>/variations/<k>/<i>/plan | musicxml | midi`: the files of a
+  variation, for previews.
+
+Errors are `{"error": "..."}`: 400 for a bad field or a Composer usage error
+(with `stderr`), 404 for an unknown composition, version or variation, 422
+`{"error":"stuck","stderr"}` when the Composer cannot do it (exit status 2),
+503 when the binary is missing, 504 on a timeout, 500 otherwise. The Composer
+needs POSIX (`posix_spawn`), so this tool does not build on Windows.
+
 ## Frontend
 
 Plain static HTML, JS and CSS served by the backend from `frontend/public/`.
@@ -243,11 +327,15 @@ pkg-config. Ursatz is a git submodule at `external/ursatz`, pinned at PR #142
 second submodule, `external/ursatz-analyzer`, pinned at PR #36 (`11263b7`).
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
-built (`URSATZ_BUILD_TESTS` is OFF).
+built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
+`external/ursatz-composer`, pinned at PR #34 (`1786b33`). It is built by an
+`ExternalProject` in `build/composer` (its tests off), so it brings its own
+Ursatz and Analyzer; the build runs it as `ursatz-composer` and does not link
+it.
 
 ## Tests
 
-`ctest` runs the backend tests (health, analyzer, corpus and id routes) and,
+`ctest` runs the backend tests (health, analyzer, corpus, composer and id routes) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be
@@ -257,7 +345,11 @@ run directly, for example `node frontend/tests/analysis-view.test.js`.
 document for Mozart 545 cut to its first 6 items per array.
 `test_analyzer_route` uploads Mozart 545 and a MusicXML score, compares the
 stored analysis with the Analyzer CLI's document for the same file, and
-covers list, detail, rename, re-run and delete.
+covers list, detail, rename, re-run and delete. `test_composer_route` runs
+the real Composer: grow, regenerate, lock, variations, choose and plan make
+versions and leave the earlier ones alone; bad requests start nothing and a
+fake Composer (`URSATZ_GUI_COMPOSER`) that records its arguments or sleeps
+shows the argument lists and the 504.
 
 CI (`.github/workflows/ci.yml`) builds and runs `ctest` on every push and
 pull request. The private submodules are checked out through the

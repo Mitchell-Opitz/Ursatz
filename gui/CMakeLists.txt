@@ -28,6 +28,26 @@ add_subdirectory(external/ursatz)
 set(URSATZ_ANALYZER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/ursatz-analyzer)
 
+# --- Ursatz Composer (built on its own) ------------------------------------
+#
+# The Composer is a tool the backend runs as a command (R-086), not a library
+# it links. It brings its own Ursatz and Analyzer, so it is built as an
+# external project in its own build tree: its targets never meet the ones
+# above. composer_service.c starts the binary named here, or the one in
+# URSATZ_GUI_COMPOSER at run time.
+include(ExternalProject)
+set(URSATZ_GUI_COMPOSER_BINARY_DIR ${CMAKE_BINARY_DIR}/composer)
+set(URSATZ_GUI_COMPOSER_BINARY ${URSATZ_GUI_COMPOSER_BINARY_DIR}/cli/ursatz-composer)
+ExternalProject_Add(ursatz_composer_cli
+  SOURCE_DIR ${CMAKE_SOURCE_DIR}/external/ursatz-composer
+  BINARY_DIR ${URSATZ_GUI_COMPOSER_BINARY_DIR}
+  CMAKE_ARGS -DCMAKE_BUILD_TYPE=Debug -DURSATZ_COMPOSER_BUILD_TESTS=OFF
+  BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ursatz-composer
+  INSTALL_COMMAND ""
+  BUILD_BYPRODUCTS ${URSATZ_GUI_COMPOSER_BINARY}
+)
+add_compile_definitions(URSATZ_GUI_COMPOSER_BIN="${URSATZ_GUI_COMPOSER_BINARY}")
+
 # --- civetweb (HTTP server library) ---------------------------------------
 set(CIVETWEB_ENABLE_CXX OFF CACHE BOOL "" FORCE)
 set(CIVETWEB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
