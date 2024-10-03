@@ -113,3 +113,40 @@ target_include_directories(test_id_service PRIVATE
 )
 
 add_test(NAME id_service COMMAND test_id_service)
+
+add_executable(test_composer_route test_composer_route.c
+  ${CMAKE_SOURCE_DIR}/backend/src/server.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+)
+
+target_include_directories(test_composer_route PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/include
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_composer_route PRIVATE
+  ursatz_analyzer
+  cjson
+  ursatz
+  civetweb-c-library
+)
+
+# The test runs the real Composer built beside the backend, in its own working
+# directory (compositions/ and the fake Composers are created there).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
+add_dependencies(test_composer_route ursatz_composer_cli)
+target_compile_definitions(test_composer_route PRIVATE
+  URSATZ_GUI_TEST_COMPOSER_DIR="${CMAKE_SOURCE_DIR}/external/ursatz-composer"
+)
+
+add_test(NAME composer_route COMMAND test_composer_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
