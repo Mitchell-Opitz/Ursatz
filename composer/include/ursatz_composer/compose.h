@@ -24,9 +24,14 @@
  *   bass       harmony-bass
  *   melody     melody-fill
  *   texture    accompaniment and voicing-satb, where a section asks for one
+ *   returns    form-return gives a section that returns an earlier one (a RETURN constraint, form_return.h) the material
+ *              of the section it returns, once that is written; the stages before leave such a section alone. Then
+ *              harmony, bass, melody and texture run again, to write what a variation reopened (REHARMONIZE). The stage
+ *              does not run when no section returns an earlier one.
  *
  * The stages from structure to texture are seeded seed + 0 to seed + 5, as grow's are, and invention seed + 6, so a
- * plan with one theme section and a Given motive is filled exactly as grow_run fills it.
+ * plan with one theme section and a Given motive is filled exactly as grow_run fills it. The returns are seeded
+ * seed + 7, and the harmony, bass, melody and texture run again seed + 8 to seed + 11 (their records are not kept).
  *
  * Retries are grow's (R-051): the melody stage is run up to six times, each from the next seed, reopening the melody
  * of the sections it left unwritten, the climax moved in a theme that is not a sentence; a run stuck after that starts
@@ -46,10 +51,11 @@ typedef enum {
     COMPOSE_STAGE_BASS,
     COMPOSE_STAGE_MELODY,
     COMPOSE_STAGE_TEXTURE,
+    COMPOSE_STAGE_RETURNS,
     COMPOSE_STAGE_COUNT
 } ComposeStage;
 
-/* "invent", "structure", "motives", "harmony", "bass", "melody", "texture". */
+/* "invent", "structure", "motives", "harmony", "bass", "melody", "texture", "returns". */
 const char *compose_stage_name(ComposeStage stage);
 
 /* All-zero is the default configuration (seed 0). The members are GrowConfig's. */

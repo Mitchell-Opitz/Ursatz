@@ -9,6 +9,7 @@
 #include <phrase_ending.h>
 #include <phrase_level_form.h>
 
+#include <ursatz_composer/form_return.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
@@ -94,6 +95,10 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
     if (target.kind != FILL_TARGET_NODE || !plan_has_node(plan, target.id) ||
         plan_node_kind(plan, target.id) != PLAN_NODE_SECTION ||
         plan_node_state(plan, target.id) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, target.id) != 0) {
+        return false;
+    }
+    /* A section that returns an earlier one is form-return's, not grown afresh. */
+    if (form_return_handles(plan, target.id)) {
         return false;
     }
     request.section = target.id;

@@ -7,6 +7,7 @@
 #include <phrase_level_form.h>
 
 #include <ursatz_composer/accompaniment.h>
+#include <ursatz_composer/form_return.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
@@ -35,14 +36,25 @@ static const unsigned CLIMAX_RETRIES[COMPOSE_MELODY_ATTEMPTS] = {0, 250, 833, 40
 
 const char *compose_stage_name(ComposeStage stage) {
     static const char *const NAMES[COMPOSE_STAGE_COUNT] = {"invent", "structure", "motives", "harmony",
-                                                           "bass",   "melody",    "texture"};
+                                                           "bass",   "melody",    "texture", "returns"};
     return stage >= 0 && stage < COMPOSE_STAGE_COUNT ? NAMES[stage] : "unknown";
 }
 
-/* What a stage's seed adds to the configuration's: grow's stages keep grow's seeds, invention comes after them. */
-static unsigned long stage_seed(ComposeStage stage) {
-    return stage == COMPOSE_STAGE_INVENT ? (unsigned long)(COMPOSE_STAGE_COUNT - 1)
-                                         : (unsigned long)(stage - COMPOSE_STAGE_STRUCTURE);
+/*
+ * What a stage's seed adds to the configuration's: grow's stages keep grow's seeds (0 to 5), invention comes after them
+ * (6), then the returns (7) and the stages that write what the returns reopened, run again (8 to 11).
+ */
+static unsigned long stage_seed(ComposeStage stage, bool again) {
+    if (again) {
+        return (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 3 + (stage - COMPOSE_STAGE_HARMONY));
+    }
+    if (stage == COMPOSE_STAGE_INVENT) {
+        return (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 1);
+    }
+    if (stage == COMPOSE_STAGE_RETURNS) {
+        return (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 2);
+    }
+    return (unsigned long)(stage - COMPOSE_STAGE_STRUCTURE);
 }
 
 void compose_outcome_destroy(ComposeOutcome *outcome) {
@@ -178,10 +190,22 @@ static bool stage_done(const PiecePlan *plan, ComposeStage stage, const NodeId *
         }
         return true;
     }
+    if (stage == COMPOSE_STAGE_RETURNS) {
+        for (size_t t = 0; t < theme_count; t++) {
+            if (form_return_handles(plan, themes[t])) {
+                return false;
+            }
+        }
+        return true;
+    }
     for (size_t t = 0; t < theme_count; t++) {
         NodeId section = themes[t];
         PlanSpan span = plan_node_span(plan, section);
         bool done = false;
+        /* A section that returns an earlier one has nothing yet: the returns stage gives it its material. */
+        if (form_return_handles(plan, section)) {
+            continue;
+        }
         switch (stage) {
         case COMPOSE_STAGE_STRUCTURE:
             done = plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED;
@@ -233,6 +257,8 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
     case COMPOSE_STAGE_TEXTURE:
         result = accompaniment_register(registry, accompaniment);
         return result == FILL_OK ? voicing_register(registry, voicing) : result;
+    case COMPOSE_STAGE_RETURNS:
+        return form_return_register(registry, melody);
     case COMPOSE_STAGE_COUNT:
         break;
     }
@@ -255,6 +281,8 @@ static FillCheckerFn checker_of(ComposeStage stage) {
         return melody_fill_checker;
     case COMPOSE_STAGE_TEXTURE:
         return texture_checker;
+    case COMPOSE_STAGE_RETURNS:
+        return form_return_checker;
     case COMPOSE_STAGE_COUNT:
         break;
     }
@@ -361,6 +389,83 @@ static void outcome_reset(ComposeOutcome *outcome) {
     compose_outcome_destroy(outcome);
 }
 
+/* What the stages of one run share. */
+typedef struct {
+    PiecePlan *plan;
+    const ComposeConfig *config;
+    unsigned long offset;
+    const NodeId *themes;
+    size_t theme_count;
+    bool sentences;
+    MotiveDevelopContext motives;
+    AccompanimentParams accompaniment;
+    VoicingParams voicing;
+    ComposeOutcome *outcome;
+} Run;
+
+/*
+ * One stage. again marks a stage run a second time, after the returns: it writes what a return reopened, with seeds
+ * of its own, and keeps no record.
+ */
+static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
+    PiecePlan *plan = run->plan;
+    const ComposeConfig *config = run->config;
+    ComposeOutcome *outcome = run->outcome;
+    /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
+       climax, so a melody that gets stuck is written again, from the next seed, a few times. */
+    size_t attempts = stage == COMPOSE_STAGE_MELODY ? COMPOSE_MELODY_ATTEMPTS : 1;
+    for (size_t attempt = 0; attempt < attempts; attempt++) {
+        FillOperatorRegistry *registry = fill_registry_create();
+        FillConfig fill;
+        FillOutcome fill_outcome;
+        if (!registry) {
+            return PIECE_ERR_ALLOC;
+        }
+        memset(&fill, 0, sizeof(fill));
+        fill.seed = config->seed + run->offset + stage_seed(stage, again) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt;
+        fill.max_iterations = config->max_iterations;
+        fill.checker = checker_of(stage);
+        fill.checker_context =
+            stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_INVENT ? (void *)&run->motives : NULL;
+        FillRecord **record = again ? NULL : &outcome->records[stage];
+        if (record) {
+            fill_record_destroy(*record);
+            *record = NULL;
+        }
+        MelodyFillParams melody = config->melody ? *config->melody : melody_fill_params_default();
+        if (attempt > 0 && !run->sentences) {
+            melody.climax_position = CLIMAX_RETRIES[attempt];
+        }
+        FillResult registered = register_stage(registry, stage, config, &run->motives, &melody, &run->accompaniment,
+                                               &run->voicing);
+        FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;
+        fill_registry_destroy(registry);
+        if (ran != FILL_OK) {
+            return ran == FILL_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_STUCK;
+        }
+        fill_outcome_destroy(&fill_outcome);
+        if (stage_done(plan, stage, run->themes, run->theme_count)) {
+            return PIECE_OK;
+        }
+        if (attempt + 1 == attempts || !reopen_melody(plan, run->themes, run->theme_count)) {
+            outcome->stuck = true;
+            outcome->stuck_stage = stage;
+            return PIECE_ERR_STUCK;
+        }
+    }
+    return PIECE_OK;
+}
+
+/* Whether a theme section is still to be given the material of the one it returns. */
+static bool returns_pending(const PiecePlan *plan, const NodeId *themes, size_t theme_count) {
+    for (size_t t = 0; t < theme_count; t++) {
+        if (form_return_handles(plan, themes[t])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* One run of the stages. offset is added to every seed. */
 static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsigned long offset,
                             ComposeOutcome *outcome) {
@@ -388,66 +493,37 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
         outcome->sections[t].requested_ending = -1;
         outcome->sections[t].structure.denominator = 1;
     }
+    Run run;
+    memset(&run, 0, sizeof(run));
+    run.plan = plan;
+    run.config = config;
+    run.offset = offset;
+    run.themes = themes;
+    run.theme_count = theme_count;
+    run.outcome = outcome;
     /* A piece of sentences keeps the climax it is asked for: their fragments always have room for one. */
-    bool sentences = true;
+    run.sentences = true;
     for (size_t t = 0; t < theme_count; t++) {
-        sentences = sentences && has_archetype(plan, themes[t], PLAN_ARCHETYPE_SENTENCE);
+        run.sentences = run.sentences && has_archetype(plan, themes[t], PLAN_ARCHETYPE_SENTENCE);
     }
     /* Fragments of one note are allowed: grow-theme shortens a fragment to fit its idea. */
-    MotiveDevelopContext motives;
-    motive_develop_context_default(&motives);
-    motives.min_length = 1;
-    AccompanimentParams accompaniment = accompaniment_params_default();
-    VoicingParams voicing = voicing_params_default();
+    motive_develop_context_default(&run.motives);
+    run.motives.min_length = 1;
+    run.accompaniment = accompaniment_params_default();
+    run.voicing = voicing_params_default();
     PieceResult result = PIECE_OK;
 
-    for (ComposeStage stage = COMPOSE_STAGE_INVENT; result == PIECE_OK && stage < COMPOSE_STAGE_COUNT; stage++) {
+    for (ComposeStage stage = COMPOSE_STAGE_INVENT; result == PIECE_OK && stage <= COMPOSE_STAGE_TEXTURE; stage++) {
         if (stage == COMPOSE_STAGE_INVENT && !invention_open(plan)) {
             continue;
         }
-        /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
-           climax, so a melody that gets stuck is written again, from the next seed, a few times. */
-        size_t attempts = stage == COMPOSE_STAGE_MELODY ? COMPOSE_MELODY_ATTEMPTS : 1;
-        for (size_t attempt = 0; attempt < attempts; attempt++) {
-            FillOperatorRegistry *registry = fill_registry_create();
-            FillConfig fill;
-            FillOutcome fill_outcome;
-            if (!registry) {
-                result = PIECE_ERR_ALLOC;
-                break;
-            }
-            memset(&fill, 0, sizeof(fill));
-            fill.seed = config->seed + offset + stage_seed(stage) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt;
-            fill.max_iterations = config->max_iterations;
-            fill.checker = checker_of(stage);
-            fill.checker_context =
-                stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_INVENT ? (void *)&motives : NULL;
-            fill_record_destroy(outcome->records[stage]);
-            outcome->records[stage] = NULL;
-            MelodyFillParams melody = config->melody ? *config->melody : melody_fill_params_default();
-            if (attempt > 0 && !sentences) {
-                melody.climax_position = CLIMAX_RETRIES[attempt];
-            }
-            FillResult registered =
-                register_stage(registry, stage, config, &motives, &melody, &accompaniment, &voicing);
-            FillResult ran = registered == FILL_OK
-                                 ? fill_run(plan, registry, &fill, &fill_outcome, &outcome->records[stage])
-                                 : registered;
-            fill_registry_destroy(registry);
-            if (ran != FILL_OK) {
-                result = ran == FILL_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_STUCK;
-                break;
-            }
-            fill_outcome_destroy(&fill_outcome);
-            if (stage_done(plan, stage, themes, theme_count)) {
-                break;
-            }
-            if (attempt + 1 == attempts || !reopen_melody(plan, themes, theme_count)) {
-                outcome->stuck = true;
-                outcome->stuck_stage = stage;
-                result = PIECE_ERR_STUCK;
-                break;
-            }
+        result = run_stage(&run, stage, false);
+    }
+    /* The sections that return an earlier one are given its material now it is written, then what they reopened is. */
+    if (result == PIECE_OK && returns_pending(plan, themes, theme_count)) {
+        result = run_stage(&run, COMPOSE_STAGE_RETURNS, false);
+        for (ComposeStage stage = COMPOSE_STAGE_HARMONY; result == PIECE_OK && stage <= COMPOSE_STAGE_TEXTURE; stage++) {
+            result = run_stage(&run, stage, true);
         }
     }
     if (result == PIECE_OK) {
