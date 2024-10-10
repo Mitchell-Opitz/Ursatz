@@ -5,7 +5,7 @@ const TOOLS = [
   { id: "library", label: "Library", active: true, render: renderLibraryView },
   { id: "analysis", label: "Analysis", active: false, render: renderAnalysisTool },
   { id: "corpus", label: "Collections", active: false, render: renderCorpusView },
-  { id: "generator", label: "Generator", active: false, comingSoon: true },
+  { id: "composer", label: "Composer", active: false, render: () => renderComposerView() },
 ];
 
 /* The piece id last opened in the Analysis view (via a Library filename
