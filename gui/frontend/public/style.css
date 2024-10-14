@@ -566,3 +566,56 @@ body {
     transform: rotate(360deg);
   }
 }
+
+.composer-panel {
+  max-width: none;
+  margin-bottom: 16px;
+}
+
+.composer-panel h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.composer-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.composer-tree,
+.composer-children {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+
+.composer-tree {
+  padding-left: 0;
+}
+
+.composer-node {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+}
+
+.composer-node-label {
+  min-width: 160px;
+}
+
+.composer-state {
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 8px;
+  color: var(--text-dim);
+}
+
+.composer-state-given {
+  color: var(--accent);
+  border-color: var(--accent);
+}

@@ -423,6 +423,8 @@ async function loadComposerList(message) {
   statusEl.textContent = message || (compositions.length === 0 ? "No compositions yet." : "");
   for (const composition of compositions) {
     const row = document.createElement("tr");
+    row.classList.add("clickable");
+    row.addEventListener("click", () => showComposition(composition.id));
     for (const text of [composition.name, composition.kind, composition.versions, composerTime(composition.created_at)]) {
       const cell = document.createElement("td");
       cell.textContent = text;
@@ -432,8 +434,266 @@ async function loadComposerList(message) {
   }
 }
 
+/* ---- plan tree ----------------------------------------------------- */
+
+function composerRational(value) {
+  return value && value.den ? value.num / value.den : 0;
+}
+
+/* Length of one bar in whole notes, from the plan's meter. */
+function composerBarLength(plan) {
+  const spans = plan && plan.meter && plan.meter.spans;
+  const payload = spans && spans[0] && spans[0].composer && spans[0].composer.payload;
+  return payload && payload.beats_per_bar && payload.beat_unit ? payload.beats_per_bar / payload.beat_unit : 1;
+}
+
+/* "bar 3" or "bars 1-8" for a span given in bars from the start. */
+function composerBarsLabel(start, end) {
+  const first = Math.floor(start + 1e-9) + 1;
+  const last = Math.max(first, Math.ceil(end - 1e-9));
+  return first === last ? `bar ${first}` : `bars ${first}-${last}`;
+}
+
+/* A form letter as the Composer takes it: A, B, A'. A section such as
+ * "A return" has none and is addressed by its node. */
+function composerSectionLetter(label) {
+  return /^[A-Z]'*$/.test(label || "") ? label : null;
+}
+
+/* The plan's form as a tree of {id, kind, label, state, letter, bars, start,
+ * end, children}. start and end are in whole notes. The trailing "material"
+ * section (the motive pool, not part of the form) is left out. */
+function buildPlanTree(plan) {
+  const barLength = composerBarLength(plan);
+  function convert(node, isSection) {
+    const start = composerRational(node.span && node.span.start);
+    const end = composerRational(node.span && node.span.end);
+    const composer = node.composer || {};
+    return {
+      id: composer.id,
+      kind: node.kind,
+      label: node.label,
+      state: composer.state,
+      letter: isSection ? composerSectionLetter(node.label) : null,
+      bars: composerBarsLabel(start / barLength, end / barLength),
+      start,
+      end,
+      children: (node.children || []).map((child) => convert(child, false)),
+    };
+  }
+  const form = plan && plan.form;
+  if (!form) {
+    return null;
+  }
+  const root = convert(form, false);
+  root.children = (form.children || [])
+    .filter((section) => !((section.composer && section.composer.constraints) || []).some((c) => c.kind === "material"))
+    .map((section) => convert(section, true));
+  if (root.children.length > 0) {
+    root.end = root.children[root.children.length - 1].end;
+    root.bars = composerBarsLabel(root.start / barLength, root.end / barLength);
+  }
+  return root;
+}
+
+/* Rows of the version's summary: one per section (or one for a grown theme)
+ * with the form heard and the cadences. */
+function buildSummaryRows(summary) {
+  if (!summary) {
+    return [];
+  }
+  const sections = (summary.fill && summary.fill.sections) || summary.sections;
+  if (Array.isArray(sections)) {
+    return sections.map((section) => ({
+      section: section.letter,
+      heard: section.heard,
+      cadences: (section.cadences || []).join(", "),
+    }));
+  }
+  if (Array.isArray(summary.themes)) {
+    return [
+      {
+        section: "theme",
+        heard: summary.pairing ? `${summary.into}, ${summary.pairing}` : summary.into,
+        cadences: summary.cadence || "",
+      },
+    ];
+  }
+  return [];
+}
+
+function composerVersionLabel(version) {
+  const seed = version.seed === null || version.seed === undefined ? "no seed" : `seed ${version.seed}`;
+  return `v${version.n} · ${version.action} · ${seed} · ${composerTime(version.created_at)}`;
+}
+
+/* ---- composition view ---------------------------------------------- */
+
+/* The version of the composition shown, so the actions know what they change. */
+let composerCurrent = null;
+let composerScoreOsmd = null;
+
+function composerBackLink() {
+  const back = document.createElement("a");
+  back.textContent = "← Compositions";
+  back.classList.add("back-link", "clickable");
+  back.addEventListener("click", () => renderComposerView());
+  return back;
+}
+
+async function showComposition(id, versionNumber) {
+  setActiveTool("composer");
+  const content = getContentEl();
+  content.innerHTML = `
+    <div id="composition-back"></div>
+    <h1 class="view-title" id="composition-title">Loading...</h1>
+    <div id="composition-status" class="piece-list-status composer-status"></div>
+    <div id="composition-body" hidden>
+      <div class="composer-toolbar">
+        <label class="composer-field">Version <select id="composition-version"></select></label>
+        <a id="composition-midi" class="back-link clickable" download>Download MIDI</a>
+      </div>
+      <section class="panel composer-panel"><h2>Plan</h2><div id="composition-plan"></div></section>
+      <section class="panel composer-panel"><h2>Summary</h2><div id="composition-summary"></div></section>
+      <section class="panel composer-panel"><h2>Score</h2>
+        <div id="composition-score-status" class="piece-list-status"></div>
+        <div id="composition-score" class="analysis-score-container"></div>
+      </section>
+    </div>
+  `;
+  document.getElementById("composition-back").appendChild(composerBackLink());
+
+  const statusEl = document.getElementById("composition-status");
+  const result = await composerFetch(`/compositions/${encodeURIComponent(id)}`);
+  if (!result.ok) {
+    composerShowError(statusEl, result.status, result.data);
+    return;
+  }
+  const meta = result.data;
+  const versions = meta.versions || [];
+  document.getElementById("composition-title").textContent = meta.name || id;
+  document.getElementById("composition-body").hidden = false;
+
+  const select = document.getElementById("composition-version");
+  for (const version of versions) {
+    const option = document.createElement("option");
+    option.value = String(version.n);
+    option.textContent = composerVersionLabel(version);
+    select.appendChild(option);
+  }
+  const wanted = versionNumber || (versions.length ? versions[versions.length - 1].n : 1);
+  select.value = String(wanted);
+  select.addEventListener("change", () => showComposerVersion(id, versions, Number(select.value)));
+  await showComposerVersion(id, versions, Number(select.value));
+}
+
+async function showComposerVersion(id, versions, number) {
+  const version = versions.find((item) => item.n === number) || versions[versions.length - 1];
+  const base = `/compositions/${encodeURIComponent(id)}/versions/${version.n}`;
+  composerCurrent = { id, versions, version: version.n, plan: null };
+
+  document.getElementById("composition-midi").href = `${COMPOSER_API}${base}/midi`;
+  renderComposerSummary(version.summary);
+
+  const planEl = document.getElementById("composition-plan");
+  planEl.textContent = "Loading plan...";
+  const [planResult] = await Promise.all([composerFetch(`${base}/plan`), renderComposerScore(`${base}/musicxml`)]);
+  if (!planResult.ok) {
+    composerShowError(planEl, planResult.status, planResult.data);
+    return;
+  }
+  composerCurrent.plan = planResult.data;
+  planEl.textContent = "";
+  const tree = buildPlanTree(planResult.data);
+  if (tree) {
+    planEl.appendChild(renderComposerTree(tree));
+  }
+}
+
+function renderComposerSummary(summary) {
+  const el = document.getElementById("composition-summary");
+  el.innerHTML = "";
+  const rows = buildSummaryRows(summary);
+  if (rows.length === 0) {
+    el.textContent = "No summary for this version.";
+    return;
+  }
+  const table = document.createElement("table");
+  table.classList.add("library-table");
+  table.innerHTML = "<thead><tr><th>Section</th><th>Heard form</th><th>Cadences</th></tr></thead>";
+  const body = document.createElement("tbody");
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    for (const text of [row.section, row.heard, row.cadences]) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  }
+  table.appendChild(body);
+  el.appendChild(table);
+}
+
+function renderComposerTree(node) {
+  const list = document.createElement("ul");
+  list.classList.add("composer-tree");
+  const item = document.createElement("li");
+  const line = document.createElement("div");
+  line.classList.add("composer-node");
+  const label = document.createElement("span");
+  label.classList.add("composer-node-label");
+  label.textContent = node.letter ? `${node.letter} (${node.label})` : node.label;
+  const bars = document.createElement("span");
+  bars.classList.add("claim-row-where");
+  bars.textContent = `${node.kind} · ${node.bars}`;
+  const state = document.createElement("span");
+  state.classList.add("composer-state", `composer-state-${node.state}`);
+  state.textContent = node.state;
+  line.append(label, bars, state);
+  item.appendChild(line);
+  if (node.children.length > 0) {
+    const children = document.createElement("li");
+    children.classList.add("composer-children");
+    for (const child of node.children) {
+      children.appendChild(renderComposerTree(child));
+    }
+    item.appendChild(children);
+  }
+  list.appendChild(item);
+  return list;
+}
+
+/* Fetches a MusicXML file and draws it with OSMD into the score panel. */
+async function renderComposerScore(path) {
+  const statusEl = document.getElementById("composition-score-status");
+  const containerEl = document.getElementById("composition-score");
+  statusEl.textContent = "Loading score...";
+  statusEl.classList.remove("error");
+  containerEl.innerHTML = "";
+  try {
+    const res = await fetch(`${COMPOSER_API}${path}`);
+    if (!res.ok) {
+      throw new Error(`score request failed (${res.status})`);
+    }
+    const xmlText = await res.text();
+    const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(containerEl);
+    await osmd.load(xmlText);
+    osmd.render();
+    composerScoreOsmd = osmd;
+    statusEl.textContent = "";
+  } catch (err) {
+    statusEl.textContent = `Could not load score: ${err}`;
+    statusEl.classList.add("error");
+  }
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    buildPlanTree,
+    buildSummaryRows,
+    composerVersionLabel,
+    composerBarsLabel,
     buildGrowRequest,
     buildPlanRequest,
     composerErrorText,
