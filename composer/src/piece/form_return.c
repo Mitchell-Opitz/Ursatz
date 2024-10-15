@@ -394,9 +394,10 @@ static bool key_shift(const PiecePlan *plan, PlanSpan source, PlanSpan target, i
     return true;
 }
 
-/* The variations the operator makes. */
+/* The variations the operator makes: all of them. */
 static bool variation_offered(PlanReturnVariation variation) {
-    return variation == PLAN_RETURN_EXACT;
+    return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
+           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER;
 }
 
 bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation) {
@@ -485,6 +486,7 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     PlanSpan from = plan_node_span(plan, source);
     payload->magic = RETURN_PAYLOAD_MAGIC;
     payload->variation = variation;
+    payload->from_start = from.start;
     payload->span = plan_node_span(plan, target);
     if (!key_pieces(plan, payload->span, pieces, &count) || !meter_over(plan, payload->span, &payload->meter) ||
         !key_shift(plan, from, payload->span, &payload->transpose)) {
@@ -500,20 +502,71 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     return payload;
 }
 
+/* How many ornaments of the melody are proposed. */
+#define ORNAMENT_CANDIDATES 4
+
+static bool add_payload(FillCandidateList *out, const char *label, ReturnPayload *payload) {
+    return fill_candidates_add(out, label, payload, return_payload_destroy);
+}
+
 static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
+    const MelodyFillParams *range = context;
+    MelodyFillParams defaults = melody_fill_params_default();
     NodeId source;
     PlanReturnVariation variation;
-    (void)rng;
-    (void)context;
     if (target.kind != FILL_TARGET_NODE || !form_return_source(plan, target.id, &source, &variation)) {
         return false;
     }
-    ReturnPayload *payload = make_payload(plan, target.id, source, variation);
-    if (!payload) {
-        return false;
+    if (!range) {
+        range = &defaults;
     }
-    return fill_candidates_add(out, "exact", payload, return_payload_destroy);
+    if (variation == PLAN_RETURN_ORNAMENT) {
+        ReturnPayload *kept[ORNAMENT_CANDIDATES];
+        size_t kept_count = 0;
+        for (size_t draw = 0; draw < 2 * ORNAMENT_CANDIDATES && kept_count < ORNAMENT_CANDIDATES; draw++) {
+            ReturnPayload *payload = make_payload(plan, target.id, source, variation);
+            if (!payload) {
+                return false;
+            }
+            bool repeat = !return_vary(payload, rng);
+            for (size_t i = 0; !repeat && i < kept_count; i++) {
+                repeat = return_same_melody(kept[i], payload);
+            }
+            if (repeat) {
+                return_payload_destroy(payload);
+                continue;
+            }
+            kept[kept_count++] = payload;
+            if (!add_payload(out, "ornament", payload)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    /* A re-registration is proposed up and down; the one that leaves the range is not made. */
+    int octaves[2] = {12, -12};
+    for (size_t i = 0; i < (variation == PLAN_RETURN_REREGISTER ? 2u : 1u); i++) {
+        ReturnPayload *payload = make_payload(plan, target.id, source, variation);
+        if (!payload) {
+            return false;
+        }
+        payload->octave = variation == PLAN_RETURN_REREGISTER ? octaves[i] : 0;
+        payload->range_low = range->range_low;
+        payload->range_high = range->range_high;
+        if (!return_vary(payload, rng)) {
+            return_payload_destroy(payload);
+            continue;
+        }
+        const char *label = variation == PLAN_RETURN_EXACT       ? "exact"
+                            : variation == PLAN_RETURN_REHARMONIZE ? "reharmonize"
+                            : i == 0                              ? "octave up"
+                                                                  : "octave down";
+        if (!add_payload(out, label, payload)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static PlanResult return_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
@@ -557,19 +610,28 @@ static bool same_span(PlanSpan a, PlanSpan b) {
     return same_times(a.start, b.start) && same_times(a.length, b.length);
 }
 
-/* Whether the returned section moved onto the target by the payload's shift is what result holds. */
-static bool result_is_moved_source(const ReturnPayload *payload, const PiecePlan *plan, NodeId target) {
-    NodeId source;
-    ReturnCopy moved;
-    bool same = false;
-    if (!form_return_source(plan, target, &source, NULL)) {
+/* Whether the notes of two spans are the same, the second the first's pitches shift semitones away. */
+static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
+    if (a->note_count != b->note_count) {
         return false;
     }
-    PlanSpan from = plan_node_span(plan, source);
+    for (size_t n = 0; n < a->note_count; n++) {
+        if (a->notes[n].midi_pitch + shift != b->notes[n].midi_pitch ||
+            !same_times(a->notes[n].offset, b->notes[n].offset) ||
+            !same_times(a->notes[n].duration, b->notes[n].duration)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool return_result_matches(const ReturnPayload *payload, const ReturnAllow *allow) {
+    ReturnCopy moved;
+    bool same = false;
     if (!return_copy_clone(&payload->source, &moved)) {
         return false;
     }
-    if (return_copy_move(&moved, from.start, payload->span.start, payload->transpose) &&
+    if (return_copy_move(&moved, payload->from_start, payload->span.start, payload->transpose) &&
         moved.node_count == payload->result.node_count && moved.span_count == payload->result.span_count) {
         same = true;
         for (size_t i = 0; same && i < moved.node_count; i++) {
@@ -581,13 +643,12 @@ static bool result_is_moved_source(const ReturnPayload *payload, const PiecePlan
         for (size_t i = 0; same && i < moved.span_count; i++) {
             const ReturnSpan *a = &moved.spans[i];
             const ReturnSpan *b = &payload->result.spans[i];
+            unsigned bit = 1u << (unsigned)a->lane;
             same = a->lane == b->lane && a->voice == b->voice && a->owner == b->owner && same_span(a->span, b->span) &&
                    a->state == b->state && a->constraint_count == b->constraint_count &&
-                   a->note_count == b->note_count && strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0;
-            for (size_t n = 0; same && n < a->note_count; n++) {
-                same = a->notes[n].midi_pitch == b->notes[n].midi_pitch &&
-                       same_times(a->notes[n].offset, b->notes[n].offset) &&
-                       same_times(a->notes[n].duration, b->notes[n].duration);
+                   strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0;
+            if (same && !(allow && (allow->skip_notes & bit))) {
+                same = same_notes(a, b, allow && (allow->shifted & bit) ? allow->shift : 0);
             }
         }
     }
@@ -621,10 +682,14 @@ bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOpe
         reject(out, "variation is not the one asked for");
         return true;
     }
-    if (payload->variation == PLAN_RETURN_EXACT && !result_is_moved_source(payload, plan, target.id)) {
-        reject(out, "exact return is not the returned section");
+    if (payload->variation == PLAN_RETURN_EXACT) {
+        if (!return_result_matches(payload, NULL)) {
+            reject(out, "exact return is not the returned section");
+            return true;
+        }
+        out->score_numerator = 1;
         return true;
     }
-    out->score_numerator = 1;
+    return_vary_check(payload, out);
     return true;
 }

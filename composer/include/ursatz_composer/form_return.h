@@ -19,7 +19,7 @@
  *   - the meter lane is the same over both, and the key lane has the same shape over both: the same number of key
  *     spans, cut at the same bars, each in the same mode, the key of the target's differing from the other's by one
  *     amount throughout (the target is then transposed by it);
- *   - the variation the constraint names is EXACT (the others are offered by form_vary.c).
+ *   - the variation the constraint names is one the operator makes: EXACT, ORNAMENT, REHARMONIZE or REREGISTER.
  * It applies once the returned section is Realized with every lane span under it written (the harmony, bass, melody
  * and inner voice lanes). Anything else, the operator does not apply to; grow-theme leaves a section the operator can
  * return alone (form_return_handles), and grows the others afresh from their motive.
@@ -27,7 +27,18 @@
  * apply copies the subtree of the returned section (its phrases, subphrases and ideas, with their names, constraints
  * and states) and its lane spans (with their constraints, written, in the state they were in, Given or Realized
  * becoming Realized), shifted by the time between the two sections. The motive references point at the same material
- * motives. The key lane is not copied: the key plan decides it. An EXACT return is the copy, Realized.
+ * motives. The key lane is not copied: the key plan decides it. The copy is Realized, except for what a variation
+ * reopens (form_vary.c):
+ *
+ *   EXACT        nothing is changed.
+ *   ORNAMENT     the melody keeps every note and gains passing and neighbor tones between them, off the strong beats, at
+ *                most one added note a beat; candidates differ in which notes are ornamented.
+ *   REHARMONIZE  the harmony spans are reopened as the targets they were written from (the HARMONY_SHAPE and the cadence
+ *                kept), and the bass, the melody and the inner voices with them, each as an open span with the
+ *                constraints it had, so the same motive references are written again over other chords: compose_run runs
+ *                the harmony, bass, melody and texture stages again after the returns.
+ *   REREGISTER   the melody, and the inner voices with it, an octave up or down; one candidate for each that keeps the
+ *                melody inside its range, none when neither does, and the section stays open.
  *
  * The checker (form_return_checker) holds each candidate to its variation's rules.
  */
@@ -51,10 +62,12 @@ bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, P
 FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody);
 
 /*
- * The checker for form-return's candidates; pass it as FillConfig.checker. A hard rule rejects a candidate whose
- * structure is not the returned section's, shifted, or whose melody, bass or harmony differ from it (an EXACT return
- * differs only in the transposition by the key difference). The score is 1/1 for a candidate that keeps to it. A
- * candidate of another operator is accepted at 0/1.
+ * The checker for form-return's candidates; pass it as FillConfig.checker. Hard rules reject a candidate that does not
+ * keep to its variation: the structure is the returned section's, shifted by the time between the two and transposed by
+ * the key difference; an ornamented melody keeps every note and adds only passing and neighbor tones, off the strong
+ * beats, one a beat; a reharmonization reopens the lanes and covers the returned harmony; a re-registered melody is an
+ * octave away and inside the range. The score is 1/1 for a candidate that keeps to it and changes what its variation
+ * changes (an ornament with a note added), else 0/1. A candidate of another operator is accepted at 0/1.
  */
 bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out);
