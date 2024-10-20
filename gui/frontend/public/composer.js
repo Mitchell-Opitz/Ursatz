@@ -531,7 +531,6 @@ function composerVersionLabel(version) {
 
 /* The version of the composition shown, so the actions know what they change. */
 let composerCurrent = null;
-let composerScoreOsmd = null;
 
 function composerBackLink() {
   const back = document.createElement("a");
@@ -541,7 +540,7 @@ function composerBackLink() {
   return back;
 }
 
-async function showComposition(id, versionNumber) {
+async function showComposition(id, versionNumber, message) {
   setActiveTool("composer");
   const content = getContentEl();
   content.innerHTML = `
@@ -553,7 +552,16 @@ async function showComposition(id, versionNumber) {
         <label class="composer-field">Version <select id="composition-version"></select></label>
         <a id="composition-midi" class="back-link clickable" download>Download MIDI</a>
       </div>
-      <section class="panel composer-panel"><h2>Plan</h2><div id="composition-plan"></div></section>
+      <section class="panel composer-panel"><h2>Plan</h2>
+        <div class="composer-toolbar">
+          <label class="composer-field">Lane <select id="composer-lane">
+            <option value="">all lanes</option><option>harmony</option><option>bass</option><option>melody</option><option>inner</option>
+          </select></label>
+          <label class="composer-field">Seed <input type="text" id="composer-seed" placeholder="random" /></label>
+        </div>
+        <div id="composition-plan"></div>
+      </section>
+      <section class="panel composer-panel"><h2>Variations</h2><div id="composition-variations"></div></section>
       <section class="panel composer-panel"><h2>Summary</h2><div id="composition-summary"></div></section>
       <section class="panel composer-panel"><h2>Score</h2>
         <div id="composition-score-status" class="piece-list-status"></div>
@@ -585,6 +593,9 @@ async function showComposition(id, versionNumber) {
   select.value = String(wanted);
   select.addEventListener("change", () => showComposerVersion(id, versions, Number(select.value)));
   await showComposerVersion(id, versions, Number(select.value));
+  if (message) {
+    statusEl.textContent = message;
+  }
 }
 
 async function showComposerVersion(id, versions, number) {
@@ -606,7 +617,8 @@ async function showComposerVersion(id, versions, number) {
   planEl.textContent = "";
   const tree = buildPlanTree(planResult.data);
   if (tree) {
-    planEl.appendChild(renderComposerTree(tree));
+    planEl.appendChild(renderComposerTree(tree, true));
+    renderComposerVariations(tree);
   }
 }
 
@@ -635,7 +647,7 @@ function renderComposerSummary(summary) {
   el.appendChild(table);
 }
 
-function renderComposerTree(node) {
+function renderComposerTree(node, isRoot) {
   const list = document.createElement("ul");
   list.classList.add("composer-tree");
   const item = document.createElement("li");
@@ -651,12 +663,15 @@ function renderComposerTree(node) {
   state.classList.add("composer-state", `composer-state-${node.state}`);
   state.textContent = node.state;
   line.append(label, bars, state);
+  if (!isRoot) {
+    renderComposerNodeActions(node, line);
+  }
   item.appendChild(line);
   if (node.children.length > 0) {
     const children = document.createElement("li");
     children.classList.add("composer-children");
     for (const child of node.children) {
-      children.appendChild(renderComposerTree(child));
+      children.appendChild(renderComposerTree(child, false));
     }
     item.appendChild(children);
   }
@@ -664,10 +679,9 @@ function renderComposerTree(node) {
   return list;
 }
 
-/* Fetches a MusicXML file and draws it with OSMD into the score panel. */
-async function renderComposerScore(path) {
-  const statusEl = document.getElementById("composition-score-status");
-  const containerEl = document.getElementById("composition-score");
+/* Fetches a MusicXML file and draws it with OSMD into containerEl; progress
+ * and errors go to statusEl. */
+async function composerDrawScore(path, containerEl, statusEl, zoom) {
   statusEl.textContent = "Loading score...";
   statusEl.classList.remove("error");
   containerEl.innerHTML = "";
@@ -679,8 +693,10 @@ async function renderComposerScore(path) {
     const xmlText = await res.text();
     const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(containerEl);
     await osmd.load(xmlText);
+    if (zoom) {
+      osmd.zoom = zoom;
+    }
     osmd.render();
-    composerScoreOsmd = osmd;
     statusEl.textContent = "";
   } catch (err) {
     statusEl.textContent = `Could not load score: ${err}`;
@@ -688,9 +704,273 @@ async function renderComposerScore(path) {
   }
 }
 
+function renderComposerScore(path) {
+  return composerDrawScore(
+    path,
+    document.getElementById("composition-score"),
+    document.getElementById("composition-score-status"),
+  );
+}
+
+/* ---- lock, regenerate, variations ---------------------------------- */
+
+const COMPOSER_LANES = ["harmony", "bass", "melody", "inner"];
+
+function composerTarget(request, target) {
+  if (target.node !== undefined) {
+    request.node = target.node;
+  } else {
+    request.section = target.section;
+  }
+  if (target.lane) {
+    request.lane = target.lane;
+  }
+  return request;
+}
+
+/* target: {node} or {section}, and lane (blank for all lanes). */
+function buildLockRequest(version, target) {
+  return composerTarget({ version }, target);
+}
+
+/* seedText blank takes a new random seed. */
+function buildRegenerateRequest(version, target, seedText) {
+  const seed = composerOptionalInteger(seedText, "Seed", 0, 4294967295);
+  if (seed.error) {
+    return { error: seed.error };
+  }
+  const request = composerTarget({ version }, target);
+  if (seed.value !== undefined) {
+    request.seed = seed.value;
+  }
+  return { request };
+}
+
+/* A harmonization takes a whole section (by its letter) and no lane. */
+function buildVariationsRequest(version, target, countText, seedText, harmonize) {
+  const count = composerOptionalInteger(countText, "Count", 1, 8);
+  if (count.error || count.value === undefined) {
+    return { error: count.error || "Count must be 1 to 8." };
+  }
+  const seed = composerOptionalInteger(seedText, "Seed", 0, 4294967295);
+  if (seed.error) {
+    return { error: seed.error };
+  }
+  let request;
+  if (harmonize) {
+    if (!target.letter) {
+      return { error: "Harmonize needs a section with a form letter." };
+    }
+    request = { version, section: target.letter, harmonize: true };
+  } else {
+    request = composerTarget({ version }, target);
+  }
+  request.count = count.value;
+  if (seed.value !== undefined) {
+    request.seed = seed.value;
+  }
+  return { request };
+}
+
+/* Harmonize is offered when every melody span inside the section is Given
+ * (the harmony is then written around the melody) and the section has a
+ * letter. node is a plan tree node (start, end in whole notes). */
+function canHarmonize(plan, node) {
+  if (!node || !node.letter || !plan || !Array.isArray(plan.melody)) {
+    return false;
+  }
+  const spans = plan.melody.filter((entry) => {
+    const start = composerRational(entry.span && entry.span.start);
+    const end = composerRational(entry.span && entry.span.end);
+    return start >= node.start && end <= node.end;
+  });
+  return spans.length > 0 && spans.every((entry) => entry.composer && entry.composer.state === "given");
+}
+
+/* Every node below the form, flat, for the target selector. */
+function composerTargets(tree) {
+  const list = [];
+  (function visit(node, depth) {
+    if (depth > 0) {
+      list.push(node);
+    }
+    node.children.forEach((child) => visit(child, depth + 1));
+  })(tree, 0);
+  return list;
+}
+
+function composerHeardText(sections) {
+  return (sections || []).map((section) => `${section.letter}: ${section.heard}`).join("; ");
+}
+
+function composerActionButtons() {
+  return Array.from(document.querySelectorAll(".composer-action"));
+}
+
+/* Runs one command on the shown version and opens the version it wrote. */
+async function runComposerAction(path, request, message) {
+  const statusEl = document.getElementById("composition-status");
+  const current = composerCurrent;
+  const result = await composerBusy(composerActionButtons(), statusEl, message, () =>
+    composerPost(`/compositions/${encodeURIComponent(current.id)}${path}`, request),
+  );
+  if (!result.ok) {
+    composerShowError(statusEl, result.status, result.data);
+    return null;
+  }
+  await showComposition(current.id, result.data.version, `Wrote v${result.data.version}.`);
+  return result.data;
+}
+
+function composerTargetOf(node, lane) {
+  return { node: node.id, lane };
+}
+
+function renderComposerNodeActions(node, line) {
+  const lane = () => document.getElementById("composer-lane").value;
+  const seed = () => document.getElementById("composer-seed").value;
+  const lock = document.createElement("button");
+  lock.type = "button";
+  lock.classList.add("composer-action");
+  lock.textContent = "Lock";
+  lock.addEventListener("click", () =>
+    runComposerAction("/lock", buildLockRequest(composerCurrent.version, composerTargetOf(node, lane())), "Locking..."),
+  );
+  const regenerate = document.createElement("button");
+  regenerate.type = "button";
+  regenerate.classList.add("composer-action");
+  regenerate.textContent = "Regenerate";
+  regenerate.addEventListener("click", () => {
+    const built = buildRegenerateRequest(composerCurrent.version, composerTargetOf(node, lane()), seed());
+    if (built.error) {
+      composerShowError(document.getElementById("composition-status"), 0, { error: built.error });
+      return;
+    }
+    runComposerAction("/regenerate", built.request, "Regenerating, this can take a while...");
+  });
+  line.append(lock, regenerate);
+}
+
+function renderComposerVariations(tree) {
+  const el = document.getElementById("composition-variations");
+  el.innerHTML = "";
+  const targets = composerTargets(tree);
+  const target = document.createElement("select");
+  for (const node of targets) {
+    const option = document.createElement("option");
+    option.value = String(node.id);
+    option.textContent = `${node.letter || node.label} (node ${node.id}, ${node.bars})`;
+    target.appendChild(option);
+  }
+  const lane = composerSelect("lane", COMPOSER_LANES, "all lanes");
+  const count = composerInput("count", "", "3");
+  const seed = composerInput("seed", "random");
+  const harmonize = composerCheckbox("harmonize");
+  const generate = document.createElement("button");
+  generate.type = "button";
+  generate.classList.add("composer-action");
+  generate.textContent = "Generate";
+  const status = document.createElement("div");
+  status.classList.add("piece-list-status", "composer-status");
+  const results = document.createElement("div");
+  results.classList.add("composer-variation-grid");
+
+  const selected = () => targets.find((node) => String(node.id) === target.value);
+  function updateHarmonize() {
+    const allowed = canHarmonize(composerCurrent.plan, selected());
+    harmonize.disabled = !allowed;
+    if (!allowed) {
+      harmonize.checked = false;
+    }
+    lane.disabled = harmonize.checked;
+  }
+  target.addEventListener("change", updateHarmonize);
+  harmonize.addEventListener("change", updateHarmonize);
+  updateHarmonize();
+
+  generate.addEventListener("click", async () => {
+    const node = selected();
+    const built = buildVariationsRequest(
+      composerCurrent.version,
+      { node: node.id, letter: node.letter, lane: lane.value },
+      count.value,
+      seed.value,
+      harmonize.checked,
+    );
+    if (built.error) {
+      composerShowError(status, 0, { error: built.error });
+      return;
+    }
+    const current = composerCurrent;
+    const result = await composerBusy(composerActionButtons(), status, "Generating variations, this can take a while...", () =>
+      composerPost(`/compositions/${encodeURIComponent(current.id)}/variations`, built.request),
+    );
+    if (!result.ok) {
+      composerShowError(status, result.status, result.data);
+      return;
+    }
+    status.textContent = `Kept ${result.data.kept} of ${result.data.requested}, ${result.data.seeds_tried} seeds tried.`;
+    renderComposerVariationResults(results, current.id, result.data);
+  });
+
+  const controls = document.createElement("div");
+  controls.classList.add("composer-toolbar");
+  controls.append(
+    composerField("Target", target),
+    composerField("Lane", lane),
+    composerField("Count (1 to 8)", count),
+    composerField("Seed", seed),
+    composerField("Harmonize", harmonize),
+    generate,
+  );
+  el.append(controls, status, results);
+}
+
+function renderComposerVariationResults(container, id, data) {
+  container.innerHTML = "";
+  for (const variation of data.variations || []) {
+    const card = document.createElement("div");
+    card.classList.add("composer-variation");
+    const title = document.createElement("div");
+    title.textContent = `#${variation.index} · seed ${variation.seed}`;
+    const heard = document.createElement("div");
+    heard.classList.add("claim-row-where");
+    heard.textContent = composerHeardText(variation.sections);
+    const scoreStatus = document.createElement("div");
+    scoreStatus.classList.add("piece-list-status");
+    const score = document.createElement("div");
+    score.classList.add("analysis-score-container");
+    const choose = document.createElement("button");
+    choose.type = "button";
+    choose.classList.add("composer-action");
+    choose.textContent = "Choose";
+    choose.addEventListener("click", async () => {
+      const statusEl = document.getElementById("composition-status");
+      const result = await composerBusy(composerActionButtons(), statusEl, "Choosing...", () =>
+        composerFetch(
+          `/compositions/${encodeURIComponent(id)}/variations/${data.set}/${variation.index}/choose`,
+          { method: "POST" },
+        ),
+      );
+      if (!result.ok) {
+        composerShowError(statusEl, result.status, result.data);
+        return;
+      }
+      await showComposition(id, result.data.version, `Wrote v${result.data.version}.`);
+    });
+    card.append(title, heard, scoreStatus, score, choose);
+    container.appendChild(card);
+    composerDrawScore(`/compositions/${encodeURIComponent(id)}/variations/${data.set}/${variation.index}/musicxml`, score, scoreStatus, 0.5);
+  }
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     buildPlanTree,
+    buildLockRequest,
+    buildRegenerateRequest,
+    buildVariationsRequest,
+    canHarmonize,
     buildSummaryRows,
     composerVersionLabel,
     composerBarsLabel,

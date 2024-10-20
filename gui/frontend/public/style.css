@@ -619,3 +619,33 @@ body {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+.composer-node button {
+  background: none;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.composer-node button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.composer-variation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.composer-variation {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  overflow: hidden;
+}
