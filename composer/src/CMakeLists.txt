@@ -47,6 +47,7 @@ add_library(ursatz_composer STATIC
     melody/melody_fill.c
     form/form_hear.c
     form/form_boundary.c
+    form/return_hear.c
     grow/grow_request.c
     grow/grow_theme.c
     grow/grow_beginning.c

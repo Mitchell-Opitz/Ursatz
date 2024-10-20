@@ -10,6 +10,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/piece_plan_keys.h>
+#include <ursatz_composer/return_hear.h>
 
 /*
  * The compose run (R-068): every theme section of a plan filled in stages, each stage one fill_run over the whole plan
@@ -37,7 +38,9 @@
  * of the sections it left unwritten, the climax moved in a theme that is not a sentence; a run stuck after that starts
  * again from a JSON snapshot of the plan as given, up to twelve rounds.
  *
- * After a complete run every theme section is heard with form_hear over its own span. A plan with more than one key
+ * After a complete run every theme section is heard with form_hear over its own span, and the returns are heard
+ * (return_hear.h): each section with a RETURN is planned to resemble the section it returns, and is heard as planned
+ * when the kernel's thematic return detection finds that pair; a pair not found is reported, not rejected (R-048). A plan with more than one key
  * span (R-069) is then checked: its keys are closely related to the home key and every key change a section ends in
  * is a modulation (piece_check_keys), and its cadences follow the plan's (piece_check_cadences). A run that fails is
  * rejected like a stuck one: it starts again from the plan as given, with other seeds, up to the same twelve rounds.
@@ -86,13 +89,17 @@ typedef struct {
     ComposeHeard *sections;                   /* owned; one per theme section, in plan order */
     size_t section_count;
     size_t heard_as_requested;                /* how many sections were */
+    ReturnHeard returns;                      /* owned; the returns heard over the whole plan */
+    size_t returns_planned;                   /* the theme sections with a RETURN, each planned to be heard as a return */
+    size_t returns_heard;                     /* how many of them were */
+    bool returns_heard_as_planned;            /* every return planned was heard (true when none was planned) */
     bool key_rejected;                        /* the last run was complete but failed the key or cadence check (stuck) */
     PieceKeyCheck key_check;                  /* the checks of the last complete run, for a plan with several keys */
     PieceCadenceCheck cadence_check;
     /*
      * Over the sections, the structure's score and 1 for each section heard as requested: the sum of the numerators
      * over the sum of the denominators (each section's denominator one more than its structure's), as GrowOutcome's
-     * score is for one.
+     * score is for one; and 1 more for each return planned, in the numerator too when it was heard.
      */
     GrowScore score;
 } ComposeOutcome;

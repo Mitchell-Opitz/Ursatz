@@ -68,6 +68,7 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
         form_heard_destroy(&outcome->sections[i].heard);
     }
     free(outcome->sections);
+    return_heard_destroy(&outcome->returns);
     memset(outcome, 0, sizeof(*outcome));
 }
 
@@ -350,6 +351,33 @@ static void hear_section(const PiecePlan *plan, NodeId section, const FillRecord
     }
 }
 
+/* The section a theme section returns, if it has a RETURN constraint. */
+static NodeId returned_section(const PiecePlan *plan, NodeId section) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
+            return constraint->params.section_return.section;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* Hears the returns the plan asks for. A return that cannot be heard counts as not heard. */
+static void hear_returns(const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
+    bool heard_ok = false;
+    for (size_t t = 0; t < theme_count; t++) {
+        outcome->returns_planned += returned_section(plan, themes[t]) != PLAN_NODE_NONE;
+    }
+    if (outcome->returns_planned > 0) {
+        heard_ok = return_hear(plan, &outcome->returns) == RETURN_HEAR_OK;
+    }
+    for (size_t t = 0; heard_ok && t < theme_count; t++) {
+        NodeId source = returned_section(plan, themes[t]);
+        outcome->returns_heard += source != PLAN_NODE_NONE && return_heard_find(&outcome->returns, source, themes[t]);
+    }
+    outcome->returns_heard_as_planned = outcome->returns_heard == outcome->returns_planned;
+}
+
 static void hear(const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
     unsigned long numerator = 0;
     unsigned long denominator = 0;
@@ -360,6 +388,9 @@ static void hear(const PiecePlan *plan, const NodeId *themes, size_t theme_count
         numerator += heard->structure.numerator + (heard->heard_as_requested ? 1 : 0);
         denominator += heard->structure.denominator + 1;
     }
+    hear_returns(plan, themes, theme_count, outcome);
+    numerator += outcome->returns_heard;
+    denominator += outcome->returns_planned;
     outcome->score.numerator = numerator;
     outcome->score.denominator = denominator ? denominator : 1;
 }
