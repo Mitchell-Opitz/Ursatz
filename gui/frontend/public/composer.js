@@ -153,30 +153,13 @@ function composerErrorText(status, data) {
   return data && data.stderr ? `${message}\n${String(data.stderr).trim()}` : message;
 }
 
-/* Sends a request to the Composer routes and resolves to {ok, status, data};
- * data is null for an answer that is not JSON. A network failure resolves to
- * {ok:false, status:0, data:{error}}. */
-async function composerFetch(path, options) {
-  try {
-    const res = await fetch(`${COMPOSER_API}${path}`, options);
-    let data = null;
-    try {
-      data = await res.json();
-    } catch (err) {
-      data = null;
-    }
-    return { ok: res.ok && !(data && data.error), status: res.status, data };
-  } catch (err) {
-    return { ok: false, status: 0, data: { error: `Could not reach backend: ${err}` } };
-  }
+/* Sends a request to the Composer routes (fetchJsonResult in app.js). */
+function composerFetch(path, options) {
+  return fetchJsonResult(`${COMPOSER_API}${path}`, options);
 }
 
 function composerPost(path, body) {
-  return composerFetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  return postJsonResult(`${COMPOSER_API}${path}`, body);
 }
 
 /* Runs action() with the buttons disabled and a spinner in statusEl until it
@@ -679,29 +662,8 @@ function renderComposerTree(node, isRoot) {
   return list;
 }
 
-/* Fetches a MusicXML file and draws it with OSMD into containerEl; progress
- * and errors go to statusEl. */
-async function composerDrawScore(path, containerEl, statusEl, zoom) {
-  statusEl.textContent = "Loading score...";
-  statusEl.classList.remove("error");
-  containerEl.innerHTML = "";
-  try {
-    const res = await fetch(`${COMPOSER_API}${path}`);
-    if (!res.ok) {
-      throw new Error(`score request failed (${res.status})`);
-    }
-    const xmlText = await res.text();
-    const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(containerEl);
-    await osmd.load(xmlText);
-    if (zoom) {
-      osmd.zoom = zoom;
-    }
-    osmd.render();
-    statusEl.textContent = "";
-  } catch (err) {
-    statusEl.textContent = `Could not load score: ${err}`;
-    statusEl.classList.add("error");
-  }
+function composerDrawScore(path, containerEl, statusEl, zoom) {
+  return drawMusicXmlScore(`${COMPOSER_API}${path}`, containerEl, statusEl, zoom);
 }
 
 function renderComposerScore(path) {

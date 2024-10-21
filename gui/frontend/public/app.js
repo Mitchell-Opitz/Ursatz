@@ -50,6 +50,63 @@ function getContentEl() {
   return document.getElementById("content");
 }
 
+/* Sends a request and resolves to {ok, status, data}; data is null for an
+ * answer that is not JSON. ok is false for an error status or a body with an
+ * "error" field. A network failure resolves to {ok:false, status:0,
+ * data:{error}}. Shared by the views that talk to the Composer routes. */
+async function fetchJsonResult(url, options) {
+  try {
+    const res = await fetch(url, options);
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (err) {
+      data = null;
+    }
+    return { ok: res.ok && !(data && data.error), status: res.status, data };
+  } catch (err) {
+    return { ok: false, status: 0, data: { error: `Could not reach backend: ${err}` } };
+  }
+}
+
+function postJsonResult(url, body) {
+  return fetchJsonResult(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/* Fetches a MusicXML file and draws it with OSMD (vendored under
+ * vendor/opensheetmusicdisplay/, loaded globally as
+ * window.opensheetmusicdisplay -- see index.html) into containerEl; progress
+ * and errors go to statusEl. Resolves to {osmd, xmlText}, or null when it
+ * could not be drawn. zoom is optional (small previews). */
+async function drawMusicXmlScore(url, containerEl, statusEl, zoom) {
+  statusEl.textContent = "Loading score...";
+  statusEl.classList.remove("error");
+  containerEl.innerHTML = "";
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`score request failed (${res.status})`);
+    }
+    const xmlText = await res.text();
+    const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(containerEl);
+    await osmd.load(xmlText);
+    if (zoom) {
+      osmd.zoom = zoom;
+    }
+    osmd.render();
+    statusEl.textContent = "";
+    return { osmd, xmlText };
+  } catch (err) {
+    statusEl.textContent = `Could not load score: ${err}`;
+    statusEl.classList.add("error");
+    return null;
+  }
+}
+
 async function checkHealth() {
   const el = document.getElementById("health-status");
   try {
@@ -701,22 +758,14 @@ function renderScoreTab(scoreEl, pieceId) {
     })
     .catch(() => {});
 
-  fetch(`/api/analyzer/pieces/${pieceId}/musicxml`)
-    .then((res) => res.text())
-    .then((xmlText) => {
-      const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(containerEl);
-      return osmd.load(xmlText).then(() => {
-        osmd.render();
-        statusEl.textContent = "";
-        currentScoreOsmd = osmd;
-        currentScoreNoteIndex = buildScoreNoteIndex(osmd, xmlText);
-        applyPendingHighlight();
-      });
-    })
-    .catch((err) => {
-      statusEl.textContent = `Could not load score: ${err}`;
-      statusEl.classList.add("error");
-    });
+  drawMusicXmlScore(`/api/analyzer/pieces/${pieceId}/musicxml`, containerEl, statusEl).then((drawn) => {
+    if (!drawn) {
+      return;
+    }
+    currentScoreOsmd = drawn.osmd;
+    currentScoreNoteIndex = buildScoreNoteIndex(drawn.osmd, drawn.xmlText);
+    applyPendingHighlight();
+  });
 }
 
 /* One tab: for each document section, a heading, the section's JSON block
