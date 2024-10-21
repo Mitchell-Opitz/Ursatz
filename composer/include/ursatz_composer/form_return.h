@@ -34,9 +34,10 @@
  *   ORNAMENT     the melody keeps every note and gains passing and neighbor tones between them, off the strong beats, at
  *                most one added note a beat; candidates differ in which notes are ornamented.
  *   REHARMONIZE  the harmony spans are reopened as the targets they were written from (the HARMONY_SHAPE and the cadence
- *                kept), and the bass, the melody and the inner voices with them, each as an open span with the
- *                constraints it had, so the same motive references are written again over other chords: compose_run runs
- *                the harmony, bass, melody and texture stages again after the returns.
+ *                kept), and the bass and the inner voices with them, each as an open span with the constraints it had;
+ *                the melody is the returned one. compose_run runs the harmony, bass, melody and texture stages again
+ *                after the returns, writes the chords the harmony operators write, and keeps the result when every
+ *                strong-beat melody note is a tone of the chord under it (form_return_melody_fits), else tries again.
  *   REREGISTER   the melody, and the inner voices with it, an octave up or down; one candidate for each that keeps the
  *                melody inside its range, none when neither does, and the section stays open.
  *
@@ -56,6 +57,20 @@ bool form_return_handles(const PiecePlan *plan, NodeId section);
 bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation);
 
 /*
+ * Whether every melody note that starts on a strong beat (the start of a cell of the meter, where a chord may start) in
+ * the section is a tone of the chord under it. A section whose key lane has more than one span is not judged: true.
+ * False when the harmony or the melody cannot be read.
+ */
+bool form_return_melody_fits(const PiecePlan *plan, NodeId section);
+
+/*
+ * How many of the chords of a section that returns another (a RETURN constraint) are not the chords of the other at the
+ * same place: another numeral, or the same one over another length. *total is the number of chords of the section. A
+ * reharmonized return changes some. False when the section has no RETURN or either harmony lane cannot be read.
+ */
+bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total);
+
+/*
  * Registers form-return. melody gives the range a re-registered melody keeps to (NULL for the defaults); the registry
  * keeps the pointer, so it must outlive the registry.
  */
@@ -65,7 +80,8 @@ FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFill
  * The checker for form-return's candidates; pass it as FillConfig.checker. Hard rules reject a candidate that does not
  * keep to its variation: the structure is the returned section's, shifted by the time between the two and transposed by
  * the key difference; an ornamented melody keeps every note and adds only passing and neighbor tones, off the strong
- * beats, one a beat; a reharmonization reopens the lanes and covers the returned harmony; a re-registered melody is an
+ * beats, one a beat; a reharmonization reopens the harmony, bass and inner voices, covers the returned harmony and keeps
+ * the melody; a re-registered melody is an
  * octave away and inside the range. The score is 1/1 for a candidate that keeps to it and changes what its variation
  * changes (an ornament with a note added), else 0/1. A candidate of another operator is accepted at 0/1.
  */

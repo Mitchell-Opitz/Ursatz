@@ -30,6 +30,12 @@
  * with the climax elsewhere.
  */
 static const unsigned CLIMAX_RETRIES[COMPOSE_MELODY_ATTEMPTS] = {0, 250, 833, 400, 950, 560};
+/*
+ * How many times the returns are made before a reharmonized return, whose chords the harmony operators write without
+ * the melody it keeps, is given up on, and how far apart the seeds of the attempts are.
+ */
+#define COMPOSE_RETURN_ATTEMPTS 12
+#define COMPOSE_RETURN_STRIDE 10000UL
 /* How many runs, from the plan as given, before a stuck run is given up on, and how far apart their seeds are. */
 #define COMPOSE_RUN_ROUNDS 12
 #define COMPOSE_ROUND_STRIDE 100000UL
@@ -428,6 +434,7 @@ typedef struct {
     const NodeId *themes;
     size_t theme_count;
     bool sentences;
+    size_t attempt; /* the attempt at the returns, which moves the seeds of the stages they run */
     MotiveDevelopContext motives;
     AccompanimentParams accompaniment;
     VoicingParams voicing;
@@ -453,7 +460,8 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             return PIECE_ERR_ALLOC;
         }
         memset(&fill, 0, sizeof(fill));
-        fill.seed = config->seed + run->offset + stage_seed(stage, again) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt;
+        fill.seed = config->seed + run->offset + stage_seed(stage, again) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt +
+                    COMPOSE_RETURN_STRIDE * (unsigned long)run->attempt;
         fill.max_iterations = config->max_iterations;
         fill.checker = checker_of(stage);
         fill.checker_context =
@@ -495,6 +503,77 @@ static bool returns_pending(const PiecePlan *plan, const NodeId *themes, size_t 
         }
     }
     return false;
+}
+
+/* The theme sections to be returned with a reharmonization. */
+static size_t reharmonized(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
+    size_t count = 0;
+    for (size_t t = 0; t < theme_count; t++) {
+        PlanReturnVariation variation;
+        if (form_return_source(plan, themes[t], NULL, &variation) && variation == PLAN_RETURN_REHARMONIZE) {
+            out[count++] = themes[t];
+        }
+    }
+    return count;
+}
+
+/*
+ * The returns, then the stages that write what they reopened. The chords of a reharmonization are the harmony
+ * operators', which know nothing of the melody the return keeps: when a strong-beat note of it is not a tone of the
+ * chord now under it, or (in the first half of the attempts) no chord differs from the returned one, the returns are
+ * made again from the plan as it was, with other seeds, a few times.
+ */
+static PieceResult run_returns(Run *run) {
+    PiecePlan *plan = run->plan;
+    NodeId *pending = calloc(run->theme_count + 1, sizeof(NodeId));
+    if (!pending) {
+        return PIECE_ERR_ALLOC;
+    }
+    size_t pending_count = reharmonized(plan, run->themes, run->theme_count, pending);
+    char *snapshot = pending_count ? plan_to_json(plan, NULL) : NULL;
+    size_t attempts = pending_count ? COMPOSE_RETURN_ATTEMPTS : 1;
+    PieceResult result = pending_count && !snapshot ? PIECE_ERR_ALLOC : PIECE_OK;
+    for (size_t attempt = 0; result == PIECE_OK && attempt < attempts; attempt++) {
+        if (attempt > 0) {
+            PiecePlan *fresh = NULL;
+            if (plan_from_json(snapshot, &fresh, NULL) != PLAN_OK) {
+                result = PIECE_ERR_ALLOC;
+                break;
+            }
+            plan_replace_contents(plan, fresh);
+        }
+        run->attempt = attempt;
+        run->outcome->stuck = false;
+        result = run_stage(run, COMPOSE_STAGE_RETURNS, false);
+        for (ComposeStage stage = COMPOSE_STAGE_HARMONY; result == PIECE_OK && stage <= COMPOSE_STAGE_TEXTURE; stage++) {
+            result = run_stage(run, stage, true);
+        }
+        /* The melody fits the chords, and (for the first half of the attempts) the chords are not all the returned ones. */
+        bool fits = true;
+        for (size_t i = 0; result == PIECE_OK && i < pending_count; i++) {
+            size_t changed = 0;
+            size_t total = 0;
+            fits = fits && form_return_melody_fits(plan, pending[i]);
+            if (attempt < attempts / 2) {
+                fits = fits && form_return_chords_changed(plan, pending[i], &changed, &total) && changed > 0;
+            }
+        }
+        if (result == PIECE_OK && !fits) {
+            run->outcome->stuck = true;
+            run->outcome->stuck_stage = COMPOSE_STAGE_RETURNS;
+            result = PIECE_ERR_STUCK;
+        }
+        if (result == PIECE_OK || result == PIECE_ERR_ALLOC) {
+            break;
+        }
+        if (attempt + 1 < attempts) {
+            result = PIECE_OK; /* another attempt */
+            continue;
+        }
+    }
+    free(snapshot);
+    free(pending);
+    return result;
 }
 
 /* One run of the stages. offset is added to every seed. */
@@ -552,10 +631,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     }
     /* The sections that return an earlier one are given its material now it is written, then what they reopened is. */
     if (result == PIECE_OK && returns_pending(plan, themes, theme_count)) {
-        result = run_stage(&run, COMPOSE_STAGE_RETURNS, false);
-        for (ComposeStage stage = COMPOSE_STAGE_HARMONY; result == PIECE_OK && stage <= COMPOSE_STAGE_TEXTURE; stage++) {
-            result = run_stage(&run, stage, true);
-        }
+        result = run_returns(&run);
     }
     if (result == PIECE_OK) {
         hear(plan, themes, theme_count, outcome);

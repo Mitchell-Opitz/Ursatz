@@ -15,7 +15,6 @@
 #define EIGHTH 16L
 /* The placeholder notes an open bass, melody and inner voice span holds until the operators write them. */
 #define BASS_PLACEHOLDER 40
-#define MELODY_PLACEHOLDER 60
 #define INNER_PLACEHOLDER 55
 
 static bool to_ticks(PlanTime time, long *out) {
@@ -379,9 +378,12 @@ static bool reharmonize(ReturnPayload *payload) {
             break;
         }
         case PLAN_LANE_MELODY:
+            *out = *span; /* the melody is the return: it stays as it was written */
+            used++;
+            break;
         case PLAN_LANE_INNER_VOICE:
             *out = *span;
-            ok = open_notes(out, span->lane == PLAN_LANE_MELODY ? MELODY_PLACEHOLDER : INNER_PLACEHOLDER);
+            ok = open_notes(out, INNER_PLACEHOLDER);
             used++;
             break;
         default:
@@ -537,18 +539,33 @@ static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
     out->score_numerator = added_total > 0 ? 1 : 0;
 }
 
-/* The harmony, bass, melody and inner voices are open, the harmony spans with the shape they were written from. */
+/* Whether the notes of two spans are the same, the second's pitches shift semitones from the first's. */
+static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
+    if (a->note_count != b->note_count) {
+        return false;
+    }
+    for (size_t n = 0; n < a->note_count; n++) {
+        if (a->notes[n].midi_pitch + shift != b->notes[n].midi_pitch ||
+            plan_time_compare(a->notes[n].offset, b->notes[n].offset) != 0 ||
+            plan_time_compare(a->notes[n].duration, b->notes[n].duration) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The harmony, bass and inner voices are open (the harmony spans with the shape they were written from); the melody is the returned one. */
 static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
     const ReturnCopy *copy = &payload->result;
     PlanTime harmony = {0, 1};
     PlanTime source_harmony = {0, 1};
     size_t reopened = 0;
-    size_t melody = 0;
-    size_t source_melody = 0;
+    size_t next_melody = 0;
     for (size_t i = 0; i < copy->span_count; i++) {
         const ReturnSpan *span = &copy->spans[i];
-        if (span->state != PLAN_STATE_CONSTRAINED) {
-            reject(out, "reharmonization leaves a lane written");
+        bool written = span->lane == PLAN_LANE_MELODY;
+        if ((span->state != PLAN_STATE_CONSTRAINED) == !written) {
+            reject(out, written ? "reharmonization reopens the melody" : "reharmonization leaves a lane written");
             return;
         }
         if (span->lane == PLAN_LANE_HARMONY) {
@@ -559,23 +576,31 @@ static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
                 return;
             }
         }
-        melody += span->lane == PLAN_LANE_MELODY;
     }
     for (size_t i = 0; i < payload->source.span_count; i++) {
         const ReturnSpan *span = &payload->source.spans[i];
-        if (span->lane == PLAN_LANE_HARMONY) {
-            if (plan_time_add(source_harmony, span->span.length, &source_harmony) != PLAN_OK) {
-                reject(out, "the returned harmony cannot be read");
-                return;
-            }
+        if (span->lane == PLAN_LANE_HARMONY && plan_time_add(source_harmony, span->span.length, &source_harmony) != PLAN_OK) {
+            reject(out, "the returned harmony cannot be read");
+            return;
         }
-        source_melody += span->lane == PLAN_LANE_MELODY;
+        if (span->lane != PLAN_LANE_MELODY) {
+            continue;
+        }
+        /* The melody of the result is the returned one's, in the same spans, moved. */
+        while (next_melody < copy->span_count && copy->spans[next_melody].lane != PLAN_LANE_MELODY) {
+            next_melody++;
+        }
+        if (next_melody == copy->span_count || !same_notes(span, &copy->spans[next_melody], payload->transpose)) {
+            reject(out, "reharmonization changes the melody");
+            return;
+        }
+        next_melody++;
     }
-    if (reopened == 0 || plan_time_compare(harmony, source_harmony) != 0 || melody != source_melody) {
-        reject(out, "reharmonization does not cover the returned section");
+    if (reopened == 0 || plan_time_compare(harmony, source_harmony) != 0) {
+        reject(out, "reharmonization does not cover the returned harmony");
         return;
     }
-    out->score_numerator = reopened <= payload->source.span_count ? 1 : 0;
+    out->score_numerator = 1;
 }
 
 static void check_reregister(const ReturnPayload *payload, FillCheck *out) {

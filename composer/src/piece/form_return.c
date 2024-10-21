@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "harmony/harmony_internal.h"
+#include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */
@@ -213,6 +215,8 @@ bool return_copy_clone(const ReturnCopy *from, ReturnCopy *out) {
     }
     return ok;
 }
+
+static bool same_times(PlanTime a, PlanTime b);
 
 static bool time_sub(PlanTime a, PlanTime b, PlanTime *out) {
     return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK;
@@ -464,6 +468,136 @@ static bool source_ready(const PiecePlan *plan, NodeId source) {
     unsigned needed = (1u << PLAN_LANE_HARMONY) | (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_MELODY);
     return plan_node_state(plan, source) != PLAN_STATE_CONSTRAINED && lanes_written(plan, source, &seen) &&
            (seen & needed) == needed;
+}
+
+/* Whether a time is a whole number of cells. */
+static bool on_cell(PlanTime time, PlanTime cell, size_t *index) {
+    long numerator = time.num * (long)cell.den;
+    long denominator = (long)time.den * cell.num;
+    if (denominator <= 0 || numerator < 0 || numerator % denominator != 0) {
+        return false;
+    }
+    *index = (size_t)(numerator / denominator);
+    return true;
+}
+
+bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
+    PlanSpan span = plan_node_span(plan, section);
+    KeyPiece pieces[MAX_KEY_PIECES];
+    size_t piece_count;
+    PhraseChord chords[HARMONY_MAX_CHORDS];
+    size_t chord_count;
+    PhraseMetre metre;
+    if (!key_pieces(plan, span, pieces, &piece_count)) {
+        return false;
+    }
+    if (piece_count > 1) {
+        return true;
+    }
+    PlanKey key = pieces[0].key;
+    if (!harmony_read_lane(plan, span, key.mode, chords, &chord_count, &metre)) {
+        return false;
+    }
+    /* The cell each chord starts on. */
+    size_t starts[HARMONY_MAX_CHORDS + 1];
+    starts[0] = 0;
+    for (size_t c = 0; c < chord_count; c++) {
+        starts[c + 1] = starts[c] + chords[c].cells;
+    }
+    size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
+    LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
+    if (spans && !ids) {
+        return false;
+    }
+    plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, spans);
+    bool fits = true;
+    for (size_t s = 0; fits && s < spans; s++) {
+        PlanSpan lane_span = plan_lane_span_span(plan, ids[s]);
+        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
+        for (size_t n = 0; fits && n < notes->note_count; n++) {
+            PlanTime onset;
+            PlanTime from_start;
+            size_t cell;
+            if (plan_time_add(lane_span.start, notes->notes[n].offset, &onset) != PLAN_OK ||
+                !time_sub(onset, span.start, &from_start)) {
+                fits = false;
+            } else if (on_cell(from_start, metre.cell_length, &cell)) {
+                size_t c = 0;
+                while (c + 1 < chord_count && starts[c + 1] <= cell) {
+                    c++;
+                }
+                unsigned mask;
+                unsigned seventh;
+                int pitch_class = ((notes->notes[n].midi_pitch % 12) + 12) % 12;
+                fits = cell < starts[chord_count] && melody_chord_mask(&key, &chords[c], &mask, &seventh) &&
+                       ((mask >> pitch_class) & 1u);
+            }
+        }
+    }
+    free(ids);
+    return fits;
+}
+
+/* A chord of a section's harmony lane: where it starts in the section, how long it is, and its numeral. */
+typedef struct {
+    PlanTime from;
+    PlanTime length;
+    char roman[PLAN_ROMAN_NUMERAL_MAX];
+} ChordAt;
+
+static ChordAt *read_chords(const PiecePlan *plan, NodeId section, size_t *count) {
+    PlanSpan span = plan_node_span(plan, section);
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, NULL, 0);
+    LaneSpanId *ids = found ? calloc(found, sizeof(LaneSpanId)) : NULL;
+    ChordAt *chords = found ? calloc(found, sizeof(ChordAt)) : NULL;
+    *count = 0;
+    if (!found || !ids || !chords) {
+        free(ids);
+        free(chords);
+        return NULL;
+    }
+    plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, found);
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan chord = plan_lane_span_span(plan, ids[i]);
+        if (!time_sub(chord.start, span.start, &chords[i].from)) {
+            free(ids);
+            free(chords);
+            return NULL;
+        }
+        chords[i].length = chord.length;
+        memcpy(chords[i].roman, plan_lane_span_payload(plan, ids[i])->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
+    }
+    free(ids);
+    *count = found;
+    return chords;
+}
+
+bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total) {
+    PlanReturn ret;
+    size_t count;
+    size_t source_count;
+    if (!plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section)) {
+        return false;
+    }
+    ChordAt *chords = read_chords(plan, section, &count);
+    ChordAt *source = read_chords(plan, ret.section, &source_count);
+    bool ok = chords && source;
+    size_t different = 0;
+    for (size_t i = 0; ok && i < count; i++) {
+        bool same = false;
+        for (size_t j = 0; j < source_count && !same; j++) {
+            same = same_times(chords[i].from, source[j].from) && same_times(chords[i].length, source[j].length) &&
+                   strcmp(chords[i].roman, source[j].roman) == 0;
+        }
+        different += !same;
+    }
+    if (ok) {
+        *changed = different;
+        *total = count;
+    }
+    free(chords);
+    free(source);
+    return ok;
 }
 
 /* ------------------------------------------------------------- the operator */
