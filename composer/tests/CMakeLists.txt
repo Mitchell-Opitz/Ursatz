@@ -252,3 +252,11 @@ endforeach()
 # variations (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed.
 set_tests_properties(test_piece_keys_binary test_piece_keys_ternary test_piece_keys_loop test_piece_keys_layered
                      PROPERTIES WILL_FAIL TRUE)
+
+add_executable(test_form_return test_form_return.c)
+target_link_libraries(test_form_return PRIVATE ursatz_composer)
+target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)
+# Returning sections (form_return.h): the smoke test is quick; the others compose a few pieces each.
+foreach(mode smoke exact ornament reharmonize reregister)
+    add_test(NAME test_form_return_${mode} COMMAND test_form_return ${mode})
+endforeach()
