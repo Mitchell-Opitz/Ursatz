@@ -327,7 +327,8 @@ static int test_ornament(void) {
 
 /* ------------------------------------------------------------ reharmonize */
 
-/* The chords of variation 2 that differ from the theme's, over the runs: one in each, the harmony operators having little to change. */
+/* The chords of variation 2 that differ from the theme's, over the runs: one in each, as the harmony operators have
+   little to change. */
 #define REHARMONIZE_CHANGED_BASELINE 5
 
 static int test_reharmonize(void) {

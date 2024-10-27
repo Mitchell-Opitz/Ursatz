@@ -260,3 +260,10 @@ target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)
 foreach(mode smoke exact ornament reharmonize reregister)
     add_test(NAME test_form_return_${mode} COMMAND test_form_return ${mode})
 endforeach()
+
+add_executable(test_return_heard test_return_heard.c)
+target_link_libraries(test_return_heard PRIVATE ursatz_composer)
+target_compile_options(test_return_heard PRIVATE -Wall -Wextra -Wpedantic)
+# The returns heard in composed pieces: the smoke test is quick; the sweep fails when a share falls below its baseline.
+add_test(NAME test_return_heard_smoke COMMAND test_return_heard smoke)
+add_test(NAME test_return_heard_heard COMMAND test_return_heard heard)
