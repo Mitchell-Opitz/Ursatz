@@ -47,8 +47,53 @@ other than the table's are not planned yet.
 | layered | 8 x layers | Layer 1 8 (presentation + continuation, HC), then each later layer returns Layer 1; layers 2 to 4, default 4 |
 
 The return defaults: A' of the rounded binary and the second A of the ternary are `exact`, Var k is `ornament` for odd k
-and `reharmonize` for even k, a layer is `exact`. A `return` is stored only: a returning section is grown afresh from
-its motive, not copied from its source.
+and `reharmonize` for even k, a layer is `exact`.
+
+## Returns
+
+A section with a `return` is given the material of the section it returns by `form-return` (`form_return.h`) instead of
+being grown afresh. It does so when the two are as long, in the same meter, and the key lane has the same shape over
+both (the same keys cut at the same bars, in the same modes); the returning section is transposed by the key difference.
+Any other return is grown afresh from its motive, its `return` stored only: the A' of the 16-bar rounded binary (4 bars
+against A's 8) is one.
+
+`compose_run` leaves such a section alone through the first six stages (grow-theme does not apply to it), then runs a
+`returns` stage (seed + 7) after the texture. `form-return` copies the returned section's nodes and lane spans, shifted;
+the variation changes the copy:
+
+| Variation | What it does |
+| --- | --- |
+| `exact` | Nothing. The harmony, bass, melody and inner voices are the returned section's. |
+| `ornament` | The melody keeps every note and gains passing and neighbor tones between them, off the strong beats, one added note a beat; candidates differ in which notes are ornamented. Harmony, bass and inner voices are the returned section's. |
+| `reharmonize` | The harmony spans are reopened as the targets they were written from (shape and cadence kept), the bass and the inner voices with them; the melody is the returned one. The harmony, bass, melody and texture stages run again (seeds + 8 to + 11, no records kept) and write them. The chords are the harmony operators', which know nothing of the melody, so the returns are made again from the plan as it was, up to 12 attempts, until every strong-beat melody note is a tone of the chord under it (`form_return_melody_fits`) and, in the first six attempts, a chord differs from the returned one. |
+| `reregister` | The melody and the inner voices an octave up or down, whichever keeps the melody inside the range of `MelodyFillParams` (`ComposeConfig.melody`, else the default 60 to 79). One candidate for each that fits, none when neither does: the section stays open and the run is stuck at the returns. |
+
+`return_hear` (`return_hear.h`) hears the returns of a written plan: each section of the piece is heard with `form_hear`,
+each theme found becomes an entry (the contour and the rhythm of its melody notes), and the kernel's thematic return
+detection with its default configuration (windows of 6 events, similarity of at least 0.8) gives a pair for each later
+theme resembling an earlier one. `ComposeOutcome` has `returns` (the pairs), `returns_planned`, `returns_heard` and
+`returns_heard_as_planned`; each return planned adds 1 to the score's denominator, and heard, to its numerator. A return
+not heard is reported, not rejected.
+
+Deviations from the plan, and why:
+
+- A reharmonized return keeps the melody and the harmony operators write the chords; the plan had the checker reject a
+  candidate whose chords equal the source's in more than half the spans. The phrase model allows little variety (the
+  predominant, V or V7, the length of a chord), so 5 of 41 chords of variation 2 differ from the theme's (12%) and a
+  half is out of reach with these operators.
+- The test of the hearing asserts a baseline instead of `WILL_FAIL`, as the other sweeps do.
+
+Measured, seeds 1 to 10, C major 4/4, invented motive (`test_return_heard`):
+
+| Template | Returns heard | Why not all |
+| --- | --- | --- |
+| rounded binary (24 bars) | 10 of 10 | |
+| ternary (24 bars) | 3 of 10 | A is a period, and standard-form hears no theme in a period (see below), so the section has no entry in the detection |
+| variations (3) | 9 of 30 | The same: the theme and every variation are periods |
+
+The cause is the kernel's: the detection compares the exact contour and rhythm of the themes standard-form finds, and
+grow never hears a period (0 of 40, [grow.md](grow.md)). A section without a heard theme can neither return nor be
+returned in what is heard, whatever the plan copied.
 
 ## Keys and cadences
 
@@ -151,18 +196,20 @@ Four tests for each template (`tests/test_form_templates.c`):
 
 CI runs `ctest -LE slow`. The slow sweeps run in the full `ctest` before a push. The sweeps are deterministic, so a
 baseline is an exact measurement; a test fails when a count falls below it, passes when it holds or rises, and the
-baseline is raised in `BASELINES` when a change lifts it.
+baseline is raised in `BASELINES` when a change lifts it. Returns that copy their source moved the baselines of B6: layered
+and variations rose (their returns no longer get stuck on their own), and rounded binary's heard-as-requested and
+ternary's completions fell by one (a return is heard as its source is, and the seeds the stages draw from changed).
 
 Baselines, with grow's measured shares for the same sections for comparison:
 
 | Template | Runs complete | Heard as requested | Share | Expected from grow's shares |
 | --- | --- | --- | --- | --- |
 | binary | 21 of 40 | 15 of 80 | 19% | 26 |
-| rounded binary | 28 of 40 | 24 of 120 | 20% | 58 |
-| ternary | 28 of 40 | 7 of 120 | 6% | 13 |
+| rounded binary | 29 of 40 | 23 of 120 | 19% | 58 |
+| ternary | 27 of 40 | 7 of 120 | 6% | 13 |
 | loop | 15 of 40 | 12 of 60 | 20% | 39 |
-| layered | 17 of 60 | 14 of 180 | 8% | 117 |
-| variations | 36 of 60 | 0 of 220 | 0% | 0 |
+| layered | 30 of 60 | 20 of 180 | 11% | 117 |
+| variations | 45 of 60 | 0 of 220 | 0% | 0 |
 
 Variations hear none, as grow does, since every section is a period and grow never hears one (0 of 40). Its runs get
 stuck more the longer the form: in A minor 3/4 with a given motive none of the sizes completes.
@@ -178,16 +225,16 @@ stuck more the longer the form: in A minor 3/4 with a given motive none of the s
 | `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
 
 Every completed run passes every check. The share of runs that complete is below 100% for every template but rounded
-binary, so those five tests are `WILL_FAIL`, with the measured shares:
+binary and variations, so the other four tests are `WILL_FAIL`, with the measured shares:
 
 | Template | Runs complete | Of them change key | Stuck at |
 | --- | --- | --- | --- |
 | binary | 13 of 20 (65%) | 11 | melody 4, bass 1, harmony 2 |
 | rounded binary | 20 of 20 (100%) | 16 | |
 | ternary | 16 of 20 (80%) | 14 | A minor only: harmony 2, melody 2 |
-| variations | 14 of 20 (70%) | 11 | A minor only, all melody |
+| variations | 20 of 20 (100%) | 16 | |
 | loop | 10 of 20 (50%) | 0 | A minor only, all harmony |
-| layered | 7 of 20 (35%) | 0 | C major: melody 2, bass 1; A minor: harmony 10 |
+| layered | 10 of 20 (50%) | 0 | A minor: harmony 10 |
 
 Loop and layered have one key; they are stuck in A minor 4/4 without `modulate` too (B4's sweeps ran A minor in 3/4),
 and are in the table because the test runs every template. For binary, 5 of the 7 stuck runs complete with the same seeds
