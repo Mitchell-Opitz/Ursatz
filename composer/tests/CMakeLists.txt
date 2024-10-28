@@ -248,7 +248,22 @@ foreach(template ${FORM_TEMPLATES})
     # The sweeps are slow: CI leaves them out (ctest -LE slow).
     set_tests_properties(test_piece_keys_${template} PROPERTIES LABELS slow)
 endforeach()
-# Every completed run passes every check; the share of runs that complete is below 100% for all but rounded binary
-# (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed.
-set_tests_properties(test_piece_keys_binary test_piece_keys_ternary test_piece_keys_variations test_piece_keys_loop
-                     test_piece_keys_layered PROPERTIES WILL_FAIL TRUE)
+# Every completed run passes every check; the share of runs that complete is below 100% for all but rounded binary and
+# variations (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed.
+set_tests_properties(test_piece_keys_binary test_piece_keys_ternary test_piece_keys_loop test_piece_keys_layered
+                     PROPERTIES WILL_FAIL TRUE)
+
+add_executable(test_form_return test_form_return.c)
+target_link_libraries(test_form_return PRIVATE ursatz_composer)
+target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)
+# Returning sections (form_return.h): the smoke test is quick; the others compose a few pieces each.
+foreach(mode smoke exact ornament reharmonize reregister)
+    add_test(NAME test_form_return_${mode} COMMAND test_form_return ${mode})
+endforeach()
+
+add_executable(test_return_heard test_return_heard.c)
+target_link_libraries(test_return_heard PRIVATE ursatz_composer)
+target_compile_options(test_return_heard PRIVATE -Wall -Wextra -Wpedantic)
+# The returns heard in composed pieces: the smoke test is quick; the sweep fails when a share falls below its baseline.
+add_test(NAME test_return_heard_smoke COMMAND test_return_heard smoke)
+add_test(NAME test_return_heard_heard COMMAND test_return_heard heard)

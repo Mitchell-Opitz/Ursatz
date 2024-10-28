@@ -483,9 +483,9 @@ typedef struct {
 } Baseline;
 
 static const Baseline BASELINES[] = {
-    {FORM_TEMPLATE_BINARY, 21, 42, 15},     {FORM_TEMPLATE_ROUNDED_BINARY, 28, 84, 24},
-    {FORM_TEMPLATE_TERNARY, 28, 84, 7},     {FORM_TEMPLATE_VARIATIONS, 36, 121, 0},
-    {FORM_TEMPLATE_LOOP, 15, 20, 12},       {FORM_TEMPLATE_LAYERED, 17, 45, 14},
+    {FORM_TEMPLATE_BINARY, 21, 42, 15},     {FORM_TEMPLATE_ROUNDED_BINARY, 29, 87, 23},
+    {FORM_TEMPLATE_TERNARY, 27, 81, 7},     {FORM_TEMPLATE_VARIATIONS, 45, 165, 0},
+    {FORM_TEMPLATE_LOOP, 15, 20, 12},       {FORM_TEMPLATE_LAYERED, 30, 90, 20},
 };
 
 static const Baseline *baseline_of(FormTemplateKind kind) {

@@ -24,8 +24,9 @@
  *     lane span, or, with no motive, a Constrained one-bar melody span with an INVENT_MOTIVE constraint for
  *     motive-invent. The material has room for each section's own motive and the motives grow-theme makes for it.
  * The form's key lane is Given, over the sections and the material: one span in the home key, or with `modulate` the
- * spans piece_plan_keys plans (piece_plan_keys.h); a returning section is grown afresh from its motive, its RETURN
- * stored only (B6).
+ * spans piece_plan_keys plans (piece_plan_keys.h). A returning section is given the material of the section it
+ * returns by form-return (form_return.h) when the two are as long, in the same meter and in keys of the same shape;
+ * any other is grown afresh from its motive, its RETURN stored only.
  */
 
 typedef struct {
