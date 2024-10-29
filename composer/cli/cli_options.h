@@ -34,6 +34,19 @@ bool cli_parse_meter(const char *text, PlanMeter *meter);
 bool cli_parse_cadence(const char *text, PlanCadenceType *cadence);
 const char *cli_cadence_name(PlanCadenceType cadence);
 
+/* "any", "block", "arpeggiated", "alberti", "oom-pah", by PlanAccompanimentPattern. */
+const char *cli_accompaniment_name(PlanAccompanimentPattern pattern);
+
+/*
+ * Reads --accompaniment (pattern_text) and --texture (texture_text), either of which may be NULL, into *out. Returns 0, or
+ * the status of the usage error it printed. meter_text is the --meter argument, for the message about alberti.
+ */
+int cli_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text, const PlanMeter *meter,
+                           PlanAccompaniment *out);
+
+/* Prints text as a JSON string to stdout: quotes and backslashes escaped, control characters dropped. */
+void cli_print_json_string(const char *text);
+
 /* A seed from the clock, for a command given none. */
 unsigned long cli_default_seed(void);
 

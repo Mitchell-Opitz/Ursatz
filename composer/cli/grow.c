@@ -110,7 +110,6 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
-static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
 static const char *const BEGINNING_WORDS[] = {"presentation", "antecedent", "cbi"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
@@ -286,38 +285,11 @@ static int check_options(Options *options) {
         options->has_voicing = true;
         options->voicing.write_soprano = chorale;
     } else if (options->accompaniment_text || options->texture_text) {
-        PlanAccompaniment *accompaniment = &options->accompaniment;
         options->has_accompaniment = true;
-        accompaniment->pattern = PLAN_ACCOMPANIMENT_ANY;
-        accompaniment->texture = -1;
-        if (options->accompaniment_text) {
-            bool found = false;
-            for (int p = 0; p < 5 && !found; p++) {
-                found = cli_equals_ignore_case(options->accompaniment_text, ACCOMPANIMENT_WORDS[p]);
-                accompaniment->pattern = found ? (PlanAccompanimentPattern)p : accompaniment->pattern;
-            }
-            if (!found) {
-                return cli_fail(CLI_EXIT_USAGE, "--accompaniment must be block, arpeggiated, alberti, oom-pah or any, not '%s'",
-                                options->accompaniment_text);
-            }
-        }
-        if (options->texture_text) {
-            bool found = false;
-            for (int t = 0; t < (int)STANDARD_TEXTURE_COUNT && !found; t++) {
-                found = cli_equals_ignore_case(options->texture_text, standard_texture_name((StandardTexture)t));
-                accompaniment->texture = found ? t : accompaniment->texture;
-            }
-            if (!found) {
-                return cli_fail(CLI_EXIT_USAGE, "--texture must be a texture name of standard-texture, for example "
-                                                "\"melody and accompaniment\", not '%s'", options->texture_text);
-            }
-            if (!standard_texture_is_homophonic((StandardTexture)accompaniment->texture)) {
-                return cli_fail(CLI_EXIT_USAGE, "--texture '%s' is not one an accompaniment can have; use homophony, "
-                                                "homorhythm or \"melody and accompaniment\"", options->texture_text);
-            }
-        }
-        if (accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI && options->meter.beat_unit == 8) {
-            return cli_fail(CLI_EXIT_USAGE, "--accompaniment alberti needs a simple meter, not %s", options->meter_text);
+        int read = cli_read_accompaniment(options->accompaniment_text, options->texture_text, options->meter_text,
+                                          &options->meter, &options->accompaniment);
+        if (read != 0) {
+            return read;
         }
     }
     options->suggest = 1;
@@ -703,26 +675,13 @@ static void print_node(const PiecePlan *plan, NodeId node, PlanSpan theme, PlanT
     }
 }
 
-static void print_json_string(const char *text) {
-    putchar('"');
-    for (; *text; text++) {
-        if (*text == '"' || *text == '\\') {
-            putchar('\\');
-        }
-        if ((unsigned char)*text >= 0x20) {
-            putchar(*text);
-        }
-    }
-    putchar('"');
-}
-
 static void print_json_node(const PiecePlan *plan, NodeId node, PlanSpan theme, PlanTime bar, bool *first) {
     PlanSpan span = plan_node_span(plan, node);
     PlanTime end;
     plan_time_add(span.start, span.length, &end);
     const char *name = plan_node_name(plan, node);
     printf("%s{\"name\":", *first ? "" : ",");
-    print_json_string(name ? name : "");
+    cli_print_json_string(name ? name : "");
     printf(",\"kind\":\"%s\",\"start\":%g,\"end\":%g}", KIND_NAMES[plan_node_kind(plan, node)],
            offset_in_bars(span.start, theme, bar), offset_in_bars(end, theme, bar));
     *first = false;
@@ -784,9 +743,9 @@ static void print_theme_json(const Options *options, const Theme *theme, PlanTim
     size_t development_count = collect_developments(plan, node, developments);
     for (size_t i = 0; i < development_count; i++) {
         printf("%s{\"motive\":\"%s\",\"idea\":", i ? "," : "", developments[i].motive);
-        print_json_string(developments[i].idea);
+        cli_print_json_string(developments[i].idea);
         printf(",\"development\":");
-        print_json_string(developments[i].how);
+        cli_print_json_string(developments[i].how);
         printf("}");
     }
     char heard_form[96];
@@ -795,15 +754,15 @@ static void print_theme_json(const Options *options, const Theme *theme, PlanTim
     heard_text(&theme->outcome, heard_form, sizeof(heard_form), requested, sizeof(requested), heard, sizeof(heard));
     printf("],\"score\":{\"numerator\":%lu,\"denominator\":%lu},\"requested\":", theme->outcome.score.numerator,
            theme->outcome.score.denominator);
-    print_json_string(requested);
+    cli_print_json_string(requested);
     printf(",\"heard\":");
     if (heard_form[0]) {
-        print_json_string(heard_form);
+        cli_print_json_string(heard_form);
     } else {
         printf("null");
     }
     printf(",\"heard_as_requested\":%s,\"heard_text\":", theme->outcome.heard_as_requested ? "true" : "false");
-    print_json_string(heard);
+    cli_print_json_string(heard);
     printf("}");
 }
 
@@ -824,7 +783,7 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
             printf(",\"first_cadence\":\"%s\"", cli_cadence_name(options->first_cadence));
         }
         if (options->has_accompaniment) {
-            printf(",\"accompaniment\":\"%s\"", ACCOMPANIMENT_WORDS[options->accompaniment.pattern]);
+            printf(",\"accompaniment\":\"%s\"", cli_accompaniment_name(options->accompaniment.pattern));
             if (options->accompaniment.texture >= 0) {
                 printf(",\"texture\":\"%s\"", standard_texture_name((StandardTexture)options->accompaniment.texture));
             }
@@ -840,7 +799,7 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
         printf("],\"files\":[");
         for (size_t i = 0; i < file_count; i++) {
             printf("%s", i ? "," : "");
-            print_json_string(files[i]);
+            cli_print_json_string(files[i]);
         }
         printf("]}\n");
         return;
@@ -851,7 +810,7 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
         printf(", first cadence %s", cli_cadence_name(options->first_cadence));
     }
     if (options->has_accompaniment) {
-        printf(", accompaniment %s", ACCOMPANIMENT_WORDS[options->accompaniment.pattern]);
+        printf(", accompaniment %s", cli_accompaniment_name(options->accompaniment.pattern));
         if (options->accompaniment.texture >= 0) {
             printf(" (%s)", standard_texture_name((StandardTexture)options->accompaniment.texture));
         }
