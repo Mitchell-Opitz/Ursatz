@@ -3,7 +3,7 @@
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v8.schema.json`](../schema/analysis-document.v8.schema.json)
+[`schema/analysis-document.v9.schema.json`](../schema/analysis-document.v9.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render` from
 `<ursatz_analyzer/analysis_document.h>`.
 
@@ -12,9 +12,9 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v8 content |
+| Key | Type | v9 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `8`. |
+| `schema_version` | integer | Always `9`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
@@ -34,10 +34,15 @@ newline. The same input and build always give the same bytes.
 | `texture` | array | Placeholder: `[]`. |
 | `voice_leading` | array | Placeholder: `[]`. |
 | `schemas` | array | Placeholder: `[]`. |
+| `progressions` | array | Placeholder: `[]`. |
+| `harmonic_rhythm` | object or null | Placeholder: `null`. |
+| `markings` | object or null | Placeholder: `null`. |
+| `counterpoint_check` | object or null | Placeholder: `null`. |
 | `notes` | array of notes | Filled: where the notated and detected keys disagree. Empty when they do not, or there is no notated key signature. |
 
 Every key is always present, so consumers can read any section without checking for it first.
-The singular section `form` is `null` until filled; the rest are empty arrays.
+The singular sections `form`, `harmonic_rhythm`, `markings` and `counterpoint_check` are `null` until
+filled; the rest are empty arrays.
 
 ## metadata
 
@@ -287,7 +292,7 @@ when no chord was identified.
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `root` | string or null | The chord's root as a pitch class name, e.g. `"G"`. Flats are used in keys that read in flats. |
-| `quality` | string or null | `"major"`, `"minor"` or `"diminished"` for a triad; the library's seventh quality (`"dominant7"`, `"major7"`, `"minor7"`, `"half-diminished7"`) for a seventh chord. |
+| `quality` | string or null | `"major"`, `"minor"`, `"diminished"` or `"augmented"` (minor regions only) for a triad; the library's seventh quality (`"dominant7"`, `"major7"`, `"minor7"`, `"half-diminished7"`) for a seventh chord. |
 | `bass` | string or null | The lowest sounding note of the segment, as a pitch class name. |
 | `inversion` | integer or null | Where the bass sits among the chord's tones: `0` root position, `1` first inversion (the third in the bass), `2` second, `3` third (sevenths only). `null` when the bass is not a chord tone. |
 | `duration` | object | `{"whole_notes", "beats"}`: the span's length as a rational in whole notes, and in beats of the signature the segment starts in (`null` when that signature has no beat grid). Where the chord starts and ends in measures and beats is `location`. |
@@ -295,6 +300,7 @@ when no chord was identified.
 | `outer` | object | `{"soprano", "bass"}`: the highest and lowest sounding note of the segment, each `{"status", "note_id", "pitch", "degree", "uncertainty"}`. `status` is `"present"` when a note sounds as the line, else `"absent"` (only other voices sound), `"bridged"` (a short gap inside the line) or `"guarded"` (dropped by the library's register guard). `note_id` and `pitch` (a name with octave, e.g. `"E5"`, spelled with flats in keys that read in flats) are `null` unless present. `degree` is the library's scale degree label in the local key of the chord's key region (`"1"` to `"7"`, with `b` or `#` for a chromatic alteration), `null` unless present and the segment lies in a key region. `uncertainty` is that key region's uncertainty, in [0, 1], higher LESS certain; `null` when `degree` is. The chord's `bass` field above is a different thing: it is the pitch class the chord is read over. |
 | `roman_numeral` | object | The chord's Roman numeral in its local key. See below. |
 | `runner_up` | object or null | The best-scoring candidate on a different root, with `label`, `root`, `quality`, `score` and `uncertainty` (the library's plausibility of it relative to the best chord, in [0, 1]); `null` when no other root sounds. |
+| `context` | string or null | Optional. Where the library took the reading from: `"none"` (the segment itself), `"previous"` or `"next"` (a sparse segment read as its neighbour's chord), or `"arpeggio"` (a run of incomplete segments inside one beat read as one chord). `null` when no chord was identified. |
 
 `roman_numeral` is the numeral Ursatz's standard-tonality Roman numeral adapter reads for the chord in the key of
 the region the segment starts in, so it is relative to the local key and not the home key. The label, its
@@ -310,7 +316,7 @@ identified chord, the region's key and the segment's pitch-class weights.
 | `degree` | integer or null | The chord's root as a degree (1 to 7) of the local key (for an applied chord, of the tonicized key); `null` when unlabelled. |
 | `uncertainty` | number or null | The chord's and the key region's uncertainty combined, `1 - (1 - chord uncertainty) * (1 - key uncertainty)`, in [0, 1]; higher is LESS certain. `null` when unlabelled. |
 | `applied` | object or null | `null` unless the library reads the chord as an applied (secondary) chord. See below. |
-| `unlabelled_reason` | string or null | Why the chord has no numeral; `null` when it has one. A chord is never dropped or guessed at: it stays in `chords` with `label` `null`. The reasons are: no key region; the region is minor (the library's weighted chord vocabulary is the major-key set, so it identifies no chord there); the library identified no chord; and the library gives no numeral for the chord in its key (a chord that is not a degree of the key, or a quality the key does not give that degree). |
+| `unlabelled_reason` | string or null | Why the chord has no numeral; `null` when it has one. A chord is never dropped or guessed at: it stays in `chords` with `label` `null`. The reasons are: no key region; the library identified no chord; and the library gives no numeral for the chord in its key (a chord that is not a degree of the key, or a quality the key does not give that degree). |
 
 An applied chord is the library's own reading (its applied-chord re-check: the chord's evidence outside the key,
 its score against the diatonic chord, and its resolution); the analyzer adds no rule for what counts as one. `label`
@@ -374,8 +380,9 @@ earliest first. A scope, level or group with no chords has no entries.
 `outer_voices` holds the two outer lines of the piece, from Ursatz's outer-voice extraction:
 `{"soprano": [...], "bass": [...]}`. Each line has one entry for every chord, in time order, so the
 entry at index `i` of either line belongs to the chord at index `i` of `chords` (`chord_index` says so
-too). A line is not a melody: it is the highest (soprano) or lowest (bass) sounding note of each
-chord's span, theory-neutral pitch height with the scale degree read against the local key. It is the
+too). A line is not a melody: it is the highest (soprano) or lowest (bass) sounding note at the start
+of each chord's span (the library extracts the lines over segments that are not merged over unchanged
+harmony, one per melody note, and each chord takes the entry at its start), theory-neutral pitch height with the scale degree read against the local key. It is the
 shared input for voice-leading (A6.1), melody (A5.1, whose `melody` section stays reserved) and schema
 (A6.2) analysis, and for the Composer's schema recognition. Nothing in it is a voice-leading, melodic
 or schema claim.
@@ -432,6 +439,10 @@ non-chord tones.
 
 ### Version history
 
+- **9**: Adds the required placeholders `progressions` (`[]`), `harmonic_rhythm`, `markings` and
+  `counterpoint_check` (`null`) after `schemas`, so the P3 sections fill them without another version. Required
+  sections are a breaking change under the rule above. Chord claims gain the optional `context`, which did not
+  need a version of its own.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
