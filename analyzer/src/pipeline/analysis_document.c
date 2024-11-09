@@ -1562,6 +1562,8 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
+          add(document, "progressions", cJSON_CreateArray()) && add(document, "harmonic_rhythm", cJSON_CreateNull()) &&
+          add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);
         return NULL;

@@ -6,12 +6,12 @@
 
 /*
  * The analysis document: the structured, versioned output described by
- * schema/analysis-document.v8.schema.json.
+ * schema/analysis-document.v9.schema.json.
  *
  * Value of the document's top-level "schema_version". Breaking changes
  * bump it; additive fields do not.
  */
-#define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 8
+#define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 9
 
 /* An in-memory analysis document. It is the single source of truth for
    every output: the JSON file and the Markdown report are both rendered
