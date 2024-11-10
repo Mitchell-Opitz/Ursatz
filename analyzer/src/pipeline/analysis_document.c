@@ -953,7 +953,21 @@ static cJSON *runner_up_json(const AnalysisChordReading *reading) {
     return object;
 }
 
-/* The chord fields beyond the shared claim: root, quality, bass, inversion, duration, score and runner-up. */
+static const char *chord_context_name(AnalysisChordContext context) {
+    switch (context) {
+        case ANALYSIS_CHORD_CONTEXT_PREVIOUS:
+            return "previous";
+        case ANALYSIS_CHORD_CONTEXT_NEXT:
+            return "next";
+        case ANALYSIS_CHORD_CONTEXT_ARPEGGIO:
+            return "arpeggio";
+        default:
+            return "none";
+    }
+}
+
+/* The chord fields beyond the shared claim: root, quality, bass, inversion, duration, score, runner-up and the
+   context the reading came from. */
 static bool add_chord_fields(cJSON *claim, const ImportedNotes *notes, const AnalysisReportEntry *entry,
                              Rational start, Rational end) {
     const AnalysisChordReading *chord = &entry->chord;
@@ -973,7 +987,9 @@ static bool add_chord_fields(cJSON *claim, const ImportedNotes *notes, const Ana
                                                                     : cJSON_CreateNull()) &&
            add(claim, "duration", duration) &&
            add(claim, "score", matched ? cJSON_CreateNumber(chord->score) : cJSON_CreateNull()) &&
-           add(claim, "runner_up", runner_up_json(&entry->runner_up));
+           add(claim, "runner_up", runner_up_json(&entry->runner_up)) &&
+           add(claim, "context", matched ? cJSON_CreateString(chord_context_name(entry->chord_context))
+                                         : cJSON_CreateNull());
 }
 
 static const char *outer_status_name(AnalysisOuterStatus status) {
@@ -1546,6 +1562,8 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
+          add(document, "progressions", cJSON_CreateArray()) && add(document, "harmonic_rhythm", cJSON_CreateNull()) &&
+          add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);
         return NULL;

@@ -81,7 +81,7 @@ static const Expectation PIECES[] = {
     {"Bach 114.mid", "file", 4, 4, 24, 24, -1, 155, BACH_CHORDS, 5, NULL, 0},
     {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 205, CLEMENTI_CHORDS, 5, NULL, 0},
     {"Field 1.mid", "file", 12, 8, 67, 67, -1, 268, FIELD_1_CHORDS, 4, NULL, 0},
-    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 170, FIELD_5_CHORDS, 5, NULL, 0},
+    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 169, FIELD_5_CHORDS, 5, NULL, 0},
     {"Mozart 545.mid", "file", 4, 4, 338, 338, -1, 1095, MOZART_CHORDS, 8, MOZART_CHANGES, 3},
 };
 

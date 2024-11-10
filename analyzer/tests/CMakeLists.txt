@@ -48,7 +48,7 @@ add_test(NAME test_analysis_document_schema
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v8.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v9.schema.json
                  -DFIXTURE_DIR=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
@@ -72,10 +72,7 @@ add_executable(test_chord_coverage test_chord_coverage.c)
 target_link_libraries(test_chord_coverage PRIVATE ursatz_analyzer)
 target_compile_definitions(test_chord_coverage PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
-# Expected to fail: Field Nocturne No. 1 reads at 86.6% in local key regions (see README, Known limits). The 90%
-# target stays; remove WILL_FAIL when the library reaches it.
 add_test(NAME test_chord_coverage COMMAND test_chord_coverage)
-set_tests_properties(test_chord_coverage PROPERTIES WILL_FAIL TRUE)
 
 add_executable(test_chord_details test_chord_details.c)
 target_link_libraries(test_chord_details PRIVATE ursatz_analyzer cjson)
@@ -86,7 +83,8 @@ target_link_libraries(test_key_regions PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_key_regions PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 # Expected to fail: Ursatz's key-region detection does not reach the hand-read regions (see README, Known
-# limits). The assertions stay as the target; remove WILL_FAIL when the library meets it.
+# limits). Measured on the P1 chain: Clementi misses 1 core measure (m. 20), Mozart misses 40 core measures and the
+# returns to C at m. 79 and m. 124. The assertions stay as the target; remove WILL_FAIL when the library meets it.
 add_test(NAME test_key_regions_clementi_36 COMMAND test_key_regions clementi)
 add_test(NAME test_key_regions_mozart_545 COMMAND test_key_regions mozart)
 set_tests_properties(test_key_regions_clementi_36 test_key_regions_mozart_545 PROPERTIES WILL_FAIL TRUE)

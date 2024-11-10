@@ -136,7 +136,7 @@ int main(void) {
 
     char *json = analysis_document_render(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 8,\n", 25) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 9,\n", 25) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = analysis_document_render(path, &notes, &report);
@@ -151,7 +151,7 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 8);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 9);
 
     const cJSON *metadata = member(document, "metadata");
     assert(cJSON_IsObject(metadata));
@@ -174,8 +174,11 @@ int main(void) {
     assert(cJSON_IsNull(member(meter, "pickup")));
     assert(cJSON_GetArraySize(member(meter, "changes")) == 0);
     assert(cJSON_IsNull(member(document, "form")));
-    static const char *const EMPTY_SECTIONS[] = {"cadences", "phrases", "motives", "melody",
-                                                 "rhythm",   "texture", "voice_leading", "schemas"};
+    assert(cJSON_IsNull(member(document, "harmonic_rhythm")));
+    assert(cJSON_IsNull(member(document, "markings")));
+    assert(cJSON_IsNull(member(document, "counterpoint_check")));
+    static const char *const EMPTY_SECTIONS[] = {"cadences", "phrases",       "motives", "melody",      "rhythm",
+                                                 "texture",  "voice_leading", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
         const cJSON *section = member(document, EMPTY_SECTIONS[i]);
         assert(cJSON_IsArray(section));

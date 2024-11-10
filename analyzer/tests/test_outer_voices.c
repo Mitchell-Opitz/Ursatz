@@ -337,18 +337,21 @@ static void test_tonicization(const char *path) {
     release(&analyzed);
 }
 
-/* Texture. Under a held bass C3 and a held inner voice E4, a melody plays C5 on beat 1 and again on beat 2 (a
-   repeated note), then drops to A3, below the inner voice, for beats 3 and 4. Documented behavior:
+/* Texture. Under a bass C3 (attacked on beats 1 and 3) and a held inner voice E4, a melody plays C5 on beat 1 and
+   again on beat 2 (a repeated note), then drops to A3, below the inner voice, for beats 3 and 4. The bass attack
+   on beat 3 keeps the chord segmentation from merging the two halves (it merges over unchanged harmony only when
+   the new attacks are above the bass). Documented behavior:
      - the soprano is the highest sounding note, whichever voice plays it: on beats 3 and 4 it is the inner voice
        E4 (degree 3), not the melody that has crossed below it;
      - for a repeated note the soprano is the note attacked most recently;
      - the bass is the lowest sounding note, C3, throughout. */
 static void test_texture(const char *path) {
-    PieceNote notes[8 * 5];
+    PieceNote notes[8 * 6];
     size_t count = 0;
     for (uint32_t m = 0; m < 8; m++) {
         uint32_t tick = m * 384;
-        notes[count++] = (PieceNote){tick, 384, 48};
+        notes[count++] = (PieceNote){tick, 192, 48};
+        notes[count++] = (PieceNote){tick + 192, 192, 48};
         notes[count++] = (PieceNote){tick, 384, 64};
         notes[count++] = (PieceNote){tick, 96, 72};
         notes[count++] = (PieceNote){tick + 96, 96, 72};

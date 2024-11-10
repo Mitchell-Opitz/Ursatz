@@ -80,8 +80,12 @@ static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange
     out->pivot = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 }
 
-bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation, AnalysisKeyRegion **regions,
-                          size_t *region_count, AnalysisKeyChange **changes, size_t *change_count) {
+bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation,
+                          const CommonPracticeKeyChord *chords, const MusicalTime *const *boundaries,
+                          size_t boundary_count, CommonPracticeKeyRegions *found,
+                          AnalysisKeyRegion **regions, size_t *region_count, AnalysisKeyChange **changes,
+                          size_t *change_count) {
+    *found = (CommonPracticeKeyRegions){0};
     *regions = NULL;
     *region_count = 0;
     *changes = NULL;
@@ -109,9 +113,14 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
 
     bool library_ok = true;
     bool ok = build_key_segments(segmentation, segments, times, &library_ok);
-    CommonPracticeKeyRegions found = {0};
+    for (size_t i = 0; chords && i < segment_count; i++) {
+        segments[i].chord = chords[i];
+    }
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.phrase_boundaries = boundaries;
+    config.phrase_boundary_count = boundary_count;
     if (ok && library_ok &&
-        key_regions_estimate(segments, segment_count, notes->meter.meter_map, events, event_count, NULL, &found) !=
+        key_regions_estimate(segments, segment_count, notes->meter.meter_map, events, event_count, &config, found) !=
             COMMON_PRACTICE_KEY_REGIONS_OK) {
         library_ok = false;
     }
@@ -119,30 +128,33 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
     AnalysisKeyRegion *out_regions = NULL;
     AnalysisKeyChange *out_changes = NULL;
     if (ok && library_ok) {
-        out_regions = calloc(found.region_count, sizeof(AnalysisKeyRegion));
-        out_changes = calloc(found.change_count > 0 ? found.change_count : 1, sizeof(AnalysisKeyChange));
+        out_regions = calloc(found->region_count, sizeof(AnalysisKeyRegion));
+        out_changes = calloc(found->change_count > 0 ? found->change_count : 1, sizeof(AnalysisKeyChange));
         ok = out_regions && out_changes;
-        for (size_t i = 0; ok && i < found.region_count; i++) {
-            ok = copy_region(&found.regions[i], &out_regions[i]);
+        for (size_t i = 0; ok && i < found->region_count; i++) {
+            ok = copy_region(&found->regions[i], &out_regions[i]);
         }
         if (ok) {
-            for (size_t i = 0; i < found.change_count; i++) {
-                copy_change(&found.changes[i], &out_changes[i]);
+            for (size_t i = 0; i < found->change_count; i++) {
+                copy_change(&found->changes[i], &out_changes[i]);
             }
             *regions = out_regions;
-            *region_count = found.region_count;
+            *region_count = found->region_count;
             *changes = out_changes;
-            *change_count = found.change_count;
+            *change_count = found->change_count;
         } else {
             if (out_regions) {
-                for (size_t i = 0; i < found.region_count; i++) {
+                for (size_t i = 0; i < found->region_count; i++) {
                     free(out_regions[i].label);
                 }
             }
             free(out_regions);
             free(out_changes);
         }
-        common_practice_key_regions_destroy(&found);
+        if (!ok) {
+            common_practice_key_regions_destroy(found);
+            *found = (CommonPracticeKeyRegions){0};
+        }
     }
 
     for (size_t i = 0; i < 2 * segment_count; i++) {

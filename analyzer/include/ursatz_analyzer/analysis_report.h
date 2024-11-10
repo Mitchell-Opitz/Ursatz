@@ -68,6 +68,15 @@ typedef struct {
     bool deceptive;             /* resolves to the target's submediant, not the target; valid only when applied */
 } AnalysisRomanNumeral;
 
+/* Where the library's weighted identification took a chord reading from (CommonPracticeContextReading): the
+   segment itself, the previous or the next segment's chord, or an arpeggio read across one beat. */
+typedef enum {
+    ANALYSIS_CHORD_CONTEXT_NONE = 0,
+    ANALYSIS_CHORD_CONTEXT_PREVIOUS,
+    ANALYSIS_CHORD_CONTEXT_NEXT,
+    ANALYSIS_CHORD_CONTEXT_ARPEGGIO
+} AnalysisChordContext;
+
 typedef struct {
     long time_numerator; /* segment start, whole notes */
     unsigned long time_denominator;
@@ -80,6 +89,7 @@ typedef struct {
     AnalysisConfidence chord_confidence;
     AnalysisChordReading chord;     /* best chord; label NULL when "no match" */
     AnalysisChordReading runner_up; /* label NULL when the library gave none */
+    AnalysisChordContext chord_context; /* where the best reading came from; NONE when "no match" */
     AnalysisOuterNote soprano;      /* the highest sounding line in this segment */
     AnalysisOuterNote bass;         /* the lowest sounding line in this segment */
     bool in_region;                 /* the segment lies in a key region */

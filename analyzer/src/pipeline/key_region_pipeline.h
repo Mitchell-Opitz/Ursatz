@@ -7,7 +7,9 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
+#include "key_regions.h"
 #include "pipeline/segmentation.h"
+#include "time/musical_time.h"
 
 /*
  * The local keys of the piece, from Ursatz's key-region detection
@@ -28,10 +30,22 @@
  * library failing to find regions (no segments, a segment it cannot weight) is not an error: it leaves
  * *region_count at 0, as a piece with no key. Returns false only on allocation failure.
  *
+ * chords is each segment's identified chord as functional evidence (common_practice_key_chord_of, from a pass
+ * before this one), or NULL for none: the library then reads the pitch classes alone.
+ *
+ * boundaries are phrase boundary times (NULL with boundary_count 0 for none), which the library snaps the
+ * region edges to (CommonPracticeKeyRegionsConfig.phrase_boundaries).
+ *
+ * *found holds the library's own regions and changes, parallel to *regions and *changes, for the stages that read
+ * its kernel Keys; owned by the caller (common_practice_key_regions_destroy), zeroed when there are none.
+ *
  * The pivot reading of each change is left empty; identify_pivot_chords (chord_pipeline.h) fills it.
  */
-bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation, AnalysisKeyRegion **regions,
-                          size_t *region_count, AnalysisKeyChange **changes, size_t *change_count);
+bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation,
+                          const CommonPracticeKeyChord *chords, const MusicalTime *const *boundaries,
+                          size_t boundary_count, CommonPracticeKeyRegions *found,
+                          AnalysisKeyRegion **regions, size_t *region_count, AnalysisKeyChange **changes,
+                          size_t *change_count);
 
 /*
  * The home key: the library offers no determination of its own, so it is the key (tonic and mode) with

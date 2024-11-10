@@ -196,18 +196,6 @@ static void expect_numeral(const Analyzed *analyzed, const char *name, int measu
     }
 }
 
-/* The chord at a measure and beat has no numeral, and says why. */
-static void expect_unlabelled(const Analyzed *analyzed, const char *name, int measure, int beat, const char *reason) {
-    const cJSON *chord = chord_at(analyzed, measure, beat);
-    const cJSON *roman = chord ? member(chord, "roman_numeral") : NULL;
-    const char *actual = roman ? text(roman, "unlabelled_reason") : NULL;
-    if (!roman || !cJSON_IsNull(member(roman, "label")) || !actual || strstr(actual, reason) == NULL) {
-        fprintf(stderr, "%s: m. %d beat %d: expected unlabelled (%s), got %s / %s\n", name, measure, beat, reason,
-                roman && text(roman, "label") ? text(roman, "label") : "(no label)", actual ? actual : "(no reason)");
-        failures++;
-    }
-}
-
 /* The key the chord's numeral is relative to. */
 static void expect_key(const Analyzed *analyzed, const char *name, int measure, int beat, const char *key) {
     const cJSON *chord = chord_at(analyzed, measure, beat);
@@ -342,8 +330,8 @@ static void test_major(const char *path) {
     release(&analyzed);
 }
 
-/* A minor: i (A C E), iv (D F A), V (E G# B). The library's weighted chord vocabulary is the major-key set, so a
-   chord in a minor region has no numeral: the document says so, with that reason, in place of a guess. */
+/* A minor: i (A C E), iv (D F A), V (E G# B). The library reads a minor region in its minor vocabulary, so every
+   chord has its numeral in A minor, the major V included. */
 static void test_minor(const char *path) {
     Chord i = {{45, 57, 60, 64, 0}};
     Chord iv = {{50, 62, 65, 69, 0}};
@@ -361,9 +349,10 @@ static void test_minor(const char *path) {
         CHECK(strcmp(analyzed.report.key_regions[0].label, "A minor") == 0);
     }
     for (int m = 3; m <= 6; m++) {
-        for (int beat = 1; beat <= 4; beat++) {
-            expect_unlabelled(&analyzed, "minor", m, beat, "major keys only");
-        }
+        expect_numeral(&analyzed, "minor", m, 1, "i");
+        expect_numeral(&analyzed, "minor", m, 2, "iv");
+        expect_numeral(&analyzed, "minor", m, 3, "V");
+        expect_numeral(&analyzed, "minor", m, 4, "i");
         expect_key(&analyzed, "minor", m, 3, "A minor");
     }
     check_vocabulary(&analyzed, "minor");

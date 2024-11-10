@@ -10,7 +10,7 @@ thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library 
 ## Build
 
 Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
-`external/ursatz`, pinned to Ursatz main at PR #112 (`6a0853b`).
+`external/ursatz`, pinned to Ursatz main at PR #142 (`ffd8a19`).
 
 ```sh
 git submodule update --init --recursive
@@ -34,7 +34,7 @@ Tests:
   and beat of the chords covering chosen positions, for the five reference pieces and two
   constructed files (a pickup and a file with no time signature).
 - `test_chord_coverage`: chord coverage of the five reference pieces. Field Nocturne No. 1 must be
-  above 90% (marked `WILL_FAIL` until it is: see "Known limits"); the others must still produce chords. See "Chords and non-chord tones".
+  above 90% (it reads 92.7%); the others must still produce chords. See "Chords and non-chord tones".
 - `test_chord_details`: inversion, runner-up present and absent, and four non-chord-tone types and
   an unclassified one, on small constructed files.
 - `test_roman_numerals`: hand-read numerals on constructed pieces (a major and a minor progression,
@@ -65,7 +65,7 @@ Writes two files next to the input file:
 - `<stem>.report.md`: the Markdown report.
 - `<stem>.analysis.json`: the analysis document. See
   [docs/analysis-document.md](docs/analysis-document.md) and the
-  [schema](schema/analysis-document.v8.schema.json).
+  [schema](schema/analysis-document.v9.schema.json).
 
 `--markdown` writes only the report, `--json` writes only the analysis document. No flag, or both,
 writes both. `--input-format` forces the input format (see "Input formats"). Flags can come before or
@@ -105,17 +105,25 @@ target_link_libraries(my_app PRIVATE ursatz_analyzer)
 
 ## Pipeline
 
-`main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedNotes`), then `analysis_pipeline`:
+`main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedNotes`), then `analysis_pipeline`,
+which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/integration/framework_v1_chain.h`):
 
-1. `segmentation`: cuts the notes into sonority segments with Ursatz's adaptive segmentation, on the
-   beats of the file's meter, and builds each segment's members for chord identification.
+1. `segmentation` (once): cuts the notes into sonority segments with Ursatz's adaptive segmentation, on the
+   beats of the file's meter, twice: the chord segments merge over unchanged harmony, the voice segments
+   (one per melody note, for the outer voices) do not. Each segment gets its members for chord
+   identification and the beat it lies inside.
 2. `key_region_pipeline`: finds the local key regions with Ursatz's key-region detection.
-3. `chord_pipeline`: identifies each segment's chord with Ursatz's weighted chord identification,
-   with its runner-up and the segment's non-chord tones.
-4. `outer_voice_pipeline`: extracts the soprano and bass of each segment with Ursatz's outer-voice
-   extraction and names their scale degrees in the segment's local key.
-5. `roman_numeral_pipeline`: gives each segment the Roman numeral Ursatz's standard-tonality adapter
+3. `chord_pipeline`: identifies each segment's chord with Ursatz's weighted chord identification, in its
+   region's key and mode, with its runner-up, the segment's non-chord tones and the context the reading
+   came from.
+4. `roman_numeral_pipeline`: gives each segment the Roman numeral Ursatz's standard-tonality adapter
    reads for its chord in its local key, applied chords included.
+5. `outer_voice_pipeline`: extracts the soprano and bass lines over the voice segments with Ursatz's
+   outer-voice extraction and names their scale degrees in the local key.
+
+Steps 2 to 5 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+classes alone, and its chords are the functional evidence for the key regions of the second pass, whose
+results are the report (R-043).
 
 `analysis_document` then builds the analysis document once. It is the single source of truth:
 the JSON file is its serialization, and `markdown_report` renders the report from it, never from
@@ -161,9 +169,8 @@ read by Ursatz's MusicXMLImporter.
   MusicXML), `score-timewise`, grace notes, wedges (crescendo and diminuendo), additive meters
   (summed) and senza-misura. Repeats and endings are not unfolded: the score is analyzed once, in
   written order.
-- **Schema.** The analysis document is schema version 6 (see
-  [docs/analysis-document.md](docs/analysis-document.md)): `metadata.input` is new, and
-  `meter.source` can be `"notated"`.
+- **Schema.** The analysis document is schema version 9 (see
+  [docs/analysis-document.md](docs/analysis-document.md)).
 
 ## Chords and non-chord tones
 
@@ -173,12 +180,17 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's segm
 
 - **Segments.** A segment is a stretch of the piece with the same sounding notes over the same bass:
   the piece is cut at every beat of the meter and where the bass changes, and neighbours that sound
-  the same pitch classes over the same bass are merged (not across a barline). A segment holds every
+  the same pitch classes over the same bass are merged (not across a barline), as is a melody or passing
+  note over unchanged harmony (new attacks above the bass while the chord is still held). A segment holds every
   note sounding in it, attacked or held over. A chord's `note_ids` are those notes.
 - **Each chord** has a root, quality, bass note and inversion (0 root position, 1 first, 2 second,
   3 third), a duration in beats and the measure and beat where it starts and ends, and the library's
   confidence. The chord's `label` is the library's (a Roman numeral for a triad, the seventh quality
   for a seventh chord). Roots are spelled with flats in keys that read in flats.
+- **Context.** A segment too sparse to read alone (no match, or fewer than three of its chord's tones
+  sounding) takes a neighbouring segment's chord when every pitch class it sounds belongs to it, and a run
+  of incomplete segments inside one beat is read as one arpeggiated chord. The chord's `context` says
+  where the reading came from: `none` (its own), `previous`, `next` or `arpeggio`.
 - **Runner-up.** The library also reports the best-scoring chord on a different root, with its
   score. The analysis document always carries it. The report's Chords table shows it only when its
   score is within 0.10 of the best chord's (`RUNNER_UP_MARGIN_THRESHOLD` in
@@ -197,8 +209,10 @@ See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 
 The analyzer adds no music theory here either. `roman_numeral_pipeline` hands Ursatz's
 standard-tonality Roman numeral adapter (`standard_tonality_build_roman_numerals`) each segment's
-identified chord (root, tones above the root, bass), the tonic and mode of its key region and its
-pitch-class weights, in time order, and copies what comes back.
+identified chord, its key region's kernel Key, its pitch-class weights and its sounding pitches, in time
+order (`standard_tonality_build_chord_inputs`), and copies what comes back. The inversion figure is read
+from the library's chord bass: the lowest sounding chord tone, so a non-chord tone in the bass does not
+make a chord read as root position.
 
 - **Numerals are relative to the local key region**, not the home key: the same chord is V in the
   key it dominates and I in the key it opens. The label, its case for quality, its inversion figure
@@ -207,9 +221,7 @@ pitch-class weights, in time order, and copies what comes back.
   table the Numeral column names the region on the first numeral and wherever it changes
   ("V (in G major)").
 - **A chord with no numeral is reported, not dropped or guessed**: `unlabelled` with the reason. The
-  reasons are no key region, a minor region (the library's weighted chord vocabulary is the
-  major-key set, so it identifies no chord there), no chord identified, and a chord the library
-  gives no numeral in its key.
+  reasons are no key region, no chord identified, and a chord the library gives no numeral in its key.
 - **Applied chords** are the library's own applied-chord re-check; the analyzer adds no rule for
   what counts as one. They read `V/V`, `V7/V`, `V6/5/V`, `viio/V` (the library's `vii°`), with the
   chord, its target numeral and the target's tonic, what it resolves to, and whether the resolution
@@ -238,8 +250,9 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's oute
 (`common_practice_scale_degree_label`, `frameworks/common-practice-minimal/outer_scale_degrees.h`)
 establish, in `src/pipeline/outer_voice_pipeline.c`.
 
-- **Soprano and bass.** For each chord segment the soprano is the highest sounding note and the bass the
-  lowest, attacked or held. Doubled pitches resolve to the note attacked most recently. The library
+- **Soprano and bass.** The lines are extracted over the voice segments (one per melody note). Each chord's
+  soprano and bass are the lines' notes at the chord's start: the highest and the lowest sounding note,
+  attacked or held. Doubled pitches resolve to the note attacked most recently. The library
   smooths each line across short gaps and register leaps; a line it leaves empty (a rest, a bridged gap,
   or a note dropped by the register guard) is reported as a rest, never filled from another voice.
 - **Scale degrees** are taken relative to the local key: the key of the region the chord lies in, so a
@@ -321,30 +334,33 @@ See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
   phrase would put it and a modulation shorter than about half a window is smoothed away. A stretch of
   four or more measures built on the subdominant, dominant or supertonic can read as its own key.
-  Measured here: Clementi Op. 36 No. 1 reads as annotated except measure 20 (the dominant of C minor
-  reads as G major). Mozart K. 545 (the file holds all three movements) comes out as 42 regions, and 50
-  measures inside the cores of the annotated first-movement regions read in a neighbouring key (the
-  subdominant as F major, the dominant or supertonic as G major, A minor, E minor or D minor); the
-  expositions' C-to-G modulation at measure 13 is found, the recapitulation's return to C at measures
-  79 and 124 is not. Bach 114 is read as G major, then D major from measure 14 to the end (the earlier one-key estimate
-  was G major). A region read in a key the music is not in also reads its chords in that key.
+  The chord evidence of the first pass lets the library hold the home key through a passage on IV, V or
+  ii when no tone outside the key is heard.
+  Measured here (`test_key_regions`, still `WILL_FAIL`): Clementi Op. 36 No. 1 reads as annotated except
+  measure 20 (the dominant of C minor reads as G major). Mozart K. 545 (the file holds all three
+  movements) comes out as 43 regions, and 40 measures inside the cores of the annotated first-movement
+  regions read in a neighbouring key (F major, G major, A minor, D minor or E minor); the expositions'
+  C-to-G modulation at measure 13 is found, the recapitulation's return to C at measures 79 and 124 is
+  not. Bach 114 is read as G major, D major from measure 14, G major from measure 17 and D major from
+  measure 20 to the end. A region read in a key the music is not in also reads its chords in that key.
   The profile fits chromatic music less well. A key signature is trusted as a boundary: many exporters
   write a default C major at tick 0 whatever the key.
-- Pivot chords are read in the old key's major collection (a minor old key reads in its relative
-  major), and a chord that needs a minor key's raised sixth or seventh is not diatonic in the new key.
-- Chord identification is Ursatz's weighted identification, read in each segment's key region. Its
-  vocabulary is the diatonic triads and sevenths of a major key: in a minor region, or when no key is
-  found, no chord is identified. Read in local keys, Field Nocturne No. 1 has chord coverage of 86.6%,
-  below the 90% it reached when read in one key: its regions include an F minor one, which gets no
-  chords, and a Bb major one (uncertainty 0.97) that the detection is unsure of. Chromatic, applied and fully diminished chords are not candidates,
-  so a segment built on one is matched to the nearest diatonic chord or not at all.
+- Pivot chords are read in the old key and its mode; a minor old key is read in its minor vocabulary.
+- Chord identification is Ursatz's weighted identification, read in each segment's key region and its
+  mode: the diatonic triads and sevenths of a major key, or of natural, harmonic and melodic minor in a
+  minor region. When no key is found, no chord is identified. Chord coverage on the reference pieces:
+  Bach 114 95.0%, Clementi 36 95.2%, Field 1 92.7%, Field 5 88.4%, Mozart 545 91.6%. Chromatic, applied
+  and fully diminished chords outside minor are not candidates, so a segment built on one is matched to
+  the nearest diatonic chord or not at all.
 - Roman numerals follow chord identification, so a chord has a numeral only where the weighted
-  identification found one: none in a minor region, and a chromatic chord is matched to the nearest
+  identification found one, and a chromatic chord is matched to the nearest
   diatonic chord or not at all. The library's adapter reads a chord that is not a degree of its key,
   or has a quality the key does not give that degree, as having no numeral; it names no borrowed
   (modal mixture) chord, Neapolitan or augmented sixth, so the borrowed group of the vocabulary is
   empty. It reads an applied chord only when the chord was identified as a diatonic neighbour and
   resolves as the library requires.
+- The outer voices in the document are per chord: a chord's soprano and bass are the lines' notes at its
+  start, so a melody note attacked later inside a merged chord segment is not listed.
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
   anticipation, appoggiatura, escape-tone and pedal rules. Many tones come back unclassified.
 - SMPTE-division MIDI files are rejected.
