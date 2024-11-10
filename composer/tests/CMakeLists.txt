@@ -267,3 +267,11 @@ target_compile_options(test_return_heard PRIVATE -Wall -Wextra -Wpedantic)
 # The returns heard in composed pieces: the smoke test is quick; the sweep fails when a share falls below its baseline.
 add_test(NAME test_return_heard_smoke COMMAND test_return_heard smoke)
 add_test(NAME test_return_heard_heard COMMAND test_return_heard heard)
+
+add_executable(test_plan_cli test_plan_cli.c)
+target_link_libraries(test_plan_cli PRIVATE ursatz_composer)
+target_compile_options(test_plan_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_plan_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                 COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_plan_cli ursatz-composer)
+add_test(NAME test_plan_cli COMMAND test_plan_cli)
