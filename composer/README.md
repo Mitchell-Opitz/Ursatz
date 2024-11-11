@@ -99,6 +99,16 @@ With it the Composer reaches milestone M1: a motive, a key and a meter in, harmo
 [docs/cli-grow.md](docs/cli-grow.md). `--accompaniment` and `--texture` add an accompaniment in the inner voices; `--voicing` and `--texture chorale` voice the
 harmony in four parts.
 
+```sh
+ursatz-composer plan --form ternary --key A --mode minor --meter 3/4 --seed 4 --out piece.json
+ursatz-composer fill piece.json --seed 7 --midi piece.mid --musicxml piece.xml
+```
+
+`plan` writes the plan of a whole short piece from a form template (binary, rounded binary, ternary, variations, loop
+or layered): its sections, their keys and cadences and the sections that return an earlier one. `fill` realizes any
+plan, one from `plan` or from `grow --out`, and writes the piece as JSON, MIDI and MusicXML with the form, the
+cadences and the returns heard in it. See [docs/cli-plan.md](docs/cli-plan.md) and [docs/cli-fill.md](docs/cli-fill.md).
+
 ## Plan format
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
