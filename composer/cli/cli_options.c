@@ -8,6 +8,65 @@
 #include <string.h>
 #include <time.h>
 
+#include <texture_rules.h>
+
+#include <ursatz_composer/harmony_phrase.h>
+
+static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
+
+const char *cli_accompaniment_name(PlanAccompanimentPattern pattern) {
+    return ACCOMPANIMENT_WORDS[pattern];
+}
+
+int cli_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text, const PlanMeter *meter,
+                           PlanAccompaniment *out) {
+    out->pattern = PLAN_ACCOMPANIMENT_ANY;
+    out->texture = -1;
+    if (pattern_text) {
+        bool found = false;
+        for (int p = 0; p < 5 && !found; p++) {
+            found = cli_equals_ignore_case(pattern_text, ACCOMPANIMENT_WORDS[p]);
+            out->pattern = found ? (PlanAccompanimentPattern)p : out->pattern;
+        }
+        if (!found) {
+            return cli_fail(CLI_EXIT_USAGE, "--accompaniment must be block, arpeggiated, alberti, oom-pah or any, not '%s'",
+                            pattern_text);
+        }
+    }
+    if (texture_text) {
+        bool found = false;
+        for (int t = 0; t < (int)STANDARD_TEXTURE_COUNT && !found; t++) {
+            found = cli_equals_ignore_case(texture_text, standard_texture_name((StandardTexture)t));
+            out->texture = found ? t : out->texture;
+        }
+        if (!found) {
+            return cli_fail(CLI_EXIT_USAGE, "--texture must be a texture name of standard-texture, for example "
+                                            "\"melody and accompaniment\", not '%s'", texture_text);
+        }
+        if (!standard_texture_is_homophonic((StandardTexture)out->texture)) {
+            return cli_fail(CLI_EXIT_USAGE, "--texture '%s' is not one an accompaniment can have; use homophony, "
+                                            "homorhythm or \"melody and accompaniment\"", texture_text);
+        }
+    }
+    if (out->pattern == PLAN_ACCOMPANIMENT_ALBERTI && meter->beat_unit == 8) {
+        return cli_fail(CLI_EXIT_USAGE, "--accompaniment alberti needs a simple meter, not %s", meter_text);
+    }
+    return 0;
+}
+
+void cli_print_json_string(const char *text) {
+    putchar('"');
+    for (; *text; text++) {
+        if (*text == '"' || *text == '\\') {
+            putchar('\\');
+        }
+        if ((unsigned char)*text >= 0x20) {
+            putchar(*text);
+        }
+    }
+    putchar('"');
+}
+
 int cli_fail(int status, const char *format, ...) {
     va_list args;
     va_start(args, format);

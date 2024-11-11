@@ -1,0 +1,83 @@
+# fill command
+
+```sh
+ursatz-composer fill <plan.json> [--seed <n>] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--record <file.json>] [--format text|json]
+```
+
+Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](piece.md)) over the plan, which
+fills every open theme section in stages (invent, structure, motives, harmony, bass, melody, texture and the returns),
+and writes the piece.
+
+## Input
+
+Any plan file: one from [`plan`](cli-plan.md), or one `grow --out` wrote. A plan with no open theme section (the
+theme of `grow --out` is written already) is not an error: nothing is composed, and the files asked for are written
+from the plan as it is. The output then says `nothing to fill: the plan is already realized`, and the records file
+holds an empty array.
+
+An Ursatz-Analyzer analysis document is not a plan. It describes a piece that is already written, so it is refused,
+with a message that names `plan_read_analysis_document_file` (`<ursatz_composer/analysis_load.h>`), which loads it as a
+plan for the library to use.
+
+## Options
+
+| Option | Meaning |
+| --- | --- |
+| `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same plan and seed give the same output, byte for byte. |
+| `--out <plan.json>` | The realized plan as JSON. |
+| `--midi <file>`, `--musicxml <file>` | The piece, one part for each voice. The source material is not part of the piece, and a layered form sounds as its layers say. |
+| `--record <file.json>` | The records of the stages as one JSON array. Each element is `{"stage": <name>, "record": <fill record>}`, the record being the `fill_record_to_json` document of that stage (the seed, the attempts, the candidates and why each was chosen or rejected). A stage that did not run has no element. |
+| `--format <text\|json>` | How the result is printed on stdout. Text by default. |
+
+## Seeds
+
+The seed is always printed. A run can get stuck, and each seed starts again from the plan as it was read; the next
+seeds are tried, up to 16, and the seed that worked is printed. Giving that seed again gives the same piece.
+
+## Output
+
+In text: the seed used; for each section the form heard in it and the cadences heard (the form is what standard-form
+hears in the written music, which need not be the form planned: `heard as hybrid, not period` is reported, not an
+error); the thematic returns heard against the ones planned, with the similarity of each pair; then the files written.
+
+```
+seed 5
+
+sections (form and cadences heard)
+  A   heard as hybrid, not period, cadences imperfect-authentic, perfect-authentic
+  B   heard as hybrid, not sentence, cadences perfect-authentic
+  A   heard as hybrid, not period, cadences imperfect-authentic, perfect-authentic
+
+returns heard 1 of 1 planned
+  A resembles A (similarity 1.00)
+```
+
+A section in which no theme is heard (a theme of 4 bars is seldom heard) is reported as `no theme heard`.
+
+With `--format json` the result is one object: `seed`, `realized` (true for a plan that had nothing to fill),
+`sections` (each with `letter`, `heard`, `heard_as_requested` and `cadences`), `returns` (`planned`, `heard` and the
+`pairs` with `later`, `earlier` and `similarity`) and `files`.
+
+## A plan that cannot be completed
+
+When no seed completes the plan, nothing is written and the command lists, on stderr, the stage it was stuck at and every
+target still open with the reason it could not be filled:
+
+```
+Error: the plan could not be completed from seeds 1 to 16: stuck at the harmony stage
+  open: bass lane of basic idea: no operator applies
+  open: harmony lane of continuation: every candidate was rejected
+```
+
+`no operator applies` is a target a later stage would have filled; `every candidate was rejected` is the target the
+stage could not fill. A plan can also be rejected after it is complete, when the keys or cadences heard do not fit
+the plan; the message says so.
+
+## Exit status
+
+| Status | Meaning |
+| --- | --- |
+| 0 | The piece was written. |
+| 1 | Usage or an invalid argument. |
+| 2 | The plan cannot be read (missing, not JSON, not a plan, or an analysis document) or cannot be completed from any of the seeds. |
+| 3 | An output file could not be written. Nothing is left behind: every file is written beside its name and all are renamed only when all were written. |
