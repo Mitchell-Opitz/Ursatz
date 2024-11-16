@@ -5,6 +5,7 @@
 
 #include "metric_position_rules.h"
 #include "time/duration.h"
+#include "time/musical_time.h"
 #include "time/meter_map.h"
 #include "time/metrical_position.h"
 #include "time/time_span.h"
@@ -128,6 +129,65 @@ bool harmony_stage_find_cadences(HarmonyStage *stage) {
     return status != HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
 }
 
+static double time_double(const MusicalTime *time) {
+    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+}
+
+/* The start times, in whole notes, of the sections: each key region that returns to the home key after leaving it
+   (a recapitulation). Returns how many were written to out, which holds region_count. */
+static size_t section_starts(const CommonPracticeKeyRegions *regions, int home_key_index, double *out) {
+    size_t count = 0;
+    for (size_t i = 1; i < regions->region_count; i++) {
+        if (regions->regions[i].key_index == home_key_index && regions->regions[i - 1].key_index != home_key_index) {
+            out[count++] = time_double(time_span_start(regions->regions[i].span));
+        }
+    }
+    return count;
+}
+
+typedef struct {
+    CadenceType type;
+    size_t arrival_first;
+} CadenceKey;
+
+bool harmony_stage_add_boundary_cadences(HarmonyStage *stage, const CommonPracticeKeyRegions *regions,
+                                         int home_key_index) {
+    if (!stage->segments || regions->region_count < 2) {
+        return true;
+    }
+    double *starts = malloc(sizeof(double) * regions->region_count);
+    CadenceKey *before = malloc(sizeof(CadenceKey) * (stage->cadences.count > 0 ? stage->cadences.count : 1));
+    if (!starts || !before) {
+        free(starts);
+        free(before);
+        return false;
+    }
+    size_t start_count = section_starts(regions, home_key_index, starts);
+    size_t before_count = stage->cadences.count;
+    for (size_t i = 0; i < before_count; i++) {
+        before[i] = (CadenceKey){stage->cadences.items[i].type, stage->cadences.items[i].arrival_first};
+    }
+    HarmonyCadenceAnalysisStatus status = HARMONY_CADENCE_ANALYSIS_OK;
+    if (start_count > 0) {
+        status = harmony_analysis_add_boundary_cadences(stage->segments, stage->count, NULL, starts, start_count,
+                                                        &stage->cadences);
+    }
+    free(starts);
+    bool ok = status != HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+    stage->boundary = ok ? calloc(stage->cadences.count > 0 ? stage->cadences.count : 1, sizeof(bool)) : NULL;
+    ok = ok && stage->boundary;
+    for (size_t i = 0; ok && i < stage->cadences.count; i++) {
+        bool existed = false;
+        for (size_t b = 0; b < before_count && !existed; b++) {
+            existed = before[b].type == stage->cadences.items[i].type &&
+                      before[b].arrival_first == stage->cadences.items[i].arrival_first;
+        }
+        stage->boundary[i] = !existed;
+    }
+    free(before);
+    return ok;
+}
+
 bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *report) {
     size_t count = stage->cadences.count;
     if (count == 0) {
@@ -150,6 +210,7 @@ bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *r
         cadence->dominant_first = found->dominant_first;
         cadence->dominant_last = found->dominant_last;
         cadence->arrival_beat_strength = beat_strength_name(found->arrival_beat_strength);
+        cadence->boundary = stage->boundary && stage->boundary[i];
         cadence->in_region = arrival->in_region;
         cadence->region = arrival->region;
         cadence->uncertainty = found->uncertainty;
@@ -164,6 +225,7 @@ void harmony_stage_destroy(HarmonyStage *stage) {
     if (!stage) {
         return;
     }
+    free(stage->boundary);
     harmony_cadences_destroy(&stage->cadences);
     harmony_analysis_destroy(stage->segments);
     for (size_t i = 0; stage->positions && i < stage->count; i++) {

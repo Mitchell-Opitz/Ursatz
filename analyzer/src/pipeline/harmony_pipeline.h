@@ -8,6 +8,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "analysis_cadence.h"
+#include "key_regions.h"
 #include "analysis_input.h"
 #include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/segmentation.h"
@@ -30,6 +31,8 @@ typedef struct {
     Duration **beat_lengths;      /* owned; inputs[i].beat_length (NULL where the meter gives none) */
     HarmonySegment *segments;     /* owned; prepared, pointing at inputs */
     HarmonyCadences cadences;     /* owned; in order of arrival */
+    bool *boundary;               /* owned; parallel to cadences.items: a half cadence the boundary step added;
+                                     NULL until harmony_stage_add_boundary_cadences */
 } HarmonyStage;
 
 /* Builds the inputs of every chord segment and prepares them. A segment with no Roman numeral gets degree 0.
@@ -40,6 +43,16 @@ bool harmony_stage_prepare(const ImportedNotes *notes, const Segmentation *segme
 
 /* Finds the cadences with the library's default config. Returns false only on allocation failure. */
 bool harmony_stage_find_cadences(HarmonyStage *stage);
+
+/*
+ * Dominants before a section start are half cadences of the earlier section (R-045, R-054), ported from the
+ * Framework v1 chain (fv1_section_starts, fv1_add_boundary_cadences). A section starts at each key region that
+ * returns to the home key after leaving it; regions are the library's regions of the pass and home_key_index the key
+ * index of the report's home region. Sections from the form structure (P3 B7) do not feed back. Marks the cadences the
+ * step added or replaced. Returns false only on allocation failure.
+ */
+bool harmony_stage_add_boundary_cadences(HarmonyStage *stage, const CommonPracticeKeyRegions *regions,
+                                         int home_key_index);
 
 /* Copies the stage's cadences into report->cadences, each with its entry ranges, type, soprano degree (the entry's
    label), beat strength, key region and uncertainty. entries must be the ones the stage was prepared from. Returns

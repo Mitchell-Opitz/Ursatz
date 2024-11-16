@@ -144,14 +144,18 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !collect_non_chord_tones(chain)) {
         return false;
     }
-    if (!harmony_stage_prepare(chain->notes, segmentation, &chain->romans, report->entries, &chain->harmony) ||
-        !harmony_stage_find_cadences(&chain->harmony) ||
-        !harmony_stage_collect_cadences(&chain->harmony, report)) {
-        return false;
-    }
     if (report->key_region_count > 0) {
         report->home_region = home_key_region(report->key_regions, report->key_region_count,
                                               &report->home_duration_numerator, &report->home_duration_denominator);
+    }
+    if (!harmony_stage_prepare(chain->notes, segmentation, &chain->romans, report->entries, &chain->harmony) ||
+        !harmony_stage_find_cadences(&chain->harmony) ||
+        !harmony_stage_add_boundary_cadences(&chain->harmony, &chain->key_regions,
+                                             report->key_region_count > 0
+                                                 ? chain->key_regions.regions[report->home_region].key_index
+                                                 : -1) ||
+        !harmony_stage_collect_cadences(&chain->harmony, report)) {
+        return false;
     }
     return true;
 }
