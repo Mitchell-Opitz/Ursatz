@@ -145,7 +145,8 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         return false;
     }
     if (!harmony_stage_prepare(chain->notes, segmentation, &chain->romans, report->entries, &chain->harmony) ||
-        !harmony_stage_find_cadences(&chain->harmony)) {
+        !harmony_stage_find_cadences(&chain->harmony) ||
+        !harmony_stage_collect_cadences(&chain->harmony, report)) {
         return false;
     }
     if (report->key_region_count > 0) {

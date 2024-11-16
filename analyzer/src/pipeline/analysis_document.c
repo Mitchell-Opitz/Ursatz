@@ -8,6 +8,7 @@
 #include "beat_grid.h"
 #include "cJSON.h"
 #include "framework.h"
+#include "harmony_framework.h"
 #include "metric_position_rules.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
@@ -1213,6 +1214,113 @@ static cJSON *non_chord_tones_json(const ImportedNotes *notes, const AnalysisRep
     return tones;
 }
 
+/* ---- Cadences ---- */
+
+static int compare_note_ids(const void *a, const void *b) {
+    size_t x = *(const size_t *)a;
+    size_t y = *(const size_t *)b;
+    return x < y ? -1 : (x > y ? 1 : 0);
+}
+
+/* The note ids of entries first..last, each once, in order. NULL on allocation failure (*count 0 with none). */
+static size_t *entry_range_note_ids(const AnalysisReport *report, size_t first, size_t last, size_t *count) {
+    size_t total = 0;
+    for (size_t i = first; i <= last; i++) {
+        total += report->entries[i].note_id_count;
+    }
+    size_t *ids = malloc(sizeof(size_t) * (total > 0 ? total : 1));
+    if (!ids) {
+        return NULL;
+    }
+    size_t next = 0;
+    for (size_t i = first; i <= last; i++) {
+        memcpy(ids + next, report->entries[i].note_ids, sizeof(size_t) * report->entries[i].note_id_count);
+        next += report->entries[i].note_id_count;
+    }
+    qsort(ids, total, sizeof(size_t), compare_note_ids);
+    size_t unique = 0;
+    for (size_t i = 0; i < total; i++) {
+        if (i == 0 || ids[i] != ids[i - 1]) {
+            ids[unique++] = ids[i];
+        }
+    }
+    *count = unique;
+    return ids;
+}
+
+static Rational entry_start_time(const AnalysisReportEntry *entry) {
+    return rational_make(entry->time_numerator, entry->time_denominator);
+}
+
+static Rational entry_end_time(const AnalysisReportEntry *entry) {
+    return rational_make(entry->end_numerator, entry->end_denominator);
+}
+
+/* {"span": ...} and {"span": ..., "location": ...} for the parts of a cadence. */
+static cJSON *span_only_json(Rational start, Rational end) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !add(object, "span", span_json(start, end))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *span_and_location_json(const ImportedNotes *notes, Rational start, Rational end) {
+    cJSON *object = span_only_json(start, end);
+    if (object && !add(object, "location", location_json(notes->meter.meter_map, start, end))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One claim per cadence, in time order. The claim's span runs from the dominant's start to the arrival's end;
+   arrival has the arrival's span and location, dominant its span. soprano_degree is the outer voice's label at the
+   arrival (null when absent); region the key region of the arrival (null outside every region); boundary marks a half
+   cadence the boundary step added before a section start. Everything else is the library's: the type, the beat
+   strength, the uncertainty. */
+static cJSON *cadences_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_harmony_framework());
+    for (size_t i = 0; i < report->cadence_count; i++) {
+        const AnalysisCadence *cadence = &report->cadences[i];
+        const AnalysisReportEntry *dominant = &report->entries[cadence->dominant_first];
+        const AnalysisReportEntry *arrival_first = &report->entries[cadence->arrival_first];
+        const AnalysisReportEntry *arrival_last = &report->entries[cadence->arrival_last];
+        Rational start = entry_start_time(dominant);
+        Rational end = entry_end_time(arrival_last);
+        Rational arrival_start = entry_start_time(arrival_first);
+        Rational dominant_end = entry_end_time(&report->entries[cadence->dominant_last]);
+        size_t id_count = 0;
+        size_t *ids = entry_range_note_ids(report, cadence->dominant_first, cadence->arrival_last, &id_count);
+        cJSON *claim = ids ? claim_json_with(framework, notes, ids, id_count, start, end, cadence->type,
+                                             cJSON_CreateNumber(cadence->uncertainty))
+                           : NULL;
+        free(ids);
+        if (!(claim && add(claim, "type", cJSON_CreateString(cadence->type)) &&
+              add(claim, "arrival", span_and_location_json(notes, arrival_start, end)) &&
+              add(claim, "dominant", span_only_json(start, dominant_end)) &&
+              add(claim, "soprano_degree", optional_string_json(cadence->soprano_degree)) &&
+              add(claim, "arrival_beat_strength", cJSON_CreateString(cadence->arrival_beat_strength)) &&
+              add(claim, "boundary", cJSON_CreateBool(cadence->boundary)) &&
+              add(claim, "region",
+                  cadence->in_region ? cJSON_CreateNumber((double)cadence->region) : cJSON_CreateNull()))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* ---- Outer voices ---- */
 
 /* The note's own timing, apart from the chord segment it sounds in: where it is attacked, as a time and a
@@ -1557,7 +1665,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
               chord_vocabulary_json(report, cJSON_GetObjectItemCaseSensitive(document, "chords"))) &&
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
-          add(document, "cadences", cJSON_CreateArray()) &&
+          add(document, "cadences", cadences_json(notes, report)) &&
           add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&

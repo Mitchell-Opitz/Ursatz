@@ -838,7 +838,45 @@ static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, con
              sb_appendf(sb, " | %d | %s | %s |\n", (int)cJSON_GetArrayItem(note_ids, 0)->valuedouble,
                         type ? type : "unclassified", string_member(tone, "chord_label"));
     }
-    return ok;
+    return ok && sb_append(sb, "\n");
+}
+
+/* The label of the key region at an index of the document's keys, or "none" outside every region. */
+static const char *region_label(const cJSON *document, const cJSON *index) {
+    if (!cJSON_IsNumber(index)) {
+        return "none";
+    }
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
+    const cJSON *region = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(keys, "regions"), (int)index->valuedouble);
+    const char *label = string_member(region, "label");
+    return label ? label : "none";
+}
+
+static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSON *cadences) {
+    bool ok = sb_append(sb, "## Cadences\n\n") &&
+              sb_appendf(sb,
+                         "%d %s the library's standard-harmony analysis found from the chords, the meter and the "
+                         "soprano. Position is where the arrival begins. Key is the key region of the arrival. "
+                         "Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added "
+                         "before a section start.\n\n",
+                         cJSON_GetArraySize(cadences), cJSON_GetArraySize(cadences) == 1 ? "cadence is" : "cadences are") &&
+              sb_append(sb, "| Position | Type | Key | Soprano | Beat strength | Boundary |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *cadence;
+    cJSON_ArrayForEach(cadence, cadences) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *arrival = cJSON_GetObjectItemCaseSensitive(cadence, "arrival");
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(arrival, "location");
+        const char *soprano = string_member(cadence, "soprano_degree");
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", string_member(cadence, "type"),
+                        region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")),
+                        soprano ? soprano : "none", string_member(cadence, "arrival_beat_strength"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(cadence, "boundary")) ? "yes" : "no");
+    }
+    return ok && sb_append(sb, "\n");
 }
 
 /* Report sections in document section order. Adding a section means
@@ -859,6 +897,7 @@ static const struct {
     {"chords", render_outer_voices},
     {"chord_vocabulary", render_chord_vocabulary},
     {"non_chord_tones", render_non_chord_tones},
+    {"cadences", render_cadences},
 };
 
 static bool section_is_empty(const cJSON *section) {
@@ -886,6 +925,10 @@ char *markdown_report_render(const AnalysisDocument *document) {
     if (!ok) {
         free(sb.data);
         return NULL;
+    }
+    /* Every section ends with a blank line; the report ends with one newline. */
+    if (sb.length >= 2 && sb.data[sb.length - 1] == '\n' && sb.data[sb.length - 2] == '\n') {
+        sb.data[--sb.length] = '\0';
     }
     return sb.data;
 }

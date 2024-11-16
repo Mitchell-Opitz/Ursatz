@@ -71,7 +71,10 @@
     "outer_voices": {
       "$ref": "#/$defs/outer_voices"
     },
-    "cadences": { "type": "array" },
+    "cadences": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/cadence_claim" }
+    },
     "phrases": { "type": "array" },
     "form": {
       "type": ["object", "null"]
@@ -318,6 +321,48 @@
         "opening_region": { "type": ["integer", "null"], "minimum": 0 },
         "closing_region": { "type": ["integer", "null"], "minimum": 0 }
       }
+    },
+    "cadence_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["type", "arrival", "dominant", "soprano_degree", "arrival_beat_strength", "boundary", "region"],
+          "properties": {
+            "type": {
+              "enum": [
+                "perfect-authentic",
+                "imperfect-authentic",
+                "half",
+                "subverted",
+                "plagal",
+                "deceptive",
+                "authentic-unspecified",
+                "unknown"
+              ]
+            },
+            "arrival": {
+              "type": "object",
+              "required": ["span", "location"],
+              "properties": {
+                "span": { "$ref": "#/$defs/span" },
+                "location": { "$ref": "#/$defs/location" }
+              }
+            },
+            "dominant": {
+              "type": "object",
+              "required": ["span"],
+              "properties": {
+                "span": { "$ref": "#/$defs/span" }
+              }
+            },
+            "soprano_degree": { "type": ["string", "null"] },
+            "arrival_beat_strength": { "enum": ["strong", "medium", "weak"] },
+            "boundary": { "type": "boolean" },
+            "region": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      ]
     },
     "tonicization_claim": {
       "allOf": [

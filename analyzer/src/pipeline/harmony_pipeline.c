@@ -128,6 +128,38 @@ bool harmony_stage_find_cadences(HarmonyStage *stage) {
     return status != HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
 }
 
+bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *report) {
+    size_t count = stage->cadences.count;
+    if (count == 0) {
+        return true;
+    }
+    report->cadences = calloc(count, sizeof(AnalysisCadence));
+    if (!report->cadences) {
+        return false;
+    }
+    report->cadence_count = count;
+    for (size_t i = 0; i < count; i++) {
+        const HarmonyCadenceResult *found = &stage->cadences.items[i];
+        const AnalysisReportEntry *arrival = &report->entries[found->arrival_first];
+        AnalysisCadence *cadence = &report->cadences[i];
+        const char *type = cadence_type_name(found->type);
+        cadence->type = strdup(type ? type : "unknown");
+        cadence->soprano_degree = arrival->soprano.degree ? strdup(arrival->soprano.degree) : NULL;
+        cadence->arrival_first = found->arrival_first;
+        cadence->arrival_last = found->arrival_last;
+        cadence->dominant_first = found->dominant_first;
+        cadence->dominant_last = found->dominant_last;
+        cadence->arrival_beat_strength = beat_strength_name(found->arrival_beat_strength);
+        cadence->in_region = arrival->in_region;
+        cadence->region = arrival->region;
+        cadence->uncertainty = found->uncertainty;
+        if (!cadence->type || (arrival->soprano.degree && !cadence->soprano_degree)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void harmony_stage_destroy(HarmonyStage *stage) {
     if (!stage) {
         return;

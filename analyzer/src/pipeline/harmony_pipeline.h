@@ -41,6 +41,11 @@ bool harmony_stage_prepare(const ImportedNotes *notes, const Segmentation *segme
 /* Finds the cadences with the library's default config. Returns false only on allocation failure. */
 bool harmony_stage_find_cadences(HarmonyStage *stage);
 
+/* Copies the stage's cadences into report->cadences, each with its entry ranges, type, soprano degree (the entry's
+   label), beat strength, key region and uncertainty. entries must be the ones the stage was prepared from. Returns
+   false only on allocation failure. */
+bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *report);
+
 void harmony_stage_destroy(HarmonyStage *stage);
 
 #endif

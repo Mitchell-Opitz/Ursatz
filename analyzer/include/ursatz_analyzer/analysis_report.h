@@ -160,6 +160,23 @@ typedef struct {
     AnalysisChordReading pivot; /* the pivot chord read in the old key; label NULL unless has_pivot */
 } AnalysisKeyChange;
 
+/* One cadence from the library's standard-harmony analysis (analysis/analysis_cadence.h), in time order. Entry
+   ranges are indices into entries, inclusive. */
+typedef struct {
+    char *type;                       /* owned; the library's CadenceType name, e.g. "perfect-authentic" */
+    size_t arrival_first;             /* the chord segments of the arrival */
+    size_t arrival_last;
+    size_t dominant_first;            /* the dominant (with its cadential 6/4, when it has one) */
+    size_t dominant_last;
+    char *soprano_degree;             /* owned; the outer voice's label at the arrival's first entry; NULL when the
+                                         soprano is absent or lies in no key region */
+    const char *arrival_beat_strength; /* the library's BeatStrength name at the arrival: "strong", "medium", "weak" */
+    bool boundary;                    /* a half cadence the boundary step added before a section start */
+    bool in_region;                   /* the arrival lies in a key region */
+    size_t region;                    /* index of that region in key_regions; valid only when in_region */
+    double uncertainty;               /* [0, 1], higher is LESS certain */
+} AnalysisCadence;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -169,12 +186,14 @@ typedef struct {
     size_t key_region_count;
     AnalysisKeyChange *key_changes; /* owned; key_region_count - 1 of them */
     size_t key_change_count;
+    AnalysisCadence *cadences; /* owned; in time order */
+    size_t cadence_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
-/* Frees every entry's labels and note ids, the entries array, and the key regions and changes. */
+/* Frees every entry's labels and note ids, the entries array, the key regions and changes, and the cadences. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

@@ -61,6 +61,11 @@ void analysis_report_destroy(AnalysisReport *report) {
         analysis_chord_reading_destroy(&report->key_changes[i].pivot);
     }
     free(report->key_changes);
+    for (size_t i = 0; i < report->cadence_count; i++) {
+        free(report->cadences[i].type);
+        free(report->cadences[i].soprano_degree);
+    }
+    free(report->cadences);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -69,6 +74,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->key_region_count = 0;
     report->key_changes = NULL;
     report->key_change_count = 0;
+    report->cadences = NULL;
+    report->cadence_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;
