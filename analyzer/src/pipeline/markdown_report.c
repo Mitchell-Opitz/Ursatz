@@ -855,11 +855,11 @@ static const char *region_label(const cJSON *document, const cJSON *index) {
 static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSON *cadences) {
     bool ok = sb_append(sb, "## Cadences\n\n") &&
               sb_appendf(sb,
-                         "%d %s the library's standard-harmony analysis found from the chords, the meter and the "
+                         "The library's standard-harmony analysis found %d %s from the chords, the meter and the "
                          "soprano. Position is where the arrival begins. Key is the key region of the arrival. "
                          "Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added "
                          "before a section start.\n\n",
-                         cJSON_GetArraySize(cadences), cJSON_GetArraySize(cadences) == 1 ? "cadence is" : "cadences are") &&
+                         cJSON_GetArraySize(cadences), cJSON_GetArraySize(cadences) == 1 ? "cadence" : "cadences") &&
               sb_append(sb, "| Position | Type | Key | Soprano | Beat strength | Boundary |\n"
                             "| --- | --- | --- | --- | --- | --- |\n");
     const cJSON *cadence;
