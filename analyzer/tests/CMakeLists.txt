@@ -83,8 +83,10 @@ target_link_libraries(test_key_regions PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_key_regions PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 # Expected to fail: Ursatz's key-region detection does not reach the hand-read regions (see README, Known
-# limits). Measured on the P1 chain: Clementi misses 1 core measure (m. 20), Mozart misses 40 core measures and the
-# returns to C at m. 79 and m. 124. The assertions stay as the target; remove WILL_FAIL when the library meets it.
+# limits). Measured with cadence-confirmed key changes (R-044): Clementi misses 1 core measure (m. 20), Mozart misses
+# 40 core measures and 5 modulations: to G at m. 13, to C at m. 29, to G at m. 41 (no cadence arrives in them, so they
+# are tonicizations), and the returns to C at m. 79 and m. 124. The assertions stay as the target; remove WILL_FAIL
+# when the library meets it.
 add_test(NAME test_key_regions_clementi_36 COMMAND test_key_regions clementi)
 add_test(NAME test_key_regions_mozart_545 COMMAND test_key_regions mozart)
 set_tests_properties(test_key_regions_clementi_36 test_key_regions_mozart_545 PROPERTIES WILL_FAIL TRUE)
