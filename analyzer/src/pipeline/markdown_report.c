@@ -853,6 +853,49 @@ static const char *region_label(const cJSON *document, const cJSON *index) {
     return label ? label : "none";
 }
 
+#define CADENCE_TYPE_MAX 8
+
+typedef struct {
+    const char *type;
+    int count;
+} TypeCount;
+
+/* The cadence plan: the cadences in time order as the piece's plan of arrivals, and how many of each type, in the
+   order each type first appears. Read from the document's cadences, so the plan is the ordered array itself. */
+static bool render_cadence_plan(StringBuilder *sb, const cJSON *document, const cJSON *cadences) {
+    TypeCount counts[CADENCE_TYPE_MAX] = {{NULL, 0}};
+    size_t distinct = 0;
+    bool ok = sb_append(sb, "### Cadence plan\n\n");
+    int number = 1;
+    const cJSON *cadence;
+    cJSON_ArrayForEach(cadence, cadences) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
+                                                                 "location");
+        const char *type = string_member(cadence, "type");
+        ok = sb_appendf(sb, "%d. ", number++) &&
+             append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_appendf(sb, ": %s in %s\n", type, region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")));
+        size_t t = 0;
+        while (t < distinct && strcmp(counts[t].type, type) != 0) {
+            t++;
+        }
+        if (t == distinct && distinct < CADENCE_TYPE_MAX) {
+            counts[distinct++] = (TypeCount){type, 0};
+        }
+        if (t < distinct) {
+            counts[t].count++;
+        }
+    }
+    ok = ok && sb_append(sb, "\n**Counts:** ");
+    for (size_t t = 0; ok && t < distinct; t++) {
+        ok = sb_appendf(sb, "%s%s %d", t > 0 ? ", " : "", counts[t].type, counts[t].count);
+    }
+    return ok && sb_append(sb, ".\n\n");
+}
+
 static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSON *cadences) {
     bool ok = sb_append(sb, "## Cadences\n\n") &&
               sb_appendf(sb,
@@ -877,7 +920,7 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
                         soprano ? soprano : "none", string_member(cadence, "arrival_beat_strength"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(cadence, "boundary")) ? "yes" : "no");
     }
-    return ok && sb_append(sb, "\n");
+    return ok && sb_append(sb, "\n") && render_cadence_plan(sb, document, cadences);
 }
 
 /* Report sections in document section order. Adding a section means
