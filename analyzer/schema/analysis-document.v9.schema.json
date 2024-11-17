@@ -372,6 +372,7 @@
           "required": ["extent", "from_region", "target_region", "from_key", "to_key"],
           "properties": {
             "extent": { "enum": ["tonicization", "extended-tonicization"] },
+            "cadence_confirmed": { "type": "boolean" },
             "from_region": { "type": "integer", "minimum": 0 },
             "target_region": { "type": "integer", "minimum": 0 },
             "from_key": { "type": "string" },
@@ -388,6 +389,7 @@
           "required": ["extent", "from_region", "to_region", "from_key", "to_key", "type", "is_return", "pivot_chord_index"],
           "properties": {
             "extent": { "enum": ["weak-modulation", "modulation"] },
+            "cadence_confirmed": { "type": "boolean" },
             "from_region": { "type": "integer", "minimum": 0 },
             "to_region": { "type": "integer", "minimum": 0 },
             "from_key": { "type": "string" },

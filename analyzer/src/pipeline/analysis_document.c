@@ -678,6 +678,7 @@ static bool add_change_fields(cJSON *claim, const AnalysisReport *report, const 
     const AnalysisKeyRegion *from = &report->key_regions[change->from_region];
     const AnalysisKeyRegion *to = &report->key_regions[change->to_region];
     return add(claim, "extent", cJSON_CreateString(extent_name(change->extent))) &&
+           add(claim, "cadence_confirmed", cJSON_CreateBool(change->cadence_confirmed)) &&
            add(claim, "from_region", cJSON_CreateNumber((double)change->from_region)) &&
            add(claim, to_name, cJSON_CreateNumber((double)change->to_region)) &&
            add(claim, "from_key", cJSON_CreateString(from->label)) &&

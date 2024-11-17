@@ -70,10 +70,18 @@ static bool copy_region(const CommonPracticeKeyRegion *source, AnalysisKeyRegion
     return true;
 }
 
+void sync_key_change_extents(const CommonPracticeKeyRegions *found, AnalysisKeyChange *changes) {
+    for (size_t i = 0; i < found->change_count; i++) {
+        changes[i].extent = change_extent(found->changes[i].extent);
+        changes[i].cadence_confirmed = found->changes[i].cadence_confirmed;
+    }
+}
+
 static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange *out) {
     out->from_region = source->from_region;
     out->to_region = source->to_region;
     out->extent = change_extent(source->extent);
+    out->cadence_confirmed = source->cadence_confirmed;
     out->is_return = source->is_return;
     out->has_pivot = source->has_pivot;
     out->pivot_entry = source->has_pivot ? source->pivot_segment : 0;

@@ -423,7 +423,8 @@ static bool render_tonicizations(StringBuilder *sb, const cJSON *document, const
               sb_appendf(sb,
                          "%d brief %s of another key that return%s to the key before. Span is the stretch in the "
                          "target key. The library tells a tonicization from a modulation by how long the new key "
-                         "lasts and whether it returns; no cadence is looked for.\n\n",
+                         "lasts, whether it returns, and whether a cadence arrives in it; without a cadence "
+                         "it is a tonicization however long.\n\n",
                          cJSON_GetArraySize(tonicizations),
                          cJSON_GetArraySize(tonicizations) == 1 ? "excursion" : "excursions",
                          cJSON_GetArraySize(tonicizations) == 1 ? "s" : "") &&
@@ -445,7 +446,7 @@ static bool render_modulations(StringBuilder *sb, const cJSON *document, const c
               sb_append(sb, "A modulation is a lasting new key. Position is where the new key arrives. Type is "
                             "pivot when the library found a pivot chord and direct when it did not. A return goes "
                             "back to the key before an excursion. The library gives the change's extent from the "
-                            "length of the new key and whether it returns; no cadence is looked for.\n\n") &&
+                            "length of the new key, whether it returns, and whether a cadence arrives in it.\n\n") &&
               sb_append(sb, "| Position | From | To | Extent | Type | Return |\n| --- | --- | --- | --- | --- | --- |\n");
     const cJSON *item;
     cJSON_ArrayForEach(item, modulations) {

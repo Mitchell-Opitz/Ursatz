@@ -3,7 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "harmony_key_change.h"
 #include "metric_position_rules.h"
+#include "semantics/key_change_extent.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/meter_map.h"
@@ -186,6 +188,46 @@ bool harmony_stage_add_boundary_cadences(HarmonyStage *stage, const CommonPracti
     }
     free(before);
     return ok;
+}
+
+bool harmony_stage_confirm_key_changes(const HarmonyStage *stage, const Segmentation *segmentation,
+                                       CommonPracticeKeyRegions *regions) {
+    if (regions->change_count == 0) {
+        return true;
+    }
+    double *arrivals = NULL;
+    if (stage->segments) {
+        arrivals = calloc(stage->cadences.count + 1, sizeof(double));
+        if (!arrivals) {
+            return false;
+        }
+        for (size_t k = 0; k < stage->cadences.count; k++) {
+            const Segment *arrival = &segmentation->segments[stage->cadences.items[k].arrival_first];
+            arrivals[k] = (double)arrival->start_numerator / (double)arrival->start_denominator;
+        }
+    }
+    for (size_t i = 0; i < regions->change_count; i++) {
+        CommonPracticeKeyChange *change = &regions->changes[i];
+        if (change->is_return) {
+            continue;
+        }
+        const CommonPracticeKeyRegion *into = &regions->regions[change->to_region];
+        KeyChangeExtent confirmed = change->extent;
+        if (harmony_key_change_confirm(change->extent, time_double(time_span_start(into->span)),
+                                       time_double(time_span_end(into->span)), arrivals, stage->cadences.count,
+                                       &confirmed)) {
+            change->extent = confirmed;
+        }
+        change->cadence_confirmed = arrivals != NULL && key_change_extent_is_modulation(change->extent);
+    }
+    for (size_t i = 1; i < regions->change_count; i++) {
+        if (regions->changes[i].is_return) {
+            regions->changes[i].extent = regions->changes[i - 1].extent;
+            regions->changes[i].cadence_confirmed = regions->changes[i - 1].cadence_confirmed;
+        }
+    }
+    free(arrivals);
+    return true;
 }
 
 bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *report) {

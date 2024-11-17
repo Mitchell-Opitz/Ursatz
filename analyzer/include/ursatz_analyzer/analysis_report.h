@@ -141,7 +141,8 @@ typedef struct {
     AnalysisRegionSource source;
 } AnalysisKeyRegion;
 
-/* How far a change goes toward the new key: the library's KeyChangeExtent. */
+/* How far a change goes toward the new key: the library's KeyChangeExtent, as confirmed by the cadences found
+   (a modulation needs a cadence arriving in the new key; without one it is a tonicization however long). */
 typedef enum {
     ANALYSIS_KEY_CHANGE_TONICIZATION = 0,
     ANALYSIS_KEY_CHANGE_EXTENDED_TONICIZATION,
@@ -155,6 +156,9 @@ typedef struct {
     size_t to_region;
     AnalysisKeyChangeExtent extent;
     bool is_return; /* goes back to the key before an excursion; extent is that excursion's */
+    bool cadence_confirmed; /* a cadence arriving in the new key confirmed the modulation (the library's
+                               harmony_key_change_confirm); false for a tonicization, and for a modulation the
+                               library kept on region length alone because it had no cadences to consult */
     bool has_pivot; /* the library found a pivot chord; false for a direct change */
     size_t pivot_entry; /* index into entries of the pivot chord's segment; valid only when has_pivot */
     AnalysisChordReading pivot; /* the pivot chord read in the old key; label NULL unless has_pivot */
