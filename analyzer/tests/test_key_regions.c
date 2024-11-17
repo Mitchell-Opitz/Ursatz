@@ -25,8 +25,8 @@
  * reason to loosen the expectation.
  *
  * Constructed pieces (usage: test_key_regions constructed): four-beat measures of I, IV, V, I triads, one
- * key per stretch, for a piece with no modulation, a tonicization only, a modulation, and a notated key
- * signature that the music does not fit.
+ * key per stretch, for a piece with no modulation, an excursion whose cadence makes it a weak modulation, a
+ * modulation, and a notated key signature that the music does not fit.
  */
 
 static int failures = 0;
@@ -350,9 +350,11 @@ static void test_no_modulation(const char *path) {
     release(&analyzed);
 }
 
-/* A brief excursion that returns: C major, two measures of G major (the library smooths them into a three-measure region), C major again. The library calls the
-   change a tonicization, so the document lists it as one and lists no modulation. */
-static void test_tonicization_only(const char *path) {
+/* A brief excursion that returns: C major, two measures of G major (the library smooths them into a three-measure region), C major again. Every
+   measure of the excursion ends on V to I in G, so a cadence arrives in the new key (R-044): the length rule's
+   tonicization is confirmed a weak modulation, the return takes its extent, and the document lists two modulations
+   and no tonicization. */
+static void test_excursion_with_cadence(const char *path) {
     Stretch stretches[] = {{0, 8}, {7, 2}, {0, 8}};
     write_piece(path, stretches, 3, false, 0);
     Analyzed analyzed;
@@ -364,20 +366,13 @@ static void test_tonicization_only(const char *path) {
         CHECK(strcmp(report->key_regions[0].label, "C major") == 0);
         CHECK(strcmp(report->key_regions[1].label, "G major") == 0);
         CHECK(strcmp(report->key_regions[2].label, "C major") == 0);
-        CHECK(report->key_changes[0].extent == ANALYSIS_KEY_CHANGE_TONICIZATION && !report->key_changes[0].is_return);
-        CHECK(report->key_changes[1].extent == ANALYSIS_KEY_CHANGE_TONICIZATION && report->key_changes[1].is_return);
+        CHECK(report->key_changes[0].extent == ANALYSIS_KEY_CHANGE_WEAK_MODULATION && !report->key_changes[0].is_return);
+        CHECK(report->key_changes[1].extent == ANALYSIS_KEY_CHANGE_WEAK_MODULATION && report->key_changes[1].is_return);
+        CHECK(report->key_changes[0].cadence_confirmed && report->key_changes[1].cadence_confirmed);
         CHECK(strcmp(report->key_regions[report->home_region].label, "C major") == 0);
     }
-    CHECK(list_size(&analyzed, "tonicizations") == 1);
-    CHECK(list_size(&analyzed, "modulations") == 0);
-    CHECK(list_size(&analyzed, "pivot_chords") == 0);
-    if (list_size(&analyzed, "tonicizations") == 1) {
-        const cJSON *tonicization =
-            cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(analyzed.document, "tonicizations"), 0);
-        CHECK(strcmp(cJSON_GetObjectItemCaseSensitive(tonicization, "to_key")->valuestring, "G major") == 0);
-        CHECK(strcmp(cJSON_GetObjectItemCaseSensitive(tonicization, "from_key")->valuestring, "C major") == 0);
-        CHECK(strcmp(cJSON_GetObjectItemCaseSensitive(tonicization, "extent")->valuestring, "tonicization") == 0);
-    }
+    CHECK(list_size(&analyzed, "tonicizations") == 0);
+    CHECK(list_size(&analyzed, "modulations") == 2);
     release(&analyzed);
 }
 
@@ -465,7 +460,7 @@ int main(int argc, char **argv) {
     }
     if (strcmp(argv[1], "constructed") == 0) {
         test_no_modulation("/tmp/ursatz_analyzer_key_regions_none.mid");
-        test_tonicization_only("/tmp/ursatz_analyzer_key_regions_tonicization.mid");
+        test_excursion_with_cadence("/tmp/ursatz_analyzer_key_regions_tonicization.mid");
         test_modulation("/tmp/ursatz_analyzer_key_regions_modulation.mid");
         test_key_signature_disagreement("/tmp/ursatz_analyzer_key_regions_signature.mid");
         remove("/tmp/ursatz_analyzer_key_regions_none.mid");
