@@ -45,6 +45,11 @@ typedef struct {
      */
     bool modulate;
     unsigned long seed;
+    /*
+     * Given melodies (given.h) the plan is to take: the material holds a bar more for each, the motive the idea that
+     * has a Given melody inside it is made from (R-071). 0 for none.
+     */
+    size_t given_melodies;
 } PieceRequest;
 
 typedef enum {

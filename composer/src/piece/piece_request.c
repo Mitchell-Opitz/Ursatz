@@ -254,7 +254,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         return PIECE_ERR_ALLOC;
     }
     PlanSpan piece = {{0, 1}, bars_of(bar, layout.bars)};
-    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars(layout.section_count))};
+    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars(layout.section_count) + request->given_melodies)};
     PlanSpan form = {{0, 1}, {0, 1}};
     PieceResult result = from_plan(plan_time_add(piece.length, material.length, &form.length));
     NodeId form_id = PLAN_NODE_NONE;

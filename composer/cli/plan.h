@@ -9,7 +9,8 @@
 
 #define PLAN_USAGE_LINE                                                                                                \
     "Usage: ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <m> [--bars N] [--count N] "     \
-    "[--modulate] [--motive <file>] [--accompaniment <p>] [--texture <t>] [--seed N] --out <plan.json> "                \
+    "[--modulate] [--motive <file>] [--accompaniment <p>] [--texture <t>] [--given-melody <f> | --given-progression "   \
+    "\"<I IV V I>\" | --given-bass <f> [--at <L>[:<bar>]] [--cells N]]... [--seed N] --out <plan.json> "           \
     "[--format text|json]"
 
 /* "ursatz-composer plan ..."; argv[1] is "plan". Returns the exit status. */
