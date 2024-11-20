@@ -102,6 +102,12 @@ add_executable(test_outer_voices test_outer_voices.c)
 target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer cjson)
 add_test(NAME test_outer_voices COMMAND test_outer_voices)
 
+add_executable(test_cadences test_cadences.c)
+target_link_libraries(test_cadences PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_cadences PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_cadences COMMAND test_cadences)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE
