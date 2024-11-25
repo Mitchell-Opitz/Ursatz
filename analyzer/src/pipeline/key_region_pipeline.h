@@ -48,6 +48,12 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
                           size_t *change_count);
 
 /*
+ * Copies the extent and cadence confirmation of each of found's changes into the parallel changes, after the caller
+ * has confirmed them with the cadences (harmony_stage_confirm_key_changes).
+ */
+void sync_key_change_extents(const CommonPracticeKeyRegions *found, AnalysisKeyChange *changes);
+
+/*
  * The home key: the library offers no determination of its own, so it is the key (tonic and mode) with
  * the greatest total duration over all its regions, a tie going to the key that appears first. Returns the
  * first region in that key and sets *duration to the key's total time in whole notes, as a rational.

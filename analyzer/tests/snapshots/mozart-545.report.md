@@ -72,38 +72,42 @@ Positions are measure and beat. Uncertainty is the library's, from 0 (clearly th
 
 **Note:** The home key G major is not the major key or relative minor of any notated key signature. Both are reported; neither is preferred.
 
+## Tonicizations
+
+19 brief excursions of another key that return to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts, whether it returns, and whether a cadence arrives in it; without a cadence it is a tonicization however long.
+
+| Span | In | Target |
+| --- | --- | --- |
+| m. 9, beat 1 to m. 12, beat 1 | C major | F major |
+| m. 12, beat 1 to m. 21, beat 1 | F major | G major |
+| m. 21, beat 1 to m. 25, beat 1 | G major | A minor |
+| m. 30, beat 1 to m. 37, beat 1 | G major | C major |
+| m. 37, beat 1 to m. 40, beat 1 | C major | F major |
+| m. 40, beat 1 to m. 49, beat 1 | F major | G major |
+| m. 49, beat 1 to m. 53, beat 1 | G major | A minor |
+| m. 66, beat 1 to m. 69, beat 1 | D minor | A minor |
+| m. 85, beat 1 to m. 88, beat 1 | F major | G major |
+| m. 88, beat 1 to m. 91, beat 1 | G major | E minor |
+| m. 91, beat 1 to m. 94, beat 1 | E minor | C major |
+| m. 94, beat 1 to m. 98, beat 1 | C major | D minor |
+| m. 104, beat 1 to m. 106, beat 1 | C major | G minor |
+| m. 111, beat 1 to m. 114, beat 1 | D minor | A minor |
+| m. 130, beat 1 to m. 133, beat 1 | F major | G major |
+| m. 133, beat 1 to m. 136, beat 1 | G major | E minor |
+| m. 136, beat 1 to m. 139, beat 1 | E minor | C major |
+| m. 139, beat 1 to m. 143, beat 1 | C major | D minor |
+| m. 301, beat 1 to m. 309, beat 1 | A minor | E major |
+
 ## Modulations
 
-A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key and whether it returns; no cadence is looked for.
+A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key, whether it returns, and whether a cadence arrives in it.
 
 | Position | From | To | Extent | Type | Return |
 | --- | --- | --- | --- | --- | --- |
-| m. 9, beat 1 | C major | F major | modulation | pivot | no |
-| m. 12, beat 1 | F major | G major | modulation | pivot | no |
-| m. 21, beat 1 | G major | A minor | weak-modulation | pivot | no |
-| m. 25, beat 1 | A minor | G major | weak-modulation | pivot | yes |
-| m. 30, beat 1 | G major | C major | modulation | pivot | no |
-| m. 37, beat 1 | C major | F major | modulation | pivot | no |
-| m. 40, beat 1 | F major | G major | modulation | pivot | no |
-| m. 49, beat 1 | G major | A minor | weak-modulation | pivot | no |
-| m. 53, beat 1 | A minor | G major | weak-modulation | pivot | yes |
 | m. 61, beat 1 | G major | D minor | modulation | pivot | no |
-| m. 66, beat 1 | D minor | A minor | modulation | pivot | no |
 | m. 69, beat 1 | A minor | F major | modulation | pivot | no |
-| m. 85, beat 1 | F major | G major | modulation | pivot | no |
-| m. 88, beat 1 | G major | E minor | modulation | pivot | no |
-| m. 91, beat 1 | E minor | C major | modulation | pivot | no |
-| m. 94, beat 1 | C major | D minor | weak-modulation | pivot | no |
-| m. 98, beat 1 | D minor | C major | weak-modulation | pivot | yes |
-| m. 104, beat 1 | C major | G minor | modulation | pivot | no |
 | m. 106, beat 1 | G minor | D minor | modulation | pivot | no |
-| m. 111, beat 1 | D minor | A minor | modulation | pivot | no |
 | m. 114, beat 1 | A minor | F major | modulation | pivot | no |
-| m. 130, beat 1 | F major | G major | modulation | pivot | no |
-| m. 133, beat 1 | G major | E minor | modulation | pivot | no |
-| m. 136, beat 1 | E minor | C major | modulation | pivot | no |
-| m. 139, beat 1 | C major | D minor | weak-modulation | pivot | no |
-| m. 143, beat 1 | D minor | C major | weak-modulation | pivot | yes |
 | m. 149, beat 1 | C major | G major | modulation | pivot | no |
 | m. 182, beat 1 | G major | D major | weak-modulation | pivot | no |
 | m. 188, beat 1 | D major | G major | weak-modulation | pivot | yes |
@@ -117,8 +121,6 @@ A modulation is a lasting new key. Position is where the new key arrives. Type i
 | m. 275, beat 1 | C major | G major | weak-modulation | pivot | yes |
 | m. 284, beat 1 | G major | C major | weak-modulation | pivot | yes |
 | m. 290, beat 1 | C major | A minor | modulation | pivot | no |
-| m. 301, beat 1 | A minor | E major | weak-modulation | pivot | no |
-| m. 309, beat 1 | E major | A minor | weak-modulation | direct | yes |
 | m. 318, beat 1 | A minor | C major | modulation | pivot | no |
 
 ## Pivot chords
@@ -127,46 +129,23 @@ The chord at a modulation that is diatonic in both the old and the new key, name
 
 | Position | Chord | Bass | Inversion | From | To | Modulation |
 | --- | --- | --- | --- | --- | --- | --- |
-| m. 9, beat 1 to m. 9, beat 2 | D minor | F | first | C major | F major | 1 |
-| m. 11, beat 4 to m. 12, beat 1 | C major | G | second | F major | G major | 2 |
-| m. 20, beat 3 to m. 21, beat 1 | A minor | A | root position | G major | A minor | 3 |
-| m. 24, beat 4 to m. 25, beat 1 | G major | D | second | A minor | G major | 4 |
-| m. 29, beat 4.5 to m. 30, beat 1 | G major | G | root position | G major | C major | 5 |
-| m. 37, beat 1 to m. 37, beat 2 | D minor | F | first | C major | F major | 6 |
-| m. 39, beat 4 to m. 40, beat 1 | C major | G | second | F major | G major | 7 |
-| m. 48, beat 3 to m. 49, beat 1 | A minor | A | root position | G major | A minor | 8 |
-| m. 52, beat 4 to m. 53, beat 1 | G major | D | second | A minor | G major | 9 |
-| m. 60, beat 3 to m. 60, beat 4 | A minor | A | root position | G major | D minor | 10 |
-| m. 66, beat 1 to m. 66, beat 2 | G major | B | first | D minor | A minor | 11 |
-| m. 69, beat 1 to m. 69, beat 2 | D minor7 | D | root position | A minor | F major | 12 |
-| m. 84, beat 4 to m. 85, beat 1 | C major | G | second | F major | G major | 13 |
-| m. 88, beat 1 to m. 88, beat 2 | E minor7 | E | root position | G major | E minor | 14 |
-| m. 91, beat 1 to m. 91, beat 3 | C major | E | first | E minor | C major | 15 |
-| m. 93, beat 3 to m. 94, beat 1 | D minor | D | root position | C major | D minor | 16 |
-| m. 98, beat 1 to m. 98, beat 4 | E minor7 | G | first | D minor | C major | 17 |
-| m. 103, beat 4 to m. 104, beat 1 | D minor7 | D | root position | C major | G minor | 18 |
-| m. 106, beat 1 to m. 106, beat 2 | D minor | D | root position | G minor | D minor | 19 |
-| m. 111, beat 1 to m. 111, beat 2 | G major | B | first | D minor | A minor | 20 |
-| m. 114, beat 1 to m. 114, beat 2 | D minor7 | D | root position | A minor | F major | 21 |
-| m. 129, beat 4 to m. 130, beat 1 | C major | G | second | F major | G major | 22 |
-| m. 133, beat 1 to m. 133, beat 2 | E minor7 | E | root position | G major | E minor | 23 |
-| m. 136, beat 1 to m. 136, beat 3 | C major | E | first | E minor | C major | 24 |
-| m. 138, beat 3 to m. 139, beat 1 | D minor | D | root position | C major | D minor | 25 |
-| m. 143, beat 1 to m. 143, beat 4 | E minor7 | G | first | D minor | C major | 26 |
-| m. 149, beat 1 to m. 149, beat 3 | G major | G | root position | C major | G major | 27 |
-| m. 181, beat 3 to m. 182, beat 1 | D major | D | root position | G major | D major | 28 |
-| m. 188, beat 1 to m. 188, beat 2 | E minor7 | D | third | D major | G major | 29 |
-| m. 197, beat 3 to m. 198, beat 1 | D major | D | root position | G major | D major | 30 |
-| m. 204, beat 1 to m. 204, beat 2 | E minor7 | D | third | D major | G major | 31 |
-| m. 217, beat 1 to m. 217, beat 2 | F major | A | first | G minor | Bb major | 33 |
-| m. 223, beat 1 to m. 223, beat 2 | G minor | Db | - | Bb major | G minor | 34 |
-| m. 227, beat 3 to m. 228, beat 1 | D dominant7 | D | root position | G minor | G major | 35 |
-| m. 257, beat 1 to m. 257, beat 1.5 | A minor | A | root position | G major | C major | 36 |
-| m. 275, beat 1 to m. 275, beat 2 | A minor | C | first | C major | G major | 37 |
-| m. 283, beat 2 to m. 283, beat 2.5 | G major | G | root position | G major | C major | 38 |
-| m. 290, beat 1 to m. 290, beat 1.5 | G major | G | root position | C major | A minor | 39 |
-| m. 300, beat 1 to m. 300, beat 2 | E major | E | root position | A minor | E major | 40 |
-| m. 318, beat 1 to m. 318, beat 1.5 | A minor | A | root position | A minor | C major | 42 |
+| m. 60, beat 3 to m. 60, beat 4 | A minor | A | root position | G major | D minor | 1 |
+| m. 69, beat 1 to m. 69, beat 2 | D minor7 | D | root position | A minor | F major | 2 |
+| m. 106, beat 1 to m. 106, beat 2 | D minor | D | root position | G minor | D minor | 3 |
+| m. 114, beat 1 to m. 114, beat 2 | D minor7 | D | root position | A minor | F major | 4 |
+| m. 149, beat 1 to m. 149, beat 3 | G major | G | root position | C major | G major | 5 |
+| m. 181, beat 3 to m. 182, beat 1 | D major | D | root position | G major | D major | 6 |
+| m. 188, beat 1 to m. 188, beat 2 | E minor7 | D | third | D major | G major | 7 |
+| m. 197, beat 3 to m. 198, beat 1 | D major | D | root position | G major | D major | 8 |
+| m. 204, beat 1 to m. 204, beat 2 | E minor7 | D | third | D major | G major | 9 |
+| m. 217, beat 1 to m. 217, beat 2 | F major | A | first | G minor | Bb major | 11 |
+| m. 223, beat 1 to m. 223, beat 2 | G minor | Db | - | Bb major | G minor | 12 |
+| m. 227, beat 3 to m. 228, beat 1 | D dominant7 | D | root position | G minor | G major | 13 |
+| m. 257, beat 1 to m. 257, beat 1.5 | A minor | A | root position | G major | C major | 14 |
+| m. 275, beat 1 to m. 275, beat 2 | A minor | C | first | C major | G major | 15 |
+| m. 283, beat 2 to m. 283, beat 2.5 | G major | G | root position | G major | C major | 16 |
+| m. 290, beat 1 to m. 290, beat 1.5 | G major | G | root position | C major | A minor | 17 |
+| m. 318, beat 1 to m. 318, beat 1.5 | A minor | A | root position | A minor | C major | 18 |
 
 ## Chords
 
@@ -1281,13 +1260,13 @@ Chords the library reads as applied (secondary) chords: the chord as it reads in
 | m. 79, beat 3 to m. 79, beat 4 | V4/3 (secondary-dominant) | iii (A) | to the target | DISAGREES: no tonicization is reported here |
 | m. 80, beat 4 to m. 81, beat 1 | V4/3 (secondary-dominant) | V (C) | to the target | DISAGREES: no tonicization is reported here |
 | m. 81, beat 2 to m. 81, beat 3 | V4/2 (secondary-dominant) | V (C) | deceptive | DISAGREES: no tonicization is reported here |
-| m. 90, beat 4 to m. 91, beat 1 | V4/3 (secondary-dominant) | VI (C) | to the target | DISAGREES: no tonicization is reported here |
-| m. 105, beat 4 to m. 106, beat 1 | V4/2 (secondary-dominant) | V (D) | to the target | DISAGREES: no tonicization is reported here |
+| m. 90, beat 4 to m. 91, beat 1 | V4/3 (secondary-dominant) | VI (C) | to the target | agrees: tonicization of C major |
+| m. 105, beat 4 to m. 106, beat 1 | V4/2 (secondary-dominant) | V (D) | to the target | DISAGREES: the tonicization is of G minor |
 | m. 109, beat 4 to m. 110, beat 1 | V4/2 (secondary-dominant) | V (A) | to the target | DISAGREES: no tonicization is reported here |
 | m. 124, beat 3 to m. 124, beat 4 | V4/3 (secondary-dominant) | iii (A) | to the target | DISAGREES: no tonicization is reported here |
 | m. 125, beat 4 to m. 126, beat 1 | V4/3 (secondary-dominant) | V (C) | to the target | DISAGREES: no tonicization is reported here |
 | m. 126, beat 2 to m. 126, beat 3 | V4/2 (secondary-dominant) | V (C) | deceptive | DISAGREES: no tonicization is reported here |
-| m. 135, beat 4 to m. 136, beat 1 | V4/3 (secondary-dominant) | VI (C) | to the target | DISAGREES: no tonicization is reported here |
+| m. 135, beat 4 to m. 136, beat 1 | V4/3 (secondary-dominant) | VI (C) | to the target | agrees: tonicization of C major |
 | m. 222, beat 2 to m. 222, beat 3 | V4/3 (secondary-dominant) | ii (C) | to the target | DISAGREES: no tonicization is reported here |
 | m. 273, beat 2 to m. 274, beat 1 | V6 (secondary-dominant) | V (G) | deceptive | DISAGREES: no tonicization is reported here |
 | m. 297, beat 2 to m. 298, beat 1 | viio7 (secondary-leading-tone) | VI (F) | to the target | DISAGREES: no tonicization is reported here |
@@ -4797,3 +4776,125 @@ By base numeral (inversions together):
 | m. 334, beat 2 to m. 335, beat 1 | 5542 | unclassified | minor7 |
 | m. 336, beat 2 to m. 337, beat 1 | 5573 | unclassified | minor7 |
 | m. 336, beat 2 to m. 337, beat 1 | 5574 | appoggiatura | minor7 |
+
+## Cadences
+
+The library's standard-harmony analysis found 55 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+
+| Position | Type | Key | Soprano | Beat strength | Boundary |
+| --- | --- | --- | --- | --- | --- |
+| m. 27, beat 1 | perfect-authentic | G major | 1 | strong | no |
+| m. 28, beat 1 | perfect-authentic | G major | 1 | strong | no |
+| m. 55, beat 1 | perfect-authentic | G major | 1 | strong | no |
+| m. 56, beat 1 | perfect-authentic | G major | 1 | strong | no |
+| m. 58, beat 1 | perfect-authentic | G major | 1 | strong | no |
+| m. 62, beat 1 | perfect-authentic | D minor | 1 | strong | no |
+| m. 63, beat 1 | imperfect-authentic | D minor | 3 | strong | no |
+| m. 82, beat 1 | subverted | F major | 6 | strong | no |
+| m. 99, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 100, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 101, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 103, beat 1 | half | C major | 5 | strong | no |
+| m. 107, beat 1 | perfect-authentic | D minor | 1 | strong | no |
+| m. 108, beat 1 | imperfect-authentic | D minor | 3 | strong | no |
+| m. 127, beat 1 | subverted | F major | 6 | strong | no |
+| m. 144, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 145, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 146, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 164, beat 1 | subverted | G major | 2 | strong | no |
+| m. 180, beat 1 | subverted | G major | 2 | strong | no |
+| m. 181, beat 1 | half | G major | 5 | strong | no |
+| m. 187, beat 3 | half | D major | 3 | weak | yes |
+| m. 188, beat 1 | subverted | G major | 6 | strong | no |
+| m. 196, beat 1 | subverted | G major | 2 | strong | no |
+| m. 197, beat 1 | half | G major | 5 | strong | no |
+| m. 203, beat 3 | half | D major | 3 | weak | yes |
+| m. 204, beat 1 | subverted | G major | 6 | strong | no |
+| m. 212, beat 1 | subverted | G major | 2 | strong | no |
+| m. 216, beat 1 | perfect-authentic | G minor | 1 | strong | no |
+| m. 220, beat 1 | subverted | Bb major | 2 | strong | no |
+| m. 227, beat 3 | half | G minor | 3 | weak | yes |
+| m. 228, beat 1 | subverted | G major | 2 | strong | no |
+| m. 244, beat 1 | subverted | G major | 2 | strong | no |
+| m. 248, beat 1 | subverted | G major | 2 | strong | no |
+| m. 252, beat 1 | imperfect-authentic | G major | 3 | strong | no |
+| m. 253, beat 1 | imperfect-authentic | G major | 3 | strong | no |
+| m. 254, beat 1 | perfect-authentic | G major | 1 | strong | no |
+| m. 258, beat 1 | half | C major | 2 | strong | no |
+| m. 262, beat 1 | half | C major | 2 | strong | no |
+| m. 264, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 266, beat 1 | half | C major | 2 | strong | no |
+| m. 270, beat 1 | half | C major | 2 | strong | no |
+| m. 272, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 278, beat 1 | half | G major | 2 | strong | no |
+| m. 286, beat 1 | half | C major | 2 | strong | no |
+| m. 296, beat 1 | half | A minor | #7 | strong | no |
+| m. 312, beat 1 | perfect-authentic | A minor | 1 | strong | no |
+| m. 313, beat 1 | perfect-authentic | A minor | 1 | strong | no |
+| m. 314, beat 1 | perfect-authentic | A minor | 1 | strong | no |
+| m. 315, beat 1 | imperfect-authentic | A minor | 5 | strong | no |
+| m. 319, beat 1 | half | C major | 2 | strong | no |
+| m. 323, beat 1 | half | C major | 2 | strong | no |
+| m. 325, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 329, beat 1 | subverted | C major | 2 | strong | no |
+| m. 333, beat 1 | subverted | C major | 3 | strong | no |
+
+### Cadence plan
+
+1. m. 27, beat 1: perfect-authentic in G major
+2. m. 28, beat 1: perfect-authentic in G major
+3. m. 55, beat 1: perfect-authentic in G major
+4. m. 56, beat 1: perfect-authentic in G major
+5. m. 58, beat 1: perfect-authentic in G major
+6. m. 62, beat 1: perfect-authentic in D minor
+7. m. 63, beat 1: imperfect-authentic in D minor
+8. m. 82, beat 1: subverted in F major
+9. m. 99, beat 1: perfect-authentic in C major
+10. m. 100, beat 1: perfect-authentic in C major
+11. m. 101, beat 1: perfect-authentic in C major
+12. m. 103, beat 1: half in C major
+13. m. 107, beat 1: perfect-authentic in D minor
+14. m. 108, beat 1: imperfect-authentic in D minor
+15. m. 127, beat 1: subverted in F major
+16. m. 144, beat 1: perfect-authentic in C major
+17. m. 145, beat 1: perfect-authentic in C major
+18. m. 146, beat 1: perfect-authentic in C major
+19. m. 164, beat 1: subverted in G major
+20. m. 180, beat 1: subverted in G major
+21. m. 181, beat 1: half in G major
+22. m. 187, beat 3: half in D major
+23. m. 188, beat 1: subverted in G major
+24. m. 196, beat 1: subverted in G major
+25. m. 197, beat 1: half in G major
+26. m. 203, beat 3: half in D major
+27. m. 204, beat 1: subverted in G major
+28. m. 212, beat 1: subverted in G major
+29. m. 216, beat 1: perfect-authentic in G minor
+30. m. 220, beat 1: subverted in Bb major
+31. m. 227, beat 3: half in G minor
+32. m. 228, beat 1: subverted in G major
+33. m. 244, beat 1: subverted in G major
+34. m. 248, beat 1: subverted in G major
+35. m. 252, beat 1: imperfect-authentic in G major
+36. m. 253, beat 1: imperfect-authentic in G major
+37. m. 254, beat 1: perfect-authentic in G major
+38. m. 258, beat 1: half in C major
+39. m. 262, beat 1: half in C major
+40. m. 264, beat 1: perfect-authentic in C major
+41. m. 266, beat 1: half in C major
+42. m. 270, beat 1: half in C major
+43. m. 272, beat 1: perfect-authentic in C major
+44. m. 278, beat 1: half in G major
+45. m. 286, beat 1: half in C major
+46. m. 296, beat 1: half in A minor
+47. m. 312, beat 1: perfect-authentic in A minor
+48. m. 313, beat 1: perfect-authentic in A minor
+49. m. 314, beat 1: perfect-authentic in A minor
+50. m. 315, beat 1: imperfect-authentic in A minor
+51. m. 319, beat 1: half in C major
+52. m. 323, beat 1: half in C major
+53. m. 325, beat 1: perfect-authentic in C major
+54. m. 329, beat 1: subverted in C major
+55. m. 333, beat 1: subverted in C major
+
+**Counts:** perfect-authentic 21, imperfect-authentic 5, subverted 14, half 15.

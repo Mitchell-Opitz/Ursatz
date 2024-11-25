@@ -148,6 +148,17 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         report->home_region = home_key_region(report->key_regions, report->key_region_count,
                                               &report->home_duration_numerator, &report->home_duration_denominator);
     }
+    if (!harmony_stage_prepare(chain->notes, segmentation, &chain->romans, report->entries, &chain->harmony) ||
+        !harmony_stage_find_cadences(&chain->harmony) ||
+        !harmony_stage_add_boundary_cadences(&chain->harmony, &chain->key_regions,
+                                             report->key_region_count > 0
+                                                 ? chain->key_regions.regions[report->home_region].key_index
+                                                 : -1) ||
+        !harmony_stage_confirm_key_changes(&chain->harmony, segmentation, &chain->key_regions) ||
+        !harmony_stage_collect_cadences(&chain->harmony, report)) {
+        return false;
+    }
+    sync_key_change_extents(&chain->key_regions, report->key_changes);
     return true;
 }
 
@@ -176,6 +187,7 @@ void chain_pass_destroy(AnalysisChain *chain) {
     chain->key_regions = (CommonPracticeKeyRegions){0};
     outer_voice_lines_destroy(&chain->lines);
     chain->lines = (OuterVoiceLines){NULL, NULL, 0};
+    harmony_stage_destroy(&chain->harmony);
     analysis_report_destroy(&chain->report);
     memset(&chain->report, 0, sizeof(chain->report));
     chain->report.home_duration_denominator = 1;

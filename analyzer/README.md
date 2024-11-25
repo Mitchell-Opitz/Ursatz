@@ -26,8 +26,10 @@ Tests:
 - `test_key_regions_clementi_36`, `test_key_regions_mozart_545`: the key regions and principal
   modulations of Clementi Sonatina Op. 36 No. 1 and Mozart K. 545 against hand-read regions. Both are
   marked `WILL_FAIL`: Ursatz's detection does not reach the target yet (see "Known limits").
-- `test_key_regions_constructed`: a piece with no modulation, one with a tonicization only, one with a
-  modulation, and a notated key signature the music does not fit.
+- `test_key_regions_constructed`: a piece with no modulation, one with an excursion whose cadence makes it a
+  weak modulation, one with a modulation, and a notated key signature the music does not fit.
+- `test_cadences`: the cadence claims of the five reference pieces (locations, note ids, types, regions), the
+  cadence-confirmed key changes, Bach 114's two perfect authentic cadences and Clementi 36's counts.
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
@@ -120,8 +122,11 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    reads for its chord in its local key, applied chords included.
 5. `outer_voice_pipeline`: extracts the soprano and bass lines over the voice segments with Ursatz's
    outer-voice extraction and names their scale degrees in the local key.
+6. `harmony_pipeline`: builds Ursatz's standard-harmony inputs from the numerals, outer voices and meter,
+   finds the cadences, adds the half cadences before section starts, and confirms the key changes with the
+   cadences (see "Cadences").
 
-Steps 2 to 5 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+Steps 2 to 6 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence for the key regions of the second pass, whose
 results are the report (R-043).
 
@@ -318,9 +323,10 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's key-
   say so; neither side is preferred.
 - **Tonicizations and modulations.** The library classes each change between neighbouring regions: a
   region shorter than four measures that returns to the previous key is a tonicization; a longer one
-  that returns is a weak modulation; one that does not return is a modulation. No cadence is looked
-  for, so "modulation" means a lasting new key region. The analyzer reports the library's
-  classification exactly and applies no rule of its own.
+  that returns is a weak modulation; one that does not return is a modulation. The analyzer then
+  confirms each change with the cadences found (see "Cadences"): a change is a modulation only when a
+  cadence arrives in the new key, otherwise a tonicization however long. It reports the library's
+  classification and applies no rule of its own.
 - **Pivot chords.** For a modulation, the library names the last segment before the new key whose
   chord is diatonic in both keys, within two measures. The analysis document gives the chord by root,
   quality, bass and inversion (no Roman numeral) with the two keys. A modulation with none is direct.
@@ -328,6 +334,27 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's key-
 A pivot chord is named by root, quality, bass and inversion in the old key, not by Roman numeral.
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
+
+## Cadences
+
+The analyzer adds no music theory here (`src/pipeline/harmony_pipeline.c`, ported from Ursatz's test glue
+as a rewrite with error returns). It builds the library's neutral inputs for each chord segment from the
+Roman numerals (degree, quality, inversion, applied target, mode, uncertainty), the soprano and bass scale
+degrees at the segment (the library's labels, a chromatic degree counted as none), the segment's place on the
+meter and its beat strength, and hands them to `harmony_analysis_prepare` and `harmony_analysis_find_cadences`
+with the default config. Each cadence has the library's type, its arrival and dominant, the arrival's beat
+strength, the soprano degree at the arrival, the key region and the uncertainty.
+
+- **Boundary cadences.** A dominant before a section start is a half cadence of the earlier section
+  (`harmony_analysis_add_boundary_cadences`). A section starts at each key region that returns to the
+  home key after leaving it, as in Ursatz's Framework v1 chain; sections from the form structure do not
+  feed back.
+- **Key change confirmation.** Each change into a new key is checked with `harmony_key_change_confirm`
+  against the cadence arrivals: no cadence in the new region makes it a tonicization however long. The
+  report's key changes, tonicizations and modulations follow the confirmed extents, and `cadence_confirmed`
+  marks the modulations.
+- **Cadence plan.** The cadences in time order with the count of each type, rendered from the analysis
+  document's `cadences`.
 
 ## Known limits
 
@@ -339,10 +366,12 @@ See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
   Measured here (`test_key_regions`, still `WILL_FAIL`): Clementi Op. 36 No. 1 reads as annotated except
   measure 20 (the dominant of C minor reads as G major). Mozart K. 545 (the file holds all three
   movements) comes out as 43 regions, and 40 measures inside the cores of the annotated first-movement
-  regions read in a neighbouring key (F major, G major, A minor, D minor or E minor); the expositions'
-  C-to-G modulation at measure 13 is found, the recapitulation's return to C at measures 79 and 124 is
-  not. Bach 114 is read as G major, D major from measure 14, G major from measure 17 and D major from
-  measure 20 to the end. A region read in a key the music is not in also reads its chords in that key.
+  regions read in a neighbouring key (F major, G major, A minor, D minor or E minor); no modulation is
+  found near measures 13 (to G), 29 (to C), 41 (to G), 79 or 124 (to C): the first three regions have no cadence
+  arriving in them, so they are tonicizations, and the returns at 79 and 124 are not read. Bach 114 is read as G major, D major from measure 14, G major from measure 17 and D major from
+  measure 20 to the end. Its file declares 4/4 for a 3/4 piece and the analyzer reads the file's meter, so its
+  measures and beat strengths are those of a 4/4 reading: the two perfect authentic cadences of the 3/4 score (m. 20
+  and m. 28) arrive at m. 15 and m. 21, beat 3.5. A region read in a key the music is not in also reads its chords in that key.
   The profile fits chromatic music less well. A key signature is trusted as a boundary: many exporters
   write a default C major at tick 0 whatever the key.
 - Pivot chords are read in the old key and its mode; a minor old key is read in its minor vocabulary.

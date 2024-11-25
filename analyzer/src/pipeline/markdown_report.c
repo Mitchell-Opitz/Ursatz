@@ -423,7 +423,8 @@ static bool render_tonicizations(StringBuilder *sb, const cJSON *document, const
               sb_appendf(sb,
                          "%d brief %s of another key that return%s to the key before. Span is the stretch in the "
                          "target key. The library tells a tonicization from a modulation by how long the new key "
-                         "lasts and whether it returns; no cadence is looked for.\n\n",
+                         "lasts, whether it returns, and whether a cadence arrives in it; without a cadence "
+                         "it is a tonicization however long.\n\n",
                          cJSON_GetArraySize(tonicizations),
                          cJSON_GetArraySize(tonicizations) == 1 ? "excursion" : "excursions",
                          cJSON_GetArraySize(tonicizations) == 1 ? "s" : "") &&
@@ -445,7 +446,7 @@ static bool render_modulations(StringBuilder *sb, const cJSON *document, const c
               sb_append(sb, "A modulation is a lasting new key. Position is where the new key arrives. Type is "
                             "pivot when the library found a pivot chord and direct when it did not. A return goes "
                             "back to the key before an excursion. The library gives the change's extent from the "
-                            "length of the new key and whether it returns; no cadence is looked for.\n\n") &&
+                            "length of the new key, whether it returns, and whether a cadence arrives in it.\n\n") &&
               sb_append(sb, "| Position | From | To | Extent | Type | Return |\n| --- | --- | --- | --- | --- | --- |\n");
     const cJSON *item;
     cJSON_ArrayForEach(item, modulations) {
@@ -838,7 +839,88 @@ static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, con
              sb_appendf(sb, " | %d | %s | %s |\n", (int)cJSON_GetArrayItem(note_ids, 0)->valuedouble,
                         type ? type : "unclassified", string_member(tone, "chord_label"));
     }
-    return ok;
+    return ok && sb_append(sb, "\n");
+}
+
+/* The label of the key region at an index of the document's keys, or "none" outside every region. */
+static const char *region_label(const cJSON *document, const cJSON *index) {
+    if (!cJSON_IsNumber(index)) {
+        return "none";
+    }
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
+    const cJSON *region = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(keys, "regions"), (int)index->valuedouble);
+    const char *label = string_member(region, "label");
+    return label ? label : "none";
+}
+
+#define CADENCE_TYPE_MAX 8
+
+typedef struct {
+    const char *type;
+    int count;
+} TypeCount;
+
+/* The cadence plan: the cadences in time order as the piece's plan of arrivals, and how many of each type, in the
+   order each type first appears. Read from the document's cadences, so the plan is the ordered array itself. */
+static bool render_cadence_plan(StringBuilder *sb, const cJSON *document, const cJSON *cadences) {
+    TypeCount counts[CADENCE_TYPE_MAX] = {{NULL, 0}};
+    size_t distinct = 0;
+    bool ok = sb_append(sb, "### Cadence plan\n\n");
+    int number = 1;
+    const cJSON *cadence;
+    cJSON_ArrayForEach(cadence, cadences) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
+                                                                 "location");
+        const char *type = string_member(cadence, "type");
+        ok = sb_appendf(sb, "%d. ", number++) &&
+             append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_appendf(sb, ": %s in %s\n", type, region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")));
+        size_t t = 0;
+        while (t < distinct && strcmp(counts[t].type, type) != 0) {
+            t++;
+        }
+        if (t == distinct && distinct < CADENCE_TYPE_MAX) {
+            counts[distinct++] = (TypeCount){type, 0};
+        }
+        if (t < distinct) {
+            counts[t].count++;
+        }
+    }
+    ok = ok && sb_append(sb, "\n**Counts:** ");
+    for (size_t t = 0; ok && t < distinct; t++) {
+        ok = sb_appendf(sb, "%s%s %d", t > 0 ? ", " : "", counts[t].type, counts[t].count);
+    }
+    return ok && sb_append(sb, ".\n\n");
+}
+
+static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSON *cadences) {
+    bool ok = sb_append(sb, "## Cadences\n\n") &&
+              sb_appendf(sb,
+                         "The library's standard-harmony analysis found %d %s from the chords, the meter and the "
+                         "soprano. Position is where the arrival begins. Key is the key region of the arrival. "
+                         "Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added "
+                         "before a section start.\n\n",
+                         cJSON_GetArraySize(cadences), cJSON_GetArraySize(cadences) == 1 ? "cadence" : "cadences") &&
+              sb_append(sb, "| Position | Type | Key | Soprano | Beat strength | Boundary |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *cadence;
+    cJSON_ArrayForEach(cadence, cadences) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *arrival = cJSON_GetObjectItemCaseSensitive(cadence, "arrival");
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(arrival, "location");
+        const char *soprano = string_member(cadence, "soprano_degree");
+        ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", string_member(cadence, "type"),
+                        region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")),
+                        soprano ? soprano : "none", string_member(cadence, "arrival_beat_strength"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(cadence, "boundary")) ? "yes" : "no");
+    }
+    return ok && sb_append(sb, "\n") && render_cadence_plan(sb, document, cadences);
 }
 
 /* Report sections in document section order. Adding a section means
@@ -859,6 +941,7 @@ static const struct {
     {"chords", render_outer_voices},
     {"chord_vocabulary", render_chord_vocabulary},
     {"non_chord_tones", render_non_chord_tones},
+    {"cadences", render_cadences},
 };
 
 static bool section_is_empty(const cJSON *section) {
@@ -886,6 +969,10 @@ char *markdown_report_render(const AnalysisDocument *document) {
     if (!ok) {
         free(sb.data);
         return NULL;
+    }
+    /* Every section ends with a blank line; the report ends with one newline. */
+    if (sb.length >= 2 && sb.data[sb.length - 1] == '\n' && sb.data[sb.length - 2] == '\n') {
+        sb.data[--sb.length] = '\0';
     }
     return sb.data;
 }

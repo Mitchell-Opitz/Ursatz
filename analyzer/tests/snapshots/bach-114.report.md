@@ -29,13 +29,15 @@ Positions are measure and beat. Uncertainty is the library's, from 0 (clearly th
 | m. 17, beat 1 to m. 20, beat 1 | G major | 0.77 | profile |
 | m. 20, beat 1 to m. 25, beat 1 | D major | 0.91 | profile |
 
-## Tonicizations
+## Modulations
 
-1 brief excursion of another key that returns to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts and whether it returns; no cadence is looked for.
+A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key, whether it returns, and whether a cadence arrives in it.
 
-| Span | In | Target |
-| --- | --- | --- |
-| m. 14, beat 1 to m. 17, beat 1 | G major | D major |
+| Position | From | To | Extent | Type | Return |
+| --- | --- | --- | --- | --- | --- |
+| m. 14, beat 1 | G major | D major | weak-modulation | direct | no |
+| m. 17, beat 1 | D major | G major | weak-modulation | direct | yes |
+| m. 20, beat 1 | G major | D major | weak-modulation | direct | yes |
 
 ## Chords
 
@@ -634,3 +636,25 @@ By base numeral (inversions together):
 | m. 23, beat 4.5 to m. 24, beat 1 | 408 | escape-tone | ii |
 | m. 24, beat 1 to m. 24, beat 1.5 | 411 | appoggiatura | IV |
 | m. 24, beat 1 to m. 24, beat 1.5 | 413 | neighbor | IV |
+
+## Cadences
+
+The library's standard-harmony analysis found 5 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+
+| Position | Type | Key | Soprano | Beat strength | Boundary |
+| --- | --- | --- | --- | --- | --- |
+| m. 14, beat 3 | subverted | D major | 1 | medium | no |
+| m. 15, beat 3.5 | perfect-authentic | D major | 1 | weak | no |
+| m. 20, beat 3 | subverted | D major | 1 | medium | no |
+| m. 21, beat 3.5 | perfect-authentic | D major | 1 | weak | no |
+| m. 23, beat 3 | subverted | D major | 4 | medium | no |
+
+### Cadence plan
+
+1. m. 14, beat 3: subverted in D major
+2. m. 15, beat 3.5: perfect-authentic in D major
+3. m. 20, beat 3: subverted in D major
+4. m. 21, beat 3.5: perfect-authentic in D major
+5. m. 23, beat 3: subverted in D major
+
+**Counts:** subverted 3, perfect-authentic 2.

@@ -6,7 +6,10 @@
 
 #include <ursatz_analyzer/midi_pipeline.h>
 
+#include "semantics/beat_strength.h"
 #include "semantics/sonority_segmentation.h"
+#include "time/meter_map.h"
+#include "time/musical_time.h"
 #include "weighted_chord_identification.h"
 
 /*
@@ -52,6 +55,9 @@ typedef struct {
  */
 bool segment_notes(const ImportedNotes *notes, bool merge_unchanged_harmony, Segmentation *out);
 void segmentation_destroy(Segmentation *segmentation);
+
+/* The strength of an attack at onset, read in the signature of its measure; weak if it cannot be read. */
+BeatStrength beat_strength_at(const MeterMap *map, const MusicalTime *onset);
 
 /* Pitch class (0-11) of the lowest note sounding in a segment. */
 int segment_bass_pitch_class(const Segment *segment);

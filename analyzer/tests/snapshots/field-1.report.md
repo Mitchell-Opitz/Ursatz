@@ -29,13 +29,20 @@ Positions are measure and beat. Uncertainty is the library's, from 0 (clearly th
 | m. 28, beat 1 to m. 33, beat 1 | F minor | 0.77 | profile |
 | m. 33, beat 1 to m. 68, beat 1 | Eb major | 0.72 | profile |
 
+## Tonicizations
+
+1 brief excursion of another key that returns to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts, whether it returns, and whether a cadence arrives in it; without a cadence it is a tonicization however long.
+
+| Span | In | Target |
+| --- | --- | --- |
+| m. 21, beat 1 to m. 28, beat 1 | Eb major | Bb major |
+
 ## Modulations
 
-A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key and whether it returns; no cadence is looked for.
+A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key, whether it returns, and whether a cadence arrives in it.
 
 | Position | From | To | Extent | Type | Return |
 | --- | --- | --- | --- | --- | --- |
-| m. 21, beat 1 | Eb major | Bb major | modulation | pivot | no |
 | m. 28, beat 1 | Bb major | F minor | modulation | pivot | no |
 | m. 33, beat 1 | F minor | Eb major | modulation | pivot | no |
 
@@ -45,9 +52,8 @@ The chord at a modulation that is diatonic in both the old and the new key, name
 
 | Position | Chord | Bass | Inversion | From | To | Modulation |
 | --- | --- | --- | --- | --- | --- | --- |
-| m. 21, beat 1 to m. 21, beat 2 | Bb major | Bb | root position | Eb major | Bb major | 1 |
-| m. 27, beat 1 to m. 27, beat 2 | C minor7 | Bb | third | Bb major | F minor | 2 |
-| m. 33, beat 1 to m. 33, beat 2 | Eb major | Eb | root position | F minor | Eb major | 3 |
+| m. 27, beat 1 to m. 27, beat 2 | C minor7 | Bb | third | Bb major | F minor | 1 |
+| m. 33, beat 1 to m. 33, beat 2 | Eb major | Eb | root position | F minor | Eb major | 2 |
 
 ## Chords
 
@@ -1089,3 +1095,39 @@ By base numeral (inversions together):
 | m. 65, beat 3 to m. 65, beat 4 | 1153 | appoggiatura | dominant7 |
 | m. 65, beat 4 to m. 66, beat 1 | 1157 | unclassified | dominant7 |
 | m. 65, beat 4 to m. 66, beat 1 | 1160 | unclassified | dominant7 |
+
+## Cadences
+
+The library's standard-harmony analysis found 12 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+
+| Position | Type | Key | Soprano | Beat strength | Boundary |
+| --- | --- | --- | --- | --- | --- |
+| m. 3, beat 1 | half | Eb major | 1 | strong | no |
+| m. 4, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
+| m. 7, beat 1 | half | Eb major | 6 | strong | no |
+| m. 18, beat 1 | subverted | Eb major | 2 | strong | no |
+| m. 30, beat 1 | half | F minor | 2 | strong | no |
+| m. 30, beat 3 | half | F minor | 2 | medium | no |
+| m. 34, beat 1 | half | Eb major | 7 | strong | no |
+| m. 37, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
+| m. 46, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
+| m. 50, beat 1 | imperfect-authentic | Eb major | 3 | strong | no |
+| m. 57, beat 1 | half | Eb major | b6 | strong | no |
+| m. 65, beat 3 | half | Eb major | 7 | medium | no |
+
+### Cadence plan
+
+1. m. 3, beat 1: half in Eb major
+2. m. 4, beat 1: perfect-authentic in Eb major
+3. m. 7, beat 1: half in Eb major
+4. m. 18, beat 1: subverted in Eb major
+5. m. 30, beat 1: half in F minor
+6. m. 30, beat 3: half in F minor
+7. m. 34, beat 1: half in Eb major
+8. m. 37, beat 1: perfect-authentic in Eb major
+9. m. 46, beat 1: perfect-authentic in Eb major
+10. m. 50, beat 1: imperfect-authentic in Eb major
+11. m. 57, beat 1: half in Eb major
+12. m. 65, beat 3: half in Eb major
+
+**Counts:** half 7, perfect-authentic 3, subverted 1, imperfect-authentic 1.

@@ -36,7 +36,7 @@ static int semitone_of(const PitchSpelling *spelling) {
 }
 
 /* The strength of an attack at onset, read in the signature of its measure; weak if it cannot be read. */
-static BeatStrength attack_strength(const MeterMap *map, const MusicalTime *onset) {
+BeatStrength beat_strength_at(const MeterMap *map, const MusicalTime *onset) {
     BeatStrength strength = BEAT_STRENGTH_WEAK;
     MetricalPosition *position = NULL;
     if (metrical_position_from_time(map, onset, &position) != METRICAL_POSITION_OK) {
@@ -74,7 +74,7 @@ static bool build_member(const NoteEvent *note, const MeterMap *map, ExactRation
     member->pitch = semitone_of(note_event_optional_pitch_spelling(note));
     member->held = held;
     member->duration = as_double(overlap);
-    member->strength = held ? BEAT_STRENGTH_STRONG : attack_strength(map, onset_time);
+    member->strength = held ? BEAT_STRENGTH_STRONG : beat_strength_at(map, onset_time);
     const VoiceReference *voice = note_event_optional_voice(note);
     member->voice_id = voice != NULL ? entity_id_value(voice_reference_target_id(voice)) : NULL;
     member->onset = as_double(onset);

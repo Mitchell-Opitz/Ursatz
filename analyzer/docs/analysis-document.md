@@ -25,7 +25,7 @@ newline. The same input and build always give the same bytes.
 | `chord_vocabulary` | array of vocabulary entries | Filled: each distinct Roman numeral with its count and length. See below. |
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `outer_voices` | object | Filled: the soprano and bass lines. See below. |
-| `cadences` | array | Placeholder: `[]`. |
+| `cadences` | array of cadence claims | Filled: the library's standard-harmony cadences. See below. |
 | `phrases` | array | Placeholder: `[]`. |
 | `form` | object or null | Placeholder: `null`. |
 | `motives` | array | Placeholder: `[]`. |
@@ -203,10 +203,13 @@ the change goes INTO and whether the key then returns:
 - longer, and followed by a return: a weak modulation;
 - not followed by a return: a modulation.
 
-No cadence is looked for, so "modulation" here means "a lasting new key region", not "a cadence
-established it". The change back out of an excursion (`is_return`) carries the extent of the
-excursion it closes. The library's extended tonicization (it needs a chord count) is not produced
-today, and would be listed under `tonicizations`.
+That is the extent from region length alone. The analyzer then confirms it with the cadences found
+(R-044, `harmony_key_change_confirm`): a change into a new key is a modulation only when a cadence arrives in
+the new region. A cadence inside a region the length rule calls a tonicization makes it a weak modulation; no
+cadence inside makes any change a tonicization, however long. `extent` in the claims is the confirmed extent,
+and `cadence_confirmed` says a cadence confirmed it. The change back out of an excursion (`is_return`)
+carries the extent of the excursion it closes. The library's extended tonicization (it needs a chord count) is
+not produced today, and would be listed under `tonicizations`.
 
 `tonicizations` holds one claim per tonicization, in time order. The return out of a tonicization is part
 of it and is not listed again. Beyond the claim fields:
@@ -216,7 +219,8 @@ of it and is not listed again. Beyond the claim fields:
 | `span`, `location`, `note_ids` | | The excursion: the stretch in the target key. |
 | `label` | string | `"tonicization of G major"`. |
 | `uncertainty` | null | The library supplies none. |
-| `extent` | string | `"tonicization"` (or `"extended-tonicization"`). |
+| `extent` | string | `"tonicization"` (or `"extended-tonicization"`), as confirmed by the cadences. |
+| `cadence_confirmed` | boolean | Optional. Always `false` here: no cadence arrives in the target region. |
 | `from_region`, `target_region` | integer | Indices into `keys.regions`: the key it leaves and the key it tonicizes. |
 | `from_key`, `to_key` | string | Those regions' labels. |
 
@@ -229,7 +233,8 @@ was itself a modulation is listed, with `is_return` true; the return out of a to
 | `span`, `location`, `note_ids` | | The passage in the new key. `location.start` is where it arrives. |
 | `label` | string | `"C major to G major"`. |
 | `uncertainty` | null | The library supplies none. |
-| `extent` | `"weak-modulation"` or `"modulation"` | The library's extent. |
+| `extent` | `"weak-modulation"` or `"modulation"` | The library's extent, as confirmed by the cadences. |
+| `cadence_confirmed` | boolean | Optional. `true` when a cadence arrives in the new region (a return carries the excursion's value). |
 | `from_region`, `to_region` | integer | Indices into `keys.regions`. |
 | `from_key`, `to_key` | string | Those regions' labels. |
 | `type` | `"pivot"` or `"direct"` | The library's classification: `"pivot"` when it found a pivot chord, `"direct"` when it found none. It does not classify further (common-tone modulation, for one, is not distinguished). |
@@ -428,6 +433,31 @@ non-chord tones.
 | `chord_index` | integer | Index into `chords` of the chord the note is non-chordal against. |
 | `chord_label` | string | That chord's `label`. |
 
+### Cadences
+
+`cadences` holds one claim per cadence the library's standard-harmony analysis finds
+(`analysis/analysis_cadence.h`), in time order. The analyzer builds the library's neutral inputs from the chain
+(each chord segment's Roman numeral degree, quality, inversion, applied target, mode and uncertainty, the soprano
+and bass scale degrees, the meter) and reports what comes back: types, arrivals, dominants and beat strengths are
+the library's. After the cadences are found, a dominant that ends the run before a section start becomes a half
+cadence of the earlier section (R-045, R-054; a section starts at each key region that returns to the home key
+after leaving it), and the key changes are confirmed (above). The cadence plan is this array in order; the
+Markdown report renders it from here.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `framework` | string | `"standard-harmony-v1"`, the library's framework name. |
+| `span`, `location`, `note_ids` | | From the start of the dominant to the end of the arrival; the notes sounding in those segments. |
+| `label` | string | The type. |
+| `uncertainty` | number | The library's, from the chords involved (higher is less certain). |
+| `type` | string | The library's cadence type name: `"perfect-authentic"`, `"imperfect-authentic"`, `"half"`, `"subverted"`, `"plagal"`, `"deceptive"`, `"authentic-unspecified"`. |
+| `arrival` | object | `span` and `location` of the arrival (the chord segments from its first to its last). |
+| `dominant` | object | `span` of the dominant (with its cadential 6/4, when it has one). |
+| `soprano_degree` | string or null | The outer voice's scale degree label at the arrival, in the arrival's key region; `null` when the soprano is absent. |
+| `arrival_beat_strength` | string | The library's beat strength of the arrival: `"strong"`, `"medium"` or `"weak"`. |
+| `boundary` | boolean | A half cadence the boundary step added before a section start. |
+| `region` | integer or null | Index into `keys.regions` of the arrival's key region; `null` outside every region. |
+
 ## Versioning
 
 - `schema_version` changes only for breaking changes: removing or renaming a field, changing a
@@ -442,7 +472,8 @@ non-chord tones.
 - **9**: Adds the required placeholders `progressions` (`[]`), `harmonic_rhythm`, `markings` and
   `counterpoint_check` (`null`) after `schemas`, so the P3 sections fill them without another version. Required
   sections are a breaking change under the rule above. Chord claims gain the optional `context`, which did not
-  need a version of its own.
+  need a version of its own. `cadences` is filled (its claims are new), and tonicization and modulation claims
+  gain the optional `cadence_confirmed`; both are additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
