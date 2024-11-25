@@ -33,7 +33,7 @@ Positions are measure and beat. Uncertainty is the library's, from 0 (clearly th
 
 ## Modulations
 
-A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key and whether it returns; no cadence is looked for.
+A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key, whether it returns, and whether a cadence arrives in it.
 
 | Position | From | To | Extent | Type | Return |
 | --- | --- | --- | --- | --- | --- |
@@ -714,3 +714,41 @@ By base numeral (inversions together):
 | m. 33, beat 1 to m. 33, beat 2 | 279 | passing | I |
 | m. 36, beat 1 to m. 36, beat 2 | 309 | passing | IV |
 | m. 37, beat 3 to m. 37, beat 4 | 324 | escape-tone | iii |
+
+## Cadences
+
+The library's standard-harmony analysis found 13 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+
+| Position | Type | Key | Soprano | Beat strength | Boundary |
+| --- | --- | --- | --- | --- | --- |
+| m. 2, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 2, beat 3 | half | C major | 5 | medium | no |
+| m. 4, beat 1 | half | C major | 2 | strong | no |
+| m. 10, beat 1 | imperfect-authentic | G major | 4 | strong | no |
+| m. 14, beat 3 | half | G major | 5 | medium | no |
+| m. 19, beat 1 | half | C minor | 1 | strong | no |
+| m. 23, beat 1 | half | C major | 5 | strong | no |
+| m. 25, beat 1 | perfect-authentic | C major | 1 | strong | no |
+| m. 25, beat 3 | half | C major | 5 | medium | no |
+| m. 27, beat 1 | half | C major | 2 | strong | no |
+| m. 33, beat 1 | imperfect-authentic | C major | 4 | strong | no |
+| m. 37, beat 3 | subverted | C major | 4 | medium | no |
+| m. 38, beat 2.5 | perfect-authentic | C major | 1 | weak | no |
+
+### Cadence plan
+
+1. m. 2, beat 1: perfect-authentic in C major
+2. m. 2, beat 3: half in C major
+3. m. 4, beat 1: half in C major
+4. m. 10, beat 1: imperfect-authentic in G major
+5. m. 14, beat 3: half in G major
+6. m. 19, beat 1: half in C minor
+7. m. 23, beat 1: half in C major
+8. m. 25, beat 1: perfect-authentic in C major
+9. m. 25, beat 3: half in C major
+10. m. 27, beat 1: half in C major
+11. m. 33, beat 1: imperfect-authentic in C major
+12. m. 37, beat 3: subverted in C major
+13. m. 38, beat 2.5: perfect-authentic in C major
+
+**Counts:** perfect-authentic 3, half 7, imperfect-authentic 2, subverted 1.

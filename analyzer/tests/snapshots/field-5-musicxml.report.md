@@ -33,29 +33,20 @@ Positions are measure and beat. Uncertainty is the library's, from 0 (clearly th
 
 ## Tonicizations
 
-1 brief excursion of another key that returns to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts and whether it returns; no cadence is looked for.
+1 brief excursion of another key that returns to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts, whether it returns, and whether a cadence arrives in it; without a cadence it is a tonicization however long.
 
 | Span | In | Target |
 | --- | --- | --- |
-| m. 5, beat 1 to m. 8, beat 1 | Bb major | D minor |
+| m. 29, beat 1 to m. 33, beat 1 | Bb major | F major |
 
 ## Modulations
 
-A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key and whether it returns; no cadence is looked for.
+A modulation is a lasting new key. Position is where the new key arrives. Type is pivot when the library found a pivot chord and direct when it did not. A return goes back to the key before an excursion. The library gives the change's extent from the length of the new key, whether it returns, and whether a cadence arrives in it.
 
 | Position | From | To | Extent | Type | Return |
 | --- | --- | --- | --- | --- | --- |
-| m. 29, beat 1 | Bb major | F major | weak-modulation | pivot | no |
-| m. 33, beat 1 | F major | Bb major | weak-modulation | pivot | yes |
-
-## Pivot chords
-
-The chord at a modulation that is diatonic in both the old and the new key, named by root and quality, with no Roman numeral. Modulation is its row in the Modulations table, counting from 1.
-
-| Position | Chord | Bass | Inversion | From | To | Modulation |
-| --- | --- | --- | --- | --- | --- | --- |
-| m. 28, beat 4 to m. 29, beat 1 | G minor7 | G | root position | Bb major | F major | 1 |
-| m. 33, beat 1 to m. 33, beat 2 | A# major | A# | root position | F major | Bb major | 2 |
+| m. 5, beat 1 | Bb major | D minor | weak-modulation | direct | no |
+| m. 8, beat 1 | D minor | Bb major | weak-modulation | direct | yes |
 
 ## Chords
 
@@ -241,8 +232,8 @@ Chords the library reads as applied (secondary) chords: the chord as it reads in
 | --- | --- | --- | --- | --- |
 | m. 14, beat 3 to m. 14, beat 4 | V6/5 (secondary-dominant) | V (F) | to the target | DISAGREES: no tonicization is reported here |
 | m. 27, beat 4 to m. 28, beat 1 | V7 (secondary-dominant) | iii (D) | to the target | DISAGREES: no tonicization is reported here |
-| m. 29, beat 3 to m. 29, beat 4 | vii°4/2 (secondary-leading-tone) | V (C) | to the target | DISAGREES: no tonicization is reported here |
-| m. 30, beat 2 to m. 30, beat 3 | V4/2 (secondary-dominant) | IV (Bb) | to the target | DISAGREES: no tonicization is reported here |
+| m. 29, beat 3 to m. 29, beat 4 | vii°4/2 (secondary-leading-tone) | V (C) | to the target | DISAGREES: the tonicization is of F major |
+| m. 30, beat 2 to m. 30, beat 3 | V4/2 (secondary-dominant) | IV (Bb) | to the target | DISAGREES: the tonicization is of F major |
 | m. 36, beat 3 to m. 36, beat 4 | V6/5 (secondary-dominant) | V (F) | to the target | DISAGREES: no tonicization is reported here |
 | m. 37, beat 1 to m. 37, beat 2 | vii°6/5 (secondary-leading-tone) | ii (C) | to the target | DISAGREES: no tonicization is reported here |
 ## Outer voices
@@ -949,3 +940,43 @@ By base numeral (inversions together):
 | m. 43, beat 1 to m. 43, beat 1.33 | 1059 | unclassified | major7 |
 | m. 43, beat 2 to m. 43, beat 3 | 1069 | unclassified | dominant7 |
 | m. 43, beat 2 to m. 43, beat 3 | 1071 | unclassified | dominant7 |
+
+## Cadences
+
+The library's standard-harmony analysis found 14 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+
+| Position | Type | Key | Soprano | Beat strength | Boundary |
+| --- | --- | --- | --- | --- | --- |
+| m. 5, beat 3 | half | D minor | 2 | medium | no |
+| m. 6, beat 1 | imperfect-authentic | D minor | 3 | strong | no |
+| m. 8, beat 1 | half | Bb major | 5 | strong | no |
+| m. 19, beat 1 | half | Bb major | 4 | strong | no |
+| m. 20, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
+| m. 21, beat 1 | half | Bb major | 4 | strong | no |
+| m. 22, beat 1 | imperfect-authentic | Bb major | 3 | strong | no |
+| m. 34, beat 3 | half | Bb major | 1 | medium | no |
+| m. 39, beat 1 | half | Bb major | 4 | strong | no |
+| m. 40, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
+| m. 41, beat 1 | half | Bb major | 4 | strong | no |
+| m. 41, beat 3 | half | Bb major | 4 | medium | no |
+| m. 42, beat 3 | subverted | Bb major | 1 | medium | no |
+| m. 43, beat 1 | subverted | Bb major | 1 | strong | no |
+
+### Cadence plan
+
+1. m. 5, beat 3: half in D minor
+2. m. 6, beat 1: imperfect-authentic in D minor
+3. m. 8, beat 1: half in Bb major
+4. m. 19, beat 1: half in Bb major
+5. m. 20, beat 1: perfect-authentic in Bb major
+6. m. 21, beat 1: half in Bb major
+7. m. 22, beat 1: imperfect-authentic in Bb major
+8. m. 34, beat 3: half in Bb major
+9. m. 39, beat 1: half in Bb major
+10. m. 40, beat 1: perfect-authentic in Bb major
+11. m. 41, beat 1: half in Bb major
+12. m. 41, beat 3: half in Bb major
+13. m. 42, beat 3: subverted in Bb major
+14. m. 43, beat 1: subverted in Bb major
+
+**Counts:** half 8, imperfect-authentic 2, perfect-authentic 2, subverted 2.
