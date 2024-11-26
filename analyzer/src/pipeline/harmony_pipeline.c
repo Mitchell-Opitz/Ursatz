@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "harmonic_function.h"
 #include "harmony_key_change.h"
 #include "metric_position_rules.h"
 #include "semantics/key_change_extent.h"
@@ -260,6 +261,29 @@ bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *r
             return false;
         }
     }
+    return true;
+}
+
+bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report) {
+    if (!stage->segments || stage->count == 0) {
+        return true;
+    }
+    harmony_analysis_mark_cadential(stage->segments, stage->count);
+    HarmonyFunctionResult *results = NULL;
+    if (harmony_analysis_assign_functions(stage->segments, stage->count, &results) != HARMONY_FUNCTION_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < stage->count && i < report->entry_count; i++) {
+        AnalysisReportEntry *entry = &report->entries[i];
+        if (!results[i].has_function) {
+            continue;
+        }
+        entry->function = harmonic_function_name(results[i].function);
+        entry->function_applied = results[i].applied;
+        entry->function_applied_to = results[i].applied ? results[i].applied_to : 0;
+        entry->function_uncertainty = results[i].uncertainty;
+    }
+    harmony_function_results_destroy(results, stage->count);
     return true;
 }
 

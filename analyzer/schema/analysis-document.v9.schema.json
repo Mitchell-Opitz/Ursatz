@@ -584,6 +584,16 @@
         }
       }
     },
+    "chord_function": {
+      "type": "object",
+      "required": ["name", "applied_to", "framework", "uncertainty"],
+      "properties": {
+        "name": { "enum": ["tonic", "predominant", "dominant"] },
+        "applied_to": { "type": ["integer", "null"], "minimum": 1, "maximum": 7 },
+        "framework": { "type": "string" },
+        "uncertainty": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
     "roman_numeral": {
       "type": "object",
       "required": ["label", "base_numeral", "key_region", "key", "degree", "uncertainty", "unlabelled_reason"],
@@ -631,6 +641,7 @@
             "key_label": { "type": "string" },
             "outer": { "$ref": "#/$defs/chord_outer_voices" },
             "roman_numeral": { "$ref": "#/$defs/roman_numeral" },
+            "function": { "$ref": "#/$defs/chord_function" },
             "root": { "type": ["string", "null"] },
             "quality": { "type": ["string", "null"] },
             "bass": { "type": ["string", "null"] },

@@ -1154,6 +1154,24 @@ static cJSON *roman_numeral_json(const AnalysisReport *report, const AnalysisRep
     return object;
 }
 
+/* The chord's harmonic function, the library's (standard-harmony), with the target degree of an applied chord (null
+   otherwise). Chords the library gives no function have none. */
+static bool add_function(cJSON *claim, const AnalysisReportEntry *entry) {
+    if (!entry->function) {
+        return true;
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "name", cJSON_CreateString(entry->function)) &&
+          add(object, "applied_to",
+              entry->function_applied ? cJSON_CreateNumber(entry->function_applied_to) : cJSON_CreateNull()) &&
+          add(object, "framework", cJSON_CreateString(framework_name(standard_harmony_framework()))) &&
+          add(object, "uncertainty", cJSON_CreateNumber(entry->function_uncertainty)))) {
+        cJSON_Delete(object);
+        return false;
+    }
+    return add(claim, "function", object);
+}
+
 /* One chord claim per report entry, in time order. */
 static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
@@ -1170,7 +1188,7 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
               add_chord_fields(claim, notes, entry, start, end) &&
               add(claim, "outer", chord_outer_json(report, entry)) &&
-              add(claim, "roman_numeral", roman_numeral_json(report, entry)))) {
+              add(claim, "roman_numeral", roman_numeral_json(report, entry)) && add_function(claim, entry))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;

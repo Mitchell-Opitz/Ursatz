@@ -95,6 +95,12 @@ typedef struct {
     bool in_region;                 /* the segment lies in a key region */
     size_t region;                  /* index of that region in key_regions; valid only when in_region */
     AnalysisRomanNumeral roman;     /* the chord's Roman numeral in that region's key */
+    /* The library's harmonic function of the chord (analysis/analysis_function.h). NULL when the library gives
+       none (a segment that is not a chord it reads, or no prepared segments). */
+    const char *function;           /* the library's HarmonicFunction name: "tonic", "predominant" or "dominant" */
+    bool function_applied;          /* an applied chord: a dominant toward function_applied_to */
+    int function_applied_to;        /* the target's scale degree 1..7; 0 unless function_applied */
+    double function_uncertainty;    /* [0, 1], higher is LESS certain; valid only when function is set */
 } AnalysisReportEntry;
 
 /* Frees an outer note's strings and clears it. */
