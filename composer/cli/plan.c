@@ -383,7 +383,7 @@ static bool has_constraint(const PiecePlan *plan, NodeId node, PlanConstraintKin
 }
 
 /* The bars in a length; 0 when the plan has no meter. */
-static size_t bars_in(const PiecePlan *plan, PlanTime length) {
+size_t cli_bars_in(const PiecePlan *plan, PlanTime length) {
     LaneSpanId meters[1];
     PlanSpan whole = plan_node_span(plan, plan_root(plan));
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, meters, 1) == 0) {
@@ -410,7 +410,7 @@ size_t cli_piece_sections(const PiecePlan *plan, CliSection *out, size_t capacit
             const char *name = plan_node_name(plan, node);
             snprintf(section->name, sizeof(section->name), "%s", name ? name : "");
             snprintf(section->letter, sizeof(section->letter), "%.*s", (int)sizeof(section->letter) - 1, section->name);
-            section->bars = bars_in(plan, plan_node_span(plan, node).length);
+            section->bars = cli_bars_in(plan, plan_node_span(plan, node).length);
             for (size_t c = 0; c < plan_node_constraint_count(plan, node); c++) {
                 const PlanConstraint *constraint = plan_node_constraint_at(plan, node, c);
                 switch (constraint->kind) {

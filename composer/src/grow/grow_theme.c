@@ -10,6 +10,8 @@
 #include <phrase_level_form.h>
 
 #include <ursatz_composer/form_return.h>
+#include <ursatz_composer/given.h>
+#include <ursatz_composer/motive.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
@@ -21,6 +23,8 @@
 #define BASS_PLACEHOLDER 40
 #define MELODY_PLACEHOLDER 60
 #define INNER_PLACEHOLDER 55
+/* The most gaps Given material leaves in one idea or one subphrase for one lane. */
+#define GROW_MAX_GAPS 16
 
 /* ------------------------------------------------------------- the plan */
 
@@ -755,53 +759,103 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
         }
     }
     if (result == PLAN_OK && voicing->write_soprano) {
-        PlanLanePayload payload;
-        PlanNote note;
-        LaneSpanId id;
-        memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = MELODY_PLACEHOLDER;
-        note.offset = (PlanTime){0, 1};
-        note.duration = span.length;
-        payload.notes.notes = &note;
-        payload.notes.note_count = 1;
-        result = plan_add_lane_span(build->plan, owner, PLAN_LANE_MELODY, 0, span, &payload, &id);
-        if (result == PLAN_OK && cadence) {
-            result = plan_lane_span_add_constraint(build->plan, id, cadence);
+        /* The melody the voicing writes is the span's gaps: a Given melody is not written over. */
+        PlanSpan gaps[GROW_MAX_GAPS];
+        size_t gap_count = given_gaps(build->plan, PLAN_LANE_MELODY, 0, span, gaps, GROW_MAX_GAPS);
+        PlanTime span_end;
+        gap_count = gap_count > GROW_MAX_GAPS ? GROW_MAX_GAPS : gap_count;
+        result = plan_span_end(span, &span_end);
+        for (size_t g = 0; result == PLAN_OK && g < gap_count; g++) {
+            PlanLanePayload payload;
+            PlanNote note;
+            LaneSpanId id;
+            PlanTime gap_end;
+            memset(&payload, 0, sizeof(payload));
+            note.midi_pitch = MELODY_PLACEHOLDER;
+            note.offset = (PlanTime){0, 1};
+            note.duration = gaps[g].length;
+            payload.notes.notes = &note;
+            payload.notes.note_count = 1;
+            result = plan_span_end(gaps[g], &gap_end);
+            if (result == PLAN_OK) {
+                result = plan_add_lane_span(build->plan, owner, PLAN_LANE_MELODY, 0, gaps[g], &payload, &id);
+            }
+            if (result == PLAN_OK && cadence && plan_time_compare(gap_end, span_end) == 0) {
+                result = plan_lane_span_add_constraint(build->plan, id, cadence);
+            }
         }
     }
     return result;
+}
+
+/* The shape of a harmony target over a gap of its owner: the anchors and the cadence belong to the ends of the owner. */
+static PlanHarmonyShape gap_shape(const PlanHarmonyShape *shape, bool at_start, bool at_end) {
+    PlanHarmonyShape out = *shape;
+    if (!at_end) {
+        /* A span that stops short of the owner's end is not where a cadence arrives: it is prolonged. */
+        if (out.kind != PLAN_HARMONY_SHAPE_PROLONGATION && out.starts_on == PLAN_HARMONY_ANCHOR_PIVOT) {
+            out.starts_on = PLAN_HARMONY_ANCHOR_ANY;
+        }
+        out.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
+        out.ends_on = PLAN_HARMONY_ANCHOR_ANY;
+    }
+    if (!at_start) {
+        out.starts_on = PLAN_HARMONY_ANCHOR_ANY;
+        /* A phrase that begins in the middle of its owner opens with no tonic. */
+        if (out.kind == PLAN_HARMONY_SHAPE_PHRASE_MODEL) {
+            out.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
+        }
+    }
+    return out;
 }
 
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                   const PlanConstraint *cadence) {
     PiecePlan *plan = build->plan;
     PlanSpan span = plan_node_span(plan, owner);
-    PlanLanePayload payload;
-    PlanNote note;
-    LaneSpanId harmony;
-    LaneSpanId bass;
-    memset(&payload, 0, sizeof(payload));
-    strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
-    PlanResult result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, &harmony);
-    PlanConstraint constraint;
-    memset(&constraint, 0, sizeof(constraint));
-    constraint.kind = PLAN_CONSTRAINT_HARMONY_SHAPE;
-    constraint.params.harmony_shape = *shape;
-    if (result == PLAN_OK) {
-        result = plan_lane_span_add_constraint(plan, harmony, &constraint);
+    PlanTime span_end;
+    PlanSpan gaps[GROW_MAX_GAPS];
+    PlanResult result = plan_span_end(span, &span_end);
+    /* Given harmony and Given bass are not written over: targets are opened for what is left. */
+    size_t gap_count = given_gaps(plan, PLAN_LANE_HARMONY, 0, span, gaps, GROW_MAX_GAPS);
+    gap_count = gap_count > GROW_MAX_GAPS ? GROW_MAX_GAPS : gap_count;
+    for (size_t g = 0; result == PLAN_OK && g < gap_count; g++) {
+        PlanLanePayload payload;
+        LaneSpanId harmony;
+        PlanTime gap_end;
+        PlanConstraint constraint;
+        memset(&payload, 0, sizeof(payload));
+        strcpy(payload.harmony.roman_numeral, "I");
+        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        result = plan_span_end(gaps[g], &gap_end);
+        bool at_start = plan_time_compare(gaps[g].start, span.start) == 0;
+        bool at_end = result == PLAN_OK && plan_time_compare(gap_end, span_end) == 0;
+        if (result == PLAN_OK) {
+            result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, gaps[g], &payload, &harmony);
+        }
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_HARMONY_SHAPE;
+        constraint.params.harmony_shape = gap_shape(shape, at_start, at_end);
+        if (result == PLAN_OK) {
+            result = plan_lane_span_add_constraint(plan, harmony, &constraint);
+        }
+        if (result == PLAN_OK && cadence && at_end) {
+            result = plan_lane_span_add_constraint(plan, harmony, cadence);
+        }
     }
-    if (result == PLAN_OK && cadence) {
-        result = plan_lane_span_add_constraint(plan, harmony, cadence);
-    }
-    memset(&payload, 0, sizeof(payload));
-    note.midi_pitch = BASS_PLACEHOLDER;
-    note.offset = (PlanTime){0, 1};
-    note.duration = span.length;
-    payload.notes.notes = &note;
-    payload.notes.note_count = 1;
-    if (result == PLAN_OK) {
-        result = plan_add_lane_span(plan, owner, PLAN_LANE_BASS, 0, span, &payload, &bass);
+    gap_count = given_gaps(plan, PLAN_LANE_BASS, 0, span, gaps, GROW_MAX_GAPS);
+    gap_count = gap_count > GROW_MAX_GAPS ? GROW_MAX_GAPS : gap_count;
+    for (size_t g = 0; result == PLAN_OK && g < gap_count; g++) {
+        PlanLanePayload payload;
+        PlanNote note;
+        LaneSpanId bass;
+        memset(&payload, 0, sizeof(payload));
+        note.midi_pitch = BASS_PLACEHOLDER;
+        note.offset = (PlanTime){0, 1};
+        note.duration = gaps[g].length;
+        payload.notes.notes = &note;
+        payload.notes.note_count = 1;
+        result = plan_add_lane_span(plan, owner, PLAN_LANE_BASS, 0, gaps[g], &payload, &bass);
     }
     if (result == PLAN_OK && build->request->has_accompaniment) {
         result = add_accompaniment_targets(build, owner, span);
@@ -812,6 +866,94 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
     return result;
 }
 
+/* The bars the material holds, counted. */
+static size_t material_bars(const GrowBuild *build) {
+    PlanTime length = {0, 1};
+    size_t count = 0;
+    while (plan_time_compare(length, build->material_span.length) < 0 && count < 4096) {
+        if (plan_time_add(length, build->request->bar, &length) != PLAN_OK) {
+            break;
+        }
+        count++;
+    }
+    return count;
+}
+
+/*
+ * The motive node made from the first bar of the Given melody that touches the idea (R-071), Given: the idea's melody
+ * gaps ask for it, so the idea is made from the notes the user gave. One node a Given span, in the last free bar of the
+ * material (the bars after the sections' own motives are the motives the ideas are made from). PLAN_NODE_NONE when the
+ * span's first bar has no note or the material has no bar free.
+ */
+static NodeId given_motive(GrowBuild *build, PlanSpan idea_span) {
+    PiecePlan *plan = build->plan;
+    LaneSpanId ids[8];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, idea_span, ids, 8);
+    LaneSpanId given = PLAN_LANE_SPAN_NONE;
+    for (size_t i = 0; i < found && i < 8 && given == PLAN_LANE_SPAN_NONE; i++) {
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_GIVEN) {
+            given = ids[i];
+        }
+    }
+    if (given == PLAN_LANE_SPAN_NONE) {
+        return PLAN_NODE_NONE;
+    }
+    char name[48];
+    snprintf(name, sizeof(name), "given %zu", (size_t)given);
+    for (size_t i = 0; i < plan_node_child_count(plan, build->material); i++) {
+        NodeId child = plan_node_child_at(plan, build->material, i);
+        if (strcmp(plan_node_name(plan, child) ? plan_node_name(plan, child) : "", name) == 0) {
+            return child;
+        }
+    }
+    /* The first bar of the Given span, clipped to the bar. */
+    Motive motive;
+    const PlanNotes *notes = &plan_lane_span_payload(plan, given)->notes;
+    memset(&motive, 0, sizeof(motive));
+    motive.meter = build->request->meter;
+    for (size_t n = 0; n < notes->note_count && motive.note_count < MOTIVE_MAX_NOTES; n++) {
+        PlanNote note = notes->notes[n];
+        PlanTime end;
+        if (plan_time_compare(note.offset, build->request->bar) >= 0) {
+            break;
+        }
+        if (plan_time_add(note.offset, note.duration, &end) != PLAN_OK) {
+            return PLAN_NODE_NONE;
+        }
+        if (plan_time_compare(end, build->request->bar) > 0 &&
+            plan_time_make(build->request->bar.num * (long)note.offset.den - note.offset.num * (long)build->request->bar.den,
+                           build->request->bar.den * note.offset.den, &note.duration) != PLAN_OK) {
+            return PLAN_NODE_NONE;
+        }
+        motive.notes[motive.note_count++] = note;
+    }
+    if (motive.note_count == 0 ||
+        plan_time_add(motive.notes[motive.note_count - 1].offset, motive.notes[motive.note_count - 1].duration,
+                      &motive.length) != PLAN_OK) {
+        return PLAN_NODE_NONE;
+    }
+    /* The last bar of the material no node starts in. */
+    size_t bars = material_bars(build);
+    for (size_t bar = bars; bar > 0; bar--) {
+        PlanTime start;
+        bool taken = false;
+        if (plan_time_add(build->material_span.start, grow_scaled(build->request->bar, bar - 1), &start) != PLAN_OK) {
+            return PLAN_NODE_NONE;
+        }
+        for (size_t i = 0; i < plan_node_child_count(plan, build->material); i++) {
+            PlanSpan other = plan_node_span(plan, plan_node_child_at(plan, build->material, i));
+            PlanTime other_end;
+            taken = taken || (plan_span_end(other, &other_end) == PLAN_OK && plan_time_compare(other.start, start) <= 0 &&
+                              plan_time_compare(start, other_end) < 0);
+        }
+        NodeId node;
+        if (!taken && plan_lane_find(plan, PLAN_LANE_MELODY, 0, (PlanSpan){start, motive.length}, NULL, 0) == 0) {
+            return motive_attach(plan, build->material, start, &motive, name, &node, NULL) == PLAN_OK ? node : PLAN_NODE_NONE;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
 PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
                                   const PlanConstraint *cadence) {
     PiecePlan *plan = build->plan;
@@ -820,25 +962,46 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         return PLAN_OK;
     }
     PlanSpan span = plan_node_span(plan, idea);
-    PlanLanePayload payload;
-    PlanNote note;
-    LaneSpanId melody;
-    memset(&payload, 0, sizeof(payload));
-    note.midi_pitch = MELODY_PLACEHOLDER;
-    note.offset = (PlanTime){0, 1};
-    note.duration = span.length;
-    payload.notes.notes = &note;
-    payload.notes.note_count = 1;
-    PlanResult result = plan_add_lane_span(plan, idea, PLAN_LANE_MELODY, 0, span, &payload, &melody);
-    PlanConstraint constraint;
-    memset(&constraint, 0, sizeof(constraint));
-    constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
-    constraint.params.motive = *ref;
-    if (result == PLAN_OK) {
-        result = plan_lane_span_add_constraint(plan, melody, &constraint);
+    PlanTime span_end;
+    PlanSpan gaps[GROW_MAX_GAPS];
+    PlanResult result = plan_span_end(span, &span_end);
+    size_t gap_count = given_gaps(plan, PLAN_LANE_MELODY, 0, span, gaps, GROW_MAX_GAPS);
+    gap_count = gap_count > GROW_MAX_GAPS ? GROW_MAX_GAPS : gap_count;
+    /* An idea with a Given melody inside it is made from that melody's notes where it is not written. */
+    PlanMotiveRef asked = *ref;
+    if (gap_count > 0 && given_touches(plan, PLAN_LANE_MELODY, 0, span)) {
+        NodeId motive = given_motive(build, span);
+        if (motive != PLAN_NODE_NONE) {
+            memset(&asked, 0, sizeof(asked));
+            asked.motive = motive;
+            asked.transform = PLAN_TRANSFORM_NONE;
+        }
     }
-    if (result == PLAN_OK && cadence) {
-        result = plan_lane_span_add_constraint(plan, melody, cadence);
+    for (size_t g = 0; result == PLAN_OK && g < gap_count; g++) {
+        PlanLanePayload payload;
+        PlanNote note;
+        LaneSpanId melody;
+        PlanTime gap_end;
+        memset(&payload, 0, sizeof(payload));
+        note.midi_pitch = MELODY_PLACEHOLDER;
+        note.offset = (PlanTime){0, 1};
+        note.duration = gaps[g].length;
+        payload.notes.notes = &note;
+        payload.notes.note_count = 1;
+        result = plan_span_end(gaps[g], &gap_end);
+        if (result == PLAN_OK) {
+            result = plan_add_lane_span(plan, idea, PLAN_LANE_MELODY, 0, gaps[g], &payload, &melody);
+        }
+        PlanConstraint constraint;
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
+        constraint.params.motive = asked;
+        if (result == PLAN_OK) {
+            result = plan_lane_span_add_constraint(plan, melody, &constraint);
+        }
+        if (result == PLAN_OK && cadence && plan_time_compare(gap_end, span_end) == 0) {
+            result = plan_lane_span_add_constraint(plan, melody, cadence);
+        }
     }
     return result;
 }

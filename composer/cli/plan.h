@@ -38,6 +38,8 @@ typedef struct {
 /* The sections of the piece in order, material left out; returns how many there are (at most capacity are written). */
 size_t cli_piece_sections(const PiecePlan *plan, CliSection *out, size_t capacity);
 
+/* The bars in a length of the plan's meter, rounded; 0 when the plan has no meter. */
+size_t cli_bars_in(const PiecePlan *plan, PlanTime length);
 /* "presentation + continuation", "antecedent + consequent". */
 void cli_pairing_name(const PlanThemePairing *pairing, char *out, size_t size);
 

@@ -230,6 +230,29 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
     return ok;
 }
 
+static bool verdict_to_check(const HeardPhrase *phrase, FillCheck *out);
+
+/* The verdict on a phrase of this operator, then what the Given material around its target asks of the chords. */
+static bool phrase_to_check(const HeardPhrase *phrase, const PhraseProgression *progression, FillCheck *out) {
+    const char *given_hard = NULL;
+    if (!verdict_to_check(phrase, out)) {
+        return false;
+    }
+    if (out->hard_violation || !progression->request.around_given) {
+        return true;
+    }
+    if (harmony_given_fits(&progression->request, progression->chords, progression->count, &given_hard) &&
+        !harmony_given_join(&progression->request, progression->chords, progression->count, true, &given_hard)) {
+        return false;
+    }
+    if (given_hard) {
+        out->hard_violation = true;
+        out->score_numerator = 0;
+        snprintf(out->reason, sizeof(out->reason), "%s", given_hard);
+    }
+    return true;
+}
+
 static bool verdict_to_check(const HeardPhrase *phrase, FillCheck *out) {
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));
@@ -276,7 +299,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
                 return true;
             }
         }
-        return verdict_to_check(&phrase, out);
+        return phrase_to_check(&phrase, progression, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_EMBELLISH_OPERATOR_NAME) == 0) {
         const EmbellishCandidate *edit = candidate->payload;

@@ -68,6 +68,8 @@ typedef struct {
     int phrase_top;      /* the highest pitch of those */
     int lead_in[2];      /* the last notes of the written melody right before the target, oldest first */
     size_t lead_in_count;
+    int lead_out;        /* the first note of the melody, Given or written, that starts where the target ends */
+    bool has_lead_out;
     bool restating;      /* the motive is the melody of the idea before, to be said again as it was */
 } MelodyContext;
 

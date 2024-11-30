@@ -23,6 +23,7 @@ add_library(ursatz_composer STATIC
     harmony/harmony_phrase.c
     harmony/harmony_prolong.c
     harmony/harmony_context.c
+    harmony/harmony_given.c
     harmony/harmony_templates.c
     harmony/harmony_embellish.c
     harmony/harmony_bass.c

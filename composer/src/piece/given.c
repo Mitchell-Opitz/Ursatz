@@ -277,3 +277,209 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
     free(payloads);
     return result;
 }
+
+/* ------------------------------------------------------------- the gaps */
+
+#define MAX_GIVEN_SPANS 64
+
+static PlanSpan between(PlanTime from, PlanTime to) {
+    PlanSpan span = {from, {0, 1}};
+    if (plan_time_make(to.num * (long)from.den - from.num * (long)to.den, to.den * from.den, &span.length) != PLAN_OK) {
+        span.length.num = 0;
+        span.length.den = 1;
+    }
+    return span;
+}
+
+bool given_touches(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
+    LaneSpanId ids[MAX_GIVEN_SPANS];
+    size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_GIVEN_SPANS);
+    for (size_t i = 0; i < found && i < MAX_GIVEN_SPANS; i++) {
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_GIVEN) {
+            return true;
+        }
+    }
+    return false;
+}
+
+size_t given_gaps(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanSpan *out, size_t capacity) {
+    LaneSpanId ids[MAX_GIVEN_SPANS];
+    size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_GIVEN_SPANS);
+    PlanTime end;
+    PlanTime at = span.start;
+    size_t count = 0;
+    if (plan_span_end(span, &end) != PLAN_OK) {
+        return 0;
+    }
+    if (found > MAX_GIVEN_SPANS) {
+        found = MAX_GIVEN_SPANS;
+    }
+    for (size_t i = 0; i < found; i++) {
+        if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN) {
+            continue;
+        }
+        PlanSpan given = plan_lane_span_span(plan, ids[i]);
+        PlanTime given_end;
+        if (plan_span_end(given, &given_end) != PLAN_OK) {
+            continue;
+        }
+        if (plan_time_compare(given.start, at) > 0) {
+            if (out && count < capacity) {
+                out[count] = between(at, given.start);
+            }
+            count++;
+        }
+        if (plan_time_compare(given_end, at) > 0) {
+            at = given_end;
+        }
+    }
+    if (plan_time_compare(at, end) < 0) {
+        if (out && count < capacity) {
+            out[count] = between(at, end);
+        }
+        count++;
+    }
+    return count;
+}
+
+/* ------------------------------------------------------------- the snapshot */
+
+typedef struct {
+    PlanLaneKind lane;
+    int voice;
+    NodeId owner;
+    PlanSpan span;
+    PlanHarmony harmony;
+    PlanNote *notes;
+    size_t note_count;
+} SnapshotEntry;
+
+struct GivenSnapshot {
+    SnapshotEntry *entries;
+    size_t count;
+};
+
+void given_snapshot_destroy(GivenSnapshot *snapshot) {
+    if (!snapshot) {
+        return;
+    }
+    for (size_t i = 0; i < snapshot->count; i++) {
+        free(snapshot->entries[i].notes);
+    }
+    free(snapshot->entries);
+    free(snapshot);
+}
+
+/* Whether a lane span is material the user placed: Given, in a lane the user fills, owned by a section. */
+static bool placed(const PiecePlan *plan, LaneSpanId id) {
+    PlanLaneKind lane = plan_lane_span_lane(plan, id);
+    return plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN &&
+           (lane == PLAN_LANE_HARMONY || lane == PLAN_LANE_BASS || lane == PLAN_LANE_MELODY ||
+            lane == PLAN_LANE_INNER_VOICE) &&
+           plan_node_kind(plan, plan_lane_span_owner(plan, id)) == PLAN_NODE_SECTION;
+}
+
+GivenSnapshot *given_snapshot(const PiecePlan *plan) {
+    GivenSnapshot *snapshot = calloc(1, sizeof(*snapshot));
+    size_t found = 0;
+    if (!snapshot || !plan) {
+        free(snapshot);
+        return NULL;
+    }
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        found += placed(plan, id);
+    }
+    snapshot->entries = found ? calloc(found, sizeof(SnapshotEntry)) : NULL;
+    if (found && !snapshot->entries) {
+        free(snapshot);
+        return NULL;
+    }
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (!placed(plan, id)) {
+            continue;
+        }
+        SnapshotEntry *entry = &snapshot->entries[snapshot->count++];
+        entry->lane = plan_lane_span_lane(plan, id);
+        entry->voice = plan_lane_span_voice(plan, id);
+        entry->owner = plan_lane_span_owner(plan, id);
+        entry->span = plan_lane_span_span(plan, id);
+        const PlanLanePayload *payload = plan_lane_span_payload(plan, id);
+        if (entry->lane == PLAN_LANE_HARMONY) {
+            entry->harmony = payload->harmony;
+        } else if (payload->notes.note_count > 0) {
+            entry->notes = malloc(payload->notes.note_count * sizeof(PlanNote));
+            if (!entry->notes) {
+                given_snapshot_destroy(snapshot);
+                return NULL;
+            }
+            memcpy(entry->notes, payload->notes.notes, payload->notes.note_count * sizeof(PlanNote));
+            entry->note_count = payload->notes.note_count;
+        }
+    }
+    return snapshot;
+}
+
+static bool same_time(PlanTime a, PlanTime b) {
+    return plan_time_compare(a, b) == 0;
+}
+
+/* Whether the plan has a Given span like the entry: same lane, voice, owner and span, and the same payload. */
+static bool entry_unchanged(const SnapshotEntry *entry, const PiecePlan *plan) {
+    LaneSpanId ids[8];
+    size_t found = plan_lane_find(plan, entry->lane, entry->voice, entry->span, ids, 8);
+    for (size_t i = 0; i < found && i < 8; i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
+        if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN || plan_lane_span_owner(plan, ids[i]) != entry->owner ||
+            !same_time(span.start, entry->span.start) || !same_time(span.length, entry->span.length)) {
+            continue;
+        }
+        if (entry->lane == PLAN_LANE_HARMONY) {
+            return strcmp(payload->harmony.roman_numeral, entry->harmony.roman_numeral) == 0 &&
+                   payload->harmony.function == entry->harmony.function;
+        }
+        if (payload->notes.note_count != entry->note_count) {
+            return false;
+        }
+        for (size_t n = 0; n < entry->note_count; n++) {
+            const PlanNote *was = &entry->notes[n];
+            const PlanNote *now = &payload->notes.notes[n];
+            if (was->midi_pitch != now->midi_pitch || !same_time(was->offset, now->offset) ||
+                !same_time(was->duration, now->duration)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+size_t given_snapshot_report(const GivenSnapshot *snapshot, const PiecePlan *plan, GivenReport *out, size_t capacity) {
+    size_t runs = 0;
+    for (size_t i = 0; snapshot && plan && i < snapshot->count; i++) {
+        const SnapshotEntry *entry = &snapshot->entries[i];
+        bool unchanged = entry_unchanged(entry, plan);
+        GivenReport *last = runs > 0 && runs <= capacity && out ? &out[runs - 1] : NULL;
+        PlanTime last_end;
+        if (last && last->lane == entry->lane && last->voice == entry->voice && last->owner == entry->owner &&
+            plan_span_end(last->span, &last_end) == PLAN_OK && same_time(last_end, entry->span.start)) {
+            PlanTime end;
+            if (plan_span_end(entry->span, &end) == PLAN_OK) {
+                last->span = between(last->span.start, end);
+            }
+            last->spans++;
+            last->unchanged = last->unchanged && unchanged;
+            continue;
+        }
+        if (out && runs < capacity) {
+            out[runs].lane = entry->lane;
+            out[runs].voice = entry->voice;
+            out[runs].owner = entry->owner;
+            out[runs].span = entry->span;
+            out[runs].spans = 1;
+            out[runs].unchanged = unchanged;
+        }
+        runs++;
+    }
+    return runs;
+}

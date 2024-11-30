@@ -1,6 +1,7 @@
 #ifndef URSATZ_COMPOSER_GIVEN_H
 #define URSATZ_COMPOSER_GIVEN_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include <ursatz_composer/lanes.h>
@@ -54,5 +55,38 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
 
 /* A bass span, as long as the notes need in whole bars, Given. */
 GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+
+/*
+ * The parts of span that no Given span of the lane and voice covers, in time order: *out receives up to capacity
+ * spans, and the count in all is returned. A span nothing Given touches is its own single gap; a span covered wholly
+ * has none. The operators that open targets (grow-theme) open them only over the gaps.
+ */
+size_t given_gaps(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanSpan *out, size_t capacity);
+
+/* Whether a Given span of the lane and voice overlaps the span. */
+bool given_touches(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span);
+
+/*
+ * A copy of the Given material of a plan that the user placed (harmony, bass, melody and inner voice spans owned by a
+ * section; the meter, the key and the motive m0 are the form's), to check after a run that nothing changed it.
+ */
+typedef struct GivenSnapshot GivenSnapshot;
+
+/* NULL when out of memory; a plan with no such material gives a snapshot of none. */
+GivenSnapshot *given_snapshot(const PiecePlan *plan);
+void given_snapshot_destroy(GivenSnapshot *snapshot);
+
+/* One run of Given spans in a row (a progression is a span a chord), as the snapshot found it and as the plan holds it now. */
+typedef struct {
+    PlanLaneKind lane;
+    int voice;
+    NodeId owner;
+    PlanSpan span;    /* from the start of the first span to the end of the last */
+    size_t spans;
+    bool unchanged;   /* every span is still there, still Given, with the same payload byte for byte */
+} GivenReport;
+
+/* The runs in the snapshot, in the order of their spans; up to capacity are written, the count in all is returned. */
+size_t given_snapshot_report(const GivenSnapshot *snapshot, const PiecePlan *plan, GivenReport *out, size_t capacity);
 
 #endif

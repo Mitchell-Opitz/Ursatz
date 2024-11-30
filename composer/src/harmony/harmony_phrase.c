@@ -10,17 +10,23 @@ static bool is_target(FillTarget target) {
     return target.kind == FILL_TARGET_LANE_SPAN;
 }
 
+/* The operator's context is non-NULL when it works around Given material (harmony_phrase_register_given). */
+static const char AROUND_GIVEN = 1;
+
+static bool read_request(const PiecePlan *plan, LaneSpanId target, bool around_given, PhraseRequest *out) {
+    return around_given ? harmony_phrase_read_request_given(plan, target, out)
+                        : harmony_phrase_read_request(plan, target, out);
+}
+
 static bool phrase_applies(const PiecePlan *plan, FillTarget target, void *context) {
     PhraseRequest request;
-    (void)context;
-    return is_target(target) && harmony_phrase_read_request(plan, (LaneSpanId)target.id, &request);
+    return is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
 }
 
 static bool phrase_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     PhraseRequest request;
-    (void)context;
-    if (!is_target(target) || !harmony_phrase_read_request(plan, (LaneSpanId)target.id, &request)) {
+    if (!is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
         return false;
     }
     return harmony_phrase_propose(&request, rng, out);
@@ -98,11 +104,11 @@ PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const F
 }
 
 static PlanResult phrase_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    (void)context;
-    return harmony_progression_apply(plan, target, candidate, harmony_phrase_read_request);
+    return harmony_progression_apply(plan, target, candidate,
+                                     context ? harmony_phrase_read_request_given : harmony_phrase_read_request);
 }
 
-FillResult harmony_phrase_register(FillOperatorRegistry *registry) {
+static FillResult register_phrase(FillOperatorRegistry *registry, bool around_given) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_PHRASE_OPERATOR_NAME;
@@ -116,5 +122,14 @@ FillResult harmony_phrase_register(FillOperatorRegistry *registry) {
     operator_.applies = phrase_applies;
     operator_.generate = phrase_generate;
     operator_.apply = phrase_apply;
+    operator_.context = around_given ? (void *)&AROUND_GIVEN : NULL;
     return fill_registry_register(registry, &operator_);
+}
+
+FillResult harmony_phrase_register(FillOperatorRegistry *registry) {
+    return register_phrase(registry, false);
+}
+
+FillResult harmony_phrase_register_given(FillOperatorRegistry *registry) {
+    return register_phrase(registry, true);
 }

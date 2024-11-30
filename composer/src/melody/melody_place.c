@@ -222,6 +222,10 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                 !leap_allowed(options[j].pitch - context->lead_in[context->lead_in_count - 1])) {
                 continue;
             }
+            /* The last note of a target that comes before written melody leads to its first note by a leap allowed. */
+            if (i + 1 == out->count && context->has_lead_out && !leap_allowed(context->lead_out - options[j].pitch)) {
+                continue;
+            }
             options[kept++] = options[j];
         }
         if (climax) {

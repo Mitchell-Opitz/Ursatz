@@ -336,10 +336,29 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
         if (found == 1 && plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED) {
             const PlanNotes *notes = &plan_lane_span_payload(plan, ids[0])->notes;
             size_t take = notes->note_count < 2 ? notes->note_count : 2;
+            /* A Given line is the user's: only the note the target joins is asked of, not the line's own rules. */
+            take = plan_lane_span_state(plan, ids[0]) == PLAN_STATE_GIVEN && take > 1 ? 1 : take;
             for (size_t k = 0; k < take; k++) {
                 context->lead_in[k] = notes->notes[notes->note_count - take + k].midi_pitch;
             }
             context->lead_in_count = take;
+        }
+    }
+    /* The first note of the melody that starts where the target ends: the target's last note leads to it. */
+    PlanTime end;
+    PlanTime tick_after;
+    if (plan_span_end(context->span, &end) == PLAN_OK && melody_time(1, &tick_after) == PLAN_OK) {
+        PlanSpan first_tick = {end, tick_after};
+        size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, first_tick, ids, HARMONY_MAX_CHORDS);
+        /* A motive's melody (m0 in the material, which starts where the piece ends) is not melody of the piece. */
+        if (found == 1 && plan_time_compare(plan_lane_span_span(plan, ids[0]).start, end) == 0 &&
+            plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED &&
+            plan_node_kind(plan, plan_lane_span_owner(plan, ids[0])) != PLAN_NODE_MOTIVE) {
+            const PlanNotes *notes = &plan_lane_span_payload(plan, ids[0])->notes;
+            if (notes->note_count > 0 && notes->notes[0].offset.num == 0) {
+                context->lead_out = notes->notes[0].midi_pitch;
+                context->has_lead_out = true;
+            }
         }
     }
     return true;

@@ -57,6 +57,15 @@ size_t harmony_phrase_min_bars(PlanCadenceType cadence, const PlanMeter *meter);
 FillResult harmony_phrase_register(FillOperatorRegistry *registry);
 
 /*
+ * The same operator for a plan with Given material in it (R-071): a Given bass under the span does not leave the span to
+ * harmony_octave (the chords it writes stand on the bass, one chord's bass member at the pitch class of the Given bass
+ * note at its start); a Given melody over it is harmonized (a note it starts on a strong beat is a tone of the chord
+ * there); and the chords are heard with the Given chords at either end, so that no cadence arises across the join that
+ * the plan does not ask for. A target with no Given material around it is written as harmony_phrase_register does.
+ */
+FillResult harmony_phrase_register_given(FillOperatorRegistry *registry);
+
+/*
  * The checker for this operator's candidates; pass it as FillConfig.checker.
  * It reads the candidate's chords against standard-harmony:
  *   - hard rules reject: the phrase model (a tonic before the dominant, IV

@@ -223,7 +223,8 @@ bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) 
     return true;
 }
 
-static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolongation, PhraseRequest *out) {
+static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolongation, bool around_given,
+                         PhraseRequest *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY) {
         return false;
     }
@@ -242,10 +243,11 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     request.cells_per_bar = metre.cells_per_bar;
     request.cell_length = metre.cell_length;
     request.cells = metre.cells;
-    /* A Given bass over the span means the harmony is to be found from the bass (harmony_octave.h). */
+    /* A Given bass over the span means the harmony is to be found from the bass (harmony_octave.h), unless this operator
+       works around Given material: it writes chords that stand on the bass. */
     LaneSpanId basses[HARMONY_MAX_CHORDS];
     size_t bass_count = plan_lane_find(plan, PLAN_LANE_BASS, 0, request.span, basses, HARMONY_MAX_CHORDS);
-    for (size_t i = 0; i < bass_count && i < HARMONY_MAX_CHORDS; i++) {
+    for (size_t i = 0; !around_given && i < bass_count && i < HARMONY_MAX_CHORDS; i++) {
         if (plan_lane_span_state(plan, basses[i]) == PLAN_STATE_GIVEN) {
             return false;
         }
@@ -283,16 +285,28 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
             return false;
         }
     }
+    request.around_given = around_given;
+    if (around_given) {
+        harmony_given_read(plan, &request);
+    }
     *out = request;
     return true;
 }
 
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, false, out);
+    return read_request(plan, target, false, false, out);
 }
 
 bool harmony_prolong_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, true, out);
+    return read_request(plan, target, true, false, out);
+}
+
+bool harmony_phrase_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+    return read_request(plan, target, false, true, out);
+}
+
+bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+    return read_request(plan, target, true, true, out);
 }
 
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out) {

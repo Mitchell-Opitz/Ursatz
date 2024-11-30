@@ -34,6 +34,9 @@
 /* Registers the operator. FILL_OK, or the registry's error. */
 FillResult harmony_prolong_register(FillOperatorRegistry *registry);
 
+/* The same, working around Given material as harmony_phrase_register_given does (harmony_phrase.h). */
+FillResult harmony_prolong_register_given(FillOperatorRegistry *registry);
+
 /*
  * The checker for this operator's candidates; pass it as FillConfig.checker. It reads the candidate's chords
  * against standard-harmony: every chord readable, the applied chords resolving, no predominant ii after IV,
