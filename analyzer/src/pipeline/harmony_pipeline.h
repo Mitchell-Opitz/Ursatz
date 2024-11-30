@@ -79,6 +79,11 @@ bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *r
    false only on allocation failure. */
 bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report);
 
+/* Reads the library's six-four types into report->entries (six_four) and its prolongations into
+   report->prolongations. Run after harmony_stage_collect_functions. entries must be the ones the stage was prepared
+   from. A stage the library declined leaves both empty. Returns false only on allocation failure. */
+bool harmony_stage_collect_six_fours_and_prolongations(HarmonyStage *stage, AnalysisReport *report);
+
 void harmony_stage_destroy(HarmonyStage *stage);
 
 #endif

@@ -7,6 +7,7 @@
 #include "harmony_key_change.h"
 #include "metric_position_rules.h"
 #include "semantics/key_change_extent.h"
+#include "six_four_type.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/meter_map.h"
@@ -285,6 +286,56 @@ bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report
     }
     harmony_function_results_destroy(results, stage->count);
     return true;
+}
+
+bool harmony_stage_collect_six_fours_and_prolongations(HarmonyStage *stage, AnalysisReport *report) {
+    if (!stage->segments || stage->count == 0) {
+        return true;
+    }
+    HarmonySixFourResult *six_fours = NULL;
+    if (harmony_analysis_classify_six_fours(stage->segments, stage->count, &six_fours) != HARMONY_SIX_FOUR_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < stage->count && i < report->entry_count; i++) {
+        if (six_fours[i].classified) {
+            report->entries[i].six_four = six_four_type_name(six_fours[i].type);
+        }
+    }
+    harmony_six_four_results_destroy(six_fours, stage->count);
+
+    HarmonyProlongations found = {0};
+    if (harmony_analysis_find_prolongations(stage->segments, stage->count, &found) != HARMONY_PROLONGATION_OK) {
+        return false;
+    }
+    bool ok = true;
+    if (found.count > 0) {
+        report->prolongations = calloc(found.count, sizeof(AnalysisProlongation));
+        ok = report->prolongations != NULL;
+    }
+    for (size_t i = 0; ok && i < found.count; i++) {
+        const HarmonyProlongationSpan *span = &found.spans[i];
+        AnalysisProlongation *prolongation = &report->prolongations[i];
+        report->prolongation_count = i + 1;
+        prolongation->function = harmonic_function_name(span->function);
+        prolongation->first_entry = span->first_segment;
+        prolongation->last_entry = span->closing_segment;
+        prolongation->interior_count = span->interior_count;
+        prolongation->reasons = calloc(span->interior_count > 0 ? span->interior_count : 1, sizeof(const char *));
+        ok = prolongation->reasons != NULL;
+        for (size_t r = 0; ok && r < span->interior_count; r++) {
+            prolongation->reasons[r] = harmony_prolongation_reason_name(span->reasons[r]);
+        }
+        const AnalysisReportEntry *first = &report->entries[span->first_segment];
+        prolongation->in_region = first->in_region;
+        prolongation->region = first->region;
+        for (size_t e = span->first_segment; e <= span->closing_segment && e < report->entry_count; e++) {
+            if (report->entries[e].function && report->entries[e].function_uncertainty > prolongation->uncertainty) {
+                prolongation->uncertainty = report->entries[e].function_uncertainty;
+            }
+        }
+    }
+    harmony_prolongations_destroy(&found);
+    return ok;
 }
 
 void harmony_stage_destroy(HarmonyStage *stage) {

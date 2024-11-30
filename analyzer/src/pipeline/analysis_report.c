@@ -66,6 +66,10 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->cadences[i].soprano_degree);
     }
     free(report->cadences);
+    for (size_t i = 0; i < report->prolongation_count; i++) {
+        free(report->prolongations[i].reasons);
+    }
+    free(report->prolongations);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -76,6 +80,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->key_change_count = 0;
     report->cadences = NULL;
     report->cadence_count = 0;
+    report->prolongations = NULL;
+    report->prolongation_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

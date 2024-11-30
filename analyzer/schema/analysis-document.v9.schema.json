@@ -60,6 +60,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/vocabulary_entry" }
     },
+    "prolongations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/prolongation_claim" }
+    },
     "chords": {
       "type": "array",
       "items": { "$ref": "#/$defs/chord_claim" }
@@ -584,6 +588,35 @@
         }
       }
     },
+    "chord_six_four": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["cadential", "passing", "neighbor", "arpeggiating"] }
+      }
+    },
+    "prolongation_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["function", "numeral", "first_chord", "last_chord", "reasons", "region"],
+          "properties": {
+            "function": { "enum": ["tonic", "dominant"] },
+            "numeral": { "type": ["string", "null"] },
+            "first_chord": { "type": "integer", "minimum": 0 },
+            "last_chord": { "type": "integer", "minimum": 0 },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "enum": ["passing-six-four", "neighbor-six-four", "arpeggiating-six-four", "tonic-line", "applied"]
+              }
+            },
+            "region": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      ]
+    },
     "chord_function": {
       "type": "object",
       "required": ["name", "applied_to", "framework", "uncertainty"],
@@ -642,6 +675,7 @@
             "outer": { "$ref": "#/$defs/chord_outer_voices" },
             "roman_numeral": { "$ref": "#/$defs/roman_numeral" },
             "function": { "$ref": "#/$defs/chord_function" },
+            "six_four": { "$ref": "#/$defs/chord_six_four" },
             "root": { "type": ["string", "null"] },
             "quality": { "type": ["string", "null"] },
             "bass": { "type": ["string", "null"] },
