@@ -101,6 +101,8 @@ typedef struct {
     bool function_applied;          /* an applied chord: a dominant toward function_applied_to */
     int function_applied_to;        /* the target's scale degree 1..7; 0 unless function_applied */
     double function_uncertainty;    /* [0, 1], higher is LESS certain; valid only when function is set */
+    const char *predominant_strength; /* "strong" (IV, ii) or "weak" (iii, vi) for a diatonic predominant, from the
+                                         library's harmony_predominant_strength; NULL for any other chord */
     const char *six_four;           /* the library's SixFourType name ("cadential", "passing", "neighbor",
                                        "arpeggiating") of a classified six-four chord; NULL otherwise */
 } AnalysisReportEntry;

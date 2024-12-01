@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "harmonic_function.h"
+#include "harmony_functions.h"
 #include "harmony_key_change.h"
 #include "metric_position_rules.h"
 #include "semantics/key_change_extent.h"
@@ -283,6 +284,12 @@ bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report
         entry->function_applied = results[i].applied;
         entry->function_applied_to = results[i].applied ? results[i].applied_to : 0;
         entry->function_uncertainty = results[i].uncertainty;
+        HarmonyPredominantStrength strength;
+        const HarmonySegment *segment = &stage->segments[i];
+        if (results[i].function == HARMONIC_FUNCTION_PREDOMINANT && segment->valid && !segment->applied &&
+            harmony_predominant_strength(segment->input->mode, &segment->chord, &strength)) {
+            entry->predominant_strength = strength == HARMONY_PREDOMINANT_STRONG ? "strong" : "weak";
+        }
     }
     harmony_function_results_destroy(results, stage->count);
     return true;

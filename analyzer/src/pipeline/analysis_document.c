@@ -1172,6 +1172,7 @@ static bool add_function(cJSON *claim, const AnalysisReportEntry *entry) {
     if (!(object && add(object, "name", cJSON_CreateString(entry->function)) &&
           add(object, "applied_to",
               entry->function_applied ? cJSON_CreateNumber(entry->function_applied_to) : cJSON_CreateNull()) &&
+          add(object, "predominant", optional_string_json(entry->predominant_strength)) &&
           add(object, "framework", cJSON_CreateString(framework_name(standard_harmony_framework()))) &&
           add(object, "uncertainty", cJSON_CreateNumber(entry->function_uncertainty)))) {
         cJSON_Delete(object);
