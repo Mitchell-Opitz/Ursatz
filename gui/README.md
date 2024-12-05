@@ -15,8 +15,47 @@ a monolithic application.
   viewed last this session; before any piece has been opened it points at
   the Library.
 - **Collections**: named groups of piece ids (the Corpus tool, below).
-- **Generator**: not built yet. Its backend is the Composer tool (see Composer
-  routes below); the view comes after it.
+- **Composer**: start a theme or a piece and work on it (Composer view,
+  below).
+
+### Composer view
+
+The Composer entry drives the Composer routes (see Composer routes below).
+The page has two forms and the list of compositions; a row opens the
+composition. Every action waits for its answer with its buttons disabled and a
+spinner (a run can take tens of seconds); nothing is polled. A failed run shows
+the backend's message and the Composer's stderr.
+
+- **Grow a theme**: fill New theme (name, the motive as a note list such as
+  `D4:q F4:e A4:e D5:h`, into sentence, period or hybrid, key, meter, bars 4 to
+  8, optional cadence, accompaniment, check, seed and tempo) and press Grow
+  theme. The composition starts at version 1.
+- **Plan a piece**: fill New piece (name, form, key, meter, bars, count,
+  modulate, optional motive, optional given melody with where it goes, for
+  example `B` or `B:2`, accompaniment, check, seed, tempo) and press Plan
+  piece. The piece is planned and filled; the result is version 1.
+- **A composition**: the version selector lists each version with its action,
+  seed and time. Below it: the plan tree (form, sections with their letters,
+  phrases and ideas, each with its bars and its state, Given or Realized), the
+  summary table (the form heard and the cadences per section), the score of the
+  version drawn with OpenSheetMusicDisplay, and a MIDI download.
+- **Lock and regenerate**: every section and node of the tree has Lock and
+  Regenerate. The Lane and Seed fields above the tree apply to the button
+  pressed (all lanes and a new random seed when left blank). Each action
+  writes the next version and opens it; the earlier versions stay.
+- **Variations**: pick a target (a section or node), a lane, a count from 1 to
+  8, an optional seed, and press Generate. The results show side by side as
+  small scores with their seeds and the form heard; Choose makes one the next
+  version. Harmonize (harmonizations of the whole section, no lane) is enabled
+  only when the section has a form letter and every melody span of the
+  section is Given.
+
+`composer.js` (loaded after `app.js`) holds the request builders and the plan
+tree as plain functions, tested by `frontend/tests/composer-view.test.js`
+against `frontend/tests/fixtures/composer-plan.json`, a plan the Composer CLI
+wrote. The score renderer (`drawMusicXmlScore`) and the fetch helpers
+(`fetchJsonResult`, `postJsonResult`) live in `app.js` and are shared with the
+Analysis view.
 
 ### Analysis view
 
@@ -343,6 +382,9 @@ run directly, for example `node frontend/tests/analysis-view.test.js`.
 `analysis-view.test.js` loads `analysis-tabs.js` and checks it against
 `frontend/tests/fixtures/mozart545.analysis.json`, the Analyzer CLI's
 document for Mozart 545 cut to its first 6 items per array.
+`composer-view.test.js` loads `composer.js` and checks the plan tree and the
+request bodies against `frontend/tests/fixtures/composer-plan.json`, the
+`plan.json` the Composer CLI wrote for a rounded binary form with seed 3.
 `test_analyzer_route` uploads Mozart 545 and a MusicXML score, compares the
 stored analysis with the Analyzer CLI's document for the same file, and
 covers list, detail, rename, re-run and delete. `test_composer_route` runs
@@ -357,5 +399,7 @@ pull request. The private submodules are checked out through the
 
 ## Out of scope
 
-Native webview packaging, Generator tool code, authentication, claim
-editing, and accepting or disputing a claim (no promotion path exists).
+Native webview packaging, authentication, claim
+editing, and accepting or disputing a claim (no promotion path exists). The
+Composer view has no style, blend, corpus seeding or explain, and no playback
+in the browser (MIDI is downloaded).

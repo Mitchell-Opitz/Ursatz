@@ -509,3 +509,143 @@ body {
   padding: 12px;
   overflow-x: auto;
 }
+
+.composer-forms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.composer-forms .panel {
+  flex: 1;
+  min-width: 320px;
+}
+
+.composer-forms h2,
+.library-panel h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.composer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.composer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.composer-field input[type="checkbox"] {
+  align-self: flex-start;
+}
+
+.composer-status {
+  white-space: pre-wrap;
+}
+
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: composer-spin 0.8s linear infinite;
+}
+
+@keyframes composer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.composer-panel {
+  max-width: none;
+  margin-bottom: 16px;
+}
+
+.composer-panel h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.composer-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.composer-tree,
+.composer-children {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+
+.composer-tree {
+  padding-left: 0;
+}
+
+.composer-node {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+}
+
+.composer-node-label {
+  min-width: 160px;
+}
+
+.composer-state {
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 8px;
+  color: var(--text-dim);
+}
+
+.composer-state-given {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.composer-node button {
+  background: none;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.composer-node button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.composer-variation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.composer-variation {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  overflow: hidden;
+}
