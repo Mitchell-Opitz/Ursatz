@@ -419,6 +419,22 @@ static void check_score_meter(const char *id, bool expect_defaulted, const char 
   free(meta);
 }
 
+/* The score route draws a piece: 200, application/xml, a body that opens with
+ * an XML declaration. */
+static void check_score_drawn(const char *id, const char *label) {
+  char path[256];
+  char what[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", id);
+  char *xml = http_get(path);
+  snprintf(what, sizeof(what), "%s: the score is 200 OK", label);
+  check(response_has_status(xml, 200), what);
+  snprintf(what, sizeof(what), "%s: the score is application/xml", label);
+  check(xml && strstr(xml, "Content-Type: application/xml\r\n") != NULL, what);
+  snprintf(what, sizeof(what), "%s: the score body starts with <?xml", label);
+  check(strncmp(response_body(xml), "<?xml", 5) == 0, what);
+  free(xml);
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -511,6 +527,30 @@ int main(void) {
   if (no_meter_id) {
     check_score_meter(no_meter_id, true, "no time signature");
   }
+
+  /* Pieces with chords and overlapping notes draw (the score export writes
+     chords and extra voices). */
+  const char *chord_pieces[] = {"Clementi 36.mid", "Field 1.mid"};
+  const char *chord_names[] = {"Clementi%2036.mid", "Field%201.mid"};
+  for (int i = 0; i < 2; i++) {
+    char piece_path[512];
+    snprintf(piece_path, sizeof(piece_path), "%s/%s", fixtures, chord_pieces[i]);
+    char *piece_id = upload_file(piece_path, chord_names[i], NULL);
+    char what[256];
+    snprintf(what, sizeof(what), "%s uploads", chord_pieces[i]);
+    check(piece_id != NULL, what);
+    if (piece_id) {
+      check_score_drawn(piece_id, chord_pieces[i]);
+    }
+    free(piece_id);
+  }
+  char *chords_id = upload_file(URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/musicxml/chords_backup.musicxml",
+                                "chords_backup.musicxml", NULL);
+  check(chords_id != NULL, "chords_backup.musicxml uploads");
+  if (chords_id) {
+    check_score_drawn(chords_id, "chords_backup.musicxml");
+  }
+  free(chords_id);
 
   /* Bodies the Analyzer cannot read. */
   response = http_exchange("POST", "/api/analyzer/pieces", NULL, "just some text", 14);
