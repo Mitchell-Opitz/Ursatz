@@ -218,7 +218,27 @@
     return null;
   }
 
+  /* Why a score response cannot be handed to OSMD, or null when it is XML.
+   * A JSON error body contributes its message and, when present, its code. */
+  function scoreResponseProblem(status, contentType, bodyText) {
+    const body = typeof bodyText === "string" ? bodyText.trim() : "";
+    const isXml = typeof contentType === "string" && contentType.includes("xml") && body.startsWith("<");
+    if (status >= 200 && status < 300 && isXml) {
+      return null;
+    }
+    try {
+      const data = JSON.parse(body);
+      if (data && typeof data.message === "string" && data.message) {
+        return data.code ? `${data.message} (${data.code})` : data.message;
+      }
+    } catch (err) {
+      /* not JSON: fall through to the status message */
+    }
+    return `score request failed (${status})`;
+  }
+
   const api = {
+    scoreResponseProblem,
     meterCaption,
     buildMusicXmlNoteKeys,
     osmdNoteKey,

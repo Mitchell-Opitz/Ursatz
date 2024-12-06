@@ -88,10 +88,13 @@ async function drawMusicXmlScore(url, containerEl, statusEl, zoom) {
   containerEl.innerHTML = "";
   try {
     const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`score request failed (${res.status})`);
-    }
     const xmlText = await res.text();
+    const problem = ScoreNotes.scoreResponseProblem(res.status, res.headers.get("Content-Type") || "", xmlText);
+    if (problem) {
+      statusEl.textContent = `Could not load score: ${problem}`;
+      statusEl.classList.add("error");
+      return null;
+    }
     const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(containerEl);
     await osmd.load(xmlText);
     if (zoom) {
