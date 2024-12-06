@@ -361,9 +361,10 @@ ctest --test-dir build
 ```
 
 Requires CMake 3.20 or newer, a C11 compiler, SQLite development headers and
-pkg-config. Ursatz is a git submodule at `external/ursatz`, pinned at PR #142
-(`ffd8a19`), the commit the Analyzer and Composer pin. The Analyzer is a
-second submodule, `external/ursatz-analyzer`, pinned at PR #36 (`11263b7`).
+pkg-config. Ursatz is a git submodule at `external/ursatz`, pinned at PR #147
+(`e74cafc`), which writes chords and overlapping notes in the score export. The
+Analyzer (version 0.1.0) is a second submodule, `external/ursatz-analyzer`,
+pinned at PR #38 (`8a2fd29`).
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
