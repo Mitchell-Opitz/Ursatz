@@ -1115,5 +1115,4 @@ async function handleRemovePiece(corpusId, corpusName, pieceId) {
   }
 }
 
-renderToolList();
-checkHealth();
+selectTool("library");
