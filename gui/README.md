@@ -111,7 +111,10 @@ static UMD build under `frontend/public/vendor/opensheetmusicdisplay/` and
 loaded by a plain `<script>` tag (`frontend/` has no `package.json` or
 bundler). A caption below the score ("This file declares no time signature;
 shown in 4/4") shows when `GET .../musicxml/meta` reports
-`meter_defaulted: true`, that is, when the source file gave no meter.
+`meter_defaulted: true`, that is, when the source file gave no meter. When the
+response is not a 2xx XML document, `ScoreNotes.scoreResponseProblem` turns it
+into a message and the tab shows "Could not load score: <message>" instead of
+handing the body to OSMD.
 
 Selecting a row colors its notes' noteheads (OSMD's `Note.NoteheadColor`). A
 row's `note_ids` are mapped to `<note xml:id>` values through the piece's
@@ -215,9 +218,12 @@ not listed and cannot be opened, so upload those files again.
 - `GET /api/analyzer/pieces/<id>/musicxml`: the piece's score as MusicXML
   (`application/xml`), written by Ursatz's `musicxml_export_write_score` from
   the stored source: its parts and staves, its real meter and its key
-  signatures. Tempo markings and dynamics are left out. Unknown id returns
-  `404`. If the export fails the response is
-  `{"ok":false,"message":"failed to export piece","code":"<MusicXmlExportResult name>"}`.
+  signatures. Tempo markings and dynamics are left out. Errors are JSON with
+  an error status: unknown id `404`; a stored source that no longer imports
+  `422` with `{"ok":false,"message":"could not import the stored source"}`;
+  a failed export `500` with
+  `{"ok":false,"message":"failed to export piece","code":"<MusicXmlExportResult name>"}`;
+  anything else `500` with `{"ok":false,"message":"failed to export piece"}`.
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`:
   `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no meter
   and the barlines come from a default 4/4 (the export then carries
