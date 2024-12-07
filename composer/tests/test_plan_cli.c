@@ -307,6 +307,93 @@ static void test_stuck(void) {
     assert(!exists("plan_cli_stuck_done.json"));
 }
 
+/*
+ * Given material (given.h): a phrase, a progression or a bass line placed in a plan with --given-* and --at, planned as a
+ * ternary form of 24 bars when no form is named, and shown by `fill` as given and unchanged.
+ */
+static const char GIVEN_MELODY[] = "C5:h E5:h G5:q E5:q C5:h E5:h G5:h G5:q F5:q E5:h "
+                                   "E5:h C5:h A4:q B4:q C5:h D5:h B4:h C5:w\n";
+static const char GIVEN_BASS[] = "C3:w C3:w C3:w C3:w C3:w F3:w G3:w C3:w\n";
+
+static void test_given(void) {
+    write_text("plan_cli_given_melody.txt", GIVEN_MELODY);
+    write_text("plan_cli_given_bass.txt", GIVEN_BASS);
+    write_text("plan_cli_given_rest.txt", "r:h C3:h C3:w\n"); /* a line that opens with a rest is no bass line */
+
+    /* No form: a ternary form of 24 bars with the melody in B, and the plan says so. */
+    char *out = output_of("plan", "--key C --meter 4/4 --given-melody plan_cli_given_melody.txt --seed 1 --out plan_cli_given.json");
+    assert(strstr(out, "ternary, 24 bars") == out);
+    assert(strstr(out, "no --form: a ternary form of 24 bars, the given material in B") != NULL);
+    assert(strstr(out, "given melody plan_cli_given_melody.txt at B:1") != NULL);
+    free(out);
+    out = output_of("plan", "--key C --meter 4/4 --given-melody plan_cli_given_melody.txt --seed 1 --format json "
+                            "--out plan_cli_given.json");
+    assert(strstr(out, "\"given\":[{\"kind\":\"melody\"") != NULL);
+    assert(strstr(out, "\"section\":\"B\",\"bar\":1}") != NULL);
+    free(out);
+    PiecePlan *plan = NULL;
+    PlanJsonError error;
+    assert(plan_read_json_file("plan_cli_given.json", &plan, &error) == PLAN_OK);
+    plan_destroy(plan);
+
+    /* Filled, the given melody is shown as unchanged, in text and in JSON, and the same seed gives the same file. */
+    out = output_of("fill", "plan_cli_given.json --seed 1 --out plan_cli_given_done.json");
+    assert(strstr(out, "given material, unchanged") != NULL);
+    assert(strstr(out, "  melody in B from bar 1, 8 bars") != NULL);
+    free(out);
+    out = output_of("fill", "plan_cli_given.json --seed 1 --format json --out plan_cli_given_again.json");
+    assert(strstr(out, "\"given\":{\"unchanged\":true,\"runs\":[{\"kind\":\"melody\",\"section\":\"B\",\"bar\":1,"
+                       "\"bars\":8,\"unchanged\":true}]}") != NULL);
+    free(out);
+    expect_same_file("plan_cli_given_done.json", "plan_cli_given_again.json");
+
+    /* A progression at the first bars of a section, a chord a bar (2 cells in 4/4), and a bass line. */
+    out = output_of("plan", "--form rounded-binary --key C --meter 4/4 --given-progression \"I IV V I\" --at A:1 --cells 2 "
+                            "--seed 1 --out plan_cli_given_progression.json");
+    assert(strstr(out, "given progression \"I IV V I\" at A:1, 2 cells a chord") != NULL);
+    assert(strstr(out, "no --form") == NULL);
+    free(out);
+    out = output_of("fill", "plan_cli_given_progression.json --seed 1 --out plan_cli_given_progression_done.json");
+    assert(strstr(out, "  progression in A from bar 1, 4 chords") != NULL);
+    free(out);
+    out = output_of("plan", "--form binary --key C --meter 4/4 --given-bass plan_cli_given_bass.txt --at B --seed 1 "
+                            "--out plan_cli_given_bass_plan.json");
+    assert(strstr(out, "given bass plan_cli_given_bass.txt at B:1") != NULL);
+    free(out);
+    out = output_of("fill", "plan_cli_given_bass_plan.json --seed 1 --out plan_cli_given_bass_done.json");
+    assert(strstr(out, "  bass line in B from bar 1, 8 bars") != NULL);
+    free(out);
+
+    /* The options and what is refused: 1 for a usage error, 2 for material that cannot be placed. */
+    expect_failure("plan", "--form binary --key C --meter 4/4 --at B:1 --out plan_cli_bad.json", 1,
+                   "--at goes after a --given-melody, --given-progression or --given-bass");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --cells 2 --out plan_cli_bad.json", 1, "--cells goes after");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-melody plan_cli_given_melody.txt --out plan_cli_bad.json", 1,
+                   "needs an --at");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-melody plan_cli_given_melody.txt --at Z --out plan_cli_bad.json",
+                   1, "the piece has no section 'Z'; its sections are A, B");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-melody plan_cli_given_melody.txt --at B:0 --out plan_cli_bad.json",
+                   1, "the bar must be a whole number from 1");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-melody plan_cli_given_melody.txt --at ABCD --out plan_cli_bad.json",
+                   1, "--at 'ABCD' must be a section's letter");
+    expect_failure("plan",
+                   "--form binary --key C --meter 4/4 --given-melody plan_cli_given_melody.txt --at B --at A --out plan_cli_bad.json",
+                   1, "--at given twice");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-melody plan_cli_given_melody.txt --at B --cells 2 --out plan_cli_bad.json",
+                   1, "--cells goes with --given-progression");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-progression \"I V\" --at B --cells 0 --out plan_cli_bad.json", 1,
+                   "--cells must be a whole number from 1");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-melody plan_cli_given_melody.txt --at B:2 --out plan_cli_bad.json",
+                   2, "past the section's end");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-progression \"I IV X I\" --at A --out plan_cli_bad.json", 2,
+                   "numeral that cannot be read");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-melody plan_cli_missing.txt --at B --out plan_cli_bad.json", 2,
+                   "cannot load 'plan_cli_missing.txt'");
+    expect_failure("plan", "--form binary --key C --meter 4/4 --given-bass plan_cli_given_rest.txt --at B --out plan_cli_bad.json", 2,
+                   "notes that cannot be placed");
+    assert(!exists("plan_cli_bad.json"));
+}
+
 int main(void) {
     test_every_form();
     test_same_seed();
@@ -315,5 +402,6 @@ int main(void) {
     test_plan_errors();
     test_fill_errors();
     test_stuck();
+    test_given();
     return 0;
 }
