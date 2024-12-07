@@ -17,6 +17,10 @@ a monolithic application.
 - **Collections**: named groups of piece ids (the Corpus tool, below).
 - **Composer**: start a theme or a piece and work on it (Composer view,
   below).
+- **Health**: last entry in the sidebar. Shows the backend health check; a
+  failed check appears only here.
+
+The GUI opens on the Library.
 
 ### Composer view
 
