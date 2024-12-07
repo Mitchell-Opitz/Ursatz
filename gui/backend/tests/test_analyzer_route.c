@@ -549,6 +549,25 @@ int main(void) {
   check(chords_id != NULL, "chords_backup.musicxml uploads");
   if (chords_id) {
     check_score_drawn(chords_id, "chords_backup.musicxml");
+
+    /* A piece whose stored source is gone: the score routes answer 422 with
+       a JSON message, not a 200 the viewer would hand to OSMD. */
+    char source_path[512];
+    snprintf(source_path, sizeof(source_path), "pieces/%s/source.musicxml", chords_id);
+    check(remove(source_path) == 0, "the chord piece's stored source can be deleted");
+    char route[256];
+    snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/musicxml", chords_id);
+    char *missing_source = http_get(route);
+    check(response_has_status(missing_source, 422), "a score with a missing source file gives 422");
+    check(strstr(missing_source, "Content-Type: application/json\r\n") != NULL,
+          "the missing-source score error is application/json");
+    check(strstr(response_body(missing_source), "\"message\":\"could not import the stored source\"") != NULL,
+          "the missing-source score error carries its message");
+    free(missing_source);
+    snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/musicxml/meta", chords_id);
+    missing_source = http_get(route);
+    check(response_has_status(missing_source, 422), "musicxml/meta with a missing source file gives 422");
+    free(missing_source);
   }
   free(chords_id);
 
