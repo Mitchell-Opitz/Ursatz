@@ -967,9 +967,10 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
     PlanResult result = plan_span_end(span, &span_end);
     size_t gap_count = given_gaps(plan, PLAN_LANE_MELODY, 0, span, gaps, GROW_MAX_GAPS);
     gap_count = gap_count > GROW_MAX_GAPS ? GROW_MAX_GAPS : gap_count;
-    /* An idea with a Given melody inside it is made from that melody's notes where it is not written. */
+    /* An idea with a Given melody inside it is made from that melody's notes where it is not written, unless it ends the
+       theme: its melody must end on the cadence's tone, which the first bar of the Given melody need not. */
     PlanMotiveRef asked = *ref;
-    if (gap_count > 0 && given_touches(plan, PLAN_LANE_MELODY, 0, span)) {
+    if (gap_count > 0 && !cadence && given_touches(plan, PLAN_LANE_MELODY, 0, span)) {
         NodeId motive = given_motive(build, span);
         if (motive != PLAN_NODE_NONE) {
             memset(&asked, 0, sizeof(asked));
