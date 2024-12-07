@@ -108,7 +108,7 @@ static void send_musicxml_export_error(struct mg_connection *conn, MusicXmlExpor
   char body[192];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
            musicxml_export_error_code(export_error));
-  send_json(conn, body);
+  send_json_status(conn, 500, "Internal Server Error", body);
 }
 
 /* Append-only buffer that grows as needed, used in place of a
@@ -586,9 +586,16 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+    return send_json_status(conn, 422, "Unprocessable Entity",
+                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
     send_musicxml_export_error(conn, export_error);
-    return 200;
+    return 500;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
 
   size_t len = strlen(xml);
@@ -609,9 +616,16 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+    return send_json_status(conn, 422, "Unprocessable Entity",
+                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
     send_musicxml_export_error(conn, export_error);
-    return 200;
+    return 500;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
   free(xml);
 
