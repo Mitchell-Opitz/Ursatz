@@ -6,6 +6,7 @@ const TOOLS = [
   { id: "analysis", label: "Analysis", active: false, render: renderAnalysisTool },
   { id: "corpus", label: "Collections", active: false, render: renderCorpusView },
   { id: "composer", label: "Composer", active: false, render: () => renderComposerView() },
+  { id: "health", label: "Health", active: false, render: renderHealthView },
 ];
 
 /* The piece id last opened in the Analysis view (via a Library filename
@@ -121,6 +122,17 @@ async function checkHealth() {
     el.textContent = `Could not reach backend: ${err}`;
     el.classList.add("error");
   }
+}
+
+function renderHealthView() {
+  const content = getContentEl();
+  content.innerHTML = `
+    <section class="panel">
+      <h1>Backend Health</h1>
+      <div id="health-status" class="health-status">Checking...</div>
+    </section>
+  `;
+  checkHealth();
 }
 
 async function renderLibraryView() {
@@ -1115,5 +1127,4 @@ async function handleRemovePiece(corpusId, corpusName, pieceId) {
   }
 }
 
-renderToolList();
-checkHealth();
+selectTool("library");
