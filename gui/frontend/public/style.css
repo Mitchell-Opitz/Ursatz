@@ -649,3 +649,27 @@ body {
   padding: 8px;
   overflow: hidden;
 }
+
+.upload-box.is-dragover {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.upload-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  color: var(--text-dim);
+}
+
+.upload-list li.upload-analyzing {
+  color: var(--text);
+}
+
+.upload-list li.upload-done {
+  color: var(--accent);
+}
+
+.upload-list li.upload-failed {
+  color: #f87171;
+}

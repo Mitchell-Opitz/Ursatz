@@ -141,7 +141,7 @@ async function renderLibraryView() {
     <h1 class="view-title">Library</h1>
     <div class="upload-box">
       <div class="upload-box-text">
-        <div class="upload-box-heading">Drop a MIDI or MusicXML file to analyze</div>
+        <div class="upload-box-heading">Drop MIDI or MusicXML files to analyze</div>
         <div class="upload-box-subheading">.mid · .midi · .musicxml · .xml · .mxl</div>
       </div>
       <div class="upload-box-controls">
@@ -183,9 +183,11 @@ async function renderLibraryView() {
     </section>
   `;
 
-  wireUploadControl("library-upload", async () => {
+  const onUploaded = async () => {
     await loadLibraryPieces();
-  });
+  };
+  wireUploadControl("library-upload", onUploaded);
+  wireUploadDrop("library-upload", onUploaded);
 
   await loadLibraryPieces();
 }
@@ -438,6 +440,27 @@ function wireUploadControl(idPrefix, onUploaded) {
     .addEventListener("click", () => handleUpload(idPrefix, onUploaded));
 }
 
+/* Dropping files on the .upload-box runs the same queue as the picker.
+ * Names the picker would not offer stay in the list as failed entries. */
+function wireUploadDrop(idPrefix, onUploaded) {
+  const box = document
+    .getElementById(`${idPrefix}-button`)
+    .closest(".upload-box");
+  box.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    box.classList.add("is-dragover");
+  });
+  box.addEventListener("dragleave", () => box.classList.remove("is-dragover"));
+  box.addEventListener("drop", (event) => {
+    event.preventDefault();
+    box.classList.remove("is-dragover");
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length === 0) return;
+    if (document.getElementById(`${idPrefix}-button`).disabled) return;
+    runUploadQueue(idPrefix, files, onUploaded);
+  });
+}
+
 function handleUpload(idPrefix, onUploaded) {
   const fileInput = document.getElementById(`${idPrefix}-file`);
   const statusEl = document.getElementById(`${idPrefix}-status`);
@@ -480,6 +503,11 @@ async function runUploadQueue(idPrefix, files, onUploaded) {
   uploadButton.disabled = true;
   show();
   for (let i = 0; i < files.length; i++) {
+    if (!UploadQueue.acceptedFile(files[i].name)) {
+      queue = UploadQueue.markFailed(queue, i, "not a MIDI or MusicXML file");
+      show();
+      continue;
+    }
     queue = UploadQueue.markAnalyzing(queue, i);
     show();
     try {
