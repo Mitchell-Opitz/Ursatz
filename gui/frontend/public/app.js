@@ -1055,8 +1055,8 @@ function showCorpusDetail(id, name) {
       </table>
     </section>
     <div class="upload-controls">
-      <input type="text" id="corpus-piece-input" placeholder="piece id" />
-      <button id="corpus-add-piece-button" type="button">Add</button>
+      <select id="corpus-piece-select" disabled></select>
+      <button id="corpus-add-piece-button" type="button" disabled>Add</button>
     </div>
     <div id="corpus-piece-add-status" class="upload-status"></div>
   `;
@@ -1065,6 +1065,41 @@ function showCorpusDetail(id, name) {
   document.getElementById("corpus-add-piece-button").addEventListener("click", () => handleAddPiece(id, name));
 
   loadCorpusPieces(id, name);
+}
+
+/* Library pieces not already in the collection, labeled by filename with
+ * the bare id as fallback (same as the row label), sorted by label. */
+function collectionAddOptions(libraryPieces, memberIds) {
+  const members = new Set(memberIds);
+  return libraryPieces
+    .filter((piece) => !members.has(piece.id))
+    .map((piece) => ({ id: piece.id, label: piece.filename || piece.id }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function populateCorpusPieceSelect(libraryPieces, memberIds) {
+  const selectEl = document.getElementById("corpus-piece-select");
+  const addButton = document.getElementById("corpus-add-piece-button");
+  if (!selectEl || !addButton) {
+    return;
+  }
+
+  const options = collectionAddOptions(libraryPieces, memberIds);
+  selectEl.innerHTML = "";
+  if (options.length === 0) {
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "All Library pieces are in this collection";
+    selectEl.appendChild(empty);
+  }
+  for (const option of options) {
+    const optionEl = document.createElement("option");
+    optionEl.value = option.id;
+    optionEl.textContent = option.label;
+    selectEl.appendChild(optionEl);
+  }
+  selectEl.disabled = options.length === 0;
+  addButton.disabled = options.length === 0;
 }
 
 /* Corpus piece refs only carry an id (see corpus_service.h) -- this joins
@@ -1095,16 +1130,20 @@ async function loadCorpusPieces(id, name) {
       return;
     }
 
+    const libraryPieces = libraryData.ok ? libraryData.pieces : [];
+    populateCorpusPieceSelect(
+      libraryPieces,
+      data.pieces.map((piece) => piece.id),
+    );
+
     if (data.pieces.length === 0) {
       statusEl.textContent = "No piece refs yet.";
       return;
     }
 
     const filenamesById = new Map();
-    if (libraryData.ok) {
-      for (const piece of libraryData.pieces) {
-        filenamesById.set(piece.id, piece.filename);
-      }
+    for (const piece of libraryPieces) {
+      filenamesById.set(piece.id, piece.filename);
     }
 
     statusEl.textContent = "";
@@ -1132,13 +1171,13 @@ function buildCollectionPieceRow(piece, corpusId, corpusName) {
 }
 
 async function handleAddPiece(corpusId, corpusName) {
-  const pieceInput = document.getElementById("corpus-piece-input");
+  const pieceSelect = document.getElementById("corpus-piece-select");
   const addButton = document.getElementById("corpus-add-piece-button");
   const statusEl = document.getElementById("corpus-piece-add-status");
 
-  const pieceId = pieceInput.value.trim();
+  const pieceId = pieceSelect.value;
   if (!pieceId) {
-    statusEl.textContent = "Enter a piece id.";
+    statusEl.textContent = "Pick a piece to add.";
     statusEl.classList.add("error");
     return;
   }
@@ -1162,7 +1201,6 @@ async function handleAddPiece(corpusId, corpusName) {
       return;
     }
 
-    pieceInput.value = "";
     loadCorpusPieces(corpusId, corpusName);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
