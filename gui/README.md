@@ -8,9 +8,14 @@ a monolithic application.
 
 ## Views
 
-- **Library**: upload a file (`.mid`, `.midi`, `.musicxml`, `.xml`, `.mxl`),
-  list the stored pieces, rename, delete, or run a piece's analysis again
-  (the round arrow). Clicking a filename opens the Analysis view.
+- **Library**: upload one or several files (`.mid`, `.midi`, `.musicxml`,
+  `.xml`, `.mxl`) with the picker or by dropping them on the upload box.
+  Files are uploaded and analyzed one after another; a list under the box
+  shows each file as queued, analyzing, uploaded or failed, with a summary
+  line, and the table fills in as each one finishes. Dropped files with
+  another extension are listed as failed. The table lists the stored pieces;
+  rename, delete, or run a piece's analysis again (the round arrow).
+  Clicking a filename opens the Analysis view.
 - **Analysis**: one piece. The top-level Analysis nav entry reopens the piece
   viewed last this session; before any piece has been opened it points at
   the Library.
