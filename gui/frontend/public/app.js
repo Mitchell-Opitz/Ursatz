@@ -928,23 +928,22 @@ async function renderCorpusView() {
   content.innerHTML = `
     <div class="collections-header">
       <h1 class="view-title">Collections</h1>
-      <button id="corpus-new-button" type="button">New Collection</button>
-    </div>
-    <div id="corpus-create-form" class="upload-controls" hidden>
-      <input type="text" id="corpus-id-input" placeholder="id" />
-      <input type="text" id="corpus-name-input" placeholder="name" />
-      <button id="corpus-create-button" type="button">Create</button>
+      <div class="upload-controls">
+        <input type="text" id="corpus-name-input" placeholder="New collection name" />
+        <button id="corpus-create-button" type="button">Create</button>
+      </div>
     </div>
     <div id="corpus-create-status" class="upload-status"></div>
     <div id="corpus-list-status" class="piece-list-status">Loading collections...</div>
     <div id="corpus-grid" class="collections-grid"></div>
   `;
 
-  document.getElementById("corpus-new-button").addEventListener("click", () => {
-    document.getElementById("corpus-create-form").hidden = false;
-    document.getElementById("corpus-id-input").focus();
-  });
   document.getElementById("corpus-create-button").addEventListener("click", handleCreateCorpus);
+  document.getElementById("corpus-name-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      handleCreateCorpus();
+    }
+  });
 
   const statusEl = document.getElementById("corpus-list-status");
   const gridEl = document.getElementById("corpus-grid");
@@ -992,15 +991,13 @@ function buildCollectionCard(corpus) {
 }
 
 async function handleCreateCorpus() {
-  const idInput = document.getElementById("corpus-id-input");
   const nameInput = document.getElementById("corpus-name-input");
   const createButton = document.getElementById("corpus-create-button");
   const statusEl = document.getElementById("corpus-create-status");
 
-  const id = idInput.value.trim();
   const name = nameInput.value.trim();
-  if (!id || !name) {
-    statusEl.textContent = "Enter both an id and a name.";
+  if (!name) {
+    statusEl.textContent = "Enter a name.";
     statusEl.classList.add("error");
     return;
   }
@@ -1013,7 +1010,7 @@ async function handleCreateCorpus() {
     const res = await fetch("/api/corpus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, name }),
+      body: JSON.stringify({ name }),
     });
     const data = await res.json();
 
@@ -1024,7 +1021,7 @@ async function handleCreateCorpus() {
       return;
     }
 
-    showCorpusDetail(id, name);
+    showCorpusDetail(data.id, data.name);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
