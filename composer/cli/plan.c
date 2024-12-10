@@ -10,12 +10,37 @@
 #include "cli_options.h"
 
 #include <ursatz_composer/form_template.h>
+#include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
 
 #define SIZE_SEARCH_MAX 96
+/* The most given phrases, progressions and bass lines one plan takes, and the numerals in one progression. */
+#define MAX_GIVEN 8
+#define MAX_NUMERALS 64
+/* The form a plan with given material and no --form is made as, and the section the material goes in. */
+#define DEFAULT_GIVEN_BARS 24
+#define DEFAULT_GIVEN_SECTION "B"
+
+typedef enum {
+    GIVEN_MELODY,
+    GIVEN_PROGRESSION,
+    GIVEN_BASS
+} GivenKind;
+
+/* One --given-* option and the --at and --cells that follow it. */
+typedef struct {
+    GivenKind kind;
+    const char *source; /* a file, or the numerals of a progression */
+    const char *at_text;
+    const char *cells_text;
+    /* Read from the text above. */
+    char letter[PLAN_SECTION_LETTER_MAX];
+    unsigned long bar; /* from 1 */
+    unsigned long cells;
+} GivenOption;
 
 typedef struct {
     bool help;
@@ -32,7 +57,11 @@ typedef struct {
     const char *seed_text;
     const char *out_path;
     const char *format_text;
+    GivenOption given[MAX_GIVEN];
+    size_t given_count;
     /* Read from the text above. */
+    bool form_defaulted; /* no --form: given material makes it a ternary form of 24 bars */
+    size_t given_melodies;
     FormTemplateKind form;
     PlanKey key;
     char key_name[24];
@@ -51,7 +80,8 @@ static void print_help(FILE *out) {
     fprintf(out, "sections that return an earlier one, and the motive. Nothing is composed yet; 'ursatz-composer fill'\n");
     fprintf(out, "realizes the plan.\n\n");
     fprintf(out, "Required:\n");
-    fprintf(out, "  --form <name>        binary, rounded-binary, ternary, variations, loop or layered\n");
+    fprintf(out, "  --form <name>        binary, rounded-binary, ternary, variations, loop or layered; with --given-* material\n");
+    fprintf(out, "                       it may be left out, and the form is a ternary form of 24 bars\n");
     fprintf(out, "  --key <K>            the tonic (\"D\", \"F#\", \"Bb\"); or tonic and mode in one argument (\"D minor\")\n");
     fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8\n");
     fprintf(out, "  --out <plan.json>    where the plan is written\n\n");
@@ -67,6 +97,14 @@ static void print_help(FILE *out) {
     fprintf(out, "                       case)\n");
     fprintf(out, "  --texture <name>     the texture the accompaniment is to be heard as (see grow --help); implies\n");
     fprintf(out, "                       --accompaniment any\n");
+    fprintf(out, "  --given-melody <f>   a phrase to place in the piece: a MIDI file, a MusicXML file, a note list or a motive JSON\n");
+    fprintf(out, "                       file of any length; fill never changes it (repeatable)\n");
+    fprintf(out, "  --given-progression \"<I IV V I>\"\n");
+    fprintf(out, "                       Roman numerals, one chord each, to place in the piece (repeatable)\n");
+    fprintf(out, "  --given-bass <f>     a bass line to place in the piece, the same file formats, no rests (repeatable)\n");
+    fprintf(out, "  --at <L>[:<bar>]     where the --given-* before it goes: the section's letter (\"B\", \"A'\") and, from 1, the bar\n");
+    fprintf(out, "                       of it the material starts in (default 1); without --form, the default is B:1\n");
+    fprintf(out, "  --cells <n>          the cells each chord of the --given-progression before it lasts (default: a bar)\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same plan. Default: from the clock\n");
     fprintf(out, "  --format <text|json> how to print the plan on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
@@ -113,6 +151,31 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->out_path;
         } else if (strcmp(arg, "--format") == 0) {
             target = &options->format_text;
+        } else if (strcmp(arg, "--given-melody") == 0 || strcmp(arg, "--given-progression") == 0 ||
+                   strcmp(arg, "--given-bass") == 0) {
+            if (i + 1 >= argc) {
+                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
+            }
+            if (options->given_count == MAX_GIVEN) {
+                return cli_fail(CLI_EXIT_USAGE, "plan takes %d given phrases, progressions and bass lines at most", MAX_GIVEN);
+            }
+            GivenOption *given = &options->given[options->given_count++];
+            given->kind = arg[8] == 'm' ? GIVEN_MELODY : (arg[8] == 'p' ? GIVEN_PROGRESSION : GIVEN_BASS);
+            given->source = argv[++i];
+        } else if (strcmp(arg, "--at") == 0 || strcmp(arg, "--cells") == 0) {
+            bool at = arg[2] == 'a';
+            if (options->given_count == 0) {
+                return cli_fail(CLI_EXIT_USAGE, "%s goes after a --given-melody, --given-progression or --given-bass", arg);
+            }
+            GivenOption *given = &options->given[options->given_count - 1];
+            const char **slot = at ? &given->at_text : &given->cells_text;
+            if (i + 1 >= argc) {
+                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
+            }
+            if (*slot) {
+                return cli_fail(CLI_EXIT_USAGE, "%s given twice for the same --given-*", arg);
+            }
+            *slot = argv[++i];
         } else if (arg[0] == '-' && arg[1] != '\0') {
             return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz-composer plan --help)", arg);
         } else {
@@ -163,7 +226,61 @@ static void describe_sizes(FormTemplateKind kind, char *out, size_t size) {
     }
 }
 
+/* The cells of a bar of the meter, which the harmony operators place chords on (harmony_rhythm.c). */
+static unsigned long cells_in_bar(const PlanMeter *meter) {
+    return (meter->beat_unit == 4 && meter->beats_per_bar == 4) || meter->beat_unit == 8 ? 2 : 1;
+}
+
+/* "B", "B:3", "A'" and "A':5": the section's letter and the bar (from 1) of it. */
+static int read_at(GivenOption *given, bool form_defaulted) {
+    if (!given->at_text) {
+        if (!form_defaulted) {
+            return cli_fail(CLI_EXIT_USAGE, "'%s' needs an --at: the section it goes in, \"B\" or \"B:3\"", given->source);
+        }
+        snprintf(given->letter, sizeof(given->letter), "%s", DEFAULT_GIVEN_SECTION);
+        given->bar = 1;
+        return 0;
+    }
+    const char *colon = strchr(given->at_text, ':');
+    size_t length = colon ? (size_t)(colon - given->at_text) : strlen(given->at_text);
+    if (length == 0 || length >= sizeof(given->letter)) {
+        return cli_fail(CLI_EXIT_USAGE, "--at '%s' must be a section's letter, then optionally a colon and a bar from 1",
+                        given->at_text);
+    }
+    snprintf(given->letter, sizeof(given->letter), "%.*s", (int)length, given->at_text);
+    given->bar = 1;
+    if (colon && (!cli_parse_whole_number(colon + 1, 100000, &given->bar) || given->bar < 1)) {
+        return cli_fail(CLI_EXIT_USAGE, "--at '%s': the bar must be a whole number from 1", given->at_text);
+    }
+    return 0;
+}
+
+static int check_given(Options *options) {
+    for (size_t i = 0; i < options->given_count; i++) {
+        GivenOption *given = &options->given[i];
+        int status = read_at(given, options->form_defaulted);
+        if (status != 0) {
+            return status;
+        }
+        if (given->cells_text && given->kind != GIVEN_PROGRESSION) {
+            return cli_fail(CLI_EXIT_USAGE, "--cells goes with --given-progression, not '%s'", given->source);
+        }
+        given->cells = cells_in_bar(&options->meter);
+        if (given->cells_text && (!cli_parse_whole_number(given->cells_text, 64, &given->cells) || given->cells < 1)) {
+            return cli_fail(CLI_EXIT_USAGE, "--cells must be a whole number from 1, not '%s'", given->cells_text);
+        }
+        options->given_melodies += given->kind == GIVEN_MELODY;
+    }
+    return 0;
+}
+
 static int check_options(Options *options) {
+    if (!options->form_text && options->given_count > 0) {
+        /* Given material with no form to put it in: the middle of a ternary form, B. */
+        options->form_text = "ternary";
+        options->form_defaulted = true;
+        options->bars = DEFAULT_GIVEN_BARS;
+    }
     if (!options->form_text || !options->key_text || !options->meter_text || !options->out_path) {
         return cli_fail(CLI_EXIT_USAGE, "plan needs --form, --key, --meter and --out (see --help)\n%s", PLAN_USAGE_LINE);
     }
@@ -211,6 +328,10 @@ static int check_options(Options *options) {
                         options->bars_text ? options->bars_text : "", options->bars_text ? " bars" : "",
                         options->bars_text && options->count_text ? " with " : "",
                         options->count_text ? "--count " : "", options->count_text ? options->count_text : "", sizes);
+    }
+    int given_status = check_given(options);
+    if (given_status != 0) {
+        return given_status;
     }
     if (options->accompaniment_text || options->texture_text) {
         options->has_accompaniment = true;
@@ -262,7 +383,7 @@ static bool has_constraint(const PiecePlan *plan, NodeId node, PlanConstraintKin
 }
 
 /* The bars in a length; 0 when the plan has no meter. */
-static size_t bars_in(const PiecePlan *plan, PlanTime length) {
+size_t cli_bars_in(const PiecePlan *plan, PlanTime length) {
     LaneSpanId meters[1];
     PlanSpan whole = plan_node_span(plan, plan_root(plan));
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, meters, 1) == 0) {
@@ -289,7 +410,7 @@ size_t cli_piece_sections(const PiecePlan *plan, CliSection *out, size_t capacit
             const char *name = plan_node_name(plan, node);
             snprintf(section->name, sizeof(section->name), "%s", name ? name : "");
             snprintf(section->letter, sizeof(section->letter), "%.*s", (int)sizeof(section->letter) - 1, section->name);
-            section->bars = bars_in(plan, plan_node_span(plan, node).length);
+            section->bars = cli_bars_in(plan, plan_node_span(plan, node).length);
             for (size_t c = 0; c < plan_node_constraint_count(plan, node); c++) {
                 const PlanConstraint *constraint = plan_node_constraint_at(plan, node, c);
                 switch (constraint->kind) {
@@ -392,6 +513,40 @@ static void print_section_json(const CliSection *section) {
     printf("}");
 }
 
+static const char *const GIVEN_KIND_NAMES[] = {"melody", "progression", "bass"};
+
+static void print_given_json(const Options *options) {
+    printf(",\"given\":[");
+    for (size_t i = 0; i < options->given_count; i++) {
+        const GivenOption *given = &options->given[i];
+        printf("%s{\"kind\":\"%s\",\"source\":", i ? "," : "", GIVEN_KIND_NAMES[given->kind]);
+        cli_print_json_string(given->source);
+        printf(",\"section\":");
+        cli_print_json_string(given->letter);
+        printf(",\"bar\":%lu", given->bar);
+        if (given->kind == GIVEN_PROGRESSION) {
+            printf(",\"cells\":%lu", given->cells);
+        }
+        printf("}");
+    }
+    printf("]");
+}
+
+static void print_given_text(const Options *options) {
+    if (options->form_defaulted) {
+        printf("no --form: a ternary form of %lu bars, the given material in %s\n", options->bars, DEFAULT_GIVEN_SECTION);
+    }
+    for (size_t i = 0; i < options->given_count; i++) {
+        const GivenOption *given = &options->given[i];
+        printf("given %s %s%s%s at %s:%lu", GIVEN_KIND_NAMES[given->kind], given->kind == GIVEN_PROGRESSION ? "\"" : "",
+               given->source, given->kind == GIVEN_PROGRESSION ? "\"" : "", given->letter, given->bar);
+        if (given->kind == GIVEN_PROGRESSION) {
+            printf(", %lu %s a chord", given->cells, given->cells == 1 ? "cell" : "cells");
+        }
+        printf("\n");
+    }
+}
+
 static void print_result(const Options *options, const PiecePlan *plan) {
     CliSection sections[CLI_MAX_SECTIONS];
     size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
@@ -426,7 +581,11 @@ static void print_result(const Options *options, const PiecePlan *plan) {
             printf("%s", i ? "," : "");
             print_section_json(&sections[i]);
         }
-        printf("],\"file\":");
+        printf("]");
+        if (options->given_count > 0) {
+            print_given_json(options);
+        }
+        printf(",\"file\":");
         cli_print_json_string(options->out_path);
         printf("}\n");
         return;
@@ -446,6 +605,7 @@ static void print_result(const Options *options, const PiecePlan *plan) {
         }
         printf("\n");
     }
+    print_given_text(options);
     printf("sections\n");
     for (size_t i = 0; i < count; i++) {
         print_section_text(&sections[i]);
@@ -468,6 +628,89 @@ static int write_plan(const Options *options, const PiecePlan *plan) {
     if (rename(temporary, options->out_path) != 0) {
         remove(temporary);
         return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", options->out_path);
+    }
+    return 0;
+}
+
+/* --- the given material ------------------------------------------------------- */
+
+/* Reads the file of a given melody or bass line, any length (a motive reader with no bar limit). */
+static int load_given(const Options *options, const GivenOption *given, Motive *out) {
+    MotiveOptions motive_options;
+    MotiveError error;
+    memset(&motive_options, 0, sizeof(motive_options));
+    motive_options.has_meter = true;
+    motive_options.meter = options->meter;
+    motive_options.has_key = true;
+    motive_options.key = options->key;
+    MotiveResult loaded = motive_load_file(given->source, MOTIVE_FORMAT_AUTO, &motive_options, out, &error);
+    if (loaded != MOTIVE_OK) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot load '%s' (%s)%s%s: %s", given->source, motive_result_name(loaded),
+                        error.location[0] ? " at " : "", error.location, error.message);
+    }
+    return 0;
+}
+
+/* The node of the section with the letter, or PLAN_NODE_NONE; the letters are listed into names when it has none. */
+static NodeId section_named(const PiecePlan *plan, const char *letter, char *names, size_t size) {
+    CliSection sections[CLI_MAX_SECTIONS];
+    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
+    names[0] = '\0';
+    for (size_t i = 0; i < count && i < CLI_MAX_SECTIONS; i++) {
+        if (cli_equals_ignore_case(sections[i].letter, letter)) {
+            return sections[i].node;
+        }
+        size_t used = strlen(names);
+        snprintf(names + used, size - used, i ? ", %s" : "%s", sections[i].letter);
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* Places the given material in the plan; the status of the failure it printed, else 0. */
+static int place_given(const Options *options, PiecePlan *plan) {
+    for (size_t i = 0; i < options->given_count; i++) {
+        const GivenOption *given = &options->given[i];
+        char names[128];
+        NodeId section = section_named(plan, given->letter, names, sizeof(names));
+        if (section == PLAN_NODE_NONE) {
+            return cli_fail(CLI_EXIT_USAGE, "--at '%s': the piece has no section '%s'; its sections are %s",
+                            given->at_text ? given->at_text : given->letter, given->letter, names);
+        }
+        GivenResult placed;
+        if (given->kind == GIVEN_PROGRESSION) {
+            char text[1024];
+            char *numerals[MAX_NUMERALS];
+            size_t count = 0;
+            if (snprintf(text, sizeof(text), "%s", given->source) >= (int)sizeof(text)) {
+                return cli_fail(CLI_EXIT_USAGE, "the progression is too long");
+            }
+            for (char *token = strtok(text, " \t,|"); token; token = strtok(NULL, " \t,|")) {
+                if (count == MAX_NUMERALS) {
+                    return cli_fail(CLI_EXIT_USAGE, "a progression has %d chords at most", MAX_NUMERALS);
+                }
+                numerals[count++] = token;
+            }
+            placed = plan_give_progression(plan, section, given->bar - 1, (const char *const *)numerals, count,
+                                           given->cells);
+        } else {
+            Motive *line = malloc(sizeof(*line));
+            if (!line) {
+                return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+            }
+            int status = load_given(options, given, line);
+            if (status != 0) {
+                free(line);
+                return status;
+            }
+            placed = given->kind == GIVEN_MELODY ? plan_give_melody(plan, section, given->bar - 1, line->notes, line->note_count)
+                                                 : plan_give_bass(plan, section, given->bar - 1, line->notes, line->note_count);
+            free(line);
+        }
+        if (placed != GIVEN_OK) {
+            return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot place the given %s '%s' at %s:%lu: %s",
+                            GIVEN_KIND_NAMES[given->kind], given->source, given->letter, given->bar,
+                            given_result_name(placed));
+        }
     }
     return 0;
 }
@@ -519,6 +762,7 @@ int run_plan(int argc, char **argv) {
     request.accompaniment = options.accompaniment;
     request.modulate = options.modulate;
     request.seed = options.seed;
+    request.given_melodies = options.given_melodies;
 
     PiecePlan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);
@@ -534,7 +778,10 @@ int run_plan(int argc, char **argv) {
                               options.meter_text)
                    : cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", piece_result_name(built));
     }
-    status = write_plan(&options, plan);
+    status = place_given(&options, plan);
+    if (status == 0) {
+        status = write_plan(&options, plan);
+    }
     if (status == 0) {
         print_result(&options, plan);
     }

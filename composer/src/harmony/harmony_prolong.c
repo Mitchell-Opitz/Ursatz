@@ -10,8 +10,9 @@
 
 /* Candidates tried per call; ones that repeat an earlier one are dropped. */
 #define CANDIDATE_ATTEMPTS 12
-/* Deals tried for one figure before it is given up on. */
+/* Deals tried for one figure before it is given up on, and when Given material limits which chords fit. */
 #define DEAL_ATTEMPTS 24
+#define GIVEN_DEAL_ATTEMPTS 160
 #define MAX_FIGURE_CHORDS 4
 
 typedef struct {
@@ -78,10 +79,17 @@ static bool is_target(FillTarget target) {
     return target.kind == FILL_TARGET_LANE_SPAN;
 }
 
+/* The operator's context is non-NULL when it works around Given material (harmony_prolong_register_given). */
+static const char AROUND_GIVEN = 1;
+
+static bool read_request(const PiecePlan *plan, LaneSpanId target, bool around_given, PhraseRequest *out) {
+    return around_given ? harmony_prolong_read_request_given(plan, target, out)
+                        : harmony_prolong_read_request(plan, target, out);
+}
+
 static bool prolong_applies(const PiecePlan *plan, FillTarget target, void *context) {
     PhraseRequest request;
-    (void)context;
-    return is_target(target) && harmony_prolong_read_request(plan, (LaneSpanId)target.id, &request);
+    return is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
 }
 
 static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
@@ -143,6 +151,10 @@ static bool deal_figure(const PhraseRequest *request, const Figure *figure, Fill
             free(chords);
             return false;
         }
+    }
+    if (request->has_given && !harmony_given_fits(request, chords, figure->count, NULL)) {
+        free(chords);
+        return false;
     }
     out->request = *request;
     out->chords = chords;
@@ -229,8 +241,7 @@ static void progression_label(const PhraseProgression *progression, char *label,
 static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
     PhraseRequest request;
-    (void)context;
-    if (!is_target(target) || !harmony_prolong_read_request(plan, (LaneSpanId)target.id, &request)) {
+    if (!is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
         return false;
     }
     size_t wanted[FIGURE_COUNT];
@@ -247,7 +258,9 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
     PhraseChord again[HARMONY_MAX_CHORDS];
     size_t again_count = 0;
     bool repeatable = previous_chords(plan, &request, again, &again_count);
-    if (repeatable) {
+    /* Said again, the chords must still stand on the given bass and carry the given melody. */
+    bool repeat_fits = repeatable && (!request.has_given || harmony_given_fits(&request, again, again_count, NULL));
+    if (repeat_fits) {
         PhraseProgression *payload = malloc(sizeof(*payload));
         PhraseChord *chords = calloc(again_count, sizeof(PhraseChord));
         if (!payload || !chords) {
@@ -272,7 +285,7 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
         const Figure *figure = &FIGURES[wanted[fill_rng_below(rng, wanted_count)]];
         PhraseProgression progression;
         bool dealt = false;
-        for (size_t deal = 0; !dealt && deal < DEAL_ATTEMPTS; deal++) {
+        for (size_t deal = 0; !dealt && deal < (request.has_given ? GIVEN_DEAL_ATTEMPTS : DEAL_ATTEMPTS); deal++) {
             dealt = deal_figure(&request, figure, rng, &progression);
         }
         if (!dealt) {
@@ -292,7 +305,7 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
             return false;
         }
         *payload = progression;
-        payload->repeatable = repeatable;
+        payload->repeatable = repeat_fits;
         payload->repeats = false;
         char label[FILL_LABEL_MAX];
         progression_label(payload, label, sizeof(label));
@@ -305,11 +318,11 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
 }
 
 static PlanResult prolong_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    (void)context;
-    return harmony_progression_apply(plan, target, candidate, harmony_prolong_read_request);
+    return harmony_progression_apply(plan, target, candidate,
+                                     context ? harmony_prolong_read_request_given : harmony_prolong_read_request);
 }
 
-FillResult harmony_prolong_register(FillOperatorRegistry *registry) {
+static FillResult register_prolong(FillOperatorRegistry *registry, bool around_given) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_PROLONG_OPERATOR_NAME;
@@ -323,7 +336,16 @@ FillResult harmony_prolong_register(FillOperatorRegistry *registry) {
     operator_.applies = prolong_applies;
     operator_.generate = prolong_generate;
     operator_.apply = prolong_apply;
+    operator_.context = around_given ? (void *)&AROUND_GIVEN : NULL;
     return fill_registry_register(registry, &operator_);
+}
+
+FillResult harmony_prolong_register(FillOperatorRegistry *registry) {
+    return register_prolong(registry, false);
+}
+
+FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
+    return register_prolong(registry, true);
 }
 
 bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
@@ -349,9 +371,15 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
-    if (verdict.hard) {
+    const char *given_hard = NULL;
+    if (!verdict.hard && progression->request.around_given &&
+        harmony_given_fits(&progression->request, progression->chords, progression->count, &given_hard) &&
+        !harmony_given_join(&progression->request, progression->chords, progression->count, false, &given_hard)) {
+        return false;
+    }
+    if (verdict.hard || given_hard) {
         out->hard_violation = true;
-        snprintf(out->reason, sizeof(out->reason), "%s", verdict.hard);
+        snprintf(out->reason, sizeof(out->reason), "%s", verdict.hard ? verdict.hard : given_hard);
         return true;
     }
     out->score_numerator = verdict.soft_held;

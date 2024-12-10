@@ -224,13 +224,15 @@ static unsigned harmonic_soft_rules(void) {
 /* standard-counterpoint's melodic rules over the melody. */
 static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     /* A target that follows written melody is read as one line with the last notes of it, so a leap or a run across
-       the join is judged like any other. */
+       the join is judged like any other; so is the join to written or Given melody that follows it. */
     size_t lead = melody->context.lead_in_count;
-    size_t total = lead + melody->count;
+    size_t trail = melody->context.has_lead_out ? 1 : 0;
+    size_t total = lead + melody->count + trail;
     PitchSpelling **spellings = calloc(total, sizeof(*spellings));
     bool ok = spellings != NULL;
     for (size_t i = 0; ok && !verdict->hard && i < total; i++) {
-        int pitch = i < lead ? melody->context.lead_in[i] : melody->notes[i - lead].pitch;
+        int pitch = i < lead ? melody->context.lead_in[i]
+                             : (i < lead + melody->count ? melody->notes[i - lead].pitch : melody->context.lead_out);
         spellings[i] = spell_melody(&melody->context.key, pitch);
         if (!spellings[i]) {
             verdict->hard = "a melody pitch cannot be spelled";

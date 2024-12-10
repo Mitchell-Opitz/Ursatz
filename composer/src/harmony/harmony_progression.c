@@ -96,8 +96,9 @@ size_t harmony_phrase_min_cells(PlanCadenceType cadence, size_t cells_per_bar) {
 
 /* Deals tried before a request is given up on, for a plagal cadence whose first tonic must land on a downbeat. */
 #define DEAL_ATTEMPTS 16
-/* More are tried when a harmony shape limits how the cells may be dealt. */
+/* More are tried when a harmony shape limits how the cells may be dealt, and when Given material limits the chords. */
 #define SHAPED_DEAL_ATTEMPTS 96
+#define GIVEN_DEAL_ATTEMPTS 480
 
 bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, size_t count, size_t cells_per_bar,
                          bool exempt_last) {
@@ -231,6 +232,11 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         free(chords);
         return false;
     }
+    /* Chords that do not stand on the given bass or carry the given melody are dealt again. */
+    if (request->has_given && !harmony_given_fits(request, chords, before_count + 1, NULL)) {
+        free(chords);
+        return false;
+    }
     out->request = *request;
     out->chords = chords;
     out->count = before_count + 1;
@@ -238,7 +244,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
 }
 
 static bool build_progression(const PhraseRequest *request, FillRng *rng, int pivot, PhraseProgression *out) {
-    size_t attempts = request->has_shape ? SHAPED_DEAL_ATTEMPTS : DEAL_ATTEMPTS;
+    size_t attempts = request->has_given ? GIVEN_DEAL_ATTEMPTS : (request->has_shape ? SHAPED_DEAL_ATTEMPTS : DEAL_ATTEMPTS);
     for (size_t attempt = 0; attempt < attempts; attempt++) {
         if (deal_progression(request, rng, pivot, out)) {
             return true;

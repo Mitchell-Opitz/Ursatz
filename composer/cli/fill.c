@@ -12,6 +12,7 @@
 
 #include <ursatz_composer/analysis_load.h>
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/given.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
@@ -186,8 +187,76 @@ static void heard_text(const ComposeHeard *heard, char *out, size_t size) {
     }
 }
 
+/* --- the given material ------------------------------------------------------------ */
+
+#define MAX_GIVEN_RUNS 64
+
+typedef struct {
+    GivenReport runs[MAX_GIVEN_RUNS];
+    size_t count;
+    bool unchanged; /* every run is as it was given */
+} GivenRuns;
+
+static const char *given_lane_name(const GivenReport *run) {
+    switch (run->lane) {
+    case PLAN_LANE_HARMONY:
+        return "progression";
+    case PLAN_LANE_BASS:
+        return "bass line";
+    case PLAN_LANE_MELODY:
+        return "melody";
+    default:
+        return "inner voice";
+    }
+}
+
+/* The bar of its section a run starts in, from 1. */
+static size_t given_bar(const PiecePlan *plan, const GivenReport *run) {
+    PlanTime offset;
+    PlanSpan section = plan_node_span(plan, run->owner);
+    if (plan_time_make(run->span.start.num * (long)section.start.den - section.start.num * (long)run->span.start.den,
+                       run->span.start.den * section.start.den, &offset) != PLAN_OK) {
+        return 1;
+    }
+    return cli_bars_in(plan, offset) + 1;
+}
+
+static void print_given_text(const PiecePlan *plan, const CliSection *sections, size_t section_count,
+                             const GivenRuns *given) {
+    if (given->count == 0) {
+        return;
+    }
+    printf("\ngiven material, %s\n", given->unchanged ? "unchanged" : "CHANGED");
+    for (size_t i = 0; i < given->count && i < MAX_GIVEN_RUNS; i++) {
+        const GivenReport *run = &given->runs[i];
+        printf("  %s in %s from bar %zu, ", given_lane_name(run), letter_of(sections, section_count, run->owner),
+               given_bar(plan, run));
+        if (run->lane == PLAN_LANE_HARMONY) {
+            printf("%zu %s", run->spans, run->spans == 1 ? "chord" : "chords");
+        } else {
+            printf("%zu %s", cli_bars_in(plan, run->span.length), cli_bars_in(plan, run->span.length) == 1 ? "bar" : "bars");
+        }
+        printf("%s\n", run->unchanged ? "" : ": changed");
+    }
+}
+
+static void print_given_json(const PiecePlan *plan, const CliSection *sections, size_t section_count,
+                             const GivenRuns *given) {
+    printf(",\"given\":{\"unchanged\":%s,\"runs\":[", given->unchanged ? "true" : "false");
+    for (size_t i = 0; i < given->count && i < MAX_GIVEN_RUNS; i++) {
+        const GivenReport *run = &given->runs[i];
+        printf("%s{\"kind\":\"%s\",\"section\":", i ? "," : "", given_lane_name(run));
+        cli_print_json_string(letter_of(sections, section_count, run->owner));
+        printf(",\"bar\":%zu,\"%s\":%zu,\"unchanged\":%s}", given_bar(plan, run),
+               run->lane == PLAN_LANE_HARMONY ? "chords" : "bars",
+               run->lane == PLAN_LANE_HARMONY ? run->spans : cli_bars_in(plan, run->span.length),
+               run->unchanged ? "true" : "false");
+    }
+    printf("]}");
+}
+
 static void print_result_text(unsigned long seed, bool realized, const PiecePlan *plan, const ComposeOutcome *outcome,
-                              const char *const *files, size_t file_count) {
+                              const GivenRuns *given, const char *const *files, size_t file_count) {
     CliSection sections[CLI_MAX_SECTIONS];
     size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
     if (count > CLI_MAX_SECTIONS) {
@@ -221,13 +290,14 @@ static void print_result_text(unsigned long seed, bool realized, const PiecePlan
         printf("  %s resembles %s (similarity %.2f)\n", letter_of(sections, count, pair->later),
                letter_of(sections, count, pair->earlier), pair->similarity);
     }
+    print_given_text(plan, sections, count, given);
     for (size_t i = 0; i < file_count; i++) {
         printf("wrote %s\n", files[i]);
     }
 }
 
 static void print_result_json(unsigned long seed, bool realized, const PiecePlan *plan, const ComposeOutcome *outcome,
-                              const char *const *files, size_t file_count) {
+                              const GivenRuns *given, const char *const *files, size_t file_count) {
     CliSection sections[CLI_MAX_SECTIONS];
     size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
     if (count > CLI_MAX_SECTIONS) {
@@ -257,7 +327,11 @@ static void print_result_json(unsigned long seed, bool realized, const PiecePlan
         cli_print_json_string(letter_of(sections, count, pair->earlier));
         printf(",\"similarity\":%.4f}", pair->similarity);
     }
-    printf("]},\"files\":[");
+    printf("]}");
+    if (given->count > 0) {
+        print_given_json(plan, sections, count, given);
+    }
+    printf(",\"files\":[");
     for (size_t i = 0; i < file_count; i++) {
         printf("%s", i ? "," : "");
         cli_print_json_string(files[i]);
@@ -460,6 +534,7 @@ int run_fill(int argc, char **argv) {
     PiecePlan *plan = NULL;
     ComposeOutcome outcome;
     memset(&outcome, 0, sizeof(outcome));
+    GivenSnapshot *snapshot = NULL;
     bool done = false;
     bool realized = false;
     unsigned long used = options.seed;
@@ -469,6 +544,10 @@ int run_fill(int argc, char **argv) {
         if (plan_from_json(text, &fresh, &error) != PLAN_OK) {
             status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read plan '%s': %s", options.input, error.message);
             break;
+        }
+        if (!snapshot) {
+            /* What the user gave, kept to show after the run that none of it was changed. */
+            snapshot = given_snapshot(fresh);
         }
         ComposeOutcome result;
         memset(&result, 0, sizeof(result));
@@ -498,6 +577,20 @@ int run_fill(int argc, char **argv) {
         report_stuck(plan, &outcome, options.seed, used);
         status = CLI_EXIT_UNSATISFIABLE;
     }
+    GivenRuns given;
+    memset(&given, 0, sizeof(given));
+    given.unchanged = true;
+    if (status == 0 && done && !realized && snapshot) {
+        given.count = given_snapshot_report(snapshot, plan, given.runs, MAX_GIVEN_RUNS);
+        given.count = given.count > MAX_GIVEN_RUNS ? MAX_GIVEN_RUNS : given.count;
+        for (size_t i = 0; i < given.count; i++) {
+            given.unchanged = given.unchanged && given.runs[i].unchanged;
+        }
+        if (!given.unchanged) {
+            status = cli_fail(CLI_EXIT_UNSATISFIABLE, "the run changed the given material; nothing is written");
+        }
+    }
+    given_snapshot_destroy(snapshot);
     if (status == 0) {
         Pending pending[MAX_OUTPUTS];
         const char *files[MAX_OUTPUTS];
@@ -508,9 +601,9 @@ int run_fill(int argc, char **argv) {
                 files[i] = pending[i].final_path;
             }
             if (options.json) {
-                print_result_json(used, realized, plan, &outcome, files, pending_count);
+                print_result_json(used, realized, plan, &outcome, &given, files, pending_count);
             } else {
-                print_result_text(used, realized, plan, &outcome, files, pending_count);
+                print_result_text(used, realized, plan, &outcome, &given, files, pending_count);
             }
         }
     }

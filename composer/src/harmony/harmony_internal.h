@@ -18,6 +18,21 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/lanes.h>
 
+/* One chord of a progression. A chord starts where the one before it ends. */
+typedef struct {
+    char roman[PLAN_ROMAN_NUMERAL_MAX];
+    PlanHarmonicFunction function;
+    HarmonyChord chord;          /* the chord, when it is not applied */
+    bool applied;
+    HarmonyAppliedChord applied_chord; /* the chord, when it is applied */
+    int applied_inversion;             /* 0 for root position; a triad has 0 or 1, a seventh chord 0 to 3 */
+    size_t cells;
+} PhraseChord;
+
+/* The most cells of a target given material is read over, and the most Given chords read on each side of it. */
+#define HARMONY_GIVEN_CELLS 128
+#define HARMONY_JOIN_CHORDS 8
+
 /* What a harmony span asks for, read from the plan. */
 typedef struct {
     LaneSpanId target;
@@ -40,6 +55,23 @@ typedef struct {
     PlanKey key;
     size_t pivot_count;
     int pivot_degrees[HARMONY_PIVOT_MAX];
+    /*
+     * Given material around the target (R-071), read only for an operator registered to work around it
+     * (harmony_phrase_register_given): the pitch class of the Given bass note sounding at the start of each cell and of
+     * the Given melody note that starts on each strong cell (-1 for none), and the Given chords that touch the target at
+     * either end, as many as keep a whole number of bars (before) or are contiguous (after).
+     */
+    bool around_given;
+    bool has_given;
+    int bass_pc[HARMONY_GIVEN_CELLS];
+    int melody_pc[HARMONY_GIVEN_CELLS];
+    size_t before_count;
+    PhraseChord before[HARMONY_JOIN_CHORDS];
+    size_t after_count;
+    PhraseChord after[HARMONY_JOIN_CHORDS];
+    /* The target starts or ends where a phrase or a section of the plan does: a cadence heard there is a boundary's. */
+    bool start_at_boundary;
+    bool end_at_boundary;
 } PhraseRequest;
 
 /* The meter under a phrase: its bars and the places in a bar where a chord may start. */
@@ -51,17 +83,6 @@ typedef struct {
     PlanTime cell_length;
     size_t cells; /* bars * cells_per_bar */
 } PhraseMetre;
-
-/* One chord of a progression. A chord starts where the one before it ends. */
-typedef struct {
-    char roman[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction function;
-    HarmonyChord chord;          /* the chord, when it is not applied */
-    bool applied;
-    HarmonyAppliedChord applied_chord; /* the chord, when it is applied */
-    int applied_inversion;             /* 0 for root position; a triad has 0 or 1, a seventh chord 0 to 3 */
-    size_t cells;
-} PhraseChord;
 
 /* A candidate's payload. */
 typedef struct {
@@ -175,6 +196,26 @@ PlanResult harmony_cells_span(PlanTime start, PlanTime cell_length, size_t first
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
 /* The same for the prolongation operator: a PROLONGATION shape, whole bars, a key, and no cadence asked for. */
 bool harmony_prolong_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+/*
+ * The same two for an operator registered to work around Given material (harmony_phrase_register_given): a Given bass
+ * over the span does not refuse the span, it is read into the request with the Given melody and the Given chords at the
+ * ends (harmony_given_read).
+ */
+bool harmony_phrase_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+
+/* Reads into the request what the Given bass, the Given melody and the Given chords around the target ask of it. */
+void harmony_given_read(const PiecePlan *plan, PhraseRequest *request);
+/* Whether chords keep to the given bass (at each chord's start) and the given melody (its notes on strong beats). */
+bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords, size_t count, const char **why);
+/*
+ * Whether the chords, heard with the Given chords before and after them, make no cadence the plan does not ask for:
+ * one that arrives inside the target and is not the target's own at its end (cadence_planned), or that the target's
+ * last chord leads into the Given chords. Where a phrase or a section starts or ends is a boundary: a half cadence's V
+ * followed by the tonic there is no cadence. False only when the recognizer fails; *why is NULL when nothing is wrong.
+ */
+bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords, size_t count, bool cadence_planned,
+                        const char **why);
 
 typedef bool (*ReadRequestFn)(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
 /* Writes a progression candidate over its target span, one chord span each; the first keeps the target's id. */

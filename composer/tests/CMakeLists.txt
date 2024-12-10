@@ -275,3 +275,16 @@ target_compile_definitions(test_plan_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FIL
                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_plan_cli ursatz-composer)
 add_test(NAME test_plan_cli COMMAND test_plan_cli)
+
+add_executable(test_middle_out test_middle_out.c)
+target_link_libraries(test_middle_out PRIVATE ursatz_composer)
+target_include_directories(test_middle_out PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_middle_out PRIVATE -Wall -Wextra -Wpedantic)
+# Given material (given.h): the placing calls and a quick run are quick; the sweeps (seeds 1 to 10) fail when a share
+# falls below its baseline (tests/test_middle_out.c, docs/middle-out.md).
+add_test(NAME test_middle_out_give COMMAND test_middle_out give)
+add_test(NAME test_middle_out_smoke COMMAND test_middle_out smoke)
+add_test(NAME test_middle_out_partial COMMAND test_middle_out partial)
+foreach(scenario melody progression bass)
+    add_test(NAME test_middle_out_${scenario} COMMAND test_middle_out ${scenario})
+endforeach()

@@ -54,6 +54,21 @@ returns heard 1 of 1 planned
 
 A section in which no theme is heard (a theme of 4 bars is seldom heard) is reported as `no theme heard`.
 
+A plan with given material ([middle-out.md](middle-out.md), placed with `plan --given-melody` and the like) is filled
+around it. Before the run `fill` copies the Given spans the user placed, and after it compares them with the plan, span
+by span and byte for byte (the pitches and the times of the notes, the numerals of the chords). The result lists each
+run of them and says that they are unchanged:
+
+```
+given material, unchanged
+  melody in B from bar 1, 8 bars
+  progression in A from bar 1, 4 chords
+```
+
+A run that changed them (it must not) is refused with exit status 2 and nothing is written. In JSON the list is
+`given`: `{"unchanged": true, "runs": [{"kind", "section", "bar", "bars" or "chords", "unchanged"}]}`, present only when
+the plan has given material.
+
 With `--format json` the result is one object: `seed`, `realized` (true for a plan that had nothing to fill),
 `sections` (each with `letter`, `heard`, `heard_as_requested` and `cadences`), `returns` (`planned`, `heard` and the
 `pairs` with `later`, `earlier` and `similarity`) and `files`.

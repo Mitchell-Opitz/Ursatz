@@ -109,6 +109,10 @@ or layered): its sections, their keys and cadences and the sections that return 
 plan, one from `plan` or from `grow --out`, and writes the piece as JSON, MIDI and MusicXML with the form, the
 cadences and the returns heard in it. See [docs/cli-plan.md](docs/cli-plan.md) and [docs/cli-fill.md](docs/cli-fill.md).
 
+A piece can start from the middle: `plan --given-melody phrase.txt --at B:1` (also `--given-progression "I IV V I"` and
+`--given-bass`) places a phrase, a progression or a bass line anywhere in the plan, `fill` grows the form around it and
+never changes it, and the result says so. See [docs/middle-out.md](docs/middle-out.md).
+
 ## Plan format
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
@@ -149,7 +153,9 @@ sentence, a period or a hybrid: its structure, motives, harmony, bass and melody
 
 `piece_build_plan` and `compose_run` (`<ursatz_composer/piece.h>`, `<ursatz_composer/compose.h>`) plan a short piece from a
 named form (binary, rounded binary, ternary, theme and variations, loop, layered), invent a motive when none is given,
-and fill every section with the grow stages. See [docs/piece.md](docs/piece.md).
+and fill every section with the grow stages. See [docs/piece.md](docs/piece.md). `plan_give_melody`,
+`plan_give_progression` and `plan_give_bass` (`<ursatz_composer/given.h>`) place given material in such a plan, and the
+stages fill around it ([docs/middle-out.md](docs/middle-out.md)).
 
 ## Hearing the form
 

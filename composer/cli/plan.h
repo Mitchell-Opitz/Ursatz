@@ -9,7 +9,8 @@
 
 #define PLAN_USAGE_LINE                                                                                                \
     "Usage: ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <m> [--bars N] [--count N] "     \
-    "[--modulate] [--motive <file>] [--accompaniment <p>] [--texture <t>] [--seed N] --out <plan.json> "                \
+    "[--modulate] [--motive <file>] [--accompaniment <p>] [--texture <t>] [--given-melody <f> | --given-progression "   \
+    "\"<I IV V I>\" | --given-bass <f> [--at <L>[:<bar>]] [--cells N]]... [--seed N] --out <plan.json> "           \
     "[--format text|json]"
 
 /* "ursatz-composer plan ..."; argv[1] is "plan". Returns the exit status. */
@@ -37,6 +38,8 @@ typedef struct {
 /* The sections of the piece in order, material left out; returns how many there are (at most capacity are written). */
 size_t cli_piece_sections(const PiecePlan *plan, CliSection *out, size_t capacity);
 
+/* The bars in a length of the plan's meter, rounded; 0 when the plan has no meter. */
+size_t cli_bars_in(const PiecePlan *plan, PlanTime length);
 /* "presentation + continuation", "antecedent + consequent". */
 void cli_pairing_name(const PlanThemePairing *pairing, char *out, size_t size);
 

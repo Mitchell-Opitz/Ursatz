@@ -255,8 +255,9 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
     case COMPOSE_STAGE_MOTIVES:
         return motive_develop_register(registry, motives);
     case COMPOSE_STAGE_HARMONY:
-        result = harmony_prolong_register(registry);
-        return result == FILL_OK ? harmony_phrase_register(registry) : result;
+        /* The harmony operators write chords that stand on a Given bass, carry a Given melody and join Given chords. */
+        result = harmony_prolong_register_given(registry);
+        return result == FILL_OK ? harmony_phrase_register_given(registry) : result;
     case COMPOSE_STAGE_BASS:
         return harmony_bass_register(registry, NULL);
     case COMPOSE_STAGE_MELODY:
