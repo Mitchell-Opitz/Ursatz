@@ -26,6 +26,7 @@ if (piece_build_plan(&request, &plan) == PIECE_OK && compose_run(plan, &config, 
 | `motive` | The motive, or NULL to have one invented. |
 | `has_accompaniment`, `accompaniment` | An accompaniment under every section, as in grow. A layered form has one in any case (pattern `ANY`). |
 | `modulate`, `seed` | With `modulate`, the sections' keys and the cadences across them are planned from `seed` (see Keys and cadences). Without it every section is in the home key with the template's cadences, as before. |
+| `given_melodies` | The given melodies ([middle-out.md](middle-out.md)) the plan is to take: the material holds a bar more for each. 0 for none. |
 
 ## The templates
 
