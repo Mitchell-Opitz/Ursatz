@@ -141,16 +141,17 @@ async function renderLibraryView() {
     <h1 class="view-title">Library</h1>
     <div class="upload-box">
       <div class="upload-box-text">
-        <div class="upload-box-heading">Drop a MIDI or MusicXML file to analyze</div>
+        <div class="upload-box-heading">Drop MIDI or MusicXML files to analyze</div>
         <div class="upload-box-subheading">.mid · .midi · .musicxml · .xml · .mxl</div>
       </div>
       <div class="upload-box-controls">
-        <input type="file" id="library-upload-file" accept=".mid,.midi,.musicxml,.xml,.mxl" />
-        <button id="library-upload-button" type="button">Upload file</button>
+        <input type="file" id="library-upload-file" accept=".mid,.midi,.musicxml,.xml,.mxl" multiple />
+        <button id="library-upload-button" type="button">Upload files</button>
         <button type="button" disabled title="Not yet available">Import from URL</button>
       </div>
     </div>
     <div id="library-upload-status" class="upload-status"></div>
+    <ul id="library-upload-list" class="upload-list"></ul>
     <div class="filter-row">
       <label class="filter-field">
         Filter
@@ -182,9 +183,11 @@ async function renderLibraryView() {
     </section>
   `;
 
-  wireUploadControl("library-upload", async () => {
+  const onUploaded = async () => {
     await loadLibraryPieces();
-  });
+  };
+  wireUploadControl("library-upload", onUploaded);
+  wireUploadDrop("library-upload", onUploaded);
 
   await loadLibraryPieces();
 }
@@ -437,46 +440,110 @@ function wireUploadControl(idPrefix, onUploaded) {
     .addEventListener("click", () => handleUpload(idPrefix, onUploaded));
 }
 
-async function handleUpload(idPrefix, onUploaded) {
+/* Dropping files on the .upload-box runs the same queue as the picker.
+ * Names the picker would not offer stay in the list as failed entries. */
+function wireUploadDrop(idPrefix, onUploaded) {
+  const box = document
+    .getElementById(`${idPrefix}-button`)
+    .closest(".upload-box");
+  box.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    box.classList.add("is-dragover");
+  });
+  box.addEventListener("dragleave", () => box.classList.remove("is-dragover"));
+  box.addEventListener("drop", (event) => {
+    event.preventDefault();
+    box.classList.remove("is-dragover");
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length === 0) return;
+    if (document.getElementById(`${idPrefix}-button`).disabled) return;
+    runUploadQueue(idPrefix, files, onUploaded);
+  });
+}
+
+function handleUpload(idPrefix, onUploaded) {
   const fileInput = document.getElementById(`${idPrefix}-file`);
-  const uploadButton = document.getElementById(`${idPrefix}-button`);
   const statusEl = document.getElementById(`${idPrefix}-status`);
 
-  const file = fileInput.files[0];
-  if (!file) {
+  const files = Array.from(fileInput.files);
+  if (files.length === 0) {
     statusEl.textContent = "Select a file first.";
     statusEl.classList.add("error");
-    return;
+    return Promise.resolve();
   }
+  fileInput.value = "";
+  return runUploadQueue(idPrefix, files, onUploaded);
+}
 
-  statusEl.textContent = "";
-  statusEl.classList.remove("error");
-  uploadButton.disabled = true;
-  statusEl.textContent = "Uploading and analyzing...";
+/* Uploads the files one after another with the existing POST (analysis is
+ * CPU bound, so no parallel requests). The list under the box shows one
+ * line per file, the status line the summary. onUploaded(data) runs after
+ * each success so the table fills in as files finish. */
+async function runUploadQueue(idPrefix, files, onUploaded) {
+  const uploadButton = document.getElementById(`${idPrefix}-button`);
+  const statusEl = document.getElementById(`${idPrefix}-status`);
+  const listEl = document.getElementById(`${idPrefix}-list`);
 
-  try {
-    const bytes = await file.arrayBuffer();
-    const res = await fetch("/api/analyzer/pieces", {
-      method: "POST",
-      headers: { "X-Filename": encodeURIComponent(file.name) },
-      body: bytes,
-    });
-    const data = await res.json();
-
-    uploadButton.disabled = false;
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Upload failed.";
-      statusEl.classList.add("error");
-      return;
+  let queue = UploadQueue.createQueue(files);
+  const show = () => {
+    listEl.innerHTML = "";
+    for (const entry of queue) {
+      const item = document.createElement("li");
+      item.classList.add(`upload-${entry.state}`);
+      item.textContent = uploadEntryText(entry);
+      listEl.appendChild(item);
     }
+    statusEl.textContent = UploadQueue.queueSummary(queue);
+    statusEl.classList.toggle(
+      "error",
+      queue.some((entry) => entry.state === "failed")
+    );
+  };
 
-    statusEl.textContent = `Uploaded ${formatPieceLabel(data.id, data.filename)}.`;
-    fileInput.value = "";
-    await onUploaded(data);
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
-    uploadButton.disabled = false;
+  uploadButton.disabled = true;
+  show();
+  for (let i = 0; i < files.length; i++) {
+    if (!UploadQueue.acceptedFile(files[i].name)) {
+      queue = UploadQueue.markFailed(queue, i, "not a MIDI or MusicXML file");
+      show();
+      continue;
+    }
+    queue = UploadQueue.markAnalyzing(queue, i);
+    show();
+    try {
+      const bytes = await files[i].arrayBuffer();
+      const res = await fetch("/api/analyzer/pieces", {
+        method: "POST",
+        headers: { "X-Filename": encodeURIComponent(files[i].name) },
+        body: bytes,
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        queue = UploadQueue.markFailed(queue, i, data.message || "Upload failed.");
+        show();
+        continue;
+      }
+      queue = UploadQueue.markDone(queue, i, formatPieceLabel(data.id, data.filename));
+      show();
+      await onUploaded(data);
+    } catch (err) {
+      queue = UploadQueue.markFailed(queue, i, `Could not reach backend: ${err}`);
+      show();
+    }
+  }
+  uploadButton.disabled = false;
+}
+
+function uploadEntryText(entry) {
+  switch (entry.state) {
+    case "analyzing":
+      return `${entry.name}: analyzing...`;
+    case "done":
+      return `${entry.name}: uploaded as ${entry.label}`;
+    case "failed":
+      return `${entry.name}: failed: ${entry.message}`;
+    default:
+      return `${entry.name}: queued`;
   }
 }
 
