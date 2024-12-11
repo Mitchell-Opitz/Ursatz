@@ -242,8 +242,10 @@ not listed and cannot be opened, so upload those files again.
 
 The Corpus tool wraps Ursatz's `corpus_api.h`:
 
-- `POST /api/corpus`: body `{"id":"<corpus-id>","name":"<name>"}`. Creates a
-  Corpus. Returns `{"ok":true}` or `{"ok":false,"message":...}`.
+- `POST /api/corpus`: body `{"name":"<name>"}`, with an optional
+  `"id":"<corpus-id>"`. Without an id, one is generated (`col-...`). Creates a
+  Corpus. Returns `{"ok":true,"id":"<id>","name":"<name>"}` or
+  `{"ok":false,"message":...}`. A duplicate id fails.
 - `GET /api/corpus`: lists all Corpora:
   `{"ok":true,"corpora":[{"id":...,"name":...},...]}`.
 - `POST /api/corpus/<id>/pieces`: body `{"piece_id":"<EntityID>"}`. Adds a
@@ -362,9 +364,12 @@ cards (name only; the API has no piece count or last-updated field). Clicking
 a card opens a detail view listing that Collection's piece refs with the same
 row component as the Library: each row's filename is found by joining the
 piece ref's id against `/api/analyzer/pieces`, falling back to the bare id.
-The only action on a Collection's piece row is removing it from the
-Collection. New piece refs are added as plain id strings from the id input
-below the list, and a piece may belong to any number of Collections.
+Clicking a row's filename opens that piece's analysis, like the Library. The
+only action on a Collection's piece row is removing it from the Collection.
+The header holds one form: a name input and a `Create` button (Enter also
+creates); the id is generated and the new Collection opens. Pieces are added
+by picking from a list of Library pieces not yet in the Collection, and a
+piece may belong to any number of Collections.
 
 ## Building
 
