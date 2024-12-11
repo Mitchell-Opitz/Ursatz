@@ -1159,15 +1159,19 @@ async function loadCorpusPieces(id, name) {
 }
 
 function buildCollectionPieceRow(piece, corpusId, corpusName) {
-  return buildPieceRow(piece, (row, actionsCell, rowPiece) => {
-    actionsCell.appendChild(
-      buildActionButton({
-        icon: "🗑",
-        label: "Remove from collection",
-        onClick: () => handleRemovePiece(corpusId, corpusName, rowPiece.id),
-      }),
-    );
-  });
+  return buildPieceRow(
+    piece,
+    (row, actionsCell, rowPiece) => {
+      actionsCell.appendChild(
+        buildActionButton({
+          icon: "🗑",
+          label: "Remove from collection",
+          onClick: () => handleRemovePiece(corpusId, corpusName, rowPiece.id),
+        }),
+      );
+    },
+    (rowPiece) => showAnalysisView(rowPiece.id),
+  );
 }
 
 async function handleAddPiece(corpusId, corpusName) {
