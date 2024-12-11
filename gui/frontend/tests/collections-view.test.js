@@ -18,6 +18,15 @@ function collectionRowCellText(piece) {
   return piece.filename || piece.id;
 }
 
+/* Mirrors collectionAddOptions in app.js. */
+function collectionAddOptions(libraryPieces, memberIds) {
+  const members = new Set(memberIds);
+  return libraryPieces
+    .filter((piece) => !members.has(piece.id))
+    .map((piece) => ({ id: piece.id, label: piece.filename || piece.id }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 let failures = 0;
 
 function check(cond, what) {
@@ -45,6 +54,35 @@ check(
 check(
   collectionRowCellText(joinPieceFilename("piece-missing", libraryPieces)) === "piece-missing",
   "a collection piece row falls back to the bare id when the piece isn't found in the Library",
+);
+
+const addLibrary = [
+  { id: "piece-c", filename: "zeta.mid" },
+  { id: "piece-a", filename: "alpha.mid" },
+  { id: "piece-b", filename: "" },
+  { id: "piece-m", filename: "member.mid" },
+];
+const addOptions = collectionAddOptions(addLibrary, ["piece-m"]);
+
+check(
+  !addOptions.some((option) => option.id === "piece-m"),
+  "the add list excludes pieces already in the collection",
+);
+check(
+  addOptions.find((option) => option.id === "piece-a").label === "alpha.mid",
+  "the add list labels a piece by its filename",
+);
+check(
+  addOptions.find((option) => option.id === "piece-b").label === "piece-b",
+  "the add list falls back to the id when the filename is empty",
+);
+check(
+  addOptions.map((option) => option.label).join(",") === "alpha.mid,piece-b,zeta.mid",
+  "the add list is sorted by label",
+);
+check(
+  collectionAddOptions(addLibrary, addLibrary.map((piece) => piece.id)).length === 0,
+  "the add list is empty when every Library piece is a member",
 );
 
 process.exit(failures === 0 ? 0 : 1);

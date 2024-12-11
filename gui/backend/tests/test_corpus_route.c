@@ -125,6 +125,15 @@ int main(void) {
   check(strstr(response, "\"ok\":true") != NULL, "list corpora succeeds");
   check(strstr(response, "\"id\":\"test-corpus\"") != NULL, "list corpora includes created corpus");
 
+  /* Create with a name only: the id is generated and returned. */
+  check(http_request("POST", "/api/corpus", "{\"name\":\"Unnamed Id Corpus\"}", response, sizeof(response)),
+        "name-only create: got a response");
+  check(strstr(response, "\"ok\":true") != NULL, "name-only create succeeds");
+  check(strstr(response, "\"id\":\"col-") != NULL, "name-only create returns a generated col- id");
+  check(strstr(response, "\"name\":\"Unnamed Id Corpus\"") != NULL, "name-only create returns the name");
+  check(http_request("GET", "/api/corpus", NULL, response, sizeof(response)), "list after name-only create: got a response");
+  check(strstr(response, "\"name\":\"Unnamed Id Corpus\"") != NULL, "name-only corpus is listed under its name");
+
   /* Invalid corpus id in path is rejected before reaching the service. */
   check(http_request("GET", "/api/corpus/bad!id/pieces", NULL, response, sizeof(response)),
         "invalid corpus id: got a response");
