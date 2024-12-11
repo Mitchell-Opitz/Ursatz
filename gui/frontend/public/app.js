@@ -928,23 +928,22 @@ async function renderCorpusView() {
   content.innerHTML = `
     <div class="collections-header">
       <h1 class="view-title">Collections</h1>
-      <button id="corpus-new-button" type="button">New Collection</button>
-    </div>
-    <div id="corpus-create-form" class="upload-controls" hidden>
-      <input type="text" id="corpus-id-input" placeholder="id" />
-      <input type="text" id="corpus-name-input" placeholder="name" />
-      <button id="corpus-create-button" type="button">Create</button>
+      <div class="upload-controls">
+        <input type="text" id="corpus-name-input" placeholder="New collection name" />
+        <button id="corpus-create-button" type="button">Create</button>
+      </div>
     </div>
     <div id="corpus-create-status" class="upload-status"></div>
     <div id="corpus-list-status" class="piece-list-status">Loading collections...</div>
     <div id="corpus-grid" class="collections-grid"></div>
   `;
 
-  document.getElementById("corpus-new-button").addEventListener("click", () => {
-    document.getElementById("corpus-create-form").hidden = false;
-    document.getElementById("corpus-id-input").focus();
-  });
   document.getElementById("corpus-create-button").addEventListener("click", handleCreateCorpus);
+  document.getElementById("corpus-name-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      handleCreateCorpus();
+    }
+  });
 
   const statusEl = document.getElementById("corpus-list-status");
   const gridEl = document.getElementById("corpus-grid");
@@ -992,15 +991,13 @@ function buildCollectionCard(corpus) {
 }
 
 async function handleCreateCorpus() {
-  const idInput = document.getElementById("corpus-id-input");
   const nameInput = document.getElementById("corpus-name-input");
   const createButton = document.getElementById("corpus-create-button");
   const statusEl = document.getElementById("corpus-create-status");
 
-  const id = idInput.value.trim();
   const name = nameInput.value.trim();
-  if (!id || !name) {
-    statusEl.textContent = "Enter both an id and a name.";
+  if (!name) {
+    statusEl.textContent = "Enter a name.";
     statusEl.classList.add("error");
     return;
   }
@@ -1013,7 +1010,7 @@ async function handleCreateCorpus() {
     const res = await fetch("/api/corpus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, name }),
+      body: JSON.stringify({ name }),
     });
     const data = await res.json();
 
@@ -1024,7 +1021,7 @@ async function handleCreateCorpus() {
       return;
     }
 
-    showCorpusDetail(id, name);
+    showCorpusDetail(data.id, data.name);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
@@ -1058,8 +1055,8 @@ function showCorpusDetail(id, name) {
       </table>
     </section>
     <div class="upload-controls">
-      <input type="text" id="corpus-piece-input" placeholder="piece id" />
-      <button id="corpus-add-piece-button" type="button">Add</button>
+      <select id="corpus-piece-select" disabled></select>
+      <button id="corpus-add-piece-button" type="button" disabled>Add</button>
     </div>
     <div id="corpus-piece-add-status" class="upload-status"></div>
   `;
@@ -1068,6 +1065,41 @@ function showCorpusDetail(id, name) {
   document.getElementById("corpus-add-piece-button").addEventListener("click", () => handleAddPiece(id, name));
 
   loadCorpusPieces(id, name);
+}
+
+/* Library pieces not already in the collection, labeled by filename with
+ * the bare id as fallback (same as the row label), sorted by label. */
+function collectionAddOptions(libraryPieces, memberIds) {
+  const members = new Set(memberIds);
+  return libraryPieces
+    .filter((piece) => !members.has(piece.id))
+    .map((piece) => ({ id: piece.id, label: piece.filename || piece.id }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function populateCorpusPieceSelect(libraryPieces, memberIds) {
+  const selectEl = document.getElementById("corpus-piece-select");
+  const addButton = document.getElementById("corpus-add-piece-button");
+  if (!selectEl || !addButton) {
+    return;
+  }
+
+  const options = collectionAddOptions(libraryPieces, memberIds);
+  selectEl.innerHTML = "";
+  if (options.length === 0) {
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "All Library pieces are in this collection";
+    selectEl.appendChild(empty);
+  }
+  for (const option of options) {
+    const optionEl = document.createElement("option");
+    optionEl.value = option.id;
+    optionEl.textContent = option.label;
+    selectEl.appendChild(optionEl);
+  }
+  selectEl.disabled = options.length === 0;
+  addButton.disabled = options.length === 0;
 }
 
 /* Corpus piece refs only carry an id (see corpus_service.h) -- this joins
@@ -1098,16 +1130,20 @@ async function loadCorpusPieces(id, name) {
       return;
     }
 
+    const libraryPieces = libraryData.ok ? libraryData.pieces : [];
+    populateCorpusPieceSelect(
+      libraryPieces,
+      data.pieces.map((piece) => piece.id),
+    );
+
     if (data.pieces.length === 0) {
       statusEl.textContent = "No piece refs yet.";
       return;
     }
 
     const filenamesById = new Map();
-    if (libraryData.ok) {
-      for (const piece of libraryData.pieces) {
-        filenamesById.set(piece.id, piece.filename);
-      }
+    for (const piece of libraryPieces) {
+      filenamesById.set(piece.id, piece.filename);
     }
 
     statusEl.textContent = "";
@@ -1123,25 +1159,29 @@ async function loadCorpusPieces(id, name) {
 }
 
 function buildCollectionPieceRow(piece, corpusId, corpusName) {
-  return buildPieceRow(piece, (row, actionsCell, rowPiece) => {
-    actionsCell.appendChild(
-      buildActionButton({
-        icon: "🗑",
-        label: "Remove from collection",
-        onClick: () => handleRemovePiece(corpusId, corpusName, rowPiece.id),
-      }),
-    );
-  });
+  return buildPieceRow(
+    piece,
+    (row, actionsCell, rowPiece) => {
+      actionsCell.appendChild(
+        buildActionButton({
+          icon: "🗑",
+          label: "Remove from collection",
+          onClick: () => handleRemovePiece(corpusId, corpusName, rowPiece.id),
+        }),
+      );
+    },
+    (rowPiece) => showAnalysisView(rowPiece.id),
+  );
 }
 
 async function handleAddPiece(corpusId, corpusName) {
-  const pieceInput = document.getElementById("corpus-piece-input");
+  const pieceSelect = document.getElementById("corpus-piece-select");
   const addButton = document.getElementById("corpus-add-piece-button");
   const statusEl = document.getElementById("corpus-piece-add-status");
 
-  const pieceId = pieceInput.value.trim();
+  const pieceId = pieceSelect.value;
   if (!pieceId) {
-    statusEl.textContent = "Enter a piece id.";
+    statusEl.textContent = "Pick a piece to add.";
     statusEl.classList.add("error");
     return;
   }
@@ -1165,7 +1205,6 @@ async function handleAddPiece(corpusId, corpusName) {
       return;
     }
 
-    pieceInput.value = "";
     loadCorpusPieces(corpusId, corpusName);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;

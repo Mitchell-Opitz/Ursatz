@@ -7,6 +7,7 @@
 #include <civetweb.h>
 
 #include "../service/corpus_service.h"
+#include "../service/id_service.h"
 
 static const char *kCorpusPrefix = "/api/corpus";
 static const size_t kMaxRequestBodySize = 64 * 1024;
@@ -138,7 +139,16 @@ static int handle_create_corpus(struct mg_connection *conn) {
   char *name = extract_json_string_field(body, "name");
   free(body);
 
-  if (!id || !ursatz_gui_corpus_is_valid_id(id)) {
+  if (!id) {
+    id = ursatz_gui_new_id("col");
+    if (!id) {
+      free(name);
+      send_ok_false(conn, "out of memory");
+      return 200;
+    }
+  }
+
+  if (!ursatz_gui_corpus_is_valid_id(id)) {
     free(id);
     free(name);
     send_ok_false(conn, "invalid id");
@@ -151,15 +161,26 @@ static int handle_create_corpus(struct mg_connection *conn) {
   }
 
   UrsatzGuiCorpusResult result = ursatz_gui_corpus_create(id, name);
-  free(id);
-  free(name);
-
   if (result != URSATZ_GUI_CORPUS_OK) {
+    free(id);
+    free(name);
     send_ok_false(conn, result_message(result));
     return 200;
   }
 
-  send_json(conn, "{\"ok\":true}");
+  size_t capacity = strlen(id) + strlen(name) + 48;
+  char *response = malloc(capacity);
+  if (!response) {
+    free(id);
+    free(name);
+    send_ok_false(conn, "out of memory");
+    return 200;
+  }
+  snprintf(response, capacity, "{\"ok\":true,\"id\":\"%s\",\"name\":\"%s\"}", id, name);
+  free(id);
+  free(name);
+  send_json(conn, response);
+  free(response);
   return 200;
 }
 
