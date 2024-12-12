@@ -59,7 +59,8 @@ bool fill_pick_open_target(const PiecePlan *plan, const FillTarget *excluded, si
     FillTarget best = {FILL_TARGET_NODE, 0};
     for (size_t id = 1; id <= plan_node_count(plan); id++) {
         FillTarget target = {FILL_TARGET_NODE, id};
-        if (fill_target_state(plan, target) != PLAN_STATE_CONSTRAINED || is_excluded(target, excluded, excluded_count)) {
+        if (!fill_target_exists(plan, target) || fill_target_state(plan, target) != PLAN_STATE_CONSTRAINED ||
+            is_excluded(target, excluded, excluded_count)) {
             continue;
         }
         if (!found || beats(plan, target, best)) {
@@ -69,7 +70,8 @@ bool fill_pick_open_target(const PiecePlan *plan, const FillTarget *excluded, si
     }
     for (size_t id = 1; id <= plan_lane_span_count(plan); id++) {
         FillTarget target = {FILL_TARGET_LANE_SPAN, id};
-        if (fill_target_state(plan, target) != PLAN_STATE_CONSTRAINED || is_excluded(target, excluded, excluded_count)) {
+        if (!fill_target_exists(plan, target) || fill_target_state(plan, target) != PLAN_STATE_CONSTRAINED ||
+            is_excluded(target, excluded, excluded_count)) {
             continue;
         }
         if (!found || beats(plan, target, best)) {

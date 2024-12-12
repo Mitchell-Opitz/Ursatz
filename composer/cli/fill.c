@@ -372,7 +372,7 @@ static void report_stuck(const PiecePlan *plan, const ComposeOutcome *outcome, u
     size_t shown = 0;
     size_t open = 0;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        if (plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED) {
+        if (!plan_has_node(plan, id) || plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED) {
             continue;
         }
         open++;

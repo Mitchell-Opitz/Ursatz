@@ -99,6 +99,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
 PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, PlanTime new_length);
 
 bool plan_has_lane_span(const PiecePlan *plan, LaneSpanId id);
+/* The last id given out: ids run 1 to this count, and an id removed with its node (plan_remove_subtree) is not a span. */
 size_t plan_lane_span_count(const PiecePlan *plan);
 
 /* The accessors below return a zero value or NULL for an unknown id. */

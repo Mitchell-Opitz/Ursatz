@@ -81,7 +81,19 @@ void plan_destroy(PiecePlan *plan);
 PlanResult plan_add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name,
                          NodeId *out_id);
 
+/*
+ * Removes every descendant of id (not id itself) and every lane span they own, and every constraint, anywhere in the
+ * plan, that names one of them (a motive a constraint is made from, a section a constraint returns). The ids of what
+ * was removed are not reused and no longer exist: plan_has_node is false for them. A plan file renumbers what is left
+ * from 1 when it is written.
+ *
+ * Nothing is changed and PLAN_ERR_GIVEN_LOCKED is returned when any of it is Given: a descendant, a lane span one
+ * owns, or a node or span whose constraint would be removed. PLAN_ERR_NOT_FOUND for an unknown id.
+ */
+PlanResult plan_remove_subtree(PiecePlan *plan, NodeId id);
+
 bool plan_has_node(const PiecePlan *plan, NodeId id);
+/* The last id given out: ids run 1 to this count, and an id removed by plan_remove_subtree is not a node. */
 size_t plan_node_count(const PiecePlan *plan);
 NodeId plan_root(const PiecePlan *plan);
 

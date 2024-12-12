@@ -373,7 +373,7 @@ void given_snapshot_destroy(GivenSnapshot *snapshot) {
 /* Whether a lane span is material the user placed: Given, in a lane the user fills, owned by a section. */
 static bool placed(const PiecePlan *plan, LaneSpanId id) {
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
-    return plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN &&
+    return plan_has_lane_span(plan, id) && plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN &&
            (lane == PLAN_LANE_HARMONY || lane == PLAN_LANE_BASS || lane == PLAN_LANE_MELODY ||
             lane == PLAN_LANE_INNER_VOICE) &&
            plan_node_kind(plan, plan_lane_span_owner(plan, id)) == PLAN_NODE_SECTION;

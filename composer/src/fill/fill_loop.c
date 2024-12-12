@@ -60,7 +60,7 @@ static void span_relatives(const PiecePlan *plan, LaneSpanId id, Relatives *rela
     LaneSpanId before = PLAN_LANE_SPAN_NONE;
     LaneSpanId after = PLAN_LANE_SPAN_NONE;
     for (LaneSpanId other = 1; other <= plan_lane_span_count(plan); other++) {
-        if (other == id || plan_lane_span_lane(plan, other) != lane || plan_lane_span_voice(plan, other) != voice) {
+        if (other == id || !plan_has_lane_span(plan, other) || plan_lane_span_lane(plan, other) != lane || plan_lane_span_voice(plan, other) != voice) {
             continue;
         }
         PlanSpan other_span = plan_lane_span_span(plan, other);
