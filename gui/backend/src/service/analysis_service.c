@@ -3,6 +3,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -904,6 +905,332 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
 
     *out_xml = xml;
     *out_meter_defaulted = meter_defaulted;
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
+/* A non-negative-denominator rational, in whole notes. */
+typedef struct {
+    long long num;
+    unsigned long long den;
+} PlaybackRational;
+
+typedef struct {
+    PlaybackRational at;
+    double qpm;
+} PlaybackTempoRegion;
+
+static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
+    while (b != 0) {
+        unsigned long long t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+static PlaybackRational rational_make(long long num, unsigned long long den) {
+    PlaybackRational r = {num, den == 0 ? 1 : den};
+    unsigned long long magnitude = num < 0 ? (unsigned long long)(-num) : (unsigned long long)num;
+    unsigned long long g = gcd_ull(magnitude, r.den);
+    if (g > 1) {
+        r.num /= (long long)g;
+        r.den /= g;
+    }
+    return r;
+}
+
+static PlaybackRational rational_add(PlaybackRational a, PlaybackRational b) {
+    unsigned long long g = gcd_ull(a.den, b.den);
+    unsigned long long common = a.den / g * b.den;
+    return rational_make(a.num * (long long)(common / a.den) + b.num * (long long)(common / b.den), common);
+}
+
+static int rational_compare(PlaybackRational a, PlaybackRational b) {
+    unsigned long long g = gcd_ull(a.den, b.den);
+    unsigned long long common = a.den / g * b.den;
+    long long left = a.num * (long long)(common / a.den);
+    long long right = b.num * (long long)(common / b.den);
+    return left < right ? -1 : left > right ? 1 : 0;
+}
+
+static double round_to_milli(double value) {
+    return floor(value * 1000.0 + 0.5) / 1000.0;
+}
+
+static cJSON *rational_json(PlaybackRational r) {
+    cJSON *array = cJSON_CreateArray();
+    if (!array) {
+        return NULL;
+    }
+    cJSON *num = cJSON_CreateNumber((double)r.num);
+    cJSON *den = cJSON_CreateNumber((double)r.den);
+    if (!num || !den) {
+        cJSON_Delete(num);
+        cJSON_Delete(den);
+        cJSON_Delete(array);
+        return NULL;
+    }
+    cJSON_AddItemToArray(array, num);
+    cJSON_AddItemToArray(array, den);
+    return array;
+}
+
+/* The MIDI file's set-tempo regions, read from the stored bytes. */
+static bool playback_midi_tempo(const char *source_path, PlaybackTempoRegion **out_regions, size_t *out_count,
+                                bool *out_defaulted) {
+    size_t size = 0;
+    char *bytes = read_whole_file(source_path, &size);
+    if (!bytes) {
+        return false;
+    }
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo;
+    memset(&tempo, 0, sizeof(tempo));
+    MidiImportResult imported =
+        midi_importer_import_with_tempo((const unsigned char *)bytes, size, &events, &pitch_values, &count, &tempo);
+    free(bytes);
+    if (imported != MIDI_IMPORT_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
+
+    size_t region_count = tempo_map_region_count(tempo.tempo_map);
+    PlaybackTempoRegion *regions = calloc(region_count > 0 ? region_count : 1, sizeof(PlaybackTempoRegion));
+    bool ok = regions != NULL;
+    for (size_t i = 0; ok && i < region_count; i++) {
+        const TempoMapRegion *region = tempo_map_region(tempo.tempo_map, i);
+        const MusicalTime *start = tempo_map_region_start(region);
+        unsigned long microseconds = tempo_map_region_microseconds_per_quarter(region);
+        if (!start || microseconds == 0) {
+            ok = false;
+            break;
+        }
+        regions[i].at = rational_make(musical_time_numerator(start), musical_time_denominator(start));
+        regions[i].qpm = round_to_milli(60000000.0 / (double)microseconds);
+    }
+    *out_defaulted = tempo_map_is_defaulted(tempo.tempo_map);
+    midi_tempo_import_destroy(&tempo);
+    if (!ok) {
+        free(regions);
+        return false;
+    }
+    *out_regions = regions;
+    *out_count = region_count;
+    return true;
+}
+
+/* A MusicXML score's tempo: its declared tempo at 0, then one region per
+   metronome mark. A mark at the position of an earlier region replaces it. */
+static bool playback_score_tempo(const ImportedSource *source, PlaybackTempoRegion **out_regions, size_t *out_count,
+                                 bool *out_defaulted) {
+    PlaybackTempoRegion *regions = calloc(source->tempo_marking_count + 1, sizeof(PlaybackTempoRegion));
+    if (!regions) {
+        return false;
+    }
+    size_t count = 0;
+    if (!source->tempo_declared || !(source->initial_quarters_per_minute > 0.0)) {
+        regions[0].at = rational_make(0, 1);
+        regions[0].qpm = 120.0;
+        *out_regions = regions;
+        *out_count = 1;
+        *out_defaulted = true;
+        return true;
+    }
+    regions[count].at = rational_make(0, 1);
+    regions[count].qpm = round_to_milli(source->initial_quarters_per_minute);
+    count++;
+
+    for (size_t i = 0; i < source->tempo_marking_count; i++) {
+        const ImportedTempoMarking *marking = &source->tempo_markings[i];
+        if (!marking->has_metronome || marking->bpm_denominator == 0 || marking->beat_unit_denominator == 0 ||
+            marking->position_numerator < 0) {
+            continue;
+        }
+        double qpm = ((double)marking->bpm_numerator / (double)marking->bpm_denominator) *
+                     ((double)marking->beat_unit_numerator / (double)marking->beat_unit_denominator) * 4.0;
+        if (!(qpm > 0.0)) {
+            continue;
+        }
+        PlaybackRational at = rational_make(marking->position_numerator, marking->position_denominator);
+        size_t slot = 0;
+        while (slot < count && rational_compare(regions[slot].at, at) < 0) {
+            slot++;
+        }
+        if (slot < count && rational_compare(regions[slot].at, at) == 0) {
+            regions[slot].qpm = round_to_milli(qpm);
+            continue;
+        }
+        memmove(&regions[slot + 1], &regions[slot], (count - slot) * sizeof(PlaybackTempoRegion));
+        regions[slot].at = at;
+        regions[slot].qpm = round_to_milli(qpm);
+        count++;
+    }
+    *out_regions = regions;
+    *out_count = count;
+    *out_defaulted = false;
+    return true;
+}
+
+static int compare_size_t(const void *left, const void *right) {
+    size_t a = *(const size_t *)left;
+    size_t b = *(const size_t *)right;
+    return a < b ? -1 : a > b ? 1 : 0;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *pieces_dir, const char *id,
+                                                                char **out_json) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
+    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    cJSON_Delete(meta);
+
+    char source_path[400];
+    ImportedNotes notes;
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
+        input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+    }
+
+    UrsatzGuiAnalysisResult result = URSATZ_GUI_ANALYSIS_OK;
+    PlaybackTempoRegion *regions = NULL;
+    size_t region_count = 0;
+    bool tempo_defaulted = false;
+    bool is_midi = notes.source.format == INPUT_FORMAT_MIDI;
+    bool tempo_ok = is_midi ? playback_midi_tempo(source_path, &regions, &region_count, &tempo_defaulted)
+                            : playback_score_tempo(&notes.source, &regions, &region_count, &tempo_defaulted);
+    if (!tempo_ok) {
+        imported_notes_destroy(&notes);
+        /* A source that imported a moment ago and now has no readable tempo
+           is a failed import; an allocation failure is not told apart. */
+        return is_midi ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+
+    size_t *part_ids = notes.count > 0 ? malloc(notes.count * sizeof(size_t)) : NULL;
+    cJSON *root = cJSON_CreateObject();
+    cJSON *tempo_array = cJSON_CreateArray();
+    cJSON *parts_array = cJSON_CreateArray();
+    cJSON *notes_array = cJSON_CreateArray();
+    if ((notes.count > 0 && !part_ids) || !root || !tempo_array || !parts_array || !notes_array) {
+        cJSON_Delete(tempo_array);
+        cJSON_Delete(parts_array);
+        cJSON_Delete(notes_array);
+        cJSON_Delete(root);
+        free(part_ids);
+        free(regions);
+        imported_notes_destroy(&notes);
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    cJSON_AddItemToObject(root, "ok", cJSON_CreateTrue());
+    cJSON_AddStringToObject(root, "tempo_source", tempo_defaulted ? "default" : (is_midi ? "file" : "score"));
+
+    for (size_t i = 0; result == URSATZ_GUI_ANALYSIS_OK && i < region_count; i++) {
+        cJSON *entry = cJSON_CreateObject();
+        cJSON *at = rational_json(regions[i].at);
+        if (!entry || !at) {
+            cJSON_Delete(entry);
+            cJSON_Delete(at);
+            result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+            break;
+        }
+        cJSON_AddItemToObject(entry, "at", at);
+        cJSON_AddNumberToObject(entry, "qpm", regions[i].qpm);
+        cJSON_AddItemToArray(tempo_array, entry);
+    }
+    cJSON_AddItemToObject(root, "tempo", tempo_array);
+
+    PlaybackRational end = rational_make(0, 1);
+    for (size_t i = 0; result == URSATZ_GUI_ANALYSIS_OK && i < notes.count; i++) {
+        const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(notes.events[i]));
+        const Duration *duration = note_event_duration(notes.events[i]);
+        PlaybackRational on = rational_make(musical_time_numerator(position), musical_time_denominator(position));
+        PlaybackRational len = rational_make(duration_numerator(duration), duration_denominator(duration));
+        PlaybackRational note_end = rational_add(on, len);
+        if (rational_compare(note_end, end) > 0) {
+            end = note_end;
+        }
+        /* The MIDI note number, as the Ursatz MIDI renderer reads it. */
+        const PitchNumericValue *value = notes.pitch_values[i];
+        long long den = (long long)pitch_numeric_value_position_denominator(value);
+        long long pitch = den > 0 ? pitch_numeric_value_position_numerator(value) / den : 0;
+        pitch = pitch < 0 ? 0 : pitch > 127 ? 127 : pitch;
+
+        cJSON *entry = cJSON_CreateObject();
+        cJSON *on_json = rational_json(on);
+        cJSON *len_json = rational_json(len);
+        if (!entry || !on_json || !len_json) {
+            cJSON_Delete(entry);
+            cJSON_Delete(on_json);
+            cJSON_Delete(len_json);
+            result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+            break;
+        }
+        cJSON_AddNumberToObject(entry, "i", (double)i);
+        cJSON_AddItemToObject(entry, "on", on_json);
+        cJSON_AddItemToObject(entry, "len", len_json);
+        cJSON_AddNumberToObject(entry, "pitch", (double)pitch);
+        cJSON_AddNumberToObject(entry, "part", (double)notes.streams[i]);
+        cJSON_AddItemToArray(notes_array, entry);
+        part_ids[i] = notes.streams[i];
+    }
+
+    if (result == URSATZ_GUI_ANALYSIS_OK && notes.count > 0) {
+        qsort(part_ids, notes.count, sizeof(size_t), compare_size_t);
+        for (size_t i = 0; result == URSATZ_GUI_ANALYSIS_OK && i < notes.count; i++) {
+            if (i > 0 && part_ids[i] == part_ids[i - 1]) {
+                continue;
+            }
+            size_t index = part_ids[i];
+            const char *name = "";
+            if (!is_midi && index < notes.source.part_count && notes.source.parts[index].name) {
+                name = notes.source.parts[index].name;
+            }
+            cJSON *entry = cJSON_CreateObject();
+            if (!entry) {
+                result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+                break;
+            }
+            cJSON_AddNumberToObject(entry, "index", (double)index);
+            cJSON_AddStringToObject(entry, "name", name);
+            cJSON_AddNumberToObject(entry, "program", 0);
+            cJSON_AddItemToArray(parts_array, entry);
+        }
+    }
+    cJSON_AddItemToObject(root, "parts", parts_array);
+
+    cJSON *end_json = rational_json(end);
+    if (!end_json) {
+        result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    } else {
+        cJSON_AddItemToObject(root, "end", end_json);
+    }
+    cJSON_AddItemToObject(root, "notes", notes_array);
+
+    char *json = result == URSATZ_GUI_ANALYSIS_OK ? cJSON_PrintUnformatted(root) : NULL;
+    cJSON_Delete(root);
+    free(part_ids);
+    free(regions);
+    imported_notes_destroy(&notes);
+    if (result != URSATZ_GUI_ANALYSIS_OK) {
+        return result;
+    }
+    if (!json) {
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    *out_json = json;
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
