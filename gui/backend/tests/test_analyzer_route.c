@@ -435,6 +435,109 @@ static void check_score_drawn(const char *id, const char *label) {
   free(xml);
 }
 
+static double rational_value(const cJSON *pair) {
+  const cJSON *num = cJSON_GetArrayItem(pair, 0);
+  const cJSON *den = cJSON_GetArrayItem(pair, 1);
+  return (cJSON_IsNumber(num) && cJSON_IsNumber(den) && den->valuedouble > 0) ? num->valuedouble / den->valuedouble
+                                                                              : -1.0;
+}
+
+/* The playback route lists every note of the piece with its time, pitch and
+ * part, and the tempo. */
+static void check_playback(const char *id, const char *label) {
+  char path[256];
+  char what[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
+  char *detail_response = http_get(path);
+  cJSON *detail = cJSON_Parse(response_body(detail_response));
+  const cJSON *document = detail ? cJSON_GetObjectItemCaseSensitive(detail, "document") : NULL;
+  const cJSON *metadata = document ? cJSON_GetObjectItemCaseSensitive(document, "metadata") : NULL;
+  const cJSON *note_count = metadata ? cJSON_GetObjectItemCaseSensitive(metadata, "note_count") : NULL;
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
+  char *response = http_get(path);
+  snprintf(what, sizeof(what), "%s: playback is 200 OK", label);
+  check(response_has_status(response, 200), what);
+  snprintf(what, sizeof(what), "%s: playback is application/json", label);
+  check(response && strstr(response, "Content-Type: application/json\r\n") != NULL, what);
+
+  cJSON *playback = cJSON_Parse(response_body(response));
+  snprintf(what, sizeof(what), "%s: playback is valid JSON with ok:true", label);
+  check(playback && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(playback, "ok")), what);
+  if (playback) {
+    const cJSON *notes = cJSON_GetObjectItemCaseSensitive(playback, "notes");
+    const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(playback, "tempo");
+    const cJSON *parts = cJSON_GetObjectItemCaseSensitive(playback, "parts");
+    const cJSON *end = cJSON_GetObjectItemCaseSensitive(playback, "end");
+    const cJSON *tempo_source = cJSON_GetObjectItemCaseSensitive(playback, "tempo_source");
+
+    snprintf(what, sizeof(what), "%s: playback notes has the document's note_count entries", label);
+    check(cJSON_IsArray(notes) && cJSON_IsNumber(note_count) && cJSON_GetArraySize(notes) == (int)note_count->valuedouble,
+          what);
+
+    snprintf(what, sizeof(what), "%s: playback tempo_source is file, score or default", label);
+    check(cJSON_IsString(tempo_source) && (strcmp(tempo_source->valuestring, "file") == 0 ||
+                                           strcmp(tempo_source->valuestring, "score") == 0 ||
+                                           strcmp(tempo_source->valuestring, "default") == 0),
+          what);
+
+    const cJSON *first_tempo = cJSON_GetArrayItem(tempo, 0);
+    snprintf(what, sizeof(what), "%s: playback tempo starts at [0,1] with qpm above 0", label);
+    check(cJSON_IsArray(tempo) && cJSON_GetArraySize(tempo) > 0 && first_tempo &&
+              rational_value(cJSON_GetObjectItemCaseSensitive(first_tempo, "at")) == 0.0 &&
+              cJSON_GetObjectItemCaseSensitive(first_tempo, "qpm") &&
+              cJSON_GetObjectItemCaseSensitive(first_tempo, "qpm")->valuedouble > 0.0,
+          what);
+
+    bool tempo_ascending = cJSON_IsArray(tempo);
+    double previous_at = -1.0;
+    const cJSON *region = NULL;
+    cJSON_ArrayForEach(region, tempo) {
+      double at = rational_value(cJSON_GetObjectItemCaseSensitive(region, "at"));
+      tempo_ascending = tempo_ascending && at > previous_at;
+      previous_at = at;
+    }
+    snprintf(what, sizeof(what), "%s: playback tempo regions are strictly ascending", label);
+    check(tempo_ascending, what);
+
+    bool indexes_match = cJSON_IsArray(notes);
+    bool parts_listed = cJSON_IsArray(notes) && cJSON_IsArray(parts);
+    bool end_covers = cJSON_IsArray(notes) && cJSON_IsArray(end);
+    double end_value = cJSON_IsArray(end) ? rational_value(end) : -1.0;
+    int index = 0;
+    const cJSON *note = NULL;
+    cJSON_ArrayForEach(note, notes) {
+      const cJSON *i = cJSON_GetObjectItemCaseSensitive(note, "i");
+      const cJSON *part = cJSON_GetObjectItemCaseSensitive(note, "part");
+      const cJSON *pitch = cJSON_GetObjectItemCaseSensitive(note, "pitch");
+      double on = rational_value(cJSON_GetObjectItemCaseSensitive(note, "on"));
+      double len = rational_value(cJSON_GetObjectItemCaseSensitive(note, "len"));
+      indexes_match = indexes_match && cJSON_IsNumber(i) && (int)i->valuedouble == index;
+      indexes_match = indexes_match && cJSON_IsNumber(pitch) && pitch->valuedouble >= 0 && pitch->valuedouble <= 127;
+      end_covers = end_covers && on >= 0.0 && len > 0.0 && end_value + 1e-9 >= on + len;
+      bool listed = false;
+      const cJSON *entry = NULL;
+      cJSON_ArrayForEach(entry, parts) {
+        const cJSON *entry_index = cJSON_GetObjectItemCaseSensitive(entry, "index");
+        listed = listed || (cJSON_IsNumber(entry_index) && cJSON_IsNumber(part) &&
+                            entry_index->valuedouble == part->valuedouble);
+      }
+      parts_listed = parts_listed && listed;
+      index++;
+    }
+    snprintf(what, sizeof(what), "%s: playback notes[k].i == k and pitches are MIDI numbers", label);
+    check(indexes_match, what);
+    snprintf(what, sizeof(what), "%s: every playback note's part is listed in parts", label);
+    check(parts_listed, what);
+    snprintf(what, sizeof(what), "%s: playback end is at least every on + len", label);
+    check(end_covers, what);
+  }
+  cJSON_Delete(playback);
+  cJSON_Delete(detail);
+  free(response);
+  free(detail_response);
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -541,6 +644,7 @@ int main(void) {
     check(piece_id != NULL, what);
     if (piece_id) {
       check_score_drawn(piece_id, chord_pieces[i]);
+      check_playback(piece_id, chord_pieces[i]);
     }
     free(piece_id);
   }
@@ -549,6 +653,7 @@ int main(void) {
   check(chords_id != NULL, "chords_backup.musicxml uploads");
   if (chords_id) {
     check_score_drawn(chords_id, "chords_backup.musicxml");
+    check_playback(chords_id, "chords_backup.musicxml");
 
     /* A piece whose stored source is gone: the score routes answer 422 with
        a JSON message, not a 200 the viewer would hand to OSMD. */
@@ -568,8 +673,18 @@ int main(void) {
     missing_source = http_get(route);
     check(response_has_status(missing_source, 422), "musicxml/meta with a missing source file gives 422");
     free(missing_source);
+    snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/playback", chords_id);
+    missing_source = http_get(route);
+    check(response_has_status(missing_source, 422), "playback with a missing source file gives 422");
+    check(strstr(response_body(missing_source), "\"message\":\"could not import the stored source\"") != NULL,
+          "the missing-source playback error carries its message");
+    free(missing_source);
   }
   free(chords_id);
+
+  char *unknown_playback = http_get("/api/analyzer/pieces/no-such-piece/playback");
+  check(response_has_status(unknown_playback, 404), "playback for an unknown id gives 404");
+  free(unknown_playback);
 
   /* Bodies the Analyzer cannot read. */
   response = http_exchange("POST", "/api/analyzer/pieces", NULL, "just some text", 14);
