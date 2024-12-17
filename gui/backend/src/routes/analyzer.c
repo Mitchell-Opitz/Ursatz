@@ -574,6 +574,7 @@ static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
 
 static const char *kMusicXmlSuffix = "/musicxml";
 static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
+static const char *kPlaybackSuffix = "/playback";
 
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
@@ -633,6 +634,27 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
   return 200;
 }
 
+static int handle_get_piece_playback(struct mg_connection *conn, const char *id) {
+  char *json = NULL;
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_playback(kPiecesDir, id, &json);
+
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+    return send_json_status(conn, 422, "Unprocessable Entity",
+                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to build playback\"}");
+  }
+
+  send_json(conn, json);
+  free(json);
+  return 200;
+}
+
 /*
  * civetweb routes both the exact "/api/analyzer/pieces" URI and any
  * "/api/analyzer/pieces/<something>" URI to a single handler registered
@@ -654,6 +676,7 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
     size_t meta_suffix_len = strlen(kMusicXmlMetaSuffix);
     size_t xml_suffix_len = strlen(kMusicXmlSuffix);
     size_t reanalyze_suffix_len = strlen(kReanalyzeSuffix);
+    size_t playback_suffix_len = strlen(kPlaybackSuffix);
 
     if (strcmp(info->request_method, "POST") == 0 && rest_len > reanalyze_suffix_len &&
         strcmp(rest + rest_len - reanalyze_suffix_len, kReanalyzeSuffix) == 0) {
@@ -692,6 +715,19 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
       memcpy(id, rest, id_len);
       id[id_len] = '\0';
       return handle_get_piece_musicxml(conn, id);
+    }
+
+    if (strcmp(info->request_method, "GET") == 0 && rest_len > playback_suffix_len &&
+        strcmp(rest + rest_len - playback_suffix_len, kPlaybackSuffix) == 0) {
+      char id[256];
+      size_t id_len = rest_len - playback_suffix_len;
+      if (id_len >= sizeof(id)) {
+        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+        return 404;
+      }
+      memcpy(id, rest, id_len);
+      id[id_len] = '\0';
+      return handle_get_piece_playback(conn, id);
     }
 
     if (strcmp(info->request_method, "GET") == 0) {
