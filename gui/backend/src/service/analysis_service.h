@@ -136,4 +136,34 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
                                                                 char **out_xml, bool *out_meter_defaulted,
                                                                 MusicXmlExportResult *out_export_error);
 
+/*
+ * Imports the piece's stored source with the same Analyzer call the score
+ * export uses (so note i here is note i of the document's note_ids and of
+ * note_xml_ids) and writes what a browser needs to play it and follow it:
+ *
+ *   {"ok": true,
+ *    "tempo_source": "file" | "score" | "default",
+ *    "tempo": [{"at": [0, 1], "qpm": 120}],
+ *    "parts": [{"index": 0, "name": "", "program": 0}],
+ *    "end": [num, den],
+ *    "notes": [{"i": 0, "on": [0, 1], "len": [1, 8], "pitch": 60, "part": 0}]}
+ *
+ * Positions and lengths are whole notes from the piece start as [num, den]
+ * in lowest terms. pitch is the MIDI note number. part is the note's stream
+ * (MIDI track chunk or MusicXML part index); parts lists each distinct one,
+ * ascending, with the MusicXML part name ("" for MIDI) and program 0 (a
+ * NoteEvent carries no program). tempo is strictly ascending by "at", qpm
+ * in quarter notes per minute to 3 decimals: a MIDI file's set-tempo
+ * regions, or a MusicXML score's declared tempo and metronome marks, or 120
+ * when the source gives none. end is the largest on + len, [0, 1] without
+ * notes.
+ *
+ * On URSATZ_GUI_ANALYSIS_OK, *out_json is newly allocated and caller-owned
+ * (free() it). URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id
+ * exists; URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no
+ * longer imports; URSATZ_GUI_ANALYSIS_ERR_ALLOC if the JSON cannot be built.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *pieces_dir, const char *id,
+                                                                char **out_json);
+
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */

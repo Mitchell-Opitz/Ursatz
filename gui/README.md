@@ -237,6 +237,25 @@ not listed and cannot be opened, so upload those files again.
   `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no meter
   and the barlines come from a default 4/4 (the export then carries
   `ursatz:meter-defaulted`). Same errors as the export route.
+- `GET /api/analyzer/pieces/<id>/playback`: what a browser needs to play the
+  piece and follow it, from the same Analyzer import as the score export (so
+  `notes[i]` is note `i` of a claim's `note_ids` and of `note_xml_ids`):
+  `{"ok":true,"tempo_source","tempo":[{"at":[n,d],"qpm"}],"parts":[{"index","name","program"}],"end":[n,d],"notes":[{"i","on":[n,d],"len":[n,d],"pitch","part"}]}`.
+  Positions and lengths are whole notes from the start, as `[num, den]` in
+  lowest terms; `pitch` is the MIDI note number; `part` is the MIDI track chunk
+  or MusicXML part index. `parts` lists each distinct part ascending, with the
+  MusicXML part name (`""` for MIDI) and `program` 0 (a note carries no
+  program). `end` is the largest `on + len`.
+  - Tempo: `tempo` is strictly ascending by `at`, `qpm` in quarter notes per
+    minute to 3 decimals. A MIDI file gives its set-tempo regions and
+    `tempo_source` `"file"`. A MusicXML score with a declared tempo gives it at
+    0, then one region per metronome mark (`qpm = bpm * beat unit * 4`; a mark
+    at an earlier region's position replaces it), and `"score"`. A source with
+    no tempo gives `[{"at":[0,1],"qpm":120}]` and `"default"`.
+  - Errors: unknown id `404` `{"ok":false,"message":"piece not found"}`; a
+    stored source that no longer imports `422` with
+    `{"ok":false,"message":"could not import the stored source"}`; anything else
+    `500` with `{"ok":false,"message":"failed to build playback"}`.
 
 ### Corpus routes
 
