@@ -260,6 +260,52 @@
     });
   }
 
+  /* Sets row on each item: in start order, the lowest row whose last end is
+   * at or before the item's start. An item that fits none of maxRows rows
+   * gets row null and overflow true. Returns the rows used. */
+  function packRows(items, maxRows = 4) {
+    const ordered = [...items].sort((a, b) => a.start - b.start || a.end - b.end);
+    const lastEnds = [];
+    for (const item of ordered) {
+      let row = lastEnds.findIndex((end) => end <= item.start);
+      if (row === -1 && lastEnds.length < maxRows) {
+        row = lastEnds.length;
+        lastEnds.push(item.end);
+      } else if (row !== -1) {
+        lastEnds[row] = item.end;
+      }
+      if (row === -1) {
+        item.row = null;
+        item.overflow = true;
+      } else {
+        item.row = row;
+        item.overflow = false;
+      }
+    }
+    return { rows: lastEnds.length };
+  }
+
+  /* Map<noteIndex, layerId> over the enabled notes layers; a note shared by
+   * two layers belongs to the one earlier in catalog order. */
+  function noteColorOwners(enabledNotesLayers) {
+    const order = (layer) => {
+      const i = LAYERS.findIndex((known) => known.id === layer.id);
+      return i === -1 ? LAYERS.length : i;
+    };
+    const owners = new Map();
+    const layers = [...enabledNotesLayers].sort((a, b) => order(a) - order(b));
+    for (const layer of layers) {
+      for (const item of layer.items || []) {
+        for (const note of item.noteIds) {
+          if (!owners.has(note)) {
+            owners.set(note, layer.id);
+          }
+        }
+      }
+    }
+    return owners;
+  }
+
   const api = {
     LAYER_GROUPS,
     LAYERS,
@@ -269,6 +315,8 @@
     collectLayerItems,
     discoverOtherLayers,
     buildLayerCatalog,
+    packRows,
+    noteColorOwners,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
