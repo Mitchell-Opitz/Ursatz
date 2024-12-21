@@ -306,9 +306,94 @@
     return owners;
   }
 
+  const STORAGE_KEY = "ursatz.scoreLayers.v1";
+  const PRESETS = {
+    none: [],
+    harmony: ["keys", "key-changes", "chords", "cadences"],
+    structure: ["form", "themes", "phrases", "cadences"],
+  };
+
+  function readStoredIds(storage) {
+    try {
+      const parsed = JSON.parse(storage.getItem(STORAGE_KEY));
+      return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /* Which layers are on, remembered in storage (a localStorage-like object)
+   * as a JSON array of ids. Nothing is on by default (R-099). A throwing or
+   * missing storage behaves as empty. Ids missing from the current catalog
+   * are kept, since the next piece may have them, but are never on for it:
+   * setCatalog(ids) names the layers the current piece has. */
+  function createLayerState(storage) {
+    let ids = new Set(readStoredIds(storage));
+    let catalog = null;
+    const listeners = [];
+
+    function known(id) {
+      return catalog === null || catalog.has(id);
+    }
+
+    function enabled() {
+      return [...ids].filter(known);
+    }
+
+    function commit() {
+      try {
+        storage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+      } catch (e) {
+        /* not remembered, still on for this page */
+      }
+      const now = enabled();
+      listeners.forEach((fn) => fn(now));
+    }
+
+    function setOn(id, on) {
+      if (ids.has(id) === Boolean(on)) {
+        return;
+      }
+      if (on) {
+        ids.add(id);
+      } else {
+        ids.delete(id);
+      }
+      commit();
+    }
+
+    return {
+      enabled,
+      isOn: (id) => ids.has(id) && known(id),
+      toggle: (id) => setOn(id, !(ids.has(id) && known(id))),
+      setOn,
+      applyPreset(name) {
+        if (!Object.prototype.hasOwnProperty.call(PRESETS, name)) {
+          return;
+        }
+        ids = new Set(PRESETS[name]);
+        commit();
+      },
+      setCatalog(layerIds) {
+        catalog = layerIds ? new Set(layerIds) : null;
+      },
+      onChange(fn) {
+        listeners.push(fn);
+        return () => {
+          const i = listeners.indexOf(fn);
+          if (i !== -1) {
+            listeners.splice(i, 1);
+          }
+        };
+      },
+    };
+  }
+
   const api = {
     LAYER_GROUPS,
     LAYERS,
+    PRESETS,
+    STORAGE_KEY,
     abbreviateCadence,
     rat,
     ratCompare,
@@ -317,6 +402,7 @@
     buildLayerCatalog,
     packRows,
     noteColorOwners,
+    createLayerState,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
