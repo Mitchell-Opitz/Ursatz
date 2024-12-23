@@ -143,6 +143,99 @@ check(
   "items without a span are skipped",
 );
 
+/* Packing */
+const spans = (list) => list.map(([start, end]) => ({ start, end }));
+const nested = spans([[0, 8], [1, 3], [3, 5], [2, 2.5]]);
+check(ScoreLayers.packRows(nested).rows === 3, "nested spans use three rows");
+check(nested.map((i) => i.row).join() === "0,1,1,2", "a touching item reuses the row whose end equals its start");
+const sequential = spans([[0, 1], [1, 2], [2, 3]]);
+check(ScoreLayers.packRows(sequential).rows === 1 && sequential.every((i) => i.row === 0), "back-to-back spans share one row");
+const crowd = spans([[0, 10], [1, 10], [2, 10], [3, 10], [4, 10], [10, 12]]);
+const crowdResult = ScoreLayers.packRows(crowd);
+check(crowdResult.rows === 4, "rows stop at four");
+check(crowd[4].row === null && crowd[4].overflow === true, "a fifth overlapping item overflows");
+check(crowd[5].row === 0 && crowd[5].overflow === false, "a later item fits again");
+const two = spans([[0, 4], [1, 4], [2, 4]]);
+ScoreLayers.packRows(two, 2);
+check(two[2].overflow === true && two[2].row === null, "maxRows is honored");
+check(ScoreLayers.packRows([]).rows === 0, "no items use no rows");
+
+/* Note owners */
+const notesLayer = (id, ids) => ({ id, items: [{ noteIds: ids }] });
+const owners = ScoreLayers.noteColorOwners([
+  notesLayer("melody", [1, 2, 3]),
+  notesLayer("motives", [2, 3, 4]),
+  notesLayer("non-chord-tones", [3, 5]),
+]);
+check(owners.get(3) === "non-chord-tones", "non-chord tones win over motives and melody");
+check(owners.get(2) === "motives" && owners.get(4) === "motives", "motives win over melody");
+check(owners.get(1) === "melody" && owners.get(5) === "non-chord-tones", "unshared notes keep their layer");
+check(owners.size === 5, "one owner per note");
+
+/* Layer state */
+function fakeStorage(initial) {
+  const data = { ...initial };
+  return {
+    data,
+    getItem: (k) => (k in data ? data[k] : null),
+    setItem: (k, v) => {
+      data[k] = String(v);
+    },
+  };
+}
+const store = fakeStorage();
+const state = ScoreLayers.createLayerState(store);
+check(state.enabled().length === 0, "nothing is on by default");
+let changes = 0;
+const stop = state.onChange(() => changes++);
+state.toggle("keys");
+check(state.isOn("keys") && changes === 1, "toggle turns a layer on and reports it");
+state.setOn("keys", true);
+check(changes === 1, "setting an on layer on again reports nothing");
+state.setOn("chords", true);
+check(JSON.parse(store.data[ScoreLayers.STORAGE_KEY]).join() === "keys,chords", "enabled ids are stored as a JSON array");
+const reloaded = ScoreLayers.createLayerState(store);
+check(reloaded.enabled().join() === "keys,chords", "a new state reads the stored ids back");
+state.toggle("keys");
+check(!state.isOn("keys"), "toggle turns a layer off");
+stop();
+state.toggle("keys");
+check(changes === 3, "an unsubscribed listener hears nothing");
+
+state.applyPreset("harmony");
+check(state.enabled().join() === "keys,key-changes,chords,cadences", "the harmony preset");
+state.applyPreset("structure");
+check(state.enabled().join() === "form,themes,phrases,cadences", "the structure preset");
+state.applyPreset("none");
+check(state.enabled().length === 0, "the none preset turns everything off");
+
+const kept = ScoreLayers.createLayerState(fakeStorage({ [ScoreLayers.STORAGE_KEY]: '["keys","other:cadence_rhymes"]' }));
+kept.setCatalog(["keys", "chords"]);
+check(kept.enabled().join() === "keys" && !kept.isOn("other:cadence_rhymes"), "an id missing from the catalog is not on");
+kept.setOn("chords", true);
+kept.setCatalog(["keys", "chords", "other:cadence_rhymes"]);
+check(kept.isOn("other:cadence_rhymes") && kept.enabled().length === 3, "it is kept for a catalog that has it");
+
+const throwing = {
+  getItem: () => {
+    throw new Error("blocked");
+  },
+  setItem: () => {
+    throw new Error("blocked");
+  },
+};
+const guarded = ScoreLayers.createLayerState(throwing);
+check(guarded.enabled().length === 0, "a throwing storage reads as empty");
+guarded.toggle("keys");
+check(guarded.isOn("keys"), "a throwing storage still toggles");
+const missing = ScoreLayers.createLayerState(undefined);
+missing.toggle("chords");
+check(missing.isOn("chords"), "a missing storage behaves as empty");
+check(
+  ScoreLayers.createLayerState(fakeStorage({ [ScoreLayers.STORAGE_KEY]: "not json" })).enabled().length === 0,
+  "unreadable stored text reads as empty",
+);
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
