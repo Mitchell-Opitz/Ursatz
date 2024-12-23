@@ -236,6 +236,50 @@ check(
   "unreadable stored text reads as empty",
 );
 
+/* Palette: every layer color is readable on the white score paper and
+ * distinct from every other (CIE76 distance in Lab, D65 white). */
+function srgbToLinear(c) {
+  const v = c / 255;
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+function linearRgb(hex) {
+  return [1, 3, 5].map((i) => srgbToLinear(parseInt(hex.slice(i, i + 2), 16)));
+}
+function contrastOnWhite(hex) {
+  const [r, g, b] = linearRgb(hex);
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 1.05 / (luminance + 0.05);
+}
+function lab(hex) {
+  const [r, g, b] = linearRgb(hex);
+  const x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
+  const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+  const f = (t) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+}
+function cie76(a, b) {
+  const [la, lb] = [lab(a), lab(b)];
+  return Math.hypot(la[0] - lb[0], la[1] - lb[1], la[2] - lb[2]);
+}
+const palette = [...ScoreLayers.LAYERS.map((l) => l.color), extraCatalog.find((l) => l.group === "other").color];
+for (const color of palette) {
+  const ratio = contrastOnWhite(color);
+  check(ratio >= 4.0, `${color} has contrast ${ratio.toFixed(2)} against #ffffff`);
+}
+let closest = Infinity;
+let closestPair = "";
+for (let i = 0; i < palette.length; i++) {
+  for (let j = i + 1; j < palette.length; j++) {
+    const d = cie76(palette[i], palette[j]);
+    if (d < closest) {
+      closest = d;
+      closestPair = `${palette[i]} and ${palette[j]}`;
+    }
+  }
+}
+check(closest >= 15, `every pair of colors is at least 15 apart (closest ${closestPair}, ${closest.toFixed(1)})`);
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
