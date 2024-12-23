@@ -390,6 +390,48 @@ creates); the id is generated and the new Collection opens. Pieces are added
 by picking from a list of Library pieces not yet in the Collection, and a
 piece may belong to any number of Collections.
 
+### Score layers
+
+`frontend/public/score-layers.js` (global `ScoreLayers`, no DOM) is the data
+model of the claim layers drawn on the score. Each layer turns sections of
+the analysis document into items `{key, layerId, text, label, start, end, at,
+noteIds, style, claim, parent}`, with `start` and `end` in whole notes from
+the piece start. A layer has one of three kinds: `ribbon` (a bar over the
+claim's span in a lane above or below the staff), `mark` (a short label at
+one point in a lane) or `notes` (the claim's noteheads colored, no lane).
+
+| Layer | Group | Kind | Color | Items from |
+|---|---|---|---|---|
+| Keys | Harmony | ribbon above | `#1f6fd1` | `keys.regions` |
+| Key changes | Harmony | ribbon above | `#7b4fd8` | `tonicizations` (dashed), `modulations` (solid) |
+| Chords | Harmony | mark below | `#0b7a70` | `chords`, the Roman numeral at the span start |
+| Cadences | Harmony | mark above | `#d0342c` | `cadences`, abbreviated (PAC, IAC, HC, ...) at the arrival |
+| Non-chord tones | Harmony | notes | `#8a6a00` | `non_chord_tones` |
+| Prolongations | Harmony | ribbon above | `#3b8a2f` | `prolongations` |
+| Progressions | Harmony | ribbon above | `#b5530a` | every `progressions[].occurrences[]` |
+| Form sections | Structure | ribbon above | `#3f4b5e` | `form.sections` |
+| Themes | Structure | ribbon above | `#c2185b` | `themes` |
+| Phrases | Structure | ribbon above | `#006f99` | `phrases` and their `subphrases` (thin) |
+| Motives | Structure | notes | `#a2369a` | every `motives[].occurrences[]` |
+| Schemas | Structure | ribbon above | `#7a5a3a` | `schemas` |
+| Texture | Texture and melody | ribbon above | `#5f6b00` | `texture` |
+| Melody | Texture and melody | notes | `#2c3fa8` | `melody` |
+
+Any other top-level section holding claims (objects with `span` or
+`location`), directly or in arrays inside an object, becomes an Other layer
+(`other:<section>`, gray `#6b7280` ribbon above), so a new Analyzer section
+shows up without a GUI change. `schema_version`, `metadata`, `meter`,
+`notes`, `chord_vocabulary`, `harmonic_rhythm`, `outer_voices`, `markings`,
+`voice_leading` and `rhythm` are never layers. Overlapping ribbons are packed
+into at most four rows; the rest are flagged as overflow. When two notes
+layers share a note, the one higher in the table colors it.
+
+Which layers are on is remembered in `localStorage` under
+`ursatz.scoreLayers.v1` as a JSON array of layer ids. Nothing is on by
+default; the presets are Harmony (keys, key changes, chords, cadences) and
+Structure (form, themes, phrases, cadences). Ids a piece lacks are kept for
+the next piece.
+
 ## Building
 
 ```
