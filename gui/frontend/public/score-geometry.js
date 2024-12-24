@@ -194,12 +194,25 @@
     return points[points.length - 1].t;
   }
 
+  // OSMD time = Ursatz position + offset. The offset absorbs pickup measure
+  // numbering (R-101); it is the median over the first 50 matched notes.
+  function calibrateOffset(pairs) {
+    const used = pairs.slice(0, 50);
+    if (used.length === 0) return { offset: 0, mismatches: 0 };
+    const deltas = used.map((p) => p.osmd - p.ursatz).sort((a, b) => a - b);
+    const mid = deltas.length >> 1;
+    const offset = deltas.length % 2 ? deltas[mid] : (deltas[mid - 1] + deltas[mid]) / 2;
+    const mismatches = used.filter((p) => Math.abs(p.osmd - p.ursatz - offset) > 1e-6).length;
+    return { offset, mismatches };
+  }
+
   const api = {
     extractLayout,
     osmdNoteTime,
     xAt,
     tAt,
     spanSegments,
+    calibrateOffset,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
