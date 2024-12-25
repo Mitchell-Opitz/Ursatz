@@ -83,9 +83,123 @@
     return graphicalNote.sourceNote.getAbsoluteTimestamp().RealValue;
   }
 
+  // Piecewise-linear points of one measure: (time, x), ascending in both.
+  function measurePoints(measure) {
+    const entries = measure.entries || [];
+    const points = [{ t: measure.start, x: entries.length ? entries[0].x : measure.x }];
+    for (const entry of entries) {
+      if (entry.t > measure.start + T_EPSILON && entry.t < measure.end - T_EPSILON) {
+        points.push({ t: entry.t, x: entry.x });
+      }
+    }
+    points.push({ t: measure.end, x: measure.x + measure.width });
+    return points;
+  }
+
+  function interpolateX(measure, t) {
+    const points = measurePoints(measure);
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1];
+      const b = points[i];
+      if (t <= b.t) {
+        if (b.t - a.t < T_EPSILON) return b.x;
+        return a.x + ((t - a.t) / (b.t - a.t)) * (b.x - a.x);
+      }
+    }
+    return points[points.length - 1].x;
+  }
+
+  function flatMeasures(layout) {
+    const flat = [];
+    layout.systems.forEach((system, si) => {
+      system.measures.forEach((measure) => flat.push({ si, measure }));
+    });
+    return flat;
+  }
+
+  // The place of OSMD time t. With `endSide`, a time on a measure boundary
+  // belongs to the measure that ends there (an exclusive span end).
+  function locate(layout, t, endSide) {
+    const flat = flatMeasures(layout);
+    if (flat.length === 0) return { si: 0, x: 0 };
+    const first = flat[0];
+    if (t < first.measure.start || (endSide && t <= first.measure.start)) {
+      return { si: first.si, x: layout.systems[first.si].measures[0].x };
+    }
+    for (const { si, measure } of flat) {
+      const inside = endSide
+        ? t > measure.start && t <= measure.end
+        : t >= measure.start && t < measure.end;
+      if (inside) return { si, x: interpolateX(measure, t) };
+    }
+    const last = flat[flat.length - 1];
+    if (!endSide && t === last.measure.end) {
+      return { si: last.si, x: last.measure.x + last.measure.width };
+    }
+    for (const { si, measure } of flat) {
+      if (t < measure.start) return { si, x: measure.x };
+    }
+    return { si: last.si, x: layout.systems[last.si].right };
+  }
+
+  // {system, x} for an OSMD time t.
+  function xAt(layout, t) {
+    const place = locate(layout, t, false);
+    return { system: layout.systems[place.si].index, x: place.x };
+  }
+
+  // One segment per system the span touches. A segment that continues on the
+  // next system is open at that end.
+  function spanSegments(layout, t1, t2) {
+    const a = locate(layout, t1, false);
+    const b = t2 > t1 ? locate(layout, t2, true) : a;
+    const segments = [];
+    for (let si = a.si; si <= b.si; si++) {
+      const system = layout.systems[si];
+      const openStart = si > a.si;
+      const openEnd = si < b.si;
+      segments.push({
+        system: system.index,
+        x1: openStart ? system.left : a.x,
+        x2: openEnd ? system.right : b.x,
+        openStart,
+        openEnd,
+      });
+    }
+    return segments;
+  }
+
+  // The inverse of xAt within one system: the OSMD time at pixel x.
+  function tAt(layout, systemIndex, x) {
+    const system = layout.systems.find((s) => s.index === systemIndex);
+    if (!system || system.measures.length === 0) return 0;
+    const measures = system.measures;
+    let measure = measures[measures.length - 1];
+    for (const m of measures) {
+      if (x < m.x + m.width) {
+        measure = m;
+        break;
+      }
+    }
+    const points = measurePoints(measure);
+    if (x <= points[0].x) return points[0].t;
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1];
+      const b = points[i];
+      if (x <= b.x) {
+        if (b.x - a.x < T_EPSILON) return b.t;
+        return a.t + ((x - a.x) / (b.x - a.x)) * (b.t - a.t);
+      }
+    }
+    return points[points.length - 1].t;
+  }
+
   const api = {
     extractLayout,
     osmdNoteTime,
+    xAt,
+    tAt,
+    spanSegments,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
