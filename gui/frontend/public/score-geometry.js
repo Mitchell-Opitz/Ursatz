@@ -206,6 +206,67 @@
     return { offset, mismatches };
   }
 
+  const ROW_HEIGHT = 18;
+  const LANE_GAP = 4;
+  const STAFF_PADDING = 8;
+  const SYSTEM_MARGIN = 16;
+  // Above-lanes from the staff upward, nearest first. Unlisted layers
+  // (other:* and any layer the Analyzer adds later) share the other:* slot.
+  const ABOVE_ORDER = [
+    "cadences", "other", "progressions", "prolongations", "key-changes",
+    "keys", "texture", "schemas", "phrases", "themes", "form",
+  ];
+  const BELOW_ORDER = ["chords"];
+
+  function laneRank(layerId, order) {
+    const i = order.indexOf(layerId);
+    if (i >= 0) return i;
+    const other = order.indexOf("other");
+    return other >= 0 ? other : order.length;
+  }
+
+  function stackLanes(lanes, order) {
+    const sorted = lanes
+      .map((lane, i) => ({ lane, i, rank: laneRank(lane.layerId, order) }))
+      .sort((a, b) => a.rank - b.rank || a.i - b.i);
+    let offset = STAFF_PADDING;
+    let height = 0;
+    const stacked = sorted.map(({ lane }) => {
+      const entry = { layerId: lane.layerId, offset, rows: lane.rows };
+      height = offset + lane.rows * ROW_HEIGHT;
+      offset = height + LANE_GAP;
+      return entry;
+    });
+    return { stacked, height };
+  }
+
+  // Stacks the enabled, non-empty lanes ({layerId, placement, rows}) against
+  // the staff. `offset` is the distance from the staff edge to the lane's
+  // nearest row edge.
+  function laneStack(lanes) {
+    const above = stackLanes(lanes.filter((l) => l.placement === "above"), ABOVE_ORDER);
+    const below = stackLanes(lanes.filter((l) => l.placement === "below"), BELOW_ORDER);
+    return {
+      above: above.stacked,
+      below: below.stacked,
+      aboveHeight: above.height,
+      belowHeight: below.height,
+    };
+  }
+
+  // OSMD spacing (in OSMD units) that leaves room for the lanes. Never below
+  // `defaults`, the EngravingRules values read before any change.
+  function systemSpacingUnits(stack, zoom, defaults) {
+    const px = 10 * zoom;
+    return {
+      minimumDistanceBetweenSystems: Math.max(
+        defaults.minimumDistanceBetweenSystems,
+        (stack.aboveHeight + stack.belowHeight + SYSTEM_MARGIN) / px
+      ),
+      pageTopMargin: Math.max(defaults.pageTopMargin, (stack.aboveHeight + STAFF_PADDING) / px),
+    };
+  }
+
   const api = {
     extractLayout,
     osmdNoteTime,
@@ -213,6 +274,9 @@
     tAt,
     spanSegments,
     calibrateOffset,
+    laneStack,
+    systemSpacingUnits,
+    ROW_HEIGHT,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
