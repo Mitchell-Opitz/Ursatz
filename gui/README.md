@@ -432,6 +432,32 @@ default; the presets are Harmony (keys, key changes, chords, cadences) and
 Structure (form, themes, phrases, cadences). Ids a piece lacks are kept for
 the next piece.
 
+### Score geometry
+
+`frontend/public/score-geometry.js` (global `ScoreGeometry`) turns positions
+into places on the rendered score. `extractLayout(osmd)` reads OSMD once into
+a plain layout, in CSS pixels from the OSMD SVG's top-left:
+`{unit, systems: [{index, top, bottom, left, right, measures: [{number, start,
+end, x, width, entries: [{t, x}]}]}]}`. Every other function takes that
+object, so tests use hand-built layouts. Times in a layout are OSMD absolute
+timestamps in whole notes.
+
+- `xAt(layout, t)` gives `{system, x}`; inside a measure x is interpolated
+  between the staff entries. `tAt(layout, system, x)` is its inverse.
+- `spanSegments(layout, t1, t2)` gives one segment per system a span
+  touches; a segment that continues on the next system is open at that end.
+- `calibrateOffset(pairs)` returns the timeline offset, the median of
+  `osmd - ursatz` over the first 50 matched notes, plus the number of pairs
+  that disagree. OSMD time is the Analyzer position plus the offset, which
+  absorbs pickup measure numbering.
+- `laneStack(lanes)` stacks lanes from the staff outward, 18 px per row, 4 px
+  between lanes and 8 px before the first. Above the staff, nearest first:
+  cadences, Other layers, progressions, prolongations, key changes, keys,
+  texture, schemas, phrases, themes, form sections. Chords go below.
+  `systemSpacingUnits` converts the stack heights into OSMD
+  `MinimumDistanceBetweenSystems` and `PageTopMargin`, never below the
+  defaults.
+
 ## Building
 
 ```
