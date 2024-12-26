@@ -41,20 +41,34 @@ LaneSpanId plan_lane_span_rank(const PiecePlan *plan, LaneSpanId id) {
     return rank;
 }
 
+static void remove_entry(PiecePlan *plan, LaneSpan *entry) {
+    if (is_note_lane(entry->lane)) {
+        free((void *)entry->payload.notes.notes);
+    }
+    constraint_list_free(&entry->constraints);
+    memset(&entry->payload, 0, sizeof(entry->payload));
+    entry->removed = true;
+    plan->removed_lane_span_count++;
+}
+
 PlanResult plan_lane_span_remove_owned(PiecePlan *plan, NodeId owner) {
     for (size_t i = 0; plan && i < plan->lane_span_count; i++) {
-        LaneSpan *entry = &plan->lane_spans[i];
-        if (entry->removed || entry->owner != owner) {
-            continue;
+        if (!plan->lane_spans[i].removed && plan->lane_spans[i].owner == owner) {
+            remove_entry(plan, &plan->lane_spans[i]);
         }
-        if (is_note_lane(entry->lane)) {
-            free((void *)entry->payload.notes.notes);
-        }
-        constraint_list_free(&entry->constraints);
-        memset(&entry->payload, 0, sizeof(entry->payload));
-        entry->removed = true;
-        plan->removed_lane_span_count++;
     }
+    return PLAN_OK;
+}
+
+PlanResult plan_lane_span_remove(PiecePlan *plan, LaneSpanId id) {
+    LaneSpan *entry = plan_lane_span_at(plan, id);
+    if (!entry) {
+        return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
+    }
+    if (entry->state == PLAN_STATE_GIVEN) {
+        return PLAN_ERR_GIVEN_LOCKED;
+    }
+    remove_entry(plan, entry);
     return PLAN_OK;
 }
 

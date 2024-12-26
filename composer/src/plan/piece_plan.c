@@ -348,12 +348,77 @@ static void free_node(PlanNode *node) {
     node->child_capacity = 0;
 }
 
+/* Takes the node out of its parent's children. */
+static void detach_child(PiecePlan *plan, NodeId id) {
+    PlanNode *parent = plan_node_at(plan, plan->nodes[id - 1].parent);
+    for (size_t i = 0; parent && i < parent->child_count; i++) {
+        if (parent->children[i] == id) {
+            memmove(&parent->children[i], &parent->children[i + 1], (parent->child_count - i - 1) * sizeof(NodeId));
+            parent->child_count--;
+            return;
+        }
+    }
+}
+
+/* Removes the nodes of set, which holds whole subtrees, and what goes with them; nothing is changed on a refusal. */
+static PlanResult remove_nodes(PiecePlan *plan, const NodeSet *set) {
+    /* Nothing is changed until every part of the removal is known to be allowed. */
+    PlanResult result = PLAN_OK;
+    for (size_t i = 0; result == PLAN_OK && i < set->count; i++) {
+        if (plan->nodes[set->ids[i] - 1].state == PLAN_STATE_GIVEN) {
+            result = PLAN_ERR_GIVEN_LOCKED;
+        }
+    }
+    for (size_t i = 0; result == PLAN_OK && i < plan->lane_span_count; i++) {
+        LaneSpan *entry = &plan->lane_spans[i];
+        if (entry->removed || entry->state != PLAN_STATE_GIVEN) {
+            continue;
+        }
+        if (set_has(set, entry->owner) || constraints_naming(&entry->constraints, set, false) > 0) {
+            result = PLAN_ERR_GIVEN_LOCKED;
+        }
+    }
+    for (size_t i = 0; result == PLAN_OK && i < plan->node_count; i++) {
+        PlanNode *node = &plan->nodes[i];
+        if (!node->removed && !set_has(set, (NodeId)(i + 1)) && node->state == PLAN_STATE_GIVEN &&
+            constraints_naming(&node->constraints, set, false) > 0) {
+            result = PLAN_ERR_GIVEN_LOCKED;
+        }
+    }
+    if (result != PLAN_OK) {
+        return result;
+    }
+
+    for (size_t i = 0; i < set->count; i++) {
+        PlanNode *node = &plan->nodes[set->ids[i] - 1];
+        if (!set_has(set, node->parent)) {
+            detach_child(plan, set->ids[i]);
+        }
+    }
+    for (size_t i = 0; i < set->count; i++) {
+        plan_lane_span_remove_owned(plan, set->ids[i]);
+        free_node(&plan->nodes[set->ids[i] - 1]);
+        plan->nodes[set->ids[i] - 1].removed = true;
+        plan->removed_node_count++;
+    }
+    for (size_t i = 0; i < plan->node_count; i++) {
+        if (!plan->nodes[i].removed) {
+            constraints_naming(&plan->nodes[i].constraints, set, true);
+        }
+    }
+    for (size_t i = 0; i < plan->lane_span_count; i++) {
+        if (!plan->lane_spans[i].removed) {
+            constraints_naming(&plan->lane_spans[i].constraints, set, true);
+        }
+    }
+    return PLAN_OK;
+}
+
 PlanResult plan_remove_subtree(PiecePlan *plan, NodeId id) {
     if (!plan) {
         return PLAN_ERR_NULL;
     }
-    PlanNode *target = plan_node_at(plan, id);
-    if (!target) {
+    if (!plan_node_at(plan, id)) {
         return PLAN_ERR_NOT_FOUND;
     }
     NodeSet set = {NULL, 0};
@@ -362,56 +427,23 @@ PlanResult plan_remove_subtree(PiecePlan *plan, NodeId id) {
         return PLAN_ERR_ALLOC;
     }
     collect_descendants(plan, id, &set);
-
-    /* Nothing is changed until every part of the removal is known to be allowed. */
-    PlanResult result = PLAN_OK;
-    for (size_t i = 0; result == PLAN_OK && i < set.count; i++) {
-        if (plan->nodes[set.ids[i] - 1].state == PLAN_STATE_GIVEN) {
-            result = PLAN_ERR_GIVEN_LOCKED;
-        }
-    }
-    for (size_t i = 0; result == PLAN_OK && i < plan->lane_span_count; i++) {
-        LaneSpan *entry = &plan->lane_spans[i];
-        if (entry->removed) {
-            continue;
-        }
-        bool owned = set_has(&set, entry->owner);
-        if (owned && entry->state == PLAN_STATE_GIVEN) {
-            result = PLAN_ERR_GIVEN_LOCKED;
-        } else if (!owned && entry->state == PLAN_STATE_GIVEN &&
-                   constraints_naming(&entry->constraints, &set, false) > 0) {
-            result = PLAN_ERR_GIVEN_LOCKED;
-        }
-    }
-    for (size_t i = 0; result == PLAN_OK && i < plan->node_count; i++) {
-        PlanNode *node = &plan->nodes[i];
-        if (!node->removed && !set_has(&set, (NodeId)(i + 1)) && node->state == PLAN_STATE_GIVEN &&
-            constraints_naming(&node->constraints, &set, false) > 0) {
-            result = PLAN_ERR_GIVEN_LOCKED;
-        }
-    }
-    if (result != PLAN_OK) {
-        free(set.ids);
-        return result;
-    }
-
-    for (size_t i = 0; i < set.count; i++) {
-        plan_lane_span_remove_owned(plan, set.ids[i]);
-        free_node(&plan->nodes[set.ids[i] - 1]);
-        plan->nodes[set.ids[i] - 1].removed = true;
-        plan->removed_node_count++;
-    }
-    for (size_t i = 0; i < plan->node_count; i++) {
-        if (!plan->nodes[i].removed) {
-            constraints_naming(&plan->nodes[i].constraints, &set, true);
-        }
-    }
-    for (size_t i = 0; i < plan->lane_span_count; i++) {
-        if (!plan->lane_spans[i].removed) {
-            constraints_naming(&plan->lane_spans[i].constraints, &set, true);
-        }
-    }
-    target->child_count = 0;
+    PlanResult result = remove_nodes(plan, &set);
     free(set.ids);
-    return PLAN_OK;
+    return result;
+}
+
+PlanResult plan_node_remove_leaf(PiecePlan *plan, NodeId id) {
+    if (!plan) {
+        return PLAN_ERR_NULL;
+    }
+    const PlanNode *node = plan_node_at(plan, id);
+    if (!node) {
+        return PLAN_ERR_NOT_FOUND;
+    }
+    if (node->parent == PLAN_NODE_NONE || node->child_count > 0) {
+        return PLAN_ERR_BAD_KIND;
+    }
+    NodeId only = id;
+    NodeSet set = {&only, 1};
+    return remove_nodes(plan, &set);
 }

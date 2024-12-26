@@ -58,6 +58,19 @@ void plan_lanes_free(PiecePlan *plan);
 /* Removes every lane span owner owns, whatever its state: the caller has checked that none is Given. */
 PlanResult plan_lane_span_remove_owned(PiecePlan *plan, NodeId owner);
 
+/*
+ * Removes one lane span: PLAN_ERR_GIVEN_LOCKED for a Given one, PLAN_ERR_NOT_FOUND for an unknown id. What other
+ * spans or nodes name it is not touched (nothing names a lane span).
+ */
+PlanResult plan_lane_span_remove(PiecePlan *plan, LaneSpanId id);
+
+/*
+ * Removes one node that has no children, with the lane spans it owns and the constraints that name it, as
+ * plan_remove_subtree does for a subtree. PLAN_ERR_BAD_KIND for the root or a node with children,
+ * PLAN_ERR_GIVEN_LOCKED when it or anything removed with it is Given, or a Given holder names it.
+ */
+PlanResult plan_node_remove_leaf(PiecePlan *plan, NodeId id);
+
 /* True when payload is a legal payload for lane over span. */
 bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload);
 
