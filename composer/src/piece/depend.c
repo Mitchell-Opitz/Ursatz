@@ -207,6 +207,16 @@ static void span_dependents(DependentList *list, const PiecePlan *plan, LaneSpan
     }
 }
 
+/* Nodes before lane spans, each by id. */
+static int by_kind_then_id(const void *a, const void *b) {
+    const FillTarget *x = a;
+    const FillTarget *y = b;
+    if (x->kind != y->kind) {
+        return x->kind == FILL_TARGET_NODE ? -1 : 1;
+    }
+    return (x->id > y->id) - (x->id < y->id);
+}
+
 PlanResult plan_dependents(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count) {
     if (!plan || !out || !count) {
         return PLAN_ERR_NULL;
@@ -225,6 +235,9 @@ PlanResult plan_dependents(const PiecePlan *plan, FillTarget target, FillTarget 
     if (list.failed) {
         free(list.items);
         return PLAN_ERR_ALLOC;
+    }
+    if (list.count > 1) {
+        qsort(list.items, list.count, sizeof(FillTarget), by_kind_then_id);
     }
     *out = list.items;
     *count = list.count;
