@@ -192,33 +192,30 @@ static NodeId return_section_of(const PiecePlan *plan, FillTarget target) {
     return PLAN_NODE_NONE;
 }
 
-static RegenerateResult scope_build(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count) {
-    if (!plan || !out || !count) {
+static RegenerateResult scope_build(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+                                    FillTarget **out, size_t *count) {
+    if (!plan || !out || !count || !targets || target_count == 0) {
         return REGENERATE_ERR_NULL;
     }
     *out = NULL;
     *count = 0;
-    if (!fill_target_exists(plan, target)) {
-        return REGENERATE_ERR_NOT_FOUND;
-    }
-    if (fill_target_state(plan, target) == PLAN_STATE_GIVEN) {
-        return REGENERATE_ERR_LOCKED;
-    }
-    NodeId home = owner_node(plan, target);
-    if (target.kind == FILL_TARGET_NODE) {
-        PlanNodeKind kind = plan_node_kind(plan, home);
-        if (kind == PLAN_NODE_MOTIVE || in_material(plan, home)) {
+    for (size_t t = 0; t < target_count; t++) {
+        FillTarget target = targets[t];
+        if (!fill_target_exists(plan, target)) {
+            return REGENERATE_ERR_NOT_FOUND;
+        }
+        if (fill_target_state(plan, target) == PLAN_STATE_GIVEN) {
+            return REGENERATE_ERR_LOCKED;
+        }
+        NodeId home = owner_node(plan, target);
+        if (target.kind == FILL_TARGET_NODE) {
+            PlanNodeKind kind = plan_node_kind(plan, home);
+            if (kind == PLAN_NODE_MOTIVE || in_material(plan, home)) {
+                return REGENERATE_ERR_BAD_TARGET;
+            }
+        } else if (in_material(plan, home) || !span_is_reopened(plan, (LaneSpanId)target.id)) {
             return REGENERATE_ERR_BAD_TARGET;
         }
-    } else if (in_material(plan, home) || !span_is_reopened(plan, (LaneSpanId)target.id)) {
-        return REGENERATE_ERR_BAD_TARGET;
-    }
-
-    /* A target in a return reopens the whole of it. */
-    NodeId returned = return_section_of(plan, target);
-    if (returned != PLAN_NODE_NONE) {
-        target.kind = FILL_TARGET_NODE;
-        target.id = returned;
     }
 
     Scope scope;
@@ -226,7 +223,16 @@ static RegenerateResult scope_build(const PiecePlan *plan, FillTarget target, Fi
         scope_free(&scope);
         return REGENERATE_ERR_ALLOC;
     }
-    scope_add(&scope, target);
+    for (size_t t = 0; t < target_count; t++) {
+        FillTarget target = targets[t];
+        /* A target in a return reopens the whole of it. */
+        NodeId returned = return_section_of(plan, target);
+        if (returned != PLAN_NODE_NONE) {
+            target.kind = FILL_TARGET_NODE;
+            target.id = returned;
+        }
+        scope_add(&scope, target);
+    }
     while (scope.head < scope.tail) {
         FillTarget now = scope.queue[scope.head++];
         FillTarget *dependents = NULL;
@@ -283,8 +289,13 @@ static RegenerateResult scope_build(const PiecePlan *plan, FillTarget target, Fi
     return REGENERATE_OK;
 }
 
+RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+                                           FillTarget **out, size_t *count) {
+    return scope_build(plan, targets, target_count, out, count);
+}
+
 RegenerateResult plan_regenerate_scope(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count) {
-    return scope_build(plan, target, out, count);
+    return scope_build(plan, &target, 1, out, count);
 }
 
 /* ------------------------------------------------------------- reopening */
@@ -539,12 +550,17 @@ static PlanResult reopen_spans(PiecePlan *plan, const LaneSpanId *ids, size_t co
 /* ------------------------------------------------------------- regenerating */
 
 RegenerateResult plan_regenerate(PiecePlan *plan, FillTarget target, const ComposeConfig *config, ComposeOutcome *outcome) {
+    return plan_regenerate_all(plan, &target, 1, config, outcome);
+}
+
+RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets, size_t target_count,
+                                     const ComposeConfig *config, ComposeOutcome *outcome) {
     if (!plan || !config || !outcome) {
         return REGENERATE_ERR_NULL;
     }
     FillTarget *scope;
     size_t count;
-    RegenerateResult scoped = plan_regenerate_scope(plan, target, &scope, &count);
+    RegenerateResult scoped = plan_regenerate_scope_all(plan, targets, target_count, &scope, &count);
     if (scoped != REGENERATE_OK) {
         return scoped;
     }

@@ -33,9 +33,13 @@ PlanResult plan_lock(PiecePlan *plan, FillTarget target) {
     }
     size_t node_count = collect_subtree(plan, (NodeId)target.id, nodes, 0);
 
-    /* Nothing is changed unless every span is written. */
+    /* Nothing is changed unless every node and span is written. */
     PlanResult result = PLAN_OK;
     for (size_t n = 0; result == PLAN_OK && n < node_count; n++) {
+        if (plan_node_state(plan, nodes[n]) == PLAN_STATE_CONSTRAINED) {
+            result = PLAN_ERR_BAD_PAYLOAD;
+            break;
+        }
         size_t spans = plan_node_lane_spans(plan, nodes[n], NULL, 0);
         LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
         if (spans && !ids) {

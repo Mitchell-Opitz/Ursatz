@@ -12,8 +12,8 @@
  * alone. Given material is never changed by the Composer, and nothing leaves Given, so locking is permanent in the
  * plan; unlocking is reading an earlier plan file.
  *
- * Only what is written can be locked: a lane span still open (Constrained) has nothing to keep, and locking it would
- * leave a hole nothing may fill. The call is then refused with PLAN_ERR_BAD_PAYLOAD and nothing is changed.
+ * Only what is written can be locked: a node or lane span still open (Constrained) has nothing to keep, and locking it
+ * would leave a hole nothing may fill. The call is then refused with PLAN_ERR_BAD_PAYLOAD and nothing is changed.
  * PLAN_ERR_NOT_FOUND for a target that does not exist.
  */
 PlanResult plan_lock(PiecePlan *plan, FillTarget target);
@@ -84,5 +84,14 @@ const char *regenerate_result_name(RegenerateResult result);
 RegenerateResult plan_regenerate_scope(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count);
 
 RegenerateResult plan_regenerate(PiecePlan *plan, FillTarget target, const ComposeConfig *config, ComposeOutcome *outcome);
+
+/*
+ * The same for several targets at once (every harmony span of a section, say): what depends on any of them is reopened
+ * once and composed once. The errors are plan_regenerate's, for the first target that has one.
+ */
+RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+                                           FillTarget **out, size_t *count);
+RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets, size_t target_count,
+                                     const ComposeConfig *config, ComposeOutcome *outcome);
 
 #endif
