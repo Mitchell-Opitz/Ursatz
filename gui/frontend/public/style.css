@@ -376,26 +376,6 @@ body {
   margin-right: 6px;
 }
 
-.analysis-layout {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
-
-.analysis-sidebar {
-  width: 160px;
-  flex-shrink: 0;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-panel);
-}
-
-.analysis-main {
-  flex: 1;
-  min-width: 0;
-}
-
 .analysis-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -435,16 +415,6 @@ body {
 
 .claim-list li:hover {
   background: var(--bg-hover);
-}
-
-.analysis-actions {
-  margin-bottom: 12px;
-}
-
-.analysis-header {
-  color: var(--text-dim);
-  font-size: 12px;
-  margin-bottom: 12px;
 }
 
 .provenance-list {
@@ -500,12 +470,6 @@ body {
   border-radius: 4px;
   background: var(--bg-panel);
   font-size: 12px;
-}
-
-.analysis-score-caption {
-  color: var(--text-dim);
-  font-size: 12px;
-  margin-bottom: 12px;
 }
 
 .analysis-score-container {
@@ -1083,4 +1047,8 @@ body {
     animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.ws-loading {
+  padding: 24px;
 }

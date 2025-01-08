@@ -40,6 +40,7 @@ function setActiveTool(toolId) {
 }
 
 function selectTool(toolId) {
+  leaveWorkspace();
   setActiveTool(toolId);
   const selected = TOOLS.find((tool) => tool.id === toolId);
   if (selected && selected.render) {
@@ -585,88 +586,138 @@ function renderAnalysisTool() {
   document.getElementById("analysis-empty-container").appendChild(renderAnalysisBackLink());
 }
 
+/* The workspace mounted in the content area while a piece is open (see
+ * showAnalysisView), and the claim-highlight state tied to its score.
+ * currentScoreNoteIndex maps a MusicXML xml:id to the GraphicalNote(s) OSMD
+ * built for it, found by position and pitch (see score-notes.js), built the
+ * first time the score has rendered. pendingHighlightClaim is a claim chosen
+ * in Data mode; highlightPending is true until its notes are colored. */
+let analysisWorkspace = null;
+let currentScoreNoteIndex = null;
+let currentHighlightedNotes = [];
+let pendingHighlightClaim = null;
+let highlightPending = false;
+
+const HIGHLIGHT_NOTEHEAD_COLOR = "#e07a00";
+
+/* Closes the open workspace, if any, and gives the content area back its
+ * padding. */
+function leaveWorkspace() {
+  if (analysisWorkspace) {
+    analysisWorkspace.destroy();
+    analysisWorkspace = null;
+  }
+  currentScoreNoteIndex = null;
+  currentHighlightedNotes = [];
+  pendingHighlightClaim = null;
+  highlightPending = false;
+  getContentEl().classList.remove("content--workspace");
+}
+
 function showAnalysisView(id) {
   lastAnalysisPieceId = id;
   setActiveTool("analysis");
+  leaveWorkspace();
 
   const content = getContentEl();
-  content.innerHTML = `
-    <div id="analysis-back-container"></div>
-    <h1 class="view-title" id="analysis-title">Loading...</h1>
-    <div class="analysis-actions">
-      <button id="analysis-reanalyze-button" type="button">Re-run analysis</button>
-    </div>
-    <div class="analysis-layout">
-      <aside class="analysis-sidebar">
-        <div class="sidebar-label">Provenance</div>
-        <dl id="analysis-provenance" class="provenance-list"></dl>
-      </aside>
-      <div class="analysis-main">
-        <div id="analysis-status" class="piece-list-status">Loading piece ${id}...</div>
-        <div id="analysis-header" class="analysis-header" hidden></div>
-        <div id="analysis-tabs" class="analysis-tabs" hidden></div>
-        <div id="analysis-claims" class="analysis-claims"></div>
-        <div id="analysis-score" class="analysis-score" hidden></div>
-      </div>
-    </div>
-  `;
-
-  document.getElementById("analysis-back-container").appendChild(renderAnalysisBackLink());
-
-  const reanalyzeButton = document.getElementById("analysis-reanalyze-button");
-  reanalyzeButton.addEventListener("click", async () => {
-    const statusEl = document.getElementById("analysis-status");
-    reanalyzeButton.disabled = true;
-    statusEl.textContent = "Re-running analysis...";
-    statusEl.classList.remove("error");
-    const error = await reanalyzePiece(id);
-    if (error) {
-      reanalyzeButton.disabled = false;
-      statusEl.textContent = error;
-      statusEl.classList.add("error");
-      return;
-    }
-    showAnalysisView(id);
-  });
+  content.classList.add("content--workspace");
+  content.innerHTML = `<div id="analysis-status" class="piece-list-status ws-loading">Loading piece ${id}...</div>`;
 
   fetch(`/api/analyzer/pieces/${id}`)
     .then((res) => res.json())
     .then((data) => {
-      const statusEl = document.getElementById("analysis-status");
-      if (!data.ok) {
-        statusEl.textContent = data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found";
-        statusEl.classList.add("error");
+      if (lastAnalysisPieceId !== id || content.querySelector(".ws")) {
         return;
       }
-
-      statusEl.textContent = "";
-      document.getElementById("analysis-title").textContent = data.filename || data.id;
-      renderAnalysisHeader(data);
-      renderProvenancePanel(data.document);
-      renderAnalysisTabs(data);
+      if (!data.ok) {
+        showAnalysisProblem(data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found");
+        return;
+      }
+      mountAnalysisWorkspace(content, id, data);
     })
     .catch((err) => {
-      const statusEl = document.getElementById("analysis-status");
-      statusEl.textContent = `Could not reach backend: ${err}`;
-      statusEl.classList.add("error");
+      showAnalysisProblem(`Could not reach backend: ${err}`);
     });
 }
 
-/* Filename, format, analyzer version, Ursatz commit, note and measure
- * counts above the tabs (buildAnalysisHeader in analysis-tabs.js). */
-function renderAnalysisHeader(data) {
-  const header = buildAnalysisHeader(data);
-  const headerEl = document.getElementById("analysis-header");
-  const parts = [
-    header.filename,
+function showAnalysisProblem(message) {
+  const statusEl = document.getElementById("analysis-status");
+  if (!statusEl) {
+    return;
+  }
+  statusEl.textContent = message;
+  statusEl.classList.add("error");
+  const back = renderAnalysisBackLink();
+  back.classList.add("ws-loading");
+  statusEl.after(back);
+}
+
+/* Format, measure count and note count under the title
+ * (buildAnalysisHeader in analysis-tabs.js). */
+function analysisSubtitle(header) {
+  return [
     header.format,
-    header.analyzerVersion ? `analyzer ${header.analyzerVersion}` : "",
-    header.ursatzCommit ? `ursatz ${header.ursatzCommit}` : "",
-    `${header.noteCount} notes`,
     header.measureCount === null ? "" : `${header.measureCount} measures`,
-  ];
-  headerEl.textContent = parts.filter((part) => part !== "").join(" · ");
-  headerEl.hidden = false;
+    `${header.noteCount} notes`,
+  ]
+    .filter((part) => part !== "")
+    .join(" · ");
+}
+
+/* Mounts the score workspace for a piece. Score mode is the default; Data
+ * mode holds the Provenance list and the claim tabs. */
+function mountAnalysisWorkspace(content, id, data) {
+  const header = buildAnalysisHeader(data);
+  const workspace = ScoreWorkspace.mount(content, {
+    title: header.filename,
+    subtitle: analysisSubtitle(header),
+    musicxmlUrl: `/api/analyzer/pieces/${id}/musicxml`,
+    metaUrl: `/api/analyzer/pieces/${id}/musicxml/meta`,
+    document: data.document,
+    noteXmlIds: data.note_xml_ids,
+    onBack: () => selectTool("library"),
+    actions: [
+      {
+        label: "Re-run analysis",
+        onClick: async (event) => {
+          const button = event.currentTarget;
+          button.disabled = true;
+          workspace.setStatus("Re-running analysis...", false);
+          const error = await reanalyzePiece(id);
+          if (error) {
+            button.disabled = false;
+            workspace.setStatus(error, true);
+            return;
+          }
+          showAnalysisView(id);
+        },
+      },
+    ],
+  });
+  analysisWorkspace = workspace;
+
+  workspace.on("rendered", () => {
+    if (!currentScoreNoteIndex && workspace.osmd()) {
+      currentScoreNoteIndex = buildScoreNoteIndex(workspace.osmd(), workspace.xmlText());
+    }
+    if (highlightPending) {
+      applyPendingHighlight();
+    }
+  });
+
+  renderDataMode(workspace.dataEl(), data);
+}
+
+/* Data mode: the Provenance list, then the claim tabs. */
+function renderDataMode(dataEl, data) {
+  dataEl.innerHTML = `
+    <div class="sidebar-label">Provenance</div>
+    <dl id="analysis-provenance" class="provenance-list"></dl>
+    <div id="analysis-tabs" class="analysis-tabs"></div>
+    <div id="analysis-claims" class="analysis-claims"></div>
+  `;
+  renderProvenancePanel(data.document);
+  renderAnalysisTabs(data);
 }
 
 /* The metadata fields of the analysis document (buildProvenanceFields). */
@@ -686,35 +737,12 @@ function renderProvenancePanel(analysisDocument) {
 function renderAnalysisTabs(data) {
   const tabsEl = document.getElementById("analysis-tabs");
   const claimsEl = document.getElementById("analysis-claims");
-  const scoreEl = document.getElementById("analysis-score");
   const states = buildAllTabStates(data.document);
-
-  currentScoreOsmd = null;
-  currentScoreNoteIndex = null;
-  currentHighlightedNotes = [];
-  pendingHighlightClaim = null;
-
-  tabsEl.innerHTML = "";
-  tabsEl.hidden = false;
-  let scoreLoaded = false;
 
   function selectTab(tabId) {
     for (const button of tabsEl.querySelectorAll("button")) {
       button.classList.toggle("active", button.dataset.tabId === tabId);
     }
-
-    if (tabId === "score") {
-      claimsEl.hidden = true;
-      scoreEl.hidden = false;
-      if (!scoreLoaded) {
-        scoreLoaded = true;
-        renderScoreTab(scoreEl, data.id);
-      }
-      return;
-    }
-
-    claimsEl.hidden = false;
-    scoreEl.hidden = true;
     renderTabBlocks(claimsEl, states.find((state) => state.tab.id === tabId), data.note_xml_ids);
   }
 
@@ -732,30 +760,13 @@ function renderAnalysisTabs(data) {
     tabsEl.appendChild(button);
   }
 
-  const scoreButton = document.createElement("button");
-  scoreButton.type = "button";
-  scoreButton.dataset.tabId = "score";
-  scoreButton.textContent = "Score";
-  scoreButton.addEventListener("click", () => selectTab("score"));
-  tabsEl.appendChild(scoreButton);
-
   const firstFilled = states.find((state) => !state.empty);
-  selectTab(firstFilled ? firstFilled.tab.id : "score");
+  if (firstFilled) {
+    selectTab(firstFilled.tab.id);
+  } else {
+    claimsEl.textContent = "This analysis has no claims.";
+  }
 }
-
-/* Claim-selection -> score highlighting state, reset per piece load (see
- * renderAnalysisTabs). currentScoreNoteIndex maps a MusicXML xml:id to the
- * GraphicalNote(s) OSMD built for it, found by position and pitch (see
- * score-notes.js), built once when the Score tab loads (see
- * renderScoreTab). pendingHighlightClaim holds a claim selected before the
- * Score tab (and therefore the index) has loaded yet, so it can be applied
- * as soon as it does. */
-let currentScoreOsmd = null;
-let currentScoreNoteIndex = null;
-let currentHighlightedNotes = [];
-let pendingHighlightClaim = null;
-
-const HIGHLIGHT_NOTEHEAD_COLOR = "#e07a00";
 
 /* Builds the xml:id -> GraphicalNote[] index from the MusicXML text and
  * the rendered OSMD instance; warns once with the number of rendered notes
@@ -772,34 +783,23 @@ function buildScoreNoteIndex(osmd, xmlText) {
 
 const findNotesForHighlightId = ScoreNotes.findNotesForHighlightId;
 
-function clearScoreHighlight() {
+/* Colors the notes of pendingHighlightClaim in the open score and draws it
+ * again; a claim without notes (key, chord, period, sentence, form,
+ * thematic_return) just clears the previous highlight. Waits (highlightPending
+ * stays true) until the score has rendered and its note index exists. */
+function applyPendingHighlight() {
+  if (!analysisWorkspace || !analysisWorkspace.osmd() || !currentScoreNoteIndex) {
+    return;
+  }
+  highlightPending = false;
   for (const note of currentHighlightedNotes) {
     if (note.sourceNote) {
       note.sourceNote.NoteheadColor = undefined;
     }
   }
-  currentHighlightedNotes = [];
-  if (currentScoreOsmd) {
-    currentScoreOsmd.render();
-  }
-}
-
-/* Applies pendingHighlightClaim once the Score tab (and its note index)
- * is ready; a no-op claim (absent/empty highlighted_note_ids -- key/
- * chord/period/sentence/form/thematic_return claims) just clears any
- * previous highlight, matching scope item 4 (those claim types still
- * list normally, with no highlight action). */
-function applyPendingHighlight() {
-  if (!currentScoreOsmd || !currentScoreNoteIndex) {
-    return;
-  }
-  clearScoreHighlight();
   const claim = pendingHighlightClaim;
-  if (!claim || !claim.highlighted_note_ids || claim.highlighted_note_ids.length === 0) {
-    return;
-  }
   const notes = [];
-  for (const baseId of claim.highlighted_note_ids) {
+  for (const baseId of (claim && claim.highlighted_note_ids) || []) {
     notes.push(...findNotesForHighlightId(currentScoreNoteIndex, baseId));
   }
   for (const note of notes) {
@@ -808,52 +808,25 @@ function applyPendingHighlight() {
     }
   }
   currentHighlightedNotes = notes;
-  currentScoreOsmd.render();
+  analysisWorkspace.rerender();
 }
 
-/* Score tab: fetches the piece's MusicXML export and renders it with
- * OSMD (vendored under vendor/opensheetmusicdisplay/, loaded globally
- * as window.opensheetmusicdisplay -- see index.html). Fetches the
- * /musicxml/meta sibling separately for the meter-defaulted flag rather
- * than parsing it out of the XML itself -- OSMD already parses the
- * document to render it, a second client-side XML parse just for one
- * flag would be redundant. */
-function renderScoreTab(scoreEl, pieceId) {
-  scoreEl.innerHTML = `
-    <div id="analysis-score-caption" class="analysis-score-caption" hidden></div>
-    <div id="analysis-score-status" class="piece-list-status">Loading score...</div>
-    <div id="analysis-score-container" class="analysis-score-container"></div>
-  `;
-
-  const statusEl = document.getElementById("analysis-score-status");
-  const captionEl = document.getElementById("analysis-score-caption");
-  const containerEl = document.getElementById("analysis-score-container");
-
-  fetch(`/api/analyzer/pieces/${pieceId}/musicxml/meta`)
-    .then((res) => res.json())
-    .then((meta) => {
-      const caption = ScoreNotes.meterCaption(meta);
-      if (caption) {
-        captionEl.textContent = caption;
-        captionEl.hidden = false;
-      }
-    })
-    .catch(() => {});
-
-  drawMusicXmlScore(`/api/analyzer/pieces/${pieceId}/musicxml`, containerEl, statusEl).then((drawn) => {
-    if (!drawn) {
-      return;
-    }
-    currentScoreOsmd = drawn.osmd;
-    currentScoreNoteIndex = buildScoreNoteIndex(drawn.osmd, drawn.xmlText);
-    applyPendingHighlight();
-  });
+/* A Data mode claim row was chosen: show Score mode with that claim's notes
+ * colored (until the Inspector takes over this job). */
+function showClaimOnScore(xmlIds) {
+  if (!analysisWorkspace) {
+    return;
+  }
+  pendingHighlightClaim = { highlighted_note_ids: xmlIds };
+  highlightPending = true;
+  analysisWorkspace.setMode("score");
+  applyPendingHighlight();
 }
 
 /* One tab: for each document section, a heading, the section's JSON block
  * when it is an object, and its rows. A row is a claim: label, where it
- * is, and a toggle for its remaining fields. Selecting a row with
- * note_ids sets the pending highlight to those notes' xml:ids. */
+ * is, and a toggle for its remaining fields. Choosing a row shows its
+ * notes' xml:ids on the score (showClaimOnScore). */
 function renderTabBlocks(claimsEl, state, noteXmlIds) {
   claimsEl.innerHTML = "";
 
@@ -915,8 +888,7 @@ function buildClaimRows(rows, noteXmlIds) {
       json.hidden = !json.hidden;
     });
     li.addEventListener("click", () => {
-      pendingHighlightClaim = { highlighted_note_ids: mapNoteIdsToXmlIds(row.noteIds, noteXmlIds) };
-      applyPendingHighlight();
+      showClaimOnScore(mapNoteIdsToXmlIds(row.noteIds, noteXmlIds));
     });
     list.appendChild(li);
   }
