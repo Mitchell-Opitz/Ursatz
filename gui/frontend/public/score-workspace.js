@@ -12,7 +12,8 @@
  *   ws.on("rendered", (layout) => ...);
  *   ws.on("modechange", (mode) => ...);
  *
- * Needs OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreGeometry and
+ * Zoom, panel state and view mode are remembered (WorkspaceState). Needs
+ * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreGeometry and
  * WorkspaceState loaded first. */
 (function (root) {
   const RESIZE_DELAY_MS = 150;
@@ -28,9 +29,25 @@
     return node;
   }
 
+  function safeStorage() {
+    try {
+      return root.localStorage || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
   function mount(rootEl, options) {
     const opts = options || {};
-    const state = WorkspaceState.defaultUiState();
+    const storage = safeStorage();
+    const state = WorkspaceState.loadUiState(storage);
+    /* What is open right now. A floating panel starts closed and is not
+     * remembered; only docked panels write to the saved state. */
+    const open = { layers: true, inspector: true };
+    let panelsMode = WorkspaceState.panelMode(window.innerWidth);
+    let focusRestore = null;
+    let dialog = null;
+    let renderDeferred = false;
     const listeners = new Map();
     let osmd = null;
     let xmlText = "";
@@ -81,6 +98,22 @@
       modeGroup.appendChild(button);
     }
     right.appendChild(modeGroup);
+
+    function iconButton(text, label, shortcut, onClick) {
+      const button = el("button", "ws-icon-btn", text);
+      button.type = "button";
+      button.setAttribute("aria-label", label);
+      button.title = `${label} (${shortcut})`;
+      button.addEventListener("click", onClick);
+      return button;
+    }
+    const zoomOutButton = iconButton("\u2212", "Zoom out", "-", () => setZoom(WorkspaceState.nextZoom(state.zoom, -1)));
+    const zoomLabelButton = iconButton("", "Reset zoom to 100%", "0", () => setZoom(1));
+    zoomLabelButton.classList.add("ws-zoom-label");
+    const zoomInButton = iconButton("+", "Zoom in", "+", () => setZoom(WorkspaceState.nextZoom(state.zoom, 1)));
+    const layersButton = iconButton("Layers", "Layers panel", "L", () => togglePanel("layers"));
+    const inspectorButton = iconButton("Inspector", "Inspector panel", "I", () => togglePanel("inspector"));
+    right.append(zoomOutButton, zoomLabelButton, zoomInButton, layersButton, inspectorButton);
     for (const action of opts.actions || []) {
       const button = el("button", "ws-btn", action.label);
       button.type = "button";
@@ -109,6 +142,9 @@
     paper.append(paperStatus, osmdHost);
     canvas.append(caption, paper);
     main.appendChild(canvas);
+    canvas.addEventListener("click", () => {
+      closeFloatingPanels();
+    });
 
     const dataPane = el("div", "ws-data");
 
@@ -160,8 +196,12 @@
         savedScrollTop = canvas.scrollTop;
       }
       state.mode = mode;
+      savePrefs();
       syncMode();
       if (mode === "score") {
+        if (osmd && (renderDeferred || canvas.clientWidth !== lastWidth)) {
+          render();
+        }
         canvas.scrollTop = savedScrollTop;
       }
       emit("modechange", mode);
@@ -172,6 +212,217 @@
       for (const [id, button] of Object.entries(modeButtons)) {
         button.setAttribute("aria-pressed", String(id === state.mode));
       }
+      const inScore = state.mode === "score";
+      layersButton.disabled = !inScore;
+      inspectorButton.disabled = !inScore;
+      syncZoom();
+    }
+
+    function savePrefs() {
+      WorkspaceState.saveUiState(storage, {
+        layersOpen: state.layersOpen,
+        inspectorOpen: state.inspectorOpen,
+        zoom: state.zoom,
+        mode: state.mode,
+      });
+    }
+
+    function syncZoom() {
+      const inScore = state.mode === "score";
+      const steps = WorkspaceState.ZOOM_STEPS;
+      zoomLabelButton.textContent = WorkspaceState.zoomLabel(state.zoom);
+      zoomLabelButton.disabled = !inScore;
+      zoomOutButton.disabled = !inScore || state.zoom <= steps[0];
+      zoomInButton.disabled = !inScore || state.zoom >= steps[steps.length - 1];
+    }
+
+    function setZoom(zoom) {
+      if (zoom === state.zoom) {
+        return;
+      }
+      state.zoom = zoom;
+      savePrefs();
+      syncZoom();
+      if (osmd) {
+        render();
+      }
+    }
+
+    function isFloating(panel) {
+      return panelsMode === "overlay" || (panelsMode === "inspector-overlay" && panel === "inspector");
+    }
+
+    function syncPanels() {
+      ws.dataset.panels = panelsMode;
+      ws.dataset.layers = open.layers ? "open" : "closed";
+      ws.dataset.inspector = open.inspector ? "open" : "closed";
+      layersButton.setAttribute("aria-pressed", String(open.layers));
+      inspectorButton.setAttribute("aria-pressed", String(open.inspector));
+    }
+
+    function setPanel(panel, isOpen) {
+      open[panel] = isOpen;
+      if (!isFloating(panel)) {
+        state[panel === "layers" ? "layersOpen" : "inspectorOpen"] = isOpen;
+        savePrefs();
+      }
+      syncPanels();
+    }
+
+    function togglePanel(panel) {
+      setPanel(panel, !open[panel]);
+    }
+
+    /* Focus mode: both panels closed, then back as they were. */
+    function toggleFocus() {
+      if (open.layers || open.inspector) {
+        focusRestore = { layers: open.layers, inspector: open.inspector };
+        setPanel("layers", false);
+        setPanel("inspector", false);
+        return;
+      }
+      const back = focusRestore || { layers: !isFloating("layers"), inspector: !isFloating("inspector") };
+      focusRestore = null;
+      setPanel("layers", back.layers);
+      setPanel("inspector", back.inspector);
+    }
+
+    /* Closes the floating panels that are open; true when any was. */
+    function closeFloatingPanels() {
+      let closed = false;
+      for (const panel of ["layers", "inspector"]) {
+        if (isFloating(panel) && open[panel]) {
+          setPanel(panel, false);
+          closed = true;
+        }
+      }
+      return closed;
+    }
+
+    /* A new window width can change which panels float: those start closed,
+     * docked ones come back as saved. */
+    function applyPanelMode(initial) {
+      const next = WorkspaceState.panelMode(window.innerWidth);
+      if (!initial && next === panelsMode) {
+        return;
+      }
+      panelsMode = next;
+      open.layers = isFloating("layers") ? false : state.layersOpen;
+      open.inspector = isFloating("inspector") ? false : state.inspectorOpen;
+      syncPanels();
+    }
+
+    function openShortcuts() {
+      if (dialog) {
+        return;
+      }
+      const backdrop = el("div", "ws-backdrop");
+      const box = el("div", "ws-dialog");
+      box.setAttribute("role", "dialog");
+      box.setAttribute("aria-modal", "true");
+      box.setAttribute("aria-labelledby", "ws-shortcuts-title");
+      const heading = el("h2", "", "Keyboard shortcuts");
+      heading.id = "ws-shortcuts-title";
+      const list = el("dl", "ws-shortcut-list");
+      for (const row of WorkspaceState.SHORTCUTS) {
+        const term = el("dt");
+        [row.key, ...(row.alt || [])].forEach((key, i) => {
+          if (i > 0) {
+            term.appendChild(document.createTextNode(" "));
+          }
+          term.appendChild(el("kbd", "ws-kbd", key === "Escape" ? "Esc" : key));
+        });
+        list.append(term, el("dd", "", row.label));
+      }
+      const close = el("button", "ws-btn", "Close");
+      close.type = "button";
+      close.addEventListener("click", closeShortcuts);
+      box.append(heading, list, close);
+      backdrop.appendChild(box);
+      /* the Close button is the only control: Tab keeps focus on it */
+      box.addEventListener("keydown", (event) => {
+        if (event.key === "Tab") {
+          event.preventDefault();
+          close.focus();
+        }
+      });
+      backdrop.addEventListener("click", (event) => {
+        if (event.target === backdrop) {
+          closeShortcuts();
+        }
+      });
+      ws.appendChild(backdrop);
+      dialog = { backdrop, previous: document.activeElement };
+      close.focus();
+    }
+
+    function closeShortcuts() {
+      if (!dialog) {
+        return;
+      }
+      const { backdrop, previous } = dialog;
+      dialog = null;
+      backdrop.remove();
+      if (previous && typeof previous.focus === "function" && document.contains(previous)) {
+        previous.focus();
+      }
+    }
+
+    function onKeyDown(event) {
+      if (event.defaultPrevented) {
+        return;
+      }
+      const row = WorkspaceState.shortcutFor(event);
+      if (!row) {
+        return;
+      }
+      const inScore = state.mode === "score";
+      if (dialog && row.action !== "escape" && row.action !== "toggle-shortcuts") {
+        return;
+      }
+      switch (row.action) {
+        case "toggle-layers":
+          if (!inScore) return;
+          togglePanel("layers");
+          break;
+        case "toggle-inspector":
+          if (!inScore) return;
+          togglePanel("inspector");
+          break;
+        case "toggle-focus":
+          if (!inScore) return;
+          toggleFocus();
+          break;
+        case "zoom-in":
+          if (!inScore) return;
+          setZoom(WorkspaceState.nextZoom(state.zoom, 1));
+          break;
+        case "zoom-out":
+          if (!inScore) return;
+          setZoom(WorkspaceState.nextZoom(state.zoom, -1));
+          break;
+        case "zoom-reset":
+          if (!inScore) return;
+          setZoom(1);
+          break;
+        case "toggle-shortcuts":
+          if (dialog) {
+            closeShortcuts();
+          } else {
+            openShortcuts();
+          }
+          break;
+        case "escape":
+          if (dialog) {
+            closeShortcuts();
+          } else if (!closeFloatingPanels()) {
+            return;
+          }
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
     }
 
     /* The score's SVG top inside the scrolling canvas, in pixels. */
@@ -227,6 +478,12 @@
       if (!osmd || destroyed) {
         return;
       }
+      if (canvas.clientWidth === 0) {
+        /* hidden (Data mode): draw when the score is shown again */
+        renderDeferred = true;
+        return;
+      }
+      renderDeferred = false;
       const anchor = captureAnchor();
       osmd.zoom = state.zoom;
       osmd.render();
@@ -301,6 +558,9 @@
 
     function destroy() {
       destroyed = true;
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", onWindowResize);
+      closeShortcuts();
       clearTimeout(resizeTimer);
       resizeObserver.disconnect();
       listeners.clear();
@@ -309,6 +569,13 @@
       rootEl.innerHTML = "";
     }
 
+    function onWindowResize() {
+      applyPanelMode(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onWindowResize);
+
+    applyPanelMode(true);
     syncMode();
     loadScore();
 
