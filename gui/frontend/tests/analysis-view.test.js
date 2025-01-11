@@ -3,7 +3,8 @@
  * item of a tab's sections, disabled empty tabs, row labels and locations,
  * the header and provenance fields, and the mapping of a claim's note_ids to
  * xml:ids. Also checks that app.js no longer carries the claim actions that
- * have no backend, and the Library/Analysis navigation decisions.
+ * have no backend, that the view is the score workspace (no Score tab), and
+ * the Library/Analysis navigation decisions.
  *
  * Fixture: frontend/tests/fixtures/mozart545.analysis.json is the Analyzer
  * CLI's document (`ursatz-analyzer --json`, schema v9) for
@@ -181,6 +182,22 @@ check(!/Accept|Dispute/.test(appSource), "app.js has no Accept or Dispute button
 check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "app.js has no static analyzer list");
 check(appSource.includes('accept=".mid,.midi,.musicxml,.xml,.mxl"'), "the upload picker accepts MusicXML files");
 check(appSource.includes("/reanalyze"), "app.js calls the reanalyze route");
+
+/* The Analysis view is the score workspace: Score mode by default, Data mode
+ * keeps the tabs and the Provenance list, and the old Score tab is gone. */
+check(appSource.includes("ScoreWorkspace.mount("), "showAnalysisView mounts the score workspace");
+check(!/renderScoreTab|analysis-score\b|analysis-sidebar|analysis-layout/.test(appSource), "the old Score tab and sidebar markup are gone from app.js");
+check(!tabs.ANALYSIS_TABS.some((tab) => tab.id === "score"), "the claim tabs have no Score tab");
+check(
+  appSource.includes("renderProvenancePanel(data.document)") && appSource.includes('class="sidebar-label">Provenance'),
+  "Data mode lists the Provenance fields above the claim tabs",
+);
+check(appSource.includes("renderAnalysisTabs(data)"), "Data mode renders the claim tabs");
+check(appSource.includes("Re-run analysis") && appSource.includes("reanalyzePiece(id)"), "the toolbar offers Re-run analysis");
+check(appSource.includes("content--workspace") && appSource.includes("leaveWorkspace()"), "the content area is a workspace only while a piece is open");
+const indexSource = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
+const scriptOrder = ["score-notes.js", "workspace-state.js", "score-workspace.js", "app.js"].map((name) => indexSource.indexOf(`src="${name}"`));
+check(scriptOrder.every((at, i) => at >= 0 && (i === 0 || at > scriptOrder[i - 1])), "index.html loads workspace-state.js and score-workspace.js after score-notes.js and before app.js");
 
 /* Mirrors app.js's buildPieceRow onFilenameClick wiring -- Library rows
  * call showAnalysisView(piece.id) on filename click; Collections rows

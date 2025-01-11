@@ -1,4 +1,4 @@
-/* Confirms how the Score tab finds a claim's notes (score-notes.js): the
+/* Confirms how the score workspace finds a claim's notes (score-notes.js): the
  * MusicXML key builder on a two-part, two-voice fixture with a chord, a
  * tie across a barline, a <backup> and a <forward>; a fake OSMD graph (the
  * same shape OSMD 3.10.1 gives) maps every xml:id to its notes; barline
@@ -143,5 +143,20 @@ check(ScoreNotes.findNotesForHighlightId(fragIndex, "missing").length === 0, "an
 
 const tie = ScoreNotes.findNotesForHighlightId(ScoreNotes.buildNoteIndex(entries, rendered).index, "tie");
 check(tie.length === 2 && tie.includes(graph.tie_a) && tie.includes(graph.tie_b), "a tied note across a barline highlights both halves");
+
+/* A Data mode claim row shows its notes on the score through the workspace:
+ * it switches to Score mode, colors the notes and draws again once, and a
+ * highlight chosen before the first render waits for it. */
+const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
+check(
+  appSource.includes("showClaimOnScore(mapNoteIdsToXmlIds(row.noteIds, noteXmlIds))"),
+  "a claim row sends its notes' xml:ids to the score",
+);
+check(appSource.includes('analysisWorkspace.setMode("score")'), "choosing a claim row switches to Score mode");
+check(appSource.includes("analysisWorkspace.rerender()"), "the highlight is drawn through the workspace re-render");
+check(
+  /if \(highlightPending\) \{\s*applyPendingHighlight\(\);/.test(appSource) && /highlightPending = false;\s*for \(const note of currentHighlightedNotes\)/.test(appSource),
+  "a highlight chosen before the first render is applied once, and clears its pending flag before drawing again",
+);
 
 process.exit(failures === 0 ? 0 : 1);
