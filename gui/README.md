@@ -68,13 +68,61 @@ Analysis view.
 
 ### Analysis view
 
-Above the tabs: the filename, the format, the analyzer version, the first 7
-characters of the Ursatz commit, the note count and the measure count
-(`meter.measure_count`). A "Re-run analysis" button runs the Analyzer again
-on the stored source and reloads the view. The sidebar's Provenance panel
-lists the document's metadata (source file, analyzer version, Ursatz commit,
-document schema, input format, source type, meter, key signature, spelling,
-importer warnings).
+Opening a piece shows the score workspace (`frontend/public/score-workspace.js`,
+global `ScoreWorkspace`). `ScoreWorkspace.mount(rootEl, options)` takes a
+title, a subtitle, the score and meta URLs, the analysis document, the note
+`xml:id` list, the toolbar actions and a back callback, and knows nothing
+else about the Analyzer, so the Composer can mount it too. It returns
+`{destroy, osmd, layout, xmlText, rerender, on, mode, setMode, setStatus,
+dataEl}` and emits `rendered` (with the extracted layout, after every OSMD
+render) and `modechange`.
+
+The toolbar (48 px) holds, from the left, a "Library" link, the filename and a
+dim line with the format, measure count and note count; a transport slot in
+the middle (empty until playback); and on the right a Score | Data switch, zoom
+out, the zoom (click to reset to 100%), zoom in, the Layers and Inspector
+toggles and "Re-run analysis", which runs the Analyzer again on the stored
+source and reloads the view. Below it are three columns: the Layers rail
+(248 px), the score and the Inspector (360 px). Both panels are empty shells
+for now. A closed panel takes no width.
+
+| Window width | Panels |
+| --- | --- |
+| 1280 px and wider | Rail and Inspector beside the score |
+| 1024 to 1279 px | Rail beside the score, Inspector floats over its right side |
+| Below 1024 px | Both float |
+
+A floating panel starts closed, sits above the score with a shadow and
+closes on Escape or a click on the score. Only the score canvas, the rail and
+the Inspector scroll. The score is drawn on white paper with OSMD (no title or
+composer, part names on, no automatic resize). A `ResizeObserver` redraws it
+150 ms after the width stops changing, and every redraw keeps the measure at
+the top of the viewport at the top. The meter caption stays above the paper.
+
+Zoom runs 50%, 62.5%, 75%, 87.5%, 100%, 125%, 150%, 175%, 200%. Keys (ignored
+while typing in a field, or with Ctrl, Meta or Alt held; the `?` dialog lists
+them):
+
+| Key | Action |
+| --- | --- |
+| `L` | Layers panel |
+| `I` | Inspector panel |
+| `F` | Focus mode: both panels closed, then restored |
+| `+` or `=` | Zoom in |
+| `-` | Zoom out |
+| `0` | Zoom to 100% |
+| `?` | Shortcut list |
+| `Escape` | Close the shortcut list, else a floating panel |
+
+The zoom, the docked panels and the mode are remembered in `localStorage` under
+`ursatz.workspace.v1` (`{layersOpen, inspectorOpen, zoom, mode}`). The pure
+part (zoom steps, panel modes, shortcut table, saved state) is
+`frontend/public/workspace-state.js` (global `WorkspaceState`, no DOM).
+
+Data mode replaces the score with the Provenance list and the claim tabs
+below. Provenance lists the document's metadata (source file, analyzer
+version, Ursatz commit, document schema, input format, source type, meter,
+key signature, spelling, importer warnings).
 
 There is one tab per group of document sections, in this order:
 
@@ -96,8 +144,7 @@ There is one tab per group of document sections, in this order:
 | Notes | `notes` |
 
 A tab shows the number of rows it holds. A tab whose sections are all empty
-arrays or null is disabled and reads "(none)". A Score tab follows the
-others.
+arrays or null is disabled and reads "(none)".
 
 Each item of an array section is one row: its name (the item's `label`, else
 its `numeral`, `type` or `key`), where it is (`m<measure> b<beat>` for the
@@ -106,15 +153,15 @@ shows the item's remaining fields as formatted JSON. An object section
 (`keys`, `form`, `meter`, `harmonic_rhythm`, `outer_voices`, `markings`,
 `counterpoint_check`) is shown as one JSON block, and the arrays of claims
 inside it (the key regions, the form's sections and returns, the soprano and
-bass lines) are rows. Selecting a row with `note_ids` highlights those notes
-in the Score tab.
+bass lines) are rows. Choosing a row with `note_ids` switches to Score mode
+and colors those notes.
 
 The tab logic is in `frontend/public/analysis-tabs.js` (no DOM, loaded by
 `index.html` before `app.js` and by the frontend tests); `app.js` renders it.
 
-### Score tab
+### Score
 
-Fetches `GET /api/analyzer/pieces/<id>/musicxml` and renders it with
+Score mode fetches `GET /api/analyzer/pieces/<id>/musicxml` and renders it with
 [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/), vendored as a
 static UMD build under `frontend/public/vendor/opensheetmusicdisplay/` and
 loaded by a plain `<script>` tag (`frontend/` has no `package.json` or
@@ -122,12 +169,12 @@ bundler). A caption below the score ("This file declares no time signature;
 shown in 4/4") shows when `GET .../musicxml/meta` reports
 `meter_defaulted: true`, that is, when the source file gave no meter. When the
 response is not a 2xx XML document, `ScoreNotes.scoreResponseProblem` turns it
-into a message and the tab shows "Could not load score: <message>" instead of
+into a message and the paper shows "Could not load score: <message>" instead of
 handing the body to OSMD.
 
-Selecting a row colors its notes' noteheads (OSMD's `Note.NoteheadColor`). A
+Choosing a Data mode row colors its notes' noteheads (OSMD's `Note.NoteheadColor`). A
 row's `note_ids` are mapped to `<note xml:id>` values through the piece's
-`note_xml_ids`. OSMD does not keep `xml:id`, so the score tab finds each
+`note_xml_ids`. OSMD does not keep `xml:id`, so the score finds each
 note by its position and pitch (`frontend/public/score-notes.js`, no DOM,
 loaded by `index.html` before `app.js` and by the frontend tests):
 
