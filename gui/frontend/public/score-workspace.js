@@ -11,6 +11,7 @@
  *   });
  *   ws.on("rendered", (layout) => ...);
  *   ws.on("modechange", (mode) => ...);
+ *   ws.on("layerchange", (enabledIds) => ...);
  *
  * Zoom, panel state and view mode are remembered (WorkspaceState). Needs
  * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreGeometry and
@@ -49,6 +50,11 @@
     let dialog = null;
     let renderDeferred = false;
     const listeners = new Map();
+    /* The layers this piece offers and which are on (R-099): all off until
+     * the reader turns some on. */
+    const catalog = ScoreLayers.buildLayerCatalog(opts.document || {});
+    const layerState = ScoreLayers.createLayerState(storage);
+    layerState.setCatalog(catalog.map((layer) => layer.id));
     let osmd = null;
     let xmlText = "";
     let layout = null;
@@ -130,7 +136,8 @@
     const body = el("div", "ws-body");
     const rail = el("aside", "ws-panel ws-rail");
     rail.setAttribute("aria-label", "Layers");
-    rail.append(el("h2", "ws-panel-title", "Layers"), el("p", "ws-empty", "Layers appear here."));
+    const railBody = el("div", "ws-rail-body");
+    rail.append(el("h2", "ws-panel-title", "Layers"), railBody);
 
     const main = el("main", "ws-main");
     const canvas = el("div", "ws-canvas");
@@ -171,6 +178,64 @@
       listeners.get(name).add(fn);
       return () => listeners.get(name).delete(fn);
     }
+
+    /* The Layers rail: preset chips, then one switch per layer, grouped. A
+     * layer with nothing in this piece is shown disabled. */
+    const layerSwitches = new Map();
+
+    function buildRail() {
+      railBody.innerHTML = "";
+      layerSwitches.clear();
+      const presets = el("div", "ws-presets");
+      presets.setAttribute("role", "group");
+      presets.setAttribute("aria-label", "Layer presets");
+      for (const [name, label] of [["none", "None"], ["harmony", "Harmony"], ["structure", "Structure"]]) {
+        const chip = el("button", "ws-chip", label);
+        chip.type = "button";
+        chip.addEventListener("click", () => layerState.applyPreset(name));
+        presets.appendChild(chip);
+      }
+      railBody.appendChild(presets);
+      for (const group of ScoreLayers.LAYER_GROUPS) {
+        const layers = catalog.filter((layer) => layer.group === group.id);
+        if (layers.length === 0) {
+          continue;
+        }
+        const section = el("section", "ws-layer-group");
+        section.appendChild(el("h3", "ws-layer-group-title", group.label));
+        for (const layer of layers) {
+          const row = el("label", "ws-layer-row");
+          row.title = layer.empty ? "None found in this piece" : layer.description;
+          const input = el("input");
+          input.type = "checkbox";
+          input.setAttribute("role", "switch");
+          input.disabled = layer.empty;
+          input.addEventListener("change", () => layerState.setOn(layer.id, input.checked));
+          const swatch = el("span", "ws-swatch");
+          swatch.style.background = layer.color;
+          row.append(input, swatch, el("span", "ws-layer-label", layer.label), el("span", "ws-layer-count", String(layer.count)));
+          if (layer.empty) {
+            row.classList.add("ws-layer-empty");
+          }
+          layerSwitches.set(layer.id, input);
+          section.appendChild(row);
+        }
+        railBody.appendChild(section);
+      }
+      syncRail();
+    }
+
+    function syncRail() {
+      for (const [id, input] of layerSwitches) {
+        input.checked = layerState.isOn(id);
+      }
+    }
+
+    layerState.onChange((enabled) => {
+      syncRail();
+      emit("layerchange", enabled);
+    });
+    buildRail();
 
     function setPaperStatus(text, isError) {
       paperStatus.textContent = text;
@@ -590,6 +655,7 @@
       setMode,
       setStatus,
       dataEl: () => dataPane,
+      layers: () => ({ catalog, state: layerState }),
     };
   }
 
