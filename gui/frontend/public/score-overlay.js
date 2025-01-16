@@ -1,6 +1,7 @@
 /* The claim layers drawn over the score (R-099, R-101): one SVG laid over
  * the OSMD SVG, redrawn from scratch on every change. Ribbons and marks sit
- * in lanes above each system; the lane heights come from ScoreGeometry.
+ * in lanes above each system and the chord numerals below it; the lane
+ * heights come from ScoreGeometry.
  *
  *   const overlay = ScoreOverlay.create(paperEl, osmdHostEl);
  *   overlay.draw(layout, offset, catalog, enabledIds);
@@ -20,6 +21,9 @@
   const THIN_HEIGHT = 6;
   const MARK_HEIGHT = 16;
   const MARK_PADDING = 10;
+  const CHORD_GAP = 4;
+  const TICK_WIDTH = 2;
+  const TICK_HEIGHT = 6;
   const INK = "#1f2937";
   const MONO = '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
 
@@ -114,6 +118,7 @@
     }
     const measureRibbon = measurer(`11px ${MONO}`);
     const measureMark = measurer(`bold 10px ${MONO}`);
+    const measureChord = measurer(`12px ${MONO}`);
 
     function clear() {
       svg.replaceChildren();
@@ -250,15 +255,56 @@
       out.appendChild(group);
     }
 
+    /* Roman numerals below each system, left to right. A numeral that would
+     * crowd the previous drawn one becomes a tick, so zooming in shows more. */
+    function drawChords(out, layout, offset, layer, lane) {
+      const bySystem = new Map();
+      for (const item of layer.items) {
+        const spot = ScoreGeometry.xAt(layout, item.at + offset);
+        if (!bySystem.has(spot.system)) {
+          bySystem.set(spot.system, []);
+        }
+        bySystem.get(spot.system).push({ item, x: spot.x });
+      }
+      for (const [systemIndex, entries] of bySystem) {
+        const system = layout.systems[systemIndex];
+        entries.sort((a, b) => a.x - b.x);
+        const widths = entries.map(({ item }) => measureChord(item.text));
+        const drawn = ScoreGeometry.chordLabelsToDraw(entries.map((e) => e.x), widths, CHORD_GAP);
+        const rowY = rowTop(system, lane, 0);
+        entries.forEach(({ item, x }, i) => {
+          const group = hitGroup(layer, item, ariaLabel(layer, item));
+          if (drawn[i]) {
+            group.appendChild(
+              svgEl("text", { x, y: rowY + 13, "font-size": 12, "font-family": MONO, fill: layer.color }, item.text),
+            );
+          } else {
+            group.appendChild(
+              svgEl("rect", {
+                x: x - TICK_WIDTH / 2, y: rowY + (ROW - TICK_HEIGHT) / 2, width: TICK_WIDTH, height: TICK_HEIGHT,
+                fill: layer.color,
+              }),
+            );
+            group.appendChild(svgEl("title", {}, item.text));
+          }
+          out.appendChild(group);
+        });
+      }
+    }
+
     function drawLane(out, layout, offset, lane, stackEntry) {
       const layer = lane.layer;
       const placed = { placement: lane.placement, offset: stackEntry.offset, rows: lane.rows };
+      if (layer.kind === "mark" && lane.placement === "below") {
+        drawChords(out, layout, offset, layer, placed);
+        return;
+      }
       for (const item of layer.items) {
         if (item.overflow) {
           drawOverflow(out, layout, offset, layer, placed, item);
         } else if (layer.kind === "ribbon") {
           drawRibbon(out, layout, offset, layer, placed, item);
-        } else if (lane.placement !== "below") {
+        } else {
           drawMark(out, layout, offset, layer, placed, item);
         }
       }
