@@ -14,8 +14,8 @@
  *   ws.on("layerchange", (enabledIds) => ...);
  *
  * Zoom, panel state and view mode are remembered (WorkspaceState). Needs
- * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreGeometry and
- * WorkspaceState loaded first. */
+ * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreLayers,
+ * ScoreGeometry, ScoreOverlay and WorkspaceState loaded first. */
 (function (root) {
   const RESIZE_DELAY_MS = 150;
 
@@ -56,6 +56,10 @@
     const layerState = ScoreLayers.createLayerState(storage);
     layerState.setCatalog(catalog.map((layer) => layer.id));
     let osmd = null;
+    let overlay = null;
+    /* OSMD time minus piece position; the timeline offset (see
+     * ScoreGeometry.calibrateOffset). */
+    let timelineOffset = 0;
     let xmlText = "";
     let layout = null;
     let destroyed = false;
@@ -147,6 +151,7 @@
     const paperStatus = el("div", "ws-paper-status");
     const osmdHost = el("div", "ws-osmd");
     paper.append(paperStatus, osmdHost);
+    overlay = ScoreOverlay.create(paper, osmdHost);
     canvas.append(caption, paper);
     main.appendChild(canvas);
     canvas.addEventListener("click", () => {
@@ -231,8 +236,15 @@
       }
     }
 
+    function redrawOverlay() {
+      if (overlay) {
+        overlay.draw(layout, timelineOffset, catalog, layerState.enabled());
+      }
+    }
+
     layerState.onChange((enabled) => {
       syncRail();
+      redrawOverlay();
       emit("layerchange", enabled);
     });
     buildRail();
@@ -555,6 +567,7 @@
       layout = readLayout();
       restoreAnchor(anchor);
       lastWidth = canvas.clientWidth;
+      redrawOverlay();
       emit("rendered", layout);
     }
 
@@ -629,6 +642,10 @@
       clearTimeout(resizeTimer);
       resizeObserver.disconnect();
       listeners.clear();
+      if (overlay) {
+        overlay.destroy();
+        overlay = null;
+      }
       osmd = null;
       layout = null;
       rootEl.innerHTML = "";

@@ -1051,6 +1051,19 @@ body {
   width: 100%;
 }
 
+/* The claim layers, laid exactly over the OSMD SVG. Only the drawn ribbons
+ * and marks take the pointer. */
+.ws-overlay {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ws-overlay [role="button"] {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .ws-paper-status {
   display: flex;
   align-items: center;
