@@ -236,10 +236,106 @@
       }
     }
 
+    /* xml:id -> the GraphicalNotes OSMD drew for it, for the current render
+     * (a render makes new GraphicalNotes), with the barline fragments
+     * "<id>_<letter>" and "<id>_<number>" Ursatz writes for a split note
+     * listed under their base id. */
+    let xmlEntries = null;
+    let noteLookup = null;
+
+    function getNoteLookup() {
+      if (noteLookup) {
+        return noteLookup;
+      }
+      if (!osmd || !xmlText) {
+        return null;
+      }
+      if (!xmlEntries) {
+        const parsed = new DOMParser().parseFromString(xmlText, "application/xml");
+        xmlEntries = ScoreNotes.buildMusicXmlNoteKeys(parsed.documentElement);
+      }
+      const { index } = ScoreNotes.buildNoteIndex(xmlEntries, ScoreNotes.collectGraphicalNotes(osmd));
+      const fragments = new Map();
+      for (const [id, notes] of index) {
+        const match = /^(.*)_([a-z]|[0-9]+)$/.exec(id);
+        if (match) {
+          if (!fragments.has(match[1])) {
+            fragments.set(match[1], []);
+          }
+          fragments.get(match[1]).push(...notes);
+        }
+      }
+      noteLookup = { index, fragments };
+      return noteLookup;
+    }
+
+    function graphicalNotesFor(xmlId) {
+      const lookup = getNoteLookup();
+      if (!lookup) {
+        return [];
+      }
+      return [...(lookup.index.get(xmlId) || []), ...(lookup.fragments.get(xmlId) || [])];
+    }
+
+    /* The notehead paths of one GraphicalNote: its own head within a chord. */
+    function noteheadPaths(note) {
+      const group = note.getSVGGElement && note.getSVGGElement();
+      if (!group) {
+        return [];
+      }
+      const heads = group.querySelectorAll(".vf-notehead");
+      const head = heads[note.vfnoteIndex] || heads[0];
+      return head ? Array.from(head.querySelectorAll("path")) : [];
+    }
+
+    /* Noteheads colored for the notes layers that are on; the original
+     * colors are put back first, so a layer turned off disappears. */
+    const coloredPaths = [];
+
+    function restoreNoteColors() {
+      for (const { path, fill, stroke } of coloredPaths) {
+        for (const [name, value] of [["fill", fill], ["stroke", stroke]]) {
+          if (value === null) {
+            path.removeAttribute(name);
+          } else {
+            path.setAttribute(name, value);
+          }
+        }
+      }
+      coloredPaths.length = 0;
+    }
+
+    function applyNoteColors() {
+      restoreNoteColors();
+      if (!osmd) {
+        return;
+      }
+      const enabled = new Set(layerState.enabled());
+      const layers = catalog.filter((layer) => layer.kind === "notes" && enabled.has(layer.id) && !layer.empty);
+      if (layers.length === 0) {
+        return;
+      }
+      const colors = new Map(layers.map((layer) => [layer.id, layer.color]));
+      for (const [noteIndex, layerId] of ScoreLayers.noteColorOwners(layers)) {
+        const xmlId = (opts.noteXmlIds || [])[noteIndex];
+        if (!xmlId) {
+          continue;
+        }
+        for (const note of graphicalNotesFor(xmlId)) {
+          for (const path of noteheadPaths(note)) {
+            coloredPaths.push({ path, fill: path.getAttribute("fill"), stroke: path.getAttribute("stroke") });
+            path.setAttribute("fill", colors.get(layerId));
+            path.setAttribute("stroke", colors.get(layerId));
+          }
+        }
+      }
+    }
+
     function redrawOverlay() {
       if (overlay) {
         overlay.draw(layout, timelineOffset, catalog, layerState.enabled());
       }
+      applyNoteColors();
     }
 
     layerState.onChange((enabled) => {
@@ -563,6 +659,8 @@
       renderDeferred = false;
       const anchor = captureAnchor();
       osmd.zoom = state.zoom;
+      coloredPaths.length = 0;
+      noteLookup = null;
       osmd.render();
       layout = readLayout();
       restoreAnchor(anchor);
