@@ -801,8 +801,10 @@
         if (destroyed) {
           return;
         }
-        render();
+        /* the status takes room above the score: clear it before the first
+         * render so the overlay is placed against the final layout */
         setPaperStatus("", false);
+        render();
       } catch (err) {
         if (!destroyed) {
           osmd = null;
