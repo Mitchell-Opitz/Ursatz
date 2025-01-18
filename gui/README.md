@@ -192,6 +192,46 @@ loaded by `index.html` before `app.js` and by the frontend tests):
 - Rendered notes whose key matches no `xml:id` are counted; the count is
   logged once per score with `console.warn`.
 
+#### Layers on the score
+
+The Layers rail (left of the score) lists the layers of
+[Score layers](#score-layers) in groups, each with a switch, its color, its
+name and the number of items in the piece. A layer with no items is disabled
+("None found in this piece"). The chips at the top apply a preset (None,
+Harmony, Structure). Everything is off by default; the choice is remembered
+and toggling never reloads the piece.
+
+`frontend/public/score-overlay.js` (global `ScoreOverlay`) draws the layers
+that are on in one SVG laid over the OSMD SVG, redrawn from scratch after
+every render and toggle. Positions come from `ScoreGeometry` (a piece position
+plus the timeline offset is an OSMD time).
+
+- Ribbons (keys, key changes, prolongations, progressions, form, themes,
+  phrases, schemas, texture, Other layers) sit in lanes above each system, one
+  18 px row each, up to four rows per layer. A ribbon is a tinted bar with a
+  solid edge at its start and its label inside, shortened to fit; a span that
+  crosses systems continues on the next one with open ends. Tonicizations are
+  dashed, subphrases thin. An item that fits none of the four rows becomes a
+  "+" in the lane's last row whose tooltip counts the hidden items.
+- Cadences are pills at the arrival (PAC, HC, ...). A cadence with a competing
+  reading shows a white dot and the tooltip "Also read as <abbr> (<share>%)".
+- Chord numerals sit below each system. A numeral that would come within 4 px
+  of the previous drawn one becomes a tick (`chordLabelsToDraw`), so zooming
+  in shows more.
+- Notes layers (non-chord tones, motives, melody) color noteheads
+  (`.vf-notehead` paths) without a re-render; the first layer in the table
+  owns a shared note, and turning a layer off restores the original colors.
+- Ribbons and marks have `role="button"` and an accessible name
+  "<layer> <text>, <location>"; color is never the only cue.
+
+Lanes need room, so after a toggle the workspace sets OSMD's
+`MinimumDistanceBetweenSystems` and `PageTopMargin` from
+`ScoreGeometry.systemSpacingUnits` and renders again only when those values
+change (the scroll position is kept). The timeline offset is calibrated once
+per piece from the first 50 notes found in the score, paired with their
+positions from `GET /api/analyzer/pieces/<id>/playback`; a console warning
+reports notes that do not fit it.
+
 ## Architecture
 
 Three layers, in order of how rarely they should change:
