@@ -117,6 +117,16 @@ check(zoomed.minimumDistanceBetweenSystems < big.minimumDistanceBetweenSystems, 
 const huge = ScoreGeometry.systemSpacingUnits(none, 1, { minimumDistanceBetweenSystems: 50, pageTopMargin: 30 });
 check(huge.minimumDistanceBetweenSystems === 50 && huge.pageTopMargin === 30, "larger defaults are kept");
 
+// chordLabelsToDraw
+const spaced = ScoreGeometry.chordLabelsToDraw([0, 40, 80], [20, 20, 20], 4);
+check(spaced.join() === "true,true,true", "labels with room between them are all kept");
+const crowded = ScoreGeometry.chordLabelsToDraw([0, 10, 30, 31, 100], [20, 20, 20, 20, 20], 4);
+check(crowded.join() === "true,false,true,false,true", "a label within the gap of the last drawn one is dropped");
+const against = ScoreGeometry.chordLabelsToDraw([0, 22, 25], [20, 20, 20], 4);
+check(against.join() === "true,false,true", "the gap is measured from the last drawn label, not a dropped one");
+check(ScoreGeometry.chordLabelsToDraw([5, 6], [50, 50], 4)[0] === true, "the first label is always kept");
+check(ScoreGeometry.chordLabelsToDraw([], [], 4).length === 0, "no labels, nothing to draw");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);

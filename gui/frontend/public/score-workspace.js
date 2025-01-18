@@ -6,15 +6,17 @@
  *     title, subtitle,           toolbar text
  *     musicxmlUrl, metaUrl,      the score and its meter caption
  *     document, noteXmlIds,      the analysis, for the layers and the inspector
+ *     playbackUrl,               the piece's playback data (timeline offset)
  *     actions: [{label, onClick}],  extra toolbar buttons
  *     onBack,                    the Library link
  *   });
  *   ws.on("rendered", (layout) => ...);
  *   ws.on("modechange", (mode) => ...);
+ *   ws.on("layerchange", (enabledIds) => ...);
  *
  * Zoom, panel state and view mode are remembered (WorkspaceState). Needs
- * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreGeometry and
- * WorkspaceState loaded first. */
+ * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreLayers,
+ * ScoreGeometry, ScoreOverlay and WorkspaceState loaded first. */
 (function (root) {
   const RESIZE_DELAY_MS = 150;
 
@@ -49,7 +51,22 @@
     let dialog = null;
     let renderDeferred = false;
     const listeners = new Map();
+    /* The layers this piece offers and which are on (R-099): all off until
+     * the reader turns some on. */
+    const catalog = ScoreLayers.buildLayerCatalog(opts.document || {});
+    const layerState = ScoreLayers.createLayerState(storage);
+    layerState.setCatalog(catalog.map((layer) => layer.id));
     let osmd = null;
+    let overlay = null;
+    /* OSMD time minus piece position; the timeline offset (see
+     * ScoreGeometry.calibrateOffset). */
+    let timelineOffset = 0;
+    let calibrated = false;
+    let playbackData = null;
+    /* OSMD's own system spacing, read once before any change, and the
+     * spacing last applied (OSMD units). */
+    let spacingDefaults = null;
+    let appliedSpacing = null;
     let xmlText = "";
     let layout = null;
     let destroyed = false;
@@ -130,7 +147,8 @@
     const body = el("div", "ws-body");
     const rail = el("aside", "ws-panel ws-rail");
     rail.setAttribute("aria-label", "Layers");
-    rail.append(el("h2", "ws-panel-title", "Layers"), el("p", "ws-empty", "Layers appear here."));
+    const railBody = el("div", "ws-rail-body");
+    rail.append(el("h2", "ws-panel-title", "Layers"), railBody);
 
     const main = el("main", "ws-main");
     const canvas = el("div", "ws-canvas");
@@ -140,6 +158,7 @@
     const paperStatus = el("div", "ws-paper-status");
     const osmdHost = el("div", "ws-osmd");
     paper.append(paperStatus, osmdHost);
+    overlay = ScoreOverlay.create(paper, osmdHost);
     canvas.append(caption, paper);
     main.appendChild(canvas);
     canvas.addEventListener("click", () => {
@@ -171,6 +190,230 @@
       listeners.get(name).add(fn);
       return () => listeners.get(name).delete(fn);
     }
+
+    /* The Layers rail: preset chips, then one switch per layer, grouped. A
+     * layer with nothing in this piece is shown disabled. */
+    const layerSwitches = new Map();
+
+    function buildRail() {
+      railBody.innerHTML = "";
+      layerSwitches.clear();
+      const presets = el("div", "ws-presets");
+      presets.setAttribute("role", "group");
+      presets.setAttribute("aria-label", "Layer presets");
+      for (const [name, label] of [["none", "None"], ["harmony", "Harmony"], ["structure", "Structure"]]) {
+        const chip = el("button", "ws-chip", label);
+        chip.type = "button";
+        chip.addEventListener("click", () => layerState.applyPreset(name));
+        presets.appendChild(chip);
+      }
+      railBody.appendChild(presets);
+      for (const group of ScoreLayers.LAYER_GROUPS) {
+        const layers = catalog.filter((layer) => layer.group === group.id);
+        if (layers.length === 0) {
+          continue;
+        }
+        const section = el("section", "ws-layer-group");
+        section.appendChild(el("h3", "ws-layer-group-title", group.label));
+        for (const layer of layers) {
+          const row = el("label", "ws-layer-row");
+          row.title = layer.empty ? "None found in this piece" : layer.description;
+          const input = el("input");
+          input.type = "checkbox";
+          input.setAttribute("role", "switch");
+          input.disabled = layer.empty;
+          input.addEventListener("change", () => layerState.setOn(layer.id, input.checked));
+          const swatch = el("span", "ws-swatch");
+          swatch.style.background = layer.color;
+          row.append(input, swatch, el("span", "ws-layer-label", layer.label), el("span", "ws-layer-count", String(layer.count)));
+          if (layer.empty) {
+            row.classList.add("ws-layer-empty");
+          }
+          layerSwitches.set(layer.id, input);
+          section.appendChild(row);
+        }
+        railBody.appendChild(section);
+      }
+      syncRail();
+    }
+
+    function syncRail() {
+      for (const [id, input] of layerSwitches) {
+        input.checked = layerState.isOn(id);
+      }
+    }
+
+    /* xml:id -> the GraphicalNotes OSMD drew for it, for the current render
+     * (a render makes new GraphicalNotes), with the barline fragments
+     * "<id>_<letter>" and "<id>_<number>" Ursatz writes for a split note
+     * listed under their base id. */
+    let xmlEntries = null;
+    let noteLookup = null;
+
+    function getNoteLookup() {
+      if (noteLookup) {
+        return noteLookup;
+      }
+      if (!osmd || !xmlText) {
+        return null;
+      }
+      if (!xmlEntries) {
+        const parsed = new DOMParser().parseFromString(xmlText, "application/xml");
+        xmlEntries = ScoreNotes.buildMusicXmlNoteKeys(parsed.documentElement);
+      }
+      const { index } = ScoreNotes.buildNoteIndex(xmlEntries, ScoreNotes.collectGraphicalNotes(osmd));
+      const fragments = new Map();
+      for (const [id, notes] of index) {
+        const match = /^(.*)_([a-z]|[0-9]+)$/.exec(id);
+        if (match) {
+          if (!fragments.has(match[1])) {
+            fragments.set(match[1], []);
+          }
+          fragments.get(match[1]).push(...notes);
+        }
+      }
+      noteLookup = { index, fragments };
+      return noteLookup;
+    }
+
+    function graphicalNotesFor(xmlId) {
+      const lookup = getNoteLookup();
+      if (!lookup) {
+        return [];
+      }
+      return [...(lookup.index.get(xmlId) || []), ...(lookup.fragments.get(xmlId) || [])];
+    }
+
+    /* The notehead paths of one GraphicalNote: its own head within a chord. */
+    function noteheadPaths(note) {
+      const group = note.getSVGGElement && note.getSVGGElement();
+      if (!group) {
+        return [];
+      }
+      const heads = group.querySelectorAll(".vf-notehead");
+      const head = heads[note.vfnoteIndex] || heads[0];
+      return head ? Array.from(head.querySelectorAll("path")) : [];
+    }
+
+    /* Noteheads colored for the notes layers that are on; the original
+     * colors are put back first, so a layer turned off disappears. */
+    const coloredPaths = [];
+
+    function restoreNoteColors() {
+      for (const { path, fill, stroke } of coloredPaths) {
+        for (const [name, value] of [["fill", fill], ["stroke", stroke]]) {
+          if (value === null) {
+            path.removeAttribute(name);
+          } else {
+            path.setAttribute(name, value);
+          }
+        }
+      }
+      coloredPaths.length = 0;
+    }
+
+    function applyNoteColors() {
+      restoreNoteColors();
+      if (!osmd) {
+        return;
+      }
+      const enabled = new Set(layerState.enabled());
+      const layers = catalog.filter((layer) => layer.kind === "notes" && enabled.has(layer.id) && !layer.empty);
+      if (layers.length === 0) {
+        return;
+      }
+      const colors = new Map(layers.map((layer) => [layer.id, layer.color]));
+      for (const [noteIndex, layerId] of ScoreLayers.noteColorOwners(layers)) {
+        const xmlId = (opts.noteXmlIds || [])[noteIndex];
+        if (!xmlId) {
+          continue;
+        }
+        for (const note of graphicalNotesFor(xmlId)) {
+          for (const path of noteheadPaths(note)) {
+            coloredPaths.push({ path, fill: path.getAttribute("fill"), stroke: path.getAttribute("stroke") });
+            path.setAttribute("fill", colors.get(layerId));
+            path.setAttribute("stroke", colors.get(layerId));
+          }
+        }
+      }
+    }
+
+    function redrawOverlay() {
+      if (overlay) {
+        overlay.draw(layout, timelineOffset, catalog, layerState.enabled());
+      }
+      applyNoteColors();
+    }
+
+    /* Room between systems for the lanes of the layers that are on
+     * (ScoreGeometry.systemSpacingUnits), never less than OSMD's own. */
+    function wantedSpacing() {
+      const { lanes } = ScoreOverlay.planLanes(catalog, layerState.enabled());
+      const stack = ScoreGeometry.laneStack(lanes);
+      return ScoreGeometry.systemSpacingUnits(stack, state.zoom, spacingDefaults);
+    }
+
+    function sameSpacing(a, b) {
+      return (
+        Math.abs(a.minimumDistanceBetweenSystems - b.minimumDistanceBetweenSystems) < 1e-6 &&
+        Math.abs(a.pageTopMargin - b.pageTopMargin) < 1e-6
+      );
+    }
+
+    function applySpacing() {
+      const rules = osmd.EngravingRules;
+      if (!spacingDefaults) {
+        spacingDefaults = {
+          minimumDistanceBetweenSystems: rules.MinimumDistanceBetweenSystems,
+          pageTopMargin: rules.PageTopMargin,
+        };
+      }
+      appliedSpacing = wantedSpacing();
+      rules.MinimumDistanceBetweenSystems = appliedSpacing.minimumDistanceBetweenSystems;
+      rules.PageTopMargin = appliedSpacing.pageTopMargin;
+    }
+
+    /* The timeline offset (R-101): OSMD time of a note minus its position
+     * from the playback route, over the first 50 notes found in the score.
+     * Needs the playback data and a render; done once per piece. */
+    let mismatchWarned = false;
+
+    function calibrate() {
+      if (calibrated || !playbackData || !osmd) {
+        return;
+      }
+      const pairs = [];
+      const notes = playbackData.notes || [];
+      for (let i = 0; i < notes.length && pairs.length < 50; i++) {
+        const xmlId = (opts.noteXmlIds || [])[notes[i].i];
+        const found = xmlId ? graphicalNotesFor(xmlId) : [];
+        if (found.length > 0) {
+          pairs.push({ ursatz: ScoreLayers.rat(notes[i].on), osmd: ScoreGeometry.osmdNoteTime(found[0]) });
+        }
+      }
+      if (pairs.length === 0) {
+        return;
+      }
+      const result = ScoreGeometry.calibrateOffset(pairs);
+      timelineOffset = result.offset;
+      calibrated = true;
+      if (result.mismatches > 0 && !mismatchWarned) {
+        mismatchWarned = true;
+        console.warn(`Score workspace: ${result.mismatches} of ${pairs.length} notes do not fit the timeline offset.`);
+      }
+    }
+
+    layerState.onChange((enabled) => {
+      syncRail();
+      /* new lanes can need more room between systems: draw the score again */
+      if (osmd && spacingDefaults && !sameSpacing(wantedSpacing(), appliedSpacing)) {
+        render();
+      } else {
+        redrawOverlay();
+      }
+      emit("layerchange", enabled);
+    });
+    buildRail();
 
     function setPaperStatus(text, isError) {
       paperStatus.textContent = text;
@@ -486,15 +729,42 @@
       renderDeferred = false;
       const anchor = captureAnchor();
       osmd.zoom = state.zoom;
+      coloredPaths.length = 0;
+      noteLookup = null;
+      applySpacing();
       osmd.render();
       layout = readLayout();
       restoreAnchor(anchor);
       lastWidth = canvas.clientWidth;
+      calibrate();
+      redrawOverlay();
       emit("rendered", layout);
+    }
+
+    /* The playback data, once per piece: the timeline offset needs it now,
+     * the transport later. */
+    function loadPlayback() {
+      if (!opts.playbackUrl) {
+        return;
+      }
+      fetch(opts.playbackUrl)
+        .then((res) => res.json())
+        .then((data) => {
+          if (destroyed || !data || !data.ok) {
+            return;
+          }
+          playbackData = data;
+          if (osmd && layout) {
+            calibrate();
+            redrawOverlay();
+          }
+        })
+        .catch(() => {});
     }
 
     async function loadScore() {
       setPaperStatus("Rendering score...", false);
+      loadPlayback();
       if (opts.metaUrl) {
         fetch(opts.metaUrl)
           .then((res) => res.json())
@@ -531,8 +801,10 @@
         if (destroyed) {
           return;
         }
-        render();
+        /* the status takes room above the score: clear it before the first
+         * render so the overlay is placed against the final layout */
         setPaperStatus("", false);
+        render();
       } catch (err) {
         if (!destroyed) {
           osmd = null;
@@ -564,6 +836,10 @@
       clearTimeout(resizeTimer);
       resizeObserver.disconnect();
       listeners.clear();
+      if (overlay) {
+        overlay.destroy();
+        overlay = null;
+      }
       osmd = null;
       layout = null;
       rootEl.innerHTML = "";
@@ -590,6 +866,9 @@
       setMode,
       setStatus,
       dataEl: () => dataPane,
+      layers: () => ({ catalog, state: layerState }),
+      playback: () => playbackData,
+      timelineOffset: () => timelineOffset,
     };
   }
 

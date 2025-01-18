@@ -267,6 +267,18 @@
     };
   }
 
+  // Which labels in a left-to-right row get drawn in full: a label whose
+  // left edge comes within `gap` px of the previous drawn label's right edge
+  // is dropped (the caller draws a tick instead). The first is always kept.
+  function chordLabelsToDraw(xs, widths, gap) {
+    let lastRight = -Infinity;
+    return xs.map((x, i) => {
+      if (x < lastRight + gap) return false;
+      lastRight = x + widths[i];
+      return true;
+    });
+  }
+
   const api = {
     extractLayout,
     osmdNoteTime,
@@ -276,6 +288,7 @@
     calibrateOffset,
     laneStack,
     systemSpacingUnits,
+    chordLabelsToDraw,
     ROW_HEIGHT,
   };
   if (typeof module !== "undefined" && module.exports) {

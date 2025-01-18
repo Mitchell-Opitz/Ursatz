@@ -873,6 +873,92 @@ body {
   line-height: 1.5;
 }
 
+.ws-presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.ws-chip {
+  padding: 4px 10px;
+  background: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ws-chip:hover {
+  background: var(--bg-hover);
+}
+
+.ws-layer-group {
+  margin-bottom: 16px;
+}
+
+.ws-layer-group-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ws-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ws-layer-row:hover {
+  background: var(--bg-hover);
+}
+
+.ws-layer-row input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.ws-layer-empty {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.ws-layer-empty:hover {
+  background: none;
+}
+
+.ws-swatch {
+  flex: 0 0 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.ws-layer-empty .ws-swatch {
+  opacity: 0.4;
+}
+
+.ws-layer-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-layer-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
 /* A closed panel takes no width. */
 .ws[data-layers="closed"] .ws-rail,
 .ws[data-inspector="closed"] .ws-inspector {
@@ -963,6 +1049,19 @@ body {
 
 .ws-osmd {
   width: 100%;
+}
+
+/* The claim layers, laid exactly over the OSMD SVG. Only the drawn ribbons
+ * and marks take the pointer. */
+.ws-overlay {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ws-overlay [role="button"] {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .ws-paper-status {
