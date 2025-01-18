@@ -6,6 +6,7 @@
  *     title, subtitle,           toolbar text
  *     musicxmlUrl, metaUrl,      the score and its meter caption
  *     document, noteXmlIds,      the analysis, for the layers and the inspector
+ *     playbackUrl,               the piece's playback data (timeline offset)
  *     actions: [{label, onClick}],  extra toolbar buttons
  *     onBack,                    the Library link
  *   });
@@ -60,6 +61,12 @@
     /* OSMD time minus piece position; the timeline offset (see
      * ScoreGeometry.calibrateOffset). */
     let timelineOffset = 0;
+    let calibrated = false;
+    let playbackData = null;
+    /* OSMD's own system spacing, read once before any change, and the
+     * spacing last applied (OSMD units). */
+    let spacingDefaults = null;
+    let appliedSpacing = null;
     let xmlText = "";
     let layout = null;
     let destroyed = false;
@@ -338,9 +345,72 @@
       applyNoteColors();
     }
 
+    /* Room between systems for the lanes of the layers that are on
+     * (ScoreGeometry.systemSpacingUnits), never less than OSMD's own. */
+    function wantedSpacing() {
+      const { lanes } = ScoreOverlay.planLanes(catalog, layerState.enabled());
+      const stack = ScoreGeometry.laneStack(lanes);
+      return ScoreGeometry.systemSpacingUnits(stack, state.zoom, spacingDefaults);
+    }
+
+    function sameSpacing(a, b) {
+      return (
+        Math.abs(a.minimumDistanceBetweenSystems - b.minimumDistanceBetweenSystems) < 1e-6 &&
+        Math.abs(a.pageTopMargin - b.pageTopMargin) < 1e-6
+      );
+    }
+
+    function applySpacing() {
+      const rules = osmd.EngravingRules;
+      if (!spacingDefaults) {
+        spacingDefaults = {
+          minimumDistanceBetweenSystems: rules.MinimumDistanceBetweenSystems,
+          pageTopMargin: rules.PageTopMargin,
+        };
+      }
+      appliedSpacing = wantedSpacing();
+      rules.MinimumDistanceBetweenSystems = appliedSpacing.minimumDistanceBetweenSystems;
+      rules.PageTopMargin = appliedSpacing.pageTopMargin;
+    }
+
+    /* The timeline offset (R-101): OSMD time of a note minus its position
+     * from the playback route, over the first 50 notes found in the score.
+     * Needs the playback data and a render; done once per piece. */
+    let mismatchWarned = false;
+
+    function calibrate() {
+      if (calibrated || !playbackData || !osmd) {
+        return;
+      }
+      const pairs = [];
+      const notes = playbackData.notes || [];
+      for (let i = 0; i < notes.length && pairs.length < 50; i++) {
+        const xmlId = (opts.noteXmlIds || [])[notes[i].i];
+        const found = xmlId ? graphicalNotesFor(xmlId) : [];
+        if (found.length > 0) {
+          pairs.push({ ursatz: ScoreLayers.rat(notes[i].on), osmd: ScoreGeometry.osmdNoteTime(found[0]) });
+        }
+      }
+      if (pairs.length === 0) {
+        return;
+      }
+      const result = ScoreGeometry.calibrateOffset(pairs);
+      timelineOffset = result.offset;
+      calibrated = true;
+      if (result.mismatches > 0 && !mismatchWarned) {
+        mismatchWarned = true;
+        console.warn(`Score workspace: ${result.mismatches} of ${pairs.length} notes do not fit the timeline offset.`);
+      }
+    }
+
     layerState.onChange((enabled) => {
       syncRail();
-      redrawOverlay();
+      /* new lanes can need more room between systems: draw the score again */
+      if (osmd && spacingDefaults && !sameSpacing(wantedSpacing(), appliedSpacing)) {
+        render();
+      } else {
+        redrawOverlay();
+      }
       emit("layerchange", enabled);
     });
     buildRail();
@@ -661,16 +731,40 @@
       osmd.zoom = state.zoom;
       coloredPaths.length = 0;
       noteLookup = null;
+      applySpacing();
       osmd.render();
       layout = readLayout();
       restoreAnchor(anchor);
       lastWidth = canvas.clientWidth;
+      calibrate();
       redrawOverlay();
       emit("rendered", layout);
     }
 
+    /* The playback data, once per piece: the timeline offset needs it now,
+     * the transport later. */
+    function loadPlayback() {
+      if (!opts.playbackUrl) {
+        return;
+      }
+      fetch(opts.playbackUrl)
+        .then((res) => res.json())
+        .then((data) => {
+          if (destroyed || !data || !data.ok) {
+            return;
+          }
+          playbackData = data;
+          if (osmd && layout) {
+            calibrate();
+            redrawOverlay();
+          }
+        })
+        .catch(() => {});
+    }
+
     async function loadScore() {
       setPaperStatus("Rendering score...", false);
+      loadPlayback();
       if (opts.metaUrl) {
         fetch(opts.metaUrl)
           .then((res) => res.json())
@@ -771,6 +865,8 @@
       setStatus,
       dataEl: () => dataPane,
       layers: () => ({ catalog, state: layerState }),
+      playback: () => playbackData,
+      timelineOffset: () => timelineOffset,
     };
   }
 

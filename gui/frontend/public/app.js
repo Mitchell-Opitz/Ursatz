@@ -673,6 +673,7 @@ function mountAnalysisWorkspace(content, id, data) {
     subtitle: analysisSubtitle(header),
     musicxmlUrl: `/api/analyzer/pieces/${id}/musicxml`,
     metaUrl: `/api/analyzer/pieces/${id}/musicxml/meta`,
+    playbackUrl: `/api/analyzer/pieces/${id}/playback`,
     document: data.document,
     noteXmlIds: data.note_xml_ids,
     onBack: () => selectTool("library"),
