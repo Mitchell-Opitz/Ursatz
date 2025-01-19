@@ -112,7 +112,10 @@ Every node and lane span is in one state. New ones are `constrained`.
 | `constrained` | Not written yet, and has requirements. |
 | `realized` | Written by the Composer. Can be regenerated. |
 
-Node state and span state are independent: a Given node does not lock its children or its spans.
+Node state and span state are independent: a Given node does not lock its children or its spans. `plan_lock`
+(`ursatz-composer lock`) sets both for a node, every node under it and the spans they own, so a lock reads in a file as
+`given` on all of them; see [regenerate.md](regenerate.md). A plan file numbers its nodes and lane spans from 1 without
+gaps, so the ids of a plan written after `regenerate` can differ from the ids of the plan read.
 
 ## Constraints
 
