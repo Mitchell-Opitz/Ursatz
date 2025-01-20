@@ -288,3 +288,14 @@ add_test(NAME test_middle_out_partial COMMAND test_middle_out partial)
 foreach(scenario melody progression bass)
     add_test(NAME test_middle_out_${scenario} COMMAND test_middle_out ${scenario})
 endforeach()
+
+# Locking and regenerating (docs/regenerate.md). Each mode is one ctest entry; the cli mode runs the commands as
+# processes.
+add_executable(test_regenerate test_regenerate.c)
+target_link_libraries(test_regenerate PRIVATE ursatz_composer)
+target_compile_options(test_regenerate PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_regenerate PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
+add_dependencies(test_regenerate ursatz-composer)
+foreach(mode remove lock dependents section returns lanes locked determinism cli)
+    add_test(NAME test_regenerate_${mode} COMMAND test_regenerate ${mode})
+endforeach()

@@ -124,7 +124,7 @@ static int check_options(Options *options) {
 /* --- reading the plan --------------------------------------------------------- */
 
 /* The plan in the file as JSON text, so that each seed can start from a new copy of it. */
-static int load_plan_text(const char *path, char **text) {
+int cli_load_plan_text(const char *path, char **text) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
     PlanResult read = plan_read_json_file(path, &plan, &error);
@@ -297,13 +297,14 @@ static void print_result_text(unsigned long seed, bool realized, const PiecePlan
 }
 
 static void print_result_json(unsigned long seed, bool realized, const PiecePlan *plan, const ComposeOutcome *outcome,
-                              const GivenRuns *given, const char *const *files, size_t file_count) {
+                              const GivenRuns *given, const char *const *files, size_t file_count, const char *extra) {
     CliSection sections[CLI_MAX_SECTIONS];
     size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
     if (count > CLI_MAX_SECTIONS) {
         count = CLI_MAX_SECTIONS;
     }
-    printf("{\"seed\":%lu,\"realized\":%s,\"sections\":[", seed, realized ? "true" : "false");
+    printf("{\"seed\":%lu,\"realized\":%s%s%s,\"sections\":[", seed, realized ? "true" : "false", extra ? "," : "",
+           extra ? extra : "");
     for (size_t i = 0; i < outcome->section_count; i++) {
         const ComposeHeard *heard = &outcome->sections[i];
         char text[256];
@@ -365,14 +366,14 @@ static void stuck_reason(const ComposeOutcome *outcome, FillTarget target, char 
     }
 }
 
-static void report_stuck(const PiecePlan *plan, const ComposeOutcome *outcome, unsigned long first, unsigned long last) {
+void cli_report_stuck(const PiecePlan *plan, const ComposeOutcome *outcome, unsigned long first, unsigned long last) {
     fprintf(stderr, "Error: the plan could not be completed from seeds %lu to %lu: stuck at the %s stage%s\n", first, last,
             compose_stage_name(outcome->stuck_stage),
             outcome->key_rejected ? " (the keys or cadences heard did not fit the plan)" : "");
     size_t shown = 0;
     size_t open = 0;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        if (plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED) {
+        if (!plan_has_node(plan, id) || plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED) {
             continue;
         }
         open++;
@@ -446,9 +447,9 @@ static int write_record(const ComposeOutcome *outcome, const char *path) {
  * Writes every output to a temporary file next to its final name, and renames them all only when every one was
  * written, so that an error leaves no output file behind.
  */
-static int write_files(const Options *options, const PiecePlan *plan, const ComposeOutcome *outcome, Pending *pending,
+static int write_files(const CliOutputPaths *output, const PiecePlan *plan, const ComposeOutcome *outcome, Pending *pending,
                        size_t *pending_count) {
-    const char *paths[MAX_OUTPUTS] = {options->out_path, options->midi_path, options->musicxml_path, options->record_path};
+    const char *paths[MAX_OUTPUTS] = {output->plan, output->midi, output->musicxml, output->record};
     int status = 0;
     RenderedPlan rendered;
     bool have_rendering = false;
@@ -508,6 +509,32 @@ static int write_files(const Options *options, const PiecePlan *plan, const Comp
     return status;
 }
 
+/* --- shared with the commands that compose a plan again ------------------------ */
+
+int cli_write_outputs(const CliOutputPaths *paths, const PiecePlan *plan, const ComposeOutcome *outcome,
+                      const char **files, size_t *file_count) {
+    Pending pending[MAX_OUTPUTS];
+    size_t count = 0;
+    int status = write_files(paths, plan, outcome, pending, &count);
+    for (size_t i = 0; status == 0 && i < count; i++) {
+        files[i] = pending[i].final_path;
+    }
+    *file_count = status == 0 ? count : 0;
+    return status;
+}
+
+void cli_print_composed(bool json, unsigned long seed, const PiecePlan *plan, const ComposeOutcome *outcome,
+                        const char *json_extra, const char *const *files, size_t file_count) {
+    GivenRuns given;
+    memset(&given, 0, sizeof(given));
+    given.unchanged = true;
+    if (json) {
+        print_result_json(seed, false, plan, outcome, &given, files, file_count, json_extra);
+    } else {
+        print_result_text(seed, false, plan, outcome, &given, files, file_count);
+    }
+}
+
 /* --- the command ---------------------------------------------------------------- */
 
 int run_fill(int argc, char **argv) {
@@ -525,7 +552,7 @@ int run_fill(int argc, char **argv) {
         return status;
     }
     char *text = NULL;
-    status = load_plan_text(options.input, &text);
+    status = cli_load_plan_text(options.input, &text);
     if (status != 0) {
         return status;
     }
@@ -574,7 +601,7 @@ int run_fill(int argc, char **argv) {
     }
     free(text);
     if (status == 0 && !done) {
-        report_stuck(plan, &outcome, options.seed, used);
+        cli_report_stuck(plan, &outcome, options.seed, used);
         status = CLI_EXIT_UNSATISFIABLE;
     }
     GivenRuns given;
@@ -595,13 +622,14 @@ int run_fill(int argc, char **argv) {
         Pending pending[MAX_OUTPUTS];
         const char *files[MAX_OUTPUTS];
         size_t pending_count = 0;
-        status = write_files(&options, plan, &outcome, pending, &pending_count);
+        CliOutputPaths output = {options.out_path, options.midi_path, options.musicxml_path, options.record_path};
+        status = write_files(&output, plan, &outcome, pending, &pending_count);
         if (status == 0) {
             for (size_t i = 0; i < pending_count; i++) {
                 files[i] = pending[i].final_path;
             }
             if (options.json) {
-                print_result_json(used, realized, plan, &outcome, &given, files, pending_count);
+                print_result_json(used, realized, plan, &outcome, &given, files, pending_count, NULL);
             } else {
                 print_result_text(used, realized, plan, &outcome, &given, files, pending_count);
             }

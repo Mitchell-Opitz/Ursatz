@@ -14,6 +14,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
 
 #define COMPOSER_FRAMEWORK "ursatz-composer"
@@ -133,7 +134,7 @@ static bool motive_ref_options_json(cJSON *object, const PlanMotiveRef *ref) {
     return ok;
 }
 
-static cJSON *constraint_json(const PlanConstraint *constraint) {
+static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
     cJSON *object = cJSON_CreateObject();
     if (!object) {
         return NULL;
@@ -147,7 +148,7 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
         ok = ok && json_add(object, "type", cJSON_CreateString(CADENCE_NAMES[constraint->params.cadence]));
         break;
     case PLAN_CONSTRAINT_MOTIVE_REF:
-        ok = ok && json_add(object, "motive", json_number((long)constraint->params.motive.motive)) &&
+        ok = ok && json_add(object, "motive", json_number((long)plan_node_rank(plan, constraint->params.motive.motive))) &&
              json_add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
              json_add(object, "semitones", json_number(constraint->params.motive.semitones));
         ok = ok && motive_ref_options_json(object, &constraint->params.motive);
@@ -205,7 +206,7 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
              json_add(object, "above", cJSON_CreateBool(constraint->params.counterpoint.above));
         break;
     case PLAN_CONSTRAINT_RETURN:
-        ok = ok && json_add(object, "section", json_number((long)constraint->params.section_return.section)) &&
+        ok = ok && json_add(object, "section", json_number((long)plan_node_rank(plan, constraint->params.section_return.section))) &&
              json_add(object, "variation",
                       cJSON_CreateString(RETURN_VARIATION_NAMES[constraint->params.section_return.variation]));
         break;
@@ -238,7 +239,7 @@ static cJSON *constraint_json(const PlanConstraint *constraint) {
 static cJSON *node_constraints_json(const PiecePlan *plan, NodeId id) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < plan_node_constraint_count(plan, id); i++) {
-        if (!json_append(array, constraint_json(plan_node_constraint_at(plan, id, i)))) {
+        if (!json_append(array, constraint_json(plan, plan_node_constraint_at(plan, id, i)))) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -249,7 +250,7 @@ static cJSON *node_constraints_json(const PiecePlan *plan, NodeId id) {
 static cJSON *span_constraints_json(const PiecePlan *plan, LaneSpanId id) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < plan_lane_span_constraint_count(plan, id); i++) {
-        if (!json_append(array, constraint_json(plan_lane_span_constraint_at(plan, id, i)))) {
+        if (!json_append(array, constraint_json(plan, plan_lane_span_constraint_at(plan, id, i)))) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -263,7 +264,7 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     cJSON *children = cJSON_CreateArray();
     const char *name = plan_node_name(plan, id);
     bool ok = object && composer && children;
-    ok = ok && json_add(composer, "id", json_number((long)id)) &&
+    ok = ok && json_add(composer, "id", json_number((long)plan_node_rank(plan, id))) &&
          json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_node_state(plan, id)])) &&
          json_add(composer, "constraints", node_constraints_json(plan, id));
     ok = ok && json_add(object, "kind", cJSON_CreateString(NODE_KINDS[plan_node_kind(plan, id)])) &&
@@ -383,7 +384,8 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
     cJSON *object = cJSON_CreateObject();
     cJSON *composer = cJSON_CreateObject();
     bool ok = object && composer;
-    ok = ok && json_add(composer, "id", json_number((long)id)) && json_add(composer, "owner", json_number((long)plan_lane_span_owner(plan, id))) &&
+    ok = ok && json_add(composer, "id", json_number((long)plan_lane_span_rank(plan, id))) &&
+         json_add(composer, "owner", json_number((long)plan_node_rank(plan, plan_lane_span_owner(plan, id)))) &&
          json_add(composer, "lane", cJSON_CreateString(LANE_NAMES[lane])) &&
          json_add(composer, "voice", json_number(plan_lane_span_voice(plan, id))) &&
          json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_lane_span_state(plan, id)])) &&
@@ -415,7 +417,7 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
 static cJSON *lane_array_json(const PiecePlan *plan, unsigned mask) {
     cJSON *array = cJSON_CreateArray();
     for (LaneSpanId id = 1; array && id <= plan_lane_span_count(plan); id++) {
-        if ((mask & (1u << plan_lane_span_lane(plan, id))) && !json_append(array, lane_entry_json(plan, id))) {
+        if (plan_has_lane_span(plan, id) && (mask & (1u << plan_lane_span_lane(plan, id))) && !json_append(array, lane_entry_json(plan, id))) {
             cJSON_Delete(array);
             return NULL;
         }

@@ -13,6 +13,7 @@
 #include <ursatz_composer/harmony_prolong.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/texture_check.h>
 #include <ursatz_composer/voicing.h>
@@ -94,13 +95,34 @@ static bool is_theme_section(const PiecePlan *plan, NodeId id) {
     return archetype && pairing;
 }
 
+/* Whether a lane span in the section (a lane span reopened by plan_regenerate) is still open. */
+static bool has_open_span(const PiecePlan *plan, NodeId section) {
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED &&
+            plan_section_of(plan, plan_lane_span_owner(plan, id)) == section) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * An open theme section: one not yet grown (Constrained), or one grown whose lane spans are partly open again. Given
+ * sections are never open.
+ */
+static bool is_open_theme(const PiecePlan *plan, NodeId id) {
+    PlanState state = plan_node_state(plan, id);
+    return is_theme_section(plan, id) &&
+           (state == PLAN_STATE_CONSTRAINED || (state == PLAN_STATE_REALIZED && has_open_span(plan, id)));
+}
+
 /* The open theme sections, in node order, into a new array; false when out of memory. */
 static bool find_themes(const PiecePlan *plan, NodeId **out, size_t *count) {
     size_t found = 0;
     *out = NULL;
     *count = 0;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        found += is_theme_section(plan, id) && plan_node_state(plan, id) == PLAN_STATE_CONSTRAINED;
+        found += is_open_theme(plan, id);
     }
     if (found == 0) {
         return true;
@@ -110,7 +132,7 @@ static bool find_themes(const PiecePlan *plan, NodeId **out, size_t *count) {
         return false;
     }
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        if (is_theme_section(plan, id) && plan_node_state(plan, id) == PLAN_STATE_CONSTRAINED) {
+        if (is_open_theme(plan, id)) {
             (*out)[(*count)++] = id;
         }
     }
@@ -404,8 +426,12 @@ static void hear(const PiecePlan *plan, const NodeId *themes, size_t theme_count
 
 /* ------------------------------------------------------------- running */
 
-/* Puts the melody of every section the stage left unwritten back to open, so it can be run again. */
-static bool reopen_melody(PiecePlan *plan, const NodeId *themes, size_t theme_count) {
+/*
+ * Puts the melody of every section the stage left unwritten back to open, so it can be run again: the spans that were
+ * open when the stage began (open_at_start), not the ones written before it, which a regenerated plan holds (R-072).
+ */
+static bool reopen_melody(PiecePlan *plan, const NodeId *themes, size_t theme_count, const LaneSpanId *open_at_start,
+                          size_t open_count) {
     for (size_t t = 0; t < theme_count; t++) {
         if (melody_done(plan, themes[t])) {
             continue;
@@ -413,7 +439,11 @@ static bool reopen_melody(PiecePlan *plan, const NodeId *themes, size_t theme_co
         size_t count;
         LaneSpanId *ids = find_spans(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, themes[t]), &count);
         for (size_t i = 0; i < count; i++) {
-            if (plan_lane_span_set_state(plan, ids[i], PLAN_STATE_CONSTRAINED) != PLAN_OK) {
+            bool was_open = false;
+            for (size_t k = 0; k < open_count && !was_open; k++) {
+                was_open = open_at_start[k] == ids[i];
+            }
+            if (was_open && plan_lane_span_set_state(plan, ids[i], PLAN_STATE_CONSTRAINED) != PLAN_OK) {
                 free(ids);
                 return false;
             }
@@ -421,6 +451,24 @@ static bool reopen_melody(PiecePlan *plan, const NodeId *themes, size_t theme_co
         free(ids);
     }
     return true;
+}
+
+/* The melody spans that are open now, into a new array (NULL when there are none). */
+static LaneSpanId *open_melody_spans(const PiecePlan *plan, size_t *count) {
+    size_t found = 0;
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        found += plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_MELODY &&
+                 plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED;
+    }
+    LaneSpanId *ids = found ? calloc(found, sizeof(LaneSpanId)) : NULL;
+    *count = 0;
+    for (LaneSpanId id = 1; ids && id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_MELODY &&
+            plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED) {
+            ids[(*count)++] = id;
+        }
+    }
+    return ids;
 }
 
 static void outcome_reset(ComposeOutcome *outcome) {
@@ -453,11 +501,14 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
     /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
        climax, so a melody that gets stuck is written again, from the next seed, a few times. */
     size_t attempts = stage == COMPOSE_STAGE_MELODY ? COMPOSE_MELODY_ATTEMPTS : 1;
+    size_t open_count = 0;
+    LaneSpanId *open_at_start = stage == COMPOSE_STAGE_MELODY ? open_melody_spans(plan, &open_count) : NULL;
     for (size_t attempt = 0; attempt < attempts; attempt++) {
         FillOperatorRegistry *registry = fill_registry_create();
         FillConfig fill;
         FillOutcome fill_outcome;
         if (!registry) {
+            free(open_at_start);
             return PIECE_ERR_ALLOC;
         }
         memset(&fill, 0, sizeof(fill));
@@ -481,18 +532,23 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;
         fill_registry_destroy(registry);
         if (ran != FILL_OK) {
+            free(open_at_start);
             return ran == FILL_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_STUCK;
         }
         fill_outcome_destroy(&fill_outcome);
         if (stage_done(plan, stage, run->themes, run->theme_count)) {
+            free(open_at_start);
             return PIECE_OK;
         }
-        if (attempt + 1 == attempts || !reopen_melody(plan, run->themes, run->theme_count)) {
+        if (attempt + 1 == attempts ||
+            !reopen_melody(plan, run->themes, run->theme_count, open_at_start, open_count)) {
             outcome->stuck = true;
             outcome->stuck_stage = stage;
+            free(open_at_start);
             return PIECE_ERR_STUCK;
         }
     }
+    free(open_at_start);
     return PIECE_OK;
 }
 

@@ -19,10 +19,6 @@
 
 /* How many candidates are drawn for each one asked for before the search is given up. */
 #define DRAWS_PER_CANDIDATE 6
-/* The pitch of the placeholder notes a bass, a melody and an inner voice span hold until the operators write them. */
-#define BASS_PLACEHOLDER 40
-#define MELODY_PLACEHOLDER 60
-#define INNER_PLACEHOLDER 55
 /* The most gaps Given material leaves in one idea or one subphrase for one lane. */
 #define GROW_MAX_GAPS 16
 
@@ -1008,10 +1004,13 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
 }
 
 /*
- * The first bar of the material no motive node holds yet: the motives each section adds go after the ones there, so
- * the sections of a piece share the material section without overlapping.
+ * The bar of the material the motives a section adds start in: the motives each section adds go after the ones there,
+ * so the sections of a piece share the material section without overlapping. A section regenerated (R-072) leaves a gap
+ * where its motives were: the first gap of the bars wanted is taken, and when there is none, the bar after the last
+ * motive, which is where the motives of a piece nothing was removed from always go.
  */
-static size_t first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, PlanTime bar) {
+static size_t first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, PlanTime bar,
+                             size_t wanted) {
     size_t free_bar = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, material); i++) {
         PlanSpan span = plan_node_span(plan, plan_node_child_at(plan, material, i));
@@ -1029,6 +1028,22 @@ static size_t first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan ma
         }
         size_t bars = (size_t)((num + den - 1) / den);
         free_bar = bars > free_bar ? bars : free_bar;
+    }
+    /* A gap below the last motive: a run of bars no node starts in, long enough. */
+    size_t run = 0;
+    for (size_t at = 0; at < free_bar; at++) {
+        PlanTime start;
+        bool taken = plan_time_add(material_span.start, grow_scaled(bar, at), &start) != PLAN_OK;
+        for (size_t i = 0; !taken && i < plan_node_child_count(plan, material); i++) {
+            PlanSpan other = plan_node_span(plan, plan_node_child_at(plan, material, i));
+            PlanTime other_end;
+            taken = plan_span_end(other, &other_end) == PLAN_OK && plan_time_compare(other.start, start) <= 0 &&
+                    plan_time_compare(start, other_end) < 0;
+        }
+        run = taken ? 0 : run + 1;
+        if (run == wanted && wanted > 0) {
+            return at + 1 - wanted;
+        }
     }
     return free_bar;
 }
@@ -1073,7 +1088,9 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.material = plan_node_parent(plan, request.source);
     build.material_span = plan_node_span(plan, build.material);
     build.source = request.source;
-    build.slot_base = first_free_bar(plan, build.material, build.material_span, request.bar);
+    /* A section's motives: its own, when it has one, and the four the ideas are made from. */
+    build.slot_base = first_free_bar(plan, build.material, build.material_span, request.bar,
+                                     (spec->has_section_motive ? 1 : 0) + GROW_IDEA_COUNT - 1);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
         result = add_section_motive(&build, build.slot_base, &build.source);

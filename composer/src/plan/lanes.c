@@ -12,7 +12,7 @@ static bool is_note_lane(PlanLaneKind lane) {
 void plan_lanes_free(PiecePlan *plan) {
     for (size_t i = 0; i < plan->lane_span_count; i++) {
         constraint_list_free(&plan->lane_spans[i].constraints);
-        if (is_note_lane(plan->lane_spans[i].lane)) {
+        if (!plan->lane_spans[i].removed && is_note_lane(plan->lane_spans[i].lane)) {
             free((void *)plan->lane_spans[i].payload.notes.notes);
         }
     }
@@ -20,13 +20,56 @@ void plan_lanes_free(PiecePlan *plan) {
     plan->lane_spans = NULL;
     plan->lane_span_count = 0;
     plan->lane_span_capacity = 0;
+    plan->removed_lane_span_count = 0;
 }
 
 LaneSpan *plan_lane_span_at(const PiecePlan *plan, LaneSpanId id) {
-    if (!plan || id == PLAN_LANE_SPAN_NONE || id > plan->lane_span_count) {
+    if (!plan || id == PLAN_LANE_SPAN_NONE || id > plan->lane_span_count || plan->lane_spans[id - 1].removed) {
         return NULL;
     }
     return &plan->lane_spans[id - 1];
+}
+
+LaneSpanId plan_lane_span_rank(const PiecePlan *plan, LaneSpanId id) {
+    if (!plan_lane_span_at(plan, id) || plan->removed_lane_span_count == 0) {
+        return id;
+    }
+    LaneSpanId rank = 0;
+    for (LaneSpanId other = 1; other <= id; other++) {
+        rank += !plan->lane_spans[other - 1].removed;
+    }
+    return rank;
+}
+
+static void remove_entry(PiecePlan *plan, LaneSpan *entry) {
+    if (is_note_lane(entry->lane)) {
+        free((void *)entry->payload.notes.notes);
+    }
+    constraint_list_free(&entry->constraints);
+    memset(&entry->payload, 0, sizeof(entry->payload));
+    entry->removed = true;
+    plan->removed_lane_span_count++;
+}
+
+PlanResult plan_lane_span_remove_owned(PiecePlan *plan, NodeId owner) {
+    for (size_t i = 0; plan && i < plan->lane_span_count; i++) {
+        if (!plan->lane_spans[i].removed && plan->lane_spans[i].owner == owner) {
+            remove_entry(plan, &plan->lane_spans[i]);
+        }
+    }
+    return PLAN_OK;
+}
+
+PlanResult plan_lane_span_remove(PiecePlan *plan, LaneSpanId id) {
+    LaneSpan *entry = plan_lane_span_at(plan, id);
+    if (!entry) {
+        return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
+    }
+    if (entry->state == PLAN_STATE_GIVEN) {
+        return PLAN_ERR_GIVEN_LOCKED;
+    }
+    remove_entry(plan, entry);
+    return PLAN_OK;
 }
 
 static bool spans_overlap(PlanSpan a, PlanSpan b) {
@@ -103,7 +146,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     }
     for (size_t i = 0; i < plan->lane_span_count; i++) {
         const LaneSpan *existing = &plan->lane_spans[i];
-        if (existing->lane == lane && existing->voice == voice && spans_overlap(existing->span, span)) {
+        if (!existing->removed && existing->lane == lane && existing->voice == voice && spans_overlap(existing->span, span)) {
             return PLAN_ERR_LANE_OVERLAP;
         }
     }
@@ -141,6 +184,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     entry->span = span;
     entry->payload = stored;
     entry->state = PLAN_STATE_CONSTRAINED;
+    entry->removed = false;
     memset(&entry->constraints, 0, sizeof(entry->constraints));
     *out_id = plan->lane_span_count;
     return PLAN_OK;
@@ -200,7 +244,7 @@ const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId 
 }
 
 static bool matches_lane(const LaneSpan *entry, PlanLaneKind lane, int voice, PlanSpan range) {
-    return entry->lane == lane && entry->voice == voice && spans_overlap(entry->span, range);
+    return !entry->removed && entry->lane == lane && entry->voice == voice && spans_overlap(entry->span, range);
 }
 
 /* Orders spans by start, then by id. */
@@ -253,7 +297,7 @@ size_t plan_node_lane_spans(const PiecePlan *plan, NodeId owner, LaneSpanId *out
     }
     size_t matches = 0;
     for (size_t i = 0; i < plan->lane_span_count; i++) {
-        if (plan->lane_spans[i].owner != owner) {
+        if (plan->lane_spans[i].removed || plan->lane_spans[i].owner != owner) {
             continue;
         }
         if (out_ids && matches < capacity) {

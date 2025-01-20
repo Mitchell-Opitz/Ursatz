@@ -380,6 +380,9 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
 
     /* Decide what is rendered and what is skipped. */
     for (LaneSpanId id = 1; result == PLAN_RENDER_OK && id <= span_count; id++) {
+        if (!plan_has_lane_span(plan, id)) {
+            continue;
+        }
         PlanLaneKind lane = plan_lane_span_lane(plan, id);
         if (node_is_material(plan, plan_lane_span_owner(plan, id))) {
             if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane, RENDER_SKIP_MATERIAL)) {

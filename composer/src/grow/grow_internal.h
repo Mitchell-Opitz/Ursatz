@@ -9,6 +9,11 @@
 #define GROW_THEME_NAME "theme"
 #define GROW_MATERIAL_NAME "material"
 #define GROW_SOURCE_NAME "m0"
+
+/* The pitch of the note an open bass, melody or inner voice span holds until an operator writes it. */
+#define BASS_PLACEHOLDER 40
+#define MELODY_PLACEHOLDER 60
+#define INNER_PLACEHOLDER 55
 #define GROW_PAYLOAD_MAGIC 0x47525731UL
 /* Fragments of the basic idea are this many notes at most; the first is the leading ones of the motive. */
 #define GROW_FRAGMENT_MAX 3

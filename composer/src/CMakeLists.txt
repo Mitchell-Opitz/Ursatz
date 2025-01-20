@@ -63,6 +63,9 @@ add_library(ursatz_composer STATIC
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c
+    piece/lock.c
+    piece/depend.c
+    piece/regenerate.c
     texture/accompaniment.c
     texture/accompaniment_pattern.c
     texture/accompaniment_hear.c

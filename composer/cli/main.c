@@ -8,6 +8,7 @@
 #include "motive.h"
 #include "plan.h"
 #include "progression.h"
+#include "regenerate.h"
 
 #include <ursatz_composer/composer.h>
 #include <ursatz_composer/export.h>
@@ -24,6 +25,8 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", COUNTERPOINT_USAGE_LINE);
     fprintf(out, "%s\n", PLAN_USAGE_LINE);
     fprintf(out, "%s\n", FILL_USAGE_LINE);
+    fprintf(out, "%s\n", LOCK_USAGE_LINE);
+    fprintf(out, "%s\n", REGENERATE_USAGE_LINE);
 }
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
@@ -122,6 +125,12 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "fill") == 0) {
         return run_fill(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "lock") == 0) {
+        return run_lock(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "regenerate") == 0) {
+        return run_regenerate(argc, argv);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         printf("ursatz-composer %s\n", composer_version());
