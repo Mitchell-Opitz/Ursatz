@@ -7,6 +7,7 @@
 #include <phrase_level_form.h>
 
 #include <ursatz_composer/accompaniment.h>
+#include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
@@ -76,6 +77,10 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
     }
     free(outcome->sections);
     return_heard_destroy(&outcome->returns);
+    for (size_t i = 0; outcome->analyzer_checks && i < outcome->analyzer_check_count; i++) {
+        analyzer_check_destroy(&outcome->analyzer_checks[i]);
+    }
+    free(outcome->analyzer_checks);
     memset(outcome, 0, sizeof(*outcome));
 }
 
@@ -719,6 +724,42 @@ static PieceResult check_keys(const PiecePlan *plan, ComposeOutcome *outcome) {
     return PIECE_ERR_STUCK;
 }
 
+/*
+ * The Analyzer's check of every theme section (R-080). PIECE_ERR_STUCK, marked in the outcome, when some section's
+ * analysis contradicts the plan; the score takes in what was planned and what was heard. A section the check cannot read
+ * is left out of it.
+ */
+static PieceResult check_analyzer(const PiecePlan *plan, ComposeOutcome *outcome) {
+    outcome->analyzer_checks = calloc(outcome->section_count ? outcome->section_count : 1, sizeof(AnalyzerCheck));
+    if (!outcome->analyzer_checks) {
+        return PIECE_ERR_ALLOC;
+    }
+    outcome->analyzer_check_count = outcome->section_count;
+    bool contradicts = false;
+    for (size_t i = 0; i < outcome->section_count; i++) {
+        AnalyzerCheck *check = &outcome->analyzer_checks[i];
+        AnalyzerCheckResult result = analyzer_check_section(plan, outcome->sections[i].section, check);
+        if (result == ANALYZER_CHECK_ERR_ALLOC) {
+            return PIECE_ERR_ALLOC;
+        }
+        if (result != ANALYZER_CHECK_OK) {
+            continue;
+        }
+        outcome->analyzer_planned += check->planned;
+        outcome->analyzer_agreed += check->agreed;
+        contradicts = contradicts || check->contradicts;
+    }
+    outcome->score.numerator += outcome->analyzer_agreed;
+    outcome->score.denominator += outcome->analyzer_planned;
+    if (!contradicts) {
+        return PIECE_OK;
+    }
+    outcome->stuck = true;
+    outcome->stuck_stage = COMPOSE_STAGE_TEXTURE;
+    outcome->analyzer_rejected = true;
+    return PIECE_ERR_STUCK;
+}
+
 PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
     if (!plan || !config || !outcome) {
         return PIECE_ERR_NULL;
@@ -743,6 +784,9 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
         result = run_once(plan, config, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome);
         if (result == PIECE_OK && has_key_changes(plan)) {
             result = check_keys(plan, outcome);
+        }
+        if (result == PIECE_OK && config->analyzer_check) {
+            result = check_analyzer(plan, outcome);
         }
         if (result != PIECE_ERR_STUCK) {
             break;
