@@ -587,18 +587,8 @@ function renderAnalysisTool() {
 }
 
 /* The workspace mounted in the content area while a piece is open (see
- * showAnalysisView), and the claim-highlight state tied to its score.
- * currentScoreNoteIndex maps a MusicXML xml:id to the GraphicalNote(s) OSMD
- * built for it, found by position and pitch (see score-notes.js), built the
- * first time the score has rendered. pendingHighlightClaim is a claim chosen
- * in Data mode; highlightPending is true until its notes are colored. */
+ * showAnalysisView). */
 let analysisWorkspace = null;
-let currentScoreNoteIndex = null;
-let currentHighlightedNotes = [];
-let pendingHighlightClaim = null;
-let highlightPending = false;
-
-const HIGHLIGHT_NOTEHEAD_COLOR = "#e07a00";
 
 /* Closes the open workspace, if any, and gives the content area back its
  * padding. */
@@ -607,10 +597,6 @@ function leaveWorkspace() {
     analysisWorkspace.destroy();
     analysisWorkspace = null;
   }
-  currentScoreNoteIndex = null;
-  currentHighlightedNotes = [];
-  pendingHighlightClaim = null;
-  highlightPending = false;
   getContentEl().classList.remove("content--workspace");
 }
 
@@ -697,15 +683,6 @@ function mountAnalysisWorkspace(content, id, data) {
   });
   analysisWorkspace = workspace;
 
-  workspace.on("rendered", () => {
-    if (!currentScoreNoteIndex && workspace.osmd()) {
-      currentScoreNoteIndex = buildScoreNoteIndex(workspace.osmd(), workspace.xmlText());
-    }
-    if (highlightPending) {
-      applyPendingHighlight();
-    }
-  });
-
   renderDataMode(workspace.dataEl(), data);
 }
 
@@ -769,65 +746,17 @@ function renderAnalysisTabs(data) {
   }
 }
 
-/* Builds the xml:id -> GraphicalNote[] index from the MusicXML text and
- * the rendered OSMD instance; warns once with the number of rendered notes
- * that matched no xml:id. */
-function buildScoreNoteIndex(osmd, xmlText) {
-  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
-  const xmlEntries = ScoreNotes.buildMusicXmlNoteKeys(doc.documentElement);
-  const { index, unmatched } = ScoreNotes.buildNoteIndex(xmlEntries, ScoreNotes.collectGraphicalNotes(osmd));
-  if (unmatched > 0) {
-    console.warn(`Score: ${unmatched} rendered note(s) matched no xml:id; claims cannot highlight them.`);
+/* A Data mode claim row was chosen: show it on the score. */
+function showClaimOnScore() {
+  if (analysisWorkspace) {
+    analysisWorkspace.setMode("score");
   }
-  return index;
-}
-
-const findNotesForHighlightId = ScoreNotes.findNotesForHighlightId;
-
-/* Colors the notes of pendingHighlightClaim in the open score and draws it
- * again; a claim without notes (key, chord, period, sentence, form,
- * thematic_return) just clears the previous highlight. Waits (highlightPending
- * stays true) until the score has rendered and its note index exists. */
-function applyPendingHighlight() {
-  if (!analysisWorkspace || !analysisWorkspace.osmd() || !currentScoreNoteIndex) {
-    return;
-  }
-  highlightPending = false;
-  for (const note of currentHighlightedNotes) {
-    if (note.sourceNote) {
-      note.sourceNote.NoteheadColor = undefined;
-    }
-  }
-  const claim = pendingHighlightClaim;
-  const notes = [];
-  for (const baseId of (claim && claim.highlighted_note_ids) || []) {
-    notes.push(...findNotesForHighlightId(currentScoreNoteIndex, baseId));
-  }
-  for (const note of notes) {
-    if (note.sourceNote) {
-      note.sourceNote.NoteheadColor = HIGHLIGHT_NOTEHEAD_COLOR;
-    }
-  }
-  currentHighlightedNotes = notes;
-  analysisWorkspace.rerender();
-}
-
-/* A Data mode claim row was chosen: show Score mode with that claim's notes
- * colored (until the Inspector takes over this job). */
-function showClaimOnScore(xmlIds) {
-  if (!analysisWorkspace) {
-    return;
-  }
-  pendingHighlightClaim = { highlighted_note_ids: xmlIds };
-  highlightPending = true;
-  analysisWorkspace.setMode("score");
-  applyPendingHighlight();
 }
 
 /* One tab: for each document section, a heading, the section's JSON block
  * when it is an object, and its rows. A row is a claim: label, where it
  * is, and a toggle for its remaining fields. Choosing a row shows its
- * notes' xml:ids on the score (showClaimOnScore). */
+ * claim on the score (showClaimOnScore). */
 function renderTabBlocks(claimsEl, state, noteXmlIds) {
   claimsEl.innerHTML = "";
 
@@ -889,7 +818,7 @@ function buildClaimRows(rows, noteXmlIds) {
       json.hidden = !json.hidden;
     });
     li.addEventListener("click", () => {
-      showClaimOnScore(mapNoteIdsToXmlIds(row.noteIds, noteXmlIds));
+      showClaimOnScore();
     });
     list.appendChild(li);
   }

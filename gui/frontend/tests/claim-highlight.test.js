@@ -144,19 +144,13 @@ check(ScoreNotes.findNotesForHighlightId(fragIndex, "missing").length === 0, "an
 const tie = ScoreNotes.findNotesForHighlightId(ScoreNotes.buildNoteIndex(entries, rendered).index, "tie");
 check(tie.length === 2 && tie.includes(graph.tie_a) && tie.includes(graph.tie_b), "a tied note across a barline highlights both halves");
 
-/* A Data mode claim row shows its notes on the score through the workspace:
- * it switches to Score mode, colors the notes and draws again once, and a
- * highlight chosen before the first render waits for it. */
+/* The workspace selects claims itself: the old app.js highlight path (a
+ * pending claim colored through NoteheadColor and a re-render) is gone. */
 const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
 check(
-  appSource.includes("showClaimOnScore(mapNoteIdsToXmlIds(row.noteIds, noteXmlIds))"),
-  "a claim row sends its notes' xml:ids to the score",
+  !/pendingHighlightClaim|applyPendingHighlight|HIGHLIGHT_NOTEHEAD_COLOR|NoteheadColor|highlightPending/.test(appSource),
+  "app.js no longer colors a claim's notes through OSMD NoteheadColor",
 );
 check(appSource.includes('analysisWorkspace.setMode("score")'), "choosing a claim row switches to Score mode");
-check(appSource.includes("analysisWorkspace.rerender()"), "the highlight is drawn through the workspace re-render");
-check(
-  /if \(highlightPending\) \{\s*applyPendingHighlight\(\);/.test(appSource) && /highlightPending = false;\s*for \(const note of currentHighlightedNotes\)/.test(appSource),
-  "a highlight chosen before the first render is applied once, and clears its pending flag before drawing again",
-);
 
 process.exit(failures === 0 ? 0 : 1);

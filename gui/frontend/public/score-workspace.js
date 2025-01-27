@@ -13,12 +13,17 @@
  *   ws.on("rendered", (layout) => ...);
  *   ws.on("modechange", (mode) => ...);
  *   ws.on("layerchange", (enabledIds) => ...);
+ *   ws.on("select", (selection) => ...);   {item, layer, others} or null
  *
  * Zoom, panel state and view mode are remembered (WorkspaceState). Needs
  * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreLayers,
- * ScoreGeometry, ScoreOverlay and WorkspaceState loaded first. */
+ * InspectorModel, ScoreGeometry, ScoreOverlay and WorkspaceState loaded
+ * first. */
 (function (root) {
   const RESIZE_DELAY_MS = 150;
+  /* Most notehead halos drawn for one selection (a whole-piece claim can
+   * name thousands of notes). */
+  const MAX_HALOS = 2000;
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -56,6 +61,16 @@
     const catalog = ScoreLayers.buildLayerCatalog(opts.document || {});
     const layerState = ScoreLayers.createLayerState(storage);
     layerState.setCatalog(catalog.map((layer) => layer.id));
+    const layerById = new Map(catalog.map((layer) => [layer.id, layer]));
+    const itemByKey = new Map();
+    for (const layer of catalog) {
+      for (const item of layer.items) {
+        itemByKey.set(item.key, item);
+      }
+    }
+    /* The one selected item: {item, layer, others}, where others are the
+     * further items a clicked note belongs to. */
+    let selection = null;
     let osmd = null;
     let overlay = null;
     /* OSMD time minus piece position; the timeline offset (see
@@ -298,8 +313,11 @@
     /* Noteheads colored for the notes layers that are on; the original
      * colors are put back first, so a layer turned off disappears. */
     const coloredPaths = [];
+    /* the colored notehead paths -> the note index they show */
+    const pathNote = new Map();
 
     function restoreNoteColors() {
+      pathNote.clear();
       for (const { path, fill, stroke } of coloredPaths) {
         for (const [name, value] of [["fill", fill], ["stroke", stroke]]) {
           if (value === null) {
@@ -333,17 +351,159 @@
             coloredPaths.push({ path, fill: path.getAttribute("fill"), stroke: path.getAttribute("stroke") });
             path.setAttribute("fill", colors.get(layerId));
             path.setAttribute("stroke", colors.get(layerId));
+            pathNote.set(path, noteIndex);
           }
         }
       }
     }
 
-    function redrawOverlay() {
-      if (overlay) {
-        overlay.draw(layout, timelineOffset, catalog, layerState.enabled());
+    /* Each notehead's box in pixels relative to the OSMD SVG, for halos. */
+    function noteRects(noteIds) {
+      const svg = osmdHost.querySelector("svg");
+      if (!svg) {
+        return [];
       }
-      applyNoteColors();
+      const base = svg.getBoundingClientRect();
+      const boxes = [];
+      for (const index of noteIds) {
+        const xmlId = (opts.noteXmlIds || [])[index];
+        if (!xmlId) {
+          continue;
+        }
+        for (const note of graphicalNotesFor(xmlId)) {
+          const [path] = noteheadPaths(note);
+          if (!path || boxes.length >= MAX_HALOS) {
+            continue;
+          }
+          const rect = path.getBoundingClientRect();
+          if (rect.width > 0 || rect.height > 0) {
+            boxes.push({ x: rect.left - base.left, y: rect.top - base.top, w: rect.width, h: rect.height });
+          }
+        }
+      }
+      return boxes;
     }
+
+    /* What the overlay shows for the selection. A ribbon layer's claim can
+     * hold thousands of notes, so it gets a tint over its span; the others
+     * get a halo around each of their noteheads. */
+    function buildView() {
+      const view = { selectedKey: null, tints: [], halos: [], secondaryTints: [], secondaryHalos: [] };
+      if (selection) {
+        const { item, layer } = selection;
+        view.selectedKey = item.key;
+        if (layer.kind === "ribbon") {
+          view.tints.push({ start: item.start, end: item.end });
+        } else {
+          view.halos = noteRects(item.noteIds);
+        }
+      }
+      return view;
+    }
+
+    function redrawOverlay() {
+      applyNoteColors();
+      if (overlay) {
+        overlay.draw(layout, timelineOffset, catalog, layerState.enabled(), buildView());
+      }
+    }
+
+    function reducedMotion() {
+      return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    }
+
+    /* Scrolls the score so the system holding the item's start sits at 25%
+     * of the canvas height; with onlyIfHidden, only when that system is not
+     * fully in view. */
+    function scrollToItem(item, onlyIfHidden) {
+      if (!layout || layout.systems.length === 0) {
+        return;
+      }
+      const system = layout.systems[ScoreGeometry.xAt(layout, item.start + timelineOffset).system];
+      if (!system) {
+        return;
+      }
+      const top = svgTopInCanvas() + system.top;
+      const bottom = svgTopInCanvas() + system.bottom;
+      if (onlyIfHidden && top >= canvas.scrollTop && bottom <= canvas.scrollTop + canvas.clientHeight) {
+        return;
+      }
+      canvas.scrollTo({
+        top: Math.max(0, top - canvas.clientHeight * 0.25),
+        behavior: reducedMotion() ? "auto" : "smooth",
+      });
+    }
+
+    /* Selects one item (a ribbon, mark, numeral or the item of a clicked
+     * note) and shows it in the Inspector. */
+    function select(item, options) {
+      const layer = item && layerById.get(item.layerId);
+      if (!layer) {
+        return;
+      }
+      selection = { item, layer, others: (options && options.others) || [] };
+      redrawOverlay();
+      if (state.mode === "score" && !open.inspector) {
+        setPanel("inspector", true);
+      }
+      emit("select", selection);
+    }
+
+    function clearSelection() {
+      if (!selection) {
+        return false;
+      }
+      selection = null;
+      redrawOverlay();
+      emit("select", null);
+      return true;
+    }
+
+    /* The previous or next item of the selected item's layer. */
+    function selectNeighbor(direction) {
+      if (!selection) {
+        return false;
+      }
+      const next = InspectorModel.neighborItem(selection.layer.items, selection.item.key, direction);
+      if (!next) {
+        return false;
+      }
+      select(next);
+      scrollToItem(next, true);
+      return true;
+    }
+
+    /* The items of the layers that are on, in catalog order. */
+    function enabledItems() {
+      const on = new Set(layerState.enabled());
+      return catalog.filter((layer) => on.has(layer.id) && !layer.empty).flatMap((layer) => layer.items);
+    }
+
+    /* A click on a ribbon, mark or numeral selects its item. */
+    overlay.element.addEventListener("click", (event) => {
+      const group = event.target.closest ? event.target.closest("g[data-key]") : null;
+      const item = group ? itemByKey.get(group.getAttribute("data-key")) : null;
+      if (item) {
+        event.stopPropagation();
+        select(item);
+      }
+    });
+
+    /* A click on a notehead colored by a notes layer selects the shortest
+     * item of the layers that are on that holds the note. */
+    osmdHost.addEventListener("click", (event) => {
+      const path = event.target.closest ? event.target.closest("path") : null;
+      const noteIndex = path ? pathNote.get(path) : undefined;
+      if (noteIndex === undefined) {
+        return;
+      }
+      const hits = enabledItems().filter((item) => item.noteIds.includes(noteIndex));
+      const picked = InspectorModel.pickItemForNote(hits);
+      if (picked) {
+        event.stopPropagation();
+        select(picked, { others: hits.filter((item) => item !== picked) });
+      }
+    });
 
     /* Room between systems for the lanes of the layers that are on
      * (ScoreGeometry.systemSpacingUnits), never less than OSMD's own. */
@@ -405,6 +565,11 @@
 
     layerState.onChange((enabled) => {
       syncRail();
+      /* a layer turned off takes its selection with it */
+      if (selection && !enabled.includes(selection.item.layerId)) {
+        selection = null;
+        emit("select", null);
+      }
       /* new lanes can need more room between systems: draw the score again */
       if (osmd && spacingDefaults && !sameSpacing(wantedSpacing(), appliedSpacing)) {
         render();
@@ -655,10 +820,14 @@
             openShortcuts();
           }
           break;
+        case "select-previous":
+        case "select-next":
+          if (!inScore || !selectNeighbor(row.action === "select-next" ? 1 : -1)) return;
+          break;
         case "escape":
           if (dialog) {
             closeShortcuts();
-          } else if (!closeFloatingPanels()) {
+          } else if (!closeFloatingPanels() && !(inScore && clearSelection())) {
             return;
           }
           break;
@@ -867,6 +1036,9 @@
       setStatus,
       dataEl: () => dataPane,
       layers: () => ({ catalog, state: layerState }),
+      select,
+      clearSelection,
+      selected: () => selection,
       playback: () => playbackData,
       timelineOffset: () => timelineOffset,
     };
