@@ -64,6 +64,7 @@ add_library(ursatz_composer STATIC
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c
+    piece/compose_candidates.c
     piece/lock.c
     piece/depend.c
     piece/regenerate.c

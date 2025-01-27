@@ -8,7 +8,7 @@
 #include <ursatz_composer/piece_plan.h>
 
 #define FILL_USAGE_LINE                                                                                                \
-    "Usage: ursatz-composer fill <plan.json> [--seed N] [--out <plan.json>] [--midi <file>] [--musicxml <file>] "       \
+    "Usage: ursatz-composer fill <plan.json> [--seed N] [--check] [--candidates N] [--out <plan.json>] [--midi <file>] [--musicxml <file>] "       \
     "[--record <file.json>] [--format text|json]"
 
 /* "ursatz-composer fill ..."; argv[1] is "fill". Returns the exit status. */
