@@ -6,6 +6,7 @@ add_library(ursatz_composer STATIC
     plan/constraint.c
     plan/plan_json.c
     plan/analysis_load.c
+    check/analyzer_check.c
     render/render.c
     render/export.c
     fill/fill_target.c
@@ -63,6 +64,7 @@ add_library(ursatz_composer STATIC
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c
+    piece/compose_candidates.c
     piece/lock.c
     piece/depend.c
     piece/regenerate.c

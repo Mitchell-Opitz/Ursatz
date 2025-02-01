@@ -1,7 +1,7 @@
 # grow command
 
 ```sh
-ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
+ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
@@ -36,6 +36,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--accompaniment <pattern>` | Write an accompaniment in the inner voices: `block`, `arpeggiated`, `alberti` (not in 6/8), `oom-pah`, or `any`, which chooses from the seed. See [accompaniment.md](accompaniment.md). |
 | `--texture <name>` | The texture the accompaniment is to be heard as, a standard-texture name in any case: `homophony`, `homorhythm` (block chords only) or `melody and accompaniment`. Alone it implies `--accompaniment any`. Other textures are refused. `--texture chorale` is a voicing, not an accompaniment: see `--voicing`. |
 | `--voicing` | Voice the harmony and bass in four parts by the standard voicing rules ([voicing.md](voicing.md)): the grown melody stays the soprano and an alto and a tenor are added under it. With `--texture chorale` instead the melody is written by the voicing too, a note a chord (a chorale), in place of the grown melody. The two are not combined with each other or with `--accompaniment`. |
+| `--check` | Analyze the theme with the Ursatz Analyzer ([analyzer-check.md](analyzer-check.md)) and pass over a seed whose analysis contradicts the plan: a planned cadence or the key not heard as planned, or a hard voice-leading fault. The next seed is tried, as for a stuck run, and the seed kept is printed. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same input, options and seed give the same output. |
 | `--suggest <n>` | 1 to 16 different themes instead of one. |
 | `--out <file.json>` | The plan as JSON, as `plan_write_json_file` writes it. |

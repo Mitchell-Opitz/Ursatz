@@ -308,6 +308,60 @@ static void test_stuck(void) {
 }
 
 /*
+ * The Analyzer check and the candidates (docs/analyzer-check.md): --check is reported with the result, --candidates lists
+ * every candidate and writes the best, the same options give the same bytes, and the options are checked.
+ */
+static void test_check_and_candidates(void) {
+    char *out = output_of("fill", "plan_cli_rounded-binary.json --seed 1 --check");
+    assert(strstr(out, "analyzer check: ") != NULL);
+    assert(strstr(out, "planned cadences and keys heard as planned") != NULL);
+    free(out);
+    out = output_of("fill", "plan_cli_rounded-binary.json --seed 1 --check --format json");
+    assert(strstr(out, "\"analyzer\":{\"planned\":") != NULL);
+    free(out);
+    out = output_of("fill", "plan_cli_rounded-binary.json --seed 1");
+    assert(strstr(out, "analyzer check") == NULL);
+    free(out);
+
+    for (int run_number = 0; run_number < 2; run_number++) {
+        char arguments[512];
+        snprintf(arguments, sizeof(arguments),
+                 "plan_cli_rounded-binary.json --seed 1 --check --candidates 3 --out plan_cli_candidates_%d.json --midi "
+                 "plan_cli_candidates_%d.mid",
+                 run_number, run_number);
+        out = output_of("fill", arguments);
+        assert(strstr(out, "candidates (") == out + 1);
+        assert(strstr(out, "  seed ") != NULL);
+        assert(strstr(out, "agreement ") != NULL);
+        assert(strstr(out, "  written") != NULL);
+        free(out);
+    }
+    expect_same_file("plan_cli_candidates_0.json", "plan_cli_candidates_1.json");
+    expect_same_file("plan_cli_candidates_0.mid", "plan_cli_candidates_1.mid");
+    out = output_of("fill", "plan_cli_rounded-binary.json --seed 1 --candidates 3 --format json");
+    assert(strstr(out, "\"candidates\":[{\"seed\":") != NULL);
+    assert(strstr(out, "\"written\":true") != NULL);
+    free(out);
+
+    expect_failure("fill", "plan_cli_binary.json --candidates 0", 1, "--candidates must be a whole number from 1 to 32");
+    expect_failure("fill", "plan_cli_binary.json --candidates 33", 1, "--candidates must be a whole number from 1 to 32");
+    expect_failure("fill", "plan_cli_binary.json --candidates many", 1, "--candidates must be");
+    expect_failure("fill", "plan_cli_binary.json --candidates", 1, "--candidates needs a value");
+
+    /* grow --check passes over a seed the Analyzer contradicts and prints the seed that was kept. */
+    out = output_of("grow", FIXTURE("motive_d_minor.txt") " --into period --key \"D minor\" --meter 4/4 --seed 7 --check");
+    assert(strstr(out, "\nseed ") != NULL);
+    assert(strstr(out, "\nseed 7\n") == NULL); /* seed 7 is contradicted; the first seed heard as planned is kept */
+    free(out);
+    char *help = output_of("fill", "--help");
+    assert(strstr(help, "--check") != NULL && strstr(help, "--candidates") != NULL);
+    free(help);
+    help = output_of("grow", "--help");
+    assert(strstr(help, "--check") != NULL);
+    free(help);
+}
+
+/*
  * Given material (given.h): a phrase, a progression or a bass line placed in a plan with --given-* and --at, planned as a
  * ternary form of 24 bars when no form is named, and shown by `fill` as given and unchanged.
  */
@@ -402,6 +456,7 @@ int main(void) {
     test_plan_errors();
     test_fill_errors();
     test_stuck();
+    test_check_and_candidates();
     test_given();
     return 0;
 }

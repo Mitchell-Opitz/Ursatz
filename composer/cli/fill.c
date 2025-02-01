@@ -22,6 +22,7 @@
 
 #define MAX_OUTPUTS 4
 #define MAX_OPEN_SHOWN 24
+#define MAX_CANDIDATES 32
 
 typedef struct {
     bool help;
@@ -32,7 +33,10 @@ typedef struct {
     const char *musicxml_path;
     const char *record_path;
     const char *format_text;
+    const char *candidates_text;
     unsigned long seed;
+    unsigned long candidates; /* 0 for the single run */
+    bool check;
     bool json;
 } Options;
 
@@ -45,6 +49,10 @@ static void print_help(FILE *out) {
     fprintf(out, "  --seed <n>           whole number from 0; the same plan and seed give the same output. Default: from the\n");
     fprintf(out, "                       clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
+    fprintf(out, "  --check              analyze every theme section with the Ursatz Analyzer and reject a run whose analysis\n");
+    fprintf(out, "                       contradicts the plan (a planned cadence or the key not heard, a hard voice-leading fault)\n");
+    fprintf(out, "  --candidates <n>     compose n candidates (1 to %d, seeds from --seed) and write the best, ranked by agreement\n", MAX_CANDIDATES);
+    fprintf(out, "                       with the Analyzer, then score, then the lower seed; every candidate is listed\n");
     fprintf(out, "  --out <file.json>    write the realized plan as JSON\n");
     fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
@@ -69,6 +77,10 @@ static int read_options(int argc, char **argv, Options *options) {
             options->help = true;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
+        } else if (strcmp(arg, "--check") == 0) {
+            options->check = true;
+        } else if (strcmp(arg, "--candidates") == 0) {
+            target = &options->candidates_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
         } else if (strcmp(arg, "--midi") == 0) {
@@ -110,6 +122,13 @@ static int check_options(Options *options) {
         }
     } else {
         options->seed = cli_default_seed();
+    }
+    if (options->candidates_text) {
+        if (!cli_parse_whole_number(options->candidates_text, MAX_CANDIDATES, &options->candidates) ||
+            options->candidates == 0) {
+            return cli_fail(CLI_EXIT_USAGE, "--candidates must be a whole number from 1 to %d, not '%s'", MAX_CANDIDATES,
+                            options->candidates_text);
+        }
     }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
@@ -284,6 +303,10 @@ static void print_result_text(unsigned long seed, bool realized, const PiecePlan
         }
         printf("\n");
     }
+    if (outcome->analyzer_check_count > 0) {
+        printf("\nanalyzer check: %zu of %zu planned cadences and keys heard as planned\n", outcome->analyzer_agreed,
+               outcome->analyzer_planned);
+    }
     printf("\nreturns heard %zu of %zu planned\n", outcome->returns_heard, outcome->returns_planned);
     for (size_t i = 0; i < outcome->returns.count; i++) {
         const ReturnHeardPair *pair = &outcome->returns.pairs[i];
@@ -319,7 +342,11 @@ static void print_result_json(unsigned long seed, bool realized, const PiecePlan
         }
         printf("]}");
     }
-    printf("],\"returns\":{\"planned\":%zu,\"heard\":%zu,\"pairs\":[", outcome->returns_planned, outcome->returns_heard);
+    printf("],");
+    if (outcome->analyzer_check_count > 0) {
+        printf("\"analyzer\":{\"planned\":%zu,\"agreed\":%zu},", outcome->analyzer_planned, outcome->analyzer_agreed);
+    }
+    printf("\"returns\":{\"planned\":%zu,\"heard\":%zu,\"pairs\":[", outcome->returns_planned, outcome->returns_heard);
     for (size_t i = 0; i < outcome->returns.count; i++) {
         const ReturnHeardPair *pair = &outcome->returns.pairs[i];
         printf("%s{\"later\":", i ? "," : "");
@@ -535,6 +562,40 @@ void cli_print_composed(bool json, unsigned long seed, const PiecePlan *plan, co
     }
 }
 
+/* --- the candidates -------------------------------------------------------------- */
+
+/* The written candidate's seed is `written`; the best is first, but the written one is named so a reader need not guess. */
+static void print_candidates_text(const ComposeCandidates *candidates, unsigned long written) {
+    if (candidates->count == 0) {
+        return;
+    }
+    printf("\ncandidates (%zu of %zu completed, best first)\n", candidates->count, candidates->tried);
+    for (size_t i = 0; i < candidates->count; i++) {
+        const ComposeCandidate *candidate = &candidates->items[i];
+        printf("  seed %lu  agreement %zu/%zu  score %lu/%lu%s\n", candidate->seed, candidate->agreed, candidate->planned,
+               candidate->score.numerator, candidate->score.denominator, candidate->seed == written ? "  written" : "");
+    }
+    printf("\n");
+}
+
+#define CANDIDATE_JSON_SIZE (MAX_CANDIDATES * 120 + 64)
+
+/* The members "candidates" of the result, as JSON text for print_result_json's extra. */
+static void candidates_json(const ComposeCandidates *candidates, unsigned long written, char *out, size_t size) {
+    size_t length = (size_t)snprintf(out, size, "\"candidates\":[");
+    for (size_t i = 0; i < candidates->count && length < size; i++) {
+        const ComposeCandidate *candidate = &candidates->items[i];
+        length += (size_t)snprintf(out + length, size - length,
+                                   "%s{\"seed\":%lu,\"agreed\":%zu,\"planned\":%zu,\"score\":\"%lu/%lu\",\"written\":%s}",
+                                   i ? "," : "", candidate->seed, candidate->agreed, candidate->planned,
+                                   candidate->score.numerator, candidate->score.denominator,
+                                   candidate->seed == written ? "true" : "false");
+    }
+    if (length < size) {
+        snprintf(out + length, size - length, "]");
+    }
+}
+
 /* --- the command ---------------------------------------------------------------- */
 
 int run_fill(int argc, char **argv) {
@@ -565,6 +626,8 @@ int run_fill(int argc, char **argv) {
     bool done = false;
     bool realized = false;
     unsigned long used = options.seed;
+    ComposeCandidates candidates;
+    memset(&candidates, 0, sizeof(candidates));
     for (unsigned long attempt = 0; attempt < CLI_MAX_SEED_TRIES && !done && status == 0; attempt++) {
         PlanJsonError error;
         PiecePlan *fresh = NULL;
@@ -576,11 +639,37 @@ int run_fill(int argc, char **argv) {
             /* What the user gave, kept to show after the run that none of it was changed. */
             snapshot = given_snapshot(fresh);
         }
-        ComposeOutcome result;
-        memset(&result, 0, sizeof(result));
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
         config.seed = (options.seed + attempt) & CLI_SEED_MAX;
+        config.analyzer_check = options.check;
+        if (options.candidates > 0) {
+            /* The candidates run from the seed and the next ones; the best is written. */
+            PieceResult ran = compose_candidates(fresh, &config, options.candidates, &candidates);
+            if (ran == PIECE_ERR_BAD_REQUEST) {
+                plan = fresh;
+                realized = true;
+                done = true;
+            } else if (ran != PIECE_OK) {
+                plan_destroy(fresh);
+                status = cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", piece_result_name(ran));
+            } else if (candidates.count == 0) {
+                plan_destroy(fresh);
+                status = cli_fail(CLI_EXIT_UNSATISFIABLE, "no candidate could be completed from seeds %lu to %lu",
+                                  config.seed, (config.seed + candidates.tried - 1) & CLI_SEED_MAX);
+            } else {
+                plan_destroy(fresh);
+                plan = candidates.items[0].plan;
+                outcome = candidates.items[0].outcome;
+                used = candidates.items[0].seed & CLI_SEED_MAX;
+                candidates.items[0].plan = NULL;
+                memset(&candidates.items[0].outcome, 0, sizeof(candidates.items[0].outcome));
+                done = true;
+            }
+            break;
+        }
+        ComposeOutcome result;
+        memset(&result, 0, sizeof(result));
         PieceResult ran = compose_run(fresh, &config, &result);
         if (plan) {
             plan_destroy(plan);
@@ -629,12 +718,17 @@ int run_fill(int argc, char **argv) {
                 files[i] = pending[i].final_path;
             }
             if (options.json) {
-                print_result_json(used, realized, plan, &outcome, &given, files, pending_count, NULL);
+                char extra[CANDIDATE_JSON_SIZE];
+                candidates_json(&candidates, used, extra, sizeof(extra));
+                print_result_json(used, realized, plan, &outcome, &given, files, pending_count,
+                                  candidates.count > 0 ? extra : NULL);
             } else {
+                print_candidates_text(&candidates, used);
                 print_result_text(used, realized, plan, &outcome, &given, files, pending_count);
             }
         }
     }
+    compose_candidates_destroy(&candidates);
     if (plan) {
         plan_destroy(plan);
         compose_outcome_destroy(&outcome);

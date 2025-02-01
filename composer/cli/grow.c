@@ -13,6 +13,7 @@
 
 #include "cli_options.h"
 
+#include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/grow.h>
@@ -41,6 +42,7 @@ typedef struct {
     const char *accompaniment_text;
     const char *texture_text;
     bool voicing_flag;
+    bool check;
     const char *seed_text;
     const char *suggest_text;
     const char *out_path;
@@ -89,6 +91,8 @@ static void print_help(FILE *out) {
     fprintf(out, "                       (standard voicing rules), instead of the grown melody\n");
     fprintf(out, "  --voicing            keep the grown melody as the soprano and add an alto and a tenor under it, voiced\n");
     fprintf(out, "                       over the bass by the standard voicing rules (not with --accompaniment)\n");
+    fprintf(out, "  --check              analyze the theme with the Ursatz Analyzer and pass over a seed whose analysis contradicts\n");
+    fprintf(out, "                       the plan (the cadences or the key not heard as planned, a hard voice-leading fault)\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
@@ -163,6 +167,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->texture_text;
         } else if (strcmp(arg, "--voicing") == 0) {
             options->voicing_flag = true;
+        } else if (strcmp(arg, "--check") == 0) {
+            options->check = true;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
         } else if (strcmp(arg, "--suggest") == 0) {
@@ -412,6 +418,18 @@ static char *signature_of(const PiecePlan *plan, NodeId theme_node) {
     return text.text ? text.text : strdup("");
 }
 
+/* Whether the Analyzer hears the theme as planned (analyzer_check.h); a theme it cannot read is not held against it. */
+static bool analysis_agrees(const PiecePlan *plan) {
+    NodeId theme_node = find_node(plan, "theme");
+    AnalyzerCheck check;
+    if (theme_node == PLAN_NODE_NONE) {
+        return true;
+    }
+    bool agrees = analyzer_check_section(plan, theme_node, &check) != ANALYZER_CHECK_OK || !check.contradicts;
+    analyzer_check_destroy(&check);
+    return agrees;
+}
+
 /* Builds the plan and runs the stages for one seed. GROW_ERR_STUCK is the only result a later seed can mend. */
 static GrowResult grow_one(const Options *options, const Motive *motive, unsigned long seed, Theme *theme) {
     GrowRequest request;
@@ -437,6 +455,9 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
+    if (ran == GROW_OK && options->check && !analysis_agrees(theme->plan)) {
+        ran = GROW_ERR_STUCK;
+    }
     if (ran == GROW_OK) {
         NodeId theme_node = find_node(theme->plan, "theme");
         theme->signature = theme_node == PLAN_NODE_NONE ? NULL : signature_of(theme->plan, theme_node);

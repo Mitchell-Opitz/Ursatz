@@ -79,6 +79,7 @@ typedef struct {
     PitchNumericValue **pitch_values; /* owned; parallel to events */
     size_t count;
     size_t *part_index;               /* owned; parallel to events: an index into parts */
+    LaneSpanId *spans;                /* owned; parallel to events: the lane span each note was written in */
     RenderedPart *parts;              /* owned; only parts that have notes */
     size_t part_count;
     MeterMap *meter_map;              /* owned; NULL when no meter span was rendered */
@@ -91,6 +92,13 @@ typedef struct {
 
 /* Renders plan into *out, which the caller destroys. On failure *out is empty and safe to destroy. */
 PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out);
+
+/*
+ * Renders only the part of the plan inside range, measured from the range's start: a note span that starts in the
+ * range, and the key and meter spans that overlap it (the first of each starting at 0). piece_end is the range's
+ * length. The same rules as plan_render otherwise.
+ */
+PlanRenderResult plan_render_range(const PiecePlan *plan, PlanSpan range, RenderedPlan *out);
 
 /* Frees everything and zeroes the struct. Safe on a zeroed struct. */
 void rendered_plan_destroy(RenderedPlan *rendered);

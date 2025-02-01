@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/grow.h>
@@ -44,6 +45,11 @@
  * span (R-069) is then checked: its keys are closely related to the home key and every key change a section ends in
  * is a modulation (piece_check_keys), and its cadences follow the plan's (piece_check_cadences). A run that fails is
  * rejected like a stuck one: it starts again from the plan as given, with other seeds, up to the same twelve rounds.
+ *
+ * With analyzer_check (R-080) every theme section is then analyzed through the Analyzer (analyzer_check.h): a run whose
+ * analysis contradicts the plan (a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault
+ * in material the plan wrote) is rejected the same way. A section the check cannot read (a length that is not whole
+ * bars, a lane left open) is not checked. The check is off by default, so a run without it is what it always was.
  */
 
 typedef enum {
@@ -67,6 +73,7 @@ typedef struct {
     GrowContext context;
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive compose_run */
     size_t max_iterations;          /* per stage; 0 means FILL_DEFAULT_MAX_ITERATIONS */
+    bool analyzer_check;            /* reject a complete run the Analyzer's analysis contradicts (false: no check) */
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */
@@ -96,10 +103,17 @@ typedef struct {
     bool key_rejected;                        /* the last run was complete but failed the key or cadence check (stuck) */
     PieceKeyCheck key_check;                  /* the checks of the last complete run, for a plan with several keys */
     PieceCadenceCheck cadence_check;
+    bool analyzer_rejected;                   /* the last run was complete but the Analyzer's analysis contradicted the plan */
+    AnalyzerCheck *analyzer_checks;           /* owned; one per theme section, in plan order; NULL without analyzer_check */
+    size_t analyzer_check_count;
+    size_t analyzer_planned;                  /* over the sections, the cadences and keys planned ... */
+    size_t analyzer_agreed;                   /* ... and those the Analyzer heard as planned */
     /*
      * Over the sections, the structure's score and 1 for each section heard as requested: the sum of the numerators
      * over the sum of the denominators (each section's denominator one more than its structure's), as GrowOutcome's
-     * score is for one; and 1 more for each return planned, in the numerator too when it was heard.
+     * score is for one; and 1 more for each return planned, in the numerator too when it was heard. With
+     * analyzer_check, each cadence and key planned adds 1 to the denominator and each one heard as planned adds 1 to
+     * the numerator.
      */
     GrowScore score;
 } ComposeOutcome;
@@ -112,5 +126,38 @@ void compose_outcome_destroy(ComposeOutcome *outcome);
  * PIECE_ERR_BAD_REQUEST for a plan with no open theme section.
  */
 PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome);
+
+/*
+ * Candidates (R-080): compose_run on fresh copies of a plan with the seeds seed, seed + 1, ... (count of them), the
+ * complete runs kept. Rejected and stuck runs are not candidates. They are ranked
+ *   1. by agreement with the Analyzer, agreed over planned (1 when nothing was planned, as when analyzer_check is off),
+ *   2. by the compose score,
+ *   3. by the lower seed,
+ * so the best is first and the same inputs always give the same order. Each keeps its own plan, outcome and seed.
+ */
+typedef struct {
+    PiecePlan *plan;       /* owned */
+    ComposeOutcome outcome; /* owned */
+    unsigned long seed;
+    /* What the ranking used, kept apart so it can be listed after the plan and outcome were taken. */
+    size_t agreed;
+    size_t planned;
+    GrowScore score;
+} ComposeCandidate;
+
+typedef struct {
+    ComposeCandidate *items; /* owned; best first; NULL when none completed */
+    size_t count;
+    size_t tried;            /* the runs made: count given */
+} ComposeCandidates;
+
+void compose_candidates_destroy(ComposeCandidates *candidates);
+
+/*
+ * Runs count candidates (1 or more) from plan, which is not changed. PIECE_OK with candidates->count possibly 0 when no
+ * seed completed; PIECE_ERR_BAD_REQUEST for a plan with no open theme section; PIECE_ERR_NULL and PIECE_ERR_ALLOC.
+ */
+PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *config, size_t count,
+                               ComposeCandidates *candidates);
 
 #endif

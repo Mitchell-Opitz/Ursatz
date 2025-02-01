@@ -35,6 +35,7 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
     free(rendered->events);
     free(rendered->pitch_values);
     free(rendered->part_index);
+    free(rendered->spans);
     free(rendered->parts);
     meter_map_destroy(rendered->meter_map);
     for (size_t i = 0; i < rendered->key_count; i++) {
@@ -100,6 +101,45 @@ static PlanTime piece_end_of(const PiecePlan *plan) {
         }
     }
     return end;
+}
+
+/* ----------------------------------------------------------------- range */
+
+/* A time measured from the start of the range, which is the origin of a range render; unchanged without a range. */
+static PlanTime from_range_start(PlanTime time, const PlanSpan *range) {
+    PlanTime shifted = time;
+    PlanTime back = {range ? -range->start.num : 0, range ? range->start.den : 1};
+    if (range && plan_time_add(time, back, &shifted) != PLAN_OK) {
+        return time;
+    }
+    return shifted;
+}
+
+/* A key or meter span's start in a range render: the later of its own and the range's, from the range's start. */
+static PlanTime span_start_in_range(PlanSpan span, const PlanSpan *range) {
+    if (range && plan_time_compare(span.start, range->start) < 0) {
+        return from_range_start(range->start, range);
+    }
+    return from_range_start(span.start, range);
+}
+
+static PlanTime range_end(const PlanSpan *range) {
+    PlanTime end = range->start;
+    plan_span_end(*range, &end);
+    return end;
+}
+
+/* Whether a span of a lane belongs to a range render: a key or meter span that overlaps it, any other that starts in it. */
+static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
+    if (!range) {
+        return true;
+    }
+    PlanTime end;
+    if (lane == PLAN_LANE_KEY || lane == PLAN_LANE_METER) {
+        return plan_span_end(span, &end) == PLAN_OK && plan_time_compare(end, range->start) > 0 &&
+               plan_time_compare(span.start, range_end(range)) < 0;
+    }
+    return plan_time_compare(span.start, range->start) >= 0 && plan_time_compare(span.start, range_end(range)) < 0;
 }
 
 /* ----------------------------------------------------------------- keys */
@@ -267,7 +307,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
 /* ------------------------------------------------------------------ meter */
 
 static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t count, const PiecePlan *plan,
-                                        MeterMap **out) {
+                                        const PlanSpan *range, MeterMap **out) {
     *out = NULL;
     if (count == 0) {
         return PLAN_RENDER_OK;
@@ -282,6 +322,7 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
     for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
         const PlanMeter *meter = &plan_lane_span_payload(plan, meter_spans[i])->meter;
         PlanSpan span = plan_lane_span_span(plan, meter_spans[i]);
+        PlanTime start = span_start_in_range(span, range);
         int exponent = -1;
         for (int candidate = TIME_SIGNATURE_MIN_BOTTOM_UNIT_EXPONENT;
              candidate <= TIME_SIGNATURE_MAX_BOTTOM_UNIT_EXPONENT; candidate++) {
@@ -299,7 +340,7 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
             note_value_destroy(unit);
             if (made != TIME_SIGNATURE_OK) {
                 result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
-            } else if (musical_time_create(span.start.num, span.start.den, &starts[i]) != MUSICAL_TIME_OK) {
+            } else if (musical_time_create(start.num, start.den, &starts[i]) != MUSICAL_TIME_OK) {
                 result = PLAN_RENDER_ERR_ALLOC;
             }
         }
@@ -359,7 +400,7 @@ static void sort_by_start(const PiecePlan *plan, LaneSpanId *ids, size_t count) 
     }
 }
 
-static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
+static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
     size_t span_count = plan_lane_span_count(plan);
     size_t skipped_capacity = 0;
     LaneSpanId *meter_spans = calloc(span_count + 1, sizeof(LaneSpanId));
@@ -384,6 +425,9 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
             continue;
         }
         PlanLaneKind lane = plan_lane_span_lane(plan, id);
+        if (!in_range(plan_lane_span_span(plan, id), lane, range)) {
+            continue;
+        }
         if (node_is_material(plan, plan_lane_span_owner(plan, id))) {
             if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane, RENDER_SKIP_MATERIAL)) {
                 result = PLAN_RENDER_ERR_ALLOC;
@@ -423,13 +467,14 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < key_count; i++) {
         PlanSpan span = plan_lane_span_span(plan, key_spans[i]);
+        PlanTime key_start = span_start_in_range(span, range);
         const PlanKey *key = &plan_lane_span_payload(plan, key_spans[i])->key;
         keys[i].span = key_spans[i];
         keys[i].plan_span = span;
         keys[i].key = *key;
         out->keys[i].sharps_flats = key_sharps_flats(key);
         out->keys[i].mode = key->mode;
-        if (musical_time_create(span.start.num, span.start.den, &out->keys[i].position) != MUSICAL_TIME_OK) {
+        if (musical_time_create(key_start.num, key_start.den, &out->keys[i].position) != MUSICAL_TIME_OK) {
             result = PLAN_RENDER_ERR_ALLOC;
         } else {
             out->key_count++;
@@ -438,7 +483,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
 
     /* Meter. */
     if (result == PLAN_RENDER_OK) {
-        result = build_meter_map(meter_spans, meter_count, plan, &out->meter_map);
+        result = build_meter_map(meter_spans, meter_count, plan, range, &out->meter_map);
     }
 
     /* Parts, then notes. */
@@ -497,16 +542,20 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
         out->events = calloc(note_count, sizeof(NoteEvent *));
         out->pitch_values = calloc(note_count, sizeof(PitchNumericValue *));
         out->part_index = calloc(note_count, sizeof(size_t));
-        if (!out->events || !out->pitch_values || !out->part_index) {
+        out->spans = calloc(note_count, sizeof(LaneSpanId));
+        if (!out->events || !out->pitch_values || !out->part_index || !out->spans) {
             result = PLAN_RENDER_ERR_ALLOC;
         }
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < note_count; i++) {
         int sharps_flats = key_in_force(keys, key_count, notes[i].onset);
-        result = build_note(&notes[i], &out->parts[notes[i].part], sharps_flats, tuning, &out->events[i],
+        NoteSource placed = notes[i];
+        placed.onset = from_range_start(placed.onset, range);
+        result = build_note(&placed, &out->parts[notes[i].part], sharps_flats, tuning, &out->events[i],
                             &out->pitch_values[i]);
         if (result == PLAN_RENDER_OK) {
             out->part_index[i] = notes[i].part;
+            out->spans[i] = notes[i].span;
             out->count++;
         }
     }
@@ -520,7 +569,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, RenderedPlan *out) {
     return result;
 }
 
-PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out) {
+static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
     if (!out) {
         return PLAN_RENDER_ERR_NULL;
     }
@@ -528,10 +577,18 @@ PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out) {
     if (!plan) {
         return PLAN_RENDER_ERR_NULL;
     }
-    out->piece_end = piece_end_of(plan);
-    PlanRenderResult result = render_into(plan, out);
+    out->piece_end = range ? from_range_start(range_end(range), range) : piece_end_of(plan);
+    PlanRenderResult result = render_into(plan, range, out);
     if (result != PLAN_RENDER_OK) {
         rendered_plan_destroy(out);
     }
     return result;
+}
+
+PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out) {
+    return render_checked(plan, NULL, out);
+}
+
+PlanRenderResult plan_render_range(const PiecePlan *plan, PlanSpan range, RenderedPlan *out) {
+    return render_checked(plan, &range, out);
 }
