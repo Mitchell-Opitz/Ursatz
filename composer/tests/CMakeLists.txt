@@ -299,3 +299,14 @@ add_dependencies(test_regenerate ursatz-composer)
 foreach(mode remove lock dependents section returns lanes locked determinism cli)
     add_test(NAME test_regenerate_${mode} COMMAND test_regenerate ${mode})
 endforeach()
+
+add_executable(test_analyzer_check test_analyzer_check.c)
+target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
+target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
+# The Analyzer check (docs/analyzer-check.md): the modes are quick except the sweep, which CI leaves out (ctest -LE slow);
+# its smoke test is the sweep on one seed.
+foreach(mode contradiction default smoke same candidates)
+    add_test(NAME test_analyzer_check_${mode} COMMAND test_analyzer_check ${mode})
+endforeach()
+add_test(NAME test_analyzer_check_planned COMMAND test_analyzer_check planned)
+set_tests_properties(test_analyzer_check_planned PROPERTIES LABELS slow)
