@@ -113,6 +113,11 @@ A piece can start from the middle: `plan --given-melody phrase.txt --at B:1` (al
 `--given-bass`) places a phrase, a progression or a bass line anywhere in the plan, `fill` grows the form around it and
 never changes it, and the result says so. See [docs/middle-out.md](docs/middle-out.md).
 
+`fill --check` and `grow --check` send each composed theme section to the Ursatz Analyzer in memory and reject a run
+whose analysis contradicts the plan (a planned cadence or the key not heard, a hard voice-leading fault);
+`fill --candidates <n>` composes `n` candidates and writes the one the Analyzer agrees with most. See
+[docs/analyzer-check.md](docs/analyzer-check.md).
+
 ```sh
 ursatz-composer lock piece.json --section A --out piece-locked.json
 ursatz-composer regenerate piece-locked.json --section B --seed 3 --out piece-2.json --midi piece-2.mid

@@ -1,7 +1,7 @@
 # fill command
 
 ```sh
-ursatz-composer fill <plan.json> [--seed <n>] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--record <file.json>] [--format text|json]
+ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--record <file.json>] [--format text|json]
 ```
 
 Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](piece.md)) over the plan, which
@@ -24,6 +24,8 @@ plan for the library to use.
 | Option | Meaning |
 | --- | --- |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same plan and seed give the same output, byte for byte. |
+| `--check` | Analyze every theme section with the Ursatz Analyzer and reject a run whose analysis contradicts the plan: a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault in material the plan wrote. See [analyzer-check.md](analyzer-check.md). Off by default; with it the result says how many cadences and keys were heard as planned. |
+| `--candidates <n>` | Compose `n` candidates (1 to 32) from the seeds `--seed`, `--seed + 1`, ... and write the best: the most cadences and keys heard as planned, then the best score, then the lower seed. Every candidate is listed with its seed, its agreement and its score. Not combined with the seed retries: if no candidate completes the command fails. |
 | `--out <plan.json>` | The realized plan as JSON. |
 | `--midi <file>`, `--musicxml <file>` | The piece, one part for each voice. The source material is not part of the piece, and a layered form sounds as its layers say. |
 | `--record <file.json>` | The records of the stages as one JSON array. Each element is `{"stage": <name>, "record": <fill record>}`, the record being the `fill_record_to_json` document of that stage (the seed, the attempts, the candidates and why each was chosen or rejected). A stage that did not run has no element. |
@@ -69,9 +71,20 @@ A run that changed them (it must not) is refused with exit status 2 and nothing 
 `given`: `{"unchanged": true, "runs": [{"kind", "section", "bar", "bars" or "chords", "unchanged"}]}`, present only when
 the plan has given material.
 
+With `--check` the result also says `analyzer check: 6 of 6 planned cadences and keys heard as planned` (an accepted run
+always has every one heard). With `--candidates` it lists the candidates, best first, before the result:
+
+```
+candidates (3 of 12 completed, best first)
+  seed 13  agreement 6/6  score 17/22  written
+  seed 4  agreement 6/6  score 16/22
+  seed 14  agreement 6/6  score 16/22
+```
+
 With `--format json` the result is one object: `seed`, `realized` (true for a plan that had nothing to fill),
-`sections` (each with `letter`, `heard`, `heard_as_requested` and `cadences`), `returns` (`planned`, `heard` and the
-`pairs` with `later`, `earlier` and `similarity`) and `files`.
+`candidates` (with `--candidates`: each `seed`, `agreed`, `planned`, `score` and `written`), `sections` (each with
+`letter`, `heard`, `heard_as_requested` and `cadences`), `analyzer` (with `--check`: `planned` and `agreed`), `returns`
+(`planned`, `heard` and the `pairs` with `later`, `earlier` and `similarity`) and `files`.
 
 ## A plan that cannot be completed
 
