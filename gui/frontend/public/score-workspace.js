@@ -71,6 +71,13 @@
     /* The one selected item: {item, layer, others}, where others are the
      * further items a clicked note belongs to. */
     let selection = null;
+    /* A second highlight beside the selection: {tints, noteIds} or null (a
+     * sub-span or sub-claim shown from the Inspector). */
+    let secondary = null;
+    const itemByClaim = new Map();
+    for (const item of itemByKey.values()) {
+      itemByClaim.set(item.claim, item);
+    }
     let osmd = null;
     let overlay = null;
     /* OSMD time minus piece position; the timeline offset (see
@@ -184,10 +191,8 @@
 
     const inspector = el("aside", "ws-panel ws-inspector");
     inspector.setAttribute("aria-label", "Inspector");
-    inspector.append(
-      el("h2", "ws-panel-title", "Inspector"),
-      el("p", "ws-empty", "Click a highlight on the score to see its evidence."),
-    );
+    const inspectorBody = el("div", "ws-insp");
+    inspector.append(el("h2", "ws-panel-title", "Inspector"), inspectorBody);
 
     body.append(rail, main, dataPane, inspector);
     ws.append(toolbar, status, body);
@@ -205,6 +210,18 @@
       listeners.get(name).add(fn);
       return () => listeners.get(name).delete(fn);
     }
+
+    const inspectorView = InspectorView.create(inspectorBody, {
+      select: (item, options) => select(item, options),
+      setSecondary: (next) => setSecondary(next),
+      itemForClaim: (claim) => {
+        const item = itemByClaim.get(claim);
+        return item && layerState.isOn(item.layerId) ? item : null;
+      },
+      layerOf: (item) => layerById.get(item.layerId) || null,
+      reveal: (position) => scrollToPosition(position, true),
+    });
+    on("select", (current) => inspectorView.show(current));
 
     /* The Layers rail: preset chips, then one switch per layer, grouped. A
      * layer with nothing in this piece is shown disabled. */
@@ -398,6 +415,10 @@
           view.halos = noteRects(item.noteIds);
         }
       }
+      if (secondary) {
+        view.secondaryTints = secondary.tints;
+        view.secondaryHalos = noteRects(secondary.noteIds);
+      }
       return view;
     }
 
@@ -414,12 +435,16 @@
 
     /* Scrolls the score so the system holding the item's start sits at 25%
      * of the canvas height; with onlyIfHidden, only when that system is not
-     * fully in view. */
+     * fully in view. scrollToPosition does the same for a piece position. */
     function scrollToItem(item, onlyIfHidden) {
+      scrollToPosition(item.start, onlyIfHidden);
+    }
+
+    function scrollToPosition(position, onlyIfHidden) {
       if (!layout || layout.systems.length === 0) {
         return;
       }
-      const system = layout.systems[ScoreGeometry.xAt(layout, item.start + timelineOffset).system];
+      const system = layout.systems[ScoreGeometry.xAt(layout, position + timelineOffset).system];
       if (!system) {
         return;
       }
@@ -441,12 +466,24 @@
       if (!layer) {
         return;
       }
-      selection = { item, layer, others: (options && options.others) || [] };
+      const given = options || {};
+      selection = { item, layer, others: given.others || [] };
+      secondary = null;
       redrawOverlay();
       if (state.mode === "score" && !open.inspector) {
         setPanel("inspector", true);
       }
+      if (given.scroll) {
+        scrollToItem(item, false);
+      } else if (given.reveal) {
+        scrollToItem(item, true);
+      }
       emit("select", selection);
+    }
+
+    function setSecondary(next) {
+      secondary = next;
+      redrawOverlay();
     }
 
     function clearSelection() {
@@ -454,6 +491,7 @@
         return false;
       }
       selection = null;
+      secondary = null;
       redrawOverlay();
       emit("select", null);
       return true;
@@ -468,8 +506,7 @@
       if (!next) {
         return false;
       }
-      select(next);
-      scrollToItem(next, true);
+      select(next, { reveal: true });
       return true;
     }
 
@@ -568,6 +605,7 @@
       /* a layer turned off takes its selection with it */
       if (selection && !enabled.includes(selection.item.layerId)) {
         selection = null;
+        secondary = null;
         emit("select", null);
       }
       /* new lanes can need more room between systems: draw the score again */
