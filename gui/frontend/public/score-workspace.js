@@ -187,6 +187,11 @@
       closeFloatingPanels();
     });
 
+    const live = el("div", "ws-live");
+    live.setAttribute("role", "status");
+    live.setAttribute("aria-live", "polite");
+    main.appendChild(live);
+
     const dataPane = el("div", "ws-data");
 
     const inspector = el("aside", "ws-panel ws-inspector");
@@ -220,8 +225,32 @@
       },
       layerOf: (item) => layerById.get(item.layerId) || null,
       reveal: (position) => scrollToPosition(position, true),
+      anyLayerOn: () => catalog.some((layer) => !layer.empty && layerState.isOn(layer.id)),
+      listItems,
+      selectedKey: () => (selection ? selection.item.key : null),
     });
     on("select", (current) => inspectorView.show(current));
+
+    /* The items of the layers that are on (or of every layer), sorted by
+     * start; a stable sort keeps catalog order for equal starts. */
+    function listItems(all) {
+      const on = new Set(layerState.enabled());
+      return catalog
+        .filter((layer) => !layer.empty && (all || on.has(layer.id)))
+        .flatMap((layer) => layer.items)
+        .sort((a, b) => a.start - b.start || a.end - b.end);
+    }
+
+    /* A line for screen readers (and a brief pill on screen). */
+    let liveTimer = null;
+
+    function announce(text) {
+      live.textContent = text;
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(() => {
+        live.textContent = "";
+      }, 4000);
+    }
 
     /* The Layers rail: preset chips, then one switch per layer, grouped. A
      * layer with nothing in this piece is shown disabled. */
@@ -467,6 +496,10 @@
         return;
       }
       const given = options || {};
+      if (given.turnOn && !layerState.isOn(layer.id)) {
+        layerState.setOn(layer.id, true);
+        announce(`${layer.label} layer turned on`);
+      }
       selection = { item, layer, others: given.others || [] };
       secondary = null;
       redrawOverlay();
@@ -615,6 +648,7 @@
         redrawOverlay();
       }
       emit("layerchange", enabled);
+      inspectorView.refreshList();
     });
     buildRail();
 
@@ -1041,6 +1075,7 @@
       window.removeEventListener("resize", onWindowResize);
       closeShortcuts();
       clearTimeout(resizeTimer);
+      clearTimeout(liveTimer);
       resizeObserver.disconnect();
       listeners.clear();
       if (overlay) {

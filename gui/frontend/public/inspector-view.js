@@ -7,11 +7,17 @@
  *     itemForClaim(claim),         the item showing a raw claim, or null
  *     layerOf(item),               the catalog layer of an item
  *     reveal(position),            scroll the score to a piece position
+ *     anyLayerOn(),                is any layer on
+ *     listItems(all),              items of the layers on (or of every
+ *                                  layer), sorted by start
+ *     selectedKey(),               the selected item's key or null
  *   });
  *   view.show(selection);          {item, layer, others} or null
+ *   view.refreshList();            after the layers or the selection change
  *
  * DOM only; the facts come from InspectorModel. */
 (function (root) {
+  const PAGE = 500;
   const EMPTY_TEXT = "Nothing selected. Click a colored mark or note on the score, or pick a claim from the List.";
 
   function el(tag, className, text) {
@@ -320,14 +326,126 @@
 
     renderClaim(null);
 
+    /* List tab: search, then the claims of the layers that are on. */
+    const listPanel = el("div", "ws-insp-list");
+    const search = el("input", "ws-search");
+    search.type = "search";
+    search.placeholder = "Search claims";
+    search.setAttribute("aria-label", "Search claims");
+    const allWrap = el("label", "ws-all");
+    const allBox = el("input");
+    allBox.type = "checkbox";
+    allBox.setAttribute("role", "switch");
+    allWrap.append(allBox, document.createTextNode(" All layers"));
+    const listHint = el("p", "ws-empty", "Turn on layers to list their claims");
+    const listCount = el("p", "ws-dim ws-list-count");
+    const listEl = el("ul", "ws-list");
+    listEl.setAttribute("role", "listbox");
+    listEl.setAttribute("aria-label", "Claims");
+    listEl.tabIndex = 0;
+    const moreButton = button("ws-btn ws-list-more", "Show more", () => {
+      shown += PAGE;
+      renderRows();
+    });
+    listPanel.append(search, allWrap, listHint, listCount, listEl, moreButton);
+    addTab("list", "List", listPanel);
+
+    let listRows = [];
+    let shown = PAGE;
+    let active = 0;
+
+    function chooseRow(n) {
+      const row = listRows[n];
+      if (row) {
+        api.select(row, { scroll: true, turnOn: true });
+      }
+    }
+
+    function setActive(n) {
+      active = clamp(n, 0, Math.min(shown, listRows.length) - 1);
+      listEl.querySelectorAll(".ws-list-row").forEach((node, i) => {
+        node.setAttribute("aria-selected", String(i === active));
+      });
+      const node = listEl.children[active];
+      if (node) {
+        listEl.setAttribute("aria-activedescendant", node.id);
+        node.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    function renderRows() {
+      const current = api.selectedKey();
+      listEl.replaceChildren();
+      const visible = listRows.slice(0, shown);
+      visible.forEach((item, n) => {
+        const li = el("li", "ws-list-row");
+        li.id = `ws-list-row-${n}`;
+        li.setAttribute("role", "option");
+        li.classList.toggle("is-current", item.key === current);
+        const layer = api.layerOf(item);
+        const dot = el("span", "ws-dot");
+        dot.style.background = layer ? layer.color : "#6b7280";
+        li.title = layer ? layer.label : "";
+        li.append(
+          dot,
+          el("span", "ws-list-text", item.text || (layer ? layer.label : "")),
+          el("span", "ws-dim ws-list-where", InspectorModel.locationOf(item)),
+        );
+        li.addEventListener("click", () => chooseRow(n));
+        listEl.appendChild(li);
+      });
+      moreButton.hidden = listRows.length <= shown;
+      setActive(active);
+    }
+
+    function refreshList() {
+      const anyOn = api.anyLayerOn();
+      const all = allBox.checked;
+      allWrap.hidden = anyOn && !all;
+      listHint.hidden = anyOn || all;
+      const source = all ? api.listItems(true) : anyOn ? api.listItems(false) : [];
+      listRows = InspectorModel.filterItems(source, search.value);
+      listCount.textContent = anyOn || all ? `${listRows.length} of ${source.length} claims` : "";
+      renderRows();
+    }
+
+    search.addEventListener("input", () => {
+      shown = PAGE;
+      active = 0;
+      refreshList();
+    });
+    allBox.addEventListener("change", () => {
+      shown = PAGE;
+      active = 0;
+      refreshList();
+    });
+    listPanel.addEventListener("keydown", (event) => {
+      if (event.target !== search && event.target !== listEl) {
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        setActive(active + (event.key === "ArrowDown" ? 1 : -1));
+      } else if (event.key === "Home" || event.key === "End") {
+        setActive(event.key === "Home" ? 0 : Math.min(shown, listRows.length) - 1);
+      } else if (event.key === "Enter") {
+        chooseRow(active);
+      } else {
+        return;
+      }
+      event.preventDefault();
+    });
+    showTab("claim");
+    refreshList();
+
     function show(selection) {
       renderClaim(selection);
       if (selection) {
         showTab("claim");
       }
+      refreshList();
     }
 
-    return { show, addTab, showTab, tab: () => currentTab };
+    return { show, refreshList, addTab, showTab, tab: () => currentTab };
   }
 
   root.InspectorView = { create };

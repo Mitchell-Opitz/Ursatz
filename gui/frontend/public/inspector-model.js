@@ -194,6 +194,11 @@
     return null;
   }
 
+  /* "m26 b4 to m27 b2" for an item. */
+  function locationOf(item) {
+    return tabs.formatLocation(item && item.claim ? item.claim.location : null);
+  }
+
   /* Everything the Claim tab shows for one item of `layer`:
    * {header, readings, evidence, scores, raw}. */
   function buildInspectorModel(item, layer) {
@@ -222,6 +227,7 @@
     filterItems,
     humanizeKey,
     formatValue,
+    locationOf,
     buildInspectorModel,
   };
   if (isNode) {

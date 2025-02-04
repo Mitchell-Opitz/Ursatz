@@ -1322,6 +1322,105 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* The Inspector's List tab and the live line over the score. */
+.ws-search {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.ws-all {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ws-all input {
+  accent-color: var(--accent);
+}
+
+.ws-list-count {
+  margin: 0 0 6px;
+}
+
+.ws-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ws-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ws-list-row:hover,
+.ws-list-row[aria-selected="true"] {
+  background: var(--bg-hover);
+}
+
+.ws-list:focus-visible .ws-list-row[aria-selected="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.ws-list-row.is-current {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.ws-list-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-list-where {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ws-list-more {
+  margin-top: 8px;
+}
+
+.ws-main {
+  position: relative;
+}
+
+.ws-live {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 4;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.ws-live:empty {
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
 .ws-backdrop {
   position: fixed;
   inset: 0;
