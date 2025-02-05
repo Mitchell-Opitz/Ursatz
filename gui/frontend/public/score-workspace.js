@@ -219,10 +219,7 @@
     const inspectorView = InspectorView.create(inspectorBody, {
       select: (item, options) => select(item, options),
       setSecondary: (next) => setSecondary(next),
-      itemForClaim: (claim) => {
-        const item = itemByClaim.get(claim);
-        return item && layerState.isOn(item.layerId) ? item : null;
-      },
+      itemForClaim: (claim) => itemByClaim.get(claim) || null,
       layerOf: (item) => layerById.get(item.layerId) || null,
       reveal: (position) => scrollToPosition(position, true),
       anyLayerOn: () => catalog.some((layer) => !layer.empty && layerState.isOn(layer.id)),
@@ -512,6 +509,18 @@
         scrollToItem(item, true);
       }
       emit("select", selection);
+    }
+
+    /* A claim chosen from the Data tabs: Score mode, its layer on (said
+     * aloud), the claim selected and scrolled into view. A claim no layer
+     * shows only switches to Score mode. */
+    function selectClaim(claim) {
+      setMode("score");
+      const item = itemByClaim.get(claim);
+      if (item) {
+        select(item, { turnOn: true, scroll: true });
+      }
+      return Boolean(item);
     }
 
     function setSecondary(next) {
@@ -1110,6 +1119,7 @@
       dataEl: () => dataPane,
       layers: () => ({ catalog, state: layerState }),
       select,
+      selectClaim,
       clearSelection,
       selected: () => selection,
       playback: () => playbackData,

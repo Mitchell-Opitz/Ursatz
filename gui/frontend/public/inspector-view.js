@@ -4,7 +4,7 @@
  *   const view = InspectorView.create(containerEl, {
  *     select(item, options),       select another item (options: reveal)
  *     setSecondary(secondary),     {tints: [{start, end}], noteIds} or null
- *     itemForClaim(claim),         the item showing a raw claim, or null
+ *     itemForClaim(claim),         the item of any layer showing a raw claim
  *     layerOf(item),               the catalog layer of an item
  *     reveal(position),            scroll the score to a piece position
  *     anyLayerOn(),                is any layer on
@@ -208,7 +208,7 @@
         const node = button("ws-sub-item", "", () => {
           const item = api.itemForClaim(sub.claim);
           if (item) {
-            api.select(item, { reveal: true });
+            api.select(item, { scroll: true, turnOn: true });
           } else if (sub.start !== null && sub.end !== null) {
             setSecondary(id, { tints: [{ start: sub.start, end: sub.end }], noteIds: [] }, sub.start);
           }

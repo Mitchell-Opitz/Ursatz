@@ -746,10 +746,10 @@ function renderAnalysisTabs(data) {
   }
 }
 
-/* A Data mode claim row was chosen: show it on the score. */
-function showClaimOnScore() {
+/* A Data mode claim row was chosen: the workspace shows it on the score. */
+function showClaimOnScore(claim) {
   if (analysisWorkspace) {
-    analysisWorkspace.setMode("score");
+    analysisWorkspace.selectClaim(claim);
   }
 }
 
@@ -818,7 +818,7 @@ function buildClaimRows(rows, noteXmlIds) {
       json.hidden = !json.hidden;
     });
     li.addEventListener("click", () => {
-      showClaimOnScore();
+      showClaimOnScore(row.claim);
     });
     list.appendChild(li);
   }

@@ -151,6 +151,9 @@ check(
   !/pendingHighlightClaim|applyPendingHighlight|HIGHLIGHT_NOTEHEAD_COLOR|NoteheadColor|highlightPending/.test(appSource),
   "app.js no longer colors a claim's notes through OSMD NoteheadColor",
 );
-check(appSource.includes('analysisWorkspace.setMode("score")'), "choosing a claim row switches to Score mode");
+check(
+  appSource.includes("showClaimOnScore(row.claim)") && appSource.includes("analysisWorkspace.selectClaim(claim)"),
+  "choosing a claim row selects that claim in the workspace, which switches to Score mode",
+);
 
 process.exit(failures === 0 ? 0 : 1);
