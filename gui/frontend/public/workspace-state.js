@@ -52,8 +52,10 @@
     { key: "+", alt: ["="], label: "Zoom in", action: "zoom-in" },
     { key: "-", label: "Zoom out", action: "zoom-out" },
     { key: "0", label: "Zoom to 100%", action: "zoom-reset" },
+    { key: "[", label: "Previous item in the selected layer", action: "select-previous" },
+    { key: "]", label: "Next item in the selected layer", action: "select-next" },
     { key: "?", label: "Shortcut list", action: "toggle-shortcuts" },
-    { key: "Escape", label: "Close a panel or the shortcut list", action: "escape" },
+    { key: "Escape", label: "Close a panel, the shortcut list or clear the selection", action: "escape" },
   ];
 
   function isTypingTarget(target) {

@@ -83,8 +83,7 @@ the middle (empty until playback); and on the right a Score | Data switch, zoom
 out, the zoom (click to reset to 100%), zoom in, the Layers and Inspector
 toggles and "Re-run analysis", which runs the Analyzer again on the stored
 source and reloads the view. Below it are three columns: the Layers rail
-(248 px), the score and the Inspector (360 px). Both panels are empty shells
-for now. A closed panel takes no width.
+(248 px), the score and the Inspector (360 px). A closed panel takes no width.
 
 | Window width | Panels |
 | --- | --- |
@@ -111,8 +110,9 @@ them):
 | `+` or `=` | Zoom in |
 | `-` | Zoom out |
 | `0` | Zoom to 100% |
+| `[` and `]` | Select the previous or next item of the selected layer |
 | `?` | Shortcut list |
-| `Escape` | Close the shortcut list, else a floating panel |
+| `Escape` | Close the shortcut list, else a floating panel, else clear the selection |
 
 The zoom, the docked panels and the mode are remembered in `localStorage` under
 `ursatz.workspace.v1` (`{layersOpen, inspectorOpen, zoom, mode}`). The pure
@@ -153,8 +153,8 @@ shows the item's remaining fields as formatted JSON. An object section
 (`keys`, `form`, `meter`, `harmonic_rhythm`, `outer_voices`, `markings`,
 `counterpoint_check`) is shown as one JSON block, and the arrays of claims
 inside it (the key regions, the form's sections and returns, the soprano and
-bass lines) are rows. Choosing a row with `note_ids` switches to Score mode
-and colors those notes.
+bass lines) are rows. Choosing a row switches to Score mode and selects that
+claim there (see [Selecting claims](#selecting-claims-and-the-inspector)).
 
 The tab logic is in `frontend/public/analysis-tabs.js` (no DOM, loaded by
 `index.html` before `app.js` and by the frontend tests); `app.js` renders it.
@@ -172,8 +172,7 @@ response is not a 2xx XML document, `ScoreNotes.scoreResponseProblem` turns it
 into a message and the paper shows "Could not load score: <message>" instead of
 handing the body to OSMD.
 
-Choosing a Data mode row colors its notes' noteheads (OSMD's `Note.NoteheadColor`). A
-row's `note_ids` are mapped to `<note xml:id>` values through the piece's
+A claim's `note_ids` are mapped to `<note xml:id>` values through the piece's
 `note_xml_ids`. OSMD does not keep `xml:id`, so the score finds each
 note by its position and pitch (`frontend/public/score-notes.js`, no DOM,
 loaded by `index.html` before `app.js` and by the frontend tests):
@@ -231,6 +230,47 @@ change (the scroll position is kept). The timeline offset is calibrated once
 per piece from the first 50 notes found in the score, paired with their
 positions from `GET /api/analyzer/pieces/<id>/playback`; a console warning
 reports notes that do not fit it.
+
+#### Selecting claims and the Inspector
+
+One item is selected at a time. Click a ribbon, a cadence pill or a numeral,
+or a notehead colored by a notes layer (of the layers that are on, the item
+with the shortest span that holds the note is chosen; the others are listed
+as "Also here" links). A claim row in Data mode and a row of the Inspector's
+List also select: they switch to Score mode, turn the claim's layer on when it
+is off (a polite status line says "Phrases layer turned on") and scroll so
+the claim's first system sits at 25% of the canvas height. Selecting from
+the score opens the Inspector when it is closed.
+
+On the score the selected ribbon or pill gets a 2 px dark outline (a ribbon
+turns solid). Cadence, chord and notes layers put an amber halo around each
+notehead of the claim; ribbon layers tint the span over the full system
+height instead, since a key region can hold thousands of notes. Escape clears
+the selection, and `[` and `]` select the previous and next item of the same
+layer.
+
+The Inspector has two tabs.
+
+- Claim: the layer, the title, the location and the measure count; Previous,
+  Next and Copy JSON; Readings for a cadence (each reading with a share bar,
+  and for a competing reading a button that shows its arrival notes with
+  dashed halos); Evidence, one row per remaining field in claim order, where a
+  sub-span such as `arrival` has a Show button that tints it, and a list of
+  sub-claims (subphrases, occurrences) expands into rows that select their
+  item when a layer shows it and tint their span otherwise; Scores
+  (`uncertainty`, `score`, `confidence.*`, as the Analyzer wrote them); and
+  the raw JSON under "Raw fields". The footer names the framework and the item
+  key.
+- List: a search field (matches the text and label), then the claims of the
+  layers that are on, sorted by start. With no layer on it shows "Turn on
+  layers to list their claims" and an "All layers" switch that lists every
+  layer. The first 500 rows are drawn, then "Show more". Up and Down move the
+  highlight, Enter selects.
+
+The pure part (picking, neighbors, filtering, formatting, the evidence rows)
+is `frontend/public/inspector-model.js` (global `InspectorModel`, no DOM); the
+panel is `inspector-view.js`; the selection and the overlay drawing live in
+`score-workspace.js` and `score-overlay.js`.
 
 ## Architecture
 

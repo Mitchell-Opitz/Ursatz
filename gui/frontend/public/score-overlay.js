@@ -4,10 +4,14 @@
  * heights come from ScoreGeometry.
  *
  *   const overlay = ScoreOverlay.create(paperEl, osmdHostEl);
- *   overlay.draw(layout, offset, catalog, enabledIds);
+ *   overlay.draw(layout, offset, catalog, enabledIds, view);
  *
  * `offset` turns a piece position into OSMD time (ScoreGeometry's timeline
- * offset). planLanes and fitText are pure; the rest needs a DOM. */
+ * offset). `view` says what is selected: {selectedKey, tints, halos,
+ * secondaryTints, secondaryHalos}, where a tint is a span {start, end} in
+ * piece positions and a halo is a notehead box {x, y, w, h} in pixels
+ * relative to the OSMD SVG. planLanes and fitText are pure; the rest needs a
+ * DOM. */
 (function (root) {
   const SVG_NS = "http://www.w3.org/2000/svg";
   const MAX_RIBBON_ROWS = 4;
@@ -25,6 +29,13 @@
   const TICK_WIDTH = 2;
   const TICK_HEIGHT = 6;
   const INK = "#1f2937";
+  const SELECT_INK = "#111827";
+  const SELECT_STROKE = 2;
+  const SELECT_TINT = "rgba(17, 24, 39, 0.06)";
+  const SECONDARY_TINT = "rgba(245, 158, 11, 0.2)";
+  const HALO_COLOR = "#f59e0b";
+  const HALO_WIDTH = 2.5;
+  const HALO_PAD = 3;
   const MONO = '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
 
   /* The lanes the enabled layers need: {lanes: [{layer, placement, rows}],
@@ -120,6 +131,8 @@
     const measureMark = measurer(`bold 10px ${MONO}`);
     const measureChord = measurer(`12px ${MONO}`);
 
+    let selectedKey = null;
+
     function clear() {
       svg.replaceChildren();
     }
@@ -160,27 +173,34 @@
       const segments = ScoreGeometry.spanSegments(layout, item.start + offset, item.end + offset);
       const group = hitGroup(layer, item, ariaLabel(layer, item));
       const thin = item.style === "thin";
+      const selected = item.key === selectedKey;
       segments.forEach((segment, n) => {
         const system = layout.systems[segment.system];
         const x = segment.x1;
         const w = Math.max(segment.x2 - segment.x1, MIN_RIBBON_WIDTH);
         const rowY = rowTop(system, lane, item.row);
         if (thin) {
-          group.appendChild(
-            svgEl("rect", {
-              x, y: rowY + (ROW - THIN_HEIGHT) / 2, width: w, height: THIN_HEIGHT, rx: 2,
-              fill: layer.color, "fill-opacity": 0.5,
-            }),
-          );
+          const bar = svgEl("rect", {
+            x, y: rowY + (ROW - THIN_HEIGHT) / 2, width: w, height: THIN_HEIGHT, rx: 2,
+            fill: layer.color, "fill-opacity": selected ? 1 : 0.5,
+          });
+          if (selected) {
+            bar.setAttribute("stroke", SELECT_INK);
+            bar.setAttribute("stroke-width", String(SELECT_STROKE));
+          }
+          group.appendChild(bar);
           return;
         }
         const y = rowY + (ROW - RIBBON_HEIGHT) / 2;
         const path = svgEl("path", {
           d: roundedPath(x, y, w, RIBBON_HEIGHT, segment.openStart ? 0 : RIBBON_RADIUS, segment.openEnd ? 0 : RIBBON_RADIUS),
           fill: layer.color,
-          "fill-opacity": 0.16,
+          "fill-opacity": selected ? 1 : 0.16,
         });
-        if (item.style === "dashed") {
+        if (selected) {
+          path.setAttribute("stroke", SELECT_INK);
+          path.setAttribute("stroke-width", String(SELECT_STROKE));
+        } else if (item.style === "dashed") {
           path.setAttribute("stroke", layer.color);
           path.setAttribute("stroke-width", "1");
           path.setAttribute("stroke-dasharray", "3 2");
@@ -197,7 +217,7 @@
             group.appendChild(
               svgEl(
                 "text",
-                { x: left, y: y + 10.5, "font-size": 11, "font-family": MONO, fill: INK },
+                { x: left, y: y + 10.5, "font-size": 11, "font-family": MONO, fill: selected ? "#fff" : INK },
                 shown,
               ),
             );
@@ -215,7 +235,12 @@
       const x = spot.x - width / 2;
       const y = rowTop(system, lane, 0) + (ROW - MARK_HEIGHT) / 2;
       const group = hitGroup(layer, item, ariaLabel(layer, item));
-      group.appendChild(svgEl("rect", { x, y, width, height: MARK_HEIGHT, rx: MARK_HEIGHT / 2, fill: layer.color }));
+      const pill = svgEl("rect", { x, y, width, height: MARK_HEIGHT, rx: MARK_HEIGHT / 2, fill: layer.color });
+      if (item.key === selectedKey) {
+        pill.setAttribute("stroke", SELECT_INK);
+        pill.setAttribute("stroke-width", String(SELECT_STROKE));
+      }
+      group.appendChild(pill);
       group.appendChild(
         svgEl(
           "text",
@@ -274,6 +299,15 @@
         const rowY = rowTop(system, lane, 0);
         entries.forEach(({ item, x }, i) => {
           const group = hitGroup(layer, item, ariaLabel(layer, item));
+          if (item.key === selectedKey) {
+            const boxWidth = drawn[i] ? widths[i] : TICK_WIDTH;
+            group.appendChild(
+              svgEl("rect", {
+                x: (drawn[i] ? x : x - TICK_WIDTH / 2) - 3, y: rowY + 1, width: boxWidth + 6, height: ROW - 2, rx: 3,
+                fill: "none", stroke: SELECT_INK, "stroke-width": SELECT_STROKE,
+              }),
+            );
+          }
           if (drawn[i]) {
             group.appendChild(
               svgEl("text", { x, y: rowY + 13, "font-size": 12, "font-family": MONO, fill: layer.color }, item.text),
@@ -310,8 +344,40 @@
       }
     }
 
+    /* A tint over a span on every system it touches, the full height of
+     * the staves. */
+    function drawTints(out, layout, offset, tints, fill) {
+      for (const tint of tints || []) {
+        for (const segment of ScoreGeometry.spanSegments(layout, tint.start + offset, tint.end + offset)) {
+          const system = layout.systems[segment.system];
+          out.appendChild(
+            svgEl("rect", {
+              x: segment.x1, y: system.top, width: Math.max(segment.x2 - segment.x1, MIN_RIBBON_WIDTH),
+              height: system.bottom - system.top, fill, "pointer-events": "none",
+            }),
+          );
+        }
+      }
+    }
+
+    /* A ring around each notehead box. */
+    function drawHalos(out, halos, dashed) {
+      for (const box of halos || []) {
+        const ring = svgEl("ellipse", {
+          cx: box.x + box.w / 2, cy: box.y + box.h / 2, rx: box.w / 2 + HALO_PAD, ry: box.h / 2 + HALO_PAD,
+          fill: "none", stroke: HALO_COLOR, "stroke-width": HALO_WIDTH, "pointer-events": "none",
+        });
+        if (dashed) {
+          ring.setAttribute("stroke-dasharray", "4 3");
+        }
+        out.appendChild(ring);
+      }
+    }
+
     /* Redraws everything for the enabled layers. */
-    function draw(layout, offset, catalog, enabledIds) {
+    function draw(layout, offset, catalog, enabledIds, view) {
+      const shown = view || {};
+      selectedKey = shown.selectedKey || null;
       clear();
       if (!layout || layout.systems.length === 0 || !place()) {
         return;
@@ -320,9 +386,13 @@
       const stack = ScoreGeometry.laneStack(lanes);
       const stackEntries = new Map([...stack.above, ...stack.below].map((entry) => [entry.layerId, entry]));
       const out = document.createDocumentFragment();
+      drawTints(out, layout, offset, shown.secondaryTints, SECONDARY_TINT);
+      drawTints(out, layout, offset, shown.tints, SELECT_TINT);
       for (const lane of lanes) {
         drawLane(out, layout, offset, lane, stackEntries.get(lane.layerId));
       }
+      drawHalos(out, shown.secondaryHalos, true);
+      drawHalos(out, shown.halos, false);
       svg.appendChild(out);
     }
 
@@ -330,7 +400,7 @@
       svg.remove();
     }
 
-    return { draw, clear, destroy };
+    return { draw, clear, destroy, element: svg };
   }
 
   const api = { create, planLanes, fitText };
