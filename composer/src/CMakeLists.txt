@@ -1,6 +1,9 @@
 add_library(ursatz_composer STATIC
     composer.c
     style/style.c
+    style/style_labels.c
+    style/style_check.c
+    style/style_measure.c
     plan/piece_plan.c
     plan/lanes.c
     plan/plan_state.c

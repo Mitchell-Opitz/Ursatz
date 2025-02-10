@@ -82,6 +82,13 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     }
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         return true;
+    case PLAN_CONSTRAINT_STYLE: {
+        const PlanStyle *style = &constraint->params.style;
+        size_t length = strnlen(style->path, PLAN_STYLE_PATH_MAX);
+        /* A weight of 0/0 is the default; any other has a denominator. */
+        return length > 0 && length < PLAN_STYLE_PATH_MAX &&
+               (style->weight_denominator > 0 || style->weight_numerator == 0);
+    }
     }
     return false;
 }

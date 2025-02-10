@@ -55,6 +55,8 @@ typedef struct {
     const char *accompaniment_text;
     const char *texture_text;
     const char *seed_text;
+    const char *style_path;
+    const char *style_weight_text;
     const char *out_path;
     const char *format_text;
     GivenOption given[MAX_GIVEN];
@@ -71,6 +73,7 @@ typedef struct {
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
     unsigned long seed;
+    ComposerRatio style_weight; /* 0/0 when --style-weight was not given (a weight of 1/1 at fill) */
     bool json;
 } Options;
 
@@ -106,6 +109,10 @@ static void print_help(FILE *out) {
     fprintf(out, "                       of it the material starts in (default 1); without --form, the default is B:1\n");
     fprintf(out, "  --cells <n>          the cells each chord of the --given-progression before it lasts (default: a bar)\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same plan. Default: from the clock\n");
+    fprintf(out, "  --style <file>       a style model file from the Ursatz Analyzer (--style-profile): fill prefers the harmony\n");
+    fprintf(out, "                       and melody closest to it. The path is kept in the plan as given, so fill finds the file\n");
+    fprintf(out, "                       from where it is run\n");
+    fprintf(out, "  --style-weight <n/d> how strongly fill prefers the style (default 1/1; needs --style)\n");
     fprintf(out, "  --format <text|json> how to print the plan on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument (an unknown form, a size the form does not have, a bad\n");
@@ -147,6 +154,10 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->texture_text;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
+        } else if (strcmp(arg, "--style") == 0) {
+            target = &options->style_path;
+        } else if (strcmp(arg, "--style-weight") == 0) {
+            target = &options->style_weight_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
         } else if (strcmp(arg, "--format") == 0) {
@@ -340,6 +351,16 @@ static int check_options(Options *options) {
         if (read != 0) {
             return read;
         }
+    }
+    if (options->style_weight_text && !options->style_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-weight needs --style");
+    }
+    if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
+                        options->style_weight_text);
+    }
+    if (options->style_path && strlen(options->style_path) >= PLAN_STYLE_PATH_MAX) {
+        return cli_fail(CLI_EXIT_USAGE, "--style path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
     }
     if (options->seed_text) {
         if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
@@ -585,6 +606,12 @@ static void print_result(const Options *options, const PiecePlan *plan) {
         if (options->given_count > 0) {
             print_given_json(options);
         }
+        if (options->style_path) {
+            printf(",\"style\":{\"file\":");
+            cli_print_json_string(options->style_path);
+            printf(",\"weight\":\"%lu/%lu\"}", options->style_weight.denominator ? options->style_weight.numerator : 1UL,
+                   options->style_weight.denominator ? options->style_weight.denominator : 1UL);
+        }
         printf(",\"file\":");
         cli_print_json_string(options->out_path);
         printf("}\n");
@@ -604,6 +631,11 @@ static void print_result(const Options *options, const PiecePlan *plan) {
             printf(" (%s)", standard_texture_name((StandardTexture)options->accompaniment.texture));
         }
         printf("\n");
+    }
+    if (options->style_path) {
+        printf("style %s, weight %lu/%lu\n", options->style_path,
+               options->style_weight.denominator ? options->style_weight.numerator : 1UL,
+               options->style_weight.denominator ? options->style_weight.denominator : 1UL);
     }
     print_given_text(options);
     printf("sections\n");
@@ -715,6 +747,14 @@ static int place_given(const Options *options, PiecePlan *plan) {
     return 0;
 }
 
+/* Checks the style file reads; the plan keeps its path and weight on the form node for fill (PieceRequest.style). */
+static int check_style(const Options *options) {
+    ComposerStyle *style = NULL;
+    int status = cli_load_style(options->style_path, &style);
+    composer_style_destroy(style);
+    return status;
+}
+
 int run_plan(int argc, char **argv) {
     Options options;
     int status = read_options(argc, argv, &options);
@@ -750,6 +790,13 @@ int run_plan(int argc, char **argv) {
         has_motive = true;
     }
 
+    if (options.style_path) {
+        status = check_style(&options);
+        if (status != 0) {
+            return status;
+        }
+    }
+
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = options.form;
@@ -763,6 +810,12 @@ int run_plan(int argc, char **argv) {
     request.modulate = options.modulate;
     request.seed = options.seed;
     request.given_melodies = options.given_melodies;
+    if (options.style_path) {
+        request.has_style = true;
+        snprintf(request.style.path, PLAN_STYLE_PATH_MAX, "%s", options.style_path);
+        request.style.weight_numerator = options.style_weight.numerator;
+        request.style.weight_denominator = options.style_weight.denominator;
+    }
 
     PiecePlan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);

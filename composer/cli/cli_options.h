@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/style.h>
 
 /* The exit statuses every command shares. */
 #define CLI_EXIT_USAGE 1
@@ -43,6 +44,17 @@ const char *cli_accompaniment_name(PlanAccompanimentPattern pattern);
  */
 int cli_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text, const PlanMeter *meter,
                            PlanAccompaniment *out);
+
+/* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
+bool cli_parse_ratio(const char *text, ComposerRatio *out);
+
+/* Reads the style model file at path into *out. Returns 0, or the status of the usage error it printed. */
+int cli_load_style(const char *path, ComposerStyle **out);
+
+/* The Analyzer's distance from the style, per dimension and overall (0 is the same, 1 is nothing alike): text lines. */
+void cli_print_style_distance(const StyleComparison *comparison);
+/* The same as the JSON member "style_distance":{...}, with no leading comma. */
+void cli_print_style_distance_json(const StyleComparison *comparison);
 
 /* Prints text as a JSON string to stdout: quotes and backslashes escaped, control characters dropped. */
 void cli_print_json_string(const char *text);

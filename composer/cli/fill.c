@@ -34,8 +34,11 @@ typedef struct {
     const char *record_path;
     const char *format_text;
     const char *candidates_text;
+    const char *style_path;
+    const char *style_weight_text;
     unsigned long seed;
     unsigned long candidates; /* 0 for the single run */
+    ComposerRatio style_weight; /* 0/0 unless --style-weight was given */
     bool check;
     bool json;
 } Options;
@@ -53,6 +56,10 @@ static void print_help(FILE *out) {
     fprintf(out, "                       contradicts the plan (a planned cadence or the key not heard, a hard voice-leading fault)\n");
     fprintf(out, "  --candidates <n>     compose n candidates (1 to %d, seeds from --seed) and write the best, ranked by agreement\n", MAX_CANDIDATES);
     fprintf(out, "                       with the Analyzer, then score, then the lower seed; every candidate is listed\n");
+    fprintf(out, "  --style <file>       prefer the harmony and melody closest to a style: a style model file from the Ursatz\n");
+    fprintf(out, "                       Analyzer (--style-profile). Overrides the plan's own style. The Analyzer's distance from the\n");
+    fprintf(out, "                       style is printed with the result\n");
+    fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; overrides the plan's)\n");
     fprintf(out, "  --out <file.json>    write the realized plan as JSON\n");
     fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
@@ -81,6 +88,10 @@ static int read_options(int argc, char **argv, Options *options) {
             options->check = true;
         } else if (strcmp(arg, "--candidates") == 0) {
             target = &options->candidates_text;
+        } else if (strcmp(arg, "--style") == 0) {
+            target = &options->style_path;
+        } else if (strcmp(arg, "--style-weight") == 0) {
+            target = &options->style_weight_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
         } else if (strcmp(arg, "--midi") == 0) {
@@ -129,6 +140,10 @@ static int check_options(Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--candidates must be a whole number from 1 to %d, not '%s'", MAX_CANDIDATES,
                             options->candidates_text);
         }
+    }
+    if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
+                        options->style_weight_text);
     }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
@@ -307,6 +322,9 @@ static void print_result_text(unsigned long seed, bool realized, const PiecePlan
         printf("\nanalyzer check: %zu of %zu planned cadences and keys heard as planned\n", outcome->analyzer_agreed,
                outcome->analyzer_planned);
     }
+    if (outcome->style_measured) {
+        cli_print_style_distance(&outcome->style_distance);
+    }
     printf("\nreturns heard %zu of %zu planned\n", outcome->returns_heard, outcome->returns_planned);
     for (size_t i = 0; i < outcome->returns.count; i++) {
         const ReturnHeardPair *pair = &outcome->returns.pairs[i];
@@ -345,6 +363,10 @@ static void print_result_json(unsigned long seed, bool realized, const PiecePlan
     printf("],");
     if (outcome->analyzer_check_count > 0) {
         printf("\"analyzer\":{\"planned\":%zu,\"agreed\":%zu},", outcome->analyzer_planned, outcome->analyzer_agreed);
+    }
+    if (outcome->style_measured) {
+        cli_print_style_distance_json(&outcome->style_distance);
+        printf(",");
     }
     printf("\"returns\":{\"planned\":%zu,\"heard\":%zu,\"pairs\":[", outcome->returns_planned, outcome->returns_heard);
     for (size_t i = 0; i < outcome->returns.count; i++) {
@@ -596,6 +618,36 @@ static void candidates_json(const ComposeCandidates *candidates, unsigned long w
     }
 }
 
+/* --- the style ------------------------------------------------------------------ */
+
+/*
+ * The style the run prefers: --style, else the STYLE constraint on the plan's form node, and the weight from
+ * --style-weight, else the constraint's. *style stays NULL when there is none. Returns 0 or the usage status.
+ */
+static int resolve_style(const Options *options, const PiecePlan *plan, ComposerStyle **style, ComposerRatio *weight) {
+    const PlanStyle *planned = NULL;
+    NodeId root = plan_root(plan);
+    for (size_t i = 0; root != PLAN_NODE_NONE && i < plan_node_constraint_count(plan, root); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, root, i);
+        if (constraint->kind == PLAN_CONSTRAINT_STYLE) {
+            planned = &constraint->params.style;
+        }
+    }
+    const char *path = options->style_path ? options->style_path : (planned ? planned->path : NULL);
+    if (!path) {
+        if (options->style_weight_text) {
+            return cli_fail(CLI_EXIT_USAGE, "--style-weight needs a style: give --style or a plan that has one");
+        }
+        return 0;
+    }
+    weight->numerator = planned ? planned->weight_numerator : 0;
+    weight->denominator = planned ? planned->weight_denominator : 0;
+    if (options->style_weight_text) {
+        *weight = options->style_weight;
+    }
+    return cli_load_style(path, style);
+}
+
 /* --- the command ---------------------------------------------------------------- */
 
 int run_fill(int argc, char **argv) {
@@ -628,6 +680,8 @@ int run_fill(int argc, char **argv) {
     unsigned long used = options.seed;
     ComposeCandidates candidates;
     memset(&candidates, 0, sizeof(candidates));
+    ComposerStyle *style = NULL;
+    ComposerRatio style_weight = {0, 0};
     for (unsigned long attempt = 0; attempt < CLI_MAX_SEED_TRIES && !done && status == 0; attempt++) {
         PlanJsonError error;
         PiecePlan *fresh = NULL;
@@ -638,11 +692,18 @@ int run_fill(int argc, char **argv) {
         if (!snapshot) {
             /* What the user gave, kept to show after the run that none of it was changed. */
             snapshot = given_snapshot(fresh);
+            status = resolve_style(&options, fresh, &style, &style_weight);
+            if (status != 0) {
+                plan_destroy(fresh);
+                break;
+            }
         }
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
         config.seed = (options.seed + attempt) & CLI_SEED_MAX;
         config.analyzer_check = options.check;
+        config.style = style;
+        config.style_weight = style_weight;
         if (options.candidates > 0) {
             /* The candidates run from the seed and the next ones; the best is written. */
             PieceResult ran = compose_candidates(fresh, &config, options.candidates, &candidates);
@@ -733,5 +794,6 @@ int run_fill(int argc, char **argv) {
         plan_destroy(plan);
         compose_outcome_destroy(&outcome);
     }
+    composer_style_destroy(style);
     return status;
 }

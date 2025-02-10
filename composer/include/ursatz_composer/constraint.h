@@ -32,7 +32,8 @@ typedef enum {
     PLAN_CONSTRAINT_RETURN,        /* on a section node: the earlier section it returns, and how it varies it */
     PLAN_CONSTRAINT_LAYERS,        /* on a section node: which lanes sound in it */
     PLAN_CONSTRAINT_SECTION_LETTER, /* on a section node: its form letter ("A", "B", "A'") */
-    PLAN_CONSTRAINT_INVENT_MOTIVE   /* no parameters: a motive's melody span to be invented (motive-invent) */
+    PLAN_CONSTRAINT_INVENT_MOTIVE,  /* no parameters: a motive's melody span to be invented (motive-invent) */
+    PLAN_CONSTRAINT_STYLE           /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -238,6 +239,19 @@ typedef struct {
 /* A section's form letter: one to three characters, NUL-terminated ("A", "B", "A'", "V1"). */
 #define PLAN_SECTION_LETTER_MAX 4
 
+/*
+ * The style a plan is filled in (style.h): the path of a StyleModel file as the command line was given it, and the
+ * weight of the preference as a fraction. A weight of 0/0 is the default, 1/1. The file is read when the plan is filled,
+ * not when the plan is read, so a plan can name a style that is not there yet.
+ */
+#define PLAN_STYLE_PATH_MAX 512
+
+typedef struct {
+    char path[PLAN_STYLE_PATH_MAX];
+    unsigned long weight_numerator;
+    unsigned long weight_denominator;
+} PlanStyle;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -256,6 +270,7 @@ typedef struct {
         PlanReturn section_return;
         PlanLayers layers;
         char letter[PLAN_SECTION_LETTER_MAX];
+        PlanStyle style;
     } params;
 } PlanConstraint;
 

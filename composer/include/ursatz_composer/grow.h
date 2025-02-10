@@ -12,6 +12,7 @@
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>
+#include <ursatz_composer/style.h>
 
 /*
  * Growing a theme from a motive (R-047): the plan of a theme, built from one motive, and the fill stages that write
@@ -144,6 +145,8 @@ typedef struct {
     GrowContext context;
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive grow_run */
     size_t max_iterations;          /* per stage; 0 means FILL_DEFAULT_MAX_ITERATIONS */
+    const ComposerStyle *style;     /* NULL for none; must outlive grow_run (compose.h) */
+    ComposerRatio style_weight;     /* a denominator of 0 is 1/1 */
 } GrowConfig;
 
 typedef struct {
@@ -163,6 +166,8 @@ typedef struct {
     int requested_ending;
     bool heard_as_requested;               /* the requested form; for a hybrid, with the requested beginning and ending */
     GrowScore score;                       /* the share of the structure's soft rules and the heard form that hold */
+    bool style_measured;                   /* with a style, after a complete run: the Analyzer's distance from it (compose.h) */
+    StyleComparison style_distance;        /* owned */
 } GrowOutcome;
 
 void grow_outcome_destroy(GrowOutcome *outcome);
