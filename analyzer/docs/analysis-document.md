@@ -23,6 +23,7 @@ newline. The same input and build always give the same bytes.
 | `pivot_chords` | array of pivot chord claims | Filled. See below. |
 | `chords` | array of chord claims | Filled. |
 | `chord_vocabulary` | array of vocabulary entries | Filled: each distinct Roman numeral with its count and length. See below. |
+| `prolongations` | array of prolongation claims | Optional, after `chord_vocabulary`. Filled: the library's tonic and dominant prolongations. See below. |
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `outer_voices` | object | Filled: the soprano and bass lines. See below. |
 | `cadences` | array of cadence claims | Filled: the library's standard-harmony cadences. See below. |
@@ -307,6 +308,13 @@ when no chord was identified.
 | `runner_up` | object or null | The best-scoring candidate on a different root, with `label`, `root`, `quality`, `score` and `uncertainty` (the library's plausibility of it relative to the best chord, in [0, 1]); `null` when no other root sounds. |
 | `context` | string or null | Optional. Where the library took the reading from: `"none"` (the segment itself), `"previous"` or `"next"` (a sparse segment read as its neighbour's chord), or `"arpeggio"` (a run of incomplete segments inside one beat read as one chord). `null` when no chord was identified. |
 
+`function` and `six_four` are optional; a chord the library gives none has no such member.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `function` | object | The library's harmonic function of the chord (`analysis/analysis_function.h`): `name` (`"tonic"`, `"predominant"` or `"dominant"`), `applied_to` (the target degree 1 to 7 of an applied chord, which is a dominant toward it; `null` otherwise), `predominant` (`"strong"` for IV and ii, `"weak"` for iii and vi, the library's `harmony_predominant_strength`; `null` unless the chord is a diatonic predominant), `framework` (`"standard-harmony-v1"`) and `uncertainty` (the chord's, in [0, 1], higher is LESS certain). Absent when the library gives no function. |
+| `six_four` | object | `{"type"}`: the library's six-four type for a triad in second inversion, `"cadential"`, `"passing"`, `"neighbor"` or `"arpeggiating"`. Absent for every other chord and for a six-four the library leaves unclassified. |
+
 `roman_numeral` is the numeral Ursatz's standard-tonality Roman numeral adapter reads for the chord in the key of
 the region the segment starts in, so it is relative to the local key and not the home key. The label, its
 inversion figure and its quality marks are the library's, unaltered; the analyzer only passes the library the
@@ -458,6 +466,29 @@ Markdown report renders it from here.
 | `boundary` | boolean | A half cadence the boundary step added before a section start. |
 | `region` | integer or null | Index into `keys.regions` of the arrival's key region; `null` outside every region. |
 
+### Prolongations
+
+`prolongations` holds one claim per prolongation the library finds (`analysis/analysis_prolongation.h`), in order
+of the prolonged chord: a tonic or dominant that lasts through the chords between it and the harmony that closes
+it. The analyzer runs `harmony_analysis_assign_functions`, `harmony_analysis_mark_cadential`,
+`harmony_analysis_classify_six_fours` and `harmony_analysis_find_prolongations` over the same prepared segments
+the cadences use; the functions, types and reasons are the library's. The section is optional and additive (no
+version bump), and empty when the library finds none or declines the piece.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `framework` | string | `"standard-harmony-v1"`. |
+| `span`, `location`, `note_ids` | | From the start of the prolonged chord to the end of the first segment of the closing chord; the notes sounding in those segments. |
+| `label` | string | The function. |
+| `uncertainty` | number | The least certain function among the chords in the span (higher is less certain). |
+| `function` | string | The prolonged harmony: `"tonic"` or `"dominant"`. |
+| `numeral` | string or null | The prolonged chord's Roman numeral; `null` when the library gave it none. |
+| `first_chord`, `last_chord` | integer | Indices into `chords` of the prolonged chord and the first chord of the closing harmony. |
+| `reasons` | array of strings | One library reason name per chord between them: `"passing-six-four"`, `"neighbor-six-four"`, `"arpeggiating-six-four"`, `"tonic-line"` or `"applied"`. |
+| `region` | integer or null | Index into `keys.regions` of the prolonged chord's key region; `null` outside every region. |
+
+The phrase model, which labels phrases from the functions, needs phrases and comes with them.
+
 ## Versioning
 
 - `schema_version` changes only for breaking changes: removing or renaming a field, changing a
@@ -473,7 +504,8 @@ Markdown report renders it from here.
   `counterpoint_check` (`null`) after `schemas`, so the P3 sections fill them without another version. Required
   sections are a breaking change under the rule above. Chord claims gain the optional `context`, which did not
   need a version of its own. `cadences` is filled (its claims are new), and tonicization and modulation claims
-  gain the optional `cadence_confirmed`; both are additive.
+  gain the optional `cadence_confirmed`; both are additive. Chord claims gain the optional `function` and
+  `six_four`, and the optional top-level `prolongations` follows `chord_vocabulary`; all additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
