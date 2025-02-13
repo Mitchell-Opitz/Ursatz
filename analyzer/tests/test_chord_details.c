@@ -182,7 +182,7 @@ static void test_inversion(void) {
     assert(strcmp(string(chord, "bass"), "E") == 0);
     assert(number(chord, "inversion") == 1);
     assert(number(member(member(chord, "duration"), "beats"), "num") == 4);
-    assert(strstr(analyzed.markdown, "| I | I6 (in C major) | C | major | E | first | 4 |") != NULL);
+    assert(strstr(analyzed.markdown, "| I | I6 (in C major) | tonic | - | C | major | E | first | 4 |") != NULL);
     analyzed_destroy(&analyzed);
 
     /* The same chord with the G lowest is in second inversion; with the C lowest, root position. */

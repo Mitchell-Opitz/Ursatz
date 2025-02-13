@@ -95,6 +95,16 @@ typedef struct {
     bool in_region;                 /* the segment lies in a key region */
     size_t region;                  /* index of that region in key_regions; valid only when in_region */
     AnalysisRomanNumeral roman;     /* the chord's Roman numeral in that region's key */
+    /* The library's harmonic function of the chord (analysis/analysis_function.h). NULL when the library gives
+       none (a segment that is not a chord it reads, or no prepared segments). */
+    const char *function;           /* the library's HarmonicFunction name: "tonic", "predominant" or "dominant" */
+    bool function_applied;          /* an applied chord: a dominant toward function_applied_to */
+    int function_applied_to;        /* the target's scale degree 1..7; 0 unless function_applied */
+    double function_uncertainty;    /* [0, 1], higher is LESS certain; valid only when function is set */
+    const char *predominant_strength; /* "strong" (IV, ii) or "weak" (iii, vi) for a diatonic predominant, from the
+                                         library's harmony_predominant_strength; NULL for any other chord */
+    const char *six_four;           /* the library's SixFourType name ("cadential", "passing", "neighbor",
+                                       "arpeggiating") of a classified six-four chord; NULL otherwise */
 } AnalysisReportEntry;
 
 /* Frees an outer note's strings and clears it. */
@@ -181,6 +191,22 @@ typedef struct {
     double uncertainty;               /* [0, 1], higher is LESS certain */
 } AnalysisCadence;
 
+/* One prolongation from the library's standard-harmony analysis (analysis/analysis_prolongation.h): the harmony of
+   entries[first_entry] lasts through the interior chords to the closing chord at entries[last_entry]. Entry
+   indices are inclusive. */
+typedef struct {
+    const char *function;        /* the prolonged harmony's HarmonicFunction name: "tonic" or "dominant" */
+    size_t first_entry;          /* the first chord of the prolonged harmony */
+    size_t last_entry;           /* the first chord of the closing harmony */
+    size_t interior_count;       /* the chords between them */
+    const char **reasons;        /* owned array of interior_count library reason names (not owned strings), one per
+                                    interior chord: "passing-six-four", "tonic-line", ... */
+    bool in_region;              /* the first chord lies in a key region */
+    size_t region;               /* index of that region in key_regions; valid only when in_region */
+    double uncertainty;          /* [0, 1], higher is LESS certain: the least certain function of the chords in the
+                                    span */
+} AnalysisProlongation;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -192,12 +218,14 @@ typedef struct {
     size_t key_change_count;
     AnalysisCadence *cadences; /* owned; in time order */
     size_t cadence_count;
+    AnalysisProlongation *prolongations; /* owned; in order of first_entry */
+    size_t prolongation_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
-/* Frees every entry's labels and note ids, the entries array, the key regions and changes, and the cadences. */
+/* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences and the prolongations. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

@@ -155,7 +155,9 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
                                                  ? chain->key_regions.regions[report->home_region].key_index
                                                  : -1) ||
         !harmony_stage_confirm_key_changes(&chain->harmony, segmentation, &chain->key_regions) ||
-        !harmony_stage_collect_cadences(&chain->harmony, report)) {
+        !harmony_stage_collect_cadences(&chain->harmony, report) ||
+        !harmony_stage_collect_functions(&chain->harmony, report) ||
+        !harmony_stage_collect_six_fours_and_prolongations(&chain->harmony, report)) {
         return false;
     }
     sync_key_change_extents(&chain->key_regions, report->key_changes);

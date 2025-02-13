@@ -108,6 +108,12 @@ target_compile_definitions(test_cadences PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_cadences COMMAND test_cadences)
 
+add_executable(test_harmonic_function test_harmonic_function.c)
+target_link_libraries(test_harmonic_function PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_harmonic_function PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_harmonic_function COMMAND test_harmonic_function)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE

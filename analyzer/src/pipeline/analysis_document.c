@@ -1154,6 +1154,33 @@ static cJSON *roman_numeral_json(const AnalysisReport *report, const AnalysisRep
     return object;
 }
 
+/* The chord's harmonic function, the library's (standard-harmony), with the target degree of an applied chord (null
+   otherwise). Chords the library gives no function have none. */
+static bool add_function(cJSON *claim, const AnalysisReportEntry *entry) {
+    if (entry->six_four) {
+        cJSON *six_four = cJSON_CreateObject();
+        if (!(six_four && add(six_four, "type", cJSON_CreateString(entry->six_four)) &&
+              add(claim, "six_four", six_four))) {
+            cJSON_Delete(six_four);
+            return false;
+        }
+    }
+    if (!entry->function) {
+        return true;
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "name", cJSON_CreateString(entry->function)) &&
+          add(object, "applied_to",
+              entry->function_applied ? cJSON_CreateNumber(entry->function_applied_to) : cJSON_CreateNull()) &&
+          add(object, "predominant", optional_string_json(entry->predominant_strength)) &&
+          add(object, "framework", cJSON_CreateString(framework_name(standard_harmony_framework()))) &&
+          add(object, "uncertainty", cJSON_CreateNumber(entry->function_uncertainty)))) {
+        cJSON_Delete(object);
+        return false;
+    }
+    return add(claim, "function", object);
+}
+
 /* One chord claim per report entry, in time order. */
 static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
@@ -1170,7 +1197,7 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
               add_chord_fields(claim, notes, entry, start, end) &&
               add(claim, "outer", chord_outer_json(report, entry)) &&
-              add(claim, "roman_numeral", roman_numeral_json(report, entry)))) {
+              add(claim, "roman_numeral", roman_numeral_json(report, entry)) && add_function(claim, entry))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;
@@ -1310,6 +1337,56 @@ static cJSON *cadences_json(const ImportedNotes *notes, const AnalysisReport *re
               add(claim, "boundary", cJSON_CreateBool(cadence->boundary)) &&
               add(claim, "region",
                   cadence->in_region ? cJSON_CreateNumber((double)cadence->region) : cJSON_CreateNull()))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* One claim per prolongation, in order of the prolonged chord. The claim's span runs from the prolonged chord's start
+   to the end of the closing chord's first segment; first_chord and last_chord are the indices of those chords in
+   "chords" and numeral is the prolonged chord's Roman numeral (null when the library gave it none). reasons has one
+   library reason name per interior chord. Everything else is the library's: the function, the reasons. */
+static cJSON *prolongations_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_harmony_framework());
+    for (size_t i = 0; i < report->prolongation_count; i++) {
+        const AnalysisProlongation *prolongation = &report->prolongations[i];
+        const AnalysisReportEntry *first = &report->entries[prolongation->first_entry];
+        const AnalysisReportEntry *last = &report->entries[prolongation->last_entry];
+        Rational start = entry_start_time(first);
+        Rational end = entry_end_time(last);
+        size_t id_count = 0;
+        size_t *ids = entry_range_note_ids(report, prolongation->first_entry, prolongation->last_entry, &id_count);
+        cJSON *claim = ids ? claim_json_with(framework, notes, ids, id_count, start, end, prolongation->function,
+                                             cJSON_CreateNumber(prolongation->uncertainty))
+                           : NULL;
+        free(ids);
+        cJSON *reasons = cJSON_CreateArray();
+        bool reasons_ok = reasons != NULL;
+        for (size_t r = 0; reasons_ok && r < prolongation->interior_count; r++) {
+            reasons_ok = append(reasons, cJSON_CreateString(prolongation->reasons[r]));
+        }
+        bool reasons_taken = false; /* add() takes the reasons over, and frees them itself when it fails */
+        if (!(claim && reasons_ok && add(claim, "function", cJSON_CreateString(prolongation->function)) &&
+              add(claim, "numeral", optional_string_json(first->roman.numeral)) &&
+              add(claim, "first_chord", cJSON_CreateNumber((double)prolongation->first_entry)) &&
+              add(claim, "last_chord", cJSON_CreateNumber((double)prolongation->last_entry)) &&
+              (reasons_taken = true, add(claim, "reasons", reasons)) &&
+              add(claim, "region",
+                  prolongation->in_region ? cJSON_CreateNumber((double)prolongation->region) : cJSON_CreateNull()))) {
+            if (!reasons_taken) {
+                cJSON_Delete(reasons);
+            }
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
@@ -1664,6 +1741,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "chords", chords_json(notes, report)) &&
           add(document, "chord_vocabulary",
               chord_vocabulary_json(report, cJSON_GetObjectItemCaseSensitive(document, "chords"))) &&
+          add(document, "prolongations", prolongations_json(notes, report)) &&
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cadences_json(notes, report)) &&

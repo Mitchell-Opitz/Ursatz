@@ -30,6 +30,9 @@ Tests:
   weak modulation, one with a modulation, and a notated key signature the music does not fit.
 - `test_cadences`: the cadence claims of the five reference pieces (locations, note ids, types, regions), the
   cadence-confirmed key changes, Bach 114's two perfect authentic cadences and Clementi 36's counts.
+- `test_harmonic_function`: the function of every labelled chord of Bach 114 and Mozart 545 (V and vii°
+  dominant, ii and IV strong and iii and vi weak predominants), the six-four types, the prolongations, and a
+  cadential six-four in Mozart 545.
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
@@ -355,6 +358,17 @@ strength, the soprano degree at the arrival, the key region and the uncertainty.
   marks the modulations.
 - **Cadence plan.** The cadences in time order with the count of each type, rendered from the analysis
   document's `cadences`.
+
+## Harmonic function, six-fours and prolongations
+
+Over the same prepared segments as the cadences (`src/pipeline/harmony_pipeline.c`, no music theory of its own),
+the analyzer asks the library for each chord's function (`harmony_analysis_assign_functions`; an applied chord is
+a dominant toward its target), marks the cadential six-fours (`harmony_analysis_mark_cadential`), classifies the
+six-fours (`harmony_analysis_classify_six_fours`) and finds the prolongations
+(`harmony_analysis_find_prolongations`). A diatonic predominant is strong (IV, ii) or weak (iii, vi) by the
+library's `harmony_predominant_strength`. The chord claims carry `function` and `six_four`, and the new
+`prolongations` section lists the spans. The Markdown report's Chords table gains Function and Six-four columns,
+and a `## Prolongations` section follows the chord vocabulary. The phrase model needs phrases and comes with them.
 
 ## Known limits
 

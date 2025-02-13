@@ -529,6 +529,30 @@ static bool append_numeral_cell(StringBuilder *sb, const cJSON *chord, long *las
     return sb_appendf(sb, "%s | ", numeral);
 }
 
+/* The chord's Function and Six-four cells: the library's function ("dominant of 5" for an applied chord, with the
+   strength of a predominant) and six-four type, or "-" where it gives none. */
+static bool append_function_cells(StringBuilder *sb, const cJSON *chord) {
+    const cJSON *function = cJSON_GetObjectItemCaseSensitive(chord, "function");
+    const char *name = string_member(function, "name");
+    bool ok;
+    if (!name) {
+        ok = sb_append(sb, "- | ");
+    } else {
+        const cJSON *applied_to = cJSON_GetObjectItemCaseSensitive(function, "applied_to");
+        const char *strength = string_member(function, "predominant");
+        ok = sb_append(sb, name);
+        if (ok && cJSON_IsNumber(applied_to)) {
+            ok = sb_appendf(sb, " of %d", (int)applied_to->valuedouble);
+        }
+        if (ok && strength) {
+            ok = sb_appendf(sb, " (%s)", strength);
+        }
+        ok = ok && sb_append(sb, " | ");
+    }
+    const char *six_four = string_member(cJSON_GetObjectItemCaseSensitive(chord, "six_four"), "type");
+    return ok && sb_appendf(sb, "%s | ", six_four ? six_four : "-");
+}
+
 static bool append_chord_row(StringBuilder *sb, const cJSON *chord, long *last_region) {
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
     const char *label = string_member(chord, "label");
@@ -537,7 +561,8 @@ static bool append_chord_row(StringBuilder *sb, const cJSON *chord, long *last_r
 
     bool ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
               sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
-              sb_appendf(sb, " | %s | ", label ? label : "") && append_numeral_cell(sb, chord, last_region);
+              sb_appendf(sb, " | %s | ", label ? label : "") && append_numeral_cell(sb, chord, last_region) &&
+              append_function_cells(sb, chord);
     if (!ok) {
         return false;
     }
@@ -589,12 +614,15 @@ static bool render_chords(StringBuilder *sb, const cJSON *document, const cJSON 
     ok = ok &&
          sb_appendf(sb,
                     " Numeral is the Roman numeral in the local key region, which is named where it changes. "
-                    "Duration is in beats. Confidence is the library's confidence in the chord. The runner-up "
-                    "is shown only when its score is within %.2f of the best chord's.\n\n",
+                    "Function is the library's harmonic function of the chord: an applied chord is a dominant "
+                    "toward its target degree, and a predominant is strong (IV, ii) or weak (iii, vi). Six-four "
+                    "is the library's type for a chord in second inversion. Duration is in beats. Confidence is "
+                    "the library's confidence in the chord. The runner-up is shown only when its score is "
+                    "within %.2f of the best chord's.\n\n",
                     RUNNER_UP_MARGIN_THRESHOLD) &&
-         sb_append(sb, "| Position | Chord | Numeral | Root | Quality | Bass | Inversion | Beats | Confidence | "
-                       "Runner-up |\n"
-                       "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+         sb_append(sb, "| Position | Chord | Numeral | Function | Six-four | Root | Quality | Bass | Inversion | Beats | "
+                       "Confidence | Runner-up |\n"
+                       "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
     long last_region = -1;
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
@@ -812,6 +840,61 @@ static bool render_chord_vocabulary(StringBuilder *sb, const cJSON *document, co
     return ok;
 }
 
+/* The label of the key region at an index of the document's keys, or "none" outside every region. */
+static const char *region_label(const cJSON *document, const cJSON *index) {
+    if (!cJSON_IsNumber(index)) {
+        return "none";
+    }
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
+    const cJSON *region = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(keys, "regions"), (int)index->valuedouble);
+    const char *label = string_member(region, "label");
+    return label ? label : "none";
+}
+
+/* The reasons of a prolongation, each once, in order of first appearance. */
+static bool append_reasons(StringBuilder *sb, const cJSON *reasons) {
+    bool ok = true;
+    const cJSON *reason;
+    cJSON_ArrayForEach(reason, reasons) {
+        bool seen = false;
+        for (const cJSON *earlier = reasons->child; earlier != reason && !seen; earlier = earlier->next) {
+            seen = cJSON_IsString(earlier) && cJSON_IsString(reason) && strcmp(earlier->valuestring, reason->valuestring) == 0;
+        }
+        if (ok && !seen && cJSON_IsString(reason)) {
+            ok = sb_appendf(sb, "%s%s", reason == reasons->child ? "" : ", ", reason->valuestring);
+        }
+    }
+    return ok;
+}
+
+static bool render_prolongations(StringBuilder *sb, const cJSON *document, const cJSON *prolongations) {
+    bool ok = sb_append(sb, "## Prolongations\n\n") &&
+              sb_appendf(sb,
+                         "The library's standard-harmony analysis found %d %s: a tonic or dominant that lasts "
+                         "through the chords between it and the harmony that closes it. Measures run from the "
+                         "prolonged chord to the closing chord. Numeral is the prolonged chord. Reason is why the "
+                         "library reads the chords between as a prolongation.\n\n",
+                         cJSON_GetArraySize(prolongations),
+                         cJSON_GetArraySize(prolongations) == 1 ? "prolongation" : "prolongations") &&
+              sb_append(sb, "| Measures | Function | Numeral | Key | Reason |\n"
+                            "| --- | --- | --- | --- | --- |\n");
+    const cJSON *prolongation;
+    cJSON_ArrayForEach(prolongation, prolongations) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(prolongation, "location");
+        int first = (int)number_member(cJSON_GetObjectItemCaseSensitive(location, "start"), "measure");
+        int last = (int)number_member(cJSON_GetObjectItemCaseSensitive(location, "end"), "measure");
+        const char *numeral = string_member(prolongation, "numeral");
+        ok = (first == last ? sb_appendf(sb, "| m. %d | ", first) : sb_appendf(sb, "| mm. %d to %d | ", first, last)) &&
+             sb_appendf(sb, "%s | %s | %s | ", string_member(prolongation, "function"), numeral ? numeral : "-",
+                        region_label(document, cJSON_GetObjectItemCaseSensitive(prolongation, "region"))) &&
+             append_reasons(sb, cJSON_GetObjectItemCaseSensitive(prolongation, "reasons")) && sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, const cJSON *tones) {
     (void)document;
     size_t unclassified = 0;
@@ -840,17 +923,6 @@ static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, con
                         type ? type : "unclassified", string_member(tone, "chord_label"));
     }
     return ok && sb_append(sb, "\n");
-}
-
-/* The label of the key region at an index of the document's keys, or "none" outside every region. */
-static const char *region_label(const cJSON *document, const cJSON *index) {
-    if (!cJSON_IsNumber(index)) {
-        return "none";
-    }
-    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
-    const cJSON *region = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(keys, "regions"), (int)index->valuedouble);
-    const char *label = string_member(region, "label");
-    return label ? label : "none";
 }
 
 #define CADENCE_TYPE_MAX 8
@@ -940,6 +1012,7 @@ static const struct {
     {"chords", render_applied_chords},
     {"chords", render_outer_voices},
     {"chord_vocabulary", render_chord_vocabulary},
+    {"prolongations", render_prolongations},
     {"non_chord_tones", render_non_chord_tones},
     {"cadences", render_cadences},
 };

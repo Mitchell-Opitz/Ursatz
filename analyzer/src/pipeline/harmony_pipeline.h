@@ -8,6 +8,9 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "analysis_cadence.h"
+#include "analysis_function.h"
+#include "analysis_prolongation.h"
+#include "analysis_six_four.h"
 #include "key_regions.h"
 #include "analysis_input.h"
 #include "pipeline/roman_numeral_pipeline.h"
@@ -68,6 +71,18 @@ bool harmony_stage_confirm_key_changes(const HarmonyStage *stage, const Segmenta
    label), beat strength, key region and uncertainty. entries must be the ones the stage was prepared from. Returns
    false only on allocation failure. */
 bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *report);
+
+/* Reads the library's harmonic function of every prepared segment into report->entries (function,
+   function_applied, function_applied_to, function_uncertainty). Marks the cadential six-fours first
+   (harmony_analysis_mark_cadential) so the functions read them as the dominant's embellishment. entries must be the
+   ones the stage was prepared from. A stage the library declined leaves the entries without a function. Returns
+   false only on allocation failure. */
+bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report);
+
+/* Reads the library's six-four types into report->entries (six_four) and its prolongations into
+   report->prolongations. Run after harmony_stage_collect_functions. entries must be the ones the stage was prepared
+   from. A stage the library declined leaves both empty. Returns false only on allocation failure. */
+bool harmony_stage_collect_six_fours_and_prolongations(HarmonyStage *stage, AnalysisReport *report);
 
 void harmony_stage_destroy(HarmonyStage *stage);
 
