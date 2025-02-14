@@ -995,6 +995,64 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
     return ok && sb_append(sb, "\n") && render_cadence_plan(sb, document, cadences);
 }
 
+#define PROGRESSION_TABLE_ROWS 10
+
+/* The measure a chord of the document's chords starts in, or -1 when the index or its location is missing. */
+static int chord_start_measure(const cJSON *document, const cJSON *index) {
+    if (!cJSON_IsNumber(index)) {
+        return -1;
+    }
+    const cJSON *chord = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "chords"),
+                                            (int)index->valuedouble);
+    const cJSON *start = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "location"),
+                                                          "start");
+    return cJSON_IsObject(start) ? (int)number_member(start, "measure") : -1;
+}
+
+/* "m. 3" or "mm. 3 to 4" for the measures an occurrence's first and last chord start in. */
+static bool append_occurrence_measures(StringBuilder *sb, const cJSON *document, const cJSON *occurrence) {
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(occurrence, "chords");
+    int first = chord_start_measure(document, cJSON_GetArrayItem(chords, 0));
+    int last = chord_start_measure(document, cJSON_GetArrayItem(chords, cJSON_GetArraySize(chords) - 1));
+    if (first < 0 || last < 0) {
+        return sb_append(sb, "unknown position");
+    }
+    return first == last ? sb_appendf(sb, "m. %d", first) : sb_appendf(sb, "mm. %d to %d", first, last);
+}
+
+/* The progressions in the document's order, which is their rank: how often, then how long, then how early. Read from
+   the document's progressions, so the table is the array itself, cut to its first rows. */
+static bool render_progression_patterns(StringBuilder *sb, const cJSON *document, const cJSON *progressions) {
+    int total = cJSON_GetArraySize(progressions);
+    bool ok = sb_append(sb, "## Progression patterns\n\n") &&
+              sb_appendf(sb,
+                         "%d recurring %s of two to six chords, counted over the library's Roman numerals: a held "
+                         "chord counts once, and a progression does not cross an unlabelled chord or a change of "
+                         "key. Ranked by count, then length, then first occurrence%s. Measures are where each "
+                         "occurrence begins and ends.\n\n",
+                         total, total == 1 ? "progression" : "progressions",
+                         total > PROGRESSION_TABLE_ROWS ? "; the top 10 are shown" : "") &&
+              sb_append(sb, "| Rank | Progression | Count | Measures |\n| --- | --- | --- | --- |\n");
+    int rank = 1;
+    const cJSON *progression;
+    cJSON_ArrayForEach(progression, progressions) {
+        if (!ok || rank > PROGRESSION_TABLE_ROWS) {
+            break;
+        }
+        ok = sb_appendf(sb, "| %d | %s | %d | ", rank++, string_member(progression, "label"),
+                        (int)number_member(progression, "count"));
+        const cJSON *occurrence;
+        cJSON_ArrayForEach(occurrence, cJSON_GetObjectItemCaseSensitive(progression, "occurrences")) {
+            ok = ok && sb_append(sb, occurrence == cJSON_GetObjectItemCaseSensitive(progression, "occurrences")->child
+                                         ? ""
+                                         : ", ") &&
+                 append_occurrence_measures(sb, document, occurrence);
+        }
+        ok = ok && sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -1015,6 +1073,7 @@ static const struct {
     {"prolongations", render_prolongations},
     {"non_chord_tones", render_non_chord_tones},
     {"cadences", render_cadences},
+    {"progressions", render_progression_patterns},
 };
 
 static bool section_is_empty(const cJSON *section) {
