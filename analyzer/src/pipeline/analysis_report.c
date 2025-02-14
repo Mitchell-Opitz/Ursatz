@@ -70,6 +70,14 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->prolongations[i].reasons);
     }
     free(report->prolongations);
+    for (size_t i = 0; i < report->progression_count; i++) {
+        for (size_t n = 0; n < report->progressions[i].length; n++) {
+            free(report->progressions[i].pattern[n]);
+        }
+        free(report->progressions[i].pattern);
+        free(report->progressions[i].occurrences);
+    }
+    free(report->progressions);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -82,6 +90,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->cadence_count = 0;
     report->prolongations = NULL;
     report->prolongation_count = 0;
+    report->progressions = NULL;
+    report->progression_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

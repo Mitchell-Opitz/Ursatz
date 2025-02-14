@@ -207,6 +207,23 @@ typedef struct {
                                     span */
 } AnalysisProlongation;
 
+/* One place a recurring progression occurs: the chords of entries[first_entry..last_entry], inclusive. The run
+   covers every chord of the pattern, a held chord (consecutive chords with the same base numeral) included; all of
+   them lie in the key region of entries[first_entry]. */
+typedef struct {
+    size_t first_entry;
+    size_t last_entry;
+} AnalysisProgressionOccurrence;
+
+/* A run of two to six labelled chords, by the base numerals of the library's Roman numerals, that occurs at least
+   twice. Counting is the analyzer's; the numerals are the library's. */
+typedef struct {
+    char **pattern;                          /* owned array of owned base numerals, e.g. "I", "IV", "V" */
+    size_t length;                           /* 2..6 */
+    AnalysisProgressionOccurrence *occurrences; /* owned; in time order */
+    size_t occurrence_count;                 /* how often the pattern occurs: at least 2 */
+} AnalysisProgression;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -220,12 +237,16 @@ typedef struct {
     size_t cadence_count;
     AnalysisProlongation *prolongations; /* owned; in order of first_entry */
     size_t prolongation_count;
+    AnalysisProgression *progressions; /* owned; the recurring progressions, ranked: most occurrences, then longest, then
+                                          earliest */
+    size_t progression_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
-/* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences and the prolongations. */
+/* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
+   prolongations and the progressions. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
