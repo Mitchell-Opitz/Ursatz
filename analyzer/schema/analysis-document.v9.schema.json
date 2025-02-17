@@ -89,7 +89,10 @@
     "texture": { "type": "array" },
     "voice_leading": { "type": "array" },
     "schemas": { "type": "array" },
-    "progressions": { "type": "array" },
+    "progressions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/progression" }
+    },
     "harmonic_rhythm": { "type": ["object", "null"] },
     "markings": { "type": ["object", "null"] },
     "counterpoint_check": { "type": ["object", "null"] },
@@ -364,6 +367,43 @@
             "arrival_beat_strength": { "enum": ["strong", "medium", "weak"] },
             "boundary": { "type": "boolean" },
             "region": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "progression": {
+      "type": "object",
+      "required": ["pattern", "label", "length", "count", "occurrences"],
+      "properties": {
+        "pattern": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": { "type": "string" }
+        },
+        "label": { "type": "string" },
+        "length": { "type": "integer", "minimum": 2, "maximum": 6 },
+        "count": { "type": "integer", "minimum": 2 },
+        "occurrences": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/progression_occurrence" }
+        }
+      }
+    },
+    "progression_occurrence": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["region", "chords"],
+          "properties": {
+            "region": { "type": "integer", "minimum": 0 },
+            "chords": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "type": "integer", "minimum": 0 }
+            }
           }
         }
       ]

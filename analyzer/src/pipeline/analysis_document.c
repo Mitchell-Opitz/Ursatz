@@ -13,6 +13,7 @@
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
+#include "pipeline/progression_pipeline.h"
 #include "theory/framework.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
@@ -1399,6 +1400,98 @@ static cJSON *prolongations_json(const ImportedNotes *notes, const AnalysisRepor
     return list;
 }
 
+/* ---- Progressions ---- */
+
+/* The pattern as a JSON array of its base numerals. */
+static cJSON *progression_pattern_json(const AnalysisProgression *progression) {
+    cJSON *pattern = cJSON_CreateArray();
+    for (size_t n = 0; pattern && n < progression->length; n++) {
+        if (!append(pattern, cJSON_CreateString(progression->pattern[n]))) {
+            cJSON_Delete(pattern);
+            return NULL;
+        }
+    }
+    return pattern;
+}
+
+/* The indices into "chords" of every chord from first to last, held repeats included. */
+static cJSON *chord_range_json(size_t first, size_t last) {
+    cJSON *indices = cJSON_CreateArray();
+    for (size_t i = first; indices && i <= last; i++) {
+        if (!append(indices, cJSON_CreateNumber((double)i))) {
+            cJSON_Delete(indices);
+            return NULL;
+        }
+    }
+    return indices;
+}
+
+/* One occurrence of a progression, a claim over the chords of the run: its span and location run from the first
+   chord's start to the last chord's end, note_ids are the notes sounding in them, the label is the pattern's, and
+   the uncertainty is the least certain Roman numeral in the run (higher is less certain). region is the key region
+   all the chords lie in; chords are their indices in "chords". */
+static cJSON *progression_occurrence_json(const ImportedNotes *notes, const AnalysisReport *report, const char *label,
+                                          const AnalysisProgressionOccurrence *occurrence) {
+    double uncertainty = 0.0;
+    for (size_t i = occurrence->first_entry; i <= occurrence->last_entry; i++) {
+        if (report->entries[i].roman.labelled && report->entries[i].roman.uncertainty > uncertainty) {
+            uncertainty = report->entries[i].roman.uncertainty;
+        }
+    }
+    size_t id_count = 0;
+    size_t *ids = entry_range_note_ids(report, occurrence->first_entry, occurrence->last_entry, &id_count);
+    cJSON *claim = ids ? claim_json_with(library_framework_name(), notes, ids, id_count,
+                                         entry_start_time(&report->entries[occurrence->first_entry]),
+                                         entry_end_time(&report->entries[occurrence->last_entry]), label,
+                                         cJSON_CreateNumber(uncertainty))
+                       : NULL;
+    free(ids);
+    if (!(claim && add(claim, "region", cJSON_CreateNumber((double)report->entries[occurrence->first_entry].region)) &&
+          add(claim, "chords", chord_range_json(occurrence->first_entry, occurrence->last_entry)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* One entry per recurring progression, in rank order (most occurrences, then longest, then earliest): pattern (the
+   base numerals), label ("I > IV > V > I"), length, count and its occurrences in time order. The progressions are
+   the analyzer's count over the library's Roman numerals; nothing here is a claim of its own. */
+static cJSON *progressions_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    for (size_t i = 0; i < report->progression_count; i++) {
+        const AnalysisProgression *progression = &report->progressions[i];
+        char *label = progression_label(progression);
+        cJSON *entry = label ? cJSON_CreateObject() : NULL;
+        cJSON *occurrences = entry ? cJSON_CreateArray() : NULL;
+        bool ok = occurrences != NULL;
+        for (size_t o = 0; ok && o < progression->occurrence_count; o++) {
+            ok = append(occurrences, progression_occurrence_json(notes, report, label, &progression->occurrences[o]));
+        }
+        bool taken = false; /* add() takes the occurrences over, and frees them itself when it fails */
+        ok = ok && add(entry, "pattern", progression_pattern_json(progression)) &&
+             add(entry, "label", cJSON_CreateString(label)) &&
+             add(entry, "length", cJSON_CreateNumber((double)progression->length)) &&
+             add(entry, "count", cJSON_CreateNumber((double)progression->occurrence_count)) &&
+             (taken = true, add(entry, "occurrences", occurrences));
+        free(label);
+        if (!(ok && append(list, entry))) {
+            if (!taken) {
+                cJSON_Delete(occurrences);
+            }
+            if (!ok) {
+                cJSON_Delete(entry);
+            }
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* ---- Outer voices ---- */
 
 /* The note's own timing, apart from the chord segment it sounds in: where it is attacked, as a time and a
@@ -1749,7 +1842,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
-          add(document, "progressions", cJSON_CreateArray()) && add(document, "harmonic_rhythm", cJSON_CreateNull()) &&
+          add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", cJSON_CreateNull()) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);
