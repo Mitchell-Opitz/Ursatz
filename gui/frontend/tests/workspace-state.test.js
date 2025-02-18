@@ -52,6 +52,8 @@ const actions = {
   0: "zoom-reset",
   "?": "toggle-shortcuts",
   Escape: "escape",
+  " ": "play-pause",
+  Home: "stop",
 };
 for (const [key, action] of Object.entries(actions)) {
   const row = press(key);
@@ -77,7 +79,7 @@ check(
 );
 
 /* Saved interface state. */
-const defaults = { layersOpen: true, inspectorOpen: true, zoom: 1, mode: "score" };
+const defaults = { layersOpen: true, inspectorOpen: true, zoom: 1, mode: "score", volume: 80 };
 check(JSON.stringify(loadUiState(null)) === JSON.stringify(defaults), "no storage gives the defaults");
 
 function fakeStorage() {
@@ -91,7 +93,7 @@ const storage = fakeStorage();
 check(JSON.stringify(loadUiState(storage)) === JSON.stringify(defaults), "an empty storage gives the defaults");
 saveUiState(storage, { layersOpen: false, inspectorOpen: true, zoom: 1.5, mode: "data" });
 check(
-  JSON.stringify(loadUiState(storage)) === JSON.stringify({ layersOpen: false, inspectorOpen: true, zoom: 1.5, mode: "data" }),
+  JSON.stringify(loadUiState(storage)) === JSON.stringify({ layersOpen: false, inspectorOpen: true, zoom: 1.5, mode: "data", volume: 80 }),
   "a saved state is loaded back",
 );
 check(storage.getItem("ursatz.workspace.v1") !== null, "the state is stored under ursatz.workspace.v1");
@@ -100,7 +102,7 @@ storage.setItem("ursatz.workspace.v1", "not json");
 check(JSON.stringify(loadUiState(storage)) === JSON.stringify(defaults), "unreadable stored text gives the defaults");
 storage.setItem("ursatz.workspace.v1", JSON.stringify({ layersOpen: "no", zoom: 3, mode: "tree", inspectorOpen: false }));
 check(
-  JSON.stringify(loadUiState(storage)) === JSON.stringify({ layersOpen: true, inspectorOpen: false, zoom: 1, mode: "score" }),
+  JSON.stringify(loadUiState(storage)) === JSON.stringify({ layersOpen: true, inspectorOpen: false, zoom: 1, mode: "score", volume: 80 }),
   "a field of the wrong type or out of range falls back to its default",
 );
 storage.setItem("ursatz.workspace.v1", "[1,2]");

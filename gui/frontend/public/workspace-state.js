@@ -46,6 +46,8 @@
 
   /* One row per key. alt lists further keys that do the same. */
   const SHORTCUTS = [
+    { key: " ", label: "Play or pause", action: "play-pause" },
+    { key: "Home", label: "Stop and go back to the start", action: "stop" },
     { key: "L", label: "Layers panel", action: "toggle-layers" },
     { key: "I", label: "Inspector panel", action: "toggle-inspector" },
     { key: "F", label: "Focus mode", action: "toggle-focus" },
@@ -91,7 +93,7 @@
   const UI_STATE_KEY = "ursatz.workspace.v1";
 
   function defaultUiState() {
-    return { layersOpen: true, inspectorOpen: true, zoom: 1, mode: "score" };
+    return { layersOpen: true, inspectorOpen: true, zoom: 1, mode: "score", volume: 80 };
   }
 
   /* The saved state with defaults for anything missing or of the wrong type.
@@ -119,6 +121,9 @@
     }
     if (saved.mode === "score" || saved.mode === "data") {
       state.mode = saved.mode;
+    }
+    if (typeof saved.volume === "number" && saved.volume >= 0 && saved.volume <= 100) {
+      state.volume = saved.volume;
     }
     return state;
   }

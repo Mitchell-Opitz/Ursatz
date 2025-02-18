@@ -91,6 +91,12 @@
     return r.at + ((seconds - r.seconds) * r.qpm) / WHOLE_NOTE_SECONDS_AT_QPM;
   }
 
+  /* Seconds as m:ss, rounded down. */
+  function formatClock(seconds) {
+    const whole = Math.max(0, Math.floor(seconds + EPSILON));
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+  }
+
   function firstIndexAtOrAfter(notes, w) {
     let lo = 0;
     let hi = notes.length;
@@ -271,6 +277,7 @@
     buildTimeline,
     secondsAt,
     positionAt,
+    formatClock,
     createTransport,
     TICK_MS,
     LOOKAHEAD_SECONDS,
