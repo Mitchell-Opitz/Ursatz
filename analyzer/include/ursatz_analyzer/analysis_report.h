@@ -224,6 +224,13 @@ typedef struct {
     size_t occurrence_count;                 /* how often the pattern occurs: at least 2 */
 } AnalysisProgression;
 
+/* How many times the harmony changes in one measure: the chord segments that start in it with a base numeral or a
+   key region different from the segment before. */
+typedef struct {
+    int measure; /* as the library numbers measures (a pickup is 0) */
+    size_t changes;
+} AnalysisMeasureChanges;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -240,13 +247,17 @@ typedef struct {
     AnalysisProgression *progressions; /* owned; the recurring progressions, ranked: most occurrences, then longest, then
                                           earliest */
     size_t progression_count;
+    AnalysisMeasureChanges *harmonic_rhythm; /* owned; one per measure from the first chord's to the last chord's,
+                                                every measure between included; empty when the piece has no chords or
+                                                the library cannot place them on the meter */
+    size_t harmonic_rhythm_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations and the progressions. */
+   prolongations, the progressions and the harmonic rhythm. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

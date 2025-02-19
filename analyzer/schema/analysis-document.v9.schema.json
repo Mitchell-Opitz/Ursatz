@@ -93,7 +93,9 @@
       "type": "array",
       "items": { "$ref": "#/$defs/progression" }
     },
-    "harmonic_rhythm": { "type": ["object", "null"] },
+    "harmonic_rhythm": {
+      "oneOf": [{ "$ref": "#/$defs/harmonic_rhythm" }, { "type": "null" }]
+    },
     "markings": { "type": ["object", "null"] },
     "counterpoint_check": { "type": ["object", "null"] },
     "notes": {
@@ -370,6 +372,38 @@
           }
         }
       ]
+    },
+    "harmonic_rhythm": {
+      "type": "object",
+      "required": ["per_measure", "mean_per_measure", "per_window", "cadence_approaches"],
+      "properties": {
+        "per_measure": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["measure", "changes"],
+            "properties": {
+              "measure": { "type": "integer", "minimum": 0 },
+              "changes": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "mean_per_measure": { "$ref": "#/$defs/rational" },
+        "per_window": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["first_measure", "last_measure", "mean_per_measure"],
+            "properties": {
+              "first_measure": { "type": "integer", "minimum": 0 },
+              "last_measure": { "type": "integer", "minimum": 0 },
+              "mean_per_measure": { "$ref": "#/$defs/rational" }
+            }
+          }
+        },
+        "cadence_approaches": { "type": "array" }
+      }
     },
     "progression": {
       "type": "object",

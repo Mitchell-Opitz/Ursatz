@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pipeline/harmonic_rhythm_pipeline.h"
 #include "pipeline/key_region_pipeline.h"
 #include "pipeline/outer_voice_pipeline.h"
 #include "pipeline/progression_pipeline.h"
@@ -159,7 +160,7 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !harmony_stage_collect_cadences(&chain->harmony, report) ||
         !harmony_stage_collect_functions(&chain->harmony, report) ||
         !harmony_stage_collect_six_fours_and_prolongations(&chain->harmony, report) ||
-        !progression_stage_collect(report)) {
+        !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(chain->notes, report)) {
         return false;
     }
     sync_key_change_extents(&chain->key_regions, report->key_changes);

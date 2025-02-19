@@ -78,6 +78,7 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->progressions[i].occurrences);
     }
     free(report->progressions);
+    free(report->harmonic_rhythm);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -92,6 +93,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->prolongation_count = 0;
     report->progressions = NULL;
     report->progression_count = 0;
+    report->harmonic_rhythm = NULL;
+    report->harmonic_rhythm_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

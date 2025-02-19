@@ -1053,6 +1053,47 @@ static bool render_progression_patterns(StringBuilder *sb, const cJSON *document
     return ok && sb_append(sb, "\n");
 }
 
+/* "1.25" for a rational, to at most two places. */
+static bool append_mean(StringBuilder *sb, const cJSON *object, const char *key) {
+    char text[32];
+    format_number(rational_member(object, key), text, sizeof(text));
+    return sb_append(sb, text);
+}
+
+/* The harmonic rhythm: the changes of harmony per measure, four measures to a row with the mean of the row, and the
+   mean over the piece. Read from the document's harmonic_rhythm. */
+static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, const cJSON *rhythm) {
+    (void)document;
+    const cJSON *per_measure = cJSON_GetObjectItemCaseSensitive(rhythm, "per_measure");
+    const cJSON *windows = cJSON_GetObjectItemCaseSensitive(rhythm, "per_window");
+    bool ok = sb_append(sb, "## Harmonic rhythm\n\n") &&
+              sb_append(sb, "How often the harmony changes. A change is a chord whose base Roman numeral or key "
+                            "differs from the chord before it, counted in the measure it starts in. Changes lists the "
+                            "measures of each row in order; Mean is changes per measure over the row.\n\n") &&
+              sb_append(sb, "| Measures | Changes | Mean |\n| --- | --- | --- |\n");
+    const cJSON *window;
+    cJSON_ArrayForEach(window, windows) {
+        if (!ok) {
+            break;
+        }
+        int first = (int)number_member(window, "first_measure");
+        int last = (int)number_member(window, "last_measure");
+        ok = (first == last ? sb_appendf(sb, "| m. %d | ", first) : sb_appendf(sb, "| mm. %d to %d | ", first, last));
+        const cJSON *measure;
+        cJSON_ArrayForEach(measure, per_measure) {
+            int number = (int)number_member(measure, "measure");
+            if (ok && number >= first && number <= last) {
+                ok = sb_appendf(sb, "%s%d", number == first ? "" : ", ", (int)number_member(measure, "changes"));
+            }
+        }
+        ok = ok && sb_append(sb, " | ") && append_mean(sb, window, "mean_per_measure") && sb_append(sb, " |\n");
+    }
+    ok = ok && sb_append(sb, "\n**Mean:** ") && append_mean(sb, rhythm, "mean_per_measure") &&
+         sb_appendf(sb, " changes per measure over %d %s.\n\n", cJSON_GetArraySize(per_measure),
+                    cJSON_GetArraySize(per_measure) == 1 ? "measure" : "measures");
+    return ok;
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -1074,6 +1115,7 @@ static const struct {
     {"non_chord_tones", render_non_chord_tones},
     {"cadences", render_cadences},
     {"progressions", render_progression_patterns},
+    {"harmonic_rhythm", render_harmonic_rhythm},
 };
 
 static bool section_is_empty(const cJSON *section) {

@@ -1492,6 +1492,72 @@ static cJSON *progressions_json(const ImportedNotes *notes, const AnalysisReport
     return list;
 }
 
+/* ---- Harmonic rhythm ---- */
+
+#define RHYTHM_WINDOW_MEASURES 4
+
+/* The mean number of changes per measure over report->harmonic_rhythm[first..first + measures), a rational. */
+static Rational rhythm_mean(const AnalysisReport *report, size_t first, size_t measures) {
+    long long changes = 0;
+    for (size_t m = first; m < first + measures; m++) {
+        changes += (long long)report->harmonic_rhythm[m].changes;
+    }
+    return rational_make(changes, measures);
+}
+
+static cJSON *rhythm_per_measure_json(const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t m = 0; list && m < report->harmonic_rhythm_count; m++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "measure", cJSON_CreateNumber(report->harmonic_rhythm[m].measure)) &&
+              add(entry, "changes", cJSON_CreateNumber((double)report->harmonic_rhythm[m].changes)) &&
+              append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The mean per window of RHYTHM_WINDOW_MEASURES consecutive measures from the first, the last window shorter when
+   the measures run out. */
+static cJSON *rhythm_per_window_json(const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t first = 0; list && first < report->harmonic_rhythm_count; first += RHYTHM_WINDOW_MEASURES) {
+        size_t measures = report->harmonic_rhythm_count - first;
+        measures = measures < RHYTHM_WINDOW_MEASURES ? measures : RHYTHM_WINDOW_MEASURES;
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "first_measure", cJSON_CreateNumber(report->harmonic_rhythm[first].measure)) &&
+              add(entry, "last_measure", cJSON_CreateNumber(report->harmonic_rhythm[first + measures - 1].measure)) &&
+              add(entry, "mean_per_measure", rational_json(rhythm_mean(report, first, measures))) &&
+              append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The harmonic rhythm: the changes of harmony in each measure (a chord segment whose base numeral or key region
+   differs from the one before), their mean over the piece, and the mean per window of four measures, from the first.
+   Null when the piece has no chords the meter can place. */
+static cJSON *harmonic_rhythm_json(const AnalysisReport *report) {
+    if (report->harmonic_rhythm_count == 0) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "per_measure", rhythm_per_measure_json(report)) &&
+          add(object, "mean_per_measure", rational_json(rhythm_mean(report, 0, report->harmonic_rhythm_count))) &&
+          add(object, "per_window", rhythm_per_window_json(report)) &&
+          add(object, "cadence_approaches", cJSON_CreateArray()))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* ---- Outer voices ---- */
 
 /* The note's own timing, apart from the chord segment it sounds in: where it is attacked, as a time and a
@@ -1842,7 +1908,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
-          add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", cJSON_CreateNull()) &&
+          add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);
