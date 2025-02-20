@@ -783,6 +783,11 @@ body {
   font-size: 12px;
 }
 
+.ws-reverb {
+  width: 160px;
+  accent-color: var(--accent);
+}
+
 .ws-sound-select {
   max-width: 180px;
   background: none;

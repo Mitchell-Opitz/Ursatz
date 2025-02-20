@@ -15,10 +15,10 @@
  *   ws.on("layerchange", (enabledIds) => ...);
  *   ws.on("select", (selection) => ...);   {item, layer, others} or null
  *
- * Zoom, panel state, view mode and volume are remembered (WorkspaceState).
+ * Zoom, panel state, view mode, volume and reverb are remembered (WorkspaceState).
  * Needs OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreLayers,
  * InspectorModel, ScoreGeometry, ScoreOverlay, WorkspaceState, Instruments,
- * SoundSources and PlaybackEngine loaded first. */
+ * SoundSources, PlaybackEngine and Reverb loaded first. */
 (function (root) {
   const RESIZE_DELAY_MS = 150;
   /* Most notehead halos drawn for one selection (a whole-piece claim can
@@ -715,6 +715,7 @@
         zoom: state.zoom,
         mode: state.mode,
         volume: state.volume,
+        reverb: state.reverb,
       });
     }
 
@@ -1176,13 +1177,36 @@
       const dry = ctx.createGain();
       const master = ctx.createGain();
       const compressor = ctx.createDynamicsCompressor();
+      const convolver = ctx.createConvolver();
+      const wet = ctx.createGain();
+      const impulse = Reverb.buildImpulse(ctx.sampleRate, 2.2, 3, Math.random);
+      const impulseBuffer = ctx.createBuffer(2, impulse[0].length, ctx.sampleRate);
+      impulseBuffer.copyToChannel(impulse[0], 0);
+      impulseBuffer.copyToChannel(impulse[1], 1);
+      convolver.buffer = impulseBuffer;
       bus.connect(dry);
+      bus.connect(convolver);
+      convolver.connect(wet);
       dry.connect(master);
+      wet.connect(master);
       master.connect(compressor);
       compressor.connect(ctx.destination);
-      audio = { ctx, bus, dry, master };
+      audio = { ctx, bus, dry, wet, master };
+      const gains = Reverb.reverbGains(state.reverb);
+      dry.gain.value = gains.dry;
+      wet.gain.value = gains.wet;
       applyVolume();
       return audio;
+    }
+
+    /* Both gains move with a short time constant, so the slider makes no
+     * clicks while playing. */
+    function applyReverb() {
+      if (audio) {
+        const gains = Reverb.reverbGains(state.reverb);
+        audio.dry.gain.setTargetAtTime(gains.dry, audio.ctx.currentTime, 0.03);
+        audio.wet.gain.setTargetAtTime(gains.wet, audio.ctx.currentTime, 0.03);
+      }
     }
 
     function applyVolume() {
@@ -1413,6 +1437,23 @@
         row.appendChild(select);
         soundMenu.appendChild(row);
       }
+      const reverbRow = el("label", "ws-sound-row");
+      const reverbText = el("span", "ws-sound-part", `Reverb ${state.reverb}`);
+      const reverbSlider = el("input", "ws-reverb");
+      reverbSlider.type = "range";
+      reverbSlider.min = "0";
+      reverbSlider.max = "100";
+      reverbSlider.step = "1";
+      reverbSlider.value = String(state.reverb);
+      reverbSlider.setAttribute("aria-label", "Reverb");
+      reverbSlider.addEventListener("input", () => {
+        state.reverb = Number(reverbSlider.value);
+        reverbText.textContent = `Reverb ${state.reverb}`;
+        applyReverb();
+        savePrefs();
+      });
+      reverbRow.append(reverbText, reverbSlider);
+      soundMenu.appendChild(reverbRow);
       const credits = new Set();
       for (const partIndex of partInfo.keys()) {
         const source = registry.sourceForPart(partIndex, (partInfo.get(partIndex) || {}).program || 0);

@@ -93,7 +93,7 @@
   const UI_STATE_KEY = "ursatz.workspace.v1";
 
   function defaultUiState() {
-    return { layersOpen: true, inspectorOpen: true, zoom: 1, mode: "score", volume: 80 };
+    return { layersOpen: true, inspectorOpen: true, zoom: 1, mode: "score", volume: 80, reverb: 20 };
   }
 
   /* The saved state with defaults for anything missing or of the wrong type.
@@ -124,6 +124,9 @@
     }
     if (typeof saved.volume === "number" && saved.volume >= 0 && saved.volume <= 100) {
       state.volume = saved.volume;
+    }
+    if (typeof saved.reverb === "number" && saved.reverb >= 0 && saved.reverb <= 100) {
+      state.reverb = saved.reverb;
     }
     return state;
   }
