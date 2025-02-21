@@ -14,7 +14,9 @@
  *
  * Fills report->harmonic_rhythm from report->entries: one record per measure from the first segment's to the last
  * segment's, a measure no segment starts in counting 0. A piece with no segments, or one the meter cannot place, is
- * left empty. Returns false only on allocation failure.
+ * left empty. Also fills report->cadence_approaches, one per cadence of report->cadences: the changes in the two
+ * measures before the arrival's measure against those in the two measures before them. Returns false only on
+ * allocation failure.
  */
 bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *report);
 

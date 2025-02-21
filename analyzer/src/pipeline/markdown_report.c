@@ -1060,8 +1060,39 @@ static bool append_mean(StringBuilder *sb, const cJSON *object, const char *key)
     return sb_append(sb, text);
 }
 
-/* The harmonic rhythm: the changes of harmony per measure, four measures to a row with the mean of the row, and the
-   mean over the piece. Read from the document's harmonic_rhythm. */
+static bool section_is_empty(const cJSON *section);
+
+/* The mean cell of a cadence approach: a rational, or "none" when the start of the piece clips the window away. */
+static bool append_window_mean(StringBuilder *sb, const cJSON *approach, const char *key) {
+    return cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(approach, key)) ? append_mean(sb, approach, key)
+                                                                           : sb_append(sb, "none");
+}
+
+/* How the harmonic rhythm moves into each cadence: the mean changes per measure over the two measures before the
+   arrival against the two before those. Arrival is where the cadence arrives, as in the cadence plan. */
+static bool render_cadence_approaches(StringBuilder *sb, const cJSON *approaches) {
+    bool ok = sb_append(sb, "### Approach to cadences\n\n") &&
+              sb_append(sb, "Changes per measure over the two measures before each cadence's arrival (Approach), "
+                            "against the two measures before those (Before). Faster is yes when the approach "
+                            "changes harmony more often.\n\n") &&
+              sb_append(sb, "| Cadence | Arrival | Before | Approach | Faster |\n| --- | --- | --- | --- | --- |\n");
+    const cJSON *approach;
+    cJSON_ArrayForEach(approach, approaches) {
+        if (!ok) {
+            break;
+        }
+        ok = sb_appendf(sb, "| %d | m. %d | ", (int)number_member(approach, "cadence") + 1,
+                        (int)number_member(approach, "arrival_measure")) &&
+             append_window_mean(sb, approach, "before") && sb_append(sb, " | ") &&
+             append_window_mean(sb, approach, "approach") &&
+             sb_appendf(sb, " | %s |\n",
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(approach, "accelerates")) ? "yes" : "no");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* The harmonic rhythm: the changes of harmony per measure, four measures to a row with the mean of the row, the
+   mean over the piece, and the approach to each cadence. Read from the document's harmonic_rhythm. */
 static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, const cJSON *rhythm) {
     (void)document;
     const cJSON *per_measure = cJSON_GetObjectItemCaseSensitive(rhythm, "per_measure");
@@ -1091,7 +1122,8 @@ static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, con
     ok = ok && sb_append(sb, "\n**Mean:** ") && append_mean(sb, rhythm, "mean_per_measure") &&
          sb_appendf(sb, " changes per measure over %d %s.\n\n", cJSON_GetArraySize(per_measure),
                     cJSON_GetArraySize(per_measure) == 1 ? "measure" : "measures");
-    return ok;
+    const cJSON *approaches = cJSON_GetObjectItemCaseSensitive(rhythm, "cadence_approaches");
+    return ok && (section_is_empty(approaches) || render_cadence_approaches(sb, approaches));
 }
 
 /* Report sections in document section order. Adding a section means

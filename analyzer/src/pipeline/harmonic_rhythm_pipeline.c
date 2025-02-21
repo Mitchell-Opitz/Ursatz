@@ -37,6 +37,42 @@ static bool is_change(const AnalysisReportEntry *previous, const AnalysisReportE
     return strcmp(before, after) != 0;
 }
 
+/* The changes in measures from..to (inclusive) that the piece has, and how many measures that is. */
+static void window_changes(const AnalysisMeasureChanges *rhythm, size_t count, int from, int to, size_t *changes,
+                           size_t *measures) {
+    *changes = 0;
+    *measures = 0;
+    for (size_t m = 0; m < count; m++) {
+        if (rhythm[m].measure >= from && rhythm[m].measure <= to) {
+            *changes += rhythm[m].changes;
+            (*measures)++;
+        }
+    }
+}
+
+/* One approach per cadence, from the arrival's measure (measures[i] is the measure of entry i). */
+static bool collect_approaches(const int *measures, AnalysisReport *report) {
+    if (report->cadence_count == 0) {
+        return true;
+    }
+    AnalysisCadenceApproach *approaches = calloc(report->cadence_count, sizeof(AnalysisCadenceApproach));
+    if (!approaches) {
+        return false;
+    }
+    for (size_t c = 0; c < report->cadence_count; c++) {
+        AnalysisCadenceApproach *approach = &approaches[c];
+        approach->cadence = c;
+        approach->arrival_measure = measures[report->cadences[c].arrival_first];
+        window_changes(report->harmonic_rhythm, report->harmonic_rhythm_count, approach->arrival_measure - 4,
+                       approach->arrival_measure - 3, &approach->before_changes, &approach->before_measures);
+        window_changes(report->harmonic_rhythm, report->harmonic_rhythm_count, approach->arrival_measure - 2,
+                       approach->arrival_measure - 1, &approach->approach_changes, &approach->approach_measures);
+    }
+    report->cadence_approaches = approaches;
+    report->cadence_approach_count = report->cadence_count;
+    return true;
+}
+
 bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *report) {
     size_t count = report->entry_count;
     if (count == 0) {
@@ -76,8 +112,9 @@ bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *r
             rhythm[measures[i] - first].changes++;
         }
     }
-    free(measures);
     report->harmonic_rhythm = rhythm;
     report->harmonic_rhythm_count = measure_count;
-    return true;
+    bool ok = collect_approaches(measures, report);
+    free(measures);
+    return ok;
 }

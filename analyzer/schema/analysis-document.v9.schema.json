@@ -402,7 +402,20 @@
             }
           }
         },
-        "cadence_approaches": { "type": "array" }
+        "cadence_approaches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["cadence", "arrival_measure", "before", "approach", "accelerates"],
+            "properties": {
+              "cadence": { "type": "integer", "minimum": 0 },
+              "arrival_measure": { "type": "integer", "minimum": 0 },
+              "before": { "oneOf": [{ "$ref": "#/$defs/rational" }, { "type": "null" }] },
+              "approach": { "oneOf": [{ "$ref": "#/$defs/rational" }, { "type": "null" }] },
+              "accelerates": { "type": "boolean" }
+            }
+          }
+        }
       }
     },
     "progression": {

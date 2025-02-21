@@ -1540,9 +1540,38 @@ static cJSON *rhythm_per_window_json(const AnalysisReport *report) {
     return list;
 }
 
+/* The mean of changes over measures measures, or null when the piece has none of them. */
+static cJSON *window_mean_json(size_t changes, size_t measures) {
+    return measures > 0 ? rational_json(rational_make((long long)changes, measures)) : cJSON_CreateNull();
+}
+
+/* One entry per cadence, in the cadences' order: its arrival measure, the mean changes per measure over the two
+   measures before the arrival (approach) and over the two before those (before), and whether the approach is faster.
+   A window the start of the piece clips to nothing has a null mean, and then accelerates is false. */
+static cJSON *cadence_approaches_json(const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t c = 0; list && c < report->cadence_approach_count; c++) {
+        const AnalysisCadenceApproach *approach = &report->cadence_approaches[c];
+        bool accelerates = approach->before_measures > 0 && approach->approach_measures > 0 &&
+                           approach->approach_changes * approach->before_measures >
+                               approach->before_changes * approach->approach_measures;
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "cadence", cJSON_CreateNumber((double)approach->cadence)) &&
+              add(entry, "arrival_measure", cJSON_CreateNumber(approach->arrival_measure)) &&
+              add(entry, "before", window_mean_json(approach->before_changes, approach->before_measures)) &&
+              add(entry, "approach", window_mean_json(approach->approach_changes, approach->approach_measures)) &&
+              add(entry, "accelerates", cJSON_CreateBool(accelerates)) && append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* The harmonic rhythm: the changes of harmony in each measure (a chord segment whose base numeral or key region
-   differs from the one before), their mean over the piece, and the mean per window of four measures, from the first.
-   Null when the piece has no chords the meter can place. */
+   differs from the one before), their mean over the piece, the mean per window of four measures, from the first, and
+   how the rhythm moves into each cadence (cadence_approaches). Null when the piece has no chords the meter can place. */
 static cJSON *harmonic_rhythm_json(const AnalysisReport *report) {
     if (report->harmonic_rhythm_count == 0) {
         return cJSON_CreateNull();
@@ -1551,7 +1580,7 @@ static cJSON *harmonic_rhythm_json(const AnalysisReport *report) {
     if (!(object && add(object, "per_measure", rhythm_per_measure_json(report)) &&
           add(object, "mean_per_measure", rational_json(rhythm_mean(report, 0, report->harmonic_rhythm_count))) &&
           add(object, "per_window", rhythm_per_window_json(report)) &&
-          add(object, "cadence_approaches", cJSON_CreateArray()))) {
+          add(object, "cadence_approaches", cadence_approaches_json(report)))) {
         cJSON_Delete(object);
         return NULL;
     }

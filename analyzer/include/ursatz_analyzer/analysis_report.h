@@ -231,6 +231,18 @@ typedef struct {
     size_t changes;
 } AnalysisMeasureChanges;
 
+/* How the harmonic rhythm moves into one cadence: the changes in the two measures before the arrival's measure (the
+   approach) against the changes in the two measures before those. A window clipped by the start of the piece holds
+   fewer measures, or none (then its mean is undefined). */
+typedef struct {
+    size_t cadence;          /* index into cadences */
+    int arrival_measure;     /* the measure the arrival begins in */
+    size_t before_changes;   /* in the two measures before the approach */
+    size_t before_measures;  /* how many of them the piece has: 0..2 */
+    size_t approach_changes; /* in the two measures before the arrival */
+    size_t approach_measures;
+} AnalysisCadenceApproach;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -251,6 +263,9 @@ typedef struct {
                                                 every measure between included; empty when the piece has no chords or
                                                 the library cannot place them on the meter */
     size_t harmonic_rhythm_count;
+    AnalysisCadenceApproach *cadence_approaches; /* owned; one per cadence, in the cadences' order; empty when
+                                                    harmonic_rhythm is */
+    size_t cadence_approach_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
