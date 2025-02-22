@@ -6,7 +6,7 @@
  *     title, subtitle,           toolbar text
  *     musicxmlUrl, metaUrl,      the score and its meter caption
  *     document, noteXmlIds,      the analysis, for the layers and the inspector
- *     playbackUrl,               the piece's playback data (timeline offset)
+ *     playbackUrl,               the piece's playback data (offset, sound)
  *     actions: [{label, onClick}],  extra toolbar buttons
  *     onBack,                    the Library link
  *   });
@@ -15,10 +15,10 @@
  *   ws.on("layerchange", (enabledIds) => ...);
  *   ws.on("select", (selection) => ...);   {item, layer, others} or null
  *
- * Zoom, panel state and view mode are remembered (WorkspaceState). Needs
- * OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreLayers,
- * InspectorModel, ScoreGeometry, ScoreOverlay and WorkspaceState loaded
- * first. */
+ * Zoom, panel state, view mode, volume and reverb are remembered (WorkspaceState).
+ * Needs OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreLayers,
+ * InspectorModel, ScoreGeometry, ScoreOverlay, WorkspaceState, Instruments,
+ * SoundSources, PlaybackEngine and Reverb loaded first. */
 (function (root) {
   const RESIZE_DELAY_MS = 150;
   /* Most notehead halos drawn for one selection (a whole-piece claim can
@@ -185,6 +185,7 @@
     main.appendChild(canvas);
     canvas.addEventListener("click", () => {
       closeFloatingPanels();
+      closeSoundMenu();
     });
 
     const live = el("div", "ws-live");
@@ -713,6 +714,8 @@
         inspectorOpen: state.inspectorOpen,
         zoom: state.zoom,
         mode: state.mode,
+        volume: state.volume,
+        reverb: state.reverb,
       });
     }
 
@@ -819,7 +822,7 @@
           if (i > 0) {
             term.appendChild(document.createTextNode(" "));
           }
-          term.appendChild(el("kbd", "ws-kbd", key === "Escape" ? "Esc" : key));
+          term.appendChild(el("kbd", "ws-kbd", key === "Escape" ? "Esc" : key === " " ? "Space" : key));
         });
         list.append(term, el("dd", "", row.label));
       }
@@ -870,6 +873,14 @@
         return;
       }
       switch (row.action) {
+        case "play-pause":
+          /* a focused button or link already acts on Space itself */
+          if (event.target && /^(BUTTON|A)$/i.test(String(event.target.tagName || ""))) return;
+          togglePlay();
+          break;
+        case "stop":
+          rewind();
+          break;
         case "toggle-layers":
           if (!inScore) return;
           togglePanel("layers");
@@ -908,6 +919,8 @@
         case "escape":
           if (dialog) {
             closeShortcuts();
+          } else if (closeSoundMenu()) {
+            /* the Sound menu closed */
           } else if (!closeFloatingPanels() && !(inScore && clearSelection())) {
             return;
           }
@@ -1004,6 +1017,7 @@
             return;
           }
           playbackData = data;
+          onPlaybackLoaded();
           if (osmd && layout) {
             calibrate();
             redrawOverlay();
@@ -1078,6 +1092,395 @@
     });
     resizeObserver.observe(canvas);
 
+
+    /* ---- Playback: the transport, the sound and the audio output ---- */
+
+    const MAX_VOICES = 64;
+    const NOTE_VELOCITY = 0.7;
+    const FALLBACK_SOURCE_ID = "basic-synth";
+    const registry = SoundSources.createDefaultRegistry(Instruments);
+    registry.mapProgram(0, "gm-piano");
+    let timeline = null;
+    let player = null;
+    let audio = null; /* {ctx, bus, dry, master} once the first Play click made it */
+    let soundsReady = false;
+    let preparing = false;
+    const failedSources = new Set();
+    const voices = [];
+    const partInfo = new Map();
+    const pitchesByPart = new Map();
+
+    const playButton = el("button", "ws-btn ws-play", "Play");
+    playButton.type = "button";
+    playButton.disabled = true;
+    playButton.title = "Play or pause (Space)";
+    playButton.addEventListener("click", togglePlay);
+    const stopButton = iconButton("Stop", "Stop and go back to the start", "Home", rewind);
+    stopButton.disabled = true;
+    const readout = el("span", "ws-readout", "m1 0:00 / 0:00");
+    readout.setAttribute("aria-label", "Position");
+    const tempoDown = iconButton("−", "Slower", "5% steps", () => nudgeTempo(-5));
+    const tempoLabel = iconButton("100%", "Reset tempo to 100%", "click", () => setTempoPercent(100));
+    tempoLabel.classList.add("ws-tempo-label");
+    const tempoUp = iconButton("+", "Faster", "5% steps", () => nudgeTempo(5));
+    const tempoGroup = el("div", "ws-tempo");
+    tempoGroup.setAttribute("role", "group");
+    tempoGroup.setAttribute("aria-label", "Tempo");
+    tempoGroup.append(tempoDown, tempoLabel, tempoUp);
+    const volume = el("input", "ws-volume");
+    volume.type = "range";
+    volume.min = "0";
+    volume.max = "100";
+    volume.step = "1";
+    volume.value = String(state.volume);
+    volume.setAttribute("aria-label", "Volume");
+    volume.title = "Volume";
+    volume.addEventListener("input", () => {
+      state.volume = Number(volume.value);
+      applyVolume();
+      savePrefs();
+    });
+    const soundButton = el("button", "ws-btn ws-sound-btn", "Sound");
+    soundButton.type = "button";
+    soundButton.setAttribute("aria-haspopup", "true");
+    soundButton.setAttribute("aria-expanded", "false");
+    soundButton.disabled = true;
+    const soundMenu = el("div", "ws-sound");
+    soundMenu.hidden = true;
+    soundButton.addEventListener("click", () => {
+      if (soundMenu.hidden) {
+        buildSoundMenu();
+        soundMenu.hidden = false;
+        soundButton.setAttribute("aria-expanded", "true");
+      } else {
+        closeSoundMenu();
+      }
+    });
+    transport.append(playButton, stopButton, readout, tempoGroup, volume, soundButton, soundMenu);
+
+    function closeSoundMenu() {
+      if (soundMenu.hidden) {
+        return false;
+      }
+      soundMenu.hidden = true;
+      soundButton.setAttribute("aria-expanded", "false");
+      return true;
+    }
+
+    function ensureAudio() {
+      if (audio) {
+        return audio;
+      }
+      const Context = root.AudioContext || root.webkitAudioContext;
+      const ctx = new Context();
+      const bus = ctx.createGain();
+      const dry = ctx.createGain();
+      const master = ctx.createGain();
+      const compressor = ctx.createDynamicsCompressor();
+      const convolver = ctx.createConvolver();
+      const wet = ctx.createGain();
+      const impulse = Reverb.buildImpulse(ctx.sampleRate, 2.2, 3, Math.random);
+      const impulseBuffer = ctx.createBuffer(2, impulse[0].length, ctx.sampleRate);
+      impulseBuffer.copyToChannel(impulse[0], 0);
+      impulseBuffer.copyToChannel(impulse[1], 1);
+      convolver.buffer = impulseBuffer;
+      bus.connect(dry);
+      bus.connect(convolver);
+      convolver.connect(wet);
+      dry.connect(master);
+      wet.connect(master);
+      master.connect(compressor);
+      compressor.connect(ctx.destination);
+      audio = { ctx, bus, dry, wet, master };
+      const gains = Reverb.reverbGains(state.reverb);
+      dry.gain.value = gains.dry;
+      wet.gain.value = gains.wet;
+      applyVolume();
+      return audio;
+    }
+
+    /* Both gains move with a short time constant, so the slider makes no
+     * clicks while playing. */
+    function applyReverb() {
+      if (audio) {
+        const gains = Reverb.reverbGains(state.reverb);
+        audio.dry.gain.setTargetAtTime(gains.dry, audio.ctx.currentTime, 0.03);
+        audio.wet.gain.setTargetAtTime(gains.wet, audio.ctx.currentTime, 0.03);
+      }
+    }
+
+    function applyVolume() {
+      if (audio) {
+        audio.master.gain.setTargetAtTime(state.volume / 100, audio.ctx.currentTime, 0.03);
+      }
+    }
+
+    /* The source a part plays: its override or program, and the basic synth
+     * when that source could not load. */
+    function sourceForPartIndex(partIndex) {
+      const info = partInfo.get(partIndex);
+      const source = registry.sourceForPart(partIndex, info ? info.program : 0);
+      if (failedSources.has(source.id)) {
+        return registry.sources().find((candidate) => candidate.id === FALLBACK_SOURCE_ID) || source;
+      }
+      return source;
+    }
+
+    /* Loads every source the parts use, with the pitches each will play. A
+     * source that fails to load is replaced by the basic synth. */
+    function prepareSounds() {
+      const wanted = new Map();
+      for (const partIndex of partInfo.keys()) {
+        const source = sourceForPartIndex(partIndex);
+        if (!wanted.has(source.id)) {
+          wanted.set(source.id, { source, pitches: new Set() });
+        }
+        for (const pitch of pitchesByPart.get(partIndex) || []) {
+          wanted.get(source.id).pitches.add(pitch);
+        }
+      }
+      return Promise.all(
+        Array.from(wanted.values()).map(({ source, pitches }) =>
+          source.load(audio.ctx, { pitches: Array.from(pitches) }).catch(() => {
+            failedSources.add(source.id);
+            setStatus("Piano samples could not load; using basic synth", false);
+          }),
+        ),
+      );
+    }
+
+    function playNote(note) {
+      if (!audio) {
+        return;
+      }
+      const source = sourceForPartIndex(note.part);
+      const voice = source.start(audio.ctx, audio.bus, {
+        pitch: note.pitch,
+        velocity: NOTE_VELOCITY,
+        when: note.when,
+        duration: note.duration,
+      });
+      const now = audio.ctx.currentTime;
+      while (voices.length > 0 && voices[0].end < now) {
+        voices.shift();
+      }
+      voices.push({ voice, end: note.when + note.duration + 0.5 });
+      while (voices.length > MAX_VOICES) {
+        voices.shift().voice.stop(now);
+      }
+    }
+
+    function silenceVoices() {
+      if (!audio) {
+        return;
+      }
+      const now = audio.ctx.currentTime;
+      for (const entry of voices.splice(0)) {
+        entry.voice.stop(now);
+      }
+    }
+
+    function onPlaybackLoaded() {
+      timeline = PlaybackEngine.buildTimeline(playbackData);
+      partInfo.clear();
+      pitchesByPart.clear();
+      for (const part of playbackData.parts || []) {
+        partInfo.set(part.index, part);
+      }
+      for (const note of playbackData.notes || []) {
+        if (!pitchesByPart.has(note.part)) {
+          pitchesByPart.set(note.part, new Set());
+        }
+        pitchesByPart.get(note.part).add(note.pitch);
+        if (!partInfo.has(note.part)) {
+          partInfo.set(note.part, { index: note.part, name: "", program: 0 });
+        }
+      }
+      player = PlaybackEngine.createTransport({
+        timeline,
+        clock: () => (audio ? audio.ctx.currentTime : 0),
+        setTimer: (fn, ms) => setInterval(fn, ms),
+        clearTimer: (handle) => clearInterval(handle),
+        onNote: playNote,
+        onState: () => syncTransport(),
+        onEnd: () => announce("Playback finished"),
+      });
+      const playable = timeline.notes.length > 0;
+      soundButton.disabled = !playable;
+      syncTransport();
+    }
+
+    function syncTransport() {
+      const current = player ? player.state() : "stopped";
+      playButton.disabled = !player || timeline.notes.length === 0 || preparing;
+      playButton.textContent = preparing ? "Loading piano..." : current === "playing" ? "Pause" : "Play";
+      playButton.setAttribute("aria-pressed", String(current === "playing"));
+      stopButton.disabled = !player;
+      const percent = Math.round((player ? player.rate() : 1) * 100);
+      tempoLabel.textContent = `${percent}%`;
+      tempoDown.disabled = !player || percent <= PlaybackEngine.MIN_RATE * 100;
+      tempoUp.disabled = !player || percent >= PlaybackEngine.MAX_RATE * 100;
+      tempoLabel.disabled = !player;
+      updateReadout();
+    }
+
+    /* The number of the measure holding OSMD time t (the last one past the
+     * end, the first before it). */
+    function measureNumberAt(t) {
+      const measures = layout ? layout.systems.flatMap((system) => system.measures) : [];
+      if (measures.length === 0) {
+        return 1;
+      }
+      const found = measures.find((measure) => t >= measure.start && t < measure.end);
+      if (found) {
+        return found.number;
+      }
+      return t < measures[0].start ? measures[0].number : measures[measures.length - 1].number;
+    }
+
+    function updateReadout() {
+      if (!player) {
+        return;
+      }
+      const position = player.position();
+      const rate = player.rate();
+      const here = PlaybackEngine.secondsAt(timeline, position) / rate;
+      const total = PlaybackEngine.secondsAt(timeline, timeline.end) / rate;
+      const text = `m${measureNumberAt(position + timelineOffset)} ${PlaybackEngine.formatClock(here)} / ${PlaybackEngine.formatClock(total)}`;
+      if (readout.textContent !== text) {
+        readout.textContent = text;
+      }
+    }
+    const readoutTimer = setInterval(updateReadout, 100);
+
+    async function togglePlay() {
+      if (!player || preparing) {
+        return;
+      }
+      closeSoundMenu();
+      if (player.state() === "playing") {
+        player.pause();
+        silenceVoices();
+        return;
+      }
+      ensureAudio();
+      if (audio.ctx.state === "suspended") {
+        await audio.ctx.resume().catch(() => {});
+      }
+      if (!soundsReady) {
+        preparing = true;
+        syncTransport();
+        await prepareSounds();
+        soundsReady = true;
+        preparing = false;
+        if (destroyed) {
+          return;
+        }
+      }
+      player.play();
+    }
+
+    function rewind() {
+      if (!player) {
+        return;
+      }
+      player.stop();
+      silenceVoices();
+      player.seek(0);
+      syncTransport();
+    }
+
+    function setTempoPercent(percent) {
+      if (!player) {
+        return;
+      }
+      player.setRate(percent / 100);
+      syncTransport();
+    }
+
+    function nudgeTempo(delta) {
+      if (player) {
+        setTempoPercent(Math.round(player.rate() * 100) + delta);
+      }
+    }
+
+    /* The Sound menu: a source per part and the credits of the sources in
+     * use. */
+    function buildSoundMenu() {
+      soundMenu.innerHTML = "";
+      const sources = registry.sources();
+      for (const [partIndex, info] of partInfo) {
+        const row = el("label", "ws-sound-row");
+        row.appendChild(el("span", "ws-sound-part", info.name || `Part ${partIndex + 1}`));
+        const select = el("select", "ws-sound-select");
+        for (const source of sources) {
+          const option = el("option", "", source.label);
+          option.value = source.id;
+          select.appendChild(option);
+        }
+        select.value = registry.sourceForPart(partIndex, info.program).id;
+        select.addEventListener("change", () => {
+          registry.setPartSource(partIndex, select.value);
+          failedSources.delete(select.value);
+          if (audio) {
+            soundsReady = false;
+            preparing = true;
+            syncTransport();
+            prepareSounds().then(() => {
+              soundsReady = true;
+              preparing = false;
+              syncTransport();
+            });
+          }
+          buildSoundMenu();
+        });
+        row.appendChild(select);
+        soundMenu.appendChild(row);
+      }
+      const reverbRow = el("label", "ws-sound-row");
+      const reverbText = el("span", "ws-sound-part", `Reverb ${state.reverb}`);
+      const reverbSlider = el("input", "ws-reverb");
+      reverbSlider.type = "range";
+      reverbSlider.min = "0";
+      reverbSlider.max = "100";
+      reverbSlider.step = "1";
+      reverbSlider.value = String(state.reverb);
+      reverbSlider.setAttribute("aria-label", "Reverb");
+      reverbSlider.addEventListener("input", () => {
+        state.reverb = Number(reverbSlider.value);
+        reverbText.textContent = `Reverb ${state.reverb}`;
+        applyReverb();
+        savePrefs();
+      });
+      reverbRow.append(reverbText, reverbSlider);
+      soundMenu.appendChild(reverbRow);
+      const credits = new Set();
+      for (const partIndex of partInfo.keys()) {
+        const source = registry.sourceForPart(partIndex, (partInfo.get(partIndex) || {}).program || 0);
+        if (source.credit) {
+          credits.add(source.credit);
+        }
+      }
+      for (const credit of credits) {
+        soundMenu.appendChild(el("p", "ws-sound-credit", credit));
+      }
+      if (timeline && timeline.tempoSource === "default") {
+        soundMenu.appendChild(el("p", "ws-sound-hint", "No tempo in the file; playing at 120"));
+      }
+    }
+
+    function destroyPlayback() {
+      clearInterval(readoutTimer);
+      if (player) {
+        player.stop();
+      }
+      silenceVoices();
+      if (audio) {
+        audio.ctx.close().catch(() => {});
+        audio = null;
+      }
+    }
+
     function destroy() {
       destroyed = true;
       document.removeEventListener("keydown", onKeyDown);
@@ -1085,6 +1488,7 @@
       closeShortcuts();
       clearTimeout(resizeTimer);
       clearTimeout(liveTimer);
+      destroyPlayback();
       resizeObserver.disconnect();
       listeners.clear();
       if (overlay) {

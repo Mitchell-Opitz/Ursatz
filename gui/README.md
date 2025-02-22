@@ -272,6 +272,57 @@ is `frontend/public/inspector-model.js` (global `InspectorModel`, no DOM); the
 panel is `inspector-view.js`; the selection and the overlay drawing live in
 `score-workspace.js` and `score-overlay.js`.
 
+### Playback
+
+The score workspace plays the piece from the toolbar. Space plays or pauses,
+Home stops and goes back to the start. The first Play creates the audio
+context (browsers block audio before a click) and loads the piano; the button
+reads "Loading piano..." until the samples are decoded.
+
+- Transport: Play/Pause, Stop and a readout "m<measure> <m:ss> / <m:ss>". The
+  times follow the current tempo.
+- Tempo: a percentage with minus and plus buttons in 5% steps from 50% to
+  150%; clicking the percentage resets it to 100%. It applies while playing
+  and resets for each piece. The tempo itself comes from the playback route's
+  `tempo` regions (a MIDI file's set-tempo events, a score's tempo and
+  metronome marks). With `tempo_source` "default" the file gave none, the
+  piece plays at 120 and the Sound menu says so.
+- Volume: a slider, 0 to 100, default 80. Saved in `ursatz.workspace.v1`.
+- Sound menu: one row per part with a select of the registered sounds, a
+  Reverb slider (0 to 100, default 20, saved with the volume), and the credit
+  lines of the sounds in use. Reverb is a generated convolution tail
+  (`reverb.js`, 2.2 s), no impulse file is shipped; its dry and wet gains are
+  an equal-power crossfade that keeps the dry signal audible, and both move
+  with a short time constant so the slider makes no clicks.
+- Output: every note is a voice into one bus (at most 64 voices, the oldest
+  stops first), then the dry path and the reverb send, a master gain and a
+  compressor. Velocity is fixed at 0.7 (the playback data has none).
+
+Adding a sound is one `register` and one `mapProgram`, with no change to the
+engine or the transport. A source is `{id, label, credit, load(ctx, {pitches}),
+start(ctx, destination, {pitch, velocity, when, duration}) -> {stop(when)}}`:
+
+```js
+const registry = SoundSources.createDefaultRegistry(Instruments);
+registry.register(mySource);
+registry.mapProgram(73, "my-source"); // MIDI program 73 plays it
+registry.setPartSource(2, "my-source"); // or override one part
+```
+
+The registry is `frontend/public/instruments.js` (global `Instruments`), the
+built-in sounds are `sound-sources.js` (`gm-piano`, the default, and
+`basic-synth`, the fallback that needs no files), the timing is
+`playback-engine.js` (a timeline with tempo regions and a transport that
+schedules notes 120 ms ahead of an injected clock) and the reverb helpers are
+`reverb.js`. If the piano cannot load, playback uses the basic synth and the
+status line says "Piano samples could not load; using basic synth".
+
+The piano is the FluidR3 GM acoustic grand piano, vendored in
+`frontend/public/vendor/soundfonts/fluidr3-gm/` with its source, checksum and
+license in `vendor/soundfonts/README.md`. FluidR3_GM by Frank Wen, rendered by
+Benjamin Gleitzman (midi-js-soundfonts), licensed Creative Commons
+Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/us/).
+
 ## Architecture
 
 Three layers, in order of how rarely they should change:
