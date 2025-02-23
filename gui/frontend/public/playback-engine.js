@@ -111,6 +111,14 @@
     return lo;
   }
 
+  /* The latest note onset at or before w, or w itself when no note has
+   * started yet. The cursor steps between these for readers who prefer
+   * reduced motion. */
+  function onsetAtOrBefore(timeline, w) {
+    const index = firstIndexAtOrAfter(timeline.notes, w + 2 * EPSILON) - 1;
+    return index >= 0 ? timeline.notes[index].on : w;
+  }
+
   function createTransport(options) {
     const timeline = options.timeline;
     const clock = options.clock;
@@ -278,6 +286,7 @@
     secondsAt,
     positionAt,
     formatClock,
+    onsetAtOrBefore,
     createTransport,
     TICK_MS,
     LOOKAHEAD_SECONDS,

@@ -96,6 +96,9 @@
     let lastWidth = 0;
     let resizeTimer = null;
     let savedScrollTop = 0;
+    /* The playback cursor shows from the first play (or seek) on. */
+    let cursorShown = false;
+    let cursorFrame = null;
 
     rootEl.innerHTML = "";
     const ws = el("div", "ws");
@@ -453,6 +456,7 @@
       applyNoteColors();
       if (overlay) {
         overlay.draw(layout, timelineOffset, catalog, layerState.enabled(), buildView());
+        updateCursor();
       }
     }
 
@@ -1322,6 +1326,52 @@
       tempoUp.disabled = !player || percent >= PlaybackEngine.MAX_RATE * 100;
       tempoLabel.disabled = !player;
       updateReadout();
+      if (current === "playing") {
+        cursorShown = true;
+        startCursorLoop();
+      }
+      updateCursor();
+    }
+
+    /* Where the cursor stands, in piece positions. Reduced motion steps it
+     * from onset to onset while playing. */
+    function cursorPosition() {
+      const position = player.position();
+      if (player.state() === "playing" && reducedMotion()) {
+        return PlaybackEngine.onsetAtOrBefore(timeline, position);
+      }
+      return position;
+    }
+
+    /* Puts the cursor where the music is. It stays at the pause or stop
+     * position and is hidden only before the first play. */
+    function updateCursor() {
+      if (!overlay || !player || !layout) {
+        return null;
+      }
+      if (!cursorShown) {
+        overlay.hideCursor();
+        return null;
+      }
+      return overlay.setCursor(layout, cursorPosition() + timelineOffset);
+    }
+
+    /* One animation frame at a time while playing, so the cursor glides. */
+    function cursorTick() {
+      cursorFrame = null;
+      if (destroyed) {
+        return;
+      }
+      updateCursor();
+      if (player && player.state() === "playing") {
+        cursorFrame = requestAnimationFrame(cursorTick);
+      }
+    }
+
+    function startCursorLoop() {
+      if (cursorFrame === null) {
+        cursorFrame = requestAnimationFrame(cursorTick);
+      }
     }
 
     /* The number of the measure holding OSMD time t (the last one past the
@@ -1471,6 +1521,10 @@
 
     function destroyPlayback() {
       clearInterval(readoutTimer);
+      if (cursorFrame !== null) {
+        cancelAnimationFrame(cursorFrame);
+        cursorFrame = null;
+      }
       if (player) {
         player.stop();
       }
