@@ -1493,6 +1493,27 @@ body {
   pointer-events: none;
 }
 
+/* Shown while playing with Follow off: bottom right of the score. */
+.ws-follow-pill {
+  position: absolute;
+  right: 32px;
+  bottom: 16px;
+  z-index: 4;
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ws-follow-pill:hover {
+  filter: brightness(1.1);
+}
+
 .ws-live:empty {
   padding: 0;
   border-color: transparent;

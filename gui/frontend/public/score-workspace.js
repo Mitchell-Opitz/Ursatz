@@ -864,9 +864,19 @@
       }
     }
 
+    const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "End"]);
+
     function onKeyDown(event) {
       if (event.defaultPrevented) {
         return;
+      }
+      /* a scroll key aimed at the score reads ahead by hand */
+      if (
+        SCROLL_KEYS.has(event.key) &&
+        state.mode === "score" &&
+        (event.target === document.body || event.target === canvas || canvas.contains(event.target))
+      ) {
+        manualScroll();
       }
       const row = WorkspaceState.shortcutFor(event);
       if (!row) {
@@ -908,6 +918,10 @@
         case "zoom-reset":
           if (!inScore) return;
           setZoom(1);
+          break;
+        case "follow":
+          if (!inScore || !player) return;
+          followNow();
           break;
         case "toggle-shortcuts":
           if (dialog) {
@@ -994,6 +1008,7 @@
         return;
       }
       renderDeferred = false;
+      followedSystem = null;
       const anchor = captureAnchor();
       osmd.zoom = state.zoom;
       coloredPaths.length = 0;
@@ -1328,8 +1343,13 @@
       updateReadout();
       if (current === "playing") {
         cursorShown = true;
+        if (lastTransportState !== "playing") {
+          setFollow(true);
+        }
         startCursorLoop();
       }
+      lastTransportState = current;
+      syncFollowPill();
       updateCursor();
     }
 
@@ -1356,13 +1376,90 @@
       return overlay.setCursor(layout, cursorPosition() + timelineOffset);
     }
 
+    /* Follow: while playing, the score scrolls to keep the cursor's system
+     * in view. Reading ahead by hand (wheel, touch, scrollbar, scroll keys)
+     * turns it off and shows a "Follow" pill; the pill or C turns it on. */
+    let following = true;
+    let followedSystem = null;
+    let lastTransportState = "stopped";
+    const followPill = el("button", "ws-follow-pill", "Follow");
+    followPill.type = "button";
+    followPill.title = "Follow the cursor (C)";
+    followPill.hidden = true;
+    main.appendChild(followPill);
+
+    function syncFollowPill() {
+      followPill.hidden = following || !player || player.state() !== "playing";
+    }
+
+    function setFollow(value) {
+      following = value;
+      followedSystem = null;
+      syncFollowPill();
+    }
+
+    function systemRectInCanvas(systemIndex) {
+      const system = layout && layout.systems.find((s) => s.index === systemIndex);
+      if (!system) {
+        return null;
+      }
+      const base = svgTopInCanvas();
+      return { top: base + system.top, bottom: base + system.bottom };
+    }
+
+    function followScroll(systemIndex, force) {
+      const rect = systemRectInCanvas(systemIndex);
+      if (!rect) {
+        return;
+      }
+      const target = WorkspaceState.followScrollTarget(
+        { scrollTop: canvas.scrollTop, height: canvas.clientHeight, contentHeight: canvas.scrollHeight },
+        rect,
+        force,
+      );
+      if (target !== null) {
+        canvas.scrollTo({ top: target, behavior: reducedMotion() ? "auto" : "smooth" });
+      }
+    }
+
+    /* The Follow pill and C: follow again and scroll to the cursor. */
+    function followNow() {
+      if (!player) {
+        return;
+      }
+      setFollow(true);
+      const spot = updateCursor();
+      if (spot) {
+        followScroll(spot.system, true);
+      }
+    }
+
+    function manualScroll() {
+      if (following && player && player.state() === "playing") {
+        setFollow(false);
+      }
+    }
+    followPill.addEventListener("click", followNow);
+    canvas.addEventListener("wheel", manualScroll, { passive: true });
+    canvas.addEventListener("touchmove", manualScroll, { passive: true });
+    /* a press on the scrollbar lands on the canvas itself, beyond its content */
+    canvas.addEventListener("pointerdown", (event) => {
+      if (event.target === canvas && event.clientX >= canvas.getBoundingClientRect().left + canvas.clientWidth) {
+        manualScroll();
+      }
+    });
+
     /* One animation frame at a time while playing, so the cursor glides. */
     function cursorTick() {
       cursorFrame = null;
       if (destroyed) {
         return;
       }
-      updateCursor();
+      const spot = updateCursor();
+      if (spot && following && player.state() === "playing" && spot.system !== followedSystem) {
+        followedSystem = spot.system;
+        followScroll(spot.system, false);
+      }
       if (player && player.state() === "playing") {
         cursorFrame = requestAnimationFrame(cursorTick);
       }

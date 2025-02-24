@@ -44,6 +44,32 @@
     return "overlay";
   }
 
+  const FOLLOW_BAND_TOP = 0.1;
+  const FOLLOW_BAND_BOTTOM = 0.75;
+  const FOLLOW_TARGET = 0.2;
+  const FOLLOW_EPSILON = 1;
+
+  /* Where to scroll so the playing system stays in view, or null to stay.
+   * viewport is {scrollTop, height, contentHeight} of the scrolling canvas,
+   * systemRect is {top, bottom} of the cursor's system in the same content
+   * pixels. While the system's top lies between 10% and 75% of the viewport
+   * height and its bottom is in view, nothing moves; otherwise the system's
+   * top goes to 20%. `force` skips the band test (the Follow button). The
+   * target is kept inside the scrollable range, and a target within a pixel
+   * of where the canvas already is gives null. */
+  function followScrollTarget(viewport, systemRect, force) {
+    const height = viewport.height;
+    const relTop = systemRect.top - viewport.scrollTop;
+    const relBottom = systemRect.bottom - viewport.scrollTop;
+    const inBand = relTop >= height * FOLLOW_BAND_TOP && relTop <= height * FOLLOW_BAND_BOTTOM && relBottom <= height;
+    if (inBand && !force) {
+      return null;
+    }
+    const furthest = Math.max(0, viewport.contentHeight - height);
+    const target = Math.min(furthest, Math.max(0, systemRect.top - height * FOLLOW_TARGET));
+    return Math.abs(target - viewport.scrollTop) < FOLLOW_EPSILON ? null : target;
+  }
+
   /* One row per key. alt lists further keys that do the same. */
   const SHORTCUTS = [
     { key: " ", label: "Play or pause", action: "play-pause" },
@@ -54,6 +80,7 @@
     { key: "+", alt: ["="], label: "Zoom in", action: "zoom-in" },
     { key: "-", label: "Zoom out", action: "zoom-out" },
     { key: "0", label: "Zoom to 100%", action: "zoom-reset" },
+    { key: "C", label: "Follow the cursor", action: "follow" },
     { key: "[", label: "Previous item in the selected layer", action: "select-previous" },
     { key: "]", label: "Next item in the selected layer", action: "select-next" },
     { key: "?", label: "Shortcut list", action: "toggle-shortcuts" },
@@ -148,6 +175,7 @@
     panelMode,
     SHORTCUTS,
     shortcutFor,
+    followScrollTarget,
     UI_STATE_KEY,
     defaultUiState,
     loadUiState,
