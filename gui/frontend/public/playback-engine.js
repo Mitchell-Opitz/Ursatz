@@ -111,6 +111,29 @@
     return lo;
   }
 
+  /* The note onset nearest to w among the onsets in [from, to), or null when
+   * none falls there. A tie goes to the earlier onset. Click-to-seek snaps a
+   * click to the music with it. */
+  function nearestOnset(timeline, w, from, to) {
+    const notes = timeline.notes;
+    const lo = firstIndexAtOrAfter(notes, from);
+    const hi = firstIndexAtOrAfter(notes, to);
+    if (lo >= hi) {
+      return null;
+    }
+    const after = Math.min(hi, Math.max(lo, firstIndexAtOrAfter(notes, w)));
+    let best = null;
+    for (const index of [after - 1, after]) {
+      if (index < lo || index >= hi) {
+        continue;
+      }
+      if (best === null || Math.abs(notes[index].on - w) < Math.abs(best - w) - EPSILON) {
+        best = notes[index].on;
+      }
+    }
+    return best;
+  }
+
   /* The latest note onset at or before w, or w itself when no note has
    * started yet. The cursor steps between these for readers who prefer
    * reduced motion. */
@@ -286,6 +309,7 @@
     secondsAt,
     positionAt,
     formatClock,
+    nearestOnset,
     onsetAtOrBefore,
     createTransport,
     TICK_MS,

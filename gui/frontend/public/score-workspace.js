@@ -585,6 +585,11 @@
       const picked = InspectorModel.pickItemForNote(hits);
       if (picked) {
         event.stopPropagation();
+        /* the note is also a place to start listening */
+        const onset = onsetByNote.get(noteIndex);
+        if (onset !== undefined) {
+          seekTo(onset);
+        }
         select(picked, { others: hits.filter((item) => item !== picked) });
       }
     });
@@ -1120,6 +1125,8 @@
     const registry = SoundSources.createDefaultRegistry(Instruments);
     registry.mapProgram(0, "gm-piano");
     let timeline = null;
+    /* note index -> onset in whole notes, for seeking from a colored note */
+    let onsetByNote = new Map();
     let player = null;
     let audio = null; /* {ctx, bus, dry, master} once the first Play click made it */
     let soundsReady = false;
@@ -1301,6 +1308,7 @@
 
     function onPlaybackLoaded() {
       timeline = PlaybackEngine.buildTimeline(playbackData);
+      onsetByNote = new Map(timeline.notes.map((note) => [note.i, note.on]));
       partInfo.clear();
       pitchesByPart.clear();
       for (const part of playbackData.parts || []) {
@@ -1446,6 +1454,57 @@
     canvas.addEventListener("pointerdown", (event) => {
       if (event.target === canvas && event.clientX >= canvas.getBoundingClientRect().left + canvas.clientWidth) {
         manualScroll();
+      }
+    });
+
+    /* Moves the play position (piece position); playing carries on from
+     * there. */
+    function seekTo(w) {
+      if (!player) {
+        return;
+      }
+      if (player.state() === "playing") {
+        silenceVoices();
+      }
+      player.seek(w);
+      cursorShown = true;
+      followedSystem = null;
+      syncTransport();
+    }
+
+    /* A click on bare paper: the system under it, the position under the
+     * click, snapped to the nearest note onset of that system. Clicks on
+     * ribbons, marks and colored notes never get here (they select). */
+    function seekToPoint(x, y) {
+      let system = null;
+      let nearest = Infinity;
+      for (const candidate of layout.systems) {
+        const gap = y < candidate.top ? candidate.top - y : y > candidate.bottom ? y - candidate.bottom : 0;
+        if (candidate.measures.length > 0 && gap < nearest) {
+          nearest = gap;
+          system = candidate;
+        }
+      }
+      if (!system) {
+        return;
+      }
+      const from = system.measures[0].start - timelineOffset;
+      const to = system.measures[system.measures.length - 1].end - timelineOffset;
+      const raw = ScoreGeometry.tAt(layout, system.index, x) - timelineOffset;
+      const snapped = PlaybackEngine.nearestOnset(timeline, raw, from, to);
+      seekTo(snapped !== null ? snapped : Math.min(to, Math.max(from, raw)));
+    }
+
+    paper.addEventListener("click", (event) => {
+      const svg = osmdHost.querySelector("svg");
+      if (!player || !layout || !svg || state.mode !== "score" || timeline.notes.length === 0) {
+        return;
+      }
+      const rect = svg.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
+        seekToPoint(x, y);
       }
     });
 
