@@ -229,6 +229,8 @@
       anyLayerOn: () => catalog.some((layer) => !layer.empty && layerState.isOn(layer.id)),
       listItems,
       selectedKey: () => (selection ? selection.item.key : null),
+      canPlay: () => Boolean(player) && timeline.notes.length > 0,
+      play: (item) => playItem(item),
     });
     on("select", (current) => inspectorView.show(current));
 
@@ -570,6 +572,17 @@
       if (item) {
         event.stopPropagation();
         select(item);
+      }
+    });
+
+    /* A double-click on a ribbon, mark or numeral plays that claim (the
+     * two clicks before it selected it). */
+    overlay.element.addEventListener("dblclick", (event) => {
+      const group = event.target.closest ? event.target.closest("g[data-key]") : null;
+      const item = group ? itemByKey.get(group.getAttribute("data-key")) : null;
+      if (item) {
+        event.stopPropagation();
+        playItem(item);
       }
     });
 
@@ -927,6 +940,18 @@
         case "follow":
           if (!inScore || !player) return;
           followNow();
+          break;
+        case "play-claim":
+          /* buttons, links and the List act on Enter themselves */
+          if (
+            !inScore ||
+            !selection ||
+            !player ||
+            (event.target && event.target.closest && event.target.closest("button, a, .ws-insp-list"))
+          ) {
+            return;
+          }
+          playItem(selection.item);
           break;
         case "toggle-shortcuts":
           if (dialog) {
@@ -1335,6 +1360,8 @@
       const playable = timeline.notes.length > 0;
       soundButton.disabled = !playable;
       syncTransport();
+      /* a claim shown before the data arrived gets its Play button */
+      inspectorView.show(selection);
     }
 
     function syncTransport() {
@@ -1559,16 +1586,27 @@
     }
     const readoutTimer = setInterval(updateReadout, 100);
 
-    async function togglePlay() {
+    function togglePlay() {
       if (!player || preparing) {
         return;
       }
-      closeSoundMenu();
       if (player.state() === "playing") {
+        closeSoundMenu();
         player.pause();
         silenceVoices();
         return;
       }
+      startPlayback();
+    }
+
+    /* Starts the sound (the audio context and the samples on the first
+     * time) and plays from `from` to `to`, both piece positions; with none
+     * it plays or resumes from where the transport stands. */
+    async function startPlayback(from, to) {
+      if (!player || preparing) {
+        return;
+      }
+      closeSoundMenu();
       ensureAudio();
       if (audio.ctx.state === "suspended") {
         await audio.ctx.resume().catch(() => {});
@@ -1583,7 +1621,18 @@
           return;
         }
       }
-      player.play();
+      silenceVoices();
+      player.play(from, to);
+    }
+
+    /* Plays a claim's span and returns the cursor to its start at the end.
+     * A span with no length plays a quarter note. */
+    function playItem(item) {
+      if (!item || !player) {
+        return;
+      }
+      const end = item.end > item.start ? item.end : item.start + 0.25;
+      startPlayback(item.start, end);
     }
 
     function rewind() {

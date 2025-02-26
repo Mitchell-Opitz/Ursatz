@@ -81,6 +81,7 @@
     { key: "-", label: "Zoom out", action: "zoom-out" },
     { key: "0", label: "Zoom to 100%", action: "zoom-reset" },
     { key: "C", label: "Follow the cursor", action: "follow" },
+    { key: "Enter", label: "Play the selected claim", action: "play-claim" },
     { key: "[", label: "Previous item in the selected layer", action: "select-previous" },
     { key: "]", label: "Next item in the selected layer", action: "select-next" },
     { key: "?", label: "Shortcut list", action: "toggle-shortcuts" },

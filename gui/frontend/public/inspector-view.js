@@ -11,6 +11,8 @@
  *     listItems(all),              items of the layers on (or of every
  *                                  layer), sorted by start
  *     selectedKey(),               the selected item's key or null
+ *     canPlay(),                   is playback ready
+ *     play(item),                  play the item's span
  *   });
  *   view.show(selection);          {item, layer, others} or null
  *   view.refreshList();            after the layers or the selection change
@@ -275,7 +277,10 @@
       nextButton.disabled = !next;
       nextButton.title = "Next in this layer (])";
       const copy = button("ws-btn", "Copy JSON", () => copyJson(model.raw, copy));
-      actions.append(previousButton, nextButton, copy);
+      const play = button("ws-btn", "Play", () => api.play(item));
+      play.title = "Play this claim (Enter)";
+      play.disabled = !api.canPlay();
+      actions.append(play, previousButton, nextButton, copy);
       claimPanel.appendChild(actions);
 
       if (others && others.length > 0) {
