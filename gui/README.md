@@ -104,6 +104,10 @@ them):
 
 | Key | Action |
 | --- | --- |
+| `Space` | Play or pause |
+| `Home` | Stop and go back to the start |
+| `C` | Follow the cursor: turn Follow on and scroll to it |
+| `Enter` | Play the selected claim (not while a button or the List has focus) |
 | `L` | Layers panel |
 | `I` | Inspector panel |
 | `F` | Focus mode: both panels closed, then restored |
@@ -294,6 +298,29 @@ reads "Loading piano..." until the samples are decoded.
   (`reverb.js`, 2.2 s), no impulse file is shipped; its dry and wet gains are
   an equal-power crossfade that keeps the dry signal audible, and both move
   with a short time constant so the slider makes no clicks.
+- Cursor: a 2 px line over the playing system's staves with a soft teal band
+  behind it, drawn in the score overlay. It glides through each measure
+  (redrawn every animation frame while playing); with reduced motion it steps
+  from note onset to note onset. It stays at the pause or stop position and is
+  hidden only before the first play or click.
+- Follow: while playing, when the cursor's system leaves the band between 10%
+  and 75% of the score's height, the score scrolls so that system's top sits
+  at 20% (smooth unless reduced motion). The wheel, touch, a drag on the
+  scrollbar or a scroll key (arrows, Page Up and Down, End) turns Follow off
+  and shows a "Follow" pill at the bottom right. The pill or `C` turns it on
+  and scrolls to the cursor; each new Play turns it on again. The rule is the
+  pure `WorkspaceState.followScrollTarget(viewport, systemRect)`.
+- Clicking to seek: a click on bare paper (not on a ribbon, mark or colored
+  note) finds the system under the click, converts the x position to a
+  position in the piece (`tAt` minus the timeline offset) and snaps it to the
+  nearest note onset in that system (`PlaybackEngine.nearestOnset`). Playback
+  continues from there if it was playing; stopped, the next Play starts there.
+  A click on a colored note seeks to that note's onset and selects its claim.
+- Playing a claim: the Play button in the Inspector's actions row, `Enter`
+  with a claim selected, or a double-click on a ribbon or mark plays the
+  claim's span (a cadence plays from the dominant to the end of the arrival)
+  and, at the end, the cursor returns to the claim's start. A span with no
+  length plays a quarter note.
 - Output: every note is a voice into one bus (at most 64 voices, the oldest
   stops first), then the dry path and the reverb send, a master gain and a
   compressor. Velocity is fixed at 0.7 (the playback data has none).

@@ -47,6 +47,24 @@ for (const w of [0, 0.25, 0.999, 1, 1.3, 1.75, 2]) {
   if (!near(positionAt(timeline, secondsAt(timeline, w)), w)) roundTrip = false;
 }
 check(roundTrip, "positionAt inverts secondsAt");
+/* Nearest onset in a range (the onsets are 0, 0.5, 1 and 1.5). */
+const { nearestOnset, onsetAtOrBefore } = PlaybackEngine;
+check(nearestOnset(timeline, 0.6, 0, 2) === 0.5 && nearestOnset(timeline, 0.8, 0, 2) === 1, "nearestOnset snaps to the closest onset");
+check(nearestOnset(timeline, 0.25, 0, 2) === 0, "a tie goes to the earlier onset");
+check(nearestOnset(timeline, 0.1, 1, 2) === 1, "before the first onset in the range gives that onset");
+check(nearestOnset(timeline, 5, 0, 2) === 1.5, "after the last onset gives the last onset");
+check(nearestOnset(timeline, 1.2, 0, 1) === 0.5, "the end of the range is exclusive");
+check(nearestOnset(timeline, 0.4, 0.5, 2) === 0.5, "the start of the range is inclusive");
+check(nearestOnset(timeline, 0.2, 0.1, 0.4) === null, "a range with no onset gives null");
+check(nearestOnset(timeline, 0.2, 1, 1) === null, "an empty range gives null");
+
+/* The onset a cursor steps to. */
+check(onsetAtOrBefore(timeline, 0.7) === 0.5 && onsetAtOrBefore(timeline, 0.5) === 0.5, "onsetAtOrBefore gives the latest onset up to the position");
+check(onsetAtOrBefore(timeline, 2) === 1.5, "onsetAtOrBefore past the end gives the last onset");
+check(
+  onsetAtOrBefore(PlaybackEngine.buildTimeline({ notes: [{ i: 0, on: [1, 4], len: [1, 4], pitch: 60, part: 0 }] }), 0.1) === 0.1,
+  "onsetAtOrBefore before any onset gives the position itself",
+);
 check(PlaybackEngine.formatClock(75.9) === "1:15" && PlaybackEngine.formatClock(0) === "0:00", "clock labels are m:ss");
 check(buildDefault(), "a piece with no tempo plays at 120");
 function buildDefault() {

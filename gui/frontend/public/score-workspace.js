@@ -96,6 +96,9 @@
     let lastWidth = 0;
     let resizeTimer = null;
     let savedScrollTop = 0;
+    /* The playback cursor shows from the first play (or seek) on. */
+    let cursorShown = false;
+    let cursorFrame = null;
 
     rootEl.innerHTML = "";
     const ws = el("div", "ws");
@@ -226,6 +229,8 @@
       anyLayerOn: () => catalog.some((layer) => !layer.empty && layerState.isOn(layer.id)),
       listItems,
       selectedKey: () => (selection ? selection.item.key : null),
+      canPlay: () => Boolean(player) && timeline.notes.length > 0,
+      play: (item) => playItem(item),
     });
     on("select", (current) => inspectorView.show(current));
 
@@ -453,6 +458,7 @@
       applyNoteColors();
       if (overlay) {
         overlay.draw(layout, timelineOffset, catalog, layerState.enabled(), buildView());
+        updateCursor();
       }
     }
 
@@ -569,6 +575,17 @@
       }
     });
 
+    /* A double-click on a ribbon, mark or numeral plays that claim (the
+     * two clicks before it selected it). */
+    overlay.element.addEventListener("dblclick", (event) => {
+      const group = event.target.closest ? event.target.closest("g[data-key]") : null;
+      const item = group ? itemByKey.get(group.getAttribute("data-key")) : null;
+      if (item) {
+        event.stopPropagation();
+        playItem(item);
+      }
+    });
+
     /* A click on a notehead colored by a notes layer selects the shortest
      * item of the layers that are on that holds the note. */
     osmdHost.addEventListener("click", (event) => {
@@ -581,6 +598,11 @@
       const picked = InspectorModel.pickItemForNote(hits);
       if (picked) {
         event.stopPropagation();
+        /* the note is also a place to start listening */
+        const onset = onsetByNote.get(noteIndex);
+        if (onset !== undefined) {
+          seekTo(onset);
+        }
         select(picked, { others: hits.filter((item) => item !== picked) });
       }
     });
@@ -860,9 +882,19 @@
       }
     }
 
+    const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "End"]);
+
     function onKeyDown(event) {
       if (event.defaultPrevented) {
         return;
+      }
+      /* a scroll key aimed at the score reads ahead by hand */
+      if (
+        SCROLL_KEYS.has(event.key) &&
+        state.mode === "score" &&
+        (event.target === document.body || event.target === canvas || canvas.contains(event.target))
+      ) {
+        manualScroll();
       }
       const row = WorkspaceState.shortcutFor(event);
       if (!row) {
@@ -904,6 +936,22 @@
         case "zoom-reset":
           if (!inScore) return;
           setZoom(1);
+          break;
+        case "follow":
+          if (!inScore || !player) return;
+          followNow();
+          break;
+        case "play-claim":
+          /* buttons, links and the List act on Enter themselves */
+          if (
+            !inScore ||
+            !selection ||
+            !player ||
+            (event.target && event.target.closest && event.target.closest("button, a, .ws-insp-list"))
+          ) {
+            return;
+          }
+          playItem(selection.item);
           break;
         case "toggle-shortcuts":
           if (dialog) {
@@ -990,6 +1038,7 @@
         return;
       }
       renderDeferred = false;
+      followedSystem = null;
       const anchor = captureAnchor();
       osmd.zoom = state.zoom;
       coloredPaths.length = 0;
@@ -1101,6 +1150,8 @@
     const registry = SoundSources.createDefaultRegistry(Instruments);
     registry.mapProgram(0, "gm-piano");
     let timeline = null;
+    /* note index -> onset in whole notes, for seeking from a colored note */
+    let onsetByNote = new Map();
     let player = null;
     let audio = null; /* {ctx, bus, dry, master} once the first Play click made it */
     let soundsReady = false;
@@ -1282,6 +1333,7 @@
 
     function onPlaybackLoaded() {
       timeline = PlaybackEngine.buildTimeline(playbackData);
+      onsetByNote = new Map(timeline.notes.map((note) => [note.i, note.on]));
       partInfo.clear();
       pitchesByPart.clear();
       for (const part of playbackData.parts || []) {
@@ -1308,6 +1360,8 @@
       const playable = timeline.notes.length > 0;
       soundButton.disabled = !playable;
       syncTransport();
+      /* a claim shown before the data arrived gets its Play button */
+      inspectorView.show(selection);
     }
 
     function syncTransport() {
@@ -1322,6 +1376,185 @@
       tempoUp.disabled = !player || percent >= PlaybackEngine.MAX_RATE * 100;
       tempoLabel.disabled = !player;
       updateReadout();
+      if (current === "playing") {
+        cursorShown = true;
+        if (lastTransportState !== "playing") {
+          setFollow(true);
+        }
+        startCursorLoop();
+      }
+      lastTransportState = current;
+      syncFollowPill();
+      updateCursor();
+    }
+
+    /* Where the cursor stands, in piece positions. Reduced motion steps it
+     * from onset to onset while playing. */
+    function cursorPosition() {
+      const position = player.position();
+      if (player.state() === "playing" && reducedMotion()) {
+        return PlaybackEngine.onsetAtOrBefore(timeline, position);
+      }
+      return position;
+    }
+
+    /* Puts the cursor where the music is. It stays at the pause or stop
+     * position and is hidden only before the first play. */
+    function updateCursor() {
+      if (!overlay || !player || !layout) {
+        return null;
+      }
+      if (!cursorShown) {
+        overlay.hideCursor();
+        return null;
+      }
+      return overlay.setCursor(layout, cursorPosition() + timelineOffset);
+    }
+
+    /* Follow: while playing, the score scrolls to keep the cursor's system
+     * in view. Reading ahead by hand (wheel, touch, scrollbar, scroll keys)
+     * turns it off and shows a "Follow" pill; the pill or C turns it on. */
+    let following = true;
+    let followedSystem = null;
+    let lastTransportState = "stopped";
+    const followPill = el("button", "ws-follow-pill", "Follow");
+    followPill.type = "button";
+    followPill.title = "Follow the cursor (C)";
+    followPill.hidden = true;
+    main.appendChild(followPill);
+
+    function syncFollowPill() {
+      followPill.hidden = following || !player || player.state() !== "playing";
+    }
+
+    function setFollow(value) {
+      following = value;
+      followedSystem = null;
+      syncFollowPill();
+    }
+
+    function systemRectInCanvas(systemIndex) {
+      const system = layout && layout.systems.find((s) => s.index === systemIndex);
+      if (!system) {
+        return null;
+      }
+      const base = svgTopInCanvas();
+      return { top: base + system.top, bottom: base + system.bottom };
+    }
+
+    function followScroll(systemIndex, force) {
+      const rect = systemRectInCanvas(systemIndex);
+      if (!rect) {
+        return;
+      }
+      const target = WorkspaceState.followScrollTarget(
+        { scrollTop: canvas.scrollTop, height: canvas.clientHeight, contentHeight: canvas.scrollHeight },
+        rect,
+        force,
+      );
+      if (target !== null) {
+        canvas.scrollTo({ top: target, behavior: reducedMotion() ? "auto" : "smooth" });
+      }
+    }
+
+    /* The Follow pill and C: follow again and scroll to the cursor. */
+    function followNow() {
+      if (!player) {
+        return;
+      }
+      setFollow(true);
+      const spot = updateCursor();
+      if (spot) {
+        followScroll(spot.system, true);
+      }
+    }
+
+    function manualScroll() {
+      if (following && player && player.state() === "playing") {
+        setFollow(false);
+      }
+    }
+    followPill.addEventListener("click", followNow);
+    canvas.addEventListener("wheel", manualScroll, { passive: true });
+    canvas.addEventListener("touchmove", manualScroll, { passive: true });
+    /* a press on the scrollbar lands on the canvas itself, beyond its content */
+    canvas.addEventListener("pointerdown", (event) => {
+      if (event.target === canvas && event.clientX >= canvas.getBoundingClientRect().left + canvas.clientWidth) {
+        manualScroll();
+      }
+    });
+
+    /* Moves the play position (piece position); playing carries on from
+     * there. */
+    function seekTo(w) {
+      if (!player) {
+        return;
+      }
+      if (player.state() === "playing") {
+        silenceVoices();
+      }
+      player.seek(w);
+      cursorShown = true;
+      followedSystem = null;
+      syncTransport();
+    }
+
+    /* A click on bare paper: the system under it, the position under the
+     * click, snapped to the nearest note onset of that system. Clicks on
+     * ribbons, marks and colored notes never get here (they select). */
+    function seekToPoint(x, y) {
+      let system = null;
+      let nearest = Infinity;
+      for (const candidate of layout.systems) {
+        const gap = y < candidate.top ? candidate.top - y : y > candidate.bottom ? y - candidate.bottom : 0;
+        if (candidate.measures.length > 0 && gap < nearest) {
+          nearest = gap;
+          system = candidate;
+        }
+      }
+      if (!system) {
+        return;
+      }
+      const from = system.measures[0].start - timelineOffset;
+      const to = system.measures[system.measures.length - 1].end - timelineOffset;
+      const raw = ScoreGeometry.tAt(layout, system.index, x) - timelineOffset;
+      const snapped = PlaybackEngine.nearestOnset(timeline, raw, from, to);
+      seekTo(snapped !== null ? snapped : Math.min(to, Math.max(from, raw)));
+    }
+
+    paper.addEventListener("click", (event) => {
+      const svg = osmdHost.querySelector("svg");
+      if (!player || !layout || !svg || state.mode !== "score" || timeline.notes.length === 0) {
+        return;
+      }
+      const rect = svg.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
+        seekToPoint(x, y);
+      }
+    });
+
+    /* One animation frame at a time while playing, so the cursor glides. */
+    function cursorTick() {
+      cursorFrame = null;
+      if (destroyed) {
+        return;
+      }
+      const spot = updateCursor();
+      if (spot && following && player.state() === "playing" && spot.system !== followedSystem) {
+        followedSystem = spot.system;
+        followScroll(spot.system, false);
+      }
+      if (player && player.state() === "playing") {
+        cursorFrame = requestAnimationFrame(cursorTick);
+      }
+    }
+
+    function startCursorLoop() {
+      if (cursorFrame === null) {
+        cursorFrame = requestAnimationFrame(cursorTick);
+      }
     }
 
     /* The number of the measure holding OSMD time t (the last one past the
@@ -1353,16 +1586,27 @@
     }
     const readoutTimer = setInterval(updateReadout, 100);
 
-    async function togglePlay() {
+    function togglePlay() {
       if (!player || preparing) {
         return;
       }
-      closeSoundMenu();
       if (player.state() === "playing") {
+        closeSoundMenu();
         player.pause();
         silenceVoices();
         return;
       }
+      startPlayback();
+    }
+
+    /* Starts the sound (the audio context and the samples on the first
+     * time) and plays from `from` to `to`, both piece positions; with none
+     * it plays or resumes from where the transport stands. */
+    async function startPlayback(from, to) {
+      if (!player || preparing) {
+        return;
+      }
+      closeSoundMenu();
       ensureAudio();
       if (audio.ctx.state === "suspended") {
         await audio.ctx.resume().catch(() => {});
@@ -1377,7 +1621,18 @@
           return;
         }
       }
-      player.play();
+      silenceVoices();
+      player.play(from, to);
+    }
+
+    /* Plays a claim's span and returns the cursor to its start at the end.
+     * A span with no length plays a quarter note. */
+    function playItem(item) {
+      if (!item || !player) {
+        return;
+      }
+      const end = item.end > item.start ? item.end : item.start + 0.25;
+      startPlayback(item.start, end);
     }
 
     function rewind() {
@@ -1471,6 +1726,10 @@
 
     function destroyPlayback() {
       clearInterval(readoutTimer);
+      if (cursorFrame !== null) {
+        cancelAnimationFrame(cursorFrame);
+        cursorFrame = null;
+      }
       if (player) {
         player.stop();
       }

@@ -10,8 +10,10 @@
  * offset). `view` says what is selected: {selectedKey, tints, halos,
  * secondaryTints, secondaryHalos}, where a tint is a span {start, end} in
  * piece positions and a halo is a notehead box {x, y, w, h} in pixels
- * relative to the OSMD SVG. planLanes and fitText are pure; the rest needs a
- * DOM. */
+ * relative to the OSMD SVG. overlay.setCursor(layout, t) moves the playback
+ * cursor to OSMD time t (it survives a redraw only if set again) and
+ * overlay.hideCursor() removes it. planLanes and fitText are pure; the rest
+ * needs a DOM. */
 (function (root) {
   const SVG_NS = "http://www.w3.org/2000/svg";
   const MAX_RIBBON_ROWS = 4;
@@ -36,6 +38,10 @@
   const HALO_COLOR = "#f59e0b";
   const HALO_WIDTH = 2.5;
   const HALO_PAD = 3;
+  const CURSOR_INK = "#0e1116";
+  const CURSOR_BAND = "rgba(45, 212, 191, 0.28)";
+  const CURSOR_WIDTH = 2;
+  const CURSOR_BAND_WIDTH = 12;
   const MONO = '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
 
   /* The lanes the enabled layers need: {lanes: [{layer, placement, rows}],
@@ -396,11 +402,58 @@
       svg.appendChild(out);
     }
 
+    /* The playback cursor: a line over the system's staves with a soft band
+     * behind it. One group is kept and moved, so a frame costs four
+     * attribute writes; a redraw detaches it and the next setCursor puts it
+     * back. */
+    let cursorGroup = null;
+
+    function ensureCursor() {
+      if (!cursorGroup) {
+        cursorGroup = svgEl("g", { class: "ws-cursor", "pointer-events": "none", "aria-hidden": "true" });
+        cursorGroup.appendChild(svgEl("rect", { fill: CURSOR_BAND, width: CURSOR_BAND_WIDTH }));
+        cursorGroup.appendChild(svgEl("rect", { fill: CURSOR_INK, width: CURSOR_WIDTH }));
+      }
+      if (cursorGroup.parentNode !== svg) {
+        svg.appendChild(cursorGroup);
+      }
+      return cursorGroup;
+    }
+
+    /* Puts the cursor at OSMD time `t`. */
+    function setCursor(layout, t) {
+      if (!layout || layout.systems.length === 0 || !place()) {
+        hideCursor();
+        return null;
+      }
+      const spot = ScoreGeometry.xAt(layout, t);
+      const system = layout.systems.find((s) => s.index === spot.system);
+      if (!system) {
+        hideCursor();
+        return null;
+      }
+      const [band, line] = ensureCursor().children;
+      const height = system.bottom - system.top;
+      band.setAttribute("x", String(spot.x - CURSOR_BAND_WIDTH / 2));
+      band.setAttribute("y", String(system.top));
+      band.setAttribute("height", String(height));
+      line.setAttribute("x", String(spot.x - CURSOR_WIDTH / 2));
+      line.setAttribute("y", String(system.top));
+      line.setAttribute("height", String(height));
+      return { system: system.index, x: spot.x };
+    }
+
+    function hideCursor() {
+      if (cursorGroup && cursorGroup.parentNode) {
+        cursorGroup.remove();
+      }
+    }
+
     function destroy() {
       svg.remove();
     }
 
-    return { draw, clear, destroy, element: svg };
+    return { draw, clear, destroy, setCursor, hideCursor, element: svg };
   }
 
   const api = { create, planLanes, fitText };
