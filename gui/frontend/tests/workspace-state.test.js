@@ -54,12 +54,35 @@ const actions = {
   Escape: "escape",
   " ": "play-pause",
   Home: "stop",
+  c: "follow",
+  C: "follow",
+  Enter: "play-claim",
 };
 for (const [key, action] of Object.entries(actions)) {
   const row = press(key);
   check(row !== null && row.action === action, `${key} triggers ${action}`);
 }
-check(press("x") === null && press("Enter") === null, "an unlisted key triggers nothing");
+check(press("x") === null && press("Tab") === null, "an unlisted key triggers nothing");
+
+/* Follow: where the score scrolls to keep the playing system in view. */
+const { followScrollTarget } = WorkspaceState;
+const viewport = { scrollTop: 1000, height: 800, contentHeight: 5000 };
+check(followScrollTarget(viewport, { top: 1200, bottom: 1350 }) === null, "a system inside the band stays put");
+check(followScrollTarget(viewport, { top: 1080, bottom: 1230 }) === null, "a system top at 10% is inside the band");
+check(followScrollTarget(viewport, { top: 1600, bottom: 1750 }) === null, "a system top at 75% is inside the band");
+check(followScrollTarget(viewport, { top: 1601, bottom: 1751 }) === 1441, "a system just below 75% scrolls its top to 20%");
+check(followScrollTarget(viewport, { top: 1079, bottom: 1229 }) === 919, "a system just above 10% scrolls its top to 20%");
+check(followScrollTarget(viewport, { top: 1050, bottom: 1200 }) === 890, "a system near the top edge scrolls to 20%");
+check(followScrollTarget(viewport, { top: 1500, bottom: 1850 }) === 1340, "a system cut off at the bottom scrolls to 20%");
+check(followScrollTarget(viewport, { top: 400, bottom: 550 }) === 240, "a system above the viewport scrolls back to it");
+check(followScrollTarget({ ...viewport, scrollTop: 500 }, { top: 100, bottom: 250 }) === 0, "the target never goes above the start");
+check(followScrollTarget(viewport, { top: 4900, bottom: 5000 }) === 4200, "the target stays inside the scrollable range");
+check(
+  followScrollTarget({ ...viewport, scrollTop: 4200 }, { top: 4900, bottom: 5000 }) === null,
+  "a target within a pixel of the scroll position gives null",
+);
+check(followScrollTarget(viewport, { top: 1200, bottom: 1350 }, true) === 1040, "force scrolls even inside the band");
+check(followScrollTarget(viewport, { top: 1160, bottom: 1310 }, true) === null, "force at the target already gives null");
 check(
   ["INPUT", "SELECT", "TEXTAREA", "input"].every((tagName) => shortcutFor({ key: "l", target: { tagName } }) === null),
   "typing in an input, select or textarea triggers nothing",
