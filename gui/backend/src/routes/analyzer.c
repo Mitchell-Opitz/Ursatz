@@ -6,8 +6,10 @@
 #include <string.h>
 
 #include <civetweb.h>
+#include <cJSON.h>
 
 #include "../service/analysis_service.h"
+#include "../service/piece_metadata.h"
 
 static const char *kPiecesDir = "pieces";
 static const size_t kReadChunkSize = 65536;
@@ -304,6 +306,9 @@ static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
     free(pieces[i].filename);
     free(pieces[i].format);
     free(pieces[i].uploaded_at);
+    free(pieces[i].composer);
+    free(pieces[i].source);
+    ursatz_gui_meta_tags_free(pieces[i].tags, pieces[i].tag_count);
   }
   free(pieces);
 }
@@ -400,45 +405,28 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   return 200;
 }
 
-/* Extracts the string value of a top-level "field":"value" pair from a
- * flat JSON object body. Minimal by design (no nesting, no escapes) --
- * mirrors corpus.c's extract_json_string_field; this route's PATCH body
- * is the same kind of flat single-field object. Returns a newly
- * allocated, caller-owned string, or NULL if the field is absent or
- * malformed. */
-static char *extract_json_string_field(const char *body, const char *field) {
-  char needle[64];
-  snprintf(needle, sizeof(needle), "\"%s\"", field);
-
-  const char *key = strstr(body, needle);
-  if (!key) {
-    return NULL;
+/* Appends one piece as the list route and the PATCH answer show it. */
+static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *piece) {
+  json_buffer_append(buf, "{\"id\":");
+  json_buffer_append_string(buf, piece->id);
+  json_buffer_append(buf, ",\"filename\":");
+  json_buffer_append_string(buf, piece->filename);
+  json_buffer_append(buf, ",\"format\":");
+  json_buffer_append_string(buf, piece->format);
+  json_buffer_append(buf, ",\"uploaded_at\":");
+  json_buffer_append_string(buf, piece->uploaded_at);
+  json_buffer_append(buf, ",\"composer\":");
+  json_buffer_append_string(buf, piece->composer);
+  json_buffer_append(buf, ",\"source\":");
+  json_buffer_append_string(buf, piece->source);
+  json_buffer_append(buf, ",\"tags\":[");
+  for (size_t i = 0; i < piece->tag_count; i++) {
+    if (i != 0) {
+      json_buffer_append(buf, ",");
+    }
+    json_buffer_append_string(buf, piece->tags[i]);
   }
-
-  const char *colon = strchr(key + strlen(needle), ':');
-  if (!colon) {
-    return NULL;
-  }
-
-  const char *quote_start = strchr(colon, '"');
-  if (!quote_start) {
-    return NULL;
-  }
-  quote_start++;
-
-  const char *quote_end = strchr(quote_start, '"');
-  if (!quote_end) {
-    return NULL;
-  }
-
-  size_t len = (size_t)(quote_end - quote_start);
-  char *value = malloc(len + 1);
-  if (!value) {
-    return NULL;
-  }
-  memcpy(value, quote_start, len);
-  value[len] = '\0';
-  return value;
+  json_buffer_append(buf, "]}");
 }
 
 static char *read_patch_body(struct mg_connection *conn) {
@@ -475,53 +463,182 @@ static char *read_patch_body(struct mg_connection *conn) {
   return buffer;
 }
 
-static int handle_patch_piece(struct mg_connection *conn, const char *id) {
-  char *body = read_patch_body(conn);
-  if (!body) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
+/* Points *out at the strings of a JSON array of strings (valid while the
+ * array is). False when item is not an array of strings. */
+static bool string_array_members(const cJSON *item, const char ***out, size_t *out_count) {
+  *out = NULL;
+  *out_count = 0;
+  if (!cJSON_IsArray(item)) {
+    return false;
+  }
+  int size = cJSON_GetArraySize(item);
+  const char **members = size > 0 ? calloc((size_t)size, sizeof(char *)) : NULL;
+  if (size > 0 && !members) {
+    return false;
+  }
+  size_t count = 0;
+  const cJSON *member = NULL;
+  cJSON_ArrayForEach(member, item) {
+    if (!cJSON_IsString(member) || !member->valuestring) {
+      free(members);
+      return false;
+    }
+    members[count++] = member->valuestring;
+  }
+  *out = members;
+  *out_count = count;
+  return true;
+}
+
+static int send_invalid_member(struct mg_connection *conn, const char *member) {
+  char body[96];
+  snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"invalid %s\"}", member);
+  return send_json_status(conn, 400, "Bad Request", body);
+}
+
+/* Answers a successful metadata change with the piece as the list shows it. */
+static int send_updated_piece(struct mg_connection *conn, const char *id) {
+  UrsatzGuiPieceSummary *pieces = NULL;
+  size_t count = 0;
+  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
-
-  char *filename = extract_json_string_field(body, "filename");
-  free(body);
-
-  if (!filename || filename[0] == '\0') {
-    free(filename);
-    send_json(conn, "{\"ok\":false,\"message\":\"invalid filename\"}");
-    return 200;
-  }
-
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_rename_piece(kPiecesDir, id, filename);
-
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
-    free(filename);
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
-    free(filename);
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to rename piece\"}");
-    return 200;
-  }
-
   JsonBuffer buf;
   json_buffer_init(&buf);
-  json_buffer_append(&buf, "{\"ok\":true,\"id\":");
-  json_buffer_append_string(&buf, id);
-  json_buffer_append(&buf, ",\"filename\":");
-  json_buffer_append_string(&buf, filename);
-  json_buffer_append(&buf, "}");
-  free(filename);
+  json_buffer_append(&buf, "{\"ok\":true,\"piece\":");
+  bool found = false;
+  for (size_t i = 0; i < count && !found; i++) {
+    if (strcmp(pieces[i].id, id) == 0) {
+      append_piece_entry(&buf, &pieces[i]);
+      found = true;
+    }
+  }
+  json_buffer_append(&buf, found ? "}" : "null}");
+  free_pieces(pieces, count);
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
     send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
-
   send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
+}
+
+/* PATCH /api/analyzer/pieces/<id>: filename, composer, source, tags, add_tags,
+ * remove_tags (all optional, unknown members ignored). */
+static int handle_patch_piece(struct mg_connection *conn, const char *id) {
+  char *body = read_patch_body(conn);
+  if (!body) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
+    return 200;
+  }
+  cJSON *root = cJSON_Parse(body);
+  free(body);
+  if (!cJSON_IsObject(root)) {
+    cJSON_Delete(root);
+    return send_json_status(conn, 400, "Bad Request", "{\"ok\":false,\"message\":\"invalid request body\"}");
+  }
+
+  UrsatzGuiMetaUpdate update = {0};
+  const char **tags = NULL;
+  const char **add_tags = NULL;
+  const char **remove_tags = NULL;
+  const char *bad_member = NULL;
+  bool any = false;
+
+  const cJSON *filename = cJSON_GetObjectItemCaseSensitive(root, "filename");
+  const cJSON *composer = cJSON_GetObjectItemCaseSensitive(root, "composer");
+  const cJSON *source = cJSON_GetObjectItemCaseSensitive(root, "source");
+  const cJSON *tags_item = cJSON_GetObjectItemCaseSensitive(root, "tags");
+  const cJSON *add_item = cJSON_GetObjectItemCaseSensitive(root, "add_tags");
+  const cJSON *remove_item = cJSON_GetObjectItemCaseSensitive(root, "remove_tags");
+
+  if (filename) {
+    if (!cJSON_IsString(filename) || !filename->valuestring || filename->valuestring[0] == '\0') {
+      cJSON_Delete(root);
+      send_json(conn, "{\"ok\":false,\"message\":\"invalid filename\"}");
+      return 200;
+    }
+    update.filename = filename->valuestring;
+    any = true;
+  }
+  if (composer) {
+    if (cJSON_IsString(composer) && composer->valuestring) {
+      update.composer = composer->valuestring;
+      any = true;
+    } else {
+      bad_member = "composer";
+    }
+  }
+  if (!bad_member && source) {
+    if (cJSON_IsString(source) && source->valuestring) {
+      update.source = source->valuestring;
+      any = true;
+    } else {
+      bad_member = "source";
+    }
+  }
+  if (!bad_member && tags_item) {
+    update.has_tags = string_array_members(tags_item, &tags, &update.tag_count);
+    bad_member = update.has_tags ? NULL : "tags";
+    any = any || update.has_tags;
+  }
+  if (!bad_member && add_item) {
+    if (string_array_members(add_item, &add_tags, &update.add_tag_count)) {
+      any = true;
+    } else {
+      bad_member = "add_tags";
+    }
+  }
+  if (!bad_member && remove_item) {
+    if (string_array_members(remove_item, &remove_tags, &update.remove_tag_count)) {
+      any = true;
+    } else {
+      bad_member = "remove_tags";
+    }
+  }
+  update.tags = tags;
+  update.add_tags = add_tags;
+  update.remove_tags = remove_tags;
+
+  int status = 200;
+  if (bad_member) {
+    status = send_invalid_member(conn, bad_member);
+  } else if (!any) {
+    send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
+  } else {
+    char message[96] = "";
+    UrsatzGuiAnalysisResult result =
+        ursatz_gui_analysis_update_metadata(kPiecesDir, id, &update, message, sizeof(message));
+    if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+      mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+      status = 404;
+    } else if (result == URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA) {
+      cJSON *answer = cJSON_CreateObject();
+      char *text = NULL;
+      if (answer) {
+        cJSON_AddFalseToObject(answer, "ok");
+        cJSON_AddStringToObject(answer, "message", message);
+        text = cJSON_PrintUnformatted(answer);
+        cJSON_Delete(answer);
+      }
+      status = send_json_status(conn, 400, "Bad Request", text ? text : "{\"ok\":false,\"message\":\"invalid metadata\"}");
+      free(text);
+    } else if (result != URSATZ_GUI_ANALYSIS_OK) {
+      send_json(conn, "{\"ok\":false,\"message\":\"failed to update piece\"}");
+    } else {
+      status = send_updated_piece(conn, id);
+    }
+  }
+
+  free(tags);
+  free(add_tags);
+  free(remove_tags);
+  cJSON_Delete(root);
+  return status;
 }
 
 static int handle_delete_piece(struct mg_connection *conn, const char *id) {
