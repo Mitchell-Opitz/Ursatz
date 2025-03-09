@@ -33,6 +33,9 @@ Tests:
 - `test_harmonic_function`: the function of every labelled chord of Bach 114 and Mozart 545 (V and vii°
   dominant, ii and IV strong and iii and vi weak predominants), the six-four types, the prolongations, and a
   cadential six-four in Mozart 545.
+- `test_progressions`: the progression finder on hand-built chord lists (held chords, key and unlabelled breaks,
+  containment, the six-chord limit) and the progressions of Bach 114 and Mozart 545. `test_progressions_bach_114_top`
+  asserts that Bach 114's most common progression ends on I; it is marked `WILL_FAIL` (see "Known limits").
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
@@ -128,8 +131,10 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
 6. `harmony_pipeline`: builds Ursatz's standard-harmony inputs from the numerals, outer voices and meter,
    finds the cadences, adds the half cadences before section starts, and confirms the key changes with the
    cadences (see "Cadences").
+7. `progression_pipeline` and `harmonic_rhythm_pipeline`: count the recurring progressions and the changes of
+   harmony per measure over the numerals and cadences (see "Progressions and harmonic rhythm").
 
-Steps 2 to 6 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+Steps 2 to 7 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence for the key regions of the second pass, whose
 results are the report (R-043).
 
@@ -370,6 +375,23 @@ library's `harmony_predominant_strength`. The chord claims carry `function` and 
 `prolongations` section lists the spans. The Markdown report's Chords table gains Function and Six-four columns,
 and a `## Prolongations` section follows the chord vocabulary. The phrase model needs phrases and comes with them.
 
+## Progressions and harmonic rhythm
+
+Counted by the analyzer over the library's Roman numerals, key regions and cadences, with no music theory of its own
+(`src/pipeline/progression_pipeline.c`, `harmonic_rhythm_pipeline.c`).
+
+- **Progressions.** A progression is a run of 2 to 6 consecutive labelled chords in one key region, named by the
+  numerals' base numerals. A held chord (the same base numeral again) counts once, and a run does not cross an
+  unlabelled chord or a change of key region. Every run is counted; a pattern that occurs at least twice is kept,
+  unless a longer pattern with the same number of occurrences contains it. They are ranked by count, then length, then
+  first occurrence. The document's `progressions` holds them all; the Markdown report's `## Progression patterns`
+  shows the top 10 with the measures of each occurrence.
+- **Harmonic rhythm.** A change is a chord whose base numeral or key region differs from the chord before it. The
+  document's `harmonic_rhythm` has the changes in each measure, their mean, the mean per window of four measures, and
+  for every cadence the mean changes per measure in the two measures before its arrival against the two before those
+  (`accelerates` when the approach is faster). The Markdown report's `## Harmonic rhythm` prints the per-measure
+  changes four measures to a row, the mean, and the approach to each cadence.
+
 ## Known limits
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
@@ -406,6 +428,10 @@ and a `## Prolongations` section follows the chord vocabulary. The phrase model 
   start, so a melody note attacked later inside a merged chord segment is not listed.
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
   anticipation, appoggiatura, escape-tone and pedal rules. Many tones come back unclassified.
+- Progressions are the library's base numerals counted as they come: Bach 114's most common progression is
+  I > IV7 (6 occurrences, tied with ii > iii7), which ends on IV7, so `test_progressions_bach_114_top` (its top
+  progression ends on I) is `WILL_FAIL`. The 4/4 reading of Bach 114's 3/4 meter (see below) also shapes its
+  measures and so its per-measure harmonic rhythm.
 - SMPTE-division MIDI files are rejected.
 - Compressed `.mxl` MusicXML is not read: the Ursatz importer takes uncompressed documents only.
 - MusicXML repeats and endings are not unfolded, and the pickup is found only when the first measure

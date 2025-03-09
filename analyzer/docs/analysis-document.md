@@ -35,15 +35,15 @@ newline. The same input and build always give the same bytes.
 | `texture` | array | Placeholder: `[]`. |
 | `voice_leading` | array | Placeholder: `[]`. |
 | `schemas` | array | Placeholder: `[]`. |
-| `progressions` | array | Placeholder: `[]`. |
-| `harmonic_rhythm` | object or null | Placeholder: `null`. |
+| `progressions` | array of progression entries | Filled: the recurring progressions of two to six chords. See below. |
+| `harmonic_rhythm` | object or null | Filled: changes of harmony per measure and the approach to cadences. See below; `null` when the piece has no chords the meter can place. |
 | `markings` | object or null | Placeholder: `null`. |
 | `counterpoint_check` | object or null | Placeholder: `null`. |
 | `notes` | array of notes | Filled: where the notated and detected keys disagree. Empty when they do not, or there is no notated key signature. |
 
 Every key is always present, so consumers can read any section without checking for it first.
-The singular sections `form`, `harmonic_rhythm`, `markings` and `counterpoint_check` are `null` until
-filled; the rest are empty arrays.
+The singular sections `form`, `markings` and `counterpoint_check` are `null` until filled; the rest are empty
+arrays. `harmonic_rhythm` is `null` only for a piece with no chords the meter can place.
 
 ## metadata
 
@@ -489,6 +489,59 @@ version bump), and empty when the library finds none or declines the piece.
 
 The phrase model, which labels phrases from the functions, needs phrases and comes with them.
 
+### Progressions
+
+`progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
+theory, R-018). A progression is a run of 2 to 6 consecutive labelled chords inside one key region, each named by the
+numeral's `base_numeral`. Consecutive chords with the same base numeral count once (a held chord), and a run does not
+cross an unlabelled chord or a change of key region. Every run is counted, overlapping runs included, and a pattern
+recurs when it occurs at least twice. A pattern that sits inside a longer pattern with the same number of occurrences
+is dropped: it only ever occurs inside the longer one. Entries are ranked by `count` descending, then `length`
+descending, then first occurrence. The section is empty when nothing recurs.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `pattern` | array of strings | The base numerals, e.g. `["I", "IV", "V", "I"]`. |
+| `label` | string | The pattern joined with `" > "`, the separator Ursatz's `corpus_stats_chord_progressions` uses: `"I > IV > V > I"`. |
+| `length` | integer | 2 to 6. |
+| `count` | integer | How often the pattern occurs: at least 2. |
+| `occurrences` | array of occurrences | In time order; each is a claim. |
+
+An occurrence has the shared claim fields and:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `framework` | string | The chord claims' framework. |
+| `span`, `location`, `note_ids` | | From the start of the run's first chord to the end of its last; the notes sounding in those chords. |
+| `label` | string | The pattern's `label`. |
+| `uncertainty` | number | The least certain Roman numeral among the run's chords (higher is less certain). |
+| `region` | integer | Index into `keys.regions` of the key region all its chords lie in. |
+| `chords` | array of integers | Indices into `chords` of every chord in the run, held repeats included. |
+
+### Harmonic rhythm
+
+`harmonic_rhythm` counts how often the harmony changes. A change is a chord segment whose base numeral or key region
+differs from the segment before it (the first segment is a change; a segment with no numeral differs from one that has
+one), counted in the measure the segment starts in. Measures are the library's (a pickup is 0).
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `per_measure` | array | `{ "measure", "changes" }` for every measure from the first chord's to the last chord's; a measure no chord starts in has 0. |
+| `mean_per_measure` | rational | Changes per measure over those measures. |
+| `per_window` | array | `{ "first_measure", "last_measure", "mean_per_measure" }` for each window of 4 measures from the first, the last window shorter when the measures run out. Optional. |
+| `cadence_approaches` | array | One per cadence, in the order of `cadences`. See below. |
+
+Each entry of `cadence_approaches` compares the harmonic rhythm in the two measures before a cadence arrives with the two
+before those:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `cadence` | integer | Index into `cadences`. |
+| `arrival_measure` | integer | The measure the arrival begins in. Optional. |
+| `approach` | rational or null | Mean changes per measure over the two measures before the arrival measure; `null` when the piece has none of them. |
+| `before` | rational or null | The same over the two measures before those. |
+| `accelerates` | boolean | `approach` is greater than `before`; `false` when either is `null`. |
+
 ## Versioning
 
 - `schema_version` changes only for breaking changes: removing or renaming a field, changing a
@@ -505,7 +558,8 @@ The phrase model, which labels phrases from the functions, needs phrases and com
   sections are a breaking change under the rule above. Chord claims gain the optional `context`, which did not
   need a version of its own. `cadences` is filled (its claims are new), and tonicization and modulation claims
   gain the optional `cadence_confirmed`; both are additive. Chord claims gain the optional `function` and
-  `six_four`, and the optional top-level `prolongations` follows `chord_vocabulary`; all additive.
+  `six_four`, and the optional top-level `prolongations` follows `chord_vocabulary`; all additive. `progressions` and `harmonic_rhythm` are filled (their
+  entries are new), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
