@@ -1139,3 +1139,65 @@ The library's standard-harmony analysis found 12 cadences from the chords, the m
 12. m. 65, beat 3: half in Eb major
 
 **Counts:** half 7, perfect-authentic 3, subverted 1, imperfect-authentic 1.
+
+## Progression patterns
+
+32 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
+
+| Rank | Progression | Count | Measures |
+| --- | --- | --- | --- |
+| 1 | I > I7 | 9 | mm. 8 to 9, m. 13, m. 23, m. 35, m. 37, m. 39, m. 42, mm. 46 to 48, m. 60 |
+| 2 | V7 > I7 > I | 7 | mm. 7 to 9, mm. 15 to 16, mm. 17 to 18, mm. 38 to 39, mm. 42 to 44, mm. 57 to 58, mm. 61 to 62 |
+| 3 | V7 > I | 6 | mm. 19 to 20, mm. 36 to 37, mm. 49 to 50, mm. 59 to 60, mm. 63 to 64, mm. 65 to 67 |
+| 4 | I > iii7 | 5 | mm. 1 to 2, mm. 4 to 6, mm. 12 to 13, mm. 50 to 51, mm. 54 to 55 |
+| 5 | V > V7 | 5 | m. 3, m. 7, m. 34, m. 45, m. 53 |
+| 6 | V > vii∅7 | 4 | m. 3, m. 7, m. 15, m. 45 |
+| 7 | I > V7 | 4 | mm. 21 to 22, mm. 25 to 26, mm. 58 to 59, m. 65 |
+| 8 | I7 > V7 | 4 | mm. 35 to 36, mm. 37 to 38, m. 49, mm. 60 to 61 |
+| 9 | V > vii∅7 > V > V7 | 3 | m. 3, m. 7, m. 45 |
+| 10 | V > V7 > V | 3 | m. 3, m. 34, m. 45 |
+
+## Harmonic rhythm
+
+How often the harmony changes. A change is a chord whose base Roman numeral or key differs from the chord before it, counted in the measure it starts in. Changes lists the measures of each row in order; Mean is changes per measure over the row.
+
+| Measures | Changes | Mean |
+| --- | --- | --- |
+| mm. 1 to 4 | 1, 1, 5, 1 | 2 |
+| mm. 5 to 8 | 0, 1, 4, 2 | 1.75 |
+| mm. 9 to 12 | 1, 3, 3, 1 | 2 |
+| mm. 13 to 16 | 3, 3, 3, 2 | 2.75 |
+| mm. 17 to 20 | 4, 2, 4, 3 | 3.25 |
+| mm. 21 to 24 | 1, 2, 3, 3 | 2.25 |
+| mm. 25 to 28 | 1, 1, 2, 4 | 2 |
+| mm. 29 to 32 | 1, 4, 2, 4 | 2.75 |
+| mm. 33 to 36 | 3, 4, 2, 3 | 3 |
+| mm. 37 to 40 | 2, 3, 3, 4 | 3 |
+| mm. 41 to 44 | 5, 4, 2, 2 | 3.25 |
+| mm. 45 to 48 | 5, 1, 0, 2 | 2 |
+| mm. 49 to 52 | 2, 1, 3, 2 | 2 |
+| mm. 53 to 56 | 3, 1, 3, 3 | 2.5 |
+| mm. 57 to 60 | 4, 2, 1, 2 | 2.25 |
+| mm. 61 to 64 | 1, 2, 4, 3 | 2.5 |
+| mm. 65 to 67 | 3, 1, 0 | 1.33 |
+
+**Mean:** 2.4 changes per measure over 67 measures.
+
+### Approach to cadences
+
+Changes per measure over the two measures before each cadence's arrival (Approach), against the two measures before those (Before). Faster is yes when the approach changes harmony more often.
+
+| Cadence | Arrival | Before | Approach | Faster |
+| --- | --- | --- | --- | --- |
+| 1 | m. 3 | none | 1 | no |
+| 2 | m. 4 | 1 | 3 | yes |
+| 3 | m. 7 | 3 | 0.5 | no |
+| 4 | m. 18 | 3 | 3 | no |
+| 5 | m. 30 | 1.5 | 2.5 | yes |
+| 6 | m. 30 | 1.5 | 2.5 | yes |
+| 7 | m. 34 | 3 | 3.5 | yes |
+| 8 | m. 37 | 3.5 | 2.5 | no |
+| 9 | m. 46 | 3 | 3.5 | yes |
+| 10 | m. 50 | 0.5 | 2 | yes |
+| 11 | m. 57 | 2 | 3 | yes |
+| 12 | m. 65 | 1.5 | 3.5 | yes |

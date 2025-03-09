@@ -4913,3 +4913,176 @@ The library's standard-harmony analysis found 55 cadences from the chords, the m
 55. m. 333, beat 1: subverted in C major
 
 **Counts:** perfect-authentic 21, imperfect-authentic 5, subverted 14, half 15.
+
+## Progression patterns
+
+231 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
+
+| Rank | Progression | Count | Measures |
+| --- | --- | --- | --- |
+| 1 | V7 > I | 34 | mm. 7 to 8, mm. 17 to 18, mm. 26 to 27, mm. 27 to 28, mm. 35 to 36, mm. 45 to 46, mm. 54 to 55, mm. 55 to 57, mm. 57 to 58, mm. 69 to 70, mm. 76 to 77, mm. 98 to 99, mm. 99 to 100, mm. 100 to 102, mm. 114 to 115, mm. 121 to 122, mm. 143 to 144, mm. 144 to 145, mm. 145 to 146, mm. 149 to 150, mm. 165 to 166, mm. 183 to 184, mm. 188 to 189, mm. 199 to 200, mm. 204 to 205, mm. 217 to 218, mm. 229 to 230, mm. 251 to 252, mm. 252 to 253, mm. 253 to 254, mm. 263 to 264, mm. 271 to 272, mm. 324 to 325, mm. 332 to 334 |
+| 2 | I > V7 | 32 | mm. 14 to 15, mm. 16 to 17, m. 26, m. 27, mm. 42 to 43, mm. 44 to 45, m. 54, m. 55, m. 78, m. 99, m. 100, m. 123, m. 144, m. 145, m. 149, mm. 160 to 161, m. 163, mm. 164 to 165, mm. 176 to 177, m. 179, m. 187, mm. 192 to 193, m. 195, m. 203, mm. 208 to 209, m. 211, m. 219, m. 229, mm. 240 to 241, m. 243, m. 247, m. 325 |
+| 3 | I > vi | 18 | mm. 2 to 3, m. 9, mm. 30 to 31, m. 37, mm. 71 to 72, m. 82, mm. 116 to 117, m. 127, m. 154, m. 162, m. 170, m. 178, m. 194, m. 210, m. 218, m. 234, m. 242, mm. 254 to 256 |
+| 4 | I > IV | 17 | mm. 4 to 5, m. 18, mm. 28 to 29, mm. 32 to 33, m. 46, mm. 73 to 74, m. 91, mm. 118 to 119, m. 136, mm. 150 to 151, mm. 166 to 167, mm. 230 to 231, mm. 258 to 259, mm. 266 to 267, mm. 278 to 279, mm. 286 to 287, mm. 319 to 320 |
+| 5 | V7 > iii7 | 14 | m. 15, m. 17, m. 43, m. 45, m. 153, m. 161, m. 169, m. 177, mm. 182 to 183, m. 193, mm. 198 to 199, m. 209, m. 233, m. 241 |
+| 6 | V7 > i | 14 | mm. 61 to 62, mm. 62 to 63, m. 63, m. 68, m. 104, mm. 106 to 107, mm. 107 to 108, m. 108, m. 113, mm. 213 to 214, mm. 215 to 216, mm. 312 to 313, mm. 313 to 314, mm. 314 to 315 |
+| 7 | I7 > ii7 | 13 | m. 6, mm. 6 to 7, m. 7, m. 34, mm. 34 to 35, m. 35, m. 75, mm. 75 to 76, m. 76, m. 120, mm. 120 to 121, m. 121, mm. 279 to 280 |
+| 8 | vi > ii | 13 | m. 20, m. 48, m. 93, m. 138, m. 257, m. 261, m. 265, m. 269, m. 277, m. 285, m. 289, m. 318, m. 322 |
+| 9 | ii > I | 13 | mm. 157 to 158, m. 163, mm. 173 to 174, m. 179, mm. 186 to 187, mm. 189 to 190, m. 195, mm. 202 to 203, mm. 205 to 206, m. 211, m. 219, mm. 237 to 238, m. 243 |
+| 10 | I > V | 12 | mm. 3 to 4, mm. 31 to 32, mm. 72 to 73, mm. 78 to 79, mm. 101 to 102, mm. 117 to 118, mm. 123 to 124, m. 156, m. 172, mm. 180 to 181, mm. 196 to 197, m. 236 |
+
+## Harmonic rhythm
+
+How often the harmony changes. A change is a chord whose base Roman numeral or key differs from the chord before it, counted in the measure it starts in. Changes lists the measures of each row in order; Mean is changes per measure over the row.
+
+| Measures | Changes | Mean |
+| --- | --- | --- |
+| mm. 1 to 4 | 2, 4, 3, 4 | 3.25 |
+| mm. 5 to 8 | 4, 4, 4, 4 | 4 |
+| mm. 9 to 12 | 4, 4, 3, 1 | 3 |
+| mm. 13 to 16 | 2, 2, 4, 2 | 2.5 |
+| mm. 17 to 20 | 4, 2, 2, 2 | 2.5 |
+| mm. 21 to 24 | 2, 3, 1, 1 | 1.75 |
+| mm. 25 to 28 | 8, 2, 2, 1 | 3.25 |
+| mm. 29 to 32 | 2, 4, 3, 4 | 3.25 |
+| mm. 33 to 36 | 4, 4, 4, 4 | 4 |
+| mm. 37 to 40 | 4, 4, 3, 1 | 3 |
+| mm. 41 to 44 | 2, 2, 4, 2 | 2.5 |
+| mm. 45 to 48 | 4, 2, 2, 2 | 2.5 |
+| mm. 49 to 52 | 2, 3, 1, 1 | 1.75 |
+| mm. 53 to 56 | 8, 2, 2, 1 | 3.25 |
+| mm. 57 to 60 | 2, 3, 4, 4 | 3.25 |
+| mm. 61 to 64 | 2, 2, 4, 3 | 2.75 |
+| mm. 65 to 68 | 4, 4, 4, 4 | 4 |
+| mm. 69 to 72 | 3, 2, 4, 3 | 3 |
+| mm. 73 to 76 | 4, 4, 4, 4 | 4 |
+| mm. 77 to 80 | 4, 4, 4, 4 | 4 |
+| mm. 81 to 84 | 4, 4, 5, 3 | 4 |
+| mm. 85 to 88 | 1, 2, 2, 3 | 2 |
+| mm. 89 to 92 | 2, 3, 2, 2 | 2.25 |
+| mm. 93 to 96 | 2, 2, 1, 5 | 2.5 |
+| mm. 97 to 100 | 4, 2, 2, 2 | 2.5 |
+| mm. 101 to 104 | 1, 3, 3, 4 | 2.75 |
+| mm. 105 to 108 | 4, 2, 2, 4 | 3 |
+| mm. 109 to 112 | 3, 4, 4, 4 | 3.75 |
+| mm. 113 to 116 | 4, 3, 2, 4 | 3.25 |
+| mm. 117 to 120 | 3, 4, 4, 4 | 3.75 |
+| mm. 121 to 124 | 4, 4, 4, 4 | 4 |
+| mm. 125 to 128 | 4, 4, 4, 5 | 4.25 |
+| mm. 129 to 132 | 3, 1, 2, 2 | 2 |
+| mm. 133 to 136 | 3, 2, 3, 2 | 2.5 |
+| mm. 137 to 140 | 2, 2, 2, 1 | 1.75 |
+| mm. 141 to 144 | 5, 4, 2, 2 | 3.25 |
+| mm. 145 to 148 | 2, 1, 0, 0 | 0.75 |
+| mm. 149 to 152 | 2, 1, 3, 1 | 1.75 |
+| mm. 153 to 156 | 3, 3, 3, 4 | 3.25 |
+| mm. 157 to 160 | 2, 2, 3, 1 | 2 |
+| mm. 161 to 164 | 2, 3, 3, 2 | 2.5 |
+| mm. 165 to 168 | 1, 1, 3, 1 | 1.5 |
+| mm. 169 to 172 | 3, 3, 3, 4 | 3.25 |
+| mm. 173 to 176 | 2, 2, 3, 1 | 2 |
+| mm. 177 to 180 | 2, 3, 3, 2 | 2.5 |
+| mm. 181 to 184 | 1, 1, 2, 3 | 1.75 |
+| mm. 185 to 188 | 3, 3, 2, 3 | 2.75 |
+| mm. 189 to 192 | 2, 2, 3, 1 | 2 |
+| mm. 193 to 196 | 2, 3, 3, 2 | 2.5 |
+| mm. 197 to 200 | 1, 1, 2, 3 | 1.75 |
+| mm. 201 to 204 | 3, 3, 2, 3 | 2.75 |
+| mm. 205 to 208 | 2, 2, 3, 1 | 2 |
+| mm. 209 to 212 | 2, 3, 3, 2 | 2.5 |
+| mm. 213 to 216 | 2, 1, 2, 2 | 1.75 |
+| mm. 217 to 220 | 2, 3, 3, 3 | 2.75 |
+| mm. 221 to 224 | 3, 3, 3, 2 | 2.75 |
+| mm. 225 to 228 | 1, 1, 3, 3 | 2 |
+| mm. 229 to 232 | 2, 1, 3, 1 | 1.75 |
+| mm. 233 to 236 | 3, 3, 3, 4 | 3.25 |
+| mm. 237 to 240 | 2, 2, 3, 1 | 2 |
+| mm. 241 to 244 | 2, 3, 3, 3 | 2.75 |
+| mm. 245 to 248 | 3, 2, 3, 3 | 2.75 |
+| mm. 249 to 252 | 3, 3, 3, 3 | 3 |
+| mm. 253 to 256 | 3, 1, 0, 1 | 1.25 |
+| mm. 257 to 260 | 2, 2, 2, 2 | 2 |
+| mm. 261 to 264 | 3, 2, 2, 2 | 2.25 |
+| mm. 265 to 268 | 2, 2, 2, 2 | 2 |
+| mm. 269 to 272 | 3, 2, 2, 1 | 2 |
+| mm. 273 to 276 | 2, 1, 2, 2 | 1.75 |
+| mm. 277 to 280 | 2, 2, 2, 1 | 1.75 |
+| mm. 281 to 284 | 2, 2, 4, 2 | 2.5 |
+| mm. 285 to 288 | 2, 2, 2, 2 | 2 |
+| mm. 289 to 292 | 3, 2, 3, 1 | 2.25 |
+| mm. 293 to 296 | 2, 2, 1, 2 | 1.75 |
+| mm. 297 to 300 | 2, 4, 2, 2 | 2.5 |
+| mm. 301 to 304 | 2, 1, 2, 1 | 1.5 |
+| mm. 305 to 308 | 0, 2, 0, 2 | 1 |
+| mm. 309 to 312 | 4, 3, 2, 2 | 2.75 |
+| mm. 313 to 316 | 2, 2, 2, 0 | 1.5 |
+| mm. 317 to 320 | 1, 2, 2, 2 | 1.75 |
+| mm. 321 to 324 | 2, 3, 2, 2 | 2.25 |
+| mm. 325 to 328 | 2, 2, 2, 2 | 2 |
+| mm. 329 to 332 | 2, 2, 2, 2 | 2 |
+| mm. 333 to 336 | 1, 1, 1, 1 | 1 |
+| mm. 337 to 338 | 1, 0 | 0.5 |
+
+**Mean:** 2.5 changes per measure over 338 measures.
+
+### Approach to cadences
+
+Changes per measure over the two measures before each cadence's arrival (Approach), against the two measures before those (Before). Faster is yes when the approach changes harmony more often.
+
+| Cadence | Arrival | Before | Approach | Faster |
+| --- | --- | --- | --- | --- |
+| 1 | m. 27 | 1 | 5 | yes |
+| 2 | m. 28 | 4.5 | 2 | no |
+| 3 | m. 55 | 1 | 5 | yes |
+| 4 | m. 56 | 4.5 | 2 | no |
+| 5 | m. 58 | 2 | 1.5 | no |
+| 6 | m. 62 | 3.5 | 3 | no |
+| 7 | m. 63 | 4 | 2 | no |
+| 8 | m. 82 | 4 | 4 | no |
+| 9 | m. 99 | 3 | 3 | no |
+| 10 | m. 100 | 4.5 | 2 | no |
+| 11 | m. 101 | 3 | 2 | no |
+| 12 | m. 103 | 2 | 2 | no |
+| 13 | m. 107 | 3.5 | 3 | no |
+| 14 | m. 108 | 4 | 2 | no |
+| 15 | m. 127 | 4 | 4 | no |
+| 16 | m. 144 | 3 | 3 | no |
+| 17 | m. 145 | 4.5 | 2 | no |
+| 18 | m. 146 | 3 | 2 | no |
+| 19 | m. 164 | 1.5 | 3 | yes |
+| 20 | m. 180 | 1.5 | 3 | yes |
+| 21 | m. 181 | 2.5 | 2.5 | no |
+| 22 | m. 187 | 2.5 | 3 | yes |
+| 23 | m. 188 | 3 | 2.5 | no |
+| 24 | m. 196 | 1.5 | 3 | yes |
+| 25 | m. 197 | 2.5 | 2.5 | no |
+| 26 | m. 203 | 2.5 | 3 | yes |
+| 27 | m. 204 | 3 | 2.5 | no |
+| 28 | m. 212 | 1.5 | 3 | yes |
+| 29 | m. 216 | 2 | 1.5 | no |
+| 30 | m. 220 | 2 | 3 | yes |
+| 31 | m. 227 | 2.5 | 1 | no |
+| 32 | m. 228 | 1.5 | 2 | yes |
+| 33 | m. 244 | 1.5 | 3 | yes |
+| 34 | m. 248 | 3 | 2.5 | no |
+| 35 | m. 252 | 3 | 3 | no |
+| 36 | m. 253 | 3 | 3 | no |
+| 37 | m. 254 | 3 | 3 | no |
+| 38 | m. 258 | 0.5 | 1.5 | yes |
+| 39 | m. 262 | 2 | 2.5 | yes |
+| 40 | m. 264 | 2.5 | 2 | no |
+| 41 | m. 266 | 2 | 2 | no |
+| 42 | m. 270 | 2 | 2.5 | yes |
+| 43 | m. 272 | 2.5 | 2 | no |
+| 44 | m. 278 | 1.5 | 2 | yes |
+| 45 | m. 286 | 3 | 2 | no |
+| 46 | m. 296 | 1.5 | 1.5 | no |
+| 47 | m. 312 | 3 | 2.5 | no |
+| 48 | m. 313 | 3.5 | 2 | no |
+| 49 | m. 314 | 2.5 | 2 | no |
+| 50 | m. 315 | 2 | 2 | no |
+| 51 | m. 319 | 1 | 1.5 | yes |
+| 52 | m. 323 | 2 | 2.5 | yes |
+| 53 | m. 325 | 2.5 | 2 | no |
+| 54 | m. 329 | 2 | 2 | no |
+| 55 | m. 333 | 2 | 2 | no |
