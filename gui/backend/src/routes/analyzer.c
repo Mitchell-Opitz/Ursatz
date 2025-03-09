@@ -412,6 +412,71 @@ static int handle_get(struct mg_connection *conn) {
   return 200;
 }
 
+static void append_group_array(JsonBuffer *buf, const char *name, const UrsatzGuiMetaGroup *groups, size_t count) {
+  json_buffer_append(buf, "\"");
+  json_buffer_append(buf, name);
+  json_buffer_append(buf, "\":[");
+  for (size_t i = 0; i < count; i++) {
+    char number[32];
+    if (i != 0) {
+      json_buffer_append(buf, ",");
+    }
+    json_buffer_append(buf, "{\"value\":");
+    json_buffer_append_string(buf, groups[i].value);
+    snprintf(number, sizeof(number), ",\"count\":%zu}", groups[i].count);
+    json_buffer_append(buf, number);
+  }
+  json_buffer_append(buf, "],");
+}
+
+/* GET /api/analyzer/groups: the distinct composers, sources and tags with piece counts. */
+static int handle_get_groups(struct mg_connection *conn) {
+  UrsatzGuiPieceSummary *pieces = NULL;
+  size_t count = 0;
+  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
+    return 200;
+  }
+  UrsatzGuiMetaGroups groups;
+  UrsatzGuiMetaResult grouped = ursatz_gui_meta_group(pieces, count, &groups);
+  free_pieces(pieces, count);
+  if (grouped != URSATZ_GUI_META_OK) {
+    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    return 200;
+  }
+
+  JsonBuffer buf;
+  json_buffer_init(&buf);
+  json_buffer_append(&buf, "{\"ok\":true,");
+  append_group_array(&buf, "composers", groups.composers, groups.composer_count);
+  append_group_array(&buf, "sources", groups.sources, groups.source_count);
+  append_group_array(&buf, "tags", groups.tags, groups.tag_count);
+  char tail[128];
+  snprintf(tail, sizeof(tail), "\"unassigned\":{\"composer\":%zu,\"source\":%zu},\"untagged\":%zu,\"total\":%zu}",
+           groups.unassigned_composer, groups.unassigned_source, groups.untagged, groups.total);
+  json_buffer_append(&buf, tail);
+  ursatz_gui_meta_groups_destroy(&groups);
+
+  if (!buf.ok) {
+    json_buffer_destroy(&buf);
+    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    return 200;
+  }
+  send_json(conn, buf.data);
+  json_buffer_destroy(&buf);
+  return 200;
+}
+
+static int groups_handler(struct mg_connection *conn, void *cbdata) {
+  (void)cbdata;
+  const struct mg_request_info *info = mg_get_request_info(conn);
+  if (strcmp(info->request_method, "GET") == 0) {
+    return handle_get_groups(conn);
+  }
+  mg_send_http_error(conn, 405, "Method Not Allowed");
+  return 405;
+}
+
 static const char *kPieceDetailPrefix = "/api/analyzer/pieces/";
 
 static int handle_get_piece(struct mg_connection *conn, const char *id) {
@@ -907,4 +972,5 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
 
 void ursatz_gui_analyzer_register(struct mg_context *ctx) {
   mg_set_request_handler(ctx, "/api/analyzer/pieces", pieces_handler, NULL);
+  mg_set_request_handler(ctx, "/api/analyzer/groups", groups_handler, NULL);
 }
