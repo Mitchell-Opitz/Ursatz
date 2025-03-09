@@ -313,6 +313,63 @@ static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
   free(pieces);
 }
 
+/* Appends one piece as the list route and the PATCH answer show it. */
+static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *piece) {
+  json_buffer_append(buf, "{\"id\":");
+  json_buffer_append_string(buf, piece->id);
+  json_buffer_append(buf, ",\"filename\":");
+  json_buffer_append_string(buf, piece->filename);
+  json_buffer_append(buf, ",\"format\":");
+  json_buffer_append_string(buf, piece->format);
+  json_buffer_append(buf, ",\"uploaded_at\":");
+  json_buffer_append_string(buf, piece->uploaded_at);
+  json_buffer_append(buf, ",\"composer\":");
+  json_buffer_append_string(buf, piece->composer);
+  json_buffer_append(buf, ",\"source\":");
+  json_buffer_append_string(buf, piece->source);
+  json_buffer_append(buf, ",\"tags\":[");
+  for (size_t i = 0; i < piece->tag_count; i++) {
+    if (i != 0) {
+      json_buffer_append(buf, ",");
+    }
+    json_buffer_append_string(buf, piece->tags[i]);
+  }
+  json_buffer_append(buf, "]}");
+}
+
+/* Reads one query parameter (URL-decoded) into out; false when absent or empty. */
+static bool query_value(const struct mg_request_info *info, const char *name, int occurrence, char *out,
+                        size_t out_size) {
+  if (!info->query_string) {
+    return false;
+  }
+  int length = mg_get_var2(info->query_string, strlen(info->query_string), name, out, out_size, (size_t)occurrence);
+  return length > 0;
+}
+
+/* Builds the metadata filter from composer, source, tag, unassigned (composer
+ * or source, may repeat) and untagged=1. The strings live in the buffers. */
+static void read_filter(const struct mg_request_info *info, UrsatzGuiMetaFilter *filter, char *composer,
+                        char *source, char *tag, size_t size) {
+  memset(filter, 0, sizeof(*filter));
+  filter->composer = query_value(info, "composer", 0, composer, size) ? composer : NULL;
+  filter->source = query_value(info, "source", 0, source, size) ? source : NULL;
+  filter->tag = query_value(info, "tag", 0, tag, size) ? tag : NULL;
+  for (int occurrence = 0; occurrence < 2; occurrence++) {
+    char which[16];
+    if (!query_value(info, "unassigned", occurrence, which, sizeof(which))) {
+      continue;
+    }
+    if (strcmp(which, "composer") == 0) {
+      filter->composer_unassigned = true;
+    } else if (strcmp(which, "source") == 0) {
+      filter->source_unassigned = true;
+    }
+  }
+  char untagged[8];
+  filter->untagged = query_value(info, "untagged", 0, untagged, sizeof(untagged)) && strcmp(untagged, "1") == 0;
+}
+
 static int handle_get(struct mg_connection *conn) {
   UrsatzGuiPieceSummary *pieces = NULL;
   size_t count = 0;
@@ -323,22 +380,23 @@ static int handle_get(struct mg_connection *conn) {
     return 200;
   }
 
+  char composer[256], source[256], tag[256];
+  UrsatzGuiMetaFilter filter;
+  read_filter(mg_get_request_info(conn), &filter, composer, source, tag, sizeof(composer));
+
   JsonBuffer buf;
   json_buffer_init(&buf);
   json_buffer_append(&buf, "{\"ok\":true,\"pieces\":[");
+  bool first = true;
   for (size_t i = 0; i < count; i++) {
-    if (i != 0) {
+    if (!ursatz_gui_meta_matches(&pieces[i], &filter)) {
+      continue;
+    }
+    if (!first) {
       json_buffer_append(&buf, ",");
     }
-    json_buffer_append(&buf, "{\"id\":");
-    json_buffer_append_string(&buf, pieces[i].id);
-    json_buffer_append(&buf, ",\"filename\":");
-    json_buffer_append_string(&buf, pieces[i].filename);
-    json_buffer_append(&buf, ",\"format\":");
-    json_buffer_append_string(&buf, pieces[i].format);
-    json_buffer_append(&buf, ",\"uploaded_at\":");
-    json_buffer_append_string(&buf, pieces[i].uploaded_at);
-    json_buffer_append(&buf, "}");
+    first = false;
+    append_piece_entry(&buf, &pieces[i]);
   }
   json_buffer_append(&buf, "]}");
   free_pieces(pieces, count);
@@ -403,30 +461,6 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
-}
-
-/* Appends one piece as the list route and the PATCH answer show it. */
-static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *piece) {
-  json_buffer_append(buf, "{\"id\":");
-  json_buffer_append_string(buf, piece->id);
-  json_buffer_append(buf, ",\"filename\":");
-  json_buffer_append_string(buf, piece->filename);
-  json_buffer_append(buf, ",\"format\":");
-  json_buffer_append_string(buf, piece->format);
-  json_buffer_append(buf, ",\"uploaded_at\":");
-  json_buffer_append_string(buf, piece->uploaded_at);
-  json_buffer_append(buf, ",\"composer\":");
-  json_buffer_append_string(buf, piece->composer);
-  json_buffer_append(buf, ",\"source\":");
-  json_buffer_append_string(buf, piece->source);
-  json_buffer_append(buf, ",\"tags\":[");
-  for (size_t i = 0; i < piece->tag_count; i++) {
-    if (i != 0) {
-      json_buffer_append(buf, ",");
-    }
-    json_buffer_append_string(buf, piece->tags[i]);
-  }
-  json_buffer_append(buf, "]}");
 }
 
 static char *read_patch_body(struct mg_connection *conn) {
