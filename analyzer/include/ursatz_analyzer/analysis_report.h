@@ -207,6 +207,42 @@ typedef struct {
                                     span */
 } AnalysisProlongation;
 
+/* One place a recurring progression occurs: the chords of entries[first_entry..last_entry], inclusive. The run
+   covers every chord of the pattern, a held chord (consecutive chords with the same base numeral) included; all of
+   them lie in the key region of entries[first_entry]. */
+typedef struct {
+    size_t first_entry;
+    size_t last_entry;
+} AnalysisProgressionOccurrence;
+
+/* A run of two to six labelled chords, by the base numerals of the library's Roman numerals, that occurs at least
+   twice. Counting is the analyzer's; the numerals are the library's. */
+typedef struct {
+    char **pattern;                          /* owned array of owned base numerals, e.g. "I", "IV", "V" */
+    size_t length;                           /* 2..6 */
+    AnalysisProgressionOccurrence *occurrences; /* owned; in time order */
+    size_t occurrence_count;                 /* how often the pattern occurs: at least 2 */
+} AnalysisProgression;
+
+/* How many times the harmony changes in one measure: the chord segments that start in it with a base numeral or a
+   key region different from the segment before. */
+typedef struct {
+    int measure; /* as the library numbers measures (a pickup is 0) */
+    size_t changes;
+} AnalysisMeasureChanges;
+
+/* How the harmonic rhythm moves into one cadence: the changes in the two measures before the arrival's measure (the
+   approach) against the changes in the two measures before those. A window clipped by the start of the piece holds
+   fewer measures, or none (then its mean is undefined). */
+typedef struct {
+    size_t cadence;          /* index into cadences */
+    int arrival_measure;     /* the measure the arrival begins in */
+    size_t before_changes;   /* in the two measures before the approach */
+    size_t before_measures;  /* how many of them the piece has: 0..2 */
+    size_t approach_changes; /* in the two measures before the arrival */
+    size_t approach_measures;
+} AnalysisCadenceApproach;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -220,12 +256,23 @@ typedef struct {
     size_t cadence_count;
     AnalysisProlongation *prolongations; /* owned; in order of first_entry */
     size_t prolongation_count;
+    AnalysisProgression *progressions; /* owned; the recurring progressions, ranked: most occurrences, then longest, then
+                                          earliest */
+    size_t progression_count;
+    AnalysisMeasureChanges *harmonic_rhythm; /* owned; one per measure from the first chord's to the last chord's,
+                                                every measure between included; empty when the piece has no chords or
+                                                the library cannot place them on the meter */
+    size_t harmonic_rhythm_count;
+    AnalysisCadenceApproach *cadence_approaches; /* owned; one per cadence, in the cadences' order; empty when
+                                                    harmonic_rhythm is */
+    size_t cadence_approach_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
-/* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences and the prolongations. */
+/* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
+   prolongations, the progressions and the harmonic rhythm. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

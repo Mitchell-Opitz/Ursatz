@@ -658,3 +658,47 @@ The library's standard-harmony analysis found 5 cadences from the chords, the me
 5. m. 23, beat 3: subverted in D major
 
 **Counts:** subverted 3, perfect-authentic 2.
+
+## Progression patterns
+
+37 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
+
+| Rank | Progression | Count | Measures |
+| --- | --- | --- | --- |
+| 1 | I > IV7 | 6 | m. 1, m. 4, mm. 5 to 6, m. 10, mm. 11 to 12, m. 23 |
+| 2 | ii > iii7 | 6 | m. 2, m. 5, m. 6, m. 8, m. 11, m. 12 |
+| 3 | V > I | 5 | m. 3, m. 9, m. 15, mm. 18 to 19, m. 21 |
+| 4 | I > vii° | 5 | m. 13, m. 15, m. 18, mm. 18 to 19, m. 21 |
+| 5 | IV > I | 5 | mm. 14 to 15, mm. 17 to 18, mm. 20 to 21, m. 23, m. 24 |
+| 6 | ii > iii7 > I | 4 | m. 2, m. 5, m. 8, m. 11 |
+| 7 | I > ii | 4 | m. 1, m. 2, m. 7, m. 8 |
+| 8 | ii7 > V | 4 | m. 3, m. 9, m. 14, m. 20 |
+| 9 | IV7 > ii | 4 | m. 6, m. 12, m. 16, m. 22 |
+| 10 | vi7 > iii7 > IV > I > vii° > I | 3 | mm. 14 to 15, mm. 17 to 18, mm. 20 to 21 |
+
+## Harmonic rhythm
+
+How often the harmony changes. A change is a chord whose base Roman numeral or key differs from the chord before it, counted in the measure it starts in. Changes lists the measures of each row in order; Mean is changes per measure over the row.
+
+| Measures | Changes | Mean |
+| --- | --- | --- |
+| mm. 1 to 4 | 5, 5, 4, 3 | 4.25 |
+| mm. 5 to 8 | 5, 4, 4, 5 | 4.5 |
+| mm. 9 to 12 | 4, 3, 5, 4 | 4 |
+| mm. 13 to 16 | 4, 5, 7, 6 | 5.5 |
+| mm. 17 to 20 | 7, 5, 3, 5 | 5 |
+| mm. 21 to 24 | 7, 6, 7, 5 | 6.25 |
+
+**Mean:** 4.92 changes per measure over 24 measures.
+
+### Approach to cadences
+
+Changes per measure over the two measures before each cadence's arrival (Approach), against the two measures before those (Before). Faster is yes when the approach changes harmony more often.
+
+| Cadence | Arrival | Before | Approach | Faster |
+| --- | --- | --- | --- | --- |
+| 1 | m. 14 | 4 | 4 | no |
+| 2 | m. 15 | 4.5 | 4.5 | no |
+| 3 | m. 20 | 6.5 | 4 | no |
+| 4 | m. 21 | 6 | 4 | no |
+| 5 | m. 23 | 4 | 6.5 | yes |

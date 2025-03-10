@@ -174,7 +174,7 @@ int main(void) {
     assert(cJSON_IsNull(member(meter, "pickup")));
     assert(cJSON_GetArraySize(member(meter, "changes")) == 0);
     assert(cJSON_IsNull(member(document, "form")));
-    assert(cJSON_IsNull(member(document, "harmonic_rhythm")));
+    assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
     assert(cJSON_IsNull(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));
     static const char *const EMPTY_SECTIONS[] = {"cadences", "phrases",       "motives", "melody",      "rhythm",

@@ -114,6 +114,18 @@ target_compile_definitions(test_harmonic_function PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_harmonic_function COMMAND test_harmonic_function)
 
+add_executable(test_progressions test_progressions.c)
+target_link_libraries(test_progressions PRIVATE ursatz_analyzer cjson)
+target_include_directories(test_progressions PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_progressions PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_progressions COMMAND test_progressions)
+# Expected to fail: the library's Roman numerals give Bach 114 the most common progression I > IV7 (6 occurrences,
+# tied with ii > iii7), which ends on IV7, not I (see README, Known limits). The assertion stays as the target; remove
+# WILL_FAIL when the library meets it.
+add_test(NAME test_progressions_bach_114_top COMMAND test_progressions bach-top)
+set_tests_properties(test_progressions_bach_114_top PROPERTIES WILL_FAIL TRUE)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE

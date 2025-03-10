@@ -11,6 +11,8 @@ add_library(ursatz_analyzer STATIC
     pipeline/outer_voice_pipeline.c
     pipeline/roman_numeral_pipeline.c
     pipeline/harmony_pipeline.c
+    pipeline/progression_pipeline.c
+    pipeline/harmonic_rhythm_pipeline.c
     pipeline/analysis_report.c
     pipeline/chain.c
     pipeline/analysis_pipeline.c

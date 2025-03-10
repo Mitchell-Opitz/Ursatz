@@ -13,6 +13,7 @@
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
+#include "pipeline/progression_pipeline.h"
 #include "theory/framework.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
@@ -1399,6 +1400,193 @@ static cJSON *prolongations_json(const ImportedNotes *notes, const AnalysisRepor
     return list;
 }
 
+/* ---- Progressions ---- */
+
+/* The pattern as a JSON array of its base numerals. */
+static cJSON *progression_pattern_json(const AnalysisProgression *progression) {
+    cJSON *pattern = cJSON_CreateArray();
+    for (size_t n = 0; pattern && n < progression->length; n++) {
+        if (!append(pattern, cJSON_CreateString(progression->pattern[n]))) {
+            cJSON_Delete(pattern);
+            return NULL;
+        }
+    }
+    return pattern;
+}
+
+/* The indices into "chords" of every chord from first to last, held repeats included. */
+static cJSON *chord_range_json(size_t first, size_t last) {
+    cJSON *indices = cJSON_CreateArray();
+    for (size_t i = first; indices && i <= last; i++) {
+        if (!append(indices, cJSON_CreateNumber((double)i))) {
+            cJSON_Delete(indices);
+            return NULL;
+        }
+    }
+    return indices;
+}
+
+/* One occurrence of a progression, a claim over the chords of the run: its span and location run from the first
+   chord's start to the last chord's end, note_ids are the notes sounding in them, the label is the pattern's, and
+   the uncertainty is the least certain Roman numeral in the run (higher is less certain). region is the key region
+   all the chords lie in; chords are their indices in "chords". */
+static cJSON *progression_occurrence_json(const ImportedNotes *notes, const AnalysisReport *report, const char *label,
+                                          const AnalysisProgressionOccurrence *occurrence) {
+    double uncertainty = 0.0;
+    for (size_t i = occurrence->first_entry; i <= occurrence->last_entry; i++) {
+        if (report->entries[i].roman.labelled && report->entries[i].roman.uncertainty > uncertainty) {
+            uncertainty = report->entries[i].roman.uncertainty;
+        }
+    }
+    size_t id_count = 0;
+    size_t *ids = entry_range_note_ids(report, occurrence->first_entry, occurrence->last_entry, &id_count);
+    cJSON *claim = ids ? claim_json_with(library_framework_name(), notes, ids, id_count,
+                                         entry_start_time(&report->entries[occurrence->first_entry]),
+                                         entry_end_time(&report->entries[occurrence->last_entry]), label,
+                                         cJSON_CreateNumber(uncertainty))
+                       : NULL;
+    free(ids);
+    if (!(claim && add(claim, "region", cJSON_CreateNumber((double)report->entries[occurrence->first_entry].region)) &&
+          add(claim, "chords", chord_range_json(occurrence->first_entry, occurrence->last_entry)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* One entry per recurring progression, in rank order (most occurrences, then longest, then earliest): pattern (the
+   base numerals), label ("I > IV > V > I"), length, count and its occurrences in time order. The progressions are
+   the analyzer's count over the library's Roman numerals; nothing here is a claim of its own. */
+static cJSON *progressions_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    for (size_t i = 0; i < report->progression_count; i++) {
+        const AnalysisProgression *progression = &report->progressions[i];
+        char *label = progression_label(progression);
+        cJSON *entry = label ? cJSON_CreateObject() : NULL;
+        cJSON *occurrences = entry ? cJSON_CreateArray() : NULL;
+        bool ok = occurrences != NULL;
+        for (size_t o = 0; ok && o < progression->occurrence_count; o++) {
+            ok = append(occurrences, progression_occurrence_json(notes, report, label, &progression->occurrences[o]));
+        }
+        bool taken = false; /* add() takes the occurrences over, and frees them itself when it fails */
+        ok = ok && add(entry, "pattern", progression_pattern_json(progression)) &&
+             add(entry, "label", cJSON_CreateString(label)) &&
+             add(entry, "length", cJSON_CreateNumber((double)progression->length)) &&
+             add(entry, "count", cJSON_CreateNumber((double)progression->occurrence_count)) &&
+             (taken = true, add(entry, "occurrences", occurrences));
+        free(label);
+        if (!(ok && append(list, entry))) {
+            if (!taken) {
+                cJSON_Delete(occurrences);
+            }
+            if (!ok) {
+                cJSON_Delete(entry);
+            }
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* ---- Harmonic rhythm ---- */
+
+#define RHYTHM_WINDOW_MEASURES 4
+
+/* The mean number of changes per measure over report->harmonic_rhythm[first..first + measures), a rational. */
+static Rational rhythm_mean(const AnalysisReport *report, size_t first, size_t measures) {
+    long long changes = 0;
+    for (size_t m = first; m < first + measures; m++) {
+        changes += (long long)report->harmonic_rhythm[m].changes;
+    }
+    return rational_make(changes, measures);
+}
+
+static cJSON *rhythm_per_measure_json(const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t m = 0; list && m < report->harmonic_rhythm_count; m++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "measure", cJSON_CreateNumber(report->harmonic_rhythm[m].measure)) &&
+              add(entry, "changes", cJSON_CreateNumber((double)report->harmonic_rhythm[m].changes)) &&
+              append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The mean per window of RHYTHM_WINDOW_MEASURES consecutive measures from the first, the last window shorter when
+   the measures run out. */
+static cJSON *rhythm_per_window_json(const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t first = 0; list && first < report->harmonic_rhythm_count; first += RHYTHM_WINDOW_MEASURES) {
+        size_t measures = report->harmonic_rhythm_count - first;
+        measures = measures < RHYTHM_WINDOW_MEASURES ? measures : RHYTHM_WINDOW_MEASURES;
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "first_measure", cJSON_CreateNumber(report->harmonic_rhythm[first].measure)) &&
+              add(entry, "last_measure", cJSON_CreateNumber(report->harmonic_rhythm[first + measures - 1].measure)) &&
+              add(entry, "mean_per_measure", rational_json(rhythm_mean(report, first, measures))) &&
+              append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The mean of changes over measures measures, or null when the piece has none of them. */
+static cJSON *window_mean_json(size_t changes, size_t measures) {
+    return measures > 0 ? rational_json(rational_make((long long)changes, measures)) : cJSON_CreateNull();
+}
+
+/* One entry per cadence, in the cadences' order: its arrival measure, the mean changes per measure over the two
+   measures before the arrival (approach) and over the two before those (before), and whether the approach is faster.
+   A window the start of the piece clips to nothing has a null mean, and then accelerates is false. */
+static cJSON *cadence_approaches_json(const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t c = 0; list && c < report->cadence_approach_count; c++) {
+        const AnalysisCadenceApproach *approach = &report->cadence_approaches[c];
+        bool accelerates = approach->before_measures > 0 && approach->approach_measures > 0 &&
+                           approach->approach_changes * approach->before_measures >
+                               approach->before_changes * approach->approach_measures;
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "cadence", cJSON_CreateNumber((double)approach->cadence)) &&
+              add(entry, "arrival_measure", cJSON_CreateNumber(approach->arrival_measure)) &&
+              add(entry, "before", window_mean_json(approach->before_changes, approach->before_measures)) &&
+              add(entry, "approach", window_mean_json(approach->approach_changes, approach->approach_measures)) &&
+              add(entry, "accelerates", cJSON_CreateBool(accelerates)) && append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The harmonic rhythm: the changes of harmony in each measure (a chord segment whose base numeral or key region
+   differs from the one before), their mean over the piece, the mean per window of four measures, from the first, and
+   how the rhythm moves into each cadence (cadence_approaches). Null when the piece has no chords the meter can place. */
+static cJSON *harmonic_rhythm_json(const AnalysisReport *report) {
+    if (report->harmonic_rhythm_count == 0) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "per_measure", rhythm_per_measure_json(report)) &&
+          add(object, "mean_per_measure", rational_json(rhythm_mean(report, 0, report->harmonic_rhythm_count))) &&
+          add(object, "per_window", rhythm_per_window_json(report)) &&
+          add(object, "cadence_approaches", cadence_approaches_json(report)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* ---- Outer voices ---- */
 
 /* The note's own timing, apart from the chord segment it sounds in: where it is attacked, as a time and a
@@ -1749,7 +1937,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
-          add(document, "progressions", cJSON_CreateArray()) && add(document, "harmonic_rhythm", cJSON_CreateNull()) &&
+          add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);

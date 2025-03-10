@@ -995,6 +995,137 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
     return ok && sb_append(sb, "\n") && render_cadence_plan(sb, document, cadences);
 }
 
+#define PROGRESSION_TABLE_ROWS 10
+
+/* The measure a chord of the document's chords starts in, or -1 when the index or its location is missing. */
+static int chord_start_measure(const cJSON *document, const cJSON *index) {
+    if (!cJSON_IsNumber(index)) {
+        return -1;
+    }
+    const cJSON *chord = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "chords"),
+                                            (int)index->valuedouble);
+    const cJSON *start = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "location"),
+                                                          "start");
+    return cJSON_IsObject(start) ? (int)number_member(start, "measure") : -1;
+}
+
+/* "m. 3" or "mm. 3 to 4" for the measures an occurrence's first and last chord start in. */
+static bool append_occurrence_measures(StringBuilder *sb, const cJSON *document, const cJSON *occurrence) {
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(occurrence, "chords");
+    int first = chord_start_measure(document, cJSON_GetArrayItem(chords, 0));
+    int last = chord_start_measure(document, cJSON_GetArrayItem(chords, cJSON_GetArraySize(chords) - 1));
+    if (first < 0 || last < 0) {
+        return sb_append(sb, "unknown position");
+    }
+    return first == last ? sb_appendf(sb, "m. %d", first) : sb_appendf(sb, "mm. %d to %d", first, last);
+}
+
+/* The progressions in the document's order, which is their rank: how often, then how long, then how early. Read from
+   the document's progressions, so the table is the array itself, cut to its first rows. */
+static bool render_progression_patterns(StringBuilder *sb, const cJSON *document, const cJSON *progressions) {
+    int total = cJSON_GetArraySize(progressions);
+    bool ok = sb_append(sb, "## Progression patterns\n\n") &&
+              sb_appendf(sb,
+                         "%d recurring %s of two to six chords, counted over the library's Roman numerals: a held "
+                         "chord counts once, and a progression does not cross an unlabelled chord or a change of "
+                         "key. Ranked by count, then length, then first occurrence%s. Measures are where each "
+                         "occurrence begins and ends.\n\n",
+                         total, total == 1 ? "progression" : "progressions",
+                         total > PROGRESSION_TABLE_ROWS ? "; the top 10 are shown" : "") &&
+              sb_append(sb, "| Rank | Progression | Count | Measures |\n| --- | --- | --- | --- |\n");
+    int rank = 1;
+    const cJSON *progression;
+    cJSON_ArrayForEach(progression, progressions) {
+        if (!ok || rank > PROGRESSION_TABLE_ROWS) {
+            break;
+        }
+        ok = sb_appendf(sb, "| %d | %s | %d | ", rank++, string_member(progression, "label"),
+                        (int)number_member(progression, "count"));
+        const cJSON *occurrence;
+        cJSON_ArrayForEach(occurrence, cJSON_GetObjectItemCaseSensitive(progression, "occurrences")) {
+            ok = ok && sb_append(sb, occurrence == cJSON_GetObjectItemCaseSensitive(progression, "occurrences")->child
+                                         ? ""
+                                         : ", ") &&
+                 append_occurrence_measures(sb, document, occurrence);
+        }
+        ok = ok && sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* "1.25" for a rational, to at most two places. */
+static bool append_mean(StringBuilder *sb, const cJSON *object, const char *key) {
+    char text[32];
+    format_number(rational_member(object, key), text, sizeof(text));
+    return sb_append(sb, text);
+}
+
+static bool section_is_empty(const cJSON *section);
+
+/* The mean cell of a cadence approach: a rational, or "none" when the start of the piece clips the window away. */
+static bool append_window_mean(StringBuilder *sb, const cJSON *approach, const char *key) {
+    return cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(approach, key)) ? append_mean(sb, approach, key)
+                                                                           : sb_append(sb, "none");
+}
+
+/* How the harmonic rhythm moves into each cadence: the mean changes per measure over the two measures before the
+   arrival against the two before those. Arrival is where the cadence arrives, as in the cadence plan. */
+static bool render_cadence_approaches(StringBuilder *sb, const cJSON *approaches) {
+    bool ok = sb_append(sb, "### Approach to cadences\n\n") &&
+              sb_append(sb, "Changes per measure over the two measures before each cadence's arrival (Approach), "
+                            "against the two measures before those (Before). Faster is yes when the approach "
+                            "changes harmony more often.\n\n") &&
+              sb_append(sb, "| Cadence | Arrival | Before | Approach | Faster |\n| --- | --- | --- | --- | --- |\n");
+    const cJSON *approach;
+    cJSON_ArrayForEach(approach, approaches) {
+        if (!ok) {
+            break;
+        }
+        ok = sb_appendf(sb, "| %d | m. %d | ", (int)number_member(approach, "cadence") + 1,
+                        (int)number_member(approach, "arrival_measure")) &&
+             append_window_mean(sb, approach, "before") && sb_append(sb, " | ") &&
+             append_window_mean(sb, approach, "approach") &&
+             sb_appendf(sb, " | %s |\n",
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(approach, "accelerates")) ? "yes" : "no");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* The harmonic rhythm: the changes of harmony per measure, four measures to a row with the mean of the row, the
+   mean over the piece, and the approach to each cadence. Read from the document's harmonic_rhythm. */
+static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, const cJSON *rhythm) {
+    (void)document;
+    const cJSON *per_measure = cJSON_GetObjectItemCaseSensitive(rhythm, "per_measure");
+    const cJSON *windows = cJSON_GetObjectItemCaseSensitive(rhythm, "per_window");
+    bool ok = sb_append(sb, "## Harmonic rhythm\n\n") &&
+              sb_append(sb, "How often the harmony changes. A change is a chord whose base Roman numeral or key "
+                            "differs from the chord before it, counted in the measure it starts in. Changes lists the "
+                            "measures of each row in order; Mean is changes per measure over the row.\n\n") &&
+              sb_append(sb, "| Measures | Changes | Mean |\n| --- | --- | --- |\n");
+    const cJSON *window;
+    cJSON_ArrayForEach(window, windows) {
+        if (!ok) {
+            break;
+        }
+        int first = (int)number_member(window, "first_measure");
+        int last = (int)number_member(window, "last_measure");
+        ok = (first == last ? sb_appendf(sb, "| m. %d | ", first) : sb_appendf(sb, "| mm. %d to %d | ", first, last));
+        const cJSON *measure;
+        cJSON_ArrayForEach(measure, per_measure) {
+            int number = (int)number_member(measure, "measure");
+            if (ok && number >= first && number <= last) {
+                ok = sb_appendf(sb, "%s%d", number == first ? "" : ", ", (int)number_member(measure, "changes"));
+            }
+        }
+        ok = ok && sb_append(sb, " | ") && append_mean(sb, window, "mean_per_measure") && sb_append(sb, " |\n");
+    }
+    ok = ok && sb_append(sb, "\n**Mean:** ") && append_mean(sb, rhythm, "mean_per_measure") &&
+         sb_appendf(sb, " changes per measure over %d %s.\n\n", cJSON_GetArraySize(per_measure),
+                    cJSON_GetArraySize(per_measure) == 1 ? "measure" : "measures");
+    const cJSON *approaches = cJSON_GetObjectItemCaseSensitive(rhythm, "cadence_approaches");
+    return ok && (section_is_empty(approaches) || render_cadence_approaches(sb, approaches));
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -1015,6 +1146,8 @@ static const struct {
     {"prolongations", render_prolongations},
     {"non_chord_tones", render_non_chord_tones},
     {"cadences", render_cadences},
+    {"progressions", render_progression_patterns},
+    {"harmonic_rhythm", render_harmonic_rhythm},
 };
 
 static bool section_is_empty(const cJSON *section) {
