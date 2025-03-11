@@ -13,6 +13,7 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#define strcasecmp _stricmp
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -22,6 +23,7 @@ typedef SOCKET socket_t;
 #else
 #include <arpa/inet.h>
 #include <dirent.h>
+#include <strings.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -538,6 +540,215 @@ static void check_playback(const char *id, const char *label) {
   free(detail_response);
 }
 
+/* PATCHes a piece with a JSON body; returns the whole response. */
+static char *patch_piece(const char *id, const char *body) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
+  return http_exchange("PATCH", path, "Content-Type: application/json\r\n", body, strlen(body));
+}
+
+/* The parsed body of GET path (caller deletes). */
+static cJSON *get_json(const char *path) {
+  char *response = http_get(path);
+  cJSON *json = response ? cJSON_Parse(response_body(response)) : NULL;
+  free(response);
+  return json;
+}
+
+static const cJSON *piece_in_list(const cJSON *list, const char *id) {
+  const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(list, "pieces");
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, pieces) {
+    const cJSON *entry_id = cJSON_GetObjectItemCaseSensitive(entry, "id");
+    if (cJSON_IsString(entry_id) && strcmp(entry_id->valuestring, id) == 0) {
+      return entry;
+    }
+  }
+  return NULL;
+}
+
+static int list_size(const cJSON *list) {
+  return cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(list, "pieces"));
+}
+
+/* True when the entry's string member equals value. */
+static bool entry_string_is(const cJSON *entry, const char *key, const char *value) {
+  const cJSON *item = entry ? cJSON_GetObjectItemCaseSensitive(entry, key) : NULL;
+  return cJSON_IsString(item) && strcmp(item->valuestring, value) == 0;
+}
+
+/* True when the entry's tags are exactly the given ones, in order. */
+static bool entry_tags_are(const cJSON *entry, const char *const *tags, int count) {
+  const cJSON *array = entry ? cJSON_GetObjectItemCaseSensitive(entry, "tags") : NULL;
+  if (!cJSON_IsArray(array) || cJSON_GetArraySize(array) != count) {
+    return false;
+  }
+  for (int i = 0; i < count; i++) {
+    const cJSON *tag = cJSON_GetArrayItem(array, i);
+    if (!cJSON_IsString(tag) || strcmp(tag->valuestring, tags[i]) != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/* The count of the group with this value (case-insensitive) in groups[key], -1 when absent. */
+static int group_count(const cJSON *groups, const char *key, const char *value) {
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(groups, key)) {
+    const cJSON *entry_value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    if (cJSON_IsString(entry_value) && strcasecmp(entry_value->valuestring, value) == 0) {
+      return (int)cJSON_GetObjectItemCaseSensitive(entry, "count")->valuedouble;
+    }
+  }
+  return -1;
+}
+
+static bool group_shows(const cJSON *groups, const char *key, const char *value) {
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(groups, key)) {
+    if (entry_string_is(entry, "value", value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/* Composer, source and tags on pieces: edit, normalize, list, filter, group. a, b and c get a
+ * composer; plain is never patched and stands for a piece from before the metadata existed. */
+static void check_metadata(const char *a, const char *b, const char *c, const char *plain) {
+  char *response = patch_piece(a, "{\"composer\":\"John  Field \"}");
+  cJSON *answer = cJSON_Parse(response_body(response));
+  check(response_has_status(response, 200) && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "ok")) &&
+            entry_string_is(cJSON_GetObjectItemCaseSensitive(answer, "piece"), "composer", "John Field"),
+        "PATCH composer \"John  Field \" answers the piece with \"John Field\"");
+  cJSON_Delete(answer);
+  free(response);
+  cJSON *list = get_json("/api/analyzer/pieces");
+  check(entry_string_is(piece_in_list(list, a), "composer", "John Field"), "the list reads the composer back normalized");
+  check(entry_string_is(piece_in_list(list, a), "filename", "Mozart 545.mid"), "setting the composer keeps the filename");
+  int total = list_size(list);
+  cJSON_Delete(list);
+
+  free(patch_piece(b, "{\"composer\":\"john field\"}"));
+  free(patch_piece(c, "{\"composer\":\"John Field\",\"source\":\"Nocturnes\"}"));
+
+  /* Tags: replace, then add and remove. */
+  response = patch_piece(a, "{\"tags\":[\"Whimsical\",\" Slow \"]}");
+  answer = cJSON_Parse(response_body(response));
+  const char *replaced[] = {"whimsical", "slow"};
+  check(entry_tags_are(cJSON_GetObjectItemCaseSensitive(answer, "piece"), replaced, 2), "tags replace all and are lowercased");
+  cJSON_Delete(answer);
+  free(response);
+  free(patch_piece(b, "{\"add_tags\":[\"slow\"]}"));
+
+  list = get_json("/api/analyzer/pieces?tag=SLOW");
+  check(list_size(list) == 2 && piece_in_list(list, a) && piece_in_list(list, b), "filter by tag matches case-insensitively");
+  cJSON_Delete(list);
+  list = get_json("/api/analyzer/pieces?composer=JOHN%20FIELD");
+  check(list_size(list) == 3 && piece_in_list(list, a) && piece_in_list(list, b) && piece_in_list(list, c),
+        "filter by composer matches case-insensitively");
+  cJSON_Delete(list);
+  list = get_json("/api/analyzer/pieces?composer=john%20field&tag=whimsical");
+  check(list_size(list) == 1 && piece_in_list(list, a), "composer and tag filters combine");
+  cJSON_Delete(list);
+  list = get_json("/api/analyzer/pieces?composer=John%20Field&source=nocturnes");
+  check(list_size(list) == 1 && piece_in_list(list, c), "composer and source filters combine");
+  cJSON_Delete(list);
+
+  response = patch_piece(a, "{\"add_tags\":[\"romantic\",\"SLOW\"],\"remove_tags\":[\"Whimsical\",\"never-had-it\"]}");
+  answer = cJSON_Parse(response_body(response));
+  const char *edited[] = {"slow", "romantic"};
+  check(entry_tags_are(cJSON_GetObjectItemCaseSensitive(answer, "piece"), edited, 2),
+        "add_tags skips a duplicate, remove_tags drops one and ignores an absent one");
+  cJSON_Delete(answer);
+  free(response);
+
+  /* A quote and a backslash in a value round-trip. */
+  free(patch_piece(c, "{\"source\":\"The \\\"Nocturnes\\\" \\\\ No. 1\"}"));
+  list = get_json("/api/analyzer/pieces");
+  check(entry_string_is(piece_in_list(list, c), "source", "The \"Nocturnes\" \\ No. 1"), "a quote and a backslash round-trip");
+  cJSON_Delete(list);
+
+  /* Invalid metadata is 400 and writes nothing. */
+  response = patch_piece(a, "{\"composer\":\"Changed\",\"add_tags\":[\"a,b\"]}");
+  check(response_has_status(response, 400) && strstr(response_body(response), "\"ok\":false") &&
+            strstr(response_body(response), "invalid tag"),
+        "a tag with a comma is 400 \"invalid tag\"");
+  free(response);
+  char long_composer[200];
+  strcpy(long_composer, "{\"composer\":\"");
+  memset(long_composer + strlen(long_composer), 'x', 121);
+  strcpy(long_composer + strlen(long_composer) + 0, "\"}");
+  response = patch_piece(a, long_composer);
+  check(response_has_status(response, 400) && strstr(response_body(response), "composer is too long"),
+        "a composer over 120 bytes is 400 \"composer is too long\"");
+  free(response);
+  char many[1024] = "{\"tags\":[";
+  for (int i = 0; i < 33; i++) {
+    char tag[24];
+    snprintf(tag, sizeof(tag), "%s\"t%d\"", i ? "," : "", i);
+    strcat(many, tag);
+  }
+  strcat(many, "]}");
+  response = patch_piece(a, many);
+  check(response_has_status(response, 400) && strstr(response_body(response), "too many tags"), "33 tags is 400 \"too many tags\"");
+  free(response);
+  list = get_json("/api/analyzer/pieces");
+  const cJSON *entry = piece_in_list(list, a);
+  check(entry_string_is(entry, "composer", "John Field") && entry_tags_are(entry, edited, 2),
+        "a rejected PATCH changes nothing");
+  cJSON_Delete(list);
+
+  response = patch_piece(a, "{}");
+  check(strstr(response_body(response), "\"ok\":false") && strstr(response_body(response), "nothing to update"),
+        "an empty body says \"nothing to update\"");
+  free(response);
+  response = patch_piece(a, "{\"unknown\":\"member\"}");
+  check(strstr(response_body(response), "nothing to update"), "unknown members are ignored");
+  free(response);
+  response = patch_piece("no-such-piece", "{\"composer\":\"X\"}");
+  check(response_has_status(response, 404), "PATCH of an unknown piece is 404");
+  free(response);
+
+  /* Pieces from before the metadata existed list as unassigned. */
+  list = get_json("/api/analyzer/pieces");
+  entry = piece_in_list(list, plain);
+  const char *none[1] = {NULL};
+  check(entry_string_is(entry, "composer", "") && entry_string_is(entry, "source", "") && entry_tags_are(entry, none, 0),
+        "a piece without the new members lists as unassigned and untagged");
+  cJSON_Delete(list);
+  list = get_json("/api/analyzer/pieces?unassigned=composer");
+  check(piece_in_list(list, plain) && !piece_in_list(list, a) && !piece_in_list(list, b), "unassigned=composer lists the pieces with no composer");
+  cJSON_Delete(list);
+  list = get_json("/api/analyzer/pieces?unassigned=composer&unassigned=source&untagged=1");
+  check(piece_in_list(list, plain) && !piece_in_list(list, c), "unassigned may repeat and combines with untagged=1");
+  cJSON_Delete(list);
+  list = get_json("/api/analyzer/pieces?untagged=1");
+  check(piece_in_list(list, plain) && !piece_in_list(list, a) && !piece_in_list(list, b) && piece_in_list(list, c),
+        "untagged=1 lists the pieces with no tags");
+  cJSON_Delete(list);
+
+  /* Groups. */
+  cJSON *groups = get_json("/api/analyzer/groups");
+  check(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(groups, "ok")), "GET groups answers ok");
+  check(group_count(groups, "composers", "john field") == 3 && group_shows(groups, "composers", "John Field") &&
+            !group_shows(groups, "composers", "john field"),
+        "groups count a composer case-insensitively and show the most used spelling");
+  check(group_count(groups, "sources", "the \"nocturnes\" \\ no. 1") == 1, "groups list the sources");
+  check(group_count(groups, "tags", "slow") == 2 && group_count(groups, "tags", "romantic") == 1, "groups list the tags with counts");
+  const cJSON *unassigned = cJSON_GetObjectItemCaseSensitive(groups, "unassigned");
+  const cJSON *total_item = cJSON_GetObjectItemCaseSensitive(groups, "total");
+  check(cJSON_IsNumber(total_item) && (int)total_item->valuedouble == total, "groups total counts every piece");
+  check((int)cJSON_GetObjectItemCaseSensitive(unassigned, "composer")->valuedouble == total - 3,
+        "groups count the pieces without a composer");
+  check((int)cJSON_GetObjectItemCaseSensitive(groups, "untagged")->valuedouble == total - 2, "groups count the untagged pieces");
+  cJSON_Delete(groups);
+  response = http_exchange("DELETE", "/api/analyzer/groups", NULL, NULL, 0);
+  check(response_has_status(response, 405), "groups only answers GET");
+  free(response);
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -771,6 +982,10 @@ int main(void) {
   response = http_exchange("POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0);
   check(response_has_status(response, 404), "reanalyze of an unknown id gives 404");
   free(response);
+
+  if (mozart_id && bach_id && no_meter_id && score_id) {
+    check_metadata(mozart_id, bach_id, no_meter_id, score_id);
+  }
 
   /* Rename. */
   if (mozart_id) {
