@@ -19,7 +19,8 @@
  *   source.mid | source.musicxml | source.xml | source.mxl   the upload, unchanged
  *   analysis.json                                            the Analyzer's document
  *   meta.json                                                filename, format, uploaded_at,
- *                                                            analyzer_version, document_schema_version
+ *                                                            analyzer_version, document_schema_version,
+ *                                                            composer, source, tags (R-103; absent = unset)
  * pieces_dir is created if it does not already exist.
  */
 
@@ -29,7 +30,8 @@ typedef enum {
     URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED,
     URSATZ_GUI_ANALYSIS_ERR_ALLOC,
     URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND,
-    URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT
+    URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT,
+    URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA
 } UrsatzGuiAnalysisResult;
 
 typedef struct {
@@ -48,6 +50,10 @@ typedef struct {
     char *filename;
     char *format;
     char *uploaded_at;
+    char *composer;    /* "" when unset */
+    char *source;      /* "" when unset */
+    char **tags;       /* tag_count normalized tags in insertion order; NULL when none */
+    size_t tag_count;
 } UrsatzGuiPieceSummary;
 
 /*
@@ -98,8 +104,41 @@ void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail);
 UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
 
 /*
+ * Changes a piece's metadata in its meta.json, written once. The source and
+ * the analysis are untouched. NULL string fields are left unchanged.
+ *
+ *   filename            display name, stored as given (the caller rejects an empty one)
+ *   composer, source    normalized (ursatz_gui_meta_normalize_value); "" clears
+ *   has_tags, tags      replace all tags (each normalized with ursatz_gui_meta_normalize_tag)
+ *   add_tags            then added (a duplicate is skipped)
+ *   remove_tags         then removed (absent is not an error)
+ *
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA if a value is too long, a tag is
+ * invalid or the piece would hold more than 32 tags; nothing is written and
+ * message (may be NULL) receives "composer is too long", "source is too
+ * long", "invalid tag" or "too many tags".
+ */
+typedef struct {
+    const char *filename;
+    const char *composer;
+    const char *source;
+    bool has_tags;
+    const char *const *tags;
+    size_t tag_count;
+    const char *const *add_tags;
+    size_t add_tag_count;
+    const char *const *remove_tags;
+    size_t remove_tag_count;
+} UrsatzGuiMetaUpdate;
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
+                                                             const UrsatzGuiMetaUpdate *update, char *message,
+                                                             size_t message_size);
+
+/*
  * Rewrites the filename in the piece's meta.json (the display name shown in
- * the Library view). The source and the analysis are untouched.
+ * the Library view): ursatz_gui_analysis_update_metadata with only filename.
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. The
  * caller rejects an empty new_filename; this stores whatever it is given.
  */

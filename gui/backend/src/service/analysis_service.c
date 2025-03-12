@@ -1,5 +1,6 @@
 #include "analysis_service.h"
 #include "id_service.h"
+#include "piece_metadata.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -262,11 +263,52 @@ static char *meta_string_copy(const cJSON *meta, const char *key) {
     return dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
 }
 
+/* Copies the string members of meta's "tags" array; *out_tags is NULL when there are none. */
+static bool meta_tags_copy(const cJSON *meta, char ***out_tags, size_t *out_count) {
+    *out_tags = NULL;
+    *out_count = 0;
+    const cJSON *array = cJSON_GetObjectItemCaseSensitive(meta, "tags");
+    if (!cJSON_IsArray(array)) {
+        return true;
+    }
+    int size = cJSON_GetArraySize(array);
+    if (size <= 0) {
+        return true;
+    }
+    char **tags = calloc((size_t)size, sizeof(char *));
+    if (!tags) {
+        return false;
+    }
+    size_t count = 0;
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, array) {
+        if (!cJSON_IsString(item) || !item->valuestring) {
+            continue;
+        }
+        tags[count] = dup_string(item->valuestring);
+        if (!tags[count]) {
+            ursatz_gui_meta_tags_free(tags, count);
+            return false;
+        }
+        count++;
+    }
+    if (count == 0) {
+        free(tags);
+        return true;
+    }
+    *out_tags = tags;
+    *out_count = count;
+    return true;
+}
+
 static void piece_summary_destroy_contents(UrsatzGuiPieceSummary *piece) {
     free(piece->id);
     free(piece->filename);
     free(piece->format);
     free(piece->uploaded_at);
+    free(piece->composer);
+    free(piece->source);
+    ursatz_gui_meta_tags_free(piece->tags, piece->tag_count);
 }
 
 static bool has_extension(const char *filename, const char *extension) {
@@ -550,8 +592,12 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
         piece->filename = meta_string_copy(meta, "filename");
         piece->format = meta_string_copy(meta, "format");
         piece->uploaded_at = meta_string_copy(meta, "uploaded_at");
+        piece->composer = meta_string_copy(meta, "composer");
+        piece->source = meta_string_copy(meta, "source");
+        bool tags_ok = meta_tags_copy(meta, &piece->tags, &piece->tag_count);
         cJSON_Delete(meta);
-        if (!piece->id || !piece->filename || !piece->format || !piece->uploaded_at) {
+        if (!piece->id || !piece->filename || !piece->format || !piece->uploaded_at || !piece->composer ||
+            !piece->source || !tags_ok) {
             piece_summary_destroy_contents(piece);
             failed = true;
             break;
@@ -712,33 +758,6 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir,
     return path_is_dir(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_OK;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
-                                                          const char *new_filename) {
-    char dir_path[320];
-    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
-        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
-    }
-    cJSON *meta = read_meta_file(dir_path);
-    if (!meta) {
-        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
-    }
-    cJSON_DeleteItemFromObjectCaseSensitive(meta, "filename");
-    if (!cJSON_AddStringToObject(meta, "filename", new_filename)) {
-        cJSON_Delete(meta);
-        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
-    }
-    char *text = cJSON_Print(meta);
-    cJSON_Delete(meta);
-    if (!text) {
-        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
-    }
-    char meta_path[400];
-    snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    bool ok = write_file_atomic(meta_path, text, strlen(text));
-    free(text);
-    return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
-}
-
 /* Sets a string member of meta in place (keeping its position), adding it
    when absent. */
 static bool meta_set_string(cJSON *meta, const char *key, const char *value) {
@@ -763,6 +782,149 @@ static bool meta_set_number(cJSON *meta, const char *key, double value) {
     }
     cJSON_AddItemToObject(meta, key, item);
     return true;
+}
+
+static void set_message(char *message, size_t message_size, const char *text) {
+    if (message && message_size > 0) {
+        snprintf(message, message_size, "%s", text);
+    }
+}
+
+/* Replaces meta's "tags" member with an array of the given strings. */
+static bool meta_set_tags(cJSON *meta, char *const *tags, size_t count) {
+    cJSON *array = cJSON_CreateArray();
+    if (!array) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        cJSON *item = cJSON_CreateString(tags[i]);
+        if (!item) {
+            cJSON_Delete(array);
+            return false;
+        }
+        cJSON_AddItemToArray(array, item);
+    }
+    if (cJSON_ReplaceItemInObjectCaseSensitive(meta, "tags", array)) {
+        return true;
+    }
+    cJSON_AddItemToObject(meta, "tags", array);
+    return true;
+}
+
+/* Normalizes composer or source and stores it in meta. */
+static UrsatzGuiAnalysisResult meta_apply_value(cJSON *meta, const char *key, const char *text, char *message,
+                                                size_t message_size) {
+    bool too_long = false;
+    char *value = ursatz_gui_meta_normalize_value(text, &too_long);
+    if (!value) {
+        if (too_long) {
+            char reason[48];
+            snprintf(reason, sizeof(reason), "%s is too long", key);
+            set_message(message, message_size, reason);
+            return URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
+        }
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    bool ok = meta_set_string(meta, key, value);
+    free(value);
+    return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+}
+
+/* Normalizes each of the given tags and adds it to (or removes it from) the list. */
+static UrsatzGuiAnalysisResult tags_apply(char ***tags, size_t *count, const char *const *items, size_t item_count,
+                                          bool remove, char *message, size_t message_size) {
+    for (size_t i = 0; i < item_count; i++) {
+        bool invalid = false;
+        char *tag = ursatz_gui_meta_normalize_tag(items[i], &invalid);
+        if (!tag) {
+            if (invalid) {
+                set_message(message, message_size, "invalid tag");
+                return URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
+            }
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+        UrsatzGuiMetaResult result =
+            remove ? ursatz_gui_meta_tags_remove(tags, count, tag) : ursatz_gui_meta_tags_add(tags, count, tag);
+        free(tag);
+        if (result == URSATZ_GUI_META_ERR_TOO_MANY_TAGS) {
+            set_message(message, message_size, "too many tags");
+            return URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
+        }
+        if (result != URSATZ_GUI_META_OK) {
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+    }
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
+                                                             const UrsatzGuiMetaUpdate *update, char *message,
+                                                             size_t message_size) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
+    UrsatzGuiAnalysisResult result = URSATZ_GUI_ANALYSIS_OK;
+    if (update->filename && !meta_set_string(meta, "filename", update->filename)) {
+        result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    if (result == URSATZ_GUI_ANALYSIS_OK && update->composer) {
+        result = meta_apply_value(meta, "composer", update->composer, message, message_size);
+    }
+    if (result == URSATZ_GUI_ANALYSIS_OK && update->source) {
+        result = meta_apply_value(meta, "source", update->source, message, message_size);
+    }
+
+    bool tags_changed = update->has_tags || update->add_tag_count > 0 || update->remove_tag_count > 0;
+    if (result == URSATZ_GUI_ANALYSIS_OK && tags_changed) {
+        char **tags = NULL;
+        size_t tag_count = 0;
+        if (!update->has_tags && !meta_tags_copy(meta, &tags, &tag_count)) {
+            result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+        if (result == URSATZ_GUI_ANALYSIS_OK && update->has_tags) {
+            result = tags_apply(&tags, &tag_count, update->tags, update->tag_count, false, message, message_size);
+        }
+        if (result == URSATZ_GUI_ANALYSIS_OK) {
+            result = tags_apply(&tags, &tag_count, update->add_tags, update->add_tag_count, false, message,
+                                message_size);
+        }
+        if (result == URSATZ_GUI_ANALYSIS_OK) {
+            result = tags_apply(&tags, &tag_count, update->remove_tags, update->remove_tag_count, true, message,
+                                message_size);
+        }
+        if (result == URSATZ_GUI_ANALYSIS_OK && !meta_set_tags(meta, tags, tag_count)) {
+            result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+        ursatz_gui_meta_tags_free(tags, tag_count);
+    }
+    if (result != URSATZ_GUI_ANALYSIS_OK) {
+        cJSON_Delete(meta);
+        return result;
+    }
+
+    char *text = cJSON_Print(meta);
+    cJSON_Delete(meta);
+    if (!text) {
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    char meta_path[400];
+    snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
+    bool ok = write_file_atomic(meta_path, text, strlen(text));
+    free(text);
+    return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
+                                                          const char *new_filename) {
+    UrsatzGuiMetaUpdate update = {0};
+    update.filename = new_filename;
+    return ursatz_gui_analysis_update_metadata(pieces_dir, id, &update, NULL, 0);
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id) {

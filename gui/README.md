@@ -396,7 +396,17 @@ most 8 tries.
   `.xml` or `.mxl` upload keeps its extension (`source.xml`, `source.mxl`).
 - `analysis.json`: the Analyzer's analysis document (schema v9).
 - `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
-  (ISO 8601 UTC), "analyzer_version", "document_schema_version"}`.
+  (ISO 8601 UTC), "analyzer_version", "document_schema_version"}` plus the
+  optional `"composer"` and `"source"` (strings) and `"tags"` (array of
+  strings). A member that is absent reads as `""` or no tags, so pieces
+  stored before the metadata existed list as unassigned.
+
+Metadata rules (`service/piece_metadata.c`): composer and source are trimmed,
+runs of whitespace become one space and control characters are dropped; `""`
+means unset; at most 120 bytes. A tag gets the same treatment, is lowercased
+(ASCII), must not be empty, longer than 48 bytes or contain a comma, and a
+piece holds at most 32 tags in insertion order. Values and tags are compared
+case-insensitively.
 
 Every file is written to `<name>.tmp` and renamed, and a failed analysis
 removes the directory. Re-running the analysis rewrites `analysis.json` and
@@ -414,16 +424,32 @@ not listed and cannot be opened, so upload those files again.
   Analyzer cannot import or analyze gives `422` with
   `{"error": "import failed"}`; nothing is stored in either case.
 - `GET /api/analyzer/pieces`: the stored pieces, newest upload first, then by
-  id: `{"ok":true,"pieces":[{"id","filename","format","uploaded_at"}]}`.
+  id: `{"ok":true,"pieces":[{"id","filename","format","uploaded_at","composer","source","tags":[...]}]}`.
+  Optional query parameters filter the list, all given ones must match:
+  `composer`, `source` and `tag` (case-insensitive, URL-decoded),
+  `unassigned=composer` and `unassigned=source` (may appear twice) for pieces
+  with no composer or source, and `untagged=1` for pieces without tags.
+- `GET /api/analyzer/groups`: the Tags panel's data:
+  `{"ok":true,"composers":[{"value","count"}],"sources":[...],"tags":[...],"unassigned":{"composer":n,"source":n},"untagged":n,"total":n}`.
+  Values are distinct case-insensitively and sorted by count, then value; the
+  shown spelling of a composer or source is the one most pieces use (ties by
+  byte order). A tag repeated within one piece counts once.
 - `GET /api/analyzer/pieces/<id>`:
   `{"ok":true,"id","filename","format","uploaded_at","note_xml_ids":[...],"document":{...}}`.
   `document` is the analysis document as stored. `note_xml_ids[i]` is the
   `<note xml:id>` the score export writes for note `i` of the source; a
   claim's `note_ids` are indices into this array. An unknown id returns
   `{"ok":false,"message":"piece not found"}`.
-- `PATCH /api/analyzer/pieces/<id>`: body `{"filename":"<name>"}`. Rewrites the
-  filename in `meta.json`. Returns `{"ok":true,"id":...,"filename":...}`,
-  `404` for an unknown id, or `{"ok":false,...}` for an empty filename.
+- `PATCH /api/analyzer/pieces/<id>`: a JSON object with any of `filename`
+  (non-empty string), `composer`, `source` (strings; `""` clears), `tags`
+  (array of strings, replaces all), `add_tags` and `remove_tags` (arrays of
+  strings, applied after `tags`). Unknown members are ignored. `meta.json` is
+  written once. Returns `{"ok":true,"piece":{...the list entry...}}`, `404`
+  for an unknown id, `400` with `{"ok":false,"message":"<reason>"}` for
+  invalid metadata (`"composer is too long"`, `"source is too long"`,
+  `"invalid tag"`, `"too many tags"`) and nothing written, and
+  `{"ok":false,"message":"nothing to update"}` when none of the members is
+  given.
 - `POST /api/analyzer/pieces/<id>/reanalyze`: runs the Analyzer again on the
   stored source. Returns `{"ok":true,"id":...}`, `404` for an unknown id, or
   `422` with `{"error": "import failed"}` when the source no longer imports.
@@ -687,7 +713,7 @@ it.
 
 ## Tests
 
-`ctest` runs the backend tests (health, analyzer, corpus, composer and id routes) and,
+`ctest` runs the backend tests (health, analyzer, corpus, composer and id routes, and the piece metadata rules) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be
@@ -700,7 +726,9 @@ request bodies against `frontend/tests/fixtures/composer-plan.json`, the
 `plan.json` the Composer CLI wrote for a rounded binary form with seed 3.
 `test_analyzer_route` uploads Mozart 545 and a MusicXML score, compares the
 stored analysis with the Analyzer CLI's document for the same file, and
-covers list, detail, rename, re-run and delete. `test_composer_route` runs
+covers list, detail, metadata editing, filtering and groups, rename,
+re-run and delete. `test_piece_metadata` covers the normalizing, grouping and
+filter rules without a server. `test_composer_route` runs
 the real Composer: grow, regenerate, lock, variations, choose and plan make
 versions and leave the earlier ones alone; bad requests start nothing and a
 fake Composer (`URSATZ_GUI_COMPOSER`) that records its arguments or sleeps

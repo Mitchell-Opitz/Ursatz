@@ -2,6 +2,7 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
@@ -34,6 +35,7 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
@@ -76,6 +78,7 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
@@ -104,6 +107,19 @@ endif()
 
 add_test(NAME corpus_route COMMAND test_corpus_route)
 
+add_executable(test_piece_metadata test_piece_metadata.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
+)
+
+target_include_directories(test_piece_metadata PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+# piece_metadata.h includes analysis_service.h, which needs Ursatz's headers.
+target_link_libraries(test_piece_metadata PRIVATE ursatz)
+
+add_test(NAME piece_metadata COMMAND test_piece_metadata)
+
 add_executable(test_id_service test_id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
 )
@@ -118,6 +134,7 @@ add_executable(test_composer_route test_composer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/server.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
