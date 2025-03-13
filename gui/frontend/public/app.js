@@ -175,7 +175,11 @@ async function renderLibraryView() {
       <table id="library-table" class="library-table" hidden>
         <thead>
           <tr>
+            <th class="select-cell"></th>
             <th>Title</th>
+            <th>Composer</th>
+            <th>Source</th>
+            <th>Tags</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -279,7 +283,53 @@ function renderPieceFilenameCell(piece) {
   return span;
 }
 
+/* Text cell for composer or source; an empty value shows a muted dash. */
+function buildMetadataTextCell(value) {
+  const cell = document.createElement("td");
+  if (value) {
+    cell.textContent = value;
+  } else {
+    const dash = document.createElement("span");
+    dash.classList.add("muted-dash");
+    dash.textContent = "—";
+    cell.appendChild(dash);
+  }
+  return cell;
+}
+
+function buildTagChips(tags) {
+  const cell = document.createElement("td");
+  cell.classList.add("tag-cell");
+  for (const tag of tags || []) {
+    const chip = document.createElement("span");
+    chip.classList.add("tag-chip");
+    chip.textContent = tag;
+    cell.appendChild(chip);
+  }
+  return cell;
+}
+
 function buildLibraryRow(piece) {
+  const row = buildLibraryRowBase(piece);
+  const selectCell = document.createElement("td");
+  selectCell.classList.add("select-cell");
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.classList.add("row-select");
+  checkbox.dataset.id = piece.id;
+  checkbox.setAttribute("aria-label", `Select ${piece.filename || piece.id}`);
+  selectCell.appendChild(checkbox);
+  row.insertBefore(selectCell, row.firstChild);
+  const titleCell = row.children[1];
+  titleCell.after(
+    buildMetadataTextCell(piece.composer),
+    buildMetadataTextCell(piece.source),
+    buildTagChips(piece.tags),
+  );
+  return row;
+}
+
+function buildLibraryRowBase(piece) {
   return buildPieceRow(
     piece,
     (row, actionsCell, rowPiece) => {
@@ -309,7 +359,7 @@ function buildLibraryRow(piece) {
 }
 
 function startLibraryRename(row, piece) {
-  const filenameCell = row.querySelector("td");
+  const filenameCell = row.querySelector("td:not(.select-cell)");
   filenameCell.innerHTML = "";
 
   const input = document.createElement("input");
@@ -360,7 +410,7 @@ async function handleLibraryRename(row, piece, newFilename) {
     statusEl.textContent = "";
     statusEl.classList.remove("error");
     piece.filename = data.filename;
-    const filenameCell = row.querySelector("td");
+    const filenameCell = row.querySelector("td:not(.select-cell)");
     filenameCell.innerHTML = "";
     filenameCell.appendChild(renderPieceFilenameCell(piece));
   } catch (err) {
