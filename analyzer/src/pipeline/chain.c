@@ -160,7 +160,9 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !harmony_stage_collect_cadences(&chain->harmony, report) ||
         !harmony_stage_collect_functions(&chain->harmony, report) ||
         !harmony_stage_collect_six_fours_and_prolongations(&chain->harmony, report) ||
-        !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(chain->notes, report)) {
+        !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(chain->notes, report) ||
+        !form_stage_run(&chain->form, chain->notes, &chain->voice_segmentation, segmentation, &chain->lines,
+                        &chain->harmony)) {
         return false;
     }
     sync_key_change_extents(&chain->key_regions, report->key_changes);
@@ -192,6 +194,7 @@ void chain_pass_destroy(AnalysisChain *chain) {
     chain->key_regions = (CommonPracticeKeyRegions){0};
     outer_voice_lines_destroy(&chain->lines);
     chain->lines = (OuterVoiceLines){NULL, NULL, 0};
+    form_stage_destroy(&chain->form);
     harmony_stage_destroy(&chain->harmony);
     analysis_report_destroy(&chain->report);
     memset(&chain->report, 0, sizeof(chain->report));

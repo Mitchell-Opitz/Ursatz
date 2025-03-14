@@ -11,6 +11,8 @@ add_library(ursatz_analyzer STATIC
     pipeline/outer_voice_pipeline.c
     pipeline/roman_numeral_pipeline.c
     pipeline/harmony_pipeline.c
+    pipeline/form_boundary.c
+    pipeline/form_pipeline.c
     pipeline/progression_pipeline.c
     pipeline/harmonic_rhythm_pipeline.c
     pipeline/analysis_report.c
@@ -21,12 +23,16 @@ add_library(ursatz_analyzer STATIC
     pipeline/path_util.c
     pipeline/analysis_document.c
 )
+# standard-form and standard-harmony have headers of the same names (analysis_input.h, analysis_phrase.h), so the
+# analyzer includes the form ones as "standard-form/analysis/...", from the frameworks directory.
+get_target_property(STANDARD_FORM_SOURCE_DIR standard_form SOURCE_DIR)
+get_filename_component(URSATZ_FRAMEWORKS_DIR "${STANDARD_FORM_SOURCE_DIR}/.." ABSOLUTE)
 target_include_directories(ursatz_analyzer
-    PUBLIC ${PROJECT_SOURCE_DIR}/include
+    PUBLIC ${PROJECT_SOURCE_DIR}/include ${URSATZ_FRAMEWORKS_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony
+    PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
     PRIVATE cjson
 )
 target_compile_definitions(ursatz_analyzer PRIVATE

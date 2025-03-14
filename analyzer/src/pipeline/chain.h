@@ -9,6 +9,7 @@
 
 #include "analysis/outer_voice.h"
 #include "pipeline/chord_pipeline.h"
+#include "pipeline/form_pipeline.h"
 #include "pipeline/harmony_pipeline.h"
 #include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/segmentation.h"
@@ -37,6 +38,7 @@ typedef struct AnalysisChain {
     RomanNumerals romans;    /* the Roman numeral inputs and results, one per chord segment */
     OuterVoiceLines lines;   /* one entry per voice segment */
     HarmonyStage harmony;    /* the standard-harmony inputs, prepared segments and cadences, one per chord segment */
+    FormStage form;          /* the standard-form input, phrases, ideas and subphrases */
     AnalysisReport report;   /* the pass's results: entries, non-chord tones, key regions and changes */
 } AnalysisChain;
 
