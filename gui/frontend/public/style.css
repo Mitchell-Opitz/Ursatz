@@ -1612,3 +1612,49 @@ body {
   color: #bff5ec;
   font-size: 0.8rem;
 }
+
+/* Library details editor */
+.editor-row td {
+  background: var(--bg-panel);
+  padding: 0.75rem;
+}
+
+.editor-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text-dim);
+}
+
+.editor-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.tag-input input {
+  flex: 1;
+  min-width: 6rem;
+}
+
+.chip-remove {
+  margin-left: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}

@@ -190,6 +190,7 @@ async function renderLibraryView() {
 
   const onUploaded = async () => {
     await loadLibraryPieces();
+    notifyMetadataChanged();
   };
   wireUploadControl("library-upload", onUploaded);
   wireUploadDrop("library-upload", onUploaded);
@@ -335,7 +336,7 @@ function buildLibraryRowBase(piece) {
     (row, actionsCell, rowPiece) => {
       actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
       actionsCell.appendChild(
-        buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, rowPiece) }),
+        buildActionButton({ icon: "✎", label: "Edit", onClick: () => startLibraryEdit(row, rowPiece) }),
       );
       actionsCell.appendChild(
         buildActionButton({
@@ -358,65 +359,197 @@ function buildLibraryRowBase(piece) {
   );
 }
 
-function startLibraryRename(row, piece) {
-  const filenameCell = row.querySelector("td:not(.select-cell)");
-  filenameCell.innerHTML = "";
+/* Distinct composers, sources and tags with counts (GET
+ * /api/analyzer/groups), cached for the Library's datalists and selects.
+ * Resolves to the cache; a failed fetch keeps the previous one. */
+let libraryGroups = { composers: [], sources: [], tags: [], unassigned: { composer: 0, source: 0 }, untagged: 0, total: 0 };
 
+async function loadLibraryGroups() {
+  const result = await fetchJsonResult("/api/analyzer/groups");
+  if (result.ok && result.data && result.data.ok) {
+    libraryGroups = result.data;
+  }
+  return libraryGroups;
+}
+
+/* Called after any upload, edit, bulk edit or delete in the Library. The
+ * sidebar Tags panel hooks in here. */
+function notifyMetadataChanged() {}
+
+function buildDatalist(id, groupList) {
+  const list = document.createElement("datalist");
+  list.id = id;
+  for (const group of groupList) {
+    const option = document.createElement("option");
+    option.value = group.value;
+    list.appendChild(option);
+  }
+  return list;
+}
+
+/* A text box that turns typed text into removable chips on Enter or comma;
+ * Backspace on an empty box removes the last chip. getTags() also takes
+ * whatever is still typed. */
+function buildTagInput(initialTags) {
+  const el = document.createElement("div");
+  el.classList.add("tag-input");
+  const tags = [];
   const input = document.createElement("input");
   input.type = "text";
-  input.value = piece.filename || "";
-  filenameCell.appendChild(input);
-  input.focus();
+  input.placeholder = "Add tag";
+  input.setAttribute("aria-label", "Tags");
 
+  function render() {
+    for (const chip of el.querySelectorAll(".tag-chip")) {
+      chip.remove();
+    }
+    for (const tag of tags) {
+      const chip = document.createElement("span");
+      chip.classList.add("tag-chip");
+      chip.textContent = tag;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.classList.add("chip-remove");
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", `Remove tag ${tag}`);
+      remove.addEventListener("click", () => {
+        tags.splice(tags.indexOf(tag), 1);
+        render();
+      });
+      chip.appendChild(remove);
+      el.insertBefore(chip, input);
+    }
+  }
+
+  function commit() {
+    for (const tag of PieceMetadata.parseTagInput(input.value)) {
+      if (!tags.includes(tag)) {
+        tags.push(tag);
+      }
+    }
+    input.value = "";
+    render();
+  }
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      commit();
+    } else if (event.key === "Backspace" && input.value === "") {
+      tags.pop();
+      render();
+    }
+  });
+  input.addEventListener("input", () => {
+    if (input.value.includes(",")) {
+      commit();
+    }
+  });
+
+  el.appendChild(input);
+  tags.push(...(initialTags || []));
+  render();
+  return {
+    el,
+    inputEl: input,
+    getTags() {
+      commit();
+      return tags.slice();
+    },
+  };
+}
+
+function buildEditorField(labelText, inputEl) {
+  const label = document.createElement("label");
+  label.classList.add("editor-field");
+  label.append(labelText, inputEl);
+  return label;
+}
+
+/* Replaces a Library row with an editor row for the piece's title,
+ * composer, source and tags. Save sends one PATCH; Cancel or Escape puts
+ * the row back. */
+async function startLibraryEdit(row, piece) {
+  await loadLibraryGroups();
+  const editorRow = document.createElement("tr");
+  editorRow.classList.add("editor-row");
+  const cell = document.createElement("td");
+  cell.colSpan = 6;
+  editorRow.appendChild(cell);
+
+  const title = document.createElement("input");
+  title.type = "text";
+  title.value = piece.filename || "";
+  const composer = document.createElement("input");
+  composer.type = "text";
+  composer.value = piece.composer || "";
+  composer.setAttribute("list", "editor-composers");
+  const source = document.createElement("input");
+  source.type = "text";
+  source.value = piece.source || "";
+  source.setAttribute("list", "editor-sources");
+  const tagInput = buildTagInput(piece.tags);
+
+  const errorEl = document.createElement("div");
+  errorEl.classList.add("piece-list-status", "error");
   const saveButton = document.createElement("button");
   saveButton.type = "button";
   saveButton.textContent = "Save";
-  saveButton.addEventListener("click", () => handleLibraryRename(row, piece, input.value.trim()));
-  filenameCell.appendChild(saveButton);
-
   const cancelButton = document.createElement("button");
   cancelButton.type = "button";
   cancelButton.textContent = "Cancel";
-  cancelButton.addEventListener("click", () => {
-    filenameCell.innerHTML = "";
-    filenameCell.appendChild(renderPieceFilenameCell(piece));
+
+  const fields = document.createElement("div");
+  fields.classList.add("editor-fields");
+  fields.append(
+    buildEditorField("Title", title),
+    buildEditorField("Composer", composer),
+    buildEditorField("Source", source),
+    buildEditorField("Tags", tagInput.el),
+  );
+  const buttons = document.createElement("div");
+  buttons.classList.add("editor-buttons");
+  buttons.append(saveButton, cancelButton);
+  cell.append(
+    buildDatalist("editor-composers", libraryGroups.composers),
+    buildDatalist("editor-sources", libraryGroups.sources),
+    fields,
+    errorEl,
+    buttons,
+  );
+
+  const cancel = () => editorRow.replaceWith(row);
+  cancelButton.addEventListener("click", cancel);
+  editorRow.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cancel();
+    }
   });
-  filenameCell.appendChild(cancelButton);
-}
-
-async function handleLibraryRename(row, piece, newFilename) {
-  const statusEl = document.getElementById("library-status");
-
-  if (!newFilename) {
-    statusEl.textContent = "Enter a filename.";
-    statusEl.classList.add("error");
-    return;
-  }
-
-  try {
-    const res = await fetch(`/api/analyzer/pieces/${piece.id}`, {
+  saveButton.addEventListener("click", async () => {
+    errorEl.textContent = "";
+    const body = {
+      filename: title.value.trim(),
+      composer: composer.value,
+      source: source.value,
+      tags: tagInput.getTags(),
+    };
+    const result = await fetchJsonResult(`/api/analyzer/pieces/${piece.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename: newFilename }),
+      body: JSON.stringify(body),
     });
-    const data = await res.json();
-
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Rename failed.";
-      statusEl.classList.add("error");
+    if (!result.ok || !result.data || !result.data.ok) {
+      errorEl.textContent = (result.data && (result.data.message || result.data.error)) || "Save failed.";
       return;
     }
+    const fresh = buildLibraryRow(result.data.piece);
+    editorRow.replaceWith(fresh);
+    await loadLibraryGroups();
+    notifyMetadataChanged();
+  });
 
-    statusEl.textContent = "";
-    statusEl.classList.remove("error");
-    piece.filename = data.filename;
-    const filenameCell = row.querySelector("td:not(.select-cell)");
-    filenameCell.innerHTML = "";
-    filenameCell.appendChild(renderPieceFilenameCell(piece));
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
-  }
+  row.replaceWith(editorRow);
+  title.focus();
 }
 
 /* Runs the Analyzer again on the piece's stored source
@@ -472,6 +605,7 @@ async function handleDeleteLibraryPiece(id, rowEl) {
     }
 
     rowEl.remove();
+    notifyMetadataChanged();
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
