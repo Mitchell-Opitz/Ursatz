@@ -162,7 +162,8 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !harmony_stage_collect_six_fours_and_prolongations(&chain->harmony, report) ||
         !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(chain->notes, report) ||
         !form_stage_run(&chain->form, chain->notes, &chain->voice_segmentation, segmentation, &chain->lines,
-                        &chain->harmony)) {
+                        &chain->harmony) ||
+        !form_stage_collect_phrases(&chain->form, report)) {
         return false;
     }
     sync_key_change_extents(&chain->key_regions, report->key_changes);

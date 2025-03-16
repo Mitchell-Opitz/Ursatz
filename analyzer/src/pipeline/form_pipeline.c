@@ -154,6 +154,70 @@ long form_stage_phrase_cadence(const FormStage *stage, size_t phrase) {
     return strncmp(id, CADENCE_ID_PREFIX, strlen(CADENCE_ID_PREFIX)) == 0 ? atol(id + strlen(CADENCE_ID_PREFIX)) : -1;
 }
 
+/* a/b < c/d for positive denominators. */
+static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
+    return (long long)a * (long long)d < (long long)c * (long long)b;
+}
+
+static const char *signal_name(int signal) {
+    switch (signal) {
+        case STANDARD_FORM_SIGNAL_CADENCE:
+            return "cadence";
+        case STANDARD_FORM_SIGNAL_DISCONTINUITY:
+            return "discontinuity";
+        default:
+            return "none";
+    }
+}
+
+bool form_stage_collect_phrases(const FormStage *stage, AnalysisReport *report) {
+    size_t count = stage->phrases.count;
+    if (count == 0) {
+        return true;
+    }
+    report->phrases = calloc(count, sizeof(AnalysisPhrase));
+    if (!report->phrases) {
+        return false;
+    }
+    report->phrase_count = count;
+    size_t next_entry = 0;
+    for (size_t i = 0; i < count; i++) {
+        const StandardFormPhrase *found = &stage->phrases.items[i];
+        const StandardFormPhraseClaim *claim = &found->claim;
+        AnalysisPhrase *phrase = &report->phrases[i];
+        const MusicalTime *start = time_span_start(found->span);
+        const MusicalTime *end = time_span_end(found->span);
+        phrase->start_numerator = musical_time_numerator(start);
+        phrase->start_denominator = musical_time_denominator(start);
+        phrase->end_numerator = musical_time_numerator(end);
+        phrase->end_denominator = musical_time_denominator(end);
+        /* The chords starting inside the span: the entries are in time order and the phrases tile. */
+        while (next_entry < report->entry_count &&
+               rational_less(report->entries[next_entry].time_numerator, report->entries[next_entry].time_denominator,
+                             phrase->start_numerator, phrase->start_denominator)) {
+            next_entry++;
+        }
+        phrase->first_entry = next_entry;
+        while (next_entry < report->entry_count &&
+               rational_less(report->entries[next_entry].time_numerator, report->entries[next_entry].time_denominator,
+                             phrase->end_numerator, phrase->end_denominator)) {
+            next_entry++;
+        }
+        phrase->entry_count = next_entry - phrase->first_entry;
+        phrase->first_measure = claim->first_measure;
+        phrase->end_measure = claim->end_measure;
+        phrase->last_measure = claim->last_measure;
+        phrase->length_measures = claim->length_measures;
+        phrase->extension_measures = claim->extension_measures;
+        long cadence = form_stage_phrase_cadence(stage, i);
+        phrase->has_cadence = cadence >= 0;
+        phrase->cadence = cadence >= 0 ? (size_t)cadence : 0;
+        phrase->signal = signal_name(claim->signal);
+        phrase->uncertainty = found->uncertainty;
+    }
+    return true;
+}
+
 void form_stage_destroy(FormStage *stage) {
     if (!stage) {
         return;

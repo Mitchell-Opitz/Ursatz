@@ -54,6 +54,11 @@ bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmenta
 /* The index into the harmony stage's cadences of phrase i's cadence, or -1 when it has none. */
 long form_stage_phrase_cadence(const FormStage *stage, size_t phrase);
 
+/* Copies the stage's phrases into report->phrases, each with its span, the chord entries inside it (entries must be the
+   ones the stage was built from), measures, cadence and signal. A stage without phrases leaves the report without.
+   Returns false only on allocation failure. */
+bool form_stage_collect_phrases(const FormStage *stage, AnalysisReport *report);
+
 void form_stage_destroy(FormStage *stage);
 
 #endif

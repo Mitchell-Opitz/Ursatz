@@ -80,6 +80,7 @@ void analysis_report_destroy(AnalysisReport *report) {
     free(report->progressions);
     free(report->harmonic_rhythm);
     free(report->cadence_approaches);
+    free(report->phrases);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -98,6 +99,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->harmonic_rhythm_count = 0;
     report->cadence_approaches = NULL;
     report->cadence_approach_count = 0;
+    report->phrases = NULL;
+    report->phrase_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

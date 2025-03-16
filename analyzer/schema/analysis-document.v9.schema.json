@@ -79,7 +79,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/cadence_claim" }
     },
-    "phrases": { "type": "array" },
+    "phrases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/phrase_claim" }
+    },
     "form": {
       "type": ["object", "null"]
     },
@@ -369,6 +372,30 @@
             "arrival_beat_strength": { "enum": ["strong", "medium", "weak"] },
             "boundary": { "type": "boolean" },
             "region": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "phrase_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "measures", "length", "extension_measures", "cadence", "signal"],
+          "properties": {
+            "index": { "type": "integer", "minimum": 0 },
+            "measures": {
+              "type": "object",
+              "required": ["first", "last"],
+              "properties": {
+                "first": { "type": "integer", "minimum": 0 },
+                "last": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "length": { "type": "integer", "minimum": 0 },
+            "extension_measures": { "type": "integer", "minimum": 0 },
+            "cadence": { "type": ["integer", "null"], "minimum": 0 },
+            "signal": { "enum": ["cadence", "discontinuity", "none"] }
           }
         }
       ]

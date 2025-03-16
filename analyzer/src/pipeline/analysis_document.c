@@ -14,6 +14,7 @@
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/progression_pipeline.h"
+#include "standard-form/framework.h"
 #include "theory/framework.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
@@ -1400,6 +1401,52 @@ static cJSON *prolongations_json(const ImportedNotes *notes, const AnalysisRepor
     return list;
 }
 
+/* ---- Phrases ---- */
+
+/* One claim per phrase, in time order, from the library's standard-form analysis. The claim's span is the phrase's
+   (an extension after its cadence included) and its note ids are the notes sounding in the chords that start in it.
+   measures runs from the phrase's first measure to the measure it ends in; length is its length in measures (a pickup
+   not counted); extension_measures the measures the extension adds after it; cadence the index into "cadences" of the
+   cadence that ends it (null with none); signal what ended it: "cadence", "discontinuity" or "none" (the end of the
+   input). */
+static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_form_framework());
+    for (size_t i = 0; i < report->phrase_count; i++) {
+        const AnalysisPhrase *phrase = &report->phrases[i];
+        Rational start = rational_make(phrase->start_numerator, phrase->start_denominator);
+        Rational end = rational_make(phrase->end_numerator, phrase->end_denominator);
+        size_t id_count = 0;
+        size_t *ids = phrase->entry_count > 0
+                          ? entry_range_note_ids(report, phrase->first_entry,
+                                                 phrase->first_entry + phrase->entry_count - 1, &id_count)
+                          : NULL;
+        cJSON *claim = (ids || phrase->entry_count == 0)
+                           ? claim_json_with(framework, notes, ids, id_count, start, end, "phrase",
+                                             cJSON_CreateNumber(phrase->uncertainty))
+                           : NULL;
+        free(ids);
+        if (!(claim && add(claim, "index", cJSON_CreateNumber((double)i)) &&
+              add(claim, "measures", measures_json(phrase->first_measure, phrase->end_measure)) &&
+              add(claim, "length", cJSON_CreateNumber(phrase->length_measures)) &&
+              add(claim, "extension_measures", cJSON_CreateNumber(phrase->extension_measures)) &&
+              add(claim, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
+              add(claim, "signal", cJSON_CreateString(phrase->signal)))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* ---- Progressions ---- */
 
 /* The pattern as a JSON array of its base numerals. */
@@ -1933,7 +1980,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cadences_json(notes, report)) &&
-          add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
+          add(document, "phrases", phrases_json(notes, report)) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&

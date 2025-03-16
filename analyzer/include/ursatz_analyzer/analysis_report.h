@@ -243,6 +243,28 @@ typedef struct {
     size_t approach_measures;
 } AnalysisCadenceApproach;
 
+/* One phrase from the library's standard-form analysis (analysis/analysis_phrase.h), in time order. The phrases
+   tile the analysed range: each begins where the one before ended. The span includes any extension after the
+   phrase's cadence (a post-cadential extension or a codetta), which the measures and length do not. Measure
+   numbers are the library's (a pickup is 0, and is not counted in the length). */
+typedef struct {
+    long start_numerator; /* the phrase's span, whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    size_t first_entry;   /* the chord segments that start inside the span: entries[first_entry .. + entry_count) */
+    size_t entry_count;
+    int first_measure;
+    int end_measure;      /* the measure the phrase proper ends in: its cadence's arrival chord ends there */
+    int last_measure;     /* end_measure, or the last measure of the extension */
+    int length_measures;  /* the phrase proper, a pickup not counted */
+    int extension_measures; /* last_measure - end_measure */
+    bool has_cadence;
+    size_t cadence;       /* index into cadences; valid only when has_cadence */
+    const char *signal;   /* what ended the phrase: "cadence", "discontinuity" or "none" (the end of the input) */
+    double uncertainty;   /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisPhrase;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -266,13 +288,15 @@ typedef struct {
     AnalysisCadenceApproach *cadence_approaches; /* owned; one per cadence, in the cadences' order; empty when
                                                     harmonic_rhythm is */
     size_t cadence_approach_count;
+    AnalysisPhrase *phrases; /* owned; in time order; empty when the library found none */
+    size_t phrase_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions and the harmonic rhythm. */
+   prolongations, the progressions, the harmonic rhythm and the phrases. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
