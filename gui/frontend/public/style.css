@@ -1658,3 +1658,14 @@ body {
   color: inherit;
   cursor: pointer;
 }
+
+/* Library filter row */
+.filter-row {
+  flex-wrap: wrap;
+}
+
+.filter-row input[type="search"] {
+  background: var(--bg-panel);
+  color: var(--text);
+  min-width: 12rem;
+}

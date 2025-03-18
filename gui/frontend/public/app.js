@@ -136,7 +136,22 @@ function renderHealthView() {
   checkHealth();
 }
 
-async function renderLibraryView() {
+const UNASSIGNED = "__unassigned__";
+const UNTAGGED = "__untagged__";
+
+function emptyLibraryFilter() {
+  return { composer: "", source: "", tag: "", unassigned: [], untagged: false, search: "", sort: "added" };
+}
+
+/* The Library's current filter: composer, source, tag, unassigned (list of
+ * "composer"/"source"), untagged, plus client-side search and sort. */
+let libraryFilter = emptyLibraryFilter();
+
+/* The pieces currently shown, after search and sort. */
+let libraryShownPieces = [];
+
+async function renderLibraryView(filter) {
+  libraryFilter = { ...emptyLibraryFilter(), ...(filter || {}) };
   const content = getContentEl();
   content.innerHTML = `
     <h1 class="view-title">Library</h1>
@@ -154,22 +169,21 @@ async function renderLibraryView() {
     <div id="library-upload-status" class="upload-status"></div>
     <ul id="library-upload-list" class="upload-list"></ul>
     <div class="filter-row">
-      <label class="filter-field">
-        Filter
-        <select disabled>
-          <option>All composers</option>
-        </select>
-      </label>
-      <select disabled>
-        <option>All statuses</option>
-      </select>
+      <input type="search" id="library-search" placeholder="Search" aria-label="Search" />
+      <label class="filter-field">Composer <select id="library-filter-composer"></select></label>
+      <label class="filter-field">Source <select id="library-filter-source"></select></label>
+      <label class="filter-field">Tag <select id="library-filter-tag"></select></label>
       <label class="filter-field">
         Sort
-        <select disabled>
-          <option>Date added</option>
+        <select id="library-sort">
+          <option value="added">Date added</option>
+          <option value="title">Title</option>
+          <option value="composer">Composer</option>
         </select>
       </label>
+      <button type="button" id="library-clear-filters">Clear filters</button>
     </div>
+    <div id="library-count" class="piece-list-status"></div>
     <section class="panel library-panel">
       <div id="library-status" class="piece-list-status">Loading pieces...</div>
       <table id="library-table" class="library-table" hidden>
@@ -189,14 +203,124 @@ async function renderLibraryView() {
   `;
 
   const onUploaded = async () => {
-    await loadLibraryPieces();
+    await refreshLibrary();
     notifyMetadataChanged();
   };
   wireUploadControl("library-upload", onUploaded);
   wireUploadDrop("library-upload", onUploaded);
+  wireLibraryFilterRow();
 
+  await loadLibraryGroups();
+  populateLibraryFilterSelects();
   await loadLibraryPieces();
 }
+
+/* Reloads the group counts, the filter selects and the piece list. */
+async function refreshLibrary() {
+  await loadLibraryGroups();
+  populateLibraryFilterSelects();
+  await loadLibraryPieces();
+}
+
+function isLibraryFilterOn() {
+  const f = libraryFilter;
+  return Boolean(f.composer || f.source || f.tag || f.unassigned.length || f.untagged || f.search.trim());
+}
+
+function fillFilterSelect(select, anyLabel, specialValue, specialLabel, special, groupList, current) {
+  select.innerHTML = "";
+  const add = (value, text) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = text;
+    select.appendChild(option);
+  };
+  add("", "Any");
+  add(specialValue, `${specialLabel} (${special})`);
+  for (const group of groupList) {
+    add(group.value, `${group.value} (${group.count})`);
+  }
+  select.value = current;
+  if (select.value !== current) {
+    select.value = "";
+  }
+}
+
+function populateLibraryFilterSelects() {
+  const f = libraryFilter;
+  const g = libraryGroups;
+  fillFilterSelect(
+    document.getElementById("library-filter-composer"),
+    "Any",
+    UNASSIGNED,
+    "Unassigned",
+    g.unassigned.composer,
+    g.composers,
+    f.unassigned.includes("composer") ? UNASSIGNED : f.composer,
+  );
+  fillFilterSelect(
+    document.getElementById("library-filter-source"),
+    "Any",
+    UNASSIGNED,
+    "Unassigned",
+    g.unassigned.source,
+    g.sources,
+    f.unassigned.includes("source") ? UNASSIGNED : f.source,
+  );
+  fillFilterSelect(
+    document.getElementById("library-filter-tag"),
+    "Any",
+    UNTAGGED,
+    "Untagged",
+    g.untagged,
+    g.tags,
+    f.untagged ? UNTAGGED : f.tag,
+  );
+  document.getElementById("library-search").value = f.search;
+  document.getElementById("library-sort").value = f.sort;
+}
+
+function wireLibraryFilterRow() {
+  const setUnassigned = (which, on) => {
+    libraryFilter.unassigned = libraryFilter.unassigned.filter((name) => name !== which);
+    if (on) {
+      libraryFilter.unassigned.push(which);
+    }
+  };
+  document.getElementById("library-filter-composer").addEventListener("change", (event) => {
+    const unassigned = event.target.value === UNASSIGNED;
+    setUnassigned("composer", unassigned);
+    libraryFilter.composer = unassigned ? "" : event.target.value;
+    loadLibraryPieces();
+  });
+  document.getElementById("library-filter-source").addEventListener("change", (event) => {
+    const unassigned = event.target.value === UNASSIGNED;
+    setUnassigned("source", unassigned);
+    libraryFilter.source = unassigned ? "" : event.target.value;
+    loadLibraryPieces();
+  });
+  document.getElementById("library-filter-tag").addEventListener("change", (event) => {
+    libraryFilter.untagged = event.target.value === UNTAGGED;
+    libraryFilter.tag = libraryFilter.untagged ? "" : event.target.value;
+    loadLibraryPieces();
+  });
+  document.getElementById("library-search").addEventListener("input", (event) => {
+    libraryFilter.search = event.target.value;
+    showLibraryPieces(libraryFetchedPieces);
+  });
+  document.getElementById("library-sort").addEventListener("change", (event) => {
+    libraryFilter.sort = event.target.value;
+    showLibraryPieces(libraryFetchedPieces);
+  });
+  document.getElementById("library-clear-filters").addEventListener("click", () => {
+    libraryFilter = emptyLibraryFilter();
+    populateLibraryFilterSelects();
+    loadLibraryPieces();
+  });
+}
+
+/* The last list fetched from the backend, before search and sort. */
+let libraryFetchedPieces = [];
 
 async function loadLibraryPieces() {
   const statusEl = document.getElementById("library-status");
@@ -209,7 +333,8 @@ async function loadLibraryPieces() {
   bodyEl.innerHTML = "";
 
   try {
-    const res = await fetch("/api/analyzer/pieces");
+    const query = PieceMetadata.filterQuery(libraryFilter);
+    const res = await fetch(query ? `/api/analyzer/pieces?${query}` : "/api/analyzer/pieces");
     const data = await res.json();
 
     if (!data.ok) {
@@ -218,19 +343,43 @@ async function loadLibraryPieces() {
       return;
     }
 
-    if (data.pieces.length === 0) {
-      statusEl.textContent = "No pieces yet.";
-      return;
-    }
-
-    statusEl.textContent = "";
-    tableEl.hidden = false;
-    for (const piece of data.pieces) {
-      bodyEl.appendChild(buildLibraryRow(piece));
-    }
+    libraryFetchedPieces = data.pieces;
+    showLibraryPieces(data.pieces);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
+  }
+}
+
+/* Applies the client-side search and sort to the fetched pieces and draws
+ * the table and the count line. */
+function showLibraryPieces(fetched) {
+  const statusEl = document.getElementById("library-status");
+  const tableEl = document.getElementById("library-table");
+  const bodyEl = document.getElementById("library-table-body");
+  const countEl = document.getElementById("library-count");
+
+  libraryShownPieces = PieceMetadata.sortPieces(
+    PieceMetadata.searchPieces(fetched, libraryFilter.search),
+    libraryFilter.sort,
+  );
+  bodyEl.innerHTML = "";
+  countEl.textContent = isLibraryFilterOn()
+    ? `${libraryShownPieces.length} of ${libraryGroups.total} pieces`
+    : "";
+
+  if (libraryShownPieces.length === 0) {
+    statusEl.textContent = isLibraryFilterOn() ? "No pieces match." : "No pieces yet.";
+    statusEl.classList.remove("error");
+    tableEl.hidden = true;
+    return;
+  }
+
+  statusEl.textContent = "";
+  statusEl.classList.remove("error");
+  tableEl.hidden = false;
+  for (const piece of libraryShownPieces) {
+    bodyEl.appendChild(buildLibraryRow(piece));
   }
 }
 
