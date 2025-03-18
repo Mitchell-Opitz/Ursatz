@@ -1403,12 +1403,73 @@ static cJSON *prolongations_json(const ImportedNotes *notes, const AnalysisRepor
 
 /* ---- Phrases ---- */
 
+/* An idea of a phrase: the claim over its soprano notes (label the library's IdeaLabel name) with its place in the
+   phrase, its measures and length, and the similarity to the phrase's first idea (null for the first idea). */
+static cJSON *idea_json(const ImportedNotes *notes, const char *framework, const AnalysisIdea *idea) {
+    Rational start = rational_make(idea->start_numerator, idea->start_denominator);
+    Rational end = rational_make(idea->end_numerator, idea->end_denominator);
+    cJSON *claim = claim_json_with(framework, notes, idea->note_ids, idea->note_id_count, start, end, idea->label,
+                                   cJSON_CreateNumber(idea->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber(idea->index)) &&
+          add(claim, "measures", measures_json(idea->first_measure, idea->last_measure)) &&
+          add(claim, "length", cJSON_CreateNumber(idea->length_measures)) &&
+          add(claim, "similarity", idea->compared ? cJSON_CreateNumber(idea->similarity) : cJSON_CreateNull()))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* A subphrase: the claim over its soprano notes, labelled "subphrase" (the library gives subphrases no name), with its
+   index (0 or 1), the ideas it holds (first_idea within the phrase's ideas), measures and length. */
+static cJSON *subphrase_json(const ImportedNotes *notes, const char *framework, const AnalysisReport *report,
+                             const AnalysisPhrase *phrase, const AnalysisSubphrase *subphrase) {
+    Rational start = rational_make(subphrase->start_numerator, subphrase->start_denominator);
+    Rational end = rational_make(subphrase->end_numerator, subphrase->end_denominator);
+    cJSON *claim = claim_json_with(framework, notes, subphrase->note_ids, subphrase->note_id_count, start, end,
+                                   "subphrase", cJSON_CreateNumber(subphrase->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber(subphrase->index)) &&
+          add(claim, "first_idea", cJSON_CreateNumber((double)(subphrase->first_idea - phrase->first_idea))) &&
+          add(claim, "idea_count", cJSON_CreateNumber((double)subphrase->idea_count)) &&
+          add(claim, "measures", measures_json(subphrase->first_measure, subphrase->last_measure)) &&
+          add(claim, "length", cJSON_CreateNumber(subphrase->length_measures)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    (void)report;
+    return claim;
+}
+
+static bool add_ideas_and_subphrases(cJSON *claim, const ImportedNotes *notes, const char *framework,
+                                     const AnalysisReport *report, const AnalysisPhrase *phrase) {
+    cJSON *subphrases = cJSON_CreateArray();
+    cJSON *ideas = cJSON_CreateArray();
+    bool ok = subphrases && ideas;
+    for (size_t k = 0; ok && k < phrase->subphrase_count; k++) {
+        ok = append(subphrases, subphrase_json(notes, framework, report, phrase,
+                                               &report->subphrases[phrase->first_subphrase + k]));
+    }
+    for (size_t k = 0; ok && k < phrase->idea_count; k++) {
+        ok = append(ideas, idea_json(notes, framework, &report->ideas[phrase->first_idea + k]));
+    }
+    if (ok && add(claim, "subphrases", subphrases)) {
+        subphrases = NULL;
+        if (add(claim, "ideas", ideas)) {
+            return true;
+        }
+        ideas = NULL;
+    }
+    cJSON_Delete(subphrases);
+    cJSON_Delete(ideas);
+    return false;
+}
+
 /* One claim per phrase, in time order, from the library's standard-form analysis. The claim's span is the phrase's
    (an extension after its cadence included) and its note ids are the notes sounding in the chords that start in it.
    measures runs from the phrase's first measure to the measure it ends in; length is its length in measures (a pickup
    not counted); extension_measures the measures the extension adds after it; cadence the index into "cadences" of the
    cadence that ends it (null with none); signal what ended it: "cadence", "discontinuity" or "none" (the end of the
-   input). */
+   input). subphrases and ideas are claims inside it, in time order. */
 static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -1434,7 +1495,8 @@ static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *rep
               add(claim, "length", cJSON_CreateNumber(phrase->length_measures)) &&
               add(claim, "extension_measures", cJSON_CreateNumber(phrase->extension_measures)) &&
               add(claim, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
-              add(claim, "signal", cJSON_CreateString(phrase->signal)))) {
+              add(claim, "signal", cJSON_CreateString(phrase->signal)) &&
+              add_ideas_and_subphrases(claim, notes, framework, report, phrase))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;

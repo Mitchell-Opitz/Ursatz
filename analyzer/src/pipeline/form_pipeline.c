@@ -6,7 +6,9 @@
 
 #include "harmony_cadence_rules.h"
 #include "pipeline/form_boundary.h"
+#include "idea_label.h"
 #include "pitch/pitch_numeric_value.h"
+#include "time/meter_map.h"
 #include "time/musical_time.h"
 
 #define CADENCE_ID_PREFIX "chain-"
@@ -48,10 +50,15 @@ static const TimeSpan *window_of(const Segmentation *segmentation, size_t i) {
 /* The soprano as notes of the input: consecutive voice segments with the same soprano note are one note. */
 static bool add_melody(FormStage *stage, const ImportedNotes *notes, const Segmentation *voices,
                        const OuterVoiceLines *lines) {
+    stage->note_indices = malloc(sizeof(size_t) * (voices->segment_count > 0 ? voices->segment_count : 1));
+    if (!stage->note_indices) {
+        return false;
+    }
     const char *current_id = NULL;
     const MusicalTime *current_start = NULL;
     const MusicalTime *current_end = NULL;
     const NoteEvent *current_event = NULL;
+    size_t current_note = 0;
     long current_semitone = 0;
     for (size_t v = 0; v <= voices->segment_count; v++) {
         const OuterVoiceEntry *entry = v < voices->segment_count && v < lines->count ? &lines->soprano[v] : NULL;
@@ -61,9 +68,13 @@ static bool add_melody(FormStage *stage, const ImportedNotes *notes, const Segme
                                                                                    : NULL;
         if (current_id != NULL && (id == NULL || strcmp(id, current_id) != 0)) {
             const TimeSpan *span = keep_span(stage, current_start, current_end);
+            size_t before = stage->input.note_count;
             if (!span || standard_form_input_add_note(&stage->input, current_id, current_event, span, NULL,
                                                       current_semitone) == STANDARD_FORM_ANALYSIS_ERR_ALLOC) {
                 return false;
+            }
+            if (stage->input.note_count > before) {
+                stage->note_indices[stage->note_index_count++] = current_note;
             }
             current_id = NULL;
         }
@@ -74,7 +85,8 @@ static bool add_melody(FormStage *stage, const ImportedNotes *notes, const Segme
         if (current_id == NULL) {
             current_id = id;
             current_start = time_span_start(window);
-            current_event = notes->events[segment->note_indices[member]];
+            current_note = segment->note_indices[member];
+            current_event = notes->events[current_note];
             current_semitone = pitch_numeric_value_position_numerator(entry->pitch);
         }
         current_end = time_span_end(window);
@@ -170,7 +182,120 @@ static const char *signal_name(int signal) {
     }
 }
 
-bool form_stage_collect_phrases(const FormStage *stage, AnalysisReport *report) {
+/* The span from the start of measure `first` to the end of measure `last`. False if the meter does not place them. */
+static bool measures_span(const MeterMap *map, int first, int last, long *start_numerator,
+                          unsigned long *start_denominator, long *end_numerator, unsigned long *end_denominator) {
+    TimeSpan *from = NULL;
+    TimeSpan *to = NULL;
+    bool ok = meter_map_measure_span(map, first, &from) == METER_MAP_OK &&
+              meter_map_measure_span(map, last, &to) == METER_MAP_OK;
+    if (ok) {
+        *start_numerator = musical_time_numerator(time_span_start(from));
+        *start_denominator = musical_time_denominator(time_span_start(from));
+        *end_numerator = musical_time_numerator(time_span_end(to));
+        *end_denominator = musical_time_denominator(time_span_end(to));
+    }
+    time_span_destroy(from);
+    time_span_destroy(to);
+    return ok;
+}
+
+/* The ImportedNotes indices of the input's soprano notes [first, end), owned. NULL with *count 0 when empty. */
+static size_t *note_ids_of(const FormStage *stage, int first, int end, size_t *count) {
+    *count = 0;
+    if (first < 0 || end <= first || (size_t)end > stage->note_index_count) {
+        return NULL;
+    }
+    size_t *ids = malloc(sizeof(size_t) * (size_t)(end - first));
+    if (!ids) {
+        return NULL;
+    }
+    memcpy(ids, stage->note_indices + first, sizeof(size_t) * (size_t)(end - first));
+    *count = (size_t)(end - first);
+    return ids;
+}
+
+static bool collect_ideas(const FormStage *stage, AnalysisReport *report) {
+    size_t count = stage->segmentation.idea_count;
+    if (count == 0) {
+        return true;
+    }
+    report->ideas = calloc(count, sizeof(AnalysisIdea));
+    if (!report->ideas) {
+        return false;
+    }
+    report->idea_count = count;
+    for (size_t i = 0; i < count; i++) {
+        const StandardFormIdea *found = &stage->segmentation.ideas[i];
+        const StandardFormIdeaClaim *claim = &found->claim;
+        AnalysisIdea *idea = &report->ideas[i];
+        idea->phrase = (size_t)claim->phrase;
+        idea->index = claim->index;
+        idea->first_measure = claim->first_measure;
+        idea->last_measure = claim->last_measure;
+        idea->length_measures = claim->length_measures;
+        idea->label = idea_label_name((IdeaLabel)claim->label);
+        idea->compared = claim->compared != 0;
+        idea->similarity = claim->similarity;
+        idea->uncertainty = found->uncertainty;
+        if (!idea->label || !measures_span(stage->input.map, claim->first_measure, claim->last_measure,
+                                           &idea->start_numerator, &idea->start_denominator, &idea->end_numerator,
+                                           &idea->end_denominator)) {
+            return false;
+        }
+        idea->note_ids = note_ids_of(stage, claim->note_first, claim->note_end, &idea->note_id_count);
+        if (claim->note_end > claim->note_first && !idea->note_ids) {
+            return false;
+        }
+        AnalysisPhrase *phrase = &report->phrases[idea->phrase];
+        if (phrase->idea_count == 0) {
+            phrase->first_idea = i;
+        }
+        phrase->idea_count++;
+    }
+    return true;
+}
+
+static bool collect_subphrases(const FormStage *stage, AnalysisReport *report) {
+    size_t count = stage->segmentation.subphrase_count;
+    if (count == 0) {
+        return true;
+    }
+    report->subphrases = calloc(count, sizeof(AnalysisSubphrase));
+    if (!report->subphrases) {
+        return false;
+    }
+    report->subphrase_count = count;
+    for (size_t i = 0; i < count; i++) {
+        const StandardFormSubphrase *found = &stage->segmentation.subphrases[i];
+        const StandardFormSubphraseClaim *claim = &found->claim;
+        AnalysisSubphrase *subphrase = &report->subphrases[i];
+        subphrase->phrase = (size_t)claim->phrase;
+        subphrase->index = claim->index;
+        subphrase->idea_count = (size_t)claim->idea_count;
+        subphrase->first_measure = claim->first_measure;
+        subphrase->last_measure = claim->last_measure;
+        subphrase->length_measures = claim->length_measures;
+        subphrase->uncertainty = found->uncertainty;
+        AnalysisPhrase *phrase = &report->phrases[subphrase->phrase];
+        subphrase->first_idea = phrase->first_idea + (size_t)claim->first_idea;
+        if (!measures_span(stage->input.map, claim->first_measure, claim->last_measure, &subphrase->start_numerator,
+                           &subphrase->start_denominator, &subphrase->end_numerator, &subphrase->end_denominator)) {
+            return false;
+        }
+        subphrase->note_ids = note_ids_of(stage, claim->note_first, claim->note_end, &subphrase->note_id_count);
+        if (claim->note_end > claim->note_first && !subphrase->note_ids) {
+            return false;
+        }
+        if (phrase->subphrase_count == 0) {
+            phrase->first_subphrase = i;
+        }
+        phrase->subphrase_count++;
+    }
+    return true;
+}
+
+bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
     size_t count = stage->phrases.count;
     if (count == 0) {
         return true;
@@ -215,7 +340,7 @@ bool form_stage_collect_phrases(const FormStage *stage, AnalysisReport *report) 
         phrase->signal = signal_name(claim->signal);
         phrase->uncertainty = found->uncertainty;
     }
-    return true;
+    return collect_ideas(stage, report) && collect_subphrases(stage, report);
 }
 
 void form_stage_destroy(FormStage *stage) {
@@ -224,6 +349,7 @@ void form_stage_destroy(FormStage *stage) {
     }
     standard_form_segmentation_destroy(&stage->segmentation);
     standard_form_phrases_destroy(&stage->phrases);
+    free(stage->note_indices);
     if (stage->built) {
         standard_form_input_destroy(&stage->input);
     }

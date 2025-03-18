@@ -81,6 +81,14 @@ void analysis_report_destroy(AnalysisReport *report) {
     free(report->harmonic_rhythm);
     free(report->cadence_approaches);
     free(report->phrases);
+    for (size_t i = 0; i < report->idea_count; i++) {
+        free(report->ideas[i].note_ids);
+    }
+    free(report->ideas);
+    for (size_t i = 0; i < report->subphrase_count; i++) {
+        free(report->subphrases[i].note_ids);
+    }
+    free(report->subphrases);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -101,6 +109,10 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->cadence_approach_count = 0;
     report->phrases = NULL;
     report->phrase_count = 0;
+    report->ideas = NULL;
+    report->idea_count = 0;
+    report->subphrases = NULL;
+    report->subphrase_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

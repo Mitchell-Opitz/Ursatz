@@ -1021,6 +1021,29 @@ static bool append_phrase_cadence(StringBuilder *sb, const cJSON *document, cons
            append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) && sb_append(sb, ")");
 }
 
+/* One line per phrase: its ideas with their labels and measures, and its subphrases. */
+static bool append_phrase_line(StringBuilder *sb, const cJSON *phrase) {
+    bool ok = sb_appendf(sb, "- **Phrase %d:** ", (int)number_member(phrase, "index") + 1);
+    const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(phrase, "ideas");
+    if (cJSON_GetArraySize(ideas) == 0) {
+        ok = ok && sb_append(sb, "no ideas");
+    } else {
+        ok = ok && sb_append(sb, "ideas ");
+    }
+    const cJSON *idea;
+    cJSON_ArrayForEach(idea, ideas) {
+        ok = ok && sb_appendf(sb, "%s%s (", idea == ideas->child ? "" : ", ", string_member(idea, "label")) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(idea, "measures")) && sb_append(sb, ")");
+    }
+    const cJSON *subphrases = cJSON_GetObjectItemCaseSensitive(phrase, "subphrases");
+    const cJSON *subphrase;
+    cJSON_ArrayForEach(subphrase, subphrases) {
+        ok = ok && sb_append(sb, subphrase == subphrases->child ? "; subphrases " : ", ") &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(subphrase, "measures"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON *phrases) {
     int count = cJSON_GetArraySize(phrases);
     bool ok = sb_append(sb, "## Phrases\n\n") &&
@@ -1041,6 +1064,10 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
              sb_appendf(sb, " | %d | ", (int)number_member(phrase, "length")) &&
              append_phrase_cadence(sb, document, phrase) &&
              sb_appendf(sb, " | %s |\n", string_member(phrase, "signal"));
+    }
+    ok = ok && sb_append(sb, "\n");
+    cJSON_ArrayForEach(phrase, phrases) {
+        ok = ok && append_phrase_line(sb, phrase);
     }
     return ok && sb_append(sb, "\n");
 }

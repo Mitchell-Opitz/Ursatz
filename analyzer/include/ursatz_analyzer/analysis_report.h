@@ -263,7 +263,49 @@ typedef struct {
     size_t cadence;       /* index into cadences; valid only when has_cadence */
     const char *signal;   /* what ended the phrase: "cadence", "discontinuity" or "none" (the end of the input) */
     double uncertainty;   /* the library's, in [0, 1]; higher is LESS certain */
+    size_t first_idea;    /* the phrase's ideas: ideas[first_idea .. + idea_count) */
+    size_t idea_count;
+    size_t first_subphrase; /* its subphrases: subphrases[first_subphrase .. + subphrase_count) */
+    size_t subphrase_count;
 } AnalysisPhrase;
+
+/* One idea of a phrase from the library's standard-form analysis (analysis/analysis_ideas.h), in time order. The span
+   runs from the first measure to the end of the last (a pickup belongs to the first idea). */
+typedef struct {
+    size_t phrase;          /* index into phrases */
+    int index;              /* within the phrase */
+    long start_numerator;   /* whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;
+    int last_measure;
+    int length_measures;    /* counted measures */
+    const char *label;      /* the library's IdeaLabel name: "basic-idea", "contrasting-idea", "fragment", "unit" */
+    bool compared;          /* the idea was compared with the phrase's first idea (false for the first) */
+    double similarity;      /* the share of matching intervals; valid only when compared */
+    size_t *note_ids;       /* owned; ImportedNotes indices of the soprano notes of the idea */
+    size_t note_id_count;
+    double uncertainty;     /* the library's, in [0, 1] */
+} AnalysisIdea;
+
+/* One subphrase of a phrase of three or more ideas: its first two ideas, or the rest. */
+typedef struct {
+    size_t phrase;
+    int index;              /* 0 or 1 */
+    size_t first_idea;      /* index into ideas */
+    size_t idea_count;
+    long start_numerator;   /* whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;
+    int last_measure;
+    int length_measures;
+    size_t *note_ids;       /* owned; ImportedNotes indices of the soprano notes of the subphrase */
+    size_t note_id_count;
+    double uncertainty;
+} AnalysisSubphrase;
 
 typedef struct {
     AnalysisReportEntry *entries;
@@ -290,13 +332,17 @@ typedef struct {
     size_t cadence_approach_count;
     AnalysisPhrase *phrases; /* owned; in time order; empty when the library found none */
     size_t phrase_count;
+    AnalysisIdea *ideas; /* owned; phrase by phrase, in time order */
+    size_t idea_count;
+    AnalysisSubphrase *subphrases; /* owned; phrase by phrase */
+    size_t subphrase_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions, the harmonic rhythm and the phrases. */
+   prolongations, the progressions, the harmonic rhythm, the phrases, ideas and subphrases. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
