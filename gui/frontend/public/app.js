@@ -816,6 +816,7 @@ async function startLibraryEdit(row, piece) {
     const fresh = buildLibraryRow(result.data.piece);
     editorRow.replaceWith(fresh);
     await loadLibraryGroups();
+    populateLibraryFilterSelects();
     notifyMetadataChanged();
   });
 
@@ -876,6 +877,8 @@ async function handleDeleteLibraryPiece(id, rowEl) {
     }
 
     rowEl.remove();
+    await loadLibraryGroups();
+    populateLibraryFilterSelects();
     notifyMetadataChanged();
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
