@@ -263,6 +263,8 @@ typedef struct {
     size_t cadence;       /* index into cadences; valid only when has_cadence */
     const char *signal;   /* what ended the phrase: "cadence", "discontinuity" or "none" (the end of the input) */
     double uncertainty;   /* the library's, in [0, 1]; higher is LESS certain */
+    const char *role;     /* where the phrase stands in the piece: "beginning" (the first), "ending" (the last) or
+                             "middle". The library names no such role for a phrase, so this is position alone. */
     size_t first_idea;    /* the phrase's ideas: ideas[first_idea .. + idea_count) */
     size_t idea_count;
     size_t first_subphrase; /* its subphrases: subphrases[first_subphrase .. + subphrase_count) */

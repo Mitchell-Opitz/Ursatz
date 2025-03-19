@@ -339,6 +339,7 @@ bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
         phrase->cadence = cadence >= 0 ? (size_t)cadence : 0;
         phrase->signal = signal_name(claim->signal);
         phrase->uncertainty = found->uncertainty;
+        phrase->role = i == 0 ? "beginning" : (i + 1 == count ? "ending" : "middle");
     }
     return collect_ideas(stage, report) && collect_subphrases(stage, report);
 }

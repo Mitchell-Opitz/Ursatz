@@ -381,7 +381,7 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "measures", "length", "extension_measures", "cadence", "signal"],
+          "required": ["index", "measures", "length", "extension_measures", "cadence", "signal", "role"],
           "properties": {
             "index": { "type": "integer", "minimum": 0 },
             "measures": { "$ref": "#/$defs/phrase_measures" },
@@ -389,6 +389,7 @@
             "extension_measures": { "type": "integer", "minimum": 0 },
             "cadence": { "type": ["integer", "null"], "minimum": 0 },
             "signal": { "enum": ["cadence", "discontinuity", "none"] },
+            "role": { "enum": ["beginning", "middle", "ending"] },
             "subphrases": {
               "type": "array",
               "items": { "$ref": "#/$defs/subphrase_claim" }

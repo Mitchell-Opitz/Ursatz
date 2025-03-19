@@ -1050,10 +1050,11 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
               sb_appendf(sb,
                          "The library's standard-form analysis found %d %s from the soprano, the meter and the "
                          "cadences. Length counts the measures of the phrase proper; Ends is what closed it: its "
-                         "cadence, a break in the melody, or the end of the piece.\n\n",
+                         "cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in "
+                         "the piece.\n\n",
                          count, count == 1 ? "phrase" : "phrases") &&
-              sb_append(sb, "| Phrase | Measures | Length | Cadence | Ends |\n"
-                            "| --- | --- | --- | --- | --- |\n");
+              sb_append(sb, "| Phrase | Measures | Length | Cadence | Ends | Role |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
     const cJSON *phrase;
     cJSON_ArrayForEach(phrase, phrases) {
         if (!ok) {
@@ -1063,7 +1064,7 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(phrase, "measures")) &&
              sb_appendf(sb, " | %d | ", (int)number_member(phrase, "length")) &&
              append_phrase_cadence(sb, document, phrase) &&
-             sb_appendf(sb, " | %s |\n", string_member(phrase, "signal"));
+             sb_appendf(sb, " | %s | %s |\n", string_member(phrase, "signal"), string_member(phrase, "role"));
     }
     ok = ok && sb_append(sb, "\n");
     cJSON_ArrayForEach(phrase, phrases) {

@@ -1469,7 +1469,9 @@ static bool add_ideas_and_subphrases(cJSON *claim, const ImportedNotes *notes, c
    measures runs from the phrase's first measure to the measure it ends in; length is its length in measures (a pickup
    not counted); extension_measures the measures the extension adds after it; cadence the index into "cadences" of the
    cadence that ends it (null with none); signal what ended it: "cadence", "discontinuity" or "none" (the end of the
-   input). subphrases and ideas are claims inside it, in time order. */
+   input). role is where the phrase stands in the piece: "beginning" for the first, "ending" for the last, "middle"
+   between (the library names no role for a phrase, so this is position alone). subphrases and ideas are claims inside
+   it, in time order. */
 static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -1496,6 +1498,7 @@ static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *rep
               add(claim, "extension_measures", cJSON_CreateNumber(phrase->extension_measures)) &&
               add(claim, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
               add(claim, "signal", cJSON_CreateString(phrase->signal)) &&
+              add(claim, "role", cJSON_CreateString(phrase->role)) &&
               add_ideas_and_subphrases(claim, notes, framework, report, phrase))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);

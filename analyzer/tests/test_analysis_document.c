@@ -196,6 +196,7 @@ int main(void) {
         assert(number(phrase, "length") > 0);
         assert(cJSON_IsNull(member(phrase, "cadence")) || cJSON_IsNumber(member(phrase, "cadence")));
         assert(strlen(string(phrase, "signal")) > 0);
+        assert(strcmp(string(phrase, "role"), i == 0 ? "beginning" : (i + 1 == cJSON_GetArraySize(phrases) ? "ending" : "middle")) == 0);
     }
 
     /* Keys: the two-measure piece is one key region, running barline to barline. */
