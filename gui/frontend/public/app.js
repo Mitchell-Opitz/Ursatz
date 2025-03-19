@@ -184,12 +184,13 @@ async function renderLibraryView(filter) {
       <button type="button" id="library-clear-filters">Clear filters</button>
     </div>
     <div id="library-count" class="piece-list-status"></div>
+    <div id="library-bulk" class="bulk-bar" hidden></div>
     <section class="panel library-panel">
       <div id="library-status" class="piece-list-status">Loading pieces...</div>
       <table id="library-table" class="library-table" hidden>
         <thead>
           <tr>
-            <th class="select-cell"></th>
+            <th class="select-cell"><input type="checkbox" id="library-select-all" aria-label="Select all shown pieces" /></th>
             <th>Title</th>
             <th>Composer</th>
             <th>Source</th>
@@ -209,6 +210,7 @@ async function renderLibraryView(filter) {
   wireUploadControl("library-upload", onUploaded);
   wireUploadDrop("library-upload", onUploaded);
   wireLibraryFilterRow();
+  wireLibrarySelection();
 
   await loadLibraryGroups();
   populateLibraryFilterSelects();
@@ -364,6 +366,8 @@ function showLibraryPieces(fetched) {
     libraryFilter.sort,
   );
   bodyEl.innerHTML = "";
+  document.getElementById("library-select-all").checked = false;
+  updateLibraryBulkBar();
   countEl.textContent = isLibraryFilterOn()
     ? `${libraryShownPieces.length} of ${libraryGroups.total} pieces`
     : "";
@@ -380,6 +384,124 @@ function showLibraryPieces(fetched) {
   tableEl.hidden = false;
   for (const piece of libraryShownPieces) {
     bodyEl.appendChild(buildLibraryRow(piece));
+  }
+}
+
+function selectedLibraryIds() {
+  return Array.from(document.querySelectorAll("#library-table-body .row-select:checked"), (box) => box.dataset.id);
+}
+
+function wireLibrarySelection() {
+  document.getElementById("library-select-all").addEventListener("change", (event) => {
+    for (const box of document.querySelectorAll("#library-table-body .row-select")) {
+      box.checked = event.target.checked;
+    }
+    updateLibraryBulkBar();
+  });
+  document.getElementById("library-table-body").addEventListener("change", (event) => {
+    if (event.target.classList.contains("row-select")) {
+      const boxes = document.querySelectorAll("#library-table-body .row-select");
+      document.getElementById("library-select-all").checked = Array.from(boxes).every((box) => box.checked);
+      updateLibraryBulkBar();
+    }
+  });
+}
+
+const BULK_ACTIONS = [
+  { action: "set-composer", label: "Set composer", list: "bulk-composers" },
+  { action: "set-source", label: "Set source", list: "bulk-sources" },
+  { action: "add-tag", label: "Add tag", list: "bulk-tags" },
+  { action: "remove-tag", label: "Remove tag", list: "bulk-tags" },
+];
+
+/* Shows the bulk bar when rows are checked: the count, one button per
+ * bulk action (each opens an inline input with an Apply button) and Clear
+ * selection. */
+function updateLibraryBulkBar() {
+  const bar = document.getElementById("library-bulk");
+  const ids = selectedLibraryIds();
+  bar.innerHTML = "";
+  bar.hidden = ids.length === 0;
+  if (ids.length === 0) {
+    return;
+  }
+
+  const count = document.createElement("span");
+  count.textContent = `${ids.length} selected`;
+  const inline = document.createElement("span");
+  inline.classList.add("bulk-inline");
+  bar.append(
+    count,
+    buildDatalist("bulk-composers", libraryGroups.composers),
+    buildDatalist("bulk-sources", libraryGroups.sources),
+    buildDatalist("bulk-tags", libraryGroups.tags),
+  );
+  for (const item of BULK_ACTIONS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.label;
+    button.addEventListener("click", () => openBulkInput(inline, item));
+    bar.appendChild(button);
+  }
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.textContent = "Clear selection";
+  clear.addEventListener("click", () => {
+    for (const box of document.querySelectorAll("#library-table-body .row-select")) {
+      box.checked = false;
+    }
+    document.getElementById("library-select-all").checked = false;
+    updateLibraryBulkBar();
+  });
+  bar.append(clear, inline);
+}
+
+function openBulkInput(container, item) {
+  container.innerHTML = "";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.setAttribute("list", item.list);
+  input.setAttribute("aria-label", item.label);
+  const apply = document.createElement("button");
+  apply.type = "button";
+  apply.textContent = "Apply";
+  apply.addEventListener("click", () => applyBulkEdit(item.action, input.value));
+  container.append(input, apply);
+  input.focus();
+}
+
+/* Sends one PATCH per selected piece, in order, and stops at the first
+ * failure, naming the piece. Reloads the list and the groups afterwards. */
+async function applyBulkEdit(action, rawValue) {
+  const isTag = action === "add-tag" || action === "remove-tag";
+  const value = isTag ? PieceMetadata.parseTagInput(rawValue) : rawValue.trim();
+  const statusEl = document.getElementById("library-status");
+  if (isTag && value.length === 0) {
+    statusEl.textContent = "Enter a tag.";
+    statusEl.classList.add("error");
+    return;
+  }
+  const body = PieceMetadata.bulkPatch(action, value);
+  const labels = new Map(libraryShownPieces.map((piece) => [piece.id, piece.filename || piece.id]));
+  let failure = "";
+  for (const id of selectedLibraryIds()) {
+    const result = await fetchJsonResult(`/api/analyzer/pieces/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!result.ok || !result.data || !result.data.ok) {
+      const reason = (result.data && (result.data.message || result.data.error)) || "failed";
+      failure = `Stopped at ${labels.get(id) || id}: ${reason}`;
+      break;
+    }
+  }
+  await refreshLibrary();
+  notifyMetadataChanged();
+  if (failure) {
+    const status = document.getElementById("library-status");
+    status.textContent = failure;
+    status.classList.add("error");
   }
 }
 

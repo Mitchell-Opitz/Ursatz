@@ -1669,3 +1669,25 @@ body {
   color: var(--text);
   min-width: 12rem;
 }
+
+/* Library bulk bar */
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg-panel);
+}
+
+.bulk-bar[hidden] {
+  display: none;
+}
+
+.bulk-inline {
+  display: inline-flex;
+  gap: 0.25rem;
+}
