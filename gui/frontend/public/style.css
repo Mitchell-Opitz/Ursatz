@@ -1587,3 +1587,107 @@ body {
 .ws-loading {
   padding: 24px;
 }
+
+/* Library metadata columns */
+.select-cell {
+  width: 2rem;
+}
+
+.muted-dash {
+  color: #8a96a6;
+}
+
+.tag-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tag-chip {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: #0f2a2a;
+  color: #bff5ec;
+  font-size: 0.8rem;
+}
+
+/* Library details editor */
+.editor-row td {
+  background: var(--bg-panel);
+  padding: 0.75rem;
+}
+
+.editor-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text-dim);
+}
+
+.editor-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.tag-input input {
+  flex: 1;
+  min-width: 6rem;
+}
+
+.chip-remove {
+  margin-left: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Library filter row */
+.filter-row {
+  flex-wrap: wrap;
+}
+
+.filter-row input[type="search"] {
+  background: var(--bg-panel);
+  color: var(--text);
+  min-width: 12rem;
+}
+
+/* Library bulk bar */
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg-panel);
+}
+
+.bulk-bar[hidden] {
+  display: none;
+}
+
+.bulk-inline {
+  display: inline-flex;
+  gap: 0.25rem;
+}

@@ -136,7 +136,22 @@ function renderHealthView() {
   checkHealth();
 }
 
-async function renderLibraryView() {
+const UNASSIGNED = "__unassigned__";
+const UNTAGGED = "__untagged__";
+
+function emptyLibraryFilter() {
+  return { composer: "", source: "", tag: "", unassigned: [], untagged: false, search: "", sort: "added" };
+}
+
+/* The Library's current filter: composer, source, tag, unassigned (list of
+ * "composer"/"source"), untagged, plus client-side search and sort. */
+let libraryFilter = emptyLibraryFilter();
+
+/* The pieces currently shown, after search and sort. */
+let libraryShownPieces = [];
+
+async function renderLibraryView(filter) {
+  libraryFilter = { ...emptyLibraryFilter(), ...(filter || {}) };
   const content = getContentEl();
   content.innerHTML = `
     <h1 class="view-title">Library</h1>
@@ -154,28 +169,32 @@ async function renderLibraryView() {
     <div id="library-upload-status" class="upload-status"></div>
     <ul id="library-upload-list" class="upload-list"></ul>
     <div class="filter-row">
-      <label class="filter-field">
-        Filter
-        <select disabled>
-          <option>All composers</option>
-        </select>
-      </label>
-      <select disabled>
-        <option>All statuses</option>
-      </select>
+      <input type="search" id="library-search" placeholder="Search" aria-label="Search" />
+      <label class="filter-field">Composer <select id="library-filter-composer"></select></label>
+      <label class="filter-field">Source <select id="library-filter-source"></select></label>
+      <label class="filter-field">Tag <select id="library-filter-tag"></select></label>
       <label class="filter-field">
         Sort
-        <select disabled>
-          <option>Date added</option>
+        <select id="library-sort">
+          <option value="added">Date added</option>
+          <option value="title">Title</option>
+          <option value="composer">Composer</option>
         </select>
       </label>
+      <button type="button" id="library-clear-filters">Clear filters</button>
     </div>
+    <div id="library-count" class="piece-list-status"></div>
+    <div id="library-bulk" class="bulk-bar" hidden></div>
     <section class="panel library-panel">
       <div id="library-status" class="piece-list-status">Loading pieces...</div>
       <table id="library-table" class="library-table" hidden>
         <thead>
           <tr>
+            <th class="select-cell"><input type="checkbox" id="library-select-all" aria-label="Select all shown pieces" /></th>
             <th>Title</th>
+            <th>Composer</th>
+            <th>Source</th>
+            <th>Tags</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -185,13 +204,125 @@ async function renderLibraryView() {
   `;
 
   const onUploaded = async () => {
-    await loadLibraryPieces();
+    await refreshLibrary();
+    notifyMetadataChanged();
   };
   wireUploadControl("library-upload", onUploaded);
   wireUploadDrop("library-upload", onUploaded);
+  wireLibraryFilterRow();
+  wireLibrarySelection();
 
+  await loadLibraryGroups();
+  populateLibraryFilterSelects();
   await loadLibraryPieces();
 }
+
+/* Reloads the group counts, the filter selects and the piece list. */
+async function refreshLibrary() {
+  await loadLibraryGroups();
+  populateLibraryFilterSelects();
+  await loadLibraryPieces();
+}
+
+function isLibraryFilterOn() {
+  const f = libraryFilter;
+  return Boolean(f.composer || f.source || f.tag || f.unassigned.length || f.untagged || f.search.trim());
+}
+
+function fillFilterSelect(select, anyLabel, specialValue, specialLabel, special, groupList, current) {
+  select.innerHTML = "";
+  const add = (value, text) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = text;
+    select.appendChild(option);
+  };
+  add("", "Any");
+  add(specialValue, `${specialLabel} (${special})`);
+  for (const group of groupList) {
+    add(group.value, `${group.value} (${group.count})`);
+  }
+  select.value = current;
+  if (select.value !== current) {
+    select.value = "";
+  }
+}
+
+function populateLibraryFilterSelects() {
+  const f = libraryFilter;
+  const g = libraryGroups;
+  fillFilterSelect(
+    document.getElementById("library-filter-composer"),
+    "Any",
+    UNASSIGNED,
+    "Unassigned",
+    g.unassigned.composer,
+    g.composers,
+    f.unassigned.includes("composer") ? UNASSIGNED : f.composer,
+  );
+  fillFilterSelect(
+    document.getElementById("library-filter-source"),
+    "Any",
+    UNASSIGNED,
+    "Unassigned",
+    g.unassigned.source,
+    g.sources,
+    f.unassigned.includes("source") ? UNASSIGNED : f.source,
+  );
+  fillFilterSelect(
+    document.getElementById("library-filter-tag"),
+    "Any",
+    UNTAGGED,
+    "Untagged",
+    g.untagged,
+    g.tags,
+    f.untagged ? UNTAGGED : f.tag,
+  );
+  document.getElementById("library-search").value = f.search;
+  document.getElementById("library-sort").value = f.sort;
+}
+
+function wireLibraryFilterRow() {
+  const setUnassigned = (which, on) => {
+    libraryFilter.unassigned = libraryFilter.unassigned.filter((name) => name !== which);
+    if (on) {
+      libraryFilter.unassigned.push(which);
+    }
+  };
+  document.getElementById("library-filter-composer").addEventListener("change", (event) => {
+    const unassigned = event.target.value === UNASSIGNED;
+    setUnassigned("composer", unassigned);
+    libraryFilter.composer = unassigned ? "" : event.target.value;
+    loadLibraryPieces();
+  });
+  document.getElementById("library-filter-source").addEventListener("change", (event) => {
+    const unassigned = event.target.value === UNASSIGNED;
+    setUnassigned("source", unassigned);
+    libraryFilter.source = unassigned ? "" : event.target.value;
+    loadLibraryPieces();
+  });
+  document.getElementById("library-filter-tag").addEventListener("change", (event) => {
+    libraryFilter.untagged = event.target.value === UNTAGGED;
+    libraryFilter.tag = libraryFilter.untagged ? "" : event.target.value;
+    loadLibraryPieces();
+  });
+  document.getElementById("library-search").addEventListener("input", (event) => {
+    libraryFilter.search = event.target.value;
+    showLibraryPieces(libraryFetchedPieces);
+  });
+  document.getElementById("library-sort").addEventListener("change", (event) => {
+    libraryFilter.sort = event.target.value;
+    showLibraryPieces(libraryFetchedPieces);
+  });
+  document.getElementById("library-clear-filters").addEventListener("click", () => {
+    libraryFilter = emptyLibraryFilter();
+    populateLibraryFilterSelects();
+    loadLibraryPieces();
+  });
+}
+
+/* The last list fetched from the backend, before search and sort. */
+let libraryFetchedPieces = [];
 
 async function loadLibraryPieces() {
   const statusEl = document.getElementById("library-status");
@@ -204,7 +335,8 @@ async function loadLibraryPieces() {
   bodyEl.innerHTML = "";
 
   try {
-    const res = await fetch("/api/analyzer/pieces");
+    const query = PieceMetadata.filterQuery(libraryFilter);
+    const res = await fetch(query ? `/api/analyzer/pieces?${query}` : "/api/analyzer/pieces");
     const data = await res.json();
 
     if (!data.ok) {
@@ -213,19 +345,163 @@ async function loadLibraryPieces() {
       return;
     }
 
-    if (data.pieces.length === 0) {
-      statusEl.textContent = "No pieces yet.";
-      return;
-    }
-
-    statusEl.textContent = "";
-    tableEl.hidden = false;
-    for (const piece of data.pieces) {
-      bodyEl.appendChild(buildLibraryRow(piece));
-    }
+    libraryFetchedPieces = data.pieces;
+    showLibraryPieces(data.pieces);
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
+  }
+}
+
+/* Applies the client-side search and sort to the fetched pieces and draws
+ * the table and the count line. */
+function showLibraryPieces(fetched) {
+  const statusEl = document.getElementById("library-status");
+  const tableEl = document.getElementById("library-table");
+  const bodyEl = document.getElementById("library-table-body");
+  const countEl = document.getElementById("library-count");
+
+  libraryShownPieces = PieceMetadata.sortPieces(
+    PieceMetadata.searchPieces(fetched, libraryFilter.search),
+    libraryFilter.sort,
+  );
+  bodyEl.innerHTML = "";
+  document.getElementById("library-select-all").checked = false;
+  updateLibraryBulkBar();
+  countEl.textContent = isLibraryFilterOn()
+    ? `${libraryShownPieces.length} of ${libraryGroups.total} pieces`
+    : "";
+
+  if (libraryShownPieces.length === 0) {
+    statusEl.textContent = isLibraryFilterOn() ? "No pieces match." : "No pieces yet.";
+    statusEl.classList.remove("error");
+    tableEl.hidden = true;
+    return;
+  }
+
+  statusEl.textContent = "";
+  statusEl.classList.remove("error");
+  tableEl.hidden = false;
+  for (const piece of libraryShownPieces) {
+    bodyEl.appendChild(buildLibraryRow(piece));
+  }
+}
+
+function selectedLibraryIds() {
+  return Array.from(document.querySelectorAll("#library-table-body .row-select:checked"), (box) => box.dataset.id);
+}
+
+function wireLibrarySelection() {
+  document.getElementById("library-select-all").addEventListener("change", (event) => {
+    for (const box of document.querySelectorAll("#library-table-body .row-select")) {
+      box.checked = event.target.checked;
+    }
+    updateLibraryBulkBar();
+  });
+  document.getElementById("library-table-body").addEventListener("change", (event) => {
+    if (event.target.classList.contains("row-select")) {
+      const boxes = document.querySelectorAll("#library-table-body .row-select");
+      document.getElementById("library-select-all").checked = Array.from(boxes).every((box) => box.checked);
+      updateLibraryBulkBar();
+    }
+  });
+}
+
+const BULK_ACTIONS = [
+  { action: "set-composer", label: "Set composer", list: "bulk-composers" },
+  { action: "set-source", label: "Set source", list: "bulk-sources" },
+  { action: "add-tag", label: "Add tag", list: "bulk-tags" },
+  { action: "remove-tag", label: "Remove tag", list: "bulk-tags" },
+];
+
+/* Shows the bulk bar when rows are checked: the count, one button per
+ * bulk action (each opens an inline input with an Apply button) and Clear
+ * selection. */
+function updateLibraryBulkBar() {
+  const bar = document.getElementById("library-bulk");
+  const ids = selectedLibraryIds();
+  bar.innerHTML = "";
+  bar.hidden = ids.length === 0;
+  if (ids.length === 0) {
+    return;
+  }
+
+  const count = document.createElement("span");
+  count.textContent = `${ids.length} selected`;
+  const inline = document.createElement("span");
+  inline.classList.add("bulk-inline");
+  bar.append(
+    count,
+    buildDatalist("bulk-composers", libraryGroups.composers),
+    buildDatalist("bulk-sources", libraryGroups.sources),
+    buildDatalist("bulk-tags", libraryGroups.tags),
+  );
+  for (const item of BULK_ACTIONS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.label;
+    button.addEventListener("click", () => openBulkInput(inline, item));
+    bar.appendChild(button);
+  }
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.textContent = "Clear selection";
+  clear.addEventListener("click", () => {
+    for (const box of document.querySelectorAll("#library-table-body .row-select")) {
+      box.checked = false;
+    }
+    document.getElementById("library-select-all").checked = false;
+    updateLibraryBulkBar();
+  });
+  bar.append(clear, inline);
+}
+
+function openBulkInput(container, item) {
+  container.innerHTML = "";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.setAttribute("list", item.list);
+  input.setAttribute("aria-label", item.label);
+  const apply = document.createElement("button");
+  apply.type = "button";
+  apply.textContent = "Apply";
+  apply.addEventListener("click", () => applyBulkEdit(item.action, input.value));
+  container.append(input, apply);
+  input.focus();
+}
+
+/* Sends one PATCH per selected piece, in order, and stops at the first
+ * failure, naming the piece. Reloads the list and the groups afterwards. */
+async function applyBulkEdit(action, rawValue) {
+  const isTag = action === "add-tag" || action === "remove-tag";
+  const value = isTag ? PieceMetadata.parseTagInput(rawValue) : rawValue.trim();
+  const statusEl = document.getElementById("library-status");
+  if (isTag && value.length === 0) {
+    statusEl.textContent = "Enter a tag.";
+    statusEl.classList.add("error");
+    return;
+  }
+  const body = PieceMetadata.bulkPatch(action, value);
+  const labels = new Map(libraryShownPieces.map((piece) => [piece.id, piece.filename || piece.id]));
+  let failure = "";
+  for (const id of selectedLibraryIds()) {
+    const result = await fetchJsonResult(`/api/analyzer/pieces/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!result.ok || !result.data || !result.data.ok) {
+      const reason = (result.data && (result.data.message || result.data.error)) || "failed";
+      failure = `Stopped at ${labels.get(id) || id}: ${reason}`;
+      break;
+    }
+  }
+  await refreshLibrary();
+  notifyMetadataChanged();
+  if (failure) {
+    const status = document.getElementById("library-status");
+    status.textContent = failure;
+    status.classList.add("error");
   }
 }
 
@@ -279,13 +555,59 @@ function renderPieceFilenameCell(piece) {
   return span;
 }
 
+/* Text cell for composer or source; an empty value shows a muted dash. */
+function buildMetadataTextCell(value) {
+  const cell = document.createElement("td");
+  if (value) {
+    cell.textContent = value;
+  } else {
+    const dash = document.createElement("span");
+    dash.classList.add("muted-dash");
+    dash.textContent = "—";
+    cell.appendChild(dash);
+  }
+  return cell;
+}
+
+function buildTagChips(tags) {
+  const cell = document.createElement("td");
+  cell.classList.add("tag-cell");
+  for (const tag of tags || []) {
+    const chip = document.createElement("span");
+    chip.classList.add("tag-chip");
+    chip.textContent = tag;
+    cell.appendChild(chip);
+  }
+  return cell;
+}
+
 function buildLibraryRow(piece) {
+  const row = buildLibraryRowBase(piece);
+  const selectCell = document.createElement("td");
+  selectCell.classList.add("select-cell");
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.classList.add("row-select");
+  checkbox.dataset.id = piece.id;
+  checkbox.setAttribute("aria-label", `Select ${piece.filename || piece.id}`);
+  selectCell.appendChild(checkbox);
+  row.insertBefore(selectCell, row.firstChild);
+  const titleCell = row.children[1];
+  titleCell.after(
+    buildMetadataTextCell(piece.composer),
+    buildMetadataTextCell(piece.source),
+    buildTagChips(piece.tags),
+  );
+  return row;
+}
+
+function buildLibraryRowBase(piece) {
   return buildPieceRow(
     piece,
     (row, actionsCell, rowPiece) => {
       actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
       actionsCell.appendChild(
-        buildActionButton({ icon: "✎", label: "Rename", onClick: () => startLibraryRename(row, rowPiece) }),
+        buildActionButton({ icon: "✎", label: "Edit", onClick: () => startLibraryEdit(row, rowPiece) }),
       );
       actionsCell.appendChild(
         buildActionButton({
@@ -308,65 +630,198 @@ function buildLibraryRow(piece) {
   );
 }
 
-function startLibraryRename(row, piece) {
-  const filenameCell = row.querySelector("td");
-  filenameCell.innerHTML = "";
+/* Distinct composers, sources and tags with counts (GET
+ * /api/analyzer/groups), cached for the Library's datalists and selects.
+ * Resolves to the cache; a failed fetch keeps the previous one. */
+let libraryGroups = { composers: [], sources: [], tags: [], unassigned: { composer: 0, source: 0 }, untagged: 0, total: 0 };
 
+async function loadLibraryGroups() {
+  const result = await fetchJsonResult("/api/analyzer/groups");
+  if (result.ok && result.data && result.data.ok) {
+    libraryGroups = result.data;
+  }
+  return libraryGroups;
+}
+
+/* Called after any upload, edit, bulk edit or delete in the Library. The
+ * sidebar Tags panel hooks in here. */
+function notifyMetadataChanged() {}
+
+function buildDatalist(id, groupList) {
+  const list = document.createElement("datalist");
+  list.id = id;
+  for (const group of groupList) {
+    const option = document.createElement("option");
+    option.value = group.value;
+    list.appendChild(option);
+  }
+  return list;
+}
+
+/* A text box that turns typed text into removable chips on Enter or comma;
+ * Backspace on an empty box removes the last chip. getTags() also takes
+ * whatever is still typed. */
+function buildTagInput(initialTags) {
+  const el = document.createElement("div");
+  el.classList.add("tag-input");
+  const tags = [];
   const input = document.createElement("input");
   input.type = "text";
-  input.value = piece.filename || "";
-  filenameCell.appendChild(input);
-  input.focus();
+  input.placeholder = "Add tag";
+  input.setAttribute("aria-label", "Tags");
 
+  function render() {
+    for (const chip of el.querySelectorAll(".tag-chip")) {
+      chip.remove();
+    }
+    for (const tag of tags) {
+      const chip = document.createElement("span");
+      chip.classList.add("tag-chip");
+      chip.textContent = tag;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.classList.add("chip-remove");
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", `Remove tag ${tag}`);
+      remove.addEventListener("click", () => {
+        tags.splice(tags.indexOf(tag), 1);
+        render();
+      });
+      chip.appendChild(remove);
+      el.insertBefore(chip, input);
+    }
+  }
+
+  function commit() {
+    for (const tag of PieceMetadata.parseTagInput(input.value)) {
+      if (!tags.includes(tag)) {
+        tags.push(tag);
+      }
+    }
+    input.value = "";
+    render();
+  }
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      commit();
+    } else if (event.key === "Backspace" && input.value === "") {
+      tags.pop();
+      render();
+    }
+  });
+  input.addEventListener("input", () => {
+    if (input.value.includes(",")) {
+      commit();
+    }
+  });
+
+  el.appendChild(input);
+  tags.push(...(initialTags || []));
+  render();
+  return {
+    el,
+    inputEl: input,
+    getTags() {
+      commit();
+      return tags.slice();
+    },
+  };
+}
+
+function buildEditorField(labelText, inputEl) {
+  const label = document.createElement("label");
+  label.classList.add("editor-field");
+  label.append(labelText, inputEl);
+  return label;
+}
+
+/* Replaces a Library row with an editor row for the piece's title,
+ * composer, source and tags. Save sends one PATCH; Cancel or Escape puts
+ * the row back. */
+async function startLibraryEdit(row, piece) {
+  await loadLibraryGroups();
+  const editorRow = document.createElement("tr");
+  editorRow.classList.add("editor-row");
+  const cell = document.createElement("td");
+  cell.colSpan = 6;
+  editorRow.appendChild(cell);
+
+  const title = document.createElement("input");
+  title.type = "text";
+  title.value = piece.filename || "";
+  const composer = document.createElement("input");
+  composer.type = "text";
+  composer.value = piece.composer || "";
+  composer.setAttribute("list", "editor-composers");
+  const source = document.createElement("input");
+  source.type = "text";
+  source.value = piece.source || "";
+  source.setAttribute("list", "editor-sources");
+  const tagInput = buildTagInput(piece.tags);
+
+  const errorEl = document.createElement("div");
+  errorEl.classList.add("piece-list-status", "error");
   const saveButton = document.createElement("button");
   saveButton.type = "button";
   saveButton.textContent = "Save";
-  saveButton.addEventListener("click", () => handleLibraryRename(row, piece, input.value.trim()));
-  filenameCell.appendChild(saveButton);
-
   const cancelButton = document.createElement("button");
   cancelButton.type = "button";
   cancelButton.textContent = "Cancel";
-  cancelButton.addEventListener("click", () => {
-    filenameCell.innerHTML = "";
-    filenameCell.appendChild(renderPieceFilenameCell(piece));
+
+  const fields = document.createElement("div");
+  fields.classList.add("editor-fields");
+  fields.append(
+    buildEditorField("Title", title),
+    buildEditorField("Composer", composer),
+    buildEditorField("Source", source),
+    buildEditorField("Tags", tagInput.el),
+  );
+  const buttons = document.createElement("div");
+  buttons.classList.add("editor-buttons");
+  buttons.append(saveButton, cancelButton);
+  cell.append(
+    buildDatalist("editor-composers", libraryGroups.composers),
+    buildDatalist("editor-sources", libraryGroups.sources),
+    fields,
+    errorEl,
+    buttons,
+  );
+
+  const cancel = () => editorRow.replaceWith(row);
+  cancelButton.addEventListener("click", cancel);
+  editorRow.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cancel();
+    }
   });
-  filenameCell.appendChild(cancelButton);
-}
-
-async function handleLibraryRename(row, piece, newFilename) {
-  const statusEl = document.getElementById("library-status");
-
-  if (!newFilename) {
-    statusEl.textContent = "Enter a filename.";
-    statusEl.classList.add("error");
-    return;
-  }
-
-  try {
-    const res = await fetch(`/api/analyzer/pieces/${piece.id}`, {
+  saveButton.addEventListener("click", async () => {
+    errorEl.textContent = "";
+    const body = {
+      filename: title.value.trim(),
+      composer: composer.value,
+      source: source.value,
+      tags: tagInput.getTags(),
+    };
+    const result = await fetchJsonResult(`/api/analyzer/pieces/${piece.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename: newFilename }),
+      body: JSON.stringify(body),
     });
-    const data = await res.json();
-
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Rename failed.";
-      statusEl.classList.add("error");
+    if (!result.ok || !result.data || !result.data.ok) {
+      errorEl.textContent = (result.data && (result.data.message || result.data.error)) || "Save failed.";
       return;
     }
+    const fresh = buildLibraryRow(result.data.piece);
+    editorRow.replaceWith(fresh);
+    await loadLibraryGroups();
+    populateLibraryFilterSelects();
+    notifyMetadataChanged();
+  });
 
-    statusEl.textContent = "";
-    statusEl.classList.remove("error");
-    piece.filename = data.filename;
-    const filenameCell = row.querySelector("td");
-    filenameCell.innerHTML = "";
-    filenameCell.appendChild(renderPieceFilenameCell(piece));
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
-  }
+  row.replaceWith(editorRow);
+  title.focus();
 }
 
 /* Runs the Analyzer again on the piece's stored source
@@ -422,6 +877,9 @@ async function handleDeleteLibraryPiece(id, rowEl) {
     }
 
     rowEl.remove();
+    await loadLibraryGroups();
+    populateLibraryFilterSelects();
+    notifyMetadataChanged();
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
     statusEl.classList.add("error");
