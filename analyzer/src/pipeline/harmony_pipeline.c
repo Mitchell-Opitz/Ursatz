@@ -7,6 +7,8 @@
 #include "harmony_functions.h"
 #include "harmony_key_change.h"
 #include "metric_position_rules.h"
+#include "phrase_model_label.h"
+#include "standard-harmony/analysis/analysis_phrase.h"
 #include "semantics/key_change_extent.h"
 #include "six_four_type.h"
 #include "time/duration.h"
@@ -343,6 +345,58 @@ bool harmony_stage_collect_six_fours_and_prolongations(HarmonyStage *stage, Anal
     }
     harmony_prolongations_destroy(&found);
     return ok;
+}
+
+bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisReport *report) {
+    if (!stage->segments || stage->count == 0 || report->phrase_count == 0) {
+        return true;
+    }
+    HarmonyPhraseSpan *spans = calloc(report->phrase_count, sizeof(HarmonyPhraseSpan));
+    size_t *owners = calloc(report->phrase_count, sizeof(size_t));
+    if (!spans || !owners) {
+        free(spans);
+        free(owners);
+        return false;
+    }
+    size_t span_count = 0;
+    for (size_t p = 0; p < report->phrase_count; p++) {
+        const AnalysisPhrase *phrase = &report->phrases[p];
+        if (phrase->entry_count == 0 || phrase->first_entry + phrase->entry_count > stage->count) {
+            continue;
+        }
+        HarmonyPhraseSpan *span = &spans[span_count];
+        span->first_segment = phrase->first_entry;
+        span->last_segment = phrase->first_entry + phrase->entry_count - 1;
+        span->cadence = CADENCE_TYPE_UNKNOWN;
+        if (phrase->has_cadence && phrase->cadence < stage->cadences.count) {
+            const HarmonyCadenceResult *cadence = &stage->cadences.items[phrase->cadence];
+            span->cadence = cadence->type;
+            if (cadence->arrival_last >= span->first_segment && cadence->arrival_last < span->last_segment) {
+                span->last_segment = cadence->arrival_last;
+            }
+        }
+        owners[span_count++] = p;
+    }
+    HarmonyPhraseModel model = {0};
+    HarmonyPhraseModelStatus status =
+        span_count > 0 ? harmony_analysis_phrase_model_label(stage->segments, stage->count, spans, span_count, &model)
+                       : HARMONY_PHRASE_MODEL_ERR_BAD_SPAN;
+    free(spans);
+    if (status != HARMONY_PHRASE_MODEL_OK) {
+        free(owners);
+        return status != HARMONY_PHRASE_MODEL_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < model.segment_count && i < report->entry_count; i++) {
+        if (model.segments[i].has_label) {
+            report->entries[i].phrase_model = phrase_model_label_abbreviation(model.segments[i].label);
+        }
+    }
+    for (size_t k = 0; k < span_count && k < model.phrase_count; k++) {
+        report->phrases[owners[k]].phrase_model_labeled = model.phrase_labeled[k];
+    }
+    harmony_phrase_model_destroy(&model);
+    free(owners);
+    return true;
 }
 
 void harmony_stage_destroy(HarmonyStage *stage) {

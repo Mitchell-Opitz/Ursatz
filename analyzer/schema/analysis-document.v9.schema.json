@@ -390,6 +390,17 @@
             "cadence": { "type": ["integer", "null"], "minimum": 0 },
             "signal": { "enum": ["cadence", "discontinuity", "none"] },
             "role": { "enum": ["beginning", "middle", "ending"] },
+            "phrase_model": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["chord", "label"],
+                "properties": {
+                  "chord": { "type": "integer", "minimum": 0 },
+                  "label": { "enum": ["Tb", "PD", "D", "Te"] }
+                }
+              }
+            },
             "subphrases": {
               "type": "array",
               "items": { "$ref": "#/$defs/subphrase_claim" }
@@ -864,7 +875,8 @@
                 }
               ]
             },
-            "context": { "enum": ["none", "previous", "next", "arpeggio", null] }
+            "context": { "enum": ["none", "previous", "next", "arpeggio", null] },
+            "phrase_model": { "enum": ["Tb", "PD", "D", "Te"] }
           }
         }
       ]

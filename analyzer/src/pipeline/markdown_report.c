@@ -1021,8 +1021,9 @@ static bool append_phrase_cadence(StringBuilder *sb, const cJSON *document, cons
            append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) && sb_append(sb, ")");
 }
 
-/* One line per phrase: its ideas with their labels and measures, and its subphrases. */
-static bool append_phrase_line(StringBuilder *sb, const cJSON *phrase) {
+/* One line per phrase: its ideas with their labels and measures, its subphrases, and its phrase model (the chords the
+   library labelled Tb, PD, D and Te, each with where it begins). */
+static bool append_phrase_line(StringBuilder *sb, const cJSON *document, const cJSON *phrase) {
     bool ok = sb_appendf(sb, "- **Phrase %d:** ", (int)number_member(phrase, "index") + 1);
     const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(phrase, "ideas");
     if (cJSON_GetArraySize(ideas) == 0) {
@@ -1040,6 +1041,15 @@ static bool append_phrase_line(StringBuilder *sb, const cJSON *phrase) {
     cJSON_ArrayForEach(subphrase, subphrases) {
         ok = ok && sb_append(sb, subphrase == subphrases->child ? "; subphrases " : ", ") &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(subphrase, "measures"));
+    }
+    const cJSON *model = cJSON_GetObjectItemCaseSensitive(phrase, "phrase_model");
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(document, "chords");
+    const cJSON *segment;
+    cJSON_ArrayForEach(segment, model) {
+        const cJSON *chord = cJSON_GetArrayItem(chords, (int)number_member(segment, "chord"));
+        const cJSON *start = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "location"), "start");
+        ok = ok && sb_append(sb, segment == model->child ? "; phrase model " : ", ") &&
+             sb_appendf(sb, "%s (", string_member(segment, "label")) && append_position(sb, start) && sb_append(sb, ")");
     }
     return ok && sb_append(sb, "\n");
 }
@@ -1068,7 +1078,7 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
     }
     ok = ok && sb_append(sb, "\n");
     cJSON_ArrayForEach(phrase, phrases) {
-        ok = ok && append_phrase_line(sb, phrase);
+        ok = ok && append_phrase_line(sb, document, phrase);
     }
     return ok && sb_append(sb, "\n");
 }

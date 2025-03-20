@@ -105,6 +105,9 @@ typedef struct {
                                          library's harmony_predominant_strength; NULL for any other chord */
     const char *six_four;           /* the library's SixFourType name ("cadential", "passing", "neighbor",
                                        "arpeggiating") of a classified six-four chord; NULL otherwise */
+    const char *phrase_model;       /* the library's phrase model label of the chord, as it abbreviates it: "Tb", "PD", "D"
+                                       or "Te"; NULL for a chord with none (outside a labelled phrase, or not a chord
+                                       of the model) */
 } AnalysisReportEntry;
 
 /* Frees an outer note's strings and clears it. */
@@ -265,6 +268,7 @@ typedef struct {
     double uncertainty;   /* the library's, in [0, 1]; higher is LESS certain */
     const char *role;     /* where the phrase stands in the piece: "beginning" (the first), "ending" (the last) or
                              "middle". The library names no such role for a phrase, so this is position alone. */
+    bool phrase_model_labeled; /* the library labelled the phrase's chords for the phrase model */
     size_t first_idea;    /* the phrase's ideas: ideas[first_idea .. + idea_count) */
     size_t idea_count;
     size_t first_subphrase; /* its subphrases: subphrases[first_subphrase .. + subphrase_count) */
