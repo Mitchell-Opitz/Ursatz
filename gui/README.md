@@ -13,9 +13,24 @@ a monolithic application.
   Files are uploaded and analyzed one after another; a list under the box
   shows each file as queued, analyzing, uploaded or failed, with a summary
   line, and the table fills in as each one finishes. Dropped files with
-  another extension are listed as failed. The table lists the stored pieces;
-  rename, delete, or run a piece's analysis again (the round arrow).
-  Clicking a filename opens the Analysis view.
+  another extension are listed as failed. The table lists the stored pieces
+  with a select box, Title, Composer, Source, Tags (chips) and Actions; an
+  empty composer or source shows a dash. Clicking a title opens the Analysis
+  view. Delete a piece, or run its analysis again (the round arrow).
+  - Edit (the pencil) opens an editor row for the title, composer, source and
+    tags. Composer and source suggest existing values; type a tag and press
+    Enter or comma to make a chip, Backspace on an empty box removes the last
+    chip, and × removes one. Save sends one request; Escape or Cancel closes
+    the editor.
+  - The filter row has a search box (title, composer, source, tags), Composer,
+    Source and Tag selects (Any, Unassigned or Untagged, then each value with
+    its piece count), a sort (Date added, Title, Composer) and Clear filters.
+    The selects filter on the backend; search and sort apply to the result. A
+    count line ("12 of 40 pieces") shows while a filter is on.
+  - Bulk edit: check rows (the header box checks every shown row) and the bulk
+    bar offers Set composer, Set source, Add tag and Remove tag. Apply updates
+    the selected pieces one at a time and stops at the first failure, naming
+    the piece.
 - **Analysis**: one piece. The top-level Analysis nav entry reopens the piece
   viewed last this session; before any piece has been opened it points at
   the Library.
