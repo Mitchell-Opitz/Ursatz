@@ -166,11 +166,6 @@ long form_stage_phrase_cadence(const FormStage *stage, size_t phrase) {
     return strncmp(id, CADENCE_ID_PREFIX, strlen(CADENCE_ID_PREFIX)) == 0 ? atol(id + strlen(CADENCE_ID_PREFIX)) : -1;
 }
 
-/* a/b < c/d for positive denominators. */
-static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return (long long)a * (long long)d < (long long)c * (long long)b;
-}
-
 static const char *signal_name(int signal) {
     switch (signal) {
         case STANDARD_FORM_SIGNAL_CADENCE:
@@ -180,6 +175,11 @@ static const char *signal_name(int signal) {
         default:
             return "none";
     }
+}
+
+/* a/b < c/d for positive denominators. */
+static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
+    return (long long)a * (long long)d < (long long)c * (long long)b;
 }
 
 /* The span from the start of measure `first` to the end of measure `last`. False if the meter does not place them. */
@@ -198,6 +198,20 @@ static bool measures_span(const MeterMap *map, int first, int last, long *start_
     time_span_destroy(from);
     time_span_destroy(to);
     return ok;
+}
+
+/* Clips [start, end) to the phrase's span: an idea ends with its last measure, a phrase with its cadence's arrival chord
+   (snapped to the beat), and the pickup lies before the first barline. */
+static void clip_to_phrase(const AnalysisPhrase *phrase, long *start_numerator, unsigned long *start_denominator,
+                           long *end_numerator, unsigned long *end_denominator) {
+    if (rational_less(*start_numerator, *start_denominator, phrase->start_numerator, phrase->start_denominator)) {
+        *start_numerator = phrase->start_numerator;
+        *start_denominator = phrase->start_denominator;
+    }
+    if (rational_less(phrase->end_numerator, phrase->end_denominator, *end_numerator, *end_denominator)) {
+        *end_numerator = phrase->end_numerator;
+        *end_denominator = phrase->end_denominator;
+    }
 }
 
 /* The ImportedNotes indices of the input's soprano notes [first, end), owned. NULL with *count 0 when empty. */
@@ -238,6 +252,9 @@ static bool collect_ideas(const FormStage *stage, AnalysisReport *report) {
         idea->compared = claim->compared != 0;
         idea->similarity = claim->similarity;
         idea->uncertainty = found->uncertainty;
+        if (claim->phrase < 0 || (size_t)claim->phrase >= report->phrase_count) {
+            return false;
+        }
         if (!idea->label || !measures_span(stage->input.map, claim->first_measure, claim->last_measure,
                                            &idea->start_numerator, &idea->start_denominator, &idea->end_numerator,
                                            &idea->end_denominator)) {
@@ -248,6 +265,8 @@ static bool collect_ideas(const FormStage *stage, AnalysisReport *report) {
             return false;
         }
         AnalysisPhrase *phrase = &report->phrases[idea->phrase];
+        clip_to_phrase(phrase, &idea->start_numerator, &idea->start_denominator, &idea->end_numerator,
+                       &idea->end_denominator);
         if (phrase->idea_count == 0) {
             phrase->first_idea = i;
         }
@@ -287,6 +306,8 @@ static bool collect_subphrases(const FormStage *stage, AnalysisReport *report) {
         if (claim->note_end > claim->note_first && !subphrase->note_ids) {
             return false;
         }
+        clip_to_phrase(phrase, &subphrase->start_numerator, &subphrase->start_denominator, &subphrase->end_numerator,
+                       &subphrase->end_denominator);
         if (phrase->subphrase_count == 0) {
             phrase->first_subphrase = i;
         }
