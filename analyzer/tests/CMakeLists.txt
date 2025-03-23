@@ -126,6 +126,12 @@ add_test(NAME test_progressions COMMAND test_progressions)
 add_test(NAME test_progressions_bach_114_top COMMAND test_progressions bach-top)
 set_tests_properties(test_progressions_bach_114_top PROPERTIES WILL_FAIL TRUE)
 
+add_executable(test_phrases test_phrases.c)
+target_link_libraries(test_phrases PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_phrases PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_phrases COMMAND test_phrases)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE
