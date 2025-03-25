@@ -42,6 +42,9 @@ function setActiveTool(toolId) {
 function selectTool(toolId) {
   leaveWorkspace();
   setActiveTool(toolId);
+  if (toolId !== "library" && tagsPanel) {
+    tagsPanel.setActive(null);
+  }
   const selected = TOOLS.find((tool) => tool.id === toolId);
   if (selected && selected.render) {
     selected.render();
@@ -329,6 +332,9 @@ async function loadLibraryPieces() {
   const tableEl = document.getElementById("library-table");
   const bodyEl = document.getElementById("library-table-body");
 
+  if (tagsPanel) {
+    tagsPanel.setActive(libraryFilter);
+  }
   statusEl.textContent = "Loading pieces...";
   statusEl.classList.remove("error");
   tableEl.hidden = true;
@@ -643,9 +649,13 @@ async function loadLibraryGroups() {
   return libraryGroups;
 }
 
-/* Called after any upload, edit, bulk edit or delete in the Library. The
- * sidebar Tags panel hooks in here. */
-function notifyMetadataChanged() {}
+/* Called after any upload, edit, bulk edit or delete in the Library;
+ * refreshes the sidebar Tags panel. */
+function notifyMetadataChanged() {
+  if (tagsPanel) {
+    tagsPanel.refresh();
+  }
+}
 
 function buildDatalist(id, groupList) {
   const list = document.createElement("datalist");
@@ -1604,11 +1614,18 @@ async function fetchTagsPanelGroups() {
   return result.data;
 }
 
+/* Selects the Library tool already filtered to a Tags panel group. */
+function openLibraryWithFilter(filter) {
+  leaveWorkspace();
+  setActiveTool("library");
+  renderLibraryView(filter);
+}
+
 function mountTagsPanel() {
   const el = document.getElementById("tags-panel");
   tagsPanel = TagsPanel.mount(el, {
     fetchGroups: fetchTagsPanelGroups,
-    onSelect: () => {},
+    onSelect: openLibraryWithFilter,
   });
   tagsPanel.refresh();
 }
