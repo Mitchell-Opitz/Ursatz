@@ -1593,4 +1593,25 @@ async function handleRemovePiece(corpusId, corpusName, pieceId) {
   }
 }
 
+/* The sidebar Tags panel (tags-panel.js). */
+let tagsPanel = null;
+
+async function fetchTagsPanelGroups() {
+  const result = await fetchJsonResult("/api/analyzer/groups");
+  if (!(result.ok && result.data && result.data.ok)) {
+    throw new Error("groups unavailable");
+  }
+  return result.data;
+}
+
+function mountTagsPanel() {
+  const el = document.getElementById("tags-panel");
+  tagsPanel = TagsPanel.mount(el, {
+    fetchGroups: fetchTagsPanelGroups,
+    onSelect: () => {},
+  });
+  tagsPanel.refresh();
+}
+
+mountTagsPanel();
 selectTool("library");
