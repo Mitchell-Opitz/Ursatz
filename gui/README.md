@@ -31,6 +31,16 @@ a monolithic application.
     bar offers Set composer, Set source, Add tag and Remove tag. Apply updates
     the selected pieces one at a time and stops at the first failure, naming
     the piece.
+- **Tags panel** (sidebar, under the tools): pieces grouped automatically by
+  Composer, Source and Tags. Each group lists its values with piece counts
+  (the top 12, then "Show all (n)"), then Unassigned (composer, source) or
+  Untagged (tags) when any pieces are in it; an empty group reads "None yet".
+  Clicking a row opens the Library filtered to that group, and the row stays
+  highlighted while that filter is on. Each group folds open or closed and
+  the choice is remembered in the browser. The panel refreshes after any
+  upload, edit, bulk edit or delete; if the groups cannot be fetched it shows
+  "Tags unavailable" and the tool list keeps working. The sidebar scrolls
+  when the panel is long.
 - **Analysis**: one piece. The top-level Analysis nav entry reopens the piece
   viewed last this session; before any piece has been opened it points at
   the Library.
