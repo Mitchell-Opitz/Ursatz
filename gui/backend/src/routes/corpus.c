@@ -12,7 +12,9 @@
 #include "../service/corpus_service.h"
 
 static const char *kCorpusPrefix = "/api/corpus";
-static const size_t kMaxRequestBodySize = 64 * 1024;
+static const size_t kMaxRequestBodySize = 1024 * 1024;
+/* "Add all matching" sends every id of a filtered Library in one request. */
+static const size_t kMaxPieceIds = 5000;
 
 static void send_json(struct mg_connection *conn, const char *body) {
   size_t len = strlen(body);
@@ -72,7 +74,8 @@ static int send_object(struct mg_connection *conn, cJSON *object) {
 /* Reads the full request body into a newly allocated, NUL-terminated
  * buffer (caller frees). Returns NULL on allocation failure, a read
  * error, or a body larger than kMaxRequestBodySize -- corpus request
- * bodies are small JSON objects, unlike the Analyzer upload route. */
+ * bodies are JSON objects (the largest a list of piece ids), unlike the
+ * Analyzer upload route. */
 static char *read_request_body(struct mg_connection *conn) {
   size_t capacity = 4096;
   char *buffer = malloc(capacity);
@@ -127,47 +130,6 @@ static cJSON *read_json_body(struct mg_connection *conn) {
     return NULL;
   }
   return body;
-}
-
-/* Extracts the string value of a top-level "field":"value" pair from a
- * flat JSON object body. Minimal by design (no nesting, no escapes) --
- * every request body this route accepts is a flat object of plain id/name
- * strings, same assumption the rest of this codebase's JSON handling
- * makes. Returns a newly allocated, caller-owned string, or NULL if the
- * field is absent or malformed. */
-static char *extract_json_string_field(const char *body, const char *field) {
-  char needle[64];
-  snprintf(needle, sizeof(needle), "\"%s\"", field);
-
-  const char *key = strstr(body, needle);
-  if (!key) {
-    return NULL;
-  }
-
-  const char *colon = strchr(key + strlen(needle), ':');
-  if (!colon) {
-    return NULL;
-  }
-
-  const char *quote_start = strchr(colon, '"');
-  if (!quote_start) {
-    return NULL;
-  }
-  quote_start++;
-
-  const char *quote_end = strchr(quote_start, '"');
-  if (!quote_end) {
-    return NULL;
-  }
-
-  size_t len = (size_t)(quote_end - quote_start);
-  char *value = malloc(len + 1);
-  if (!value) {
-    return NULL;
-  }
-  memcpy(value, quote_start, len);
-  value[len] = '\0';
-  return value;
 }
 
 static const char *result_message(UrsatzGuiCorpusResult result) {
@@ -391,32 +353,93 @@ static int handle_delete_corpus(struct mg_connection *conn, const char *id) {
   return 200;
 }
 
-static int handle_add_piece(struct mg_connection *conn, const char *corpus_id) {
-  char *body = read_request_body(conn);
+/* Adds the ids of {"piece_id":"..."} or {"piece_ids":["...", ...]} to the
+ * collection. A piece already in it is counted, not an error:
+ * {"ok":true,"added":n,"already":n}. */
+static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) {
+  cJSON *body = read_json_body(conn);
   if (!body) {
-    send_ok_false(conn, "failed to read request body");
-    return 200;
+    return send_failure(conn, 200, "invalid request body");
   }
 
-  char *piece_id = extract_json_string_field(body, "piece_id");
-  free(body);
+  const cJSON *single = cJSON_GetObjectItemCaseSensitive(body, "piece_id");
+  const cJSON *list = cJSON_GetObjectItemCaseSensitive(body, "piece_ids");
+  size_t count = 0;
+  const char **ids = NULL;
+  const char *failure = NULL;
+  int failure_status = 200;
 
-  if (!piece_id || !ursatz_gui_corpus_is_valid_id(piece_id)) {
-    free(piece_id);
-    send_ok_false(conn, "invalid piece_id");
-    return 200;
+  if (cJSON_IsArray(list)) {
+    int length = cJSON_GetArraySize(list);
+    if (length <= 0) {
+      failure = "invalid piece_ids";
+    } else if ((size_t)length > kMaxPieceIds) {
+      failure = "too many pieces";
+      failure_status = 400;
+    } else {
+      ids = calloc((size_t)length, sizeof(*ids));
+      if (!ids) {
+        failure = "out of memory";
+      } else {
+        const cJSON *item = NULL;
+        cJSON_ArrayForEach(item, list) {
+          if (!cJSON_IsString(item) || !ursatz_gui_collection_is_valid_id(item->valuestring)) {
+            failure = "invalid piece_id";
+            break;
+          }
+          ids[count++] = item->valuestring;
+        }
+      }
+    }
+  } else if (cJSON_IsString(single) && ursatz_gui_collection_is_valid_id(single->valuestring)) {
+    ids = calloc(1, sizeof(*ids));
+    if (!ids) {
+      failure = "out of memory";
+    } else {
+      ids[count++] = single->valuestring;
+    }
+  } else {
+    failure = "invalid piece_id";
   }
 
-  UrsatzGuiCorpusResult result = ursatz_gui_corpus_add_piece(corpus_id, piece_id);
-  free(piece_id);
-
-  if (result != URSATZ_GUI_CORPUS_OK) {
-    send_ok_false(conn, result_message(result));
-    return 200;
+  if (failure) {
+    free(ids);
+    cJSON_Delete(body);
+    return send_failure(conn, failure_status, failure);
   }
 
-  send_json(conn, "{\"ok\":true}");
-  return 200;
+  /* An unknown collection is a 404 before any piece is looked at. */
+  if (!ursatz_gui_collection_exists(corpus_id)) {
+    free(ids);
+    cJSON_Delete(body);
+    return send_failure(conn, 404, "collection not found");
+  }
+  for (size_t i = 0; i < count; i++) {
+    if (!ursatz_gui_collection_piece_exists(ids[i])) {
+      char message[128];
+      snprintf(message, sizeof(message), "unknown piece: %s", ids[i]);
+      free(ids);
+      cJSON_Delete(body);
+      return send_failure(conn, 400, message);
+    }
+  }
+
+  size_t added = 0;
+  size_t already = 0;
+  UrsatzGuiCollectionResult result = ursatz_gui_collection_add_pieces(corpus_id, ids, count, &added, &already);
+  free(ids);
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_COLLECTION_OK) {
+    return send_collection_failure(conn, result);
+  }
+
+  cJSON *object = cJSON_CreateObject();
+  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddNumberToObject(object, "added", (double)added) ||
+      !cJSON_AddNumberToObject(object, "already", (double)already)) {
+    cJSON_Delete(object);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, object);
 }
 
 static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id, const char *piece_id) {
@@ -541,7 +564,7 @@ static int corpus_handler(struct mg_connection *conn, void *cbdata) {
 
   if (after_pieces[0] == '\0') {
     if (strcmp(method, "POST") == 0) {
-      return handle_add_piece(conn, corpus_id);
+      return handle_add_pieces(conn, corpus_id);
     }
     if (strcmp(method, "GET") == 0) {
       return handle_list_pieces(conn, corpus_id);
