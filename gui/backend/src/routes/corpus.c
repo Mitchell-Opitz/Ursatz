@@ -9,7 +9,6 @@
 #include <civetweb.h>
 
 #include "../service/collection_service.h"
-#include "../service/corpus_service.h"
 
 static const char *kCorpusPrefix = "/api/corpus";
 static const size_t kMaxRequestBodySize = 1024 * 1024;
@@ -132,26 +131,6 @@ static cJSON *read_json_body(struct mg_connection *conn) {
   return body;
 }
 
-static const char *result_message(UrsatzGuiCorpusResult result) {
-  switch (result) {
-    case URSATZ_GUI_CORPUS_ERR_INVALID_ID:
-      return "invalid id";
-    case URSATZ_GUI_CORPUS_ERR_INVALID_NAME:
-      return "invalid name";
-    case URSATZ_GUI_CORPUS_ERR_ALREADY_MEMBER:
-      return "piece is already in this corpus";
-    case URSATZ_GUI_CORPUS_ERR_NOT_MEMBER:
-      return "piece is not in this corpus";
-    case URSATZ_GUI_CORPUS_ERR_ALLOC:
-      return "out of memory";
-    case URSATZ_GUI_CORPUS_ERR_NOT_INITIALIZED:
-      return "corpus store is not available";
-    case URSATZ_GUI_CORPUS_ERR_FAILED:
-    default:
-      return "corpus operation failed";
-  }
-}
-
 static const char *collection_message(UrsatzGuiCollectionResult result) {
   switch (result) {
     case URSATZ_GUI_COLLECTION_ERR_INVALID_ID:
@@ -164,6 +143,8 @@ static const char *collection_message(UrsatzGuiCollectionResult result) {
       return "collection already exists";
     case URSATZ_GUI_COLLECTION_ERR_NOT_FOUND:
       return "collection not found";
+    case URSATZ_GUI_COLLECTION_ERR_NOT_MEMBER:
+      return "piece is not in this collection";
     case URSATZ_GUI_COLLECTION_ERR_ALLOC:
       return "out of memory";
     case URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED:
@@ -443,52 +424,39 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
 }
 
 static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id, const char *piece_id) {
-  UrsatzGuiCorpusResult result = ursatz_gui_corpus_remove_piece(corpus_id, piece_id);
-
-  if (result != URSATZ_GUI_CORPUS_OK) {
-    send_ok_false(conn, result_message(result));
-    return 200;
+  UrsatzGuiCollectionResult result = ursatz_gui_collection_remove_piece(corpus_id, piece_id);
+  if (result != URSATZ_GUI_COLLECTION_OK) {
+    return send_collection_failure(conn, result);
   }
-
   send_json(conn, "{\"ok\":true}");
   return 200;
 }
 
 static int handle_list_pieces(struct mg_connection *conn, const char *corpus_id) {
-  char **ids = NULL;
-  size_t count = 0;
-  UrsatzGuiCorpusResult result = ursatz_gui_corpus_list_pieces(corpus_id, &ids, &count);
-
-  if (result != URSATZ_GUI_CORPUS_OK) {
-    send_ok_false(conn, result_message(result));
-    return 200;
+  UrsatzGuiCollection *collection = NULL;
+  UrsatzGuiCollectionResult result = ursatz_gui_collection_get(corpus_id, &collection);
+  if (result != URSATZ_GUI_COLLECTION_OK) {
+    return send_collection_failure(conn, result);
   }
 
-  size_t capacity = 64;
-  for (size_t i = 0; i < count; i++) {
-    capacity += strlen(ids[i]) + 16;
-  }
-  char *out_body = malloc(capacity);
-  if (!out_body) {
-    for (size_t i = 0; i < count; i++) {
-      free(ids[i]);
+  cJSON *object = cJSON_CreateObject();
+  cJSON *pieces = object ? cJSON_AddArrayToObject(object, "pieces") : NULL;
+  bool built = pieces && cJSON_AddBoolToObject(object, "ok", 1);
+  for (size_t i = 0; built && i < collection->piece_count; i++) {
+    cJSON *piece = cJSON_CreateObject();
+    built = piece && cJSON_AddStringToObject(piece, "id", collection->pieces[i]);
+    if (built) {
+      cJSON_AddItemToArray(pieces, piece);
+    } else {
+      cJSON_Delete(piece);
     }
-    free(ids);
-    send_ok_false(conn, "out of memory");
-    return 200;
   }
-
-  size_t offset = (size_t)snprintf(out_body, capacity, "{\"ok\":true,\"pieces\":[");
-  for (size_t i = 0; i < count; i++) {
-    offset += (size_t)snprintf(out_body + offset, capacity - offset, "%s{\"id\":\"%s\"}", i == 0 ? "" : ",", ids[i]);
-    free(ids[i]);
+  ursatz_gui_collection_destroy(collection);
+  if (!built) {
+    cJSON_Delete(object);
+    return send_failure(conn, 500, "out of memory");
   }
-  free(ids);
-  offset += (size_t)snprintf(out_body + offset, capacity - offset, "]}");
-
-  send_json(conn, out_body);
-  free(out_body);
-  return 200;
+  return send_object(conn, object);
 }
 
 /*
@@ -575,7 +543,7 @@ static int corpus_handler(struct mg_connection *conn, void *cbdata) {
 
   if (after_pieces[0] == '/' && after_pieces[1] != '\0') {
     const char *piece_id = after_pieces + 1;
-    if (!ursatz_gui_corpus_is_valid_id(piece_id)) {
+    if (!ursatz_gui_collection_is_valid_id(piece_id)) {
       send_ok_false(conn, "invalid piece_id");
       return 200;
     }
