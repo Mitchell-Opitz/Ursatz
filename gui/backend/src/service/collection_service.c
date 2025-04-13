@@ -18,6 +18,8 @@
 
 #include <cJSON.h>
 
+#include <corpus/corpus_api.h>
+
 #include "id_service.h"
 #include "piece_metadata.h"
 
@@ -27,6 +29,8 @@ static const char *kPiecesDir = "pieces";
 #define ID_MAX_BYTES 64
 #define ID_MAX_TRIES 8
 #define PATH_BYTES 400
+
+static const char *kImportMarker = ".imported-from-corpus-db";
 
 static char g_dir[200];
 static bool g_ready = false;
@@ -450,17 +454,132 @@ static bool list_collection_ids(char ***out_ids, size_t *out_count) {
 
 /* --- lifecycle ----------------------------------------------------------- */
 
+#ifdef _WIN32
+#define REMOVE_DIR(path) _rmdir(path)
+#else
+#define REMOVE_DIR(path) rmdir(path)
+#endif
+
+/* Imports one corpus of the old store as a collection. Piece refs without a
+ * pieces/<id>/meta.json are dropped and counted in *dropped. */
+static bool import_corpus(CorpusStoreHandle *handle, const CorpusApiEntry *corpus, size_t *dropped) {
+    if (!ursatz_gui_collection_is_valid_id(corpus->id)) {
+        fprintf(stderr, "collections: skipped corpus with unusable id\n");
+        return true;
+    }
+
+    UrsatzGuiCollection collection;
+    memset(&collection, 0, sizeof(collection));
+    char now[32];
+    iso_utc_now(now, sizeof(now));
+    collection.id = dup_string(corpus->id);
+    collection.description = dup_string("");
+    collection.created_at = dup_string(now);
+    collection.updated_at = dup_string(now);
+    /* A name the new rules reject (empty, over 120 bytes) falls back to the id. */
+    bool ok = normalize_name(corpus->name, &collection.name) == URSATZ_GUI_COLLECTION_OK ||
+              (collection.name = dup_string(corpus->id)) != NULL;
+
+    char **refs = NULL;
+    size_t ref_count = 0;
+    if (ok && corpus_api_list_piece_refs(handle, corpus->id, &refs, &ref_count) != CORPUS_API_OK) {
+        ok = false;
+    }
+    for (size_t i = 0; i < ref_count; i++) {
+        if (ok && ursatz_gui_collection_piece_exists(refs[i]) && piece_index(&collection, refs[i]) < 0) {
+            ok = append_piece(&collection, refs[i]);
+        } else if (!ursatz_gui_collection_piece_exists(refs[i])) {
+            (*dropped)++;
+        }
+        free(refs[i]);
+    }
+    free(refs);
+
+    ok = ok && collection.id && collection.description && collection.created_at && collection.updated_at &&
+         save_collection(&collection) == URSATZ_GUI_COLLECTION_OK;
+    collection_destroy_contents(&collection);
+    return ok;
+}
+
+/* Copies every corpus of the old data/corpus.db into g_dir, then writes the
+ * marker file. The old file is left in place. Returns false, with the files
+ * written so far removed again, when the old store cannot be read. */
+static bool import_legacy_corpora(const char *db_path) {
+    CorpusStoreHandle *handle = NULL;
+    if (corpus_api_open(db_path, &handle) != CORPUS_API_OK) {
+        fprintf(stderr, "collections: could not open %s to import it\n", db_path);
+        return false;
+    }
+
+    CorpusApiEntry *corpora = NULL;
+    size_t corpus_count = 0;
+    bool ok = corpus_api_list_corpora(handle, &corpora, &corpus_count) == CORPUS_API_OK;
+    size_t dropped = 0;
+    for (size_t i = 0; ok && i < corpus_count; i++) {
+        ok = import_corpus(handle, &corpora[i], &dropped);
+    }
+    if (corpora) {
+        corpus_api_free_corpus_list(corpora, corpus_count);
+    }
+    corpus_api_close(handle);
+
+    char marker[PATH_BYTES];
+    if (ok && snprintf(marker, sizeof(marker), "%s/%s", g_dir, kImportMarker) < (int)sizeof(marker)) {
+        char note[PATH_BYTES + 32];
+        snprintf(note, sizeof(note), "imported from %s\n", db_path);
+        ok = write_file_atomic(marker, note, strlen(note));
+    } else {
+        ok = false;
+    }
+
+    if (!ok) {
+        fprintf(stderr, "collections: import from %s failed\n", db_path);
+        return false;
+    }
+    fprintf(stderr, "collections: imported %zu collection(s) from %s, dropped %zu reference(s) to missing pieces\n",
+            corpus_count, db_path, dropped);
+    return true;
+}
+
+/* Removes everything a failed import wrote, and the directory, so the next
+ * start tries the import again. */
+static void remove_store_dir(void) {
+    char **ids = NULL;
+    size_t count = 0;
+    if (list_collection_ids(&ids, &count)) {
+        for (size_t i = 0; i < count; i++) {
+            char path[PATH_BYTES];
+            if (collection_path(ids[i], path, sizeof(path))) {
+                remove(path);
+            }
+        }
+        free_ids(ids, count);
+    }
+    char marker[PATH_BYTES];
+    if (snprintf(marker, sizeof(marker), "%s/%s", g_dir, kImportMarker) < (int)sizeof(marker)) {
+        remove(marker);
+    }
+    REMOVE_DIR(g_dir);
+}
+
 bool ursatz_gui_collection_service_init(const char *dir, const char *legacy_db_path) {
-    (void)legacy_db_path;
     if (!dir || strlen(dir) >= sizeof(g_dir)) {
         return false;
     }
     LOCK();
-    bool ok = path_is_dir(dir) || make_dir(dir);
+    bool existed = path_is_dir(dir);
+    bool ok = existed || make_dir(dir);
     if (ok) {
         strcpy(g_dir, dir);
-        g_ready = true;
+        /* First start with a collections/ directory that does not exist yet:
+         * bring over what the old corpus store held. */
+        if (!existed && legacy_db_path && path_exists(legacy_db_path) && !import_legacy_corpora(legacy_db_path)) {
+            remove_store_dir();
+            g_dir[0] = '\0';
+            ok = false;
+        }
     }
+    g_ready = ok;
     UNLOCK();
     return ok;
 }

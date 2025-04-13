@@ -56,6 +56,14 @@ typedef struct {
 /*
  * Prepares the store in dir (created if absent). Called once at server
  * startup. Returns false when the store cannot be used.
+ *
+ * One-time import: when dir does not exist yet and legacy_db_path (the old
+ * data/corpus.db, may be NULL) does, every corpus in it becomes a
+ * collection (same id and name, empty description, the ids of its refs that
+ * are existing piece directories; the others are dropped and counted on
+ * stderr) and dir/.imported-from-corpus-db is written. The old file is left
+ * where it is. An import that fails removes what it wrote and returns false,
+ * so the next start tries again.
  */
 bool ursatz_gui_collection_service_init(const char *dir, const char *legacy_db_path);
 
