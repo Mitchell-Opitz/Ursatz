@@ -105,7 +105,10 @@ if(WIN32)
   target_link_libraries(test_corpus_route PRIVATE ws2_32)
 endif()
 
-add_test(NAME corpus_route COMMAND test_corpus_route)
+# The test creates collections/, pieces/ and data/ in its own working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
+add_test(NAME corpus_route COMMAND test_corpus_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
 
 add_executable(test_piece_metadata test_piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
