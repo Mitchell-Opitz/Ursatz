@@ -2,7 +2,7 @@
 
 #include "composition_service.h"
 #include "composer_service.h"
-#include "corpus_service.h"
+#include "collection_service.h"
 #include "id_service.h"
 
 #include <ctype.h>
@@ -1035,7 +1035,7 @@ fail:
    valid or the directory does not exist. */
 static bool find_composition(const char *compositions_dir, const char *id, char *comp_dir, size_t size) {
     char root[PATH_SIZE];
-    if (!id || strlen(id) > 63 || !ursatz_gui_corpus_is_valid_id(id) ||
+    if (!id || strlen(id) > 63 || !ursatz_gui_collection_is_valid_id(id) ||
         !store_root(compositions_dir, root, sizeof(root)) || !join_path(comp_dir, size, "%s/%s", root, id)) {
         return false;
     }
@@ -1665,7 +1665,7 @@ UrsatzGuiCompositionResponse ursatz_gui_composition_list(const char *composition
     struct dirent *item;
     while ((item = readdir(dir)) != NULL) {
         char comp_dir[PATH_SIZE];
-        if (item->d_name[0] == '.' || strlen(item->d_name) > 63 || !ursatz_gui_corpus_is_valid_id(item->d_name) ||
+        if (item->d_name[0] == '.' || strlen(item->d_name) > 63 || !ursatz_gui_collection_is_valid_id(item->d_name) ||
             !join_path(comp_dir, sizeof(comp_dir), "%s/%s", root, item->d_name)) {
             continue;
         }

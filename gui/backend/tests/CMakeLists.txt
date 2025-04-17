@@ -4,7 +4,7 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
@@ -37,7 +37,7 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
@@ -80,7 +80,7 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
@@ -105,7 +105,10 @@ if(WIN32)
   target_link_libraries(test_corpus_route PRIVATE ws2_32)
 endif()
 
-add_test(NAME corpus_route COMMAND test_corpus_route)
+# The test creates collections/, pieces/ and data/ in its own working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
+add_test(NAME corpus_route COMMAND test_corpus_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
 
 add_executable(test_piece_metadata test_piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
@@ -136,7 +139,7 @@ add_executable(test_composer_route test_composer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/corpus_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c

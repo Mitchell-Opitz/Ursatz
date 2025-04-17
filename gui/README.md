@@ -44,7 +44,7 @@ a monolithic application.
 - **Analysis**: one piece. The top-level Analysis nav entry reopens the piece
   viewed last this session; before any piece has been opened it points at
   the Library.
-- **Collections**: named groups of piece ids (the Corpus tool, below).
+- **Collections**: named groups of piece ids (the Corpus routes, below).
 - **Composer**: start a theme or a piece and work on it (Composer view,
   below).
 - **Health**: last entry in the sidebar. Shows the backend health check; a
@@ -515,30 +515,58 @@ not listed and cannot be opened, so upload those files again.
 
 ### Corpus routes
 
-The Corpus tool wraps Ursatz's `corpus_api.h`:
+The Collections tool keeps its `/api/corpus` paths. Collections are owned by
+the GUI (`service/collection_service.c`), not by Ursatz's `corpus_api`:
 
 - `POST /api/corpus`: body `{"name":"<name>"}`, with an optional
-  `"id":"<corpus-id>"`. Without an id, one is generated (`col-...`). Creates a
-  Corpus. Returns `{"ok":true,"id":"<id>","name":"<name>"}` or
-  `{"ok":false,"message":...}`. A duplicate id fails.
-- `GET /api/corpus`: lists all Corpora:
-  `{"ok":true,"corpora":[{"id":...,"name":...},...]}`.
-- `POST /api/corpus/<id>/pieces`: body `{"piece_id":"<EntityID>"}`. Adds a
-  piece ref to the named Corpus. Adding a ref already present fails, same as
-  `corpus_api` itself.
-- `DELETE /api/corpus/<id>/pieces/<piece_id>`: removes a piece ref. Removing
-  a ref that is not a member fails the same way.
-- `GET /api/corpus/<id>/pieces`: lists piece refs in a Corpus:
+  `"description":"<text>"` and an optional `"id":"<collection-id>"` (accepted
+  when it is a valid, unused id). Without an id, one is generated (`col-...`).
+  Returns `{"ok":true,"id","name","description","piece_count","updated_at"}`
+  or `{"ok":false,"message":...}`. A duplicate id fails.
+- `GET /api/corpus`: lists all collections, sorted by name (ASCII
+  case-insensitive), then id:
+  `{"ok":true,"corpora":[{"id","name","description","piece_count","updated_at"},...]}`.
+- `GET /api/corpus/<id>`: one collection, the list fields plus `created_at`
+  and `pieces` (the piece ids, in add order). `404` when absent.
+- `PATCH /api/corpus/<id>`: body with `name` and/or `description` (`""`
+  clears the description). Answers with the list fields. A body with neither
+  answers `{"ok":false,"message":"nothing to update"}`; `404` when absent.
+- `DELETE /api/corpus/<id>`: deletes the collection. Its pieces are not
+  touched. `404` when absent.
+- `POST /api/corpus/<id>/pieces`: body `{"piece_id":"<id>"}` or
+  `{"piece_ids":["<id>",...]}` (at most 5000). Adds the ones that are not
+  members yet and answers `{"ok":true,"added":n,"already":n}`; a piece that is
+  already a member (or repeated in the request) is counted, not an error. An
+  id with no `pieces/<id>/meta.json` is `400`
+  `{"ok":false,"message":"unknown piece: <id>"}` and nothing is added; an
+  unknown collection is `404`.
+- `DELETE /api/corpus/<id>/pieces/<piece_id>`: removes a piece id. Removing
+  one that is not a member fails with `{"ok":false,...}`.
+- `GET /api/corpus/<id>/pieces`: lists the piece ids in a collection:
   `{"ok":true,"pieces":[{"id":...},...]}`.
 
-All Corpus routes return HTTP 200 with `{"ok":false,...}` on failure.
-`<id>` and `<piece_id>` path segments are validated against the same
-alnum, `-`, `_` whitelist the Analyzer uses for piece ids (its own copy,
-kept in `corpus_service.c`).
+Other failures (bad id, bad name, malformed body) return HTTP 200 with
+`{"ok":false,"message":...}`. `<id>` and `<piece_id>` path segments are
+validated against the same alnum, `-`, `_` whitelist the Analyzer uses for
+piece ids (1 to 64 characters). Names are normalized like piece metadata
+values (trimmed, whitespace collapsed, at most 120 bytes, never empty);
+descriptions the same with at most 500 bytes and may be empty.
 
-Corpus uses one shared store, `data/corpus.db`, opened once when the server
-starts and kept open for the life of the process. It does not check that a
-piece ref exists in the piece store when added; `corpus_api` does not either.
+Storage: one file per collection, `collections/<id>.json`, with `id`, `name`,
+`description`, `pieces` (ids in add order), `created_at` and `updated_at`
+(ISO 8601 UTC). A write goes to a temporary file that is renamed over the old
+one, and one mutex serializes the writes. A collection is a fixed set of
+piece ids: tagging a piece later does not add it.
+`DELETE /api/analyzer/pieces/<id>` also removes the id from every collection
+that holds it (a service call, `ursatz_gui_collection_remove_piece_everywhere`).
+
+One-time import: when `collections/` does not exist yet and `data/corpus.db`
+(the old Corpus store) does, the server start copies each corpus into a
+collection (same id and name, no description) with the piece refs whose
+`pieces/<id>/meta.json` exists; the others are dropped and counted on stderr.
+`collections/.imported-from-corpus-db` marks it done and `data/corpus.db` is
+left in place. If the import fails, the server does not start and the next
+start tries again.
 
 `GET /api/health/status` calls the persistence service to confirm
 `persistence_open` succeeds against a test database path, and returns JSON.
@@ -635,7 +663,8 @@ touching markup or `app.js`. Frontend logic makes no styling decisions.
 
 The Corpus tool is shown as "Collections" in the sidebar and view title; the
 API, module and route names stay `corpus`. It renders a grid of Collection
-cards (name only; the API has no piece count or last-updated field). Clicking
+cards (name only; the piece count, description and date the API returns are
+not shown yet). Clicking
 a card opens a detail view listing that Collection's piece refs with the same
 row component as the Library: each row's filename is found by joining the
 piece ref's id against `/api/analyzer/pieces`, falling back to the bare id.

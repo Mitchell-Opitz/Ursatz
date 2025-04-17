@@ -6,9 +6,10 @@
 #include "routes/composer.h"
 #include "routes/corpus.h"
 #include "routes/health.h"
-#include "service/corpus_service.h"
+#include "service/collection_service.h"
 
-static const char *kCorpusDbPath = "data/corpus.db";
+static const char *kCollectionsDir = "collections";
+static const char *kLegacyCorpusDbPath = "data/corpus.db";
 
 struct mg_context *ursatz_gui_server_start(const char *listen_port,
                                             const char *frontend_dir) {
@@ -19,16 +20,15 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
       NULL,
   };
 
-  /* Corpus uses a single shared store (unlike Analyzer's per-piece files
-   * under pieces/), opened once here and kept for the life of the
-   * process -- see service/corpus_service.h. */
-  if (!ursatz_gui_corpus_service_init(kCorpusDbPath)) {
+  /* Collections are files under collections/ (see
+   * service/collection_service.h); the store is prepared once here. */
+  if (!ursatz_gui_collection_service_init(kCollectionsDir, kLegacyCorpusDbPath)) {
     return NULL;
   }
 
   struct mg_context *ctx = mg_start(NULL, NULL, options);
   if (!ctx) {
-    ursatz_gui_corpus_service_shutdown();
+    ursatz_gui_collection_service_shutdown();
     return NULL;
   }
 
@@ -46,5 +46,5 @@ void ursatz_gui_server_stop(struct mg_context *ctx) {
   if (ctx) {
     mg_stop(ctx);
   }
-  ursatz_gui_corpus_service_shutdown();
+  ursatz_gui_collection_service_shutdown();
 }
