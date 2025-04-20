@@ -190,19 +190,7 @@ async function renderLibraryView(filter) {
     <div id="library-bulk" class="bulk-bar" hidden></div>
     <section class="panel library-panel">
       <div id="library-status" class="piece-list-status">Loading pieces...</div>
-      <table id="library-table" class="library-table" hidden>
-        <thead>
-          <tr>
-            <th class="select-cell"><input type="checkbox" id="library-select-all" aria-label="Select all shown pieces" /></th>
-            <th>Title</th>
-            <th>Composer</th>
-            <th>Source</th>
-            <th>Tags</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="library-table-body"></tbody>
-      </table>
+      <div id="library-table-container" hidden></div>
     </section>
   `;
 
@@ -213,7 +201,6 @@ async function renderLibraryView(filter) {
   wireUploadControl("library-upload", onUploaded);
   wireUploadDrop("library-upload", onUploaded);
   wireLibraryFilterRow();
-  wireLibrarySelection();
 
   await loadLibraryGroups();
   populateLibraryFilterSelects();
@@ -329,8 +316,7 @@ let libraryFetchedPieces = [];
 
 async function loadLibraryPieces() {
   const statusEl = document.getElementById("library-status");
-  const tableEl = document.getElementById("library-table");
-  const bodyEl = document.getElementById("library-table-body");
+  const tableEl = document.getElementById("library-table-container");
 
   if (tagsPanel) {
     tagsPanel.setActive(libraryFilter);
@@ -338,7 +324,8 @@ async function loadLibraryPieces() {
   statusEl.textContent = "Loading pieces...";
   statusEl.classList.remove("error");
   tableEl.hidden = true;
-  bodyEl.innerHTML = "";
+  tableEl.innerHTML = "";
+  libraryTable = null;
 
   try {
     const query = PieceMetadata.filterQuery(libraryFilter);
@@ -363,16 +350,15 @@ async function loadLibraryPieces() {
  * the table and the count line. */
 function showLibraryPieces(fetched) {
   const statusEl = document.getElementById("library-status");
-  const tableEl = document.getElementById("library-table");
-  const bodyEl = document.getElementById("library-table-body");
+  const tableEl = document.getElementById("library-table-container");
   const countEl = document.getElementById("library-count");
 
   libraryShownPieces = PieceMetadata.sortPieces(
     PieceMetadata.searchPieces(fetched, libraryFilter.search),
     libraryFilter.sort,
   );
-  bodyEl.innerHTML = "";
-  document.getElementById("library-select-all").checked = false;
+  libraryTable = null;
+  tableEl.innerHTML = "";
   updateLibraryBulkBar();
   countEl.textContent = isLibraryFilterOn()
     ? `${libraryShownPieces.length} of ${libraryGroups.total} pieces`
@@ -388,29 +374,21 @@ function showLibraryPieces(fetched) {
   statusEl.textContent = "";
   statusEl.classList.remove("error");
   tableEl.hidden = false;
-  for (const piece of libraryShownPieces) {
-    bodyEl.appendChild(buildLibraryRow(piece));
-  }
+  libraryTable = buildPieceTable(tableEl, {
+    pieces: libraryShownPieces,
+    columns: ["composer", "source", "tags"],
+    selectable: true,
+    rowActions: libraryRowActions,
+    onOpen: (piece) => showAnalysisView(piece.id),
+    onSelectionChange: updateLibraryBulkBar,
+  });
 }
+
+/* The Library's current shared table (see buildPieceTable), or null. */
+let libraryTable = null;
 
 function selectedLibraryIds() {
-  return Array.from(document.querySelectorAll("#library-table-body .row-select:checked"), (box) => box.dataset.id);
-}
-
-function wireLibrarySelection() {
-  document.getElementById("library-select-all").addEventListener("change", (event) => {
-    for (const box of document.querySelectorAll("#library-table-body .row-select")) {
-      box.checked = event.target.checked;
-    }
-    updateLibraryBulkBar();
-  });
-  document.getElementById("library-table-body").addEventListener("change", (event) => {
-    if (event.target.classList.contains("row-select")) {
-      const boxes = document.querySelectorAll("#library-table-body .row-select");
-      document.getElementById("library-select-all").checked = Array.from(boxes).every((box) => box.checked);
-      updateLibraryBulkBar();
-    }
-  });
+  return libraryTable ? libraryTable.selectedIds() : [];
 }
 
 const BULK_ACTIONS = [
@@ -453,10 +431,9 @@ function updateLibraryBulkBar() {
   clear.type = "button";
   clear.textContent = "Clear selection";
   clear.addEventListener("click", () => {
-    for (const box of document.querySelectorAll("#library-table-body .row-select")) {
-      box.checked = false;
+    if (libraryTable) {
+      libraryTable.clearSelection();
     }
-    document.getElementById("library-select-all").checked = false;
     updateLibraryBulkBar();
   });
   bar.append(clear, inline);
@@ -587,53 +564,137 @@ function buildTagChips(tags) {
   return cell;
 }
 
-function buildLibraryRow(piece) {
-  const row = buildLibraryRowBase(piece);
-  const selectCell = document.createElement("td");
-  selectCell.classList.add("select-cell");
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.classList.add("row-select");
-  checkbox.dataset.id = piece.id;
-  checkbox.setAttribute("aria-label", `Select ${piece.filename || piece.id}`);
-  selectCell.appendChild(checkbox);
-  row.insertBefore(selectCell, row.firstChild);
-  const titleCell = row.children[1];
-  titleCell.after(
-    buildMetadataTextCell(piece.composer),
-    buildMetadataTextCell(piece.source),
-    buildTagChips(piece.tags),
+/* Row actions of the Library table. */
+function libraryRowActions(row, actionsCell, rowPiece) {
+  actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
+  actionsCell.appendChild(
+    buildActionButton({ icon: "✎", label: "Edit", onClick: () => startLibraryEdit(row, rowPiece) }),
   );
-  return row;
+  actionsCell.appendChild(
+    buildActionButton({
+      icon: "↻",
+      label: "Re-run analysis",
+      onClick: () => handleLibraryReanalyze(rowPiece.id),
+    }),
+  );
+  actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
+  actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
+  actionsCell.appendChild(
+    buildActionButton({
+      icon: "🗑",
+      label: "Delete piece",
+      onClick: () => handleDeleteLibraryPiece(rowPiece.id, row),
+    }),
+  );
 }
 
-function buildLibraryRowBase(piece) {
-  return buildPieceRow(
-    piece,
-    (row, actionsCell, rowPiece) => {
-      actionsCell.appendChild(buildActionButton({ icon: "▶", label: "Play", disabled: true }));
-      actionsCell.appendChild(
-        buildActionButton({ icon: "✎", label: "Edit", onClick: () => startLibraryEdit(row, rowPiece) }),
-      );
-      actionsCell.appendChild(
-        buildActionButton({
-          icon: "↻",
-          label: "Re-run analysis",
-          onClick: () => handleLibraryReanalyze(rowPiece.id),
-        }),
-      );
-      actionsCell.appendChild(buildActionButton({ icon: "🔗", label: "Import from URL", disabled: true }));
-      actionsCell.appendChild(buildActionButton({ icon: "⌫", label: "Delete analysis", disabled: true }));
-      actionsCell.appendChild(
-        buildActionButton({
-          icon: "🗑",
-          label: "Delete piece",
-          onClick: () => handleDeleteLibraryPiece(rowPiece.id, row),
-        }),
-      );
+const PIECE_TABLE_COLUMN_LABELS = { composer: "Composer", source: "Source", tags: "Tags" };
+
+/* The shared piece table used by the Library, a collection's detail and the
+ * add-pieces picker. options: pieces; columns (any of "composer", "source",
+ * "tags" after the always-present Title); selectable (a checkbox column and
+ * a select-all box); rowActions(row, actionsCell, piece); onOpen(piece) for a
+ * title click; onSelectionChange(). Draws into container and returns
+ * {table, columnCount, buildRow(piece), selectedIds(), selectAll(checked),
+ * clearSelection()}. */
+function buildPieceTable(container, options) {
+  const columns = options.columns || [];
+  const table = document.createElement("table");
+  table.classList.add("library-table");
+  const headRow = document.createElement("tr");
+  const notify = () => {
+    if (options.onSelectionChange) {
+      options.onSelectionChange();
+    }
+  };
+
+  let selectAllBox = null;
+  if (options.selectable) {
+    const th = document.createElement("th");
+    th.classList.add("select-cell");
+    selectAllBox = document.createElement("input");
+    selectAllBox.type = "checkbox";
+    selectAllBox.classList.add("select-all");
+    selectAllBox.setAttribute("aria-label", "Select all shown pieces");
+    th.appendChild(selectAllBox);
+    headRow.appendChild(th);
+  }
+  const labels = ["Title", ...columns.map((name) => PIECE_TABLE_COLUMN_LABELS[name]), "Actions"];
+  for (const text of labels) {
+    const th = document.createElement("th");
+    th.textContent = text;
+    headRow.appendChild(th);
+  }
+  const thead = document.createElement("thead");
+  thead.appendChild(headRow);
+  const tbody = document.createElement("tbody");
+  table.append(thead, tbody);
+
+  function buildRow(piece) {
+    const row = buildPieceRow(piece, options.rowActions || (() => {}), options.onOpen);
+    if (options.selectable) {
+      const selectCell = document.createElement("td");
+      selectCell.classList.add("select-cell");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.classList.add("row-select");
+      checkbox.dataset.id = piece.id;
+      checkbox.setAttribute("aria-label", `Select ${piece.filename || piece.id}`);
+      selectCell.appendChild(checkbox);
+      row.insertBefore(selectCell, row.firstChild);
+    }
+    const extra = columns.map((name) => (name === "tags" ? buildTagChips(piece.tags) : buildMetadataTextCell(piece[name])));
+    row.children[options.selectable ? 1 : 0].after(...extra);
+    return row;
+  }
+
+  for (const piece of options.pieces) {
+    tbody.appendChild(buildRow(piece));
+  }
+  container.innerHTML = "";
+  container.appendChild(table);
+
+  const boxes = () => tbody.querySelectorAll(".row-select");
+  if (selectAllBox) {
+    selectAllBox.addEventListener("change", () => {
+      for (const box of boxes()) {
+        box.checked = selectAllBox.checked;
+      }
+      notify();
+    });
+    tbody.addEventListener("change", (event) => {
+      if (event.target.classList.contains("row-select")) {
+        selectAllBox.checked = Array.from(boxes()).every((box) => box.checked);
+        notify();
+      }
+    });
+  }
+
+  return {
+    table,
+    columnCount: labels.length + (options.selectable ? 1 : 0),
+    buildRow,
+    selectedIds() {
+      return Array.from(tbody.querySelectorAll(".row-select:checked"), (box) => box.dataset.id);
     },
-    (rowPiece) => showAnalysisView(rowPiece.id),
-  );
+    selectAll(checked) {
+      for (const box of boxes()) {
+        box.checked = checked;
+      }
+      if (selectAllBox) {
+        selectAllBox.checked = checked;
+      }
+      notify();
+    },
+    clearSelection() {
+      for (const box of boxes()) {
+        box.checked = false;
+      }
+      if (selectAllBox) {
+        selectAllBox.checked = false;
+      }
+    },
+  };
 }
 
 /* Distinct composers, sources and tags with counts (GET
@@ -755,7 +816,7 @@ async function startLibraryEdit(row, piece) {
   const editorRow = document.createElement("tr");
   editorRow.classList.add("editor-row");
   const cell = document.createElement("td");
-  cell.colSpan = 6;
+  cell.colSpan = libraryTable ? libraryTable.columnCount : 6;
   editorRow.appendChild(cell);
 
   const title = document.createElement("input");
@@ -823,7 +884,7 @@ async function startLibraryEdit(row, piece) {
       errorEl.textContent = (result.data && (result.data.message || result.data.error)) || "Save failed.";
       return;
     }
-    const fresh = buildLibraryRow(result.data.piece);
+    const fresh = libraryTable ? libraryTable.buildRow(result.data.piece) : row;
     editorRow.replaceWith(fresh);
     await loadLibraryGroups();
     populateLibraryFilterSelects();
