@@ -89,7 +89,30 @@
     }
   }
 
-  const api = { parseTagInput, filterQuery, sortPieces, searchPieces, bulkPatch };
+  function topCounts(values, limit) {
+    const counts = new Map();
+    for (const value of values) {
+      const key = value.toLowerCase();
+      const entry = counts.get(key) || { value, count: 0 };
+      entry.count += 1;
+      counts.set(key, entry);
+    }
+    return Array.from(counts.values())
+      .sort((a, b) => b.count - a.count || compareText(a.value.toLowerCase(), b.value.toLowerCase()))
+      .slice(0, limit);
+  }
+
+  /* The top 3 composers and top 3 tags among a collection's pieces, by count
+   * then name (case-insensitive). Unassigned composers are not counted. */
+  function collectionSummary(pieces) {
+    const list = pieces || [];
+    return {
+      composers: topCounts(list.map((piece) => String(piece.composer || "")).filter(Boolean), 3),
+      tags: topCounts(list.flatMap((piece) => piece.tags || []), 3),
+    };
+  }
+
+  const api = { parseTagInput, filterQuery, sortPieces, searchPieces, bulkPatch, collectionSummary };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {

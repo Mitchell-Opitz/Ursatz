@@ -1771,3 +1771,18 @@ body {
   display: inline-flex;
   gap: 0.25rem;
 }
+
+.collection-card-description,
+.collection-card-count,
+.collection-card-summary {
+  font-size: 0.8rem;
+  color: var(--text);
+  padding: 0 0.5rem;
+}
+
+.collection-card-description,
+.collection-card-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1395,8 +1395,9 @@ async function renderCorpusView() {
     }
 
     statusEl.textContent = "";
+    const summaries = await loadCollectionSummaries(data.corpora);
     for (const corpus of data.corpora) {
-      gridEl.appendChild(buildCollectionCard(corpus));
+      gridEl.appendChild(buildCollectionCard(corpus, summaries.get(corpus.id)));
     }
   } catch (err) {
     statusEl.textContent = `Could not reach backend: ${err}`;
@@ -1404,7 +1405,37 @@ async function renderCorpusView() {
   }
 }
 
-function buildCollectionCard(corpus) {
+/* Resolves to Map(collection id -> collectionSummary) by joining each
+ * collection's piece ids against the Library list. A failed lookup leaves
+ * that card without a summary. */
+async function loadCollectionSummaries(collections) {
+  const summaries = new Map();
+  const library = await fetchJsonResult("/api/analyzer/pieces");
+  if (!(library.ok && library.data && library.data.ok)) {
+    return summaries;
+  }
+  const byId = new Map(library.data.pieces.map((piece) => [piece.id, piece]));
+  await Promise.all(
+    collections.map(async (corpus) => {
+      const detail = await fetchJsonResult(`/api/corpus/${corpus.id}`);
+      if (detail.ok && detail.data && detail.data.ok) {
+        const members = detail.data.pieces.map((id) => byId.get(id)).filter(Boolean);
+        summaries.set(corpus.id, PieceMetadata.collectionSummary(members));
+      }
+    }),
+  );
+  return summaries;
+}
+
+function summaryLine(label, entries) {
+  return entries.length ? `${label}: ${entries.map((entry) => entry.value).join(", ")}` : "";
+}
+
+function pieceCountText(count) {
+  return `${count} ${count === 1 ? "piece" : "pieces"}`;
+}
+
+function buildCollectionCard(corpus, summary) {
   const card = document.createElement("div");
   card.classList.add("collection-card", "clickable");
   card.addEventListener("click", () => showCorpusDetail(corpus.id, corpus.name));
@@ -1413,10 +1444,22 @@ function buildCollectionCard(corpus) {
   cover.classList.add("collection-card-cover");
   card.appendChild(cover);
 
-  const name = document.createElement("div");
-  name.classList.add("collection-card-name");
-  name.textContent = corpus.name;
-  card.appendChild(name);
+  const addLine = (className, text) => {
+    if (!text) {
+      return;
+    }
+    const line = document.createElement("div");
+    line.classList.add(className);
+    line.textContent = text;
+    card.appendChild(line);
+  };
+  addLine("collection-card-name", corpus.name);
+  addLine("collection-card-description", corpus.description);
+  addLine("collection-card-count", pieceCountText(corpus.piece_count || 0));
+  if (summary) {
+    addLine("collection-card-summary", summaryLine("Composers", summary.composers));
+    addLine("collection-card-summary", summaryLine("Tags", summary.tags));
+  }
 
   return card;
 }
