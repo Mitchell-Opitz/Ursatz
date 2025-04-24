@@ -1361,6 +1361,7 @@ async function renderCorpusView() {
       <h1 class="view-title">Collections</h1>
       <div class="upload-controls">
         <input type="text" id="corpus-name-input" placeholder="New collection name" />
+        <input type="text" id="corpus-description-input" placeholder="Description (optional)" />
         <button id="corpus-create-button" type="button">Create</button>
       </div>
     </div>
@@ -1435,6 +1436,107 @@ function pieceCountText(count) {
   return `${count} ${count === 1 ? "piece" : "pieces"}`;
 }
 
+function patchCollection(id, body) {
+  return fetchJsonResult(`/api/corpus/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function collectionResultError(result, fallback) {
+  return (result.data && (result.data.message || result.data.error)) || fallback;
+}
+
+function showCollectionsStatus(text, isError) {
+  const statusEl = document.getElementById("corpus-create-status");
+  if (statusEl) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle("error", Boolean(isError));
+  }
+}
+
+/* The card's ⋯ button and its menu: Rename, Edit description, Delete. Reachable
+ * by keyboard (a button with aria-expanded; Escape closes). */
+function buildCollectionCardMenu(corpus) {
+  const wrap = document.createElement("div");
+  wrap.classList.add("card-menu");
+  wrap.addEventListener("click", (event) => event.stopPropagation());
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.classList.add("icon-button");
+  toggle.textContent = "⋯";
+  toggle.setAttribute("aria-label", `Actions for ${corpus.name}`);
+  toggle.setAttribute("aria-haspopup", "true");
+  toggle.setAttribute("aria-expanded", "false");
+  const menu = document.createElement("div");
+  menu.classList.add("card-menu-list");
+  menu.hidden = true;
+
+  const close = () => {
+    menu.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  };
+  const addItem = (label, action) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.textContent = label;
+    item.addEventListener("click", async () => {
+      close();
+      await action();
+    });
+    menu.appendChild(item);
+  };
+  addItem("Rename", async () => {
+    const name = window.prompt("Collection name", corpus.name);
+    if (name === null) {
+      return;
+    }
+    const result = await patchCollection(corpus.id, { name });
+    if (result.ok && result.data && result.data.ok) {
+      renderCorpusView();
+    } else {
+      showCollectionsStatus(collectionResultError(result, "Rename failed."), true);
+    }
+  });
+  addItem("Edit description", async () => {
+    const description = window.prompt("Description", corpus.description || "");
+    if (description === null) {
+      return;
+    }
+    const result = await patchCollection(corpus.id, { description });
+    if (result.ok && result.data && result.data.ok) {
+      renderCorpusView();
+    } else {
+      showCollectionsStatus(collectionResultError(result, "Update failed."), true);
+    }
+  });
+  addItem("Delete", async () => {
+    if (!window.confirm(`Delete the collection "${corpus.name}"? Its pieces are not deleted.`)) {
+      return;
+    }
+    const result = await fetchJsonResult(`/api/corpus/${corpus.id}`, { method: "DELETE" });
+    if (result.ok && result.data && result.data.ok) {
+      renderCorpusView();
+    } else {
+      showCollectionsStatus(collectionResultError(result, "Delete failed."), true);
+    }
+  });
+
+  toggle.addEventListener("click", () => {
+    menu.hidden = !menu.hidden;
+    toggle.setAttribute("aria-expanded", String(!menu.hidden));
+  });
+  wrap.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      close();
+      toggle.focus();
+    }
+  });
+  wrap.append(toggle, menu);
+  return wrap;
+}
+
 function buildCollectionCard(corpus, summary) {
   const card = document.createElement("div");
   card.classList.add("collection-card", "clickable");
@@ -1453,6 +1555,7 @@ function buildCollectionCard(corpus, summary) {
     line.textContent = text;
     card.appendChild(line);
   };
+  card.appendChild(buildCollectionCardMenu(corpus));
   addLine("collection-card-name", corpus.name);
   addLine("collection-card-description", corpus.description);
   addLine("collection-card-count", pieceCountText(corpus.piece_count || 0));
@@ -1484,7 +1587,7 @@ async function handleCreateCorpus() {
     const res = await fetch("/api/corpus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, description: document.getElementById("corpus-description-input").value }),
     });
     const data = await res.json();
 
@@ -1515,7 +1618,7 @@ function showCorpusDetail(id, name) {
   const content = getContentEl();
   content.innerHTML = `
     <div id="corpus-back-container"></div>
-    <h1 class="view-title">${name}</h1>
+    <div id="corpus-heading" class="collection-heading"></div>
     <section class="panel library-panel">
       <div id="corpus-piece-status" class="piece-list-status">Loading pieces...</div>
       <table id="corpus-piece-table" class="library-table" hidden>
@@ -1536,9 +1639,75 @@ function showCorpusDetail(id, name) {
   `;
 
   document.getElementById("corpus-back-container").appendChild(renderCorpusBackLink());
+  loadCollectionHeading(id, name);
   document.getElementById("corpus-add-piece-button").addEventListener("click", () => handleAddPiece(id, name));
 
   loadCorpusPieces(id, name);
+}
+
+/* The detail title with inline rename and the description with an editor.
+ * Shows the name passed in while the collection is fetched. */
+async function loadCollectionHeading(id, fallbackName) {
+  const heading = document.getElementById("corpus-heading");
+  const draw = (name, description) => {
+    heading.innerHTML = "";
+    const title = document.createElement("h1");
+    title.classList.add("view-title");
+    title.textContent = name;
+    const renameButton = document.createElement("button");
+    renameButton.type = "button";
+    renameButton.textContent = "Rename";
+    const text = document.createElement("p");
+    text.classList.add("collection-description");
+    text.textContent = description || "No description.";
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.textContent = "Edit description";
+    const errorEl = document.createElement("div");
+    errorEl.classList.add("piece-list-status", "error");
+
+    const edit = (field, current, label) => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = current;
+      input.setAttribute("aria-label", label);
+      const save = document.createElement("button");
+      save.type = "button";
+      save.textContent = "Save";
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.textContent = "Cancel";
+      const row = document.createElement("div");
+      row.classList.add("inline-edit");
+      row.append(input, save, cancel);
+      heading.replaceChildren(row, errorEl);
+      input.focus();
+      cancel.addEventListener("click", () => draw(name, description));
+      row.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          draw(name, description);
+        } else if (event.key === "Enter") {
+          save.click();
+        }
+      });
+      save.addEventListener("click", async () => {
+        const result = await patchCollection(id, { [field]: input.value });
+        if (result.ok && result.data && result.data.ok) {
+          draw(result.data.name, result.data.description);
+        } else {
+          errorEl.textContent = collectionResultError(result, "Save failed.");
+        }
+      });
+    };
+    renameButton.addEventListener("click", () => edit("name", name, "Collection name"));
+    editButton.addEventListener("click", () => edit("description", description || "", "Description"));
+    heading.append(title, renameButton, text, editButton, errorEl);
+  };
+  draw(fallbackName, "");
+  const result = await fetchJsonResult(`/api/corpus/${id}`);
+  if (result.ok && result.data && result.data.ok && document.getElementById("corpus-heading") === heading) {
+    draw(result.data.name, result.data.description);
+  }
 }
 
 /* Library pieces not already in the collection, labeled by filename with

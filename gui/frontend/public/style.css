@@ -1786,3 +1786,32 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.collection-card {
+  position: relative;
+}
+
+.card-menu {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+}
+
+.card-menu-list {
+  position: absolute;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  z-index: 5;
+}
+
+.collection-description {
+  margin: 0.25rem 0;
+}
+
+.inline-edit {
+  display: flex;
+  gap: 0.5rem;
+}
