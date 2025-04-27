@@ -1614,22 +1614,28 @@ function renderCorpusBackLink() {
   return back;
 }
 
+/* State of the open collection detail: its members joined with Library
+ * metadata, the filter on them and the shared table. */
+let collectionView = null;
+
 function showCorpusDetail(id, name) {
+  collectionView = { id, name, members: [], libraryPieces: [], filter: emptyLibraryFilter(), table: null };
   const content = getContentEl();
   content.innerHTML = `
     <div id="corpus-back-container"></div>
     <div id="corpus-heading" class="collection-heading"></div>
+    <div class="filter-row">
+      <input type="search" id="corpus-search" placeholder="Search" aria-label="Search" />
+      <label class="filter-field">Composer <select id="corpus-filter-composer"></select></label>
+      <label class="filter-field">Source <select id="corpus-filter-source"></select></label>
+      <label class="filter-field">Tag <select id="corpus-filter-tag"></select></label>
+      <button type="button" id="corpus-clear-filters">Clear filters</button>
+    </div>
+    <div id="corpus-count" class="piece-list-status"></div>
+    <div id="corpus-bulk" class="bulk-bar" hidden></div>
     <section class="panel library-panel">
       <div id="corpus-piece-status" class="piece-list-status">Loading pieces...</div>
-      <table id="corpus-piece-table" class="library-table" hidden>
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="corpus-piece-table-body"></tbody>
-      </table>
+      <div id="corpus-piece-table-container" hidden></div>
     </section>
     <div class="upload-controls">
       <select id="corpus-piece-select" disabled></select>
@@ -1641,8 +1647,170 @@ function showCorpusDetail(id, name) {
   document.getElementById("corpus-back-container").appendChild(renderCorpusBackLink());
   loadCollectionHeading(id, name);
   document.getElementById("corpus-add-piece-button").addEventListener("click", () => handleAddPiece(id, name));
+  wireCollectionFilterRow();
 
   loadCorpusPieces(id, name);
+}
+
+function wireCollectionFilterRow() {
+  const f = () => collectionView.filter;
+  const setUnassigned = (which, on) => {
+    f().unassigned = f().unassigned.filter((item) => item !== which);
+    if (on) {
+      f().unassigned.push(which);
+    }
+  };
+  const change = (id, apply) => {
+    document.getElementById(id).addEventListener("change", (event) => {
+      apply(event.target.value);
+      showCollectionMembers();
+    });
+  };
+  change("corpus-filter-composer", (value) => {
+    setUnassigned("composer", value === UNASSIGNED);
+    f().composer = value === UNASSIGNED ? "" : value;
+  });
+  change("corpus-filter-source", (value) => {
+    setUnassigned("source", value === UNASSIGNED);
+    f().source = value === UNASSIGNED ? "" : value;
+  });
+  change("corpus-filter-tag", (value) => {
+    f().untagged = value === UNTAGGED;
+    f().tag = f().untagged ? "" : value;
+  });
+  document.getElementById("corpus-search").addEventListener("input", (event) => {
+    f().search = event.target.value;
+    showCollectionMembers(false);
+  });
+  document.getElementById("corpus-clear-filters").addEventListener("click", () => {
+    collectionView.filter = emptyLibraryFilter();
+    showCollectionMembers();
+  });
+}
+
+function isCollectionFilterOn() {
+  const f = collectionView.filter;
+  return Boolean(f.composer || f.source || f.tag || f.unassigned.length || f.untagged || f.search.trim());
+}
+
+/* Fills the filter selects from the members and draws the filtered table.
+ * The selects are left alone while typing in the search box. */
+function showCollectionMembers(refillSelects = true) {
+  const view = collectionView;
+  const f = view.filter;
+  const groups = PieceMetadata.groupValues(view.members);
+  if (refillSelects) {
+    fillFilterSelect(
+      document.getElementById("corpus-filter-composer"),
+      "Any",
+      UNASSIGNED,
+      "Unassigned",
+      groups.unassigned.composer,
+      groups.composers,
+      f.unassigned.includes("composer") ? UNASSIGNED : f.composer,
+    );
+    fillFilterSelect(
+      document.getElementById("corpus-filter-source"),
+      "Any",
+      UNASSIGNED,
+      "Unassigned",
+      groups.unassigned.source,
+      groups.sources,
+      f.unassigned.includes("source") ? UNASSIGNED : f.source,
+    );
+    fillFilterSelect(
+      document.getElementById("corpus-filter-tag"),
+      "Any",
+      UNTAGGED,
+      "Untagged",
+      groups.untagged,
+      groups.tags,
+      f.untagged ? UNTAGGED : f.tag,
+    );
+    document.getElementById("corpus-search").value = f.search;
+  }
+
+  const shown = PieceMetadata.sortPieces(PieceMetadata.matchPieces(view.members, f), "title");
+  const statusEl = document.getElementById("corpus-piece-status");
+  const tableEl = document.getElementById("corpus-piece-table-container");
+  document.getElementById("corpus-count").textContent = isCollectionFilterOn()
+    ? `${shown.length} of ${view.members.length} pieces`
+    : "";
+  view.table = null;
+  tableEl.innerHTML = "";
+  updateCollectionBulkBar();
+  statusEl.classList.remove("error");
+  if (shown.length === 0) {
+    statusEl.textContent = view.members.length === 0 ? "No pieces yet." : "No pieces match.";
+    tableEl.hidden = true;
+    return;
+  }
+  statusEl.textContent = "";
+  tableEl.hidden = false;
+  view.table = buildPieceTable(tableEl, {
+    pieces: shown,
+    columns: ["composer", "source", "tags"],
+    selectable: true,
+    rowActions: (row, actionsCell, rowPiece) => {
+      actionsCell.appendChild(
+        buildActionButton({ icon: "↗", label: "Open analysis", onClick: () => showAnalysisView(rowPiece.id) }),
+      );
+      actionsCell.appendChild(
+        buildActionButton({
+          icon: "🗑",
+          label: "Remove from collection",
+          onClick: () => handleRemovePiece(view.id, view.name, rowPiece.id),
+        }),
+      );
+    },
+    onOpen: (piece) => showAnalysisView(piece.id),
+    onSelectionChange: updateCollectionBulkBar,
+  });
+}
+
+function updateCollectionBulkBar() {
+  const bar = document.getElementById("corpus-bulk");
+  const ids = collectionView && collectionView.table ? collectionView.table.selectedIds() : [];
+  bar.innerHTML = "";
+  bar.hidden = ids.length === 0;
+  if (ids.length === 0) {
+    return;
+  }
+  const count = document.createElement("span");
+  count.textContent = `${ids.length} selected`;
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "Remove from collection";
+  remove.addEventListener("click", () => bulkRemoveFromCollection(ids));
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.textContent = "Clear selection";
+  clear.addEventListener("click", () => {
+    collectionView.table.clearSelection();
+    updateCollectionBulkBar();
+  });
+  bar.append(count, remove, clear);
+}
+
+/* One DELETE per selected piece, in order; stops at the first failure and
+ * names the piece. Reloads the members afterwards. */
+async function bulkRemoveFromCollection(ids) {
+  const view = collectionView;
+  const labels = new Map(view.members.map((piece) => [piece.id, piece.filename || piece.id]));
+  let failure = "";
+  for (const pieceId of ids) {
+    const result = await fetchJsonResult(`/api/corpus/${view.id}/pieces/${pieceId}`, { method: "DELETE" });
+    if (!result.ok || !result.data || !result.data.ok) {
+      failure = `Stopped at ${labels.get(pieceId) || pieceId}: ${collectionResultError(result, "failed")}`;
+      break;
+    }
+  }
+  await loadCorpusPieces(view.id, view.name);
+  if (failure) {
+    const statusEl = document.getElementById("corpus-piece-status");
+    statusEl.textContent = failure;
+    statusEl.classList.add("error");
+  }
 }
 
 /* The detail title with inline rename and the description with an editor.
@@ -1745,76 +1913,33 @@ function populateCorpusPieceSelect(libraryPieces, memberIds) {
   addButton.disabled = options.length === 0;
 }
 
-/* Corpus piece refs only carry an id (see corpus_service.h) -- this joins
- * them against /api/analyzer/pieces so the shared row component can show
- * the same filename Library shows, falling back to the bare id exactly
- * as Library's row does when a piece isn't found (e.g. deleted from the
- * Library since being added here). */
+/* A collection stores piece ids only; this joins them against
+ * /api/analyzer/pieces for the same columns the Library shows, falling back
+ * to the bare id for a piece not found. */
 async function loadCorpusPieces(id, name) {
   const statusEl = document.getElementById("corpus-piece-status");
-  const tableEl = document.getElementById("corpus-piece-table");
-  const bodyEl = document.getElementById("corpus-piece-table-body");
   statusEl.textContent = "Loading pieces...";
   statusEl.classList.remove("error");
-  tableEl.hidden = true;
-  bodyEl.innerHTML = "";
 
-  try {
-    const [corpusRes, libraryRes] = await Promise.all([
-      fetch(`/api/corpus/${id}/pieces`),
-      fetch("/api/analyzer/pieces"),
-    ]);
-    const data = await corpusRes.json();
-    const libraryData = await libraryRes.json();
-
-    if (!data.ok) {
-      statusEl.textContent = `Failed to load pieces: ${data.message || "unknown error"}`;
-      statusEl.classList.add("error");
-      return;
-    }
-
-    const libraryPieces = libraryData.ok ? libraryData.pieces : [];
-    populateCorpusPieceSelect(
-      libraryPieces,
-      data.pieces.map((piece) => piece.id),
-    );
-
-    if (data.pieces.length === 0) {
-      statusEl.textContent = "No piece refs yet.";
-      return;
-    }
-
-    const filenamesById = new Map();
-    for (const piece of libraryPieces) {
-      filenamesById.set(piece.id, piece.filename);
-    }
-
-    statusEl.textContent = "";
-    tableEl.hidden = false;
-    for (const piece of data.pieces) {
-      const enrichedPiece = { id: piece.id, filename: filenamesById.get(piece.id) };
-      bodyEl.appendChild(buildCollectionPieceRow(enrichedPiece, id, name));
-    }
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
-    statusEl.classList.add("error");
+  const [detail, library] = await Promise.all([
+    fetchJsonResult(`/api/corpus/${id}`),
+    fetchJsonResult("/api/analyzer/pieces"),
+  ]);
+  if (!collectionView || collectionView.id !== id) {
+    return;
   }
-}
-
-function buildCollectionPieceRow(piece, corpusId, corpusName) {
-  return buildPieceRow(
-    piece,
-    (row, actionsCell, rowPiece) => {
-      actionsCell.appendChild(
-        buildActionButton({
-          icon: "🗑",
-          label: "Remove from collection",
-          onClick: () => handleRemovePiece(corpusId, corpusName, rowPiece.id),
-        }),
-      );
-    },
-    (rowPiece) => showAnalysisView(rowPiece.id),
-  );
+  if (!detail.ok || !detail.data || !detail.data.ok) {
+    statusEl.textContent = `Failed to load pieces: ${collectionResultError(detail, "unknown error")}`;
+    statusEl.classList.add("error");
+    return;
+  }
+  const libraryPieces = library.ok && library.data && library.data.ok ? library.data.pieces : [];
+  const byId = new Map(libraryPieces.map((piece) => [piece.id, piece]));
+  collectionView.name = detail.data.name || name;
+  collectionView.libraryPieces = libraryPieces;
+  collectionView.members = detail.data.pieces.map((pieceId) => byId.get(pieceId) || { id: pieceId, filename: "" });
+  populateCorpusPieceSelect(libraryPieces, detail.data.pieces);
+  showCollectionMembers();
 }
 
 async function handleAddPiece(corpusId, corpusName) {

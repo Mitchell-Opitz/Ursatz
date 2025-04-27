@@ -112,7 +112,64 @@
     };
   }
 
-  const api = { parseTagInput, filterQuery, sortPieces, searchPieces, bulkPatch, collectionSummary };
+  function sameText(a, b) {
+    return String(a || "").toLowerCase() === String(b || "").toLowerCase();
+  }
+
+  /* Client-side version of the backend's filter (same fields as
+   * filterQuery) plus the free-text search, for lists already in memory. */
+  function matchPieces(pieces, filter) {
+    const f = filter || {};
+    const unassigned = f.unassigned || [];
+    const kept = pieces.filter((piece) => {
+      if (f.composer && !sameText(piece.composer, f.composer)) {
+        return false;
+      }
+      if (f.source && !sameText(piece.source, f.source)) {
+        return false;
+      }
+      if (f.tag && !(piece.tags || []).some((tag) => sameText(tag, f.tag))) {
+        return false;
+      }
+      if (unassigned.includes("composer") && piece.composer) {
+        return false;
+      }
+      if (unassigned.includes("source") && piece.source) {
+        return false;
+      }
+      return !(f.untagged && (piece.tags || []).length > 0);
+    });
+    return searchPieces(kept, f.search);
+  }
+
+  /* Distinct composers, sources and tags with counts, in the shape of the
+   * backend's groups route, over pieces already in memory. */
+  function groupValues(pieces) {
+    const count = (values) => topCounts(values, Infinity);
+    const list = pieces || [];
+    return {
+      composers: count(list.map((piece) => String(piece.composer || "")).filter(Boolean)),
+      sources: count(list.map((piece) => String(piece.source || "")).filter(Boolean)),
+      tags: count(list.flatMap((piece) => piece.tags || [])),
+      unassigned: {
+        composer: list.filter((piece) => !piece.composer).length,
+        source: list.filter((piece) => !piece.source).length,
+      },
+      untagged: list.filter((piece) => !(piece.tags || []).length).length,
+      total: list.length,
+    };
+  }
+
+  const api = {
+    parseTagInput,
+    filterQuery,
+    sortPieces,
+    searchPieces,
+    bulkPatch,
+    collectionSummary,
+    matchPieces,
+    groupValues,
+  };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {
