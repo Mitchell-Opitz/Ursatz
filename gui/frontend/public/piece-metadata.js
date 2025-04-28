@@ -160,7 +160,27 @@
     };
   }
 
+  /* Pieces not yet in the collection, for the add-pieces picker. */
+  function pickerCandidates(pieces, memberIds) {
+    const members = new Set(memberIds);
+    return pieces.filter((piece) => !members.has(piece.id));
+  }
+
+  function addPiecesBody(ids) {
+    return { piece_ids: ids.slice() };
+  }
+
+  function addResultText(added, already) {
+    if (!already) {
+      return `Added ${added}`;
+    }
+    return `Added ${added}, ${already} ${already === 1 ? "was" : "were"} already in it`;
+  }
+
   const api = {
+    pickerCandidates,
+    addPiecesBody,
+    addResultText,
     parseTagInput,
     filterQuery,
     sortPieces,

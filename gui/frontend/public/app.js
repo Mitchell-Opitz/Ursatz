@@ -1638,15 +1638,15 @@ function showCorpusDetail(id, name) {
       <div id="corpus-piece-table-container" hidden></div>
     </section>
     <div class="upload-controls">
-      <select id="corpus-piece-select" disabled></select>
-      <button id="corpus-add-piece-button" type="button" disabled>Add</button>
+      <button id="corpus-add-pieces-button" type="button">Add pieces</button>
     </div>
     <div id="corpus-piece-add-status" class="upload-status"></div>
+    <section id="corpus-picker" class="panel" hidden></section>
   `;
 
   document.getElementById("corpus-back-container").appendChild(renderCorpusBackLink());
   loadCollectionHeading(id, name);
-  document.getElementById("corpus-add-piece-button").addEventListener("click", () => handleAddPiece(id, name));
+  document.getElementById("corpus-add-pieces-button").addEventListener("click", openCollectionPicker);
   wireCollectionFilterRow();
 
   loadCorpusPieces(id, name);
@@ -1878,41 +1878,6 @@ async function loadCollectionHeading(id, fallbackName) {
   }
 }
 
-/* Library pieces not already in the collection, labeled by filename with
- * the bare id as fallback (same as the row label), sorted by label. */
-function collectionAddOptions(libraryPieces, memberIds) {
-  const members = new Set(memberIds);
-  return libraryPieces
-    .filter((piece) => !members.has(piece.id))
-    .map((piece) => ({ id: piece.id, label: piece.filename || piece.id }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-function populateCorpusPieceSelect(libraryPieces, memberIds) {
-  const selectEl = document.getElementById("corpus-piece-select");
-  const addButton = document.getElementById("corpus-add-piece-button");
-  if (!selectEl || !addButton) {
-    return;
-  }
-
-  const options = collectionAddOptions(libraryPieces, memberIds);
-  selectEl.innerHTML = "";
-  if (options.length === 0) {
-    const empty = document.createElement("option");
-    empty.value = "";
-    empty.textContent = "All Library pieces are in this collection";
-    selectEl.appendChild(empty);
-  }
-  for (const option of options) {
-    const optionEl = document.createElement("option");
-    optionEl.value = option.id;
-    optionEl.textContent = option.label;
-    selectEl.appendChild(optionEl);
-  }
-  selectEl.disabled = options.length === 0;
-  addButton.disabled = options.length === 0;
-}
-
 /* A collection stores piece ids only; this joins them against
  * /api/analyzer/pieces for the same columns the Library shows, falling back
  * to the bare id for a piece not found. */
@@ -1938,47 +1903,192 @@ async function loadCorpusPieces(id, name) {
   collectionView.name = detail.data.name || name;
   collectionView.libraryPieces = libraryPieces;
   collectionView.members = detail.data.pieces.map((pieceId) => byId.get(pieceId) || { id: pieceId, filename: "" });
-  populateCorpusPieceSelect(libraryPieces, detail.data.pieces);
   showCollectionMembers();
+  if (collectionView.picker) {
+    loadPickerPieces();
+  }
 }
 
-async function handleAddPiece(corpusId, corpusName) {
-  const pieceSelect = document.getElementById("corpus-piece-select");
-  const addButton = document.getElementById("corpus-add-piece-button");
-  const statusEl = document.getElementById("corpus-piece-add-status");
+/* The add-pieces picker: the Library's filters (applied by the backend)
+ * over the pieces not yet in the collection. */
+function openCollectionPicker() {
+  const view = collectionView;
+  const panel = document.getElementById("corpus-picker");
+  view.picker = { filter: emptyLibraryFilter(), fetched: [], shown: [], table: null };
+  panel.hidden = false;
+  panel.innerHTML = `
+    <div class="filter-row">
+      <input type="search" id="picker-search" placeholder="Search" aria-label="Search pieces to add" />
+      <label class="filter-field">Composer <select id="picker-filter-composer"></select></label>
+      <label class="filter-field">Source <select id="picker-filter-source"></select></label>
+      <label class="filter-field">Tag <select id="picker-filter-tag"></select></label>
+      <button type="button" id="picker-clear-filters">Clear filters</button>
+      <button type="button" id="picker-close">Close</button>
+    </div>
+    <div id="picker-actions" class="bulk-bar"></div>
+    <div id="picker-status" class="piece-list-status"></div>
+    <div id="picker-table-container" hidden></div>
+  `;
+  const f = () => view.picker.filter;
+  const setUnassigned = (which, on) => {
+    f().unassigned = f().unassigned.filter((item) => item !== which);
+    if (on) {
+      f().unassigned.push(which);
+    }
+  };
+  const change = (id, apply) => {
+    document.getElementById(id).addEventListener("change", (event) => {
+      apply(event.target.value);
+      loadPickerPieces();
+    });
+  };
+  change("picker-filter-composer", (value) => {
+    setUnassigned("composer", value === UNASSIGNED);
+    f().composer = value === UNASSIGNED ? "" : value;
+  });
+  change("picker-filter-source", (value) => {
+    setUnassigned("source", value === UNASSIGNED);
+    f().source = value === UNASSIGNED ? "" : value;
+  });
+  change("picker-filter-tag", (value) => {
+    f().untagged = value === UNTAGGED;
+    f().tag = f().untagged ? "" : value;
+  });
+  document.getElementById("picker-search").addEventListener("input", (event) => {
+    f().search = event.target.value;
+    showPickerPieces();
+  });
+  document.getElementById("picker-clear-filters").addEventListener("click", () => {
+    view.picker.filter = emptyLibraryFilter();
+    populatePickerSelects();
+    loadPickerPieces();
+  });
+  document.getElementById("picker-close").addEventListener("click", () => {
+    view.picker = null;
+    panel.hidden = true;
+    panel.innerHTML = "";
+  });
+  loadLibraryGroups().then(() => {
+    if (view.picker) {
+      populatePickerSelects();
+    }
+  });
+  loadPickerPieces();
+}
 
-  const pieceId = pieceSelect.value;
-  if (!pieceId) {
-    statusEl.textContent = "Pick a piece to add.";
+function populatePickerSelects() {
+  const f = collectionView.picker.filter;
+  const g = libraryGroups;
+  fillFilterSelect(
+    document.getElementById("picker-filter-composer"),
+    "Any",
+    UNASSIGNED,
+    "Unassigned",
+    g.unassigned.composer,
+    g.composers,
+    f.unassigned.includes("composer") ? UNASSIGNED : f.composer,
+  );
+  fillFilterSelect(
+    document.getElementById("picker-filter-source"),
+    "Any",
+    UNASSIGNED,
+    "Unassigned",
+    g.unassigned.source,
+    g.sources,
+    f.unassigned.includes("source") ? UNASSIGNED : f.source,
+  );
+  fillFilterSelect(
+    document.getElementById("picker-filter-tag"),
+    "Any",
+    UNTAGGED,
+    "Untagged",
+    g.untagged,
+    g.tags,
+    f.untagged ? UNTAGGED : f.tag,
+  );
+  document.getElementById("picker-search").value = f.search;
+}
+
+async function loadPickerPieces() {
+  const view = collectionView;
+  const picker = view.picker;
+  const statusEl = document.getElementById("picker-status");
+  statusEl.textContent = "Loading pieces...";
+  statusEl.classList.remove("error");
+  const query = PieceMetadata.filterQuery(picker.filter);
+  const result = await fetchJsonResult(query ? `/api/analyzer/pieces?${query}` : "/api/analyzer/pieces");
+  if (view.picker !== picker) {
+    return;
+  }
+  if (!result.ok || !result.data || !result.data.ok) {
+    statusEl.textContent = `Failed to load pieces: ${collectionResultError(result, "unknown error")}`;
     statusEl.classList.add("error");
     return;
   }
+  picker.fetched = PieceMetadata.pickerCandidates(
+    result.data.pieces,
+    view.members.map((piece) => piece.id),
+  );
+  showPickerPieces();
+}
 
+function showPickerPieces() {
+  const picker = collectionView.picker;
+  const statusEl = document.getElementById("picker-status");
+  const tableEl = document.getElementById("picker-table-container");
+  picker.shown = PieceMetadata.sortPieces(PieceMetadata.searchPieces(picker.fetched, picker.filter.search), "title");
+  picker.table = null;
+  tableEl.innerHTML = "";
+  updatePickerActions();
+  statusEl.classList.remove("error");
+  if (picker.shown.length === 0) {
+    statusEl.textContent = "No pieces to add.";
+    tableEl.hidden = true;
+    return;
+  }
+  statusEl.textContent = "";
+  tableEl.hidden = false;
+  picker.table = buildPieceTable(tableEl, {
+    pieces: picker.shown,
+    columns: ["composer", "source", "tags"],
+    selectable: true,
+    onSelectionChange: updatePickerActions,
+  });
+}
+
+function updatePickerActions() {
+  const picker = collectionView.picker;
+  const bar = document.getElementById("picker-actions");
+  const selected = picker.table ? picker.table.selectedIds() : [];
+  bar.innerHTML = "";
+  const addSelected = document.createElement("button");
+  addSelected.type = "button";
+  addSelected.textContent = `Add selected (${selected.length})`;
+  addSelected.disabled = selected.length === 0;
+  addSelected.addEventListener("click", () => addPiecesToCollection(selected));
+  const addAll = document.createElement("button");
+  addAll.type = "button";
+  addAll.textContent = `Add all matching (${picker.shown.length})`;
+  addAll.disabled = picker.shown.length === 0;
+  addAll.addEventListener("click", () => addPiecesToCollection(picker.shown.map((piece) => piece.id)));
+  bar.append(addSelected, addAll);
+}
+
+/* One POST with piece_ids; the result line reads "Added 5, 2 were already
+ * in it". Reloads the members and the picker afterwards. */
+async function addPiecesToCollection(ids) {
+  const view = collectionView;
+  const statusEl = document.getElementById("corpus-piece-add-status");
   statusEl.textContent = "";
   statusEl.classList.remove("error");
-  addButton.disabled = true;
-
-  try {
-    const res = await fetch(`/api/corpus/${corpusId}/pieces`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ piece_id: pieceId }),
-    });
-    const data = await res.json();
-
-    addButton.disabled = false;
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Add failed.";
-      statusEl.classList.add("error");
-      return;
-    }
-
-    loadCorpusPieces(corpusId, corpusName);
-  } catch (err) {
-    statusEl.textContent = `Could not reach backend: ${err}`;
+  const result = await postJsonResult(`/api/corpus/${view.id}/pieces`, PieceMetadata.addPiecesBody(ids));
+  if (!result.ok || !result.data || !result.data.ok) {
+    statusEl.textContent = collectionResultError(result, "Add failed.");
     statusEl.classList.add("error");
-    addButton.disabled = false;
+    return;
   }
+  statusEl.textContent = PieceMetadata.addResultText(result.data.added, result.data.already);
+  await loadCorpusPieces(view.id, view.name);
 }
 
 async function handleRemovePiece(corpusId, corpusName, pieceId) {
