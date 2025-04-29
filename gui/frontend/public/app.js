@@ -187,6 +187,7 @@ async function renderLibraryView(filter) {
       <button type="button" id="library-clear-filters">Clear filters</button>
     </div>
     <div id="library-count" class="piece-list-status"></div>
+    <div id="library-save-row" class="bulk-bar" hidden></div>
     <div id="library-bulk" class="bulk-bar" hidden></div>
     <section class="panel library-panel">
       <div id="library-status" class="piece-list-status">Loading pieces...</div>
@@ -360,6 +361,7 @@ function showLibraryPieces(fetched) {
   libraryTable = null;
   tableEl.innerHTML = "";
   updateLibraryBulkBar();
+  updateLibrarySaveRow();
   countEl.textContent = isLibraryFilterOn()
     ? `${libraryShownPieces.length} of ${libraryGroups.total} pieces`
     : "";
@@ -382,6 +384,49 @@ function showLibraryPieces(fetched) {
     onOpen: (piece) => showAnalysisView(piece.id),
     onSelectionChange: updateLibraryBulkBar,
   });
+}
+
+/* "Save as collection" while a filter is on and pieces match. */
+function updateLibrarySaveRow() {
+  const row = document.getElementById("library-save-row");
+  row.innerHTML = "";
+  row.hidden = !(isLibraryFilterOn() && libraryShownPieces.length > 0);
+  if (row.hidden) {
+    return;
+  }
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "Save as collection";
+  button.addEventListener("click", () => saveLibraryAsCollection(button));
+  row.appendChild(button);
+}
+
+/* Creates a collection named from the filter and adds every shown piece in
+ * one POST, then opens it. The collection is a snapshot: it does not follow
+ * later tag changes. */
+async function saveLibraryAsCollection(button) {
+  const statusEl = document.getElementById("library-status");
+  const name = PieceMetadata.collectionNameFromFilter(libraryFilter);
+  const ids = libraryShownPieces.map((piece) => piece.id);
+  button.disabled = true;
+  statusEl.classList.remove("error");
+  const created = await postJsonResult("/api/corpus", { name });
+  if (!created.ok || !created.data || !created.data.ok) {
+    statusEl.textContent = collectionResultError(created, "Could not create the collection.");
+    statusEl.classList.add("error");
+    button.disabled = false;
+    return;
+  }
+  const added = await postJsonResult(`/api/corpus/${created.data.id}/pieces`, PieceMetadata.addPiecesBody(ids));
+  if (!added.ok || !added.data || !added.data.ok) {
+    statusEl.textContent = `Created "${created.data.name}" but adding pieces failed: ${collectionResultError(added, "failed")}`;
+    statusEl.classList.add("error");
+    button.disabled = false;
+    return;
+  }
+  setActiveTool("corpus");
+  tagsPanel.setActive(null);
+  showCorpusDetail(created.data.id, created.data.name);
 }
 
 /* The Library's current shared table (see buildPieceTable), or null. */

@@ -177,7 +177,35 @@
     return `Added ${added}, ${already} ${already === 1 ? "was" : "were"} already in it`;
   }
 
+  /* A collection name for a Library filter: "John Field", "Tag: whimsical",
+   * parts combined with " · ". Search text is named only when nothing else is
+   * filtered. At most 120 characters. */
+  function collectionNameFromFilter(filter) {
+    const f = filter || {};
+    const parts = [];
+    if (f.composer) {
+      parts.push(f.composer);
+    } else if ((f.unassigned || []).includes("composer")) {
+      parts.push("No composer");
+    }
+    if (f.source) {
+      parts.push(`Source: ${f.source}`);
+    } else if ((f.unassigned || []).includes("source")) {
+      parts.push("No source");
+    }
+    if (f.tag) {
+      parts.push(`Tag: ${f.tag}`);
+    } else if (f.untagged) {
+      parts.push("Untagged");
+    }
+    if (parts.length === 0 && String(f.search || "").trim()) {
+      parts.push(`Search: ${String(f.search).trim()}`);
+    }
+    return (parts.join(" · ") || "Selected pieces").slice(0, 120);
+  }
+
   const api = {
+    collectionNameFromFilter,
     pickerCandidates,
     addPiecesBody,
     addResultText,
