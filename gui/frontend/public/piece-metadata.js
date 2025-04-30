@@ -204,7 +204,17 @@
     return (parts.join(" · ") || "Selected pieces").slice(0, 120);
   }
 
+  function summaryLine(label, entries) {
+    return entries.length ? `${label}: ${entries.map((entry) => entry.value).join(", ")}` : "";
+  }
+
+  function pieceCountText(count) {
+    return `${count} ${count === 1 ? "piece" : "pieces"}`;
+  }
+
   const api = {
+    summaryLine,
+    pieceCountText,
     collectionNameFromFilter,
     pickerCandidates,
     addPiecesBody,

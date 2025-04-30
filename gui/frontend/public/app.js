@@ -1473,14 +1473,6 @@ async function loadCollectionSummaries(collections) {
   return summaries;
 }
 
-function summaryLine(label, entries) {
-  return entries.length ? `${label}: ${entries.map((entry) => entry.value).join(", ")}` : "";
-}
-
-function pieceCountText(count) {
-  return `${count} ${count === 1 ? "piece" : "pieces"}`;
-}
-
 function patchCollection(id, body) {
   return fetchJsonResult(`/api/corpus/${id}`, {
     method: "PATCH",
@@ -1603,10 +1595,10 @@ function buildCollectionCard(corpus, summary) {
   card.appendChild(buildCollectionCardMenu(corpus));
   addLine("collection-card-name", corpus.name);
   addLine("collection-card-description", corpus.description);
-  addLine("collection-card-count", pieceCountText(corpus.piece_count || 0));
+  addLine("collection-card-count", PieceMetadata.pieceCountText(corpus.piece_count || 0));
   if (summary) {
-    addLine("collection-card-summary", summaryLine("Composers", summary.composers));
-    addLine("collection-card-summary", summaryLine("Tags", summary.tags));
+    addLine("collection-card-summary", PieceMetadata.summaryLine("Composers", summary.composers));
+    addLine("collection-card-summary", PieceMetadata.summaryLine("Tags", summary.tags));
   }
 
   return card;
