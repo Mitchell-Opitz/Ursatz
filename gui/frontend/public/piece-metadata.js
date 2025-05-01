@@ -89,7 +89,145 @@
     }
   }
 
-  const api = { parseTagInput, filterQuery, sortPieces, searchPieces, bulkPatch };
+  function topCounts(values, limit) {
+    const counts = new Map();
+    for (const value of values) {
+      const key = value.toLowerCase();
+      const entry = counts.get(key) || { value, count: 0 };
+      entry.count += 1;
+      counts.set(key, entry);
+    }
+    return Array.from(counts.values())
+      .sort((a, b) => b.count - a.count || compareText(a.value.toLowerCase(), b.value.toLowerCase()))
+      .slice(0, limit);
+  }
+
+  /* The top 3 composers and top 3 tags among a collection's pieces, by count
+   * then name (case-insensitive). Unassigned composers are not counted. */
+  function collectionSummary(pieces) {
+    const list = pieces || [];
+    return {
+      composers: topCounts(list.map((piece) => String(piece.composer || "")).filter(Boolean), 3),
+      tags: topCounts(list.flatMap((piece) => piece.tags || []), 3),
+    };
+  }
+
+  function sameText(a, b) {
+    return String(a || "").toLowerCase() === String(b || "").toLowerCase();
+  }
+
+  /* Client-side version of the backend's filter (same fields as
+   * filterQuery) plus the free-text search, for lists already in memory. */
+  function matchPieces(pieces, filter) {
+    const f = filter || {};
+    const unassigned = f.unassigned || [];
+    const kept = pieces.filter((piece) => {
+      if (f.composer && !sameText(piece.composer, f.composer)) {
+        return false;
+      }
+      if (f.source && !sameText(piece.source, f.source)) {
+        return false;
+      }
+      if (f.tag && !(piece.tags || []).some((tag) => sameText(tag, f.tag))) {
+        return false;
+      }
+      if (unassigned.includes("composer") && piece.composer) {
+        return false;
+      }
+      if (unassigned.includes("source") && piece.source) {
+        return false;
+      }
+      return !(f.untagged && (piece.tags || []).length > 0);
+    });
+    return searchPieces(kept, f.search);
+  }
+
+  /* Distinct composers, sources and tags with counts, in the shape of the
+   * backend's groups route, over pieces already in memory. */
+  function groupValues(pieces) {
+    const count = (values) => topCounts(values, Infinity);
+    const list = pieces || [];
+    return {
+      composers: count(list.map((piece) => String(piece.composer || "")).filter(Boolean)),
+      sources: count(list.map((piece) => String(piece.source || "")).filter(Boolean)),
+      tags: count(list.flatMap((piece) => piece.tags || [])),
+      unassigned: {
+        composer: list.filter((piece) => !piece.composer).length,
+        source: list.filter((piece) => !piece.source).length,
+      },
+      untagged: list.filter((piece) => !(piece.tags || []).length).length,
+      total: list.length,
+    };
+  }
+
+  /* Pieces not yet in the collection, for the add-pieces picker. */
+  function pickerCandidates(pieces, memberIds) {
+    const members = new Set(memberIds);
+    return pieces.filter((piece) => !members.has(piece.id));
+  }
+
+  function addPiecesBody(ids) {
+    return { piece_ids: ids.slice() };
+  }
+
+  function addResultText(added, already) {
+    if (!already) {
+      return `Added ${added}`;
+    }
+    return `Added ${added}, ${already} ${already === 1 ? "was" : "were"} already in it`;
+  }
+
+  /* A collection name for a Library filter: "John Field", "Tag: whimsical",
+   * parts combined with " · ". Search text is named only when nothing else is
+   * filtered. At most 120 characters. */
+  function collectionNameFromFilter(filter) {
+    const f = filter || {};
+    const parts = [];
+    if (f.composer) {
+      parts.push(f.composer);
+    } else if ((f.unassigned || []).includes("composer")) {
+      parts.push("No composer");
+    }
+    if (f.source) {
+      parts.push(`Source: ${f.source}`);
+    } else if ((f.unassigned || []).includes("source")) {
+      parts.push("No source");
+    }
+    if (f.tag) {
+      parts.push(`Tag: ${f.tag}`);
+    } else if (f.untagged) {
+      parts.push("Untagged");
+    }
+    if (parts.length === 0 && String(f.search || "").trim()) {
+      parts.push(`Search: ${String(f.search).trim()}`);
+    }
+    return (parts.join(" · ") || "Selected pieces").slice(0, 120);
+  }
+
+  function summaryLine(label, entries) {
+    return entries.length ? `${label}: ${entries.map((entry) => entry.value).join(", ")}` : "";
+  }
+
+  function pieceCountText(count) {
+    return `${count} ${count === 1 ? "piece" : "pieces"}`;
+  }
+
+  const api = {
+    summaryLine,
+    pieceCountText,
+    collectionNameFromFilter,
+    pickerCandidates,
+    addPiecesBody,
+    addResultText,
+    parseTagInput,
+    filterQuery,
+    sortPieces,
+    searchPieces,
+    bulkPatch,
+    collectionSummary,
+    matchPieces,
+    groupValues,
+  };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {

@@ -662,18 +662,30 @@ custom properties on `:root`, so a theme picker can swap colors without
 touching markup or `app.js`. Frontend logic makes no styling decisions.
 
 The Corpus tool is shown as "Collections" in the sidebar and view title; the
-API, module and route names stay `corpus`. It renders a grid of Collection
-cards (name only; the piece count, description and date the API returns are
-not shown yet). Clicking
-a card opens a detail view listing that Collection's piece refs with the same
-row component as the Library: each row's filename is found by joining the
-piece ref's id against `/api/analyzer/pieces`, falling back to the bare id.
-Clicking a row's filename opens that piece's analysis, like the Library. The
-only action on a Collection's piece row is removing it from the Collection.
-The header holds one form: a name input and a `Create` button (Enter also
-creates); the id is generated and the new Collection opens. Pieces are added
-by picking from a list of Library pieces not yet in the Collection, and a
-piece may belong to any number of Collections.
+API, module and route names stay `corpus`.
+
+The Library, a collection's detail and the add-pieces picker share one table
+(`buildPieceTable` in `app.js`): a select column, Title, Composer, Source,
+Tags and Actions.
+
+- **Cards**: name, a one-line description, "<n> pieces" and the top 3
+  composers and top 3 tags among the collection's pieces. The `⋯` button
+  opens Rename, Edit description and Delete (the confirm names the
+  collection; its pieces are not deleted). The header form takes a name and
+  an optional description.
+- **Detail**: the title and description each have an inline editor. The
+  table lists the members with search, Composer, Source and Tag filters
+  applied in the browser. Row actions are Open (analysis) and Remove from
+  collection; checked rows can be removed together.
+- **Add pieces**: opens a picker with the Library filters (applied by the
+  backend) over pieces not yet in the collection. `Add selected (n)` and
+  `Add all matching (n)` each send one `POST /api/corpus/<id>/pieces` with
+  `piece_ids`; the result reads "Added 5, 2 were already in it".
+- **Save as collection**: shown in the Library while a filter is on. It
+  creates a collection named from the filter ("John Field", "Tag: whimsical",
+  parts joined with " · ") and adds every shown piece in one request, then
+  opens it. The collection is a snapshot and does not follow later tag
+  changes; the sidebar Tags panel is the live grouping.
 
 ### Score layers
 

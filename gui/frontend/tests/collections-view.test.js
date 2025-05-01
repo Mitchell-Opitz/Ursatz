@@ -1,34 +1,10 @@
-/* Confirms the Collections view's data-shaping decisions in app.js
- * (loadCorpusPieces/buildCollectionPieceRow): joining a bare corpus piece
- * ref against the Library's piece list to get a filename, falling back to
- * the bare id exactly as Library's own row does, and that the row's only
- * action is remove-from-collection (no Library piece-management actions
- * carried over). Plain Node script, no framework/deps, run directly:
- * `node frontend/tests/collections-view.test.js`. */
-
-function joinPieceFilename(pieceId, libraryPieces) {
-  const filenamesById = new Map();
-  for (const piece of libraryPieces) {
-    filenamesById.set(piece.id, piece.filename);
-  }
-  return { id: pieceId, filename: filenamesById.get(pieceId) };
-}
-
-function collectionRowCellText(piece) {
-  return piece.filename || piece.id;
-}
-
-/* Mirrors collectionAddOptions in app.js. */
-function collectionAddOptions(libraryPieces, memberIds) {
-  const members = new Set(memberIds);
-  return libraryPieces
-    .filter((piece) => !members.has(piece.id))
-    .map((piece) => ({ id: piece.id, label: piece.filename || piece.id }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
+/* Covers the Collections view's data decisions through the pure helpers in
+ * public/piece-metadata.js: card text, the add-pieces picker, the add body
+ * and result line, and the name given to Save as collection. Plain Node
+ * script: `node frontend/tests/collections-view.test.js`. */
+const M = require("../public/piece-metadata.js");
 
 let failures = 0;
-
 function check(cond, what) {
   if (!cond) {
     console.error(`FAIL: ${what}`);
@@ -37,52 +13,42 @@ function check(cond, what) {
     console.log(`PASS: ${what}`);
   }
 }
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-const libraryPieces = [
-  { id: "piece-1", filename: "nocturne.mid" },
-  { id: "piece-2", filename: "" },
+const library = [
+  { id: "p1", filename: "nocturne.mid", composer: "John Field", source: "", tags: ["whimsical"] },
+  { id: "p2", filename: "sonata.mid", composer: "John Field", source: "Op 1", tags: ["whimsical", "slow"] },
+  { id: "p3", filename: "etude.mid", composer: "Chopin", source: "", tags: [] },
 ];
 
-check(
-  collectionRowCellText(joinPieceFilename("piece-1", libraryPieces)) === "nocturne.mid",
-  "a collection piece row shows the Library filename when the piece is found",
-);
-check(
-  collectionRowCellText(joinPieceFilename("piece-2", libraryPieces)) === "piece-2",
-  "a collection piece row falls back to the bare id when the Library filename is empty",
-);
-check(
-  collectionRowCellText(joinPieceFilename("piece-missing", libraryPieces)) === "piece-missing",
-  "a collection piece row falls back to the bare id when the piece isn't found in the Library",
-);
-
-const addLibrary = [
-  { id: "piece-c", filename: "zeta.mid" },
-  { id: "piece-a", filename: "alpha.mid" },
-  { id: "piece-b", filename: "" },
-  { id: "piece-m", filename: "member.mid" },
+/* Card text, as buildCollectionCard assembles it. */
+const summary = M.collectionSummary(library.slice(0, 2));
+const lines = [
+  M.pieceCountText(2),
+  M.summaryLine("Composers", summary.composers),
+  M.summaryLine("Tags", summary.tags),
 ];
-const addOptions = collectionAddOptions(addLibrary, ["piece-m"]);
+check(same(lines, ["2 pieces", "Composers: John Field", "Tags: whimsical, slow"]), "card shows count, composers and tags");
+check(M.pieceCountText(0) === "0 pieces", "an empty collection says 0 pieces");
 
+/* The picker. */
+const candidates = M.pickerCandidates(library, ["p2"]);
+check(same(candidates.map((piece) => piece.id), ["p1", "p3"]), "the picker excludes pieces already in the collection");
+check(M.pickerCandidates(library, library.map((piece) => piece.id)).length === 0, "the picker is empty when every piece is a member");
+check(same(M.searchPieces(candidates, "chopin").map((piece) => piece.id), ["p3"]), "the picker search narrows the candidates");
+check(same(M.addPiecesBody(candidates.map((piece) => piece.id)), { piece_ids: ["p1", "p3"] }), "Add all matching sends every candidate in one body");
+check(M.addResultText(5, 2) === "Added 5, 2 were already in it", "the result line reports added and already");
+
+/* Detail filters over members. */
+check(same(M.matchPieces(library, { tag: "slow" }).map((piece) => piece.id), ["p2"]), "member filter by tag");
+check(same(M.matchPieces(library, { untagged: true }).map((piece) => piece.id), ["p3"]), "member filter untagged");
+
+/* Save as collection. */
+check(M.collectionNameFromFilter({ composer: "John Field" }) === "John Field", "Save as collection names a composer filter");
+check(M.collectionNameFromFilter({ tag: "whimsical" }) === "Tag: whimsical", "Save as collection names a tag filter");
 check(
-  !addOptions.some((option) => option.id === "piece-m"),
-  "the add list excludes pieces already in the collection",
-);
-check(
-  addOptions.find((option) => option.id === "piece-a").label === "alpha.mid",
-  "the add list labels a piece by its filename",
-);
-check(
-  addOptions.find((option) => option.id === "piece-b").label === "piece-b",
-  "the add list falls back to the id when the filename is empty",
-);
-check(
-  addOptions.map((option) => option.label).join(",") === "alpha.mid,piece-b,zeta.mid",
-  "the add list is sorted by label",
-);
-check(
-  collectionAddOptions(addLibrary, addLibrary.map((piece) => piece.id)).length === 0,
-  "the add list is empty when every Library piece is a member",
+  M.collectionNameFromFilter({ composer: "John Field", tag: "whimsical" }) === "John Field · Tag: whimsical",
+  "Save as collection combines the parts",
 );
 
 process.exit(failures === 0 ? 0 : 1);
