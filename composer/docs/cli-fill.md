@@ -1,7 +1,7 @@
 # fill command
 
 ```sh
-ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--record <file.json>] [--format text|json]
+ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--record <file.json>] [--format text|json]
 ```
 
 Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](piece.md)) over the plan, which
@@ -26,6 +26,8 @@ plan for the library to use.
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same plan and seed give the same output, byte for byte. |
 | `--check` | Analyze every theme section with the Ursatz Analyzer and reject a run whose analysis contradicts the plan: a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault in material the plan wrote. See [analyzer-check.md](analyzer-check.md). Off by default; with it the result says how many cadences and keys were heard as planned. |
 | `--candidates <n>` | Compose `n` candidates (1 to 32) from the seeds `--seed`, `--seed + 1`, ... and write the best: the most cadences and keys heard as planned, then the best score, then the lower seed. Every candidate is listed with its seed, its agreement and its score. Not combined with the seed retries: if no candidate completes the command fails. |
+| `--style <file>` | Prefer the harmony and melody closest to a style: a style model file the Ursatz Analyzer wrote (`--style-profile`). Overrides the plan's own style. The Analyzer's distance from the style is printed with the result, per dimension. See [style.md](style.md). |
+| `--style-weight <n/d>` | How strongly the style is preferred (default `1/1`). Overrides the plan's weight; needs a style from here or the plan. |
 | `--out <plan.json>` | The realized plan as JSON. |
 | `--midi <file>`, `--musicxml <file>` | The piece, one part for each voice. The source material is not part of the piece, and a layered form sounds as its layers say. |
 | `--record <file.json>` | The records of the stages as one JSON array. Each element is `{"stage": <name>, "record": <fill record>}`, the record being the `fill_record_to_json` document of that stage (the seed, the attempts, the candidates and why each was chosen or rejected). A stage that did not run has no element. |

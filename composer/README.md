@@ -118,6 +118,10 @@ whose analysis contradicts the plan (a planned cadence or the key not heard, a h
 `fill --candidates <n>` composes `n` candidates and writes the one the Analyzer agrees with most. See
 [docs/analyzer-check.md](docs/analyzer-check.md).
 
+`plan --style`, `fill --style` and `grow --style` take a style model file the Ursatz Analyzer wrote from a corpus. The harmony and
+melody stages then prefer the candidates closest to it, and the result prints the Analyzer's distance from the style. A style
+is a preference, never a rule. See [docs/style.md](docs/style.md).
+
 ```sh
 ursatz-composer lock piece.json --section A --out piece-locked.json
 ursatz-composer regenerate piece-locked.json --section B --seed 3 --out piece-2.json --midi piece-2.mid
