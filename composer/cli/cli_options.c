@@ -100,6 +100,73 @@ bool cli_parse_whole_number(const char *text, unsigned long maximum, unsigned lo
     return true;
 }
 
+bool cli_parse_ratio(const char *text, ComposerRatio *out) {
+    if (!text || !isdigit((unsigned char)text[0])) {
+        return false;
+    }
+    char *end = NULL;
+    errno = 0;
+    unsigned long numerator = strtoul(text, &end, 10);
+    unsigned long denominator = 1;
+    if (errno != 0 || numerator > 4294967295UL) {
+        return false;
+    }
+    if (*end == '/') {
+        if (!isdigit((unsigned char)end[1])) {
+            return false;
+        }
+        errno = 0;
+        denominator = strtoul(end + 1, &end, 10);
+        if (errno != 0 || denominator == 0 || denominator > 4294967295UL) {
+            return false;
+        }
+    }
+    if (*end != '\0') {
+        return false;
+    }
+    out->numerator = numerator;
+    out->denominator = denominator;
+    return true;
+}
+
+int cli_load_style(const char *path, ComposerStyle **out) {
+    ComposerStyleResult loaded = composer_style_load(path, out);
+    if (loaded != COMPOSER_STYLE_OK) {
+        return cli_fail(loaded == COMPOSER_STYLE_ERR_ARGUMENT ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE,
+                        "cannot read style '%s': %s", path, composer_style_result_name(loaded));
+    }
+    return 0;
+}
+
+static const char *const STYLE_DIMENSION_LABELS[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
+
+void cli_print_style_distance(const StyleComparison *comparison) {
+    printf("\nstyle distance (the Analyzer's, 0 is the style, 1 is nothing alike)\n");
+    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+        if (comparison->dimension_present[d]) {
+            printf("  %-8s %.4f\n", STYLE_DIMENSION_LABELS[d], style_rational_value(comparison->dimension[d]));
+        }
+    }
+    if (comparison->overall_present) {
+        printf("  %-8s %.4f\n", "overall", style_rational_value(comparison->overall));
+    }
+}
+
+void cli_print_style_distance_json(const StyleComparison *comparison) {
+    printf("\"style_distance\":{");
+    const char *separator = "";
+    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+        if (comparison->dimension_present[d]) {
+            printf("%s\"%s\":%.4f", separator, STYLE_DIMENSION_LABELS[d], style_rational_value(comparison->dimension[d]));
+            separator = ",";
+        }
+    }
+    if (comparison->overall_present) {
+        printf("%s\"overall\":%.4f", separator, style_rational_value(comparison->overall));
+    }
+    printf("}");
+}
+
 bool cli_parse_key(const char *text, PlanKey *key) {
     static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
     while (isspace((unsigned char)*text)) {

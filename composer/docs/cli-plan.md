@@ -1,7 +1,7 @@
 # plan command
 
 ```sh
-ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] --out <plan.json> [--format text|json]
+ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] --out <plan.json> [--format text|json]
 ```
 
 Plans a whole short piece from a form template and writes the plan as JSON. Nothing is composed yet: the
@@ -31,6 +31,8 @@ section open for [`fill`](cli-fill.md) to realize. It builds a request for `piec
 | `--at <L>[:<bar>]` | Goes after the `--given-*` it places: the letter of the section (`B`, `A'`, as the plan prints it) and the bar of it, from 1 (the default), where the material starts. With no `--form`, the default is `B:1`. |
 | `--cells <n>` | After a `--given-progression`: the cells each chord lasts (a bar has 1 in 2/4 and 3/4, 2 in 4/4 and 6/8). The default is a bar. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The seed chooses the keys and cadences of `--modulate`; the same options and seed give the same plan. The seed that fills the plan is given to `fill`. |
+| `--style <file>` | A style model file from the Ursatz Analyzer (`--style-profile`). It must read; its path is kept in the plan as given, as a `style` constraint on the form node, so `fill` finds the file from where it is run. See [style.md](style.md). |
+| `--style-weight <n/d>` | How strongly `fill` prefers the style (default `1/1`; needs `--style`). Kept in the plan. |
 | `--out <plan.json>` | Where the plan is written, as `plan_write_json_file` writes it. |
 | `--format <text\|json>` | How the plan is printed on stdout. Text by default. |
 

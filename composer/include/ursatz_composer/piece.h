@@ -50,6 +50,12 @@ typedef struct {
      * has a Given melody inside it is made from (R-071). 0 for none.
      */
     size_t given_melodies;
+    /*
+     * A style (R-080): with has_style the form node gets a STYLE constraint holding the model file's path and the
+     * weight, which fill reads. The form is Given once the plan is built, so the constraint has to be added here.
+     */
+    bool has_style;
+    PlanStyle style;
 } PieceRequest;
 
 typedef enum {

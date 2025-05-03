@@ -14,6 +14,9 @@ void grow_outcome_destroy(GrowOutcome *outcome) {
         fill_record_destroy(outcome->records[stage]);
     }
     form_heard_destroy(&outcome->heard);
+    if (outcome->style_measured) {
+        style_comparison_destroy(&outcome->style_distance);
+    }
     memset(outcome, 0, sizeof(*outcome));
 }
 
@@ -71,6 +74,8 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     compose.context = config->context;
     compose.melody = config->melody;
     compose.max_iterations = config->max_iterations;
+    compose.style = config->style;
+    compose.style_weight = config->style_weight;
     GrowResult result = from_piece(compose_run(plan, &compose, &composed));
 
     for (int stage = 0; stage < GROW_STAGE_COUNT; stage++) {
@@ -91,6 +96,10 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
         outcome->requested_ending = heard->requested_ending;
         outcome->heard_as_requested = heard->heard_as_requested;
         outcome->score = composed.score;
+        outcome->style_measured = composed.style_measured;
+        outcome->style_distance = composed.style_distance;
+        memset(&composed.style_distance, 0, sizeof(composed.style_distance));
+        composed.style_measured = false;
     }
     compose_outcome_destroy(&composed);
     return result;

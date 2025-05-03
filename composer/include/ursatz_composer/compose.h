@@ -12,6 +12,7 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/return_hear.h>
+#include <ursatz_composer/style.h>
 
 /*
  * The compose run (R-068): every theme section of a plan filled in stages, each stage one fill_run over the whole plan
@@ -50,6 +51,12 @@
  * analysis contradicts the plan (a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault
  * in material the plan wrote) is rejected the same way. A section the check cannot read (a length that is not whole
  * bars, a lane left open) is not checked. The check is off by default, so a run without it is what it always was.
+ *
+ * With a style (R-080, style.h) the harmony and melody stages prefer the candidates closest to it: their checkers add
+ * style_weight times the candidate's closeness to the style (style_labels.h, composer_style_closeness) to the score of
+ * every candidate they accept, and reject nothing more (Laws 12 and 13). After a complete run the whole plan is rendered,
+ * analyzed (analyzer_analyze_fragment) and compared with the style (analyzer_fragment_style_distance): the independent
+ * measure outcome->style_distance holds. Without a style a run is byte for byte what it was.
  */
 
 typedef enum {
@@ -74,6 +81,8 @@ typedef struct {
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive compose_run */
     size_t max_iterations;          /* per stage; 0 means FILL_DEFAULT_MAX_ITERATIONS */
     bool analyzer_check;            /* reject a complete run the Analyzer's analysis contradicts (false: no check) */
+    const ComposerStyle *style;     /* NULL for none; must outlive compose_run */
+    ComposerRatio style_weight;     /* a denominator of 0 (all-zero) is 1/1; unused without a style */
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */
@@ -116,6 +125,13 @@ typedef struct {
      * the numerator.
      */
     GrowScore score;
+    /*
+     * With a style, after a complete run: the whole plan analyzed and compared with the style. style_measured is false
+     * when there is no style, the run is not complete, or the Analyzer could not analyze the plan; then style_distance is
+     * empty. The categories the plan has no data for are listed in it with in_a false (analyzer_fragment_style_distance).
+     */
+    bool style_measured;
+    StyleComparison style_distance; /* owned */
 } ComposeOutcome;
 
 void compose_outcome_destroy(ComposeOutcome *outcome);

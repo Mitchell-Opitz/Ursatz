@@ -21,6 +21,7 @@
 
 #include "grow/grow_internal.h"
 #include "plan/plan_internal.h"
+#include "style/style_internal.h"
 
 /* How many times the melody stage is run before it is given up on, and how far apart the seeds of the runs are. */
 #define COMPOSE_MELODY_ATTEMPTS 6
@@ -81,6 +82,9 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
         analyzer_check_destroy(&outcome->analyzer_checks[i]);
     }
     free(outcome->analyzer_checks);
+    if (outcome->style_measured) {
+        style_comparison_destroy(&outcome->style_distance);
+    }
     memset(outcome, 0, sizeof(*outcome));
 }
 
@@ -523,6 +527,19 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         fill.checker = checker_of(stage);
         fill.checker_context =
             stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_INVENT ? (void *)&run->motives : NULL;
+        /* With a style, the harmony and melody checkers also prefer what is closer to it. */
+        StyleCheckContext style_context;
+        if (config->style && (stage == COMPOSE_STAGE_HARMONY || stage == COMPOSE_STAGE_MELODY)) {
+            style_context.inner = fill.checker;
+            style_context.style = config->style;
+            style_context.weight = config->style_weight;
+            if (style_context.weight.denominator == 0) {
+                style_context.weight.numerator = 1;
+                style_context.weight.denominator = 1;
+            }
+            fill.checker = style_stage_checker;
+            fill.checker_context = &style_context;
+        }
         FillRecord **record = again ? NULL : &outcome->records[stage];
         if (record) {
             fill_record_destroy(*record);
@@ -760,6 +777,19 @@ static PieceResult check_analyzer(const PiecePlan *plan, ComposeOutcome *outcome
     return PIECE_ERR_STUCK;
 }
 
+/*
+ * The Analyzer's measure of how far the finished plan is from the style. A plan the Analyzer cannot read is left
+ * unmeasured: the measure is a report, it never rejects a run.
+ */
+static PieceResult measure_style(const PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
+    ComposerMeasureResult measured = composer_style_measure(plan, config->style, &outcome->style_distance);
+    if (measured == COMPOSER_MEASURE_ERR_ALLOC) {
+        return PIECE_ERR_ALLOC;
+    }
+    outcome->style_measured = measured == COMPOSER_MEASURE_OK;
+    return PIECE_OK;
+}
+
 PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
     if (!plan || !config || !outcome) {
         return PIECE_ERR_NULL;
@@ -787,6 +817,9 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
         }
         if (result == PIECE_OK && config->analyzer_check) {
             result = check_analyzer(plan, outcome);
+        }
+        if (result == PIECE_OK && config->style) {
+            result = measure_style(plan, config, outcome);
         }
         if (result != PIECE_ERR_STUCK) {
             break;

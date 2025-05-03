@@ -140,6 +140,7 @@ nothing checks them.
 | `return` | On a section node: the section is a return of an earlier one. `section`: the id of the section it returns (a Section node, else `PLAN_ERR_BAD_PAYLOAD`); `variation`: `exact`, `ornament`, `reharmonize` or `reregister`. `form-return` gives the section the returned one's nodes and lane spans, varied as `variation` says, when the two are as long and the meter and the key lane have the same shape; any other is grown afresh from its motive. See [piece.md](piece.md). |
 | `layers` | On a section node: the lanes that sound in a layer section. `lanes`: an array of lane names (`bass`, `harmony`, `melody`, `inner_voice`, `key`, `meter`), at least one. Rendering skips the section's spans in the other lanes (`RENDER_SKIP_LAYER`). |
 | `section_letter` | The letter of a section in its form. `letter`: one to three characters (`A`, `B`, `A'`). |
+| `style` | On the form node: the style model file `fill` prefers. `path`: the file as `plan --style` was given it. `weight`: a fraction as text (`"1/1"`; `"0/0"` is the default, 1/1). See [style.md](style.md). |
 | `invent_motive` | No fields. On a Constrained melody span of a motive node: `motive-invent` writes the motive. See [piece.md](piece.md). |
 
 ### Motive development parameters

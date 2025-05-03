@@ -27,7 +27,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -228,6 +228,14 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     }
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         break;
+    case PLAN_CONSTRAINT_STYLE: {
+        const PlanStyle *style = &constraint->params.style;
+        char weight[64];
+        ok = ok && json_add(object, "path", cJSON_CreateString(style->path));
+        snprintf(weight, sizeof(weight), "%lu/%lu", style->weight_numerator, style->weight_denominator);
+        ok = ok && json_add(object, "weight", cJSON_CreateString(weight));
+        break;
+    }
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -981,6 +989,29 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     }
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         return true;
+    case PLAN_CONSTRAINT_STYLE: {
+        const cJSON *file = json_member(reader, item, path, "path", true);
+        const cJSON *weight = file ? json_member(reader, item, path, "weight", true) : NULL;
+        if (!file || !weight) {
+            return false;
+        }
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "path");
+        if (!cJSON_IsString(file) || file->valuestring[0] == '\0' || strlen(file->valuestring) >= PLAN_STYLE_PATH_MAX) {
+            return json_bad_format(reader, at, "expected a file path");
+        }
+        json_child_path(at, path, "weight");
+        unsigned long numerator, denominator;
+        char rest;
+        if (!cJSON_IsString(weight) || sscanf(weight->valuestring, "%lu/%lu%c", &numerator, &denominator, &rest) != 2 ||
+            (denominator == 0 && numerator != 0)) {
+            return json_bad_format(reader, at, "expected a fraction like \"1/1\"");
+        }
+        snprintf(out->params.style.path, PLAN_STYLE_PATH_MAX, "%s", file->valuestring);
+        out->params.style.weight_numerator = numerator;
+        out->params.style.weight_denominator = denominator;
+        return true;
+    }
     }
     return false;
 }

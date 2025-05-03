@@ -310,3 +310,18 @@ foreach(mode contradiction default smoke same candidates)
 endforeach()
 add_test(NAME test_analyzer_check_planned COMMAND test_analyzer_check planned)
 set_tests_properties(test_analyzer_check_planned PROPERTIES LABELS slow)
+
+add_executable(test_style test_style.c)
+target_link_libraries(test_style PRIVATE ursatz_composer)
+target_compile_options(test_style PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_style PRIVATE
+    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
+add_dependencies(test_style ursatz-composer)
+# Styles (docs/style.md): the sweep is slow and CI leaves it out (ctest -LE slow); its smoke test is the sweep on seeds 1 and 2.
+foreach(mode labels same smoke cli)
+    add_test(NAME test_style_${mode} COMMAND test_style ${mode})
+endforeach()
+add_test(NAME test_style_distance COMMAND test_style distance)
+set_tests_properties(test_style_distance PROPERTIES LABELS slow)

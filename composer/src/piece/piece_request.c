@@ -290,6 +290,13 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     for (size_t i = 0; result == PIECE_OK && i < layout.section_count; i++) {
         result = add_section_motive(plan, &layout.sections[i], sections[i], source);
     }
+    if (result == PIECE_OK && request->has_style) {
+        PlanConstraint style;
+        memset(&style, 0, sizeof(style));
+        style.kind = PLAN_CONSTRAINT_STYLE;
+        style.params.style = request->style;
+        result = from_plan(plan_node_add_constraint(plan, form_id, &style));
+    }
     /* The keys and the cadences across them are planned from the request's seed, home only unless it asks to modulate;
    then the form is Given. */
     if (result == PIECE_OK) {

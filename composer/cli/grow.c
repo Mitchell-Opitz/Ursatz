@@ -43,6 +43,8 @@ typedef struct {
     const char *texture_text;
     bool voicing_flag;
     bool check;
+    const char *style_path;
+    const char *style_weight_text;
     const char *seed_text;
     const char *suggest_text;
     const char *out_path;
@@ -63,6 +65,8 @@ typedef struct {
     PlanVoicing voicing;
     unsigned long seed;
     unsigned long suggest;
+    ComposerRatio style_weight;
+    ComposerStyle *style; /* loaded from style_path; NULL for none */
     bool json;
 } Options;
 
@@ -93,6 +97,9 @@ static void print_help(FILE *out) {
     fprintf(out, "                       over the bass by the standard voicing rules (not with --accompaniment)\n");
     fprintf(out, "  --check              analyze the theme with the Ursatz Analyzer and pass over a seed whose analysis contradicts\n");
     fprintf(out, "                       the plan (the cadences or the key not heard as planned, a hard voice-leading fault)\n");
+    fprintf(out, "  --style <file>       prefer the harmony and melody closest to a style: a style model file from the Ursatz\n");
+    fprintf(out, "                       Analyzer (--style-profile). The Analyzer's distance from the style is printed\n");
+    fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; needs --style)\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
@@ -169,6 +176,10 @@ static int read_options(int argc, char **argv, Options *options) {
             options->voicing_flag = true;
         } else if (strcmp(arg, "--check") == 0) {
             options->check = true;
+        } else if (strcmp(arg, "--style") == 0) {
+            target = &options->style_path;
+        } else if (strcmp(arg, "--style-weight") == 0) {
+            target = &options->style_weight_text;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
         } else if (strcmp(arg, "--suggest") == 0) {
@@ -297,6 +308,13 @@ static int check_options(Options *options) {
         if (read != 0) {
             return read;
         }
+    }
+    if (options->style_weight_text && !options->style_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-weight needs --style");
+    }
+    if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
+                        options->style_weight_text);
     }
     options->suggest = 1;
     if (options->suggest_text &&
@@ -454,6 +472,8 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     GrowConfig config;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
+    config.style = options->style;
+    config.style_weight = options->style_weight;
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
     if (ran == GROW_OK && options->check && !analysis_agrees(theme->plan)) {
         ran = GROW_ERR_STUCK;
@@ -744,6 +764,9 @@ static void print_theme_text(const Options *options, const Theme *theme, PlanTim
     printf("\nstandard-form rule score %lu/%lu (%lu%%)\n", theme->outcome.score.numerator,
            theme->outcome.score.denominator, percent(&theme->outcome.score));
     printf("%s\n", heard);
+    if (theme->outcome.style_measured) {
+        cli_print_style_distance(&theme->outcome.style_distance);
+    }
 }
 
 static void print_theme_json(const Options *options, const Theme *theme, PlanTime bar) {
@@ -784,6 +807,10 @@ static void print_theme_json(const Options *options, const Theme *theme, PlanTim
     }
     printf(",\"heard_as_requested\":%s,\"heard_text\":", theme->outcome.heard_as_requested ? "true" : "false");
     cli_print_json_string(heard);
+    if (theme->outcome.style_measured) {
+        printf(",");
+        cli_print_style_distance_json(&theme->outcome.style_distance);
+    }
     printf("}");
 }
 
@@ -963,6 +990,13 @@ int run_grow(int argc, char **argv) {
                         motive_error.message);
     }
 
+    if (options.style_path) {
+        status = cli_load_style(options.style_path, &options.style);
+        if (status != 0) {
+            return status;
+        }
+    }
+
     /* The seeds are tried one after another; a stuck run is passed over, and a theme that is the same as one already
        made is not counted. A request no seed can mend ends the search at once. */
     Theme themes[MAX_SUGGESTIONS];
@@ -1021,5 +1055,6 @@ int run_grow(int argc, char **argv) {
     for (size_t k = 0; k < made; k++) {
         theme_destroy(&themes[k]);
     }
+    composer_style_destroy(options.style);
     return status;
 }
