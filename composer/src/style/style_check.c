@@ -3,12 +3,19 @@
 #include <limits.h>
 #include <string.h>
 
+#include <phrase_beginning.h>
+#include <phrase_ending.h>
+#include <phrase_level_form.h>
+
+#include <ursatz_composer/constraint.h>
+#include <ursatz_composer/grow.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 
@@ -87,6 +94,36 @@ static bool melody_labels(const MelodyCandidate *melody, ComposerStyleLabels *la
     return composer_style_labels_add_melody(labels, context->lead_in_count > 0 ? &before : NULL, notes, melody->count);
 }
 
+/* Whether the plan fixes the form of the section: a theme pairing constraint says how it begins and ends. */
+static bool form_fixed(const PiecePlan *plan, FillTarget target) {
+    if (target.kind != FILL_TARGET_NODE) {
+        return true;
+    }
+    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
+        if (plan_node_constraint_at(plan, target.id, i)->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The form labels of a planned theme: its form's name, and a phrase a period's half or otherwise the whole of it. */
+static bool form_labels(const GrowThemeSpec *spec, ComposerStyleLabels *labels) {
+    PhraseLevelForm form;
+    if (!spec || spec->magic != GROW_PAYLOAD_MAGIC ||
+        !standard_form_pairing_form(grow_phrase_beginning(spec->pairing.beginning),
+                                    grow_phrase_ending(spec->pairing.ending), &form)) {
+        return false;
+    }
+    unsigned bars[2] = {(unsigned)spec->bars, 0};
+    size_t phrases = 1;
+    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+        bars[0] = bars[1] = (unsigned)(spec->bars / 2);
+        phrases = 2;
+    }
+    return composer_style_labels_add_form(labels, phrase_level_form_name(form), bars, phrases);
+}
+
 /* ---------------------------------------------------------------- score */
 
 __extension__ typedef unsigned __int128 Wide;
@@ -158,13 +195,21 @@ bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOpe
     if (out->hard_violation) {
         return true;
     }
+    const char *name = operator_->generator.name;
+    /* The structure stage prefers a form only where the plan has not fixed it: a form every candidate shares would
+       add the same to each of them and only change the score the structure is reported with. */
+    bool theme = strcmp(name, GROW_THEME_OPERATOR_NAME) == 0;
+    if (theme && form_fixed(plan, target)) {
+        return true;
+    }
     ComposerStyleLabels *labels = composer_style_labels_create();
     if (!labels) {
         return false;
     }
     bool ok = true;
-    const char *name = operator_->generator.name;
-    if (strcmp(name, HARMONY_PHRASE_OPERATOR_NAME) == 0 || strcmp(name, HARMONY_PROLONG_OPERATOR_NAME) == 0) {
+    if (theme) {
+        ok = form_labels(candidate->payload, labels);
+    } else if (strcmp(name, HARMONY_PHRASE_OPERATOR_NAME) == 0 || strcmp(name, HARMONY_PROLONG_OPERATOR_NAME) == 0) {
         ok = harmony_labels(plan, candidate->payload, labels);
     } else if (strcmp(name, MELODY_FILL_OPERATOR_NAME) == 0) {
         ok = melody_labels(candidate->payload, labels);

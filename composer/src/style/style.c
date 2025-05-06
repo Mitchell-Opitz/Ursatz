@@ -90,6 +90,49 @@ static bool add_statistic(ComposerStyle *style, const StyleStatistic *statistic)
     return true;
 }
 
+/* Reads the statistics of style->model into its categories. */
+static ComposerStyleResult read_statistics(ComposerStyle *style) {
+    StyleStatistic *statistics = NULL;
+    size_t count = 0;
+    StyleModelFileResult decoded = style_model_statistics(style->model, &statistics, &count);
+    bool ok = decoded == STYLE_MODEL_FILE_OK;
+    for (size_t i = 0; ok && i < count; i++) {
+        ok = add_statistic(style, &statistics[i]);
+    }
+    if (decoded == STYLE_MODEL_FILE_OK) {
+        style_statistics_free(statistics, count);
+    }
+    if (!ok) {
+        return decoded == STYLE_MODEL_FILE_OK || decoded == STYLE_MODEL_FILE_ERR_ALLOC ? COMPOSER_STYLE_ERR_ALLOC
+                                                                                       : COMPOSER_STYLE_ERR_FORMAT;
+    }
+    return COMPOSER_STYLE_OK;
+}
+
+ComposerStyleResult composer_style_from_model(StyleModel *model, size_t pieces, ComposerStyle **out) {
+    if (!out) {
+        return COMPOSER_STYLE_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    if (!model) {
+        return COMPOSER_STYLE_ERR_ARGUMENT;
+    }
+    ComposerStyle *style = calloc(1, sizeof(*style));
+    if (!style) {
+        return COMPOSER_STYLE_ERR_ALLOC;
+    }
+    style->model = model;
+    style->pieces = pieces;
+    ComposerStyleResult read = read_statistics(style);
+    if (read != COMPOSER_STYLE_OK) {
+        style->model = NULL; /* the caller keeps the model on failure */
+        composer_style_destroy(style);
+        return read;
+    }
+    *out = style;
+    return COMPOSER_STYLE_OK;
+}
+
 ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out) {
     if (!out) {
         return COMPOSER_STYLE_ERR_ARGUMENT;
@@ -116,20 +159,10 @@ ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out) {
             return COMPOSER_STYLE_ERR_FORMAT;
         }
     }
-    StyleStatistic *statistics = NULL;
-    size_t count = 0;
-    StyleModelFileResult decoded = style_model_statistics(style->model, &statistics, &count);
-    bool ok = decoded == STYLE_MODEL_FILE_OK;
-    for (size_t i = 0; ok && i < count; i++) {
-        ok = add_statistic(style, &statistics[i]);
-    }
-    if (decoded == STYLE_MODEL_FILE_OK) {
-        style_statistics_free(statistics, count);
-    }
-    if (!ok) {
+    ComposerStyleResult result = read_statistics(style);
+    if (result != COMPOSER_STYLE_OK) {
         composer_style_destroy(style);
-        return decoded == STYLE_MODEL_FILE_OK || decoded == STYLE_MODEL_FILE_ERR_ALLOC ? COMPOSER_STYLE_ERR_ALLOC
-                                                                                       : COMPOSER_STYLE_ERR_FORMAT;
+        return result;
     }
     *out = style;
     return COMPOSER_STYLE_OK;
