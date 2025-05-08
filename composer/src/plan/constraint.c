@@ -86,8 +86,17 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         const PlanStyle *style = &constraint->params.style;
         size_t length = strnlen(style->path, PLAN_STYLE_PATH_MAX);
         /* A weight of 0/0 is the default; any other has a denominator. */
-        return length > 0 && length < PLAN_STYLE_PATH_MAX &&
-               (style->weight_denominator > 0 || style->weight_numerator == 0);
+        size_t blend_length = strnlen(style->blend_path, PLAN_STYLE_PATH_MAX);
+        if (length == 0 || length >= PLAN_STYLE_PATH_MAX || blend_length >= PLAN_STYLE_PATH_MAX ||
+            (style->weight_denominator == 0 && style->weight_numerator != 0)) {
+            return false;
+        }
+        for (int d = 0; blend_length > 0 && d < 4; d++) {
+            if (style->blend_denominator[d] == 0 || style->blend_numerator[d] > style->blend_denominator[d]) {
+                return false;
+            }
+        }
+        return true;
     }
     }
     return false;

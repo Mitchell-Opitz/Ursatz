@@ -51,6 +51,19 @@ bool cli_parse_ratio(const char *text, ComposerRatio *out);
 /* Reads the style model file at path into *out. Returns 0, or the status of the usage error it printed. */
 int cli_load_style(const char *path, ComposerStyle **out);
 
+/*
+ * The blend options of grow, plan and fill: --blend <file> (blend_path), --blend-weight <n/d> (all_text) and
+ * --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d> (list_text); any may be NULL. Usage errors, as
+ * 0 or the status of the one printed: --blend without a style (has_style false), a weight option without --blend, a
+ * weight that is not a fraction from 0 to 1, a dimension that is not one or is named twice.
+ */
+int cli_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
+                   ComposerStyleWeights *out);
+
+/* Loads the two style model files and blends them, weights as cli_read_blend read them. Returns 0 or the status. */
+int cli_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
+                   ComposerStyle **out);
+
 /* The Analyzer's distance from the style, per dimension and overall (0 is the same, 1 is nothing alike): text lines. */
 void cli_print_style_distance(const StyleComparison *comparison);
 /* The same as the JSON member "style_distance":{...}, with no leading comma. */

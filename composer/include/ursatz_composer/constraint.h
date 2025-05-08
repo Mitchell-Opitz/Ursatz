@@ -243,6 +243,10 @@ typedef struct {
  * The style a plan is filled in (style.h): the path of a StyleModel file as the command line was given it, and the
  * weight of the preference as a fraction. A weight of 0/0 is the default, 1/1. The file is read when the plan is filled,
  * not when the plan is read, so a plan can name a style that is not there yet.
+ *
+ * A blend (style.h, composer_style_blend) names a second file, blend_path ("" for none), and the weight of that file
+ * in each dimension (StyleDimension order: harmony, rhythm, melody, form) as fractions from 0 to 1; with a blend_path
+ * every blend denominator is at least 1.
  */
 #define PLAN_STYLE_PATH_MAX 512
 
@@ -250,6 +254,9 @@ typedef struct {
     char path[PLAN_STYLE_PATH_MAX];
     unsigned long weight_numerator;
     unsigned long weight_denominator;
+    char blend_path[PLAN_STYLE_PATH_MAX];
+    unsigned long blend_numerator[4];
+    unsigned long blend_denominator[4];
 } PlanStyle;
 
 /* The member of params that is used follows the kind. */

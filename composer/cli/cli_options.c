@@ -138,6 +138,97 @@ int cli_load_style(const char *path, ComposerStyle **out) {
     return 0;
 }
 
+int cli_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
+                   ComposerStyleWeights *out) {
+    if (!blend_path) {
+        if (all_text || list_text) {
+            return cli_fail(CLI_EXIT_USAGE, "%s needs --blend", all_text ? "--blend-weight" : "--blend-weights");
+        }
+        return 0;
+    }
+    if (!has_style) {
+        return cli_fail(CLI_EXIT_USAGE, "--blend needs --style");
+    }
+    ComposerRatio all = {1, 2};
+    if (all_text) {
+        if (!cli_parse_ratio(all_text, &all)) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weight must be a fraction like 1/2, not '%s'", all_text);
+        }
+        if (all.numerator > all.denominator) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weight must be from 0 to 1, not '%s'", all_text);
+        }
+    }
+    *out = composer_style_weights_all(all);
+    if (!list_text) {
+        return 0;
+    }
+    bool seen[STYLE_DIMENSION_COUNT] = {false};
+    const char *at = list_text;
+    while (*at) {
+        const char *end = strchr(at, ',');
+        size_t length = end ? (size_t)(end - at) : strlen(at);
+        char item[64];
+        if (length == 0 || length >= sizeof item) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weights must be like harmony=1/2,form=0, not '%s'", list_text);
+        }
+        memcpy(item, at, length);
+        item[length] = '\0';
+        char *equals = strchr(item, '=');
+        StyleDimension dimension;
+        if (!equals) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weights must be like harmony=1/2,form=0, not '%s'", list_text);
+        }
+        *equals = '\0';
+        if (!style_dimension_from_name(item, &dimension)) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weights: '%s' is not a dimension (harmony, rhythm, melody, form)",
+                            item);
+        }
+        if (seen[dimension]) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weights names %s twice", item);
+        }
+        seen[dimension] = true;
+        ComposerRatio weight;
+        if (!cli_parse_ratio(equals + 1, &weight)) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weights: %s must be a fraction like 1/2, not '%s'", item,
+                            equals + 1);
+        }
+        if (weight.numerator > weight.denominator) {
+            return cli_fail(CLI_EXIT_USAGE, "--blend-weights: %s must be from 0 to 1, not '%s'", item, equals + 1);
+        }
+        out->numerator[dimension] = weight.numerator;
+        out->denominator[dimension] = weight.denominator;
+        at += length;
+        if (*at == ',') {
+            at++;
+            if (*at == '\0') {
+                return cli_fail(CLI_EXIT_USAGE, "--blend-weights must be like harmony=1/2,form=0, not '%s'", list_text);
+            }
+        }
+    }
+    return 0;
+}
+
+int cli_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
+                   ComposerStyle **out) {
+    ComposerStyle *first = NULL;
+    ComposerStyle *second = NULL;
+    int status = cli_load_style(style_path, &first);
+    if (status == 0) {
+        status = cli_load_style(blend_path, &second);
+    }
+    if (status == 0) {
+        ComposerStyleResult blended = composer_style_blend(first, second, weights, out);
+        if (blended != COMPOSER_STYLE_OK) {
+            status = cli_fail(blended == COMPOSER_STYLE_ERR_ARGUMENT ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE,
+                              "cannot blend '%s' with '%s': %s", style_path, blend_path,
+                              composer_style_result_name(blended));
+        }
+    }
+    composer_style_destroy(first);
+    composer_style_destroy(second);
+    return status;
+}
+
 static const char *const STYLE_DIMENSION_LABELS[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
 
 void cli_print_style_distance(const StyleComparison *comparison) {
