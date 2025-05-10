@@ -4,6 +4,8 @@
 ursatz-composer plan --form binary --key C --meter 4/4 --style chorales.style.json --out piece.json
 ursatz-composer fill piece.json --style-weight 2/1
 ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --style sonatinas.style.json
+ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --style chorales.style.json \
+    --blend sonatinas.style.json --blend-weights harmony=1/4,form=1
 ```
 
 Library: `<ursatz_composer/style.h>`. `ComposeConfig.style` and `.style_weight` (`compose.h`), `GrowConfig` the same.
@@ -62,6 +64,57 @@ A style is a preference among the one to ten candidates an operator proposes for
 Under `chorales` both dimensions are closer. Under `sonatinas` (two pieces) melody is a little closer and harmony is not: a
 known limit, the styled mean is held to its baseline (R-075). A larger weight did not help (1 to 64 measured). The Analyzer
 also hears the Composer's chords through the notes only (`ii7` where `ii` was written), which blurs the harmony labels.
+
+## Blending
+
+```sh
+ursatz-composer plan --form binary --key C --meter 4/4 --style chorales.style.json --blend sonatinas.style.json \
+    --blend-weight 1/4 --blend-weights harmony=3/4,form=1 --out piece.json
+ursatz-composer fill piece.json
+```
+
+`composer_style_blend(a, b, weights, &out)` mixes two styles with a weight for each dimension (`ComposerStyleWeights`, in the
+Analyzer's `StyleDimension` order: harmony, rhythm, melody, form). A weight is the second style's share, a fraction from 0 (only
+the first) to 1 (only the second). For each dimension the statistics of that dimension's categories (`style_category_dimension`)
+of each style become a model, the two are blended with Ursatz `style_model_blend`, frequency = (1 - w) * a + w * b, exact,
+and the four results are merged. The blended frequencies come as reduced fractions with their own denominators, so each
+category is then brought to one total, as in a file the Analyzer wrote: its labels' frequencies over their common denominator,
+or over 2^30 when that is too large. A weight of 0 gives the first style's frequencies in a dimension and 1 the second's; a
+label only the other style has is left out at weight 0 and kept at weight 1. The result is a style like any other: named
+`<a> + <b>`, its training corpus both joined with `;`, its pieces the sum. A blend can be blended again.
+
+On the command line `--blend <file>` goes with `--style` (a usage error without it), `--blend-weight <n/d>` sets every
+dimension (default 1/2) and `--blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>` sets some; the others take
+`--blend-weight`. A weight above 1, a dimension that is not one or is named twice, and a weight without `--blend` are usage
+errors. `plan` keeps the blend in the plan's `style` constraint (the second file and the four weights), so `fill` blends the
+same two files from where it is run. On `fill`, `--blend` replaces the plan's blend, `--blend-weight` and `--blend-weights`
+replace its weights, and `--style` alone drops it. The weight of the preference itself, `--style-weight`, is the same for a
+blend as for one style.
+
+### Form
+
+The form dimension is used by the structure stage: when a theme section does not fix its form, the stage's checker adds
+`style_weight * closeness` over each candidate's `theme-form` and `phrase-length` labels. A section made from a template
+fixes it (every candidate has the section's theme pairing), so the form weight has no effect there: the same labels would
+be added to every candidate. Today every theme the Composer grows is of that kind, and the form weight shapes the blend and
+the distance that is measured, not the notes.
+
+### Measured
+
+Sentences in C major 4/4 as above, seeds 1 to 20, `chorales` blended with `sonatinas`, weight 1/1, the weight on harmony
+alone (`tests/test_style_blend.c` `harmony`, label `slow`, with `smoke` on seeds 1 and 2). Mean harmony distance (the
+Analyzer's):
+
+| Harmony weight | From chorales | From sonatinas |
+| --- | --- | --- |
+| 0 | 0.6875 | 0.6580 |
+| 1/2 | 0.7027 | 0.6820 |
+| 1 | 0.7088 | 0.6687 |
+
+Weight 0 is the `chorales` run above. The distance from `chorales` rises with the weight, as the weight moves the preference
+away from it. The distance from `sonatinas` does not fall steadily: the same known limit as above, held to its baseline
+(R-075). A weight on melody alone (1, harmony 0) moved the harmony distances by 0.008 and 0.010: the Analyzer hears the chords
+through the melody, so a melody weight reaches the harmony it measures a little. The test holds this within 0.02.
 
 ## The test styles
 

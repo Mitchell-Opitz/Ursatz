@@ -1,7 +1,7 @@
 # grow command
 
 ```sh
-ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
+ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
@@ -39,6 +39,9 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--check` | Analyze the theme with the Ursatz Analyzer ([analyzer-check.md](analyzer-check.md)) and pass over a seed whose analysis contradicts the plan: a planned cadence or the key not heard as planned, or a hard voice-leading fault. The next seed is tried, as for a stuck run, and the seed kept is printed. |
 | `--style <file>` | Prefer the harmony and melody closest to a style, a style model file from the Ursatz Analyzer. The Analyzer's distance from the style is printed with the theme. See [style.md](style.md). |
 | `--style-weight <n/d>` | How strongly the style is preferred (default `1/1`; needs `--style`). |
+| `--blend <file>` | A second style model file, blended with the style (`--style`; needs `--style`). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
+| `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
+| `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same input, options and seed give the same output. |
 | `--suggest <n>` | 1 to 16 different themes instead of one. |
 | `--out <file.json>` | The plan as JSON, as `plan_write_json_file` writes it. |
