@@ -325,3 +325,18 @@ foreach(mode labels same smoke cli)
 endforeach()
 add_test(NAME test_style_distance COMMAND test_style distance)
 set_tests_properties(test_style_distance PROPERTIES LABELS slow)
+
+add_executable(test_style_blend test_style_blend.c)
+target_link_libraries(test_style_blend PRIVATE ursatz_composer)
+target_compile_options(test_style_blend PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_style_blend PRIVATE
+    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
+add_dependencies(test_style_blend ursatz-composer)
+# Style blending (docs/style.md): the sweep is slow and CI leaves it out (ctest -LE slow); its smoke test is the sweep on seeds 1 and 2.
+foreach(mode statistics labels form smoke cli)
+    add_test(NAME test_style_blend_${mode} COMMAND test_style_blend ${mode})
+endforeach()
+add_test(NAME test_style_blend_harmony COMMAND test_style_blend harmony)
+set_tests_properties(test_style_blend_harmony PROPERTIES LABELS slow)
