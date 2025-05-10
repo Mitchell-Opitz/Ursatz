@@ -57,6 +57,9 @@ typedef struct {
     const char *seed_text;
     const char *style_path;
     const char *style_weight_text;
+    const char *blend_path;
+    const char *blend_weight_text;
+    const char *blend_weights_text;
     const char *out_path;
     const char *format_text;
     GivenOption given[MAX_GIVEN];
@@ -74,6 +77,7 @@ typedef struct {
     PlanAccompaniment accompaniment;
     unsigned long seed;
     ComposerRatio style_weight; /* 0/0 when --style-weight was not given (a weight of 1/1 at fill) */
+    ComposerStyleWeights blend_weights; /* read with --blend */
     bool json;
 } Options;
 
@@ -113,6 +117,10 @@ static void print_help(FILE *out) {
     fprintf(out, "                       and melody closest to it. The path is kept in the plan as given, so fill finds the file\n");
     fprintf(out, "                       from where it is run\n");
     fprintf(out, "  --style-weight <n/d> how strongly fill prefers the style (default 1/1; needs --style)\n");
+    fprintf(out, "  --blend <file>       a second style model file, blended with --style (needs --style); kept in the plan\n");
+    fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; needs --blend)\n");
+    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
+    fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
     fprintf(out, "  --format <text|json> how to print the plan on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument (an unknown form, a size the form does not have, a bad\n");
@@ -158,6 +166,12 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->style_path;
         } else if (strcmp(arg, "--style-weight") == 0) {
             target = &options->style_weight_text;
+        } else if (strcmp(arg, "--blend") == 0) {
+            target = &options->blend_path;
+        } else if (strcmp(arg, "--blend-weight") == 0) {
+            target = &options->blend_weight_text;
+        } else if (strcmp(arg, "--blend-weights") == 0) {
+            target = &options->blend_weights_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
         } else if (strcmp(arg, "--format") == 0) {
@@ -361,6 +375,14 @@ static int check_options(Options *options) {
     }
     if (options->style_path && strlen(options->style_path) >= PLAN_STYLE_PATH_MAX) {
         return cli_fail(CLI_EXIT_USAGE, "--style path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
+    }
+    if (options->blend_path && strlen(options->blend_path) >= PLAN_STYLE_PATH_MAX) {
+        return cli_fail(CLI_EXIT_USAGE, "--blend path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
+    }
+    int blend = cli_read_blend(options->style_path != NULL, options->blend_path, options->blend_weight_text,
+                               options->blend_weights_text, &options->blend_weights);
+    if (blend != 0) {
+        return blend;
     }
     if (options->seed_text) {
         if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
@@ -611,6 +633,16 @@ static void print_result(const Options *options, const PiecePlan *plan) {
             cli_print_json_string(options->style_path);
             printf(",\"weight\":\"%lu/%lu\"}", options->style_weight.denominator ? options->style_weight.numerator : 1UL,
                    options->style_weight.denominator ? options->style_weight.denominator : 1UL);
+            if (options->blend_path) {
+                printf(",\"blend\":{\"file\":");
+                cli_print_json_string(options->blend_path);
+                printf(",\"weights\":{");
+                for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+                    printf("%s\"%s\":\"%lu/%lu\"", d ? "," : "", style_dimension_name((StyleDimension)d),
+                           options->blend_weights.numerator[d], options->blend_weights.denominator[d]);
+                }
+                printf("}}");
+            }
         }
         printf(",\"file\":");
         cli_print_json_string(options->out_path);
@@ -636,6 +668,14 @@ static void print_result(const Options *options, const PiecePlan *plan) {
         printf("style %s, weight %lu/%lu\n", options->style_path,
                options->style_weight.denominator ? options->style_weight.numerator : 1UL,
                options->style_weight.denominator ? options->style_weight.denominator : 1UL);
+        if (options->blend_path) {
+            printf("blend %s, second style's share", options->blend_path);
+            for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+                printf("%s %s %lu/%lu", d ? "," : "", style_dimension_name((StyleDimension)d),
+                       options->blend_weights.numerator[d], options->blend_weights.denominator[d]);
+            }
+            printf("\n");
+        }
     }
     print_given_text(options);
     printf("sections\n");
@@ -747,10 +787,12 @@ static int place_given(const Options *options, PiecePlan *plan) {
     return 0;
 }
 
-/* Checks the style file reads; the plan keeps its path and weight on the form node for fill (PieceRequest.style). */
+/* Checks the style file (and the blend, if any) reads; the plan keeps its path and weight on the form node for fill (PieceRequest.style). */
 static int check_style(const Options *options) {
     ComposerStyle *style = NULL;
-    int status = cli_load_style(options->style_path, &style);
+    int status = options->blend_path
+                     ? cli_load_blend(options->style_path, options->blend_path, &options->blend_weights, &style)
+                     : cli_load_style(options->style_path, &style);
     composer_style_destroy(style);
     return status;
 }
@@ -815,6 +857,13 @@ int run_plan(int argc, char **argv) {
         snprintf(request.style.path, PLAN_STYLE_PATH_MAX, "%s", options.style_path);
         request.style.weight_numerator = options.style_weight.numerator;
         request.style.weight_denominator = options.style_weight.denominator;
+        if (options.blend_path) {
+            snprintf(request.style.blend_path, PLAN_STYLE_PATH_MAX, "%s", options.blend_path);
+            for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+                request.style.blend_numerator[d] = options.blend_weights.numerator[d];
+                request.style.blend_denominator[d] = options.blend_weights.denominator[d];
+            }
+        }
     }
 
     PiecePlan *plan = NULL;

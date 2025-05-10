@@ -182,6 +182,24 @@ static ComposerRatio narrow(Wide numerator, Wide denominator) {
     return out;
 }
 
+bool composer_style_labels_add_form(ComposerStyleLabels *labels, const char *form, const unsigned *phrase_bars,
+                                    size_t phrase_count) {
+    if (!labels || (phrase_count > 0 && !phrase_bars)) {
+        return false;
+    }
+    if (form && !composer_style_labels_add(labels, STYLE_CATEGORY_THEME_FORM, form)) {
+        return false;
+    }
+    for (size_t i = 0; i < phrase_count; i++) {
+        char text[32];
+        snprintf(text, sizeof text, "%u", phrase_bars[i]);
+        if (!composer_style_labels_add(labels, STYLE_CATEGORY_PHRASE_LENGTH, text)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLabels *labels, ComposerRatio *out) {
     if (!style || !labels || !out) {
         return false;

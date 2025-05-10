@@ -234,6 +234,27 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && json_add(object, "path", cJSON_CreateString(style->path));
         snprintf(weight, sizeof(weight), "%lu/%lu", style->weight_numerator, style->weight_denominator);
         ok = ok && json_add(object, "weight", cJSON_CreateString(weight));
+        if (ok && style->blend_path[0]) {
+            static const char *const DIMENSIONS[4] = {"harmony", "rhythm", "melody", "form"};
+            cJSON *blend = cJSON_CreateObject();
+            cJSON *weights = cJSON_CreateObject();
+            bool built = blend && weights && json_add(blend, "path", cJSON_CreateString(style->blend_path));
+            for (int d = 0; built && d < 4; d++) {
+                snprintf(weight, sizeof(weight), "%lu/%lu", style->blend_numerator[d], style->blend_denominator[d]);
+                built = json_add(weights, DIMENSIONS[d], cJSON_CreateString(weight));
+            }
+            if (built) {
+                built = json_add(blend, "weights", weights);
+                weights = NULL;
+            }
+            cJSON_Delete(weights);
+            if (built) {
+                built = json_add(object, "blend", blend);
+            } else {
+                cJSON_Delete(blend);
+            }
+            ok = built;
+        }
         break;
     }
     }
@@ -1010,6 +1031,45 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         snprintf(out->params.style.path, PLAN_STYLE_PATH_MAX, "%s", file->valuestring);
         out->params.style.weight_numerator = numerator;
         out->params.style.weight_denominator = denominator;
+        const cJSON *blend = cJSON_GetObjectItemCaseSensitive(item, "blend");
+        if (!blend) {
+            return true;
+        }
+        char blend_at[PLAN_JSON_PATH_MAX];
+        json_child_path(blend_at, path, "blend");
+        if (!cJSON_IsObject(blend)) {
+            return json_bad_format(reader, blend_at, "expected an object with a path and weights");
+        }
+        const cJSON *blend_file = json_member(reader, blend, blend_at, "path", true);
+        const cJSON *blend_weights = blend_file ? json_member(reader, blend, blend_at, "weights", true) : NULL;
+        if (!blend_file || !blend_weights) {
+            return false;
+        }
+        if (!cJSON_IsObject(blend_weights)) {
+            json_child_path(at, blend_at, "weights");
+            return json_bad_format(reader, at, "expected an object with a weight for each dimension");
+        }
+        json_child_path(at, blend_at, "path");
+        if (!cJSON_IsString(blend_file) || blend_file->valuestring[0] == '\0' ||
+            strlen(blend_file->valuestring) >= PLAN_STYLE_PATH_MAX) {
+            return json_bad_format(reader, at, "expected a file path");
+        }
+        static const char *const DIMENSIONS[4] = {"harmony", "rhythm", "melody", "form"};
+        for (int d = 0; d < 4; d++) {
+            const cJSON *w = json_member(reader, blend_weights, blend_at, DIMENSIONS[d], true);
+            if (!w) {
+                return false;
+            }
+            char w_at[PLAN_JSON_PATH_MAX];
+            json_child_path(w_at, blend_at, DIMENSIONS[d]);
+            if (!cJSON_IsString(w) || sscanf(w->valuestring, "%lu/%lu%c", &numerator, &denominator, &rest) != 2 ||
+                denominator == 0 || numerator > denominator) {
+                return json_bad_format(reader, w_at, "expected a fraction from 0 to 1 like \"1/2\"");
+            }
+            out->params.style.blend_numerator[d] = numerator;
+            out->params.style.blend_denominator[d] = denominator;
+        }
+        snprintf(out->params.style.blend_path, PLAN_STYLE_PATH_MAX, "%s", blend_file->valuestring);
         return true;
     }
     }

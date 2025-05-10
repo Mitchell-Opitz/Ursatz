@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_analyzer/style_labels.h>
 #include <ursatz_analyzer/style_profile.h>
 
 #include <ursatz_composer/piece_plan.h>
@@ -59,6 +60,39 @@ typedef struct {
 bool composer_style_share(const ComposerStyle *style, const char *category, const char *label, ComposerStyleShare *out);
 
 /*
+ * A style built from a model in memory, for a blend (composer_style_blend). Takes ownership of model on success only,
+ * and reads its statistics the way composer_style_load does; every category of the model must give each of its labels
+ * the same total, as the Analyzer's files and composer_style_blend's results do. pieces is what composer_style_pieces
+ * returns.
+ */
+ComposerStyleResult composer_style_from_model(StyleModel *model, size_t pieces, ComposerStyle **out);
+
+/*
+ * The weight of the second style of a blend in each dimension (StyleDimension: harmony, rhythm, melody, form), as a
+ * fraction from 0 (only the first) to 1 (only the second). A denominator of 0 is invalid.
+ */
+typedef struct {
+    unsigned long numerator[STYLE_DIMENSION_COUNT];
+    unsigned long denominator[STYLE_DIMENSION_COUNT];
+} ComposerStyleWeights;
+
+/* The same weight, weight, in every dimension. */
+ComposerStyleWeights composer_style_weights_all(ComposerRatio weight);
+
+/*
+ * Blends two styles with a weight per dimension. For each dimension the statistics of that dimension's categories
+ * (style_category_dimension) of each style become a model (style_model_from_statistics), the two are blended at that
+ * dimension's weight (style_model_blend: frequency = (1 - w) * a + w * b, exact), and the four results are merged.
+ * Each category is then brought to one total (its labels' frequencies over their common denominator, or over 2^30
+ * when that is too large), so the result reads like a model the Analyzer wrote. A weight of 0 gives a's frequencies
+ * in a dimension and 1 gives b's; a category only one style has is blended with nothing. The result is named
+ * "<a> + <b>", its training corpus is both joined with ';', and its pieces are the sum. COMPOSER_STYLE_ERR_ARGUMENT
+ * for a weight above 1 or a zero denominator. *out is destroyed by the caller.
+ */
+ComposerStyleResult composer_style_blend(const ComposerStyle *a, const ComposerStyle *b,
+                                         const ComposerStyleWeights *weights, ComposerStyle **out);
+
+/*
  * The labels of a piece of material, in the Analyzer's words (style_labels.h): the Composer's candidates are counted
  * the way the Analyzer counts a corpus, so a candidate's label and a style's label meet under the same name.
  */
@@ -83,6 +117,13 @@ bool composer_style_labels_add(ComposerStyleLabels *labels, const char *category
  */
 bool composer_style_labels_add_harmony(ComposerStyleLabels *labels, const char *previous, const char *const *numerals,
                                        size_t count);
+
+/*
+ * The form labels of one theme: `theme-form` is form (the name the Analyzer gives a theme: "sentence", "period",
+ * "repeated-phrase", "compound-period", "hybrid", "unique") and `phrase-length` is each phrase's length in bars.
+ */
+bool composer_style_labels_add_form(ComposerStyleLabels *labels, const char *form, const unsigned *phrase_bars,
+                                    size_t phrase_count);
 
 /* One melody note: its MIDI pitch and its length as a fraction of a whole note. */
 typedef struct {

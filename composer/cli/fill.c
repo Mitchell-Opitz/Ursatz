@@ -36,6 +36,9 @@ typedef struct {
     const char *candidates_text;
     const char *style_path;
     const char *style_weight_text;
+    const char *blend_path;
+    const char *blend_weight_text;
+    const char *blend_weights_text;
     unsigned long seed;
     unsigned long candidates; /* 0 for the single run */
     ComposerRatio style_weight; /* 0/0 unless --style-weight was given */
@@ -60,6 +63,11 @@ static void print_help(FILE *out) {
     fprintf(out, "                       Analyzer (--style-profile). Overrides the plan's own style. The Analyzer's distance from the\n");
     fprintf(out, "                       style is printed with the result\n");
     fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; overrides the plan's)\n");
+    fprintf(out, "  --blend <file>       a second style model file, blended with the style (--style, or the plan's). Overrides the\n");
+    fprintf(out, "                       plan's blend; --style without --blend drops the plan's blend\n");
+    fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; overrides the plan's)\n");
+    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
+    fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
     fprintf(out, "  --out <file.json>    write the realized plan as JSON\n");
     fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
@@ -92,6 +100,12 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->style_path;
         } else if (strcmp(arg, "--style-weight") == 0) {
             target = &options->style_weight_text;
+        } else if (strcmp(arg, "--blend") == 0) {
+            target = &options->blend_path;
+        } else if (strcmp(arg, "--blend-weight") == 0) {
+            target = &options->blend_weight_text;
+        } else if (strcmp(arg, "--blend-weights") == 0) {
+            target = &options->blend_weights_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
         } else if (strcmp(arg, "--midi") == 0) {
@@ -634,18 +648,41 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
         }
     }
     const char *path = options->style_path ? options->style_path : (planned ? planned->path : NULL);
+    /* The plan's blend goes with the plan's style: a --style of its own is not blended unless --blend says so. */
+    const char *blend_path = options->blend_path;
+    if (!blend_path && !options->style_path && planned && planned->blend_path[0]) {
+        blend_path = planned->blend_path;
+    }
+    ComposerStyleWeights blend_weights;
+    bool weights_given = options->blend_path || options->blend_weight_text || options->blend_weights_text;
     if (!path) {
         if (options->style_weight_text) {
             return cli_fail(CLI_EXIT_USAGE, "--style-weight needs a style: give --style or a plan that has one");
         }
-        return 0;
+        return cli_read_blend(false, blend_path, options->blend_weight_text, options->blend_weights_text, &blend_weights);
     }
     weight->numerator = planned ? planned->weight_numerator : 0;
     weight->denominator = planned ? planned->weight_denominator : 0;
     if (options->style_weight_text) {
         *weight = options->style_weight;
     }
-    return cli_load_style(path, style);
+    if (!blend_path) {
+        int checked = cli_read_blend(true, NULL, options->blend_weight_text, options->blend_weights_text, &blend_weights);
+        return checked != 0 ? checked : cli_load_style(path, style);
+    }
+    if (weights_given) {
+        int read = cli_read_blend(true, blend_path, options->blend_weight_text, options->blend_weights_text,
+                                  &blend_weights);
+        if (read != 0) {
+            return read;
+        }
+    } else {
+        for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+            blend_weights.numerator[d] = planned->blend_numerator[d];
+            blend_weights.denominator[d] = planned->blend_denominator[d];
+        }
+    }
+    return cli_load_blend(path, blend_path, &blend_weights, style);
 }
 
 /* --- the command ---------------------------------------------------------------- */

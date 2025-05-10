@@ -527,9 +527,11 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         fill.checker = checker_of(stage);
         fill.checker_context =
             stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_INVENT ? (void *)&run->motives : NULL;
-        /* With a style, the harmony and melody checkers also prefer what is closer to it. */
+        /* With a style, the harmony and melody checkers also prefer what is closer to it, and the structure checker the
+           form (where the plan leaves it open). */
         StyleCheckContext style_context;
-        if (config->style && (stage == COMPOSE_STAGE_HARMONY || stage == COMPOSE_STAGE_MELODY)) {
+        if (config->style &&
+            (stage == COMPOSE_STAGE_STRUCTURE || stage == COMPOSE_STAGE_HARMONY || stage == COMPOSE_STAGE_MELODY)) {
             style_context.inner = fill.checker;
             style_context.style = config->style;
             style_context.weight = config->style_weight;

@@ -45,6 +45,9 @@ typedef struct {
     bool check;
     const char *style_path;
     const char *style_weight_text;
+    const char *blend_path;
+    const char *blend_weight_text;
+    const char *blend_weights_text;
     const char *seed_text;
     const char *suggest_text;
     const char *out_path;
@@ -66,7 +69,8 @@ typedef struct {
     unsigned long seed;
     unsigned long suggest;
     ComposerRatio style_weight;
-    ComposerStyle *style; /* loaded from style_path; NULL for none */
+    ComposerStyleWeights blend_weights;
+    ComposerStyle *style; /* loaded from style_path (blended with blend_path); NULL for none */
     bool json;
 } Options;
 
@@ -100,6 +104,10 @@ static void print_help(FILE *out) {
     fprintf(out, "  --style <file>       prefer the harmony and melody closest to a style: a style model file from the Ursatz\n");
     fprintf(out, "                       Analyzer (--style-profile). The Analyzer's distance from the style is printed\n");
     fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; needs --style)\n");
+    fprintf(out, "  --blend <file>       a second style model file, blended with --style (needs --style)\n");
+    fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; needs --blend)\n");
+    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
+    fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
@@ -180,6 +188,12 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->style_path;
         } else if (strcmp(arg, "--style-weight") == 0) {
             target = &options->style_weight_text;
+        } else if (strcmp(arg, "--blend") == 0) {
+            target = &options->blend_path;
+        } else if (strcmp(arg, "--blend-weight") == 0) {
+            target = &options->blend_weight_text;
+        } else if (strcmp(arg, "--blend-weights") == 0) {
+            target = &options->blend_weights_text;
         } else if (strcmp(arg, "--seed") == 0) {
             target = &options->seed_text;
         } else if (strcmp(arg, "--suggest") == 0) {
@@ -315,6 +329,11 @@ static int check_options(Options *options) {
     if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
                         options->style_weight_text);
+    }
+    int blend = cli_read_blend(options->style_path != NULL, options->blend_path, options->blend_weight_text,
+                               options->blend_weights_text, &options->blend_weights);
+    if (blend != 0) {
+        return blend;
     }
     options->suggest = 1;
     if (options->suggest_text &&
@@ -991,7 +1010,9 @@ int run_grow(int argc, char **argv) {
     }
 
     if (options.style_path) {
-        status = cli_load_style(options.style_path, &options.style);
+        status = options.blend_path
+                     ? cli_load_blend(options.style_path, options.blend_path, &options.blend_weights, &options.style)
+                     : cli_load_style(options.style_path, &options.style);
         if (status != 0) {
             return status;
         }

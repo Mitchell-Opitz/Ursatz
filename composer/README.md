@@ -120,7 +120,8 @@ whose analysis contradicts the plan (a planned cadence or the key not heard, a h
 
 `plan --style`, `fill --style` and `grow --style` take a style model file the Ursatz Analyzer wrote from a corpus. The harmony and
 melody stages then prefer the candidates closest to it, and the result prints the Analyzer's distance from the style. A style
-is a preference, never a rule. See [docs/style.md](docs/style.md).
+is a preference, never a rule. `--blend <file>` with `--blend-weight` or `--blend-weights harmony=1/2,form=0,...` mixes two
+styles, with a share for each of harmony, rhythm, melody and form. See [docs/style.md](docs/style.md).
 
 ```sh
 ursatz-composer lock piece.json --section A --out piece-locked.json
