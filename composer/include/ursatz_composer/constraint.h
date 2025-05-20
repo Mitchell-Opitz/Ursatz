@@ -33,7 +33,8 @@ typedef enum {
     PLAN_CONSTRAINT_LAYERS,        /* on a section node: which lanes sound in it */
     PLAN_CONSTRAINT_SECTION_LETTER, /* on a section node: its form letter ("A", "B", "A'") */
     PLAN_CONSTRAINT_INVENT_MOTIVE,  /* no parameters: a motive's melody span to be invented (motive-invent) */
-    PLAN_CONSTRAINT_STYLE           /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
+    PLAN_CONSTRAINT_STYLE,          /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
+    PLAN_CONSTRAINT_SOURCE          /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
 } PlanConstraintKind;
 
 typedef enum {
@@ -259,6 +260,23 @@ typedef struct {
     unsigned long blend_denominator[4];
 } PlanStyle;
 
+/*
+ * Where seeded material came from (corpus_seed.h): the piece's path in the corpus, the passage as the Analyzer reports
+ * it (a measure and the beat plus the fraction of it, at both ends) and the similarity it scored, as a fraction from 0
+ * to 1. A note for the reader of the plan; nothing in a fill reads it.
+ */
+#define PLAN_SOURCE_PIECE_MAX 512
+
+typedef struct {
+    char piece[PLAN_SOURCE_PIECE_MAX];
+    int start_measure;
+    double start_beat;
+    int end_measure;
+    double end_beat;
+    unsigned long score_numerator;
+    unsigned long score_denominator;
+} PlanSource;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -278,6 +296,7 @@ typedef struct {
         PlanLayers layers;
         char letter[PLAN_SECTION_LETTER_MAX];
         PlanStyle style;
+        PlanSource source;
     } params;
 } PlanConstraint;
 

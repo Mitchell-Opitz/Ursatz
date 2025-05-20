@@ -32,6 +32,8 @@ typedef enum { INTO_SENTENCE, INTO_PERIOD, INTO_HYBRID } Into;
 typedef struct {
     bool help;
     const char *input;
+    const char *from_corpus;
+    const char *like_path;
     const char *into_text;
     const char *hybrid_text;
     const char *key_text;
@@ -71,13 +73,17 @@ typedef struct {
     ComposerRatio style_weight;
     ComposerStyleWeights blend_weights;
     ComposerStyle *style; /* loaded from style_path (blended with blend_path); NULL for none */
+    bool seeded;          /* the motive is a passage of the corpus, kept in seed_found */
+    CorpusSeed seed_found;
+    PlanSource source; /* seed_found as the plan records it */
     bool json;
 } Options;
 
 static void print_help(FILE *out) {
     fprintf(out, "Usage:\n%s\n\n", GROW_USAGE_LINE + 7);
     fprintf(out, "Grows a theme from the motive in <motive-input> (a MIDI file, a MusicXML file, a note list or a motive\n");
-    fprintf(out, "JSON file): its structure, a harmony, a bass line and a melody, ending in the cadence asked for.\n\n");
+    fprintf(out, "JSON file): its structure, a harmony, a bass line and a melody, ending in the cadence asked for. With\n");
+    fprintf(out, "--from-corpus and --like the motive is not given but taken from a corpus.\n\n");
     fprintf(out, "Required:\n");
     fprintf(out, "  --into <form>        sentence (presentation + continuation), period (antecedent + consequent) or\n");
     fprintf(out, "                       hybrid (any other pairing, named with --hybrid)\n");
@@ -108,6 +114,11 @@ static void print_help(FILE *out) {
     fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; needs --blend)\n");
     fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
     fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
+    fprintf(out, "  --from-corpus <dir>  start from material in a corpus instead of <motive-input>: the output directory of\n");
+    fprintf(out, "                       ursatz-analyzer --corpus. Needs --like; the passage it names, the measures and the score\n");
+    fprintf(out, "                       are printed and kept in the plan. Exit 2 when no passage scores 1/2 or more\n");
+    fprintf(out, "  --like <file>        with --from-corpus: a MIDI or MusicXML passage; the first bar of a similar passage of the\n");
+    fprintf(out, "                       corpus (picked by the seed among the best) becomes the motive, in --key\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
@@ -162,6 +173,10 @@ static int read_options(int argc, char **argv, Options *options) {
         const char **target = NULL;
         if (strcmp(arg, "--help") == 0) {
             options->help = true;
+        } else if (strcmp(arg, "--from-corpus") == 0) {
+            target = &options->from_corpus;
+        } else if (strcmp(arg, "--like") == 0) {
+            target = &options->like_path;
         } else if (strcmp(arg, "--into") == 0) {
             target = &options->into_text;
         } else if (strcmp(arg, "--hybrid") == 0) {
@@ -228,7 +243,16 @@ static int read_options(int argc, char **argv, Options *options) {
 
 /* Checks each value and fills the parsed members; returns 0, or the exit status. */
 static int check_options(Options *options) {
-    if (!options->input) {
+    if (options->like_path && !options->from_corpus) {
+        return cli_fail(CLI_EXIT_USAGE, "--like needs --from-corpus");
+    }
+    if (options->from_corpus && !options->like_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--from-corpus needs --like <file>");
+    }
+    if (options->from_corpus && options->input) {
+        return cli_fail(CLI_EXIT_USAGE, "give a motive input or --from-corpus, not both");
+    }
+    if (!options->input && !options->from_corpus) {
         return cli_fail(CLI_EXIT_USAGE, "grow needs a motive input\n%s", GROW_USAGE_LINE);
     }
     if (!options->into_text || !options->key_text || !options->meter_text) {
@@ -472,6 +496,7 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
+    request.source = options->seeded ? &options->source : NULL;
     request.key = options->key;
     request.meter = options->meter;
     request.bars = options->bars;
@@ -858,6 +883,10 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
         if (options->has_voicing) {
             printf(",\"voicing\":\"%s\"", options->voicing.write_soprano ? "chorale" : "satb");
         }
+        if (options->seeded) {
+            printf(",\"source\":");
+            cli_print_seed_json(&options->seed_found);
+        }
         printf(",\"themes\":[");
         for (size_t k = 0; k < count; k++) {
             printf("%s", k ? "," : "");
@@ -886,6 +915,9 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
         printf(", %s", options->voicing.write_soprano ? "chorale (four parts)" : "voiced in four parts");
     }
     printf("\n");
+    if (options->seeded) {
+        cli_print_seed_line("motive", &options->seed_found);
+    }
     for (size_t k = 0; k < count; k++) {
         if (options->suggest > 1 || options->suggest_text) {
             printf("\ntheme %zu of %zu\n", k + 1, count);
@@ -1001,12 +1033,27 @@ int run_grow(int argc, char **argv) {
     motive_options.has_key = true;
     motive_options.key = options.key;
     Motive motive;
-    MotiveError motive_error;
-    MotiveResult loaded = motive_load_file(options.input, MOTIVE_FORMAT_AUTO, &motive_options, &motive, &motive_error);
-    if (loaded != MOTIVE_OK) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot load '%s' (%s)%s%s: %s", options.input,
-                        motive_result_name(loaded), motive_error.location[0] ? " at " : "", motive_error.location,
-                        motive_error.message);
+    if (options.from_corpus) {
+        /* The passage is chosen once, by the first seed; the seeds tried after it grow from the same motive. */
+        status = cli_seed_motive(options.from_corpus, options.like_path, &options.meter, &options.key, options.seed,
+                                 &options.seed_found);
+        if (status != 0) {
+            return status;
+        }
+        status = cli_seed_source(&options.seed_found, &options.source);
+        if (status != 0) {
+            return status;
+        }
+        options.seeded = true;
+        motive = options.seed_found.motive;
+    } else {
+        MotiveError motive_error;
+        MotiveResult loaded = motive_load_file(options.input, MOTIVE_FORMAT_AUTO, &motive_options, &motive, &motive_error);
+        if (loaded != MOTIVE_OK) {
+            return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot load '%s' (%s)%s%s: %s", options.input,
+                            motive_result_name(loaded), motive_error.location[0] ? " at " : "", motive_error.location,
+                            motive_error.message);
+        }
     }
 
     if (options.style_path) {

@@ -195,7 +195,8 @@ static PieceResult add_material(PiecePlan *plan, const PieceRequest *request, No
         result = from_plan(plan_add_node(plan, phrase, PLAN_NODE_IDEA, material, GROW_MATERIAL_NAME, &idea));
     }
     if (result == PIECE_OK && request->motive) {
-        result = from_plan(motive_attach(plan, idea, material.start, request->motive, GROW_SOURCE_NAME, out, NULL));
+        result = from_plan(motive_attach_sourced(plan, idea, material.start, request->motive, GROW_SOURCE_NAME,
+                                                 request->source, out, NULL));
     } else if (result == PIECE_OK) {
         PlanSpan span = {material.start, bar};
         result = add_open_motive(plan, idea, span);

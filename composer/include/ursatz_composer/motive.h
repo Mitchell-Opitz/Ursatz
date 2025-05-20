@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -192,5 +193,13 @@ char *motive_to_json(const Motive *motive);
  */
 PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
                          NodeId *out_node, LaneSpanId *out_span);
+
+/*
+ * motive_attach with a SOURCE constraint (constraint.h) on the motive node: where the motive was taken from in a
+ * corpus (corpus_seed.h). It is added before the node becomes Given, which is the only time it can be. source may be
+ * NULL, which is motive_attach.
+ */
+PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+                                 const PlanSource *source, NodeId *out_node, LaneSpanId *out_span);
 
 #endif

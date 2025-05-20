@@ -771,8 +771,8 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
 
 /* ----------------------------------------------------------------- attach */
 
-PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
-                         NodeId *out_node, LaneSpanId *out_span) {
+static PlanResult attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+                         const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
     if (!plan || !motive) {
         return PLAN_ERR_NULL;
     }
@@ -799,6 +799,17 @@ PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const M
     if (result != PLAN_OK) {
         return result;
     }
+    if (source) {
+        /* The node is Given below, and a Given node takes no more constraints. */
+        PlanConstraint constraint;
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_SOURCE;
+        constraint.params.source = *source;
+        result = plan_node_add_constraint(plan, node, &constraint);
+        if (result != PLAN_OK) {
+            return result;
+        }
+    }
     PlanLanePayload payload;
     payload.notes.notes = motive->notes;
     payload.notes.note_count = motive->note_count;
@@ -821,4 +832,14 @@ PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const M
         *out_span = lane_span;
     }
     return PLAN_OK;
+}
+
+PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+                         NodeId *out_node, LaneSpanId *out_span) {
+    return attach(plan, parent, start, motive, name, NULL, out_node, out_span);
+}
+
+PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+                                 const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
+    return attach(plan, parent, start, motive, name, source, out_node, out_span);
 }

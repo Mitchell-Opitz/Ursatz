@@ -13,6 +13,7 @@ int run_grow(int argc, char **argv);
 /* The line of the usage text that names the subcommand. */
 #define GROW_USAGE_LINE                                                                                          \
     "       ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] " \
-    "--key <key> --meter <n/m> [options]"
+    "--key <key> --meter <n/m> [options]\n"                                                               \
+    "       ursatz-composer grow --from-corpus <dir> --like <file> --into <...> --key <key> --meter <n/m> [options]"
 
 #endif
