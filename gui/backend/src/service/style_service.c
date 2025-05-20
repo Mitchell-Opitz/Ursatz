@@ -10,6 +10,7 @@
 #include <direct.h>
 #include <windows.h>
 #else
+#include <dirent.h>
 #include <pthread.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -774,4 +775,488 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
     UNLOCK();
     normalized_source_free(&normalized);
     return result;
+}
+
+/* --- stored styles -------------------------------------------------------- */
+
+static void free_strings(char **items, size_t count) {
+    for (size_t i = 0; items && i < count; i++) {
+        free(items[i]);
+    }
+    free(items);
+}
+
+static void style_destroy_contents(UrsatzGuiStyle *style) {
+    free(style->id);
+    free(style->name);
+    free(style->created_at);
+    free(style->updated_at);
+    free(style->filter_composer);
+    free(style->filter_source);
+    free(style->filter_tag);
+    free(style->collection_id);
+    free_strings(style->source_piece_ids, style->source_piece_count);
+    free_strings(style->pieces, style->piece_count);
+    ursatz_gui_style_skipped_free(style->skipped, style->skipped_count);
+    for (size_t i = 0; i < style->category_count; i++) {
+        UrsatzGuiStyleCategory *category = &style->categories[i];
+        free(category->dimension);
+        free(category->category);
+        for (size_t j = 0; j < category->label_count; j++) {
+            free(category->labels[j].label);
+        }
+        free(category->labels);
+    }
+    free(style->categories);
+    memset(style, 0, sizeof(*style));
+}
+
+void ursatz_gui_style_destroy(UrsatzGuiStyle *style) {
+    if (style) {
+        style_destroy_contents(style);
+        free(style);
+    }
+}
+
+void ursatz_gui_style_free_list(UrsatzGuiStyle *styles, size_t count) {
+    for (size_t i = 0; styles && i < count; i++) {
+        style_destroy_contents(&styles[i]);
+    }
+    free(styles);
+}
+
+static bool style_dir_path(const char *id, char *out, size_t out_size) {
+    return ursatz_gui_collection_is_valid_id(id) && snprintf(out, out_size, "%s/%s", kStylesDir, id) < (int)out_size;
+}
+
+/* A copy of a string member, "" when it is absent or not a string. */
+static char *string_member(const cJSON *object, const char *key) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    return dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
+}
+
+/* Copies the string members of an array; *out is NULL when there are none. */
+static bool string_array_copy(const cJSON *array, char ***out, size_t *out_count) {
+    *out = NULL;
+    *out_count = 0;
+    int length = cJSON_IsArray(array) ? cJSON_GetArraySize(array) : 0;
+    if (length <= 0) {
+        return true;
+    }
+    char **items = calloc((size_t)length, sizeof(char *));
+    if (!items) {
+        return false;
+    }
+    size_t count = 0;
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, array) {
+        if (!cJSON_IsString(item) || !item->valuestring) {
+            continue;
+        }
+        items[count] = dup_string(item->valuestring);
+        if (!items[count]) {
+            free_strings(items, count);
+            return false;
+        }
+        count++;
+    }
+    if (count == 0) {
+        free(items);
+        return true;
+    }
+    *out = items;
+    *out_count = count;
+    return true;
+}
+
+static UrsatzGuiStyleSourceKind source_kind_from_label(const char *label) {
+    if (label && strcmp(label, "collection") == 0) {
+        return URSATZ_GUI_STYLE_SOURCE_COLLECTION;
+    }
+    if (label && strcmp(label, "pieces") == 0) {
+        return URSATZ_GUI_STYLE_SOURCE_PIECES;
+    }
+    return URSATZ_GUI_STYLE_SOURCE_FILTER;
+}
+
+/* Loads styles/<id>/meta.json into style (zeroed by the caller). */
+static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
+    char dir[PATH_BYTES];
+    char path[PATH_BYTES + 16];
+    if (!style_dir_path(id, dir, sizeof(dir))) {
+        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+    }
+    snprintf(path, sizeof(path), "%s/meta.json", dir);
+    cJSON *meta = read_json_object(path);
+    if (!meta) {
+        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+    }
+
+    /* The directory name is the id; a copy of it inside the file is not trusted. */
+    style->id = dup_string(id);
+    style->name = string_member(meta, "name");
+    style->created_at = string_member(meta, "created_at");
+    style->updated_at = string_member(meta, "updated_at");
+
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(meta, "source");
+    const cJSON *kind = cJSON_GetObjectItemCaseSensitive(source, "kind");
+    const cJSON *filter = cJSON_GetObjectItemCaseSensitive(source, "filter");
+    style->source_kind = source_kind_from_label(cJSON_IsString(kind) ? kind->valuestring : NULL);
+    style->filter_composer = string_member(filter, "composer");
+    style->filter_source = string_member(filter, "source");
+    style->filter_tag = string_member(filter, "tag");
+    style->collection_id = string_member(source, "collection_id");
+    bool ok = style->id && style->name && style->created_at && style->updated_at && style->filter_composer &&
+              style->filter_source && style->filter_tag && style->collection_id &&
+              string_array_copy(cJSON_GetObjectItemCaseSensitive(source, "piece_ids"), &style->source_piece_ids,
+                                &style->source_piece_count) &&
+              string_array_copy(cJSON_GetObjectItemCaseSensitive(meta, "pieces"), &style->pieces,
+                                &style->piece_count);
+
+    const cJSON *skipped = cJSON_GetObjectItemCaseSensitive(meta, "skipped");
+    int skipped_length = cJSON_IsArray(skipped) ? cJSON_GetArraySize(skipped) : 0;
+    if (ok && skipped_length > 0) {
+        style->skipped = calloc((size_t)skipped_length, sizeof(*style->skipped));
+        ok = style->skipped != NULL;
+        const cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, skipped) {
+            if (!ok) {
+                break;
+            }
+            style->skipped[style->skipped_count].id = string_member(entry, "id");
+            style->skipped[style->skipped_count].reason = string_member(entry, "reason");
+            if (!style->skipped[style->skipped_count].id || !style->skipped[style->skipped_count].reason) {
+                free(style->skipped[style->skipped_count].id);
+                free(style->skipped[style->skipped_count].reason);
+                ok = false;
+            } else {
+                style->skipped_count++;
+            }
+        }
+    }
+    cJSON_Delete(meta);
+
+    if (!ok) {
+        style_destroy_contents(style);
+        return URSATZ_GUI_STYLE_ERR_ALLOC;
+    }
+    return URSATZ_GUI_STYLE_OK;
+}
+
+/* --- list ----------------------------------------------------------------- */
+
+/* The names in styles/; *out_names is NULL when the directory is absent or empty. */
+static bool list_style_dirs(char ***out_names, size_t *out_count) {
+    IdList names = {0};
+    *out_names = NULL;
+    *out_count = 0;
+
+#ifdef _WIN32
+    char pattern[MAX_PATH];
+    snprintf(pattern, sizeof(pattern), "%s\\*", kStylesDir);
+    WIN32_FIND_DATAA find_data;
+    HANDLE find_handle = FindFirstFileA(pattern, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        return true;
+    }
+    bool more = true;
+    bool ok = true;
+    while (more && ok) {
+        const char *name = find_data.cFileName;
+        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
+            ok = id_list_add(&names, name);
+        }
+        more = FindNextFileA(find_handle, &find_data) != 0;
+    }
+    FindClose(find_handle);
+#else
+    DIR *dir = opendir(kStylesDir);
+    if (!dir) {
+        return true;
+    }
+    bool ok = true;
+    struct dirent *entry;
+    while (ok && (entry = readdir(dir)) != NULL) {
+        const char *name = entry->d_name;
+        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
+            ok = id_list_add(&names, name);
+        }
+    }
+    closedir(dir);
+#endif
+    if (!ok) {
+        id_list_free(&names);
+        return false;
+    }
+    *out_names = names.items;
+    *out_count = names.count;
+    return true;
+}
+
+/* Newest update first, then id. */
+static int compare_styles(const void *left, const void *right) {
+    const UrsatzGuiStyle *a = left;
+    const UrsatzGuiStyle *b = right;
+    int by_time = strcmp(b->updated_at, a->updated_at);
+    return by_time != 0 ? by_time : strcmp(a->id, b->id);
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_list(UrsatzGuiStyle **out_styles, size_t *out_count) {
+    *out_styles = NULL;
+    *out_count = 0;
+
+    LOCK();
+    char **names = NULL;
+    size_t name_count = 0;
+    if (!list_style_dirs(&names, &name_count)) {
+        UNLOCK();
+        return URSATZ_GUI_STYLE_ERR_ALLOC;
+    }
+
+    UrsatzGuiStyle *styles = name_count > 0 ? calloc(name_count, sizeof(*styles)) : NULL;
+    UrsatzGuiStyleResult result = name_count > 0 && !styles ? URSATZ_GUI_STYLE_ERR_ALLOC : URSATZ_GUI_STYLE_OK;
+    size_t count = 0;
+    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < name_count; i++) {
+        UrsatzGuiStyleResult loaded = load_style(names[i], &styles[count]);
+        if (loaded == URSATZ_GUI_STYLE_OK) {
+            count++;
+        } else if (loaded != URSATZ_GUI_STYLE_ERR_NOT_FOUND) {
+            result = loaded;
+        }
+    }
+    free_strings(names, name_count);
+    UNLOCK();
+
+    if (result != URSATZ_GUI_STYLE_OK || count == 0) {
+        ursatz_gui_style_free_list(styles, count);
+        return result;
+    }
+    qsort(styles, count, sizeof(*styles), compare_styles);
+    *out_styles = styles;
+    *out_count = count;
+    return URSATZ_GUI_STYLE_OK;
+}
+
+/* --- get ------------------------------------------------------------------ */
+
+#define MAX_LABELS_PER_CATEGORY 12
+
+/* Most frequent first, then label. */
+static int compare_labels(const void *left, const void *right) {
+    const UrsatzGuiStyleLabel *a = left;
+    const UrsatzGuiStyleLabel *b = right;
+    if (a->count != b->count) {
+        return a->count > b->count ? -1 : 1;
+    }
+    return strcmp(a->label, b->label);
+}
+
+static int dimension_rank(const char *name) {
+    StyleDimension dimension;
+    return style_dimension_from_name(name, &dimension) ? (int)dimension : STYLE_DIMENSION_COUNT;
+}
+
+/* Harmony, rhythm, melody, form, then category. */
+static int compare_categories(const void *left, const void *right) {
+    const UrsatzGuiStyleCategory *a = left;
+    const UrsatzGuiStyleCategory *b = right;
+    int by_dimension = dimension_rank(a->dimension) - dimension_rank(b->dimension);
+    return by_dimension != 0 ? by_dimension : strcmp(a->category, b->category);
+}
+
+/* Fills style->categories from the model file; the statistics come sorted by category then label. */
+static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiStyle *style) {
+    StyleModel *model = NULL;
+    if (style_model_file_read(model_path, &model, NULL) != STYLE_MODEL_FILE_OK) {
+        return URSATZ_GUI_STYLE_ERR_FAILED;
+    }
+    StyleStatistic *statistics = NULL;
+    size_t count = 0;
+    StyleModelFileResult read = style_model_statistics(model, &statistics, &count);
+    style_model_destroy(model);
+    if (read != STYLE_MODEL_FILE_OK) {
+        return URSATZ_GUI_STYLE_ERR_FAILED;
+    }
+
+    UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
+    size_t start = 0;
+    while (result == URSATZ_GUI_STYLE_OK && start < count) {
+        size_t end = start;
+        while (end < count && strcmp(statistics[end].category, statistics[start].category) == 0) {
+            end++;
+        }
+        StyleDimension dimension;
+        if (!style_category_dimension(statistics[start].category, &dimension)) {
+            start = end;
+            continue;
+        }
+
+        UrsatzGuiStyleCategory *grown =
+            realloc(style->categories, (style->category_count + 1) * sizeof(*style->categories));
+        if (!grown) {
+            result = URSATZ_GUI_STYLE_ERR_ALLOC;
+            break;
+        }
+        style->categories = grown;
+        UrsatzGuiStyleCategory *category = &style->categories[style->category_count];
+        memset(category, 0, sizeof(*category));
+        style->category_count++;
+
+        size_t total_labels = end - start;
+        UrsatzGuiStyleLabel *labels = calloc(total_labels, sizeof(*labels));
+        category->dimension = dup_string(style_dimension_name(dimension));
+        category->category = dup_string(statistics[start].category);
+        if (!labels || !category->dimension || !category->category) {
+            free(labels);
+            result = URSATZ_GUI_STYLE_ERR_ALLOC;
+            break;
+        }
+        for (size_t i = 0; i < total_labels; i++) {
+            labels[i].label = (char *)statistics[start + i].label; /* borrowed until the cut below */
+            labels[i].count = statistics[start + i].count;
+            labels[i].total = statistics[start + i].total;
+        }
+        qsort(labels, total_labels, sizeof(*labels), compare_labels);
+
+        size_t kept = total_labels < MAX_LABELS_PER_CATEGORY ? total_labels : MAX_LABELS_PER_CATEGORY;
+        for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < kept; i++) {
+            labels[i].label = dup_string(labels[i].label);
+            if (!labels[i].label) {
+                for (size_t j = 0; j < i; j++) {
+                    free(labels[j].label);
+                }
+                free(labels);
+                result = URSATZ_GUI_STYLE_ERR_ALLOC;
+            }
+        }
+        if (result != URSATZ_GUI_STYLE_OK) {
+            break;
+        }
+        category->labels = labels;
+        category->label_count = kept;
+        category->more = total_labels - kept;
+        start = end;
+    }
+    style_statistics_free(statistics, count);
+
+    if (result == URSATZ_GUI_STYLE_OK && style->category_count > 1) {
+        qsort(style->categories, style->category_count, sizeof(*style->categories), compare_categories);
+    }
+    return result;
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_style) {
+    *out_style = NULL;
+    UrsatzGuiStyle *style = calloc(1, sizeof(*style));
+    if (!style) {
+        return URSATZ_GUI_STYLE_ERR_ALLOC;
+    }
+    LOCK();
+    UrsatzGuiStyleResult result = load_style(id, style);
+    if (result == URSATZ_GUI_STYLE_OK) {
+        char dir[PATH_BYTES];
+        char model_path[PATH_BYTES + 32];
+        style_dir_path(id, dir, sizeof(dir));
+        snprintf(model_path, sizeof(model_path), "%s/style-model.json", dir);
+        result = load_statistics(model_path, style);
+    }
+    UNLOCK();
+    if (result != URSATZ_GUI_STYLE_OK) {
+        ursatz_gui_style_destroy(style);
+        return result;
+    }
+    *out_style = style;
+    return URSATZ_GUI_STYLE_OK;
+}
+
+/* --- rebuild, delete, model path ------------------------------------------ */
+
+UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id) {
+    UrsatzGuiStyle style;
+    memset(&style, 0, sizeof(style));
+
+    LOCK();
+    UrsatzGuiStyleResult result = load_style(id, &style);
+    if (result != URSATZ_GUI_STYLE_OK) {
+        UNLOCK();
+        return result;
+    }
+
+    UrsatzGuiStyleSource input = {0};
+    input.kind = style.source_kind;
+    input.composer = style.filter_composer;
+    input.source = style.filter_source;
+    input.tag = style.filter_tag;
+    input.collection_id = style.collection_id;
+    input.piece_ids = (const char *const *)style.source_piece_ids;
+    input.piece_count = style.source_piece_count;
+
+    NormalizedSource source;
+    result = normalized_source_make(&input, &source);
+    if (result == URSATZ_GUI_STYLE_OK) {
+        Collected collected;
+        result = collect_pieces(&source, &collected);
+        if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND) {
+            result = URSATZ_GUI_STYLE_ERR_SOURCE_MISSING;
+        }
+        if (result == URSATZ_GUI_STYLE_OK) {
+            char dir[PATH_BYTES];
+            char now[32];
+            iso_utc_now(now, sizeof(now));
+            style_dir_path(id, dir, sizeof(dir));
+            if (!write_style_files(dir, style.id, style.name, style.created_at, now, &source, &collected)) {
+                result = URSATZ_GUI_STYLE_ERR_FAILED;
+            }
+            collected_free(&collected);
+        }
+        normalized_source_free(&source);
+    }
+    UNLOCK();
+    style_destroy_contents(&style);
+    return result;
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_delete(const char *id) {
+    char dir[PATH_BYTES];
+    if (!style_dir_path(id, dir, sizeof(dir))) {
+        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+    }
+    LOCK();
+    UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
+    if (!path_is_dir(dir)) {
+        result = URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+    } else {
+        remove_style_dir(dir);
+        if (path_is_dir(dir)) {
+            result = URSATZ_GUI_STYLE_ERR_FAILED;
+        }
+    }
+    UNLOCK();
+    return result;
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_model_path(const char *id, char *buffer, size_t buffer_size) {
+    char path[PATH_BYTES + 32];
+    char dir[PATH_BYTES];
+    if (!buffer || buffer_size == 0 || !style_dir_path(id, dir, sizeof(dir))) {
+        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+    }
+    snprintf(path, sizeof(path), "%s/style-model.json", dir);
+
+    LOCK();
+    char resolved[PATH_BYTES * 4];
+#ifdef _WIN32
+    bool found = _fullpath(resolved, path, sizeof(resolved)) != NULL && GetFileAttributesA(resolved) != INVALID_FILE_ATTRIBUTES;
+#else
+    bool found = realpath(path, resolved) != NULL;
+#endif
+    UNLOCK();
+    if (!found) {
+        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+    }
+    if (strlen(resolved) >= buffer_size) {
+        return URSATZ_GUI_STYLE_ERR_FAILED;
+    }
+    memcpy(buffer, resolved, strlen(resolved) + 1);
+    return URSATZ_GUI_STYLE_OK;
 }
