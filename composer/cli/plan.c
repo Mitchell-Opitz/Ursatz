@@ -214,7 +214,7 @@ static int read_options(int argc, char **argv, Options *options) {
         } else if (strcmp(arg, "--at") == 0 || strcmp(arg, "--cells") == 0) {
             bool at = arg[2] == 'a';
             if (options->given_count == 0) {
-                return cli_fail(CLI_EXIT_USAGE, "%s goes after a --given-melody, --given-progression, --like-progression or --given-bass", arg);
+                return cli_fail(CLI_EXIT_USAGE, "%s goes after a --given-melody, --given-progression or --given-bass", arg);
             }
             GivenOption *given = &options->given[options->given_count - 1];
             const char **slot = at ? &given->at_text : &given->cells_text;
