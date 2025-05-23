@@ -123,6 +123,30 @@ melody stages then prefer the candidates closest to it, and the result prints th
 is a preference, never a rule. `--blend <file>` with `--blend-weight` or `--blend-weights harmony=1/2,form=0,...` mixes two
 styles, with a share for each of harmony, rhythm, melody and form. See [docs/style.md](docs/style.md).
 
+A piece can also start from a corpus. End to end, with the Ursatz Analyzer (`ursatz-analyzer`, built with the Composer):
+
+```sh
+# 1. analyze a folder of MIDI or MusicXML files
+ursatz-analyzer --corpus chorales/ --out chorales-out
+ursatz-analyzer --corpus sonatinas/ --out sonatinas-out
+# 2. profile it: what its harmony, rhythm, melody and form are like
+ursatz-analyzer --style-profile chorales-out --name chorales --out chorales.style.json
+ursatz-analyzer --style-profile sonatinas-out --name sonatinas --out sonatinas.style.json
+# 3. compose in it, or in a blend of two
+ursatz-composer plan --form binary --key C --meter 4/4 --style chorales.style.json --out piece.json
+ursatz-composer plan --form binary --key C --meter 4/4 --style chorales.style.json --blend sonatinas.style.json \
+    --blend-weights harmony=1/4,melody=3/4 --out piece.json
+ursatz-composer fill piece.json --seed 3 --midi piece.mid
+# 4. start from material in the corpus similar to a passage
+ursatz-composer grow --from-corpus sonatinas-out --like passage.mid --into sentence --key "D major" --meter 4/4 --seed 3
+ursatz-composer plan --form rounded-binary --key "D major" --meter 4/4 --from-corpus sonatinas-out --like passage.mid \
+    --like-progression "I IV V I" --at B --out piece.json
+```
+
+`--from-corpus <dir> --like <file>` takes one bar of a similar passage as the motive (the seed picks among the best); on `plan`,
+`--like-progression "<numerals>"` places the chords of the best matching passage like a `--given-progression`. The source
+piece, measures and score are printed and recorded in the plan. See [docs/style.md](docs/style.md).
+
 ```sh
 ursatz-composer lock piece.json --section A --out piece-locked.json
 ursatz-composer regenerate piece-locked.json --section B --seed 3 --out piece-2.json --midi piece-2.mid

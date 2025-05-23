@@ -1,7 +1,7 @@
 # grow command
 
 ```sh
-ursatz-composer grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
+ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
@@ -42,6 +42,8 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--blend <file>` | A second style model file, blended with the style (`--style`; needs `--style`). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
+| `--from-corpus <dir>` | Start from material in a corpus instead of a motive input: the output directory of `ursatz-analyzer --corpus`. Needs `--like`; not with a motive input. The source piece, its measures and the score are printed (JSON: `source`) and kept in the plan on the motive node. Exit 2 when no passage scores 1/2 or more. See [style.md](style.md). |
+| `--like <file>` | With `--from-corpus`: a MIDI or MusicXML passage. One bar of a similar passage of the corpus, picked by the seed among the best, becomes the motive, in `--key`. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same input, options and seed give the same output. |
 | `--suggest <n>` | 1 to 16 different themes instead of one. |
 | `--out <file.json>` | The plan as JSON, as `plan_write_json_file` writes it. |
@@ -112,4 +114,5 @@ ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --acc
 ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --texture "melody and accompaniment"
 ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --texture chorale --midi chorale.mid
 ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --voicing --seed 3
+ursatz-composer grow --from-corpus corpus-out --like passage.mid --into sentence --key "D major" --meter 4/4 --seed 3
 ```
