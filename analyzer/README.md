@@ -133,10 +133,13 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    cadences (see "Cadences").
 7. `progression_pipeline` and `harmonic_rhythm_pipeline`: count the recurring progressions and the changes of
    harmony per measure over the numerals and cadences (see "Progressions and harmonic rhythm").
+8. `form_pipeline` (with `form_boundary`): builds Ursatz's standard-form input from the soprano, the segments, the
+   meter and the cadences, and finds the phrases, ideas and subphrases; `harmony_pipeline` then labels the phrase
+   model (see "Phrases").
 
-Steps 2 to 7 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
-classes alone, and its chords are the functional evidence for the key regions of the second pass, whose
-results are the report (R-043).
+Steps 2 to 8 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
+regions of the second pass, whose results are the report (R-039, R-043).
 
 `analysis_document` then builds the analysis document once. It is the single source of truth:
 the JSON file is its serialization, and `markdown_report` renders the report from it, never from
@@ -373,7 +376,7 @@ six-fours (`harmony_analysis_classify_six_fours`) and finds the prolongations
 (`harmony_analysis_find_prolongations`). A diatonic predominant is strong (IV, ii) or weak (iii, vi) by the
 library's `harmony_predominant_strength`. The chord claims carry `function` and `six_four`, and the new
 `prolongations` section lists the spans. The Markdown report's Chords table gains Function and Six-four columns,
-and a `## Prolongations` section follows the chord vocabulary. The phrase model needs phrases and comes with them.
+and a `## Prolongations` section follows the chord vocabulary. The phrase model labels the phrases' chords (see "Phrases").
 
 ## Progressions and harmonic rhythm
 
@@ -392,6 +395,33 @@ Counted by the analyzer over the library's Roman numerals, key regions and caden
   (`accelerates` when the approach is faster). The Markdown report's `## Harmonic rhythm` prints the per-measure
   changes four measures to a row, the mean, and the approach to each cadence.
 
+## Phrases
+
+Over the cadences (`src/pipeline/form_pipeline.c` and `form_boundary.c`, ported from Ursatz's test glue as a
+rewrite with error returns; the analyzer adds no music theory), the analyzer builds the library's standard-form input
+from the outer-voice soprano (consecutive segments of one note are one note), the chord segments, the meter and the
+cadences with their arrival spans, injects the kernel's Phrase Boundary Detection, and reads back the phrases, then
+the ideas and subphrases inside each. The library's phrase model labels (`Tb`, `PD`, `D`, `Te`) go on the chords of
+each phrase that ends in a cadence. The ends of all but the last phrase are then the boundaries of the second key
+pass (see "Pipeline"). The Markdown report has a `## Phrases` table (measures, length, cadence, what ended it, role)
+and a line per phrase with its ideas, subphrases and phrase model; the document's `phrases` has the claims. A
+phrase's role is its position in the piece (the first is a beginning, the last an ending), since the library names
+none.
+
+Measured on the reference pieces (MIDI; `test_phrases`, which asserts these counts so a change in the chain shows):
+
+| Piece | Phrases | Ideas |
+| --- | --- | --- |
+| Bach 114 | 2 | 10 |
+| Clementi 36 | 10 | 18 |
+| Mozart 545 | 52 | 166 |
+| Field 1 | 10 | 30 |
+| Field 5 | 9 | 22 |
+
+These are the library's phrases, not hand readings: a phrase without a cadence ends on a break in the melody or the
+end of the piece, and the cadences still miss much of the harmony (Mozart K. 545 has 52 phrases, 15 of them without a
+cadence, and Field 1 has one).
+
 ## Known limits
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
@@ -401,10 +431,10 @@ Counted by the analyzer over the library's Roman numerals, key regions and caden
   ii when no tone outside the key is heard.
   Measured here (`test_key_regions`, still `WILL_FAIL`): Clementi Op. 36 No. 1 reads as annotated except
   measure 20 (the dominant of C minor reads as G major). Mozart K. 545 (the file holds all three
-  movements) comes out as 43 regions, and 40 measures inside the cores of the annotated first-movement
+  movements) comes out as 43 regions, and 38 measures inside the cores of the annotated first-movement
   regions read in a neighbouring key (F major, G major, A minor, D minor or E minor); no modulation is
   found near measures 13 (to G), 29 (to C), 41 (to G), 79 or 124 (to C): the first three regions have no cadence
-  arriving in them, so they are tonicizations, and the returns at 79 and 124 are not read. Bach 114 is read as G major, D major from measure 14, G major from measure 17 and D major from
+  arriving in them, so they are tonicizations, and the returns at 79 and 124 are not read. Bach 114 is read as G major, D major from measure 14, G major from measure 16 and D major from
   measure 20 to the end. Its file declares 4/4 for a 3/4 piece and the analyzer reads the file's meter, so its
   measures and beat strengths are those of a 4/4 reading: the two perfect authentic cadences of the 3/4 score (m. 20
   and m. 28) arrive at m. 15 and m. 21, beat 3.5. A region read in a key the music is not in also reads its chords in that key.
@@ -414,7 +444,7 @@ Counted by the analyzer over the library's Roman numerals, key regions and caden
 - Chord identification is Ursatz's weighted identification, read in each segment's key region and its
   mode: the diatonic triads and sevenths of a major key, or of natural, harmonic and melodic minor in a
   minor region. When no key is found, no chord is identified. Chord coverage on the reference pieces:
-  Bach 114 95.0%, Clementi 36 95.2%, Field 1 92.7%, Field 5 88.4%, Mozart 545 91.6%. Chromatic, applied
+  Bach 114 96.2%, Clementi 36 95.2%, Field 1 92.7%, Field 5 87.9%, Mozart 545 92.4%. Chromatic, applied
   and fully diminished chords outside minor are not candidates, so a segment built on one is matched to
   the nearest diatonic chord or not at all.
 - Roman numerals follow chord identification, so a chord has a numeral only where the weighted
