@@ -314,16 +314,21 @@ static void test_tonicization(const char *path) {
         return;
     }
 
-    /* The G major measure's first chord: G B D over G, from beat 1 of its first measure. */
+    /* The G major measure's first chord: G B D over G, from beat 1 of the first measure played in G (the ninth,
+       starting at 8 whole notes). The second pass's phrase boundaries (R-039) put the region's edge a measure
+       early, so the chord is found by time, and it still lies in the G major region. */
     size_t first_in_g = report->entry_count;
     for (size_t i = 0; i < report->entry_count; i++) {
         const AnalysisReportEntry *entry = &report->entries[i];
-        if (entry->in_region && strcmp(report->key_regions[entry->region].label, "G major") == 0) {
+        if (entry->time_numerator == 8 && entry->time_denominator == 1) {
             first_in_g = i;
             break;
         }
     }
+    CHECK(first_in_g + 1 < report->entry_count);
     if (first_in_g + 1 < report->entry_count) {
+        CHECK(report->entries[first_in_g].in_region &&
+              strcmp(report->key_regions[report->entries[first_in_g].region].label, "G major") == 0);
         CHECK(outer_is(&report->entries[first_in_g].soprano, "D5", "5"));
         CHECK(outer_is(&report->entries[first_in_g].bass, "G4", "1"));
         CHECK(outer_is(&report->entries[first_in_g + 1].soprano, "G5", "1"));

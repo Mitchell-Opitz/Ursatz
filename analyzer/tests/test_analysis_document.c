@@ -177,12 +177,26 @@ int main(void) {
     assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
     assert(cJSON_IsNull(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));
-    static const char *const EMPTY_SECTIONS[] = {"cadences", "phrases",       "motives", "melody",      "rhythm",
+    static const char *const EMPTY_SECTIONS[] = {"cadences", "motives", "melody",        "rhythm",
                                                  "texture",  "voice_leading", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
         const cJSON *section = member(document, EMPTY_SECTIONS[i]);
         assert(cJSON_IsArray(section));
         assert(cJSON_GetArraySize(section) == 0);
+    }
+
+    /* Phrases: one claim each in time order, with measures, length, cadence (an index or null) and signal. */
+    const cJSON *phrases = member(document, "phrases");
+    assert(cJSON_IsArray(phrases));
+    for (int i = 0; i < cJSON_GetArraySize(phrases); i++) {
+        const cJSON *phrase = cJSON_GetArrayItem(phrases, i);
+        check_claim(phrase);
+        assert(number(phrase, "index") == i);
+        assert(number(member(phrase, "measures"), "first") <= number(member(phrase, "measures"), "last"));
+        assert(number(phrase, "length") > 0);
+        assert(cJSON_IsNull(member(phrase, "cadence")) || cJSON_IsNumber(member(phrase, "cadence")));
+        assert(strlen(string(phrase, "signal")) > 0);
+        assert(strcmp(string(phrase, "role"), i == 0 ? "beginning" : (i + 1 == cJSON_GetArraySize(phrases) ? "ending" : "middle")) == 0);
     }
 
     /* Keys: the two-measure piece is one key region, running barline to barline. */

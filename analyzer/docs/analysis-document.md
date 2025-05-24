@@ -27,7 +27,7 @@ newline. The same input and build always give the same bytes.
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `outer_voices` | object | Filled: the soprano and bass lines. See below. |
 | `cadences` | array of cadence claims | Filled: the library's standard-harmony cadences. See below. |
-| `phrases` | array | Placeholder: `[]`. |
+| `phrases` | array of phrase claims | Filled: the library's standard-form phrases, with their ideas, subphrases and phrase model. See below. |
 | `form` | object or null | Placeholder: `null`. |
 | `motives` | array | Placeholder: `[]`. |
 | `melody` | array | Placeholder: `[]`. |
@@ -308,12 +308,13 @@ when no chord was identified.
 | `runner_up` | object or null | The best-scoring candidate on a different root, with `label`, `root`, `quality`, `score` and `uncertainty` (the library's plausibility of it relative to the best chord, in [0, 1]); `null` when no other root sounds. |
 | `context` | string or null | Optional. Where the library took the reading from: `"none"` (the segment itself), `"previous"` or `"next"` (a sparse segment read as its neighbour's chord), or `"arpeggio"` (a run of incomplete segments inside one beat read as one chord). `null` when no chord was identified. |
 
-`function` and `six_four` are optional; a chord the library gives none has no such member.
+`function`, `six_four` and `phrase_model` are optional; a chord the library gives none has no such member.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `function` | object | The library's harmonic function of the chord (`analysis/analysis_function.h`): `name` (`"tonic"`, `"predominant"` or `"dominant"`), `applied_to` (the target degree 1 to 7 of an applied chord, which is a dominant toward it; `null` otherwise), `predominant` (`"strong"` for IV and ii, `"weak"` for iii and vi, the library's `harmony_predominant_strength`; `null` unless the chord is a diatonic predominant), `framework` (`"standard-harmony-v1"`) and `uncertainty` (the chord's, in [0, 1], higher is LESS certain). Absent when the library gives no function. |
 | `six_four` | object | `{"type"}`: the library's six-four type for a triad in second inversion, `"cadential"`, `"passing"`, `"neighbor"` or `"arpeggiating"`. Absent for every other chord and for a six-four the library leaves unclassified. |
+| `phrase_model` | string | The library's phrase model label of the chord (`harmony_analysis_phrase_model_label`), as it abbreviates it: `"Tb"` (the tonic that starts the phrase), `"PD"` (the first strong predominant before the cadential dominant), `"D"` (the cadential dominant) or `"Te"` (the tonic of an authentic cadence). Absent for a chord with no label: outside a phrase the library labels, or not a chord of the model. |
 
 `roman_numeral` is the numeral Ursatz's standard-tonality Roman numeral adapter reads for the chord in the key of
 the region the segment starts in, so it is relative to the local key and not the home key. The label, its
@@ -487,7 +488,41 @@ version bump), and empty when the library finds none or declines the piece.
 | `reasons` | array of strings | One library reason name per chord between them: `"passing-six-four"`, `"neighbor-six-four"`, `"arpeggiating-six-four"`, `"tonic-line"` or `"applied"`. |
 | `region` | integer or null | Index into `keys.regions` of the prolonged chord's key region; `null` outside every region. |
 
-The phrase model, which labels phrases from the functions, needs phrases and comes with them.
+
+### Phrases
+
+`phrases` holds one claim per phrase the library's standard-form analysis finds (`analysis/analysis_phrase.h`,
+`analysis_ideas.h`), in time order. The analyzer builds the library's neutral input from the chain (the outer-voice
+soprano as notes, with consecutive segments of one note merged, the chord segments, the meter and the cadences of the
+cadence step, each with its arrival span) and injects the kernel's Phrase Boundary Detection as the boundary detector
+(`src/pipeline/form_pipeline.c`, `form_boundary.c`, ported from Ursatz's test glue). Phrases, ideas and subphrases
+are the library's; the analyzer only reads them out. A phrase runs from the measure after the one before it to the end
+of its cadence's arrival chord, snapped to the next beat, so the phrases tile the measures of the analysed range and
+their spans may leave the rest of a phrase's last measure out.
+
+The ends of all but the last phrase are the boundaries of the second key pass (R-039): the chain runs once, reads the
+phrases, and runs again with those ends as phrase boundaries and its chords as evidence for the key regions, so
+everything in the document comes from the second pass. There is no further iteration.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `framework` | string | `"standard-form-v1"`, the library's framework name. |
+| `span`, `location`, `note_ids` | | The phrase's span, an extension after its cadence included; the notes sounding in the chords that start in it. |
+| `label` | string | `"phrase"`. |
+| `uncertainty` | number | The library's: the cadence's, 0.25 for a boundary made by a break in the melody, 0.5 for a final phrase with neither (higher is less certain). |
+| `index` | integer | The phrase's position, from 0. |
+| `measures` | object | `{"first", "last"}`: the library's measure numbers (a pickup is 0) from the phrase's first measure to the measure its cadence's arrival chord ends in; the phrase proper. |
+| `length` | integer | The phrase proper in measures, a pickup not counted. |
+| `extension_measures` | integer | The measures a post-cadential extension or codetta adds after `measures.last`; 0 with none. |
+| `cadence` | integer or null | Index into `cadences` of the cadence that ends the phrase; `null` for a phrase no cadence ended. |
+| `signal` | string | What ended the phrase: `"cadence"`, `"discontinuity"` (a break in the melody after the longest run without a cadence) or `"none"` (the end of the input). |
+| `role` | string | `"beginning"` for the first phrase, `"ending"` for the last, `"middle"` between. The library names no role for a phrase, so this is position alone (a single phrase is a `"beginning"`). |
+| `phrase_model` | array | The chords the library labelled for the phrase model, in order: `{"chord": index into chords, "label": "Tb" \| "PD" \| "D" \| "Te"}`. Empty when the library labels none: a phrase with no cadence, or one its rules cannot label. A phrase spans the chords that start in it up to its cadence's arrival; an extension takes no label. |
+| `subphrases` | array | Optional. A phrase of at least three ideas has two: its first two ideas and the rest. Each is a claim (`label` `"subphrase"`) with `index` (0 or 1), `first_idea` and `idea_count` (into this phrase's `ideas`), `measures` and `length`. |
+| `ideas` | array | Optional. The phrase's ideas, in order, cut by the library's nominal two-measure length. Each is a claim whose `label` is the library's idea label (`"basic-idea"`, `"contrasting-idea"`, `"fragment"` or `"unit"`) with `index`, `measures`, `length` and `similarity` (the share of matching intervals against the phrase's first idea; `null` for the first idea). Spans are clipped to the phrase's span. |
+
+`subphrases`, `ideas` and the chord claims' `phrase_model` are additive. The Markdown report renders `## Phrases` from
+this array: a row per phrase, then a line per phrase with its ideas, subphrases and phrase model.
 
 ### Progressions
 
@@ -559,7 +594,8 @@ before those:
   need a version of its own. `cadences` is filled (its claims are new), and tonicization and modulation claims
   gain the optional `cadence_confirmed`; both are additive. Chord claims gain the optional `function` and
   `six_four`, and the optional top-level `prolongations` follows `chord_vocabulary`; all additive. `progressions` and `harmonic_rhythm` are filled (their
-  entries are new), which is additive.
+  entries are new), which is additive. `phrases` is filled (its claims are new, with the optional `subphrases`,
+  `ideas` and `phrase_model`), and chord claims gain the optional `phrase_model`; all additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,

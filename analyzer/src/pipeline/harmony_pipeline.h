@@ -84,6 +84,13 @@ bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report
    from. A stage the library declined leaves both empty. Returns false only on allocation failure. */
 bool harmony_stage_collect_six_fours_and_prolongations(HarmonyStage *stage, AnalysisReport *report);
 
+/* Labels the chords of every phrase of report->phrases for the phrase model (harmony_analysis_phrase_model_label):
+   Tb, PD, D and Te as the library names them, into report->entries (phrase_model) and report->phrases
+   (phrase_model_labeled). A phrase spans the chords that start in it up to its cadence's arrival (an extension after
+   the cadence takes no label); a phrase with no cadence gets none. Run after the phrases are in the report. A stage
+   the library declined, or no phrases, leaves the report without labels. Returns false only on allocation failure. */
+bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisReport *report);
+
 void harmony_stage_destroy(HarmonyStage *stage);
 
 #endif

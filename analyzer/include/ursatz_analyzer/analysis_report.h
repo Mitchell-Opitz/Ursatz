@@ -105,6 +105,9 @@ typedef struct {
                                          library's harmony_predominant_strength; NULL for any other chord */
     const char *six_four;           /* the library's SixFourType name ("cadential", "passing", "neighbor",
                                        "arpeggiating") of a classified six-four chord; NULL otherwise */
+    const char *phrase_model;       /* the library's phrase model label of the chord, as it abbreviates it: "Tb", "PD", "D"
+                                       or "Te"; NULL for a chord with none (outside a labelled phrase, or not a chord
+                                       of the model) */
 } AnalysisReportEntry;
 
 /* Frees an outer note's strings and clears it. */
@@ -243,6 +246,73 @@ typedef struct {
     size_t approach_measures;
 } AnalysisCadenceApproach;
 
+/* One phrase from the library's standard-form analysis (analysis/analysis_phrase.h), in time order. The phrases
+   tile the analysed range: each begins where the one before ended. The span includes any extension after the
+   phrase's cadence (a post-cadential extension or a codetta), which the measures and length do not. Measure
+   numbers are the library's (a pickup is 0, and is not counted in the length). */
+typedef struct {
+    long start_numerator; /* the phrase's span, whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    size_t first_entry;   /* the chord segments that start inside the span: entries[first_entry .. + entry_count) */
+    size_t entry_count;
+    int first_measure;
+    int end_measure;      /* the measure the phrase proper ends in: its cadence's arrival chord ends there */
+    int last_measure;     /* end_measure, or the last measure of the extension */
+    int length_measures;  /* the phrase proper, a pickup not counted */
+    int extension_measures; /* last_measure - end_measure */
+    bool has_cadence;
+    size_t cadence;       /* index into cadences; valid only when has_cadence */
+    const char *signal;   /* what ended the phrase: "cadence", "discontinuity" or "none" (the end of the input) */
+    double uncertainty;   /* the library's, in [0, 1]; higher is LESS certain */
+    const char *role;     /* where the phrase stands in the piece: "beginning" (the first), "ending" (the last) or
+                             "middle". The library names no such role for a phrase, so this is position alone. */
+    bool phrase_model_labeled; /* the library labelled the phrase's chords for the phrase model */
+    size_t first_idea;    /* the phrase's ideas: ideas[first_idea .. + idea_count) */
+    size_t idea_count;
+    size_t first_subphrase; /* its subphrases: subphrases[first_subphrase .. + subphrase_count) */
+    size_t subphrase_count;
+} AnalysisPhrase;
+
+/* One idea of a phrase from the library's standard-form analysis (analysis/analysis_ideas.h), in time order. The span
+   runs from the first measure to the end of the last (a pickup belongs to the first idea). */
+typedef struct {
+    size_t phrase;          /* index into phrases */
+    int index;              /* within the phrase */
+    long start_numerator;   /* whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;
+    int last_measure;
+    int length_measures;    /* counted measures */
+    const char *label;      /* the library's IdeaLabel name: "basic-idea", "contrasting-idea", "fragment", "unit" */
+    bool compared;          /* the idea was compared with the phrase's first idea (false for the first) */
+    double similarity;      /* the share of matching intervals; valid only when compared */
+    size_t *note_ids;       /* owned; ImportedNotes indices of the soprano notes of the idea */
+    size_t note_id_count;
+    double uncertainty;     /* the library's, in [0, 1] */
+} AnalysisIdea;
+
+/* One subphrase of a phrase of three or more ideas: its first two ideas, or the rest. */
+typedef struct {
+    size_t phrase;
+    int index;              /* 0 or 1 */
+    size_t first_idea;      /* index into ideas */
+    size_t idea_count;
+    long start_numerator;   /* whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;
+    int last_measure;
+    int length_measures;
+    size_t *note_ids;       /* owned; ImportedNotes indices of the soprano notes of the subphrase */
+    size_t note_id_count;
+    double uncertainty;
+} AnalysisSubphrase;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -266,13 +336,19 @@ typedef struct {
     AnalysisCadenceApproach *cadence_approaches; /* owned; one per cadence, in the cadences' order; empty when
                                                     harmonic_rhythm is */
     size_t cadence_approach_count;
+    AnalysisPhrase *phrases; /* owned; in time order; empty when the library found none */
+    size_t phrase_count;
+    AnalysisIdea *ideas; /* owned; phrase by phrase, in time order */
+    size_t idea_count;
+    AnalysisSubphrase *subphrases; /* owned; phrase by phrase */
+    size_t subphrase_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions and the harmonic rhythm. */
+   prolongations, the progressions, the harmonic rhythm, the phrases, ideas and subphrases. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

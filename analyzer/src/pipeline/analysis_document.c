@@ -14,6 +14,7 @@
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/progression_pipeline.h"
+#include "standard-form/framework.h"
 #include "theory/framework.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
@@ -1198,7 +1199,8 @@ static cJSON *chords_json(const ImportedNotes *notes, const AnalysisReport *repo
         if (!(claim && add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
               add_chord_fields(claim, notes, entry, start, end) &&
               add(claim, "outer", chord_outer_json(report, entry)) &&
-              add(claim, "roman_numeral", roman_numeral_json(report, entry)) && add_function(claim, entry))) {
+              add(claim, "roman_numeral", roman_numeral_json(report, entry)) && add_function(claim, entry) &&
+              (!entry->phrase_model || add(claim, "phrase_model", cJSON_CreateString(entry->phrase_model))))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;
@@ -1388,6 +1390,138 @@ static cJSON *prolongations_json(const ImportedNotes *notes, const AnalysisRepor
             if (!reasons_taken) {
                 cJSON_Delete(reasons);
             }
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* ---- Phrases ---- */
+
+/* An idea of a phrase: the claim over its soprano notes (label the library's IdeaLabel name) with its place in the
+   phrase, its measures and length, and the similarity to the phrase's first idea (null for the first idea). */
+static cJSON *idea_json(const ImportedNotes *notes, const char *framework, const AnalysisIdea *idea) {
+    Rational start = rational_make(idea->start_numerator, idea->start_denominator);
+    Rational end = rational_make(idea->end_numerator, idea->end_denominator);
+    cJSON *claim = claim_json_with(framework, notes, idea->note_ids, idea->note_id_count, start, end, idea->label,
+                                   cJSON_CreateNumber(idea->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber(idea->index)) &&
+          add(claim, "measures", measures_json(idea->first_measure, idea->last_measure)) &&
+          add(claim, "length", cJSON_CreateNumber(idea->length_measures)) &&
+          add(claim, "similarity", idea->compared ? cJSON_CreateNumber(idea->similarity) : cJSON_CreateNull()))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* A subphrase: the claim over its soprano notes, labelled "subphrase" (the library gives subphrases no name), with its
+   index (0 or 1), the ideas it holds (first_idea within the phrase's ideas), measures and length. */
+static cJSON *subphrase_json(const ImportedNotes *notes, const char *framework, const AnalysisReport *report,
+                             const AnalysisPhrase *phrase, const AnalysisSubphrase *subphrase) {
+    Rational start = rational_make(subphrase->start_numerator, subphrase->start_denominator);
+    Rational end = rational_make(subphrase->end_numerator, subphrase->end_denominator);
+    cJSON *claim = claim_json_with(framework, notes, subphrase->note_ids, subphrase->note_id_count, start, end,
+                                   "subphrase", cJSON_CreateNumber(subphrase->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber(subphrase->index)) &&
+          add(claim, "first_idea", cJSON_CreateNumber((double)(subphrase->first_idea - phrase->first_idea))) &&
+          add(claim, "idea_count", cJSON_CreateNumber((double)subphrase->idea_count)) &&
+          add(claim, "measures", measures_json(subphrase->first_measure, subphrase->last_measure)) &&
+          add(claim, "length", cJSON_CreateNumber(subphrase->length_measures)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    (void)report;
+    return claim;
+}
+
+/* The labelled chords of a phrase in order: {"chord": index into "chords", "label": "Tb" | "PD" | "D" | "Te"}. Empty
+   when the library labelled none. */
+static cJSON *phrase_model_json(const AnalysisReport *report, const AnalysisPhrase *phrase) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t k = 0; list && k < phrase->entry_count; k++) {
+        const AnalysisReportEntry *entry = &report->entries[phrase->first_entry + k];
+        if (!entry->phrase_model) {
+            continue;
+        }
+        cJSON *segment = cJSON_CreateObject();
+        if (!(segment && add(segment, "chord", cJSON_CreateNumber((double)(phrase->first_entry + k))) &&
+              add(segment, "label", cJSON_CreateString(entry->phrase_model)) && append(list, segment))) {
+            cJSON_Delete(segment);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+static bool add_ideas_and_subphrases(cJSON *claim, const ImportedNotes *notes, const char *framework,
+                                     const AnalysisReport *report, const AnalysisPhrase *phrase) {
+    cJSON *subphrases = cJSON_CreateArray();
+    cJSON *ideas = cJSON_CreateArray();
+    bool ok = subphrases && ideas;
+    for (size_t k = 0; ok && k < phrase->subphrase_count; k++) {
+        ok = append(subphrases, subphrase_json(notes, framework, report, phrase,
+                                               &report->subphrases[phrase->first_subphrase + k]));
+    }
+    for (size_t k = 0; ok && k < phrase->idea_count; k++) {
+        ok = append(ideas, idea_json(notes, framework, &report->ideas[phrase->first_idea + k]));
+    }
+    if (ok && add(claim, "subphrases", subphrases)) {
+        subphrases = NULL;
+        if (add(claim, "ideas", ideas)) {
+            return true;
+        }
+        ideas = NULL;
+    }
+    cJSON_Delete(subphrases);
+    cJSON_Delete(ideas);
+    return false;
+}
+
+/* One claim per phrase, in time order, from the library's standard-form analysis. The claim's span is the phrase's
+   (an extension after its cadence included) and its note ids are the notes sounding in the chords that start in it.
+   measures runs from the phrase's first measure to the measure it ends in; length is its length in measures (a pickup
+   not counted); extension_measures the measures the extension adds after it; cadence the index into "cadences" of the
+   cadence that ends it (null with none); signal what ended it: "cadence", "discontinuity" or "none" (the end of the
+   input). role is where the phrase stands in the piece: "beginning" for the first, "ending" for the last, "middle"
+   between (the library names no role for a phrase, so this is position alone). subphrases and ideas are claims inside
+   it, in time order. phrase_model lists the chords the library labelled for the phrase model, in order. */
+static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_form_framework());
+    for (size_t i = 0; i < report->phrase_count; i++) {
+        const AnalysisPhrase *phrase = &report->phrases[i];
+        Rational start = rational_make(phrase->start_numerator, phrase->start_denominator);
+        Rational end = rational_make(phrase->end_numerator, phrase->end_denominator);
+        size_t id_count = 0;
+        size_t *ids = phrase->entry_count > 0
+                          ? entry_range_note_ids(report, phrase->first_entry,
+                                                 phrase->first_entry + phrase->entry_count - 1, &id_count)
+                          : NULL;
+        cJSON *claim = (ids || phrase->entry_count == 0)
+                           ? claim_json_with(framework, notes, ids, id_count, start, end, "phrase",
+                                             cJSON_CreateNumber(phrase->uncertainty))
+                           : NULL;
+        free(ids);
+        if (!(claim && add(claim, "index", cJSON_CreateNumber((double)i)) &&
+              add(claim, "measures", measures_json(phrase->first_measure, phrase->end_measure)) &&
+              add(claim, "length", cJSON_CreateNumber(phrase->length_measures)) &&
+              add(claim, "extension_measures", cJSON_CreateNumber(phrase->extension_measures)) &&
+              add(claim, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
+              add(claim, "signal", cJSON_CreateString(phrase->signal)) &&
+              add(claim, "role", cJSON_CreateString(phrase->role)) &&
+              add(claim, "phrase_model", phrase_model_json(report, phrase)) &&
+              add_ideas_and_subphrases(claim, notes, framework, report, phrase))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
@@ -1933,7 +2067,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cadences_json(notes, report)) &&
-          add(document, "phrases", cJSON_CreateArray()) && add(document, "form", cJSON_CreateNull()) &&
+          add(document, "phrases", phrases_json(notes, report)) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&

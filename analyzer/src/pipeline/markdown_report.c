@@ -998,6 +998,91 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
 #define PROGRESSION_TABLE_ROWS 10
 
 /* The measure a chord of the document's chords starts in, or -1 when the index or its location is missing. */
+/* "m. 8" or "mm. 5 to 8" for a measures object. */
+static bool append_measures(StringBuilder *sb, const cJSON *measures) {
+    int first = (int)number_member(measures, "first");
+    int last = (int)number_member(measures, "last");
+    return first == last ? sb_appendf(sb, "m. %d", first) : sb_appendf(sb, "mm. %d to %d", first, last);
+}
+
+/* The cadence that ends a phrase as "perfect-authentic (m. 8)", or "none". */
+static bool append_phrase_cadence(StringBuilder *sb, const cJSON *document, const cJSON *phrase) {
+    const cJSON *index = cJSON_GetObjectItemCaseSensitive(phrase, "cadence");
+    const cJSON *cadence =
+        cJSON_IsNumber(index)
+            ? cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "cadences"), (int)index->valuedouble)
+            : NULL;
+    if (!cadence) {
+        return sb_append(sb, "none");
+    }
+    const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
+                                                             "location");
+    return sb_appendf(sb, "%s (", string_member(cadence, "type")) &&
+           append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) && sb_append(sb, ")");
+}
+
+/* One line per phrase: its ideas with their labels and measures, its subphrases, and its phrase model (the chords the
+   library labelled Tb, PD, D and Te, each with where it begins). */
+static bool append_phrase_line(StringBuilder *sb, const cJSON *document, const cJSON *phrase) {
+    bool ok = sb_appendf(sb, "- **Phrase %d:** ", (int)number_member(phrase, "index") + 1);
+    const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(phrase, "ideas");
+    if (cJSON_GetArraySize(ideas) == 0) {
+        ok = ok && sb_append(sb, "no ideas");
+    } else {
+        ok = ok && sb_append(sb, "ideas ");
+    }
+    const cJSON *idea;
+    cJSON_ArrayForEach(idea, ideas) {
+        ok = ok && sb_appendf(sb, "%s%s (", idea == ideas->child ? "" : ", ", string_member(idea, "label")) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(idea, "measures")) && sb_append(sb, ")");
+    }
+    const cJSON *subphrases = cJSON_GetObjectItemCaseSensitive(phrase, "subphrases");
+    const cJSON *subphrase;
+    cJSON_ArrayForEach(subphrase, subphrases) {
+        ok = ok && sb_append(sb, subphrase == subphrases->child ? "; subphrases " : ", ") &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(subphrase, "measures"));
+    }
+    const cJSON *model = cJSON_GetObjectItemCaseSensitive(phrase, "phrase_model");
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(document, "chords");
+    const cJSON *segment;
+    cJSON_ArrayForEach(segment, model) {
+        const cJSON *chord = cJSON_GetArrayItem(chords, (int)number_member(segment, "chord"));
+        const cJSON *start = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "location"), "start");
+        ok = ok && sb_append(sb, segment == model->child ? "; phrase model " : ", ") &&
+             sb_appendf(sb, "%s (", string_member(segment, "label")) && append_position(sb, start) && sb_append(sb, ")");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON *phrases) {
+    int count = cJSON_GetArraySize(phrases);
+    bool ok = sb_append(sb, "## Phrases\n\n") &&
+              sb_appendf(sb,
+                         "The library's standard-form analysis found %d %s from the soprano, the meter and the "
+                         "cadences. Length counts the measures of the phrase proper; Ends is what closed it: its "
+                         "cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in "
+                         "the piece.\n\n",
+                         count, count == 1 ? "phrase" : "phrases") &&
+              sb_append(sb, "| Phrase | Measures | Length | Cadence | Ends | Role |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *phrase;
+    cJSON_ArrayForEach(phrase, phrases) {
+        if (!ok) {
+            break;
+        }
+        ok = sb_appendf(sb, "| %d | ", (int)number_member(phrase, "index") + 1) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(phrase, "measures")) &&
+             sb_appendf(sb, " | %d | ", (int)number_member(phrase, "length")) &&
+             append_phrase_cadence(sb, document, phrase) &&
+             sb_appendf(sb, " | %s | %s |\n", string_member(phrase, "signal"), string_member(phrase, "role"));
+    }
+    ok = ok && sb_append(sb, "\n");
+    cJSON_ArrayForEach(phrase, phrases) {
+        ok = ok && append_phrase_line(sb, document, phrase);
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static int chord_start_measure(const cJSON *document, const cJSON *index) {
     if (!cJSON_IsNumber(index)) {
         return -1;
@@ -1146,6 +1231,7 @@ static const struct {
     {"prolongations", render_prolongations},
     {"non_chord_tones", render_non_chord_tones},
     {"cadences", render_cadences},
+    {"phrases", render_phrases},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
 };

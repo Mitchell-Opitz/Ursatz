@@ -79,7 +79,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/cadence_claim" }
     },
-    "phrases": { "type": "array" },
+    "phrases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/phrase_claim" }
+    },
     "form": {
       "type": ["object", "null"]
     },
@@ -372,6 +375,83 @@
           }
         }
       ]
+    },
+    "phrase_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "measures", "length", "extension_measures", "cadence", "signal", "role"],
+          "properties": {
+            "index": { "type": "integer", "minimum": 0 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "length": { "type": "integer", "minimum": 0 },
+            "extension_measures": { "type": "integer", "minimum": 0 },
+            "cadence": { "type": ["integer", "null"], "minimum": 0 },
+            "signal": { "enum": ["cadence", "discontinuity", "none"] },
+            "role": { "enum": ["beginning", "middle", "ending"] },
+            "phrase_model": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["chord", "label"],
+                "properties": {
+                  "chord": { "type": "integer", "minimum": 0 },
+                  "label": { "enum": ["Tb", "PD", "D", "Te"] }
+                }
+              }
+            },
+            "subphrases": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/subphrase_claim" }
+            },
+            "ideas": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/idea_claim" }
+            }
+          }
+        }
+      ]
+    },
+    "idea_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "measures", "length", "similarity"],
+          "properties": {
+            "label": { "enum": ["basic-idea", "contrasting-idea", "fragment", "unit"] },
+            "index": { "type": "integer", "minimum": 0 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "length": { "type": "integer", "minimum": 0 },
+            "similarity": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+          }
+        }
+      ]
+    },
+    "subphrase_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "first_idea", "idea_count", "measures", "length"],
+          "properties": {
+            "index": { "enum": [0, 1] },
+            "first_idea": { "type": "integer", "minimum": 0 },
+            "idea_count": { "type": "integer", "minimum": 1 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "length": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "phrase_measures": {
+      "type": "object",
+      "required": ["first", "last"],
+      "properties": {
+        "first": { "type": "integer", "minimum": 0 },
+        "last": { "type": "integer", "minimum": 0 }
+      }
     },
     "harmonic_rhythm": {
       "type": "object",
@@ -795,7 +875,8 @@
                 }
               ]
             },
-            "context": { "enum": ["none", "previous", "next", "arpeggio", null] }
+            "context": { "enum": ["none", "previous", "next", "arpeggio", null] },
+            "phrase_model": { "enum": ["Tb", "PD", "D", "Te"] }
           }
         }
       ]
