@@ -36,6 +36,7 @@ typedef struct {
     size_t bars;           /* the template's size; 0 for the size count gives, or the default */
     size_t count;          /* variations or layers; 0 for the size bars gives, or the default */
     const Motive *motive;  /* NULL to have one invented */
+    const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
     bool has_accompaniment;
     PlanAccompaniment accompaniment; /* read only with has_accompaniment; a layered form has one in any case */
     /*

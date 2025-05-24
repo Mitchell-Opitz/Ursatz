@@ -27,7 +27,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -255,6 +255,18 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
             }
             ok = built;
         }
+        break;
+    }
+    case PLAN_CONSTRAINT_SOURCE: {
+        const PlanSource *source = &constraint->params.source;
+        char score[64];
+        snprintf(score, sizeof(score), "%lu/%lu", source->score_numerator, source->score_denominator);
+        ok = ok && json_add(object, "piece", cJSON_CreateString(source->piece)) &&
+             json_add(object, "start_measure", cJSON_CreateNumber(source->start_measure)) &&
+             json_add(object, "start_beat", cJSON_CreateNumber(source->start_beat)) &&
+             json_add(object, "end_measure", cJSON_CreateNumber(source->end_measure)) &&
+             json_add(object, "end_beat", cJSON_CreateNumber(source->end_beat)) &&
+             json_add(object, "score", cJSON_CreateString(score));
         break;
     }
     }
@@ -1070,6 +1082,42 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
             out->params.style.blend_denominator[d] = denominator;
         }
         snprintf(out->params.style.blend_path, PLAN_STYLE_PATH_MAX, "%s", blend_file->valuestring);
+        return true;
+    }
+    case PLAN_CONSTRAINT_SOURCE: {
+        const cJSON *piece = json_member(reader, item, path, "piece", true);
+        const cJSON *start_measure = piece ? json_member(reader, item, path, "start_measure", true) : NULL;
+        const cJSON *start_beat = start_measure ? json_member(reader, item, path, "start_beat", true) : NULL;
+        const cJSON *end_measure = start_beat ? json_member(reader, item, path, "end_measure", true) : NULL;
+        const cJSON *end_beat = end_measure ? json_member(reader, item, path, "end_beat", true) : NULL;
+        const cJSON *score = end_beat ? json_member(reader, item, path, "score", true) : NULL;
+        if (!score) {
+            return false;
+        }
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "piece");
+        if (!cJSON_IsString(piece) || piece->valuestring[0] == '\0' ||
+            strlen(piece->valuestring) >= PLAN_SOURCE_PIECE_MAX) {
+            return json_bad_format(reader, at, "expected the piece's path in the corpus");
+        }
+        if (!cJSON_IsNumber(start_measure) || !cJSON_IsNumber(start_beat) || !cJSON_IsNumber(end_measure) ||
+            !cJSON_IsNumber(end_beat)) {
+            return json_bad_format(reader, path, "expected the measures and beats of the passage as numbers");
+        }
+        unsigned long numerator, denominator;
+        char rest;
+        json_child_path(at, path, "score");
+        if (!cJSON_IsString(score) || sscanf(score->valuestring, "%lu/%lu%c", &numerator, &denominator, &rest) != 2 ||
+            denominator == 0 || numerator > denominator) {
+            return json_bad_format(reader, at, "expected a fraction from 0 to 1 like \"3/4\"");
+        }
+        snprintf(out->params.source.piece, PLAN_SOURCE_PIECE_MAX, "%s", piece->valuestring);
+        out->params.source.start_measure = (int)start_measure->valuedouble;
+        out->params.source.start_beat = start_beat->valuedouble;
+        out->params.source.end_measure = (int)end_measure->valuedouble;
+        out->params.source.end_beat = end_beat->valuedouble;
+        out->params.source.score_numerator = numerator;
+        out->params.source.score_denominator = denominator;
         return true;
     }
     }

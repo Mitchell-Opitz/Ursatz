@@ -1,7 +1,7 @@
 # plan command
 
 ```sh
-ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
+ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --like-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
 ```
 
 Plans a whole short piece from a form template and writes the plan as JSON. Nothing is composed yet: the
@@ -23,6 +23,9 @@ section open for [`fill`](cli-fill.md) to realize. It builds a request for `piec
 | `--count <n>` | The variations (1 to 8) of `variations` or the layers (2 to 4) of `layered`, instead of `--bars`. With both, they must agree. Refused for the other forms. |
 | `--modulate` | Plan the keys and the cadences across the sections from the seed ([piece.md](piece.md)): a section may end in a closely related key, reached by a pivot chord, and the cadences follow. Without it every section is in the home key and the cadences are the form's. |
 | `--motive <file>` | The motive, loaded as for the [motive command](cli-motive.md) (a MIDI file, a MusicXML file, a note list or a motive JSON file), given the key and the meter. Without it the plan asks for one to be invented when it is filled. |
+| `--from-corpus <dir>` | The output directory of `ursatz-analyzer --corpus`, for `--like` and `--like-progression`. The passage used, its measures and its score are printed and kept in the plan as a `source` constraint. Exit 2 when no passage scores 1/2 or more, with nothing written. See [style.md](style.md). |
+| `--like <file>` | The motive, taken from the corpus: one bar of a passage similar to this MIDI or MusicXML passage, picked by the seed among the best, in `--key`. Instead of `--motive`. |
+| `--like-progression "<numerals>"` | A progression placed like `--given-progression` (with its `--at` and `--cells`), but with the chords of the passage of the corpus that best matches these numerals and that the plan can place in the key's mode. |
 | `--accompaniment <pattern>` | `block`, `arpeggiated`, `alberti` (not in 6/8), `oom-pah` or `any`. A layered form has an accompaniment in any case. See [accompaniment.md](accompaniment.md). |
 | `--texture <name>` | The texture the accompaniment is to be heard as, as for [grow](cli-grow.md). Alone it implies `--accompaniment any`. |
 | `--given-melody <file>` | A phrase to place in the piece, from a MIDI file, a MusicXML file, a note list or a motive JSON file, of any length up to 64 notes (the motive limit of one bar is not asked). `fill` never changes it. Repeatable, up to 8 `--given-*` in all. See [middle-out.md](middle-out.md). |

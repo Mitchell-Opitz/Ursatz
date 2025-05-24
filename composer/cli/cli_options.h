@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/style.h>
 
 /* The exit statuses every command shares. */
@@ -68,6 +69,24 @@ int cli_load_blend(const char *style_path, const char *blend_path, const Compose
 void cli_print_style_distance(const StyleComparison *comparison);
 /* The same as the JSON member "style_distance":{...}, with no leading comma. */
 void cli_print_style_distance_json(const StyleComparison *comparison);
+
+/* Seeding from a corpus (corpus_seed.h). Each returns 0 or the status of the failure it printed: a passage or numerals
+   that cannot be read is a usage error, a corpus with no match at 1/2 or more exits 2. */
+int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const PlanKey *key,
+                    unsigned long seed, CorpusSeed *out);
+int cli_seed_progression(const char *corpus_dir, const char *numerals_text, PlanKeyMode mode, CorpusSeed *out);
+/* The numerals of a progression seed in one string, separated by spaces. */
+void cli_seed_numerals_text(const CorpusSeed *seed, char *out, size_t size);
+/* "motive from <piece> m.1 b.1 - m.2 b.1, score 7/8", the line the text output carries. */
+void cli_print_seed_line(const char *what, const CorpusSeed *seed);
+/* The same as the JSON object {"piece":..,"start":..,"end":..,"score":..}, with no leading comma. */
+void cli_print_seed_json(const CorpusSeed *seed);
+/* The seed as the plan records it. Returns 0 or the status of the failure it printed. */
+int cli_seed_source(const CorpusSeed *seed, PlanSource *out);
+/* Records the seed in a SOURCE constraint on the node, which must not be Given. Returns 0 or the status of the failure it printed. */
+int cli_add_source(PiecePlan *plan, NodeId node, const CorpusSeed *seed);
+/* The first node of the plan with the name, or PLAN_NODE_NONE. */
+NodeId cli_find_node(const PiecePlan *plan, const char *name);
 
 /* Prints text as a JSON string to stdout: quotes and backslashes escaped, control characters dropped. */
 void cli_print_json_string(const char *text);

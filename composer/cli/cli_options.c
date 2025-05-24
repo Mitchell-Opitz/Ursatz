@@ -367,3 +367,95 @@ bool cli_alternative_path(const char *path, size_t k, bool several, char *out, s
     }
     return snprintf(out, size, "%.*s-%zu%s", (int)(dot - path), path, k, dot) < (int)size;
 }
+
+/* --- seeding from a corpus ------------------------------------------------------- */
+
+static int seed_failure(CorpusSeedResult result, const char *corpus_dir, const char *what) {
+    switch (result) {
+    case CORPUS_SEED_ERR_NO_MATCH:
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "no passage of the corpus '%s' is similar to %s (a score of 1/2 or more)",
+                        corpus_dir, what);
+    case CORPUS_SEED_ERR_QUERY:
+        return cli_fail(CLI_EXIT_USAGE, "cannot read %s as a passage to look for", what);
+    case CORPUS_SEED_ERR_CORPUS:
+        return cli_fail(CLI_EXIT_UNSATISFIABLE,
+                        "cannot read the corpus '%s' (the output directory of ursatz-analyzer --corpus)", corpus_dir);
+    default:
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", corpus_seed_result_name(result));
+    }
+}
+
+int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const PlanKey *key,
+                    unsigned long seed, CorpusSeed *out) {
+    CorpusSeedResult result = corpus_seed_motive(corpus_dir, like_path, meter, key, seed, out);
+    return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, like_path);
+}
+
+int cli_seed_progression(const char *corpus_dir, const char *numerals_text, PlanKeyMode mode, CorpusSeed *out) {
+    CorpusSeedResult result = corpus_seed_progression(corpus_dir, numerals_text, mode, out);
+    return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, numerals_text);
+}
+
+void cli_seed_numerals_text(const CorpusSeed *seed, char *out, size_t size) {
+    size_t used = 0;
+    out[0] = '\0';
+    for (size_t i = 0; i < seed->numeral_count && used + 1 < size; i++) {
+        int written = snprintf(out + used, size - used, i ? " %s" : "%s", seed->numerals[i]);
+        if (written < 0 || (size_t)written >= size - used) {
+            break;
+        }
+        used += (size_t)written;
+    }
+}
+
+void cli_print_seed_line(const char *what, const CorpusSeed *seed) {
+    char span[96];
+    corpus_seed_describe(seed, span, sizeof(span));
+    printf("%s from %s %s, score %lu/%lu\n", what, seed->piece, span, seed->score_numerator, seed->score_denominator);
+}
+
+void cli_print_seed_json(const CorpusSeed *seed) {
+    printf("{\"piece\":");
+    cli_print_json_string(seed->piece);
+    printf(",\"start\":{\"measure\":%d,\"beat\":%g},\"end\":{\"measure\":%d,\"beat\":%g},\"score\":\"%lu/%lu\"}",
+           seed->start_measure, seed->start_beat, seed->end_measure, seed->end_beat, seed->score_numerator,
+           seed->score_denominator);
+}
+
+int cli_seed_source(const CorpusSeed *seed, PlanSource *out) {
+    memset(out, 0, sizeof(*out));
+    if (snprintf(out->piece, PLAN_SOURCE_PIECE_MAX, "%s", seed->piece) >= PLAN_SOURCE_PIECE_MAX) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "the source piece's path is too long to record");
+    }
+    out->start_measure = seed->start_measure;
+    out->start_beat = seed->start_beat;
+    out->end_measure = seed->end_measure;
+    out->end_beat = seed->end_beat;
+    out->score_numerator = seed->score_numerator;
+    out->score_denominator = seed->score_denominator;
+    return 0;
+}
+
+int cli_add_source(PiecePlan *plan, NodeId node, const CorpusSeed *seed) {
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_SOURCE;
+    int status = cli_seed_source(seed, &constraint.params.source);
+    if (status != 0) {
+        return status;
+    }
+    if (node == PLAN_NODE_NONE || plan_node_add_constraint(plan, node, &constraint) != PLAN_OK) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot record the source of the seeded material in the plan");
+    }
+    return 0;
+}
+
+NodeId cli_find_node(const PiecePlan *plan, const char *name) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *found = plan_node_name(plan, id);
+        if (found && strcmp(found, name) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}

@@ -98,6 +98,12 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         }
         return true;
     }
+    case PLAN_CONSTRAINT_SOURCE: {
+        const PlanSource *source = &constraint->params.source;
+        size_t length = strnlen(source->piece, PLAN_SOURCE_PIECE_MAX);
+        return length > 0 && length < PLAN_SOURCE_PIECE_MAX && source->score_denominator > 0 &&
+               source->score_numerator <= source->score_denominator;
+    }
     }
     return false;
 }

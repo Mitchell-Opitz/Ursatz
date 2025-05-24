@@ -340,3 +340,32 @@ foreach(mode statistics labels form smoke cli)
 endforeach()
 add_test(NAME test_style_blend_harmony COMMAND test_style_blend harmony)
 set_tests_properties(test_style_blend_harmony PROPERTIES LABELS slow)
+
+# Seeding from a corpus (docs/style.md). "sonatinas" is Clementi 36 and Mozart 545 from Ursatz's reference corpus,
+# copied into the build tree at configure time and analyzed by the Analyzer CLI at build time; "empty" holds one file
+# the Analyzer cannot import, so nothing in its output is analyzed.
+set(SEED_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
+set(SEED_REFERENCE ${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus)
+file(COPY "${SEED_REFERENCE}/Clementi 36.mid" "${SEED_REFERENCE}/Mozart 545.mid" DESTINATION ${SEED_CORPORA_DIR}/sonatinas)
+file(WRITE ${SEED_CORPORA_DIR}/empty/broken.mid "not a midi file")
+add_custom_command(
+    OUTPUT ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json ${SEED_CORPORA_DIR}/empty-analyzed/corpus-index.json
+    COMMAND ursatz-analyzer --corpus ${SEED_CORPORA_DIR}/sonatinas --out ${SEED_CORPORA_DIR}/sonatinas-analyzed
+    COMMAND ursatz-analyzer --corpus ${SEED_CORPORA_DIR}/empty --out ${SEED_CORPORA_DIR}/empty-analyzed
+    DEPENDS ursatz-analyzer
+    COMMENT "Analyzing the test corpora for corpus seeding"
+    VERBATIM)
+add_custom_target(seed_corpora DEPENDS ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json)
+
+add_executable(test_corpus_seed test_corpus_seed.c)
+target_link_libraries(test_corpus_seed PRIVATE ursatz_composer)
+target_compile_options(test_corpus_seed PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_corpus_seed PRIVATE
+    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_SONATINAS_CORPUS="${SEED_CORPORA_DIR}/sonatinas-analyzed"
+    COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed")
+add_dependencies(test_corpus_seed ursatz-composer seed_corpora)
+foreach(mode motive same plan progression no-match cli)
+    add_test(NAME test_corpus_seed_${mode} COMMAND test_corpus_seed ${mode})
+endforeach()

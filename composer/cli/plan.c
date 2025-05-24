@@ -34,6 +34,9 @@ typedef enum {
 typedef struct {
     GivenKind kind;
     const char *source; /* a file, or the numerals of a progression */
+    bool from_corpus;   /* --like-progression: source is looked for in the corpus and replaced by the passage's numerals */
+    char found_numerals[1024];
+    CorpusSeed found;
     const char *at_text;
     const char *cells_text;
     /* Read from the text above. */
@@ -52,6 +55,8 @@ typedef struct {
     const char *count_text;
     bool modulate;
     const char *motive_path;
+    const char *from_corpus;
+    const char *like_path;
     const char *accompaniment_text;
     const char *texture_text;
     const char *seed_text;
@@ -78,6 +83,9 @@ typedef struct {
     unsigned long seed;
     ComposerRatio style_weight; /* 0/0 when --style-weight was not given (a weight of 1/1 at fill) */
     ComposerStyleWeights blend_weights; /* read with --blend */
+    bool seeded; /* the motive is a passage of the corpus, kept in seed */
+    CorpusSeed seed_found;
+    PlanSource source; /* seed_found as the plan records it */
     bool json;
 } Options;
 
@@ -100,6 +108,14 @@ static void print_help(FILE *out) {
     fprintf(out, "                       is in the home key and the cadences are the form's)\n");
     fprintf(out, "  --motive <file>      the motive: a MIDI file, a MusicXML file, a note list or a motive JSON file; without\n");
     fprintf(out, "                       it one is invented when the plan is filled\n");
+    fprintf(out, "  --from-corpus <dir>  the output directory of ursatz-analyzer --corpus, for --like and --like-progression; the\n");
+    fprintf(out, "                       passage used, its measures and its score are printed and kept in the plan (SOURCE). Exit 2\n");
+    fprintf(out, "                       when no passage scores 1/2 or more\n");
+    fprintf(out, "  --like <file>        the motive: the first bar of a passage of the corpus similar to this MIDI or MusicXML\n");
+    fprintf(out, "                       passage (picked by the seed among the best), in --key; instead of --motive\n");
+    fprintf(out, "  --like-progression \"<I IV V I>\"\n");
+    fprintf(out, "                       a progression to place like --given-progression, but the chords are those of the passage of\n");
+    fprintf(out, "                       the corpus that best matches these numerals; goes with --at (and --cells)\n");
     fprintf(out, "  --accompaniment <p>  block, arpeggiated, alberti (not in 6/8), oom-pah or any (a layered form has one in any\n");
     fprintf(out, "                       case)\n");
     fprintf(out, "  --texture <name>     the texture the accompaniment is to be heard as (see grow --help); implies\n");
@@ -156,6 +172,10 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->count_text;
         } else if (strcmp(arg, "--motive") == 0) {
             target = &options->motive_path;
+        } else if (strcmp(arg, "--from-corpus") == 0) {
+            target = &options->from_corpus;
+        } else if (strcmp(arg, "--like") == 0) {
+            target = &options->like_path;
         } else if (strcmp(arg, "--accompaniment") == 0) {
             target = &options->accompaniment_text;
         } else if (strcmp(arg, "--texture") == 0) {
@@ -177,7 +197,7 @@ static int read_options(int argc, char **argv, Options *options) {
         } else if (strcmp(arg, "--format") == 0) {
             target = &options->format_text;
         } else if (strcmp(arg, "--given-melody") == 0 || strcmp(arg, "--given-progression") == 0 ||
-                   strcmp(arg, "--given-bass") == 0) {
+                   strcmp(arg, "--given-bass") == 0 || strcmp(arg, "--like-progression") == 0) {
             if (i + 1 >= argc) {
                 return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
             }
@@ -185,7 +205,11 @@ static int read_options(int argc, char **argv, Options *options) {
                 return cli_fail(CLI_EXIT_USAGE, "plan takes %d given phrases, progressions and bass lines at most", MAX_GIVEN);
             }
             GivenOption *given = &options->given[options->given_count++];
-            given->kind = arg[8] == 'm' ? GIVEN_MELODY : (arg[8] == 'p' ? GIVEN_PROGRESSION : GIVEN_BASS);
+            given->from_corpus = arg[2] == 'l';
+            given->kind = given->from_corpus ? GIVEN_PROGRESSION
+                          : arg[8] == 'm'    ? GIVEN_MELODY
+                          : arg[8] == 'p'    ? GIVEN_PROGRESSION
+                                             : GIVEN_BASS;
             given->source = argv[++i];
         } else if (strcmp(arg, "--at") == 0 || strcmp(arg, "--cells") == 0) {
             bool at = arg[2] == 'a';
@@ -357,6 +381,19 @@ static int check_options(Options *options) {
     int given_status = check_given(options);
     if (given_status != 0) {
         return given_status;
+    }
+    bool likes_progression = false;
+    for (size_t i = 0; i < options->given_count; i++) {
+        likes_progression = likes_progression || options->given[i].from_corpus;
+    }
+    if ((options->like_path || likes_progression) && !options->from_corpus) {
+        return cli_fail(CLI_EXIT_USAGE, "%s needs --from-corpus <dir>", options->like_path ? "--like" : "--like-progression");
+    }
+    if (options->from_corpus && !options->like_path && !likes_progression) {
+        return cli_fail(CLI_EXIT_USAGE, "--from-corpus needs --like <file> or --like-progression \"<numerals>\"");
+    }
+    if (options->like_path && options->motive_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--like and --motive both give the motive; use one");
     }
     if (options->accompaniment_text || options->texture_text) {
         options->has_accompaniment = true;
@@ -570,6 +607,10 @@ static void print_given_json(const Options *options) {
         if (given->kind == GIVEN_PROGRESSION) {
             printf(",\"cells\":%lu", given->cells);
         }
+        if (given->from_corpus) {
+            printf(",\"from\":");
+            cli_print_seed_json(&given->found);
+        }
         printf("}");
     }
     printf("]");
@@ -587,6 +628,9 @@ static void print_given_text(const Options *options) {
             printf(", %lu %s a chord", given->cells, given->cells == 1 ? "cell" : "cells");
         }
         printf("\n");
+        if (given->from_corpus) {
+            cli_print_seed_line("progression", &given->found);
+        }
     }
 }
 
@@ -612,6 +656,10 @@ static void print_result(const Options *options, const PiecePlan *plan) {
             cli_print_json_string(options->motive_path);
         } else {
             printf("null");
+        }
+        if (options->seeded) {
+            printf(",\"motive_source\":");
+            cli_print_seed_json(&options->seed_found);
         }
         printf(",\"accompaniment\":");
         if (options->has_accompaniment) {
@@ -652,7 +700,9 @@ static void print_result(const Options *options, const PiecePlan *plan) {
     printf("%s, %zu bars, key %s, meter %d/%d, seed %lu%s\n", form_template_name(options->form), bars, options->key_name,
            options->meter.beats_per_bar, options->meter.beat_unit, options->seed,
            options->modulate ? ", keys and cadences planned" : "");
-    if (options->motive_path) {
+    if (options->seeded) {
+        cli_print_seed_line("motive", &options->seed_found);
+    } else if (options->motive_path) {
         printf("motive %s\n", options->motive_path);
     } else {
         printf("motive invented at fill\n");
@@ -783,6 +833,12 @@ static int place_given(const Options *options, PiecePlan *plan) {
                             GIVEN_KIND_NAMES[given->kind], given->source, given->letter, given->bar,
                             given_result_name(placed));
         }
+        if (given->from_corpus) {
+            int recorded = cli_add_source(plan, section, &given->found);
+            if (recorded != 0) {
+                return recorded;
+            }
+        }
     }
     return 0;
 }
@@ -814,6 +870,32 @@ int run_plan(int argc, char **argv) {
 
     Motive motive;
     bool has_motive = false;
+    if (options.like_path) {
+        status = cli_seed_motive(options.from_corpus, options.like_path, &options.meter, &options.key, options.seed,
+                                 &options.seed_found);
+        if (status != 0) {
+            return status;
+        }
+        status = cli_seed_source(&options.seed_found, &options.source);
+        if (status != 0) {
+            return status;
+        }
+        options.seeded = true;
+        motive = options.seed_found.motive;
+        has_motive = true;
+    }
+    for (size_t i = 0; i < options.given_count; i++) {
+        GivenOption *given = &options.given[i];
+        if (!given->from_corpus) {
+            continue;
+        }
+        status = cli_seed_progression(options.from_corpus, given->source, options.key.mode, &given->found);
+        if (status != 0) {
+            return status;
+        }
+        cli_seed_numerals_text(&given->found, given->found_numerals, sizeof(given->found_numerals));
+        given->source = given->found_numerals;
+    }
     if (options.motive_path) {
         MotiveOptions motive_options;
         memset(&motive_options, 0, sizeof(motive_options));
@@ -847,6 +929,7 @@ int run_plan(int argc, char **argv) {
     request.bars = options.bars;
     request.count = options.count;
     request.motive = has_motive ? &motive : NULL;
+    request.source = options.seeded ? &options.source : NULL;
     request.has_accompaniment = options.has_accompaniment;
     request.accompaniment = options.accompaniment;
     request.modulate = options.modulate;

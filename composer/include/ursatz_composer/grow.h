@@ -57,6 +57,7 @@
 
 typedef struct {
     const Motive *motive;
+    const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
     PlanKey key;
     PlanMeter meter;
     size_t bars;              /* 4 or 8 */

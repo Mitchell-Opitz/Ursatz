@@ -116,6 +116,45 @@ away from it. The distance from `sonatinas` does not fall steadily: the same kno
 (R-075). A weight on melody alone (1, harmony 0) moved the harmony distances by 0.008 and 0.010: the Analyzer hears the chords
 through the melody, so a melody weight reaches the harmony it measures a little. The test holds this within 0.02.
 
+## Seeding from a corpus
+
+A style says what a corpus is like; seeding starts a piece from a passage of it. The corpus is the output directory of
+`ursatz-analyzer --corpus <folder> --out <dir>`, the same one the Analyzer's `--similar` searches. The search is the
+Analyzer's (`similar_query_from_file`, `similar_material_find`, see its `docs/similar-material.md`) and reads only the
+analysis documents (R-079).
+
+```sh
+ursatz-composer grow --from-corpus corpus-out --like passage.mid --into sentence --key "D major" --meter 4/4 --seed 3 --out theme.json
+ursatz-composer plan --form rounded-binary --key "D major" --meter 4/4 --from-corpus corpus-out --like passage.mid \
+    --like-progression "I IV V I" --at B --out piece.json
+```
+
+**A motive.** `--like <file>` (a MIDI or MusicXML passage, with `--from-corpus <dir>`) replaces the motive input of `grow`
+and `--motive` of `plan`. `corpus_seed_motive(dir, passage, meter, key, seed, &out)` (`<ursatz_composer/corpus_seed.h>`)
+takes the best ten matches scoring 1/2 or more, keeps those within 1/10 of the best and picks one with the seeded generator
+(`fill_rng`), so the same seed gives the same choice. From the start of the matched passage it takes the notes that start in
+one bar of the meter, the last cut at the barline, and moves them by one interval so the first note keeps its scale degree in
+the requested key, the source key being the key its analysis heard there (the key of the chord at the passage). In the same
+mode that is a plain transposition (Mozart 545's opening bar, C major, seeds D5 half, F#5 quarter, A5 quarter in D major);
+from major to minor the first note takes the same degree of the other scale and the others keep their intervals. A match with
+fewer than two notes in the bar is passed over for the next. The result is a `Motive` in the requested key (`MOTIVE_KEY_GIVEN`).
+
+**A progression.** `--like-progression "<numerals>"` goes after `--from-corpus` like a `--given-progression` and takes the
+same `--at` and `--cells`: the chords placed are those of the passage of the corpus that best matches the numerals
+(`corpus_seed_progression`). The Analyzer writes a passage in the notation of its own key (`i iv V i` in a minor key) and the
+plan reads numerals in the mode of the key they are placed in, so the passage is the best of the best hundred whose every
+chord the plan can place under the requested key's mode. There is no seed: the best match is the first the Analyzer ranks.
+
+**What is reported.** The text output names the source piece, its measures and the score (`motive from Mozart 545.mid m.1
+b.1 - m.2 b.1, score 1/1`; `progression from ...`), the JSON output has `source` (grow), `motive_source` (plan) and `from`
+(a progression), and the plan JSON records it in a `source` constraint: on the motive node `m0` for a motive, on the section
+for a progression (`docs/plan-format.md`). Nothing reads the note when the plan is filled.
+
+A corpus with no passage scoring 1/2 or more, or none analyzed, exits 2 with `no passage of the corpus ... is similar to ...`
+and nothing is written. A passage that is not a MIDI or MusicXML file, or numerals the Analyzer cannot read, is a usage
+error; a directory that is not a corpus output is exit 2. Only one bar of melody is taken: for more, cut the passage into a
+file and give it to `plan --given-melody`.
+
 ## The test styles
 
 `tests/fixtures/styles/chorales.style.json` (ten chorales) and `sonatinas.style.json` (Clementi 36, Mozart 545) were made by

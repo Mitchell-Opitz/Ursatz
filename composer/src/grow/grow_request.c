@@ -226,7 +226,8 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         result = from_plan(plan_add_node(plan, phrase, PLAN_NODE_IDEA, material, GROW_MATERIAL_NAME, &idea));
     }
     if (result == GROW_OK) {
-        result = from_plan(motive_attach(plan, idea, material.start, request->motive, GROW_SOURCE_NAME, NULL, NULL));
+        result = from_plan(motive_attach_sourced(plan, idea, material.start, request->motive, GROW_SOURCE_NAME,
+                                                 request->source, NULL, NULL));
     }
     if (result == GROW_OK) {
         result = from_plan(plan_node_set_state(plan, section, PLAN_STATE_REALIZED));
