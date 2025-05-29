@@ -1534,6 +1534,81 @@ static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *rep
     return list;
 }
 
+/* ---- Themes ---- */
+
+static cJSON *string_or_null_json(const char *text) {
+    return text ? cJSON_CreateString(text) : cJSON_CreateNull();
+}
+
+/* One part of a theme: the library's name for it (null when the library gives none), its measures and length. */
+static cJSON *theme_part_json(const AnalysisThemePart *part) {
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "name", string_or_null_json(part->name)) &&
+          add(object, "measures", measures_json(part->first_measure, part->last_measure)) &&
+          add(object, "length", cJSON_CreateNumber(part->length_measures)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The phrases a theme spans: the first one's index and how many. */
+static cJSON *theme_phrases_json(const AnalysisTheme *theme) {
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "first", cJSON_CreateNumber((double)theme->first_phrase)) &&
+          add(object, "count", cJSON_CreateNumber((double)theme->phrase_count)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *theme_parts_json(const AnalysisTheme *theme) {
+    cJSON *parts = cJSON_CreateArray();
+    if (!(parts && append(parts, theme_part_json(&theme->parts[0])) && append(parts, theme_part_json(&theme->parts[1])))) {
+        cJSON_Delete(parts);
+        return NULL;
+    }
+    return parts;
+}
+
+/* One claim per theme, in the library's order, from its standard-form analysis. label is the library's form name
+   ("sentence", "period", "hybrid", "compound-period", "repeated-phrase"); beginning and ending are the library's names
+   for the two parts (null for a repeated phrase and a compound period); phrases are the phrases it spans (first index
+   and count); measures run from its first measure to the last of its last phrase proper (an extension is not part of
+   it); parts are the two halves in order, subphrases of a one-phrase theme or phrases of a two-phrase one. */
+static cJSON *themes_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_form_framework());
+    for (size_t i = 0; i < report->theme_count; i++) {
+        const AnalysisTheme *theme = &report->themes[i];
+        Rational start = rational_make(theme->start_numerator, theme->start_denominator);
+        Rational end = rational_make(theme->end_numerator, theme->end_denominator);
+        cJSON *claim = claim_json_with(framework, notes, theme->note_ids, theme->note_id_count, start, end,
+                                       theme->form, cJSON_CreateNumber(theme->uncertainty));
+        if (!(claim && add(claim, "index", cJSON_CreateNumber(theme->index)) &&
+              add(claim, "beginning", string_or_null_json(theme->beginning)) &&
+              add(claim, "ending", string_or_null_json(theme->ending)) &&
+              add(claim, "phrases", theme_phrases_json(theme)) &&
+              add(claim, "measures", measures_json(theme->first_measure, theme->last_measure)) &&
+              add(claim, "length", cJSON_CreateNumber(theme->length_measures)) &&
+              add(claim, "parts_are_phrases", cJSON_CreateBool(theme->parts_are_phrases)) &&
+              add(claim, "parts", theme_parts_json(theme)))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* ---- Progressions ---- */
 
 /* The pattern as a JSON array of its base numerals. */
@@ -2067,7 +2142,8 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cadences_json(notes, report)) &&
-          add(document, "phrases", phrases_json(notes, report)) && add(document, "form", cJSON_CreateNull()) &&
+          add(document, "phrases", phrases_json(notes, report)) &&
+          add(document, "themes", themes_json(notes, report)) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&

@@ -83,6 +83,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/phrase_claim" }
     },
+    "themes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/theme_claim" }
+    },
     "form": {
       "type": ["object", "null"]
     },
@@ -412,6 +416,47 @@
           }
         }
       ]
+    },
+    "theme_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "beginning", "ending", "phrases", "measures", "length", "parts_are_phrases", "parts"],
+          "properties": {
+            "label": { "enum": ["sentence", "period", "hybrid", "compound-period", "repeated-phrase"] },
+            "index": { "type": "integer", "minimum": 0 },
+            "beginning": { "type": ["string", "null"] },
+            "ending": { "type": ["string", "null"] },
+            "phrases": {
+              "type": "object",
+              "required": ["first", "count"],
+              "properties": {
+                "first": { "type": "integer", "minimum": 0 },
+                "count": { "enum": [1, 2] }
+              }
+            },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "length": { "type": "integer", "minimum": 0 },
+            "parts_are_phrases": { "type": "boolean" },
+            "parts": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "$ref": "#/$defs/theme_part" }
+            }
+          }
+        }
+      ]
+    },
+    "theme_part": {
+      "type": "object",
+      "required": ["name", "measures", "length"],
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "length": { "type": "integer", "minimum": 0 }
+      }
     },
     "idea_claim": {
       "allOf": [

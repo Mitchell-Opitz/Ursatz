@@ -89,6 +89,10 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->subphrases[i].note_ids);
     }
     free(report->subphrases);
+    for (size_t i = 0; i < report->theme_count; i++) {
+        free(report->themes[i].note_ids);
+    }
+    free(report->themes);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -113,6 +117,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->idea_count = 0;
     report->subphrases = NULL;
     report->subphrase_count = 0;
+    report->themes = NULL;
+    report->theme_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

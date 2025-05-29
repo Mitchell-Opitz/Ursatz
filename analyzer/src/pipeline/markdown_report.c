@@ -1083,6 +1083,44 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
     return ok && sb_append(sb, "\n");
 }
 
+/* The parts of a theme as "presentation (mm. 1 to 4), continuation (mm. 5 to 8)"; a part the library does not name is
+   "part". */
+static bool append_theme_parts(StringBuilder *sb, const cJSON *theme) {
+    const cJSON *parts = cJSON_GetObjectItemCaseSensitive(theme, "parts");
+    const cJSON *part;
+    bool ok = true;
+    cJSON_ArrayForEach(part, parts) {
+        const cJSON *name = cJSON_GetObjectItemCaseSensitive(part, "name");
+        ok = ok && sb_appendf(sb, "%s%s (", part == parts->child ? "" : ", ",
+                              cJSON_IsString(name) ? name->valuestring : "part") &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(part, "measures")) && sb_append(sb, ")");
+    }
+    return ok;
+}
+
+static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON *themes) {
+    (void)document;
+    int count = cJSON_GetArraySize(themes);
+    bool ok = sb_append(sb, "## Themes\n\n") &&
+              sb_appendf(sb,
+                         "The library's standard-form analysis found %d %s from the phrases, their ideas and the "
+                         "cadences. Form is the library's name for the pairing of the two parts.\n\n",
+                         count, count == 1 ? "theme" : "themes") &&
+              sb_append(sb, "| Theme | Form | Measures | Length | Parts |\n"
+                            "| --- | --- | --- | --- | --- |\n");
+    const cJSON *theme;
+    cJSON_ArrayForEach(theme, themes) {
+        if (!ok) {
+            break;
+        }
+        ok = sb_appendf(sb, "| %d | %s | ", (int)number_member(theme, "index") + 1, string_member(theme, "label")) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(theme, "measures")) &&
+             sb_appendf(sb, " | %d | ", (int)number_member(theme, "length")) && append_theme_parts(sb, theme) &&
+             sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static int chord_start_measure(const cJSON *document, const cJSON *index) {
     if (!cJSON_IsNumber(index)) {
         return -1;
@@ -1232,6 +1270,7 @@ static const struct {
     {"non_chord_tones", render_non_chord_tones},
     {"cadences", render_cadences},
     {"phrases", render_phrases},
+    {"themes", render_themes},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
 };

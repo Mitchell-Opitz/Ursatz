@@ -313,6 +313,41 @@ typedef struct {
     double uncertainty;
 } AnalysisSubphrase;
 
+/* One part of a theme: a subphrase of a one-phrase theme (presentation and continuation) or a phrase of a two-phrase
+   one (antecedent and consequent). Measures are the library's. */
+typedef struct {
+    const char *name;      /* the library's PhraseBeginning or PhraseEnding name; NULL for the parts of a repeated
+                              phrase or a compound period, which the library does not name */
+    int first_measure;
+    int last_measure;
+    int length_measures;
+} AnalysisThemePart;
+
+/* One theme from the library's standard-form analysis (analysis/analysis_theme.h), in the library's order (a compound
+   period after its two sentences). The span runs from the first measure to the end of the last, an extension after
+   the last phrase's cadence not included. */
+typedef struct {
+    int index;               /* the library's, within the piece */
+    const char *form;        /* the library's PhraseLevelForm name: "sentence", "period", "hybrid", "compound-period",
+                                "repeated-phrase" */
+    const char *beginning;   /* the library's PhraseBeginning name; NULL for a repeated phrase or a compound period */
+    const char *ending;      /* the library's PhraseEnding name; NULL likewise */
+    size_t first_phrase;     /* the phrases it spans: phrases[first_phrase .. + phrase_count) */
+    size_t phrase_count;     /* 1 or 2 */
+    long start_numerator;    /* whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;
+    int last_measure;
+    int length_measures;
+    bool parts_are_phrases;  /* the parts are phrases, not subphrases */
+    AnalysisThemePart parts[2];
+    size_t *note_ids;        /* owned; ImportedNotes indices of the soprano notes in the span */
+    size_t note_id_count;
+    double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisTheme;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -342,13 +377,15 @@ typedef struct {
     size_t idea_count;
     AnalysisSubphrase *subphrases; /* owned; phrase by phrase */
     size_t subphrase_count;
+    AnalysisTheme *themes; /* owned; the library's themes, in its order; empty when it found none */
+    size_t theme_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions, the harmonic rhythm, the phrases, ideas and subphrases. */
+   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases and themes. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
