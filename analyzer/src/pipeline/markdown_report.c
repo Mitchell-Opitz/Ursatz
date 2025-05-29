@@ -1083,9 +1083,9 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
     return ok && sb_append(sb, "\n");
 }
 
-/* The parts of a theme as "presentation (mm. 1 to 4), continuation (mm. 5 to 8)"; a part the library does not name is
-   "part". */
-static bool append_theme_parts(StringBuilder *sb, const cJSON *theme) {
+/* The parts of a theme as "presentation (mm. 1 to 4), continuation (mm. 5 to 8, perfect-authentic (m. 8, beat 1))": a
+   part's measures, then the cadence that ends it when it has one. A part the library does not name is "part". */
+static bool append_theme_parts(StringBuilder *sb, const cJSON *document, const cJSON *theme) {
     const cJSON *parts = cJSON_GetObjectItemCaseSensitive(theme, "parts");
     const cJSON *part;
     bool ok = true;
@@ -1093,13 +1093,16 @@ static bool append_theme_parts(StringBuilder *sb, const cJSON *theme) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(part, "name");
         ok = ok && sb_appendf(sb, "%s%s (", part == parts->child ? "" : ", ",
                               cJSON_IsString(name) ? name->valuestring : "part") &&
-             append_measures(sb, cJSON_GetObjectItemCaseSensitive(part, "measures")) && sb_append(sb, ")");
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(part, "measures"));
+        if (ok && cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(part, "cadence"))) {
+            ok = sb_append(sb, ", ") && append_phrase_cadence(sb, document, part);
+        }
+        ok = ok && sb_append(sb, ")");
     }
     return ok;
 }
 
 static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON *themes) {
-    (void)document;
     int count = cJSON_GetArraySize(themes);
     bool ok = sb_append(sb, "## Themes\n\n") &&
               sb_appendf(sb,
@@ -1115,7 +1118,7 @@ static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON 
         }
         ok = sb_appendf(sb, "| %d | %s | ", (int)number_member(theme, "index") + 1, string_member(theme, "label")) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(theme, "measures")) &&
-             sb_appendf(sb, " | %d | ", (int)number_member(theme, "length")) && append_theme_parts(sb, theme) &&
+             sb_appendf(sb, " | %d | ", (int)number_member(theme, "length")) && append_theme_parts(sb, document, theme) &&
              sb_append(sb, " |\n");
     }
     return ok && sb_append(sb, "\n");

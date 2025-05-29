@@ -1540,12 +1540,15 @@ static cJSON *string_or_null_json(const char *text) {
     return text ? cJSON_CreateString(text) : cJSON_CreateNull();
 }
 
-/* One part of a theme: the library's name for it (null when the library gives none), its measures and length. */
+/* One part of a theme: the library's name for it (null when the library gives none), its measures and length, and the
+   index into "cadences" of the cadence that ends it (null with none: a presentation or the first half of a
+   two-phrase theme can end on none). */
 static cJSON *theme_part_json(const AnalysisThemePart *part) {
     cJSON *object = cJSON_CreateObject();
     if (!(object && add(object, "name", string_or_null_json(part->name)) &&
           add(object, "measures", measures_json(part->first_measure, part->last_measure)) &&
-          add(object, "length", cJSON_CreateNumber(part->length_measures)))) {
+          add(object, "length", cJSON_CreateNumber(part->length_measures)) &&
+          add(object, "cadence", part->has_cadence ? cJSON_CreateNumber((double)part->cadence) : cJSON_CreateNull()))) {
         cJSON_Delete(object);
         return NULL;
     }

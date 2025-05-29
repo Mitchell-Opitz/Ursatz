@@ -348,11 +348,14 @@ static size_t *note_ids_between(const FormStage *stage, long start_numerator, un
     return ids;
 }
 
-static void fill_part(AnalysisThemePart *part, const char *name, int first, int last, int length) {
+static void fill_part(AnalysisThemePart *part, const char *name, int first, int last, int length,
+                      const AnalysisPhrase *phrase) {
     part->name = name;
     part->first_measure = first;
     part->last_measure = last;
     part->length_measures = length;
+    part->has_cadence = phrase && phrase->has_cadence;
+    part->cadence = part->has_cadence ? phrase->cadence : 0;
 }
 
 static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
@@ -384,10 +387,14 @@ static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
         theme->length_measures = claim->length_measures;
         theme->parts_are_phrases = claim->parts_are_phrases != 0;
         theme->uncertainty = found->uncertainty;
+        /* The parts of a two-phrase theme are its phrases, each with its own cadence. The beginning of a one-phrase
+           theme is a subphrase with no cadence; its ending is the phrase's end, with the phrase's cadence. */
+        const AnalysisPhrase *first_phrase = &report->phrases[theme->first_phrase];
+        const AnalysisPhrase *second_phrase = &report->phrases[theme->first_phrase + theme->phrase_count - 1];
         fill_part(&theme->parts[0], theme->beginning, claim->first_part_first_measure, claim->first_part_last_measure,
-                  claim->first_part_length);
+                  claim->first_part_length, theme->phrase_count == 2 ? first_phrase : NULL);
         fill_part(&theme->parts[1], theme->ending, claim->second_part_first_measure, claim->second_part_last_measure,
-                  claim->second_part_length);
+                  claim->second_part_length, second_phrase);
         if (!theme->form || !measures_span(stage->input.map, claim->first_measure, claim->last_measure,
                                            &theme->start_numerator, &theme->start_denominator, &theme->end_numerator,
                                            &theme->end_denominator)) {
@@ -395,16 +402,15 @@ static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
         }
         /* A theme lies inside its phrases: the pickup lies before the first barline and the extension after the last
            phrase's cadence is not part of it. */
-        const AnalysisPhrase *first = &report->phrases[theme->first_phrase];
-        const AnalysisPhrase *last = &report->phrases[theme->first_phrase + theme->phrase_count - 1];
-        if (rational_less(theme->start_numerator, theme->start_denominator, first->start_numerator,
-                          first->start_denominator)) {
-            theme->start_numerator = first->start_numerator;
-            theme->start_denominator = first->start_denominator;
+        if (rational_less(theme->start_numerator, theme->start_denominator, first_phrase->start_numerator,
+                          first_phrase->start_denominator)) {
+            theme->start_numerator = first_phrase->start_numerator;
+            theme->start_denominator = first_phrase->start_denominator;
         }
-        if (rational_less(last->end_numerator, last->end_denominator, theme->end_numerator, theme->end_denominator)) {
-            theme->end_numerator = last->end_numerator;
-            theme->end_denominator = last->end_denominator;
+        if (rational_less(second_phrase->end_numerator, second_phrase->end_denominator, theme->end_numerator,
+                          theme->end_denominator)) {
+            theme->end_numerator = second_phrase->end_numerator;
+            theme->end_denominator = second_phrase->end_denominator;
         }
         theme->note_ids = note_ids_between(stage, theme->start_numerator, theme->start_denominator,
                                            theme->end_numerator, theme->end_denominator, &theme->note_id_count);

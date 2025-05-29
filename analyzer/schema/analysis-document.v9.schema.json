@@ -451,11 +451,12 @@
     },
     "theme_part": {
       "type": "object",
-      "required": ["name", "measures", "length"],
+      "required": ["name", "measures", "length", "cadence"],
       "properties": {
         "name": { "type": ["string", "null"] },
         "measures": { "$ref": "#/$defs/phrase_measures" },
-        "length": { "type": "integer", "minimum": 0 }
+        "length": { "type": "integer", "minimum": 0 },
+        "cadence": { "type": ["integer", "null"], "minimum": 0 }
       }
     },
     "idea_claim": {

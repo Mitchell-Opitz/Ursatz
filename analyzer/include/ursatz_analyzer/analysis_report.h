@@ -321,6 +321,9 @@ typedef struct {
     int first_measure;
     int last_measure;
     int length_measures;
+    bool has_cadence;      /* the part ends with a cadence: its phrase's (a presentation, a compound basic idea and
+                              the first half of a two-phrase theme can have none) */
+    size_t cadence;        /* index into cadences; valid only when has_cadence */
 } AnalysisThemePart;
 
 /* One theme from the library's standard-form analysis (analysis/analysis_theme.h), in the library's order (a compound
