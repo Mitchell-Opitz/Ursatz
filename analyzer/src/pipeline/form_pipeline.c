@@ -6,6 +6,7 @@
 
 #include "harmony_cadence_rules.h"
 #include "pipeline/form_boundary.h"
+#include "continuation_trait.h"
 #include "hybrid_rules.h"
 #include "idea_label.h"
 #include "phrase_beginning.h"
@@ -406,6 +407,13 @@ static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
                                  ? standard_form_commonality_name((StandardFormCommonality)claim->commonality)
                                  : NULL;
         theme->part_of_compound = claim->part_of_compound != 0;
+        theme->archetypal = claim->archetypal != 0;
+        theme->cadences_usual = claim->cadences_usual != 0;
+        theme->lengths_usual = claim->lengths_usual != 0;
+        /* The claim names one trait of a continuation: fragmentation. */
+        if (claim->has_fragmentation) {
+            theme->traits[theme->trait_count++] = continuation_trait_name(CONTINUATION_TRAIT_FRAGMENTATION);
+        }
         theme->uncertainty = found->uncertainty;
         /* The parts of a two-phrase theme are its phrases, each with its own cadence. The beginning of a one-phrase
            theme is a subphrase with no cadence; its ending is the phrase's end, with the phrase's cadence. */

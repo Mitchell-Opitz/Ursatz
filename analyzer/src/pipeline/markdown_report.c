@@ -1102,16 +1102,31 @@ static bool append_theme_parts(StringBuilder *sb, const cJSON *document, const c
     return ok;
 }
 
+/* The continuation traits as "fragmentation", or "-" with none. */
+static bool append_theme_traits(StringBuilder *sb, const cJSON *theme) {
+    const cJSON *traits = cJSON_GetObjectItemCaseSensitive(theme, "traits");
+    if (cJSON_GetArraySize(traits) == 0) {
+        return sb_append(sb, "-");
+    }
+    const cJSON *trait;
+    bool ok = true;
+    cJSON_ArrayForEach(trait, traits) {
+        ok = ok && sb_appendf(sb, "%s%s", trait == traits->child ? "" : ", ",
+                              cJSON_IsString(trait) ? trait->valuestring : "");
+    }
+    return ok;
+}
+
 static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON *themes) {
     int count = cJSON_GetArraySize(themes);
     bool ok = sb_append(sb, "## Themes\n\n") &&
               sb_appendf(sb,
                          "The library's standard-form analysis found %d %s from the phrases, their ideas and the "
                          "cadences. Form is the library's name for the pairing of the two parts; Commonality is how "
-                         "common that pairing is.\n\n",
+                         "common that pairing is; Traits are what the library finds in the continuation.\n\n",
                          count, count == 1 ? "theme" : "themes") &&
-              sb_append(sb, "| Theme | Form | Commonality | Measures | Length | Parts |\n"
-                            "| --- | --- | --- | --- | --- | --- |\n");
+              sb_append(sb, "| Theme | Form | Commonality | Measures | Length | Parts | Traits |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
     const cJSON *theme;
     cJSON_ArrayForEach(theme, themes) {
         if (!ok) {
@@ -1122,7 +1137,7 @@ static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON 
                         cJSON_IsString(commonality) ? commonality->valuestring : "-") &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(theme, "measures")) &&
              sb_appendf(sb, " | %d | ", (int)number_member(theme, "length")) && append_theme_parts(sb, document, theme) &&
-             sb_append(sb, " |\n");
+             sb_append(sb, " | ") && append_theme_traits(sb, theme) && sb_append(sb, " |\n");
     }
     ok = ok && sb_append(sb, "\n");
     bool any_compound = false;

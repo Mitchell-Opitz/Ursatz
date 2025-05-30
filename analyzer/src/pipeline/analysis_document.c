@@ -1575,6 +1575,18 @@ static cJSON *theme_parts_json(const AnalysisTheme *theme) {
     return parts;
 }
 
+/* The continuation traits the library's claim gives, as their names. */
+static cJSON *theme_traits_json(const AnalysisTheme *theme) {
+    cJSON *traits = cJSON_CreateArray();
+    for (size_t n = 0; traits && n < theme->trait_count; n++) {
+        if (!append(traits, cJSON_CreateString(theme->traits[n]))) {
+            cJSON_Delete(traits);
+            return NULL;
+        }
+    }
+    return traits;
+}
+
 /* The two themes that make up a compound period, as indices into "themes". */
 static cJSON *theme_halves_json(const AnalysisTheme *theme) {
     cJSON *halves = cJSON_CreateArray();
@@ -1593,7 +1605,9 @@ static cJSON *theme_halves_json(const AnalysisTheme *theme) {
    it); parts are the two parts in order, subphrases of a one-phrase theme or phrases of a two-phrase one.
    commonality is the library's name for how common the pairing of the two parts is (null when it has none);
    part_of_compound is true for a sentence that is a half of a compound period; halves (a compound period only) are the
-   indices into "themes" of its two sentences. */
+   indices into "themes" of its two sentences. traits are the library's names for what its claim finds in the
+   continuation ("fragmentation"; the claim gives no other); archetypal, cadences_usual and lengths_usual are the
+   claim's own judgements of the pairing. */
 static cJSON *themes_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -1615,6 +1629,10 @@ static cJSON *themes_json(const ImportedNotes *notes, const AnalysisReport *repo
               add(claim, "parts_are_phrases", cJSON_CreateBool(theme->parts_are_phrases)) &&
               add(claim, "commonality", string_or_null_json(theme->commonality)) &&
               add(claim, "part_of_compound", cJSON_CreateBool(theme->part_of_compound)) &&
+              add(claim, "traits", theme_traits_json(theme)) &&
+              add(claim, "archetypal", cJSON_CreateBool(theme->archetypal)) &&
+              add(claim, "cadences_usual", cJSON_CreateBool(theme->cadences_usual)) &&
+              add(claim, "lengths_usual", cJSON_CreateBool(theme->lengths_usual)) &&
               add(claim, "parts", theme_parts_json(theme)) &&
               (!theme->has_halves || add(claim, "halves", theme_halves_json(theme))))) {
             cJSON_Delete(claim);

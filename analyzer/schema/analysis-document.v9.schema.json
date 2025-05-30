@@ -423,7 +423,8 @@
         {
           "type": "object",
           "required": ["index", "beginning", "ending", "phrases", "measures", "length", "parts_are_phrases",
-                       "commonality", "part_of_compound", "parts"],
+                       "commonality", "part_of_compound", "traits", "archetypal", "cadences_usual", "lengths_usual",
+                       "parts"],
           "properties": {
             "label": { "enum": ["sentence", "period", "hybrid", "compound-period", "repeated-phrase"] },
             "index": { "type": "integer", "minimum": 0 },
@@ -442,6 +443,13 @@
             "parts_are_phrases": { "type": "boolean" },
             "commonality": { "enum": ["very-common", "slightly-less-common", "occasional", "rare", null] },
             "part_of_compound": { "type": "boolean" },
+            "traits": {
+              "type": "array",
+              "items": { "enum": ["fragmentation", "increased-rhythmic-activity", "sequence", "increased-harmonic-rhythm"] }
+            },
+            "archetypal": { "type": "boolean" },
+            "cadences_usual": { "type": "boolean" },
+            "lengths_usual": { "type": "boolean" },
             "halves": {
               "type": "array",
               "minItems": 2,

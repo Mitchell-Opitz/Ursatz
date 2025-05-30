@@ -326,6 +326,8 @@ typedef struct {
     size_t cadence;        /* index into cadences; valid only when has_cadence */
 } AnalysisThemePart;
 
+#define ANALYSIS_THEME_MAX_TRAITS 4
+
 /* One theme from the library's standard-form analysis (analysis/analysis_theme.h), in the library's order (a compound
    period after its two sentences). The span runs from the first measure to the end of the last, an extension after
    the last phrase's cadence not included. */
@@ -348,6 +350,16 @@ typedef struct {
     const char *commonality; /* the library's StandardFormCommonality name of the pairing of the two parts ("very-common",
                                 "slightly-less-common", "occasional", "rare"); NULL when the pairing has none */
     bool part_of_compound;   /* a sentence that is one half of a compound period */
+    const char *traits[ANALYSIS_THEME_MAX_TRAITS]; /* the library's ContinuationTrait names the theme's continuation
+                                shows: "fragmentation" is all its claim gives (acceleration, sequence and harmonic
+                                rhythm are not in the claim) */
+    size_t trait_count;
+    bool archetypal;         /* the library's claim: a sentence of 4 or 8 measures whose continuation balances the
+                                presentation and has fragmentation */
+    bool cadences_usual;     /* the library's claim: a period's antecedent half cadence and consequent perfect authentic
+                                cadence; a sentence's cadence is a goal */
+    bool lengths_usual;      /* the library's claim: a four-measure presentation or antecedent, and an ending at least as
+                                long */
     bool has_halves;         /* a compound period: its two halves are themes */
     size_t halves[2];        /* indices into themes of the two sentences; valid only when has_halves */
     AnalysisThemePart parts[2];
