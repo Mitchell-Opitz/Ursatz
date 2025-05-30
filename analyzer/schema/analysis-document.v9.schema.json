@@ -422,7 +422,8 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "beginning", "ending", "phrases", "measures", "length", "parts_are_phrases", "parts"],
+          "required": ["index", "beginning", "ending", "phrases", "measures", "length", "parts_are_phrases",
+                       "commonality", "part_of_compound", "parts"],
           "properties": {
             "label": { "enum": ["sentence", "period", "hybrid", "compound-period", "repeated-phrase"] },
             "index": { "type": "integer", "minimum": 0 },
@@ -439,6 +440,14 @@
             "measures": { "$ref": "#/$defs/phrase_measures" },
             "length": { "type": "integer", "minimum": 0 },
             "parts_are_phrases": { "type": "boolean" },
+            "commonality": { "enum": ["very-common", "slightly-less-common", "occasional", "rare", null] },
+            "part_of_compound": { "type": "boolean" },
+            "halves": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "integer", "minimum": 0 }
+            },
             "parts": {
               "type": "array",
               "minItems": 2,

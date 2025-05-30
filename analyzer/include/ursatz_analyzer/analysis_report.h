@@ -345,6 +345,11 @@ typedef struct {
     int last_measure;
     int length_measures;
     bool parts_are_phrases;  /* the parts are phrases, not subphrases */
+    const char *commonality; /* the library's StandardFormCommonality name of the pairing of the two parts ("very-common",
+                                "slightly-less-common", "occasional", "rare"); NULL when the pairing has none */
+    bool part_of_compound;   /* a sentence that is one half of a compound period */
+    bool has_halves;         /* a compound period: its two halves are themes */
+    size_t halves[2];        /* indices into themes of the two sentences; valid only when has_halves */
     AnalysisThemePart parts[2];
     size_t *note_ids;        /* owned; ImportedNotes indices of the soprano notes in the span */
     size_t note_id_count;

@@ -6,6 +6,7 @@
 
 #include "harmony_cadence_rules.h"
 #include "pipeline/form_boundary.h"
+#include "hybrid_rules.h"
 #include "idea_label.h"
 #include "phrase_beginning.h"
 #include "phrase_ending.h"
@@ -358,6 +359,21 @@ static void fill_part(AnalysisThemePart *part, const char *name, int first, int 
     part->cadence = part->has_cadence ? phrase->cadence : 0;
 }
 
+/* A compound period's halves are the two sentences the library marks part_of_compound over its two phrases. */
+static void find_compound_halves(const FormStage *stage, AnalysisReport *report, size_t compound) {
+    AnalysisTheme *theme = &report->themes[compound];
+    size_t found = 0;
+    for (size_t j = 0; j < report->theme_count && found < 2; j++) {
+        const StandardFormThemeClaim *claim = &stage->themes.items[j].claim;
+        if (j != compound && claim->part_of_compound && claim->phrase_count == 1 &&
+            (size_t)claim->first_phrase >= theme->first_phrase &&
+            (size_t)claim->first_phrase < theme->first_phrase + theme->phrase_count) {
+            theme->halves[found++] = j;
+        }
+    }
+    theme->has_halves = found == 2;
+}
+
 static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
     size_t count = stage->themes.count;
     if (count == 0) {
@@ -386,6 +402,10 @@ static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
         theme->last_measure = claim->last_measure;
         theme->length_measures = claim->length_measures;
         theme->parts_are_phrases = claim->parts_are_phrases != 0;
+        theme->commonality = claim->commonality >= 0
+                                 ? standard_form_commonality_name((StandardFormCommonality)claim->commonality)
+                                 : NULL;
+        theme->part_of_compound = claim->part_of_compound != 0;
         theme->uncertainty = found->uncertainty;
         /* The parts of a two-phrase theme are its phrases, each with its own cadence. The beginning of a one-phrase
            theme is a subphrase with no cadence; its ending is the phrase's end, with the phrase's cadence. */
@@ -414,6 +434,11 @@ static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
         }
         theme->note_ids = note_ids_between(stage, theme->start_numerator, theme->start_denominator,
                                            theme->end_numerator, theme->end_denominator, &theme->note_id_count);
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (stage->themes.items[i].claim.form == PHRASE_LEVEL_FORM_COMPOUND_PERIOD) {
+            find_compound_halves(stage, report, i);
+        }
     }
     return true;
 }

@@ -1107,21 +1107,36 @@ static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON 
     bool ok = sb_append(sb, "## Themes\n\n") &&
               sb_appendf(sb,
                          "The library's standard-form analysis found %d %s from the phrases, their ideas and the "
-                         "cadences. Form is the library's name for the pairing of the two parts.\n\n",
+                         "cadences. Form is the library's name for the pairing of the two parts; Commonality is how "
+                         "common that pairing is.\n\n",
                          count, count == 1 ? "theme" : "themes") &&
-              sb_append(sb, "| Theme | Form | Measures | Length | Parts |\n"
-                            "| --- | --- | --- | --- | --- |\n");
+              sb_append(sb, "| Theme | Form | Commonality | Measures | Length | Parts |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
     const cJSON *theme;
     cJSON_ArrayForEach(theme, themes) {
         if (!ok) {
             break;
         }
-        ok = sb_appendf(sb, "| %d | %s | ", (int)number_member(theme, "index") + 1, string_member(theme, "label")) &&
+        const cJSON *commonality = cJSON_GetObjectItemCaseSensitive(theme, "commonality");
+        ok = sb_appendf(sb, "| %d | %s | %s | ", (int)number_member(theme, "index") + 1, string_member(theme, "label"),
+                        cJSON_IsString(commonality) ? commonality->valuestring : "-") &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(theme, "measures")) &&
              sb_appendf(sb, " | %d | ", (int)number_member(theme, "length")) && append_theme_parts(sb, document, theme) &&
              sb_append(sb, " |\n");
     }
-    return ok && sb_append(sb, "\n");
+    ok = ok && sb_append(sb, "\n");
+    bool any_compound = false;
+    cJSON_ArrayForEach(theme, themes) {
+        const cJSON *halves = cJSON_GetObjectItemCaseSensitive(theme, "halves");
+        if (ok && cJSON_GetArraySize(halves) == 2) {
+            any_compound = true;
+            ok = sb_appendf(sb, "- **Theme %d** is a compound period of themes %d and %d.\n",
+                            (int)number_member(theme, "index") + 1,
+                            (int)cJSON_GetArrayItem(halves, 0)->valuedouble + 1,
+                            (int)cJSON_GetArrayItem(halves, 1)->valuedouble + 1);
+        }
+    }
+    return ok && (!any_compound || sb_append(sb, "\n"));
 }
 
 static int chord_start_measure(const cJSON *document, const cJSON *index) {

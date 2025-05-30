@@ -1575,11 +1575,25 @@ static cJSON *theme_parts_json(const AnalysisTheme *theme) {
     return parts;
 }
 
+/* The two themes that make up a compound period, as indices into "themes". */
+static cJSON *theme_halves_json(const AnalysisTheme *theme) {
+    cJSON *halves = cJSON_CreateArray();
+    if (!(halves && append(halves, cJSON_CreateNumber((double)theme->halves[0])) &&
+          append(halves, cJSON_CreateNumber((double)theme->halves[1])))) {
+        cJSON_Delete(halves);
+        return NULL;
+    }
+    return halves;
+}
+
 /* One claim per theme, in the library's order, from its standard-form analysis. label is the library's form name
    ("sentence", "period", "hybrid", "compound-period", "repeated-phrase"); beginning and ending are the library's names
    for the two parts (null for a repeated phrase and a compound period); phrases are the phrases it spans (first index
    and count); measures run from its first measure to the last of its last phrase proper (an extension is not part of
-   it); parts are the two halves in order, subphrases of a one-phrase theme or phrases of a two-phrase one. */
+   it); parts are the two parts in order, subphrases of a one-phrase theme or phrases of a two-phrase one.
+   commonality is the library's name for how common the pairing of the two parts is (null when it has none);
+   part_of_compound is true for a sentence that is a half of a compound period; halves (a compound period only) are the
+   indices into "themes" of its two sentences. */
 static cJSON *themes_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -1599,7 +1613,10 @@ static cJSON *themes_json(const ImportedNotes *notes, const AnalysisReport *repo
               add(claim, "measures", measures_json(theme->first_measure, theme->last_measure)) &&
               add(claim, "length", cJSON_CreateNumber(theme->length_measures)) &&
               add(claim, "parts_are_phrases", cJSON_CreateBool(theme->parts_are_phrases)) &&
-              add(claim, "parts", theme_parts_json(theme)))) {
+              add(claim, "commonality", string_or_null_json(theme->commonality)) &&
+              add(claim, "part_of_compound", cJSON_CreateBool(theme->part_of_compound)) &&
+              add(claim, "parts", theme_parts_json(theme)) &&
+              (!theme->has_halves || add(claim, "halves", theme_halves_json(theme))))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
