@@ -5,12 +5,14 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
 )
 
 target_include_directories(test_health_route PRIVATE
@@ -38,12 +40,14 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
 )
 
 target_include_directories(test_analyzer_route PRIVATE
@@ -81,12 +85,14 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
 )
 
 target_include_directories(test_corpus_route PRIVATE
@@ -140,12 +146,14 @@ add_executable(test_composer_route test_composer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
 )
 
 target_include_directories(test_composer_route PRIVATE
@@ -170,3 +178,46 @@ target_compile_definitions(test_composer_route PRIVATE
 
 add_test(NAME composer_route COMMAND test_composer_route
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
+
+add_executable(test_styles_route test_styles_route.c
+  ${CMAKE_SOURCE_DIR}/backend/src/server.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+)
+
+target_include_directories(test_styles_route PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/include
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_styles_route PRIVATE
+  ursatz_analyzer
+  cjson
+  ursatz
+  civetweb-c-library
+)
+
+if(WIN32)
+  target_link_libraries(test_styles_route PRIVATE ws2_32)
+endif()
+
+# The test builds styles from the reference pieces; it creates pieces/, collections/ and styles/ in its own
+# working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
+target_compile_definitions(test_styles_route PRIVATE
+  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
+)
+
+add_test(NAME styles_route COMMAND test_styles_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)

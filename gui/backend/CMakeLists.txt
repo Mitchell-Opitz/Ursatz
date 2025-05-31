@@ -6,12 +6,14 @@ add_executable(ursatz-gui-backend
   src/service/piece_metadata.c
   src/service/id_service.c
   src/service/collection_service.c
+  src/service/style_service.c
   src/service/composer_service.c
   src/service/composition_service.c
   src/routes/health.c
   src/routes/analyzer.c
   src/routes/corpus.c
   src/routes/composer.c
+  src/routes/styles.c
 )
 
 target_include_directories(ursatz-gui-backend PRIVATE

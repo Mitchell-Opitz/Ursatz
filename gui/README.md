@@ -571,6 +571,62 @@ start tries again.
 `GET /api/health/status` calls the persistence service to confirm
 `persistence_open` succeeds against a test database path, and returns JSON.
 
+### Styles routes
+
+A style is a StyleModel file built from a set of pieces through the
+Analyzer's style profile (`service/style_service.c`). The Composer reads it
+with `--style` (the GUI option for that comes later). Styles are not
+collections and not tags: they are a count of harmony, rhythm, melody and
+form labels over the pieces they were built from.
+
+- `POST /api/styles`: body `{"name"?, <source>}` with exactly one source (else
+  `400`):
+  - `"filter": {"composer"?, "source"?, "tag"?}` (the pieces that match, as the
+    Library filters them; at least one value),
+  - `"collection_id": "<id>"` (the pieces of that collection; `404` when it
+    does not exist),
+  - `"piece_ids": ["<id>",...]` (at most 5000; repeated ids count once).
+
+  Answers `{"ok":true,"style":{list entry},"skipped":[{"id","reason"}]}`.
+  `422` `{"ok":false,"message":"no analyzable pieces"}` when no piece could be
+  added; nothing is written then. `name` is normalized like piece metadata
+  values (at most 120 bytes, else `400`). When it is empty the default is
+  `Composer: X`, `Source: X`, `Tag: x` joined with ` · ` for a filter,
+  `Collection: <name>` for a collection and `Selected pieces` for ids.
+- `GET /api/styles`: `{"ok":true,"styles":[list entry,...]}`, newest update
+  first. A list entry is `{"id","name","piece_count","updated_at","source"}`,
+  where `source` is `{"kind":"filter"|"collection"|"pieces","filter":{"composer",
+  "source","tag"}|null,"collection_id":"..."|null,"piece_ids":[...]|null}`.
+- `GET /api/styles/<id>`: `{"ok":true,"style":{...}}`, the list entry plus
+  `created_at`, `pieces` (the ids used), `skipped` and `statistics`:
+  `{"<dimension>":{"<category>":{"labels":[{"label","count","total"}],"more":n}}}`
+  with dimension `harmony`, `rhythm`, `melody` or `form`, the labels of a
+  category by count descending (at most 12) and `more` the number cut.
+- `POST /api/styles/<id>/rebuild`: builds the style again from its stored
+  source over today's pieces (same id and name, files replaced in place,
+  `updated_at` set) and answers like `POST /api/styles`. `422` when no piece
+  is left or the collection is gone; the style stays as it was.
+- `DELETE /api/styles/<id>`: `{"ok":true}`.
+
+An unknown style id is `404` `{"ok":false,"message":"style not found"}` on
+every route.
+
+A piece that cannot be added is skipped with a reason and the build goes on:
+`not found` (no such piece), `re-analysis failed` or `unreadable analysis`.
+When a piece's `meta.json` `document_schema_version` is not the Analyzer's
+current one, the piece is analyzed again first (the same call as the
+re-run route), so older pieces still count. Only analysis documents are read,
+never the scores. A build runs on the request thread and one mutex serializes
+the style store.
+
+Storage: `styles/<id>/style-model.json` (written by `style_model_file_write`,
+the same bytes for the same pieces) and `styles/<id>/meta.json` (`id`, `name`,
+`created_at`, `updated_at`, `source`, `pieces`, `skipped`, `piece_count`),
+each written to a temporary file and renamed. Ids are `sty-<16 lowercase hex>`.
+A style is a snapshot: tagging, untagging or deleting a piece later changes
+it only when it is rebuilt, and a Composer plan keeps naming the file, so a
+rebuild changes what that plan's later steps use.
+
 ### Composer routes
 
 The Composer tool grows themes, plans and fills pieces, and makes variations.
@@ -779,7 +835,7 @@ it.
 
 ## Tests
 
-`ctest` runs the backend tests (health, analyzer, corpus, composer and id routes, and the piece metadata rules) and,
+`ctest` runs the backend tests (health, analyzer, corpus, styles, composer and id routes, and the piece metadata rules) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be
@@ -793,7 +849,10 @@ request bodies against `frontend/tests/fixtures/composer-plan.json`, the
 `test_analyzer_route` uploads Mozart 545 and a MusicXML score, compares the
 stored analysis with the Analyzer CLI's document for the same file, and
 covers list, detail, metadata editing, filtering and groups, rename,
-re-run and delete. `test_piece_metadata` covers the normalizing, grouping and
+re-run and delete. `test_styles_route` uploads Clementi 36 and Mozart 545,
+tags them and builds styles from a tag, a collection and ids, then reads the
+model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
+`test_piece_metadata` covers the normalizing, grouping and
 filter rules without a server. `test_composer_route` runs
 the real Composer: grow, regenerate, lock, variations, choose and plan make
 versions and leave the earlier ones alone; bad requests start nothing and a
