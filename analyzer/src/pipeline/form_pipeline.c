@@ -7,6 +7,10 @@
 #include "harmony_cadence_rules.h"
 #include "pipeline/form_boundary.h"
 #include "continuation_trait.h"
+#include "expansion_placement.h"
+#include "external_expansion_kind.h"
+#include "internal_expansion_technique.h"
+#include "phrase_length_change.h"
 #include "hybrid_rules.h"
 #include "idea_label.h"
 #include "phrase_beginning.h"
@@ -159,6 +163,11 @@ bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmenta
         return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
     }
     status = standard_form_identify_themes(&stage->input, &stage->phrases, &stage->segmentation, NULL, &stage->themes);
+    if (status != STANDARD_FORM_ANALYSIS_OK) {
+        return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    status = standard_form_detect_expansions(&stage->input, &stage->phrases, &stage->segmentation, &stage->themes, NULL,
+                                             &stage->expansions);
     return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
 }
 
@@ -451,6 +460,69 @@ static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
     return true;
 }
 
+static void fill_techniques(AnalysisExpansion *expansion, int mask) {
+    for (int bit = 0; bit < INTERNAL_EXPANSION_TECHNIQUE_COUNT; bit++) {
+        if ((mask & (1 << bit)) && expansion->technique_count < ANALYSIS_EXPANSION_MAX_TECHNIQUES) {
+            expansion->techniques[expansion->technique_count++] =
+                internal_expansion_technique_name((InternalExpansionTechnique)bit);
+        }
+    }
+}
+
+static bool collect_expansions(const FormStage *stage, AnalysisReport *report) {
+    size_t count = stage->expansions.count;
+    if (count == 0) {
+        return true;
+    }
+    report->expansions = calloc(count, sizeof(AnalysisExpansion));
+    if (!report->expansions) {
+        return false;
+    }
+    report->expansion_count = count;
+    for (size_t i = 0; i < count; i++) {
+        const StandardFormExpansion *found = &stage->expansions.items[i];
+        const StandardFormExpansionClaim *claim = &found->claim;
+        AnalysisExpansion *expansion = &report->expansions[i];
+        if (claim->phrase < 0 || (size_t)claim->phrase >= report->phrase_count ||
+            (claim->theme >= 0 && (size_t)claim->theme >= report->theme_count)) {
+            return false;
+        }
+        expansion->index = claim->index;
+        expansion->change = phrase_length_change_name((PhraseLengthChange)claim->change);
+        expansion->kind = claim->kind == STANDARD_FORM_EXPANSION_CONTRACTION
+                              ? expansion->change
+                              : expansion_placement_name((ExpansionPlacement)claim->placement);
+        expansion->has_theme = claim->theme >= 0;
+        expansion->theme = expansion->has_theme ? (size_t)claim->theme : 0;
+        expansion->phrase = (size_t)claim->phrase;
+        expansion->expected_length = claim->expected_length;
+        expansion->actual_length = claim->actual_length;
+        expansion->measures_changed = claim->measures_changed;
+        expansion->first_measure = claim->first_measure;
+        expansion->last_measure = claim->last_measure;
+        expansion->uncertainty = found->uncertainty;
+        fill_techniques(expansion, claim->techniques);
+        if (claim->kind == STANDARD_FORM_EXPANSION_EXTERNAL) {
+            expansion->external_kind = claim->external_kind >= 0
+                                           ? external_expansion_kind_name((ExternalExpansionKind)claim->external_kind)
+                                           : NULL;
+            expansion->suffix_length_typical = claim->suffix_length_typical != 0;
+            expansion->suffix_agrees_with_location = claim->suffix_agrees_with_location != 0;
+        }
+        if (!expansion->change || !expansion->kind ||
+            !measures_span(stage->input.map, claim->first_measure, claim->last_measure, &expansion->start_numerator,
+                           &expansion->start_denominator, &expansion->end_numerator, &expansion->end_denominator)) {
+            return false;
+        }
+        clip_to_phrase(&report->phrases[expansion->phrase], &expansion->start_numerator,
+                       &expansion->start_denominator, &expansion->end_numerator, &expansion->end_denominator);
+        expansion->note_ids = note_ids_between(stage, expansion->start_numerator, expansion->start_denominator,
+                                               expansion->end_numerator, expansion->end_denominator,
+                                               &expansion->note_id_count);
+    }
+    return true;
+}
+
 bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
     size_t count = stage->phrases.count;
     if (count == 0) {
@@ -497,13 +569,15 @@ bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
         phrase->uncertainty = found->uncertainty;
         phrase->role = i == 0 ? "beginning" : (i + 1 == count ? "ending" : "middle");
     }
-    return collect_ideas(stage, report) && collect_subphrases(stage, report) && collect_themes(stage, report);
+    return collect_ideas(stage, report) && collect_subphrases(stage, report) && collect_themes(stage, report) &&
+           collect_expansions(stage, report);
 }
 
 void form_stage_destroy(FormStage *stage) {
     if (!stage) {
         return;
     }
+    standard_form_expansions_destroy(&stage->expansions);
     standard_form_themes_destroy(&stage->themes);
     standard_form_segmentation_destroy(&stage->segmentation);
     standard_form_phrases_destroy(&stage->phrases);

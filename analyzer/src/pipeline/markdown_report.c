@@ -1054,6 +1054,28 @@ static bool append_phrase_line(StringBuilder *sb, const cJSON *document, const c
     return ok && sb_append(sb, "\n");
 }
 
+/* The phrase's expansions and contractions as "internal expansion +2 (mm. 5 to 8)" or "external codetta +1 (m. 9)", each
+   with the measures it adds or removes, or "-" with none. */
+static bool append_phrase_expansions(StringBuilder *sb, const cJSON *phrase) {
+    const cJSON *expansions = cJSON_GetObjectItemCaseSensitive(phrase, "expansions");
+    if (cJSON_GetArraySize(expansions) == 0) {
+        return sb_append(sb, "-");
+    }
+    const cJSON *expansion;
+    bool ok = true;
+    cJSON_ArrayForEach(expansion, expansions) {
+        const cJSON *external = cJSON_GetObjectItemCaseSensitive(expansion, "external_kind");
+        bool contraction = strcmp(string_member(expansion, "change"), "contraction") == 0;
+        ok = ok && sb_appendf(sb, "%s%s %s%s%+d (", expansion == expansions->child ? "" : "; ",
+                              string_member(expansion, "label"), cJSON_IsString(external) ? external->valuestring : "",
+                              cJSON_IsString(external) ? " " : "",
+                              contraction ? -(int)number_member(expansion, "measures_changed")
+                                          : (int)number_member(expansion, "measures_changed")) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(expansion, "measures")) && sb_append(sb, ")");
+    }
+    return ok;
+}
+
 static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON *phrases) {
     int count = cJSON_GetArraySize(phrases);
     bool ok = sb_append(sb, "## Phrases\n\n") &&
@@ -1061,10 +1083,11 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
                          "The library's standard-form analysis found %d %s from the soprano, the meter and the "
                          "cadences. Length counts the measures of the phrase proper; Ends is what closed it: its "
                          "cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in "
-                         "the piece.\n\n",
+                         "the piece; Expansion is a lengthening or shortening of the phrase's ending, or an extension "
+                         "after its cadence, with the measures it adds or removes.\n\n",
                          count, count == 1 ? "phrase" : "phrases") &&
-              sb_append(sb, "| Phrase | Measures | Length | Cadence | Ends | Role |\n"
-                            "| --- | --- | --- | --- | --- | --- |\n");
+              sb_append(sb, "| Phrase | Measures | Length | Cadence | Ends | Role | Expansion |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
     const cJSON *phrase;
     cJSON_ArrayForEach(phrase, phrases) {
         if (!ok) {
@@ -1074,7 +1097,8 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(phrase, "measures")) &&
              sb_appendf(sb, " | %d | ", (int)number_member(phrase, "length")) &&
              append_phrase_cadence(sb, document, phrase) &&
-             sb_appendf(sb, " | %s | %s |\n", string_member(phrase, "signal"), string_member(phrase, "role"));
+             sb_appendf(sb, " | %s | %s | ", string_member(phrase, "signal"), string_member(phrase, "role")) &&
+             append_phrase_expansions(sb, phrase) && sb_append(sb, " |\n");
     }
     ok = ok && sb_append(sb, "\n");
     cJSON_ArrayForEach(phrase, phrases) {
