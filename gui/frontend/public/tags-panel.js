@@ -96,8 +96,9 @@
     }
   }
 
-  function buildRow(row, active, onSelect) {
+  function buildRow(row, active, onSelect, onBuildStyle) {
     const li = document.createElement("li");
+    li.className = "tags-panel-item";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "tags-panel-row";
@@ -113,15 +114,27 @@
     button.append(label, count);
     button.addEventListener("click", () => onSelect(row.filter));
     li.appendChild(button);
+    if (onBuildStyle) {
+      const build = document.createElement("button");
+      build.type = "button";
+      build.className = "tags-panel-build";
+      build.textContent = "♫";
+      build.title = "Build style";
+      build.setAttribute("aria-label", `Build style from ${row.label}`);
+      build.addEventListener("click", () => onBuildStyle(row, build));
+      li.appendChild(build);
+    }
     return li;
   }
 
   /* Renders the panel into el (a section holding the "Tags" label) and
    * returns {refresh(), setActive(filter)}. fetchGroups resolves to the
-   * groups route's data and rejects (or resolves null) on failure. */
+   * groups route's data and rejects (or resolves null) on failure. When
+   * onBuildStyle is given, each row also has a Build style button. */
   function mount(el, options) {
     const opts = options || {};
     const onSelect = opts.onSelect || function () {};
+    const onBuildStyle = opts.onBuildStyle || null;
     const open = readOpenState();
     const showAll = new Set();
     let body = el.querySelector(".tags-panel-body");
@@ -168,7 +181,7 @@
           const list = document.createElement("ul");
           list.className = "tags-panel-list";
           for (const row of rows) {
-            list.appendChild(buildRow(row, isActiveFilter(row.filter, active), onSelect));
+            list.appendChild(buildRow(row, isActiveFilter(row.filter, active), onSelect, onBuildStyle));
           }
           details.appendChild(list);
         }

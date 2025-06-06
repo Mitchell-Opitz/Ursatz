@@ -1815,3 +1815,68 @@ body {
   display: flex;
   gap: 0.5rem;
 }
+
+/* Build style: Tags panel row action, name prompt and result line */
+.tags-panel-item {
+  display: flex;
+  align-items: center;
+}
+
+.tags-panel-item .tags-panel-row {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.tags-panel-build {
+  flex: none;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.tags-panel-item:hover .tags-panel-build,
+.tags-panel-item:focus-within .tags-panel-build {
+  visibility: visible;
+}
+
+.style-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.style-prompt input {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.sidebar .style-prompt {
+  padding: 0 8px;
+}
+
+.style-result {
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.sidebar .style-result {
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.style-result.error {
+  color: #ff8a80;
+}
+
+.style-skipped {
+  margin-top: 0.25rem;
+  color: var(--text-dim);
+}

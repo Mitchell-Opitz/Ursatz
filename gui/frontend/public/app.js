@@ -188,6 +188,8 @@ async function renderLibraryView(filter) {
     </div>
     <div id="library-count" class="piece-list-status"></div>
     <div id="library-save-row" class="bulk-bar" hidden></div>
+    <div id="library-style-prompt"></div>
+    <div id="library-style-result" class="style-result" role="status"></div>
     <div id="library-bulk" class="bulk-bar" hidden></div>
     <section class="panel library-panel">
       <div id="library-status" class="piece-list-status">Loading pieces...</div>
@@ -399,6 +401,21 @@ function updateLibrarySaveRow() {
   button.textContent = "Save as collection";
   button.addEventListener("click", () => saveLibraryAsCollection(button));
   row.appendChild(button);
+  const styleButton = document.createElement("button");
+  styleButton.type = "button";
+  styleButton.textContent = "Build style";
+  styleButton.addEventListener("click", () =>
+    startStyleBuild({
+      source: PieceMetadata.styleSourceForFilter(
+        libraryFilter,
+        libraryShownPieces.map((piece) => piece.id),
+      ),
+      host: document.getElementById("library-style-prompt"),
+      trigger: styleButton,
+      resultEl: document.getElementById("library-style-result"),
+    }),
+  );
+  row.appendChild(styleButton);
 }
 
 /* Creates a collection named from the filter and adds every shown piece in
@@ -1661,6 +1678,11 @@ function showCorpusDetail(id, name) {
   content.innerHTML = `
     <div id="corpus-back-container"></div>
     <div id="corpus-heading" class="collection-heading"></div>
+    <div class="upload-controls">
+      <button id="corpus-build-style-button" type="button">Build style</button>
+    </div>
+    <div id="corpus-style-prompt"></div>
+    <div id="corpus-style-result" class="style-result" role="status"></div>
     <div class="filter-row">
       <input type="search" id="corpus-search" placeholder="Search" aria-label="Search" />
       <label class="filter-field">Composer <select id="corpus-filter-composer"></select></label>
@@ -1684,6 +1706,16 @@ function showCorpusDetail(id, name) {
   document.getElementById("corpus-back-container").appendChild(renderCorpusBackLink());
   loadCollectionHeading(id, name);
   document.getElementById("corpus-add-pieces-button").addEventListener("click", openCollectionPicker);
+  const buildStyleButton = document.getElementById("corpus-build-style-button");
+  buildStyleButton.addEventListener("click", () => {
+    const title = document.querySelector("#corpus-heading h1");
+    startStyleBuild({
+      source: { kind: "collection", collection_id: id, name: title ? title.textContent : name },
+      host: document.getElementById("corpus-style-prompt"),
+      trigger: buildStyleButton,
+      resultEl: document.getElementById("corpus-style-result"),
+    });
+  });
   wireCollectionFilterRow();
 
   loadCorpusPieces(id, name);
@@ -2166,11 +2198,123 @@ function openLibraryWithFilter(filter) {
   renderLibraryView(filter);
 }
 
+/* Building a style (POST /api/styles): an inline name prompt prefilled with
+ * the default name, a "Building..." state on the button, and a result line. */
+function pieceLabelById(id) {
+  const pools = [libraryFetchedPieces, collectionView ? collectionView.members : []];
+  for (const pool of pools) {
+    const hit = pool.find((piece) => piece.id === id);
+    if (hit) {
+      return hit.filename || id;
+    }
+  }
+  return id;
+}
+
+function renderStyleBuildResult(el, style, skipped) {
+  el.innerHTML = "";
+  el.classList.remove("error");
+  const text = document.createElement("span");
+  text.textContent = PieceMetadata.styleBuildText(style.piece_count, skipped.length);
+  el.appendChild(text);
+  if (skipped.length === 0) {
+    return;
+  }
+  const details = document.createElement("details");
+  details.classList.add("style-skipped");
+  const summary = document.createElement("summary");
+  summary.textContent = `${skipped.length} skipped`;
+  const list = document.createElement("ul");
+  for (const item of skipped) {
+    const li = document.createElement("li");
+    li.textContent = `${pieceLabelById(item.id)}: ${item.reason}`;
+    list.appendChild(li);
+  }
+  details.append(summary, list);
+  el.appendChild(details);
+}
+
+function openStyleNamePrompt(host, defaultName, onSubmit) {
+  host.innerHTML = "";
+  const row = document.createElement("div");
+  row.classList.add("style-prompt");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = defaultName;
+  input.setAttribute("aria-label", "Style name");
+  const build = document.createElement("button");
+  build.type = "button";
+  build.textContent = "Build";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = "Cancel";
+  row.append(input, build, cancel);
+  host.appendChild(row);
+  input.focus();
+  input.select();
+  cancel.addEventListener("click", () => {
+    host.innerHTML = "";
+  });
+  build.addEventListener("click", () => onSubmit(input.value));
+  row.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      host.innerHTML = "";
+    } else if (event.key === "Enter") {
+      build.click();
+    }
+  });
+}
+
+/* source is {kind: "filter"|"collection"|"pieces", ...} (see
+ * PieceMetadata.styleRequestBody). */
+function startStyleBuild({ source, host, trigger, resultEl }) {
+  openStyleNamePrompt(host, PieceMetadata.defaultStyleName(source), async (name) => {
+    host.innerHTML = "";
+    const label = trigger.textContent;
+    trigger.textContent = "Building...";
+    trigger.disabled = true;
+    resultEl.classList.remove("error");
+    resultEl.textContent = "";
+    const result = await postJsonResult("/api/styles", PieceMetadata.styleRequestBody(source, name));
+    trigger.textContent = label;
+    trigger.disabled = false;
+    if (result.ok && result.data && result.data.ok) {
+      renderStyleBuildResult(resultEl, result.data.style, result.data.skipped || []);
+    } else {
+      resultEl.textContent = collectionResultError(result, "Could not build the style.");
+      resultEl.classList.add("error");
+    }
+  });
+}
+
+/* Build style on a Tags panel row. Rows that are not a plain composer,
+ * source or tag value (Unassigned, Untagged) build from the matching ids. */
+async function buildStyleFromPanelRow(row, trigger) {
+  const resultEl = document.getElementById("tags-panel-style-result");
+  let source = PieceMetadata.styleSourceForFilter(row.filter, []);
+  if (source.kind === "pieces") {
+    const listed = await fetchJsonResult(`/api/analyzer/pieces?${PieceMetadata.filterQuery(row.filter)}`);
+    if (!(listed.ok && listed.data && listed.data.ok)) {
+      resultEl.textContent = collectionResultError(listed, "Could not list the pieces.");
+      resultEl.classList.add("error");
+      return;
+    }
+    source = { kind: "pieces", piece_ids: listed.data.pieces.map((piece) => piece.id) };
+  }
+  startStyleBuild({
+    source,
+    host: document.getElementById("tags-panel-style-prompt"),
+    trigger,
+    resultEl,
+  });
+}
+
 function mountTagsPanel() {
   const el = document.getElementById("tags-panel");
   tagsPanel = TagsPanel.mount(el, {
     fetchGroups: fetchTagsPanelGroups,
     onSelect: openLibraryWithFilter,
+    onBuildStyle: buildStyleFromPanelRow,
   });
   tagsPanel.refresh();
 }
