@@ -273,13 +273,31 @@
     return body;
   }
 
-  /* "Built from 12 pieces" plus ", 2 skipped" when pieces were skipped. */
-  function styleBuildText(pieceCount, skippedCount) {
-    const text = `Built from ${pieceCountText(pieceCount)}`;
+  /* "Built from 12 pieces" plus ", 2 skipped" when pieces were skipped. The
+   * verb is "Built" or, after a rebuild, "Rebuilt". */
+  function styleBuildText(pieceCount, skippedCount, verb) {
+    const text = `${verb || "Built"} from ${pieceCountText(pieceCount)}`;
     return skippedCount > 0 ? `${text}, ${skippedCount} skipped` : text;
   }
 
+  /* A style's source as the list shows it: "Tag: whimsical", "Collection:
+   * <name>" (collectionNames maps id to name; "a collection" when unknown),
+   * "Selected pieces (n)". */
+  function styleSourceText(source, collectionNames) {
+    const s = source || {};
+    if (s.kind === "filter") {
+      return defaultStyleName(s);
+    }
+    if (s.kind === "collection") {
+      const name = collectionNames && collectionNames[s.collection_id];
+      return name ? `Collection: ${name}` : "Collection (deleted)";
+    }
+    const count = Array.isArray(s.piece_ids) ? s.piece_ids.length : 0;
+    return count ? `Selected pieces (${count})` : "Selected pieces";
+  }
+
   const api = {
+    styleSourceText,
     styleSourceForFilter,
     defaultStyleName,
     styleRequestBody,

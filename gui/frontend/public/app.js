@@ -1430,6 +1430,9 @@ async function renderCorpusView() {
     <div id="corpus-create-status" class="upload-status"></div>
     <div id="corpus-list-status" class="piece-list-status">Loading collections...</div>
     <div id="corpus-grid" class="collections-grid"></div>
+    <h2 class="section-title">Styles</h2>
+    <div id="styles-status" class="piece-list-status" role="status"></div>
+    <section id="styles-section" class="panel library-panel" hidden></section>
   `;
 
   document.getElementById("corpus-create-button").addEventListener("click", handleCreateCorpus);
@@ -1441,6 +1444,8 @@ async function renderCorpusView() {
 
   const statusEl = document.getElementById("corpus-list-status");
   const gridEl = document.getElementById("corpus-grid");
+
+  loadStylesSection();
 
   try {
     const res = await fetch("/api/corpus");
@@ -2196,6 +2201,108 @@ function openLibraryWithFilter(filter) {
   leaveWorkspace();
   setActiveTool("library");
   renderLibraryView(filter);
+}
+
+/* The Styles section of the Collections view: name, source, piece count and
+ * updated date with Rebuild and Delete. */
+function setStylesStatus(text, isError) {
+  const statusEl = document.getElementById("styles-status");
+  if (statusEl) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle("error", Boolean(isError));
+  }
+}
+
+async function loadStylesSection() {
+  const section = document.getElementById("styles-section");
+  setStylesStatus("Loading styles...", false);
+  const [styles, collections] = await Promise.all([fetchJsonResult("/api/styles"), fetchJsonResult("/api/corpus")]);
+  if (document.getElementById("styles-section") !== section) {
+    return;
+  }
+  if (!(styles.ok && styles.data && styles.data.ok)) {
+    setStylesStatus(`Failed to load styles: ${collectionResultError(styles, "unknown error")}`, true);
+    return;
+  }
+  const names = {};
+  if (collections.ok && collections.data && collections.data.ok) {
+    for (const corpus of collections.data.corpora) {
+      names[corpus.id] = corpus.name;
+    }
+  }
+  const list = styles.data.styles || [];
+  section.innerHTML = "";
+  section.hidden = list.length === 0;
+  setStylesStatus(list.length === 0 ? "No styles yet. Build one from the Library, a tag or a collection." : "", false);
+  if (list.length === 0) {
+    return;
+  }
+  const table = document.createElement("table");
+  table.classList.add("library-table");
+  const head = document.createElement("tr");
+  for (const title of ["Name", "Source", "Pieces", "Updated", "Actions"]) {
+    const th = document.createElement("th");
+    th.textContent = title;
+    head.appendChild(th);
+  }
+  const thead = document.createElement("thead");
+  thead.appendChild(head);
+  const tbody = document.createElement("tbody");
+  for (const style of list) {
+    tbody.appendChild(buildStyleRow(style, names));
+  }
+  table.append(thead, tbody);
+  section.appendChild(table);
+}
+
+function buildStyleRow(style, collectionNames) {
+  const row = document.createElement("tr");
+  const cell = (text) => {
+    const td = document.createElement("td");
+    td.textContent = text;
+    row.appendChild(td);
+    return td;
+  };
+  cell(style.name);
+  cell(PieceMetadata.styleSourceText(style.source, collectionNames));
+  cell(String(style.piece_count));
+  cell(String(style.updated_at || "").slice(0, 10));
+  const actions = document.createElement("td");
+  const wrap = document.createElement("div");
+  wrap.classList.add("library-actions");
+  wrap.appendChild(
+    buildActionButton({ icon: "↻", label: `Rebuild ${style.name}`, onClick: () => rebuildStyle(style) }),
+  );
+  wrap.appendChild(
+    buildActionButton({ icon: "🗑", label: `Delete ${style.name}`, onClick: () => deleteStyle(style) }),
+  );
+  actions.appendChild(wrap);
+  row.appendChild(actions);
+  return row;
+}
+
+async function rebuildStyle(style) {
+  setStylesStatus(`Rebuilding ${style.name}...`, false);
+  const result = await postJsonResult(`/api/styles/${style.id}/rebuild`, {});
+  if (result.ok && result.data && result.data.ok) {
+    const skipped = result.data.skipped || [];
+    await loadStylesSection();
+    setStylesStatus(`${style.name}: ${PieceMetadata.styleBuildText(result.data.style.piece_count, skipped.length, "Rebuilt")}`, false);
+  } else {
+    setStylesStatus(`Could not rebuild ${style.name}: ${collectionResultError(result, "failed")}`, true);
+  }
+}
+
+async function deleteStyle(style) {
+  if (!window.confirm(`Delete the style "${style.name}"? Compositions that use it can no longer fill or regenerate.`)) {
+    return;
+  }
+  const result = await fetchJsonResult(`/api/styles/${style.id}`, { method: "DELETE" });
+  if (result.ok && result.data && result.data.ok) {
+    await loadStylesSection();
+  } else {
+    setStylesStatus(`Could not delete ${style.name}: ${collectionResultError(result, "failed")}`, true);
+  }
 }
 
 /* Building a style (POST /api/styles): an inline name prompt prefilled with
