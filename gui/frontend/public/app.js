@@ -2271,6 +2271,9 @@ function buildStyleRow(style, collectionNames) {
   const wrap = document.createElement("div");
   wrap.classList.add("library-actions");
   wrap.appendChild(
+    buildActionButton({ icon: "↗", label: `Open ${style.name}`, onClick: () => openStyleDetail(style.id) }),
+  );
+  wrap.appendChild(
     buildActionButton({ icon: "↻", label: `Rebuild ${style.name}`, onClick: () => rebuildStyle(style) }),
   );
   wrap.appendChild(
@@ -2305,42 +2308,161 @@ async function deleteStyle(style) {
   }
 }
 
-/* Building a style (POST /api/styles): an inline name prompt prefilled with
- * the default name, a "Building..." state on the button, and a result line. */
-function pieceLabelById(id) {
-  const pools = [libraryFetchedPieces, collectionView ? collectionView.members : []];
-  for (const pool of pools) {
-    const hit = pool.find((piece) => piece.id === id);
-    if (hit) {
-      return hit.filename || id;
-    }
-  }
-  return id;
-}
-
-function renderStyleBuildResult(el, style, skipped) {
-  el.innerHTML = "";
-  el.classList.remove("error");
-  const text = document.createElement("span");
-  text.textContent = PieceMetadata.styleBuildText(style.piece_count, skipped.length);
-  el.appendChild(text);
-  if (skipped.length === 0) {
+/* The style detail: source, pieces used (linking to the analysis), skipped
+ * pieces with reasons, and what the style learned as share bars. notice is
+ * the result line shown right after a build. */
+function appendStyleShareBars(parent, statistics) {
+  const dimensions = StyleView.styleSummaryRows(statistics);
+  if (dimensions.length === 0) {
+    const none = document.createElement("p");
+    none.classList.add("piece-list-status");
+    none.textContent = "Nothing learned yet.";
+    parent.appendChild(none);
     return;
   }
-  const details = document.createElement("details");
-  details.classList.add("style-skipped");
-  const summary = document.createElement("summary");
-  summary.textContent = `${skipped.length} skipped`;
-  const list = document.createElement("ul");
-  for (const item of skipped) {
-    const li = document.createElement("li");
-    li.textContent = `${pieceLabelById(item.id)}: ${item.reason}`;
-    list.appendChild(li);
+  for (const dimension of dimensions) {
+    const heading = document.createElement("h3");
+    heading.classList.add("section-title");
+    heading.textContent = dimension.title;
+    parent.appendChild(heading);
+    for (const category of dimension.categories) {
+      const block = document.createElement("div");
+      block.classList.add("share-group");
+      const name = document.createElement("h4");
+      name.classList.add("share-title");
+      name.textContent = category.title;
+      block.appendChild(name);
+      for (const row of category.rows) {
+        const line = document.createElement("div");
+        line.classList.add("share-row");
+        const label = document.createElement("span");
+        label.classList.add("share-label");
+        label.textContent = row.label;
+        const bar = document.createElement("div");
+        bar.classList.add("share-bar");
+        const fill = document.createElement("div");
+        fill.classList.add("share-fill");
+        fill.style.width = `${row.percent}%`;
+        bar.appendChild(fill);
+        const text = document.createElement("span");
+        text.classList.add("share-text");
+        text.textContent = row.text;
+        line.append(label, bar, text);
+        block.appendChild(line);
+      }
+      if (category.moreText) {
+        const more = document.createElement("p");
+        more.classList.add("share-more");
+        more.textContent = category.moreText;
+        block.appendChild(more);
+      }
+      parent.appendChild(block);
+    }
   }
-  details.append(summary, list);
-  el.appendChild(details);
 }
 
+async function openStyleDetail(id, notice) {
+  leaveWorkspace();
+  setActiveTool("corpus");
+  if (tagsPanel) {
+    tagsPanel.setActive(null);
+  }
+  const content = getContentEl();
+  content.innerHTML = `
+    <div id="style-back-container"></div>
+    <h1 id="style-title" class="view-title">Style</h1>
+    <div id="style-notice" class="style-result" role="status"></div>
+    <div id="style-status" class="piece-list-status">Loading style...</div>
+    <div id="style-body"></div>
+  `;
+  document.getElementById("style-back-container").appendChild(renderCorpusBackLink());
+  document.getElementById("style-notice").textContent = notice || "";
+  const statusEl = document.getElementById("style-status");
+  const body = document.getElementById("style-body");
+
+  const [detail, library, collections] = await Promise.all([
+    fetchJsonResult(`/api/styles/${id}`),
+    fetchJsonResult("/api/analyzer/pieces"),
+    fetchJsonResult("/api/corpus"),
+  ]);
+  if (document.getElementById("style-body") !== body) {
+    return;
+  }
+  if (!(detail.ok && detail.data && detail.data.ok)) {
+    statusEl.textContent = `Failed to load the style: ${collectionResultError(detail, "unknown error")}`;
+    statusEl.classList.add("error");
+    return;
+  }
+  statusEl.textContent = "";
+  const style = detail.data.style;
+  const titles = new Map();
+  if (library.ok && library.data && library.data.ok) {
+    for (const piece of library.data.pieces) {
+      titles.set(piece.id, piece.filename || piece.id);
+    }
+  }
+  const collectionNames = {};
+  if (collections.ok && collections.data && collections.data.ok) {
+    for (const corpus of collections.data.corpora) {
+      collectionNames[corpus.id] = corpus.name;
+    }
+  }
+
+  document.getElementById("style-title").textContent = style.name;
+  const meta = document.createElement("p");
+  meta.classList.add("collection-description");
+  meta.textContent = [
+    PieceMetadata.styleSourceText(style.source, collectionNames),
+    PieceMetadata.pieceCountText(style.piece_count),
+    `updated ${String(style.updated_at || "").slice(0, 10)}`,
+  ].join(" · ");
+  body.appendChild(meta);
+
+  const piecesHeading = document.createElement("h2");
+  piecesHeading.classList.add("section-title");
+  piecesHeading.textContent = "Pieces used";
+  const pieceList = document.createElement("ul");
+  pieceList.classList.add("style-pieces");
+  for (const pieceId of style.pieces || []) {
+    const li = document.createElement("li");
+    if (titles.has(pieceId)) {
+      const link = document.createElement("button");
+      link.type = "button";
+      link.classList.add("link-button");
+      link.textContent = titles.get(pieceId);
+      link.addEventListener("click", () => showAnalysisView(pieceId));
+      li.appendChild(link);
+    } else {
+      li.textContent = `${pieceId} (no longer in the Library)`;
+    }
+    pieceList.appendChild(li);
+  }
+  body.append(piecesHeading, pieceList);
+
+  if ((style.skipped || []).length > 0) {
+    const skippedHeading = document.createElement("h2");
+    skippedHeading.classList.add("section-title");
+    skippedHeading.textContent = "Skipped";
+    const skippedList = document.createElement("ul");
+    skippedList.classList.add("style-pieces");
+    for (const item of style.skipped) {
+      const li = document.createElement("li");
+      li.textContent = `${titles.get(item.id) || item.id}: ${item.reason}`;
+      skippedList.appendChild(li);
+    }
+    body.append(skippedHeading, skippedList);
+  }
+
+  const learnedHeading = document.createElement("h2");
+  learnedHeading.classList.add("section-title");
+  learnedHeading.textContent = "What it learned";
+  body.appendChild(learnedHeading);
+  appendStyleShareBars(body, style.statistics);
+}
+
+/* Building a style (POST /api/styles): an inline name prompt prefilled with
+ * the default name, a "Building..." state on the button, and, on success, the
+ * style detail with the result line. A failure is shown beside the button. */
 function openStyleNamePrompt(host, defaultName, onSubmit) {
   host.innerHTML = "";
   const row = document.createElement("div");
@@ -2386,7 +2508,8 @@ function startStyleBuild({ source, host, trigger, resultEl }) {
     trigger.textContent = label;
     trigger.disabled = false;
     if (result.ok && result.data && result.data.ok) {
-      renderStyleBuildResult(resultEl, result.data.style, result.data.skipped || []);
+      const skipped = result.data.skipped || [];
+      openStyleDetail(result.data.style.id, PieceMetadata.styleBuildText(result.data.style.piece_count, skipped.length));
     } else {
       resultEl.textContent = collectionResultError(result, "Could not build the style.");
       resultEl.classList.add("error");
