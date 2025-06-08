@@ -35,6 +35,16 @@ Written for this repository (same licence as the repository). Each is a few meas
 - `spelling-flat.musicxml`, `spelling-sharp.musicxml`: the same sounding I - IV - V - I, written in
   D-flat major and in C-sharp major.
 - `pickup.mxl`: `pickup.musicxml` compressed (a zip with `META-INF/container.xml`).
+- `sentence.musicxml`: eight measures in C major, 4/4, one whole-note chord per measure (I V6 I V6 | vi ii6 V7 I). The
+  soprano repeats its two-measure basic idea (E5 D5), moves on (C5 D5, B4 C5) and closes on a perfect authentic
+  cadence. The library hears one sentence: a presentation (mm. 1 to 4) and a continuation (mm. 5 to 8).
+- `period.musicxml`: eight measures in C major, 4/4, one whole-note chord per measure (I V6 V7 I | I6 V6/5 V7 I). The
+  antecedent (mm. 1 to 4) closes on an imperfect authentic cadence and the consequent (mm. 5 to 8) on a perfect
+  authentic one. The antecedent has no half cadence because the library reads a V followed by I as an authentic
+  cadence, so a half-cadence antecedent needs a chord other than I after it, which breaks the phrase.
+- `compound-period.musicxml`: sixteen measures, two sentences of the `sentence.musicxml` kind. The first closes on an
+  imperfect authentic cadence (mm. 1 to 8), the second on a perfect authentic one (mm. 9 to 16). The library hears
+  both sentences and the compound period they make.
 
 ## Error fixtures
 
