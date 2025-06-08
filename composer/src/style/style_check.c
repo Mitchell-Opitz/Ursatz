@@ -181,6 +181,28 @@ void style_add_to_score(FillCheck *check, ComposerRatio closeness, ComposerRatio
     check->score_denominator = (unsigned long)denominator;
 }
 
+/* The term style_add_to_score adds, weight * closeness, in lowest terms and below 2^32 as the score is. */
+static void style_term(ComposerRatio closeness, ComposerRatio weight, FillCheck *check) {
+    check->style_numerator = 0;
+    check->style_denominator = 1;
+    if (closeness.denominator == 0 || weight.denominator == 0) {
+        return;
+    }
+    Wide numerator = (Wide)weight.numerator * (Wide)closeness.numerator;
+    Wide denominator = (Wide)weight.denominator * (Wide)closeness.denominator;
+    Wide divisor = wide_gcd(numerator, denominator);
+    if (divisor > 1) {
+        numerator /= divisor;
+        denominator /= divisor;
+    }
+    while (numerator >= SCORE_LIMIT || denominator >= SCORE_LIMIT) {
+        numerator >>= 1;
+        denominator >>= 1;
+    }
+    check->style_numerator = (unsigned long)numerator;
+    check->style_denominator = denominator ? (unsigned long)denominator : 1;
+}
+
 /* --------------------------------------------------------------- checker */
 
 bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
@@ -192,6 +214,8 @@ bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOpe
     if (!style->inner(plan, target, operator_, candidate, NULL, out)) {
         return false;
     }
+    out->style_numerator = 0;
+    out->style_denominator = 1;
     if (out->hard_violation) {
         return true;
     }
@@ -216,6 +240,7 @@ bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOpe
     }
     ComposerRatio closeness;
     if (ok && composer_style_closeness(style->style, labels, &closeness)) {
+        style_term(closeness, style->weight, out);
         style_add_to_score(out, closeness, style->weight);
     } else {
         ok = false;

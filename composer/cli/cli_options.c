@@ -368,6 +368,22 @@ bool cli_alternative_path(const char *path, size_t k, bool several, char *out, s
     return snprintf(out, size, "%.*s-%zu%s", (int)(dot - path), path, k, dot) < (int)size;
 }
 
+int cli_write_explanation(const char *final_path, const char *write_path, const Explanation *explanation) {
+    size_t length = strlen(final_path);
+    bool json = length >= 5 && cli_equals_ignore_case(final_path + length - 5, ".json");
+    char *text = json ? explain_to_json(explanation) : explain_to_text(explanation);
+    if (!text) {
+        return -1;
+    }
+    FILE *file = fopen(write_path, "wb");
+    bool ok = file && fputs(text, file) >= 0;
+    free(text);
+    if (file && fclose(file) != 0) {
+        ok = false;
+    }
+    return ok ? 0 : -1;
+}
+
 /* --- seeding from a corpus ------------------------------------------------------- */
 
 static int seed_failure(CorpusSeedResult result, const char *corpus_dir, const char *what) {

@@ -75,6 +75,9 @@ FillResult fill_record_add_step(FillRecord *record, FillTarget target, FillStepO
         snprintf(considered->label, FILL_LABEL_MAX, "%s", entry->candidate.label);
         considered->score_numerator = entry->check.score_numerator;
         considered->score_denominator = entry->check.score_denominator;
+        considered->styled = entry->check.style_denominator != 0;
+        considered->style_numerator = considered->styled ? entry->check.style_numerator : 0;
+        considered->style_denominator = considered->styled ? entry->check.style_denominator : 1;
         considered->rejected = entry->check.hard_violation;
         snprintf(considered->reason, FILL_REASON_MAX, "%s", entry->check.reason);
     }
@@ -118,6 +121,8 @@ static cJSON *considered_json(const FillConsidered *considered) {
     }
     ok = ok && json_add(object, "label", cJSON_CreateString(considered->label)) &&
          json_add(object, "score", rational_json(considered->score_numerator, considered->score_denominator)) &&
+         (!considered->styled ||
+          json_add(object, "style", rational_json(considered->style_numerator, considered->style_denominator))) &&
          json_add(object, "rejected", cJSON_CreateBool(considered->rejected)) &&
          json_add(object, "reason", cJSON_CreateString(considered->reason));
     if (!ok) {

@@ -13,6 +13,7 @@ add_library(ursatz_composer STATIC
     plan/plan_json.c
     plan/analysis_load.c
     check/analyzer_check.c
+    check/explain.c
     render/render.c
     render/export.c
     fill/fill_target.c

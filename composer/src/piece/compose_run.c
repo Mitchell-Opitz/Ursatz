@@ -66,6 +66,13 @@ static unsigned long stage_seed(ComposeStage stage, bool again) {
     return (unsigned long)(stage - COMPOSE_STAGE_STRUCTURE);
 }
 
+void compose_rejections_free(ComposeRejection *rejections, size_t count) {
+    for (size_t i = 0; rejections && i < count; i++) {
+        free(rejections[i].items);
+    }
+    free(rejections);
+}
+
 void compose_outcome_destroy(ComposeOutcome *outcome) {
     if (!outcome) {
         return;
@@ -85,6 +92,7 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
     if (outcome->style_measured) {
         style_comparison_destroy(&outcome->style_distance);
     }
+    compose_rejections_free(outcome->rejections, outcome->rejection_count);
     memset(outcome, 0, sizeof(*outcome));
 }
 
@@ -792,6 +800,53 @@ static PieceResult measure_style(const PiecePlan *plan, const ComposeConfig *con
     return PIECE_OK;
 }
 
+/*
+ * Keeps the run that just ended stuck as a rejection, with the reason the run's own marks give; a failed allocation
+ * leaves the run out of the list. A fill error that marked no stage (outcome->stuck false) has an empty stage.
+ */
+static void add_rejection(ComposeRejection **list, size_t *count, const PiecePlan *plan, const ComposeOutcome *outcome,
+                          size_t round, unsigned long seed) {
+    ComposeRejection *grown = realloc(*list, (*count + 1) * sizeof(ComposeRejection));
+    if (!grown) {
+        return;
+    }
+    *list = grown;
+    ComposeRejection *rejection = &grown[*count];
+    memset(rejection, 0, sizeof(*rejection));
+    rejection->round = round;
+    rejection->seed = seed;
+    snprintf(rejection->stage, sizeof(rejection->stage), "%s", outcome->stuck ? compose_stage_name(outcome->stuck_stage) : "");
+    if (outcome->analyzer_rejected) {
+        snprintf(rejection->reason, sizeof(rejection->reason), "analyzer");
+        for (size_t s = 0; s < outcome->analyzer_check_count; s++) {
+            const AnalyzerCheck *check = &outcome->analyzer_checks[s];
+            for (size_t i = 0; i < check->item_count; i++) {
+                if (check->items[i].agreed) {
+                    continue;
+                }
+                ComposeRejectionItem *items = realloc(rejection->items, (rejection->item_count + 1) * sizeof(*items));
+                if (!items) {
+                    break;
+                }
+                rejection->items = items;
+                memset(&items[rejection->item_count], 0, sizeof(*items));
+                const char *name = s < outcome->section_count ? plan_node_name(plan, outcome->sections[s].section) : NULL;
+                snprintf(items[rejection->item_count].section, sizeof(items[0].section), "%s", name ? name : "");
+                items[rejection->item_count].item = check->items[i];
+                rejection->item_count++;
+            }
+        }
+    } else if (outcome->key_rejected) {
+        bool keys = !outcome->key_check.ok;
+        snprintf(rejection->reason, sizeof(rejection->reason), "%s", keys ? "key" : "cadence");
+        snprintf(rejection->detail, sizeof(rejection->detail), "%s",
+                 keys ? outcome->key_check.reason : outcome->cadence_check.reason);
+    } else {
+        snprintf(rejection->reason, sizeof(rejection->reason), "stuck");
+    }
+    (*count)++;
+}
+
 PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
     if (!plan || !config || !outcome) {
         return PIECE_ERR_NULL;
@@ -804,6 +859,8 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
      */
     char *snapshot = plan_to_json(plan, NULL);
     PieceResult result = PIECE_ERR_ALLOC;
+    ComposeRejection *rejections = NULL;
+    size_t rejection_count = 0;
     for (size_t round = 0; snapshot && round < COMPOSE_RUN_ROUNDS; round++) {
         if (round > 0) {
             PiecePlan *fresh = NULL;
@@ -826,7 +883,12 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
         if (result != PIECE_ERR_STUCK) {
             break;
         }
+        add_rejection(&rejections, &rejection_count, plan, outcome, round,
+                      config->seed + COMPOSE_ROUND_STRIDE * (unsigned long)round);
     }
     free(snapshot);
+    /* Kept apart until now: each run starts by clearing the outcome. */
+    outcome->rejections = rejections;
+    outcome->rejection_count = rejection_count;
     return result;
 }

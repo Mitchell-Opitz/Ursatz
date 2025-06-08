@@ -11,6 +11,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/piece_plan_keys.h>
+#include <ursatz_composer/rejection.h>
 #include <ursatz_composer/return_hear.h>
 #include <ursatz_composer/style.h>
 
@@ -132,6 +133,9 @@ typedef struct {
      */
     bool style_measured;
     StyleComparison style_distance; /* owned */
+    /* Every run rejected before this one, in order, the last run included when none completed. NULL when none. */
+    ComposeRejection *rejections; /* owned */
+    size_t rejection_count;
 } ComposeOutcome;
 
 void compose_outcome_destroy(ComposeOutcome *outcome);

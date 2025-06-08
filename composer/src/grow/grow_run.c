@@ -17,6 +17,7 @@ void grow_outcome_destroy(GrowOutcome *outcome) {
     if (outcome->style_measured) {
         style_comparison_destroy(&outcome->style_distance);
     }
+    compose_rejections_free(outcome->rejections, outcome->rejection_count);
     memset(outcome, 0, sizeof(*outcome));
 }
 
@@ -83,6 +84,10 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
         outcome->records[stage] = composed.records[from];
         composed.records[from] = NULL;
     }
+    outcome->rejections = composed.rejections;
+    outcome->rejection_count = composed.rejection_count;
+    composed.rejections = NULL;
+    composed.rejection_count = 0;
     outcome->stuck = composed.stuck;
     outcome->stuck_stage = composed.stuck ? (GrowStage)(composed.stuck_stage - COMPOSE_STAGE_STRUCTURE) : 0;
     if (result == GROW_OK && composed.section_count > 0) {

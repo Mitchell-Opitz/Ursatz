@@ -20,7 +20,7 @@
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/return_hear.h>
 
-#define MAX_OUTPUTS 4
+#define MAX_OUTPUTS 5
 #define MAX_OPEN_SHOWN 24
 #define MAX_CANDIDATES 32
 
@@ -32,6 +32,7 @@ typedef struct {
     const char *midi_path;
     const char *musicxml_path;
     const char *record_path;
+    const char *explain_path;
     const char *format_text;
     const char *candidates_text;
     const char *style_path;
@@ -72,6 +73,9 @@ static void print_help(FILE *out) {
     fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
     fprintf(out, "  --record <file.json> write the records of the stages (what each choice was and why) as one JSON array\n");
+    fprintf(out, "  --explain <file>     write why each candidate was chosen or rejected: the chosen candidate, its runners-up and the\n");
+    fprintf(out, "                       rejected ones with their reasons per target, the analyzer check and the form heard per section, and\n");
+    fprintf(out, "                       the runs thrown away. JSON when the file ends in .json, else text\n");
     fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "The form and cadences heard in each section, and the thematic returns heard, are printed with the result; a\n");
@@ -114,6 +118,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->musicxml_path;
         } else if (strcmp(arg, "--record") == 0) {
             target = &options->record_path;
+        } else if (strcmp(arg, "--explain") == 0) {
+            target = &options->explain_path;
         } else if (strcmp(arg, "--format") == 0) {
             target = &options->format_text;
         } else if (arg[0] == '-' && arg[1] != '\0') {
@@ -512,7 +518,7 @@ static int write_record(const ComposeOutcome *outcome, const char *path) {
  */
 static int write_files(const CliOutputPaths *output, const PiecePlan *plan, const ComposeOutcome *outcome, Pending *pending,
                        size_t *pending_count) {
-    const char *paths[MAX_OUTPUTS] = {output->plan, output->midi, output->musicxml, output->record};
+    const char *paths[MAX_OUTPUTS] = {output->plan, output->midi, output->musicxml, output->record, output->explain};
     int status = 0;
     RenderedPlan rendered;
     bool have_rendering = false;
@@ -536,6 +542,15 @@ static int write_files(const CliOutputPaths *output, const PiecePlan *plan, cons
         } else if (kind == 3) {
             if (write_record(outcome, entry->temporary) != 0) {
                 status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", paths[kind]);
+            }
+        } else if (kind == 4) {
+            Explanation explanation;
+            ExplainResult built = explain_build(plan, outcome, &explanation);
+            if (built != EXPLAIN_OK || cli_write_explanation(paths[kind], entry->temporary, &explanation) != 0) {
+                status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", paths[kind]);
+            }
+            if (built == EXPLAIN_OK) {
+                explain_destroy(&explanation);
             }
         } else {
             if (!have_rendering) {
@@ -809,7 +824,8 @@ int run_fill(int argc, char **argv) {
         Pending pending[MAX_OUTPUTS];
         const char *files[MAX_OUTPUTS];
         size_t pending_count = 0;
-        CliOutputPaths output = {options.out_path, options.midi_path, options.musicxml_path, options.record_path};
+        CliOutputPaths output = {options.out_path, options.midi_path, options.musicxml_path, options.record_path,
+                                 options.explain_path};
         status = write_files(&output, plan, &outcome, pending, &pending_count);
         if (status == 0) {
             for (size_t i = 0; i < pending_count; i++) {
