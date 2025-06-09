@@ -212,7 +212,96 @@
     return `${count} ${count === 1 ? "piece" : "pieces"}`;
   }
 
+  /* The source a style is built from, for a Library filter: the backend's
+   * filter (composer, source, tag) when the filter is only those values, else
+   * the ids of the pieces shown (unassigned, untagged and search have no
+   * backend form). */
+  function styleSourceForFilter(filter, pieceIds) {
+    const f = filter || {};
+    const plain = (f.composer || f.source || f.tag) && !(f.unassigned || []).length && !f.untagged && !String(f.search || "").trim();
+    if (!plain) {
+      return { kind: "pieces", piece_ids: (pieceIds || []).slice() };
+    }
+    const backendFilter = {};
+    for (const key of ["composer", "source", "tag"]) {
+      if (f[key]) {
+        backendFilter[key] = f[key];
+      }
+    }
+    return { kind: "filter", filter: backendFilter };
+  }
+
+  /* The default name the backend would give a style (Composer: X, Source: X,
+   * Tag: x joined with " · "; Collection: <name>; Selected pieces), at most
+   * 120 characters. */
+  function defaultStyleName(source) {
+    const s = source || {};
+    if (s.kind === "filter") {
+      const f = s.filter || {};
+      const parts = [];
+      if (f.composer) {
+        parts.push(`Composer: ${f.composer}`);
+      }
+      if (f.source) {
+        parts.push(`Source: ${f.source}`);
+      }
+      if (f.tag) {
+        parts.push(`Tag: ${String(f.tag).toLowerCase()}`);
+      }
+      return (parts.join(" · ") || "Selected pieces").slice(0, 120);
+    }
+    if (s.kind === "collection") {
+      return `Collection: ${s.name || ""}`.slice(0, 120);
+    }
+    return "Selected pieces";
+  }
+
+  /* The POST /api/styles body: the name only when not blank, plus exactly one
+   * source member. */
+  function styleRequestBody(source, name) {
+    const body = {};
+    if (String(name || "").trim()) {
+      body.name = String(name).trim();
+    }
+    if (source.kind === "filter") {
+      body.filter = source.filter;
+    } else if (source.kind === "collection") {
+      body.collection_id = source.collection_id;
+    } else {
+      body.piece_ids = source.piece_ids;
+    }
+    return body;
+  }
+
+  /* "Built from 12 pieces" plus ", 2 skipped" when pieces were skipped. The
+   * verb is "Built" or, after a rebuild, "Rebuilt". */
+  function styleBuildText(pieceCount, skippedCount, verb) {
+    const text = `${verb || "Built"} from ${pieceCountText(pieceCount)}`;
+    return skippedCount > 0 ? `${text}, ${skippedCount} skipped` : text;
+  }
+
+  /* A style's source as the list shows it: "Tag: whimsical", "Collection:
+   * <name>" (collectionNames maps id to name; "a collection" when unknown),
+   * "Selected pieces (n)". */
+  function styleSourceText(source, collectionNames) {
+    const s = source || {};
+    if (s.kind === "filter") {
+      return defaultStyleName(s);
+    }
+    if (s.kind === "collection") {
+      const name = collectionNames && collectionNames[s.collection_id];
+      return name ? `Collection: ${name}` : "Collection (deleted)";
+    }
+    const count = Array.isArray(s.piece_ids) ? s.piece_ids.length : 0;
+    return count ? `Selected pieces (${count})` : "Selected pieces";
+  }
+
   const api = {
+    styleSourceText,
+    styleSourceForFilter,
+    defaultStyleName,
+    styleRequestBody,
+    styleBuildText,
     summaryLine,
     pieceCountText,
     collectionNameFromFilter,

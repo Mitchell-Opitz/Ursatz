@@ -742,6 +742,26 @@ Tags and Actions.
   parts joined with " · ") and adds every shown piece in one request, then
   opens it. The collection is a snapshot and does not follow later tag
   changes; the sidebar Tags panel is the live grouping.
+- **Build style**: builds a style (a StyleModel learned from pieces, see
+  Styles routes) from a set of pieces. The button appears in three places:
+  the Library while a filter is on (next to Save as collection), a
+  collection's detail, and on each Tags panel row (a small ♫ button shown on
+  hover and focus, labelled "Build style from <row>"). It opens an inline name
+  prompt prefilled with the default name ("Composer: X", "Source: X",
+  "Tag: x" joined with " · ", "Collection: <name>" or "Selected pieces");
+  Build sends `POST /api/styles` and the button reads "Building..." until the
+  answer. A plain composer, source or tag filter builds from that filter;
+  Unassigned, Untagged and search have no backend form, so those build from
+  the ids of the pieces shown. A failure shows under the button.
+- **Styles**: a section under the collection cards listing each style with
+  its name, source ("Tag: whimsical"), piece count and updated date, and the
+  actions Open, Rebuild (replaces the style in place from today's pieces) and
+  Delete (confirm). A finished build opens the style detail with a result line
+  ("Built from 12 pieces, 2 skipped").
+- **Style detail**: the source and counts, the pieces used (each a link to its
+  analysis), the skipped pieces with the reason, and what the style learned:
+  for each dimension and category the most common labels as a bar of
+  `count/total` with the fraction as text, then "and <n> more".
 
 ### Score layers
 
@@ -853,7 +873,9 @@ re-run and delete. `test_styles_route` uploads Clementi 36 and Mozart 545,
 tags them and builds styles from a tag, a collection and ids, then reads the
 model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
 `test_piece_metadata` covers the normalizing, grouping and
-filter rules without a server. `test_composer_route` runs
+filter rules without a server. `style-view.test.js` covers the style detail
+rows (order, fractions, "and n more") and `piece-metadata.test.js` the style
+names and request bodies. `test_composer_route` runs
 the real Composer: grow, regenerate, lock, variations, choose and plan make
 versions and leave the earlier ones alone; bad requests start nothing and a
 fake Composer (`URSATZ_GUI_COMPOSER`) that records its arguments or sleeps
