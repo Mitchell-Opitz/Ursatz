@@ -101,4 +101,44 @@ check(M.collectionNameFromFilter({ search: " waltz " }) === "Search: waltz", "na
 check(M.collectionNameFromFilter({}) === "Selected pieces", "name fallback");
 check(M.collectionNameFromFilter({ composer: "x".repeat(200) }).length === 120, "name is cut at 120 characters");
 
+/* Style names and requests. */
+check(M.defaultStyleName({ kind: "filter", filter: { composer: "John Field" } }) === "Composer: John Field", "style name from composer");
+check(M.defaultStyleName({ kind: "filter", filter: { source: "Op 1" } }) === "Source: Op 1", "style name from source");
+check(M.defaultStyleName({ kind: "filter", filter: { tag: "Whimsical" } }) === "Tag: whimsical", "style name lowercases the tag");
+check(
+  M.defaultStyleName({ kind: "filter", filter: { composer: "John Field", source: "Op 1", tag: "etude" } }) ===
+    "Composer: John Field · Source: Op 1 · Tag: etude",
+  "style name combines filters with a middle dot",
+);
+check(M.defaultStyleName({ kind: "collection", name: "Nocturnes" }) === "Collection: Nocturnes", "style name from a collection");
+check(M.defaultStyleName({ kind: "pieces", piece_ids: ["p1"] }) === "Selected pieces", "style name for chosen pieces");
+check(M.defaultStyleName({ kind: "filter", filter: { composer: "x".repeat(200) } }).length === 120, "style name is cut at 120 characters");
+
+check(
+  same(M.styleSourceForFilter({ composer: "John Field", tag: "etude", unassigned: [], search: "" }, ["p1"]), {
+    kind: "filter",
+    filter: { composer: "John Field", tag: "etude" },
+  }),
+  "a plain filter builds from the backend filter",
+);
+check(same(M.styleSourceForFilter({ untagged: true }, ["p1", "p2"]), { kind: "pieces", piece_ids: ["p1", "p2"] }), "untagged builds from the shown ids");
+check(same(M.styleSourceForFilter({ unassigned: ["composer"] }, ["p1"]), { kind: "pieces", piece_ids: ["p1"] }), "unassigned builds from the shown ids");
+check(same(M.styleSourceForFilter({ composer: "Chopin", search: "waltz" }, ["p3"]), { kind: "pieces", piece_ids: ["p3"] }), "a search builds from the shown ids");
+check(same(M.styleSourceForFilter({}, ["p1"]), { kind: "pieces", piece_ids: ["p1"] }), "no filter builds from the shown ids");
+
+check(
+  same(M.styleRequestBody({ kind: "filter", filter: { tag: "etude" } }, " My style "), { name: "My style", filter: { tag: "etude" } }),
+  "request body for a filter",
+);
+check(same(M.styleRequestBody({ kind: "collection", collection_id: "col_1" }, ""), { collection_id: "col_1" }), "a blank name is left out");
+check(same(M.styleRequestBody({ kind: "pieces", piece_ids: ["p1"] }, "S"), { name: "S", piece_ids: ["p1"] }), "request body for ids");
+
+check(M.styleBuildText(12, 0) === "Built from 12 pieces", "build text without skipped");
+check(M.styleBuildText(1, 2) === "Built from 1 piece, 2 skipped", "build text with skipped");
+check(M.styleBuildText(3, 0, "Rebuilt") === "Rebuilt from 3 pieces", "rebuild text");
+check(M.styleSourceText({ kind: "filter", filter: { tag: "whimsical" } }) === "Tag: whimsical", "source text for a filter");
+check(M.styleSourceText({ kind: "collection", collection_id: "c1" }, { c1: "Nocturnes" }) === "Collection: Nocturnes", "source text for a collection");
+check(M.styleSourceText({ kind: "collection", collection_id: "gone" }, {}) === "Collection (deleted)", "source text for a deleted collection");
+check(M.styleSourceText({ kind: "pieces", piece_ids: ["a", "b"] }) === "Selected pieces (2)", "source text for ids");
+
 process.exit(failures === 0 ? 0 : 1);
