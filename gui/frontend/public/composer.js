@@ -73,8 +73,20 @@ function composerAddCommon(body, values) {
   if (values.check) {
     body.check = true;
   }
+  const style = composerText(values, "style");
+  if (style !== "") {
+    body.style = style;
+    body.style_weight = composerText(values, "style_weight") || COMPOSER_DEFAULT_STYLE_WEIGHT;
+  }
   return null;
 }
+
+const COMPOSER_STYLE_WEIGHTS = [
+  ["1/4", "Light (1/4)"],
+  ["1/2", "Normal (1/2)"],
+  ["1", "Strong (1)"],
+];
+const COMPOSER_DEFAULT_STYLE_WEIGHT = "1/2";
 
 /* The body of POST /api/composer/grow from the New theme form's values:
  * {request} or {error}. */
@@ -238,6 +250,40 @@ function composerSelect(name, options, blank) {
   return select;
 }
 
+/* Style and Weight selects; the style list comes from GET /api/styles. Weight
+ * is disabled while Style is None. */
+function composerStyleFields() {
+  const style = document.createElement("select");
+  style.name = "style";
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "None";
+  style.appendChild(none);
+  const weight = document.createElement("select");
+  weight.name = "style_weight";
+  for (const [value, label] of COMPOSER_STYLE_WEIGHTS) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    weight.appendChild(option);
+  }
+  weight.value = COMPOSER_DEFAULT_STYLE_WEIGHT;
+  weight.disabled = true;
+  style.addEventListener("change", () => {
+    weight.disabled = style.value === "";
+  });
+  fetchJsonResult("/api/styles").then((result) => {
+    const styles = result.ok && result.data && Array.isArray(result.data.styles) ? result.data.styles : [];
+    for (const item of styles) {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${item.piece_count} ${item.piece_count === 1 ? "piece" : "pieces"})`;
+      style.appendChild(option);
+    }
+  });
+  return [composerField("Style", style), composerField("Weight", weight)];
+}
+
 function composerCheckbox(name) {
   const box = document.createElement("input");
   box.type = "checkbox";
@@ -295,6 +341,7 @@ function buildComposerThemeForm(onCreated) {
     composerField("Cadence", composerSelect("cadence", COMPOSER_CADENCES, "default")),
     composerField("Accompaniment", composerSelect("accompaniment", COMPOSER_ACCOMPANIMENTS, "default")),
     composerField("Check", composerCheckbox("check")),
+    ...composerStyleFields(),
     composerField("Seed", composerInput("seed", "random")),
     composerField("Tempo", composerInput("tempo", "120")),
     submit,
@@ -331,6 +378,7 @@ function buildComposerPieceForm(onCreated) {
     composerField("At", composerInput("given_at", "B or B:2")),
     composerField("Accompaniment", composerSelect("accompaniment", COMPOSER_ACCOMPANIMENTS, "default")),
     composerField("Check", composerCheckbox("check")),
+    ...composerStyleFields(),
     composerField("Seed", composerInput("seed", "random")),
     composerField("Tempo", composerInput("tempo", "120")),
     submit,
@@ -358,6 +406,9 @@ async function submitComposerForm(form, build, path, submit, status, onCreated) 
     return;
   }
   form.reset();
+  if (form.elements.style) {
+    form.elements.style.dispatchEvent(new Event("change"));
+  }
   await onCreated(result.data, built.request.name);
 }
 
