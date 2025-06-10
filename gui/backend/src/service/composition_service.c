@@ -4,6 +4,7 @@
 #include "composer_service.h"
 #include "collection_service.h"
 #include "id_service.h"
+#include "style_service.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -547,6 +548,65 @@ static bool add_flag(ArgList *args, const cJSON *request, const char *key, const
     return true;
 }
 
+/* style is a style id resolved to its model file; style_weight is a whole
+   number or "n/d" with a non-zero denominator, and needs a style. */
+static bool valid_style_weight(const char *text) {
+    const char *slash = strchr(text, '/');
+    size_t numerator_digits = slash ? (size_t)(slash - text) : strlen(text);
+    size_t denominator_digits = slash ? strlen(slash + 1) : 0;
+    if (numerator_digits == 0 || numerator_digits > 6 || (slash && (denominator_digits == 0 || denominator_digits > 6))) {
+        return false;
+    }
+    bool denominator_nonzero = !slash;
+    for (const char *c = text; *c; c++) {
+        if (c == slash) {
+            continue;
+        }
+        if (!isdigit((unsigned char)*c)) {
+            return false;
+        }
+        if (slash && c > slash && *c != '0') {
+            denominator_nonzero = true;
+        }
+    }
+    return denominator_nonzero;
+}
+
+static bool style_id_text(const char *text) {
+    return ursatz_gui_collection_is_valid_id(text);
+}
+
+static bool add_style(ArgList *args, const cJSON *request, Validation *v) {
+    const char *id = NULL;
+    const char *weight = NULL;
+    if (!text_value(request, "style", style_id_text, &id, false, v)) {
+        snprintf(v->message, sizeof(v->message), "unknown style");
+        return false;
+    }
+    if (!text_value(request, "style_weight", valid_style_weight, &weight, false, v)) {
+        return false;
+    }
+    if (!id) {
+        if (weight) {
+            invalid(v, "style_weight");
+            return false;
+        }
+        return true;
+    }
+    char path[PATH_SIZE];
+    if (ursatz_gui_style_model_path(id, path, sizeof(path)) != URSATZ_GUI_STYLE_OK) {
+        snprintf(v->message, sizeof(v->message), "unknown style");
+        return false;
+    }
+    args_add(args, "--style");
+    args_add(args, path);
+    if (weight) {
+        args_add(args, "--style-weight");
+        args_add(args, weight);
+    }
+    return true;
+}
+
 /* tempo is a whole number or an "n/d" string. */
 static bool tempo_text(const cJSON *request, char *out, size_t size, bool *present, Validation *v) {
     const cJSON *item = field(request, "tempo");
@@ -834,7 +894,7 @@ UrsatzGuiCompositionResponse ursatz_gui_composition_grow(const char *composition
         !add_text(&args, request, "accompaniment", "--accompaniment", valid_accompaniment, false, &v) ||
         !add_text(&args, request, "texture", "--texture", valid_texture, false, &v) ||
         !add_flag(&args, request, "check", "--check", &v) || !add_seed(&args, request, &v) ||
-        !add_tempo(&args, request, &v)) {
+        !add_tempo(&args, request, &v) || !add_style(&args, request, &v)) {
         response = respond_error(400, v.message, NULL);
         goto fail;
     }
@@ -932,7 +992,7 @@ UrsatzGuiCompositionResponse ursatz_gui_composition_plan(const char *composition
         !add_flag(&plan_args, request, "modulate", "--modulate", &v) ||
         !add_text(&plan_args, request, "accompaniment", "--accompaniment", valid_accompaniment, false, &v) ||
         !add_text(&plan_args, request, "texture", "--texture", valid_texture, false, &v) ||
-        !add_seed(&plan_args, request, &v)) {
+        !add_seed(&plan_args, request, &v) || !add_style(&plan_args, request, &v)) {
         response = respond_error(400, v.message, NULL);
         goto fail;
     }
