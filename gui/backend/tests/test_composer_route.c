@@ -44,7 +44,8 @@ static void sleep_ms(int ms) {
 
 /* One HTTP exchange. Returns the whole response (status line, headers, body)
  * as a newly allocated string, or NULL when the connection failed. */
-static char *http_exchange(const char *method, const char *path, const char *body) {
+static char *http_exchange_with(const char *method, const char *path, const char *extra_headers, const char *body,
+                                size_t body_len) {
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock < 0) {
     return NULL;
@@ -60,12 +61,11 @@ static char *http_exchange(const char *method, const char *path, const char *bod
     return NULL;
   }
 
-  size_t body_len = body ? strlen(body) : 0;
   char header[1024];
   int header_len = snprintf(header, sizeof(header),
-                            "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n"
+                            "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n%s"
                             "Content-Length: %zu\r\nConnection: close\r\n\r\n",
-                            method, path, body_len);
+                            method, path, extra_headers ? extra_headers : "", body_len);
   send(sock, header, (size_t)header_len, 0);
   if (body_len > 0) {
     send(sock, body, body_len, 0);
@@ -96,6 +96,10 @@ static char *http_exchange(const char *method, const char *path, const char *bod
     response[total] = '\0';
   }
   return response;
+}
+
+static char *http_exchange(const char *method, const char *path, const char *body) {
+  return http_exchange_with(method, path, NULL, body, body ? strlen(body) : 0);
 }
 
 static const char *response_body(const char *response) {
@@ -240,8 +244,30 @@ static cJSON *post_to(const char *id, const char *what, const char *body, int *s
   return exchange_json("POST", path, body, status);
 }
 
+/* Uploads a file to the Library; returns the new piece's id (caller frees), or NULL. */
+static char *upload_piece(const char *file_path, const char *encoded_filename) {
+  size_t size = 0;
+  char *data = read_file(file_path, &size);
+  if (!data) {
+    return NULL;
+  }
+  char headers[512];
+  snprintf(headers, sizeof(headers), "X-Filename: %s\r\n", encoded_filename);
+  char *response = http_exchange_with("POST", "/api/analyzer/pieces", headers, data, size);
+  free(data);
+  char *id = NULL;
+  cJSON *json = cJSON_Parse(response_body(response));
+  const cJSON *id_item = json ? cJSON_GetObjectItemCaseSensitive(json, "id") : NULL;
+  if (cJSON_IsString(id_item)) {
+    id = strdup(id_item->valuestring);
+  }
+  cJSON_Delete(json);
+  free(response);
+  return id;
+}
+
 int main(void) {
-  system("rm -rf compositions fake");
+  system("rm -rf compositions fake pieces styles collections");
   mkdir("fake", 0755);
 
   char cwd[512];
@@ -319,6 +345,74 @@ int main(void) {
   const cJSON *action = first ? cJSON_GetObjectItemCaseSensitive(first, "action") : NULL;
   check(cJSON_IsString(action) && strcmp(action->valuestring, "grow") == 0, "v1 records the grow action");
   cJSON_Delete(json);
+
+
+  /* Composing in a style built from a tagged reference piece. */
+  {
+    char piece_path[600];
+    snprintf(piece_path, sizeof(piece_path),
+             URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/framework-v1-corpus/Clementi 36.mid");
+    char *piece_id = upload_piece(piece_path, "Clementi%2036.mid");
+    check(piece_id != NULL, "the reference piece uploads");
+    if (piece_id) {
+      char patch_path[256];
+      snprintf(patch_path, sizeof(patch_path), "/api/analyzer/pieces/%s", piece_id);
+      cJSON_Delete(exchange_json("PATCH", patch_path, "{\"add_tags\":[\"sonatina\"]}", &status));
+      free(piece_id);
+    }
+    json = exchange_json("POST", "/api/styles", "{\"filter\":{\"tag\":\"sonatina\"}}", &status);
+    const cJSON *built = json ? cJSON_GetObjectItemCaseSensitive(json, "style") : NULL;
+    const cJSON *built_id = built ? cJSON_GetObjectItemCaseSensitive(built, "id") : NULL;
+    char style_id[96] = "";
+    if (status == 200 && cJSON_IsString(built_id)) {
+      snprintf(style_id, sizeof(style_id), "%s", built_id->valuestring);
+    }
+    check(style_id[0] != '\0', "a style is built from the tag");
+    cJSON_Delete(json);
+
+    char styled_body[2048];
+    snprintf(styled_body, sizeof(styled_body),
+             "{\"name\":\"Styled\",\"motive\":\"D4:q F4:e A4:e D5:h\",\"into\":\"sentence\",\"key\":\"D minor\","
+             "\"meter\":\"4/4\",\"seed\":7,\"style\":\"%s\",\"style_weight\":\"1/4\"}",
+             style_id);
+    json = exchange_json("POST", "/api/composer/grow", styled_body, &status);
+    char styled_id[64] = "";
+    check(status == 200 && take_id(json, styled_id, sizeof(styled_id)), "grow with a style answers 200");
+    cJSON_Delete(json);
+    char styled_plan[600];
+    snprintf(styled_plan, sizeof(styled_plan), "compositions/%s/v1/plan.json", styled_id);
+    char *plan_text = read_file(styled_plan, NULL);
+    check(plan_text && strstr(plan_text, "style-model.json") != NULL,
+          "the plan has a style constraint naming the style file");
+    free(plan_text);
+
+    json = exchange_json("POST", "/api/composer/grow",
+                         "{\"name\":\"x\",\"motive\":\"D4:q F4:e\",\"into\":\"sentence\",\"key\":\"D minor\","
+                         "\"meter\":\"4/4\",\"style\":\"sty-0000000000000000\"}",
+                         &status);
+    const cJSON *style_error = json ? cJSON_GetObjectItemCaseSensitive(json, "error") : NULL;
+    check(status == 400 && cJSON_IsString(style_error) && strcmp(style_error->valuestring, "unknown style") == 0,
+          "an unknown style gives 400 unknown style");
+    cJSON_Delete(json);
+    json = exchange_json("POST", "/api/composer/grow",
+                         "{\"name\":\"x\",\"motive\":\"D4:q F4:e\",\"into\":\"sentence\",\"key\":\"D minor\","
+                         "\"meter\":\"4/4\",\"style_weight\":\"1/2\"}",
+                         &status);
+    check(status == 400, "a style weight without a style gives 400");
+    cJSON_Delete(json);
+    json = exchange_json("POST", "/api/composer/plan",
+                         "{\"name\":\"x\",\"form\":\"binary\",\"key\":\"C\",\"meter\":\"4/4\",\"style_weight\":\"1/2\"}",
+                         &status);
+    check(status == 400, "plan with a style weight and no style gives 400");
+    cJSON_Delete(json);
+    snprintf(styled_body, sizeof(styled_body),
+             "{\"name\":\"x\",\"form\":\"binary\",\"key\":\"C\",\"meter\":\"4/4\",\"style\":\"%s\","
+             "\"style_weight\":\"1/0\"}",
+             style_id);
+    json = exchange_json("POST", "/api/composer/plan", styled_body, &status);
+    check(status == 400, "a style weight with a zero denominator gives 400");
+    cJSON_Delete(json);
+  }
 
   /* regenerate the theme's section (node 2 of a sentence plan) with seed 5. */
   char v1_before[600];

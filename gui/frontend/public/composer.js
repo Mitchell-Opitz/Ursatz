@@ -988,6 +988,7 @@ if (typeof module !== "undefined" && module.exports) {
     composerVersionLabel,
     composerBarsLabel,
     buildGrowRequest,
+    composerStyleFields,
     buildPlanRequest,
     composerErrorText,
     composerTempo,

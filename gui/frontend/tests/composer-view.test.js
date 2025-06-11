@@ -159,6 +159,69 @@ check(/id: "composer", label: "Composer"/.test(appSource), "the nav has a Compos
 check(!/Generator/.test(appSource), "the Generator placeholder is gone");
 check(indexSource.indexOf("app.js") < indexSource.indexOf("composer.js"), "composer.js loads after app.js");
 
+// Style option.
+const styleBase = { name: "T", motive: "C4:q", into: "period", key: "C", meter: "4/4" };
+const noStyle = composer.buildGrowRequest({ ...styleBase, style: "", style_weight: "1" }).request;
+check(!("style" in noStyle) && !("style_weight" in noStyle), "no style: the grow body has neither style nor weight");
+same(
+  composer.buildGrowRequest({ ...styleBase, style: "sty-1", style_weight: "1/4" }).request.style_weight,
+  "1/4",
+  "a style sends its weight",
+);
+same(
+  composer.buildGrowRequest({ ...styleBase, style: "sty-1" }).request.style,
+  "sty-1",
+  "a style id is sent in the grow body",
+);
+same(
+  composer.buildGrowRequest({ ...styleBase, style: "sty-1" }).request.style_weight,
+  "1/2",
+  "the weight defaults to Normal (1/2)",
+);
+const planStyle = composer.buildPlanRequest({ name: "P", form: "binary", key: "C", meter: "4/4", style: "sty-2", style_weight: "1" }).request;
+same([planStyle.style, planStyle.style_weight], ["sty-2", "1"], "the plan body carries style and weight");
+check(!("style" in composer.buildPlanRequest({ name: "P", form: "binary", key: "C", meter: "4/4", style: "" }).request), "no style: the plan body has no style");
+same(
+  composer.buildPlanRequest({ name: "P", form: "binary", key: "C", meter: "4/4", style: "", style_weight: "1/4" }).request.style_weight,
+  undefined,
+  "a weight alone is not sent",
+);
+
+// The forms: Weight is disabled while Style is None.
+{
+  const created = [];
+  const fakeElement = () => {
+    const el = {
+      children: [],
+      classList: { add() {}, remove() {} },
+      listeners: {},
+      appendChild(child) { this.children.push(child); return child; },
+      append(...nodes) { this.children.push(...nodes); },
+      addEventListener(name, fn) { this.listeners[name] = fn; },
+      setAttribute() {},
+    };
+    created.push(el);
+    return el;
+  };
+  global.document = { createElement: fakeElement, createTextNode: (text) => ({ text }) };
+  global.fetchJsonResult = async () => ({ ok: true, data: { styles: [{ id: "sty-1", name: "Tag: x", piece_count: 2 }] } });
+  const fields = composer.composerStyleFields();
+  const selects = created.filter((el) => el.name === "style" || el.name === "style_weight");
+  const style = selects.find((el) => el.name === "style");
+  const weight = selects.find((el) => el.name === "style_weight");
+  check(style && weight, "the form has Style and Weight selects");
+  if (style && weight) {
+    check(weight.disabled === true, "Weight is disabled while Style is None");
+    style.value = "sty-1";
+    style.listeners.change();
+    check(weight.disabled === false, "Weight is enabled once a style is chosen");
+    style.value = "";
+    style.listeners.change();
+    check(weight.disabled === true, "Weight is disabled again when Style returns to None");
+  }
+  check(fields.length === 2, "two fields are built: Style and Weight");
+}
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
