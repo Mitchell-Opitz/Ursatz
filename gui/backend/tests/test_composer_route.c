@@ -379,8 +379,17 @@ int main(void) {
     char styled_id[64] = "";
     check(status == 200 && take_id(json, styled_id, sizeof(styled_id)), "grow with a style answers 200");
     cJSON_Delete(json);
+    /* grow composes in the style; only plan records it as a constraint in plan.json. */
+    snprintf(styled_body, sizeof(styled_body),
+             "{\"name\":\"Styled piece\",\"form\":\"binary\",\"key\":\"C\",\"meter\":\"4/4\",\"seed\":3,"
+             "\"style\":\"%s\",\"style_weight\":\"1/4\"}",
+             style_id);
+    json = exchange_json("POST", "/api/composer/plan", styled_body, &status);
+    char planned_id[64] = "";
+    check(status == 200 && take_id(json, planned_id, sizeof(planned_id)), "plan with a style answers 200");
+    cJSON_Delete(json);
     char styled_plan[600];
-    snprintf(styled_plan, sizeof(styled_plan), "compositions/%s/v1/plan.json", styled_id);
+    snprintf(styled_plan, sizeof(styled_plan), "compositions/%s/v1/plan.json", planned_id);
     char *plan_text = read_file(styled_plan, NULL);
     check(plan_text && strstr(plan_text, "style-model.json") != NULL,
           "the plan has a style constraint naming the style file");
