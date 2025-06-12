@@ -207,6 +207,13 @@ response is not a 2xx XML document, `ScoreNotes.scoreResponseProblem` turns it
 into a message and the paper shows "Could not load score: <message>" instead of
 handing the body to OSMD.
 
+The score is written in notated values: the export quantizes the played times
+to the beat grid (`score_quantize_options_default()`), so notes carry `<type>`,
+dots, triplet brackets and `<beam>`. Each source part is a part with its
+instrument and General MIDI program (`midi_program`), a piano part draws on two
+staves, `<work-title>` is the piece title (the filename without its extension)
+and the composer from `meta.json` is written as the composer credit.
+
 A claim's `note_ids` are mapped to `<note xml:id>` values through the piece's
 `note_xml_ids`. OSMD does not keep `xml:id`, so the score finds each
 note by its position and pitch (`frontend/public/score-notes.js`, no DOM,
