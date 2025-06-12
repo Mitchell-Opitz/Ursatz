@@ -976,19 +976,19 @@ The library's standard-harmony analysis found 12 cadences from the chords, the m
 
 ## Phrases
 
-The library's standard-form analysis found 9 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece.
+The library's standard-form analysis found 9 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece; Expansion is a lengthening or shortening of the phrase's ending, or an extension after its cadence, with the measures it adds or removes.
 
-| Phrase | Measures | Length | Cadence | Ends | Role |
-| --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 8 | 8 | half (m. 8, beat 1) | cadence | beginning |
-| 2 | mm. 9 to 19 | 11 | half (m. 19, beat 1) | cadence | middle |
-| 3 | m. 20 | 1 | perfect-authentic (m. 20, beat 1) | cadence | middle |
-| 4 | m. 21 | 1 | half (m. 21, beat 1) | cadence | middle |
-| 5 | m. 22 | 1 | imperfect-authentic (m. 22, beat 1) | cadence | middle |
-| 6 | mm. 23 to 34 | 12 | half (m. 34, beat 3) | cadence | middle |
-| 7 | mm. 35 to 39 | 5 | half (m. 39, beat 1) | cadence | middle |
-| 8 | m. 40 | 1 | perfect-authentic (m. 40, beat 1) | cadence | middle |
-| 9 | m. 41 | 1 | half (m. 41, beat 1) | cadence | ending |
+| Phrase | Measures | Length | Cadence | Ends | Role | Expansion |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 8 | 8 | half (m. 8, beat 1) | cadence | beginning | - |
+| 2 | mm. 9 to 19 | 11 | half (m. 19, beat 1) | cadence | middle | internal +3 (mm. 13 to 19) |
+| 3 | m. 20 | 1 | perfect-authentic (m. 20, beat 1) | cadence | middle | - |
+| 4 | m. 21 | 1 | half (m. 21, beat 1) | cadence | middle | - |
+| 5 | m. 22 | 1 | imperfect-authentic (m. 22, beat 1) | cadence | middle | - |
+| 6 | mm. 23 to 34 | 12 | half (m. 34, beat 3) | cadence | middle | internal +4 (mm. 27 to 34) |
+| 7 | mm. 35 to 39 | 5 | half (m. 39, beat 1) | cadence | middle | - |
+| 8 | m. 40 | 1 | perfect-authentic (m. 40, beat 1) | cadence | middle | contraction -4 (m. 40) |
+| 9 | m. 41 | 1 | half (m. 41, beat 1) | cadence | ending | external post-cadential-extension +2 (mm. 42 to 43) |
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8); subphrases mm. 1 to 4, mm. 5 to 8; phrase model Tb (m. 1, beat 1), PD (m. 7, beat 3), D (m. 8, beat 1)
 - **Phrase 2:** ideas basic-idea (mm. 9 to 10), contrasting-idea (mm. 11 to 12), contrasting-idea (mm. 13 to 14), contrasting-idea (mm. 15 to 16), contrasting-idea (mm. 17 to 19); subphrases mm. 9 to 12, mm. 13 to 19; phrase model Tb (m. 9, beat 1), D (m. 19, beat 1)
@@ -999,6 +999,17 @@ The library's standard-form analysis found 9 phrases from the soprano, the meter
 - **Phrase 7:** ideas basic-idea (mm. 35 to 36), contrasting-idea (mm. 37 to 39); phrase model D (m. 39, beat 1)
 - **Phrase 8:** ideas basic-idea (m. 40)
 - **Phrase 9:** ideas basic-idea (m. 41); phrase model D (m. 41, beat 1)
+
+## Themes
+
+The library's standard-form analysis found 4 themes from the phrases, their ideas and the cadences. Form is the library's name for the pairing of the two parts; Commonality is how common that pairing is; Traits are what the library finds in the continuation.
+
+| Theme | Form | Commonality | Measures | Length | Parts | Traits |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | hybrid | slightly-less-common | mm. 1 to 8 | 8 | compound-basic-idea (mm. 1 to 4), continuation (mm. 5 to 8, half (m. 8, beat 1)) | - |
+| 2 | hybrid | slightly-less-common | mm. 9 to 19 | 11 | compound-basic-idea (mm. 9 to 12), continuation (mm. 13 to 19, half (m. 19, beat 1)) | - |
+| 3 | hybrid | slightly-less-common | mm. 23 to 34 | 12 | compound-basic-idea (mm. 23 to 26), continuation (mm. 27 to 34, half (m. 34, beat 3)) | - |
+| 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, perfect-authentic (m. 40, beat 1)) | fragmentation |
 
 ## Progression patterns
 

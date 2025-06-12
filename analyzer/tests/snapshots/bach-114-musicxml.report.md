@@ -658,15 +658,24 @@ The library's standard-harmony analysis found 5 cadences from the chords, the me
 
 ## Phrases
 
-The library's standard-form analysis found 2 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece.
+The library's standard-form analysis found 2 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece; Expansion is a lengthening or shortening of the phrase's ending, or an extension after its cadence, with the measures it adds or removes.
 
-| Phrase | Measures | Length | Cadence | Ends | Role |
-| --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 15 | 15 | perfect-authentic (m. 15, beat 3.5) | cadence | beginning |
-| 2 | mm. 16 to 21 | 6 | perfect-authentic (m. 21, beat 3.5) | cadence | ending |
+| Phrase | Measures | Length | Cadence | Ends | Role | Expansion |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 15 | 15 | perfect-authentic (m. 15, beat 3.5) | cadence | beginning | internal +7 (mm. 5 to 15) |
+| 2 | mm. 16 to 21 | 6 | perfect-authentic (m. 21, beat 3.5) | cadence | ending | contraction -2 (mm. 20 to 21); external codetta +3 (mm. 22 to 24) |
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8), contrasting-idea (mm. 9 to 10), contrasting-idea (mm. 11 to 12), contrasting-idea (mm. 13 to 15); subphrases mm. 1 to 4, mm. 5 to 15
 - **Phrase 2:** ideas basic-idea (mm. 16 to 17), contrasting-idea (mm. 18 to 19), contrasting-idea (mm. 20 to 21); subphrases mm. 16 to 19, mm. 20 to 21; phrase model D (m. 21, beat 3), Te (m. 21, beat 3.5)
+
+## Themes
+
+The library's standard-form analysis found 2 themes from the phrases, their ideas and the cadences. Form is the library's name for the pairing of the two parts; Commonality is how common that pairing is; Traits are what the library finds in the continuation.
+
+| Theme | Form | Commonality | Measures | Length | Parts | Traits |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | hybrid | slightly-less-common | mm. 1 to 15 | 15 | compound-basic-idea (mm. 1 to 4), continuation (mm. 5 to 15, perfect-authentic (m. 15, beat 3.5)) | - |
+| 2 | hybrid | slightly-less-common | mm. 16 to 21 | 6 | compound-basic-idea (mm. 16 to 19), continuation (mm. 20 to 21, perfect-authentic (m. 21, beat 3.5)) | - |
 
 ## Progression patterns
 

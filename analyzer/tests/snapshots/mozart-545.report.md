@@ -4905,62 +4905,62 @@ The library's standard-harmony analysis found 51 cadences from the chords, the m
 
 ## Phrases
 
-The library's standard-form analysis found 52 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece.
+The library's standard-form analysis found 52 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece; Expansion is a lengthening or shortening of the phrase's ending, or an extension after its cadence, with the measures it adds or removes.
 
-| Phrase | Measures | Length | Cadence | Ends | Role |
-| --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 13 | 13 | none | discontinuity | beginning |
-| 2 | mm. 14 to 21 | 8 | none | discontinuity | middle |
-| 3 | mm. 22 to 27 | 6 | perfect-authentic (m. 27, beat 1) | cadence | middle |
-| 4 | mm. 28 to 29 | 2 | perfect-authentic (m. 28, beat 1) | cadence | middle |
-| 5 | mm. 30 to 41 | 12 | none | discontinuity | middle |
-| 6 | mm. 42 to 49 | 8 | none | discontinuity | middle |
-| 7 | mm. 50 to 55 | 6 | perfect-authentic (m. 55, beat 1) | cadence | middle |
-| 8 | mm. 56 to 57 | 2 | perfect-authentic (m. 56, beat 1) | cadence | middle |
-| 9 | m. 58 | 1 | perfect-authentic (m. 58, beat 1) | cadence | middle |
-| 10 | mm. 59 to 63 | 5 | imperfect-authentic (m. 63, beat 1) | cadence | middle |
-| 11 | mm. 64 to 71 | 8 | none | discontinuity | middle |
-| 12 | mm. 72 to 86 | 15 | none | discontinuity | middle |
-| 13 | mm. 87 to 94 | 8 | none | discontinuity | middle |
-| 14 | mm. 95 to 100 | 6 | perfect-authentic (m. 100, beat 1) | cadence | middle |
-| 15 | m. 101 | 1 | perfect-authentic (m. 101, beat 1) | cadence | middle |
-| 16 | mm. 102 to 104 | 3 | perfect-authentic (m. 104, beat 1) | cadence | middle |
-| 17 | mm. 105 to 108 | 4 | imperfect-authentic (m. 108, beat 1) | cadence | middle |
-| 18 | mm. 109 to 116 | 8 | none | discontinuity | middle |
-| 19 | mm. 117 to 131 | 15 | none | discontinuity | middle |
-| 20 | mm. 132 to 139 | 8 | none | discontinuity | middle |
-| 21 | mm. 140 to 145 | 6 | perfect-authentic (m. 145, beat 1) | cadence | middle |
-| 22 | m. 146 | 1 | perfect-authentic (m. 146, beat 1) | cadence | middle |
-| 23 | mm. 147 to 149 | 3 | half (m. 149, beat 1) | cadence | middle |
-| 24 | mm. 150 to 162 | 13 | none | discontinuity | middle |
-| 25 | mm. 163 to 181 | 19 | half (m. 181, beat 1) | cadence | middle |
-| 26 | mm. 182 to 187 | 6 | half (m. 187, beat 3) | cadence | middle |
-| 27 | mm. 188 to 197 | 10 | half (m. 197, beat 1) | cadence | middle |
-| 28 | mm. 198 to 203 | 6 | half (m. 203, beat 3) | cadence | middle |
-| 29 | mm. 204 to 216 | 13 | perfect-authentic (m. 216, beat 1) | cadence | middle |
-| 30 | mm. 217 to 227 | 11 | half (m. 227, beat 3) | cadence | middle |
-| 31 | mm. 228 to 242 | 15 | none | discontinuity | middle |
-| 32 | mm. 243 to 252 | 10 | imperfect-authentic (m. 252, beat 1) | cadence | middle |
-| 33 | m. 253 | 1 | imperfect-authentic (m. 253, beat 1) | cadence | middle |
-| 34 | m. 254 | 1 | perfect-authentic (m. 254, beat 1) | cadence | middle |
-| 35 | mm. 255 to 262 | 8 | half (m. 262, beat 1) | cadence | middle |
-| 36 | mm. 263 to 264 | 2 | perfect-authentic (m. 264, beat 1) | cadence | middle |
-| 37 | mm. 265 to 266 | 2 | half (m. 266, beat 1) | cadence | middle |
-| 38 | mm. 267 to 270 | 4 | half (m. 270, beat 1) | cadence | middle |
-| 39 | mm. 271 to 272 | 2 | perfect-authentic (m. 272, beat 1) | cadence | middle |
-| 40 | mm. 273 to 278 | 6 | half (m. 278, beat 1) | cadence | middle |
-| 41 | mm. 279 to 286 | 8 | half (m. 286, beat 1) | cadence | middle |
-| 42 | mm. 287 to 296 | 10 | half (m. 296, beat 1) | cadence | middle |
-| 43 | mm. 297 to 307 | 11 | none | discontinuity | middle |
-| 44 | mm. 308 to 312 | 5 | perfect-authentic (m. 312, beat 1) | cadence | middle |
-| 45 | m. 313 | 1 | perfect-authentic (m. 313, beat 1) | cadence | middle |
-| 46 | m. 314 | 1 | perfect-authentic (m. 314, beat 1) | cadence | middle |
-| 47 | m. 315 | 1 | imperfect-authentic (m. 315, beat 1) | cadence | middle |
-| 48 | mm. 316 to 319 | 4 | half (m. 319, beat 1) | cadence | middle |
-| 49 | mm. 320 to 323 | 4 | half (m. 323, beat 1) | cadence | middle |
-| 50 | mm. 324 to 325 | 2 | perfect-authentic (m. 325, beat 1) | cadence | middle |
-| 51 | mm. 326 to 333 | 8 | none | discontinuity | middle |
-| 52 | mm. 334 to 338 | 5 | none | none | ending |
+| Phrase | Measures | Length | Cadence | Ends | Role | Expansion |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 13 | 13 | none | discontinuity | beginning | - |
+| 2 | mm. 14 to 21 | 8 | none | discontinuity | middle | - |
+| 3 | mm. 22 to 27 | 6 | perfect-authentic (m. 27, beat 1) | cadence | middle | contraction -2 (mm. 26 to 27) |
+| 4 | mm. 28 to 29 | 2 | perfect-authentic (m. 28, beat 1) | cadence | middle | - |
+| 5 | mm. 30 to 41 | 12 | none | discontinuity | middle | - |
+| 6 | mm. 42 to 49 | 8 | none | discontinuity | middle | - |
+| 7 | mm. 50 to 55 | 6 | perfect-authentic (m. 55, beat 1) | cadence | middle | contraction -2 (mm. 54 to 55) |
+| 8 | mm. 56 to 57 | 2 | perfect-authentic (m. 56, beat 1) | cadence | middle | - |
+| 9 | m. 58 | 1 | perfect-authentic (m. 58, beat 1) | cadence | middle | - |
+| 10 | mm. 59 to 63 | 5 | imperfect-authentic (m. 63, beat 1) | cadence | middle | - |
+| 11 | mm. 64 to 71 | 8 | none | discontinuity | middle | - |
+| 12 | mm. 72 to 86 | 15 | none | discontinuity | middle | - |
+| 13 | mm. 87 to 94 | 8 | none | discontinuity | middle | - |
+| 14 | mm. 95 to 100 | 6 | perfect-authentic (m. 100, beat 1) | cadence | middle | contraction -2 (mm. 99 to 100) |
+| 15 | m. 101 | 1 | perfect-authentic (m. 101, beat 1) | cadence | middle | - |
+| 16 | mm. 102 to 104 | 3 | perfect-authentic (m. 104, beat 1) | cadence | middle | - |
+| 17 | mm. 105 to 108 | 4 | imperfect-authentic (m. 108, beat 1) | cadence | middle | - |
+| 18 | mm. 109 to 116 | 8 | none | discontinuity | middle | - |
+| 19 | mm. 117 to 131 | 15 | none | discontinuity | middle | - |
+| 20 | mm. 132 to 139 | 8 | none | discontinuity | middle | - |
+| 21 | mm. 140 to 145 | 6 | perfect-authentic (m. 145, beat 1) | cadence | middle | contraction -2 (mm. 144 to 145) |
+| 22 | m. 146 | 1 | perfect-authentic (m. 146, beat 1) | cadence | middle | - |
+| 23 | mm. 147 to 149 | 3 | half (m. 149, beat 1) | cadence | middle | - |
+| 24 | mm. 150 to 162 | 13 | none | discontinuity | middle | - |
+| 25 | mm. 163 to 181 | 19 | half (m. 181, beat 1) | cadence | middle | internal +11 (mm. 167 to 181) |
+| 26 | mm. 182 to 187 | 6 | half (m. 187, beat 3) | cadence | middle | contraction -2 (mm. 186 to 187) |
+| 27 | mm. 188 to 197 | 10 | half (m. 197, beat 1) | cadence | middle | internal +2 (mm. 192 to 197) |
+| 28 | mm. 198 to 203 | 6 | half (m. 203, beat 3) | cadence | middle | contraction -2 (mm. 202 to 203) |
+| 29 | mm. 204 to 216 | 13 | perfect-authentic (m. 216, beat 1) | cadence | middle | internal +5 (mm. 208 to 216) |
+| 30 | mm. 217 to 227 | 11 | half (m. 227, beat 3) | cadence | middle | internal +3 (mm. 221 to 227) |
+| 31 | mm. 228 to 242 | 15 | none | discontinuity | middle | - |
+| 32 | mm. 243 to 252 | 10 | imperfect-authentic (m. 252, beat 1) | cadence | middle | internal +2 (mm. 247 to 252) |
+| 33 | m. 253 | 1 | imperfect-authentic (m. 253, beat 1) | cadence | middle | - |
+| 34 | m. 254 | 1 | perfect-authentic (m. 254, beat 1) | cadence | middle | - |
+| 35 | mm. 255 to 262 | 8 | half (m. 262, beat 1) | cadence | middle | - |
+| 36 | mm. 263 to 264 | 2 | perfect-authentic (m. 264, beat 1) | cadence | middle | - |
+| 37 | mm. 265 to 266 | 2 | half (m. 266, beat 1) | cadence | middle | - |
+| 38 | mm. 267 to 270 | 4 | half (m. 270, beat 1) | cadence | middle | - |
+| 39 | mm. 271 to 272 | 2 | perfect-authentic (m. 272, beat 1) | cadence | middle | contraction -2 (mm. 271 to 272) |
+| 40 | mm. 273 to 278 | 6 | half (m. 278, beat 1) | cadence | middle | contraction -2 (mm. 277 to 278) |
+| 41 | mm. 279 to 286 | 8 | half (m. 286, beat 1) | cadence | middle | - |
+| 42 | mm. 287 to 296 | 10 | half (m. 296, beat 1) | cadence | middle | internal +2 (mm. 291 to 296) |
+| 43 | mm. 297 to 307 | 11 | none | discontinuity | middle | - |
+| 44 | mm. 308 to 312 | 5 | perfect-authentic (m. 312, beat 1) | cadence | middle | - |
+| 45 | m. 313 | 1 | perfect-authentic (m. 313, beat 1) | cadence | middle | - |
+| 46 | m. 314 | 1 | perfect-authentic (m. 314, beat 1) | cadence | middle | - |
+| 47 | m. 315 | 1 | imperfect-authentic (m. 315, beat 1) | cadence | middle | - |
+| 48 | mm. 316 to 319 | 4 | half (m. 319, beat 1) | cadence | middle | - |
+| 49 | mm. 320 to 323 | 4 | half (m. 323, beat 1) | cadence | middle | - |
+| 50 | mm. 324 to 325 | 2 | perfect-authentic (m. 325, beat 1) | cadence | middle | contraction -2 (mm. 324 to 325) |
+| 51 | mm. 326 to 333 | 8 | none | discontinuity | middle | - |
+| 52 | mm. 334 to 338 | 5 | none | none | ending | - |
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8), contrasting-idea (mm. 9 to 10), contrasting-idea (mm. 11 to 13); subphrases mm. 1 to 4, mm. 5 to 13
 - **Phrase 2:** ideas basic-idea (mm. 14 to 15), basic-idea (mm. 16 to 17), contrasting-idea (mm. 18 to 19), contrasting-idea (mm. 20 to 21); subphrases mm. 14 to 17, mm. 18 to 21
@@ -5014,6 +5014,31 @@ The library's standard-form analysis found 52 phrases from the soprano, the mete
 - **Phrase 50:** ideas basic-idea (mm. 324 to 325); phrase model PD (m. 324, beat 1), D (m. 324, beat 2.5), Te (m. 325, beat 1), Te (m. 325, beat 1.5)
 - **Phrase 51:** ideas basic-idea (mm. 326 to 327), contrasting-idea (mm. 328 to 329), basic-idea (mm. 330 to 331), contrasting-idea (mm. 332 to 333); subphrases mm. 326 to 329, mm. 330 to 333
 - **Phrase 52:** ideas basic-idea (mm. 334 to 335), contrasting-idea (mm. 336 to 338)
+
+## Themes
+
+The library's standard-form analysis found 18 themes from the phrases, their ideas and the cadences. Form is the library's name for the pairing of the two parts; Commonality is how common that pairing is; Traits are what the library finds in the continuation.
+
+| Theme | Form | Commonality | Measures | Length | Parts | Traits |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | hybrid | slightly-less-common | mm. 22 to 27 | 6 | compound-basic-idea (mm. 22 to 25), continuation (mm. 26 to 27, perfect-authentic (m. 27, beat 1)) | - |
+| 2 | hybrid | slightly-less-common | mm. 50 to 55 | 6 | compound-basic-idea (mm. 50 to 53), continuation (mm. 54 to 55, perfect-authentic (m. 55, beat 1)) | - |
+| 3 | hybrid | slightly-less-common | mm. 95 to 100 | 6 | compound-basic-idea (mm. 95 to 98), continuation (mm. 99 to 100, perfect-authentic (m. 100, beat 1)) | - |
+| 4 | hybrid | slightly-less-common | mm. 140 to 145 | 6 | compound-basic-idea (mm. 140 to 143), continuation (mm. 144 to 145, perfect-authentic (m. 145, beat 1)) | - |
+| 5 | hybrid | slightly-less-common | mm. 163 to 181 | 19 | compound-basic-idea (mm. 163 to 166), continuation (mm. 167 to 181, half (m. 181, beat 1)) | - |
+| 6 | hybrid | slightly-less-common | mm. 182 to 187 | 6 | compound-basic-idea (mm. 182 to 185), continuation (mm. 186 to 187, half (m. 187, beat 3)) | - |
+| 7 | hybrid | slightly-less-common | mm. 188 to 197 | 10 | compound-basic-idea (mm. 188 to 191), continuation (mm. 192 to 197, half (m. 197, beat 1)) | - |
+| 8 | hybrid | slightly-less-common | mm. 198 to 203 | 6 | compound-basic-idea (mm. 198 to 201), continuation (mm. 202 to 203, half (m. 203, beat 3)) | - |
+| 9 | hybrid | slightly-less-common | mm. 204 to 216 | 13 | compound-basic-idea (mm. 204 to 207), continuation (mm. 208 to 216, perfect-authentic (m. 216, beat 1)) | - |
+| 10 | hybrid | slightly-less-common | mm. 217 to 227 | 11 | compound-basic-idea (mm. 217 to 220), continuation (mm. 221 to 227, half (m. 227, beat 3)) | - |
+| 11 | hybrid | slightly-less-common | mm. 243 to 252 | 10 | compound-basic-idea (mm. 243 to 246), consequent (mm. 247 to 252, imperfect-authentic (m. 252, beat 1)) | - |
+| 12 | hybrid | slightly-less-common | mm. 255 to 262 | 8 | compound-basic-idea (mm. 255 to 258), continuation (mm. 259 to 262, half (m. 262, beat 1)) | - |
+| 13 | hybrid | slightly-less-common | mm. 267 to 272 | 6 | antecedent (mm. 267 to 270, half (m. 270, beat 1)), continuation (mm. 271 to 272, perfect-authentic (m. 272, beat 1)) | - |
+| 14 | hybrid | slightly-less-common | mm. 273 to 278 | 6 | compound-basic-idea (mm. 273 to 276), continuation (mm. 277 to 278, half (m. 278, beat 1)) | - |
+| 15 | hybrid | slightly-less-common | mm. 279 to 286 | 8 | compound-basic-idea (mm. 279 to 282), continuation (mm. 283 to 286, half (m. 286, beat 1)) | - |
+| 16 | hybrid | slightly-less-common | mm. 287 to 296 | 10 | compound-basic-idea (mm. 287 to 290), continuation (mm. 291 to 296, half (m. 296, beat 1)) | - |
+| 17 | repeated-phrase | - | mm. 313 to 314 | 2 | part (m. 313, perfect-authentic (m. 313, beat 1)), part (m. 314, perfect-authentic (m. 314, beat 1)) | - |
+| 18 | hybrid | slightly-less-common | mm. 320 to 325 | 6 | antecedent (mm. 320 to 323, half (m. 323, beat 1)), continuation (mm. 324 to 325, perfect-authentic (m. 325, beat 1)) | - |
 
 ## Progression patterns
 
