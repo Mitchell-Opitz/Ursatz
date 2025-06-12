@@ -57,6 +57,9 @@ set(CIVETWEB_ENABLE_SSL OFF CACHE BOOL "" FORCE)
 # library, breaking the final link. We don't want civetweb built with
 # sanitizers baked in as a fixed default, so turn it off explicitly.
 set(CIVETWEB_ENABLE_ASAN OFF CACHE BOOL "" FORCE)
+# civetweb v1.16 declares cmake_minimum_required below 3.5, which CMake 4
+# rejects.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 FetchContent_Declare(
   civetweb
