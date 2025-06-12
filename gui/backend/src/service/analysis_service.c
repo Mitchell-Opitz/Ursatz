@@ -997,18 +997,32 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
     }
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
     InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    /* The Library shows the filename without its extension as the title. */
+    char *title = meta_string_copy(meta, "filename");
+    char *composer = meta_string_copy(meta, "composer");
     cJSON_Delete(meta);
+    if (!title || !composer) {
+        free(title);
+        free(composer);
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    char *title_dot = strrchr(title, '.');
+    if (title_dot && title_dot != title) {
+        *title_dot = '\0';
+    }
 
     char source_path[400];
     ImportedNotes notes;
     if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
         input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+        free(title);
+        free(composer);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    /* The score is written from the imported notes: their parts and staves,
-       the source's own meter, and its key signatures in part 0. Tempo
-       markings and dynamics are left out. */
+    /* The score is written from the imported notes: their parts, staves and
+       programs, the source's own meter, and its key signatures in part 0,
+       quantized to notated values. Tempo markings and dynamics are left out. */
     MusicXmlExportPart *parts = NULL;
     if (notes.source.part_count > 0) {
         parts = calloc(notes.source.part_count, sizeof(MusicXmlExportPart));
@@ -1021,6 +1035,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
     if ((notes.source.part_count > 0 && !parts) || (key_count > 0 && !keys)) {
         free(parts);
         free(keys);
+        free(title);
+        free(composer);
         imported_notes_destroy(&notes);
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
@@ -1028,6 +1044,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
         parts[i].id = notes.source.parts[i].id;
         parts[i].name = notes.source.parts[i].name;
         parts[i].staff_count = notes.source.parts[i].staff_count;
+        parts[i].midi_program = notes.source.parts[i].midi_program;
     }
     for (size_t i = 0; i < key_count; i++) {
         const MidiKeySignatureEvent *event = &notes.key_signature_events.events[i];
@@ -1037,6 +1054,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
         keys[i].part_index = 0;
     }
 
+    const ScoreQuantizeOptions quantize = score_quantize_options_default();
     MusicXmlExportScore score;
     memset(&score, 0, sizeof(score));
     score.events = notes.events;
@@ -1049,12 +1067,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
     score.meter_map = notes.meter.meter_map;
     score.key_signatures = keys;
     score.key_signature_count = key_count;
+    score.quantize = &quantize;
+    score.title = title;
+    score.composer = composer;
 
     char *xml = NULL;
     MusicXmlExportResult result = musicxml_export_write_score(&score, &xml);
     bool meter_defaulted = notes.meter.meter_map ? meter_map_is_defaulted(notes.meter.meter_map) : true;
     free(parts);
     free(keys);
+    free(title);
+    free(composer);
     imported_notes_destroy(&notes);
 
     if (result != MUSICXML_EXPORT_OK) {

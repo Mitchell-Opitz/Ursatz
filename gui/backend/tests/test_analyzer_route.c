@@ -555,6 +555,51 @@ static cJSON *get_json(const char *path) {
   return json;
 }
 
+/* The number of non-overlapping occurrences of needle in text. */
+static int count_occurrences(const char *text, const char *needle) {
+  int count = 0;
+  size_t length = strlen(needle);
+  for (const char *at = text ? strstr(text, needle) : NULL; at; at = strstr(at + length, needle)) {
+    count++;
+  }
+  return count;
+}
+
+/* The score is drawn with notated values: parts, staves, instruments, beams,
+ * the piece title, and the composer once it is set. */
+static void check_notated_score(const char *piano_id, const char *two_channel_id) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", two_channel_id);
+  char *xml = http_get(path);
+  check(response_has_status(xml, 200), "the two-channel score is 200 OK");
+  check(count_occurrences(response_body(xml), "<score-part ") == 2, "a two-channel MIDI upload gives two parts");
+  check(strstr(response_body(xml), "<midi-program>41</midi-program>") != NULL,
+        "the second part carries its MIDI program");
+  check(strstr(response_body(xml), "<work-title>two-channel</work-title>") != NULL,
+        "the score title is the filename without its extension");
+  check(strstr(response_body(xml), "type=\"composer\"") == NULL, "a piece with no composer writes none");
+  free(xml);
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", piano_id);
+  xml = http_get(path);
+  check(response_has_status(xml, 200), "the piano score is 200 OK");
+  check(strstr(response_body(xml), "<staves>2</staves>") != NULL, "a piano upload has two staves");
+  check(strstr(response_body(xml), "<type>") != NULL, "the score notes carry a <type>");
+  check(strstr(response_body(xml), "<beam number=\"1\">begin</beam>") != NULL, "the score notes carry <beam>");
+  check(strstr(response_body(xml), "<work-title>Bach 114</work-title>") != NULL,
+        "the piano score title is the piece title");
+  free(xml);
+
+  char *response = patch_piece(piano_id, "{\"composer\":\"J. S. Bach\"}");
+  check(response_has_status(response, 200), "PATCH sets the composer");
+  free(response);
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", piano_id);
+  xml = http_get(path);
+  check(strstr(response_body(xml), "type=\"composer\">J. S. Bach</creator>") != NULL,
+        "the composer is written after a PATCH");
+  free(xml);
+}
+
 static const cJSON *piece_in_list(const cJSON *list, const char *id) {
   const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(list, "pieces");
   const cJSON *entry = NULL;
@@ -830,6 +875,20 @@ int main(void) {
   if (bach_id) {
     check_score_meter(bach_id, false, "Bach 114");
   }
+
+  /* Notated values: two MIDI channels give two named parts, a piano upload
+     two staves with beams, and the title and composer reach the score. */
+  static const unsigned char kTwoChannelMidi[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T',
+                                                  'r', 'k', 0, 0, 0, 27, 0x00, 0xC0, 0x00, 0x00, 0xC1, 0x28, 0x00,
+                                                  0x90, 0x3C, 0x40, 0x00, 0x91, 0x40, 0x40, 0x83, 0x60, 0x80, 0x3C,
+                                                  0x40, 0x00, 0x81, 0x40, 0x40, 0x00, 0xFF, 0x2F, 0x00};
+  write_file("two-channel.mid", kTwoChannelMidi, sizeof(kTwoChannelMidi));
+  char *two_channel_id = upload_file("two-channel.mid", "two-channel.mid", NULL);
+  check(two_channel_id != NULL, "a two-channel MIDI file uploads");
+  if (two_channel_id && bach_id) {
+    check_notated_score(bach_id, two_channel_id);
+  }
+  free(two_channel_id);
 
   /* A MIDI file without a time signature gets a default 4/4, flagged. */
   static const unsigned char kNoMeterMidi[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T',
