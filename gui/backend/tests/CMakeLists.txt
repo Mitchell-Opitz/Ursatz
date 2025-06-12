@@ -174,6 +174,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
 add_dependencies(test_composer_route ursatz_composer_cli)
 target_compile_definitions(test_composer_route PRIVATE
   URSATZ_GUI_TEST_COMPOSER_DIR="${CMAKE_SOURCE_DIR}/external/ursatz-composer"
+  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
 )
 
 add_test(NAME composer_route COMMAND test_composer_route

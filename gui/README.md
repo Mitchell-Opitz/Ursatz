@@ -68,6 +68,12 @@ the backend's message and the Composer's stderr.
   modulate, optional motive, optional given melody with where it goes, for
   example `B` or `B:2`, accompaniment, check, seed, tempo) and press Plan
   piece. The piece is planned and filled; the result is version 1.
+- **Compose in a style**: both forms have a Style select (None, then every
+  style built in the Collections view, with its piece count) and a Weight
+  select (Light 1/4, Normal 1/2, Strong 1; Normal by default, disabled while
+  Style is None). The result text includes the Composer's style distance line.
+  A composition keeps the path of its style file, so a later fill or
+  regenerate after the style was deleted fails with the Composer's message.
 - **A composition**: the version selector lists each version with its action,
   seed and time. Below it: the plan tree (form, sections with their letters,
   phrases and ideas, each with its bars and its state, Given or Realized), the
@@ -673,13 +679,18 @@ Routes (bodies are JSON; success bodies have `"ok":true`):
   or 503 when the binary is missing.
 - `POST /api/composer/grow`: `{name, motive, into, hybrid?, key, meter,
   bars?, cadence?, first_cadence?, accompaniment?, texture?, check?, seed?,
-  tempo?}`. `motive` is a note list (`D4:q F4:e A4:e D5:h`); `hybrid` is
-  required when `into` is `hybrid`. Makes version 1. Returns
+  tempo?, style?, style_weight?}`. `motive` is a note list (`D4:q F4:e A4:e
+  D5:h`); `hybrid` is required when `into` is `hybrid`. `style` is a style id
+  (see Styles routes), passed as `--style <model file>`; `style_weight` is a
+  whole number or `n/d` with a non-zero denominator (`--style-weight`) and
+  needs `style`. An unknown style is 400 `{"error":"unknown style"}`. Makes
+  version 1. Returns
   `{"ok":true,"id","version":1,"summary"}`.
 - `POST /api/composer/plan`: `{name, form, key, meter, bars?, count?,
   modulate?, motive?, given_melody? {notes, at}, accompaniment?, texture?,
-  seed?, check?, tempo?}`. Runs `plan`, then `fill` with the same seed, into
-  version 1.
+  seed?, check?, tempo?, style?, style_weight?}`. Runs `plan`, then `fill`
+  with the same seed, into version 1. `style` and `style_weight` are as for
+  grow and go to `plan`; `fill` reads the plan's style constraint.
 - `GET /api/composer/compositions`: `{"ok":true,"compositions":[{id, name,
   kind, created_at, versions}]}`, newest first.
 - `GET /api/composer/compositions/<id>`: `meta.json` with `ok` and `id`.
