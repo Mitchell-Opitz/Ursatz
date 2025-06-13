@@ -27,7 +27,8 @@ newline. The same input and build always give the same bytes.
 | `non_chord_tones` | array of non-chord-tone claims | Filled. |
 | `outer_voices` | object | Filled: the soprano and bass lines. See below. |
 | `cadences` | array of cadence claims | Filled: the library's standard-harmony cadences. See below. |
-| `phrases` | array of phrase claims | Filled: the library's standard-form phrases, with their ideas, subphrases and phrase model. See below. |
+| `phrases` | array of phrase claims | Filled: the library's standard-form phrases, with their ideas, subphrases, phrase model and expansions. See below. |
+| `themes` | array of theme claims | Optional, after `phrases`. Filled: the library's themes (sentences, periods, hybrids, compound periods, repeated phrases). See below. |
 | `form` | object or null | Placeholder: `null`. |
 | `motives` | array | Placeholder: `[]`. |
 | `melody` | array | Placeholder: `[]`. |
@@ -521,8 +522,43 @@ everything in the document comes from the second pass. There is no further itera
 | `subphrases` | array | Optional. A phrase of at least three ideas has two: its first two ideas and the rest. Each is a claim (`label` `"subphrase"`) with `index` (0 or 1), `first_idea` and `idea_count` (into this phrase's `ideas`), `measures` and `length`. |
 | `ideas` | array | Optional. The phrase's ideas, in order, cut by the library's nominal two-measure length. Each is a claim whose `label` is the library's idea label (`"basic-idea"`, `"contrasting-idea"`, `"fragment"` or `"unit"`) with `index`, `measures`, `length` and `similarity` (the share of matching intervals against the phrase's first idea; `null` for the first idea). Spans are clipped to the phrase's span. |
 
-`subphrases`, `ideas` and the chord claims' `phrase_model` are additive. The Markdown report renders `## Phrases` from
-this array: a row per phrase, then a line per phrase with its ideas, subphrases and phrase model.
+| `expansions` | array | Optional, absent with none. The expansions and contractions that concern the phrase (see "Themes"): each is a claim whose `label` is `"internal"`, `"external"` or `"contraction"` (the library's `ExpansionPlacement` and `PhraseLengthChange` names; its `StandardFormExpansionKind` has none of its own) with `index`, `change` (`"expansion"` or `"contraction"`), `theme` (index into `themes`, `null` for an external expansion of a phrase in no theme), `expected_length` and `actual_length` in measures, `measures_changed` (at least 1), `measures`, and `techniques` (the library's `"repetition"`, `"stretching"`, `"one-more-time"` and `"alternative-path"` it finds evidence for; the library detects only repetition and one-more-time, and none when it finds no evidence). An external one adds `external_kind` (`"post-cadential-extension"`, `"codetta"`, `"coda"` or `"prefix"`) and the booleans `suffix_length_typical` and `suffix_agrees_with_location`. |
+
+`subphrases`, `ideas`, `expansions` and the chord claims' `phrase_model` are additive. The Markdown report renders
+`## Phrases` from this array: a row per phrase (with an Expansion column), then a line per phrase with its ideas,
+subphrases and phrase model.
+
+### Themes
+
+`themes` holds one claim per theme the library's standard-form analysis finds (`analysis/analysis_theme.h`) over the
+phrases, ideas and subphrases above, in the library's order: a compound period comes after its two sentences, so a
+theme may start before the one before it. The analyzer runs `standard_form_identify_themes` and
+`standard_form_detect_expansions` with the default config (`src/pipeline/form_pipeline.c`); every form, part name and
+judgement is the library's. The form's bass is not part of the input: the library reads the bass only for motives, which
+a later branch fills, so no bass notes are added and the cadential ending is never identified (README, Known limits).
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `framework` | string | `"standard-form-v1"`. |
+| `span`, `location`, `note_ids` | | From the first measure to the end of the last phrase proper (an extension after its cadence is not part of the theme); the soprano notes starting in it. |
+| `label` | string | The library's form name: `"sentence"`, `"period"`, `"hybrid"`, `"compound-period"` or `"repeated-phrase"`. |
+| `uncertainty` | number | The library's: the greatest phrase uncertainty combined with the uncertainty of the similarity that decided the form. |
+| `index` | integer | The theme's position in this array, from 0. |
+| `beginning`, `ending` | string or null | The library's names for the two parts (`"presentation"`, `"compound-basic-idea"`, `"antecedent"`; `"continuation"`, `"consequent"`, `"cadential"`); `null` for a repeated phrase and a compound period. |
+| `phrases` | object | `{"first", "count"}`: the phrases it spans (index into `phrases`, 1 or 2). |
+| `measures`, `length` | | As for a phrase: the library's measure numbers from the first measure to the last of the last phrase proper, and the length in measures. |
+| `parts_are_phrases` | boolean | The two parts are phrases (a two-phrase theme) and not subphrases (a one-phrase theme). |
+| `commonality` | string or null | How common the pairing of the two parts is: `"very-common"`, `"slightly-less-common"`, `"occasional"` or `"rare"`; `null` when the library gives none. |
+| `part_of_compound` | boolean | A sentence that is a half of a compound period. |
+| `parts` | array | The two parts, in order: `{"name", "measures", "length", "cadence"}`. `name` is `beginning` or `ending`; `cadence` is the index into `cadences` of the cadence that ends the part, `null` for a presentation or compound basic idea and for the first half of a theme whose first phrase has no cadence. |
+| `traits` | array | What the library's claim finds in the continuation: `"fragmentation"` or none. The claim gives no acceleration or sequence, so the analyzer reports none. |
+| `archetypal`, `cadences_usual`, `lengths_usual` | boolean | The claim's own judgements: a sentence of 4 or 8 measures with a balanced continuation that has fragmentation; the usual cadences (a period's half cadence then perfect authentic cadence; a sentence's goal cadence); the usual lengths. |
+| `halves` | array | Optional, compound periods only: the indices into `themes` of its two sentences. |
+
+The expansion and contraction claims are in the phrase they concern, in `expansions` (see "Phrases"): an ending longer
+or shorter than its beginning is an internal expansion or a contraction by the measures of the difference, and the
+extension after a phrase's cadence is an external expansion. The Markdown report renders `## Themes` from this array (a
+row per theme with its parts, each with the cadence that ends it, and its traits) and lists the compound periods.
 
 ### Progressions
 
@@ -595,7 +631,8 @@ before those:
   gain the optional `cadence_confirmed`; both are additive. Chord claims gain the optional `function` and
   `six_four`, and the optional top-level `prolongations` follows `chord_vocabulary`; all additive. `progressions` and `harmonic_rhythm` are filled (their
   entries are new), which is additive. `phrases` is filled (its claims are new, with the optional `subphrases`,
-  `ideas` and `phrase_model`), and chord claims gain the optional `phrase_model`; all additive.
+  `ideas` and `phrase_model`), and chord claims gain the optional `phrase_model`; all additive. The optional
+  top-level `themes` follows `phrases`, and phrase claims gain the optional `expansions`; both are additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
