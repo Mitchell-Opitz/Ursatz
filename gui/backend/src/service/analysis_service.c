@@ -30,6 +30,7 @@
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer/notation_reading.h>
 
 static char *dup_string(const char *value) {
     if (!value) {
@@ -298,6 +299,59 @@ static bool meta_tags_copy(const cJSON *meta, char ***out_tags, size_t *out_coun
     }
     *out_tags = tags;
     *out_count = count;
+    return true;
+}
+
+/* Copies meta's "notation" object. False (and *out zeroed) when it is absent, null or not an object. */
+static bool meta_notation_read(const cJSON *meta, UrsatzGuiNotation *out) {
+    memset(out, 0, sizeof(*out));
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, "notation");
+    if (!cJSON_IsObject(item)) {
+        return false;
+    }
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(item, "meter");
+    const cJSON *scale = cJSON_GetObjectItemCaseSensitive(item, "value_scale");
+    const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(item, "pickup");
+    if (cJSON_IsString(meter) && meter->valuestring) {
+        snprintf(out->meter, sizeof(out->meter), "%s", meter->valuestring);
+    }
+    if (cJSON_IsString(scale) && scale->valuestring) {
+        snprintf(out->value_scale, sizeof(out->value_scale), "%s", scale->valuestring);
+    }
+    if (cJSON_IsString(pickup) && pickup->valuestring) {
+        snprintf(out->pickup, sizeof(out->pickup), "%s", pickup->valuestring);
+    }
+    return true;
+}
+
+/* True when every set member of n is text the Analyzer reads. */
+static bool notation_is_valid(const UrsatzGuiNotation *n) {
+    NotationReading reading = notation_reading_none();
+    return (n->meter[0] == '\0' || notation_reading_parse_meter(n->meter, &reading)) &&
+           (n->value_scale[0] == '\0' || notation_reading_parse_scale(n->value_scale, &reading)) &&
+           (n->pickup[0] == '\0' || notation_reading_parse_pickup(n->pickup, &reading));
+}
+
+/* Sets (n) or removes (NULL) meta's "notation" object. */
+static bool meta_set_notation(cJSON *meta, const UrsatzGuiNotation *n) {
+    if (!n) {
+        cJSON_DeleteItemFromObjectCaseSensitive(meta, "notation");
+        return true;
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!object) {
+        return false;
+    }
+    if (!cJSON_AddStringToObject(object, "meter", n->meter) ||
+        !cJSON_AddStringToObject(object, "value_scale", n->value_scale) ||
+        !cJSON_AddStringToObject(object, "pickup", n->pickup)) {
+        cJSON_Delete(object);
+        return false;
+    }
+    if (cJSON_ReplaceItemInObjectCaseSensitive(meta, "notation", object)) {
+        return true;
+    }
+    cJSON_AddItemToObject(meta, "notation", object);
     return true;
 }
 
@@ -595,6 +649,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
         piece->composer = meta_string_copy(meta, "composer");
         piece->source = meta_string_copy(meta, "source");
         bool tags_ok = meta_tags_copy(meta, &piece->tags, &piece->tag_count);
+        piece->has_notation = meta_notation_read(meta, &piece->notation);
         cJSON_Delete(meta);
         if (!piece->id || !piece->filename || !piece->format || !piece->uploaded_at || !piece->composer ||
             !piece->source || !tags_ok) {
@@ -710,6 +765,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     detail->filename = meta_string_copy(meta, "filename");
     detail->format = meta_string_copy(meta, "format");
     detail->uploaded_at = meta_string_copy(meta, "uploaded_at");
+    detail->has_notation = meta_notation_read(meta, &detail->notation);
     cJSON_Delete(meta);
 
     char analysis_path[400];
@@ -903,6 +959,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_d
         }
         ursatz_gui_meta_tags_free(tags, tag_count);
     }
+    if (result == URSATZ_GUI_ANALYSIS_OK && update->has_notation) {
+        if (update->notation && !notation_is_valid(update->notation)) {
+            set_message(message, message_size, "invalid notation");
+            result = URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
+        } else if (!meta_set_notation(meta, update->notation)) {
+            result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+    }
     if (result != URSATZ_GUI_ANALYSIS_OK) {
         cJSON_Delete(meta);
         return result;
@@ -918,6 +982,21 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_d
     bool ok = write_file_atomic(meta_path, text, strlen(text));
     free(text);
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_notation(const char *pieces_dir, const char *id, bool *out_has,
+                                                          UrsatzGuiNotation *out) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    *out_has = meta_notation_read(meta, out);
+    cJSON_Delete(meta);
+    return URSATZ_GUI_ANALYSIS_OK;
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,

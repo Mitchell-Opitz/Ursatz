@@ -314,6 +314,21 @@ static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
   free(pieces);
 }
 
+/* Appends a piece's notation override as JSON: null when it has none. */
+static void append_notation(JsonBuffer *buf, bool has_notation, const UrsatzGuiNotation *notation) {
+  if (!has_notation) {
+    json_buffer_append(buf, "null");
+    return;
+  }
+  json_buffer_append(buf, "{\"meter\":");
+  json_buffer_append_string(buf, notation->meter);
+  json_buffer_append(buf, ",\"value_scale\":");
+  json_buffer_append_string(buf, notation->value_scale);
+  json_buffer_append(buf, ",\"pickup\":");
+  json_buffer_append_string(buf, notation->pickup);
+  json_buffer_append(buf, "}");
+}
+
 /* Appends one piece as the list route and the PATCH answer show it. */
 static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *piece) {
   json_buffer_append(buf, "{\"id\":");
@@ -335,7 +350,9 @@ static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *pie
     }
     json_buffer_append_string(buf, piece->tags[i]);
   }
-  json_buffer_append(buf, "]}");
+  json_buffer_append(buf, "],\"notation\":");
+  append_notation(buf, piece->has_notation, &piece->notation);
+  json_buffer_append(buf, "}");
 }
 
 /* Reads one query parameter (URL-decoded) into out; false when absent or empty. */
@@ -504,6 +521,8 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   json_buffer_append_string(&buf, detail->format);
   json_buffer_append(&buf, ",\"uploaded_at\":");
   json_buffer_append_string(&buf, detail->uploaded_at);
+  json_buffer_append(&buf, ",\"notation\":");
+  append_notation(&buf, detail->has_notation, &detail->notation);
   json_buffer_append(&buf, ",\"note_xml_ids\":[");
   for (size_t i = 0; i < detail->note_count; i++) {
     if (i != 0) {

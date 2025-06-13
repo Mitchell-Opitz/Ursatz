@@ -20,7 +20,8 @@
  *   analysis.json                                            the Analyzer's document
  *   meta.json                                                filename, format, uploaded_at,
  *                                                            analyzer_version, document_schema_version,
- *                                                            composer, source, tags (R-103; absent = unset)
+ *                                                            composer, source, tags (R-103; absent = unset),
+ *                                                            notation (R-110; absent = no override)
  * pieces_dir is created if it does not already exist.
  */
 
@@ -34,11 +35,25 @@ typedef enum {
     URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA
 } UrsatzGuiAnalysisResult;
 
+/*
+ * A piece's notation override (R-110): how its notes are to be read as notation.
+ * Each member is the text the Analyzer's notation_reading_parse_* reads, or ""
+ * for "not set": meter "3/4", value_scale "2" (1/4, 1/2, 1, 2 or 4), pickup
+ * "1/4" (whole notes, after scaling).
+ */
+typedef struct {
+    char meter[16];
+    char value_scale[8];
+    char pickup[16];
+} UrsatzGuiNotation;
+
 typedef struct {
     char *id;
     char *filename;    /* upload name, or "" if none was given */
     char *format;      /* "midi" or "musicxml" */
     char *uploaded_at; /* ISO 8601 UTC */
+    bool has_notation;   /* true when the piece has a notation override */
+    UrsatzGuiNotation notation;
     char *document_json; /* the Analyzer's analysis document, as stored */
     char **note_xml_ids; /* note_xml_ids[i]: the <note xml:id> the score export writes for note i */
     size_t note_count;
@@ -54,6 +69,8 @@ typedef struct {
     char *source;      /* "" when unset */
     char **tags;       /* tag_count normalized tags in insertion order; NULL when none */
     size_t tag_count;
+    bool has_notation; /* true when the piece has a notation override */
+    UrsatzGuiNotation notation;
 } UrsatzGuiPieceSummary;
 
 /*
@@ -112,12 +129,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir,
  *   has_tags, tags      replace all tags (each normalized with ursatz_gui_meta_normalize_tag)
  *   add_tags            then added (a duplicate is skipped)
  *   remove_tags         then removed (absent is not an error)
+ *   has_notation        replace the notation override with *notation, or clear it
+ *                       when notation is NULL
  *
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
  * URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA if a value is too long, a tag is
- * invalid or the piece would hold more than 32 tags; nothing is written and
- * message (may be NULL) receives "composer is too long", "source is too
- * long", "invalid tag" or "too many tags".
+ * invalid, the piece would hold more than 32 tags or a notation member is not
+ * one the Analyzer reads; nothing is written and message (may be NULL)
+ * receives "composer is too long", "source is too long", "invalid tag",
+ * "too many tags" or "invalid notation".
  */
 typedef struct {
     const char *filename;
@@ -130,11 +150,21 @@ typedef struct {
     size_t add_tag_count;
     const char *const *remove_tags;
     size_t remove_tag_count;
+    bool has_notation;
+    const UrsatzGuiNotation *notation;
 } UrsatzGuiMetaUpdate;
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
                                                              const UrsatzGuiMetaUpdate *update, char *message,
                                                              size_t message_size);
+
+/*
+ * Reads the piece's notation override from its meta.json: *out_has is false
+ * (and *out is zeroed) when it has none.
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_notation(const char *pieces_dir, const char *id, bool *out_has,
+                                                          UrsatzGuiNotation *out);
 
 /*
  * Rewrites the filename in the piece's meta.json (the display name shown in
