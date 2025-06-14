@@ -398,11 +398,15 @@ static const char *source_file_name(InputFormat format, const char *original_fil
     return "source.musicxml";
 }
 
-/* Imports the source file and runs it through the Analyzer. On OK,
-   *out_json is the analysis document (caller frees). */
-static UrsatzGuiAnalysisResult analyze_source_file(const char *source_path, InputFormat format, char **out_json) {
+static bool find_source_path(const char *dir_path, char *out, size_t out_size);
+static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes *out);
+
+/* Imports the piece's source (with its notation override, if any) and runs it
+   through the Analyzer. On OK, *out_json is the analysis document (caller frees). */
+static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, InputFormat format, char **out_json) {
+    char source_path[400];
     ImportedNotes notes;
-    if (input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) || !import_piece(dir_path, format, &notes)) {
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
@@ -492,7 +496,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
     }
 
     char *document_json = NULL;
-    result = analyze_source_file(source_path, format, &document_json);
+    result = analyze_source_file(dir_path, format, &document_json);
     if (result != URSATZ_GUI_ANALYSIS_OK) {
         remove_piece_dir(dir_path);
         free(id);
@@ -724,6 +728,33 @@ static bool find_source_path(const char *dir_path, char *out, size_t out_size) {
     return false;
 }
 
+/* Imports the piece's stored source and applies the notation override kept in
+   its meta.json, if any (R-110). The analysis, the score and playback all
+   read the piece through this, so they agree on its meter and note values. */
+static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes *out) {
+    char source_path[400];
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
+        input_pipeline_import_file(source_path, format, out) != INPUT_PIPELINE_OK) {
+        return false;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    UrsatzGuiNotation notation;
+    bool has_notation = meta && meta_notation_read(meta, &notation);
+    cJSON_Delete(meta);
+    if (!has_notation) {
+        return true;
+    }
+    NotationReading reading = notation_reading_none();
+    if ((notation.meter[0] != '\0' && !notation_reading_parse_meter(notation.meter, &reading)) ||
+        (notation.value_scale[0] != '\0' && !notation_reading_parse_scale(notation.value_scale, &reading)) ||
+        (notation.pickup[0] != '\0' && !notation_reading_parse_pickup(notation.pickup, &reading)) ||
+        notation_reading_apply(out, &reading) != NOTATION_READING_OK) {
+        imported_notes_destroy(out);
+        return false;
+    }
+    return true;
+}
+
 /* The id the score export writes as <note xml:id> for an event with this
    EntityID value: a leading 'n' unless it starts with a letter or '_', and
    every character outside [A-Za-z0-9_.-] replaced by '_'. */
@@ -778,11 +809,10 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     }
 
     /* The note ids come from importing the stored source again: they are the
-       ids of the source's own NoteEvents, in the Analyzer's event order. */
-    char source_path[400];
+       ids of the source's own NoteEvents (a notation override keeps them), in
+       the Analyzer's event order. */
     ImportedNotes notes;
-    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        input_pipeline_import_file(source_path, format_from_label(detail->format), &notes) != INPUT_PIPELINE_OK) {
+    if (!import_piece(dir_path, format_from_label(detail->format), &notes)) {
         ursatz_gui_piece_detail_destroy(detail);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
@@ -1018,13 +1048,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
     InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
 
-    char source_path[400];
-    if (!find_source_path(dir_path, source_path, sizeof(source_path))) {
-        cJSON_Delete(meta);
-        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
-    }
     char *document_json = NULL;
-    UrsatzGuiAnalysisResult result = analyze_source_file(source_path, format, &document_json);
+    UrsatzGuiAnalysisResult result = analyze_source_file(dir_path, format, &document_json);
     if (result != URSATZ_GUI_ANALYSIS_OK) {
         cJSON_Delete(meta);
         return result;
@@ -1090,10 +1115,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
         *title_dot = '\0';
     }
 
-    char source_path[400];
     ImportedNotes notes;
-    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+    if (!import_piece(dir_path, format, &notes)) {
         free(title);
         free(composer);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
@@ -1342,6 +1365,20 @@ static bool playback_score_tempo(const ImportedSource *source, PlaybackTempoRegi
     return true;
 }
 
+/* Multiplies every region's qpm by num/den, and its position too when positions is set. */
+static void scale_tempo_regions(PlaybackTempoRegion *regions, size_t count, long num, unsigned long den,
+                                bool positions) {
+    if (num <= 0 || den == 0 || (num == 1 && den == 1)) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        regions[i].qpm = round_to_milli(regions[i].qpm * (double)num / (double)den);
+        if (positions) {
+            regions[i].at = rational_make(regions[i].at.num * num, regions[i].at.den * den);
+        }
+    }
+}
+
 static int compare_size_t(const void *left, const void *right) {
     size_t a = *(const size_t *)left;
     size_t b = *(const size_t *)right;
@@ -1364,8 +1401,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *piece
 
     char source_path[400];
     ImportedNotes notes;
-    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) || !import_piece(dir_path, format, &notes)) {
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
@@ -1381,6 +1417,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *piece
         /* A source that imported a moment ago and now has no readable tempo
            is a failed import; an allocation failure is not told apart. */
         return is_midi ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+
+    /* A value scale changes the notated length of everything, so the tempo is
+       changed with it and the piece sounds as fast as before. The MIDI tempo
+       is read from the file, so its positions are scaled here; a score's
+       marking positions were scaled with the notes. */
+    if (notes.source.reading_applied) {
+        scale_tempo_regions(regions, region_count, notes.source.reading.scale_numerator,
+                            notes.source.reading.scale_denominator, is_midi);
     }
 
     size_t *part_ids = notes.count > 0 ? malloc(notes.count * sizeof(size_t)) : NULL;
