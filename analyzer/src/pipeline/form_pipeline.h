@@ -10,6 +10,8 @@
 #include "analysis/outer_voice.h"
 /* Prefixed: standard-harmony has headers of the same names (analysis_input.h, analysis_phrase.h). */
 #include "standard-form/analysis/analysis_ideas.h"
+#include "standard-form/analysis/analysis_expansion.h"
+#include "standard-form/analysis/analysis_theme.h"
 #include "standard-form/analysis/analysis_input.h"
 #include "standard-form/analysis/analysis_phrase.h"
 #include "pipeline/harmony_pipeline.h"
@@ -17,7 +19,7 @@
 #include "time/time_span.h"
 
 /*
- * Ursatz's standard-form analysis over the chain: phrases, then ideas and subphrases. Ported from the test glue
+ * Ursatz's standard-form analysis over the chain: phrases, then ideas and subphrases, then themes and expansions. Ported from the test glue
  * (tests/integration/form_util.h form_build_*, test_form_reference_pieces.c add_chain_cadences and form_analyze,
  * R-053) as a rewrite with error returns. The analyzer adds no music theory: the input is the outer-voice soprano, the
  * chord segments, the meter and the cadences of the harmony stage, and every phrase, idea and subphrase is the
@@ -45,9 +47,12 @@ typedef struct {
     bool built;       /* input holds a finished input */
     StandardFormPhrases phrases;
     StandardFormSegmentation segmentation;
+    StandardFormThemes themes;
+    StandardFormExpansions expansions;
 } FormStage;
 
-/* Builds the input and runs standard_form_segment_phrases and standard_form_segment_ideas with the default config.
+/* Builds the input and runs standard_form_segment_phrases, standard_form_segment_ideas and
+   standard_form_identify_themes and standard_form_detect_expansions with the default config.
    lines is the outer voice lines over voices; harmony the stage's cadences. Returns false only on allocation
    failure. */
 bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmentation *voices,
@@ -56,7 +61,7 @@ bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmenta
 /* The index into the harmony stage's cadences of phrase i's cadence, or -1 when it has none. */
 long form_stage_phrase_cadence(const FormStage *stage, size_t phrase);
 
-/* Copies the stage's phrases, ideas and subphrases into the report, each phrase with its span, the chord entries inside it (entries must be the
+/* Copies the stage's phrases, ideas, subphrases, themes and expansions into the report, each phrase with its span, the chord entries inside it (entries must be the
    ones the stage was built from), measures, cadence and signal, and its ideas and subphrases. A stage without phrases leaves the report without.
    Returns false only on allocation failure. */
 bool form_stage_collect(const FormStage *stage, AnalysisReport *report);

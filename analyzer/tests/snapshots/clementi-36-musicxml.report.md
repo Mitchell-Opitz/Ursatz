@@ -759,20 +759,20 @@ The library's standard-harmony analysis found 13 cadences from the chords, the m
 
 ## Phrases
 
-The library's standard-form analysis found 10 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece.
+The library's standard-form analysis found 10 phrases from the soprano, the meter and the cadences. Length counts the measures of the phrase proper; Ends is what closed it: its cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in the piece; Expansion is a lengthening or shortening of the phrase's ending, or an extension after its cadence, with the measures it adds or removes.
 
-| Phrase | Measures | Length | Cadence | Ends | Role |
-| --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 2 | 2 | perfect-authentic (m. 2, beat 1) | cadence | beginning |
-| 2 | mm. 3 to 4 | 2 | half (m. 4, beat 1) | cadence | middle |
-| 3 | mm. 5 to 10 | 6 | imperfect-authentic (m. 10, beat 1) | cadence | middle |
-| 4 | mm. 11 to 14 | 4 | half (m. 14, beat 3) | cadence | middle |
-| 5 | mm. 15 to 19 | 5 | half (m. 19, beat 1) | cadence | middle |
-| 6 | mm. 20 to 23 | 4 | half (m. 23, beat 4.5) | cadence | middle |
-| 7 | mm. 24 to 25 | 2 | perfect-authentic (m. 25, beat 1) | cadence | middle |
-| 8 | mm. 26 to 27 | 2 | half (m. 27, beat 1) | cadence | middle |
-| 9 | mm. 28 to 33 | 6 | imperfect-authentic (m. 33, beat 1) | cadence | middle |
-| 10 | mm. 34 to 38 | 5 | perfect-authentic (m. 38, beat 2.5) | cadence | ending |
+| Phrase | Measures | Length | Cadence | Ends | Role | Expansion |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 2 | 2 | perfect-authentic (m. 2, beat 1) | cadence | beginning | - |
+| 2 | mm. 3 to 4 | 2 | half (m. 4, beat 1) | cadence | middle | - |
+| 3 | mm. 5 to 10 | 6 | imperfect-authentic (m. 10, beat 1) | cadence | middle | contraction -2 (mm. 9 to 10) |
+| 4 | mm. 11 to 14 | 4 | half (m. 14, beat 3) | cadence | middle | - |
+| 5 | mm. 15 to 19 | 5 | half (m. 19, beat 1) | cadence | middle | - |
+| 6 | mm. 20 to 23 | 4 | half (m. 23, beat 4.5) | cadence | middle | - |
+| 7 | mm. 24 to 25 | 2 | perfect-authentic (m. 25, beat 1) | cadence | middle | contraction -2 (mm. 24 to 25) |
+| 8 | mm. 26 to 27 | 2 | half (m. 27, beat 1) | cadence | middle | - |
+| 9 | mm. 28 to 33 | 6 | imperfect-authentic (m. 33, beat 1) | cadence | middle | contraction -2 (mm. 32 to 33) |
+| 10 | mm. 34 to 38 | 5 | perfect-authentic (m. 38, beat 2.5) | cadence | ending | - |
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 2); phrase model Tb (m. 1, beat 1), D (m. 1, beat 3), Te (m. 2, beat 1)
 - **Phrase 2:** ideas basic-idea (mm. 3 to 4); phrase model D (m. 4, beat 1)
@@ -784,6 +784,16 @@ The library's standard-form analysis found 10 phrases from the soprano, the mete
 - **Phrase 8:** ideas basic-idea (mm. 26 to 27); phrase model D (m. 27, beat 1)
 - **Phrase 9:** ideas basic-idea (mm. 28 to 29), contrasting-idea (mm. 30 to 31), contrasting-idea (mm. 32 to 33); subphrases mm. 28 to 31, mm. 32 to 33; phrase model Tb (m. 28, beat 1), D (m. 32, beat 3.5), D (m. 32, beat 4.5), Te (m. 33, beat 1)
 - **Phrase 10:** ideas basic-idea (mm. 34 to 35), contrasting-idea (mm. 36 to 38); phrase model D (m. 38, beat 2), Te (m. 38, beat 2.5)
+
+## Themes
+
+The library's standard-form analysis found 3 themes from the phrases, their ideas and the cadences. Form is the library's name for the pairing of the two parts; Commonality is how common that pairing is; Traits are what the library finds in the continuation.
+
+| Theme | Form | Commonality | Measures | Length | Parts | Traits |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | hybrid | slightly-less-common | mm. 5 to 10 | 6 | compound-basic-idea (mm. 5 to 8), continuation (mm. 9 to 10, imperfect-authentic (m. 10, beat 1)) | - |
+| 2 | hybrid | slightly-less-common | mm. 20 to 25 | 6 | antecedent (mm. 20 to 23, half (m. 23, beat 4.5)), continuation (mm. 24 to 25, perfect-authentic (m. 25, beat 1)) | - |
+| 3 | hybrid | slightly-less-common | mm. 28 to 33 | 6 | compound-basic-idea (mm. 28 to 31), continuation (mm. 32 to 33, imperfect-authentic (m. 33, beat 1)) | - |
 
 ## Progression patterns
 

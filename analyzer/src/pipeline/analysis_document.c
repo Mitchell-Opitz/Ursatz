@@ -1485,6 +1485,63 @@ static bool add_ideas_and_subphrases(cJSON *claim, const ImportedNotes *notes, c
     return false;
 }
 
+static cJSON *expansion_techniques_json(const AnalysisExpansion *expansion) {
+    cJSON *techniques = cJSON_CreateArray();
+    for (size_t n = 0; techniques && n < expansion->technique_count; n++) {
+        if (!append(techniques, cJSON_CreateString(expansion->techniques[n]))) {
+            cJSON_Delete(techniques);
+            return NULL;
+        }
+    }
+    return techniques;
+}
+
+/* An expansion or contraction of a phrase: the claim over its soprano notes (label the kind: "internal", "external" or
+   "contraction"), with the change ("expansion" or "contraction"), the theme it concerns (null for an external
+   expansion of a phrase in no theme), the expected and actual lengths and the measures changed, its measures, and the
+   techniques the library finds evidence for. An external one adds external_kind and the two judgements of its length. */
+static cJSON *expansion_json(const ImportedNotes *notes, const char *framework, const AnalysisExpansion *expansion) {
+    Rational start = rational_make(expansion->start_numerator, expansion->start_denominator);
+    Rational end = rational_make(expansion->end_numerator, expansion->end_denominator);
+    cJSON *claim = claim_json_with(framework, notes, expansion->note_ids, expansion->note_id_count, start, end,
+                                   expansion->kind, cJSON_CreateNumber(expansion->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber(expansion->index)) &&
+          add(claim, "change", cJSON_CreateString(expansion->change)) &&
+          add(claim, "theme", expansion->has_theme ? cJSON_CreateNumber((double)expansion->theme) : cJSON_CreateNull()) &&
+          add(claim, "expected_length", cJSON_CreateNumber(expansion->expected_length)) &&
+          add(claim, "actual_length", cJSON_CreateNumber(expansion->actual_length)) &&
+          add(claim, "measures_changed", cJSON_CreateNumber(expansion->measures_changed)) &&
+          add(claim, "measures", measures_json(expansion->first_measure, expansion->last_measure)) &&
+          add(claim, "techniques", expansion_techniques_json(expansion)) &&
+          (!expansion->external_kind ||
+           (add(claim, "external_kind", cJSON_CreateString(expansion->external_kind)) &&
+            add(claim, "suffix_length_typical", cJSON_CreateBool(expansion->suffix_length_typical)) &&
+            add(claim, "suffix_agrees_with_location", cJSON_CreateBool(expansion->suffix_agrees_with_location)))))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The phrase's expansions and contractions as "expansions", in the library's order; absent when it has none. */
+static bool add_expansions(cJSON *claim, const ImportedNotes *notes, const char *framework, const AnalysisReport *report,
+                           size_t phrase) {
+    cJSON *list = NULL;
+    for (size_t e = 0; e < report->expansion_count; e++) {
+        if (report->expansions[e].phrase != phrase) {
+            continue;
+        }
+        if (!list && !(list = cJSON_CreateArray())) {
+            return false;
+        }
+        if (!append(list, expansion_json(notes, framework, &report->expansions[e]))) {
+            cJSON_Delete(list);
+            return false;
+        }
+    }
+    return !list || add(claim, "expansions", list);
+}
+
 /* One claim per phrase, in time order, from the library's standard-form analysis. The claim's span is the phrase's
    (an extension after its cadence included) and its note ids are the notes sounding in the chords that start in it.
    measures runs from the phrase's first measure to the measure it ends in; length is its length in measures (a pickup
@@ -1492,7 +1549,8 @@ static bool add_ideas_and_subphrases(cJSON *claim, const ImportedNotes *notes, c
    cadence that ends it (null with none); signal what ended it: "cadence", "discontinuity" or "none" (the end of the
    input). role is where the phrase stands in the piece: "beginning" for the first, "ending" for the last, "middle"
    between (the library names no role for a phrase, so this is position alone). subphrases and ideas are claims inside
-   it, in time order. phrase_model lists the chords the library labelled for the phrase model, in order. */
+   it, in time order. expansions (absent with none) are the claims about its length: an expansion or contraction of its
+   ending against its beginning, or an extension after its cadence. phrase_model lists the chords the library labelled for the phrase model, in order. */
 static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -1521,7 +1579,121 @@ static cJSON *phrases_json(const ImportedNotes *notes, const AnalysisReport *rep
               add(claim, "signal", cJSON_CreateString(phrase->signal)) &&
               add(claim, "role", cJSON_CreateString(phrase->role)) &&
               add(claim, "phrase_model", phrase_model_json(report, phrase)) &&
-              add_ideas_and_subphrases(claim, notes, framework, report, phrase))) {
+              add_ideas_and_subphrases(claim, notes, framework, report, phrase) &&
+              add_expansions(claim, notes, framework, report, i))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* ---- Themes ---- */
+
+static cJSON *string_or_null_json(const char *text) {
+    return text ? cJSON_CreateString(text) : cJSON_CreateNull();
+}
+
+/* One part of a theme: the library's name for it (null when the library gives none), its measures and length, and the
+   index into "cadences" of the cadence that ends it (null with none: a presentation or the first half of a
+   two-phrase theme can end on none). */
+static cJSON *theme_part_json(const AnalysisThemePart *part) {
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "name", string_or_null_json(part->name)) &&
+          add(object, "measures", measures_json(part->first_measure, part->last_measure)) &&
+          add(object, "length", cJSON_CreateNumber(part->length_measures)) &&
+          add(object, "cadence", part->has_cadence ? cJSON_CreateNumber((double)part->cadence) : cJSON_CreateNull()))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The phrases a theme spans: the first one's index and how many. */
+static cJSON *theme_phrases_json(const AnalysisTheme *theme) {
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "first", cJSON_CreateNumber((double)theme->first_phrase)) &&
+          add(object, "count", cJSON_CreateNumber((double)theme->phrase_count)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *theme_parts_json(const AnalysisTheme *theme) {
+    cJSON *parts = cJSON_CreateArray();
+    if (!(parts && append(parts, theme_part_json(&theme->parts[0])) && append(parts, theme_part_json(&theme->parts[1])))) {
+        cJSON_Delete(parts);
+        return NULL;
+    }
+    return parts;
+}
+
+/* The continuation traits the library's claim gives, as their names. */
+static cJSON *theme_traits_json(const AnalysisTheme *theme) {
+    cJSON *traits = cJSON_CreateArray();
+    for (size_t n = 0; traits && n < theme->trait_count; n++) {
+        if (!append(traits, cJSON_CreateString(theme->traits[n]))) {
+            cJSON_Delete(traits);
+            return NULL;
+        }
+    }
+    return traits;
+}
+
+/* The two themes that make up a compound period, as indices into "themes". */
+static cJSON *theme_halves_json(const AnalysisTheme *theme) {
+    cJSON *halves = cJSON_CreateArray();
+    if (!(halves && append(halves, cJSON_CreateNumber((double)theme->halves[0])) &&
+          append(halves, cJSON_CreateNumber((double)theme->halves[1])))) {
+        cJSON_Delete(halves);
+        return NULL;
+    }
+    return halves;
+}
+
+/* One claim per theme, in the library's order, from its standard-form analysis. label is the library's form name
+   ("sentence", "period", "hybrid", "compound-period", "repeated-phrase"); beginning and ending are the library's names
+   for the two parts (null for a repeated phrase and a compound period); phrases are the phrases it spans (first index
+   and count); measures run from its first measure to the last of its last phrase proper (an extension is not part of
+   it); parts are the two parts in order, subphrases of a one-phrase theme or phrases of a two-phrase one.
+   commonality is the library's name for how common the pairing of the two parts is (null when it has none);
+   part_of_compound is true for a sentence that is a half of a compound period; halves (a compound period only) are the
+   indices into "themes" of its two sentences. traits are the library's names for what its claim finds in the
+   continuation ("fragmentation"; the claim gives no other); archetypal, cadences_usual and lengths_usual are the
+   claim's own judgements of the pairing. */
+static cJSON *themes_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_form_framework());
+    for (size_t i = 0; i < report->theme_count; i++) {
+        const AnalysisTheme *theme = &report->themes[i];
+        Rational start = rational_make(theme->start_numerator, theme->start_denominator);
+        Rational end = rational_make(theme->end_numerator, theme->end_denominator);
+        cJSON *claim = claim_json_with(framework, notes, theme->note_ids, theme->note_id_count, start, end,
+                                       theme->form, cJSON_CreateNumber(theme->uncertainty));
+        if (!(claim && add(claim, "index", cJSON_CreateNumber(theme->index)) &&
+              add(claim, "beginning", string_or_null_json(theme->beginning)) &&
+              add(claim, "ending", string_or_null_json(theme->ending)) &&
+              add(claim, "phrases", theme_phrases_json(theme)) &&
+              add(claim, "measures", measures_json(theme->first_measure, theme->last_measure)) &&
+              add(claim, "length", cJSON_CreateNumber(theme->length_measures)) &&
+              add(claim, "parts_are_phrases", cJSON_CreateBool(theme->parts_are_phrases)) &&
+              add(claim, "commonality", string_or_null_json(theme->commonality)) &&
+              add(claim, "part_of_compound", cJSON_CreateBool(theme->part_of_compound)) &&
+              add(claim, "traits", theme_traits_json(theme)) &&
+              add(claim, "archetypal", cJSON_CreateBool(theme->archetypal)) &&
+              add(claim, "cadences_usual", cJSON_CreateBool(theme->cadences_usual)) &&
+              add(claim, "lengths_usual", cJSON_CreateBool(theme->lengths_usual)) &&
+              add(claim, "parts", theme_parts_json(theme)) &&
+              (!theme->has_halves || add(claim, "halves", theme_halves_json(theme))))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
@@ -2067,7 +2239,8 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "non_chord_tones", non_chord_tones_json(notes, report)) &&
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cadences_json(notes, report)) &&
-          add(document, "phrases", phrases_json(notes, report)) && add(document, "form", cJSON_CreateNull()) &&
+          add(document, "phrases", phrases_json(notes, report)) &&
+          add(document, "themes", themes_json(notes, report)) && add(document, "form", cJSON_CreateNull()) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&

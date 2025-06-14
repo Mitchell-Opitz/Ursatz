@@ -1054,6 +1054,28 @@ static bool append_phrase_line(StringBuilder *sb, const cJSON *document, const c
     return ok && sb_append(sb, "\n");
 }
 
+/* The phrase's expansions and contractions as "internal expansion +2 (mm. 5 to 8)" or "external codetta +1 (m. 9)", each
+   with the measures it adds or removes, or "-" with none. */
+static bool append_phrase_expansions(StringBuilder *sb, const cJSON *phrase) {
+    const cJSON *expansions = cJSON_GetObjectItemCaseSensitive(phrase, "expansions");
+    if (cJSON_GetArraySize(expansions) == 0) {
+        return sb_append(sb, "-");
+    }
+    const cJSON *expansion;
+    bool ok = true;
+    cJSON_ArrayForEach(expansion, expansions) {
+        const cJSON *external = cJSON_GetObjectItemCaseSensitive(expansion, "external_kind");
+        bool contraction = strcmp(string_member(expansion, "change"), "contraction") == 0;
+        ok = ok && sb_appendf(sb, "%s%s %s%s%+d (", expansion == expansions->child ? "" : "; ",
+                              string_member(expansion, "label"), cJSON_IsString(external) ? external->valuestring : "",
+                              cJSON_IsString(external) ? " " : "",
+                              contraction ? -(int)number_member(expansion, "measures_changed")
+                                          : (int)number_member(expansion, "measures_changed")) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(expansion, "measures")) && sb_append(sb, ")");
+    }
+    return ok;
+}
+
 static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON *phrases) {
     int count = cJSON_GetArraySize(phrases);
     bool ok = sb_append(sb, "## Phrases\n\n") &&
@@ -1061,10 +1083,11 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
                          "The library's standard-form analysis found %d %s from the soprano, the meter and the "
                          "cadences. Length counts the measures of the phrase proper; Ends is what closed it: its "
                          "cadence, a break in the melody, or the end of the piece; Role is where the phrase stands in "
-                         "the piece.\n\n",
+                         "the piece; Expansion is a lengthening or shortening of the phrase's ending, or an extension "
+                         "after its cadence, with the measures it adds or removes.\n\n",
                          count, count == 1 ? "phrase" : "phrases") &&
-              sb_append(sb, "| Phrase | Measures | Length | Cadence | Ends | Role |\n"
-                            "| --- | --- | --- | --- | --- | --- |\n");
+              sb_append(sb, "| Phrase | Measures | Length | Cadence | Ends | Role | Expansion |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
     const cJSON *phrase;
     cJSON_ArrayForEach(phrase, phrases) {
         if (!ok) {
@@ -1074,13 +1097,85 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(phrase, "measures")) &&
              sb_appendf(sb, " | %d | ", (int)number_member(phrase, "length")) &&
              append_phrase_cadence(sb, document, phrase) &&
-             sb_appendf(sb, " | %s | %s |\n", string_member(phrase, "signal"), string_member(phrase, "role"));
+             sb_appendf(sb, " | %s | %s | ", string_member(phrase, "signal"), string_member(phrase, "role")) &&
+             append_phrase_expansions(sb, phrase) && sb_append(sb, " |\n");
     }
     ok = ok && sb_append(sb, "\n");
     cJSON_ArrayForEach(phrase, phrases) {
         ok = ok && append_phrase_line(sb, document, phrase);
     }
     return ok && sb_append(sb, "\n");
+}
+
+/* The parts of a theme as "presentation (mm. 1 to 4), continuation (mm. 5 to 8, perfect-authentic (m. 8, beat 1))": a
+   part's measures, then the cadence that ends it when it has one. A part the library does not name is "part". */
+static bool append_theme_parts(StringBuilder *sb, const cJSON *document, const cJSON *theme) {
+    const cJSON *parts = cJSON_GetObjectItemCaseSensitive(theme, "parts");
+    const cJSON *part;
+    bool ok = true;
+    cJSON_ArrayForEach(part, parts) {
+        const cJSON *name = cJSON_GetObjectItemCaseSensitive(part, "name");
+        ok = ok && sb_appendf(sb, "%s%s (", part == parts->child ? "" : ", ",
+                              cJSON_IsString(name) ? name->valuestring : "part") &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(part, "measures"));
+        if (ok && cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(part, "cadence"))) {
+            ok = sb_append(sb, ", ") && append_phrase_cadence(sb, document, part);
+        }
+        ok = ok && sb_append(sb, ")");
+    }
+    return ok;
+}
+
+/* The continuation traits as "fragmentation", or "-" with none. */
+static bool append_theme_traits(StringBuilder *sb, const cJSON *theme) {
+    const cJSON *traits = cJSON_GetObjectItemCaseSensitive(theme, "traits");
+    if (cJSON_GetArraySize(traits) == 0) {
+        return sb_append(sb, "-");
+    }
+    const cJSON *trait;
+    bool ok = true;
+    cJSON_ArrayForEach(trait, traits) {
+        ok = ok && sb_appendf(sb, "%s%s", trait == traits->child ? "" : ", ",
+                              cJSON_IsString(trait) ? trait->valuestring : "");
+    }
+    return ok;
+}
+
+static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON *themes) {
+    int count = cJSON_GetArraySize(themes);
+    bool ok = sb_append(sb, "## Themes\n\n") &&
+              sb_appendf(sb,
+                         "The library's standard-form analysis found %d %s from the phrases, their ideas and the "
+                         "cadences. Form is the library's name for the pairing of the two parts; Commonality is how "
+                         "common that pairing is; Traits are what the library finds in the continuation.\n\n",
+                         count, count == 1 ? "theme" : "themes") &&
+              sb_append(sb, "| Theme | Form | Commonality | Measures | Length | Parts | Traits |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *theme;
+    cJSON_ArrayForEach(theme, themes) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *commonality = cJSON_GetObjectItemCaseSensitive(theme, "commonality");
+        ok = sb_appendf(sb, "| %d | %s | %s | ", (int)number_member(theme, "index") + 1, string_member(theme, "label"),
+                        cJSON_IsString(commonality) ? commonality->valuestring : "-") &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(theme, "measures")) &&
+             sb_appendf(sb, " | %d | ", (int)number_member(theme, "length")) && append_theme_parts(sb, document, theme) &&
+             sb_append(sb, " | ") && append_theme_traits(sb, theme) && sb_append(sb, " |\n");
+    }
+    ok = ok && sb_append(sb, "\n");
+    bool any_compound = false;
+    cJSON_ArrayForEach(theme, themes) {
+        const cJSON *halves = cJSON_GetObjectItemCaseSensitive(theme, "halves");
+        if (ok && cJSON_GetArraySize(halves) == 2) {
+            any_compound = true;
+            ok = sb_appendf(sb, "- **Theme %d** is a compound period of themes %d and %d.\n",
+                            (int)number_member(theme, "index") + 1,
+                            (int)cJSON_GetArrayItem(halves, 0)->valuedouble + 1,
+                            (int)cJSON_GetArrayItem(halves, 1)->valuedouble + 1);
+        }
+    }
+    return ok && (!any_compound || sb_append(sb, "\n"));
 }
 
 static int chord_start_measure(const cJSON *document, const cJSON *index) {
@@ -1232,6 +1327,7 @@ static const struct {
     {"non_chord_tones", render_non_chord_tones},
     {"cadences", render_cadences},
     {"phrases", render_phrases},
+    {"themes", render_themes},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
 };

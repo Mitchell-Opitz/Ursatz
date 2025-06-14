@@ -83,6 +83,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/phrase_claim" }
     },
+    "themes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/theme_claim" }
+    },
     "form": {
       "type": ["object", "null"]
     },
@@ -408,10 +412,101 @@
             "ideas": {
               "type": "array",
               "items": { "$ref": "#/$defs/idea_claim" }
+            },
+            "expansions": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/expansion_claim" }
             }
           }
         }
       ]
+    },
+    "expansion_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "change", "theme", "expected_length", "actual_length", "measures_changed", "measures",
+                       "techniques"],
+          "properties": {
+            "label": { "enum": ["internal", "external", "contraction"] },
+            "index": { "type": "integer", "minimum": 0 },
+            "change": { "enum": ["expansion", "contraction"] },
+            "theme": { "type": ["integer", "null"], "minimum": 0 },
+            "expected_length": { "type": "integer", "minimum": 0 },
+            "actual_length": { "type": "integer", "minimum": 0 },
+            "measures_changed": { "type": "integer", "minimum": 1 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "techniques": {
+              "type": "array",
+              "items": { "enum": ["repetition", "stretching", "one-more-time", "alternative-path"] }
+            },
+            "external_kind": { "enum": ["prefix", "post-cadential-extension", "codetta", "coda"] },
+            "suffix_length_typical": { "type": "boolean" },
+            "suffix_agrees_with_location": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "theme_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "beginning", "ending", "phrases", "measures", "length", "parts_are_phrases",
+                       "commonality", "part_of_compound", "traits", "archetypal", "cadences_usual", "lengths_usual",
+                       "parts"],
+          "properties": {
+            "label": { "enum": ["sentence", "period", "hybrid", "compound-period", "repeated-phrase"] },
+            "index": { "type": "integer", "minimum": 0 },
+            "beginning": { "type": ["string", "null"] },
+            "ending": { "type": ["string", "null"] },
+            "phrases": {
+              "type": "object",
+              "required": ["first", "count"],
+              "properties": {
+                "first": { "type": "integer", "minimum": 0 },
+                "count": { "enum": [1, 2] }
+              }
+            },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "length": { "type": "integer", "minimum": 0 },
+            "parts_are_phrases": { "type": "boolean" },
+            "commonality": { "enum": ["very-common", "slightly-less-common", "occasional", "rare", null] },
+            "part_of_compound": { "type": "boolean" },
+            "traits": {
+              "type": "array",
+              "items": { "enum": ["fragmentation", "increased-rhythmic-activity", "sequence", "increased-harmonic-rhythm"] }
+            },
+            "archetypal": { "type": "boolean" },
+            "cadences_usual": { "type": "boolean" },
+            "lengths_usual": { "type": "boolean" },
+            "halves": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "integer", "minimum": 0 }
+            },
+            "parts": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "$ref": "#/$defs/theme_part" }
+            }
+          }
+        }
+      ]
+    },
+    "theme_part": {
+      "type": "object",
+      "required": ["name", "measures", "length", "cadence"],
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "length": { "type": "integer", "minimum": 0 },
+        "cadence": { "type": ["integer", "null"], "minimum": 0 }
+      }
     },
     "idea_claim": {
       "allOf": [

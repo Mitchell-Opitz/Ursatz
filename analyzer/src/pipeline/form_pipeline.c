@@ -6,7 +6,16 @@
 
 #include "harmony_cadence_rules.h"
 #include "pipeline/form_boundary.h"
+#include "continuation_trait.h"
+#include "expansion_placement.h"
+#include "external_expansion_kind.h"
+#include "internal_expansion_technique.h"
+#include "phrase_length_change.h"
+#include "hybrid_rules.h"
 #include "idea_label.h"
+#include "phrase_beginning.h"
+#include "phrase_ending.h"
+#include "phrase_level_form.h"
 #include "pitch/pitch_numeric_value.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
@@ -150,6 +159,15 @@ bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmenta
         return true; /* a time the meter cannot place, or the detector declined: no phrases */
     }
     status = standard_form_segment_ideas(&stage->input, &stage->phrases, NULL, &stage->segmentation);
+    if (status != STANDARD_FORM_ANALYSIS_OK) {
+        return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    status = standard_form_identify_themes(&stage->input, &stage->phrases, &stage->segmentation, NULL, &stage->themes);
+    if (status != STANDARD_FORM_ANALYSIS_OK) {
+        return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    status = standard_form_detect_expansions(&stage->input, &stage->phrases, &stage->segmentation, &stage->themes, NULL,
+                                             &stage->expansions);
     return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
 }
 
@@ -316,6 +334,195 @@ static bool collect_subphrases(const FormStage *stage, AnalysisReport *report) {
     return true;
 }
 
+/* The ImportedNotes indices of the input's soprano notes that start in [start, end), owned. NULL with *count 0 when
+   none. */
+static size_t *note_ids_between(const FormStage *stage, long start_numerator, unsigned long start_denominator,
+                                long end_numerator, unsigned long end_denominator, size_t *count) {
+    *count = 0;
+    size_t *ids = malloc(sizeof(size_t) * (stage->note_index_count > 0 ? stage->note_index_count : 1));
+    if (!ids) {
+        return NULL;
+    }
+    for (size_t n = 0; n < stage->note_index_count && n < stage->input.note_count; n++) {
+        const MusicalTime *start = time_span_start(stage->input.notes[n].span);
+        long numerator = musical_time_numerator(start);
+        unsigned long denominator = musical_time_denominator(start);
+        if (!rational_less(numerator, denominator, start_numerator, start_denominator) &&
+            rational_less(numerator, denominator, end_numerator, end_denominator)) {
+            ids[(*count)++] = stage->note_indices[n];
+        }
+    }
+    if (*count == 0) {
+        free(ids);
+        return NULL;
+    }
+    return ids;
+}
+
+static void fill_part(AnalysisThemePart *part, const char *name, int first, int last, int length,
+                      const AnalysisPhrase *phrase) {
+    part->name = name;
+    part->first_measure = first;
+    part->last_measure = last;
+    part->length_measures = length;
+    part->has_cadence = phrase && phrase->has_cadence;
+    part->cadence = part->has_cadence ? phrase->cadence : 0;
+}
+
+/* A compound period's halves are the two sentences the library marks part_of_compound over its two phrases. */
+static void find_compound_halves(const FormStage *stage, AnalysisReport *report, size_t compound) {
+    AnalysisTheme *theme = &report->themes[compound];
+    size_t found = 0;
+    for (size_t j = 0; j < report->theme_count && found < 2; j++) {
+        const StandardFormThemeClaim *claim = &stage->themes.items[j].claim;
+        if (j != compound && claim->part_of_compound && claim->phrase_count == 1 &&
+            (size_t)claim->first_phrase >= theme->first_phrase &&
+            (size_t)claim->first_phrase < theme->first_phrase + theme->phrase_count) {
+            theme->halves[found++] = j;
+        }
+    }
+    theme->has_halves = found == 2;
+}
+
+static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
+    size_t count = stage->themes.count;
+    if (count == 0) {
+        return true;
+    }
+    report->themes = calloc(count, sizeof(AnalysisTheme));
+    if (!report->themes) {
+        return false;
+    }
+    report->theme_count = count;
+    for (size_t i = 0; i < count; i++) {
+        const StandardFormTheme *found = &stage->themes.items[i];
+        const StandardFormThemeClaim *claim = &found->claim;
+        AnalysisTheme *theme = &report->themes[i];
+        if (claim->first_phrase < 0 || claim->phrase_count < 1 || claim->phrase_count > 2 ||
+            (size_t)(claim->first_phrase + claim->phrase_count) > report->phrase_count) {
+            return false;
+        }
+        theme->index = claim->index;
+        theme->form = phrase_level_form_name((PhraseLevelForm)claim->form);
+        theme->beginning = claim->beginning >= 0 ? phrase_beginning_name((PhraseBeginning)claim->beginning) : NULL;
+        theme->ending = claim->ending >= 0 ? phrase_ending_name((PhraseEnding)claim->ending) : NULL;
+        theme->first_phrase = (size_t)claim->first_phrase;
+        theme->phrase_count = (size_t)claim->phrase_count;
+        theme->first_measure = claim->first_measure;
+        theme->last_measure = claim->last_measure;
+        theme->length_measures = claim->length_measures;
+        theme->parts_are_phrases = claim->parts_are_phrases != 0;
+        theme->commonality = claim->commonality >= 0
+                                 ? standard_form_commonality_name((StandardFormCommonality)claim->commonality)
+                                 : NULL;
+        theme->part_of_compound = claim->part_of_compound != 0;
+        theme->archetypal = claim->archetypal != 0;
+        theme->cadences_usual = claim->cadences_usual != 0;
+        theme->lengths_usual = claim->lengths_usual != 0;
+        /* The claim names one trait of a continuation: fragmentation. */
+        if (claim->has_fragmentation) {
+            theme->traits[theme->trait_count++] = continuation_trait_name(CONTINUATION_TRAIT_FRAGMENTATION);
+        }
+        theme->uncertainty = found->uncertainty;
+        /* The parts of a two-phrase theme are its phrases, each with its own cadence. The beginning of a one-phrase
+           theme is a subphrase with no cadence; its ending is the phrase's end, with the phrase's cadence. */
+        const AnalysisPhrase *first_phrase = &report->phrases[theme->first_phrase];
+        const AnalysisPhrase *second_phrase = &report->phrases[theme->first_phrase + theme->phrase_count - 1];
+        fill_part(&theme->parts[0], theme->beginning, claim->first_part_first_measure, claim->first_part_last_measure,
+                  claim->first_part_length, theme->phrase_count == 2 ? first_phrase : NULL);
+        fill_part(&theme->parts[1], theme->ending, claim->second_part_first_measure, claim->second_part_last_measure,
+                  claim->second_part_length, second_phrase);
+        if (!theme->form || !measures_span(stage->input.map, claim->first_measure, claim->last_measure,
+                                           &theme->start_numerator, &theme->start_denominator, &theme->end_numerator,
+                                           &theme->end_denominator)) {
+            return false;
+        }
+        /* A theme lies inside its phrases: the pickup lies before the first barline and the extension after the last
+           phrase's cadence is not part of it. */
+        if (rational_less(theme->start_numerator, theme->start_denominator, first_phrase->start_numerator,
+                          first_phrase->start_denominator)) {
+            theme->start_numerator = first_phrase->start_numerator;
+            theme->start_denominator = first_phrase->start_denominator;
+        }
+        if (rational_less(second_phrase->end_numerator, second_phrase->end_denominator, theme->end_numerator,
+                          theme->end_denominator)) {
+            theme->end_numerator = second_phrase->end_numerator;
+            theme->end_denominator = second_phrase->end_denominator;
+        }
+        theme->note_ids = note_ids_between(stage, theme->start_numerator, theme->start_denominator,
+                                           theme->end_numerator, theme->end_denominator, &theme->note_id_count);
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (stage->themes.items[i].claim.form == PHRASE_LEVEL_FORM_COMPOUND_PERIOD) {
+            find_compound_halves(stage, report, i);
+        }
+    }
+    return true;
+}
+
+static void fill_techniques(AnalysisExpansion *expansion, int mask) {
+    for (int bit = 0; bit < INTERNAL_EXPANSION_TECHNIQUE_COUNT; bit++) {
+        if ((mask & (1 << bit)) && expansion->technique_count < ANALYSIS_EXPANSION_MAX_TECHNIQUES) {
+            expansion->techniques[expansion->technique_count++] =
+                internal_expansion_technique_name((InternalExpansionTechnique)bit);
+        }
+    }
+}
+
+static bool collect_expansions(const FormStage *stage, AnalysisReport *report) {
+    size_t count = stage->expansions.count;
+    if (count == 0) {
+        return true;
+    }
+    report->expansions = calloc(count, sizeof(AnalysisExpansion));
+    if (!report->expansions) {
+        return false;
+    }
+    report->expansion_count = count;
+    for (size_t i = 0; i < count; i++) {
+        const StandardFormExpansion *found = &stage->expansions.items[i];
+        const StandardFormExpansionClaim *claim = &found->claim;
+        AnalysisExpansion *expansion = &report->expansions[i];
+        if (claim->phrase < 0 || (size_t)claim->phrase >= report->phrase_count ||
+            (claim->theme >= 0 && (size_t)claim->theme >= report->theme_count)) {
+            return false;
+        }
+        expansion->index = claim->index;
+        expansion->change = phrase_length_change_name((PhraseLengthChange)claim->change);
+        expansion->kind = claim->kind == STANDARD_FORM_EXPANSION_CONTRACTION
+                              ? expansion->change
+                              : expansion_placement_name((ExpansionPlacement)claim->placement);
+        expansion->has_theme = claim->theme >= 0;
+        expansion->theme = expansion->has_theme ? (size_t)claim->theme : 0;
+        expansion->phrase = (size_t)claim->phrase;
+        expansion->expected_length = claim->expected_length;
+        expansion->actual_length = claim->actual_length;
+        expansion->measures_changed = claim->measures_changed;
+        expansion->first_measure = claim->first_measure;
+        expansion->last_measure = claim->last_measure;
+        expansion->uncertainty = found->uncertainty;
+        fill_techniques(expansion, claim->techniques);
+        if (claim->kind == STANDARD_FORM_EXPANSION_EXTERNAL) {
+            expansion->external_kind = claim->external_kind >= 0
+                                           ? external_expansion_kind_name((ExternalExpansionKind)claim->external_kind)
+                                           : NULL;
+            expansion->suffix_length_typical = claim->suffix_length_typical != 0;
+            expansion->suffix_agrees_with_location = claim->suffix_agrees_with_location != 0;
+        }
+        if (!expansion->change || !expansion->kind ||
+            !measures_span(stage->input.map, claim->first_measure, claim->last_measure, &expansion->start_numerator,
+                           &expansion->start_denominator, &expansion->end_numerator, &expansion->end_denominator)) {
+            return false;
+        }
+        clip_to_phrase(&report->phrases[expansion->phrase], &expansion->start_numerator,
+                       &expansion->start_denominator, &expansion->end_numerator, &expansion->end_denominator);
+        expansion->note_ids = note_ids_between(stage, expansion->start_numerator, expansion->start_denominator,
+                                               expansion->end_numerator, expansion->end_denominator,
+                                               &expansion->note_id_count);
+    }
+    return true;
+}
+
 bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
     size_t count = stage->phrases.count;
     if (count == 0) {
@@ -362,13 +569,16 @@ bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
         phrase->uncertainty = found->uncertainty;
         phrase->role = i == 0 ? "beginning" : (i + 1 == count ? "ending" : "middle");
     }
-    return collect_ideas(stage, report) && collect_subphrases(stage, report);
+    return collect_ideas(stage, report) && collect_subphrases(stage, report) && collect_themes(stage, report) &&
+           collect_expansions(stage, report);
 }
 
 void form_stage_destroy(FormStage *stage) {
     if (!stage) {
         return;
     }
+    standard_form_expansions_destroy(&stage->expansions);
+    standard_form_themes_destroy(&stage->themes);
     standard_form_segmentation_destroy(&stage->segmentation);
     standard_form_phrases_destroy(&stage->phrases);
     free(stage->note_indices);

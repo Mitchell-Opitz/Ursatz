@@ -36,6 +36,9 @@ Tests:
 - `test_progressions`: the progression finder on hand-built chord lists (held chords, key and unlabelled breaks,
   containment, the six-chord limit) and the progressions of Bach 114 and Mozart 545. `test_progressions_bach_114_top`
   asserts that Bach 114's most common progression ends on I; it is marked `WILL_FAIL` (see "Known limits").
+- `test_themes`: a constructed sentence, period and compound period (`tests/musicxml`), field by field (form, part
+  names, measures, cadences, halves), and on the five reference pieces the structure of the themes and expansions
+  (order, parts inside the theme, cadences in their part, expansions inside their phrase).
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
@@ -422,6 +425,30 @@ These are the library's phrases, not hand readings: a phrase without a cadence e
 end of the piece, and the cadences still miss much of the harmony (Mozart K. 545 has 52 phrases, 15 of them without a
 cadence, and Field 1 has one).
 
+## Themes and expansions
+
+On the phrases, ideas and subphrases above the library identifies themes (`standard_form_identify_themes`) and
+detects expansions and contractions (`standard_form_detect_expansions`), both with the default config. The document's
+`themes` has a claim per theme with the form, the names of its two parts, their measures and cadences, the commonality
+of the pairing and the traits of its continuation; each phrase claim lists the expansions and contractions that concern
+it. The Markdown report has a `## Themes` table and an Expansion column in `## Phrases`. A constructed sentence,
+period and compound period (`tests/musicxml/sentence.musicxml`, `period.musicxml`, `compound-period.musicxml`) are
+heard as such by `test_themes`.
+
+Measured on the reference pieces (MIDI; `test_themes` asserts structure, not these counts):
+
+| Piece | Themes | Forms | Expansions | Contractions |
+| --- | --- | --- | --- | --- |
+| Bach 114 | 2 | 2 hybrid | 2 (1 internal, 1 external) | 1 |
+| Clementi 36 | 3 | 3 hybrid | 0 | 3 |
+| Mozart 545 | 18 | 17 hybrid, 1 repeated phrase | 6 (internal) | 9 |
+| Field 1 | 5 | 5 hybrid | 3 (2 internal, 1 external) | 2 |
+| Field 5 | 4 | 4 hybrid | 3 (2 internal, 1 external) | 1 |
+
+The constructed pieces give a sentence, a period and a compound period; the reference pieces give hybrids and one
+repeated phrase, and no sentence, period or compound period. Continuation traits are the claim's fragmentation only
+(Field 5 has one), and the cadential ending is never identified (see "Known limits").
+
 ## Known limits
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
@@ -440,6 +467,13 @@ cadence, and Field 1 has one).
   and m. 28) arrive at m. 15 and m. 21, beat 3.5. A region read in a key the music is not in also reads its chords in that key.
   The profile fits chromatic music less well. A key signature is trusted as a boundary: many exporters
   write a default C major at tick 0 whatever the key.
+- Themes: the reference pieces yield no sentence, period or compound period (17 of Mozart 545's 18 themes and all
+  the others are hybrids, one is a repeated phrase), so the sentence, period and compound period cases are tested on
+  constructed pieces only. The library's ideas are the nominal two-measure cut, its cadential ending needs the bass
+  (`bass_is_cadential_pattern`) and is never identified, fragmentation is judged on those nominal ideas and is rarely
+  found, and its claim gives no acceleration or sequence trait. A constructed period cannot end its antecedent on a
+  half cadence: a V followed by I reads as an authentic cadence, so the constructed antecedent ends on an imperfect
+  authentic one.
 - Pivot chords are read in the old key and its mode; a minor old key is read in its minor vocabulary.
 - Chord identification is Ursatz's weighted identification, read in each segment's key region and its
   mode: the diatonic triads and sevenths of a major key, or of natural, harmonic and melodic minor in a

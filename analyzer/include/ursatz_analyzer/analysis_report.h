@@ -313,6 +313,95 @@ typedef struct {
     double uncertainty;
 } AnalysisSubphrase;
 
+/* One part of a theme: a subphrase of a one-phrase theme (presentation and continuation) or a phrase of a two-phrase
+   one (antecedent and consequent). Measures are the library's. */
+typedef struct {
+    const char *name;      /* the library's PhraseBeginning or PhraseEnding name; NULL for the parts of a repeated
+                              phrase or a compound period, which the library does not name */
+    int first_measure;
+    int last_measure;
+    int length_measures;
+    bool has_cadence;      /* the part ends with a cadence: its phrase's (a presentation, a compound basic idea and
+                              the first half of a two-phrase theme can have none) */
+    size_t cadence;        /* index into cadences; valid only when has_cadence */
+} AnalysisThemePart;
+
+#define ANALYSIS_THEME_MAX_TRAITS 4
+
+/* One theme from the library's standard-form analysis (analysis/analysis_theme.h), in the library's order (a compound
+   period after its two sentences). The span runs from the first measure to the end of the last, an extension after
+   the last phrase's cadence not included. */
+typedef struct {
+    int index;               /* the library's, within the piece */
+    const char *form;        /* the library's PhraseLevelForm name: "sentence", "period", "hybrid", "compound-period",
+                                "repeated-phrase" */
+    const char *beginning;   /* the library's PhraseBeginning name; NULL for a repeated phrase or a compound period */
+    const char *ending;      /* the library's PhraseEnding name; NULL likewise */
+    size_t first_phrase;     /* the phrases it spans: phrases[first_phrase .. + phrase_count) */
+    size_t phrase_count;     /* 1 or 2 */
+    long start_numerator;    /* whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;
+    int last_measure;
+    int length_measures;
+    bool parts_are_phrases;  /* the parts are phrases, not subphrases */
+    const char *commonality; /* the library's StandardFormCommonality name of the pairing of the two parts ("very-common",
+                                "slightly-less-common", "occasional", "rare"); NULL when the pairing has none */
+    bool part_of_compound;   /* a sentence that is one half of a compound period */
+    const char *traits[ANALYSIS_THEME_MAX_TRAITS]; /* the library's ContinuationTrait names the theme's continuation
+                                shows: "fragmentation" is all its claim gives (acceleration, sequence and harmonic
+                                rhythm are not in the claim) */
+    size_t trait_count;
+    bool archetypal;         /* the library's claim: a sentence of 4 or 8 measures whose continuation balances the
+                                presentation and has fragmentation */
+    bool cadences_usual;     /* the library's claim: a period's antecedent half cadence and consequent perfect authentic
+                                cadence; a sentence's cadence is a goal */
+    bool lengths_usual;      /* the library's claim: a four-measure presentation or antecedent, and an ending at least as
+                                long */
+    bool has_halves;         /* a compound period: its two halves are themes */
+    size_t halves[2];        /* indices into themes of the two sentences; valid only when has_halves */
+    AnalysisThemePart parts[2];
+    size_t *note_ids;        /* owned; ImportedNotes indices of the soprano notes in the span */
+    size_t note_id_count;
+    double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisTheme;
+
+#define ANALYSIS_EXPANSION_MAX_TECHNIQUES 4
+
+/* One expansion or contraction from the library's standard-form analysis (analysis/analysis_expansion.h), in the
+   library's order (by theme, then phrase). An internal expansion or a contraction concerns the ending of a theme
+   against its beginning; an external one concerns the extension after a phrase's cadence. */
+typedef struct {
+    int index;                 /* the library's, within the piece */
+    const char *kind;          /* "internal", "external" (the library's ExpansionPlacement names) or "contraction"
+                                  (its PhraseLengthChange name): the library's StandardFormExpansionKind has no
+                                  name of its own */
+    const char *change;        /* the library's PhraseLengthChange name: "expansion" or "contraction" */
+    bool has_theme;            /* false for an external expansion of a phrase that is in no theme */
+    size_t theme;              /* index into themes; valid only when has_theme */
+    size_t phrase;             /* index into phrases: the phrase of the ending, or the extended phrase */
+    int expected_length;       /* measures: the beginning's, or the phrase's own length when external */
+    int actual_length;         /* measures: the ending's, or the phrase's with its extension */
+    int measures_changed;      /* added (expansion) or removed (contraction), at least 1 */
+    int first_measure;
+    int last_measure;
+    long start_numerator;      /* whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    const char *techniques[ANALYSIS_EXPANSION_MAX_TECHNIQUES]; /* the library's InternalExpansionTechnique names it
+                                  finds evidence for; none when unspecified or not internal */
+    size_t technique_count;
+    const char *external_kind; /* the library's ExternalExpansionKind name; NULL unless external */
+    bool suffix_length_typical;       /* external only: the extension's length is typical for its kind */
+    bool suffix_agrees_with_location; /* external only: its length agrees with its location */
+    size_t *note_ids;          /* owned; ImportedNotes indices of the soprano notes in the span */
+    size_t note_id_count;
+    double uncertainty;        /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisExpansion;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -342,13 +431,17 @@ typedef struct {
     size_t idea_count;
     AnalysisSubphrase *subphrases; /* owned; phrase by phrase */
     size_t subphrase_count;
+    AnalysisTheme *themes; /* owned; the library's themes, in its order; empty when it found none */
+    size_t theme_count;
+    AnalysisExpansion *expansions; /* owned; the library's expansions and contractions, in its order */
+    size_t expansion_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions, the harmonic rhythm, the phrases, ideas and subphrases. */
+   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes and expansions. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
