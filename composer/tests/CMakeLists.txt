@@ -311,6 +311,18 @@ endforeach()
 add_test(NAME test_analyzer_check_planned COMMAND test_analyzer_check planned)
 set_tests_properties(test_analyzer_check_planned PROPERTIES LABELS slow)
 
+add_executable(test_explain test_explain.c)
+target_link_libraries(test_explain PRIVATE ursatz_composer)
+target_compile_options(test_explain PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_explain PRIVATE
+    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
+add_dependencies(test_explain ursatz-composer)
+# The explanation of a run (docs/explain.md); every mode is quick.
+foreach(mode choices rejections same cli)
+    add_test(NAME test_explain_${mode} COMMAND test_explain ${mode})
+endforeach()
+
 add_executable(test_style test_style.c)
 target_link_libraries(test_style PRIVATE ursatz_composer)
 target_compile_options(test_style PRIVATE -Wall -Wextra -Wpedantic)

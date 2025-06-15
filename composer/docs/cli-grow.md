@@ -1,7 +1,7 @@
 # grow command
 
 ```sh
-ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
+ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--explain <file>] [--format text|json]
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
@@ -48,6 +48,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--suggest <n>` | 1 to 16 different themes instead of one. |
 | `--out <file.json>` | The plan as JSON, as `plan_write_json_file` writes it. |
 | `--midi <file>`, `--musicxml <file>` | The melody and the bass of the theme, and the accompaniment, one part for each voice of it. The source material is not part of the piece. |
+| `--explain <file>` | Why each candidate was chosen or rejected while the theme was grown: per target the chosen candidate, its runners-up and the rejected ones with their reasons, the form heard, the Analyzer check (with `--check`) and the seeds passed over. JSON when the file name ends in `.json`, else text; with `--suggest`, theme k goes to `<name>-k.<extension>` like the other files. See [explain.md](explain.md). |
 | `--format <text\|json>` | How the result is printed on stdout. Text by default. |
 
 ## Seeds

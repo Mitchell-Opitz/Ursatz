@@ -23,7 +23,7 @@
 #include <ursatz_composer/render.h>
 
 #define MAX_SUGGESTIONS 16
-#define MAX_FILES (3 * MAX_SUGGESTIONS)
+#define MAX_FILES (4 * MAX_SUGGESTIONS)
 #define MAX_CHORDS 96
 #define MAX_LANE_SPANS 128
 
@@ -55,6 +55,7 @@ typedef struct {
     const char *out_path;
     const char *midi_path;
     const char *musicxml_path;
+    const char *explain_path;
     const char *format_text;
     /* Read from the text above. */
     Into into;
@@ -127,6 +128,9 @@ static void print_help(FILE *out) {
     fprintf(out, "  --out <file.json>    write the plan as JSON\n");
     fprintf(out, "  --midi <file>        write the melody, the bass and the accompaniment as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the melody, the bass and the accompaniment as MusicXML\n");
+    fprintf(out, "  --explain <file>     write why each candidate was chosen or rejected: per target the chosen candidate, its\n");
+    fprintf(out, "                       runners-up and the rejected ones with their reasons, the form heard and the analyzer check\n");
+    fprintf(out, "                       (with --check), and the seeds passed over. JSON when the file ends in .json, else text\n");
     fprintf(out, "  --format <text|json> how to print the theme on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "The form heard in the result (by Ursatz's standard-form) is printed with it; a theme need not be heard as\n");
@@ -219,6 +223,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->midi_path;
         } else if (strcmp(arg, "--musicxml") == 0) {
             target = &options->musicxml_path;
+        } else if (strcmp(arg, "--explain") == 0) {
+            target = &options->explain_path;
         } else if (strcmp(arg, "--format") == 0) {
             target = &options->format_text;
         } else if (arg[0] == '-' && arg[1] != '\0') {
@@ -390,11 +396,31 @@ typedef struct {
     GrowOutcome outcome;
     unsigned long seed;
     char *signature;
+    AnalyzerCheck check; /* with --check, the Analyzer's check of the theme; empty otherwise */
+    bool checked;
+    size_t passed_before; /* how many of the seeds passed over came before this theme */
 } Theme;
+
+/* The seeds passed over, in the order tried (explain.h), kept for --explain. */
+typedef struct {
+    ComposeRejection *items;
+    size_t count;
+} Passed;
+
+static void passed_add(Passed *passed, const ComposeRejection *rejection) {
+    ComposeRejection *grown = realloc(passed->items, (passed->count + 1) * sizeof(ComposeRejection));
+    if (!grown) {
+        free(rejection->items);
+        return;
+    }
+    passed->items = grown;
+    passed->items[passed->count++] = *rejection;
+}
 
 static void theme_destroy(Theme *theme) {
     plan_destroy(theme->plan);
     grow_outcome_destroy(&theme->outcome);
+    analyzer_check_destroy(&theme->check);
     free(theme->signature);
     memset(theme, 0, sizeof(*theme));
 }
@@ -479,20 +505,9 @@ static char *signature_of(const PiecePlan *plan, NodeId theme_node) {
     return text.text ? text.text : strdup("");
 }
 
-/* Whether the Analyzer hears the theme as planned (analyzer_check.h); a theme it cannot read is not held against it. */
-static bool analysis_agrees(const PiecePlan *plan) {
-    NodeId theme_node = find_node(plan, "theme");
-    AnalyzerCheck check;
-    if (theme_node == PLAN_NODE_NONE) {
-        return true;
-    }
-    bool agrees = analyzer_check_section(plan, theme_node, &check) != ANALYZER_CHECK_OK || !check.contradicts;
-    analyzer_check_destroy(&check);
-    return agrees;
-}
-
 /* Builds the plan and runs the stages for one seed. GROW_ERR_STUCK is the only result a later seed can mend. */
-static GrowResult grow_one(const Options *options, const Motive *motive, unsigned long seed, Theme *theme) {
+static GrowResult grow_one(const Options *options, const Motive *motive, unsigned long seed, size_t attempt, Theme *theme,
+                           Passed *passed) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
@@ -519,11 +534,30 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     config.style = options->style;
     config.style_weight = options->style_weight;
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
-    if (ran == GROW_OK && options->check && !analysis_agrees(theme->plan)) {
-        ran = GROW_ERR_STUCK;
+    NodeId theme_node = find_node(theme->plan, "theme");
+    if (ran == GROW_ERR_STUCK && options->explain_path) {
+        ComposeRejection rejection;
+        memset(&rejection, 0, sizeof(rejection));
+        rejection.round = attempt;
+        rejection.seed = seed;
+        snprintf(rejection.stage, sizeof(rejection.stage), "%s",
+                 theme->outcome.stuck ? grow_stage_name(theme->outcome.stuck_stage) : "");
+        snprintf(rejection.reason, sizeof(rejection.reason), "stuck");
+        passed_add(passed, &rejection);
+    }
+    /* A theme the Analyzer cannot read is not held against it. */
+    if (ran == GROW_OK && options->check && theme_node != PLAN_NODE_NONE) {
+        theme->checked = analyzer_check_section(theme->plan, theme_node, &theme->check) == ANALYZER_CHECK_OK;
+        if (theme->checked && theme->check.contradicts) {
+            ComposeRejection rejection;
+            if (options->explain_path &&
+                explain_analyzer_rejection(theme->plan, theme_node, &theme->check, attempt, seed, &rejection) == EXPLAIN_OK) {
+                passed_add(passed, &rejection);
+            }
+            ran = GROW_ERR_STUCK;
+        }
     }
     if (ran == GROW_OK) {
-        NodeId theme_node = find_node(theme->plan, "theme");
         theme->signature = theme_node == PLAN_NODE_NONE ? NULL : signature_of(theme->plan, theme_node);
         if (!theme->signature) {
             ran = GROW_ERR_ALLOC;
@@ -948,15 +982,15 @@ static void discard(Pending *pending, size_t count) {
  * Writes every output to a temporary file next to its final name, and renames them all only when every one was
  * written, so that an error leaves no output file behind.
  */
-static int write_files(const Options *options, const Theme *themes, size_t count, Pending *pending,
+static int write_files(const Options *options, const Theme *themes, size_t count, const Passed *passed, Pending *pending,
                        size_t *pending_count) {
-    const char *paths[3] = {options->out_path, options->midi_path, options->musicxml_path};
+    const char *paths[4] = {options->out_path, options->midi_path, options->musicxml_path, options->explain_path};
     int status = 0;
     *pending_count = 0;
     for (size_t k = 0; k < count && status == 0; k++) {
         RenderedPlan rendered;
         bool have_rendering = false;
-        for (int kind = 0; kind < 3 && status == 0; kind++) {
+        for (int kind = 0; kind < 4 && status == 0; kind++) {
             if (!paths[kind]) {
                 continue;
             }
@@ -972,6 +1006,21 @@ static int write_files(const Options *options, const Theme *themes, size_t count
                 PlanJsonError error;
                 if (plan_write_json_file(themes[k].plan, entry->temporary, &error) != PLAN_OK) {
                     status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
+                }
+                continue;
+            }
+            if (kind == 3) {
+                Explanation explanation;
+                const Theme *theme = &themes[k];
+                ExplainResult built =
+                    explain_build_grow(theme->plan, find_node(theme->plan, "theme"), &theme->outcome,
+                                       theme->checked ? &theme->check : NULL, passed->items, theme->passed_before,
+                                       &explanation);
+                if (built != EXPLAIN_OK || cli_write_explanation(entry->final_path, entry->temporary, &explanation) != 0) {
+                    status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", entry->final_path);
+                }
+                if (built == EXPLAIN_OK) {
+                    explain_destroy(&explanation);
                 }
                 continue;
             }
@@ -1070,12 +1119,14 @@ int run_grow(int argc, char **argv) {
     Theme themes[MAX_SUGGESTIONS];
     memset(themes, 0, sizeof(themes));
     size_t made = 0;
+    Passed passed;
+    memset(&passed, 0, sizeof(passed));
     unsigned long tries = (unsigned long)CLI_MAX_SEED_TRIES * options.suggest;
     unsigned long last_seed = options.seed;
     for (unsigned long attempt = 0; attempt < tries && made < options.suggest; attempt++) {
         Theme theme;
         last_seed = (options.seed + attempt) & CLI_SEED_MAX;
-        GrowResult result = grow_one(&options, &motive, last_seed, &theme);
+        GrowResult result = grow_one(&options, &motive, last_seed, attempt, &theme, &passed);
         if (result == GROW_OK) {
             bool repeated = false;
             for (size_t k = 0; k < made; k++) {
@@ -1084,6 +1135,7 @@ int run_grow(int argc, char **argv) {
             if (repeated) {
                 theme_destroy(&theme);
             } else {
+                theme.passed_before = passed.count;
                 themes[made++] = theme;
             }
         } else if (result != GROW_ERR_STUCK) {
@@ -1112,7 +1164,7 @@ int run_grow(int argc, char **argv) {
         Pending pending[MAX_FILES];
         const char *files[MAX_FILES];
         size_t pending_count = 0;
-        status = write_files(&options, themes, made, pending, &pending_count);
+        status = write_files(&options, themes, made, &passed, pending, &pending_count);
         if (status == 0) {
             for (size_t i = 0; i < pending_count; i++) {
                 files[i] = pending[i].final_path;
@@ -1123,6 +1175,7 @@ int run_grow(int argc, char **argv) {
     for (size_t k = 0; k < made; k++) {
         theme_destroy(&themes[k]);
     }
+    compose_rejections_free(passed.items, passed.count);
     composer_style_destroy(options.style);
     return status;
 }

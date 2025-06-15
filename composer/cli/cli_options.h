@@ -6,6 +6,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/corpus_seed.h>
+#include <ursatz_composer/explain.h>
 #include <ursatz_composer/style.h>
 
 /* The exit statuses every command shares. */
@@ -93,6 +94,12 @@ void cli_print_json_string(const char *text);
 
 /* A seed from the clock, for a command given none. */
 unsigned long cli_default_seed(void);
+
+/*
+ * Writes the explanation (explain.h) to write_path, as JSON when final_path ends in ".json" (any case), else as text.
+ * Returns 0, or -1 when the file cannot be written.
+ */
+int cli_write_explanation(const char *final_path, const char *write_path, const Explanation *explanation);
 
 /* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size);

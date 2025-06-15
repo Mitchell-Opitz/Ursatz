@@ -9,7 +9,7 @@
 
 #define FILL_USAGE_LINE                                                                                                \
     "Usage: ursatz-composer fill <plan.json> [--seed N] [--check] [--candidates N] [--style <file>] [--style-weight N/D] [--blend <file>] [--blend-weight N/D | --blend-weights D=N/D,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] "       \
-    "[--record <file.json>] [--format text|json]"
+    "[--record <file.json>] [--explain <file>] [--format text|json]"
 
 /* "ursatz-composer fill ..."; argv[1] is "fill". Returns the exit status. */
 int run_fill(int argc, char **argv);
@@ -29,9 +29,10 @@ typedef struct {
     const char *midi;
     const char *musicxml;
     const char *record;
+    const char *explain;
 } CliOutputPaths;
 
-#define CLI_MAX_OUTPUTS 4
+#define CLI_MAX_OUTPUTS 5
 
 /*
  * Writes the files, all or none, then gives the paths written in files (room for CLI_MAX_OUTPUTS). Returns 0, or the

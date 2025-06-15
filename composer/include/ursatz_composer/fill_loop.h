@@ -42,6 +42,12 @@ typedef struct {
     unsigned long score_numerator;
     unsigned long score_denominator; /* must be at least 1 */
     char reason[FILL_REASON_MAX];
+    /*
+     * The part of the score a style added (style_check.c), kept apart so a record can show it. A denominator of 0, as
+     * a checker that knows no style leaves it, means no style; the loop never reads these two.
+     */
+    unsigned long style_numerator;
+    unsigned long style_denominator;
 } FillCheck;
 
 /*

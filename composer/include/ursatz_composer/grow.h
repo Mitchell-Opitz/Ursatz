@@ -10,6 +10,7 @@
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/melody_fill.h>
+#include <ursatz_composer/rejection.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
@@ -169,6 +170,8 @@ typedef struct {
     GrowScore score;                       /* the share of the structure's soft rules and the heard form that hold */
     bool style_measured;                   /* with a style, after a complete run: the Analyzer's distance from it (compose.h) */
     StyleComparison style_distance;        /* owned */
+    ComposeRejection *rejections;          /* owned; the runs thrown away before this one (compose.h), NULL when none */
+    size_t rejection_count;
 } GrowOutcome;
 
 void grow_outcome_destroy(GrowOutcome *outcome);

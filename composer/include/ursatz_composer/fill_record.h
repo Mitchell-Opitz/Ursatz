@@ -32,6 +32,13 @@ typedef struct {
     char label[FILL_LABEL_MAX];
     unsigned long score_numerator;
     unsigned long score_denominator;
+    /*
+     * The style term in the score (the score includes it): 0/1 with no style. styled is true when a style was set, and
+     * only then does the JSON carry the two, so a record without a style is what it always was.
+     */
+    unsigned long style_numerator;
+    unsigned long style_denominator;
+    bool styled;
     bool rejected;
     char reason[FILL_REASON_MAX];
 } FillConsidered;
