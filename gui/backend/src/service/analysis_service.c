@@ -30,6 +30,7 @@
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer/notation_reading.h>
 
 static char *dup_string(const char *value) {
     if (!value) {
@@ -301,6 +302,59 @@ static bool meta_tags_copy(const cJSON *meta, char ***out_tags, size_t *out_coun
     return true;
 }
 
+/* Copies meta's "notation" object. False (and *out zeroed) when it is absent, null or not an object. */
+static bool meta_notation_read(const cJSON *meta, UrsatzGuiNotation *out) {
+    memset(out, 0, sizeof(*out));
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, "notation");
+    if (!cJSON_IsObject(item)) {
+        return false;
+    }
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(item, "meter");
+    const cJSON *scale = cJSON_GetObjectItemCaseSensitive(item, "value_scale");
+    const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(item, "pickup");
+    if (cJSON_IsString(meter) && meter->valuestring) {
+        snprintf(out->meter, sizeof(out->meter), "%s", meter->valuestring);
+    }
+    if (cJSON_IsString(scale) && scale->valuestring) {
+        snprintf(out->value_scale, sizeof(out->value_scale), "%s", scale->valuestring);
+    }
+    if (cJSON_IsString(pickup) && pickup->valuestring) {
+        snprintf(out->pickup, sizeof(out->pickup), "%s", pickup->valuestring);
+    }
+    return true;
+}
+
+/* True when every set member of n is text the Analyzer reads. */
+static bool notation_is_valid(const UrsatzGuiNotation *n) {
+    NotationReading reading = notation_reading_none();
+    return (n->meter[0] == '\0' || notation_reading_parse_meter(n->meter, &reading)) &&
+           (n->value_scale[0] == '\0' || notation_reading_parse_scale(n->value_scale, &reading)) &&
+           (n->pickup[0] == '\0' || notation_reading_parse_pickup(n->pickup, &reading));
+}
+
+/* Sets (n) or removes (NULL) meta's "notation" object. */
+static bool meta_set_notation(cJSON *meta, const UrsatzGuiNotation *n) {
+    if (!n) {
+        cJSON_DeleteItemFromObjectCaseSensitive(meta, "notation");
+        return true;
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!object) {
+        return false;
+    }
+    if (!cJSON_AddStringToObject(object, "meter", n->meter) ||
+        !cJSON_AddStringToObject(object, "value_scale", n->value_scale) ||
+        !cJSON_AddStringToObject(object, "pickup", n->pickup)) {
+        cJSON_Delete(object);
+        return false;
+    }
+    if (cJSON_ReplaceItemInObjectCaseSensitive(meta, "notation", object)) {
+        return true;
+    }
+    cJSON_AddItemToObject(meta, "notation", object);
+    return true;
+}
+
 static void piece_summary_destroy_contents(UrsatzGuiPieceSummary *piece) {
     free(piece->id);
     free(piece->filename);
@@ -344,11 +398,15 @@ static const char *source_file_name(InputFormat format, const char *original_fil
     return "source.musicxml";
 }
 
-/* Imports the source file and runs it through the Analyzer. On OK,
-   *out_json is the analysis document (caller frees). */
-static UrsatzGuiAnalysisResult analyze_source_file(const char *source_path, InputFormat format, char **out_json) {
+static bool find_source_path(const char *dir_path, char *out, size_t out_size);
+static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes *out);
+
+/* Imports the piece's source (with its notation override, if any) and runs it
+   through the Analyzer. On OK, *out_json is the analysis document (caller frees). */
+static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, InputFormat format, char **out_json) {
+    char source_path[400];
     ImportedNotes notes;
-    if (input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) || !import_piece(dir_path, format, &notes)) {
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
@@ -438,7 +496,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
     }
 
     char *document_json = NULL;
-    result = analyze_source_file(source_path, format, &document_json);
+    result = analyze_source_file(dir_path, format, &document_json);
     if (result != URSATZ_GUI_ANALYSIS_OK) {
         remove_piece_dir(dir_path);
         free(id);
@@ -595,6 +653,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
         piece->composer = meta_string_copy(meta, "composer");
         piece->source = meta_string_copy(meta, "source");
         bool tags_ok = meta_tags_copy(meta, &piece->tags, &piece->tag_count);
+        piece->has_notation = meta_notation_read(meta, &piece->notation);
         cJSON_Delete(meta);
         if (!piece->id || !piece->filename || !piece->format || !piece->uploaded_at || !piece->composer ||
             !piece->source || !tags_ok) {
@@ -669,6 +728,33 @@ static bool find_source_path(const char *dir_path, char *out, size_t out_size) {
     return false;
 }
 
+/* Imports the piece's stored source and applies the notation override kept in
+   its meta.json, if any (R-110). The analysis, the score and playback all
+   read the piece through this, so they agree on its meter and note values. */
+static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes *out) {
+    char source_path[400];
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
+        input_pipeline_import_file(source_path, format, out) != INPUT_PIPELINE_OK) {
+        return false;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    UrsatzGuiNotation notation;
+    bool has_notation = meta && meta_notation_read(meta, &notation);
+    cJSON_Delete(meta);
+    if (!has_notation) {
+        return true;
+    }
+    NotationReading reading = notation_reading_none();
+    if ((notation.meter[0] != '\0' && !notation_reading_parse_meter(notation.meter, &reading)) ||
+        (notation.value_scale[0] != '\0' && !notation_reading_parse_scale(notation.value_scale, &reading)) ||
+        (notation.pickup[0] != '\0' && !notation_reading_parse_pickup(notation.pickup, &reading)) ||
+        notation_reading_apply(out, &reading) != NOTATION_READING_OK) {
+        imported_notes_destroy(out);
+        return false;
+    }
+    return true;
+}
+
 /* The id the score export writes as <note xml:id> for an event with this
    EntityID value: a leading 'n' unless it starts with a letter or '_', and
    every character outside [A-Za-z0-9_.-] replaced by '_'. */
@@ -710,6 +796,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     detail->filename = meta_string_copy(meta, "filename");
     detail->format = meta_string_copy(meta, "format");
     detail->uploaded_at = meta_string_copy(meta, "uploaded_at");
+    detail->has_notation = meta_notation_read(meta, &detail->notation);
     cJSON_Delete(meta);
 
     char analysis_path[400];
@@ -722,11 +809,10 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     }
 
     /* The note ids come from importing the stored source again: they are the
-       ids of the source's own NoteEvents, in the Analyzer's event order. */
-    char source_path[400];
+       ids of the source's own NoteEvents (a notation override keeps them), in
+       the Analyzer's event order. */
     ImportedNotes notes;
-    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        input_pipeline_import_file(source_path, format_from_label(detail->format), &notes) != INPUT_PIPELINE_OK) {
+    if (!import_piece(dir_path, format_from_label(detail->format), &notes)) {
         ursatz_gui_piece_detail_destroy(detail);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
@@ -903,6 +989,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_d
         }
         ursatz_gui_meta_tags_free(tags, tag_count);
     }
+    if (result == URSATZ_GUI_ANALYSIS_OK && update->has_notation) {
+        if (update->notation && !notation_is_valid(update->notation)) {
+            set_message(message, message_size, "invalid notation");
+            result = URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
+        } else if (!meta_set_notation(meta, update->notation)) {
+            result = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+    }
     if (result != URSATZ_GUI_ANALYSIS_OK) {
         cJSON_Delete(meta);
         return result;
@@ -918,6 +1012,21 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_d
     bool ok = write_file_atomic(meta_path, text, strlen(text));
     free(text);
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_notation(const char *pieces_dir, const char *id, bool *out_has,
+                                                          UrsatzGuiNotation *out) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    *out_has = meta_notation_read(meta, out);
+    cJSON_Delete(meta);
+    return URSATZ_GUI_ANALYSIS_OK;
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
@@ -939,13 +1048,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
     InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
 
-    char source_path[400];
-    if (!find_source_path(dir_path, source_path, sizeof(source_path))) {
-        cJSON_Delete(meta);
-        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
-    }
     char *document_json = NULL;
-    UrsatzGuiAnalysisResult result = analyze_source_file(source_path, format, &document_json);
+    UrsatzGuiAnalysisResult result = analyze_source_file(dir_path, format, &document_json);
     if (result != URSATZ_GUI_ANALYSIS_OK) {
         cJSON_Delete(meta);
         return result;
@@ -1011,10 +1115,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
         *title_dot = '\0';
     }
 
-    char source_path[400];
     ImportedNotes notes;
-    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+    if (!import_piece(dir_path, format, &notes)) {
         free(title);
         free(composer);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
@@ -1263,6 +1365,20 @@ static bool playback_score_tempo(const ImportedSource *source, PlaybackTempoRegi
     return true;
 }
 
+/* Multiplies every region's qpm by num/den, and its position too when positions is set. */
+static void scale_tempo_regions(PlaybackTempoRegion *regions, size_t count, long num, unsigned long den,
+                                bool positions) {
+    if (num <= 0 || den == 0 || (num == 1 && den == 1)) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        regions[i].qpm = round_to_milli(regions[i].qpm * (double)num / (double)den);
+        if (positions) {
+            regions[i].at = rational_make(regions[i].at.num * num, regions[i].at.den * den);
+        }
+    }
+}
+
 static int compare_size_t(const void *left, const void *right) {
     size_t a = *(const size_t *)left;
     size_t b = *(const size_t *)right;
@@ -1285,8 +1401,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *piece
 
     char source_path[400];
     ImportedNotes notes;
-    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        input_pipeline_import_file(source_path, format, &notes) != INPUT_PIPELINE_OK) {
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) || !import_piece(dir_path, format, &notes)) {
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
@@ -1302,6 +1417,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *piece
         /* A source that imported a moment ago and now has no readable tempo
            is a failed import; an allocation failure is not told apart. */
         return is_midi ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+
+    /* A value scale changes the notated length of everything, so the tempo is
+       changed with it and the piece sounds as fast as before. The MIDI tempo
+       is read from the file, so its positions are scaled here; a score's
+       marking positions were scaled with the notes. */
+    if (notes.source.reading_applied) {
+        scale_tempo_regions(regions, region_count, notes.source.reading.scale_numerator,
+                            notes.source.reading.scale_denominator, is_midi);
     }
 
     size_t *part_ids = notes.count > 0 ? malloc(notes.count * sizeof(size_t)) : NULL;

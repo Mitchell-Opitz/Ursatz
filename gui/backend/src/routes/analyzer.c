@@ -1,6 +1,7 @@
 #include "analyzer.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -314,6 +315,21 @@ static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
   free(pieces);
 }
 
+/* Appends a piece's notation override as JSON: null when it has none. */
+static void append_notation(JsonBuffer *buf, bool has_notation, const UrsatzGuiNotation *notation) {
+  if (!has_notation) {
+    json_buffer_append(buf, "null");
+    return;
+  }
+  json_buffer_append(buf, "{\"meter\":");
+  json_buffer_append_string(buf, notation->meter);
+  json_buffer_append(buf, ",\"value_scale\":");
+  json_buffer_append_string(buf, notation->value_scale);
+  json_buffer_append(buf, ",\"pickup\":");
+  json_buffer_append_string(buf, notation->pickup);
+  json_buffer_append(buf, "}");
+}
+
 /* Appends one piece as the list route and the PATCH answer show it. */
 static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *piece) {
   json_buffer_append(buf, "{\"id\":");
@@ -335,7 +351,9 @@ static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *pie
     }
     json_buffer_append_string(buf, piece->tags[i]);
   }
-  json_buffer_append(buf, "]}");
+  json_buffer_append(buf, "],\"notation\":");
+  append_notation(buf, piece->has_notation, &piece->notation);
+  json_buffer_append(buf, "}");
 }
 
 /* Reads one query parameter (URL-decoded) into out; false when absent or empty. */
@@ -504,6 +522,8 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   json_buffer_append_string(&buf, detail->format);
   json_buffer_append(&buf, ",\"uploaded_at\":");
   json_buffer_append_string(&buf, detail->uploaded_at);
+  json_buffer_append(&buf, ",\"notation\":");
+  append_notation(&buf, detail->has_notation, &detail->notation);
   json_buffer_append(&buf, ",\"note_xml_ids\":[");
   for (size_t i = 0; i < detail->note_count; i++) {
     if (i != 0) {
@@ -627,8 +647,47 @@ static int send_updated_piece(struct mg_connection *conn, const char *id) {
   return 200;
 }
 
+/* Reads a PATCH "notation" member: an object whose meter, value_scale and
+ * pickup are strings (each optional, absent = not set). False for anything else. */
+static bool read_notation_member(const cJSON *item, UrsatzGuiNotation *out) {
+  static const struct {
+    const char *name;
+    size_t offset;
+    size_t size;
+  } kMembers[] = {
+      {"meter", offsetof(UrsatzGuiNotation, meter), sizeof(((UrsatzGuiNotation *)0)->meter)},
+      {"value_scale", offsetof(UrsatzGuiNotation, value_scale), sizeof(((UrsatzGuiNotation *)0)->value_scale)},
+      {"pickup", offsetof(UrsatzGuiNotation, pickup), sizeof(((UrsatzGuiNotation *)0)->pickup)},
+  };
+  memset(out, 0, sizeof(*out));
+  if (!cJSON_IsObject(item)) {
+    return false;
+  }
+  for (size_t i = 0; i < sizeof(kMembers) / sizeof(kMembers[0]); i++) {
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(item, kMembers[i].name);
+    if (!member) {
+      continue;
+    }
+    if (!cJSON_IsString(member) || !member->valuestring || strlen(member->valuestring) >= kMembers[i].size) {
+      return false;
+    }
+    strcpy((char *)out + kMembers[i].offset, member->valuestring);
+  }
+  return true;
+}
+
+static bool notation_equal(bool has_a, const UrsatzGuiNotation *a, bool has_b, const UrsatzGuiNotation *b) {
+  if (has_a != has_b) {
+    return false;
+  }
+  return !has_a || (strcmp(a->meter, b->meter) == 0 && strcmp(a->value_scale, b->value_scale) == 0 &&
+                    strcmp(a->pickup, b->pickup) == 0);
+}
+
 /* PATCH /api/analyzer/pieces/<id>: filename, composer, source, tags, add_tags,
- * remove_tags (all optional, unknown members ignored). */
+ * remove_tags, notation (an object, or null to clear; all optional, unknown
+ * members ignored). A changed notation analyzes the piece again before the
+ * answer. */
 static int handle_patch_piece(struct mg_connection *conn, const char *id) {
   char *body = read_patch_body(conn);
   if (!body) {
@@ -700,6 +759,21 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
       bad_member = "remove_tags";
     }
   }
+  UrsatzGuiNotation notation;
+  memset(&notation, 0, sizeof(notation));
+  const cJSON *notation_item = cJSON_GetObjectItemCaseSensitive(root, "notation");
+  if (!bad_member && notation_item) {
+    if (cJSON_IsNull(notation_item)) {
+      update.has_notation = true;
+      any = true;
+    } else if (read_notation_member(notation_item, &notation)) {
+      update.has_notation = true;
+      update.notation = &notation;
+      any = true;
+    } else {
+      bad_member = "notation";
+    }
+  }
   update.tags = tags;
   update.add_tags = add_tags;
   update.remove_tags = remove_tags;
@@ -711,8 +785,29 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
     send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
   } else {
     char message[96] = "";
+    bool had_notation = false;
+    UrsatzGuiNotation previous;
+    memset(&previous, 0, sizeof(previous));
+    if (update.has_notation) {
+      ursatz_gui_analysis_get_notation(kPiecesDir, id, &had_notation, &previous);
+    }
     UrsatzGuiAnalysisResult result =
         ursatz_gui_analysis_update_metadata(kPiecesDir, id, &update, message, sizeof(message));
+    if (result == URSATZ_GUI_ANALYSIS_OK && update.has_notation &&
+        !notation_equal(had_notation, &previous, update.notation != NULL, &notation)) {
+      result = ursatz_gui_analysis_reanalyze(kPiecesDir, id);
+      if (result != URSATZ_GUI_ANALYSIS_OK) {
+        /* The piece keeps its old analysis; put the old reading back to match it. */
+        UrsatzGuiMetaUpdate undo = {0};
+        undo.has_notation = true;
+        undo.notation = had_notation ? &previous : NULL;
+        ursatz_gui_analysis_update_metadata(kPiecesDir, id, &undo, NULL, 0);
+        if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+          snprintf(message, sizeof(message), "invalid notation");
+          result = URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
+        }
+      }
+    }
     if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
       mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
       status = 404;
