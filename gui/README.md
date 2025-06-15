@@ -473,21 +473,34 @@ not listed and cannot be opened, so upload those files again.
   shown spelling of a composer or source is the one most pieces use (ties by
   byte order). A tag repeated within one piece counts once.
 - `GET /api/analyzer/pieces/<id>`:
-  `{"ok":true,"id","filename","format","uploaded_at","note_xml_ids":[...],"document":{...}}`.
-  `document` is the analysis document as stored. `note_xml_ids[i]` is the
+  `{"ok":true,"id","filename","format","uploaded_at","notation","note_xml_ids":[...],"document":{...}}`.
+  `notation` is the piece's notation override or `null`. `document` is the analysis document as stored. `note_xml_ids[i]` is the
   `<note xml:id>` the score export writes for note `i` of the source; a
   claim's `note_ids` are indices into this array. An unknown id returns
   `{"ok":false,"message":"piece not found"}`.
 - `PATCH /api/analyzer/pieces/<id>`: a JSON object with any of `filename`
   (non-empty string), `composer`, `source` (strings; `""` clears), `tags`
   (array of strings, replaces all), `add_tags` and `remove_tags` (arrays of
-  strings, applied after `tags`). Unknown members are ignored. `meta.json` is
-  written once. Returns `{"ok":true,"piece":{...the list entry...}}`, `404`
+  strings, applied after `tags`), and `notation` (see below). Unknown members
+  are ignored. `meta.json` is written once. Returns `{"ok":true,"piece":{...the list entry...}}`, `404`
   for an unknown id, `400` with `{"ok":false,"message":"<reason>"}` for
   invalid metadata (`"composer is too long"`, `"source is too long"`,
-  `"invalid tag"`, `"too many tags"`) and nothing written, and
+  `"invalid tag"`, `"too many tags"`, `"invalid notation"`) and nothing written, and
   `{"ok":false,"message":"nothing to update"}` when none of the members is
   given.
+  - `notation`: `{"meter":"3/4","value_scale":"2","pickup":"1/4"}` or `null`
+    to clear. Each member is optional and `""` leaves it unset: `meter` is
+    `beats/beat_type`, `value_scale` one of `1/4`, `1/2`, `1`, `2`, `4` (every
+    start and duration is multiplied by it), `pickup` a fraction of a whole
+    note (after scaling) shorter than one measure. It is stored in
+    `meta.json` and read by the Analyzer's `notation_reading_*` functions; an
+    invalid value, or a pickup that does not fit the meter, answers `400`
+    `"invalid notation"` and the piece keeps its old reading. A changed
+    notation analyzes the piece again before the answer. The analysis (meter
+    source `override`), the score (`/musicxml`) and playback (`/playback`, its
+    tempo scaled so the piece sounds as fast as before) all use it. The list
+    entries and `GET /api/analyzer/pieces/<id>` include `notation` (`null`
+    when unset).
 - `POST /api/analyzer/pieces/<id>/reanalyze`: runs the Analyzer again on the
   stored source. Returns `{"ok":true,"id":...}`, `404` for an unknown id, or
   `422` with `{"error": "import failed"}` when the source no longer imports.
