@@ -6,6 +6,7 @@
  * test_health_route.c. */
 
 #include <civetweb.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -600,6 +601,138 @@ static void check_notated_score(const char *piano_id, const char *two_channel_id
   free(xml);
 }
 
+static const cJSON *piece_in_list(const cJSON *list, const char *id);
+
+/* How long playback takes, in seconds: each tempo region's span up to the end,
+ * at its quarter notes per minute. -1 when the route does not answer. */
+static double playback_seconds(const char *id) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
+  cJSON *playback = get_json(path);
+  const cJSON *tempo = playback ? cJSON_GetObjectItemCaseSensitive(playback, "tempo") : NULL;
+  const cJSON *end = playback ? cJSON_GetObjectItemCaseSensitive(playback, "end") : NULL;
+  double seconds = -1.0;
+  if (cJSON_IsArray(tempo) && cJSON_IsArray(end)) {
+    seconds = 0.0;
+    double end_value = rational_value(end);
+    int count = cJSON_GetArraySize(tempo);
+    for (int i = 0; i < count; i++) {
+      const cJSON *region = cJSON_GetArrayItem(tempo, i);
+      double from = rational_value(cJSON_GetObjectItemCaseSensitive(region, "at"));
+      double to = i + 1 < count ? rational_value(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(tempo, i + 1), "at"))
+                                : end_value;
+      double qpm = cJSON_GetObjectItemCaseSensitive(region, "qpm")->valuedouble;
+      if (to > end_value) {
+        to = end_value;
+      }
+      if (to > from && qpm > 0.0) {
+        seconds += (to - from) * 4.0 / qpm * 60.0;
+      }
+    }
+  }
+  cJSON_Delete(playback);
+  return seconds;
+}
+
+/* The document's meter.source for a piece ("" when absent). */
+static void document_meter_source(const char *id, char *out, size_t out_size) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
+  cJSON *detail = get_json(path);
+  const cJSON *document = detail ? cJSON_GetObjectItemCaseSensitive(detail, "document") : NULL;
+  const cJSON *meter = document ? cJSON_GetObjectItemCaseSensitive(document, "meter") : NULL;
+  const cJSON *source = meter ? cJSON_GetObjectItemCaseSensitive(meter, "source") : NULL;
+  snprintf(out, out_size, "%s", cJSON_IsString(source) ? source->valuestring : "");
+  cJSON_Delete(detail);
+}
+
+/* The number of <measure> elements in a piece's score. */
+static int score_measure_count(const char *id, const char *beats_text) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", id);
+  char *xml = http_get(path);
+  int count = count_occurrences(response_body(xml), "<measure ");
+  if (beats_text) {
+    check(strstr(response_body(xml), beats_text) != NULL, beats_text);
+  }
+  free(xml);
+  return count;
+}
+
+/* The notation override: a 3/4 reading with doubled values redraws, analyzes
+ * and plays the piece, clearing it restores the file's reading, and values the
+ * Analyzer does not read are 400. */
+static void check_notation_override(const char *id) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
+
+  int measures_before = score_measure_count(id, "<beats>4</beats>");
+  double seconds_before = playback_seconds(id);
+  char source[32];
+  document_meter_source(id, source, sizeof(source));
+  check(strcmp(source, "override") != 0, "a piece with no override has a meter source other than override");
+  cJSON *detail = get_json(path);
+  check(detail && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(detail, "notation")),
+        "the piece detail shows notation null without an override");
+  cJSON_Delete(detail);
+
+  char *response = patch_piece(id, "{\"notation\":{\"meter\":\"3/4\",\"value_scale\":\"2\",\"pickup\":\"\"}}");
+  check(response_has_status(response, 200), "PATCH sets a notation override");
+  cJSON *answer = cJSON_Parse(response_body(response));
+  const cJSON *piece = answer ? cJSON_GetObjectItemCaseSensitive(answer, "piece") : NULL;
+  const cJSON *notation = piece ? cJSON_GetObjectItemCaseSensitive(piece, "notation") : NULL;
+  const cJSON *meter = notation ? cJSON_GetObjectItemCaseSensitive(notation, "meter") : NULL;
+  const cJSON *scale = notation ? cJSON_GetObjectItemCaseSensitive(notation, "value_scale") : NULL;
+  check(cJSON_IsString(meter) && strcmp(meter->valuestring, "3/4") == 0 && cJSON_IsString(scale) &&
+            strcmp(scale->valuestring, "2") == 0,
+        "the PATCH answer includes the piece's notation");
+  cJSON_Delete(answer);
+  free(response);
+
+  int measures_after = score_measure_count(id, "<beats>3</beats>");
+  check(measures_before > 0 && measures_after > 2 * measures_before,
+        "a 3/4 reading with doubled values more than doubles the measure count");
+  document_meter_source(id, source, sizeof(source));
+  check(strcmp(source, "override") == 0, "the analysis reports the meter source override");
+  double seconds_after = playback_seconds(id);
+  check(seconds_before > 0.0 && seconds_after > 0.0 && fabs(seconds_after - seconds_before) < seconds_before * 0.001,
+        "playback takes the same total seconds under the override");
+  cJSON *list = get_json("/api/analyzer/pieces");
+  const cJSON *listed = list ? piece_in_list(list, id) : NULL;
+  const cJSON *listed_notation = listed ? cJSON_GetObjectItemCaseSensitive(listed, "notation") : NULL;
+  check(cJSON_IsObject(listed_notation), "the piece list includes the notation");
+  cJSON_Delete(list);
+  detail = get_json(path);
+  check(detail && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(detail, "notation")),
+        "the piece detail includes the notation");
+  cJSON_Delete(detail);
+
+  response = patch_piece(id, "{\"notation\":null}");
+  check(response_has_status(response, 200), "PATCH clears the notation override");
+  free(response);
+  check(score_measure_count(id, "<beats>4</beats>") == measures_before, "clearing the override restores the measure count");
+  document_meter_source(id, source, sizeof(source));
+  check(strcmp(source, "override") != 0, "clearing the override restores the meter source");
+  check(fabs(playback_seconds(id) - seconds_before) < seconds_before * 0.001, "clearing the override restores playback");
+
+  static const char *const kInvalid[] = {
+      "{\"notation\":{\"meter\":\"3/0\"}}",       "{\"notation\":{\"value_scale\":\"3\"}}",
+      "{\"notation\":{\"pickup\":\"x\"}}",         "{\"notation\":{\"meter\":4}}",
+      "{\"notation\":\"3/4\"}",                     "{\"notation\":{\"pickup\":\"1/1\"}}",
+  };
+  for (size_t i = 0; i < sizeof(kInvalid) / sizeof(kInvalid[0]); i++) {
+    response = patch_piece(id, kInvalid[i]);
+    char what[96];
+    snprintf(what, sizeof(what), "%s gives 400 invalid notation", kInvalid[i]);
+    check(response_has_status(response, 400) && strstr(response_body(response), "invalid notation") != NULL, what);
+    free(response);
+  }
+  detail = get_json(path);
+  check(detail && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(detail, "notation")),
+        "a refused notation leaves the piece without an override");
+  cJSON_Delete(detail);
+}
+
 static const cJSON *piece_in_list(const cJSON *list, const char *id) {
   const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(list, "pieces");
   const cJSON *entry = NULL;
@@ -889,6 +1022,11 @@ int main(void) {
     check_notated_score(bach_id, two_channel_id);
   }
   free(two_channel_id);
+
+  /* The notation override: set, apply everywhere, clear. */
+  if (bach_id) {
+    check_notation_override(bach_id);
+  }
 
   /* A MIDI file without a time signature gets a default 4/4, flagged. */
   static const unsigned char kNoMeterMidi[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T',
