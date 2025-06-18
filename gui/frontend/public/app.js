@@ -1254,6 +1254,7 @@ function mountAnalysisWorkspace(content, id, data) {
     document: data.document,
     noteXmlIds: data.note_xml_ids,
     onBack: () => selectTool("library"),
+    headerExtra: buildNotationRow(data),
     actions: [
       {
         label: "Re-run analysis",
@@ -1275,6 +1276,107 @@ function mountAnalysisWorkspace(content, id, data) {
   analysisWorkspace = workspace;
 
   renderDataMode(workspace.dataEl(), data);
+}
+
+/* The Notation row (R-110): the reading the analysis used, the meter
+ * check's line, Apply for a better reading, and Edit for the override
+ * fields. Saving sends the PATCH and loads the analysis and score again. */
+function buildNotationRow(data) {
+  const summary = NotationPanel.meterFitSummary(data.document);
+  const current = data.notation || null;
+  const row = document.createElement("div");
+  row.classList.add("notation-row");
+
+  const label = document.createElement("span");
+  label.classList.add("notation-label");
+  label.textContent = "Notation";
+  const reading = document.createElement("span");
+  reading.classList.add("notation-reading");
+  reading.textContent = summary ? summary.reading : "";
+  const line = document.createElement("span");
+  line.classList.add("notation-line");
+  line.textContent = summary ? summary.line : "";
+  const message = document.createElement("span");
+  message.classList.add("notation-message");
+  message.setAttribute("role", "status");
+
+  async function save(body) {
+    message.textContent = "Saving...";
+    const result = await fetchJsonResult(`/api/analyzer/pieces/${data.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!result.ok || !result.data || !result.data.ok) {
+      message.textContent = (result.data && (result.data.message || result.data.error)) || "Save failed.";
+      return;
+    }
+    showAnalysisView(data.id);
+  }
+
+  function button(text, onClick) {
+    const el = document.createElement("button");
+    el.type = "button";
+    el.classList.add("ws-btn");
+    el.textContent = text;
+    el.addEventListener("click", onClick);
+    return el;
+  }
+
+  row.append(label, reading, line);
+
+  if (summary && summary.alternative) {
+    const alt = summary.alternative;
+    row.appendChild(
+      button("Apply", () =>
+        save(NotationPanel.notationBody({ meter: alt.meter, value_scale: alt.value_scale, pickup: alt.pickup })),
+      ),
+    );
+  }
+
+  const form = document.createElement("div");
+  form.classList.add("notation-form");
+  form.hidden = true;
+  const meterInput = document.createElement("input");
+  meterInput.type = "text";
+  meterInput.placeholder = "Meter, 3/4";
+  meterInput.size = 6;
+  meterInput.setAttribute("aria-label", "Meter");
+  meterInput.value = current ? current.meter : "";
+  const scaleSelect = document.createElement("select");
+  scaleSelect.setAttribute("aria-label", "Value scale");
+  for (const [value, text] of [["", "Scale: as written"], ["1/4", "x1/4"], ["1/2", "x1/2 (halved)"], ["1", "x1"], ["2", "x2 (doubled)"], ["4", "x4"]]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = text;
+    scaleSelect.appendChild(option);
+  }
+  scaleSelect.value = current ? current.value_scale : "";
+  const pickupInput = document.createElement("input");
+  pickupInput.type = "text";
+  pickupInput.placeholder = "Pickup, 1/4";
+  pickupInput.size = 8;
+  pickupInput.setAttribute("aria-label", "Pickup");
+  pickupInput.value = current ? current.pickup : "";
+  form.append(
+    meterInput,
+    scaleSelect,
+    pickupInput,
+    button("Save", () =>
+      save(NotationPanel.notationBody({ meter: meterInput.value, value_scale: scaleSelect.value, pickup: pickupInput.value })),
+    ),
+    button("Clear", () => save(NotationPanel.notationBody({ clear: true }))),
+    button("Cancel", () => {
+      form.hidden = true;
+      message.textContent = "";
+    }),
+  );
+
+  row.appendChild(button("Edit", () => {
+    form.hidden = !form.hidden;
+  }));
+  row.append(message, form);
+  return row;
 }
 
 /* Data mode: the Provenance list, then the claim tabs. */
@@ -1313,6 +1415,9 @@ function renderAnalysisTabs(data) {
       button.classList.toggle("active", button.dataset.tabId === tabId);
     }
     renderTabBlocks(claimsEl, states.find((state) => state.tab.id === tabId), data.note_xml_ids);
+    if (tabId === "rhythm-meter") {
+      claimsEl.prepend(buildNotationRow(data));
+    }
   }
 
   for (const state of states) {

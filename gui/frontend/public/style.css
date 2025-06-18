@@ -1952,3 +1952,45 @@ body {
   color: var(--text-dim);
   font-size: 0.8rem;
 }
+
+.notation-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notation-label {
+  color: var(--text-dim);
+}
+
+.notation-line,
+.notation-message {
+  color: var(--text-dim);
+}
+
+.notation-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+}
+
+.notation-form[hidden] {
+  display: none;
+}
+
+.notation-form input,
+.notation-form select {
+  background: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 12px;
+}
