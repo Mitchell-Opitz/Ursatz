@@ -8,6 +8,7 @@
  *     document, noteXmlIds,      the analysis, for the layers and the inspector
  *     playbackUrl,               the piece's playback data (offset, sound)
  *     actions: [{label, onClick}],  extra toolbar buttons
+ *     headerExtra,               an element shown under the toolbar
  *     onBack,                    the Library link
  *   });
  *   ws.on("rendered", (layout) => ...);
@@ -204,7 +205,7 @@
     inspector.append(el("h2", "ws-panel-title", "Inspector"), inspectorBody);
 
     body.append(rail, main, dataPane, inspector);
-    ws.append(toolbar, status, body);
+    ws.append(toolbar, ...(opts.headerExtra ? [opts.headerExtra] : []), status, body);
 
     function emit(name, payload) {
       for (const fn of listeners.get(name) || []) {

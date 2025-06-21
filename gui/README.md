@@ -116,6 +116,19 @@ toggles and "Re-run analysis", which runs the Analyzer again on the stored
 source and reloads the view. Below it are three columns: the Layers rail
 (248 px), the score and the Inspector (360 px). A closed panel takes no width.
 
+A Notation row (R-110) sits under the toolbar and at the top of the Data
+view's "Rhythm and meter" tab. It shows the reading the analysis used, the
+meter check's line from the `meter-fit` claim ("Declared 4/4 fits 41%. 3/4 with
+values doubled fits 93%."), Apply when the check found a better reading, and
+Edit, which opens meter, value scale (x1/4 to x4) and pickup fields with Save,
+Clear and Cancel. Apply and Save send `PATCH /api/analyzer/pieces/<id>` with
+`notation` (blank fields left out, Clear sends `null`), then load the analysis
+and score again. A rejected notation shows the backend's message
+(`invalid notation`) in the row. The model is `frontend/public/notation-panel.js`
+(global `NotationPanel`: `meterFitSummary`, `notationBody`, `readingText`),
+tested by `frontend/tests/notation-panel.test.js`. Nothing is applied
+automatically.
+
 | Window width | Panels |
 | --- | --- |
 | 1280 px and wider | Rail and Inspector beside the score |
