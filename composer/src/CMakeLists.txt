@@ -22,6 +22,7 @@ add_library(ursatz_composer STATIC
     fill/fill_rng.c
     fill/fill_record.c
     fill/fill_suggest.c
+    fill/variations.c
     harmony/harmony_roman.c
     harmony/harmony_rhythm.c
     harmony/harmony_request.c

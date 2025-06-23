@@ -17,19 +17,14 @@
 typedef struct {
     bool help;
     const char *input;
-    const char *node_text;
-    const char *section_text;
-    const char *lane_text;
+    CliTargetOptions target;
     const char *seed_text;
     const char *out_path;
     const char *midi_path;
     const char *musicxml_path;
     const char *format_text;
     unsigned long seed;
-    unsigned long node;
     bool json;
-    bool has_lane;
-    PlanLaneKind lane;
 } Options;
 
 static void print_lock_help(FILE *out) {
@@ -86,11 +81,11 @@ static int read_options(int argc, char **argv, Options *options, bool regenerate
         if (strcmp(arg, "--help") == 0) {
             options->help = true;
         } else if (strcmp(arg, "--node") == 0) {
-            target = &options->node_text;
+            target = &options->target.node_text;
         } else if (strcmp(arg, "--section") == 0) {
-            target = &options->section_text;
+            target = &options->target.section_text;
         } else if (strcmp(arg, "--lane") == 0) {
-            target = &options->lane_text;
+            target = &options->target.lane_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
         } else if (regenerate && strcmp(arg, "--seed") == 0) {
@@ -127,25 +122,9 @@ static int check_options(Options *options, bool regenerate) {
     if (!options->input) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs a plan file\n%s", command, usage);
     }
-    if (!options->node_text == !options->section_text) {
-        return cli_fail(CLI_EXIT_USAGE, "%s needs a node: give --node <id> or --section <letter>, not both\n%s", command, usage);
-    }
-    if (options->node_text && !cli_parse_whole_number(options->node_text, 1000000UL, &options->node)) {
-        return cli_fail(CLI_EXIT_USAGE, "--node must be a whole number (the id in the plan file), not '%s'", options->node_text);
-    }
-    if (options->lane_text) {
-        options->has_lane = true;
-        if (cli_equals_ignore_case(options->lane_text, "harmony")) {
-            options->lane = PLAN_LANE_HARMONY;
-        } else if (cli_equals_ignore_case(options->lane_text, "bass")) {
-            options->lane = PLAN_LANE_BASS;
-        } else if (cli_equals_ignore_case(options->lane_text, "melody")) {
-            options->lane = PLAN_LANE_MELODY;
-        } else if (cli_equals_ignore_case(options->lane_text, "inner")) {
-            options->lane = PLAN_LANE_INNER_VOICE;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody or inner, not '%s'", options->lane_text);
-        }
+    int status = cli_check_target(&options->target, command, usage);
+    if (status != 0) {
+        return status;
     }
     if (!options->out_path) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs --out <plan.json>\n%s", command, usage);
@@ -171,95 +150,6 @@ static int check_options(Options *options, bool regenerate) {
 /* --- the targets ---------------------------------------------------------------- */
 
 static const char *const LANE_LABELS[] = {"meter", "key", "harmony", "bass", "melody", "inner voice"};
-
-static bool in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
-    for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
-        if (node == root) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/* The node the options name, or the exit status of the error it printed. */
-static int find_node(const PiecePlan *plan, const Options *options, bool quiet, NodeId *out) {
-    if (options->node_text) {
-        if (!plan_has_node(plan, (NodeId)options->node)) {
-            return quiet ? CLI_EXIT_UNSATISFIABLE : cli_fail(CLI_EXIT_UNSATISFIABLE, "the plan has no node %lu (ids run from 1 to %zu)", options->node,
-                            plan_node_count(plan));
-        }
-        *out = (NodeId)options->node;
-        return 0;
-    }
-    CliSection sections[CLI_MAX_SECTIONS];
-    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
-    count = count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : count;
-    for (size_t i = 0; i < count; i++) {
-        if (strcmp(sections[i].letter, options->section_text) == 0 ||
-            (options->section_text[1] == '\0' && cli_equals_ignore_case(sections[i].letter, options->section_text))) {
-            *out = sections[i].node;
-            return 0;
-        }
-    }
-    return quiet ? CLI_EXIT_UNSATISFIABLE : cli_fail(CLI_EXIT_UNSATISFIABLE, "the plan has no section '%s'", options->section_text);
-}
-
-/*
- * The targets: the node, or with a lane every span of it under the node (all the voices for inner). Into a new array;
- * the exit status of the error printed otherwise.
- */
-static int find_targets(const PiecePlan *plan, const Options *options, FillTarget **out, size_t *count) {
-    NodeId node;
-    int status = find_node(plan, options, false, &node);
-    if (status != 0) {
-        return status;
-    }
-    *out = calloc(plan_lane_span_count(plan) + 1, sizeof(FillTarget));
-    *count = 0;
-    if (!*out) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
-    }
-    if (!options->has_lane) {
-        (*out)[(*count)++] = (FillTarget){FILL_TARGET_NODE, node};
-        return 0;
-    }
-    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == options->lane &&
-            in_subtree(plan, plan_lane_span_owner(plan, id), node)) {
-            (*out)[(*count)++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
-        }
-    }
-    if (*count == 0) {
-        free(*out);
-        *out = NULL;
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "node %zu has no %s spans", (size_t)node, LANE_LABELS[options->lane]);
-    }
-    return 0;
-}
-
-/* The name of the target in words: "section B", "node 12", "the harmony of section B". */
-static void describe(const PiecePlan *plan, const Options *options, char *out, size_t size) {
-    NodeId node;
-    char what[64];
-    if (find_node(plan, options, true, &node) != 0) {
-        snprintf(out, size, "the node");
-        return;
-    }
-    CliSection sections[CLI_MAX_SECTIONS];
-    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
-    count = count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : count;
-    snprintf(what, sizeof(what), "node %zu", (size_t)node);
-    for (size_t i = 0; i < count; i++) {
-        if (sections[i].node == node) {
-            snprintf(what, sizeof(what), "section %s", sections[i].letter);
-        }
-    }
-    if (options->has_lane) {
-        snprintf(out, size, "the %s of %s", LANE_LABELS[options->lane], what);
-    } else {
-        snprintf(out, size, "%s", what);
-    }
-}
 
 /* --- lock ------------------------------------------------------------------------ */
 
@@ -297,9 +187,9 @@ int run_lock(int argc, char **argv) {
     }
     FillTarget *targets = NULL;
     size_t target_count = 0;
-    status = find_targets(plan, &options, &targets, &target_count);
+    status = cli_find_targets(plan, &options.target, &targets, &target_count);
     char what[96];
-    describe(plan, &options, what, sizeof(what));
+    cli_describe_target(plan, &options.target, what, sizeof(what));
     size_t nodes_before;
     size_t spans_before = count_given(plan, &nodes_before);
     for (size_t t = 0; status == 0 && t < target_count; t++) {
@@ -385,25 +275,6 @@ static void reopened_json(const Reopened *reopened, char *out, size_t size) {
                              reopened->spans[PLAN_LANE_MELODY], reopened->spans[PLAN_LANE_INNER_VOICE]);
 }
 
-static int report_refused(RegenerateResult result, const char *what) {
-    switch (result) {
-    case REGENERATE_ERR_LOCKED:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                        "%s is Given (locked) or has Given material among its phrases; locking is for good in a plan, to unlock go "
-                        "back to an earlier plan file",
-                        what);
-    case REGENERATE_ERR_BAD_TARGET:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                        "%s cannot be regenerated: a motive, the material, the meter and key, and spans the Composer did not "
-                        "open have nothing to write again",
-                        what);
-    case REGENERATE_ERR_NOT_FOUND:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s is not in the plan", what);
-    default:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot regenerate %s: %s", what, regenerate_result_name(result));
-    }
-}
-
 int run_regenerate(int argc, char **argv) {
     Options options;
     int status = read_options(argc, argv, &options, true);
@@ -435,14 +306,14 @@ int run_regenerate(int argc, char **argv) {
     }
     FillTarget *targets = NULL;
     size_t target_count = 0;
-    status = find_targets(before, &options, &targets, &target_count);
-    describe(before, &options, what, sizeof(what));
+    status = cli_find_targets(before, &options.target, &targets, &target_count);
+    cli_describe_target(before, &options.target, what, sizeof(what));
     if (status == 0) {
         FillTarget *scope = NULL;
         size_t scope_count = 0;
         RegenerateResult scoped = plan_regenerate_scope_all(before, targets, target_count, &scope, &scope_count);
         if (scoped != REGENERATE_OK) {
-            status = report_refused(scoped, what);
+            status = cli_report_refused(scoped, what);
         } else {
             read_reopened(before, scope, scope_count, &reopened);
         }
@@ -469,7 +340,7 @@ int run_regenerate(int argc, char **argv) {
         }
         FillTarget *again = NULL;
         size_t again_count = 0;
-        status = find_targets(fresh, &options, &again, &again_count);
+        status = cli_find_targets(fresh, &options.target, &again, &again_count);
         if (status != 0) {
             plan_destroy(fresh);
             break;
@@ -491,7 +362,7 @@ int run_regenerate(int argc, char **argv) {
         if (ran == REGENERATE_OK) {
             done = true;
         } else if (ran != REGENERATE_ERR_STUCK) {
-            status = report_refused(ran, what);
+            status = cli_report_refused(ran, what);
         }
     }
     free(text);

@@ -7,6 +7,10 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/explain.h>
+#include <ursatz_composer/fill_target.h>
+#include <ursatz_composer/lanes.h>
+#include <ursatz_composer/piece_plan.h>
+#include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/style.h>
 
 /* The exit statuses every command shares. */
@@ -103,5 +107,29 @@ int cli_write_explanation(const char *final_path, const char *write_path, const 
 
 /* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size);
+
+/*
+ * The node (or lane) a command works on: --node <id> or --section <letter>, and --lane. The commands that lock,
+ * regenerate and vary share it.
+ */
+typedef struct {
+    const char *node_text;
+    const char *section_text;
+    const char *lane_text;
+    unsigned long node;
+    bool has_lane;
+    PlanLaneKind lane;
+} CliTargetOptions;
+
+/* Checks the three texts of target (exactly one of node and section, a lane word). Returns 0 or the usage status printed. */
+int cli_check_target(CliTargetOptions *target, const char *command, const char *usage);
+/* The node the options name, or the exit status of the error it printed (none printed when quiet). */
+int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *target, bool quiet, NodeId *out);
+/* The targets: the node, or with a lane every span of it under the node. Into a new array the caller frees. */
+int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *target, FillTarget **out, size_t *count);
+/* The target in words: "section B", "node 12", "the harmony of section B". */
+void cli_describe_target(const PiecePlan *plan, const CliTargetOptions *target, char *out, size_t size);
+/* Prints why a regenerate result refused the target and returns the exit status. */
+int cli_report_refused(RegenerateResult result, const char *what);
 
 #endif

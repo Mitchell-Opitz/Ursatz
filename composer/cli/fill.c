@@ -309,6 +309,51 @@ static void print_given_json(const PiecePlan *plan, const CliSection *sections, 
     printf("]}");
 }
 
+void cli_print_heard_json(const PiecePlan *plan, const ComposeOutcome *outcome) {
+    CliSection sections[CLI_MAX_SECTIONS];
+    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
+    if (count > CLI_MAX_SECTIONS) {
+        count = CLI_MAX_SECTIONS;
+    }
+    printf("[");
+    for (size_t i = 0; i < outcome->section_count; i++) {
+        const ComposeHeard *heard = &outcome->sections[i];
+        char text[256];
+        heard_text(heard, text, sizeof(text));
+        printf("%s{\"letter\":", i ? "," : "");
+        cli_print_json_string(letter_of(sections, count, heard->section));
+        printf(",\"heard\":");
+        cli_print_json_string(text);
+        printf(",\"heard_as_requested\":%s,\"cadences\":[", heard->heard_as_requested ? "true" : "false");
+        for (size_t c = 0; heard->heard_result == FORM_HEAR_OK && c < heard->heard.cadence_count; c++) {
+            printf("%s\"%s\"", c ? "," : "", cadence_type_name((CadenceType)heard->heard.cadences[c].type));
+        }
+        printf("]}");
+    }
+    printf("]");
+}
+
+void cli_print_heard_text(const PiecePlan *plan, const ComposeOutcome *outcome) {
+    CliSection sections[CLI_MAX_SECTIONS];
+    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
+    if (count > CLI_MAX_SECTIONS) {
+        count = CLI_MAX_SECTIONS;
+    }
+    for (size_t i = 0; i < outcome->section_count; i++) {
+        const ComposeHeard *heard = &outcome->sections[i];
+        char text[256];
+        heard_text(heard, text, sizeof(text));
+        printf("%s%s %s", i ? "; " : "", letter_of(sections, count, heard->section), text);
+        if (heard->heard_result == FORM_HEAR_OK && heard->heard.cadence_count > 0) {
+            printf(", cadences");
+            for (size_t c = 0; c < heard->heard.cadence_count; c++) {
+                printf(c ? ", %s" : " %s", cadence_type_name((CadenceType)heard->heard.cadences[c].type));
+            }
+        }
+    }
+}
+
+
 static void print_result_text(unsigned long seed, bool realized, const PiecePlan *plan, const ComposeOutcome *outcome,
                               const GivenRuns *given, const char *const *files, size_t file_count) {
     CliSection sections[CLI_MAX_SECTIONS];
@@ -364,23 +409,10 @@ static void print_result_json(unsigned long seed, bool realized, const PiecePlan
     if (count > CLI_MAX_SECTIONS) {
         count = CLI_MAX_SECTIONS;
     }
-    printf("{\"seed\":%lu,\"realized\":%s%s%s,\"sections\":[", seed, realized ? "true" : "false", extra ? "," : "",
+    printf("{\"seed\":%lu,\"realized\":%s%s%s,\"sections\":", seed, realized ? "true" : "false", extra ? "," : "",
            extra ? extra : "");
-    for (size_t i = 0; i < outcome->section_count; i++) {
-        const ComposeHeard *heard = &outcome->sections[i];
-        char text[256];
-        heard_text(heard, text, sizeof(text));
-        printf("%s{\"letter\":", i ? "," : "");
-        cli_print_json_string(letter_of(sections, count, heard->section));
-        printf(",\"heard\":");
-        cli_print_json_string(text);
-        printf(",\"heard_as_requested\":%s,\"cadences\":[", heard->heard_as_requested ? "true" : "false");
-        for (size_t c = 0; heard->heard_result == FORM_HEAR_OK && c < heard->heard.cadence_count; c++) {
-            printf("%s\"%s\"", c ? "," : "", cadence_type_name((CadenceType)heard->heard.cadences[c].type));
-        }
-        printf("]}");
-    }
-    printf("],");
+    cli_print_heard_json(plan, outcome);
+    printf(",");
     if (outcome->analyzer_check_count > 0) {
         printf("\"analyzer\":{\"planned\":%zu,\"agreed\":%zu},", outcome->analyzer_planned, outcome->analyzer_agreed);
     }

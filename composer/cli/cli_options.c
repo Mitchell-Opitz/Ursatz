@@ -10,6 +10,8 @@
 
 #include <texture_rules.h>
 
+#include "plan.h"
+
 #include <ursatz_composer/harmony_phrase.h>
 
 static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
@@ -475,3 +477,142 @@ NodeId cli_find_node(const PiecePlan *plan, const char *name) {
     }
     return PLAN_NODE_NONE;
 }
+
+/* --- the node a command works on ------------------------------------------------ */
+
+
+int cli_check_target(CliTargetOptions *options, const char *command, const char *usage) {
+    if (!options->node_text == !options->section_text) {
+        return cli_fail(CLI_EXIT_USAGE, "%s needs a node: give --node <id> or --section <letter>, not both\n%s", command, usage);
+    }
+    if (options->node_text && !cli_parse_whole_number(options->node_text, 1000000UL, &options->node)) {
+        return cli_fail(CLI_EXIT_USAGE, "--node must be a whole number (the id in the plan file), not '%s'", options->node_text);
+    }
+    options->has_lane = false;
+    if (options->lane_text) {
+        options->has_lane = true;
+        if (cli_equals_ignore_case(options->lane_text, "harmony")) {
+            options->lane = PLAN_LANE_HARMONY;
+        } else if (cli_equals_ignore_case(options->lane_text, "bass")) {
+            options->lane = PLAN_LANE_BASS;
+        } else if (cli_equals_ignore_case(options->lane_text, "melody")) {
+            options->lane = PLAN_LANE_MELODY;
+        } else if (cli_equals_ignore_case(options->lane_text, "inner")) {
+            options->lane = PLAN_LANE_INNER_VOICE;
+        } else {
+            return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody or inner, not '%s'", options->lane_text);
+        }
+    }
+    return 0;
+}
+
+static const char *const TARGET_LANE_LABELS[] = {"meter", "key", "harmony", "bass", "melody", "inner voice"};
+
+static bool in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
+    for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
+        if (node == root) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The node the options name, or the exit status of the error it printed. */
+int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *options, bool quiet, NodeId *out) {
+    if (options->node_text) {
+        if (!plan_has_node(plan, (NodeId)options->node)) {
+            return quiet ? CLI_EXIT_UNSATISFIABLE : cli_fail(CLI_EXIT_UNSATISFIABLE, "the plan has no node %lu (ids run from 1 to %zu)", options->node,
+                            plan_node_count(plan));
+        }
+        *out = (NodeId)options->node;
+        return 0;
+    }
+    CliSection sections[CLI_MAX_SECTIONS];
+    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
+    count = count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : count;
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(sections[i].letter, options->section_text) == 0 ||
+            (options->section_text[1] == '\0' && cli_equals_ignore_case(sections[i].letter, options->section_text))) {
+            *out = sections[i].node;
+            return 0;
+        }
+    }
+    return quiet ? CLI_EXIT_UNSATISFIABLE : cli_fail(CLI_EXIT_UNSATISFIABLE, "the plan has no section '%s'", options->section_text);
+}
+
+/*
+ * The targets: the node, or with a lane every span of it under the node (all the voices for inner). Into a new array;
+ * the exit status of the error printed otherwise.
+ */
+int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *options, FillTarget **out, size_t *count) {
+    NodeId node;
+    int status = cli_find_target_node(plan, options, false, &node);
+    if (status != 0) {
+        return status;
+    }
+    *out = calloc(plan_lane_span_count(plan) + 1, sizeof(FillTarget));
+    *count = 0;
+    if (!*out) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    if (!options->has_lane) {
+        (*out)[(*count)++] = (FillTarget){FILL_TARGET_NODE, node};
+        return 0;
+    }
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == options->lane &&
+            in_subtree(plan, plan_lane_span_owner(plan, id), node)) {
+            (*out)[(*count)++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
+        }
+    }
+    if (*count == 0) {
+        free(*out);
+        *out = NULL;
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "node %zu has no %s spans", (size_t)node, TARGET_LANE_LABELS[options->lane]);
+    }
+    return 0;
+}
+
+/* The name of the target in words: "section B", "node 12", "the harmony of section B". */
+void cli_describe_target(const PiecePlan *plan, const CliTargetOptions *options, char *out, size_t size) {
+    NodeId node;
+    char what[64];
+    if (cli_find_target_node(plan, options, true, &node) != 0) {
+        snprintf(out, size, "the node");
+        return;
+    }
+    CliSection sections[CLI_MAX_SECTIONS];
+    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
+    count = count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : count;
+    snprintf(what, sizeof(what), "node %zu", (size_t)node);
+    for (size_t i = 0; i < count; i++) {
+        if (sections[i].node == node) {
+            snprintf(what, sizeof(what), "section %s", sections[i].letter);
+        }
+    }
+    if (options->has_lane) {
+        snprintf(out, size, "the %s of %s", TARGET_LANE_LABELS[options->lane], what);
+    } else {
+        snprintf(out, size, "%s", what);
+    }
+}
+
+int cli_report_refused(RegenerateResult result, const char *what) {
+    switch (result) {
+    case REGENERATE_ERR_LOCKED:
+        return cli_fail(CLI_EXIT_UNSATISFIABLE,
+                        "%s is Given (locked) or has Given material among its phrases; locking is for good in a plan, to unlock go "
+                        "back to an earlier plan file",
+                        what);
+    case REGENERATE_ERR_BAD_TARGET:
+        return cli_fail(CLI_EXIT_UNSATISFIABLE,
+                        "%s cannot be regenerated: a motive, the material, the meter and key, and spans the Composer did not "
+                        "open have nothing to write again",
+                        what);
+    case REGENERATE_ERR_NOT_FOUND:
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s is not in the plan", what);
+    default:
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot regenerate %s: %s", what, regenerate_result_name(result));
+    }
+}
+
