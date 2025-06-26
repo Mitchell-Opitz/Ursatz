@@ -37,6 +37,7 @@ static void print_lock_help(FILE *out) {
     fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") instead of --node\n");
     fprintf(out, "  --lane <lane>        harmony, bass, melody or inner: only that lane of the node and of what is under it\n");
     fprintf(out, "  --out <plan.json>    where the plan is written\n");
+    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Only written material can be locked: a node with a lane span still open is refused.\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the plan cannot be read, the node is not found or has\n");
@@ -94,7 +95,7 @@ static int read_options(int argc, char **argv, Options *options, bool regenerate
             target = &options->midi_path;
         } else if (regenerate && strcmp(arg, "--musicxml") == 0) {
             target = &options->musicxml_path;
-        } else if (regenerate && strcmp(arg, "--format") == 0) {
+        } else if (strcmp(arg, "--format") == 0) {
             target = &options->format_text;
         } else if (arg[0] == '-' && arg[1] != '\0') {
             return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz-composer %s --help)", arg, command);
@@ -208,10 +209,17 @@ int run_lock(int argc, char **argv) {
         } else {
             size_t nodes_after;
             size_t spans_after = count_given(plan, &nodes_after);
-            printf("locked %s: %zu %s and %zu lane %s now Given\n", what, nodes_after - nodes_before,
-                   nodes_after - nodes_before == 1 ? "node" : "nodes", spans_after - spans_before,
-                   spans_after - spans_before == 1 ? "span" : "spans");
-            printf("wrote %s\n", options.out_path);
+            if (options.json) {
+                printf("{\"locked\":{\"nodes\":%zu,\"spans\":%zu},\"plan\":", nodes_after - nodes_before,
+                       spans_after - spans_before);
+                cli_print_json_string(options.out_path);
+                printf("}\n");
+            } else {
+                printf("locked %s: %zu %s and %zu lane %s now Given\n", what, nodes_after - nodes_before,
+                       nodes_after - nodes_before == 1 ? "node" : "nodes", spans_after - spans_before,
+                       spans_after - spans_before == 1 ? "span" : "spans");
+                printf("wrote %s\n", options.out_path);
+            }
         }
     }
     plan_destroy(plan);
