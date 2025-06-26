@@ -28,6 +28,29 @@ typedef struct {
     unsigned long seed;
 } Options;
 
+static void print_harmonize_help(FILE *out) {
+    fprintf(out, "Usage:\n%s\n\n", HARMONIZE_USAGE_LINE + 7);
+    fprintf(out, "Writes several distinct harmonizations of a melody that is given. The whole melody of the section must be\n");
+    fprintf(out, "Given (a plan made with --given-melody for every bar of the section); its harmony, and what is written from\n");
+    fprintf(out, "the harmony (the bass and the voices between), is written again as variations does, on a copy of the plan\n");
+    fprintf(out, "for the seeds N, N+1, ..., at most four times --count of them. A version is kept when it sounds different\n");
+    fprintf(out, "from the plan and from the versions kept before. Every melody note is kept. The plan file is not changed.\n\n");
+    fprintf(out, "Options:\n");
+    fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") whose melody is given\n");
+    fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", PLAN_VARIATIONS_MAX);
+    fprintf(out, "  --seed <n>           whole number from 0 for the first seed tried. Default: from the clock\n");
+    fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
+    fprintf(out, "  --midi               also write variation-<i>.mid\n");
+    fprintf(out, "  --musicxml           also write variation-<i>.musicxml\n");
+    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
+    fprintf(out, "  --help               this text\n\n");
+    fprintf(out, "Exit status: 0 at least one version was kept; 1 usage or an invalid argument; 2 none was kept, the plan\n");
+    fprintf(out, "cannot be read, the section is not found or has no given melody (nothing is written); 3 an output file\n");
+    fprintf(out, "could not be written.\n\n");
+    fprintf(out, "Example:\n");
+    fprintf(out, "  ursatz-composer harmonize piece.json --section A --count 4 --seed 3 --out-dir harmonizations --midi\n");
+}
+
 static void print_help(FILE *out) {
     fprintf(out, "Usage:\n%s\n\n", VARIATIONS_USAGE_LINE + 7);
     fprintf(out, "Writes several distinct versions of one node of a filled plan. The node is written again (as regenerate\n");
@@ -53,7 +76,8 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz-composer variations piece.json --section B --count 4 --seed 3 --out-dir variations --midi\n");
 }
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(int argc, char **argv, Options *options, bool harmonize) {
+    const char *command = harmonize ? "harmonize" : "variations";
     memset(options, 0, sizeof(*options));
     for (int i = 2; i < argc; i++) {
         const char *arg = argv[i];
@@ -64,11 +88,11 @@ static int read_options(int argc, char **argv, Options *options) {
             options->midi = true;
         } else if (strcmp(arg, "--musicxml") == 0) {
             options->musicxml = true;
-        } else if (strcmp(arg, "--node") == 0) {
+        } else if (!harmonize && strcmp(arg, "--node") == 0) {
             target = &options->target.node_text;
         } else if (strcmp(arg, "--section") == 0) {
             target = &options->target.section_text;
-        } else if (strcmp(arg, "--lane") == 0) {
+        } else if (!harmonize && strcmp(arg, "--lane") == 0) {
             target = &options->target.lane_text;
         } else if (strcmp(arg, "--count") == 0) {
             target = &options->count_text;
@@ -79,7 +103,7 @@ static int read_options(int argc, char **argv, Options *options) {
         } else if (strcmp(arg, "--format") == 0) {
             target = &options->format_text;
         } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz-composer variations --help)", arg);
+            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz-composer %s --help)", arg, command);
         } else if (!options->input) {
             options->input = arg;
         } else {
@@ -98,23 +122,30 @@ static int read_options(int argc, char **argv, Options *options) {
     return 0;
 }
 
-static int check_options(Options *options) {
+static int check_options(Options *options, bool harmonize) {
+    const char *command = harmonize ? "harmonize" : "variations";
+    const char *usage = harmonize ? HARMONIZE_USAGE_LINE : VARIATIONS_USAGE_LINE;
     if (!options->input) {
-        return cli_fail(CLI_EXIT_USAGE, "variations needs a plan file\n%s", VARIATIONS_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "%s needs a plan file\n%s", command, usage);
     }
-    int status = cli_check_target(&options->target, "variations", VARIATIONS_USAGE_LINE);
+    if (harmonize) {
+        if (!options->target.section_text) {
+            return cli_fail(CLI_EXIT_USAGE, "harmonize needs --section <letter>\n%s", usage);
+        }
+    }
+    int status = cli_check_target(&options->target, command, usage);
     if (status != 0) {
         return status;
     }
     if (!options->count_text) {
-        return cli_fail(CLI_EXIT_USAGE, "variations needs --count <n>\n%s", VARIATIONS_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "%s needs --count <n>\n%s", command, usage);
     }
     if (!cli_parse_whole_number(options->count_text, PLAN_VARIATIONS_MAX, &options->count) || options->count < 1) {
         return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number from 1 to %d, not '%s'", PLAN_VARIATIONS_MAX,
                         options->count_text);
     }
     if (!options->out_dir) {
-        return cli_fail(CLI_EXIT_USAGE, "variations needs --out-dir <dir>\n%s", VARIATIONS_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "%s needs --out-dir <dir>\n%s", command, usage);
     }
     if (options->seed_text) {
         if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
@@ -229,17 +260,18 @@ static int finish(const Options *options, PlanVariations *variations, const char
     return status;
 }
 
-int run_variations(int argc, char **argv) {
+/* The shared body of the two commands. */
+static int run_command(int argc, char **argv, bool harmonize) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(argc, argv, &options, harmonize);
     if (status != 0) {
         return status;
     }
     if (options.help) {
-        print_help(stdout);
+        harmonize ? print_harmonize_help(stdout) : print_help(stdout);
         return 0;
     }
-    status = check_options(&options);
+    status = check_options(&options, harmonize);
     if (status != 0) {
         return status;
     }
@@ -249,25 +281,47 @@ int run_variations(int argc, char **argv) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read plan '%s': %s%s%s", options.input, error.message,
                         error.path[0] ? " at " : "", error.path);
     }
-    FillTarget *targets = NULL;
-    size_t target_count = 0;
     char what[96];
     cli_describe_target(plan, &options.target, what, sizeof(what));
-    status = cli_find_targets(plan, &options.target, &targets, &target_count);
-    if (status == 0) {
-        ComposeConfig config;
-        memset(&config, 0, sizeof(config));
-        config.seed = options.seed;
-        PlanVariations variations;
-        RegenerateResult ran = plan_variations(plan, targets, target_count, &config, options.count, &variations);
-        if (ran != REGENERATE_OK) {
+    ComposeConfig config;
+    memset(&config, 0, sizeof(config));
+    config.seed = options.seed;
+    PlanVariations variations;
+    RegenerateResult ran;
+    FillTarget *targets = NULL;
+    size_t target_count = 0;
+    if (harmonize) {
+        NodeId section;
+        status = cli_find_target_node(plan, &options.target, false, &section);
+        ran = status == 0 ? plan_harmonizations(plan, section, &config, options.count, &variations) : REGENERATE_ERR_NULL;
+        if (status == 0 && ran == REGENERATE_ERR_BAD_TARGET) {
+            status = cli_fail(CLI_EXIT_UNSATISFIABLE,
+                              "%s has no given melody over all its bars to harmonize (plan it with --given-melody and fill it)",
+                              what);
+        } else if (status == 0 && ran != REGENERATE_OK) {
             status = cli_report_refused(ran, what);
-        } else {
-            status = finish(&options, &variations, what);
-            plan_variations_destroy(&variations);
         }
+    } else {
+        status = cli_find_targets(plan, &options.target, &targets, &target_count);
+        ran = status == 0 ? plan_variations(plan, targets, target_count, &config, options.count, &variations)
+                          : REGENERATE_ERR_NULL;
+        if (status == 0 && ran != REGENERATE_OK) {
+            status = cli_report_refused(ran, what);
+        }
+    }
+    if (status == 0) {
+        status = finish(&options, &variations, what);
+        plan_variations_destroy(&variations);
     }
     free(targets);
     plan_destroy(plan);
     return status;
+}
+
+int run_variations(int argc, char **argv) {
+    return run_command(argc, argv, false);
+}
+
+int run_harmonize(int argc, char **argv) {
+    return run_command(argc, argv, true);
 }

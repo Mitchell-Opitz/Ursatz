@@ -29,6 +29,7 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", LOCK_USAGE_LINE);
     fprintf(out, "%s\n", REGENERATE_USAGE_LINE);
     fprintf(out, "%s\n", VARIATIONS_USAGE_LINE);
+    fprintf(out, "%s\n", HARMONIZE_USAGE_LINE);
 }
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
@@ -136,6 +137,9 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "variations") == 0) {
         return run_variations(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "harmonize") == 0) {
+        return run_harmonize(argc, argv);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         printf("ursatz-composer %s\n", composer_version());

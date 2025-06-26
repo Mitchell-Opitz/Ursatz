@@ -8,6 +8,7 @@
 #include "time/temporal_anchor.h"
 
 #include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 
 #define FNV_OFFSET 14695981039346656037ULL
@@ -155,5 +156,49 @@ RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *target
     if (result != REGENERATE_OK) {
         plan_variations_destroy(out);
     }
+    return result;
+}
+
+static bool in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
+    for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
+        if (node == root) {
+            return true;
+        }
+    }
+    return false;
+}
+
+RegenerateResult plan_harmonizations(const PiecePlan *plan, NodeId section, const ComposeConfig *config, size_t count,
+                                     PlanVariations *out) {
+    if (!plan || !config || !out) {
+        return REGENERATE_ERR_NULL;
+    }
+    memset(out, 0, sizeof(*out));
+    if (!plan_has_node(plan, section) || plan_section_of(plan, section) != section) {
+        return REGENERATE_ERR_BAD_TARGET;
+    }
+    FillTarget *targets = calloc(plan_lane_span_count(plan) + 1, sizeof(FillTarget));
+    if (!targets) {
+        return REGENERATE_ERR_ALLOC;
+    }
+    size_t target_count = 0;
+    size_t melody_count = 0;
+    bool melody_given = true;
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (!plan_has_lane_span(plan, id) || !in_subtree(plan, plan_lane_span_owner(plan, id), section)) {
+            continue;
+        }
+        PlanLaneKind lane = plan_lane_span_lane(plan, id);
+        if (lane == PLAN_LANE_MELODY) {
+            melody_count++;
+            melody_given = melody_given && plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN;
+        } else if (lane == PLAN_LANE_HARMONY && plan_lane_span_state(plan, id) != PLAN_STATE_GIVEN) {
+            targets[target_count++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
+        }
+    }
+    RegenerateResult result = melody_count > 0 && melody_given && target_count > 0
+                                  ? plan_variations(plan, targets, target_count, config, count, out)
+                                  : REGENERATE_ERR_BAD_TARGET;
+    free(targets);
     return result;
 }
