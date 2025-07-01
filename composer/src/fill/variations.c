@@ -39,7 +39,55 @@ static uint64_t hash_fraction(uint64_t hash, long numerator, unsigned long denom
     return hash_value(hash, denominator / divisor);
 }
 
-uint64_t plan_signature(const PiecePlan *plan) {
+typedef struct {
+    PlanSpan span;
+    LaneSpanId id;
+} HarmonySpan;
+
+/* By start, then length, then numeral: the same chords in the same places sort the same whatever their ids. */
+static const PiecePlan *sort_plan;
+
+static int compare_harmony(const void *left, const void *right) {
+    const HarmonySpan *a = left;
+    const HarmonySpan *b = right;
+    int order = plan_time_compare(a->span.start, b->span.start);
+    if (order == 0) {
+        order = plan_time_compare(a->span.length, b->span.length);
+    }
+    return order != 0 ? order
+                      : strcmp(plan_lane_span_payload(sort_plan, a->id)->harmony.roman_numeral,
+                               plan_lane_span_payload(sort_plan, b->id)->harmony.roman_numeral);
+}
+
+/* The harmony lane of the plan in time order: where each span is and its numeral. */
+static uint64_t hash_harmony(uint64_t hash, const PiecePlan *plan) {
+    size_t count = 0;
+    HarmonySpan *spans = calloc(plan_lane_span_count(plan) + 1, sizeof(HarmonySpan));
+    if (!spans) {
+        return 0;
+    }
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_HARMONY) {
+            spans[count++] = (HarmonySpan){plan_lane_span_span(plan, id), id};
+        }
+    }
+    sort_plan = plan;
+    qsort(spans, count, sizeof(HarmonySpan), compare_harmony);
+    for (size_t i = 0; i < count; i++) {
+        hash = hash_fraction(hash, spans[i].span.start.num, spans[i].span.start.den);
+        hash = hash_fraction(hash, spans[i].span.length.num, spans[i].span.length.den);
+        for (const char *c = plan_lane_span_payload(plan, spans[i].id)->harmony.roman_numeral; *c; c++) {
+            hash = hash_value(hash, (unsigned char)*c);
+        }
+    }
+    free(spans);
+    return hash;
+}
+
+static uint64_t signature_of(const PiecePlan *plan, bool harmony_only) {
+    if (plan && harmony_only) {
+        return hash_harmony(FNV_OFFSET, plan);
+    }
     RenderedPlan rendered;
     if (!plan || plan_render(plan, &rendered) != PLAN_RENDER_OK) {
         return 0;
@@ -55,6 +103,10 @@ uint64_t plan_signature(const PiecePlan *plan) {
     }
     rendered_plan_destroy(&rendered);
     return hash;
+}
+
+uint64_t plan_signature(const PiecePlan *plan) {
+    return signature_of(plan, false);
 }
 
 /* A plan file numbers its nodes and lane spans from 1 with no gaps; a copy through JSON then keeps every id. */
@@ -90,8 +142,8 @@ void plan_variations_destroy(PlanVariations *variations) {
     memset(variations, 0, sizeof(*variations));
 }
 
-RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
-                                 const ComposeConfig *config, size_t count, PlanVariations *out) {
+static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+                             const ComposeConfig *config, size_t count, bool with_harmony, PlanVariations *out) {
     if (!plan || !targets || !config || !out) {
         return REGENERATE_ERR_NULL;
     }
@@ -119,7 +171,7 @@ RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *target
         free(text);
         return REGENERATE_ERR_ALLOC;
     }
-    uint64_t original = plan_signature(plan);
+    uint64_t original = signature_of(plan, with_harmony);
     RegenerateResult result = REGENERATE_OK;
     size_t seeds = 4 * count;
     for (size_t k = 0; k < seeds && out->count < count && result == REGENERATE_OK; k++) {
@@ -137,7 +189,7 @@ RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *target
         bool keep = false;
         uint64_t signature = 0;
         if (ran == REGENERATE_OK) {
-            signature = plan_signature(copy);
+            signature = signature_of(copy, with_harmony);
             keep = signature != original;
             for (size_t i = 0; keep && i < out->count; i++) {
                 keep = out->items[i].signature != signature;
@@ -157,6 +209,11 @@ RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *target
         plan_variations_destroy(out);
     }
     return result;
+}
+
+RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+                                 const ComposeConfig *config, size_t count, PlanVariations *out) {
+    return vary(plan, targets, target_count, config, count, false, out);
 }
 
 static bool in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
@@ -197,7 +254,7 @@ RegenerateResult plan_harmonizations(const PiecePlan *plan, NodeId section, cons
         }
     }
     RegenerateResult result = melody_count > 0 && melody_given && target_count > 0
-                                  ? plan_variations(plan, targets, target_count, config, count, out)
+                                  ? vary(plan, targets, target_count, config, count, true, out)
                                   : REGENERATE_ERR_BAD_TARGET;
     free(targets);
     return result;

@@ -50,7 +50,9 @@ void plan_variations_destroy(PlanVariations *variations);
  * Alternative harmonizations (R-088): the harmony of one section written again over a melody that is given. The melody
  * lane spans of the section must all be Given, and there must be at least one (else REGENERATE_ERR_BAD_TARGET, as it is
  * when section is not a section); the targets are every harmony lane span of the section that is not Given; then
- * plan_variations. The melody is never changed, so every variation keeps every melody note.
+ * plan_variations, except that the signature is the FNV-1a 64 hash of the harmony lane alone (each span's place and
+ * numeral), so a harmonization is kept only when its chords differ from the plan's and from those kept before. The melody is never changed, so every
+ * variation keeps every melody note.
  */
 RegenerateResult plan_harmonizations(const PiecePlan *plan, NodeId section, const ComposeConfig *config, size_t count,
                                      PlanVariations *out);
