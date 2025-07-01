@@ -12,6 +12,14 @@
  *
  * Layout under the store directory (default "materials"):
  *   projects/<prj-id>.json   {id, name, description, created_at, updated_at}
+ *   items/<id>/item.json     {id, type, name, project_id, current_version,
+ *                             versions: [{number, created_at, note}],
+ *                             created_at, updated_at}
+ *   items/<id>/v<n>.json     the version body, numbered from 1
+ *
+ * An item is a motif, a theme or a piece (ids "mot-", "thm-", "pce-"). A
+ * version is never deleted or rewritten: a change to the body is a new
+ * version, and rename and move change item.json only.
  *
  * Every file is written to "<file>.tmp" and renamed over the old one, so a
  * reader never sees half a file. civetweb serves requests on several
@@ -77,5 +85,51 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const
 
 /* Deletes the project. NOT_EMPTY while it holds items. NOT_FOUND if absent. */
 UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
+
+/* --- items and versions -------------------------------------------------- */
+
+/*
+ * Creates an item of type "motif", "theme" or "piece" (INVALID_TYPE) with a
+ * generated id, in the project project_id (INVALID_ID, NOT_FOUND). name has
+ * the project name limits (INVALID_NAME). body is the first version, v1
+ * (INVALID_BODY when it is not an object). On OK, *out_item (may be NULL)
+ * is the item object (item.json), caller-owned.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const char *name, const char *project_id,
+                                                         const cJSON *body, cJSON **out_item);
+
+/*
+ * Lists items, newest "updated_at" first, then id. project_id and type
+ * (each may be NULL for any) filter the list. On OK, *out_items is a
+ * caller-owned array of item objects.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, const char *type, cJSON **out_items);
+
+/*
+ * Loads one item: *out_meta (may be NULL) is item.json, *out_body (may be
+ * NULL) the body of its current version. Both caller-owned. NOT_FOUND if
+ * absent.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_item_get(const char *id, cJSON **out_meta, cJSON **out_body);
+
+/* Renames the item. *out_item (may be NULL) is the updated item.json, caller-owned. */
+UrsatzGuiMaterialResult ursatz_gui_material_item_rename(const char *id, const char *name, cJSON **out_item);
+
+/* Moves the item to another project (NOT_FOUND if the project is absent). */
+UrsatzGuiMaterialResult ursatz_gui_material_item_move(const char *id, const char *project_id, cJSON **out_item);
+
+/*
+ * Writes body as version current_version + 1 and makes it current. note is
+ * trimmed and at most 500 characters (INVALID_NAME), NULL or "" for none.
+ * *out_item (may be NULL) is the updated item.json, caller-owned.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, const cJSON *body, const char *note,
+                                                              cJSON **out_item);
+
+/* The body of version number (1 to current_version). NOT_FOUND otherwise. Caller-owned. */
+UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int number, cJSON **out_body);
+
+/* Deletes the item directory with every version. NOT_FOUND if absent. */
+UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id);
 
 #endif /* URSATZ_GUI_MATERIAL_SERVICE_H */
