@@ -300,6 +300,19 @@ foreach(mode remove lock dependents section returns lanes locked determinism cli
     add_test(NAME test_regenerate_${mode} COMMAND test_regenerate ${mode})
 endforeach()
 
+# Variations and harmonizations (docs/regenerate.md). Each mode is one ctest entry; the sweep is slow and CI leaves it
+# out (ctest -LE slow), its smoke test is the sweep on seeds 1 and 2. The cli test runs the commands as processes.
+add_executable(test_variations test_variations.c)
+target_link_libraries(test_variations PRIVATE ursatz_composer)
+target_compile_options(test_variations PRIVATE -Wall -Wextra -Wpedantic)
+foreach(mode distinct refused harmonize sweep_smoke sweep)
+    add_test(NAME test_variations_${mode} COMMAND test_variations ${mode})
+endforeach()
+set_tests_properties(test_variations_sweep PROPERTIES LABELS slow)
+add_test(NAME test_variations_cli
+         COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
+                 -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
+
 add_executable(test_analyzer_check test_analyzer_check.c)
 target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
 target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
