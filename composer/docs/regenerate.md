@@ -62,6 +62,31 @@ are Given.
 
 The same plan, target and seed give the same plan and the same records.
 
+## Variations
+
+`plan_variations` (`<ursatz_composer/variations.h>`) regenerates the same targets for several seeds and keeps the results
+that sound different: for the seeds `config->seed`, `config->seed + 1`, ..., at most `4 * count` of them, the plan is
+copied (`plan_to_json` then `plan_from_json`, so the input is never changed), `plan_regenerate_all` runs on the copy, and
+the copy is kept when its signature differs from the plan's and from every copy kept before. A seed that gets stuck is
+skipped. The signature is the FNV-1a 64 hash over the events of `plan_render`: for each its part, onset and duration as
+reduced fractions, and MIDI pitch. `count` is 1 to 16. The plan must have the ids a plan file has (no removed nodes or
+spans), since the targets are found again in the copy by id, and gives `REGENERATE_ERR_BAD_TARGET` otherwise. The errors
+`plan_regenerate_all` gives before any seed (locked, bad target, not found) are returned as it gives them. The result is
+`REGENERATE_OK` with `count` between 0 and the number asked for: what none kept means is for the caller (the commands
+exit 2).
+
+`plan_harmonizations` is the same for the harmony of one section over a melody that is given. Every melody lane span of
+the section must be Given (and there must be one), else `REGENERATE_ERR_BAD_TARGET`; the targets are the section's
+harmony spans that are not Given. A melody that is only partly Given is refused because regenerating the harmony then
+writes the melody around the given part again, and the melody stage often cannot join it. Its signature is the hash of
+the harmony lane alone (each span's place and numeral, in time order), so two harmonizations are different only when
+their chords are. See [cli-variations.md](cli-variations.md) for the commands.
+
+Variations are reseedings of `regenerate`: nothing yet ornaments a melody or reharmonizes with substitutions.
+
+The sweep `test_variations sweep` (label `slow`) asks for 4 variations of section B of the 24-bar rounded binary filled
+with seed 3, for each config seed 1 to 20. All 80 were kept; the test fails only below that baseline (R-075).
+
 ## Results
 
 | Result | Meaning |

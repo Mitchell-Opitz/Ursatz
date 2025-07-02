@@ -1,13 +1,13 @@
 # lock and regenerate commands
 
 ```sh
-ursatz-composer lock <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] --out <plan.json>
+ursatz-composer lock <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] --out <plan.json> [--format text|json]
 ursatz-composer regenerate <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] [--seed <n>] --out <plan.json> [--midi <file>] [--musicxml <file>] [--format text|json]
 ```
 
 Take a filled plan (from [`fill`](cli-fill.md)) apart. `lock` keeps material: it becomes Given and nothing composes over
 it. `regenerate` writes one node again with a seed, and only what depends on it. See [regenerate.md](regenerate.md) for
-what that means.
+what that means. [`variations` and `harmonize`](cli-variations.md) write several versions of a node at once.
 
 ## Addressing a node
 
@@ -23,6 +23,7 @@ voices).
 | Option | Meaning |
 | --- | --- |
 | `--out <plan.json>` | Where the plan is written (required). |
+| `--format <text\|json>` | How to print the result (default: text). |
 
 Prints what became Given. A node or span not written yet is refused (run `fill` first). Locking is for good: to unlock, go
 back to an earlier plan file.
@@ -32,6 +33,9 @@ $ ursatz-composer lock piece.json --section A --out piece-locked.json
 locked section A: 9 nodes and 23 lane spans now Given
 wrote piece-locked.json
 ```
+
+With `--format json` the output is the object `{"locked": {"nodes": 9, "spans": 23}, "plan": "piece-locked.json"}`: the
+nodes and lane spans that became Given, and the path of the plan as given to `--out`.
 
 ## regenerate
 
