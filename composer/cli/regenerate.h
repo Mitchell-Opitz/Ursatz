@@ -3,7 +3,7 @@
 
 #define LOCK_USAGE_LINE                                                                                                \
     "Usage: ursatz-composer lock <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] "   \
-    "--out <plan.json>"
+    "--out <plan.json> [--format text|json]"
 
 #define REGENERATE_USAGE_LINE                                                                                          \
     "Usage: ursatz-composer regenerate <plan.json> (--node <id> | --section <letter>) [--lane "                        \

@@ -48,4 +48,12 @@ int cli_write_outputs(const CliOutputPaths *paths, const PiecePlan *plan, const 
 void cli_print_composed(bool json, unsigned long seed, const PiecePlan *plan, const ComposeOutcome *outcome,
                         const char *json_extra, const char *const *files, size_t file_count);
 
+/*
+ * What the sections were heard as, for the commands that print several results. The JSON is the array
+ * [{"letter","heard","heard_as_requested","cadences"}] fill prints as "sections" (no newline); the text is one line,
+ * "A heard as period, cadences PAC; B heard as ..." (no newline).
+ */
+void cli_print_heard_json(const PiecePlan *plan, const ComposeOutcome *outcome);
+void cli_print_heard_text(const PiecePlan *plan, const ComposeOutcome *outcome);
+
 #endif

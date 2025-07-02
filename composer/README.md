@@ -157,6 +157,16 @@ apart node by node. `lock` makes a section, a phrase or one lane Given; `regener
 and writes again only what depends on it, so locked material is never changed. See
 [docs/regenerate.md](docs/regenerate.md) and [docs/cli-regenerate.md](docs/cli-regenerate.md).
 
+```sh
+ursatz-composer variations piece.json --section B --count 4 --seed 3 --out-dir variations --midi
+ursatz-composer harmonize piece.json --section B --count 4 --seed 1 --out-dir harmonizations --musicxml
+```
+
+`variations` writes a node of a filled plan again with other seeds and keeps several versions that sound different, each
+as a plan file of its own (`variation-<i>.json`, with `--midi` and `--musicxml` the piece too). `harmonize` does the same
+for the harmony of a section whose melody is given. `lock --format json` prints what it locked as JSON. See
+[docs/cli-variations.md](docs/cli-variations.md).
+
 ## Plan format
 
 A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
