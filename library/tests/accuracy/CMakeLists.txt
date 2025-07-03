@@ -9,3 +9,9 @@ add_test(NAME accuracy_romantext COMMAND test_accuracy_romantext)
 add_executable(test_accuracy_score_layout test_score_layout.c)
 target_link_libraries(test_accuracy_score_layout PRIVATE accuracy_support)
 add_test(NAME accuracy_score_layout COMMAND test_accuracy_score_layout)
+
+add_executable(test_accuracy_corpus_load test_corpus_load.c)
+target_link_libraries(test_accuracy_corpus_load PRIVATE accuracy_support)
+target_compile_definitions(test_accuracy_corpus_load PRIVATE
+    URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus")
+add_test(NAME accuracy_corpus_load COMMAND test_accuracy_corpus_load)

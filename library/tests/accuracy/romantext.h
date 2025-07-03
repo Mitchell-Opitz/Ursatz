@@ -30,7 +30,8 @@
  * UNSUPPORTED (kept in the timeline as written, flagged, and counted; never an error)
  *   Ger65, Fr43, It6 and other augmented-sixth chords, the Neapolitan "N", "Cad64", bracketed additions or
  *   omissions ("[no5]", "[add4]"), figures beyond sevenths (9, 11, 13), nested applied targets ("V/V/V"),
- *   measure repeats ("m5-6 = m1-2"), measure lines whose number carries a letter ("m7a"), and any token the
+ *   measure repeats ("m5-6 = m1-2"), measure lines whose number carries a letter ("m7a") or a variant tag
+ *   ("m11var1", an alternative reading of m11: skipped, so the main reading stands), and any token the
  *   grammar above does not read.
  */
 
