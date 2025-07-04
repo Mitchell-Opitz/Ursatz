@@ -508,13 +508,13 @@ static int write_files(const Options *options, Scene *scene, const FillSuggestio
     }
     PlanExportError error;
     if (options->midi_path) {
-        if (plan_export_midi(scene->plan, options->midi_path, &error) != PLAN_EXPORT_OK) {
+        if (plan_export_midi(scene->plan, NULL, options->midi_path, &error) != PLAN_EXPORT_OK) {
             return cli_fail(EXIT_WRITE, "MIDI export failed: %s", error.message);
         }
         printf("MIDI written to %s\n", options->midi_path);
     }
     if (options->musicxml_path) {
-        if (plan_export_musicxml(scene->plan, options->musicxml_path, &error) != PLAN_EXPORT_OK) {
+        if (plan_export_musicxml(scene->plan, NULL, options->musicxml_path, &error) != PLAN_EXPORT_OK) {
             return cli_fail(EXIT_WRITE, "MusicXML export failed: %s", error.message);
         }
         printf("MusicXML written to %s\n", options->musicxml_path);

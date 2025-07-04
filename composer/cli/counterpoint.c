@@ -484,8 +484,8 @@ static int write_files(const Options *options, const Result *results, size_t cou
                 }
                 have_rendering = true;
             }
-            PlanExportResult written = kind == 1 ? rendered_plan_export_midi(&rendered, entry->temporary, &error)
-                                                 : rendered_plan_export_musicxml(&rendered, entry->temporary, &error);
+            PlanExportResult written = kind == 1 ? rendered_plan_export_midi(&rendered, NULL, entry->temporary, &error)
+                                                 : rendered_plan_export_musicxml(&rendered, NULL, entry->temporary, &error);
             if (written != PLAN_EXPORT_OK) {
                 status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
             }

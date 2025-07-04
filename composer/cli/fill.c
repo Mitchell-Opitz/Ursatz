@@ -593,8 +593,8 @@ static int write_files(const CliOutputPaths *output, const PiecePlan *plan, cons
                 have_rendering = true;
             }
             PlanExportError error;
-            PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, entry->temporary, &error)
-                                                : rendered_plan_export_musicxml(&rendered, entry->temporary, &error);
+            PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, NULL, entry->temporary, &error)
+                                                : rendered_plan_export_musicxml(&rendered, NULL, entry->temporary, &error);
             if (result != PLAN_EXPORT_OK) {
                 status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", paths[kind], error.message);
             }

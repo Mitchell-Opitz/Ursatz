@@ -88,6 +88,7 @@ typedef struct {
     RenderSkip *skipped;              /* owned; in lane span id order */
     size_t skipped_count;
     PlanTime piece_end;               /* the end of the last section that is not material; 0 when the plan has none */
+    char *form_name;                  /* owned; the form node's name, NULL when the plan has no form or it has no name */
 } RenderedPlan;
 
 /* Renders plan into *out, which the caller destroys. On failure *out is empty and safe to destroy. */
@@ -105,5 +106,11 @@ void rendered_plan_destroy(RenderedPlan *rendered);
 
 /* "melody", "bass" or "inner_voice". */
 const char *rendered_part_lane_name(const RenderedPart *part);
+
+/* The part's name in an export: "melody", "bass", "inner_voice_2". Written to out, which holds size bytes. */
+void rendered_part_name(const RenderedPart *part, char *out, size_t size);
+
+/* The id value of the voice reference every NoteEvent of the part carries (entity_id_value of its target). */
+void rendered_part_voice_id(const RenderedPart *part, char *out, size_t size);
 
 #endif

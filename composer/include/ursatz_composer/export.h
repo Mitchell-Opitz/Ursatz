@@ -1,6 +1,7 @@
 #ifndef URSATZ_COMPOSER_EXPORT_H
 #define URSATZ_COMPOSER_EXPORT_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include <ursatz_composer/piece_plan.h>
@@ -14,7 +15,10 @@
  *
  * MIDI: one track per part, at 480 ticks per quarter when every time lands on a
  * whole tick there and otherwise at the smallest division that does. A plan
- * with no tempo carries none (the file default, 120, applies).
+ * with no tempo carries none (the file default, 120, applies). With
+ * PlanExportOptions.track_names (the default) the conductor track is named for
+ * the form ("piece" when the form has no name) and each part's track for its
+ * lane, as the MusicXML parts are ("melody", "bass", "inner_voice_2").
  *
  * MusicXML: one part per lane voice, named for its lane ("melody", "bass",
  * "inner_voice_2"). With no meter span the document is flagged
@@ -42,18 +46,30 @@ typedef struct {
     char message[PLAN_EXPORT_MESSAGE_MAX];
 } PlanExportError;
 
+/* What an export adds to the notes. Every export function takes const PlanExportOptions *; NULL means the default. */
+typedef struct {
+    bool track_names; /* MIDI: name the conductor track and each part's track */
+} PlanExportOptions;
+
+/* Track names on. */
+PlanExportOptions plan_export_options_default(void);
+
 /* From an already rendered plan, to a buffer the caller frees with free(). */
-PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, unsigned char **out_data, size_t *out_size,
-                                          PlanExportError *error);
-PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, char **out_xml, PlanExportError *error);
+PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const PlanExportOptions *options,
+                                          unsigned char **out_data, size_t *out_size, PlanExportError *error);
+PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const PlanExportOptions *options,
+                                             char **out_xml, PlanExportError *error);
 
 /* From an already rendered plan, to a file. */
-PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const char *path, PlanExportError *error);
-PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, const char *path,
-                                               PlanExportError *error);
+PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const PlanExportOptions *options,
+                                           const char *path, PlanExportError *error);
+PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, const PlanExportOptions *options,
+                                               const char *path, PlanExportError *error);
 
 /* Renders the plan, then writes the file. Use the rendered_plan_ functions to render once and write both. */
-PlanExportResult plan_export_midi(const PiecePlan *plan, const char *path, PlanExportError *error);
-PlanExportResult plan_export_musicxml(const PiecePlan *plan, const char *path, PlanExportError *error);
+PlanExportResult plan_export_midi(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
+                                  PlanExportError *error);
+PlanExportResult plan_export_musicxml(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
+                                      PlanExportError *error);
 
 #endif

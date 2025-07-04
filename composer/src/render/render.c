@@ -24,6 +24,18 @@ const char *rendered_part_lane_name(const RenderedPart *part) {
     return LANE_NAMES[part->lane];
 }
 
+void rendered_part_name(const RenderedPart *part, char *out, size_t size) {
+    if (part->lane == PLAN_LANE_INNER_VOICE) {
+        snprintf(out, size, "%s_%d", rendered_part_lane_name(part), part->voice);
+    } else {
+        snprintf(out, size, "%s", rendered_part_lane_name(part));
+    }
+}
+
+void rendered_part_voice_id(const RenderedPart *part, char *out, size_t size) {
+    snprintf(out, size, "composer-voice-%s-%d", rendered_part_lane_name(part), part->voice);
+}
+
 void rendered_plan_destroy(RenderedPlan *rendered) {
     if (!rendered) {
         return;
@@ -43,6 +55,7 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
     }
     free(rendered->keys);
     free(rendered->skipped);
+    free(rendered->form_name);
     memset(rendered, 0, sizeof(*rendered));
 }
 
@@ -276,7 +289,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
          pitch_numeric_value_to_identity(value, &identity) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
          pitch_spelling_create(written.letter, written.accidental, note->midi_pitch / 12 - 1, &spelling) ==
              PITCH_SPELLING_OK;
-    snprintf(text, sizeof(text), "composer-voice-%s-%d", rendered_part_lane_name(part), part->voice);
+    rendered_part_voice_id(part, text, sizeof(text));
     ok = ok && entity_id_create(text, &voice_id) == ENTITY_ID_OK &&
          voice_reference_create(voice_id, &voice) == VOICE_REFERENCE_OK;
     if (ok) {
@@ -578,6 +591,14 @@ static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *ra
         return PLAN_RENDER_ERR_NULL;
     }
     out->piece_end = range ? from_range_start(range_end(range), range) : piece_end_of(plan);
+    const char *form_name = plan_root(plan) != PLAN_NODE_NONE ? plan_node_name(plan, plan_root(plan)) : NULL;
+    if (form_name && form_name[0]) {
+        out->form_name = malloc(strlen(form_name) + 1);
+        if (!out->form_name) {
+            return PLAN_RENDER_ERR_ALLOC;
+        }
+        memcpy(out->form_name, form_name, strlen(form_name) + 1);
+    }
     PlanRenderResult result = render_into(plan, range, out);
     if (result != PLAN_RENDER_OK) {
         rendered_plan_destroy(out);

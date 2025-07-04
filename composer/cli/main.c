@@ -86,13 +86,13 @@ static int run_export(int argc, char **argv) {
 
     PlanExportError export_error;
     int status = 0;
-    if (midi_path && rendered_plan_export_midi(&rendered, midi_path, &export_error) != PLAN_EXPORT_OK) {
+    if (midi_path && rendered_plan_export_midi(&rendered, NULL, midi_path, &export_error) != PLAN_EXPORT_OK) {
         fprintf(stderr, "Error: MIDI export failed: %s\n", export_error.message);
         status = 1;
     } else if (midi_path) {
         printf("MIDI written to %s\n", midi_path);
     }
-    if (musicxml_path && rendered_plan_export_musicxml(&rendered, musicxml_path, &export_error) != PLAN_EXPORT_OK) {
+    if (musicxml_path && rendered_plan_export_musicxml(&rendered, NULL, musicxml_path, &export_error) != PLAN_EXPORT_OK) {
         fprintf(stderr, "Error: MusicXML export failed: %s\n", export_error.message);
         status = 1;
     } else if (musicxml_path) {

@@ -190,11 +190,11 @@ static void test_render(void) {
     size_t size_b = 0;
     char *xml_a = NULL;
     char *xml_b = NULL;
-    assert(rendered_plan_midi_bytes(&rendered, &midi_a, &size_a, NULL) == PLAN_EXPORT_OK);
-    assert(rendered_plan_midi_bytes(&again, &midi_b, &size_b, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(&rendered, NULL, &midi_a, &size_a, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(&again, NULL, &midi_b, &size_b, NULL) == PLAN_EXPORT_OK);
     assert(size_a == size_b && memcmp(midi_a, midi_b, size_a) == 0);
-    assert(rendered_plan_musicxml_text(&rendered, &xml_a, NULL) == PLAN_EXPORT_OK);
-    assert(rendered_plan_musicxml_text(&again, &xml_b, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_musicxml_text(&rendered, NULL, &xml_a, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_musicxml_text(&again, NULL, &xml_b, NULL) == PLAN_EXPORT_OK);
     assert(strcmp(xml_a, xml_b) == 0);
     free(midi_a);
     free(midi_b);
@@ -244,7 +244,7 @@ static void test_midi_round_trip(void) {
 
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(rendered_plan_midi_bytes(&rendered, &data, &size, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(&rendered, NULL, &data, &size, NULL) == PLAN_EXPORT_OK);
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitches = NULL;
@@ -286,7 +286,7 @@ static void test_musicxml_round_trip(void) {
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
 
     char *xml = NULL;
-    assert(rendered_plan_musicxml_text(&rendered, &xml, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_musicxml_text(&rendered, NULL, &xml, NULL) == PLAN_EXPORT_OK);
 
     MusicXmlImport imported;
     memset(&imported, 0, sizeof(imported));
@@ -357,9 +357,9 @@ static void test_constrained_is_skipped(void) {
     assert(rendered.skipped_count == 1);
     assert(rendered.skipped[0].lane == PLAN_LANE_MELODY);
     assert(rendered.skipped[0].reason == RENDER_SKIP_NOT_REALIZED);
-    assert(rendered_plan_export_midi(&rendered, "render_test_none.mid", &error) == PLAN_EXPORT_ERR_NO_CONTENT);
+    assert(rendered_plan_export_midi(&rendered, NULL, "render_test_none.mid", &error) == PLAN_EXPORT_ERR_NO_CONTENT);
     assert(error.message[0] != '\0');
-    assert(plan_export_musicxml(plan, "render_test_none.xml", &error) == PLAN_EXPORT_ERR_NO_CONTENT);
+    assert(plan_export_musicxml(plan, NULL, "render_test_none.xml", &error) == PLAN_EXPORT_ERR_NO_CONTENT);
     assert(!file_exists("render_test_none.mid") && !file_exists("render_test_none.xml"));
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);
@@ -371,19 +371,19 @@ static void test_export_errors(void) {
     /* Two notes of one pitch overlapping in one voice. */
     PlanNote overlapping[] = {note(60, time_of(0, 1), time_of(1, 2)), note(60, time_of(1, 4), time_of(1, 2))};
     PiecePlan *plan = plan_with_one_melody(overlapping, 2, PLAN_STATE_REALIZED);
-    assert(plan_export_midi(plan, "render_test_overlap.mid", &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
+    assert(plan_export_midi(plan, NULL, "render_test_overlap.mid", &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
     assert(error.message[0] != '\0');
-    assert(plan_export_musicxml(plan, "render_test_overlap.xml", &error) == PLAN_EXPORT_ERR_OVERLAP);
+    assert(plan_export_musicxml(plan, NULL, "render_test_overlap.xml", &error) == PLAN_EXPORT_ERR_OVERLAP);
     assert(!file_exists("render_test_overlap.mid") && !file_exists("render_test_overlap.xml"));
     plan_destroy(plan);
 
     /* A file that cannot be written. */
     PlanNote one[] = {note(60, time_of(0, 1), time_of(1, 1))};
     plan = plan_with_one_melody(one, 1, PLAN_STATE_REALIZED);
-    assert(plan_export_midi(plan, "no/such/directory/out.mid", &error) == PLAN_EXPORT_ERR_IO);
+    assert(plan_export_midi(plan, NULL, "no/such/directory/out.mid", &error) == PLAN_EXPORT_ERR_IO);
     assert(error.message[0] != '\0');
-    assert(plan_export_midi(NULL, "x.mid", &error) == PLAN_EXPORT_ERR_NULL);
-    assert(plan_export_midi(plan, NULL, &error) == PLAN_EXPORT_ERR_NULL);
+    assert(plan_export_midi(NULL, NULL, "x.mid", &error) == PLAN_EXPORT_ERR_NULL);
+    assert(plan_export_midi(plan, NULL, NULL, &error) == PLAN_EXPORT_ERR_NULL);
     plan_destroy(plan);
 
     /* More voices than MIDI has tracks. */
@@ -393,7 +393,7 @@ static void test_export_errors(void) {
         LaneSpanId span = add_notes(plan, form, PLAN_LANE_INNER_VOICE, voice, bars(0, 1), one, 1);
         assert(plan_lane_span_set_state(plan, span, PLAN_STATE_REALIZED) == PLAN_OK);
     }
-    assert(plan_export_midi(plan, "render_test_voices.mid", &error) == PLAN_EXPORT_ERR_TOO_MANY_VOICES);
+    assert(plan_export_midi(plan, NULL, "render_test_voices.mid", &error) == PLAN_EXPORT_ERR_TOO_MANY_VOICES);
     assert(!file_exists("render_test_voices.mid"));
     plan_destroy(plan);
 }
@@ -406,7 +406,7 @@ static void test_division_is_exact(void) {
     unsigned char *data = NULL;
     size_t size = 0;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
-    assert(rendered_plan_midi_bytes(&rendered, &data, &size, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(&rendered, NULL, &data, &size, NULL) == PLAN_EXPORT_OK);
     assert(size > 14 && data[12] == 0 && data[13] == 7);
 
     NoteEvent **events = NULL;
@@ -443,8 +443,8 @@ static void test_files_and_cli(void) {
     PlanExportError error;
     PlanJsonError json_error;
 
-    assert(plan_export_midi(plan, "render_test_plan.mid", &error) == PLAN_EXPORT_OK);
-    assert(plan_export_musicxml(plan, "render_test_plan.xml", &error) == PLAN_EXPORT_OK);
+    assert(plan_export_midi(plan, NULL, "render_test_plan.mid", &error) == PLAN_EXPORT_OK);
+    assert(plan_export_musicxml(plan, NULL, "render_test_plan.xml", &error) == PLAN_EXPORT_OK);
     assert(file_size("render_test_plan.mid") > 0 && file_size("render_test_plan.xml") > 0);
     assert(!file_exists("render_test_plan.mid.tmp") && !file_exists("render_test_plan.xml.tmp"));
 
@@ -516,7 +516,7 @@ static void test_material_is_left_out(void) {
     /* The score has the four bars of the theme and no more. */
     char *xml = NULL;
     PlanExportError error;
-    assert(rendered_plan_musicxml_text(&rendered, &xml, &error) == PLAN_EXPORT_OK);
+    assert(rendered_plan_musicxml_text(&rendered, NULL, &xml, &error) == PLAN_EXPORT_OK);
     size_t measures = 0;
     for (const char *at = strstr(xml, "<measure "); at; at = strstr(at + 1, "<measure ")) {
         measures++;

@@ -9,6 +9,7 @@
 #include "io/midi_renderer.h"
 
 #define PREFERRED_DIVISION 480u
+#define MIDI_NAME_TEXT_MAX 48
 
 static void set_message(PlanExportError *error, const char *format, ...) {
     if (!error) {
@@ -18,6 +19,16 @@ static void set_message(PlanExportError *error, const char *format, ...) {
     va_start(args, format);
     vsnprintf(error->message, sizeof(error->message), format, args);
     va_end(args);
+}
+
+PlanExportOptions plan_export_options_default(void) {
+    PlanExportOptions options;
+    options.track_names = true;
+    return options;
+}
+
+static PlanExportOptions resolve_options(const PlanExportOptions *options) {
+    return options ? *options : plan_export_options_default();
 }
 
 static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
@@ -70,8 +81,9 @@ static unsigned choose_division(const RenderedPlan *rendered) {
     return PREFERRED_DIVISION % needed == 0 ? PREFERRED_DIVISION : (unsigned)needed;
 }
 
-PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, unsigned char **out_data, size_t *out_size,
-                                          PlanExportError *error) {
+PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const PlanExportOptions *options_in,
+                                          unsigned char **out_data, size_t *out_size, PlanExportError *error) {
+    PlanExportOptions options = resolve_options(options_in);
     if (!rendered || !out_data || !out_size) {
         set_message(error, "rendered plan or output is NULL");
         return PLAN_EXPORT_ERR_NULL;
@@ -98,10 +110,39 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, unsigned
         keys[i].mode_hint = rendered->keys[i].mode == PLAN_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     }
 
-    MidiRenderResult result = midi_renderer_render(rendered->events, rendered->pitch_values, rendered->count,
-                                                   rendered->meter_map, NULL, keys, rendered->key_count, division,
-                                                   out_data, out_size);
+    /* Track names: the conductor track for the form, each part's track for its lane. */
+    char (*voice_ids)[MIDI_NAME_TEXT_MAX] = calloc(rendered->part_count, sizeof(*voice_ids));
+    char (*part_names)[MIDI_NAME_TEXT_MAX] = calloc(rendered->part_count, sizeof(*part_names));
+    MidiTrackName *names = calloc(rendered->part_count, sizeof(*names));
+    if (!voice_ids || !part_names || !names) {
+        free(voice_ids);
+        free(part_names);
+        free(names);
+        free(keys);
+        set_message(error, "out of memory");
+        return PLAN_EXPORT_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < rendered->part_count; i++) {
+        rendered_part_voice_id(&rendered->parts[i], voice_ids[i], MIDI_NAME_TEXT_MAX);
+        rendered_part_name(&rendered->parts[i], part_names[i], MIDI_NAME_TEXT_MAX);
+        names[i].voice_id = voice_ids[i];
+        names[i].name = part_names[i];
+    }
+    MidiRenderOptions midi_options;
+    memset(&midi_options, 0, sizeof(midi_options));
+    if (options.track_names) {
+        midi_options.conductor_name = rendered->form_name ? rendered->form_name : "piece";
+        midi_options.track_names = names;
+        midi_options.track_name_count = rendered->part_count;
+    }
+
+    MidiRenderResult result = midi_renderer_render_with_options(
+        rendered->events, rendered->pitch_values, rendered->count, rendered->meter_map, NULL, keys,
+        rendered->key_count, &midi_options, division, out_data, out_size);
     free(keys);
+    free(voice_ids);
+    free(part_names);
+    free(names);
     switch (result) {
     case MIDI_RENDER_OK:
         return PLAN_EXPORT_OK;
@@ -123,7 +164,9 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, unsigned
 
 #define PART_TEXT_MAX 32
 
-PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, char **out_xml, PlanExportError *error) {
+PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const PlanExportOptions *options,
+                                             char **out_xml, PlanExportError *error) {
+    (void)options;
     if (!rendered || !out_xml) {
         set_message(error, "rendered plan or output is NULL");
         return PLAN_EXPORT_ERR_NULL;
@@ -145,11 +188,7 @@ PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, char 
     }
     for (size_t i = 0; i < rendered->part_count; i++) {
         const RenderedPart *part = &rendered->parts[i];
-        if (part->lane == PLAN_LANE_INNER_VOICE) {
-            snprintf(names[i], PART_TEXT_MAX, "%s_%d", rendered_part_lane_name(part), part->voice);
-        } else {
-            snprintf(names[i], PART_TEXT_MAX, "%s", rendered_part_lane_name(part));
-        }
+        rendered_part_name(part, names[i], PART_TEXT_MAX);
         parts[i].id = names[i];
         parts[i].name = names[i];
         parts[i].staff_count = 1;
@@ -222,10 +261,11 @@ static PlanExportResult write_file(const char *path, const void *data, size_t si
     return PLAN_EXPORT_OK;
 }
 
-PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const char *path, PlanExportError *error) {
+PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const PlanExportOptions *options,
+                                           const char *path, PlanExportError *error) {
     unsigned char *data = NULL;
     size_t size = 0;
-    PlanExportResult result = rendered_plan_midi_bytes(rendered, &data, &size, error);
+    PlanExportResult result = rendered_plan_midi_bytes(rendered, options, &data, &size, error);
     if (result != PLAN_EXPORT_OK) {
         return result;
     }
@@ -234,10 +274,10 @@ PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const c
     return result;
 }
 
-PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, const char *path,
-                                               PlanExportError *error) {
+PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, const PlanExportOptions *options,
+                                               const char *path, PlanExportError *error) {
     char *xml = NULL;
-    PlanExportResult result = rendered_plan_musicxml_text(rendered, &xml, error);
+    PlanExportResult result = rendered_plan_musicxml_text(rendered, options, &xml, error);
     if (result != PLAN_EXPORT_OK) {
         return result;
     }
@@ -263,24 +303,26 @@ static PlanExportResult render_for_export(const PiecePlan *plan, RenderedPlan *r
     return PLAN_EXPORT_ERR_ALLOC;
 }
 
-PlanExportResult plan_export_midi(const PiecePlan *plan, const char *path, PlanExportError *error) {
+PlanExportResult plan_export_midi(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
+                                  PlanExportError *error) {
     RenderedPlan rendered;
     PlanExportResult result = render_for_export(plan, &rendered, error);
     if (result != PLAN_EXPORT_OK) {
         return result;
     }
-    result = rendered_plan_export_midi(&rendered, path, error);
+    result = rendered_plan_export_midi(&rendered, options, path, error);
     rendered_plan_destroy(&rendered);
     return result;
 }
 
-PlanExportResult plan_export_musicxml(const PiecePlan *plan, const char *path, PlanExportError *error) {
+PlanExportResult plan_export_musicxml(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
+                                      PlanExportError *error) {
     RenderedPlan rendered;
     PlanExportResult result = render_for_export(plan, &rendered, error);
     if (result != PLAN_EXPORT_OK) {
         return result;
     }
-    result = rendered_plan_export_musicxml(&rendered, path, error);
+    result = rendered_plan_export_musicxml(&rendered, options, path, error);
     rendered_plan_destroy(&rendered);
     return result;
 }
