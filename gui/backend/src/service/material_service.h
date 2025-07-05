@@ -86,13 +86,35 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const
 /* Deletes the project. NOT_EMPTY while it holds items. NOT_FOUND if absent. */
 UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
 
+/* --- version bodies ------------------------------------------------------ */
+
+/*
+ * Checks a version body for an item of the given type ("motif", "theme" or
+ * "piece"; INVALID_TYPE otherwise). Returns OK or INVALID_BODY; when error
+ * is not NULL, it receives a one-line reason ("" on OK).
+ *
+ * Every body is an object whose "uses" is an array (may be empty) of
+ * {item_id, version, copy}. A body carries its own type's member ("motif",
+ * "theme" or "piece") and no other:
+ *   motif: role (melodic | accompaniment), form (full | rhythm | contour),
+ *     notes (1 to 4000 characters), meter ("n/m"), key (null or a string),
+ *     pickup (beats, "n" or "n/d"), features [{label 1 to 8 characters,
+ *     first, last with 0 <= first <= last}], analysis (null or an object),
+ *     derived (null or {source_item, source_version, operations, seed, kind,
+ *     kept, changed, harmony, functions, flag}).
+ *   theme: form (null, a string or an object) and slots (an array).
+ *   piece: structure (null, a string, an object or an array).
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
+                                                           size_t error_size);
+
 /* --- items and versions -------------------------------------------------- */
 
 /*
  * Creates an item of type "motif", "theme" or "piece" (INVALID_TYPE) with a
  * generated id, in the project project_id (INVALID_ID, NOT_FOUND). name has
  * the project name limits (INVALID_NAME). body is the first version, v1
- * (INVALID_BODY when it is not an object). On OK, *out_item (may be NULL)
+ * (INVALID_BODY when ursatz_gui_material_body_validate refuses it). On OK, *out_item (may be NULL)
  * is the item object (item.json), caller-owned.
  */
 UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const char *name, const char *project_id,

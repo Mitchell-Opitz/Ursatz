@@ -709,10 +709,238 @@ static bool project_exists_locked(const char *project_id) {
     return project_path(project_id, path, sizeof(path)) && path_exists(path);
 }
 
-/* Checks a version body for an item of the given type. */
-static UrsatzGuiMaterialResult check_body(const char *type, const cJSON *body) {
-    (void)type;
-    return cJSON_IsObject(body) ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+/* --- body validation ----------------------------------------------------- */
+
+#define LABEL_MAX_CHARS 8
+#define NOTES_MAX_CHARS 4000
+
+static UrsatzGuiMaterialResult invalid_body(char *error, size_t error_size, const char *message) {
+    if (error && error_size > 0) {
+        snprintf(error, error_size, "%s", message);
+    }
+    return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+}
+
+static bool in_set(const cJSON *value, const char *const *set) {
+    if (!cJSON_IsString(value)) {
+        return false;
+    }
+    for (; *set; set++) {
+        if (strcmp(value->valuestring, *set) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool is_whole_number(const cJSON *value, double minimum) {
+    return cJSON_IsNumber(value) && value->valuedouble >= minimum && value->valuedouble == (double)(long long)value->valuedouble;
+}
+
+static size_t utf8_length(const char *text) {
+    size_t chars = 0;
+    for (; *text; text++) {
+        if (((unsigned char)*text & 0xC0) != 0x80) {
+            chars++;
+        }
+    }
+    return chars;
+}
+
+/* A member that is absent or null. */
+static bool is_absent_or_null(const cJSON *object, const char *name) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(object, name);
+    return !value || cJSON_IsNull(value);
+}
+
+/* digits with an optional "/digits": "4/4" when meter is set (both parts 1 to 99), else "0", "1/2", "3". */
+static bool is_rational(const char *text, bool meter) {
+    const char *slash = strchr(text, '/');
+    size_t left = slash ? (size_t)(slash - text) : strlen(text);
+    size_t right = slash ? strlen(slash + 1) : 0;
+    if (left == 0 || left > (meter ? 2 : 9) || (meter && !slash) || (slash && (right == 0 || right > (meter ? 2 : 9)))) {
+        return false;
+    }
+    bool denominator_nonzero = !slash;
+    for (const char *c = text; *c; c++) {
+        if (*c == '/' && c == slash) {
+            continue;
+        }
+        if (!isdigit((unsigned char)*c)) {
+            return false;
+        }
+        if (slash && c > slash && *c != '0') {
+            denominator_nonzero = true;
+        }
+    }
+    if (meter && text[0] == '0') {
+        return false;
+    }
+    return denominator_nonzero;
+}
+
+static UrsatzGuiMaterialResult validate_uses(const cJSON *body, char *error, size_t error_size) {
+    const cJSON *uses = cJSON_GetObjectItemCaseSensitive(body, "uses");
+    if (!cJSON_IsArray(uses)) {
+        return invalid_body(error, error_size, "uses must be an array");
+    }
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, uses) {
+        const cJSON *item_id = cJSON_GetObjectItemCaseSensitive(use, "item_id");
+        const cJSON *copy = cJSON_GetObjectItemCaseSensitive(use, "copy");
+        if (!cJSON_IsObject(use) || !cJSON_IsString(item_id) || !is_valid_id(item_id->valuestring) ||
+            !is_whole_number(cJSON_GetObjectItemCaseSensitive(use, "version"), 1) || (copy && !cJSON_IsObject(copy))) {
+            return invalid_body(error, error_size, "each use needs item_id, version and, if present, an object copy");
+        }
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+static bool is_string_list_from(const cJSON *value, const char *const *set) {
+    if (!cJSON_IsArray(value)) {
+        return false;
+    }
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, value) {
+        if (!in_set(entry, set)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *error, size_t error_size) {
+    static const char *const kinds[] = {"exact", "motive-form", "variant", NULL};
+    static const char *const dimensions[] = {"rhythm", "intervals", "harmony", "contour", NULL};
+    static const char *const functions[] = {"beginning", "continuation", "contrast", "cadential", NULL};
+    static const char *const flags[] = {"approved", "rejected", "unflagged", NULL};
+    const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
+    const cJSON *seed = cJSON_GetObjectItemCaseSensitive(derived, "seed");
+    if (!cJSON_IsObject(derived)) {
+        return invalid_body(error, error_size, "derived must be null or an object");
+    }
+    if (!cJSON_IsString(source_item) || !is_valid_id(source_item->valuestring) ||
+        !is_whole_number(cJSON_GetObjectItemCaseSensitive(derived, "source_version"), 1)) {
+        return invalid_body(error, error_size, "derived needs source_item and source_version");
+    }
+    if (!cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(derived, "operations"))) {
+        return invalid_body(error, error_size, "derived operations must be an array");
+    }
+    if (seed && !cJSON_IsNull(seed) && !is_whole_number(seed, 0)) {
+        return invalid_body(error, error_size, "derived seed must be null or a whole number");
+    }
+    if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "kind"), kinds)) {
+        return invalid_body(error, error_size, "derived kind must be exact, motive-form or variant");
+    }
+    if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "kept"), dimensions) ||
+        !is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "changed"), dimensions)) {
+        return invalid_body(error, error_size, "derived kept and changed must list rhythm, intervals, harmony or contour");
+    }
+    if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "functions"), functions)) {
+        return invalid_body(error, error_size, "derived functions must list beginning, continuation, contrast or cadential");
+    }
+    if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "flag"), flags)) {
+        return invalid_body(error, error_size, "derived flag must be approved, rejected or unflagged");
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, size_t error_size) {
+    static const char *const roles[] = {"melodic", "accompaniment", NULL};
+    static const char *const forms[] = {"full", "rhythm", "contour", NULL};
+    if (!cJSON_IsObject(motif)) {
+        return invalid_body(error, error_size, "a motif body needs a motif object");
+    }
+    if (!in_set(cJSON_GetObjectItemCaseSensitive(motif, "role"), roles)) {
+        return invalid_body(error, error_size, "motif role must be melodic or accompaniment");
+    }
+    if (!in_set(cJSON_GetObjectItemCaseSensitive(motif, "form"), forms)) {
+        return invalid_body(error, error_size, "motif form must be full, rhythm or contour");
+    }
+    const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
+    if (!cJSON_IsString(notes) || notes->valuestring[0] == '\0' || utf8_length(notes->valuestring) > NOTES_MAX_CHARS) {
+        return invalid_body(error, error_size, "motif notes must be a non-empty string of at most 4000 characters");
+    }
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
+    if (!cJSON_IsString(meter) || !is_rational(meter->valuestring, true)) {
+        return invalid_body(error, error_size, "motif meter must look like 4/4");
+    }
+    const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+    if (key && !cJSON_IsNull(key) && !cJSON_IsString(key)) {
+        return invalid_body(error, error_size, "motif key must be null or a string");
+    }
+    const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
+    if (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false)) {
+        return invalid_body(error, error_size, "motif pickup must be beats as n or n/d");
+    }
+    const cJSON *features = cJSON_GetObjectItemCaseSensitive(motif, "features");
+    if (!cJSON_IsArray(features)) {
+        return invalid_body(error, error_size, "motif features must be an array");
+    }
+    const cJSON *feature = NULL;
+    cJSON_ArrayForEach(feature, features) {
+        const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
+        const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
+        const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
+        if (!cJSON_IsObject(feature) || !cJSON_IsString(label) || utf8_length(label->valuestring) < 1 ||
+            utf8_length(label->valuestring) > LABEL_MAX_CHARS || !is_whole_number(first, 0) ||
+            !is_whole_number(last, 0) || first->valuedouble > last->valuedouble) {
+            return invalid_body(error, error_size, "each feature needs a label of 1 to 8 characters and 0 <= first <= last");
+        }
+    }
+    const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
+    if (analysis && !cJSON_IsNull(analysis) && !cJSON_IsObject(analysis)) {
+        return invalid_body(error, error_size, "motif analysis must be null or an object");
+    }
+    return is_absent_or_null(motif, "derived")
+               ? URSATZ_GUI_MATERIAL_OK
+               : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error, error_size);
+}
+
+static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, size_t error_size) {
+    const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
+    if (!cJSON_IsObject(theme) || (form && !cJSON_IsNull(form) && !cJSON_IsString(form) && !cJSON_IsObject(form)) ||
+        !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(theme, "slots"))) {
+        return invalid_body(error, error_size, "a theme body needs a theme object with form and slots");
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+static UrsatzGuiMaterialResult validate_piece(const cJSON *piece, char *error, size_t error_size) {
+    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
+    if (!cJSON_IsObject(piece) || (structure && !cJSON_IsNull(structure) && !cJSON_IsString(structure) &&
+                                   !cJSON_IsObject(structure) && !cJSON_IsArray(structure))) {
+        return invalid_body(error, error_size, "a piece body needs a piece object with a structure");
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
+                                                           size_t error_size) {
+    if (error && error_size > 0) {
+        error[0] = '\0';
+    }
+    if (!prefix_for_type(type)) {
+        return URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE;
+    }
+    if (!cJSON_IsObject(body)) {
+        return invalid_body(error, error_size, "a version body must be an object");
+    }
+    UrsatzGuiMaterialResult result = validate_uses(body, error, error_size);
+    if (result != URSATZ_GUI_MATERIAL_OK) {
+        return result;
+    }
+    static const char *const members[] = {"motif", "theme", "piece"};
+    for (size_t i = 0; i < sizeof(members) / sizeof(members[0]); i++) {
+        if (strcmp(members[i], type) != 0 && cJSON_GetObjectItemCaseSensitive(body, members[i])) {
+            return invalid_body(error, error_size, "a body must not carry another type's member");
+        }
+    }
+    const cJSON *own = cJSON_GetObjectItemCaseSensitive(body, type);
+    if (strcmp(type, "motif") == 0) {
+        return validate_motif(own, error, error_size);
+    }
+    return strcmp(type, "theme") == 0 ? validate_theme(own, error, error_size) : validate_piece(own, error, error_size);
 }
 
 static UrsatzGuiMaterialResult load_item_locked(const char *id, cJSON **out) {
@@ -812,7 +1040,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = check_body(type, body);
+        result = ursatz_gui_material_body_validate(type, body, NULL, 0);
     }
 
     char *id = NULL;
@@ -1088,7 +1316,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
         }
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = check_body(string_member(item, "type"), body);
+        result = ursatz_gui_material_body_validate(string_member(item, "type"), body, NULL, 0);
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
         int number = current_version_of(item) + 1;
