@@ -6,7 +6,10 @@
 #include <string.h>
 
 #include "export/musicxml_export.h"
+#include "identity/entity_id.h"
 #include "io/midi_renderer.h"
+#include "time/musical_time.h"
+#include "time/tempo_map.h"
 
 #define PREFERRED_DIVISION 480u
 #define MIDI_NAME_TEXT_MAX 48
@@ -23,12 +26,50 @@ static void set_message(PlanExportError *error, const char *format, ...) {
 
 PlanExportOptions plan_export_options_default(void) {
     PlanExportOptions options;
+    memset(&options, 0, sizeof(options));
     options.track_names = true;
+    options.section_markers = true;
     return options;
 }
 
 static PlanExportOptions resolve_options(const PlanExportOptions *options) {
     return options ? *options : plan_export_options_default();
+}
+
+/* The options' tempo as a one-region TempoMap, NULL for none. */
+static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoMap **out, PlanExportError *error) {
+    *out = NULL;
+    if (options->tempo_numerator == 0 && options->tempo_denominator == 0) {
+        return PLAN_EXPORT_OK;
+    }
+    if (options->tempo_numerator == 0 || options->tempo_denominator == 0) {
+        set_message(error, "the tempo must be a ratio of two numbers of 1 or more");
+        return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
+    unsigned long long numerator = options->tempo_numerator;
+    unsigned long long micros = (60000000ULL * options->tempo_denominator + numerator / 2) / numerator;
+    if (micros < 1 || micros > 0xFFFFFFULL) {
+        set_message(error, "a tempo of %lu/%lu quarter notes per minute cannot be written", options->tempo_numerator,
+                    options->tempo_denominator);
+        return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
+    EntityID *id = NULL;
+    MusicalTime *start = NULL;
+    TempoMapChangePoint point;
+    TempoMapResult made = TEMPO_MAP_ERR_ALLOC;
+    if (entity_id_create("composer-tempo-map", &id) == ENTITY_ID_OK &&
+        musical_time_create(0, 1, &start) == MUSICAL_TIME_OK) {
+        point.start = start;
+        point.microseconds_per_quarter = (unsigned long)micros;
+        made = tempo_map_create(id, &point, 1, out);
+    }
+    musical_time_destroy(start);
+    if (made != TEMPO_MAP_OK) {
+        entity_id_destroy(id);
+        set_message(error, "out of memory");
+        return PLAN_EXPORT_ERR_ALLOC;
+    }
+    return PLAN_EXPORT_OK;
 }
 
 static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
@@ -55,7 +96,7 @@ static bool need_division_for(unsigned long denominator, unsigned long long *lcm
 }
 
 /* 480 when every time is a whole number of ticks at 480, else the smallest division that works; 0 if none fits. */
-static unsigned choose_division(const RenderedPlan *rendered) {
+static unsigned choose_division(const RenderedPlan *rendered, bool with_markers) {
     unsigned long long needed = 1;
     for (size_t i = 0; i < rendered->count; i++) {
         const NoteEvent *event = rendered->events[i];
@@ -67,6 +108,11 @@ static unsigned choose_division(const RenderedPlan *rendered) {
     }
     for (size_t i = 0; i < rendered->key_count; i++) {
         if (!need_division_for(musical_time_denominator(rendered->keys[i].position), &needed)) {
+            return 0;
+        }
+    }
+    for (size_t i = 0; with_markers && i < rendered->section_count; i++) {
+        if (!need_division_for(musical_time_denominator(rendered->sections[i].position), &needed)) {
             return 0;
         }
     }
@@ -92,7 +138,7 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
         set_message(error, "the plan has no Given or Realized notes to write");
         return PLAN_EXPORT_ERR_NO_CONTENT;
     }
-    unsigned division = choose_division(rendered);
+    unsigned division = choose_division(rendered, options.section_markers);
     if (division == 0) {
         set_message(error, "the note times need more than %d ticks per quarter", MIDI_RENDER_MAX_DIVISION);
         return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
@@ -128,8 +174,33 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
         names[i].voice_id = voice_ids[i];
         names[i].name = part_names[i];
     }
+    MidiMarker *markers = options.section_markers && rendered->section_count
+                              ? calloc(rendered->section_count, sizeof(*markers))
+                              : NULL;
+    TempoMap *tempo_map = NULL;
+    PlanExportResult tempo_result = build_tempo_map(&options, &tempo_map, error);
+    if ((options.section_markers && rendered->section_count && !markers) || tempo_result != PLAN_EXPORT_OK) {
+        free(markers);
+        free(voice_ids);
+        free(part_names);
+        free(names);
+        free(keys);
+        if (tempo_result == PLAN_EXPORT_OK) {
+            set_message(error, "out of memory");
+            return PLAN_EXPORT_ERR_ALLOC;
+        }
+        return tempo_result;
+    }
     MidiRenderOptions midi_options;
     memset(&midi_options, 0, sizeof(midi_options));
+    if (markers) {
+        for (size_t i = 0; i < rendered->section_count; i++) {
+            markers[i].position = rendered->sections[i].position;
+            markers[i].text = rendered->sections[i].label;
+        }
+        midi_options.markers = markers;
+        midi_options.marker_count = rendered->section_count;
+    }
     if (options.track_names) {
         midi_options.conductor_name = rendered->form_name ? rendered->form_name : "piece";
         midi_options.track_names = names;
@@ -137,12 +208,14 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     }
 
     MidiRenderResult result = midi_renderer_render_with_options(
-        rendered->events, rendered->pitch_values, rendered->count, rendered->meter_map, NULL, keys,
+        rendered->events, rendered->pitch_values, rendered->count, rendered->meter_map, tempo_map, keys,
         rendered->key_count, &midi_options, division, out_data, out_size);
     free(keys);
     free(voice_ids);
     free(part_names);
     free(names);
+    free(markers);
+    tempo_map_destroy(tempo_map);
     switch (result) {
     case MIDI_RENDER_OK:
         return PLAN_EXPORT_OK;
@@ -164,9 +237,9 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
 
 #define PART_TEXT_MAX 32
 
-PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const PlanExportOptions *options,
+PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const PlanExportOptions *options_in,
                                              char **out_xml, PlanExportError *error) {
-    (void)options;
+    PlanExportOptions options = resolve_options(options_in);
     if (!rendered || !out_xml) {
         set_message(error, "rendered plan or output is NULL");
         return PLAN_EXPORT_ERR_NULL;
@@ -213,7 +286,18 @@ PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const
     score.key_signatures = keys;
     score.key_signature_count = rendered->key_count;
 
+    TempoMap *tempo_map = NULL;
+    PlanExportResult tempo_result = build_tempo_map(&options, &tempo_map, error);
+    if (tempo_result != PLAN_EXPORT_OK) {
+        free(names);
+        free(parts);
+        free(keys);
+        return tempo_result;
+    }
+    score.tempo_map = tempo_map;
+
     MusicXmlExportResult result = musicxml_export_write_score(&score, out_xml);
+    tempo_map_destroy(tempo_map);
     free(names);
     free(parts);
     free(keys);

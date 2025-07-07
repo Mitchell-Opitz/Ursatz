@@ -23,6 +23,9 @@ typedef struct {
     const char *format_text;
     bool midi;
     bool musicxml;
+    const char *tempo_text;
+    bool plain_midi;
+    PlanExportOptions export_options;
     bool json;
     unsigned long count;
     unsigned long seed;
@@ -42,6 +45,9 @@ static void print_harmonize_help(FILE *out) {
     fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
     fprintf(out, "  --midi               also write variation-<i>.mid\n");
     fprintf(out, "  --musicxml           also write variation-<i>.musicxml\n");
+    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
+    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
+    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
     fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 at least one version was kept; 1 usage or an invalid argument; 2 none was kept, the plan\n");
@@ -67,6 +73,9 @@ static void print_help(FILE *out) {
     fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
     fprintf(out, "  --midi               also write variation-<i>.mid\n");
     fprintf(out, "  --musicxml           also write variation-<i>.musicxml\n");
+    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
+    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
+    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
     fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 at least one version was kept; 1 usage or an invalid argument; 2 none was kept, the plan\n");
@@ -88,6 +97,10 @@ static int read_options(int argc, char **argv, Options *options, bool harmonize)
             options->midi = true;
         } else if (strcmp(arg, "--musicxml") == 0) {
             options->musicxml = true;
+        } else if (strcmp(arg, "--plain-midi") == 0) {
+            options->plain_midi = true;
+        } else if (strcmp(arg, "--tempo") == 0) {
+            target = &options->tempo_text;
         } else if (!harmonize && strcmp(arg, "--node") == 0) {
             target = &options->target.node_text;
         } else if (strcmp(arg, "--section") == 0) {
@@ -155,6 +168,12 @@ static int check_options(Options *options, bool harmonize) {
     } else {
         options->seed = cli_default_seed();
     }
+    {
+        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
+        if (export_status != 0) {
+            return export_status;
+        }
+    }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
@@ -199,7 +218,7 @@ static int write_variations(const Options *options, const PlanVariations *variat
             snprintf(entry->musicxml, PATH_SIZE, "%s/variation-%zu.musicxml", options->out_dir, i + 1);
         }
         CliOutputPaths outputs = {entry->plan, options->midi ? entry->midi : NULL, options->musicxml ? entry->musicxml : NULL,
-                                  NULL, NULL};
+                                  NULL, NULL, &options->export_options};
         const char *files[CLI_MAX_OUTPUTS];
         size_t file_count = 0;
         status = cli_write_outputs(&outputs, variation->plan, &variation->outcome, files, &file_count);

@@ -55,6 +55,9 @@ typedef struct {
     const char *out_path;
     const char *midi_path;
     const char *musicxml_path;
+    const char *tempo_text;
+    bool plain_midi;
+    PlanExportOptions export_options;
     const char *explain_path;
     const char *format_text;
     /* Read from the text above. */
@@ -128,6 +131,9 @@ static void print_help(FILE *out) {
     fprintf(out, "  --out <file.json>    write the plan as JSON\n");
     fprintf(out, "  --midi <file>        write the melody, the bass and the accompaniment as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the melody, the bass and the accompaniment as MusicXML\n");
+    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
+    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
+    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
     fprintf(out, "  --explain <file>     write why each candidate was chosen or rejected: per target the chosen candidate, its\n");
     fprintf(out, "                       runners-up and the rejected ones with their reasons, the form heard and the analyzer check\n");
     fprintf(out, "                       (with --check), and the seeds passed over. JSON when the file ends in .json, else text\n");
@@ -223,6 +229,10 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->midi_path;
         } else if (strcmp(arg, "--musicxml") == 0) {
             target = &options->musicxml_path;
+        } else if (strcmp(arg, "--tempo") == 0) {
+            target = &options->tempo_text;
+        } else if (strcmp(arg, "--plain-midi") == 0) {
+            options->plain_midi = true;
         } else if (strcmp(arg, "--explain") == 0) {
             target = &options->explain_path;
         } else if (strcmp(arg, "--format") == 0) {
@@ -378,6 +388,12 @@ static int check_options(Options *options) {
         }
     } else {
         options->seed = cli_default_seed();
+    }
+    {
+        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
+        if (export_status != 0) {
+            return export_status;
+        }
     }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
@@ -1032,8 +1048,8 @@ static int write_files(const Options *options, const Theme *themes, size_t count
                 }
                 have_rendering = true;
             }
-            PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, NULL, entry->temporary, &error)
-                                                : rendered_plan_export_musicxml(&rendered, NULL, entry->temporary, &error);
+            PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, &options->export_options, entry->temporary, &error)
+                                                : rendered_plan_export_musicxml(&rendered, &options->export_options, entry->temporary, &error);
             if (result != PLAN_EXPORT_OK) {
                 status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
             }

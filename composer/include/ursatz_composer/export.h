@@ -18,7 +18,14 @@
  * with no tempo carries none (the file default, 120, applies). With
  * PlanExportOptions.track_names (the default) the conductor track is named for
  * the form ("piece" when the form has no name) and each part's track for its
- * lane, as the MusicXML parts are ("melody", "bass", "inner_voice_2").
+ * lane, as the MusicXML parts are ("melody", "bass", "inner_voice_2"). With
+ * section_markers (the default) each section that is not material gets a
+ * marker in the conductor track at its start, its SECTION_LETTER ("A", "B",
+ * "A'") or else its node name. With a tempo the file carries one tempo region
+ * from 0 (a plan stores none; the tempo is an export option only).
+ *
+ * MusicXML: the tempo is written as <sound tempo> in part 0. Names and markers
+ * are MIDI only (Ursatz's MusicXML export writes no rehearsal marks).
  *
  * MusicXML: one part per lane voice, named for its lane ("melody", "bass",
  * "inner_voice_2"). With no meter span the document is flagged
@@ -48,10 +55,14 @@ typedef struct {
 
 /* What an export adds to the notes. Every export function takes const PlanExportOptions *; NULL means the default. */
 typedef struct {
-    bool track_names; /* MIDI: name the conductor track and each part's track */
+    unsigned long tempo_numerator;   /* quarter notes per minute as a ratio; 0 and 0 is no tempo */
+    unsigned long tempo_denominator;
+    bool track_names;                /* MIDI: name the conductor track and each part's track */
+    bool section_markers;            /* MIDI: a marker at the start of each section that is not material */
 } PlanExportOptions;
 
-/* Track names on. */
+/* No tempo, track names and section markers on. A tempo that is not 0/0 needs both parts at least 1 and rounds to
+   a whole number of microseconds per quarter note, at most 0xFFFFFF. */
 PlanExportOptions plan_export_options_default(void);
 
 /* From an already rendered plan, to a buffer the caller frees with free(). */

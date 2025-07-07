@@ -55,6 +55,11 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
     }
     free(rendered->keys);
     free(rendered->skipped);
+    for (size_t i = 0; i < rendered->section_count; i++) {
+        free(rendered->sections[i].label);
+        musical_time_destroy(rendered->sections[i].position);
+    }
+    free(rendered->sections);
     free(rendered->form_name);
     memset(rendered, 0, sizeof(*rendered));
 }
@@ -582,6 +587,79 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
     return result;
 }
 
+/* ----------------------------------------------------------------- sections */
+
+static const char *section_label(const PiecePlan *plan, NodeId id) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
+        if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER && constraint->params.letter[0]) {
+            return constraint->params.letter;
+        }
+    }
+    return plan_node_name(plan, id);
+}
+
+/* The sections that are not material and start inside the range (all of them without one), earliest first. */
+static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
+    NodeId root = plan_root(plan);
+    size_t child_count = root == PLAN_NODE_NONE ? 0 : plan_node_child_count(plan, root);
+    if (child_count == 0) {
+        return PLAN_RENDER_OK;
+    }
+    out->sections = calloc(child_count, sizeof(RenderedSection));
+    if (!out->sections) {
+        return PLAN_RENDER_ERR_ALLOC;
+    }
+    PlanTime *starts = calloc(child_count, sizeof(PlanTime));
+    if (!starts) {
+        return PLAN_RENDER_ERR_ALLOC;
+    }
+    PlanRenderResult result = PLAN_RENDER_OK;
+    for (size_t i = 0; result == PLAN_RENDER_OK && i < child_count; i++) {
+        NodeId section = plan_node_child_at(plan, root, i);
+        if (plan_node_kind(plan, section) != PLAN_NODE_SECTION || section_is_material(plan, section)) {
+            continue;
+        }
+        PlanTime start = plan_node_span(plan, section).start;
+        if (range && (plan_time_compare(start, range->start) < 0 || plan_time_compare(start, range_end(range)) >= 0)) {
+            continue;
+        }
+        const char *label = section_label(plan, section);
+        size_t length = label ? strlen(label) : 0;
+        if (length == 0) {
+            continue;
+        }
+        PlanTime shifted = from_range_start(start, range);
+        RenderedSection *entry = &out->sections[out->section_count];
+        entry->label = malloc(length + 1);
+        if (!entry->label) {
+            result = PLAN_RENDER_ERR_ALLOC;
+            break;
+        }
+        memcpy(entry->label, label, length + 1);
+        if (musical_time_create(shifted.num, shifted.den, &entry->position) != MUSICAL_TIME_OK) {
+            free(entry->label);
+            entry->label = NULL;
+            result = PLAN_RENDER_ERR_ALLOC;
+            break;
+        }
+        starts[out->section_count++] = shifted;
+    }
+    /* Insertion sort by start; the children are normally in order already. */
+    for (size_t i = 1; result == PLAN_RENDER_OK && i < out->section_count; i++) {
+        for (size_t j = i; j > 0 && plan_time_compare(starts[j - 1], starts[j]) > 0; j--) {
+            PlanTime time = starts[j];
+            starts[j] = starts[j - 1];
+            starts[j - 1] = time;
+            RenderedSection section = out->sections[j];
+            out->sections[j] = out->sections[j - 1];
+            out->sections[j - 1] = section;
+        }
+    }
+    free(starts);
+    return result;
+}
+
 static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
     if (!out) {
         return PLAN_RENDER_ERR_NULL;
@@ -600,6 +678,9 @@ static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *ra
         memcpy(out->form_name, form_name, strlen(form_name) + 1);
     }
     PlanRenderResult result = render_into(plan, range, out);
+    if (result == PLAN_RENDER_OK) {
+        result = render_sections(plan, range, out);
+    }
     if (result != PLAN_RENDER_OK) {
         rendered_plan_destroy(out);
     }

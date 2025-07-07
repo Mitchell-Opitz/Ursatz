@@ -37,6 +37,9 @@
  * a flat key, sharps otherwise (and when no key applies). MIDI 60 is C4. A key
  * signature is the one with the fewest accidentals, sharps on a tie.
  *
+ * Sections: every section of the form that is not material, at its start, labelled with its SECTION_LETTER constraint
+ * or else its node name (a range render has those that start inside the range).
+ *
  * The same plan always gives the same events, in the same order: by time, then
  * part, then lane span, then position in the span.
  */
@@ -60,6 +63,12 @@ typedef struct {
     PlanKeyMode mode;
     MusicalTime *position; /* owned */
 } RenderedKey;
+
+/* A section's start: where an export puts a marker. label is the form letter ("A", "B", "A'") or the node name. */
+typedef struct {
+    char *label;           /* owned */
+    MusicalTime *position; /* owned; from the start of the render */
+} RenderedSection;
 
 typedef enum {
     RENDER_SKIP_NOT_REALIZED,   /* the span is Constrained */
@@ -88,6 +97,8 @@ typedef struct {
     RenderSkip *skipped;              /* owned; in lane span id order */
     size_t skipped_count;
     PlanTime piece_end;               /* the end of the last section that is not material; 0 when the plan has none */
+    RenderedSection *sections;        /* owned; the sections that are not material, in time order */
+    size_t section_count;
     char *form_name;                  /* owned; the form node's name, NULL when the plan has no form or it has no name */
 } RenderedPlan;
 
