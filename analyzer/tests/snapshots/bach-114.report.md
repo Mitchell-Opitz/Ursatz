@@ -677,6 +677,45 @@ The library's standard-form analysis found 2 themes from the phrases, their idea
 | 1 | hybrid | slightly-less-common | mm. 1 to 15 | 15 | compound-basic-idea (mm. 1 to 4), continuation (mm. 5 to 15, perfect-authentic (m. 15, beat 3.5)) | - |
 | 2 | hybrid | slightly-less-common | mm. 16 to 21 | 6 | compound-basic-idea (mm. 16 to 19), continuation (mm. 20 to 21, perfect-authentic (m. 21, beat 3.5)) | - |
 
+## Form plan
+
+The kernel's form structure detection grouped the phrases into 2 sections, closing a section at each phrase that ends on a perfect or imperfect authentic cadence; the phrases after the last such cadence form the last section. Sections are lettered by first appearance, and a section whose opening theme returns an earlier section's material takes that letter with a prime. Key is the key the section opens in.
+
+| Section | Measures | Key | Phrases | Closing cadence | Returns |
+| --- | --- | --- | --- | --- | --- |
+| A | mm. 1 to 15 | G major | 1 | perfect-authentic (m. 15, beat 3.5) | - |
+| A' | mm. 16 to 24 | G major | 2 | perfect-authentic (m. 21, beat 3.5) | returns A (similarity 1.00) |
+
+### Thematic returns
+
+A later theme recalls an earlier one when the kernel's thematic return detection finds the same contour and rhythm in a stretch of both. Similarity is the lower of the two scores. Themes that share a phrase are not compared.
+
+| Later theme | Measures | Section | Earlier theme | Measures | Section | Similarity |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 | mm. 16 to 21 | A' | 1 | mm. 1 to 15 | A | 1.00 |
+
+### Outline
+
+- form (mm. 1 to 24)
+  - section A (mm. 1 to 15, G major)
+    - phrase 1 (mm. 1 to 15)
+      - subphrase 1 (mm. 1 to 4)
+        - idea basic-idea (mm. 1 to 2)
+        - idea contrasting-idea (mm. 3 to 4)
+      - subphrase 2 (mm. 5 to 15)
+        - idea contrasting-idea (mm. 5 to 6)
+        - idea contrasting-idea (mm. 7 to 8)
+        - idea contrasting-idea (mm. 9 to 10)
+        - idea contrasting-idea (mm. 11 to 12)
+        - idea contrasting-idea (mm. 13 to 15)
+  - section A' (mm. 16 to 24, G major)
+    - phrase 2 (mm. 16 to 21)
+      - subphrase 1 (mm. 16 to 19)
+        - idea basic-idea (mm. 16 to 17)
+        - idea contrasting-idea (mm. 18 to 19)
+      - subphrase 2 (mm. 20 to 21)
+        - idea contrasting-idea (mm. 20 to 21)
+
 ## Progression patterns
 
 38 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
