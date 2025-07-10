@@ -8,6 +8,7 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
@@ -43,6 +44,7 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
@@ -88,6 +90,7 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
@@ -149,6 +152,7 @@ add_executable(test_composer_route test_composer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
@@ -190,6 +194,7 @@ add_executable(test_styles_route test_styles_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
@@ -222,3 +227,19 @@ target_compile_definitions(test_styles_route PRIVATE
 
 add_test(NAME styles_route COMMAND test_styles_route
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
+
+add_executable(test_material_service test_material_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+)
+
+target_include_directories(test_material_service PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_material_service PRIVATE cjson)
+
+# The test creates its own materials_<pid>/ store in its working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)
+add_test(NAME material_service COMMAND test_material_service
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)

@@ -9,6 +9,7 @@ add_executable(ursatz-gui-backend
   src/service/style_service.c
   src/service/composer_service.c
   src/service/composition_service.c
+  src/service/material_service.c
   src/routes/health.c
   src/routes/analyzer.c
   src/routes/corpus.c
