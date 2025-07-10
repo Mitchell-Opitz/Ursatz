@@ -465,6 +465,39 @@ the two version fields of `meta.json`; the filename and `uploaded_at` stay.
 Pieces saved by earlier versions (`pieces/<id>.db`) are ignored: they are
 not listed and cannot be opened, so upload those files again.
 
+### Material store
+
+Motifs, themes and pieces live in `materials/` beside `pieces/`, `collections/`
+and `compositions/`. `service/material_service.c` is the only code that touches
+it; every operation runs under one mutex, and every file is written to
+`<name>.tmp` and renamed.
+
+```
+materials/
+  projects/<prj-id>.json   {id, name, description, created_at, updated_at}
+  items/<id>/item.json     {id, type, name, project_id, current_version,
+                            versions: [{number, created_at, note}],
+                            created_at, updated_at}
+  items/<id>/v<n>.json     the version body
+```
+
+- Ids are `<prefix>-<16 lowercase hex>` from `ursatz_gui_new_id`: `prj` for
+  projects, `mot`, `thm` and `pce` for motif, theme and piece items.
+- On first start a project named `General` is created. A project name is 1 to
+  200 characters after trimming, a description at most 2000; a project that
+  holds items cannot be deleted.
+- Versions are numbered from 1 and never deleted or rewritten. Saving a new
+  body writes `v<n+1>.json` and then `item.json`, which advances
+  `current_version`; rename and move change `item.json` only. Deleting an item
+  removes its whole directory.
+- A version body is validated by `ursatz_gui_material_body_validate` before it
+  is written: an object with a `uses` array, and the member of its own type
+  (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
+  `notes`, `meter`, `key`, `pickup`, `features`, `analysis` and `derived`; the
+  rules are listed in `service/material_service.h`.
+- Projects and items are passed as cJSON objects; the caller frees what it
+  receives.
+
 ### Analyzer routes
 
 - `POST /api/analyzer/pieces`: the file as the raw request body, its name
@@ -899,7 +932,7 @@ it.
 
 ## Tests
 
-`ctest` runs the backend tests (health, analyzer, corpus, styles, composer and id routes, and the piece metadata rules) and,
+`ctest` runs the backend tests (health, analyzer, corpus, styles, composer and id routes, the piece metadata rules and the material store) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be
@@ -917,7 +950,8 @@ re-run and delete. `test_styles_route` uploads Clementi 36 and Mozart 545,
 tags them and builds styles from a tag, a collection and ids, then reads the
 model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
 `test_piece_metadata` covers the normalizing, grouping and
-filter rules without a server. `style-view.test.js` covers the style detail
+filter rules without a server. `test_material_service` covers the projects,
+items, versions and version body rules without a server. `style-view.test.js` covers the style detail
 rows (order, fractions, "and n more") and `piece-metadata.test.js` the style
 names and request bodies. `test_composer_route` runs
 the real Composer: grow, regenerate, lock, variations, choose and plan make
