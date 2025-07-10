@@ -319,6 +319,202 @@ static void test_items_and_versions(void) {
     free(piece);
 }
 
+#define INVALID URSATZ_GUI_MATERIAL_ERR_INVALID_BODY
+
+static UrsatzGuiMaterialResult validate(const char *type, const cJSON *body) {
+    return ursatz_gui_material_body_validate(type, body, NULL, 0);
+}
+
+/* A valid motif body with one member of its motif object replaced by the JSON text. */
+static cJSON *motif_with(const char *member, const char *json) {
+    cJSON *body = cJSON_Parse(kMotifBody);
+    cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
+    cJSON *value = cJSON_Parse(json);
+    if (cJSON_GetObjectItemCaseSensitive(motif, member)) {
+        cJSON_ReplaceItemInObjectCaseSensitive(motif, member, value);
+    } else {
+        cJSON_AddItemToObject(motif, member, value);
+    }
+    return body;
+}
+
+/* Expects the motif body with this member replaced to give result. */
+static void expect_motif(const char *member, const char *json, UrsatzGuiMaterialResult result) {
+    cJSON *body = motif_with(member, json);
+    char label[160];
+    snprintf(label, sizeof(label), "motif %s = %s", member, json);
+    CHECK(validate("motif", body) == result, label);
+    cJSON_Delete(body);
+}
+
+static const char *kDerived =
+    "{\"source_item\":\"mot-0123456789abcdef\",\"source_version\":1,\"operations\":[],\"seed\":42,"
+    "\"kind\":\"variant\",\"kept\":[\"rhythm\"],\"changed\":[\"intervals\",\"contour\"],\"harmony\":null,"
+    "\"functions\":[\"continuation\"],\"flag\":\"unflagged\"}";
+
+static void test_body_validation(void) {
+    cJSON *body = cJSON_Parse(kMotifBody);
+    char error[200];
+    CHECK(ursatz_gui_material_body_validate("motif", body, error, sizeof(error)) == OK && error[0] == '\0',
+          "a valid motif body");
+    cJSON_Delete(body);
+    body = cJSON_Parse(kThemeBody);
+    CHECK(validate("theme", body) == OK, "a valid theme body");
+    cJSON_Delete(body);
+    body = cJSON_Parse(kPieceBody);
+    CHECK(validate("piece", body) == OK, "a valid piece body");
+    cJSON_Delete(body);
+
+    body = cJSON_Parse("[]");
+    CHECK(validate("motif", body) == INVALID, "a body must be an object");
+    cJSON_Delete(body);
+    body = cJSON_Parse(kMotifBody);
+    CHECK(validate("chord", body) == URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE, "an unknown type");
+    CHECK(validate(NULL, body) == URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE, "no type");
+    CHECK(validate("motif", NULL) == INVALID, "no body");
+    cJSON_Delete(body);
+
+    /* uses */
+    body = cJSON_Parse("{\"motif\":{}}");
+    CHECK(validate("motif", body) == INVALID, "uses is required");
+    cJSON_Delete(body);
+    body = cJSON_Parse("{\"uses\":{},\"theme\":{\"form\":null,\"slots\":[]}}");
+    CHECK(validate("theme", body) == INVALID, "uses must be an array");
+    cJSON_Delete(body);
+    body = cJSON_Parse("{\"uses\":[{\"item_id\":\"mot-0123456789abcdef\",\"version\":1,\"copy\":{}}],"
+                       "\"theme\":{\"form\":null,\"slots\":[]}}");
+    CHECK(validate("theme", body) == OK, "a use with a copy");
+    cJSON_Delete(body);
+    body = cJSON_Parse("{\"uses\":[{\"item_id\":\"mot-0123456789abcdef\",\"version\":0}],"
+                       "\"theme\":{\"form\":null,\"slots\":[]}}");
+    CHECK(validate("theme", body) == INVALID, "a use needs a version of 1 or more");
+    cJSON_Delete(body);
+    body = cJSON_Parse("{\"uses\":[{\"item_id\":\"../x\",\"version\":1}],\"theme\":{\"form\":null,\"slots\":[]}}");
+    CHECK(validate("theme", body) == INVALID, "a use needs a valid item id");
+    cJSON_Delete(body);
+
+    /* one type's member in another type's body */
+    body = cJSON_Parse("{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]},\"piece\":{\"structure\":null}}");
+    CHECK(validate("theme", body) == INVALID, "a theme body must not carry a piece member");
+    cJSON_Delete(body);
+    body = cJSON_Parse("{\"uses\":[],\"motif\":{},\"piece\":{\"structure\":null}}");
+    CHECK(validate("piece", body) == INVALID, "a piece body must not carry a motif member");
+    cJSON_Delete(body);
+    body = cJSON_Parse(kThemeBody);
+    CHECK(validate("motif", body) == INVALID, "a motif body needs a motif member");
+    CHECK(validate("piece", body) == INVALID, "a piece body needs a piece member");
+    cJSON_Delete(body);
+    body = cJSON_Parse("{\"uses\":[],\"theme\":{\"form\":null}}");
+    CHECK(validate("theme", body) == INVALID, "a theme needs slots");
+    cJSON_Delete(body);
+
+    /* motif members */
+    expect_motif("role", "\"accompaniment\"", OK);
+    expect_motif("role", "\"bass\"", INVALID);
+    expect_motif("role", "null", INVALID);
+    expect_motif("form", "\"rhythm\"", OK);
+    expect_motif("form", "\"contour\"", OK);
+    expect_motif("form", "\"partial\"", INVALID);
+    expect_motif("notes", "\"\"", INVALID);
+    expect_motif("notes", "5", INVALID);
+
+    char *long_notes = calloc(1, 4010);
+    memset(long_notes, 'x', 4001);
+    long_notes[0] = '"';
+    long_notes[4000] = '"';
+    long_notes[4001] = '\0';
+    expect_motif("notes", long_notes, OK); /* 3999 characters between the quotes */
+    memset(long_notes, 'x', 4003);
+    long_notes[0] = '"';
+    long_notes[4002] = '"';
+    long_notes[4003] = '\0';
+    expect_motif("notes", long_notes, INVALID); /* 4001 characters */
+    free(long_notes);
+
+    expect_motif("meter", "\"6/8\"", OK);
+    expect_motif("meter", "\"12/8\"", OK);
+    expect_motif("meter", "\"4\"", INVALID);
+    expect_motif("meter", "\"4/0\"", INVALID);
+    expect_motif("meter", "\"100/4\"", INVALID);
+    expect_motif("meter", "\"a/b\"", INVALID);
+    expect_motif("meter", "44", INVALID);
+    expect_motif("key", "null", OK);
+    expect_motif("key", "\"A major\"", OK);
+    expect_motif("key", "7", INVALID);
+    expect_motif("pickup", "\"1/2\"", OK);
+    expect_motif("pickup", "\"3\"", OK);
+    expect_motif("pickup", "\"-1\"", INVALID);
+    expect_motif("pickup", "\"1/0\"", INVALID);
+    expect_motif("pickup", "\"0.5\"", INVALID);
+    expect_motif("pickup", "0", INVALID);
+    expect_motif("features", "[]", OK);
+    expect_motif("features", "{}", INVALID);
+    expect_motif("features", "[{\"label\":\"abcdefgh\",\"first\":1,\"last\":1}]", OK);
+    expect_motif("features", "[{\"label\":\"abcdefghi\",\"first\":1,\"last\":1}]", INVALID);
+    expect_motif("features", "[{\"label\":\"\",\"first\":0,\"last\":1}]", INVALID);
+    expect_motif("features", "[{\"label\":\"a\",\"first\":-1,\"last\":1}]", INVALID);
+    expect_motif("features", "[{\"label\":\"a\",\"first\":3,\"last\":2}]", INVALID);
+    expect_motif("features", "[{\"label\":\"a\",\"first\":0.5,\"last\":2}]", INVALID);
+    expect_motif("features", "[{\"label\":\"a\",\"first\":0}]", INVALID);
+    expect_motif("analysis", "{\"degrees\":[]}", OK);
+    expect_motif("analysis", "[]", INVALID);
+
+    /* derived */
+    expect_motif("derived", kDerived, OK);
+    expect_motif("derived", "[]", INVALID);
+    const char *edits[][2] = {
+        {"\"kind\":\"variant\"", "\"kind\":\"copy\""},
+        {"\"flag\":\"unflagged\"", "\"flag\":\"maybe\""},
+        {"\"kept\":[\"rhythm\"]", "\"kept\":[\"tempo\"]"},
+        {"\"changed\":[\"intervals\",\"contour\"]", "\"changed\":\"intervals\""},
+        {"\"functions\":[\"continuation\"]", "\"functions\":[\"ending\"]"},
+        {"\"source_version\":1", "\"source_version\":0"},
+        {"\"source_item\":\"mot-0123456789abcdef\"", "\"source_item\":\"a b\""},
+        {"\"operations\":[]", "\"operations\":null"},
+        {"\"seed\":42", "\"seed\":\"x\""},
+    };
+    for (size_t i = 0; i < sizeof(edits) / sizeof(edits[0]); i++) {
+        char *text = strdup(kDerived);
+        char *at = strstr(text, edits[i][0]);
+        CHECK(at != NULL, "derived edit applies");
+        char *edited = calloc(1, strlen(text) + strlen(edits[i][1]) + 1);
+        if (at) {
+            memcpy(edited, text, (size_t)(at - text));
+            strcat(edited, edits[i][1]);
+            strcat(edited, at + strlen(edits[i][0]));
+            expect_motif("derived", edited, INVALID);
+        }
+        free(edited);
+        free(text);
+    }
+
+    /* A malformed body is refused on create and add_version, and writes nothing. */
+    char *home = new_project("Validation home");
+    cJSON *bad = motif_with("role", "\"bass\"");
+    cJSON *item = NULL;
+    CHECK(ursatz_gui_material_item_create("motif", "Bad", home, bad, &item) == INVALID && item == NULL,
+          "create refuses a bad body");
+    cJSON *list = NULL;
+    CHECK(ursatz_gui_material_item_list(home, NULL, &list) == OK && cJSON_GetArraySize(list) == 0, "no item written");
+    cJSON_Delete(list);
+    char *motif = new_item("motif", "Good", home, kMotifBody);
+    CHECK(motif != NULL, "create a good motif");
+    CHECK(ursatz_gui_material_item_add_version(motif, bad, NULL, &item) == INVALID && item == NULL,
+          "add_version refuses a bad body");
+    CHECK(ursatz_gui_material_item_get(motif, &item, NULL) == OK && num(item, "current_version") == 1,
+          "no version written");
+    cJSON_Delete(item);
+    cJSON *theme = cJSON_Parse(kThemeBody);
+    CHECK(ursatz_gui_material_item_add_version(motif, theme, NULL, NULL) == INVALID,
+          "add_version refuses another type's body");
+    cJSON_Delete(theme);
+    CHECK(ursatz_gui_material_item_delete(motif) == OK, "delete the motif");
+    CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the project");
+    cJSON_Delete(bad);
+    free(motif);
+    free(home);
+}
+
 /* Deletes every project, then the store's directories. */
 static void remove_store(void) {
     cJSON *projects = NULL;
@@ -345,6 +541,7 @@ int main(void) {
     test_general_project();
     test_project_crud();
     test_items_and_versions();
+    test_body_validation();
 
     remove_store();
     if (failures) {
