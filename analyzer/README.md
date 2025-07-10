@@ -39,6 +39,10 @@ Tests:
 - `test_themes`: a constructed sentence, period and compound period (`tests/musicxml`), field by field (form, part
   names, measures, cadences, halves), and on the five reference pieces the structure of the themes and expansions
   (order, parts inside the theme, cadences in their part, expansions inside their phrase).
+- `test_form_plan`: the form tree of the five reference pieces and the three constructed ones: every phrase in
+  exactly one section, the sections following each other and closed only by an authentic cadence, the tree's levels
+  named `form`, `section`, `phrase`, `subphrase` and `idea`, the letters following from the returns, and the
+  section and return counts and letters as the library gives them (see "Form plan").
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
@@ -139,8 +143,11 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
 8. `form_pipeline` (with `form_boundary`): builds Ursatz's standard-form input from the soprano, the segments, the
    meter and the cadences, and finds the phrases, ideas and subphrases; `harmony_pipeline` then labels the phrase
    model (see "Phrases").
+9. `form_plan_pipeline`: groups the phrases into sections with Ursatz's form structure detection, finds the
+   thematic returns between the themes, and letters the sections (see "Form plan"). The sections are reported only:
+   they do not feed back into the cadences or the key regions.
 
-Steps 2 to 8 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+Steps 2 to 9 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
 regions of the second pass, whose results are the report (R-039, R-043).
 
@@ -449,6 +456,42 @@ The constructed pieces give a sentence, a period and a compound period; the refe
 repeated phrase, and no sentence, period or compound period. Continuation traits are the claim's fragmentation only
 (Field 5 has one), and the cadential ending is never identified (see "Known limits").
 
+## Form plan
+
+Over the phrases and themes (`src/pipeline/form_plan_pipeline.c`, ported from Ursatz's
+`tests/integration/framework_v1_thematic_returns.c` as a rewrite with error returns), the analyzer gives the
+kernel's form structure detection one phrase occurrence per phrase with its cadence type, and reads back the sections:
+a section closes at each phrase that ends on a perfect or imperfect authentic cadence. The kernel leaves out the
+phrases after the last such cadence, so the analyzer takes them as a last section (`closed: false`) and the sections
+tile the phrases; a piece with no such cadence is one section. Thematic returns come from the kernel's thematic return
+detection (default config) over each theme's soprano notes: a later theme recalls an earlier one when a stretch of
+six notes of both has the same contour and rhythm to a similarity of at least 0.8. Themes that share a phrase (a
+compound period and its sentences) are not returns of one another. The sections are reported only (R-054): they do not
+feed back into the cadences, which use the key-return section starts.
+
+The letters are the analyzer's bookkeeping over the returns. Sections are lettered by first appearance. A section
+whose opening theme (a theme that starts at the section's first phrase) returns a theme of an earlier section takes
+that section's letter with a prime, one more prime for each section of that letter already (`M`, `M'`, `M''`);
+where several returns qualify, the most similar one decides, then the earliest section. The document's `form` is the
+tree (`form`, `section`, `phrase`, `subphrase`, `idea`) and the returns; the Markdown report has a `## Form plan`
+table, a `### Thematic returns` table and an indented `### Outline`.
+
+Measured on the reference pieces (MIDI; `test_form_plan` asserts these counts and letters, and the structure):
+
+| Piece | Sections | Letters | Returns |
+| --- | --- | --- | --- |
+| Bach 114 | 2 | A A' | 1 |
+| Clementi 36 | 5 | A B C D E | 3 |
+| Mozart 545 | 24 | A to L, M M' N O M'' P M''' Q to U | 77 |
+| Field 1 | 5 | A B C D E | 0 |
+| Field 5 | 4 | A B A' C | 4 |
+
+The constructed sentence is one section, the period two (the antecedent's imperfect authentic cadence closes the
+first), and the compound period two (A A'). The last section of every reference piece is open: the final phrase is
+never a section boundary in the kernel's rule. Mozart 545's 77 returns are almost all between hybrids and repeated
+phrases whose six-note stretches share a contour and rhythm (similarity 0.80 to 1.00), so they say that stock figures
+recur, not that a theme returns; only the opening themes decide the letters.
+
 ## Known limits
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
@@ -474,6 +517,10 @@ repeated phrase, and no sentence, period or compound period. Continuation traits
   found, and its claim gives no acceleration or sequence trait. A constructed period cannot end its antecedent on a
   half cadence: a V followed by I reads as an authentic cadence, so the constructed antecedent ends on an imperfect
   authentic one.
+- Form plan: the kernel's sections close only on perfect and imperfect authentic cadences, so a piece of half
+  cadences and deceptive endings is one section, and the final phrase never closes one. Returns compare six-note
+  stretches by contour and rhythm, so a figure that recurs inside a hybrid reads as a return (Mozart 545: 77). A
+  section's key is the key region its first chord lies in, not the key it ends in.
 - Pivot chords are read in the old key and its mode; a minor old key is read in its minor vocabulary.
 - Chord identification is Ursatz's weighted identification, read in each segment's key region and its
   mode: the diatonic triads and sevenths of a major key, or of natural, harmonic and melodic minor in a
