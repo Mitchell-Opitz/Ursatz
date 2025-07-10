@@ -313,6 +313,15 @@ add_test(NAME test_variations_cli
          COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
                  -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
 
+# The DAW-friendly export (docs/export.md): names, markers and tempo in the MIDI file, tempo in the MusicXML.
+add_executable(test_export_daw test_export_daw.c)
+target_link_libraries(test_export_daw PRIVATE ursatz_composer)
+target_compile_options(test_export_daw PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_export_daw COMMAND test_export_daw)
+add_test(NAME test_export_cli
+         COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_export.cmake)
+
 add_executable(test_analyzer_check test_analyzer_check.c)
 target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
 target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
