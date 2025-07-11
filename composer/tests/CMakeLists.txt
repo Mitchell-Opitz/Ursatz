@@ -400,6 +400,9 @@ target_compile_definitions(test_corpus_seed PRIVATE
     COMPOSER_SONATINAS_CORPUS="${SEED_CORPORA_DIR}/sonatinas-analyzed"
     COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed")
 add_dependencies(test_corpus_seed ursatz-composer seed_corpora)
+# Each mode runs in a directory of its own: the modes write files of the same names, and ctest -j runs them together.
 foreach(mode motive same plan progression no-match cli)
-    add_test(NAME test_corpus_seed_${mode} COMMAND test_corpus_seed ${mode})
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
+    add_test(NAME test_corpus_seed_${mode} COMMAND test_corpus_seed ${mode}
+             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
 endforeach()
