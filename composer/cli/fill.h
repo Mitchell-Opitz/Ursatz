@@ -5,10 +5,11 @@
 #include <stddef.h>
 
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/export.h>
 #include <ursatz_composer/piece_plan.h>
 
 #define FILL_USAGE_LINE                                                                                                \
-    "Usage: ursatz-composer fill <plan.json> [--seed N] [--check] [--candidates N] [--style <file>] [--style-weight N/D] [--blend <file>] [--blend-weight N/D | --blend-weights D=N/D,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] "       \
+    "Usage: ursatz-composer fill <plan.json> [--seed N] [--check] [--candidates N] [--style <file>] [--style-weight N/D] [--blend <file>] [--blend-weight N/D | --blend-weights D=N/D,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] "       \
     "[--record <file.json>] [--explain <file>] [--format text|json]"
 
 /* "ursatz-composer fill ..."; argv[1] is "fill". Returns the exit status. */
@@ -30,6 +31,7 @@ typedef struct {
     const char *musicxml;
     const char *record;
     const char *explain;
+    const PlanExportOptions *export_options; /* NULL for the default */
 } CliOutputPaths;
 
 #define CLI_MAX_OUTPUTS 5

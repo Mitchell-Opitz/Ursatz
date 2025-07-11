@@ -22,6 +22,9 @@ typedef struct {
     const char *out_path;
     const char *midi_path;
     const char *musicxml_path;
+    const char *tempo_text;
+    bool plain_midi;
+    PlanExportOptions export_options;
     const char *format_text;
     unsigned long seed;
     bool json;
@@ -62,6 +65,9 @@ static void print_regenerate_help(FILE *out) {
     fprintf(out, "  --out <plan.json>    where the plan is written\n");
     fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
+    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
+    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
+    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
     fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "What was reopened, the seed, the form and cadences heard in each section written again, and the returns are\n");
@@ -95,6 +101,10 @@ static int read_options(int argc, char **argv, Options *options, bool regenerate
             target = &options->midi_path;
         } else if (regenerate && strcmp(arg, "--musicxml") == 0) {
             target = &options->musicxml_path;
+        } else if (regenerate && strcmp(arg, "--tempo") == 0) {
+            target = &options->tempo_text;
+        } else if (regenerate && strcmp(arg, "--plain-midi") == 0) {
+            options->plain_midi = true;
         } else if (strcmp(arg, "--format") == 0) {
             target = &options->format_text;
         } else if (arg[0] == '-' && arg[1] != '\0') {
@@ -137,6 +147,12 @@ static int check_options(Options *options, bool regenerate) {
         }
     } else {
         options->seed = cli_default_seed();
+    }
+    {
+        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
+        if (export_status != 0) {
+            return export_status;
+        }
     }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
@@ -379,7 +395,8 @@ int run_regenerate(int argc, char **argv) {
         status = CLI_EXIT_UNSATISFIABLE;
     }
     if (status == 0) {
-        CliOutputPaths paths = {options.out_path, options.midi_path, options.musicxml_path, NULL};
+        CliOutputPaths paths = {options.out_path, options.midi_path, options.musicxml_path, NULL, NULL,
+                                &options.export_options};
         const char *files[CLI_MAX_OUTPUTS];
         size_t file_count = 0;
         status = cli_write_outputs(&paths, plan, &outcome, files, &file_count);

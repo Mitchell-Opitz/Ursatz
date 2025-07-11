@@ -1,7 +1,7 @@
 # fill command
 
 ```sh
-ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--record <file.json>] [--explain <file>] [--format text|json]
+ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--record <file.json>] [--explain <file>] [--format text|json]
 ```
 
 Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](piece.md)) over the plan, which
@@ -33,6 +33,8 @@ plan for the library to use.
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
 | `--out <plan.json>` | The realized plan as JSON. |
 | `--midi <file>`, `--musicxml <file>` | The piece, one part for each voice. The source material is not part of the piece, and a layered form sounds as its layers say. |
+| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
+| `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
 | `--record <file.json>` | The records of the stages as one JSON array. Each element is `{"stage": <name>, "record": <fill record>}`, the record being the `fill_record_to_json` document of that stage (the seed, the attempts, the candidates and why each was chosen or rejected). A stage that did not run has no element. |
 | `--explain <file>` | Why each candidate was chosen or rejected, put together from the records, the Analyzer check and the rejected runs: JSON when the file name ends in `.json`, else text. Works with or without `--check` and `--style`. See [explain.md](explain.md). |
 | `--format <text\|json>` | How the result is printed on stdout. Text by default. |

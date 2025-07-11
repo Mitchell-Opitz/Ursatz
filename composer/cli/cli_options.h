@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/export.h>
 #include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/fill_target.h>
@@ -50,6 +51,13 @@ const char *cli_accompaniment_name(PlanAccompanimentPattern pattern);
  */
 int cli_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text, const PlanMeter *meter,
                            PlanAccompaniment *out);
+
+/*
+ * The export options of --tempo (tempo_text, NULL when not given) and --plain-midi: the tempo is a whole number or a
+ * fraction like "195/2" of quarter notes per minute, from 20 to 400; --plain-midi turns the MIDI track names and
+ * section markers off. Returns 0, or the status of the usage error it printed.
+ */
+int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out);
 
 /* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
 bool cli_parse_ratio(const char *text, ComposerRatio *out);

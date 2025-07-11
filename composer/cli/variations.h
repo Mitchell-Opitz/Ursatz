@@ -3,11 +3,11 @@
 
 #define VARIATIONS_USAGE_LINE                                                                                          \
     "Usage: ursatz-composer variations <plan.json> (--node <id> | --section <letter>) [--lane "                        \
-    "harmony|bass|melody|inner] --count N [--seed N] --out-dir <dir> [--midi] [--musicxml] [--format text|json]"
+    "harmony|bass|melody|inner] --count N [--seed N] --out-dir <dir> [--midi] [--musicxml] [--tempo <bpm>] [--plain-midi] [--format text|json]"
 
 #define HARMONIZE_USAGE_LINE                                                                                           \
     "Usage: ursatz-composer harmonize <plan.json> --section <letter> --count N [--seed N] --out-dir <dir> [--midi] "   \
-    "[--musicxml] [--format text|json]"
+    "[--musicxml] [--tempo <bpm>] [--plain-midi] [--format text|json]"
 
 /* "ursatz-composer variations ..."; argv[1] is the command. Returns the exit status. */
 int run_variations(int argc, char **argv);

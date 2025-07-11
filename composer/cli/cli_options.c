@@ -102,6 +102,28 @@ bool cli_parse_whole_number(const char *text, unsigned long maximum, unsigned lo
     return true;
 }
 
+int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out) {
+    *out = plan_export_options_default();
+    if (plain_midi) {
+        out->track_names = false;
+        out->section_markers = false;
+    }
+    if (!tempo_text) {
+        return 0;
+    }
+    ComposerRatio tempo;
+    if (!cli_parse_ratio(tempo_text, &tempo) || tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
+        tempo.numerator > 400UL * tempo.denominator) {
+        return cli_fail(CLI_EXIT_USAGE,
+                        "--tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like "
+                        "195/2, not '%s'",
+                        tempo_text);
+    }
+    out->tempo_numerator = tempo.numerator;
+    out->tempo_denominator = tempo.denominator;
+    return 0;
+}
+
 bool cli_parse_ratio(const char *text, ComposerRatio *out) {
     if (!text || !isdigit((unsigned char)text[0])) {
         return false;

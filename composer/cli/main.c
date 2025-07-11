@@ -10,6 +10,7 @@
 #include "progression.h"
 #include "regenerate.h"
 #include "variations.h"
+#include "cli_options.h"
 
 #include <ursatz_composer/composer.h>
 #include <ursatz_composer/export.h>
@@ -18,7 +19,7 @@
 
 static void print_usage(FILE *out) {
     fprintf(out, "Usage: ursatz-composer [--version] [--help]\n");
-    fprintf(out, "       ursatz-composer export <plan.json> [--midi <out.mid>] [--musicxml <out.xml>]\n");
+    fprintf(out, "       ursatz-composer export <plan.json> [--midi <out.mid>] [--musicxml <out.xml>] [--tempo <bpm>] [--plain-midi]\n");
     fprintf(out, "%s\n", PROGRESSION_USAGE_LINE);
     fprintf(out, "%s\n", MOTIVE_USAGE_LINE);
     fprintf(out, "%s\n", DEVELOP_USAGE_LINE);
@@ -49,8 +50,14 @@ static int run_export(int argc, char **argv) {
     const char *plan_path = NULL;
     const char *midi_path = NULL;
     const char *musicxml_path = NULL;
+    const char *tempo_text = NULL;
+    bool plain_midi = false;
     for (int i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "--midi") == 0 && i + 1 < argc && !midi_path) {
+        if (strcmp(argv[i], "--tempo") == 0 && i + 1 < argc && !tempo_text) {
+            tempo_text = argv[++i];
+        } else if (strcmp(argv[i], "--plain-midi") == 0) {
+            plain_midi = true;
+        } else if (strcmp(argv[i], "--midi") == 0 && i + 1 < argc && !midi_path) {
             midi_path = argv[++i];
         } else if (strcmp(argv[i], "--musicxml") == 0 && i + 1 < argc && !musicxml_path) {
             musicxml_path = argv[++i];
@@ -65,6 +72,11 @@ static int run_export(int argc, char **argv) {
     if (!plan_path || (!midi_path && !musicxml_path)) {
         fprintf(stderr, "Error: export needs a plan file and at least one of --midi or --musicxml\n");
         print_usage(stderr);
+        return 1;
+    }
+
+    PlanExportOptions export_options;
+    if (cli_read_export_options(tempo_text, plain_midi, &export_options) != 0) {
         return 1;
     }
 
@@ -86,13 +98,13 @@ static int run_export(int argc, char **argv) {
 
     PlanExportError export_error;
     int status = 0;
-    if (midi_path && rendered_plan_export_midi(&rendered, midi_path, &export_error) != PLAN_EXPORT_OK) {
+    if (midi_path && rendered_plan_export_midi(&rendered, &export_options, midi_path, &export_error) != PLAN_EXPORT_OK) {
         fprintf(stderr, "Error: MIDI export failed: %s\n", export_error.message);
         status = 1;
     } else if (midi_path) {
         printf("MIDI written to %s\n", midi_path);
     }
-    if (musicxml_path && rendered_plan_export_musicxml(&rendered, musicxml_path, &export_error) != PLAN_EXPORT_OK) {
+    if (musicxml_path && rendered_plan_export_musicxml(&rendered, &export_options, musicxml_path, &export_error) != PLAN_EXPORT_OK) {
         fprintf(stderr, "Error: MusicXML export failed: %s\n", export_error.message);
         status = 1;
     } else if (musicxml_path) {

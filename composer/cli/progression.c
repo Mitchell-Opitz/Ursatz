@@ -50,6 +50,9 @@ typedef struct {
     const char *out_path;
     const char *midi_path;
     const char *musicxml_path;
+    const char *tempo_text;
+    bool plain_midi;
+    PlanExportOptions export_options;
     const char *schema_text;
     const char *sequence_text;
     const char *suggest_text;
@@ -100,6 +103,9 @@ static void print_help(FILE *out) {
     fprintf(out, "  --out <file.json>    write the plan as JSON\n");
     fprintf(out, "  --midi <file>        write the bass line as a MIDI file (needs the bass)\n");
     fprintf(out, "  --musicxml <file>    write the bass line as MusicXML (needs the bass)\n");
+    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
+    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
+    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
     fprintf(out, "  --format <text|json> how to print the progression on stdout (default: text)\n");
     fprintf(out, "  --help               this text\n");
     fprintf(out, "\n");
@@ -166,6 +172,10 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->midi_path;
         } else if (strcmp(arg, "--musicxml") == 0) {
             target = &options->musicxml_path;
+        } else if (strcmp(arg, "--tempo") == 0) {
+            target = &options->tempo_text;
+        } else if (strcmp(arg, "--plain-midi") == 0) {
+            options->plain_midi = true;
         } else {
             return cli_fail(EXIT_USAGE, "unexpected argument '%s' (see ursatz-composer progression --help)", arg);
         }
@@ -221,6 +231,12 @@ static int read_options(int argc, char **argv, Options *options) {
         }
         if (!found) {
             return cli_fail(EXIT_USAGE, "--embellish must be none, low, medium or high, not '%s'", options->embellish_text);
+        }
+    }
+    {
+        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
+        if (export_status != 0) {
+            return export_status;
         }
     }
     if (options->format_text) {
@@ -806,8 +822,8 @@ static int write_files(const Options *options, const Built *alternatives, size_t
                 }
                 have_rendering = true;
             }
-            PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, entry->temporary, &error)
-                                                : rendered_plan_export_musicxml(&rendered, entry->temporary, &error);
+            PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, &options->export_options, entry->temporary, &error)
+                                                : rendered_plan_export_musicxml(&rendered, &options->export_options, entry->temporary, &error);
             if (result != PLAN_EXPORT_OK) {
                 status = cli_fail(EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
             }

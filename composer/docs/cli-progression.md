@@ -47,6 +47,8 @@ that is not an opening, add one bar at the start (a tonic chord the schema follo
 | `--out <file.json>` | Write the plan as JSON. |
 | `--midi <file>` | Write the bass line as MIDI. Needs the bass. |
 | `--musicxml <file>` | Write the bass line as MusicXML. Needs the bass. |
+| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
+| `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
 | `--format <text\|json>` | Stdout format. Default `text`. |
 | `--help` | Print usage. |
 

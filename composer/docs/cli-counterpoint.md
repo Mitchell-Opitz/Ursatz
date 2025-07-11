@@ -1,7 +1,7 @@
 # counterpoint command
 
 ```sh
-ursatz-composer counterpoint <line> --species <1-4> [--above|--below] --key <key> --meter <n/m> [--mode <major|minor>] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--format text|json]
+ursatz-composer counterpoint <line> --species <1-4> [--above|--below] --key <key> --meter <n/m> [--mode <major|minor>] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format text|json]
 ```
 
 Writes a counter-melody against `<line>` in the first, second, third or fourth species and checks it with
@@ -21,6 +21,8 @@ required and are given to the loader.
 | `--suggest <n>` | 1 to 16 different counter-melodies. With files, number k goes to `<name>-k.<extension>`. |
 | `--out <file.json>` | Write the plan as JSON. |
 | `--midi <file>`, `--musicxml <file>` | Write the line and the counter-melody as two parts. |
+| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
+| `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
 | `--format <text\|json>` | How to print the result: text by default. |
 
 ## Output

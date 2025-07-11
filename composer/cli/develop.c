@@ -79,6 +79,8 @@ typedef struct {
     const char *min_text;
     const char *drop_text;
     const char *ratio_text;
+    const char *tempo_text;
+    PlanExportOptions export_options;
     unsigned given; /* the F_ flags that were on the command line */
     bool help;
 } Options;
@@ -91,7 +93,9 @@ static void print_help(FILE *out) {
     fprintf(out, "  --seed <n>           whole number, 0 to 4294967295 (default 0); the same seed gives the same output\n");
     fprintf(out, "  --suggest <n>        how many candidates to print, 1 to %d (default %d)\n", MAX_SUGGEST, DEFAULT_SUGGEST);
     fprintf(out, "  --meter <n/m>, --key <key>, --format <auto|midi|musicxml|notes|json>   as for the motive command\n");
-    fprintf(out, "  --midi <file>, --musicxml <file>   write the source and the best candidate\n\n");
+    fprintf(out, "  --midi <file>, --musicxml <file>   write the source and the best candidate\n");
+    fprintf(out, "  --tempo <bpm>        write a tempo in both files, quarter notes per minute from 20 to 400 (a whole number or\n");
+    fprintf(out, "                       a fraction like 195/2); --plain-midi: no track names and no section markers in the MIDI\n\n");
     fprintf(out, "Options by operation (the operation chooses at random from what is left open):\n");
     fprintf(out, "  restate     --by <n> (semitones; steps with --tonal), --degree <n> (move the first note to scale\n");
     fprintf(out, "              degree n, tonal), --tonal;  with none, the exact repetition and transpositions\n");
@@ -122,6 +126,7 @@ static int read_options(int argc, char **argv, Options *options) {
     bool tonal = false;
     bool keep_contour = false;
     bool keep_rhythm = false;
+    bool plain_midi = false;
     memset(options, 0, sizeof(*options));
     const FlagSpec specs[] = {
         {"--op", &options->op_text, 0, NULL},
@@ -132,6 +137,8 @@ static int read_options(int argc, char **argv, Options *options) {
         {"--format", &options->format_text, 0, NULL},
         {"--midi", &options->midi_path, 0, NULL},
         {"--musicxml", &options->musicxml_path, 0, NULL},
+        {"--tempo", &options->tempo_text, 0, NULL},
+        {"--plain-midi", NULL, 0, &plain_midi},
         {"--by", &options->by_text, F_BY, NULL},
         {"--degree", &options->degree_text, F_DEGREE, NULL},
         {"--axis", &options->axis_text, F_AXIS, NULL},
@@ -177,7 +184,7 @@ static int read_options(int argc, char **argv, Options *options) {
             return cli_fail(EXIT_USAGE, "unexpected argument '%s'; the input is one file", argument);
         }
     }
-    return 0;
+    return cli_read_export_options(options->tempo_text, plain_midi, &options->export_options);
 }
 
 static bool parse_number(const char *text, long minimum, long maximum, long *out) {
@@ -508,13 +515,13 @@ static int write_files(const Options *options, Scene *scene, const FillSuggestio
     }
     PlanExportError error;
     if (options->midi_path) {
-        if (plan_export_midi(scene->plan, options->midi_path, &error) != PLAN_EXPORT_OK) {
+        if (plan_export_midi(scene->plan, &options->export_options, options->midi_path, &error) != PLAN_EXPORT_OK) {
             return cli_fail(EXIT_WRITE, "MIDI export failed: %s", error.message);
         }
         printf("MIDI written to %s\n", options->midi_path);
     }
     if (options->musicxml_path) {
-        if (plan_export_musicxml(scene->plan, options->musicxml_path, &error) != PLAN_EXPORT_OK) {
+        if (plan_export_musicxml(scene->plan, &options->export_options, options->musicxml_path, &error) != PLAN_EXPORT_OK) {
             return cli_fail(EXIT_WRITE, "MusicXML export failed: %s", error.message);
         }
         printf("MusicXML written to %s\n", options->musicxml_path);

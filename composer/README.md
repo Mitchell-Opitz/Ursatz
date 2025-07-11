@@ -62,11 +62,16 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 ursatz-composer --version
 ursatz-composer --help
 ursatz-composer export plan.json --midi out.mid --musicxml out.xml
+ursatz-composer export plan.json --midi out.mid --tempo 96
 ```
 
 `export` loads a plan from JSON and writes its Given and Realized notes as a MIDI file, a
 MusicXML file, or both, through Ursatz's renderer and exporter. Spans that are not written yet are
 listed on stderr. Filling a plan is not implemented yet.
+
+A MIDI file opens in a DAW with named tracks (`melody`, `bass`, `inner_voice_<n>`, the form on the conductor track), a
+marker at the start of every section (`A`, `B`, `A'`) and, with `--tempo <bpm>` on any command that writes `--midi` or
+`--musicxml`, a tempo; `--plain-midi` turns the names and markers off. See [docs/export.md](docs/export.md).
 
 ```sh
 ursatz-composer progression --key "D minor" --meter 4/4 --bars 8 --cadence PAC --seed 7
