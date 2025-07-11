@@ -2,7 +2,7 @@
 
 ```sh
 ursatz-composer lock <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] --out <plan.json> [--format text|json]
-ursatz-composer regenerate <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] [--seed <n>] --out <plan.json> [--midi <file>] [--musicxml <file>] [--format text|json]
+ursatz-composer regenerate <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] [--seed <n>] --out <plan.json> [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format text|json]
 ```
 
 Take a filled plan (from [`fill`](cli-fill.md)) apart. `lock` keeps material: it becomes Given and nothing composes over
@@ -44,6 +44,8 @@ nodes and lane spans that became Given, and the path of the plan as given to `--
 | `--seed <n>` | Whole number from 0. The same plan, node and seed give the same output. Default: from the clock. The seed used is always printed. If a seed gets stuck the next seeds are tried, up to 16. |
 | `--out <plan.json>` | Where the plan is written (required). |
 | `--midi <file>`, `--musicxml <file>` | Also write the piece. |
+| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
+| `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
 | `--format <text\|json>` | How to print the result (default: text). |
 
 The output is `fill`'s, with what was reopened first: the sections reopened whole, the lane spans reopened one by one, the

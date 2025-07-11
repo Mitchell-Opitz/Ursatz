@@ -98,7 +98,8 @@ Pitches are written with sharps, since the spelling is not known. A length no on
 two tied notes (`C4:q~ C4:s`); a rest is split into rests.
 
 `--midi <file>` and `--musicxml <file>` write the source followed by the best candidate, with the
-meter and, when there is one, the key. Only the best candidate is written.
+meter and, when there is one, the key. Only the best candidate is written. `--tempo <bpm>` writes a tempo in both
+files and `--plain-midi` leaves the track names and section markers out of the MIDI ([export.md](export.md)).
 
 ## Exit status
 
