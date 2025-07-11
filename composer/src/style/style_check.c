@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <string.h>
 
+#include <hybrid_rules.h>
 #include <phrase_beginning.h>
 #include <phrase_ending.h>
 #include <phrase_level_form.h>
