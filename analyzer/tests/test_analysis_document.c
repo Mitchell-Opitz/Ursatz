@@ -173,7 +173,9 @@ int main(void) {
     assert(number(member(meter, "time_signature"), "denominator") == 4);
     assert(cJSON_IsNull(member(meter, "pickup")));
     assert(cJSON_GetArraySize(member(meter, "changes")) == 0);
-    assert(cJSON_IsNull(member(document, "form")));
+    /* The form is the tree of the phrases' sections, or null when the library found no phrases. */
+    assert(cJSON_GetArraySize(member(document, "phrases")) == 0 ? cJSON_IsNull(member(document, "form"))
+                                                                : cJSON_IsObject(member(document, "form")));
     assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
     assert(cJSON_IsNull(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));

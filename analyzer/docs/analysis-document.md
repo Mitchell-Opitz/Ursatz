@@ -29,7 +29,7 @@ newline. The same input and build always give the same bytes.
 | `cadences` | array of cadence claims | Filled: the library's standard-harmony cadences. See below. |
 | `phrases` | array of phrase claims | Filled: the library's standard-form phrases, with their ideas, subphrases, phrase model and expansions. See below. |
 | `themes` | array of theme claims | Optional, after `phrases`. Filled: the library's themes (sentences, periods, hybrids, compound periods, repeated phrases). See below. |
-| `form` | object or null | Placeholder: `null`. |
+| `form` | form object or null | Filled: the tree of sections, phrases, subphrases and ideas, and the thematic returns. See below; `null` when the library found no phrases. |
 | `motives` | array | Placeholder: `[]`. |
 | `melody` | array | Placeholder: `[]`. |
 | `rhythm` | array | Placeholder: `[]`. |
@@ -43,8 +43,9 @@ newline. The same input and build always give the same bytes.
 | `notes` | array of notes | Filled: where the notated and detected keys disagree. Empty when they do not, or there is no notated key signature. |
 
 Every key is always present, so consumers can read any section without checking for it first.
-The singular sections `form`, `markings` and `counterpoint_check` are `null` until filled; the rest are empty
-arrays. `harmonic_rhythm` is `null` only for a piece with no chords the meter can place.
+The singular sections `markings` and `counterpoint_check` are `null` until filled; the rest are empty arrays.
+`harmonic_rhythm` is `null` only for a piece with no chords the meter can place, and `form` only for a piece with no
+phrases.
 
 ## metadata
 
@@ -560,6 +561,68 @@ or shorter than its beginning is an internal expansion or a contraction by the m
 extension after a phrase's cadence is an external expansion. The Markdown report renders `## Themes` from this array (a
 row per theme with its parts, each with the cadence that ends it, and its traits) and lists the compound periods.
 
+### Form plan
+
+`form` is the plan of the piece: its sections, the phrases, subphrases and ideas inside them, and the thematic returns
+between its themes. The sections are the kernel's form structure detection (`analysis/form_structure_detection.h`)
+over one phrase occurrence per phrase with its cadence type, and the returns are the kernel's thematic return
+detection (`analysis/thematic_return_detection.h`, default config) over the soprano notes of each theme, both in
+`src/pipeline/form_plan_pipeline.c`. The analyzer adds only bookkeeping: the phrases after the last closing cadence,
+which the kernel leaves out, become a last section; returns between themes that share a phrase are dropped; and the
+section letters, which follow from the returns alone. The sections are reported only and do not feed back into the
+cadences (R-054).
+
+The tree's nodes carry a `level` field with the exact names `form`, `section`, `phrase`, `subphrase` and `idea`, the
+levels of the Composer's plan, so the Composer can load it (R-019). A phrase, subphrase or idea node points at its full
+claim in `phrases` and repeats only what reading the outline needs; each idea appears once in the tree, in its
+subphrase or, for a phrase of fewer than three ideas (which has no subphrases), in the phrase.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `level` | `"form"` | |
+| `measures` | object | `{"first", "last"}`: from the first section's first measure to the last section's last. |
+| `sections` | array | The sections in time order, at least one (see below). |
+| `returns` | array | The thematic returns (see below); empty when the library found none. |
+
+A section is a claim (`framework` `"standard-form-v1"`, the framework of the phrases it groups):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `span`, `location`, `note_ids` | | From the first phrase's start to the last phrase's end; the notes sounding in the chords that start in it. |
+| `label` | string | The letter: `"A"`, `"B"`; a section whose opening theme returns an earlier section's material takes that section's letter with one prime more than the sections of that letter already have (`"A'"`, `"A''"`). |
+| `uncertainty` | number | The greatest uncertainty of its phrases. |
+| `level` | `"section"` | |
+| `index` | integer | The section's position in `sections`, from 0. |
+| `measures` | object | `{"first", "last"}`: the library's measure numbers, the last including the last phrase's extension. |
+| `key` | string or null | The label of the key region the section's first chord lies in (not the key it ends in); `null` outside every region. |
+| `region` | integer or null | The index of that region in `keys.regions`. |
+| `closed` | boolean | A section-closing cadence (perfect or imperfect authentic) of the library's ended it; `false` only for the last section when phrases follow the last such cadence or there is none. |
+| `cadence` | integer or null | The index into `cadences` of the cadence that ends its last phrase. |
+| `returns_from` | integer or null | The index into `sections` of the earlier section whose material its opening theme returns; `null` for a section with a new letter. |
+| `return` | integer or null | The index into the form's `returns` of the return that set the letter. |
+| `phrases` | array | The phrase nodes, at least one. |
+
+A phrase node is `{"level": "phrase", "phrase", "measures", "length", "cadence", "subphrases", "ideas"}`: `phrase` is
+the index into `phrases`, `measures`, `length` and `cadence` are that claim's, `subphrases` are nodes
+`{"level": "subphrase", "phrase", "index", "measures", "ideas"}` and `ideas` are nodes
+`{"level": "idea", "phrase", "index", "label", "measures"}` (the library's `IdeaLabel` names), `index` being the
+position within the phrase.
+
+A return is a claim over the later theme, labelled `"thematic-return"`, in the order of the later theme and then the
+earlier:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `span`, `location`, `note_ids` | | The later theme's. |
+| `uncertainty` | number | 1 minus the similarity. |
+| `earlier_theme`, `later_theme` | integer | Indices into `themes`; the earlier theme's phrases come before the later's. |
+| `earlier_section`, `later_section` | integer | Indices into the form's `sections`: the section holding each theme's first phrase. |
+| `earlier`, `later` | object | `{"first", "last"}`: the measures of the two themes. |
+| `similarity` | object | The kernel's evidence for the best stretch pair: `value` (the lower of `contour`, the share of equal up, down and same directions, and `rhythm`, the share of equal durations; at least 0.8), `window` (the notes compared), and `earlier_offset` and `later_offset` (where the stretches begin inside each theme, in notes). |
+
+The Markdown report renders `## Form plan` from this object: a row per section (letter, measures, key, phrases, closing
+cadence, the return that lettered it), the returns, and the tree as an indented outline.
+
 ### Progressions
 
 `progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
@@ -632,7 +695,8 @@ before those:
   `six_four`, and the optional top-level `prolongations` follows `chord_vocabulary`; all additive. `progressions` and `harmonic_rhythm` are filled (their
   entries are new), which is additive. `phrases` is filled (its claims are new, with the optional `subphrases`,
   `ideas` and `phrase_model`), and chord claims gain the optional `phrase_model`; all additive. The optional
-  top-level `themes` follows `phrases`, and phrase claims gain the optional `expansions`; both are additive.
+  top-level `themes` follows `phrases`, and phrase claims gain the optional `expansions`; both are additive. `form` is
+  filled (its object is new), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,

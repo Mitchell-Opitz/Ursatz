@@ -402,6 +402,54 @@ typedef struct {
     double uncertainty;        /* the library's, in [0, 1]; higher is LESS certain */
 } AnalysisExpansion;
 
+/* One section of the form plan: consecutive phrases, grouped by the kernel's form structure detection
+   (analysis/form_structure_detection.h) at the section-closing cadences (perfect and imperfect authentic) of the
+   phrases. The sections tile the phrases: the phrases after the last closing cadence, which the kernel leaves out,
+   form a last section with closed false. The label is the analyzer's bookkeeping over the thematic returns. */
+#define ANALYSIS_SECTION_LABEL_SIZE 8
+
+typedef struct {
+    char label[ANALYSIS_SECTION_LABEL_SIZE]; /* letters by first appearance; a section whose opening theme returns
+                                  an earlier section's takes that section's letter, with one more prime than the
+                                  sections of the letter before it ("A", "A'", "A''") */
+    size_t first_phrase;     /* the phrases it holds: phrases[first_phrase .. + phrase_count) */
+    size_t phrase_count;
+    long start_numerator;    /* whole notes: the first phrase's start to the last phrase's end */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    size_t first_entry;      /* the chord segments that start inside the span: entries[first_entry .. + entry_count) */
+    size_t entry_count;
+    int first_measure;       /* the library's measure numbers (a pickup is 0) */
+    int last_measure;
+    bool closed;             /* a section-closing cadence of the library's ended it */
+    bool has_cadence;        /* the last phrase ends with a cadence */
+    size_t cadence;          /* index into cadences; valid only when has_cadence */
+    bool in_region;          /* the section's first chord lies in a key region */
+    size_t region;           /* index of that region in key_regions; valid only when in_region */
+    bool has_return;         /* the section's opening theme returns an earlier section's material */
+    size_t returns_from;     /* index into sections of that earlier section; valid only when has_return */
+    size_t return_index;     /* index into thematic_returns of the return that set the letter; valid only when
+                                has_return */
+    double uncertainty;      /* the greatest uncertainty of its phrases, in [0, 1]; higher is LESS certain */
+} AnalysisSection;
+
+/* A later theme recalling an earlier one: one "resembles" relationship of the kernel's thematic return detection
+   (analysis/thematic_return_detection.h) over the themes' soprano notes, default config. Themes that share a phrase
+   (a compound period and its sentences) are not returns of one another. */
+typedef struct {
+    size_t earlier_theme;      /* indices into themes */
+    size_t later_theme;
+    size_t earlier_section;    /* indices into sections: the section of each theme's first phrase */
+    size_t later_section;
+    double similarity;         /* the library's: the lower of the two scores, in [0, 1] */
+    double contour_score;
+    double rhythm_score;
+    size_t earlier_offset;     /* the best stretch pair, as note offsets inside each theme */
+    size_t later_offset;
+    size_t window_length;      /* notes compared */
+} AnalysisThematicReturn;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -435,13 +483,19 @@ typedef struct {
     size_t theme_count;
     AnalysisExpansion *expansions; /* owned; the library's expansions and contractions, in its order */
     size_t expansion_count;
+    AnalysisSection *sections; /* owned; tile the phrases, in time order; empty when there are no phrases */
+    size_t section_count;
+    AnalysisThematicReturn *thematic_returns; /* owned; by later theme, then earlier theme; empty when the library
+                                                 found none */
+    size_t thematic_return_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes and expansions. */
+   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections and
+   thematic returns. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

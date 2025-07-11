@@ -1011,6 +1011,73 @@ The library's standard-form analysis found 4 themes from the phrases, their idea
 | 3 | hybrid | slightly-less-common | mm. 23 to 34 | 12 | compound-basic-idea (mm. 23 to 26), continuation (mm. 27 to 34, half (m. 34, beat 3)) | - |
 | 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, perfect-authentic (m. 40, beat 1)) | fragmentation |
 
+## Form plan
+
+The kernel's form structure detection grouped the phrases into 4 sections, closing a section at each phrase that ends on a perfect or imperfect authentic cadence; the phrases after the last such cadence form the last section. Sections are lettered by first appearance, and a section whose opening theme returns an earlier section's material takes that letter with a prime. Key is the key the section opens in.
+
+| Section | Measures | Key | Phrases | Closing cadence | Returns |
+| --- | --- | --- | --- | --- | --- |
+| A | mm. 1 to 20 | Bb major | 1 to 3 | perfect-authentic (m. 20, beat 1) | - |
+| B | mm. 21 to 22 | Bb major | 4 to 5 | imperfect-authentic (m. 22, beat 1) | - |
+| A' | mm. 23 to 40 | Bb major | 6 to 8 | perfect-authentic (m. 40, beat 1) | returns A (similarity 0.83) |
+| C | mm. 41 to 43 | Bb major | 9 | half (m. 41, beat 1) | - |
+
+### Thematic returns
+
+A later theme recalls an earlier one when the kernel's thematic return detection finds the same contour and rhythm in a stretch of both. Similarity is the lower of the two scores. Themes that share a phrase are not compared.
+
+| Later theme | Measures | Section | Earlier theme | Measures | Section | Similarity |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 | mm. 9 to 19 | A | 1 | mm. 1 to 8 | A | 1.00 |
+| 3 | mm. 23 to 34 | A' | 1 | mm. 1 to 8 | A | 0.83 |
+| 3 | mm. 23 to 34 | A' | 2 | mm. 9 to 19 | A | 0.83 |
+| 4 | mm. 35 to 40 | A' | 2 | mm. 9 to 19 | A | 1.00 |
+
+### Outline
+
+- form (mm. 1 to 43)
+  - section A (mm. 1 to 20, Bb major)
+    - phrase 1 (mm. 1 to 8)
+      - subphrase 1 (mm. 1 to 4)
+        - idea basic-idea (mm. 1 to 2)
+        - idea contrasting-idea (mm. 3 to 4)
+      - subphrase 2 (mm. 5 to 8)
+        - idea contrasting-idea (mm. 5 to 6)
+        - idea contrasting-idea (mm. 7 to 8)
+    - phrase 2 (mm. 9 to 19)
+      - subphrase 1 (mm. 9 to 12)
+        - idea basic-idea (mm. 9 to 10)
+        - idea contrasting-idea (mm. 11 to 12)
+      - subphrase 2 (mm. 13 to 19)
+        - idea contrasting-idea (mm. 13 to 14)
+        - idea contrasting-idea (mm. 15 to 16)
+        - idea contrasting-idea (mm. 17 to 19)
+    - phrase 3 (m. 20)
+      - idea basic-idea (m. 20)
+  - section B (mm. 21 to 22, Bb major)
+    - phrase 4 (m. 21)
+      - idea basic-idea (m. 21)
+    - phrase 5 (m. 22)
+      - idea basic-idea (m. 22)
+  - section A' (mm. 23 to 40, Bb major)
+    - phrase 6 (mm. 23 to 34)
+      - subphrase 1 (mm. 23 to 26)
+        - idea basic-idea (mm. 23 to 24)
+        - idea contrasting-idea (mm. 25 to 26)
+      - subphrase 2 (mm. 27 to 34)
+        - idea contrasting-idea (mm. 27 to 28)
+        - idea contrasting-idea (mm. 29 to 30)
+        - idea contrasting-idea (mm. 31 to 32)
+        - idea contrasting-idea (mm. 33 to 34)
+    - phrase 7 (mm. 35 to 39)
+      - idea basic-idea (mm. 35 to 36)
+      - idea contrasting-idea (mm. 37 to 39)
+    - phrase 8 (m. 40)
+      - idea basic-idea (m. 40)
+  - section C (mm. 41 to 43, Bb major)
+    - phrase 9 (m. 41)
+      - idea basic-idea (m. 41)
+
 ## Progression patterns
 
 23 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.

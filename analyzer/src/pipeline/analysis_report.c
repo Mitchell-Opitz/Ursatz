@@ -97,6 +97,8 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->expansions[i].note_ids);
     }
     free(report->expansions);
+    free(report->sections);
+    free(report->thematic_returns);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -125,6 +127,10 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->theme_count = 0;
     report->expansions = NULL;
     report->expansion_count = 0;
+    report->sections = NULL;
+    report->section_count = 0;
+    report->thematic_returns = NULL;
+    report->thematic_return_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

@@ -5040,6 +5040,425 @@ The library's standard-form analysis found 18 themes from the phrases, their ide
 | 17 | repeated-phrase | - | mm. 313 to 314 | 2 | part (m. 313, perfect-authentic (m. 313, beat 1)), part (m. 314, perfect-authentic (m. 314, beat 1)) | - |
 | 18 | hybrid | slightly-less-common | mm. 320 to 325 | 6 | antecedent (mm. 320 to 323, half (m. 323, beat 1)), continuation (mm. 324 to 325, perfect-authentic (m. 325, beat 1)) | - |
 
+## Form plan
+
+The kernel's form structure detection grouped the phrases into 24 sections, closing a section at each phrase that ends on a perfect or imperfect authentic cadence; the phrases after the last such cadence form the last section. Sections are lettered by first appearance, and a section whose opening theme returns an earlier section's material takes that letter with a prime. Key is the key the section opens in.
+
+| Section | Measures | Key | Phrases | Closing cadence | Returns |
+| --- | --- | --- | --- | --- | --- |
+| A | mm. 1 to 27 | C major | 1 to 3 | perfect-authentic (m. 27, beat 1) | - |
+| B | mm. 28 to 29 | G major | 4 | perfect-authentic (m. 28, beat 1) | - |
+| C | mm. 30 to 55 | C major | 5 to 7 | perfect-authentic (m. 55, beat 1) | - |
+| D | mm. 56 to 57 | G major | 8 | perfect-authentic (m. 56, beat 1) | - |
+| E | m. 58 | G major | 9 | perfect-authentic (m. 58, beat 1) | - |
+| F | mm. 59 to 63 | G major | 10 | imperfect-authentic (m. 63, beat 1) | - |
+| G | mm. 64 to 100 | D minor | 11 to 14 | perfect-authentic (m. 100, beat 1) | - |
+| H | m. 101 | C major | 15 | perfect-authentic (m. 101, beat 1) | - |
+| I | mm. 102 to 104 | C major | 16 | perfect-authentic (m. 104, beat 1) | - |
+| J | mm. 105 to 108 | G minor | 17 | imperfect-authentic (m. 108, beat 1) | - |
+| K | mm. 109 to 145 | D minor | 18 to 21 | perfect-authentic (m. 145, beat 1) | - |
+| L | m. 146 | C major | 22 | perfect-authentic (m. 146, beat 1) | - |
+| M | mm. 147 to 216 | C major | 23 to 29 | perfect-authentic (m. 216, beat 1) | - |
+| M' | mm. 217 to 252 | Bb major | 30 to 32 | imperfect-authentic (m. 252, beat 1) | returns M (similarity 0.83) |
+| N | m. 253 | G major | 33 | imperfect-authentic (m. 253, beat 1) | - |
+| O | m. 254 | G major | 34 | perfect-authentic (m. 254, beat 1) | - |
+| M'' | mm. 255 to 264 | G major | 35 to 36 | perfect-authentic (m. 264, beat 1) | returns M' (similarity 0.80) |
+| P | mm. 265 to 272 | C major | 37 to 39 | perfect-authentic (m. 272, beat 1) | - |
+| M''' | mm. 273 to 312 | G major | 40 to 44 | perfect-authentic (m. 312, beat 1) | returns M (similarity 0.83) |
+| Q | m. 313 | A minor | 45 | perfect-authentic (m. 313, beat 1) | - |
+| R | m. 314 | A minor | 46 | perfect-authentic (m. 314, beat 1) | - |
+| S | m. 315 | A minor | 47 | imperfect-authentic (m. 315, beat 1) | - |
+| T | mm. 316 to 325 | A minor | 48 to 50 | perfect-authentic (m. 325, beat 1) | - |
+| U | mm. 326 to 338 | C major | 51 to 52 | none | - |
+
+### Thematic returns
+
+A later theme recalls an earlier one when the kernel's thematic return detection finds the same contour and rhythm in a stretch of both. Similarity is the lower of the two scores. Themes that share a phrase are not compared.
+
+| Later theme | Measures | Section | Earlier theme | Measures | Section | Similarity |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 | mm. 50 to 55 | C | 1 | mm. 22 to 27 | A | 1.00 |
+| 3 | mm. 95 to 100 | G | 1 | mm. 22 to 27 | A | 1.00 |
+| 3 | mm. 95 to 100 | G | 2 | mm. 50 to 55 | C | 1.00 |
+| 4 | mm. 140 to 145 | K | 1 | mm. 22 to 27 | A | 1.00 |
+| 4 | mm. 140 to 145 | K | 2 | mm. 50 to 55 | C | 1.00 |
+| 4 | mm. 140 to 145 | K | 3 | mm. 95 to 100 | G | 1.00 |
+| 5 | mm. 163 to 181 | M | 1 | mm. 22 to 27 | A | 0.80 |
+| 5 | mm. 163 to 181 | M | 2 | mm. 50 to 55 | C | 0.80 |
+| 5 | mm. 163 to 181 | M | 3 | mm. 95 to 100 | G | 0.80 |
+| 5 | mm. 163 to 181 | M | 4 | mm. 140 to 145 | K | 0.80 |
+| 6 | mm. 182 to 187 | M | 1 | mm. 22 to 27 | A | 0.80 |
+| 6 | mm. 182 to 187 | M | 2 | mm. 50 to 55 | C | 0.80 |
+| 6 | mm. 182 to 187 | M | 3 | mm. 95 to 100 | G | 0.80 |
+| 6 | mm. 182 to 187 | M | 4 | mm. 140 to 145 | K | 0.80 |
+| 6 | mm. 182 to 187 | M | 5 | mm. 163 to 181 | M | 0.80 |
+| 7 | mm. 188 to 197 | M | 1 | mm. 22 to 27 | A | 0.80 |
+| 7 | mm. 188 to 197 | M | 2 | mm. 50 to 55 | C | 0.80 |
+| 7 | mm. 188 to 197 | M | 3 | mm. 95 to 100 | G | 0.80 |
+| 7 | mm. 188 to 197 | M | 4 | mm. 140 to 145 | K | 0.80 |
+| 7 | mm. 188 to 197 | M | 5 | mm. 163 to 181 | M | 1.00 |
+| 7 | mm. 188 to 197 | M | 6 | mm. 182 to 187 | M | 0.80 |
+| 8 | mm. 198 to 203 | M | 1 | mm. 22 to 27 | A | 0.80 |
+| 8 | mm. 198 to 203 | M | 2 | mm. 50 to 55 | C | 0.80 |
+| 8 | mm. 198 to 203 | M | 3 | mm. 95 to 100 | G | 0.80 |
+| 8 | mm. 198 to 203 | M | 4 | mm. 140 to 145 | K | 0.80 |
+| 8 | mm. 198 to 203 | M | 5 | mm. 163 to 181 | M | 0.80 |
+| 8 | mm. 198 to 203 | M | 6 | mm. 182 to 187 | M | 1.00 |
+| 8 | mm. 198 to 203 | M | 7 | mm. 188 to 197 | M | 0.80 |
+| 9 | mm. 204 to 216 | M | 1 | mm. 22 to 27 | A | 0.80 |
+| 9 | mm. 204 to 216 | M | 2 | mm. 50 to 55 | C | 0.80 |
+| 9 | mm. 204 to 216 | M | 3 | mm. 95 to 100 | G | 0.80 |
+| 9 | mm. 204 to 216 | M | 4 | mm. 140 to 145 | K | 0.80 |
+| 9 | mm. 204 to 216 | M | 5 | mm. 163 to 181 | M | 1.00 |
+| 9 | mm. 204 to 216 | M | 7 | mm. 188 to 197 | M | 1.00 |
+| 10 | mm. 217 to 227 | M' | 5 | mm. 163 to 181 | M | 0.83 |
+| 10 | mm. 217 to 227 | M' | 6 | mm. 182 to 187 | M | 0.83 |
+| 10 | mm. 217 to 227 | M' | 7 | mm. 188 to 197 | M | 0.83 |
+| 10 | mm. 217 to 227 | M' | 8 | mm. 198 to 203 | M | 0.83 |
+| 10 | mm. 217 to 227 | M' | 9 | mm. 204 to 216 | M | 0.83 |
+| 11 | mm. 243 to 252 | M' | 1 | mm. 22 to 27 | A | 0.80 |
+| 11 | mm. 243 to 252 | M' | 2 | mm. 50 to 55 | C | 0.80 |
+| 11 | mm. 243 to 252 | M' | 3 | mm. 95 to 100 | G | 0.80 |
+| 11 | mm. 243 to 252 | M' | 4 | mm. 140 to 145 | K | 0.80 |
+| 11 | mm. 243 to 252 | M' | 5 | mm. 163 to 181 | M | 0.83 |
+| 11 | mm. 243 to 252 | M' | 6 | mm. 182 to 187 | M | 0.80 |
+| 11 | mm. 243 to 252 | M' | 7 | mm. 188 to 197 | M | 0.83 |
+| 11 | mm. 243 to 252 | M' | 8 | mm. 198 to 203 | M | 0.80 |
+| 11 | mm. 243 to 252 | M' | 9 | mm. 204 to 216 | M | 0.83 |
+| 11 | mm. 243 to 252 | M' | 10 | mm. 217 to 227 | M' | 0.83 |
+| 12 | mm. 255 to 262 | M'' | 11 | mm. 243 to 252 | M' | 0.80 |
+| 13 | mm. 267 to 272 | P | 12 | mm. 255 to 262 | M'' | 1.00 |
+| 14 | mm. 273 to 278 | M''' | 5 | mm. 163 to 181 | M | 0.83 |
+| 14 | mm. 273 to 278 | M''' | 6 | mm. 182 to 187 | M | 0.80 |
+| 14 | mm. 273 to 278 | M''' | 7 | mm. 188 to 197 | M | 0.83 |
+| 14 | mm. 273 to 278 | M''' | 8 | mm. 198 to 203 | M | 0.80 |
+| 14 | mm. 273 to 278 | M''' | 9 | mm. 204 to 216 | M | 0.83 |
+| 14 | mm. 273 to 278 | M''' | 12 | mm. 255 to 262 | M'' | 0.83 |
+| 14 | mm. 273 to 278 | M''' | 13 | mm. 267 to 272 | P | 0.83 |
+| 15 | mm. 279 to 286 | M''' | 12 | mm. 255 to 262 | M'' | 1.00 |
+| 15 | mm. 279 to 286 | M''' | 13 | mm. 267 to 272 | P | 1.00 |
+| 16 | mm. 287 to 296 | M''' | 5 | mm. 163 to 181 | M | 0.80 |
+| 16 | mm. 287 to 296 | M''' | 7 | mm. 188 to 197 | M | 0.80 |
+| 16 | mm. 287 to 296 | M''' | 9 | mm. 204 to 216 | M | 0.80 |
+| 16 | mm. 287 to 296 | M''' | 11 | mm. 243 to 252 | M' | 0.83 |
+| 16 | mm. 287 to 296 | M''' | 12 | mm. 255 to 262 | M'' | 1.00 |
+| 16 | mm. 287 to 296 | M''' | 13 | mm. 267 to 272 | P | 1.00 |
+| 16 | mm. 287 to 296 | M''' | 14 | mm. 273 to 278 | M''' | 0.83 |
+| 16 | mm. 287 to 296 | M''' | 15 | mm. 279 to 286 | M''' | 1.00 |
+| 18 | mm. 320 to 325 | T | 5 | mm. 163 to 181 | M | 0.80 |
+| 18 | mm. 320 to 325 | T | 7 | mm. 188 to 197 | M | 0.80 |
+| 18 | mm. 320 to 325 | T | 9 | mm. 204 to 216 | M | 0.80 |
+| 18 | mm. 320 to 325 | T | 11 | mm. 243 to 252 | M' | 0.83 |
+| 18 | mm. 320 to 325 | T | 12 | mm. 255 to 262 | M'' | 1.00 |
+| 18 | mm. 320 to 325 | T | 13 | mm. 267 to 272 | P | 1.00 |
+| 18 | mm. 320 to 325 | T | 14 | mm. 273 to 278 | M''' | 0.83 |
+| 18 | mm. 320 to 325 | T | 15 | mm. 279 to 286 | M''' | 1.00 |
+| 18 | mm. 320 to 325 | T | 16 | mm. 287 to 296 | M''' | 1.00 |
+
+### Outline
+
+- form (mm. 1 to 338)
+  - section A (mm. 1 to 27, C major)
+    - phrase 1 (mm. 1 to 13)
+      - subphrase 1 (mm. 1 to 4)
+        - idea basic-idea (mm. 1 to 2)
+        - idea contrasting-idea (mm. 3 to 4)
+      - subphrase 2 (mm. 5 to 13)
+        - idea contrasting-idea (mm. 5 to 6)
+        - idea contrasting-idea (mm. 7 to 8)
+        - idea contrasting-idea (mm. 9 to 10)
+        - idea contrasting-idea (mm. 11 to 13)
+    - phrase 2 (mm. 14 to 21)
+      - subphrase 1 (mm. 14 to 17)
+        - idea basic-idea (mm. 14 to 15)
+        - idea basic-idea (mm. 16 to 17)
+      - subphrase 2 (mm. 18 to 21)
+        - idea contrasting-idea (mm. 18 to 19)
+        - idea contrasting-idea (mm. 20 to 21)
+    - phrase 3 (mm. 22 to 27)
+      - subphrase 1 (mm. 22 to 25)
+        - idea basic-idea (mm. 22 to 23)
+        - idea contrasting-idea (mm. 24 to 25)
+      - subphrase 2 (mm. 26 to 27)
+        - idea contrasting-idea (mm. 26 to 27)
+  - section B (mm. 28 to 29, G major)
+    - phrase 4 (mm. 28 to 29)
+      - idea basic-idea (mm. 28 to 29)
+  - section C (mm. 30 to 55, C major)
+    - phrase 5 (mm. 30 to 41)
+      - subphrase 1 (mm. 30 to 33)
+        - idea basic-idea (mm. 30 to 31)
+        - idea contrasting-idea (mm. 32 to 33)
+      - subphrase 2 (mm. 34 to 41)
+        - idea contrasting-idea (mm. 34 to 35)
+        - idea contrasting-idea (mm. 36 to 37)
+        - idea contrasting-idea (mm. 38 to 39)
+        - idea contrasting-idea (mm. 40 to 41)
+    - phrase 6 (mm. 42 to 49)
+      - subphrase 1 (mm. 42 to 45)
+        - idea basic-idea (mm. 42 to 43)
+        - idea basic-idea (mm. 44 to 45)
+      - subphrase 2 (mm. 46 to 49)
+        - idea contrasting-idea (mm. 46 to 47)
+        - idea contrasting-idea (mm. 48 to 49)
+    - phrase 7 (mm. 50 to 55)
+      - subphrase 1 (mm. 50 to 53)
+        - idea basic-idea (mm. 50 to 51)
+        - idea contrasting-idea (mm. 52 to 53)
+      - subphrase 2 (mm. 54 to 55)
+        - idea contrasting-idea (mm. 54 to 55)
+  - section D (mm. 56 to 57, G major)
+    - phrase 8 (mm. 56 to 57)
+      - idea basic-idea (mm. 56 to 57)
+  - section E (m. 58, G major)
+    - phrase 9 (m. 58)
+      - idea basic-idea (m. 58)
+  - section F (mm. 59 to 63, G major)
+    - phrase 10 (mm. 59 to 63)
+      - idea basic-idea (mm. 59 to 60)
+      - idea contrasting-idea (mm. 61 to 63)
+  - section G (mm. 64 to 100, D minor)
+    - phrase 11 (mm. 64 to 71)
+      - subphrase 1 (mm. 64 to 67)
+        - idea basic-idea (mm. 64 to 65)
+        - idea contrasting-idea (mm. 66 to 67)
+      - subphrase 2 (mm. 68 to 71)
+        - idea contrasting-idea (mm. 68 to 69)
+        - idea contrasting-idea (mm. 70 to 71)
+    - phrase 12 (mm. 72 to 86)
+      - subphrase 1 (mm. 72 to 75)
+        - idea basic-idea (mm. 72 to 73)
+        - idea contrasting-idea (mm. 74 to 75)
+      - subphrase 2 (mm. 76 to 86)
+        - idea contrasting-idea (mm. 76 to 77)
+        - idea contrasting-idea (mm. 78 to 79)
+        - idea contrasting-idea (mm. 80 to 81)
+        - idea contrasting-idea (mm. 82 to 83)
+        - idea contrasting-idea (mm. 84 to 86)
+    - phrase 13 (mm. 87 to 94)
+      - subphrase 1 (mm. 87 to 90)
+        - idea basic-idea (mm. 87 to 88)
+        - idea basic-idea (mm. 89 to 90)
+      - subphrase 2 (mm. 91 to 94)
+        - idea contrasting-idea (mm. 91 to 92)
+        - idea contrasting-idea (mm. 93 to 94)
+    - phrase 14 (mm. 95 to 100)
+      - subphrase 1 (mm. 95 to 98)
+        - idea basic-idea (mm. 95 to 96)
+        - idea contrasting-idea (mm. 97 to 98)
+      - subphrase 2 (mm. 99 to 100)
+        - idea contrasting-idea (mm. 99 to 100)
+  - section H (m. 101, C major)
+    - phrase 15 (m. 101)
+      - idea basic-idea (m. 101)
+  - section I (mm. 102 to 104, C major)
+    - phrase 16 (mm. 102 to 104)
+      - idea basic-idea (mm. 102 to 104)
+  - section J (mm. 105 to 108, G minor)
+    - phrase 17 (mm. 105 to 108)
+      - idea basic-idea (mm. 105 to 106)
+      - idea contrasting-idea (mm. 107 to 108)
+  - section K (mm. 109 to 145, D minor)
+    - phrase 18 (mm. 109 to 116)
+      - subphrase 1 (mm. 109 to 112)
+        - idea basic-idea (mm. 109 to 110)
+        - idea contrasting-idea (mm. 111 to 112)
+      - subphrase 2 (mm. 113 to 116)
+        - idea contrasting-idea (mm. 113 to 114)
+        - idea contrasting-idea (mm. 115 to 116)
+    - phrase 19 (mm. 117 to 131)
+      - subphrase 1 (mm. 117 to 120)
+        - idea basic-idea (mm. 117 to 118)
+        - idea contrasting-idea (mm. 119 to 120)
+      - subphrase 2 (mm. 121 to 131)
+        - idea contrasting-idea (mm. 121 to 122)
+        - idea contrasting-idea (mm. 123 to 124)
+        - idea contrasting-idea (mm. 125 to 126)
+        - idea contrasting-idea (mm. 127 to 128)
+        - idea contrasting-idea (mm. 129 to 131)
+    - phrase 20 (mm. 132 to 139)
+      - subphrase 1 (mm. 132 to 135)
+        - idea basic-idea (mm. 132 to 133)
+        - idea basic-idea (mm. 134 to 135)
+      - subphrase 2 (mm. 136 to 139)
+        - idea contrasting-idea (mm. 136 to 137)
+        - idea contrasting-idea (mm. 138 to 139)
+    - phrase 21 (mm. 140 to 145)
+      - subphrase 1 (mm. 140 to 143)
+        - idea basic-idea (mm. 140 to 141)
+        - idea contrasting-idea (mm. 142 to 143)
+      - subphrase 2 (mm. 144 to 145)
+        - idea contrasting-idea (mm. 144 to 145)
+  - section L (m. 146, C major)
+    - phrase 22 (m. 146)
+      - idea basic-idea (m. 146)
+  - section M (mm. 147 to 216, C major)
+    - phrase 23 (mm. 147 to 149)
+      - idea basic-idea (mm. 147 to 149)
+    - phrase 24 (mm. 150 to 162)
+      - subphrase 1 (mm. 150 to 153)
+        - idea basic-idea (mm. 150 to 151)
+        - idea contrasting-idea (mm. 152 to 153)
+      - subphrase 2 (mm. 154 to 162)
+        - idea contrasting-idea (mm. 154 to 155)
+        - idea contrasting-idea (mm. 156 to 157)
+        - idea contrasting-idea (mm. 158 to 159)
+        - idea contrasting-idea (mm. 160 to 162)
+    - phrase 25 (mm. 163 to 181)
+      - subphrase 1 (mm. 163 to 166)
+        - idea basic-idea (mm. 163 to 164)
+        - idea contrasting-idea (mm. 165 to 166)
+      - subphrase 2 (mm. 167 to 181)
+        - idea contrasting-idea (mm. 167 to 168)
+        - idea contrasting-idea (mm. 169 to 170)
+        - idea contrasting-idea (mm. 171 to 172)
+        - idea contrasting-idea (mm. 173 to 174)
+        - idea contrasting-idea (mm. 175 to 176)
+        - idea contrasting-idea (mm. 177 to 178)
+        - idea contrasting-idea (mm. 179 to 181)
+    - phrase 26 (mm. 182 to 187)
+      - subphrase 1 (mm. 182 to 185)
+        - idea basic-idea (mm. 182 to 183)
+        - idea contrasting-idea (mm. 184 to 185)
+      - subphrase 2 (mm. 186 to 187)
+        - idea contrasting-idea (mm. 186 to 187)
+    - phrase 27 (mm. 188 to 197)
+      - subphrase 1 (mm. 188 to 191)
+        - idea basic-idea (mm. 188 to 189)
+        - idea contrasting-idea (mm. 190 to 191)
+      - subphrase 2 (mm. 192 to 197)
+        - idea contrasting-idea (mm. 192 to 193)
+        - idea contrasting-idea (mm. 194 to 195)
+        - idea contrasting-idea (mm. 196 to 197)
+    - phrase 28 (mm. 198 to 203)
+      - subphrase 1 (mm. 198 to 201)
+        - idea basic-idea (mm. 198 to 199)
+        - idea contrasting-idea (mm. 200 to 201)
+      - subphrase 2 (mm. 202 to 203)
+        - idea contrasting-idea (mm. 202 to 203)
+    - phrase 29 (mm. 204 to 216)
+      - subphrase 1 (mm. 204 to 207)
+        - idea basic-idea (mm. 204 to 205)
+        - idea contrasting-idea (mm. 206 to 207)
+      - subphrase 2 (mm. 208 to 216)
+        - idea contrasting-idea (mm. 208 to 209)
+        - idea contrasting-idea (mm. 210 to 211)
+        - idea contrasting-idea (mm. 212 to 213)
+        - idea contrasting-idea (mm. 214 to 216)
+  - section M' (mm. 217 to 252, Bb major)
+    - phrase 30 (mm. 217 to 227)
+      - subphrase 1 (mm. 217 to 220)
+        - idea basic-idea (mm. 217 to 218)
+        - idea contrasting-idea (mm. 219 to 220)
+      - subphrase 2 (mm. 221 to 227)
+        - idea contrasting-idea (mm. 221 to 222)
+        - idea contrasting-idea (mm. 223 to 224)
+        - idea contrasting-idea (mm. 225 to 227)
+    - phrase 31 (mm. 228 to 242)
+      - subphrase 1 (mm. 228 to 231)
+        - idea basic-idea (mm. 228 to 229)
+        - idea contrasting-idea (mm. 230 to 231)
+      - subphrase 2 (mm. 232 to 242)
+        - idea contrasting-idea (mm. 232 to 233)
+        - idea contrasting-idea (mm. 234 to 235)
+        - idea contrasting-idea (mm. 236 to 237)
+        - idea contrasting-idea (mm. 238 to 239)
+        - idea contrasting-idea (mm. 240 to 242)
+    - phrase 32 (mm. 243 to 252)
+      - subphrase 1 (mm. 243 to 246)
+        - idea basic-idea (mm. 243 to 244)
+        - idea contrasting-idea (mm. 245 to 246)
+      - subphrase 2 (mm. 247 to 252)
+        - idea basic-idea (mm. 247 to 248)
+        - idea contrasting-idea (mm. 249 to 250)
+        - idea contrasting-idea (mm. 251 to 252)
+  - section N (m. 253, G major)
+    - phrase 33 (m. 253)
+      - idea basic-idea (m. 253)
+  - section O (m. 254, G major)
+    - phrase 34 (m. 254)
+      - idea basic-idea (m. 254)
+  - section M'' (mm. 255 to 264, G major)
+    - phrase 35 (mm. 255 to 262)
+      - subphrase 1 (mm. 255 to 258)
+        - idea basic-idea (mm. 255 to 256)
+        - idea contrasting-idea (mm. 257 to 258)
+      - subphrase 2 (mm. 259 to 262)
+        - idea contrasting-idea (mm. 259 to 260)
+        - idea contrasting-idea (mm. 261 to 262)
+    - phrase 36 (mm. 263 to 264)
+      - idea basic-idea (mm. 263 to 264)
+  - section P (mm. 265 to 272, C major)
+    - phrase 37 (mm. 265 to 266)
+      - idea basic-idea (mm. 265 to 266)
+    - phrase 38 (mm. 267 to 270)
+      - idea basic-idea (mm. 267 to 268)
+      - idea contrasting-idea (mm. 269 to 270)
+    - phrase 39 (mm. 271 to 272)
+      - idea basic-idea (mm. 271 to 272)
+  - section M''' (mm. 273 to 312, G major)
+    - phrase 40 (mm. 273 to 278)
+      - subphrase 1 (mm. 273 to 276)
+        - idea basic-idea (mm. 273 to 274)
+        - idea contrasting-idea (mm. 275 to 276)
+      - subphrase 2 (mm. 277 to 278)
+        - idea contrasting-idea (mm. 277 to 278)
+    - phrase 41 (mm. 279 to 286)
+      - subphrase 1 (mm. 279 to 282)
+        - idea basic-idea (mm. 279 to 280)
+        - idea contrasting-idea (mm. 281 to 282)
+      - subphrase 2 (mm. 283 to 286)
+        - idea contrasting-idea (mm. 283 to 284)
+        - idea contrasting-idea (mm. 285 to 286)
+    - phrase 42 (mm. 287 to 296)
+      - subphrase 1 (mm. 287 to 290)
+        - idea basic-idea (mm. 287 to 288)
+        - idea contrasting-idea (mm. 289 to 290)
+      - subphrase 2 (mm. 291 to 296)
+        - idea contrasting-idea (mm. 291 to 292)
+        - idea contrasting-idea (mm. 293 to 294)
+        - idea contrasting-idea (mm. 295 to 296)
+    - phrase 43 (mm. 297 to 307)
+      - subphrase 1 (mm. 297 to 300)
+        - idea basic-idea (mm. 297 to 298)
+        - idea contrasting-idea (mm. 299 to 300)
+      - subphrase 2 (mm. 301 to 307)
+        - idea contrasting-idea (mm. 301 to 302)
+        - idea contrasting-idea (mm. 303 to 304)
+        - idea contrasting-idea (mm. 305 to 307)
+    - phrase 44 (mm. 308 to 312)
+      - idea basic-idea (mm. 308 to 309)
+      - idea contrasting-idea (mm. 310 to 312)
+  - section Q (m. 313, A minor)
+    - phrase 45 (m. 313)
+      - idea basic-idea (m. 313)
+  - section R (m. 314, A minor)
+    - phrase 46 (m. 314)
+      - idea basic-idea (m. 314)
+  - section S (m. 315, A minor)
+    - phrase 47 (m. 315)
+      - idea basic-idea (m. 315)
+  - section T (mm. 316 to 325, A minor)
+    - phrase 48 (mm. 316 to 319)
+      - idea basic-idea (mm. 316 to 317)
+      - idea contrasting-idea (mm. 318 to 319)
+    - phrase 49 (mm. 320 to 323)
+      - idea basic-idea (mm. 320 to 321)
+      - idea contrasting-idea (mm. 322 to 323)
+    - phrase 50 (mm. 324 to 325)
+      - idea basic-idea (mm. 324 to 325)
+  - section U (mm. 326 to 338, C major)
+    - phrase 51 (mm. 326 to 333)
+      - subphrase 1 (mm. 326 to 329)
+        - idea basic-idea (mm. 326 to 327)
+        - idea contrasting-idea (mm. 328 to 329)
+      - subphrase 2 (mm. 330 to 333)
+        - idea basic-idea (mm. 330 to 331)
+        - idea contrasting-idea (mm. 332 to 333)
+    - phrase 52 (mm. 334 to 338)
+      - idea basic-idea (mm. 334 to 335)
+      - idea contrasting-idea (mm. 336 to 338)
+
 ## Progression patterns
 
 229 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.

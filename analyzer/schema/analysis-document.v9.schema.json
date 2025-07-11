@@ -88,7 +88,7 @@
       "items": { "$ref": "#/$defs/theme_claim" }
     },
     "form": {
-      "type": ["object", "null"]
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/form" }]
     },
     "motives": { "type": "array" },
     "melody": { "type": "array" },
@@ -546,6 +546,107 @@
       "properties": {
         "first": { "type": "integer", "minimum": 0 },
         "last": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "idea_node": {
+      "type": "object",
+      "required": ["level", "phrase", "index", "label", "measures"],
+      "properties": {
+        "level": { "const": "idea" },
+        "phrase": { "type": "integer", "minimum": 0 },
+        "index": { "type": "integer", "minimum": 0 },
+        "label": { "enum": ["basic-idea", "contrasting-idea", "fragment", "unit"] },
+        "measures": { "$ref": "#/$defs/phrase_measures" }
+      }
+    },
+    "subphrase_node": {
+      "type": "object",
+      "required": ["level", "phrase", "index", "measures", "ideas"],
+      "properties": {
+        "level": { "const": "subphrase" },
+        "phrase": { "type": "integer", "minimum": 0 },
+        "index": { "type": "integer", "minimum": 0 },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "ideas": { "type": "array", "items": { "$ref": "#/$defs/idea_node" } }
+      }
+    },
+    "phrase_node": {
+      "type": "object",
+      "required": ["level", "phrase", "measures", "length", "cadence", "subphrases", "ideas"],
+      "properties": {
+        "level": { "const": "phrase" },
+        "phrase": { "type": "integer", "minimum": 0 },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "length": { "type": "integer", "minimum": 0 },
+        "cadence": { "type": ["integer", "null"], "minimum": 0 },
+        "subphrases": { "type": "array", "items": { "$ref": "#/$defs/subphrase_node" } },
+        "ideas": { "type": "array", "items": { "$ref": "#/$defs/idea_node" } }
+      }
+    },
+    "section_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": [
+            "level", "index", "measures", "key", "region", "closed", "cadence", "returns_from", "return", "phrases"
+          ],
+          "properties": {
+            "level": { "const": "section" },
+            "index": { "type": "integer", "minimum": 0 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "key": { "type": ["string", "null"] },
+            "region": { "type": ["integer", "null"], "minimum": 0 },
+            "closed": { "type": "boolean" },
+            "cadence": { "type": ["integer", "null"], "minimum": 0 },
+            "returns_from": { "type": ["integer", "null"], "minimum": 0 },
+            "return": { "type": ["integer", "null"], "minimum": 0 },
+            "phrases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/phrase_node" } }
+          }
+        }
+      ]
+    },
+    "thematic_return_similarity": {
+      "type": "object",
+      "required": ["value", "contour", "rhythm", "window", "earlier_offset", "later_offset"],
+      "properties": {
+        "value": { "type": "number", "minimum": 0, "maximum": 1 },
+        "contour": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rhythm": { "type": "number", "minimum": 0, "maximum": 1 },
+        "window": { "type": "integer", "minimum": 1 },
+        "earlier_offset": { "type": "integer", "minimum": 0 },
+        "later_offset": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "thematic_return_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": [
+            "earlier_theme", "later_theme", "earlier_section", "later_section", "earlier", "later", "similarity"
+          ],
+          "properties": {
+            "label": { "const": "thematic-return" },
+            "earlier_theme": { "type": "integer", "minimum": 0 },
+            "later_theme": { "type": "integer", "minimum": 0 },
+            "earlier_section": { "type": "integer", "minimum": 0 },
+            "later_section": { "type": "integer", "minimum": 0 },
+            "earlier": { "$ref": "#/$defs/phrase_measures" },
+            "later": { "$ref": "#/$defs/phrase_measures" },
+            "similarity": { "$ref": "#/$defs/thematic_return_similarity" }
+          }
+        }
+      ]
+    },
+    "form": {
+      "type": "object",
+      "required": ["level", "measures", "sections", "returns"],
+      "properties": {
+        "level": { "const": "form" },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "sections": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/section_claim" } },
+        "returns": { "type": "array", "items": { "$ref": "#/$defs/thematic_return_claim" } }
       }
     },
     "harmonic_rhythm": {

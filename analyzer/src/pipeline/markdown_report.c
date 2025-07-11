@@ -1178,6 +1178,137 @@ static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON 
     return ok && (!any_compound || sb_append(sb, "\n"));
 }
 
+static bool section_is_empty(const cJSON *section);
+
+/* ---- Form plan ---- */
+
+/* The phrases of a section as "1" or "1 to 4": the first and last phrase numbers. */
+static bool append_section_phrases(StringBuilder *sb, const cJSON *section) {
+    const cJSON *phrases = cJSON_GetObjectItemCaseSensitive(section, "phrases");
+    int first = (int)number_member(cJSON_GetArrayItem(phrases, 0), "phrase") + 1;
+    int last = (int)number_member(cJSON_GetArrayItem(phrases, cJSON_GetArraySize(phrases) - 1), "phrase") + 1;
+    return first == last ? sb_appendf(sb, "%d", first) : sb_appendf(sb, "%d to %d", first, last);
+}
+
+/* The section the section returns from as "returns A (similarity 0.83)", or "-" for a section with a new letter. */
+static bool append_section_return(StringBuilder *sb, const cJSON *form, const cJSON *section) {
+    const cJSON *from = cJSON_GetObjectItemCaseSensitive(section, "returns_from");
+    const cJSON *index = cJSON_GetObjectItemCaseSensitive(section, "return");
+    if (!cJSON_IsNumber(from) || !cJSON_IsNumber(index)) {
+        return sb_append(sb, "-");
+    }
+    const cJSON *earlier = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(form, "sections"), (int)from->valuedouble);
+    const cJSON *item = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(form, "returns"), (int)index->valuedouble);
+    return sb_appendf(sb, "returns %s (similarity %.2f)", string_member(earlier, "label"),
+                      number_member(cJSON_GetObjectItemCaseSensitive(item, "similarity"), "value"));
+}
+
+static bool append_outline_line(StringBuilder *sb, int depth, const char *level, const char *text,
+                                const cJSON *measures, const char *detail) {
+    bool ok = true;
+    for (int i = 0; ok && i < depth; i++) {
+        ok = sb_append(sb, "  ");
+    }
+    ok = ok && sb_appendf(sb, "- %s%s%s (", level, text[0] ? " " : "", text) && append_measures(sb, measures);
+    return ok && sb_appendf(sb, "%s%s)\n", detail[0] ? ", " : "", detail);
+}
+
+static bool append_idea_outline(StringBuilder *sb, int depth, const cJSON *ideas) {
+    const cJSON *idea;
+    bool ok = true;
+    cJSON_ArrayForEach(idea, ideas) {
+        ok = ok && append_outline_line(sb, depth, "idea", string_member(idea, "label"),
+                                       cJSON_GetObjectItemCaseSensitive(idea, "measures"), "");
+    }
+    return ok;
+}
+
+static bool append_phrase_outline(StringBuilder *sb, int depth, const cJSON *phrase) {
+    char number[24];
+    snprintf(number, sizeof(number), "%d", (int)number_member(phrase, "phrase") + 1);
+    bool ok = append_outline_line(sb, depth, "phrase", number, cJSON_GetObjectItemCaseSensitive(phrase, "measures"), "");
+    const cJSON *subphrases = cJSON_GetObjectItemCaseSensitive(phrase, "subphrases");
+    const cJSON *subphrase;
+    cJSON_ArrayForEach(subphrase, subphrases) {
+        snprintf(number, sizeof(number), "%d", (int)number_member(subphrase, "index") + 1);
+        ok = ok && append_outline_line(sb, depth + 1, "subphrase", number,
+                                       cJSON_GetObjectItemCaseSensitive(subphrase, "measures"), "") &&
+             append_idea_outline(sb, depth + 2, cJSON_GetObjectItemCaseSensitive(subphrase, "ideas"));
+    }
+    return ok && append_idea_outline(sb, depth + 1, cJSON_GetObjectItemCaseSensitive(phrase, "ideas"));
+}
+
+/* The tree as an indented outline: form, sections, phrases, subphrases and ideas, each with its measures. */
+static bool render_form_outline(StringBuilder *sb, const cJSON *form) {
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(form, "sections");
+    bool ok = sb_append(sb, "### Outline\n\n") &&
+              append_outline_line(sb, 0, "form", "", cJSON_GetObjectItemCaseSensitive(form, "measures"), "");
+    const cJSON *section;
+    cJSON_ArrayForEach(section, sections) {
+        const cJSON *key = cJSON_GetObjectItemCaseSensitive(section, "key");
+        ok = ok && append_outline_line(sb, 1, "section", string_member(section, "label"),
+                                       cJSON_GetObjectItemCaseSensitive(section, "measures"),
+                                       cJSON_IsString(key) ? key->valuestring : "");
+        const cJSON *phrase;
+        cJSON_ArrayForEach(phrase, cJSON_GetObjectItemCaseSensitive(section, "phrases")) {
+            ok = ok && append_phrase_outline(sb, 2, phrase);
+        }
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_thematic_returns(StringBuilder *sb, const cJSON *form, const cJSON *returns) {
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(form, "sections");
+    bool ok = sb_append(sb, "### Thematic returns\n\n") &&
+              sb_append(sb, "A later theme recalls an earlier one when the kernel's thematic return detection finds "
+                            "the same contour and rhythm in a stretch of both. Similarity is the lower of the two "
+                            "scores. Themes that share a phrase are not compared.\n\n") &&
+              sb_append(sb, "| Later theme | Measures | Section | Earlier theme | Measures | Section | Similarity |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *item;
+    cJSON_ArrayForEach(item, returns) {
+        const cJSON *later = cJSON_GetArrayItem(sections, (int)number_member(item, "later_section"));
+        const cJSON *earlier = cJSON_GetArrayItem(sections, (int)number_member(item, "earlier_section"));
+        ok = ok && sb_appendf(sb, "| %d | ", (int)number_member(item, "later_theme") + 1) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(item, "later")) &&
+             sb_appendf(sb, " | %s | %d | ", string_member(later, "label"),
+                        (int)number_member(item, "earlier_theme") + 1) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(item, "earlier")) &&
+             sb_appendf(sb, " | %s | %.2f |\n", string_member(earlier, "label"),
+                        number_member(cJSON_GetObjectItemCaseSensitive(item, "similarity"), "value"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_form_plan(StringBuilder *sb, const cJSON *document, const cJSON *form) {
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(form, "sections");
+    const cJSON *returns = cJSON_GetObjectItemCaseSensitive(form, "returns");
+    int count = cJSON_GetArraySize(sections);
+    bool ok = sb_append(sb, "## Form plan\n\n") &&
+              sb_appendf(sb,
+                         "The kernel's form structure detection grouped the phrases into %d %s, closing a section at "
+                         "each phrase that ends on a perfect or imperfect authentic cadence; the phrases after the "
+                         "last such cadence form the last section. Sections are lettered by first appearance, and a "
+                         "section whose opening theme returns an earlier section's material takes that letter with a "
+                         "prime. Key is the key the section opens in.\n\n",
+                         count, count == 1 ? "section" : "sections") &&
+              sb_append(sb, "| Section | Measures | Key | Phrases | Closing cadence | Returns |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *section;
+    cJSON_ArrayForEach(section, sections) {
+        const cJSON *key = cJSON_GetObjectItemCaseSensitive(section, "key");
+        ok = ok && sb_appendf(sb, "| %s | ", string_member(section, "label")) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(section, "measures")) &&
+             sb_appendf(sb, " | %s | ", cJSON_IsString(key) ? key->valuestring : "-") &&
+             append_section_phrases(sb, section) && sb_append(sb, " | ") &&
+             append_phrase_cadence(sb, document, section) && sb_append(sb, " | ") &&
+             append_section_return(sb, form, section) && sb_append(sb, " |\n");
+    }
+    ok = ok && sb_append(sb, "\n");
+    return ok && (section_is_empty(returns) || render_thematic_returns(sb, form, returns)) &&
+           render_form_outline(sb, form);
+}
+
 static int chord_start_measure(const cJSON *document, const cJSON *index) {
     if (!cJSON_IsNumber(index)) {
         return -1;
@@ -1240,7 +1371,6 @@ static bool append_mean(StringBuilder *sb, const cJSON *object, const char *key)
     return sb_append(sb, text);
 }
 
-static bool section_is_empty(const cJSON *section);
 
 /* The mean cell of a cadence approach: a rational, or "none" when the start of the piece clips the window away. */
 static bool append_window_mean(StringBuilder *sb, const cJSON *approach, const char *key) {
@@ -1328,6 +1458,7 @@ static const struct {
     {"cadences", render_cadences},
     {"phrases", render_phrases},
     {"themes", render_themes},
+    {"form", render_form_plan},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
 };

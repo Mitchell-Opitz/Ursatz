@@ -1706,6 +1706,227 @@ static cJSON *themes_json(const ImportedNotes *notes, const AnalysisReport *repo
     return list;
 }
 
+/* ---- Form plan ---- */
+
+/* The form tree's nodes are named by level: "form", "section", "phrase", "subphrase" and "idea". A phrase, subphrase
+   or idea node points at its full claim in "phrases" (phrase, and index within the phrase for the last two) and
+   repeats only what reading the outline needs. */
+
+static cJSON *idea_node_json(const AnalysisIdea *idea) {
+    cJSON *node = cJSON_CreateObject();
+    if (!(node && add(node, "level", cJSON_CreateString("idea")) &&
+          add(node, "phrase", cJSON_CreateNumber((double)idea->phrase)) &&
+          add(node, "index", cJSON_CreateNumber(idea->index)) && add(node, "label", cJSON_CreateString(idea->label)) &&
+          add(node, "measures", measures_json(idea->first_measure, idea->last_measure)))) {
+        cJSON_Delete(node);
+        return NULL;
+    }
+    return node;
+}
+
+/* A subphrase node holds the ideas the subphrase holds. */
+static cJSON *subphrase_node_json(const AnalysisReport *report, const AnalysisSubphrase *subphrase) {
+    cJSON *node = cJSON_CreateObject();
+    cJSON *ideas = cJSON_CreateArray();
+    bool ok = node && ideas;
+    for (size_t k = 0; ok && k < subphrase->idea_count; k++) {
+        ok = append(ideas, idea_node_json(&report->ideas[subphrase->first_idea + k]));
+    }
+    bool taken = false; /* add() takes the ideas over, and frees them itself when it fails */
+    if (!(ok && add(node, "level", cJSON_CreateString("subphrase")) &&
+          add(node, "phrase", cJSON_CreateNumber((double)subphrase->phrase)) &&
+          add(node, "index", cJSON_CreateNumber(subphrase->index)) &&
+          add(node, "measures", measures_json(subphrase->first_measure, subphrase->last_measure)) &&
+          (taken = true, add(node, "ideas", ideas)))) {
+        if (!taken) {
+            cJSON_Delete(ideas);
+        }
+        cJSON_Delete(node);
+        return NULL;
+    }
+    return node;
+}
+
+static bool idea_in_subphrase(const AnalysisReport *report, const AnalysisPhrase *phrase, size_t idea) {
+    for (size_t k = 0; k < phrase->subphrase_count; k++) {
+        const AnalysisSubphrase *subphrase = &report->subphrases[phrase->first_subphrase + k];
+        if (idea >= subphrase->first_idea && idea < subphrase->first_idea + subphrase->idea_count) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* A phrase node holds its subphrases, each with its ideas, and the ideas that lie in no subphrase (all of them for a
+   phrase of fewer than three ideas, which has no subphrases), so each idea appears once in the tree. */
+static cJSON *phrase_node_json(const AnalysisReport *report, size_t index) {
+    const AnalysisPhrase *phrase = &report->phrases[index];
+    cJSON *node = cJSON_CreateObject();
+    cJSON *subphrases = cJSON_CreateArray();
+    cJSON *ideas = cJSON_CreateArray();
+    bool ok = node && subphrases && ideas;
+    for (size_t k = 0; ok && k < phrase->subphrase_count; k++) {
+        ok = append(subphrases, subphrase_node_json(report, &report->subphrases[phrase->first_subphrase + k]));
+    }
+    for (size_t k = 0; ok && k < phrase->idea_count; k++) {
+        if (!idea_in_subphrase(report, phrase, phrase->first_idea + k)) {
+            ok = append(ideas, idea_node_json(&report->ideas[phrase->first_idea + k]));
+        }
+    }
+    bool taken_subphrases = false;
+    bool taken_ideas = false;
+    if (!(ok && add(node, "level", cJSON_CreateString("phrase")) &&
+          add(node, "phrase", cJSON_CreateNumber((double)index)) &&
+          add(node, "measures", measures_json(phrase->first_measure, phrase->end_measure)) &&
+          add(node, "length", cJSON_CreateNumber(phrase->length_measures)) &&
+          add(node, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
+          (taken_subphrases = true, add(node, "subphrases", subphrases)) &&
+          (taken_ideas = true, add(node, "ideas", ideas)))) {
+        if (!taken_subphrases) {
+            cJSON_Delete(subphrases);
+        }
+        if (!taken_ideas) {
+            cJSON_Delete(ideas);
+        }
+        cJSON_Delete(node);
+        return NULL;
+    }
+    return node;
+}
+
+static cJSON *section_phrases_json(const AnalysisReport *report, const AnalysisSection *section) {
+    cJSON *phrases = cJSON_CreateArray();
+    for (size_t k = 0; phrases && k < section->phrase_count; k++) {
+        if (!append(phrases, phrase_node_json(report, section->first_phrase + k))) {
+            cJSON_Delete(phrases);
+            return NULL;
+        }
+    }
+    return phrases;
+}
+
+static bool add_section_fields(cJSON *claim, const AnalysisReport *report, const AnalysisSection *section,
+                               size_t index) {
+    return add(claim, "level", cJSON_CreateString("section")) && add(claim, "index", cJSON_CreateNumber((double)index)) &&
+           add(claim, "measures", measures_json(section->first_measure, section->last_measure)) &&
+           add(claim, "key", section->in_region ? cJSON_CreateString(report->key_regions[section->region].label)
+                                                : cJSON_CreateNull()) &&
+           add(claim, "region", section->in_region ? cJSON_CreateNumber((double)section->region) : cJSON_CreateNull()) &&
+           add(claim, "closed", cJSON_CreateBool(section->closed)) &&
+           add(claim, "cadence", section->has_cadence ? cJSON_CreateNumber((double)section->cadence) : cJSON_CreateNull()) &&
+           add(claim, "returns_from",
+               section->has_return ? cJSON_CreateNumber((double)section->returns_from) : cJSON_CreateNull()) &&
+           add(claim, "return",
+               section->has_return ? cJSON_CreateNumber((double)section->return_index) : cJSON_CreateNull()) &&
+           add(claim, "phrases", section_phrases_json(report, section));
+}
+
+/* One claim per section, labelled with its letter: the span runs from its first phrase's start to its last phrase's
+   end, the notes are those sounding in its chords, the uncertainty the greatest of its phrases'. key is the key
+   region the section opens in, closed whether one of the library's section-closing cadences ended it (false for the
+   phrases after the last one), cadence the cadence that ends its last phrase, returns_from the earlier section whose
+   material its opening theme returns (null for a section with a new letter) and return the index into the form's
+   "returns" of that return. */
+static cJSON *section_json(const ImportedNotes *notes, const AnalysisReport *report, size_t index) {
+    const AnalysisSection *section = &report->sections[index];
+    Rational start = rational_make(section->start_numerator, section->start_denominator);
+    Rational end = rational_make(section->end_numerator, section->end_denominator);
+    size_t id_count = 0;
+    size_t *ids = section->entry_count > 0 ? entry_range_note_ids(report, section->first_entry,
+                                                                  section->first_entry + section->entry_count - 1,
+                                                                  &id_count)
+                                           : NULL;
+    cJSON *claim = (ids || section->entry_count == 0)
+                       ? claim_json_with(framework_name(standard_form_framework()), notes, ids, id_count, start, end,
+                                         section->label, cJSON_CreateNumber(section->uncertainty))
+                       : NULL;
+    free(ids);
+    if (!(claim && add_section_fields(claim, report, section, index))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+static cJSON *return_similarity_json(const AnalysisThematicReturn *item) {
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "value", cJSON_CreateNumber(item->similarity)) &&
+          add(object, "contour", cJSON_CreateNumber(item->contour_score)) &&
+          add(object, "rhythm", cJSON_CreateNumber(item->rhythm_score)) &&
+          add(object, "window", cJSON_CreateNumber((double)item->window_length)) &&
+          add(object, "earlier_offset", cJSON_CreateNumber((double)item->earlier_offset)) &&
+          add(object, "later_offset", cJSON_CreateNumber((double)item->later_offset)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One claim per thematic return, by later theme, then earlier theme: the later theme recalls the earlier one. The
+   claim is over the later theme (its span, notes and location); earlier_theme and later_theme are indices into
+   "themes", earlier_section and later_section into the form's "sections", earlier and later the measures of the
+   two themes, and similarity the kernel's scores for the best stretch pair (value is the lower of contour and
+   rhythm; window the notes compared, the offsets where the stretches begin inside each theme). The uncertainty is
+   1 minus the similarity. */
+static cJSON *return_json(const ImportedNotes *notes, const AnalysisReport *report,
+                          const AnalysisThematicReturn *item) {
+    const AnalysisTheme *earlier = &report->themes[item->earlier_theme];
+    const AnalysisTheme *later = &report->themes[item->later_theme];
+    Rational start = rational_make(later->start_numerator, later->start_denominator);
+    Rational end = rational_make(later->end_numerator, later->end_denominator);
+    cJSON *claim = claim_json_with(framework_name(standard_form_framework()), notes, later->note_ids,
+                                   later->note_id_count, start, end, "thematic-return",
+                                   cJSON_CreateNumber(1.0 - item->similarity));
+    if (!(claim && add(claim, "earlier_theme", cJSON_CreateNumber((double)item->earlier_theme)) &&
+          add(claim, "later_theme", cJSON_CreateNumber((double)item->later_theme)) &&
+          add(claim, "earlier_section", cJSON_CreateNumber((double)item->earlier_section)) &&
+          add(claim, "later_section", cJSON_CreateNumber((double)item->later_section)) &&
+          add(claim, "earlier", measures_json(earlier->first_measure, earlier->last_measure)) &&
+          add(claim, "later", measures_json(later->first_measure, later->last_measure)) &&
+          add(claim, "similarity", return_similarity_json(item)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The form: a tree of sections, each holding its phrases, subphrases and ideas, and the thematic returns between
+   its themes. null when the library found no phrases to group. The root has no span of its own; its measures run
+   from the first section's first measure to the last section's last. */
+static cJSON *form_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    if (report->section_count == 0) {
+        return cJSON_CreateNull();
+    }
+    cJSON *form = cJSON_CreateObject();
+    cJSON *sections = cJSON_CreateArray();
+    cJSON *returns = cJSON_CreateArray();
+    bool ok = form && sections && returns;
+    for (size_t s = 0; ok && s < report->section_count; s++) {
+        ok = append(sections, section_json(notes, report, s));
+    }
+    for (size_t r = 0; ok && r < report->thematic_return_count; r++) {
+        ok = append(returns, return_json(notes, report, &report->thematic_returns[r]));
+    }
+    bool taken_sections = false;
+    bool taken_returns = false;
+    if (!(ok && add(form, "level", cJSON_CreateString("form")) &&
+          add(form, "measures",
+              measures_json(report->sections[0].first_measure,
+                            report->sections[report->section_count - 1].last_measure)) &&
+          (taken_sections = true, add(form, "sections", sections)) &&
+          (taken_returns = true, add(form, "returns", returns)))) {
+        if (!taken_sections) {
+            cJSON_Delete(sections);
+        }
+        if (!taken_returns) {
+            cJSON_Delete(returns);
+        }
+        cJSON_Delete(form);
+        return NULL;
+    }
+    return form;
+}
+
 /* ---- Progressions ---- */
 
 /* The pattern as a JSON array of its base numerals. */
@@ -2240,7 +2461,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "outer_voices", outer_voices_json(notes, report)) &&
           add(document, "cadences", cadences_json(notes, report)) &&
           add(document, "phrases", phrases_json(notes, report)) &&
-          add(document, "themes", themes_json(notes, report)) && add(document, "form", cJSON_CreateNull()) &&
+          add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
           add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&

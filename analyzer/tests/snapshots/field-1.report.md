@@ -1192,6 +1192,79 @@ The library's standard-form analysis found 5 themes from the phrases, their idea
 | 4 | hybrid | slightly-less-common | mm. 51 to 57 | 7 | compound-basic-idea (mm. 51 to 54), continuation (mm. 55 to 57, half (m. 57, beat 1)) | - |
 | 5 | hybrid | slightly-less-common | mm. 58 to 65 | 8 | compound-basic-idea (mm. 58 to 61), continuation (mm. 62 to 65, half (m. 65, beat 3)) | - |
 
+## Form plan
+
+The kernel's form structure detection grouped the phrases into 5 sections, closing a section at each phrase that ends on a perfect or imperfect authentic cadence; the phrases after the last such cadence form the last section. Sections are lettered by first appearance, and a section whose opening theme returns an earlier section's material takes that letter with a prime. Key is the key the section opens in.
+
+| Section | Measures | Key | Phrases | Closing cadence | Returns |
+| --- | --- | --- | --- | --- | --- |
+| A | mm. 1 to 4 | Eb major | 1 to 2 | perfect-authentic (m. 4, beat 1) | - |
+| B | mm. 5 to 37 | Eb major | 3 to 6 | perfect-authentic (m. 37, beat 1) | - |
+| C | mm. 38 to 46 | Eb major | 7 | perfect-authentic (m. 46, beat 1) | - |
+| D | mm. 47 to 50 | Eb major | 8 | imperfect-authentic (m. 50, beat 1) | - |
+| E | mm. 51 to 67 | Eb major | 9 to 10 | half (m. 65, beat 3) | - |
+
+### Outline
+
+- form (mm. 1 to 67)
+  - section A (mm. 1 to 4, Eb major)
+    - phrase 1 (mm. 1 to 3)
+      - idea basic-idea (mm. 1 to 3)
+    - phrase 2 (m. 4)
+      - idea basic-idea (m. 4)
+  - section B (mm. 5 to 37, Eb major)
+    - phrase 3 (mm. 5 to 7)
+      - idea basic-idea (mm. 5 to 7)
+    - phrase 4 (mm. 8 to 15)
+      - subphrase 1 (mm. 8 to 11)
+        - idea basic-idea (mm. 8 to 9)
+        - idea contrasting-idea (mm. 10 to 11)
+      - subphrase 2 (mm. 12 to 15)
+        - idea contrasting-idea (mm. 12 to 13)
+        - idea contrasting-idea (mm. 14 to 15)
+    - phrase 5 (mm. 16 to 30)
+      - subphrase 1 (mm. 16 to 19)
+        - idea basic-idea (mm. 16 to 17)
+        - idea contrasting-idea (mm. 18 to 19)
+      - subphrase 2 (mm. 20 to 30)
+        - idea contrasting-idea (mm. 20 to 21)
+        - idea contrasting-idea (mm. 22 to 23)
+        - idea contrasting-idea (mm. 24 to 25)
+        - idea contrasting-idea (mm. 26 to 27)
+        - idea contrasting-idea (mm. 28 to 30)
+    - phrase 6 (mm. 31 to 37)
+      - subphrase 1 (mm. 31 to 34)
+        - idea basic-idea (mm. 31 to 32)
+        - idea contrasting-idea (mm. 33 to 34)
+      - subphrase 2 (mm. 35 to 37)
+        - idea contrasting-idea (mm. 35 to 37)
+  - section C (mm. 38 to 46, Eb major)
+    - phrase 7 (mm. 38 to 46)
+      - subphrase 1 (mm. 38 to 41)
+        - idea basic-idea (mm. 38 to 39)
+        - idea contrasting-idea (mm. 40 to 41)
+      - subphrase 2 (mm. 42 to 46)
+        - idea contrasting-idea (mm. 42 to 43)
+        - idea contrasting-idea (mm. 44 to 46)
+  - section D (mm. 47 to 50, Eb major)
+    - phrase 8 (mm. 47 to 50)
+      - idea basic-idea (mm. 47 to 48)
+      - idea contrasting-idea (mm. 49 to 50)
+  - section E (mm. 51 to 67, Eb major)
+    - phrase 9 (mm. 51 to 57)
+      - subphrase 1 (mm. 51 to 54)
+        - idea basic-idea (mm. 51 to 52)
+        - idea contrasting-idea (mm. 53 to 54)
+      - subphrase 2 (mm. 55 to 57)
+        - idea contrasting-idea (mm. 55 to 57)
+    - phrase 10 (mm. 58 to 65)
+      - subphrase 1 (mm. 58 to 61)
+        - idea basic-idea (mm. 58 to 59)
+        - idea contrasting-idea (mm. 60 to 61)
+      - subphrase 2 (mm. 62 to 65)
+        - idea contrasting-idea (mm. 62 to 63)
+        - idea contrasting-idea (mm. 64 to 65)
+
 ## Progression patterns
 
 31 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
