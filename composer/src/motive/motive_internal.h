@@ -14,6 +14,10 @@ typedef struct {
     bool meter_declared;
     bool has_key;
     PlanKey key;
+    /* A JSON "form" and "pickup"; the other inputs have neither, and the caller's options can set the pickup. */
+    MotiveForm form;
+    bool has_pickup;
+    PlanTime pickup;
 } MotiveDocument;
 
 /* Records the first problem only. error may be NULL. */
@@ -22,6 +26,9 @@ void motive_set_error(MotiveError *error, const char *location, const char *form
 PlanTime motive_time(long num, unsigned long den);
 PlanTime motive_time_plus(PlanTime a, PlanTime b);
 PlanTime motive_time_minus(PlanTime a, PlanTime b);
+
+/* The pickup of a motive, or zero when it is unset (a zero-initialized Motive has a denominator of 0). */
+PlanTime motive_pickup(const Motive *motive);
 
 /* A note's end. */
 PlanTime motive_note_end(const PlanNote *note);

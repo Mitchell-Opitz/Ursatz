@@ -68,6 +68,16 @@ typedef enum {
     MOTIVE_KEY_INFERRED
 } MotiveKeySource;
 
+/*
+ * What a motive holds. FULL is pitches and rhythm. RHYTHM keeps only the durations and onsets (every note sounds on
+ * the same pitch). CONTOUR keeps only the heights of the notes in relation to each other, in even quarter notes.
+ */
+typedef enum {
+    MOTIVE_FORM_FULL = 0,
+    MOTIVE_FORM_RHYTHM,
+    MOTIVE_FORM_CONTOUR
+} MotiveForm;
+
 typedef struct {
     PlanMeter meter;
     /* Valid when key_source is not MOTIVE_KEY_UNSPECIFIED. */
@@ -77,6 +87,11 @@ typedef struct {
     size_t note_count;
     /* Where the last note ends. The span of the motive is this long. */
     PlanTime length;
+    /* Zero-initialized means a full motive with no pickup. */
+    MotiveForm form;
+    /* How much of the meter's bar comes before the first barline, in whole notes. The motive still starts at offset 0;
+       bars and beats are counted from -pickup. */
+    PlanTime pickup;
 } Motive;
 
 /* What the caller says about the motive. NULL options mean nothing. */
@@ -85,6 +100,9 @@ typedef struct {
     PlanMeter meter;
     bool has_key;
     PlanKey key;
+    bool has_pickup;
+    /* In whole notes; the CLI converts beats. */
+    PlanTime pickup;
     /* The most bars the notes may fill, or 0 for no limit. The readers themselves set none: a line of any length up to
        MOTIVE_MAX_NOTES notes is read, and the commands that take a one-bar motive check it after. */
     size_t max_bars;
@@ -112,6 +130,11 @@ const char *motive_result_name(MotiveResult result);
 bool motive_format_parse(const char *name, MotiveFormat *out);
 /* "midi", "musicxml", "notes", "json" or "auto". */
 const char *motive_format_name(MotiveFormat format);
+
+/* Reads "full", "rhythm" or "contour". False for any other text. */
+bool motive_form_parse(const char *name, MotiveForm *out);
+/* "full", "rhythm" or "contour". */
+const char *motive_form_name(MotiveForm form);
 
 /*
  * What the bytes look like, never MOTIVE_FORMAT_AUTO: "MThd" is MIDI, a first
