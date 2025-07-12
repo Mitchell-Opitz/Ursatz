@@ -25,7 +25,7 @@ const char *motive_result_name(MotiveResult result) {
     return (size_t)result < sizeof(RESULT_NAMES) / sizeof(RESULT_NAMES[0]) ? RESULT_NAMES[result] : "unknown";
 }
 
-static const char *const FORMAT_NAMES[] = {"auto", "midi", "musicxml", "notes", "json"};
+static const char *const FORMAT_NAMES[] = {"auto", "midi", "musicxml", "notes", "json", "degrees"};
 
 bool motive_format_parse(const char *name, MotiveFormat *out) {
     if (!name || !out) {
@@ -431,6 +431,11 @@ static MotiveResult load_text(const char *text, TextParser parse, const MotiveOp
     Motive motive;
     MotiveDocument document;
     begin(&motive, &document, error);
+    if (options && options->has_key) {
+        /* A key the caller gives is the key a degree list is read in; for the other inputs it changes nothing. */
+        document.has_key = true;
+        document.key = options->key;
+    }
     MotiveResult result = parse(text, &motive, &document, error);
     if (result == MOTIVE_OK) {
         result = motive_complete(&motive, &document, options, error);
@@ -443,6 +448,10 @@ static MotiveResult load_text(const char *text, TextParser parse, const MotiveOp
 
 MotiveResult motive_from_notes_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
     return load_text(text, motive_parse_notes_text, options, out, error);
+}
+
+MotiveResult motive_from_degrees_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
+    return load_text(text, motive_parse_degrees_text, options, out, error);
 }
 
 MotiveResult motive_from_json(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
@@ -502,6 +511,7 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
     case MOTIVE_FORMAT_MUSICXML:
         return motive_from_musicxml(data, size, options, out, error);
     case MOTIVE_FORMAT_NOTES:
+    case MOTIVE_FORMAT_DEGREES:
     case MOTIVE_FORMAT_JSON: {
         char *text = malloc(size + 1);
         if (!text) {
@@ -510,8 +520,9 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
         }
         memcpy(text, data, size);
         text[size] = '\0';
-        MotiveResult result = format == MOTIVE_FORMAT_JSON ? motive_from_json(text, options, out, error)
-                                                           : motive_from_notes_text(text, options, out, error);
+        MotiveResult result = format == MOTIVE_FORMAT_JSON     ? motive_from_json(text, options, out, error)
+                              : format == MOTIVE_FORMAT_DEGREES ? motive_from_degrees_text(text, options, out, error)
+                                                                : motive_from_notes_text(text, options, out, error);
         free(text);
         return result;
     }

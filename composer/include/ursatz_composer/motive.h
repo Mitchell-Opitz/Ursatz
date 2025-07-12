@@ -120,15 +120,17 @@ typedef enum {
     MOTIVE_FORMAT_MIDI,
     MOTIVE_FORMAT_MUSICXML,
     MOTIVE_FORMAT_NOTES,
-    MOTIVE_FORMAT_JSON
+    MOTIVE_FORMAT_JSON,
+    /* Never chosen by motive_detect_format: it has to be asked for. */
+    MOTIVE_FORMAT_DEGREES
 } MotiveFormat;
 
 /* "ok", "polyphonic" and so on. */
 const char *motive_result_name(MotiveResult result);
 
-/* Reads "auto", "midi", "musicxml", "notes" or "json". False for any other text. */
+/* Reads "auto", "midi", "musicxml", "notes", "json" or "degrees". False for any other text. */
 bool motive_format_parse(const char *name, MotiveFormat *out);
-/* "midi", "musicxml", "notes", "json" or "auto". */
+/* "midi", "musicxml", "notes", "json", "degrees" or "auto". */
 const char *motive_format_name(MotiveFormat format);
 
 /* Reads "full", "rhythm" or "contour". False for any other text. */
@@ -170,6 +172,19 @@ bool motive_parse_meter(const char *text, PlanMeter *out);
  * The meter comes from the options (a note list has none of its own).
  */
 MotiveResult motive_from_notes_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
+
+/*
+ * A degree list, as text: the same as a note list, but each pitch is a degree of the key's scale (natural minor in a
+ * minor key):
+ *
+ *   1:q b3:e 5:e 1':h
+ *
+ * A pitch is an optional # or b, a degree 1 to 7, then octave marks, any number: ' up an octave, , down. Octave 0 is
+ * the octave whose degree 1 is the tonic's pitch class in MIDI 60 to 71. "r:<duration>" is a rest, "~" ties and "|" is
+ * ignored as in a note list. The key comes from the options; without one the pitches are C major's and the key stays
+ * as the pitches settle it.
+ */
+MotiveResult motive_from_degrees_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
 /*
  * JSON, in the plan format's vocabulary (docs/plan-format.md, "Motive documents"):

@@ -48,6 +48,8 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
 
 /* The text inputs, each filling a motive's notes and a document. */
 MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
+/* A degree list: the key for the pitches is the document's (the options' key), else C major. */
+MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 
 /* JSON building shared with the analysis document. The motive as an object (see motive_to_json); NULL on failure. */
