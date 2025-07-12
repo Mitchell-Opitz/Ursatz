@@ -151,6 +151,16 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
 /* The body of version number (1 to current_version). NOT_FOUND otherwise. Caller-owned. */
 UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int number, cJSON **out_body);
 
+/*
+ * Reports, for every use in the item's current version, how its source stands.
+ * *out_status is a caller-owned array of {item_id, version (the used one),
+ * updated, missing} plus, while the source exists, current_version, name, type
+ * and project_id of the source. "updated" is true when the source's
+ * current_version is newer than the used version; "missing" is true when the
+ * source was deleted (the copy stays in the body). NOT_FOUND if the item is absent.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **out_status);
+
 /* Deletes the item directory with every version. NOT_FOUND if absent. */
 UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id);
 

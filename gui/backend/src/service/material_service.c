@@ -1296,6 +1296,63 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int
     return result;
 }
 
+UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **out_status) {
+    *out_status = NULL;
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    }
+    cJSON *item = NULL;
+    cJSON *body = NULL;
+    cJSON *status = NULL;
+    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = read_version_locked(id, current_version_of(item), &body);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        status = cJSON_CreateArray();
+        result = status ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    }
+    const cJSON *uses = result == URSATZ_GUI_MATERIAL_OK ? cJSON_GetObjectItemCaseSensitive(body, "uses") : NULL;
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, uses) {
+        const char *source_id = string_member(use, "item_id");
+        const cJSON *version = cJSON_GetObjectItemCaseSensitive(use, "version");
+        int used = cJSON_IsNumber(version) ? version->valueint : 0;
+        cJSON *source = NULL;
+        cJSON *entry = cJSON_CreateObject();
+        bool ok = entry && cJSON_AddStringToObject(entry, "item_id", source_id) &&
+                  cJSON_AddNumberToObject(entry, "version", used);
+        if (ok && load_item_locked(source_id, &source) == URSATZ_GUI_MATERIAL_OK) {
+            int latest = current_version_of(source);
+            ok = cJSON_AddNumberToObject(entry, "current_version", latest) &&
+                 cJSON_AddStringToObject(entry, "name", string_member(source, "name")) &&
+                 cJSON_AddStringToObject(entry, "type", string_member(source, "type")) &&
+                 cJSON_AddStringToObject(entry, "project_id", string_member(source, "project_id")) &&
+                 cJSON_AddBoolToObject(entry, "updated", latest > used) && cJSON_AddBoolToObject(entry, "missing", false);
+        } else if (ok) {
+            ok = cJSON_AddBoolToObject(entry, "updated", false) && cJSON_AddBoolToObject(entry, "missing", true);
+        }
+        cJSON_Delete(source);
+        if (!ok) {
+            cJSON_Delete(entry);
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            break;
+        }
+        cJSON_AddItemToArray(status, entry);
+    }
+    UNLOCK();
+    cJSON_Delete(item);
+    cJSON_Delete(body);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        *out_status = status;
+    } else {
+        cJSON_Delete(status);
+    }
+    return result;
+}
+
 /* Sets the name and/or project (each NULL = unchanged) on the item and saves it. */
 static UrsatzGuiMaterialResult change_item(const char *id, const char *name, const char *project_id,
                                            cJSON **out_item) {
