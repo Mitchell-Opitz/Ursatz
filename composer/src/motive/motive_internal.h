@@ -50,6 +50,9 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
 MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 /* A degree list: the key for the pitches is the document's (the options' key), else C major. */
 MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
+/* A rhythm ("x:q x:e r:e") and a contour ("0 2 1 3"); both set the document's form, and take the key as a degree list does. */
+MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
+MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 
 /* JSON building shared with the analysis document. The motive as an object (see motive_to_json); NULL on failure. */

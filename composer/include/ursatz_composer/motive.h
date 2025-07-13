@@ -121,16 +121,18 @@ typedef enum {
     MOTIVE_FORMAT_MUSICXML,
     MOTIVE_FORMAT_NOTES,
     MOTIVE_FORMAT_JSON,
-    /* Never chosen by motive_detect_format: it has to be asked for. */
-    MOTIVE_FORMAT_DEGREES
+    /* The last three are never chosen by motive_detect_format: they have to be asked for. */
+    MOTIVE_FORMAT_DEGREES,
+    MOTIVE_FORMAT_RHYTHM,
+    MOTIVE_FORMAT_CONTOUR
 } MotiveFormat;
 
 /* "ok", "polyphonic" and so on. */
 const char *motive_result_name(MotiveResult result);
 
-/* Reads "auto", "midi", "musicxml", "notes", "json" or "degrees". False for any other text. */
+/* Reads "auto", "midi", "musicxml", "notes", "json", "degrees", "rhythm" or "contour". False for any other text. */
 bool motive_format_parse(const char *name, MotiveFormat *out);
-/* "midi", "musicxml", "notes", "json", "degrees" or "auto". */
+/* "midi", "musicxml", "notes", "json", "degrees", "rhythm", "contour" or "auto". */
 const char *motive_format_name(MotiveFormat format);
 
 /* Reads "full", "rhythm" or "contour". False for any other text. */
@@ -185,6 +187,26 @@ MotiveResult motive_from_notes_text(const char *text, const MotiveOptions *optio
  * as the pitches settle it.
  */
 MotiveResult motive_from_degrees_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
+
+/*
+ * A rhythm, as text: a note list with no pitches.
+ *
+ *   x:q x:e x:e x:h
+ *
+ * Each note is "x" and a duration; "r" rests, "~" ties, dots and "|" are as in a note list. The motive is read with
+ * form MOTIVE_FORM_RHYTHM and sounds every note on degree 1 of the key (C major's when the options give none).
+ */
+MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
+
+/*
+ * A contour, as text: ranks separated by white space, 0 the lowest, equal ranks the same height, no durations.
+ *
+ *   0 2 1 3
+ *
+ * The motive is read with form MOTIVE_FORM_CONTOUR and sounds rank r on degree r + 1 of the key (C major's when the
+ * options give none), every note a quarter.
+ */
+MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
 /*
  * JSON, in the plan format's vocabulary (docs/plan-format.md, "Motive documents"):

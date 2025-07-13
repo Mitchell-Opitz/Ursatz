@@ -25,7 +25,7 @@ const char *motive_result_name(MotiveResult result) {
     return (size_t)result < sizeof(RESULT_NAMES) / sizeof(RESULT_NAMES[0]) ? RESULT_NAMES[result] : "unknown";
 }
 
-static const char *const FORMAT_NAMES[] = {"auto", "midi", "musicxml", "notes", "json", "degrees"};
+static const char *const FORMAT_NAMES[] = {"auto", "midi", "musicxml", "notes", "json", "degrees", "rhythm", "contour"};
 
 bool motive_format_parse(const char *name, MotiveFormat *out) {
     if (!name || !out) {
@@ -454,6 +454,14 @@ MotiveResult motive_from_degrees_text(const char *text, const MotiveOptions *opt
     return load_text(text, motive_parse_degrees_text, options, out, error);
 }
 
+MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
+    return load_text(text, motive_parse_rhythm_text, options, out, error);
+}
+
+MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
+    return load_text(text, motive_parse_contour_text, options, out, error);
+}
+
 MotiveResult motive_from_json(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
     return load_text(text, motive_parse_json_text, options, out, error);
 }
@@ -512,6 +520,8 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
         return motive_from_musicxml(data, size, options, out, error);
     case MOTIVE_FORMAT_NOTES:
     case MOTIVE_FORMAT_DEGREES:
+    case MOTIVE_FORMAT_RHYTHM:
+    case MOTIVE_FORMAT_CONTOUR:
     case MOTIVE_FORMAT_JSON: {
         char *text = malloc(size + 1);
         if (!text) {
@@ -520,8 +530,10 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
         }
         memcpy(text, data, size);
         text[size] = '\0';
-        MotiveResult result = format == MOTIVE_FORMAT_JSON     ? motive_from_json(text, options, out, error)
+        MotiveResult result = format == MOTIVE_FORMAT_JSON      ? motive_from_json(text, options, out, error)
                               : format == MOTIVE_FORMAT_DEGREES ? motive_from_degrees_text(text, options, out, error)
+                              : format == MOTIVE_FORMAT_RHYTHM  ? motive_from_rhythm_text(text, options, out, error)
+                              : format == MOTIVE_FORMAT_CONTOUR ? motive_from_contour_text(text, options, out, error)
                                                                 : motive_from_notes_text(text, options, out, error);
         free(text);
         return result;
