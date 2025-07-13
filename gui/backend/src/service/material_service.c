@@ -1353,6 +1353,70 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
     return result;
 }
 
+/*
+ * Builds the array of items whose current version uses id: {id, name, type,
+ * project_id, version}. The item need not exist (a deleted source still has users).
+ */
+static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
+    char dir[PATH_BYTES];
+    char **names = NULL;
+    size_t count = 0;
+    if (!is_valid_id(id)) {
+        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+    }
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+    }
+    cJSON *users = cJSON_CreateArray();
+    UrsatzGuiMaterialResult result = users ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+        cJSON *item = NULL;
+        cJSON *body = NULL;
+        if (strcmp(names[i], id) == 0 || load_item_locked(names[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+            continue;
+        }
+        if (read_version_locked(names[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
+            const cJSON *use = NULL;
+            cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
+                const cJSON *version = cJSON_GetObjectItemCaseSensitive(use, "version");
+                if (strcmp(string_member(use, "item_id"), id) != 0) {
+                    continue;
+                }
+                cJSON *entry = cJSON_CreateObject();
+                bool ok = entry && cJSON_AddStringToObject(entry, "id", names[i]) &&
+                          cJSON_AddStringToObject(entry, "name", string_member(item, "name")) &&
+                          cJSON_AddStringToObject(entry, "type", string_member(item, "type")) &&
+                          cJSON_AddStringToObject(entry, "project_id", string_member(item, "project_id")) &&
+                          cJSON_AddNumberToObject(entry, "version", cJSON_IsNumber(version) ? version->valueint : 0);
+                if (!ok) {
+                    cJSON_Delete(entry);
+                    result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                } else {
+                    cJSON_AddItemToArray(users, entry);
+                }
+                break;
+            }
+        }
+        cJSON_Delete(item);
+        cJSON_Delete(body);
+    }
+    free_names(names, count);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        *out = users;
+    } else {
+        cJSON_Delete(users);
+    }
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users) {
+    *out_users = NULL;
+    LOCK();
+    UrsatzGuiMaterialResult result = g_ready ? used_by_locked(id, out_users) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    UNLOCK();
+    return result;
+}
+
 /* Sets the name and/or project (each NULL = unchanged) on the item and saves it. */
 static UrsatzGuiMaterialResult change_item(const char *id, const char *name, const char *project_id,
                                            cJSON **out_item) {

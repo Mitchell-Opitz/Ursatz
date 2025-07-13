@@ -161,6 +161,13 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int
  */
 UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **out_status);
 
+/*
+ * Lists the items whose current version uses any version of id, in id order.
+ * *out_users is a caller-owned array of {id, name, type, project_id, version
+ * (the used one)}. id need not exist: a deleted source can still have users.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users);
+
 /* Deletes the item directory with every version. NOT_FOUND if absent. */
 UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id);
 
