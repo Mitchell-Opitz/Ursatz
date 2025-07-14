@@ -168,6 +168,15 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
  */
 UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users);
 
+/*
+ * Writes a new version of item id identical to its current one, except that
+ * every use of source_id points at the source's current version with a fresh
+ * copy; the note is "updated <source name> to v<n>". NOT_FOUND when the item
+ * or the source is absent or the current version does not use the source.
+ * *out_item (may be NULL) is the updated item.json, caller-owned.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item);
+
 /* Deletes the item directory with every version. NOT_FOUND if absent. */
 UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id);
 
