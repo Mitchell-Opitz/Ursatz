@@ -177,7 +177,11 @@ UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_
  */
 UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item);
 
-/* Deletes the item directory with every version. NOT_FOUND if absent. */
-UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id);
+/*
+ * Deletes the item directory with every version. NOT_FOUND if absent;
+ * REFERENCED while other items use it, unless force is true. A forced delete
+ * leaves the users' copies untouched; their uses then report missing.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force);
 
 #endif /* URSATZ_GUI_MATERIAL_SERVICE_H */

@@ -1583,7 +1583,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id) {
+UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force) {
     LOCK();
     if (!g_ready) {
         UNLOCK();
@@ -1591,12 +1591,15 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id) {
     }
     char dir[PATH_BYTES];
     char meta[PATH_BYTES];
+    cJSON *users = NULL;
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     if (!item_dir_path(id, dir, sizeof(dir)) || !item_file_path(id, "item.json", meta, sizeof(meta))) {
         result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     } else if (!path_exists(meta)) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
-    } else {
+    } else if (!force && (result = used_by_locked(id, &users)) == URSATZ_GUI_MATERIAL_OK && users->child) {
+        result = URSATZ_GUI_MATERIAL_ERR_REFERENCED;
+    } else if (result == URSATZ_GUI_MATERIAL_OK) {
         /* item.json first: a half-deleted directory is no longer an item. */
         if (remove(meta) != 0) {
             result = URSATZ_GUI_MATERIAL_ERR_FAILED;
@@ -1605,5 +1608,6 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id) {
         }
     }
     UNLOCK();
+    cJSON_Delete(users);
     return result;
 }

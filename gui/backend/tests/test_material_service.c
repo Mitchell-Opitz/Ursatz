@@ -299,14 +299,14 @@ static void test_items_and_versions(void) {
     CHECK(ursatz_gui_material_item_list(NULL, NULL, &list) == OK && cJSON_GetArraySize(list) == 3, "items persist");
     cJSON_Delete(list);
 
-    CHECK(ursatz_gui_material_item_delete(theme) == OK, "delete the theme");
+    CHECK(ursatz_gui_material_item_delete(theme, false) == OK, "delete the theme");
     CHECK(ursatz_gui_material_item_get(theme, &meta, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "theme is gone");
     char theme_dir[200];
     snprintf(theme_dir, sizeof(theme_dir), "%s/items/%s/v1.json", g_dir, theme);
     CHECK(access(theme_dir, F_OK) != 0, "theme versions are gone");
-    CHECK(ursatz_gui_material_item_delete(theme) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "delete twice");
+    CHECK(ursatz_gui_material_item_delete(theme, false) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "delete twice");
     CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the emptied project");
-    CHECK(ursatz_gui_material_item_delete(motif) == OK && ursatz_gui_material_item_delete(piece) == OK,
+    CHECK(ursatz_gui_material_item_delete(motif, false) == OK && ursatz_gui_material_item_delete(piece, false) == OK,
           "delete the rest");
     CHECK(ursatz_gui_material_project_delete(other) == OK, "delete the other project");
 
@@ -508,7 +508,7 @@ static void test_body_validation(void) {
     CHECK(ursatz_gui_material_item_add_version(motif, theme, NULL, NULL) == INVALID,
           "add_version refuses another type's body");
     cJSON_Delete(theme);
-    CHECK(ursatz_gui_material_item_delete(motif) == OK, "delete the motif");
+    CHECK(ursatz_gui_material_item_delete(motif, false) == OK, "delete the motif");
     CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the project");
     cJSON_Delete(bad);
     free(motif);
