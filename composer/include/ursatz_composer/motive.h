@@ -234,6 +234,20 @@ MotiveResult motive_load_file(const char *path, MotiveFormat format, const Motiv
 /* The same meter, key and notes. */
 bool motive_equal(const Motive *a, const Motive *b);
 
+/*
+ * The motive as text, each read back by its reader (motive_from_notes_text and so on) into the same notes. A rest
+ * between notes, or before the first, is written as rests; a note whose length is not a plain or dotted value is
+ * written as tied pieces. NULL on failure, and for a value that is not a sum of w to t; caller frees.
+ *   notes:   "D4:q F4:e A4:e D5:h"
+ *   degrees: "1:q b3:e 5:e 1':h", a raised degree as "#"; NULL when the motive has no key
+ *   rhythm:  "x:q x:e x:e x:h"
+ *   contour: "0 2 1 3", the rank of each note among the motive's distinct pitches
+ */
+char *motive_to_notes_text(const Motive *motive);
+char *motive_to_degrees_text(const Motive *motive);
+char *motive_to_rhythm_text(const Motive *motive);
+char *motive_to_contour_text(const Motive *motive);
+
 /* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
 char *motive_to_json(const Motive *motive);
 
