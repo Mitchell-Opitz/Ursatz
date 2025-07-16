@@ -659,6 +659,44 @@ static void test_references(void) {
     free(other);
 }
 
+static void test_forced_delete(void) {
+    char *home = new_project("Forced home");
+    char *source = new_item("motif", "Forced source", home, kMotifBody);
+    char *user = new_theme_using("Forced user", home, source);
+    CHECK(source && user, "create the source and its user");
+
+    CHECK(ursatz_gui_material_item_delete(source, false) == URSATZ_GUI_MATERIAL_ERR_REFERENCED, "refused without force");
+    CHECK(ursatz_gui_material_item_delete(source, true) == OK, "forced delete");
+    CHECK(ursatz_gui_material_item_get(source, NULL, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "the source is gone");
+
+    cJSON *body = NULL;
+    CHECK(ursatz_gui_material_item_get(user, NULL, &body) == OK, "the user still loads");
+    CHECK(strcmp(copied_notes(first_use(body)), "D4:q F4:e A4:e D5:h") == 0, "the copy is untouched");
+    cJSON_Delete(body);
+
+    cJSON *status = NULL;
+    CHECK(ursatz_gui_material_uses_status(user, &status) == OK && cJSON_GetArraySize(status) == 1, "status still lists the use");
+    const cJSON *entry = cJSON_GetArrayItem(status, 0);
+    CHECK(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(entry, "missing")) &&
+              strcmp(str(entry, "item_id"), source) == 0 && num(entry, "version") == 1,
+          "the use reports a missing source");
+    cJSON_Delete(status);
+    CHECK(ursatz_gui_material_update_use(user, source, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+          "a missing source cannot be updated to");
+
+    /* The copy keeps being copied into later versions of the user. */
+    CHECK(ursatz_gui_material_item_get(user, NULL, &body) == OK, "get the user's body");
+    CHECK(ursatz_gui_material_item_add_version(user, body, "again", NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
+          "a new version cannot name a deleted source");
+    cJSON_Delete(body);
+
+    CHECK(ursatz_gui_material_item_delete(user, false) == OK, "delete the user");
+    CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the project");
+    free(user);
+    free(source);
+    free(home);
+}
+
 /* Deletes every project, then the store's directories. */
 static void remove_store(void) {
     cJSON *projects = NULL;
@@ -687,6 +725,7 @@ int main(void) {
     test_items_and_versions();
     test_body_validation();
     test_references();
+    test_forced_delete();
 
     remove_store();
     if (failures) {
