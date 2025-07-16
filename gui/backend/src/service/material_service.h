@@ -151,7 +151,37 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
 /* The body of version number (1 to current_version). NOT_FOUND otherwise. Caller-owned. */
 UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int number, cJSON **out_body);
 
-/* Deletes the item directory with every version. NOT_FOUND if absent. */
-UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id);
+/*
+ * Reports, for every use in the item's current version, how its source stands.
+ * *out_status is a caller-owned array of {item_id, version (the used one),
+ * updated, missing} plus, while the source exists, current_version, name, type
+ * and project_id of the source. "updated" is true when the source's
+ * current_version is newer than the used version; "missing" is true when the
+ * source was deleted (the copy stays in the body). NOT_FOUND if the item is absent.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **out_status);
+
+/*
+ * Lists the items whose current version uses any version of id, in id order.
+ * *out_users is a caller-owned array of {id, name, type, project_id, version
+ * (the used one)}. id need not exist: a deleted source can still have users.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users);
+
+/*
+ * Writes a new version of item id identical to its current one, except that
+ * every use of source_id points at the source's current version with a fresh
+ * copy; the note is "updated <source name> to v<n>". NOT_FOUND when the item
+ * or the source is absent or the current version does not use the source.
+ * *out_item (may be NULL) is the updated item.json, caller-owned.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item);
+
+/*
+ * Deletes the item directory with every version. NOT_FOUND if absent;
+ * REFERENCED while other items use it, unless force is true. A forced delete
+ * leaves the users' copies untouched; their uses then report missing.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force);
 
 #endif /* URSATZ_GUI_MATERIAL_SERVICE_H */

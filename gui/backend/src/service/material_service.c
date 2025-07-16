@@ -1025,6 +1025,68 @@ static bool append_version_entry(cJSON *item, int number, const char *note) {
     return cJSON_AddNumberToObject(item, "current_version", number) != NULL && touch_item(item);
 }
 
+static UrsatzGuiMaterialResult read_version_locked(const char *id, int number, cJSON **out_body) {
+    char path[PATH_BYTES];
+    if (!version_path(id, number, path, sizeof(path))) {
+        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+    }
+    cJSON *body = read_json_object(path);
+    if (!body) {
+        return path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+    }
+    *out_body = body;
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/*
+ * Returns in *out a copy of body whose uses each carry a fresh "copy" of the
+ * version they name (a client-sent copy is replaced). A use of an item or
+ * version that does not exist, or of self_id (may be NULL), is INVALID_BODY.
+ */
+static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON *body, cJSON **out) {
+    cJSON *filled = cJSON_Duplicate(body, 1);
+    if (!filled) {
+        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    }
+    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    cJSON *use = NULL;
+    cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(filled, "uses")) {
+        const char *source_id = string_member(use, "item_id");
+        int number = cJSON_GetObjectItemCaseSensitive(use, "version")->valueint;
+        cJSON *source = NULL;
+        cJSON *copy = NULL;
+        if (self_id && strcmp(source_id, self_id) == 0) {
+            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+        } else {
+            result = load_item_locked(source_id, &source);
+        }
+        if (result == URSATZ_GUI_MATERIAL_OK) {
+            result = number <= current_version_of(source) ? read_version_locked(source_id, number, &copy)
+                                                           : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        }
+        cJSON_Delete(source);
+        if (result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND || result == URSATZ_GUI_MATERIAL_ERR_INVALID_ID) {
+            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+        }
+        if (result == URSATZ_GUI_MATERIAL_OK) {
+            cJSON_DeleteItemFromObjectCaseSensitive(use, "copy");
+            if (!cJSON_AddItemToObject(use, "copy", copy)) {
+                cJSON_Delete(copy);
+                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            }
+        }
+        if (result != URSATZ_GUI_MATERIAL_OK) {
+            break;
+        }
+    }
+    if (result != URSATZ_GUI_MATERIAL_OK) {
+        cJSON_Delete(filled);
+        return result;
+    }
+    *out = filled;
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
 static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *name, const char *project_id,
                                                   const cJSON *body, cJSON **out_item) {
     const char *prefix = prefix_for_type(type);
@@ -1039,8 +1101,12 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
     if (result == URSATZ_GUI_MATERIAL_OK && !project_exists_locked(project_id)) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
+    cJSON *stored = NULL;
     if (result == URSATZ_GUI_MATERIAL_OK) {
         result = ursatz_gui_material_body_validate(type, body, NULL, 0);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = fill_uses_locked(NULL, body, &stored);
     }
 
     char *id = NULL;
@@ -1078,7 +1144,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
         } else {
             dir_made = true;
             /* item.json goes last: a directory without it is not an item. */
-            if (!write_version_locked(id, 1, body)) {
+            if (!write_version_locked(id, 1, stored)) {
                 result = URSATZ_GUI_MATERIAL_ERR_FAILED;
             } else {
                 result = save_item_locked(item);
@@ -1093,6 +1159,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
     } else {
         cJSON_Delete(item);
     }
+    cJSON_Delete(stored);
     free(id);
     free(clean_name);
     return result;
@@ -1181,19 +1248,6 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, co
     return result;
 }
 
-static UrsatzGuiMaterialResult read_version_locked(const char *id, int number, cJSON **out_body) {
-    char path[PATH_BYTES];
-    if (!version_path(id, number, path, sizeof(path))) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
-    }
-    cJSON *body = read_json_object(path);
-    if (!body) {
-        return path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
-    }
-    *out_body = body;
-    return URSATZ_GUI_MATERIAL_OK;
-}
-
 UrsatzGuiMaterialResult ursatz_gui_material_item_get(const char *id, cJSON **out_meta, cJSON **out_body) {
     if (out_meta) {
         *out_meta = NULL;
@@ -1238,6 +1292,127 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int
                                                                     : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
     cJSON_Delete(item);
+    UNLOCK();
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **out_status) {
+    *out_status = NULL;
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    }
+    cJSON *item = NULL;
+    cJSON *body = NULL;
+    cJSON *status = NULL;
+    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = read_version_locked(id, current_version_of(item), &body);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        status = cJSON_CreateArray();
+        result = status ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    }
+    const cJSON *uses = result == URSATZ_GUI_MATERIAL_OK ? cJSON_GetObjectItemCaseSensitive(body, "uses") : NULL;
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, uses) {
+        const char *source_id = string_member(use, "item_id");
+        const cJSON *version = cJSON_GetObjectItemCaseSensitive(use, "version");
+        int used = cJSON_IsNumber(version) ? version->valueint : 0;
+        cJSON *source = NULL;
+        cJSON *entry = cJSON_CreateObject();
+        bool ok = entry && cJSON_AddStringToObject(entry, "item_id", source_id) &&
+                  cJSON_AddNumberToObject(entry, "version", used);
+        if (ok && load_item_locked(source_id, &source) == URSATZ_GUI_MATERIAL_OK) {
+            int latest = current_version_of(source);
+            ok = cJSON_AddNumberToObject(entry, "current_version", latest) &&
+                 cJSON_AddStringToObject(entry, "name", string_member(source, "name")) &&
+                 cJSON_AddStringToObject(entry, "type", string_member(source, "type")) &&
+                 cJSON_AddStringToObject(entry, "project_id", string_member(source, "project_id")) &&
+                 cJSON_AddBoolToObject(entry, "updated", latest > used) && cJSON_AddBoolToObject(entry, "missing", false);
+        } else if (ok) {
+            ok = cJSON_AddBoolToObject(entry, "updated", false) && cJSON_AddBoolToObject(entry, "missing", true);
+        }
+        cJSON_Delete(source);
+        if (!ok) {
+            cJSON_Delete(entry);
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            break;
+        }
+        cJSON_AddItemToArray(status, entry);
+    }
+    UNLOCK();
+    cJSON_Delete(item);
+    cJSON_Delete(body);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        *out_status = status;
+    } else {
+        cJSON_Delete(status);
+    }
+    return result;
+}
+
+/*
+ * Builds the array of items whose current version uses id: {id, name, type,
+ * project_id, version}. The item need not exist (a deleted source still has users).
+ */
+static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
+    char dir[PATH_BYTES];
+    char **names = NULL;
+    size_t count = 0;
+    if (!is_valid_id(id)) {
+        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+    }
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+    }
+    cJSON *users = cJSON_CreateArray();
+    UrsatzGuiMaterialResult result = users ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+        cJSON *item = NULL;
+        cJSON *body = NULL;
+        if (strcmp(names[i], id) == 0 || load_item_locked(names[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+            continue;
+        }
+        if (read_version_locked(names[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
+            const cJSON *use = NULL;
+            cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
+                const cJSON *version = cJSON_GetObjectItemCaseSensitive(use, "version");
+                if (strcmp(string_member(use, "item_id"), id) != 0) {
+                    continue;
+                }
+                cJSON *entry = cJSON_CreateObject();
+                bool ok = entry && cJSON_AddStringToObject(entry, "id", names[i]) &&
+                          cJSON_AddStringToObject(entry, "name", string_member(item, "name")) &&
+                          cJSON_AddStringToObject(entry, "type", string_member(item, "type")) &&
+                          cJSON_AddStringToObject(entry, "project_id", string_member(item, "project_id")) &&
+                          cJSON_AddNumberToObject(entry, "version", cJSON_IsNumber(version) ? version->valueint : 0);
+                if (!ok) {
+                    cJSON_Delete(entry);
+                    result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                } else {
+                    cJSON_AddItemToArray(users, entry);
+                }
+                break;
+            }
+        }
+        cJSON_Delete(item);
+        cJSON_Delete(body);
+    }
+    free_names(names, count);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        *out = users;
+    } else {
+        cJSON_Delete(users);
+    }
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users) {
+    *out_users = NULL;
+    LOCK();
+    UrsatzGuiMaterialResult result = g_ready ? used_by_locked(id, out_users) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
     UNLOCK();
     return result;
 }
@@ -1295,6 +1470,19 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_move(const char *id, const char
     return change_item(id, NULL, project_id, out_item);
 }
 
+/* Writes body as the next version of item and saves item.json with it made current. */
+static UrsatzGuiMaterialResult commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note) {
+    int number = current_version_of(item) + 1;
+    /* The body goes first; the version exists once item.json names it. */
+    if (!append_version_entry(item, number, note)) {
+        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    }
+    if (!write_version_locked(id, number, body)) {
+        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+    }
+    return save_item_locked(item);
+}
+
 UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, const cJSON *body, const char *note,
                                                               cJSON **out_item) {
     if (out_item) {
@@ -1318,16 +1506,12 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
     if (result == URSATZ_GUI_MATERIAL_OK) {
         result = ursatz_gui_material_body_validate(string_member(item, "type"), body, NULL, 0);
     }
+    cJSON *stored = NULL;
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        int number = current_version_of(item) + 1;
-        /* The body goes first; the version exists once item.json names it. */
-        if (!append_version_entry(item, number, clean_note)) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
-        } else if (!write_version_locked(id, number, body)) {
-            result = URSATZ_GUI_MATERIAL_ERR_FAILED;
-        } else {
-            result = save_item_locked(item);
-        }
+        result = fill_uses_locked(id, body, &stored);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = commit_version_locked(id, item, stored, clean_note);
     }
     if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
         *out_item = item;
@@ -1335,11 +1519,71 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
         cJSON_Delete(item);
     }
     UNLOCK();
+    cJSON_Delete(stored);
     free(clean_note);
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id) {
+UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item) {
+    if (out_item) {
+        *out_item = NULL;
+    }
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    }
+    cJSON *item = NULL;
+    cJSON *source = NULL;
+    cJSON *body = NULL;
+    cJSON *stored = NULL;
+    char note[NAME_MAX_CHARS + 40];
+    UrsatzGuiMaterialResult result = is_valid_id(source_id) ? load_item_locked(id, &item)
+                                                            : URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = read_version_locked(id, current_version_of(item), &body);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = load_item_locked(source_id, &source);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        /* Point every use of the source at its current version; fill_uses_locked refreshes the copies. */
+        int latest = current_version_of(source);
+        bool found = false;
+        bool ok = true;
+        cJSON *use = NULL;
+        cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
+            if (strcmp(string_member(use, "item_id"), source_id) == 0) {
+                found = true;
+                cJSON_DeleteItemFromObjectCaseSensitive(use, "version");
+                ok = ok && cJSON_AddNumberToObject(use, "version", latest) != NULL;
+            }
+        }
+        if (!ok) {
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        } else if (!found) {
+            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        } else {
+            snprintf(note, sizeof(note), "updated %s to v%d", string_member(source, "name"), latest);
+            result = fill_uses_locked(id, body, &stored);
+        }
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = commit_version_locked(id, item, stored, note);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
+        *out_item = item;
+    } else {
+        cJSON_Delete(item);
+    }
+    UNLOCK();
+    cJSON_Delete(source);
+    cJSON_Delete(body);
+    cJSON_Delete(stored);
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force) {
     LOCK();
     if (!g_ready) {
         UNLOCK();
@@ -1347,12 +1591,15 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id) {
     }
     char dir[PATH_BYTES];
     char meta[PATH_BYTES];
+    cJSON *users = NULL;
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     if (!item_dir_path(id, dir, sizeof(dir)) || !item_file_path(id, "item.json", meta, sizeof(meta))) {
         result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     } else if (!path_exists(meta)) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
-    } else {
+    } else if (!force && (result = used_by_locked(id, &users)) == URSATZ_GUI_MATERIAL_OK && users->child) {
+        result = URSATZ_GUI_MATERIAL_ERR_REFERENCED;
+    } else if (result == URSATZ_GUI_MATERIAL_OK) {
         /* item.json first: a half-deleted directory is no longer an item. */
         if (remove(meta) != 0) {
             result = URSATZ_GUI_MATERIAL_ERR_FAILED;
@@ -1361,5 +1608,6 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id) {
         }
     }
     UNLOCK();
+    cJSON_Delete(users);
     return result;
 }

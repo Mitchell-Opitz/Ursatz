@@ -498,6 +498,28 @@ materials/
 - Projects and items are passed as cJSON objects; the caller frees what it
   receives.
 
+#### Item references
+
+An item can use other items, from any project. Each entry of a body's `uses` is
+`{item_id, version, copy}`.
+
+- On create and on every new version the service checks that the item and
+  version exist (an unknown one, or an item using itself, is `INVALID_BODY`)
+  and fills `copy` with that version's body. A `copy` the client sends is
+  replaced.
+- `ursatz_gui_material_uses_status` reports each use of the current version
+  with the source's name, type, project and `current_version`. `updated` is
+  true when the source is newer than the used version.
+- `ursatz_gui_material_used_by` lists the items whose current version uses an
+  item.
+- `ursatz_gui_material_update_use` writes a new version that points the use at
+  the source's current version with a fresh copy (note
+  `updated <name> to v<n>`). Older versions keep their old copy.
+- `ursatz_gui_material_item_delete(id, force)` returns `ERR_REFERENCED` while
+  other items use the item. A forced delete leaves the users' copies as they
+  are; their uses report `missing: true`. Saving a new version of such a user
+  needs the missing use removed first.
+
 ### Analyzer routes
 
 - `POST /api/analyzer/pieces`: the file as the raw request body, its name
@@ -951,7 +973,7 @@ tags them and builds styles from a tag, a collection and ids, then reads the
 model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
 `test_piece_metadata` covers the normalizing, grouping and
 filter rules without a server. `test_material_service` covers the projects,
-items, versions and version body rules without a server. `style-view.test.js` covers the style detail
+items, versions, version body rules and item references without a server. `style-view.test.js` covers the style detail
 rows (order, fractions, "and n more") and `piece-metadata.test.js` the style
 names and request bodies. `test_composer_route` runs
 the real Composer: grow, regenerate, lock, variations, choose and plan make

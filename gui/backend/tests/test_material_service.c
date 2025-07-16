@@ -299,14 +299,14 @@ static void test_items_and_versions(void) {
     CHECK(ursatz_gui_material_item_list(NULL, NULL, &list) == OK && cJSON_GetArraySize(list) == 3, "items persist");
     cJSON_Delete(list);
 
-    CHECK(ursatz_gui_material_item_delete(theme) == OK, "delete the theme");
+    CHECK(ursatz_gui_material_item_delete(theme, false) == OK, "delete the theme");
     CHECK(ursatz_gui_material_item_get(theme, &meta, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "theme is gone");
     char theme_dir[200];
     snprintf(theme_dir, sizeof(theme_dir), "%s/items/%s/v1.json", g_dir, theme);
     CHECK(access(theme_dir, F_OK) != 0, "theme versions are gone");
-    CHECK(ursatz_gui_material_item_delete(theme) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "delete twice");
+    CHECK(ursatz_gui_material_item_delete(theme, false) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "delete twice");
     CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the emptied project");
-    CHECK(ursatz_gui_material_item_delete(motif) == OK && ursatz_gui_material_item_delete(piece) == OK,
+    CHECK(ursatz_gui_material_item_delete(motif, false) == OK && ursatz_gui_material_item_delete(piece, false) == OK,
           "delete the rest");
     CHECK(ursatz_gui_material_project_delete(other) == OK, "delete the other project");
 
@@ -508,10 +508,192 @@ static void test_body_validation(void) {
     CHECK(ursatz_gui_material_item_add_version(motif, theme, NULL, NULL) == INVALID,
           "add_version refuses another type's body");
     cJSON_Delete(theme);
-    CHECK(ursatz_gui_material_item_delete(motif) == OK, "delete the motif");
+    CHECK(ursatz_gui_material_item_delete(motif, false) == OK, "delete the motif");
     CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the project");
     cJSON_Delete(bad);
     free(motif);
+    free(home);
+}
+
+/* A motif body with the given notes. */
+static cJSON *motif_body_with_notes(const char *notes) {
+    cJSON *body = cJSON_Parse(kMotifBody);
+    cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
+    cJSON_ReplaceItemInObjectCaseSensitive(motif, "notes", cJSON_CreateString(notes));
+    return body;
+}
+
+/* A theme body whose single use names item_id at version, with a bogus client copy. */
+static cJSON *theme_body_using(const char *item_id, int version) {
+    cJSON *body = cJSON_Parse(kThemeBody);
+    cJSON *use = cJSON_CreateObject();
+    cJSON_AddStringToObject(use, "item_id", item_id);
+    cJSON_AddNumberToObject(use, "version", version);
+    cJSON *copy = cJSON_AddObjectToObject(use, "copy");
+    cJSON_AddStringToObject(copy, "bogus", "client");
+    cJSON_AddItemToArray(cJSON_GetObjectItemCaseSensitive(body, "uses"), use);
+    return body;
+}
+
+static const cJSON *first_use(const cJSON *body) {
+    return cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(body, "uses"), 0);
+}
+
+static const char *copied_notes(const cJSON *use) {
+    const cJSON *copy = cJSON_GetObjectItemCaseSensitive(use, "copy");
+    return str(cJSON_GetObjectItemCaseSensitive(copy, "motif"), "notes");
+}
+
+/* Creates a theme in project_id that uses source_id at version 1 and returns its id (malloc'd). */
+static char *new_theme_using(const char *name, const char *project_id, const char *source_id) {
+    cJSON *body = theme_body_using(source_id, 1);
+    cJSON *item = NULL;
+    char *id = NULL;
+    if (ursatz_gui_material_item_create("theme", name, project_id, body, &item) == OK) {
+        id = strdup(str(item, "id"));
+    }
+    cJSON_Delete(item);
+    cJSON_Delete(body);
+    return id;
+}
+
+static void test_references(void) {
+    char *home = new_project("Refs source");
+    char *other = new_project("Refs user");
+    char *source = new_item("motif", "Source motif", home, kMotifBody);
+    CHECK(source != NULL, "create the source motif");
+
+    /* A use is copied from the version it names, in any project; a client copy is replaced. */
+    char *user = new_theme_using("User theme", other, source);
+    CHECK(user != NULL, "create a theme that uses the motif");
+    cJSON *body = NULL;
+    CHECK(ursatz_gui_material_item_get(user, NULL, &body) == OK, "get the user's body");
+    CHECK(strcmp(copied_notes(first_use(body)), "D4:q F4:e A4:e D5:h") == 0, "the copy holds the source's notes");
+    CHECK(!cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(first_use(body), "copy"), "bogus"),
+          "the client copy is replaced");
+    cJSON_Delete(body);
+
+    /* Unknown items and versions, and an item using itself, are refused. */
+    cJSON *bad = theme_body_using("mot-0000000000000000", 1);
+    CHECK(ursatz_gui_material_item_create("theme", "Ghost use", other, bad, NULL) == INVALID, "unknown source item");
+    cJSON_Delete(bad);
+    bad = theme_body_using(source, 2);
+    CHECK(ursatz_gui_material_item_create("theme", "Future use", other, bad, NULL) == INVALID, "unknown source version");
+    CHECK(ursatz_gui_material_item_add_version(user, bad, NULL, NULL) == INVALID, "add_version refuses unknown version");
+    cJSON_Delete(bad);
+    bad = theme_body_using(user, 1);
+    CHECK(ursatz_gui_material_item_add_version(user, bad, NULL, NULL) == INVALID, "an item may not use itself");
+    cJSON_Delete(bad);
+    cJSON *meta = NULL;
+    CHECK(ursatz_gui_material_item_get(user, &meta, NULL) == OK && num(meta, "current_version") == 1,
+          "refused versions are not written");
+    cJSON_Delete(meta);
+
+    /* uses_status: current while the source is on the used version. */
+    cJSON *status = NULL;
+    CHECK(ursatz_gui_material_uses_status(user, &status) == OK && cJSON_GetArraySize(status) == 1, "one use reported");
+    const cJSON *entry = cJSON_GetArrayItem(status, 0);
+    CHECK(strcmp(str(entry, "item_id"), source) == 0 && strcmp(str(entry, "name"), "Source motif") == 0 &&
+              strcmp(str(entry, "type"), "motif") == 0 && strcmp(str(entry, "project_id"), home) == 0,
+          "status names the source");
+    CHECK(num(entry, "version") == 1 && num(entry, "current_version") == 1, "status versions");
+    CHECK(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(entry, "updated")), "not updated yet");
+    cJSON_Delete(status);
+    CHECK(ursatz_gui_material_uses_status("thm-0000000000000000", &status) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+          "status of an unknown item");
+
+    /* The source moves on: the use reports it and used_by lists the user. */
+    cJSON *next = motif_body_with_notes("D4:q E4:q F4:h");
+    CHECK(ursatz_gui_material_item_add_version(source, next, "second", NULL) == OK, "source gets version 2");
+    cJSON_Delete(next);
+    CHECK(ursatz_gui_material_uses_status(user, &status) == OK, "status after the source moved");
+    entry = cJSON_GetArrayItem(status, 0);
+    CHECK(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(entry, "updated")) && num(entry, "current_version") == 2 &&
+              num(entry, "version") == 1,
+          "the use is flagged updated");
+    cJSON_Delete(status);
+
+    cJSON *users = NULL;
+    CHECK(ursatz_gui_material_used_by(source, &users) == OK && cJSON_GetArraySize(users) == 1, "one user");
+    entry = cJSON_GetArrayItem(users, 0);
+    CHECK(strcmp(str(entry, "id"), user) == 0 && strcmp(str(entry, "name"), "User theme") == 0 &&
+              strcmp(str(entry, "type"), "theme") == 0 && strcmp(str(entry, "project_id"), other) == 0 &&
+              num(entry, "version") == 1,
+          "used_by names the user across projects");
+    cJSON_Delete(users);
+    CHECK(ursatz_gui_material_used_by(user, &users) == OK && cJSON_GetArraySize(users) == 0, "nothing uses the theme");
+    cJSON_Delete(users);
+
+    /* update_use writes a new version that points at the source's latest. */
+    CHECK(ursatz_gui_material_update_use(user, "mot-0000000000000000", NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+          "update_use of a source the theme does not use");
+    CHECK(ursatz_gui_material_update_use(user, source, &meta) == OK, "update_use");
+    CHECK(num(meta, "current_version") == 2, "update_use advances the version");
+    const cJSON *versions = cJSON_GetObjectItemCaseSensitive(meta, "versions");
+    CHECK(strcmp(str(cJSON_GetArrayItem(versions, 1), "note"), "updated Source motif to v2") == 0, "update_use note");
+    cJSON_Delete(meta);
+    CHECK(ursatz_gui_material_item_get(user, NULL, &body) == OK && num(first_use(body), "version") == 2 &&
+              strcmp(copied_notes(first_use(body)), "D4:q E4:q F4:h") == 0,
+          "the new version uses the latest copy");
+    cJSON_Delete(body);
+    CHECK(ursatz_gui_material_item_get_version(user, 1, &body) == OK && num(first_use(body), "version") == 1 &&
+              strcmp(copied_notes(first_use(body)), "D4:q F4:e A4:e D5:h") == 0,
+          "version 1 keeps its old copy");
+    cJSON_Delete(body);
+    CHECK(ursatz_gui_material_uses_status(user, &status) == OK &&
+              cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(status, 0), "updated")),
+          "no longer updated");
+    cJSON_Delete(status);
+
+    /* A used item is refused a plain delete. */
+    CHECK(ursatz_gui_material_item_delete(source, false) == URSATZ_GUI_MATERIAL_ERR_REFERENCED, "used item is protected");
+    CHECK(ursatz_gui_material_item_get(source, NULL, NULL) == OK, "the used item is still there");
+
+    CHECK(ursatz_gui_material_item_delete(user, false) == OK, "delete the user");
+    CHECK(ursatz_gui_material_item_delete(source, false) == OK, "delete the source once unused");
+    CHECK(ursatz_gui_material_project_delete(home) == OK && ursatz_gui_material_project_delete(other) == OK,
+          "delete the projects");
+    free(user);
+    free(source);
+    free(home);
+    free(other);
+}
+
+static void test_forced_delete(void) {
+    char *home = new_project("Forced home");
+    char *source = new_item("motif", "Forced source", home, kMotifBody);
+    char *user = new_theme_using("Forced user", home, source);
+    CHECK(source && user, "create the source and its user");
+
+    CHECK(ursatz_gui_material_item_delete(source, false) == URSATZ_GUI_MATERIAL_ERR_REFERENCED, "refused without force");
+    CHECK(ursatz_gui_material_item_delete(source, true) == OK, "forced delete");
+    CHECK(ursatz_gui_material_item_get(source, NULL, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "the source is gone");
+
+    cJSON *body = NULL;
+    CHECK(ursatz_gui_material_item_get(user, NULL, &body) == OK, "the user still loads");
+    CHECK(strcmp(copied_notes(first_use(body)), "D4:q F4:e A4:e D5:h") == 0, "the copy is untouched");
+    cJSON_Delete(body);
+
+    cJSON *status = NULL;
+    CHECK(ursatz_gui_material_uses_status(user, &status) == OK && cJSON_GetArraySize(status) == 1, "status still lists the use");
+    const cJSON *entry = cJSON_GetArrayItem(status, 0);
+    CHECK(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(entry, "missing")) &&
+              strcmp(str(entry, "item_id"), source) == 0 && num(entry, "version") == 1,
+          "the use reports a missing source");
+    cJSON_Delete(status);
+    CHECK(ursatz_gui_material_update_use(user, source, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+          "a missing source cannot be updated to");
+
+    /* The copy keeps being copied into later versions of the user. */
+    CHECK(ursatz_gui_material_item_get(user, NULL, &body) == OK, "get the user's body");
+    CHECK(ursatz_gui_material_item_add_version(user, body, "again", NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
+          "a new version cannot name a deleted source");
+    cJSON_Delete(body);
+
+    CHECK(ursatz_gui_material_item_delete(user, false) == OK, "delete the user");
+    CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the project");
+    free(user);
+    free(source);
     free(home);
 }
 
@@ -542,6 +724,8 @@ int main(void) {
     test_project_crud();
     test_items_and_versions();
     test_body_validation();
+    test_references();
+    test_forced_delete();
 
     remove_store();
     if (failures) {
