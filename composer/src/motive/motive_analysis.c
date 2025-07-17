@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "harmony/harmony_internal.h"
@@ -362,6 +363,29 @@ static void degree_text(const MotiveDegree *degree, char *out, size_t size) {
     snprintf(out, size, "%s%d", degree->alteration ? "#" : "", degree->degree);
 }
 
+/* The pickup in beats of the meter's beat unit: "0", "1", "1/2". */
+static void pickup_beats_text(const Motive *motive, char *out, size_t size) {
+    PlanTime pickup = motive_pickup(motive);
+    long numerator = pickup.num * motive->meter.beat_unit;
+    unsigned long denominator = pickup.den;
+    unsigned long a = (unsigned long)(numerator < 0 ? -numerator : numerator);
+    unsigned long b = denominator;
+    while (b != 0) {
+        unsigned long t = a % b;
+        a = b;
+        b = t;
+    }
+    if (a > 1) {
+        numerator /= (long)a;
+        denominator /= a;
+    }
+    if (denominator == 1) {
+        snprintf(out, size, "%ld", numerator);
+    } else {
+        snprintf(out, size, "%ld/%lu", numerator, denominator);
+    }
+}
+
 void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis, FILE *out) {
     char text[64];
     char text2[64];
@@ -372,6 +396,10 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
     }
     fprintf(out, "\n");
     fprintf(out, "Meter: %d/%d\n", motive->meter.beats_per_bar, motive->meter.beat_unit);
+    fprintf(out, "Form: %s\n", motive_form_name(analysis->form));
+    char beats[32];
+    pickup_beats_text(motive, beats, sizeof(beats));
+    fprintf(out, "Pickup: %s\n", motive_pickup(motive).num == 0 ? "none" : beats);
     if (analysis->key_known) {
         key_text(&analysis->key, text, sizeof(text));
         fprintf(out, "Key: %s (%s)\n", text, key_source_name(analysis->key_source));
@@ -658,6 +686,28 @@ char *motive_analysis_to_json(const Motive *motive, const MotiveAnalysis *analys
     cJSON *document = cJSON_CreateObject();
     cJSON *body = cJSON_CreateObject();
     bool ok = document && body && json_add(document, "motive", motive_json_object(motive));
+    char beats[32];
+    if (ok) {
+        pickup_beats_text(motive, beats, sizeof(beats));
+    }
+    char *notes_text = ok ? motive_to_notes_text(motive) : NULL;
+    char *degrees_text = ok ? motive_to_degrees_text(motive) : NULL;
+    char *rhythm_text = ok && motive->form == MOTIVE_FORM_RHYTHM ? motive_to_rhythm_text(motive) : NULL;
+    char *contour_text = ok && motive->form == MOTIVE_FORM_CONTOUR ? motive_to_contour_text(motive) : NULL;
+    ok = ok && json_add(body, "form", cJSON_CreateString(motive_form_name(analysis->form))) &&
+         json_add(body, "pickup", cJSON_CreateString(beats)) &&
+         json_add(body, "notes_text", notes_text ? cJSON_CreateString(notes_text) : cJSON_CreateNull()) &&
+         json_add(body, "degrees_text", degrees_text ? cJSON_CreateString(degrees_text) : cJSON_CreateNull());
+    if (ok && motive->form == MOTIVE_FORM_RHYTHM) {
+        ok = rhythm_text && json_add(body, "rhythm_text", cJSON_CreateString(rhythm_text));
+    }
+    if (ok && motive->form == MOTIVE_FORM_CONTOUR) {
+        ok = contour_text && json_add(body, "contour_text", cJSON_CreateString(contour_text));
+    }
+    free(notes_text);
+    free(degrees_text);
+    free(rhythm_text);
+    free(contour_text);
     ok = ok && json_add(body, "note_count", json_number((long)analysis->note_count)) &&
          json_add(body, "length", motive_time_json(analysis->length)) &&
          json_add(body, "bars", motive_time_json(analysis->bars)) && json_add(body, "key", key_json(analysis)) &&
