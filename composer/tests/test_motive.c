@@ -692,6 +692,185 @@ static void test_attach_as_given(void) {
     plan_destroy(plan);
 }
 
+/* ------------------------------------------------------- degrees, rhythm, contour */
+
+typedef MotiveResult (*Reader)(const char *, const MotiveOptions *, Motive *, MotiveError *);
+
+static Motive load_with(Reader reader, const char *text, const PlanMeter *meter, const PlanKey *key) {
+    Motive motive;
+    MotiveOptions options = options_with(meter, key);
+    MotiveError error;
+    MotiveResult result = reader(text, &options, &motive, &error);
+    if (result != MOTIVE_OK) {
+        fprintf(stderr, "'%s': %s at %s: %s\n", text, motive_result_name(result), error.location, error.message);
+    }
+    assert(result == MOTIVE_OK);
+    return motive;
+}
+
+static void expect_read_error(Reader reader, const char *text, const PlanKey *key, MotiveResult code,
+                              const char *location, const char *message) {
+    Motive motive;
+    MotiveOptions options = options_with(&FOUR_FOUR, key);
+    MotiveError error;
+    MotiveResult result = reader(text, &options, &motive, &error);
+    if (result != code || strcmp(error.location, location) != 0 || strstr(error.message, message) == NULL) {
+        fprintf(stderr, "'%s': got %s at '%s': %s\n", text, motive_result_name(result), error.location, error.message);
+    }
+    assert(result == code);
+    assert(strcmp(error.location, location) == 0);
+    assert(strstr(error.message, message) != NULL);
+}
+
+static void expect_text(char *text, const char *expected) {
+    assert(text);
+    if (strcmp(text, expected) != 0) {
+        fprintf(stderr, "expected '%s', got '%s'\n", expected, text);
+    }
+    assert(strcmp(text, expected) == 0);
+    free(text);
+}
+
+static void test_degrees_reading(void) {
+    /* D minor: b3 is the third (F) lowered to E; the octave mark moves up 12. */
+    Motive motive = load_with(motive_from_degrees_text, "1:q b3:e 5:e 1':h", &FOUR_FOUR, &D_MINOR);
+    assert(motive.note_count == 4 && motive.form == MOTIVE_FORM_FULL);
+    assert(note_is(&motive, 0, 62, 0, 1, 1, 4));
+    assert(note_is(&motive, 1, 64, 1, 4, 1, 8));
+    assert(note_is(&motive, 2, 69, 3, 8, 1, 8));
+    assert(note_is(&motive, 3, 74, 1, 2, 1, 2));
+    assert(motive.key_source == MOTIVE_KEY_GIVEN && motive.key.mode == PLAN_MODE_MINOR);
+
+    /* Octave 0 puts the tonic in MIDI 60 to 71: G is 67. Marks are any number, up or down. */
+    motive = load_with(motive_from_degrees_text, "1:q 1,:q 1':q 1'':q 1,,:q 1',:q", &FOUR_FOUR, &G_MAJOR);
+    assert(motive.notes[0].midi_pitch == 67 && motive.notes[1].midi_pitch == 55 && motive.notes[2].midi_pitch == 79);
+    assert(motive.notes[3].midi_pitch == 91 && motive.notes[4].midi_pitch == 43 && motive.notes[5].midi_pitch == 67);
+
+    /* Degrees are counted in the natural minor scale; # and b alter them. */
+    motive = load_with(motive_from_degrees_text, "3:q 6:q 7:q #4:q b7:q b2:q", &FOUR_FOUR, &D_MINOR);
+    assert(motive.notes[0].midi_pitch == 65 && motive.notes[1].midi_pitch == 70 && motive.notes[2].midi_pitch == 72);
+    assert(motive.notes[3].midi_pitch == 68 && motive.notes[4].midi_pitch == 71 && motive.notes[5].midi_pitch == 63);
+
+    /* Rests, ties, dots and barlines are as in a note list. */
+    motive = load_with(motive_from_degrees_text, "r:e 1:q.~ 1:s | 5:q", &FOUR_FOUR, &C_MAJOR);
+    assert(motive.note_count == 2 && note_is(&motive, 0, 60, 1, 8, 7, 16) && note_is(&motive, 1, 67, 9, 16, 1, 4));
+
+    /* With no key the pitches are C major's and the key is left as the pitches settle it. */
+    motive = load_with(motive_from_degrees_text, "1:q 3:q 5:q", &FOUR_FOUR, NULL);
+    assert(motive.notes[0].midi_pitch == 60 && motive.notes[1].midi_pitch == 64 && motive.notes[2].midi_pitch == 67);
+    assert(motive.key_source == MOTIVE_KEY_UNSPECIFIED);
+
+    /* The degrees format is read by motive_load, and auto-detection never picks it. */
+    MotiveOptions options = options_with(&FOUR_FOUR, &C_MAJOR);
+    MotiveError error;
+    Motive loaded;
+    assert(motive_load("1:q 5:q", 7, MOTIVE_FORMAT_DEGREES, &options, &loaded, &error) == MOTIVE_OK);
+    assert(loaded.notes[1].midi_pitch == 67);
+    assert(motive_detect_format("1:q 5:q", 7) == MOTIVE_FORMAT_NOTES);
+    MotiveFormat format;
+    assert(motive_format_parse("degrees", &format) && format == MOTIVE_FORMAT_DEGREES);
+    assert(motive_format_parse("rhythm", &format) && format == MOTIVE_FORMAT_RHYTHM);
+    assert(motive_format_parse("contour", &format) && format == MOTIVE_FORMAT_CONTOUR);
+    assert(strcmp(motive_format_name(MOTIVE_FORMAT_CONTOUR), "contour") == 0);
+}
+
+static void test_degrees_errors(void) {
+    expect_read_error(motive_from_degrees_text, "1:q 8:e", &C_MAJOR, MOTIVE_ERR_VALUE, "token 2 (column 5)",
+                      "not a scale degree");
+    expect_read_error(motive_from_degrees_text, "1:q 0:e", &C_MAJOR, MOTIVE_ERR_VALUE, "token 2 (column 5)",
+                      "not a scale degree");
+    expect_read_error(motive_from_degrees_text, "1:q 3x:e", &C_MAJOR, MOTIVE_ERR_VALUE, "token 2 (column 5)",
+                      "not an octave mark");
+    expect_read_error(motive_from_degrees_text, "1:q 3", &C_MAJOR, MOTIVE_ERR_SYNTAX, "token 2 (column 5)",
+                      "as in 5':q");
+    expect_read_error(motive_from_degrees_text, "1:q 3:z", &C_MAJOR, MOTIVE_ERR_VALUE, "token 2 (column 5)",
+                      "not a duration");
+    expect_read_error(motive_from_degrees_text, "1:q 1:q~", &C_MAJOR, MOTIVE_ERR_VALUE, "token 2", "no note after");
+    expect_read_error(motive_from_degrees_text, "1:q 3:q~ 4:q", &C_MAJOR, MOTIVE_ERR_VALUE, "token 3 (column 10)",
+                      "different pitch");
+    expect_read_error(motive_from_degrees_text, "1:q r:q", &C_MAJOR, MOTIVE_ERR_VALUE, "token 2 (column 5)",
+                      "ends with a rest");
+    expect_read_error(motive_from_degrees_text, "", &C_MAJOR, MOTIVE_ERR_EMPTY, "", "no notes");
+    expect_read_error(motive_from_degrees_text, "1'''''''''''''':q", &C_MAJOR, MOTIVE_ERR_VALUE, "token 1 (column 1)",
+                      "outside the MIDI range");
+}
+
+static void test_rhythm_and_contour_reading(void) {
+    /* A rhythm sounds every note on degree 1: C4 with no key, the tonic with one. */
+    Motive motive = load_with(motive_from_rhythm_text, "x:q x:e r:e x:h", &FOUR_FOUR, NULL);
+    assert(motive.form == MOTIVE_FORM_RHYTHM && motive.note_count == 3);
+    assert(note_is(&motive, 0, 60, 0, 1, 1, 4) && note_is(&motive, 1, 60, 1, 4, 1, 8) &&
+           note_is(&motive, 2, 60, 1, 2, 1, 2));
+    motive = load_with(motive_from_rhythm_text, "x:q~ x:q | x:h", &FOUR_FOUR, &D_MINOR);
+    assert(motive.note_count == 2 && note_is(&motive, 0, 62, 0, 1, 1, 2) && note_is(&motive, 1, 62, 1, 2, 1, 2));
+
+    /* A contour sounds rank r on degree r + 1 in quarters; equal ranks are the same height. */
+    motive = load_with(motive_from_contour_text, "0 2 1 3", &FOUR_FOUR, &C_MAJOR);
+    assert(motive.form == MOTIVE_FORM_CONTOUR && motive.note_count == 4);
+    assert(note_is(&motive, 0, 60, 0, 1, 1, 4) && note_is(&motive, 1, 64, 1, 4, 1, 4) &&
+           note_is(&motive, 2, 62, 1, 2, 1, 4) && note_is(&motive, 3, 65, 3, 4, 1, 4));
+    motive = load_with(motive_from_contour_text, "1 1 0 7", &FOUR_FOUR, &D_MINOR);
+    assert(motive.notes[0].midi_pitch == 64 && motive.notes[1].midi_pitch == 64 && motive.notes[2].midi_pitch == 62);
+    assert(motive.notes[3].midi_pitch == 74);
+
+    MotiveOptions options = options_with(&FOUR_FOUR, NULL);
+    MotiveError error;
+    Motive loaded;
+    assert(motive_load("x:q x:q", 7, MOTIVE_FORMAT_RHYTHM, &options, &loaded, &error) == MOTIVE_OK);
+    assert(loaded.form == MOTIVE_FORM_RHYTHM);
+    assert(motive_load("0 1", 3, MOTIVE_FORMAT_CONTOUR, &options, &loaded, &error) == MOTIVE_OK);
+    assert(loaded.form == MOTIVE_FORM_CONTOUR);
+
+    expect_read_error(motive_from_rhythm_text, "x:q C4:e", NULL, MOTIVE_ERR_VALUE, "token 2 (column 5)",
+                      "not a note of a rhythm");
+    expect_read_error(motive_from_rhythm_text, "x:q r:e", NULL, MOTIVE_ERR_VALUE, "token 2 (column 5)",
+                      "ends with a rest");
+    expect_read_error(motive_from_contour_text, "0 a", NULL, MOTIVE_ERR_SYNTAX, "token 2 (column 3)", "not a rank");
+    expect_read_error(motive_from_contour_text, "0 -1", NULL, MOTIVE_ERR_SYNTAX, "token 2 (column 3)", "not a rank");
+    expect_read_error(motive_from_contour_text, "0 q:e", NULL, MOTIVE_ERR_SYNTAX, "token 2 (column 3)", "not a rank");
+    expect_read_error(motive_from_contour_text, "0 99", NULL, MOTIVE_ERR_VALUE, "token 2 (column 3)", "too high");
+    expect_read_error(motive_from_contour_text, " | ", NULL, MOTIVE_ERR_EMPTY, "", "no notes");
+}
+
+static void test_writing_round_trips(void) {
+    /* A note list with a rest, dots and a tie; 5/16 is a quarter and a sixteenth, written as a tie. */
+    Motive motive = load_notes("r:e D4:q F4:e.~ F4:s F4:q.. A#3:e D5:h.. | C-1:q", &THREE_FOUR, &D_MINOR);
+    char *text = motive_to_notes_text(&motive);
+    assert(text);
+    Motive again = load_with(motive_from_notes_text, text, &THREE_FOUR, &D_MINOR);
+    assert(motive_equal(&motive, &again));
+    free(text);
+    motive = load_notes("D4:q~ D4:s F4:q", &FOUR_FOUR, NULL);
+    assert(note_is(&motive, 0, 62, 0, 1, 5, 16));
+    expect_text(motive_to_notes_text(&motive), "D4:q~ D4:s F4:q");
+
+    /* Degrees, with octave marks and a raised degree. */
+    motive = load_with(motive_from_degrees_text, "1:q #4:e 5,:e 1':h", &FOUR_FOUR, &D_MINOR);
+    text = motive_to_degrees_text(&motive);
+    assert(text);
+    again = load_with(motive_from_degrees_text, text, &FOUR_FOUR, &D_MINOR);
+    assert(motive_equal(&motive, &again));
+    free(text);
+    expect_text(motive_to_degrees_text(&motive), "1:q #4:e 5,:e 1':h");
+    motive = load_notes("A4:q C5:q", &FOUR_FOUR, &G_MAJOR);
+    expect_text(motive_to_degrees_text(&motive), "2:q 4:q");
+    motive = load_notes("D4:q F4:q", &FOUR_FOUR, NULL);
+    assert(motive.key_source == MOTIVE_KEY_UNSPECIFIED);
+    assert(motive_to_degrees_text(&motive) == NULL);
+
+    /* Rhythm and contour. */
+    motive = load_with(motive_from_rhythm_text, "x:q x:e r:e x:h", &FOUR_FOUR, NULL);
+    expect_text(motive_to_rhythm_text(&motive), "x:q x:e r:e x:h");
+    motive = load_notes("D4:q F4:e r:e A4:h", &FOUR_FOUR, NULL);
+    expect_text(motive_to_rhythm_text(&motive), "x:q x:e r:e x:h");
+    expect_text(motive_to_contour_text(&motive), "0 1 2");
+    motive = load_with(motive_from_contour_text, "0 2 1 3", &FOUR_FOUR, &C_MAJOR);
+    expect_text(motive_to_contour_text(&motive), "0 2 1 3");
+    motive = load_with(motive_from_contour_text, "2 2 0 5 1", &FOUR_FOUR, NULL);
+    expect_text(motive_to_contour_text(&motive), "2 2 0 3 1");
+    assert(motive_to_notes_text(NULL) == NULL && motive_to_contour_text(NULL) == NULL);
+}
+
 int main(void) {
     test_same_motive_from_each_format();
     test_options();
@@ -706,6 +885,10 @@ int main(void) {
     test_json_errors();
     test_file_errors();
     test_attach_as_given();
+    test_degrees_reading();
+    test_degrees_errors();
+    test_rhythm_and_contour_reading();
+    test_writing_round_trips();
     puts("test_motive: ok");
     return 0;
 }
