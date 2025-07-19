@@ -871,6 +871,114 @@ static void test_writing_round_trips(void) {
     assert(motive_to_notes_text(NULL) == NULL && motive_to_contour_text(NULL) == NULL);
 }
 
+/* ------------------------------------------------------------ pickup and form */
+
+static void test_analysis_with_a_pickup(void) {
+    /* A pickup of one beat in 3/4: the first note is the last beat of the bar before the first barline. */
+    MotiveOptions options = options_with(&THREE_FOUR, &C_MAJOR);
+    options.has_pickup = true;
+    options.pickup.num = 1;
+    options.pickup.den = 4;
+    Motive motive;
+    MotiveError error;
+    assert(motive_from_notes_text("G4:q C5:h. D5:q", &options, &motive, &error) == MOTIVE_OK);
+    assert(time_is(motive.pickup, 1, 4));
+    MotiveAnalysis analysis;
+    assert(motive_analyze(&motive, &analysis));
+    assert(analysis.rhythm[0].bar == -1 && time_is(analysis.rhythm[0].beat, 2, 1) && analysis.rhythm[0].on_beat);
+    assert(analysis.rhythm[1].bar == 0 && time_is(analysis.rhythm[1].beat, 0, 1));
+    assert(analysis.rhythm[2].bar == 1 && time_is(analysis.rhythm[2].beat, 0, 1));
+
+    /* A half-beat pickup puts the first note on the off-beat before the barline. */
+    options.pickup.num = 1;
+    options.pickup.den = 8;
+    assert(motive_from_notes_text("G4:e C5:h.", &options, &motive, &error) == MOTIVE_OK);
+    assert(motive_analyze(&motive, &analysis));
+    assert(analysis.rhythm[0].bar == -1 && time_is(analysis.rhythm[0].beat, 5, 2) && !analysis.rhythm[0].on_beat);
+    assert(analysis.rhythm[1].bar == 0 && time_is(analysis.rhythm[1].beat, 0, 1));
+
+    /* No pickup: unchanged. */
+    motive = load_notes("G4:q C5:h.", &THREE_FOUR, &C_MAJOR);
+    assert(time_is(motive.pickup, 0, 1));
+    assert(motive_analyze(&motive, &analysis));
+    assert(analysis.rhythm[0].bar == 0 && time_is(analysis.rhythm[0].beat, 0, 1));
+
+    /* A pickup is shorter than a bar. */
+    options.pickup.num = 3;
+    options.pickup.den = 4;
+    assert(motive_from_notes_text("G4:e C5:h.", &options, &motive, &error) == MOTIVE_ERR_VALUE);
+    assert(strcmp(error.location, "pickup") == 0);
+}
+
+static void test_pickup_and_form_in_json(void) {
+    MotiveOptions options = options_with(&THREE_FOUR, NULL);
+    options.has_pickup = true;
+    options.pickup.num = 1;
+    options.pickup.den = 4;
+    Motive motive;
+    MotiveError error;
+    assert(motive_from_rhythm_text("x:q x:h.", &options, &motive, &error) == MOTIVE_OK);
+    char *json = motive_to_json(&motive);
+    assert(json && strstr(json, "\"form\": \"rhythm\"") && strstr(json, "\"pickup\""));
+    Motive again;
+    options = options_with(NULL, NULL);
+    assert(motive_from_json(json, &options, &again, &error) == MOTIVE_OK);
+    assert(again.form == MOTIVE_FORM_RHYTHM && time_is(again.pickup, 1, 4) && motive_equal(&motive, &again));
+    free(json);
+
+    /* A full motive without a pickup writes neither, and the two differ in motive_equal. */
+    Motive plain = load_notes("D4:q F4:q", &FOUR_FOUR, NULL);
+    json = motive_to_json(&plain);
+    assert(json && !strstr(json, "\"form\"") && !strstr(json, "\"pickup\""));
+    free(json);
+    Motive shifted = plain;
+    shifted.pickup = (PlanTime){1, 4};
+    assert(!motive_equal(&plain, &shifted));
+    shifted = plain;
+    shifted.form = MOTIVE_FORM_CONTOUR;
+    assert(!motive_equal(&plain, &shifted));
+
+    const char *bad = "{\"meter\": {\"beats_per_bar\": 4, \"beat_unit\": 4}, \"form\": \"chord\", \"notes\": []}";
+    assert(motive_from_json(bad, NULL, &again, &error) == MOTIVE_ERR_VALUE);
+    assert(strcmp(error.location, "form") == 0);
+    MotiveForm form;
+    assert(motive_form_parse("contour", &form) && form == MOTIVE_FORM_CONTOUR && !motive_form_parse("chord", &form));
+    assert(strcmp(motive_form_name(MOTIVE_FORM_RHYTHM), "rhythm") == 0);
+}
+
+static void test_analysis_by_form(void) {
+    MotiveAnalysis analysis;
+    /* A rhythm has a rhythm and nothing about pitch. */
+    Motive motive = load_with(motive_from_rhythm_text, "x:q x:e x:e x:h", &FOUR_FOUR, &D_MINOR);
+    assert(motive_analyze(&motive, &analysis));
+    assert(analysis.form == MOTIVE_FORM_RHYTHM && analysis.rhythm_known && !analysis.intervals_known &&
+           !analysis.contour_known && !analysis.range_known && !analysis.degrees_known && !analysis.harmony_known);
+    assert(analysis.rhythm[3].bar == 0 && time_is(analysis.rhythm[3].beat, 2, 1) && time_is(analysis.bars, 1, 1));
+
+    /* A contour has a contour and no rhythm. */
+    motive = load_with(motive_from_contour_text, "0 2 1 3", &FOUR_FOUR, &C_MAJOR);
+    assert(motive_analyze(&motive, &analysis));
+    assert(analysis.form == MOTIVE_FORM_CONTOUR && analysis.contour_known && !analysis.rhythm_known &&
+           !analysis.intervals_known && !analysis.range_known && !analysis.degrees_known && !analysis.harmony_known);
+    assert(analysis.shape == MOTIVE_SHAPE_WAVE && analysis.directions[0] == CONTOUR_DIRECTION_UP &&
+           analysis.directions[1] == CONTOUR_DIRECTION_DOWN);
+
+    /* A full motive has all of it. */
+    motive = load_notes("D4:q F4:q A4:q D5:q", &FOUR_FOUR, &D_MINOR);
+    assert(motive_analyze(&motive, &analysis));
+    assert(analysis.form == MOTIVE_FORM_FULL && analysis.rhythm_known && analysis.intervals_known &&
+           analysis.contour_known && analysis.range_known && analysis.degrees_known && analysis.harmony_known);
+
+    /* The JSON has null where a form has nothing; the text has no such section. */
+    motive = load_with(motive_from_rhythm_text, "x:q x:e x:e x:h", &FOUR_FOUR, &D_MINOR);
+    assert(motive_analyze(&motive, &analysis));
+    char *json = motive_analysis_to_json(&motive, &analysis);
+    assert(json && strstr(json, "\"intervals\": null") && strstr(json, "\"contour\": null") &&
+           strstr(json, "\"range\": null") && strstr(json, "\"scale_degrees\": null"));
+    assert(!strstr(json, "\"rhythm\": null"));
+    free(json);
+}
+
 int main(void) {
     test_same_motive_from_each_format();
     test_options();
@@ -889,6 +997,9 @@ int main(void) {
     test_degrees_errors();
     test_rhythm_and_contour_reading();
     test_writing_round_trips();
+    test_analysis_with_a_pickup();
+    test_pickup_and_form_in_json();
+    test_analysis_by_form();
     puts("test_motive: ok");
     return 0;
 }
