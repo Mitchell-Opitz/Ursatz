@@ -119,10 +119,95 @@ static void test_bad_input(void) {
     expect_failure(FIXTURE("no_such_file.mid"), 2, "cannot open");
 }
 
+static void write_input(const char *text) {
+    FILE *file = fopen("motive_cli_in.txt", "wb");
+    assert(file);
+    fputs(text, file);
+    fclose(file);
+}
+
+static char *run_json(const char *arguments) {
+    assert(run(arguments, "motive_cli_out.txt", "motive_cli_err.txt") == 0);
+    return read_file("motive_cli_out.txt");
+}
+
+static void test_forms_and_pickup(void) {
+    /* Text output names the form and the pickup. */
+    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"", "motive_cli_out.txt",
+               "motive_cli_err.txt") == 0);
+    char *out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "Form: full") != NULL && strstr(out, "Pickup: none") != NULL);
+    free(out);
+
+    /* A degree list. */
+    write_input("1:q b3:e 5:e 1':h");
+    out = run_json("motive_cli_in.txt --format degrees --meter 4/4 --key \"D minor\" --json");
+    assert(strstr(out, "\"form\": \"full\"") && strstr(out, "\"pickup\": \"0\""));
+    assert(strstr(out, "\"notes_text\": \"D4:q E4:e A4:e D5:h\"") && strstr(out, "\"degrees_text\": \"1:q 2:e 5:e 1':h\""));
+    assert(!strstr(out, "\"rhythm_text\"") && !strstr(out, "\"contour_text\""));
+    free(out);
+
+    /* Without a key there is no degree text. */
+    write_input("D4:q F4:q");
+    out = run_json("motive_cli_in.txt --meter 4/4 --json");
+    assert(strstr(out, "\"degrees_text\": null") && strstr(out, "\"notes_text\": \"D4:q F4:q\""));
+    free(out);
+
+    /* --form rhythm reads a rhythm; the pickup is in beats of the meter. */
+    write_input("x:q x:h.");
+    out = run_json("motive_cli_in.txt --form rhythm --meter 3/4 --pickup 1 --json");
+    assert(strstr(out, "\"form\": \"rhythm\"") && strstr(out, "\"pickup\": \"1\"") &&
+           strstr(out, "\"rhythm_text\": \"x:q x:h.\"") && strstr(out, "\"intervals\": null"));
+    assert(strstr(out, "\"bar\": -1"));
+    free(out);
+    assert(run("motive_cli_in.txt --form rhythm --meter 3/4 --pickup 1", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
+    out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "Form: rhythm") && strstr(out, "Pickup: 1") && strstr(out, "bar 0 beat 3"));
+    free(out);
+
+    /* --form contour reads a contour; a half beat pickup is "1/2". */
+    write_input("0 2 1 3");
+    out = run_json("motive_cli_in.txt --form contour --meter 4/4 --pickup 1/2 --key \"C major\" --json");
+    assert(strstr(out, "\"form\": \"contour\"") && strstr(out, "\"pickup\": \"1/2\"") &&
+           strstr(out, "\"contour_text\": \"0 2 1 3\"") && strstr(out, "\"rhythm\": null"));
+    free(out);
+
+    /* --format rhythm and --form rhythm are the same; full leaves the format alone. */
+    write_input("x:q x:q");
+    out = run_json("motive_cli_in.txt --format rhythm --meter 4/4 --json");
+    assert(strstr(out, "\"form\": \"rhythm\""));
+    free(out);
+    write_input("D4:q F4:q");
+    out = run_json("motive_cli_in.txt --form full --meter 4/4 --json");
+    assert(strstr(out, "\"form\": \"full\""));
+    free(out);
+
+    /* A file that declares its own meter takes the pickup in that meter's beats. */
+    out = run_json(FIXTURE("motive_d_minor.mid") " --pickup 1/2 --json");
+    assert(strstr(out, "\"pickup\": \"1/2\""));
+    free(out);
+}
+
+static void test_forms_and_pickup_errors(void) {
+    expect_failure(FIXTURE("motive_d_minor.mid") " --form chord", 1, "--form must be");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --form rhythm --format contour", 1, "--form rhythm reads a rhythm");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --form full --format rhythm", 1, "--form full does not read");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --pickup x", 1, "pickup 'x'");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --pickup -1", 1, "pickup '-1'");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --pickup 1/0", 1, "pickup '1/0'");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --pickup", 1, "--pickup needs a value");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --pickup 4", 2, "pickup must be");
+    write_input("0 a");
+    expect_failure("motive_cli_in.txt --form contour --meter 4/4", 2, "not a rank");
+    write_input("1:q 9:q");
+    expect_failure("motive_cli_in.txt --format degrees --meter 4/4", 2, "not a scale degree");
+}
+
 static void test_help(void) {
     assert(run("--help", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
     char *out = read_file("motive_cli_out.txt");
     assert(strstr(out, "--meter") != NULL && strstr(out, "--format") != NULL && strstr(out, "--json") != NULL);
+    assert(strstr(out, "--form") != NULL && strstr(out, "--pickup") != NULL);
     free(out);
 }
 
@@ -131,6 +216,8 @@ int main(void) {
     test_json_output();
     test_bad_arguments();
     test_bad_input();
+    test_forms_and_pickup();
+    test_forms_and_pickup_errors();
     test_help();
     puts("test_motive_cli: ok");
     return 0;
