@@ -25,7 +25,7 @@ const char *motive_result_name(MotiveResult result) {
     return (size_t)result < sizeof(RESULT_NAMES) / sizeof(RESULT_NAMES[0]) ? RESULT_NAMES[result] : "unknown";
 }
 
-static const char *const FORMAT_NAMES[] = {"auto", "midi", "musicxml", "notes", "json"};
+static const char *const FORMAT_NAMES[] = {"auto", "midi", "musicxml", "notes", "json", "degrees", "rhythm", "contour"};
 
 bool motive_format_parse(const char *name, MotiveFormat *out) {
     if (!name || !out) {
@@ -42,6 +42,25 @@ bool motive_format_parse(const char *name, MotiveFormat *out) {
 
 const char *motive_format_name(MotiveFormat format) {
     return (size_t)format < sizeof(FORMAT_NAMES) / sizeof(FORMAT_NAMES[0]) ? FORMAT_NAMES[format] : "unknown";
+}
+
+static const char *const FORM_NAMES[] = {"full", "rhythm", "contour"};
+
+bool motive_form_parse(const char *name, MotiveForm *out) {
+    if (!name || !out) {
+        return false;
+    }
+    for (size_t i = 0; i < sizeof(FORM_NAMES) / sizeof(FORM_NAMES[0]); i++) {
+        if (strcmp(name, FORM_NAMES[i]) == 0) {
+            *out = (MotiveForm)i;
+            return true;
+        }
+    }
+    return false;
+}
+
+const char *motive_form_name(MotiveForm form) {
+    return (size_t)form < sizeof(FORM_NAMES) / sizeof(FORM_NAMES[0]) ? FORM_NAMES[form] : "unknown";
 }
 
 MotiveFormat motive_detect_format(const void *data, size_t size) {
@@ -188,6 +207,10 @@ PlanTime motive_time_plus(PlanTime a, PlanTime b) {
 
 PlanTime motive_time_minus(PlanTime a, PlanTime b) {
     return motive_time(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
+}
+
+PlanTime motive_pickup(const Motive *motive) {
+    return motive->pickup.den == 0 ? motive_time(0, 1) : motive->pickup;
 }
 
 PlanTime motive_note_end(const PlanNote *note) {
@@ -349,6 +372,21 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
         }
     }
 
+    PlanTime pickup = options && options->has_pickup ? options->pickup
+                      : document->has_pickup           ? document->pickup
+                                                       : motive_time(0, 1);
+    PlanTime bar_length;
+    if (pickup.den == 0 || pickup.num < 0 ||
+        plan_time_make((long)motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit, &bar_length) !=
+            PLAN_OK ||
+        plan_time_compare(pickup, bar_length) >= 0) {
+        motive_set_error(error, "pickup", "the pickup must be at least 0 and shorter than one bar of %d/%d",
+                         motive->meter.beats_per_bar, motive->meter.beat_unit);
+        return MOTIVE_ERR_VALUE;
+    }
+    motive->pickup = pickup;
+    motive->form = document->form;
+
     PlanKey key;
     if (options && options->has_key) {
         key = options->key;
@@ -376,6 +414,7 @@ static void begin(Motive *motive, MotiveDocument *document, MotiveError *error) 
     memset(motive, 0, sizeof(*motive));
     memset(document, 0, sizeof(*document));
     motive->length = motive_time(0, 1);
+    motive->pickup = motive_time(0, 1);
     if (error) {
         memset(error, 0, sizeof(*error));
     }
@@ -392,6 +431,11 @@ static MotiveResult load_text(const char *text, TextParser parse, const MotiveOp
     Motive motive;
     MotiveDocument document;
     begin(&motive, &document, error);
+    if (options && options->has_key) {
+        /* A key the caller gives is the key a degree list is read in; for the other inputs it changes nothing. */
+        document.has_key = true;
+        document.key = options->key;
+    }
     MotiveResult result = parse(text, &motive, &document, error);
     if (result == MOTIVE_OK) {
         result = motive_complete(&motive, &document, options, error);
@@ -404,6 +448,18 @@ static MotiveResult load_text(const char *text, TextParser parse, const MotiveOp
 
 MotiveResult motive_from_notes_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
     return load_text(text, motive_parse_notes_text, options, out, error);
+}
+
+MotiveResult motive_from_degrees_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
+    return load_text(text, motive_parse_degrees_text, options, out, error);
+}
+
+MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
+    return load_text(text, motive_parse_rhythm_text, options, out, error);
+}
+
+MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
+    return load_text(text, motive_parse_contour_text, options, out, error);
 }
 
 MotiveResult motive_from_json(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error) {
@@ -463,6 +519,9 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
     case MOTIVE_FORMAT_MUSICXML:
         return motive_from_musicxml(data, size, options, out, error);
     case MOTIVE_FORMAT_NOTES:
+    case MOTIVE_FORMAT_DEGREES:
+    case MOTIVE_FORMAT_RHYTHM:
+    case MOTIVE_FORMAT_CONTOUR:
     case MOTIVE_FORMAT_JSON: {
         char *text = malloc(size + 1);
         if (!text) {
@@ -471,8 +530,11 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
         }
         memcpy(text, data, size);
         text[size] = '\0';
-        MotiveResult result = format == MOTIVE_FORMAT_JSON ? motive_from_json(text, options, out, error)
-                                                           : motive_from_notes_text(text, options, out, error);
+        MotiveResult result = format == MOTIVE_FORMAT_JSON      ? motive_from_json(text, options, out, error)
+                              : format == MOTIVE_FORMAT_DEGREES ? motive_from_degrees_text(text, options, out, error)
+                              : format == MOTIVE_FORMAT_RHYTHM  ? motive_from_rhythm_text(text, options, out, error)
+                              : format == MOTIVE_FORMAT_CONTOUR ? motive_from_contour_text(text, options, out, error)
+                                                                : motive_from_notes_text(text, options, out, error);
         free(text);
         return result;
     }
@@ -531,7 +593,8 @@ bool motive_equal(const Motive *a, const Motive *b) {
     }
     if (a->meter.beats_per_bar != b->meter.beats_per_bar || a->meter.beat_unit != b->meter.beat_unit ||
         a->meter.bars_per_hyperbar != b->meter.bars_per_hyperbar || a->key_source != b->key_source ||
-        a->note_count != b->note_count || plan_time_compare(a->length, b->length) != 0) {
+        a->note_count != b->note_count || plan_time_compare(a->length, b->length) != 0 || a->form != b->form ||
+        plan_time_compare(motive_pickup(a), motive_pickup(b)) != 0) {
         return false;
     }
     if (a->key_source != MOTIVE_KEY_UNSPECIFIED &&
@@ -611,6 +674,12 @@ cJSON *motive_json_object(const Motive *motive) {
         ok = json_add(document, "key", key_json(&motive->key));
     }
     ok = ok && json_add(document, "notes", notes_json(motive));
+    if (ok && motive->form != MOTIVE_FORM_FULL) {
+        ok = json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
+    }
+    if (ok && motive_pickup(motive).num != 0) {
+        ok = json_add(document, "pickup", motive_time_json(motive_pickup(motive)));
+    }
     if (!ok) {
         cJSON_Delete(document);
         return NULL;
@@ -760,6 +829,16 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     const cJSON *key = ok ? cJSON_GetObjectItemCaseSensitive(root, "key") : NULL;
     ok = ok && (!meter || cJSON_IsNull(meter) || read_meter(&reader, meter, document));
     ok = ok && (!key || cJSON_IsNull(key) || read_key(&reader, key, document));
+    const cJSON *form = ok ? cJSON_GetObjectItemCaseSensitive(root, "form") : NULL;
+    const cJSON *pickup = ok ? cJSON_GetObjectItemCaseSensitive(root, "pickup") : NULL;
+    if (ok && form && !cJSON_IsNull(form)) {
+        ok = (cJSON_IsString(form) && motive_form_parse(form->valuestring, &document->form)) ||
+             json_bad_format(&reader, "form", "expected \"full\", \"rhythm\" or \"contour\"");
+    }
+    if (ok && pickup && !cJSON_IsNull(pickup)) {
+        ok = read_time(&reader, pickup, "pickup", 0, &document->pickup);
+        document->has_pickup = ok;
+    }
     ok = ok && read_notes(&reader, json_member(&reader, root, "", "notes", true), motive);
     cJSON_Delete(root);
     if (!ok) {

@@ -210,6 +210,8 @@ lanes, and `notes` is the note payload of a melody lane, with times as in the co
 | `meter` | Optional. `beats_per_bar` (1 to 64), `beat_unit` (1, 2, 4, 8 or 16) and optionally `bars_per_hyperbar`. |
 | `key` | Optional. `tonic_pitch_class` (0 to 11) and `mode` (`major` or `minor`). |
 | `notes` | A non-empty array of at most 64 `{"midi_pitch": 0 to 127, "offset": <time>, "duration": <time>}`. `offset` is measured from the start of the motive, so a gap between notes is a rest and a first note after 0 is a leading rest. Notes are in order and do not overlap. A tie is one note as long as both. |
+| `form` | Optional, `full` (the default), `rhythm` or `contour`. A rhythm keeps only the durations and onsets (every note sounds on one pitch); a contour only the heights of the notes in relation to each other (even quarters). Written only when it is not `full`. |
+| `pickup` | Optional. A time in whole notes: the length before the first barline, shorter than one bar. The notes still start at 0; bars and beats are counted from the barline. Written only when it is not 0. |
 
 The motive ends where its last note ends. Unknown fields are ignored; a value that is not allowed is an error
 that names the field, for example `notes[2].duration.den`.
@@ -240,15 +242,18 @@ document above) and an `analysis` member:
 
 | Key | Content |
 | --- | --- |
+| `form`, `pickup` | The motive's form, and its pickup in beats of the beat unit as text: `"0"`, `"1"`, `"1/2"`. |
+| `notes_text`, `degrees_text` | The notes as a note list (`D4:q F4:e`), and as a degree list (`1:q 3:e`, `null` without a key). |
+| `rhythm_text`, `contour_text` | Only for the form: the rhythm list (`x:q x:e`) of a `rhythm` motive, the contour list (`0 2 1 3`) of a `contour` motive. |
 | `note_count` | The number of notes. |
 | `length`, `bars` | The motive's length in whole notes, and as a number of bars of its meter. Times. |
 | `key` | `null` without a key. Otherwise `tonic_pitch_class`, `mode` and `source`: `given` or `inferred`. |
-| `intervals` | One per pair of neighboring notes: `semitones` (signed) and `steps` (signed diatonic steps in the key, `null` without a key). |
-| `contour` | `shape` (`single note`, `level`, `ascending`, `descending`, `arch`, `valley` or `wave`) and `directions`, one of `up`, `down` and `same` per interval. |
-| `rhythm` | One per note: `onset`, `duration`, `bar` (from 0), `beat` (the position in the bar in beats of the beat unit, 0 is the downbeat; a time), `on_beat`, `dotted` (the duration is 3 or 7 over a power of two) and `rest_before` (a time). |
-| `range` | `lowest` and `highest` MIDI pitch, and `semitones` between them. |
-| `scale_degrees` | `null` without a key. Otherwise `start`, `end` and `all` (one per note), each `{"degree": 1 to 7, "alteration": 0 or 1}`; 1 is a raised degree. |
-| `implied_harmony` | `key_known`, and `candidates`, best fit first: `roman_numeral`, `function`, `fit` (the share of the motive that is chord tones, 0 to 1, to four places), `chord_tones` and `non_chord_tones`. Empty without a key. |
+| `intervals` | `null` for a rhythm or a contour. Otherwise one per pair of neighboring notes: `semitones` (signed) and `steps` (signed diatonic steps in the key, `null` without a key). |
+| `contour` | `null` for a rhythm. Otherwise `shape` (`single note`, `level`, `ascending`, `descending`, `arch`, `valley` or `wave`) and `directions`, one of `up`, `down` and `same` per interval. |
+| `rhythm` | `null` for a contour. Otherwise one per note: `onset`, `duration`, `bar` (the first full bar is 0, and a pickup's notes are in bar -1), `beat` (the position in the bar in beats of the beat unit, 0 is the downbeat; a time), `on_beat`, `dotted` (the duration is 3 or 7 over a power of two) and `rest_before` (a time). |
+| `range` | `null` for a rhythm or a contour. Otherwise `lowest` and `highest` MIDI pitch, and `semitones` between them. |
+| `scale_degrees` | `null` without a key, and for a rhythm or a contour. Otherwise `start`, `end` and `all` (one per note), each `{"degree": 1 to 7, "alteration": 0 or 1}`; 1 is a raised degree. |
+| `implied_harmony` | `key_known`, and `candidates`, best fit first: `roman_numeral`, `function`, `fit` (the share of the motive that is chord tones, 0 to 1, to four places), `chord_tones` and `non_chord_tones`. Empty without a key, and for a rhythm or a contour. |
 
 For the motive above, `scale_degrees` gives `1 3 5 1`, the contour is `ascending` and the intervals are `+3`, `+4`
 and `+5` semitones, `+2`, `+2` and `+3` steps. The best implied chord is `i`, with `fit` 1.

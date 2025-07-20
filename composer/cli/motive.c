@@ -17,6 +17,8 @@ typedef struct {
     const char *meter_text;
     const char *key_text;
     const char *format_text;
+    const char *form_text;
+    const char *pickup_text;
     bool json;
     bool help;
 } Options;
@@ -29,12 +31,33 @@ static void print_help(FILE *out) {
     fprintf(out, "  --meter <n/m>        the meter, for input that has none (a note list); a MIDI or MusicXML\n");
     fprintf(out, "                       file that declares another meter is an error\n");
     fprintf(out, "  --key <key>          the key, for example \"D minor\"; replaces a key the file states\n");
-    fprintf(out, "  --format <name>      auto (default), midi, musicxml, notes or json\n");
+    fprintf(out, "  --format <name>      auto (default), midi, musicxml, notes, degrees, rhythm, contour or json\n");
+    fprintf(out, "  --form <name>        full (default), rhythm or contour; rhythm and contour read the text as a\n");
+    fprintf(out, "                       rhythm (x:q x:e) or a contour (0 2 1 3) instead of a note list\n");
+    fprintf(out, "  --pickup <beats>     the beats before the first barline, as 1 or 1/2; default 0\n");
     fprintf(out, "  --json               print the analysis as JSON\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the input cannot be loaded.\n\n");
     fprintf(out, "Example:\n");
     fprintf(out, "  ursatz-composer motive theme.txt --meter 4/4 --key \"D minor\"\n");
+}
+
+/* "0", "1", "1/2": beats of the beat unit, as whole notes. */
+static bool parse_pickup(const char *text, int beat_unit, PlanTime *out) {
+    char *end = NULL;
+    long numerator = strtol(text, &end, 10);
+    long denominator = 1;
+    if (end == text || numerator < 0) {
+        return false;
+    }
+    if (*end == '/') {
+        const char *rest = end + 1;
+        denominator = strtol(rest, &end, 10);
+        if (end == rest || denominator < 1) {
+            return false;
+        }
+    }
+    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
 }
 
 static int fail(int status, const char *format, ...) {
@@ -56,10 +79,13 @@ static int read_options(int argc, char **argv, Options *options) {
         } else if (strcmp(argument, "--json") == 0) {
             options->json = true;
         } else if (strcmp(argument, "--meter") == 0 || strcmp(argument, "--key") == 0 ||
-                   strcmp(argument, "--format") == 0) {
-            const char **slot = strcmp(argument, "--meter") == 0 ? &options->meter_text
-                                : strcmp(argument, "--key") == 0 ? &options->key_text
-                                                                 : &options->format_text;
+                   strcmp(argument, "--format") == 0 || strcmp(argument, "--form") == 0 ||
+                   strcmp(argument, "--pickup") == 0) {
+            const char **slot = strcmp(argument, "--meter") == 0    ? &options->meter_text
+                                : strcmp(argument, "--key") == 0    ? &options->key_text
+                                : strcmp(argument, "--form") == 0   ? &options->form_text
+                                : strcmp(argument, "--pickup") == 0 ? &options->pickup_text
+                                                                    : &options->format_text;
             if (i + 1 >= argc) {
                 return fail(EXIT_USAGE, "%s needs a value", argument);
             }
@@ -112,12 +138,42 @@ int run_motive(int argc, char **argv) {
     }
     MotiveFormat format = MOTIVE_FORMAT_AUTO;
     if (options.format_text && !motive_format_parse(options.format_text, &format)) {
-        return fail(EXIT_USAGE, "--format must be auto, midi, musicxml, notes or json, not '%s'", options.format_text);
+        return fail(EXIT_USAGE, "--format must be auto, midi, musicxml, notes, degrees, rhythm, contour or json, not '%s'",
+                    options.format_text);
+    }
+    if (options.form_text) {
+        MotiveForm form;
+        if (!motive_form_parse(options.form_text, &form)) {
+            return fail(EXIT_USAGE, "--form must be full, rhythm or contour, not '%s'", options.form_text);
+        }
+        /* A rhythm or a contour is read by its own reader; full leaves the format as it is. */
+        MotiveFormat wanted = form == MOTIVE_FORM_RHYTHM ? MOTIVE_FORMAT_RHYTHM : MOTIVE_FORMAT_CONTOUR;
+        if (form != MOTIVE_FORM_FULL && format != MOTIVE_FORMAT_AUTO && format != wanted) {
+            return fail(EXIT_USAGE, "--form %s reads a %s, which --format %s does not", options.form_text,
+                        options.form_text, options.format_text);
+        }
+        if (form == MOTIVE_FORM_FULL && (format == MOTIVE_FORMAT_RHYTHM || format == MOTIVE_FORMAT_CONTOUR)) {
+            return fail(EXIT_USAGE, "--form full does not read a %s; use --form %s or another --format",
+                        options.format_text, options.format_text);
+        }
+        if (form != MOTIVE_FORM_FULL) {
+            format = wanted;
+        }
     }
 
     Motive motive;
     MotiveError error;
     MotiveResult result = motive_load_file(options.input, format, &motive_options, &motive, &error);
+    if (result == MOTIVE_OK && options.pickup_text) {
+        /* The pickup is in beats of the motive's meter, which a file may declare, so it is read after the first load. */
+        PlanTime pickup;
+        if (!parse_pickup(options.pickup_text, motive.meter.beat_unit, &pickup)) {
+            return fail(EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2", options.pickup_text);
+        }
+        motive_options.has_pickup = true;
+        motive_options.pickup = pickup;
+        result = motive_load_file(options.input, format, &motive_options, &motive, &error);
+    }
     if (result != MOTIVE_OK) {
         return fail(EXIT_UNLOADABLE, "cannot load '%s' (%s)%s%s: %s", options.input, motive_result_name(result),
                     error.location[0] ? " at " : "", error.location, error.message);

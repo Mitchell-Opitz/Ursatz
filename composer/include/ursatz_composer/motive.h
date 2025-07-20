@@ -68,6 +68,16 @@ typedef enum {
     MOTIVE_KEY_INFERRED
 } MotiveKeySource;
 
+/*
+ * What a motive holds. FULL is pitches and rhythm. RHYTHM keeps only the durations and onsets (every note sounds on
+ * the same pitch). CONTOUR keeps only the heights of the notes in relation to each other, in even quarter notes.
+ */
+typedef enum {
+    MOTIVE_FORM_FULL = 0,
+    MOTIVE_FORM_RHYTHM,
+    MOTIVE_FORM_CONTOUR
+} MotiveForm;
+
 typedef struct {
     PlanMeter meter;
     /* Valid when key_source is not MOTIVE_KEY_UNSPECIFIED. */
@@ -77,6 +87,11 @@ typedef struct {
     size_t note_count;
     /* Where the last note ends. The span of the motive is this long. */
     PlanTime length;
+    /* Zero-initialized means a full motive with no pickup. */
+    MotiveForm form;
+    /* How much of the meter's bar comes before the first barline, in whole notes. The motive still starts at offset 0;
+       bars and beats are counted from -pickup. */
+    PlanTime pickup;
 } Motive;
 
 /* What the caller says about the motive. NULL options mean nothing. */
@@ -85,6 +100,9 @@ typedef struct {
     PlanMeter meter;
     bool has_key;
     PlanKey key;
+    bool has_pickup;
+    /* In whole notes; the CLI converts beats. */
+    PlanTime pickup;
     /* The most bars the notes may fill, or 0 for no limit. The readers themselves set none: a line of any length up to
        MOTIVE_MAX_NOTES notes is read, and the commands that take a one-bar motive check it after. */
     size_t max_bars;
@@ -102,16 +120,25 @@ typedef enum {
     MOTIVE_FORMAT_MIDI,
     MOTIVE_FORMAT_MUSICXML,
     MOTIVE_FORMAT_NOTES,
-    MOTIVE_FORMAT_JSON
+    MOTIVE_FORMAT_JSON,
+    /* The last three are never chosen by motive_detect_format: they have to be asked for. */
+    MOTIVE_FORMAT_DEGREES,
+    MOTIVE_FORMAT_RHYTHM,
+    MOTIVE_FORMAT_CONTOUR
 } MotiveFormat;
 
 /* "ok", "polyphonic" and so on. */
 const char *motive_result_name(MotiveResult result);
 
-/* Reads "auto", "midi", "musicxml", "notes" or "json". False for any other text. */
+/* Reads "auto", "midi", "musicxml", "notes", "json", "degrees", "rhythm" or "contour". False for any other text. */
 bool motive_format_parse(const char *name, MotiveFormat *out);
-/* "midi", "musicxml", "notes", "json" or "auto". */
+/* "midi", "musicxml", "notes", "json", "degrees", "rhythm", "contour" or "auto". */
 const char *motive_format_name(MotiveFormat format);
+
+/* Reads "full", "rhythm" or "contour". False for any other text. */
+bool motive_form_parse(const char *name, MotiveForm *out);
+/* "full", "rhythm" or "contour". */
+const char *motive_form_name(MotiveForm form);
 
 /*
  * What the bytes look like, never MOTIVE_FORMAT_AUTO: "MThd" is MIDI, a first
@@ -149,6 +176,39 @@ bool motive_parse_meter(const char *text, PlanMeter *out);
 MotiveResult motive_from_notes_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
 /*
+ * A degree list, as text: the same as a note list, but each pitch is a degree of the key's scale (natural minor in a
+ * minor key):
+ *
+ *   1:q b3:e 5:e 1':h
+ *
+ * A pitch is an optional # or b, a degree 1 to 7, then octave marks, any number: ' up an octave, , down. Octave 0 is
+ * the octave whose degree 1 is the tonic's pitch class in MIDI 60 to 71. "r:<duration>" is a rest, "~" ties and "|" is
+ * ignored as in a note list. The key comes from the options; without one the pitches are C major's and the key stays
+ * as the pitches settle it.
+ */
+MotiveResult motive_from_degrees_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
+
+/*
+ * A rhythm, as text: a note list with no pitches.
+ *
+ *   x:q x:e x:e x:h
+ *
+ * Each note is "x" and a duration; "r" rests, "~" ties, dots and "|" are as in a note list. The motive is read with
+ * form MOTIVE_FORM_RHYTHM and sounds every note on degree 1 of the key (C major's when the options give none).
+ */
+MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
+
+/*
+ * A contour, as text: ranks separated by white space, 0 the lowest, equal ranks the same height, no durations.
+ *
+ *   0 2 1 3
+ *
+ * The motive is read with form MOTIVE_FORM_CONTOUR and sounds rank r on degree r + 1 of the key (C major's when the
+ * options give none), every note a quarter.
+ */
+MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
+
+/*
  * JSON, in the plan format's vocabulary (docs/plan-format.md, "Motive documents"):
  *
  *   {"meter": {"beats_per_bar": 4, "beat_unit": 4},
@@ -173,6 +233,20 @@ MotiveResult motive_load_file(const char *path, MotiveFormat format, const Motiv
 
 /* The same meter, key and notes. */
 bool motive_equal(const Motive *a, const Motive *b);
+
+/*
+ * The motive as text, each read back by its reader (motive_from_notes_text and so on) into the same notes. A rest
+ * between notes, or before the first, is written as rests; a note whose length is not a plain or dotted value is
+ * written as tied pieces. NULL on failure, and for a value that is not a sum of w to t; caller frees.
+ *   notes:   "D4:q F4:e A4:e D5:h"
+ *   degrees: "1:q b3:e 5:e 1':h", a raised degree as "#"; NULL when the motive has no key
+ *   rhythm:  "x:q x:e x:e x:h"
+ *   contour: "0 2 1 3", the rank of each note among the motive's distinct pitches
+ */
+char *motive_to_notes_text(const Motive *motive);
+char *motive_to_degrees_text(const Motive *motive);
+char *motive_to_rhythm_text(const Motive *motive);
+char *motive_to_contour_text(const Motive *motive);
 
 /* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
 char *motive_to_json(const Motive *motive);

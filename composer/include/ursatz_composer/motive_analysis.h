@@ -92,6 +92,13 @@ typedef struct {
 
 typedef struct {
     size_t note_count;
+    /* What the motive holds. A rhythm has only the rhythm below; a contour only the contour (its pitches are made up
+       to sound it, so no intervals, range, degrees or harmony); a full motive has all of it. */
+    MotiveForm form;
+    bool intervals_known;
+    bool contour_known;
+    bool rhythm_known;
+    bool range_known;
     PlanTime length;
     /* How many bars the motive is: its length over a bar. */
     PlanTime bars;
@@ -102,6 +109,8 @@ typedef struct {
     ContourDirection directions[MOTIVE_MAX_NOTES];
     MotiveShape shape;
 
+    /* bar counts from the first barline: the bars before it (a pickup's) are -1, and the first full bar is 0. beat is the
+       position in the bar, in beats from 0. */
     MotiveRhythmNote rhythm[MOTIVE_MAX_NOTES];
 
     int lowest;

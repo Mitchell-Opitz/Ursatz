@@ -11,6 +11,6 @@ int run_motive(int argc, char **argv);
 
 /* The line of the usage text that names the subcommand. */
 #define MOTIVE_USAGE_LINE \
-    "       ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|json>] [--json]"
+    "       ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--json]"
 
 #endif

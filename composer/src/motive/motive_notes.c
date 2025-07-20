@@ -86,6 +86,58 @@ static bool parse_pitch(const char *text, int *midi, char *message, size_t messa
     return true;
 }
 
+/* The shape of one pitched token of a list: how its pitch text becomes a MIDI note number. */
+typedef bool (*PitchParser)(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size);
+
+static bool parse_note_pitch(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size) {
+    (void)key;
+    return parse_pitch(text, midi, message, message_size);
+}
+
+/*
+ * Parses "1", "b3", "#4", "5'", "1,," into a MIDI note number: an optional # or b, a degree 1 to 7 of the key's scale,
+ * then octave marks (' up, , down). Octave 0 is the octave whose degree 1 is the tonic's pitch class in MIDI 60 to 71.
+ */
+static bool parse_degree_pitch(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size) {
+    const char *cursor = text;
+    int alteration = 0;
+    if (*cursor == '#' || *cursor == 'b') {
+        alteration = *cursor == '#' ? 1 : -1;
+        cursor++;
+    }
+    if (*cursor < '1' || *cursor > '7') {
+        snprintf(message, message_size, "'%s' is not a scale degree; use 1 to 7, with an optional # or b before it", text);
+        return false;
+    }
+    int degree = *cursor++ - '0';
+    long octave = 0;
+    for (; *cursor == '\'' || *cursor == ','; cursor++) {
+        octave += *cursor == '\'' ? 1 : -1;
+    }
+    if (*cursor != '\0') {
+        snprintf(message, message_size, "'%s' is not a scale degree: '%s' is not an octave mark (' up, , down)", text,
+                 cursor);
+        return false;
+    }
+    long value = 60 + motive_position_pitch(key, octave * 7 + (degree - 1), alteration);
+    if (value < 0 || value > 127) {
+        snprintf(message, message_size, "'%s' is outside the MIDI range (C-1 to G9)", text);
+        return false;
+    }
+    *midi = (int)value;
+    return true;
+}
+
+/* A rhythm-only token's pitch is "x"; it sounds on degree 1 of the key (the tonic, in MIDI 60 to 71). */
+static bool parse_rhythm_pitch(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size) {
+    if (strcmp(text, "x") != 0 && strcmp(text, "X") != 0) {
+        snprintf(message, message_size, "'%s' is not a note of a rhythm; write x for a note or r for a rest", text);
+        return false;
+    }
+    *midi = 60 + motive_position_pitch(key, 0, 0);
+    return true;
+}
+
 /* Parses "q", "e.", "h.." into a length in whole notes. On failure writes the reason to message. */
 static bool parse_duration(const char *text, PlanTime *out, char *message, size_t message_size) {
     PlanTime base;
@@ -134,8 +186,8 @@ static bool parse_duration(const char *text, PlanTime *out, char *message, size_
     return true;
 }
 
-MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
-    (void)document;
+static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, const PlanKey *key, const char *example,
+                               Motive *motive, MotiveError *error) {
     PlanTime cursor = motive_time(0, 1);
     size_t count = 0;
     bool tied = false;          /* the last note is tied to the next token */
@@ -172,7 +224,7 @@ MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDoc
         /* Split "PITCH:DURATION[~]". */
         char *colon = strchr(token.text, ':');
         if (!colon || colon == token.text || colon[1] == '\0') {
-            motive_set_error(error, location, "'%s' must be a pitch, a colon and a duration, as in D4:q", token.text);
+            motive_set_error(error, location, "'%s' must be a pitch, a colon and a duration, as in %s", token.text, example);
             return MOTIVE_ERR_SYNTAX;
         }
         *colon = '\0';
@@ -190,7 +242,7 @@ MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDoc
         bool rest = (pitch_text[0] == 'r' || pitch_text[0] == 'R') && pitch_text[1] == '\0';
         int midi = 0;
         PlanTime duration;
-        if ((!rest && !parse_pitch(pitch_text, &midi, message, sizeof(message))) ||
+        if ((!rest && !parse_pitch_text(pitch_text, key, &midi, message, sizeof(message))) ||
             !parse_duration(duration_text, &duration, message, sizeof(message))) {
             motive_set_error(error, location, "%s", message);
             return MOTIVE_ERR_VALUE;
@@ -252,5 +304,99 @@ MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDoc
         return MOTIVE_ERR_VALUE;
     }
     motive->note_count = count;
+    return MOTIVE_OK;
+}
+
+MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
+    (void)document;
+    return parse_list(text, parse_note_pitch, NULL, "D4:q", motive, error);
+}
+
+MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
+    PlanKey key;
+    memset(&key, 0, sizeof(key));
+    if (document->has_key) {
+        key = document->key;
+    }
+    return parse_list(text, parse_degree_pitch, &key, "5':q", motive, error);
+}
+
+MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
+    PlanKey key;
+    memset(&key, 0, sizeof(key));
+    if (document->has_key) {
+        key = document->key;
+    }
+    MotiveResult result = parse_list(text, parse_rhythm_pitch, &key, "x:q", motive, error);
+    document->form = MOTIVE_FORM_RHYTHM;
+    return result;
+}
+
+/* A contour is ranks separated by white space, each a whole number; every note is a quarter, rank r on degree r + 1. */
+MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
+    PlanKey key;
+    memset(&key, 0, sizeof(key));
+    if (document->has_key) {
+        key = document->key;
+    }
+    size_t count = 0;
+    size_t number = 0;
+    for (size_t at = 0; text[at];) {
+        if (isspace((unsigned char)text[at]) || text[at] == '|') {
+            at++;
+            continue;
+        }
+        Token token;
+        token.number = ++number;
+        token.column = at + 1;
+        size_t length = 0;
+        while (text[at] && !isspace((unsigned char)text[at]) && text[at] != '|') {
+            if (length + 1 >= TOKEN_MAX) {
+                char location[MOTIVE_ERROR_LOCATION_MAX];
+                token.text[length] = '\0';
+                token_location(&token, location, sizeof(location));
+                motive_set_error(error, location, "the token is longer than %d characters", TOKEN_MAX - 1);
+                return MOTIVE_ERR_SYNTAX;
+            }
+            token.text[length++] = text[at++];
+        }
+        token.text[length] = '\0';
+
+        char location[MOTIVE_ERROR_LOCATION_MAX];
+        token_location(&token, location, sizeof(location));
+        for (size_t i = 0; i < length; i++) {
+            if (!isdigit((unsigned char)token.text[i])) {
+                motive_set_error(error, location, "'%s' is not a rank; write whole numbers, 0 the lowest, as in 0 2 1 3",
+                                 token.text);
+                return MOTIVE_ERR_SYNTAX;
+            }
+        }
+        if (length > 3) {
+            motive_set_error(error, location, "the rank '%s' is too high; the most is %d", token.text,
+                             MOTIVE_MAX_NOTES - 1);
+            return MOTIVE_ERR_VALUE;
+        }
+        long rank = strtol(token.text, NULL, 10);
+        long pitch = 60 + motive_position_pitch(&key, rank, 0);
+        if (rank > MOTIVE_MAX_NOTES - 1 || pitch > 127) {
+            motive_set_error(error, location, "the rank %ld is too high; the most is %d", rank, MOTIVE_MAX_NOTES - 1);
+            return MOTIVE_ERR_VALUE;
+        }
+        if (count == MOTIVE_MAX_NOTES) {
+            motive_set_error(error, location, "the motive has more than %d notes", MOTIVE_MAX_NOTES);
+            return MOTIVE_ERR_TOO_MANY_NOTES;
+        }
+        PlanNote *note = &motive->notes[count];
+        note->midi_pitch = (int)pitch;
+        note->offset = motive_time((long)count, 4);
+        note->duration = motive_time(1, 4);
+        count++;
+    }
+    if (count == 0) {
+        motive_set_error(error, "", "the motive has no notes");
+        return MOTIVE_ERR_EMPTY;
+    }
+    motive->note_count = count;
+    document->form = MOTIVE_FORM_CONTOUR;
     return MOTIVE_OK;
 }

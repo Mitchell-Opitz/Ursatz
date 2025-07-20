@@ -14,6 +14,10 @@ typedef struct {
     bool meter_declared;
     bool has_key;
     PlanKey key;
+    /* A JSON "form" and "pickup"; the other inputs have neither, and the caller's options can set the pickup. */
+    MotiveForm form;
+    bool has_pickup;
+    PlanTime pickup;
 } MotiveDocument;
 
 /* Records the first problem only. error may be NULL. */
@@ -22,6 +26,9 @@ void motive_set_error(MotiveError *error, const char *location, const char *form
 PlanTime motive_time(long num, unsigned long den);
 PlanTime motive_time_plus(PlanTime a, PlanTime b);
 PlanTime motive_time_minus(PlanTime a, PlanTime b);
+
+/* The pickup of a motive, or zero when it is unset (a zero-initialized Motive has a denominator of 0). */
+PlanTime motive_pickup(const Motive *motive);
 
 /* A note's end. */
 PlanTime motive_note_end(const PlanNote *note);
@@ -41,6 +48,11 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
 
 /* The text inputs, each filling a motive's notes and a document. */
 MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
+/* A degree list: the key for the pitches is the document's (the options' key), else C major. */
+MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
+/* A rhythm ("x:q x:e r:e") and a contour ("0 2 1 3"); both set the document's form, and take the key as a degree list does. */
+MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
+MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 
 /* JSON building shared with the analysis document. The motive as an object (see motive_to_json); NULL on failure. */
