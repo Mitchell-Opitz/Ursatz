@@ -1,7 +1,7 @@
 # motive command
 
 ```sh
-ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|json>] [--json]
+ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--json]
 ```
 
 Loads a motive, a short cell of notes (one bar or less, as a rule), and prints its analysis: the
@@ -19,6 +19,9 @@ MIDI, a first character of `<` is MusicXML, `{` is JSON, and anything else is a 
 | `midi` | A Standard MIDI File, type 0 or 1, read with Ursatz's MIDI importer. |
 | `musicxml` | An uncompressed score-partwise file, read with Ursatz's MusicXML importer. Ties are merged into one note. |
 | `notes` | A note list, below. |
+| `degrees` | A degree list, below. Never chosen by `auto`. |
+| `rhythm` | A rhythm-only list, below. Never chosen by `auto`. |
+| `contour` | A contour-only list, below. Never chosen by `auto`. |
 | `json` | A motive document, see [plan-format.md](plan-format.md#motive-documents). |
 
 A motive is one voice. A MIDI or MusicXML file with notes sounding together, or with notes in more than
@@ -48,6 +51,55 @@ Tokens are separated by white space. Each is a pitch, a colon and a duration, wi
 Notes follow one another from time 0. The text must end on a note, not a rest, and may have at most 64
 notes.
 
+### Degree list
+
+```
+1:q b3:e 5:e 1':h
+```
+
+The same as a note list, but each pitch is a degree of the key's scale (natural minor in a minor key).
+
+| Part | Syntax |
+| --- | --- |
+| Degree | An optional `#` or `b`, then `1` to `7`: `b3`, `#4`. |
+| Octave | Marks after the degree, any number: `'` up an octave, `,` down. `1'` is the tonic an octave up, `5,,` the dominant two octaves down. Octave 0 is the octave whose degree 1 is the tonic's pitch class in MIDI 60 to 71 (D is 62, G is 67). |
+| Rest, duration, tie, barline | As in a note list: `r:q`, `q.`, `~`, `\|`. |
+
+The key comes from `--key`. Without one the pitches are C major's, and the key is left to the usual
+inference. `degrees_text` in the JSON output (below) is the motive written this way, and it needs a key.
+
+### Rhythm-only list
+
+```
+x:q x:e x:e x:h
+```
+
+A note list with no pitches: `x` is a note, `r` a rest, and durations, dots, ties and `\|` are as above. The
+motive has the form `rhythm`. When it is heard, every note sounds on degree 1 of the key (C4 without one).
+Only the rhythm is analyzed.
+
+### Contour-only list
+
+```
+0 2 1 3
+```
+
+Ranks separated by white space: 0 is the lowest, equal ranks are the same height, no durations. The motive
+has the form `contour`. When it is heard, rank `r` sounds on degree `r + 1` of the key (C major without one),
+each note a quarter. Only the contour is analyzed.
+
+`--form rhythm` and `--form contour` read the input as a rhythm or a contour; they are the same as
+`--format rhythm` and `--format contour`, and a `--format` that says otherwise is an error. `--form full`
+(the default) leaves the format as it is.
+
+## Pickup
+
+`--pickup <beats>` is the number of beats of the meter's beat unit that come before the first barline:
+`0` (the default), `1`, `1/2`. It must be shorter than a bar. The motive still starts at offset 0, but bars
+and beats are counted from the first barline: the pickup's notes are in bar 0 of the text output (bar -1
+in the JSON, where the first full bar is 0), so in 3/4 a note at the start of a one-beat pickup is in
+bar 0, beat 3. The pickup is in beats of the file's own meter for MIDI and MusicXML.
+
 ## Meter and key
 
 | Flag | Meaning |
@@ -73,6 +125,8 @@ Text, by default:
 ```
 Notes: D4 F4 A4 D5
 Meter: 4/4
+Form: full
+Pickup: none
 Key: D minor (given)
 Length: 1 bar
 Intervals: +3 (+2 steps), +4 (+2 steps), +5 (+3 steps)
@@ -96,8 +150,13 @@ minor also the one on the raised seventh degree) and V7 by the share of the moti
 tones; each note counts for its duration, and twice that on a downbeat. A chord none of the notes belong
 to is left out.
 
+A rhythm has only the `Rhythm:` section and a contour only the `Contour:` line: their pitches are made up to
+sound them, so there are no intervals, range, degrees or harmony.
+
 `--json` prints the motive and its analysis as one JSON document, described in
-[plan-format.md](plan-format.md#motive-analysis). The same motive gives the same bytes whichever format
+[plan-format.md](plan-format.md#motive-analysis). The `analysis` also gives the form, the pickup in beats
+(`"1"`, `"1/2"`), `notes_text` (the pitches as a note list), `degrees_text` (as a degree list, `null` without
+a key) and, for the two forms, `rhythm_text` or `contour_text`. The same motive gives the same bytes whichever format
 it was read from.
 
 ## Exit status
