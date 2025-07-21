@@ -44,6 +44,7 @@ add_library(ursatz_composer STATIC
     motive/motive.c
     motive/motive_notes.c
     motive/motive_text.c
+    motive/motive_render.c
     motive/motive_import.c
     motive/motive_analysis.c
     motive/motive_develop.c
