@@ -979,6 +979,44 @@ static void test_analysis_by_form(void) {
     free(json);
 }
 
+static void test_render_in_another_key(void) {
+    /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
+    Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
+    static const PlanKey G_MINOR = {7, PLAN_MODE_MINOR};
+    Motive moved;
+    assert(motive_in_key(&source, &G_MINOR, &moved));
+    assert(moved.key_source == MOTIVE_KEY_GIVEN && moved.key.tonic_pitch_class == 7 && moved.key.mode == PLAN_MODE_MINOR);
+    assert(moved.note_count == 4 && moved.notes[0].midi_pitch == 67 && moved.notes[1].midi_pitch == 70 &&
+           moved.notes[2].midi_pitch == 74 && moved.notes[3].midi_pitch == 79);
+    assert(moved.length.num == source.length.num && moved.length.den == source.length.den);
+    char *before = motive_to_degrees_text(&source);
+    char *after = motive_to_degrees_text(&moved);
+    assert(before && after && strcmp(before, after) == 0);
+    free(before);
+    free(after);
+
+    /* The rhythm is the source's, and the pickup too. */
+    source.pickup = (PlanTime){1, 4};
+    assert(motive_in_key(&source, &G_MINOR, &moved));
+    assert(time_is(moved.pickup, 1, 4) && time_is(moved.notes[1].offset, 1, 4) && time_is(moved.notes[3].duration, 1, 2));
+
+    /* A raised degree stays raised; the mode may change. */
+    source = load_notes("D4:q F#4:q A4:q", &FOUR_FOUR, &D_MINOR);
+    assert(motive_in_key(&source, &C_MAJOR, &moved));
+    assert(moved.notes[0].midi_pitch == 60 && moved.notes[1].midi_pitch == 65 && moved.notes[2].midi_pitch == 67);
+
+    /* The motive moves to its own key unchanged, and may be moved in place. */
+    source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
+    assert(motive_in_key(&source, &D_MINOR, &moved) && motive_equal(&source, &moved));
+    assert(motive_in_key(&source, &G_MINOR, &source) && source.notes[0].midi_pitch == 67);
+
+    /* No source key: refused, and out untouched. */
+    Motive keyless = load_notes("D4:q F4:q", &FOUR_FOUR, NULL);
+    moved = source;
+    assert(!motive_in_key(&keyless, &G_MINOR, &moved) && motive_equal(&moved, &source));
+    assert(!motive_in_key(NULL, &G_MINOR, &moved) && !motive_in_key(&source, NULL, &moved));
+}
+
 int main(void) {
     test_same_motive_from_each_format();
     test_options();
@@ -1000,6 +1038,7 @@ int main(void) {
     test_analysis_with_a_pickup();
     test_pickup_and_form_in_json();
     test_analysis_by_form();
+    test_render_in_another_key();
     puts("test_motive: ok");
     return 0;
 }
