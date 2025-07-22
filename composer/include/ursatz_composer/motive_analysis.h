@@ -149,4 +149,11 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
  */
 char *motive_analysis_to_json(const Motive *motive, const MotiveAnalysis *analysis);
 
+/*
+ * motive_analysis_to_json with a top-level "rendered" object: {"key": "G minor" (null without a key), "notes":
+ * [{"midi_pitch", "offset": {num, den}, "duration": {num, den}}]}, the notes of rendered (the motive moved to the key
+ * it is heard in, motive_in_key) with offsets from the first note's onset, in whole notes. NULL when rendered is NULL.
+ */
+char *motive_analysis_to_json_rendered(const Motive *motive, const MotiveAnalysis *analysis, const Motive *rendered);
+
 #endif

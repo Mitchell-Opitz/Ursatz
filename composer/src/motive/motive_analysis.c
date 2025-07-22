@@ -679,7 +679,39 @@ static cJSON *key_json(const MotiveAnalysis *analysis) {
     return object;
 }
 
-char *motive_analysis_to_json(const Motive *motive, const MotiveAnalysis *analysis) {
+/* {"key": "G minor", "notes": [{"midi_pitch", "offset", "duration"}]}: the motive as it sounds, from its start. */
+static cJSON *rendered_json(const Motive *rendered) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *notes = cJSON_CreateArray();
+    bool ok = object && notes;
+    if (ok && rendered->key_source != MOTIVE_KEY_UNSPECIFIED) {
+        char text[32];
+        key_text(&rendered->key, text, sizeof(text));
+        ok = add_string(object, "key", text);
+    } else if (ok) {
+        ok = json_add(object, "key", cJSON_CreateNull());
+    }
+    for (size_t i = 0; ok && i < rendered->note_count; i++) {
+        cJSON *note = cJSON_CreateObject();
+        ok = note && json_add(note, "midi_pitch", json_number(rendered->notes[i].midi_pitch)) &&
+             json_add(note, "offset", motive_time_json(rendered->notes[i].offset)) &&
+             json_add(note, "duration", motive_time_json(rendered->notes[i].duration));
+        if (ok) {
+            cJSON_AddItemToArray(notes, note);
+        } else {
+            cJSON_Delete(note);
+        }
+    }
+    ok = ok && json_add(object, "notes", notes);
+    if (!ok) {
+        cJSON_Delete(notes);
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis, const Motive *rendered) {
     if (!motive || !analysis) {
         return NULL;
     }
@@ -719,10 +751,19 @@ char *motive_analysis_to_json(const Motive *motive, const MotiveAnalysis *analys
         ok = json_add(document, "analysis", body);
         body = NULL;
     }
+    ok = ok && (!rendered || json_add(document, "rendered", rendered_json(rendered)));
     cJSON_Delete(body);
     if (!ok) {
         cJSON_Delete(document);
         return NULL;
     }
     return motive_json_text(document);
+}
+
+char *motive_analysis_to_json(const Motive *motive, const MotiveAnalysis *analysis) {
+    return analysis_json(motive, analysis, NULL);
+}
+
+char *motive_analysis_to_json_rendered(const Motive *motive, const MotiveAnalysis *analysis, const Motive *rendered) {
+    return rendered ? analysis_json(motive, analysis, rendered) : NULL;
 }

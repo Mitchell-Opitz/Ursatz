@@ -8,9 +8,13 @@
 
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_render.h>
+
+#include "cli_options.h"
 
 #define EXIT_USAGE 1
 #define EXIT_UNLOADABLE 2
+#define EXIT_OUTPUT 3
 
 typedef struct {
     const char *input;
@@ -19,6 +23,10 @@ typedef struct {
     const char *format_text;
     const char *form_text;
     const char *pickup_text;
+    const char *render_key_text;
+    const char *midi_path;
+    const char *musicxml_path;
+    const char *tempo_text;
     bool json;
     bool help;
 } Options;
@@ -35,9 +43,13 @@ static void print_help(FILE *out) {
     fprintf(out, "  --form <name>        full (default), rhythm or contour; rhythm and contour read the text as a\n");
     fprintf(out, "                       rhythm (x:q x:e) or a contour (0 2 1 3) instead of a note list\n");
     fprintf(out, "  --pickup <beats>     the beats before the first barline, as 1 or 1/2; default 0\n");
-    fprintf(out, "  --json               print the analysis as JSON\n");
+    fprintf(out, "  --render-key <key>   hear the motive in this key (same degrees); default the motive's key\n");
+    fprintf(out, "  --midi <file>        write the motive as a MIDI file\n");
+    fprintf(out, "  --musicxml <file>    write the motive as a MusicXML file (a pickup is an implicit first measure)\n");
+    fprintf(out, "  --tempo <bpm>        the tempo of the files, 20 to 400 quarter notes per minute\n");
+    fprintf(out, "  --json               print the analysis as JSON, with the rendered notes when a render option is given\n");
     fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the input cannot be loaded.\n\n");
+    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the input cannot be loaded; 3 a file cannot be written.\n\n");
     fprintf(out, "Example:\n");
     fprintf(out, "  ursatz-composer motive theme.txt --meter 4/4 --key \"D minor\"\n");
 }
@@ -80,8 +92,14 @@ static int read_options(int argc, char **argv, Options *options) {
             options->json = true;
         } else if (strcmp(argument, "--meter") == 0 || strcmp(argument, "--key") == 0 ||
                    strcmp(argument, "--format") == 0 || strcmp(argument, "--form") == 0 ||
-                   strcmp(argument, "--pickup") == 0) {
-            const char **slot = strcmp(argument, "--meter") == 0    ? &options->meter_text
+                   strcmp(argument, "--pickup") == 0 || strcmp(argument, "--render-key") == 0 ||
+                   strcmp(argument, "--midi") == 0 || strcmp(argument, "--musicxml") == 0 ||
+                   strcmp(argument, "--tempo") == 0) {
+            const char **slot = strcmp(argument, "--meter") == 0        ? &options->meter_text
+                                : strcmp(argument, "--render-key") == 0 ? &options->render_key_text
+                                : strcmp(argument, "--midi") == 0       ? &options->midi_path
+                                : strcmp(argument, "--musicxml") == 0   ? &options->musicxml_path
+                                : strcmp(argument, "--tempo") == 0      ? &options->tempo_text
                                 : strcmp(argument, "--key") == 0    ? &options->key_text
                                 : strcmp(argument, "--form") == 0   ? &options->form_text
                                 : strcmp(argument, "--pickup") == 0 ? &options->pickup_text
@@ -182,8 +200,41 @@ int run_motive(int argc, char **argv) {
     if (!motive_analyze(&motive, &analysis)) {
         return fail(EXIT_UNLOADABLE, "cannot analyze '%s'", options.input);
     }
+
+    bool render = options.render_key_text || options.midi_path || options.musicxml_path;
+    Motive rendered = motive;
+    if (options.render_key_text) {
+        PlanKey render_key;
+        if (!motive_parse_key(options.render_key_text, &render_key)) {
+            return fail(EXIT_USAGE,
+                        "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
+                        "for example \"D minor\"",
+                        options.render_key_text);
+        }
+        if (!motive_in_key(&motive, &render_key, &rendered)) {
+            return fail(EXIT_UNLOADABLE, "cannot move '%s' to %s: it has no key, or a note leaves the MIDI range",
+                        options.input, options.render_key_text);
+        }
+    }
+    PlanExportOptions export_options;
+    status = cli_read_export_options(options.tempo_text, false, &export_options);
+    if (status != 0) {
+        return status;
+    }
+    PlanExportError export_error;
+    memset(&export_error, 0, sizeof(export_error));
+    if (options.midi_path &&
+        motive_export_midi(&rendered, &export_options, options.midi_path, &export_error) != PLAN_EXPORT_OK) {
+        return fail(EXIT_OUTPUT, "cannot write '%s': %s", options.midi_path, export_error.message);
+    }
+    if (options.musicxml_path &&
+        motive_export_musicxml(&rendered, &export_options, options.musicxml_path, &export_error) != PLAN_EXPORT_OK) {
+        return fail(EXIT_OUTPUT, "cannot write '%s': %s", options.musicxml_path, export_error.message);
+    }
+
     if (options.json) {
-        char *json = motive_analysis_to_json(&motive, &analysis);
+        char *json = render ? motive_analysis_to_json_rendered(&motive, &analysis, &rendered)
+                            : motive_analysis_to_json(&motive, &analysis);
         if (!json) {
             return fail(EXIT_UNLOADABLE, "out of memory");
         }
