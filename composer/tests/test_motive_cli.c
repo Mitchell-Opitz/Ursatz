@@ -203,11 +203,68 @@ static void test_forms_and_pickup_errors(void) {
     expect_failure("motive_cli_in.txt --format degrees --meter 4/4", 2, "not a scale degree");
 }
 
+static void test_render(void) {
+    /* A 3/4 motive with a one-beat pickup: measure 0 is implicit and holds the pickup, measure 1 the full bar. */
+    remove("motive_cli_out.xml");
+    remove("motive_cli_out.mid");
+    write_input("1:q 3:h.");
+    char *out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --pickup 1 "
+                         "--musicxml motive_cli_out.xml --midi motive_cli_out.mid --tempo 90 --json");
+    assert(strstr(out, "\"rendered\"") && strstr(out, "\"key\": \"D minor\""));
+    assert(strstr(out, "\"midi_pitch\": 62") && strstr(out, "\"midi_pitch\": 65"));
+    free(out);
+    char *xml = read_file("motive_cli_out.xml");
+    char *zero = strstr(xml, "<measure number=\"0\" implicit=\"yes\">");
+    char *one = strstr(xml, "<measure number=\"1\">");
+    assert(zero && one && zero < one && !strstr(xml, "<measure number=\"2\">"));
+    assert(strstr(xml, "<beats>1</beats>") && strstr(xml, "<beats>3</beats>") && strstr(xml, "<sound tempo=\"89.99"));
+    char *duration = strstr(zero, "<duration>");
+    assert(duration && duration < one && strncmp(duration, "<duration>1</duration>", 22) == 0);
+    duration = strstr(one, "<duration>");
+    assert(duration && strncmp(duration, "<duration>3</duration>", 22) == 0);
+    free(xml);
+    FILE *midi = fopen("motive_cli_out.mid", "rb");
+    assert(midi);
+    char header[4];
+    assert(fread(header, 1, 4, midi) == 4 && memcmp(header, "MThd", 4) == 0);
+    fclose(midi);
+
+    /* No pickup: no implicit measure. */
+    write_input("1:q 3:h.");
+    out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --musicxml motive_cli_out.xml --json");
+    assert(strstr(out, "\"rendered\""));
+    free(out);
+    xml = read_file("motive_cli_out.xml");
+    assert(!strstr(xml, "implicit") && strstr(xml, "<measure number=\"1\">"));
+    free(xml);
+
+    /* The rendered notes are in the render key, with offsets from the first note; the analysis stays in the source's. */
+    out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --render-key \"G minor\" --json");
+    assert(strstr(out, "\"key\": \"G minor\"") && strstr(out, "\"midi_pitch\": 67") && strstr(out, "\"midi_pitch\": 70"));
+    assert(strstr(out, "\"tonic_pitch_class\": 2"));
+    free(out);
+
+    /* Without a render option there is no rendered object. */
+    out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --json");
+    assert(!strstr(out, "\"rendered\""));
+    free(out);
+
+    expect_failure("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --render-key H", 1, "unknown key");
+    expect_failure("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --tempo 5 --midi motive_cli_out.mid", 1,
+                   "--tempo");
+    write_input("D4:q F4:q");
+    expect_failure("motive_cli_in.txt --meter 4/4 --render-key \"G minor\"", 2, "it has no key");
+    write_input("1:q 3:h.");
+    expect_failure("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --midi /nonexistent/dir/o.mid", 3,
+                   "cannot write");
+}
+
 static void test_help(void) {
     assert(run("--help", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
     char *out = read_file("motive_cli_out.txt");
     assert(strstr(out, "--meter") != NULL && strstr(out, "--format") != NULL && strstr(out, "--json") != NULL);
     assert(strstr(out, "--form") != NULL && strstr(out, "--pickup") != NULL);
+    assert(strstr(out, "--render-key") != NULL && strstr(out, "--midi") != NULL && strstr(out, "--musicxml") != NULL);
     free(out);
 }
 
@@ -218,6 +275,7 @@ int main(void) {
     test_bad_input();
     test_forms_and_pickup();
     test_forms_and_pickup_errors();
+    test_render();
     test_help();
     puts("test_motive_cli: ok");
     return 0;
