@@ -84,7 +84,7 @@ ursatz-composer progression --key "D minor" --meter 4/4 --bars 8 --cadence PAC -
 ursatz-composer motive theme.txt --meter 4/4 --key "D minor"
 ```
 
-`motive` loads a motive from MIDI, MusicXML, a note list or JSON and prints its analysis. See
+`motive` loads a motive from MIDI, MusicXML, a note list or JSON, prints its analysis and renders it in any key to MIDI or MusicXML. See
 [docs/cli-motive.md](docs/cli-motive.md).
 
 ```sh

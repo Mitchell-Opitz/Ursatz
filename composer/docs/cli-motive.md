@@ -1,13 +1,14 @@
 # motive command
 
 ```sh
-ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--json]
+ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--json]
 ```
 
 Loads a motive, a short cell of notes (one bar or less, as a rule), and prints its analysis: the
 intervals, the contour, the rhythm, the range, the scale degrees and the chords it implies. The motive
 can be attached to a plan as Given material with `motive_attach` (`<ursatz_composer/motive.h>`); this
-command only reads and reports.
+command reads and reports, and with `--render-key`, `--midi` or `--musicxml` it also renders the motive
+(below).
 
 ## Input
 
@@ -159,12 +160,45 @@ sound them, so there are no intervals, range, degrees or harmony.
 a key) and, for the two forms, `rhythm_text` or `contour_text`. The same motive gives the same bytes whichever format
 it was read from.
 
+## Rendering
+
+`--render-key <key>` hears the motive in another key: each note keeps its degree of the scale and its
+alteration, and sounds on that degree of the new key (degree 1 in octave 0, MIDI 60 to 71 for the tonic's
+pitch class). A D minor motive `1:q b3:e 5:e 1':h` in G minor is `G4 Bb4 D5 G5`. The mode may change; the
+degrees are counted in the new mode's scale. The default is the motive's own key. A motive with no key can
+only be rendered as it is (rhythm and contour forms sound on C major's degrees); `--render-key` on one is
+an error.
+
+| Flag | Meaning |
+| --- | --- |
+| `--midi <file>` | Write the rendered motive as a MIDI file. |
+| `--musicxml <file>` | Write it as a MusicXML file. |
+| `--tempo <bpm>` | The tempo of the files, 20 to 400 quarter notes per minute, as in `export`. |
+
+The files are one voice (a part named `melody`), as long as the motive, with its meter and, when it has
+one, the key it is rendered in. A pickup is written as a short first meter, its own length (a pickup of
+one beat in 3/4 is a 1/4 meter), and then the motive's meter from the first barline. In MusicXML the
+first bar is `<measure number="0" implicit="yes">`; the full bars are numbered from 1. A pickup whose
+length is not a meter (1/3 of a beat) cannot be written. Library: `motive_in_key` in
+`<ursatz_composer/motive.h>`, `motive_export_midi` and `motive_export_musicxml` in
+`<ursatz_composer/motive_render.h>`.
+
+With `--json`, a render option adds a top-level `rendered` object next to `motive` and `analysis`:
+
+```json
+"rendered": {"key": "G minor", "notes": [{"midi_pitch": 67, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}}]}
+```
+
+`key` is `null` for a motive with no key. Offsets are in whole notes from the motive's start, which is the
+start of its pickup. The `analysis` is still the motive's own, in the key it was given.
+
 ## Exit status
 
 | Status | Meaning |
 | --- | --- |
 | 0 | Success. |
 | 1 | Usage or an invalid argument. |
-| 2 | The input cannot be loaded as a motive. The message gives the reason and where: a token and column in a note list, a field path in JSON, a position in a file. |
+| 2 | The input cannot be loaded as a motive, or cannot be moved to `--render-key`. The message gives the reason and where: a token and column in a note list, a field path in JSON, a position in a file. |
+| 3 | A `--midi` or `--musicxml` file cannot be written. |
 
 Errors are printed on stderr as `Error: ...`; nothing is printed on stdout.

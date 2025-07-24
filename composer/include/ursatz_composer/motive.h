@@ -248,6 +248,16 @@ char *motive_to_degrees_text(const Motive *motive);
 char *motive_to_rhythm_text(const Motive *motive);
 char *motive_to_contour_text(const Motive *motive);
 
+/*
+ * The same degrees, rhythm and pickup in another key: each note keeps its step of the source key's scale and its
+ * alteration, and sounds on that step of the new key's scale with degree 1 in octave 0 (MIDI 60 to 71 for the tonic's
+ * pitch class). The result is marked MOTIVE_KEY_GIVEN. The mode may differ; the steps are counted in the new mode's
+ * scale. Rhythm and contour forms sound as their readers place them (every note on degree 1; rank r on degree r + 1).
+ * False, with *out untouched, for a source with no key, a note that leaves MIDI 0 to 127, or NULL arguments.
+ * out may be the source.
+ */
+bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out);
+
 /* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
 char *motive_to_json(const Motive *motive);
 

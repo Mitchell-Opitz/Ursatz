@@ -238,7 +238,7 @@ written, since reading the motive infers it again.
 ### Motive analysis
 
 `motive_analysis_to_json` writes the motive and its analysis together, as an object with a `motive` member (the
-document above) and an `analysis` member:
+document above) and an `analysis` member (and, from `motive --render-key`, `--midi` or `--musicxml`, a `rendered` member: `{"key", "notes": [{"midi_pitch", "offset", "duration"}]}`, see [cli-motive.md](cli-motive.md#rendering)):
 
 | Key | Content |
 | --- | --- |

@@ -922,3 +922,24 @@ PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, PlanTime start,
                                  const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, source, out_node, out_span);
 }
+
+bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out) {
+    if (!source || !key || !out || source->key_source == MOTIVE_KEY_UNSPECIFIED) {
+        return false;
+    }
+    Motive moved = *source;
+    for (size_t i = 0; i < source->note_count; i++) {
+        long position;
+        int alteration;
+        motive_scale_position(&source->key, source->notes[i].midi_pitch - 60, &position, &alteration);
+        int pitch = 60 + motive_position_pitch(key, position, alteration);
+        if (pitch < 0 || pitch > 127) {
+            return false;
+        }
+        moved.notes[i].midi_pitch = pitch;
+    }
+    moved.key = *key;
+    moved.key_source = MOTIVE_KEY_GIVEN;
+    *out = moved;
+    return true;
+}
