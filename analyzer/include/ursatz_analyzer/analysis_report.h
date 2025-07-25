@@ -463,6 +463,14 @@ typedef struct {
     double first_beat;       /* 1-based, in beats of the first measure */
     size_t *note_ids;        /* owned; ImportedNotes indices of the occurrence's soprano notes */
     size_t note_id_count;
+    const char *kind;        /* the library's StandardFormMotiveKind name, relative to the family's prototype: "exact",
+                                "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented",
+                                "diminished", "fragmented" or "varied"; the prototype is "exact" */
+    double score;            /* the library's, in [0, 1]: 1 minus mismatches over intervals, times its rhythm factor */
+    int mismatches;          /* interval mismatches of a varied occurrence, else 0 */
+    int intervals;           /* the intervals compared */
+    const char *fragment;    /* a fragmented occurrence: "prefix" or "suffix" of the prototype; else NULL */
+    bool in_continuation;    /* a fragment found inside a continuation span of a theme */
     double uncertainty;      /* the library's, 1 minus its score, in [0, 1]; higher is LESS certain */
 } AnalysisMotiveOccurrence;
 

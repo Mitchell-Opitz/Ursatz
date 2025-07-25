@@ -283,6 +283,16 @@ static bool collect_occurrence(const MotiveStage *stage, const StandardFormMotiv
     if (meter_map_measure_index_at(form->input.map, last_start, &occurrence->last_measure) != METER_MAP_OK) {
         return false;
     }
+    occurrence->kind = standard_form_motive_kind_name((StandardFormMotiveKind)claim->kind);
+    if (!occurrence->kind) {
+        return false;
+    }
+    occurrence->score = claim->score;
+    occurrence->mismatches = claim->mismatches;
+    occurrence->intervals = claim->intervals;
+    /* The claim gives the part of the prototype a fragment is as 0 (prefix) or 1 (suffix), and has no names for them. */
+    occurrence->fragment = claim->fragment_part == 0 ? "prefix" : (claim->fragment_part == 1 ? "suffix" : NULL);
+    occurrence->in_continuation = claim->in_continuation != 0;
     occurrence->uncertainty = found->uncertainty;
     occurrence->note_ids = malloc(sizeof(size_t) * (size_t)claim->note_count);
     if (!occurrence->note_ids) {

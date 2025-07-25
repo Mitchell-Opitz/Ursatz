@@ -2446,17 +2446,28 @@ static cJSON *chord_vocabulary_json(const AnalysisReport *report, const cJSON *c
 
 /* ---- Motives ---- */
 
-/* One occurrence of a motive family as a claim over its soprano notes. measures run from the measure of its first note
-   to the measure of its last; beat is the 1-based beat of the first measure its first note starts on. */
+/* One occurrence of a motive family as a claim over its soprano notes. The label is the library's kind of the
+   occurrence relative to the family's prototype (the transformation: "exact", "real-transposed" for the same semitone
+   intervals from another pitch, "tonal-transposed" for the same scale steps, "inverted", "retrograde", "augmented",
+   "diminished", "fragmented" or "varied"). measures run from the measure of its first note to the measure of its last;
+   beat is the 1-based beat of the first measure its first note starts on. score is the library's match score and
+   mismatches the interval mismatches of a varied occurrence out of intervals compared. A fragmented occurrence
+   names the part of the prototype it is (fragment: "prefix" or "suffix") and says whether it lies in a continuation
+   (in_continuation). */
 static cJSON *motive_occurrence_json(const ImportedNotes *notes, const char *framework,
                                      const AnalysisMotiveOccurrence *occurrence) {
     Rational start = rational_make(occurrence->start_numerator, occurrence->start_denominator);
     Rational end = rational_make(occurrence->end_numerator, occurrence->end_denominator);
     cJSON *claim = claim_json_with(framework, notes, occurrence->note_ids, occurrence->note_id_count, start, end,
-                                   "occurrence", cJSON_CreateNumber(occurrence->uncertainty));
+                                   occurrence->kind, cJSON_CreateNumber(occurrence->uncertainty));
     if (!(claim && add(claim, "index", cJSON_CreateNumber((double)occurrence->index)) &&
           add(claim, "measures", measures_json(occurrence->first_measure, occurrence->last_measure)) &&
-          add(claim, "beat", cJSON_CreateNumber(occurrence->first_beat)))) {
+          add(claim, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
+          add(claim, "score", cJSON_CreateNumber(occurrence->score)) &&
+          add(claim, "mismatches", cJSON_CreateNumber(occurrence->mismatches)) &&
+          add(claim, "intervals", cJSON_CreateNumber(occurrence->intervals)) &&
+          add(claim, "fragment", string_or_null_json(occurrence->fragment)) &&
+          add(claim, "in_continuation", cJSON_CreateBool(occurrence->in_continuation)))) {
         cJSON_Delete(claim);
         return NULL;
     }
