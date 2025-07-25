@@ -16,7 +16,9 @@
 #include <unistd.h>
 #endif
 
+#include "collection_service.h"
 #include "id_service.h"
+#include "material_service.h"
 
 #define NAME_MAX_CHARS 200
 #define NOTE_MAX_CHARS 4000
@@ -628,4 +630,140 @@ UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id) {
     }
     UNLOCK();
     return result;
+}
+
+/* --- links --------------------------------------------------------------- */
+
+static bool list_has(const cJSON *list, const char *value) {
+    const cJSON *entry;
+    cJSON_ArrayForEach(entry, list) {
+        if (cJSON_IsString(entry) && strcmp(entry->valuestring, value) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The array member `name`, created when the file lacks it. */
+static cJSON *list_member(cJSON *subject, const char *name) {
+    cJSON *list = cJSON_GetObjectItemCaseSensitive(subject, name);
+    if (cJSON_IsArray(list)) {
+        return list;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(subject, name);
+    return cJSON_AddArrayToObject(subject, name);
+}
+
+static UrsatzGuiSubjectResult touch_subject(cJSON *subject) {
+    char now[32];
+    iso_utc_now(now, sizeof(now));
+    return set_string_member(subject, "updated_at", now) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_ALLOC;
+}
+
+/* Adds ref to the array member `name`, or removes it when add is false. */
+static UrsatzGuiSubjectResult change_link(const char *id, const char *name, const char *ref, bool add,
+                                          bool *out_already, cJSON **out_subject) {
+    if (out_already) {
+        *out_already = false;
+    }
+    if (out_subject) {
+        *out_subject = NULL;
+    }
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+    }
+    cJSON *subject = NULL;
+    UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
+    if (result == URSATZ_GUI_SUBJECT_OK) {
+        cJSON *list = list_member(subject, name);
+        bool present = list && list_has(list, ref);
+        if (!list) {
+            result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
+        } else if (add && present) {
+            if (out_already) {
+                *out_already = true;
+            }
+        } else if (!add && !present) {
+            result = URSATZ_GUI_SUBJECT_ERR_NOT_LINKED;
+        } else {
+            if (add) {
+                cJSON *entry = cJSON_CreateString(ref);
+                if (!entry) {
+                    result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
+                } else {
+                    cJSON_AddItemToArray(list, entry);
+                }
+            } else {
+                int index = 0;
+                const cJSON *entry;
+                cJSON_ArrayForEach(entry, list) {
+                    if (cJSON_IsString(entry) && strcmp(entry->valuestring, ref) == 0) {
+                        break;
+                    }
+                    index++;
+                }
+                cJSON_DeleteItemFromArray(list, index);
+            }
+            if (result == URSATZ_GUI_SUBJECT_OK) {
+                result = touch_subject(subject);
+            }
+            if (result == URSATZ_GUI_SUBJECT_OK) {
+                result = save_subject_locked(subject);
+            }
+        }
+    }
+    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+        *out_subject = subject;
+    } else {
+        cJSON_Delete(subject);
+    }
+    UNLOCK();
+    return result;
+}
+
+/*
+ * The material store has its own lock and calls back into this service when
+ * an item is deleted, so item existence is checked before this service's lock
+ * is taken, never while holding it.
+ */
+UrsatzGuiSubjectResult ursatz_gui_subject_link_item(const char *id, const char *item_id, bool *out_already,
+                                                    cJSON **out_subject) {
+    cJSON *meta = NULL;
+    UrsatzGuiMaterialResult found = ursatz_gui_material_item_get(item_id, &meta, NULL);
+    cJSON_Delete(meta);
+    if (found == URSATZ_GUI_MATERIAL_ERR_INVALID_ID) {
+        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    }
+    if (found != URSATZ_GUI_MATERIAL_OK) {
+        return found == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND ? URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND
+                                                          : URSATZ_GUI_SUBJECT_ERR_FAILED;
+    }
+    return change_link(id, "items", item_id, true, out_already, out_subject);
+}
+
+UrsatzGuiSubjectResult ursatz_gui_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject) {
+    if (!is_valid_id(item_id)) {
+        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    }
+    return change_link(id, "items", item_id, false, NULL, out_subject);
+}
+
+UrsatzGuiSubjectResult ursatz_gui_subject_link_piece(const char *id, const char *piece_id, bool *out_already,
+                                                     cJSON **out_subject) {
+    if (!is_valid_id(piece_id)) {
+        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    }
+    if (!ursatz_gui_collection_piece_exists(piece_id)) {
+        return URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND;
+    }
+    return change_link(id, "pieces", piece_id, true, out_already, out_subject);
+}
+
+UrsatzGuiSubjectResult ursatz_gui_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject) {
+    if (!is_valid_id(piece_id)) {
+        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    }
+    return change_link(id, "pieces", piece_id, false, NULL, out_subject);
 }

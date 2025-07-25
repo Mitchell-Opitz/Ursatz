@@ -31,6 +31,9 @@ typedef enum {
     URSATZ_GUI_SUBJECT_ERR_INVALID_NAME,
     URSATZ_GUI_SUBJECT_ERR_INVALID_KIND,
     URSATZ_GUI_SUBJECT_ERR_NOT_FOUND,
+    URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND,
+    URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND,
+    URSATZ_GUI_SUBJECT_ERR_NOT_LINKED,
     URSATZ_GUI_SUBJECT_ERR_FAILED,
     URSATZ_GUI_SUBJECT_ERR_ALLOC,
     URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED
@@ -72,5 +75,25 @@ UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *nam
 
 /* Deletes the subject. NOT_FOUND if absent. Items and pieces it linked are not touched. */
 UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id);
+
+/*
+ * Links the subject to a material item (INVALID_ID for a bad item id,
+ * ITEM_NOT_FOUND when the material store has no such item). Linking an item
+ * that is already linked is not an error: *out_already (may be NULL) is true
+ * and nothing changes. *out_subject (may be NULL) is the subject after the
+ * call, caller-owned.
+ */
+UrsatzGuiSubjectResult ursatz_gui_subject_link_item(const char *id, const char *item_id, bool *out_already,
+                                                    cJSON **out_subject);
+
+/* Removes an item link. NOT_LINKED when the subject does not link the item. */
+UrsatzGuiSubjectResult ursatz_gui_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject);
+
+/* As link_item, for a Library piece (PIECE_NOT_FOUND when pieces/<id>/meta.json is absent). */
+UrsatzGuiSubjectResult ursatz_gui_subject_link_piece(const char *id, const char *piece_id, bool *out_already,
+                                                     cJSON **out_subject);
+
+/* Removes a piece link. NOT_LINKED when the subject does not link the piece. */
+UrsatzGuiSubjectResult ursatz_gui_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject);
 
 #endif /* URSATZ_GUI_SUBJECT_SERVICE_H */
