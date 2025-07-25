@@ -997,6 +997,52 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
 
 #define PROGRESSION_TABLE_ROWS 10
 
+/* ---- Motives ---- */
+
+/* The measures the occurrences of a family start in, as "1, 29, 70", each measure once. */
+static bool append_motive_measures(StringBuilder *sb, const cJSON *occurrences) {
+    int previous = -1;
+    bool first = true;
+    bool ok = true;
+    const cJSON *occurrence;
+    cJSON_ArrayForEach(occurrence, occurrences) {
+        int measure = (int)number_member(cJSON_GetObjectItemCaseSensitive(occurrence, "measures"), "first");
+        if (ok && (first || measure != previous)) {
+            ok = sb_appendf(sb, "%s%d", first ? "" : ", ", measure);
+            first = false;
+        }
+        previous = measure;
+    }
+    return ok;
+}
+
+static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON *motives) {
+    (void)document;
+    int count = cJSON_GetArraySize(motives);
+    bool ok = sb_append(sb, "## Motives\n\n") &&
+              sb_appendf(sb,
+                         "The library's motive analysis found %d motive %s in the soprano, the highest sounding note "
+                         "at each attack. A family is a short figure that recurs; Notes is the length of the figure, "
+                         "Pattern whether its occurrences match by scale steps or by semitones, and Measures the "
+                         "measures the occurrences start in.\n\n",
+                         count, count == 1 ? "family" : "families") &&
+              sb_append(sb, "| Family | Notes | Pattern | Occurrences | Measures |\n"
+                            "| --- | --- | --- | --- | --- |\n");
+    const cJSON *motive;
+    cJSON_ArrayForEach(motive, motives) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *occurrences = cJSON_GetObjectItemCaseSensitive(motive, "occurrences");
+        ok = sb_appendf(sb, "| %d | %d | %s | %d | ", (int)number_member(motive, "index") + 1,
+                        (int)number_member(motive, "note_count"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motive, "generic")) ? "scale steps" : "semitones",
+                        cJSON_GetArraySize(occurrences)) &&
+             append_motive_measures(sb, occurrences) && sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 /* The measure a chord of the document's chords starts in, or -1 when the index or its location is missing. */
 /* "m. 8" or "mm. 5 to 8" for a measures object. */
 static bool append_measures(StringBuilder *sb, const cJSON *measures) {
@@ -1459,6 +1505,7 @@ static const struct {
     {"phrases", render_phrases},
     {"themes", render_themes},
     {"form", render_form_plan},
+    {"motives", render_motives},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
 };

@@ -58,6 +58,17 @@ typedef struct {
 bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmentation *voices,
                     const Segmentation *segmentation, const OuterVoiceLines *lines, const HarmonyStage *harmony);
 
+/* The parts of a stage that do not depend on its melody, for a stage that builds a form input of its own from another
+   melody (motive_pipeline.c, whose note-level soprano the motive analysis needs, R-053). The stage must have been
+   zeroed and its input initialised, with stage->built set. form_stage_keep_span copies [start, end) into the stage
+   (NULL on failure); form_stage_add_segments and form_stage_add_cadences add the chord segments and the harmony stage's
+   cadences as form_stage_run does; form_stage_analyze finishes the input and runs the phrases, ideas, themes and
+   expansions with the default config. All return false only on allocation failure. */
+const TimeSpan *form_stage_keep_span(FormStage *stage, const MusicalTime *start, const MusicalTime *end);
+bool form_stage_add_segments(FormStage *stage, const Segmentation *segmentation);
+bool form_stage_add_cadences(FormStage *stage, const Segmentation *segmentation, const HarmonyStage *harmony);
+bool form_stage_analyze(FormStage *stage);
+
 /* The index into the harmony stage's cadences of phrase i's cadence, or -1 when it has none. */
 long form_stage_phrase_cadence(const FormStage *stage, size_t phrase);
 

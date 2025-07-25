@@ -11,6 +11,7 @@
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/form_pipeline.h"
 #include "pipeline/harmony_pipeline.h"
+#include "pipeline/motive_pipeline.h"
 #include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/segmentation.h"
 #include "time/musical_time.h"
@@ -39,6 +40,7 @@ typedef struct AnalysisChain {
     OuterVoiceLines lines;   /* one entry per voice segment */
     HarmonyStage harmony;    /* the standard-harmony inputs, prepared segments and cadences, one per chord segment */
     FormStage form;          /* the standard-form input, phrases, ideas and subphrases */
+    MotiveStage motives;     /* the note-level soprano input, its phrases, ideas and themes, and the motive families */
     AnalysisReport report;   /* the pass's results: entries, non-chord tones, key regions and changes */
 } AnalysisChain;
 

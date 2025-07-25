@@ -90,7 +90,10 @@
     "form": {
       "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/form" }]
     },
-    "motives": { "type": "array" },
+    "motives": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/motive_claim" }
+    },
     "melody": { "type": "array" },
     "rhythm": { "type": "array" },
     "texture": { "type": "array" },
@@ -536,6 +539,41 @@
             "idea_count": { "type": "integer", "minimum": 1 },
             "measures": { "$ref": "#/$defs/phrase_measures" },
             "length": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "motive_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "note_count", "generic", "occurrences"],
+          "properties": {
+            "label": { "const": "motive" },
+            "index": { "type": "integer", "minimum": 0 },
+            "note_count": { "type": "integer", "minimum": 2 },
+            "generic": { "type": "boolean" },
+            "occurrences": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "$ref": "#/$defs/motive_occurrence_claim" }
+            }
+          }
+        }
+      ]
+    },
+    "motive_occurrence_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "measures", "beat"],
+          "properties": {
+            "label": { "const": "occurrence" },
+            "index": { "type": "integer", "minimum": 0 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "beat": { "type": "number", "minimum": 1 }
           }
         }
       ]

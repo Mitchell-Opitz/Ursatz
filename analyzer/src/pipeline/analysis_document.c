@@ -2444,6 +2444,73 @@ static cJSON *chord_vocabulary_json(const AnalysisReport *report, const cJSON *c
     return list;
 }
 
+/* ---- Motives ---- */
+
+/* One occurrence of a motive family as a claim over its soprano notes. measures run from the measure of its first note
+   to the measure of its last; beat is the 1-based beat of the first measure its first note starts on. */
+static cJSON *motive_occurrence_json(const ImportedNotes *notes, const char *framework,
+                                     const AnalysisMotiveOccurrence *occurrence) {
+    Rational start = rational_make(occurrence->start_numerator, occurrence->start_denominator);
+    Rational end = rational_make(occurrence->end_numerator, occurrence->end_denominator);
+    cJSON *claim = claim_json_with(framework, notes, occurrence->note_ids, occurrence->note_id_count, start, end,
+                                   "occurrence", cJSON_CreateNumber(occurrence->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber((double)occurrence->index)) &&
+          add(claim, "measures", measures_json(occurrence->first_measure, occurrence->last_measure)) &&
+          add(claim, "beat", cJSON_CreateNumber(occurrence->first_beat)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* One claim per motive family, in the library's order. Its span, note ids and location are the prototype's (the first
+   occurrence); note_count is the prototype's length; generic says the pattern is the scale-step interval sequence
+   rather than the semitones; uncertainty is the greatest of its occurrences'. occurrences are the claims of every
+   occurrence in time order, the prototype first. */
+static cJSON *motives_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_form_framework());
+    for (size_t i = 0; i < report->motive_count; i++) {
+        const AnalysisMotive *motive = &report->motives[i];
+        const AnalysisMotiveOccurrence *prototype = &motive->occurrences[0];
+        double uncertainty = 0.0;
+        for (size_t o = 0; o < motive->occurrence_count; o++) {
+            if (motive->occurrences[o].uncertainty > uncertainty) {
+                uncertainty = motive->occurrences[o].uncertainty;
+            }
+        }
+        Rational start = rational_make(prototype->start_numerator, prototype->start_denominator);
+        Rational end = rational_make(prototype->end_numerator, prototype->end_denominator);
+        cJSON *claim = claim_json_with(framework, notes, prototype->note_ids, prototype->note_id_count, start, end,
+                                       "motive", cJSON_CreateNumber(uncertainty));
+        cJSON *occurrences = cJSON_CreateArray();
+        bool ok = claim && occurrences;
+        for (size_t o = 0; ok && o < motive->occurrence_count; o++) {
+            ok = append(occurrences, motive_occurrence_json(notes, framework, &motive->occurrences[o]));
+        }
+        bool taken = false; /* add() takes the occurrences over, and frees them itself when it fails */
+        if (!(ok && add(claim, "index", cJSON_CreateNumber((double)motive->index)) &&
+              add(claim, "note_count", cJSON_CreateNumber(motive->note_count)) &&
+              add(claim, "generic", cJSON_CreateBool(motive->generic)) &&
+              (taken = true, add(claim, "occurrences", occurrences)))) {
+            if (!taken) {
+                cJSON_Delete(occurrences);
+            }
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -2462,7 +2529,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "cadences", cadences_json(notes, report)) &&
           add(document, "phrases", phrases_json(notes, report)) &&
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
-          add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
+          add(document, "motives", motives_json(notes, report)) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&

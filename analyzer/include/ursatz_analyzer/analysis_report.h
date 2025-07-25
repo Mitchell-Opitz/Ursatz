@@ -450,6 +450,31 @@ typedef struct {
     size_t window_length;      /* notes compared */
 } AnalysisThematicReturn;
 
+/* One occurrence of a motive family from the library's motive analysis (analysis/analysis_motive.h) over the
+   note-level soprano: the highest sounding note at each attack. The first occurrence of a family is its prototype. */
+typedef struct {
+    size_t index;            /* within the family; 0 is the prototype */
+    long start_numerator;    /* whole notes: the first note's start to the last note's end */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;       /* the library's measure numbers (a pickup is 0) */
+    int last_measure;        /* the measure the last note starts in */
+    double first_beat;       /* 1-based, in beats of the first measure */
+    size_t *note_ids;        /* owned; ImportedNotes indices of the occurrence's soprano notes */
+    size_t note_id_count;
+    double uncertainty;      /* the library's, 1 minus its score, in [0, 1]; higher is LESS certain */
+} AnalysisMotiveOccurrence;
+
+/* One motive family: a short figure that recurs. Its occurrences are in time order, the prototype first. */
+typedef struct {
+    size_t index;            /* within the piece, in the library's order: by prototype, longer first */
+    int note_count;          /* the prototype's */
+    bool generic;            /* the pattern is the scale-step interval sequence (else the semitones) */
+    AnalysisMotiveOccurrence *occurrences; /* owned */
+    size_t occurrence_count;
+} AnalysisMotive;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -488,14 +513,16 @@ typedef struct {
     AnalysisThematicReturn *thematic_returns; /* owned; by later theme, then earlier theme; empty when the library
                                                  found none */
     size_t thematic_return_count;
+    AnalysisMotive *motives; /* owned; the library's motive families, in its order; empty when it found none */
+    size_t motive_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections and
-   thematic returns. */
+   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
+   thematic returns and motives. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
