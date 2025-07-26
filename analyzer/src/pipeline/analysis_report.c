@@ -104,6 +104,7 @@ void analysis_report_destroy(AnalysisReport *report) {
             free(report->motives[i].occurrences[o].note_ids);
         }
         free(report->motives[i].occurrences);
+        free(report->motives[i].development);
     }
     free(report->motives);
     report->entries = NULL;

@@ -1104,6 +1104,41 @@ static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON
     return ok && sb_append(sb, "\n");
 }
 
+/* The development of each family: its occurrences in time order as "m1 original > m3 real-transposed > m5
+   fragmented". The first is the prototype; each later step is the library's kind of that occurrence against it. A
+   document without developments (an older one) renders nothing. */
+static bool render_motive_development(StringBuilder *sb, const cJSON *document, const cJSON *motives) {
+    (void)document;
+    bool any = false;
+    const cJSON *motive;
+    cJSON_ArrayForEach(motive, motives) {
+        any = any || cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(motive, "development")) > 0;
+    }
+    if (!any) {
+        return true;
+    }
+    bool ok = sb_append(sb, "### Development\n\n") &&
+              sb_append(sb, "Each family's occurrences in time order, as the measure they start in and the kind the "
+                            "library names against the first occurrence, which is the original.\n\n");
+    cJSON_ArrayForEach(motive, motives) {
+        const cJSON *steps = cJSON_GetObjectItemCaseSensitive(motive, "development");
+        if (!ok || cJSON_GetArraySize(steps) == 0) {
+            continue;
+        }
+        ok = sb_appendf(sb, "- **Family %d:** ", (int)number_member(motive, "index") + 1);
+        bool first = true;
+        const cJSON *step;
+        cJSON_ArrayForEach(step, steps) {
+            const cJSON *transformation = cJSON_GetObjectItemCaseSensitive(step, "transformation");
+            ok = ok && sb_appendf(sb, "%sm%d %s", first ? "" : " > ", (int)number_member(step, "measure"),
+                                  cJSON_IsString(transformation) ? transformation->valuestring : "original");
+            first = false;
+        }
+        ok = ok && sb_append(sb, "\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 /* The measure a chord of the document's chords starts in, or -1 when the index or its location is missing. */
 /* "m. 8" or "mm. 5 to 8" for a measures object. */
 static bool append_measures(StringBuilder *sb, const cJSON *measures) {
@@ -1567,6 +1602,7 @@ static const struct {
     {"themes", render_themes},
     {"form", render_form_plan},
     {"motives", render_motives},
+    {"motives", render_motive_development},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
 };

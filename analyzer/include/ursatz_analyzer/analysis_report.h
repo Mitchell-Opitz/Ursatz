@@ -485,6 +485,9 @@ typedef struct {
     bool generic;            /* the pattern is the scale-step interval sequence (else the semitones) */
     AnalysisMotiveOccurrence *occurrences; /* owned */
     size_t occurrence_count;
+    size_t *development;     /* owned; occurrence_count indices into occurrences in time order, earliest first: the
+                                family's development through the piece. Each step after the first is the occurrence's
+                                kind (the library's transformation against the prototype); the analyzer only orders */
 } AnalysisMotive;
 
 typedef struct {

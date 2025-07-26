@@ -338,6 +338,31 @@ static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *r
     return true;
 }
 
+/* Fills motive->development: the occurrence indices in time order, earliest first, ties in the library's order (an
+   insertion sort: the library gives them in time order already, so it is a single pass). */
+static bool order_development(AnalysisMotive *motive) {
+    size_t count = motive->occurrence_count;
+    motive->development = malloc(sizeof(size_t) * (count > 0 ? count : 1));
+    if (!motive->development) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        size_t at = i;
+        while (at > 0) {
+            const AnalysisMotiveOccurrence *before = &motive->occurrences[motive->development[at - 1]];
+            const AnalysisMotiveOccurrence *now = &motive->occurrences[i];
+            if (compare_rational(before->start_numerator, (long long)before->start_denominator, now->start_numerator,
+                                 (long long)now->start_denominator) <= 0) {
+                break;
+            }
+            motive->development[at] = motive->development[at - 1];
+            at--;
+        }
+        motive->development[at] = i;
+    }
+    return true;
+}
+
 bool motive_stage_collect(const MotiveStage *stage, AnalysisReport *report) {
     size_t count = stage->motives.family_count;
     if (count == 0) {
@@ -364,6 +389,9 @@ bool motive_stage_collect(const MotiveStage *stage, AnalysisReport *report) {
             if (!collect_occurrence(stage, report, &found->occurrences[o], o, &motive->occurrences[o])) {
                 return false;
             }
+        }
+        if (!order_development(motive)) {
+            return false;
         }
     }
     return true;
