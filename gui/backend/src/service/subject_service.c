@@ -613,6 +613,36 @@ UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *nam
     return result;
 }
 
+static UrsatzGuiSubjectResult edit_list(cJSON *subject, const char *name, const char *ref, bool add, bool *changed);
+
+/* Removes id from the related list of every subject that holds it. */
+static void remove_from_related_locked(const char *id) {
+    char **names = NULL;
+    size_t count = 0;
+    if (!list_names(g_dir, &names, &count)) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (!has_suffix(names[i], ".json")) {
+            continue;
+        }
+        char other[ID_MAX_BYTES + 1];
+        size_t other_len = strlen(names[i]) - strlen(".json");
+        if (other_len > ID_MAX_BYTES) {
+            continue;
+        }
+        memcpy(other, names[i], other_len);
+        other[other_len] = '\0';
+        cJSON *subject = NULL;
+        bool changed = false;
+        if (load_subject_locked(other, &subject) == URSATZ_GUI_SUBJECT_OK) {
+            edit_list(subject, "related", id, false, &changed);
+        }
+        cJSON_Delete(subject);
+    }
+    free_names(names, count);
+}
+
 UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id) {
     LOCK();
     if (!g_ready) {
@@ -627,6 +657,8 @@ UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id) {
         result = URSATZ_GUI_SUBJECT_ERR_NOT_FOUND;
     } else if (remove(path) != 0) {
         result = URSATZ_GUI_SUBJECT_ERR_FAILED;
+    } else {
+        remove_from_related_locked(id);
     }
     UNLOCK();
     return result;
@@ -660,6 +692,39 @@ static UrsatzGuiSubjectResult touch_subject(cJSON *subject) {
     return set_string_member(subject, "updated_at", now) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_ALLOC;
 }
 
+/* Adds ref to the array member `name` of subject, or removes it when add is false. */
+static UrsatzGuiSubjectResult edit_list(cJSON *subject, const char *name, const char *ref, bool add, bool *changed) {
+    *changed = false;
+    cJSON *list = list_member(subject, name);
+    if (!list) {
+        return URSATZ_GUI_SUBJECT_ERR_ALLOC;
+    }
+    bool present = list_has(list, ref);
+    if (add == present) {
+        return add ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_NOT_LINKED;
+    }
+    if (add) {
+        cJSON *entry = cJSON_CreateString(ref);
+        if (!entry) {
+            return URSATZ_GUI_SUBJECT_ERR_ALLOC;
+        }
+        cJSON_AddItemToArray(list, entry);
+    } else {
+        int index = 0;
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, list) {
+            if (cJSON_IsString(entry) && strcmp(entry->valuestring, ref) == 0) {
+                break;
+            }
+            index++;
+        }
+        cJSON_DeleteItemFromArray(list, index);
+    }
+    *changed = true;
+    UrsatzGuiSubjectResult result = touch_subject(subject);
+    return result == URSATZ_GUI_SUBJECT_OK ? save_subject_locked(subject) : result;
+}
+
 /* Adds ref to the array member `name`, or removes it when add is false. */
 static UrsatzGuiSubjectResult change_link(const char *id, const char *name, const char *ref, bool add,
                                           bool *out_already, cJSON **out_subject) {
@@ -675,44 +740,13 @@ static UrsatzGuiSubjectResult change_link(const char *id, const char *name, cons
         return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
     }
     cJSON *subject = NULL;
+    bool changed = false;
     UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
     if (result == URSATZ_GUI_SUBJECT_OK) {
-        cJSON *list = list_member(subject, name);
-        bool present = list && list_has(list, ref);
-        if (!list) {
-            result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
-        } else if (add && present) {
-            if (out_already) {
-                *out_already = true;
-            }
-        } else if (!add && !present) {
-            result = URSATZ_GUI_SUBJECT_ERR_NOT_LINKED;
-        } else {
-            if (add) {
-                cJSON *entry = cJSON_CreateString(ref);
-                if (!entry) {
-                    result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
-                } else {
-                    cJSON_AddItemToArray(list, entry);
-                }
-            } else {
-                int index = 0;
-                const cJSON *entry;
-                cJSON_ArrayForEach(entry, list) {
-                    if (cJSON_IsString(entry) && strcmp(entry->valuestring, ref) == 0) {
-                        break;
-                    }
-                    index++;
-                }
-                cJSON_DeleteItemFromArray(list, index);
-            }
-            if (result == URSATZ_GUI_SUBJECT_OK) {
-                result = touch_subject(subject);
-            }
-            if (result == URSATZ_GUI_SUBJECT_OK) {
-                result = save_subject_locked(subject);
-            }
-        }
+        result = edit_list(subject, name, ref, add, &changed);
+    }
+    if (result == URSATZ_GUI_SUBJECT_OK && add && !changed && out_already) {
+        *out_already = true;
     }
     if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
         *out_subject = subject;
@@ -766,4 +800,89 @@ UrsatzGuiSubjectResult ursatz_gui_subject_unlink_piece(const char *id, const cha
         return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
     }
     return change_link(id, "pieces", piece_id, false, NULL, out_subject);
+}
+
+/* --- relations ----------------------------------------------------------- */
+
+UrsatzGuiSubjectResult ursatz_gui_subject_relate(const char *id, const char *other_id, bool *out_already,
+                                                 cJSON **out_subject) {
+    if (out_already) {
+        *out_already = false;
+    }
+    if (out_subject) {
+        *out_subject = NULL;
+    }
+    if (!is_valid_id(id) || !is_valid_id(other_id)) {
+        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    }
+    if (strcmp(id, other_id) == 0) {
+        return URSATZ_GUI_SUBJECT_ERR_SELF;
+    }
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+    }
+    cJSON *subject = NULL;
+    cJSON *other = NULL;
+    bool changed_subject = false;
+    bool changed_other = false;
+    UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
+    if (result == URSATZ_GUI_SUBJECT_OK) {
+        result = load_subject_locked(other_id, &other);
+    }
+    if (result == URSATZ_GUI_SUBJECT_OK) {
+        result = edit_list(other, "related", id, true, &changed_other);
+    }
+    if (result == URSATZ_GUI_SUBJECT_OK) {
+        result = edit_list(subject, "related", other_id, true, &changed_subject);
+    }
+    if (result == URSATZ_GUI_SUBJECT_OK && !changed_subject && !changed_other && out_already) {
+        *out_already = true;
+    }
+    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+        *out_subject = subject;
+    } else {
+        cJSON_Delete(subject);
+    }
+    cJSON_Delete(other);
+    UNLOCK();
+    return result;
+}
+
+UrsatzGuiSubjectResult ursatz_gui_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject) {
+    if (out_subject) {
+        *out_subject = NULL;
+    }
+    if (!is_valid_id(id) || !is_valid_id(other_id)) {
+        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    }
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+    }
+    cJSON *subject = NULL;
+    cJSON *other = NULL;
+    bool changed = false;
+    UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
+    if (result == URSATZ_GUI_SUBJECT_OK) {
+        result = edit_list(subject, "related", other_id, false, &changed);
+        if (result == URSATZ_GUI_SUBJECT_ERR_NOT_LINKED) {
+            result = URSATZ_GUI_SUBJECT_ERR_NOT_RELATED;
+        }
+    }
+    /* The other side is cleaned even when it is gone or already clean. */
+    if (result == URSATZ_GUI_SUBJECT_OK && load_subject_locked(other_id, &other) == URSATZ_GUI_SUBJECT_OK) {
+        bool other_changed = false;
+        edit_list(other, "related", id, false, &other_changed);
+    }
+    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+        *out_subject = subject;
+    } else {
+        cJSON_Delete(subject);
+    }
+    cJSON_Delete(other);
+    UNLOCK();
+    return result;
 }

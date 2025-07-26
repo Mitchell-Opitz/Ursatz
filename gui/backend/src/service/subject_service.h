@@ -34,6 +34,8 @@ typedef enum {
     URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND,
     URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND,
     URSATZ_GUI_SUBJECT_ERR_NOT_LINKED,
+    URSATZ_GUI_SUBJECT_ERR_SELF,
+    URSATZ_GUI_SUBJECT_ERR_NOT_RELATED,
     URSATZ_GUI_SUBJECT_ERR_FAILED,
     URSATZ_GUI_SUBJECT_ERR_ALLOC,
     URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED
@@ -73,7 +75,10 @@ UrsatzGuiSubjectResult ursatz_gui_subject_get(const char *id, cJSON **out_subjec
 UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *name, const char *kind, const char *note,
                                                  cJSON **out_subject);
 
-/* Deletes the subject. NOT_FOUND if absent. Items and pieces it linked are not touched. */
+/*
+ * Deletes the subject and removes it from every other subject's related
+ * list. NOT_FOUND if absent. Items and pieces it linked are not touched.
+ */
 UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id);
 
 /*
@@ -95,5 +100,18 @@ UrsatzGuiSubjectResult ursatz_gui_subject_link_piece(const char *id, const char 
 
 /* Removes a piece link. NOT_LINKED when the subject does not link the piece. */
 UrsatzGuiSubjectResult ursatz_gui_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject);
+
+/*
+ * Relates two subjects. The relation is stored on both sides. A subject
+ * cannot relate to itself (SELF); NOT_FOUND when either is absent. Relating
+ * twice is not an error: *out_already (may be NULL) is true and nothing
+ * changes. *out_subject (may be NULL) is the first subject after the call,
+ * caller-owned.
+ */
+UrsatzGuiSubjectResult ursatz_gui_subject_relate(const char *id, const char *other_id, bool *out_already,
+                                                 cJSON **out_subject);
+
+/* Removes the relation from both sides. NOT_RELATED when the two are not related. */
+UrsatzGuiSubjectResult ursatz_gui_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject);
 
 #endif /* URSATZ_GUI_SUBJECT_SERVICE_H */
