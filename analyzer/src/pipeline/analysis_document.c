@@ -2453,8 +2453,10 @@ static cJSON *chord_vocabulary_json(const AnalysisReport *report, const cJSON *c
    beat is the 1-based beat of the first measure its first note starts on. score is the library's match score and
    mismatches the interval mismatches of a varied occurrence out of intervals compared. A fragmented occurrence
    names the part of the prototype it is (fragment: "prefix" or "suffix") and says whether it lies in a continuation
-   (in_continuation). */
-static cJSON *motive_occurrence_json(const ImportedNotes *notes, const char *framework,
+   (in_continuation). phrase is the index into "phrases" of the phrase the whole occurrence lies in, and idea the
+   index (within that phrase's "ideas") of the idea it lies in; each is null when the occurrence crosses a boundary.
+   Both are placed by span against the report's phrases and ideas. */
+static cJSON *motive_occurrence_json(const ImportedNotes *notes, const AnalysisReport *report, const char *framework,
                                      const AnalysisMotiveOccurrence *occurrence) {
     Rational start = rational_make(occurrence->start_numerator, occurrence->start_denominator);
     Rational end = rational_make(occurrence->end_numerator, occurrence->end_denominator);
@@ -2467,7 +2469,10 @@ static cJSON *motive_occurrence_json(const ImportedNotes *notes, const char *fra
           add(claim, "mismatches", cJSON_CreateNumber(occurrence->mismatches)) &&
           add(claim, "intervals", cJSON_CreateNumber(occurrence->intervals)) &&
           add(claim, "fragment", string_or_null_json(occurrence->fragment)) &&
-          add(claim, "in_continuation", cJSON_CreateBool(occurrence->in_continuation)))) {
+          add(claim, "in_continuation", cJSON_CreateBool(occurrence->in_continuation)) &&
+          add(claim, "phrase", occurrence->has_phrase ? cJSON_CreateNumber((double)occurrence->phrase) : cJSON_CreateNull()) &&
+          add(claim, "idea",
+              occurrence->has_idea ? cJSON_CreateNumber(report->ideas[occurrence->idea].index) : cJSON_CreateNull()))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -2500,7 +2505,7 @@ static cJSON *motives_json(const ImportedNotes *notes, const AnalysisReport *rep
         cJSON *occurrences = cJSON_CreateArray();
         bool ok = claim && occurrences;
         for (size_t o = 0; ok && o < motive->occurrence_count; o++) {
-            ok = append(occurrences, motive_occurrence_json(notes, framework, &motive->occurrences[o]));
+            ok = append(occurrences, motive_occurrence_json(notes, report, framework, &motive->occurrences[o]));
         }
         bool taken = false; /* add() takes the occurrences over, and frees them itself when it fails */
         if (!(ok && add(claim, "index", cJSON_CreateNumber((double)motive->index)) &&

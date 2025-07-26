@@ -260,7 +260,41 @@ bool motive_stage_run(MotiveStage *stage, const ImportedNotes *notes, const Segm
     return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
 }
 
-static bool collect_occurrence(const MotiveStage *stage, const StandardFormMotiveOccurrence *found, size_t index,
+/* The phrase and idea of the report an occurrence lies in, by span: the phrase whose span holds the start of its first
+   and of its last note, and the idea of that phrase which does. The motive stage reads its own phrases and ideas, from
+   the same cadences, so the occurrence is placed against the report's by time. Both stay unset for an occurrence
+   that crosses a boundary. */
+static void link_occurrence(const AnalysisReport *report, const MusicalTime *first_start, const MusicalTime *last_start,
+                            AnalysisMotiveOccurrence *occurrence) {
+    long long first_n = musical_time_numerator(first_start);
+    long long first_d = (long long)musical_time_denominator(first_start);
+    long long last_n = musical_time_numerator(last_start);
+    long long last_d = (long long)musical_time_denominator(last_start);
+    for (size_t p = 0; p < report->phrase_count; p++) {
+        const AnalysisPhrase *phrase = &report->phrases[p];
+        long long end_d = (long long)phrase->end_denominator;
+        long long start_d = (long long)phrase->start_denominator;
+        if (compare_rational(first_n, first_d, phrase->start_numerator, start_d) < 0 ||
+            compare_rational(last_n, last_d, phrase->end_numerator, end_d) >= 0) {
+            continue;
+        }
+        occurrence->has_phrase = true;
+        occurrence->phrase = p;
+        for (size_t k = 0; k < phrase->idea_count; k++) {
+            const AnalysisIdea *idea = &report->ideas[phrase->first_idea + k];
+            if (compare_rational(first_n, first_d, idea->start_numerator, (long long)idea->start_denominator) >= 0 &&
+                compare_rational(last_n, last_d, idea->end_numerator, (long long)idea->end_denominator) < 0) {
+                occurrence->has_idea = true;
+                occurrence->idea = phrase->first_idea + k;
+                break;
+            }
+        }
+        return;
+    }
+}
+
+static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *report,
+                               const StandardFormMotiveOccurrence *found, size_t index,
                                AnalysisMotiveOccurrence *occurrence) {
     const FormStage *form = &stage->form;
     const StandardFormMotiveOccurrenceClaim *claim = &found->claim;
@@ -280,6 +314,7 @@ static bool collect_occurrence(const MotiveStage *stage, const StandardFormMotiv
     occurrence->end_denominator = musical_time_denominator(end);
     occurrence->first_measure = claim->first_measure;
     occurrence->first_beat = claim->first_beat;
+    link_occurrence(report, start, last_start, occurrence);
     if (meter_map_measure_index_at(form->input.map, last_start, &occurrence->last_measure) != METER_MAP_OK) {
         return false;
     }
@@ -326,7 +361,7 @@ bool motive_stage_collect(const MotiveStage *stage, AnalysisReport *report) {
         }
         motive->occurrence_count = found->occurrence_count;
         for (size_t o = 0; o < found->occurrence_count; o++) {
-            if (!collect_occurrence(stage, &found->occurrences[o], o, &motive->occurrences[o])) {
+            if (!collect_occurrence(stage, report, &found->occurrences[o], o, &motive->occurrences[o])) {
                 return false;
             }
         }

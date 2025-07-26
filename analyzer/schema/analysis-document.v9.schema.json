@@ -568,7 +568,8 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "measures", "beat", "score", "mismatches", "intervals", "fragment", "in_continuation"],
+          "required": ["index", "measures", "beat", "score", "mismatches", "intervals", "fragment", "in_continuation", "phrase",
+                       "idea"],
           "properties": {
             "label": { "enum": ["exact", "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented",
                                 "diminished", "fragmented", "varied"] },
@@ -579,7 +580,9 @@
             "mismatches": { "type": "integer", "minimum": 0 },
             "intervals": { "type": "integer", "minimum": 0 },
             "fragment": { "enum": ["prefix", "suffix", null] },
-            "in_continuation": { "type": "boolean" }
+            "in_continuation": { "type": "boolean" },
+            "phrase": { "type": ["integer", "null"], "minimum": 0 },
+            "idea": { "type": ["integer", "null"], "minimum": 0 }
           }
         }
       ]

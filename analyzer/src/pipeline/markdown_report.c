@@ -1016,6 +1016,34 @@ static bool append_motive_measures(StringBuilder *sb, const cJSON *occurrences) 
     return ok;
 }
 
+/* The phrases the occurrences of a family lie in, as "1, 2, 5" in order, each once; occurrences that cross a phrase
+   boundary lie in none. "-" when there are none. */
+static bool append_motive_phrases(StringBuilder *sb, const cJSON *occurrences) {
+    bool ok = true;
+    bool any = false;
+    const cJSON *occurrence;
+    cJSON_ArrayForEach(occurrence, occurrences) {
+        const cJSON *phrase = cJSON_GetObjectItemCaseSensitive(occurrence, "phrase");
+        if (!ok || !cJSON_IsNumber(phrase)) {
+            continue;
+        }
+        bool seen = false;
+        const cJSON *earlier;
+        cJSON_ArrayForEach(earlier, occurrences) {
+            if (earlier == occurrence) {
+                break;
+            }
+            const cJSON *other = cJSON_GetObjectItemCaseSensitive(earlier, "phrase");
+            seen = seen || (cJSON_IsNumber(other) && other->valuedouble == phrase->valuedouble);
+        }
+        if (!seen) {
+            ok = sb_appendf(sb, "%s%d", any ? ", " : "", (int)phrase->valuedouble + 1);
+            any = true;
+        }
+    }
+    return ok && (any || sb_append(sb, "-"));
+}
+
 /* How many occurrences of a family are of each kind, as "exact 1, tonal-transposed 3", in the order the kinds first
    appear. The kind is the library's name of the occurrence's transformation relative to the prototype. */
 static bool append_motive_kinds(StringBuilder *sb, const cJSON *occurrences) {
@@ -1053,12 +1081,13 @@ static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON
                          "The library's motive analysis found %d motive %s in the soprano, the highest sounding note "
                          "at each attack. A family is a short figure that recurs; Notes is the length of the figure, "
                          "Pattern whether its occurrences match by scale steps or by semitones, Measures the "
-                         "measures the occurrences start in, and Transformations how many occurrences are of each "
+                         "measures the occurrences start in, Phrases the phrases they lie in (an occurrence "
+                         "across a phrase boundary lies in none), and Transformations how many occurrences are of each "
                          "kind the library names against the first occurrence (exact, real-transposed, "
                          "tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).\n\n",
                          count, count == 1 ? "family" : "families") &&
-              sb_append(sb, "| Family | Notes | Pattern | Occurrences | Measures | Transformations |\n"
-                            "| --- | --- | --- | --- | --- | --- |\n");
+              sb_append(sb, "| Family | Notes | Pattern | Occurrences | Measures | Phrases | Transformations |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
     const cJSON *motive;
     cJSON_ArrayForEach(motive, motives) {
         if (!ok) {
@@ -1070,7 +1099,7 @@ static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motive, "generic")) ? "scale steps" : "semitones",
                         cJSON_GetArraySize(occurrences)) &&
              append_motive_measures(sb, occurrences) && sb_append(sb, " | ") &&
-             append_motive_kinds(sb, occurrences) && sb_append(sb, " |\n");
+             append_motive_phrases(sb, occurrences) && sb_append(sb, " | ") && append_motive_kinds(sb, occurrences) && sb_append(sb, " |\n");
     }
     return ok && sb_append(sb, "\n");
 }

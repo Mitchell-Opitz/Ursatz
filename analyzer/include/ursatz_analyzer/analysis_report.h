@@ -471,6 +471,10 @@ typedef struct {
     int intervals;           /* the intervals compared */
     const char *fragment;    /* a fragmented occurrence: "prefix" or "suffix" of the prototype; else NULL */
     bool in_continuation;    /* a fragment found inside a continuation span of a theme */
+    bool has_phrase;         /* the whole occurrence lies in one of phrases; false when it crosses a phrase boundary */
+    size_t phrase;           /* index into phrases; valid only when has_phrase */
+    bool has_idea;           /* it lies in one idea of that phrase */
+    size_t idea;             /* index into ideas; valid only when has_idea */
     double uncertainty;      /* the library's, 1 minus its score, in [0, 1]; higher is LESS certain */
 } AnalysisMotiveOccurrence;
 
