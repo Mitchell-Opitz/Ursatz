@@ -128,4 +128,13 @@ UrsatzGuiSubjectResult ursatz_gui_subject_forget_piece(const char *piece_id);
  */
 UrsatzGuiSubjectResult ursatz_gui_subject_forget_item(const char *item_id);
 
+/*
+ * The panel's view: *out_groups is a caller-owned array of four objects, one
+ * per kind in the order character, place, idea, note: {kind, subjects: [{id,
+ * name, item_count, piece_count, link_count}]}. link_count is the item count
+ * plus the piece count. Subjects are in name order; a kind with none has an
+ * empty array.
+ */
+UrsatzGuiSubjectResult ursatz_gui_subject_groups(cJSON **out_groups);
+
 #endif /* URSATZ_GUI_SUBJECT_SERVICE_H */

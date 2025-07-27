@@ -910,3 +910,68 @@ UrsatzGuiSubjectResult ursatz_gui_subject_unrelate(const char *id, const char *o
     UNLOCK();
     return result;
 }
+
+/* --- groups -------------------------------------------------------------- */
+
+static const char *const kKinds[] = {"character", "place", "idea", "note"};
+
+/* A panel row for subject: id, name, item_count, piece_count, link_count. */
+static cJSON *group_row(const cJSON *subject) {
+    const cJSON *item_count = cJSON_GetObjectItemCaseSensitive(subject, "item_count");
+    const cJSON *piece_count = cJSON_GetObjectItemCaseSensitive(subject, "piece_count");
+    int items = cJSON_IsNumber(item_count) ? item_count->valueint : 0;
+    int pieces = cJSON_IsNumber(piece_count) ? piece_count->valueint : 0;
+    cJSON *row = cJSON_CreateObject();
+    bool ok = row && cJSON_AddStringToObject(row, "id", string_member(subject, "id")) &&
+              cJSON_AddStringToObject(row, "name", string_member(subject, "name")) &&
+              cJSON_AddNumberToObject(row, "item_count", items) && cJSON_AddNumberToObject(row, "piece_count", pieces) &&
+              cJSON_AddNumberToObject(row, "link_count", items + pieces);
+    if (!ok) {
+        cJSON_Delete(row);
+        return NULL;
+    }
+    return row;
+}
+
+UrsatzGuiSubjectResult ursatz_gui_subject_groups(cJSON **out_groups) {
+    *out_groups = NULL;
+    cJSON *subjects = NULL;
+    UrsatzGuiSubjectResult result = ursatz_gui_subject_list(&subjects);
+    if (result != URSATZ_GUI_SUBJECT_OK) {
+        return result;
+    }
+    cJSON *groups = cJSON_CreateArray();
+    for (size_t k = 0; groups && k < sizeof(kKinds) / sizeof(kKinds[0]); k++) {
+        cJSON *group = cJSON_CreateObject();
+        cJSON *rows = group ? cJSON_AddArrayToObject(group, "subjects") : NULL;
+        if (!rows || !cJSON_AddStringToObject(group, "kind", kKinds[k])) {
+            cJSON_Delete(group);
+            cJSON_Delete(groups);
+            groups = NULL;
+            break;
+        }
+        const cJSON *subject;
+        cJSON_ArrayForEach(subject, subjects) {
+            if (strcmp(string_member(subject, "kind"), kKinds[k]) != 0) {
+                continue;
+            }
+            cJSON *row = group_row(subject);
+            if (!row) {
+                cJSON_Delete(group);
+                cJSON_Delete(groups);
+                groups = NULL;
+                break;
+            }
+            cJSON_AddItemToArray(rows, row);
+        }
+        if (groups) {
+            cJSON_AddItemToArray(groups, group);
+        }
+    }
+    cJSON_Delete(subjects);
+    if (!groups) {
+        return URSATZ_GUI_SUBJECT_ERR_ALLOC;
+    }
+    *out_groups = groups;
+    return URSATZ_GUI_SUBJECT_OK;
+}
