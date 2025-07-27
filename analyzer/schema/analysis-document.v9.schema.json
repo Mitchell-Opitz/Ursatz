@@ -548,7 +548,7 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "note_count", "generic", "occurrences"],
+          "required": ["index", "note_count", "generic", "occurrences", "development"],
           "properties": {
             "label": { "const": "motive" },
             "index": { "type": "integer", "minimum": 0 },
@@ -558,10 +558,29 @@
               "type": "array",
               "minItems": 2,
               "items": { "$ref": "#/$defs/motive_occurrence_claim" }
+            },
+            "development": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "$ref": "#/$defs/motive_development_step" }
             }
           }
         }
       ]
+    },
+    "motive_development_step": {
+      "type": "object",
+      "required": ["occurrence", "measure", "beat", "transformation", "from"],
+      "properties": {
+        "occurrence": { "type": "integer", "minimum": 0 },
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "number", "minimum": 1 },
+        "transformation": {
+          "enum": ["exact", "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented", "diminished",
+                   "fragmented", "varied", null]
+        },
+        "from": { "type": ["integer", "null"], "minimum": 0 }
+      }
     },
     "motive_occurrence_claim": {
       "allOf": [
