@@ -615,13 +615,14 @@ UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *nam
 
 static UrsatzGuiSubjectResult edit_list(cJSON *subject, const char *name, const char *ref, bool add, bool *changed);
 
-/* Removes id from the related list of every subject that holds it. */
-static void remove_from_related_locked(const char *id) {
+/* Removes ref from the array member `name` of every subject that holds it. */
+static UrsatzGuiSubjectResult remove_from_all_locked(const char *name, const char *ref) {
     char **names = NULL;
     size_t count = 0;
     if (!list_names(g_dir, &names, &count)) {
-        return;
+        return URSATZ_GUI_SUBJECT_ERR_FAILED;
     }
+    UrsatzGuiSubjectResult result = URSATZ_GUI_SUBJECT_OK;
     for (size_t i = 0; i < count; i++) {
         if (!has_suffix(names[i], ".json")) {
             continue;
@@ -636,11 +637,34 @@ static void remove_from_related_locked(const char *id) {
         cJSON *subject = NULL;
         bool changed = false;
         if (load_subject_locked(other, &subject) == URSATZ_GUI_SUBJECT_OK) {
-            edit_list(subject, "related", id, false, &changed);
+            UrsatzGuiSubjectResult edited = edit_list(subject, name, ref, false, &changed);
+            if (edited != URSATZ_GUI_SUBJECT_OK && edited != URSATZ_GUI_SUBJECT_ERR_NOT_LINKED) {
+                result = edited;
+            }
         }
         cJSON_Delete(subject);
     }
     free_names(names, count);
+    return result;
+}
+
+static UrsatzGuiSubjectResult forget(const char *name, const char *ref) {
+    if (!is_valid_id(ref)) {
+        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    }
+    LOCK();
+    UrsatzGuiSubjectResult result =
+        g_ready ? remove_from_all_locked(name, ref) : URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+    UNLOCK();
+    return result;
+}
+
+UrsatzGuiSubjectResult ursatz_gui_subject_forget_piece(const char *piece_id) {
+    return forget("pieces", piece_id);
+}
+
+UrsatzGuiSubjectResult ursatz_gui_subject_forget_item(const char *item_id) {
+    return forget("items", item_id);
 }
 
 UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id) {
@@ -658,7 +682,7 @@ UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id) {
     } else if (remove(path) != 0) {
         result = URSATZ_GUI_SUBJECT_ERR_FAILED;
     } else {
-        remove_from_related_locked(id);
+        remove_from_all_locked("related", id);
     }
     UNLOCK();
     return result;

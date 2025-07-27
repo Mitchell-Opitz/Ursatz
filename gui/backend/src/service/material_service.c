@@ -17,6 +17,7 @@
 #endif
 
 #include "id_service.h"
+#include "subject_service.h"
 
 #define NAME_MAX_CHARS 200
 #define NOTE_MAX_CHARS 500
@@ -1609,5 +1610,9 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool for
     }
     UNLOCK();
     cJSON_Delete(users);
+    /* Subjects take their own lock, so this runs with the material lock released. */
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        ursatz_gui_subject_forget_item(id);
+    }
     return result;
 }

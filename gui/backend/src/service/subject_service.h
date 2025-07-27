@@ -114,4 +114,18 @@ UrsatzGuiSubjectResult ursatz_gui_subject_relate(const char *id, const char *oth
 /* Removes the relation from both sides. NOT_RELATED when the two are not related. */
 UrsatzGuiSubjectResult ursatz_gui_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject);
 
+/*
+ * Removes the id from the pieces list of every subject that holds it. Called
+ * by the analyzer route after a Library piece is deleted. Absent everywhere is
+ * fine.
+ */
+UrsatzGuiSubjectResult ursatz_gui_subject_forget_piece(const char *piece_id);
+
+/*
+ * Removes the id from the items list of every subject that holds it. Called
+ * by the material service after an item is deleted, with no material lock
+ * held. Absent everywhere is fine.
+ */
+UrsatzGuiSubjectResult ursatz_gui_subject_forget_item(const char *item_id);
+
 #endif /* URSATZ_GUI_SUBJECT_SERVICE_H */
