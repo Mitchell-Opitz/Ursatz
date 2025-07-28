@@ -59,6 +59,7 @@ typedef struct {
     bool applied;
     int target_degree;      /* 1..7; meaningful when applied */
     int target_alteration;
+    bool target_upper;      /* the target is written in capitals (a major key) */
     int tonic_pitch_class;  /* the key in force at the chord */
     bool minor;
     size_t key_index;       /* an index into keys, or SIZE_MAX when no key was given before the chord */
@@ -117,6 +118,16 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
 RomanTextStatus romantext_load(const char *path, const RomanTextGrid *grid, RomanTextAnalysis *out);
 
 void romantext_destroy(RomanTextAnalysis *analysis);
+
+/*
+ * The chord a supported annotation names, in the key in force at it: its root pitch class and its root-relative
+ * interval set (3 or 4 semitone values, ascending), the count returned. The scale is the major scale, or the natural
+ * minor; a lowercase vii in minor is the leading tone chord; a capital seventh chord not on the dominant takes the
+ * seventh its key's scale gives (a major seventh above I, IV, and in minor III and VI); V and V7/x are dominant
+ * sevenths; "o" is diminished (fully diminished with a 7), "%" half-diminished, "+" augmented; an applied chord is
+ * read in the key of its target (V/x is the dominant of x, vii/x its leading tone chord).
+ */
+size_t romantext_expected_chord(const RomanTextChord *chord, int *root, int intervals[4]);
 
 /* The metadata of text alone, with no MeterMap: composer, title and time signature. For building the MeterMap. */
 RomanTextStatus romantext_parse_metadata(const char *text, RomanTextAnalysis *out);

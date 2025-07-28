@@ -1,4 +1,4 @@
-add_library(accuracy_support STATIC romantext.c score_layout.c)
+add_library(accuracy_support STATIC romantext.c score_layout.c alignment.c)
 target_include_directories(accuracy_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(accuracy_support PUBLIC ursatz)
 

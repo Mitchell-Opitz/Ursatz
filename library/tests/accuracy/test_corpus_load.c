@@ -4,14 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "alignment.h"
 #include "io/musicxml_importer.h"
 #include "score_layout.h"
 
 /*
  * Every piece under corpus/ loads: its score imports, its measure layout is read, and its RomanText analysis
- * parses on that layout with the same last measure as the score. Pieces are found by scanning the directory, so
- * adding a piece needs no edit here.
+ * parses on that layout with the same last measure as the score, and its chord roots sound in the score where the
+ * analysis puts them (alignment.h: a pair in different transpositions fails). Pieces are found by scanning the
+ * directory, so adding a piece needs no edit here.
  */
+
+#define ALIGNMENT_MINIMUM 0.85
 
 static char *read_file(const char *path, size_t *size) {
     FILE *f = fopen(path, "rb");
@@ -53,8 +57,11 @@ static void check_piece(const char *name) {
     assert(analysis.chord_count > 20 && analysis.key_count >= 1);
     assert(analysis.time_signature_top == (int)layout.time_top && analysis.time_signature_bottom == (int)layout.time_bottom);
     assert(analysis.last_measure == layout.measures[layout.measure_count - 1].number);
-    printf("%s: %zu notes, %zu measures, %zu chords, %zu keys, %zu unsupported\n", name, imported.count,
-           layout.measure_count, analysis.chord_count, analysis.key_count, analysis.unsupported_count);
+    double share = alignment_root_share(&analysis, &imported);
+    printf("%s: %zu notes, %zu measures, %zu chords, %zu keys, %zu unsupported, roots sounding %.1f%%\n", name,
+           imported.count, layout.measure_count, analysis.chord_count, analysis.key_count, analysis.unsupported_count,
+           share * 100.0);
+    assert(share >= ALIGNMENT_MINIMUM);
 
     romantext_destroy(&analysis);
     score_layout_destroy(&layout);

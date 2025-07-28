@@ -163,8 +163,7 @@ static void parse_chord_token(const char *token, RomanTextChord *chord) {
     chord->target_alteration = 0;
     if (*p == '/') {
         p++;
-        bool target_upper = false;
-        if (!parse_degree(&p, &chord->target_degree, &chord->target_alteration, &target_upper)) {
+        if (!parse_degree(&p, &chord->target_degree, &chord->target_alteration, &chord->target_upper)) {
             return;
         }
         chord->applied = true;
@@ -508,3 +507,72 @@ void romantext_destroy(RomanTextAnalysis *analysis) {
     analysis->key_count = 0;
     analysis->chord_count = 0;
 }
+
+
+static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
+static const int MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
+
+static int wrap12(int v) {
+    return ((v % 12) + 12) % 12;
+}
+
+static int scale_step(int tonic, bool minor, int degree, int alteration) {
+    const int *scale = minor ? MINOR_SCALE : MAJOR_SCALE;
+    return wrap12(tonic + scale[degree - 1] + alteration);
+}
+
+size_t romantext_expected_chord(const RomanTextChord *c, int *root, int intervals[4]) {
+    int tonic = c->tonic_pitch_class;
+    bool minor = c->minor;
+    int local_tonic = tonic;
+    bool local_minor = minor;
+    bool dominant_like = false;
+    if (c->applied) {
+        local_tonic = scale_step(tonic, minor, c->target_degree, c->target_alteration);
+        local_minor = !c->target_upper;
+    }
+    if (c->applied && (c->degree == 5 || c->degree == 7)) {
+        /* V/x and vii/x: the chord as it reads in the tonicized key, whose tonic is a major or minor key's */
+        *root = c->degree == 5 ? wrap12(local_tonic + 7) : wrap12(local_tonic + 11);
+        dominant_like = c->degree == 5;
+    } else {
+        *root = scale_step(local_tonic, local_minor, c->degree, c->alteration);
+        if (local_minor && !c->applied && c->degree == 7 && !c->upper) {
+            *root = wrap12(local_tonic + 11 + c->alteration); /* a lowercase vii in minor: the leading tone */
+        }
+    }
+    static const int TRI_MAJ[3] = {0, 4, 7};
+    static const int TRI_MIN[3] = {0, 3, 7};
+    static const int TRI_DIM[3] = {0, 3, 6};
+    static const int TRI_AUG[3] = {0, 4, 8};
+    if (!c->seventh) {
+        const int *t = c->marker == 'o' ? TRI_DIM : (c->marker == '+' ? TRI_AUG : (c->upper ? TRI_MAJ : TRI_MIN));
+        memcpy(intervals, t, 3 * sizeof(int));
+        intervals[3] = 0;
+        return 3;
+    }
+    static const int S_DOM[4] = {0, 4, 7, 10};
+    static const int S_MAJ[4] = {0, 4, 7, 11};
+    static const int S_MIN[4] = {0, 3, 7, 10};
+    static const int S_HALF[4] = {0, 3, 6, 10};
+    static const int S_FULL[4] = {0, 3, 6, 9};
+    const int *t;
+    if (c->marker == 'o') {
+        t = S_FULL;
+    } else if (c->marker == '%') {
+        t = S_HALF;
+    } else if (!c->upper) {
+        t = S_MIN;
+    } else if (dominant_like || (!c->applied && c->degree == 5)) {
+        t = S_DOM;
+    } else {
+        /* a capital seventh chord not on the dominant: the seventh the key's scale gives */
+        const int *scale = local_minor ? MINOR_SCALE : MAJOR_SCALE;
+        int seventh_degree = ((c->degree - 1) + 6) % 7;
+        int seventh = wrap12(scale[seventh_degree] - scale[c->degree - 1]);
+        t = seventh == 11 ? S_MAJ : S_DOM;
+    }
+    memcpy(intervals, t, 4 * sizeof(int));
+    return 4;
+}
+

@@ -186,8 +186,55 @@ static void test_errors(void) {
     meter_map_destroy(map);
 }
 
+static void expect_chord(const char *text, const char *key_line, int root, const int *intervals, size_t count) {
+    MeterMap *map = make_map(4, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
+    char source[160];
+    snprintf(source, sizeof(source), "m1 %s %s\n", key_line, text);
+    RomanTextAnalysis a;
+    assert(romantext_parse(source, &grid, &a) == ROMANTEXT_OK);
+    assert(a.chord_count == 1 && a.chords[0].supported);
+    int got_root = -1;
+    int got[4];
+    size_t got_count = romantext_expected_chord(&a.chords[0], &got_root, got);
+    if (got_root != root || got_count != count || memcmp(got, intervals, count * sizeof(int)) != 0) {
+        fprintf(stderr, "%s in %s: root %d (want %d), %zu intervals\n", text, key_line, got_root, root, got_count);
+        assert(!"expected chord differs");
+    }
+    romantext_destroy(&a);
+    meter_map_destroy(map);
+}
+
+static void test_expected_chords(void) {
+    static const int MAJ[3] = {0, 4, 7}, MIN[3] = {0, 3, 7}, DIM[3] = {0, 3, 6}, AUG[3] = {0, 4, 8};
+    static const int DOM7[4] = {0, 4, 7, 10}, MAJ7[4] = {0, 4, 7, 11}, MIN7[4] = {0, 3, 7, 10}, HALF[4] = {0, 3, 6, 10},
+                     FULL[4] = {0, 3, 6, 9};
+    expect_chord("I", "C:", 0, MAJ, 3);
+    expect_chord("ii6", "C:", 2, MIN, 3);
+    expect_chord("viio", "C:", 11, DIM, 3);
+    expect_chord("III+", "C:", 4, AUG, 3);
+    expect_chord("V7", "C:", 7, DOM7, 4);
+    expect_chord("IV7", "C:", 5, MAJ7, 4);
+    expect_chord("ii65", "C:", 2, MIN7, 4);
+    expect_chord("vii%7", "C:", 11, HALF, 4);
+    expect_chord("viio7", "C:", 11, FULL, 4);
+    expect_chord("i", "a:", 9, MIN, 3);
+    expect_chord("V", "a:", 4, MAJ, 3);
+    expect_chord("VII", "a:", 7, MAJ, 3);
+    expect_chord("viio6", "a:", 8, DIM, 3);
+    expect_chord("III7", "a:", 0, MAJ7, 4);
+    expect_chord("VII7", "a:", 7, DOM7, 4);
+    expect_chord("V7/V", "C:", 2, DOM7, 4);
+    expect_chord("V/vi", "C:", 4, MAJ, 3);
+    expect_chord("viio6/V", "C:", 6, DIM, 3);
+    expect_chord("viio7/ii", "G:", 8, FULL, 4);
+    expect_chord("bVI", "C:", 8, MAJ, 3);
+    expect_chord("#ivo", "C:", 6, DIM, 3);
+}
+
 int main(void) {
     test_metadata();
+    test_expected_chords();
     test_chords_keys_and_beats();
     test_applied_and_altered();
     test_slashed_figures_and_keys();

@@ -51,6 +51,11 @@ no license for that file or its origin, only a general statement.
 | `chorale-010-bwv38-6/` | 38.6 | Aus tiefer Not schrei ich zu dir (5) | `bwv38.6.mxl` | Dmitri Tymoczko / Hamish Robb | unclear | unclear |
 | `chorale-012-bwv65-2/` | 65.2 | Ein Kind geborn zu Bethlehem (4) | `bwv65.2.mxl` | Dmitri Tymoczko / Hamish Robb | unclear | unclear |
 | `chorale-013-bwv33-6/` | 33.6 | Allein zu dir, Herr Jesu Christ (4) | `bwv33.6.mxl` | Dmitri Tymoczko / Hamish Robb | unclear | unclear |
-| `chorale-014-bwv184-5/` | 184.5 | O Herre Gott, dein göttlich Wort (8) | `bwv184.5.mxl` | Dmitri Tymoczko / Hamish Robb | unclear | unclear |
+| `chorale-016-bwv311/` | 311 | Es woll uns Gott genädig sein | `bwv311.mxl` | Dmitri Tymoczko / Hamish Robb | unclear | unclear |
 
 Per directory: `score.musicxml` is the score (source above), `analysis.rntxt` is the analysis (source above).
+
+Each pair was checked before it was admitted: the analysis's chord roots must sound in the score at the chord's start
+(`alignment_root_share`, at least 85%), because two sources of one chorale can be in different transpositions. Chorales
+14, 15 and 17 of the same set failed that check (their analyses are in another key than the music21 score) and are not
+included.
