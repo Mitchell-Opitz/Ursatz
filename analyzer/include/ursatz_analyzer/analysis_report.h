@@ -478,7 +478,8 @@ typedef struct {
     double uncertainty;      /* the library's, 1 minus its score, in [0, 1]; higher is LESS certain */
 } AnalysisMotiveOccurrence;
 
-/* One motive family: a short figure that recurs. Its occurrences are in time order, the prototype first. */
+/* One motive family: a short figure that recurs. Its occurrences are the prototype first and then the library's order,
+   which is not always time order (it searches continuations for fragments first); development is the time order. */
 typedef struct {
     size_t index;            /* within the piece, in the library's order: by prototype, longer first */
     int note_count;          /* the prototype's */
@@ -486,8 +487,8 @@ typedef struct {
     AnalysisMotiveOccurrence *occurrences; /* owned */
     size_t occurrence_count;
     size_t *development;     /* owned; occurrence_count indices into occurrences in time order, earliest first: the
-                                family's development through the piece. Each step after the first is the occurrence's
-                                kind (the library's transformation against the prototype); the analyzer only orders */
+                                family's development through the piece. Each step's transformation is the occurrence's
+                                kind (the library's, against the prototype); the analyzer only orders */
 } AnalysisMotive;
 
 typedef struct {

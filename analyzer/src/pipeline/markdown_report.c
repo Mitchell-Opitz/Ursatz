@@ -1105,8 +1105,8 @@ static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON
 }
 
 /* The development of each family: its occurrences in time order as "m1 original > m3 real-transposed > m5
-   fragmented". The first is the prototype; each later step is the library's kind of that occurrence against it. A
-   document without developments (an older one) renders nothing. */
+   fragmented". The original is the prototype, which the transformation null marks; every other step is the library's
+   kind of that occurrence against it. A document without developments (an older one) renders nothing. */
 static bool render_motive_development(StringBuilder *sb, const cJSON *document, const cJSON *motives) {
     (void)document;
     bool any = false;
@@ -1119,7 +1119,7 @@ static bool render_motive_development(StringBuilder *sb, const cJSON *document, 
     }
     bool ok = sb_append(sb, "### Development\n\n") &&
               sb_append(sb, "Each family's occurrences in time order, as the measure they start in and the kind the "
-                            "library names against the first occurrence, which is the original.\n\n");
+                            "library names against the family's prototype, which is the original.\n\n");
     cJSON_ArrayForEach(motive, motives) {
         const cJSON *steps = cJSON_GetObjectItemCaseSensitive(motive, "development");
         if (!ok || cJSON_GetArraySize(steps) == 0) {

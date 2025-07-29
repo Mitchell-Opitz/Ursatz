@@ -2479,9 +2479,10 @@ static cJSON *motive_occurrence_json(const ImportedNotes *notes, const AnalysisR
     return claim;
 }
 
-/* The development of a family: a step per occurrence in time order, the first with a null transformation (the
-   prototype) and every later one with the library's kind of that occurrence against the prototype. from is the
-   occurrence before it in time (null for the first); occurrence and from are indices into the family's "occurrences". */
+/* The development of a family: a step per occurrence in time order. transformation is the library's kind of that
+   occurrence against the prototype, null for the prototype itself (which is not always the earliest: the library
+   searches continuations for fragments first). from is the occurrence before it in time (null for the first);
+   occurrence and from are indices into the family's "occurrences". */
 static cJSON *motive_development_json(const AnalysisMotive *motive) {
     cJSON *steps = cJSON_CreateArray();
     if (!steps) {
@@ -2494,7 +2495,7 @@ static cJSON *motive_development_json(const AnalysisMotive *motive) {
         if (!(step && add(step, "occurrence", cJSON_CreateNumber((double)index)) &&
               add(step, "measure", cJSON_CreateNumber(occurrence->first_measure)) &&
               add(step, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
-              add(step, "transformation", k == 0 ? cJSON_CreateNull() : cJSON_CreateString(occurrence->kind)) &&
+              add(step, "transformation", index == 0 ? cJSON_CreateNull() : cJSON_CreateString(occurrence->kind)) &&
               add(step, "from", k == 0 ? cJSON_CreateNull() : cJSON_CreateNumber((double)motive->development[k - 1])))) {
             cJSON_Delete(step);
             cJSON_Delete(steps);
@@ -2511,7 +2512,8 @@ static cJSON *motive_development_json(const AnalysisMotive *motive) {
 /* One claim per motive family, in the library's order. Its span, note ids and location are the prototype's (the first
    occurrence); note_count is the prototype's length; generic says the pattern is the scale-step interval sequence
    rather than the semitones; uncertainty is the greatest of its occurrences'. occurrences are the claims of every
-   occurrence in time order, the prototype first; development is the family's occurrences in time order as steps. */
+   occurrence, the prototype first and the rest in the library's order (not always time order); development is the
+   family's occurrences in time order as steps. */
 static cJSON *motives_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
