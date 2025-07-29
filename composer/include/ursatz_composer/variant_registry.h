@@ -99,4 +99,71 @@ const VariantOperation *variant_registry_find(const char *name);
 /* The index of a parameter of the operation by name, or -1. */
 int variant_operation_param_index(const VariantOperation *operation, const char *name);
 
+/* --- chains ------------------------------------------------------------- */
+
+#define VARIANT_CHAIN_MAX 4
+#define VARIANT_ERROR_MAX 160
+
+/* One operation and the parameters Michelle (or a chain file) set. A parameter not set is open. */
+typedef struct {
+    char op[VARIANT_NAME_MAX];
+    VariantValue values[VARIANT_PARAM_MAX]; /* indexed like the operation's params */
+} VariantStep;
+
+typedef struct {
+    VariantStep steps[VARIANT_CHAIN_MAX];
+    size_t step_count;
+} VariantChain;
+
+/* Sets *step to the operation with every parameter open. False for a name that is not in the registry. */
+bool variant_step_init(VariantStep *step, const char *op);
+/*
+ * Sets a parameter of a step made by variant_step_init. den is the denominator of a ratio and ignored for the other
+ * kinds. False for an unknown parameter or a value outside the parameter's range.
+ */
+bool variant_step_set(VariantStep *step, const char *param, long value, long den);
+
+/* What a step resolved to: every parameter, and which of them the chain left open (drawn from the seed). */
+typedef struct {
+    char op[VARIANT_NAME_MAX];
+    size_t param_count;
+    VariantValue values[VARIANT_PARAM_MAX];
+    bool open[VARIANT_PARAM_MAX];
+} VariantStepRecord;
+
+/*
+ * How a variant was made. The same chain and seed give the same variant, so a reroll is the same chain with another
+ * seed. On a failed chain, failed_step is the 0-based step and error says why in one sentence.
+ */
+typedef struct {
+    unsigned long seed;
+    VariantStepRecord steps[VARIANT_CHAIN_MAX];
+    size_t step_count;
+    size_t failed_step;
+    char error[VARIANT_ERROR_MAX];
+} VariantRecord;
+
+typedef enum {
+    VARIANT_OK = 0,
+    VARIANT_ERR_NULL,
+    VARIANT_ERR_EMPTY,      /* a chain with no steps, or more than VARIANT_CHAIN_MAX */
+    VARIANT_ERR_UNKNOWN_OP, /* a step names an operation that is not in the registry */
+    VARIANT_ERR_FORM,       /* the operation does not apply to the source's form */
+    VARIANT_ERR_PARAM,      /* a set parameter is outside its range */
+    VARIANT_ERR_REFUSED     /* the operation refused the motive, on every draw of its open parameters */
+} VariantResult;
+
+/* "ok", "empty chain" and so on. */
+const char *variant_result_name(VariantResult result);
+
+/*
+ * Applies the steps in order, each to the result of the one before. The open parameters of every step are drawn from
+ * one FillRng seeded once with seed, in step order and in the order of the operation's params; a step an operation
+ * refuses is drawn again, up to 16 draws, and fails if the step has no open parameter to draw. record may be NULL.
+ * *out and *record are written on VARIANT_OK; on any other result *out is untouched and the record says which step
+ * failed and why.
+ */
+VariantResult variant_apply_chain(const Motive *source, const VariantChain *chain, unsigned long seed, Motive *out,
+                                  VariantRecord *record);
+
 #endif
