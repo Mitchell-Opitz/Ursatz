@@ -251,3 +251,22 @@ target_link_libraries(test_material_service PRIVATE cjson ursatz)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)
 add_test(NAME material_service COMMAND test_material_service
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)
+
+add_executable(test_subject_service test_subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+)
+
+target_include_directories(test_subject_service PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_subject_service PRIVATE cjson ursatz)
+
+# The test creates its own materials_<pid>/, subjects_<pid>/ and pieces/ in its working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
+add_test(NAME subject_service COMMAND test_subject_service
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
