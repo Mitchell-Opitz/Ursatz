@@ -7,10 +7,16 @@
 
 #include <ursatz_composer/fill_rng.h>
 
+#include <ursatz_composer/motive_analysis.h>
+
 #include "motive/motive_internal.h"
 
 /* How many draws of its open parameters a refused step gets. */
 #define VARIANT_DRAWS 16
+
+const char *variant_kind_name(VariantKind kind) {
+    return kind == VARIANT_KIND_EXACT ? "exact" : "motive-form";
+}
 
 const char *variant_result_name(VariantResult result) {
     static const char *const NAMES[] = {"ok",   "null",           "empty chain", "unknown operation",
@@ -134,6 +140,100 @@ static bool normalize_contour(const Motive *source, Motive *result) {
     return ok;
 }
 
+/* ------------------------------------------------------------ kept, changed */
+
+/* Whether a equals b times fnum/fden. */
+static bool scaled_equal(PlanTime a, PlanTime b, long long fnum, long long fden) {
+    return (long long)a.num * (long long)b.den * fden == (long long)b.num * (long long)a.den * fnum;
+}
+
+/* The result's times are the source's times one common factor; *scaled says whether that factor is not 1. */
+static bool rhythm_kept(const Motive *source, const Motive *result, bool *scaled) {
+    *scaled = false;
+    if (source->note_count != result->note_count) {
+        return false;
+    }
+    long long fnum = (long long)result->notes[0].duration.num * (long long)source->notes[0].duration.den;
+    long long fden = (long long)result->notes[0].duration.den * (long long)source->notes[0].duration.num;
+    for (size_t i = 0; i < source->note_count; i++) {
+        if (!scaled_equal(result->notes[i].duration, source->notes[i].duration, fnum, fden) ||
+            !scaled_equal(result->notes[i].offset, source->notes[i].offset, fnum, fden)) {
+            return false;
+        }
+    }
+    *scaled = fnum != fden;
+    return true;
+}
+
+static bool intervals_kept(const MotiveAnalysis *a, const MotiveAnalysis *b) {
+    if (a->interval_count != b->interval_count) {
+        return false;
+    }
+    for (size_t i = 0; i < a->interval_count; i++) {
+        bool same = a->intervals[i].has_steps && b->intervals[i].has_steps
+                        ? a->intervals[i].steps == b->intervals[i].steps
+                        : a->intervals[i].semitones == b->intervals[i].semitones;
+        if (!same) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool contour_kept(const MotiveAnalysis *a, const MotiveAnalysis *b) {
+    if (a->interval_count != b->interval_count) {
+        return false;
+    }
+    for (size_t i = 0; i < a->interval_count; i++) {
+        if (a->directions[i] != b->directions[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool harmony_kept(const MotiveAnalysis *a, const MotiveAnalysis *b) {
+    if (a->candidate_count == 0 || b->candidate_count == 0) {
+        return a->candidate_count == b->candidate_count;
+    }
+    return strcmp(a->candidates[0].roman, b->candidates[0].roman) == 0;
+}
+
+static void note_dimension(VariantRecord *record, const char *name, bool kept) {
+    if (kept) {
+        record->kept[record->kept_count++] = name;
+    } else {
+        record->changed[record->changed_count++] = name;
+    }
+}
+
+/* Fills the record's kind, kept, changed and recognizability from the source and the finished variant. */
+static void record_difference(const Motive *source, const Motive *result, VariantRecord *record) {
+    MotiveAnalysis before;
+    MotiveAnalysis after;
+    record->kept_count = 0;
+    record->changed_count = 0;
+    if (motive_analyze(source, &before) && motive_analyze(result, &after)) {
+        if (before.rhythm_known) {
+            note_dimension(record, "rhythm", rhythm_kept(source, result, &record->rhythm_scaled));
+        }
+        if (before.intervals_known) {
+            note_dimension(record, "intervals", intervals_kept(&before, &after));
+        }
+        if (before.contour_known) {
+            note_dimension(record, "contour", contour_kept(&before, &after));
+        }
+        if (before.harmony_known && after.harmony_known) {
+            note_dimension(record, "harmony", harmony_kept(&before, &after));
+        }
+    }
+    record->kind = record->changed_count == 0 ? VARIANT_KIND_EXACT : VARIANT_KIND_MOTIVE_FORM;
+    MotiveRecognizability score;
+    if (motive_recognizability(source, result, NULL, &score)) {
+        record->recognizability = score.total;
+    }
+}
+
 /* -------------------------------------------------------------------- chain */
 
 static void record_error(VariantRecord *record, size_t step, const char *format, ...) __attribute__((format(printf, 3, 4)));
@@ -223,6 +323,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
         current = next;
     }
 
+    record_difference(source, &current, log);
     *out = current;
     return VARIANT_OK;
 }

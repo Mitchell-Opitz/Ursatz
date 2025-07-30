@@ -131,6 +131,18 @@ typedef struct {
     bool open[VARIANT_PARAM_MAX];
 } VariantStepRecord;
 
+/* The dimensions a variant keeps or changes (R-134), in this order: "rhythm", "intervals", "contour", "harmony". */
+#define VARIANT_DIMENSIONS 4
+
+/* exact: nothing changed. motive-form: something did. The GUI sets variant, never the Composer. */
+typedef enum {
+    VARIANT_KIND_EXACT,
+    VARIANT_KIND_MOTIVE_FORM
+} VariantKind;
+
+/* "exact" or "motive-form". */
+const char *variant_kind_name(VariantKind kind);
+
 /*
  * How a variant was made. The same chain and seed give the same variant, so a reroll is the same chain with another
  * seed. On a failed chain, failed_step is the 0-based step and error says why in one sentence.
@@ -139,6 +151,22 @@ typedef struct {
     unsigned long seed;
     VariantStepRecord steps[VARIANT_CHAIN_MAX];
     size_t step_count;
+    /*
+     * What the result kept and changed against the source. A dimension is kept when
+     *   rhythm     the durations and onsets are the source's times one common factor (rhythm_scaled when it is not 1)
+     *   intervals  every diatonic step (semitones without a key) is the source's
+     *   contour    every direction is the source's
+     *   harmony    the best implied chord's degree is the source's (a full motive with a key only)
+     * and changed otherwise; one the motive's form does not have is in neither list.
+     */
+    VariantKind kind;
+    const char *kept[VARIANT_DIMENSIONS];
+    size_t kept_count;
+    const char *changed[VARIANT_DIMENSIONS];
+    size_t changed_count;
+    bool rhythm_scaled;
+    /* motive_recognizability of the result against the source, the total. */
+    MotiveScore recognizability;
     size_t failed_step;
     char error[VARIANT_ERROR_MAX];
 } VariantRecord;
