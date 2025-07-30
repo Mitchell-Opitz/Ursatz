@@ -38,6 +38,7 @@ typedef int socket_t;
 #include <cJSON.h>
 
 #include "server.h"
+#include "service/subject_service.h"
 
 #ifndef URSATZ_GUI_TEST_URSATZ_DIR
 #error "URSATZ_GUI_TEST_URSATZ_DIR must name the external/ursatz checkout"
@@ -1199,12 +1200,28 @@ int main(void) {
     check(piece_file_exists(mozart_id, "source.mid") && piece_file_exists(mozart_id, "analysis.json"),
           "renaming leaves the source and the analysis alone");
 
-    /* Delete. */
+    /* Delete. A subject that linked the piece forgets it. */
+    cJSON *subject = NULL;
+    check(ursatz_gui_subject_create("Delete test", "idea", "", &subject) == URSATZ_GUI_SUBJECT_OK,
+          "a subject is created");
+    char *subject_id = subject ? strdup(cJSON_GetObjectItemCaseSensitive(subject, "id")->valuestring) : NULL;
+    cJSON_Delete(subject);
+    subject = NULL;
+    check(subject_id && ursatz_gui_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_GUI_SUBJECT_OK,
+          "the subject links the piece");
     char dir[256];
     snprintf(dir, sizeof(dir), "pieces/%s", mozart_id);
     response = http_exchange("DELETE", path, NULL, NULL, 0);
     check(response_has_status(response, 200), "DELETE removes a piece");
     free(response);
+    check(subject_id && ursatz_gui_subject_get(subject_id, &subject) == URSATZ_GUI_SUBJECT_OK &&
+              cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(subject, "pieces")) == 0,
+          "deleting a piece removes it from the subjects that linked it");
+    cJSON_Delete(subject);
+    if (subject_id) {
+      ursatz_gui_subject_delete(subject_id);
+    }
+    free(subject_id);
     check(!is_directory(dir), "deleting a piece removes its directory");
     response = http_get(path);
     check(strstr(response_body(response), "\"ok\":false") != NULL, "a deleted piece is not found");
