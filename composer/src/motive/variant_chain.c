@@ -378,3 +378,34 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     *out = current;
     return VARIANT_OK;
 }
+
+bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out) {
+    if (!source || !out) {
+        return false;
+    }
+    const VariantOperation *candidates[VARIANT_CHAIN_MAX * 4 + 16];
+    size_t count = 0;
+    for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
+        const VariantOperation *operation = variant_registry_at(i);
+        if (operation->category != VARIANT_CATEGORY_EXACT && (operation->forms & VARIANT_FORM_BIT(source->form)) != 0) {
+            candidates[count++] = operation;
+        }
+    }
+    memset(out, 0, sizeof(*out));
+    if (count == 0) {
+        return true;
+    }
+    FillRng rng;
+    fill_rng_seed(&rng, seed);
+    size_t steps = 1 + (size_t)fill_rng_below(&rng, 2);
+    if (steps > count) {
+        steps = count;
+    }
+    for (size_t s = 0; s < steps; s++) {
+        size_t pick = (size_t)fill_rng_below(&rng, count - s);
+        variant_step_init(&out->steps[s], candidates[pick]->name);
+        candidates[pick] = candidates[count - s - 1];
+    }
+    out->step_count = steps;
+    return true;
+}

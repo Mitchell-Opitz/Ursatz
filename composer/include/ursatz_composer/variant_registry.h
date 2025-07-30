@@ -201,4 +201,11 @@ const char *variant_result_name(VariantResult result);
 VariantResult variant_apply_chain(const Motive *source, const VariantChain *chain, unsigned long seed, Motive *out,
                                   VariantRecord *record);
 
+/*
+ * A random chain for source: 1 or 2 steps, each a different operation drawn from those the source's form takes (never
+ * exact), every parameter open. Drawn from seed, so the same source and seed give the same chain. False for NULL
+ * arguments.
+ */
+bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out);
+
 #endif
