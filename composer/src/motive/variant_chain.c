@@ -234,6 +234,56 @@ static void record_difference(const Motive *source, const Motive *result, Varian
     }
 }
 
+/* ---------------------------------------------------------------- derivation */
+
+static void append(char *out, size_t size, const char *text) {
+    size_t used = strlen(out);
+    if (used < size) {
+        snprintf(out + used, size - used, "%s", text);
+    }
+}
+
+/* "a", "a and b", "a, b and c"; "nothing" for none. */
+static void append_list(char *out, size_t size, const char *const *names, size_t count, bool rhythm_scaled) {
+    if (count == 0) {
+        append(out, size, "nothing");
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        append(out, size, i == 0 ? "" : (i + 1 == count ? " and " : ", "));
+        append(out, size, "the ");
+        append(out, size, names[i]);
+        if (strcmp(names[i], "rhythm") == 0 && rhythm_scaled) {
+            append(out, size, "'s proportions");
+        }
+    }
+}
+
+/* One sentence for the steps, then one for what was kept and changed. */
+static void record_derivation(VariantRecord *record) {
+    char *text = record->derivation;
+    size_t size = sizeof(record->derivation);
+    text[0] = '\0';
+    for (size_t s = 0; s < record->step_count; s++) {
+        const VariantOperation *operation = variant_registry_find(record->steps[s].op);
+        char phrase[96] = "";
+        if (operation) {
+            operation->describe(record->steps[s].values, phrase, sizeof(phrase));
+        }
+        size_t start = strlen(text);
+        append(text, size, s == 0 ? "" : ", then ");
+        append(text, size, phrase);
+        if (s == 0 && text[start] >= 'a' && text[start] <= 'z') {
+            text[start] = (char)(text[start] - 'a' + 'A');
+        }
+    }
+    append(text, size, ". Kept ");
+    append_list(text, size, record->kept, record->kept_count, record->rhythm_scaled);
+    append(text, size, "; changed ");
+    append_list(text, size, record->changed, record->changed_count, false);
+    append(text, size, ".");
+}
+
 /* -------------------------------------------------------------------- chain */
 
 static void record_error(VariantRecord *record, size_t step, const char *format, ...) __attribute__((format(printf, 3, 4)));
@@ -324,6 +374,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     }
 
     record_difference(source, &current, log);
+    record_derivation(log);
     *out = current;
     return VARIANT_OK;
 }

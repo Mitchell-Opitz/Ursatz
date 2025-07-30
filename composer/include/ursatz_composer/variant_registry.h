@@ -103,6 +103,7 @@ int variant_operation_param_index(const VariantOperation *operation, const char 
 
 #define VARIANT_CHAIN_MAX 4
 #define VARIANT_ERROR_MAX 160
+#define VARIANT_DERIVATION_MAX 512
 
 /* One operation and the parameters Michelle (or a chain file) set. A parameter not set is open. */
 typedef struct {
@@ -167,6 +168,12 @@ typedef struct {
     bool rhythm_scaled;
     /* motive_recognizability of the result against the source, the total. */
     MotiveScore recognizability;
+    /*
+     * How it was made in plain words: each step's phrase from the registry, joined by "then", and what was kept and
+     * changed. "Inverted about D4 in the key's scale, then augmented 2:1. Kept the rhythm's proportions; changed
+     * the intervals and the contour."
+     */
+    char derivation[VARIANT_DERIVATION_MAX];
     size_t failed_step;
     char error[VARIANT_ERROR_MAX];
 } VariantRecord;
