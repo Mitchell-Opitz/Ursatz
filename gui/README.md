@@ -520,6 +520,42 @@ An item can use other items, from any project. Each entry of a body's `uses` is
   are; their uses report `missing: true`. Saving a new version of such a user
   needs the missing use removed first.
 
+### Subjects
+
+A subject is a character, place, idea or note that items and Library pieces
+link to. They live in `subjects/`, one file per subject, beside `materials/`.
+`service/subject_service.c` is the only code that touches them; every
+operation runs under one mutex, and every file is written to `<name>.tmp` and
+renamed.
+
+```
+subjects/
+  <sub-id>.json   {id, name, kind, note, items: [item ids],
+                   pieces: [library piece ids], related: [subject ids],
+                   created_at, updated_at}
+```
+
+- Ids are `sub-<16 lowercase hex>`. `kind` is `character`, `place`, `idea` or
+  `note`. A name is 1 to 200 characters after trimming, a note at most 4000.
+- `ursatz_gui_subject_link_item` and `ursatz_gui_subject_link_piece` check
+  that the item is in the material store and the piece is in `pieces/`.
+  Linking something already linked is not an error: `*out_already` is set and
+  nothing changes. Unlinking something that is not linked is `ERR_NOT_LINKED`.
+- `ursatz_gui_subject_relate` stores the relation on both subjects. A subject
+  cannot relate to itself (`ERR_SELF`); relating twice reports `already`.
+- Deleting a subject removes it from every `related` list. It does not touch
+  the items or pieces it linked.
+- Deleting a Library piece (`DELETE /api/analyzer/pieces/<id>`) calls
+  `ursatz_gui_subject_forget_piece`, and `ursatz_gui_material_item_delete`
+  calls `ursatz_gui_subject_forget_item`, so a subject never keeps a link to
+  something that is gone. A failure there is logged, not answered.
+- `ursatz_gui_subject_list` returns the subjects in name order with
+  `item_count`, `piece_count` and `related_count`. `ursatz_gui_subject_groups`
+  is the panel's view: one group per kind, each with its subjects and their
+  `item_count`, `piece_count` and `link_count` (items plus pieces).
+- `server.c` starts both the material store (`materials/`) and the subject
+  store (`subjects/`) with the collections.
+
 ### Analyzer routes
 
 - `POST /api/analyzer/pieces`: the file as the raw request body, its name

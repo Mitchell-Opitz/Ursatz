@@ -12,6 +12,7 @@
 #include "../service/analysis_service.h"
 #include "../service/collection_service.h"
 #include "../service/piece_metadata.h"
+#include "../service/subject_service.h"
 
 static const char *kPiecesDir = "pieces";
 static const size_t kReadChunkSize = 65536;
@@ -852,6 +853,11 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
    * already deleted, so a failure here is logged, not answered. */
   if (ursatz_gui_collection_remove_piece_everywhere(id) != URSATZ_GUI_COLLECTION_OK) {
     fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every collection\n", id);
+  }
+
+  /* The same goes for the subjects that linked the piece. */
+  if (ursatz_gui_subject_forget_piece(id) != URSATZ_GUI_SUBJECT_OK) {
+    fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every subject\n", id);
   }
 
   send_json(conn, "{\"ok\":true}");
