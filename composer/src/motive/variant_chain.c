@@ -10,6 +10,7 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_internal.h"
+#include "plan/plan_json_internal.h"
 
 /* How many draws of its open parameters a refused step gets. */
 #define VARIANT_DRAWS 16
@@ -408,4 +409,88 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     }
     out->step_count = steps;
     return true;
+}
+
+/* ------------------------------------------------------------------- JSON */
+
+static cJSON *value_json(const VariantParam *param, const VariantValue *value) {
+    switch (param->kind) {
+    case VARIANT_PARAM_BOOL:
+        return cJSON_CreateBool(value->value != 0);
+    case VARIANT_PARAM_POSITION: {
+        static const char *const NAMES[] = {"any", "leading", "trailing", "middle"};
+        return cJSON_CreateString(value->value >= 0 && value->value <= 3 ? NAMES[value->value] : "any");
+    }
+    case VARIANT_PARAM_RATIO: {
+        char text[32];
+        snprintf(text, sizeof(text), "%ld:%ld", value->value, value->den);
+        return cJSON_CreateString(text);
+    }
+    default:
+        return json_number(value->value);
+    }
+}
+
+static cJSON *step_json(const VariantStepRecord *step) {
+    const VariantOperation *operation = variant_registry_find(step->op);
+    cJSON *object = cJSON_CreateObject();
+    bool ok = object && operation && json_add(object, "op", cJSON_CreateString(step->op));
+    cJSON *params = ok ? cJSON_CreateObject() : NULL;
+    ok = ok && json_add(object, "params", params);
+    cJSON *open = ok ? cJSON_CreateArray() : NULL;
+    ok = ok && json_add(object, "open", open);
+    for (size_t p = 0; ok && p < step->param_count; p++) {
+        if (step->values[p].set) {
+            ok = json_add(params, operation->params[p].name, value_json(&operation->params[p], &step->values[p]));
+        }
+        if (ok && step->open[p]) {
+            ok = json_append(open, cJSON_CreateString(operation->params[p].name));
+        }
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static bool names_json(cJSON *object, const char *key, const char *const *names, size_t count) {
+    cJSON *array = cJSON_CreateArray();
+    if (!json_add(object, key, array)) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (!json_append(array, cJSON_CreateString(names[i]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+char *variant_record_to_json(const VariantRecord *record) {
+    if (!record) {
+        return NULL;
+    }
+    cJSON *document = cJSON_CreateObject();
+    cJSON *chain = document ? cJSON_CreateObject() : NULL;
+    bool ok = document && json_add(document, "seed", json_number((long)record->seed)) && json_add(document, "chain", chain);
+    cJSON *steps = ok ? cJSON_CreateArray() : NULL;
+    ok = ok && json_add(chain, "steps", steps);
+    for (size_t s = 0; ok && s < record->step_count; s++) {
+        ok = json_append(steps, step_json(&record->steps[s]));
+    }
+    double score = record->recognizability.denominator == 0
+                       ? 0.0
+                       : (double)record->recognizability.numerator / (double)record->recognizability.denominator;
+    ok = ok && json_add(document, "kind", cJSON_CreateString(variant_kind_name(record->kind))) &&
+         names_json(document, "kept", record->kept, record->kept_count) &&
+         names_json(document, "changed", record->changed, record->changed_count) &&
+         names_json(document, "functions", NULL, 0) &&
+         json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
+         json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0));
+    if (!ok) {
+        cJSON_Delete(document);
+        return NULL;
+    }
+    return motive_json_text(document);
 }

@@ -5,6 +5,9 @@
 
 #include <ursatz_composer/motive_analysis.h>
 
+#include "motive/motive_internal.h"
+#include "plan/plan_json_internal.h"
+
 /*
  * The registry table. Parameters are in the order the operation's apply and describe functions read them; the
  * constants below name the indexes. The ranges are what a chain draws open parameters from (variant_chain.c) and what
@@ -312,4 +315,64 @@ int variant_operation_param_index(const VariantOperation *operation, const char 
         }
     }
     return -1;
+}
+
+/* ------------------------------------------------------------------- JSON */
+
+static cJSON *param_json(const VariantParam *param) {
+    cJSON *object = cJSON_CreateObject();
+    bool ok = object && json_add(object, "name", cJSON_CreateString(param->name)) &&
+              json_add(object, "kind", cJSON_CreateString(variant_param_kind_name(param->kind))) &&
+              json_add(object, "min", json_number(param->min)) && json_add(object, "max", json_number(param->max)) &&
+              json_add(object, "description", cJSON_CreateString(param->description)) &&
+              json_add(object, "optional", cJSON_CreateBool(param->optional));
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* Adds an empty array under key and returns it; the object owns it. NULL on failure. */
+static cJSON *add_array(cJSON *object, const char *key) {
+    cJSON *array = cJSON_CreateArray();
+    return json_add(object, key, array) ? array : NULL;
+}
+
+static cJSON *operation_json(const VariantOperation *operation) {
+    cJSON *object = cJSON_CreateObject();
+    bool ok = object && json_add(object, "name", cJSON_CreateString(operation->name)) &&
+              json_add(object, "label", cJSON_CreateString(operation->label)) &&
+              json_add(object, "category", cJSON_CreateString(variant_category_name(operation->category))) &&
+              json_add(object, "citation", cJSON_CreateString(operation->citation));
+    cJSON *params = ok ? add_array(object, "params") : NULL;
+    cJSON *forms = ok ? add_array(object, "forms") : NULL;
+    ok = ok && params && forms;
+    for (size_t i = 0; ok && i < operation->param_count; i++) {
+        ok = json_append(params, param_json(&operation->params[i]));
+    }
+    for (int form = MOTIVE_FORM_FULL; ok && form <= MOTIVE_FORM_CONTOUR; form++) {
+        if ((operation->forms & VARIANT_FORM_BIT(form)) != 0) {
+            ok = json_append(forms, cJSON_CreateString(motive_form_name((MotiveForm)form)));
+        }
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+char *variant_registry_to_json(void) {
+    cJSON *document = cJSON_CreateObject();
+    cJSON *operations = document ? add_array(document, "operations") : NULL;
+    bool ok = operations != NULL;
+    for (size_t i = 0; ok && i < variant_registry_count(); i++) {
+        ok = json_append(operations, operation_json(variant_registry_at(i)));
+    }
+    if (!ok) {
+        cJSON_Delete(document);
+        return NULL;
+    }
+    return motive_json_text(document);
 }

@@ -96,6 +96,14 @@ const VariantOperation *variant_registry_at(size_t index);
 /* NULL for a name that is not in the registry. */
 const VariantOperation *variant_registry_find(const char *name);
 
+/*
+ * The registry as JSON, 2-space indent, trailing newline; NULL on failure, caller frees:
+ *   {"operations": [{"name", "label", "category", "citation",
+ *                    "params": [{"name", "kind", "min", "max", "description", "optional"}],
+ *                    "forms": ["full", "rhythm", "contour"]}]}
+ */
+char *variant_registry_to_json(void);
+
 /* The index of a parameter of the operation by name, or -1. */
 int variant_operation_param_index(const VariantOperation *operation, const char *name);
 
@@ -200,6 +208,16 @@ const char *variant_result_name(VariantResult result);
  */
 VariantResult variant_apply_chain(const Motive *source, const VariantChain *chain, unsigned long seed, Motive *out,
                                   VariantRecord *record);
+
+/*
+ * A record as JSON, 2-space indent, trailing newline; NULL on failure, caller frees. A parameter's value is a boolean,
+ * a number (an int or a MIDI pitch), a position name ("leading") or a ratio text ("2:1"):
+ *   {"seed", "chain": {"steps": [{"op", "params": {"tonal": true}, "open": ["by"]}]},
+ *    "kind", "kept": [], "changed": [], "functions": [], "derivation", "recognizability": 0.8571}
+ * params holds every resolved parameter that has a value; open names those the seed drew. functions stays [] until
+ * the function tags of P14.
+ */
+char *variant_record_to_json(const VariantRecord *record);
 
 /*
  * A random chain for source: 1 or 2 steps, each a different operation drawn from those the source's form takes (never
