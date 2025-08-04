@@ -89,10 +89,33 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         /* An axis is one of the motive's own pitches. */
         value.value = current->notes[fill_rng_below(rng, current->note_count)].midi_pitch;
         break;
-    case VARIANT_PARAM_RATIO:
-        value.value = draw_int(rng, param->min, param->max);
-        value.den = draw_int(rng, param->min, param->max);
+    case VARIANT_PARAM_RATIO: {
+        /* A factor in lowest terms from min:max to max:min, above 1 or, when the parameter shrinks, below it. */
+        long nums[16];
+        long dens[16];
+        size_t pairs = 0;
+        for (long a = param->min; a <= param->max && pairs < 16; a++) {
+            for (long b = param->min; b < a && pairs < 16; b++) {
+                long x = a;
+                long y = b;
+                while (y != 0) {
+                    long t = x % y;
+                    x = y;
+                    y = t;
+                }
+                if (x == 1) {
+                    nums[pairs] = a;
+                    dens[pairs++] = b;
+                }
+            }
+        }
+        size_t pick = pairs == 0 ? 0 : (size_t)fill_rng_below(rng, pairs);
+        long up = pairs == 0 ? 2 : nums[pick];
+        long down = pairs == 0 ? 1 : dens[pick];
+        value.value = param->shrinks ? down : up;
+        value.den = param->shrinks ? up : down;
         break;
+    }
     default: {
         long max = param->max;
         if (param->notes_limit && (long)current->note_count - 1 < max) {

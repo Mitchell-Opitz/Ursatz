@@ -53,6 +53,8 @@ typedef struct {
     bool optional;
     /* A count of the source's notes: the largest value drawn is the source's note count less one. */
     bool notes_limit;
+    /* A ratio: drawn below 1 instead of above it. */
+    bool shrinks;
 } VariantParam;
 
 /*

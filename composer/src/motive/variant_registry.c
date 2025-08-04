@@ -59,10 +59,10 @@ static void describe_exact(const VariantValue *values, char *out, size_t size) {
 enum { TRANSPOSE_TONAL, TRANSPOSE_BY, TRANSPOSE_DEGREE };
 
 static const VariantParam TRANSPOSE_PARAMS[] = {
-    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "move in steps of the key's scale instead of semitones", false, false},
-    {"by", VARIANT_PARAM_INT, -12, 12, "how far to move: semitones, or steps when tonal; not 0", false, false},
+    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "move in steps of the key's scale instead of semitones", false, false, false},
+    {"by", VARIANT_PARAM_INT, -12, 12, "how far to move: semitones, or steps when tonal; not 0", false, false, false},
     {"degree", VARIANT_PARAM_INT, 1, 7, "move the first note to this scale degree instead of using by; tonal", true,
-     false}};
+     false, false}};
 
 static MotiveDevResult apply_transpose(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -99,8 +99,8 @@ static void describe_transpose(const VariantValue *values, char *out, size_t siz
 enum { INVERT_AXIS, INVERT_TONAL };
 
 static const VariantParam INVERT_PARAMS[] = {
-    {"axis", VARIANT_PARAM_PITCH, 0, 127, "the pitch mirrored about; the first note when not set", false, false},
-    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "mirror in steps of the key's scale instead of semitones", false, false}};
+    {"axis", VARIANT_PARAM_PITCH, 0, 127, "the pitch mirrored about; the first note when not set", false, false, false},
+    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "mirror in steps of the key's scale instead of semitones", false, false, false}};
 
 static MotiveDevResult apply_invert(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -139,9 +139,9 @@ static void describe_retrograde(const VariantValue *values, char *out, size_t si
 enum { INTERVAL_WHICH, INTERVAL_AMOUNT, INTERVAL_KEEP_CONTOUR };
 
 static const VariantParam INTERVAL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 0, 16, "the 1-based interval changed; 0 for every one", false, true},
-    {"amount", VARIANT_PARAM_INT, -6, 6, "semitones to widen by, negative to narrow; not 0", false, false},
-    {"keep-contour", VARIANT_PARAM_BOOL, 0, 1, "refuse a result that changes a direction", false, false}};
+    {"interval", VARIANT_PARAM_INT, 0, 16, "the 1-based interval changed; 0 for every one", false, true, false},
+    {"amount", VARIANT_PARAM_INT, -6, 6, "semitones to widen by, negative to narrow; not 0", false, false, false},
+    {"keep-contour", VARIANT_PARAM_BOOL, 0, 1, "refuse a result that changes a direction", false, false, false}};
 
 static MotiveDevResult apply_interval_change(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -170,9 +170,9 @@ enum { FRAGMENT_POSITION, FRAGMENT_LENGTH, FRAGMENT_MIN };
 
 static const VariantParam FRAGMENT_PARAMS[] = {
     {"position", VARIANT_PARAM_POSITION, 1, 3, "where the fragment is taken from: leading, trailing or middle", false,
-     false},
-    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes the fragment has", false, true},
-    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false}};
+     false, false},
+    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes the fragment has", false, true, false},
+    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false}};
 
 static MotiveDevResult apply_fragment(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -194,9 +194,9 @@ static void describe_fragment(const VariantValue *values, char *out, size_t size
 enum { LIQUIDATE_DROP, LIQUIDATE_KEEP_RHYTHM, LIQUIDATE_MIN };
 
 static const VariantParam LIQUIDATE_PARAMS[] = {
-    {"drop", VARIANT_PARAM_INT, 1, 16, "how many notes to drop, the weakest first", false, true},
-    {"keep-rhythm", VARIANT_PARAM_BOOL, 0, 1, "leave a dropped note's time as a rest", false, false},
-    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false}};
+    {"drop", VARIANT_PARAM_INT, 1, 16, "how many notes to drop, the weakest first", false, true, false},
+    {"keep-rhythm", VARIANT_PARAM_BOOL, 0, 1, "leave a dropped note's time as a rest", false, false, false},
+    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false}};
 
 static MotiveDevResult apply_liquidate(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -215,9 +215,13 @@ static void describe_liquidate(const VariantValue *values, char *out, size_t siz
 
 /* -------------------------------------------------------- augment, diminish */
 
-static const VariantParam RATIO_PARAMS[] = {
-    {"ratio", VARIANT_PARAM_RATIO, 1, 4, "the factor durations are multiplied by, n:m; 2:1 or 1:2 when not set", false,
-     false}};
+static const VariantParam AUGMENT_PARAMS[] = {
+    {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor durations are multiplied by, n:m above 1; 2:1 when not set", false,
+     false, false}};
+
+static const VariantParam DIMINISH_PARAMS[] = {
+    {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor durations are multiplied by, n:m below 1; 1:2 when not set", false,
+     false, true}};
 
 static MotiveDevResult apply_ratio(MotiveDevKind kind, const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -280,9 +284,9 @@ static const VariantOperation OPERATIONS[] = {
      FORMS_ALL, apply_fragment, describe_fragment},
     {"liquidate", "Liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52", PARAMS(LIQUIDATE_PARAMS),
      FORMS_FULL_RHYTHM, apply_liquidate, describe_liquidate},
-    {"augment", "Augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(RATIO_PARAMS), FORMS_FULL_RHYTHM,
+    {"augment", "Augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(AUGMENT_PARAMS), FORMS_FULL_RHYTHM,
      apply_augment, describe_augment},
-    {"diminish", "Diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(RATIO_PARAMS), FORMS_FULL_RHYTHM,
+    {"diminish", "Diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(DIMINISH_PARAMS), FORMS_FULL_RHYTHM,
      apply_diminish, describe_diminish}};
 
 size_t variant_registry_count(void) {
