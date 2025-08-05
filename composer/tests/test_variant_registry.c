@@ -239,6 +239,178 @@ static void test_refused_steps(void) {
     assert(record.failed_step == 0 && strncmp(record.error, "fragment: ", 10) == 0);
 }
 
+/* ----------------------------------------------------- kept, changed and kind */
+
+static bool listed(const char *const *names, size_t count, const char *name) {
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(names[i], name) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool kept(const VariantRecord *record, const char *name) {
+    return listed(record->kept, record->kept_count, name);
+}
+
+static bool changed(const VariantRecord *record, const char *name) {
+    return listed(record->changed, record->changed_count, name);
+}
+
+static VariantResult run_one(const Motive *source, VariantStep step, unsigned long seed, Motive *out,
+                             VariantRecord *record) {
+    VariantChain chain = one_step(step);
+    return variant_apply_chain(source, &chain, seed, out, record);
+}
+
+static void test_transpose_tonal_is_exact(void) {
+    Motive source = source_motive();
+    VariantStep step = step_of("transpose");
+    assert(variant_step_set(&step, "tonal", 1, 0));
+    assert(variant_step_set(&step, "by", 7, 0));
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(out.notes[0].midi_pitch == 74);
+    assert(record.kind == VARIANT_KIND_EXACT && record.changed_count == 0);
+    assert(kept(&record, "rhythm") && kept(&record, "intervals") && kept(&record, "contour") && kept(&record, "harmony"));
+    assert(!record.rhythm_scaled);
+    assert(strcmp(variant_kind_name(record.kind), "exact") == 0);
+}
+
+static void test_invert_changes_contour(void) {
+    Motive source = source_motive();
+    VariantStep step = step_of("invert");
+    assert(variant_step_set(&step, "tonal", 1, 0));
+    assert(variant_step_set(&step, "axis", 62, 0));
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(record.kind == VARIANT_KIND_MOTIVE_FORM);
+    assert(changed(&record, "contour") && changed(&record, "intervals"));
+    assert(kept(&record, "rhythm") && !record.rhythm_scaled);
+    assert(strcmp(variant_kind_name(record.kind), "motive-form") == 0);
+    assert(record.recognizability.denominator >= 1 && record.recognizability.numerator <= record.recognizability.denominator);
+}
+
+static void test_augment_keeps_rhythm_proportions(void) {
+    Motive source = source_motive();
+    VariantStep step = step_of("augment");
+    assert(variant_step_set(&step, "ratio", 2, 1));
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(kept(&record, "rhythm") && record.rhythm_scaled);
+    assert(kept(&record, "intervals") && kept(&record, "contour"));
+    assert(record.kind == VARIANT_KIND_EXACT || changed(&record, "harmony"));
+
+    /* a fragment is a different rhythm and different intervals */
+    VariantStep fragment = step_of("fragment");
+    assert(variant_step_set(&fragment, "position", 1, 0));
+    assert(variant_step_set(&fragment, "length", 3, 0));
+    assert(run_one(&source, fragment, 0, &out, &record) == VARIANT_OK);
+    assert(changed(&record, "rhythm") && changed(&record, "intervals"));
+    assert(record.kind == VARIANT_KIND_MOTIVE_FORM);
+}
+
+static void test_forms_have_only_their_dimensions(void) {
+    Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
+    VariantStep step = step_of("augment");
+    assert(variant_step_set(&step, "ratio", 2, 1));
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&rhythm, step, 0, &out, &record) == VARIANT_OK);
+    assert(record.kept_count == 1 && kept(&record, "rhythm") && record.changed_count == 0 && record.rhythm_scaled);
+    assert(out.form == MOTIVE_FORM_RHYTHM);
+
+    Motive contour = load("0 2 1 3", "4/4", NULL, MOTIVE_FORMAT_CONTOUR);
+    assert(run_one(&contour, step_of("invert"), 2, &out, &record) == VARIANT_OK);
+    assert(record.kept_count + record.changed_count == 1);
+    assert(changed(&record, "contour") || kept(&record, "contour"));
+    assert(out.form == MOTIVE_FORM_CONTOUR);
+}
+
+static void test_derivation_sentence(void) {
+    Motive source = source_motive();
+    VariantChain chain;
+    memset(&chain, 0, sizeof(chain));
+    chain.steps[0] = step_of("invert");
+    assert(variant_step_set(&chain.steps[0], "axis", 62, 0));
+    assert(variant_step_set(&chain.steps[0], "tonal", 1, 0));
+    chain.steps[1] = step_of("augment");
+    assert(variant_step_set(&chain.steps[1], "ratio", 2, 1));
+    chain.step_count = 2;
+    Motive out;
+    VariantRecord record;
+    assert(variant_apply_chain(&source, &chain, 0, &out, &record) == VARIANT_OK);
+    static const char EXPECTED[] = "Inverted about D4 in the key's scale, then augmented 2:1. Kept the rhythm's proportions";
+    assert(strncmp(record.derivation, EXPECTED, strlen(EXPECTED)) == 0);
+    assert(strstr(record.derivation, "changed ") != NULL);
+    assert(strstr(record.derivation, "the intervals") != NULL && strstr(record.derivation, "the contour") != NULL);
+    assert(record.derivation[strlen(record.derivation) - 1] == '.');
+}
+
+/* ------------------------------------------------------- random chains, JSON */
+
+static void test_random_chains(void) {
+    Motive source = source_motive();
+    Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
+    Motive contour = load("0 2 1 3", "4/4", NULL, MOTIVE_FORMAT_CONTOUR);
+    const Motive *sources[] = {&source, &rhythm, &contour};
+    bool two_steps = false;
+    bool one_step_seen = false;
+    for (size_t m = 0; m < 3; m++) {
+        for (unsigned long seed = 0; seed < 24; seed++) {
+            VariantChain a;
+            VariantChain b;
+            assert(variant_random_chain(sources[m], seed, &a) && variant_random_chain(sources[m], seed, &b));
+            assert(a.step_count >= 1 && a.step_count <= 2 && a.step_count == b.step_count);
+            two_steps = two_steps || a.step_count == 2;
+            one_step_seen = one_step_seen || a.step_count == 1;
+            for (size_t s = 0; s < a.step_count; s++) {
+                const VariantOperation *operation = variant_registry_find(a.steps[s].op);
+                assert(operation && strcmp(a.steps[s].op, b.steps[s].op) == 0);
+                assert(strcmp(operation->name, "exact") != 0);
+                assert((operation->forms & VARIANT_FORM_BIT(sources[m]->form)) != 0);
+                for (size_t p = 0; p < VARIANT_PARAM_MAX; p++) {
+                    assert(!a.steps[s].values[p].set);
+                }
+                assert(s == 0 || strcmp(a.steps[s].op, a.steps[0].op) != 0);
+            }
+        }
+    }
+    assert(two_steps && one_step_seen);
+}
+
+static void test_json(void) {
+    char *registry = variant_registry_to_json();
+    assert(registry);
+    assert(strstr(registry, "\"operations\"") && strstr(registry, "\"interval-change\""));
+    assert(strstr(registry, "\"melody-adaptation\"") && strstr(registry, "ch. VIII, Ex. 52"));
+    assert(strstr(registry, "\"keep-contour\"") && strstr(registry, "\"forms\""));
+    free(registry);
+
+    Motive source = source_motive();
+    VariantChain chain;
+    memset(&chain, 0, sizeof(chain));
+    chain.steps[0] = step_of("invert");
+    assert(variant_step_set(&chain.steps[0], "tonal", 1, 0));
+    chain.steps[1] = step_of("augment");
+    chain.step_count = 2;
+    Motive out;
+    VariantRecord record;
+    assert(variant_apply_chain(&source, &chain, 5, &out, &record) == VARIANT_OK);
+    char *json = variant_record_to_json(&record);
+    assert(json);
+    assert(strstr(json, "\"seed\": 5") && strstr(json, "\"op\": \"invert\"") && strstr(json, "\"tonal\": true"));
+    assert(strstr(json, "\"open\": [") && strstr(json, "\"axis\"") && strstr(json, "\"ratio\""));
+    assert(strstr(json, "\"kind\"") && strstr(json, "\"functions\": []") && strstr(json, "\"derivation\""));
+    assert(strstr(json, "\"recognizability\""));
+    free(json);
+    assert(variant_record_to_json(NULL) == NULL);
+}
+
 int main(void) {
     test_registry_entries();
     test_registry_forms();
@@ -247,6 +419,13 @@ int main(void) {
     test_open_parameters_recorded();
     test_fixed_chain_result();
     test_refused_steps();
+    test_transpose_tonal_is_exact();
+    test_invert_changes_contour();
+    test_augment_keeps_rhythm_proportions();
+    test_forms_have_only_their_dimensions();
+    test_derivation_sentence();
+    test_random_chains();
+    test_json();
     puts("test_variant_registry: ok");
     return 0;
 }
