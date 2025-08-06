@@ -406,3 +406,8 @@ foreach(mode motive same plan progression no-match cli)
     add_test(NAME test_corpus_seed_${mode} COMMAND test_corpus_seed ${mode}
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
 endforeach()
+
+add_executable(test_variant_registry test_variant_registry.c)
+target_link_libraries(test_variant_registry PRIVATE ursatz_composer)
+target_compile_options(test_variant_registry PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_variant_registry COMMAND test_variant_registry)
