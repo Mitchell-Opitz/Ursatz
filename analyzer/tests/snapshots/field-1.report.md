@@ -1265,6 +1265,20 @@ The kernel's form structure detection grouped the phrases into 5 sections, closi
         - idea contrasting-idea (mm. 62 to 63)
         - idea contrasting-idea (mm. 64 to 65)
 
+## Motives
+
+The library's motive analysis found 1 motive family in the soprano, the highest sounding note at each attack. A family is a short figure that recurs; Notes is the length of the figure, Pattern whether its occurrences match by scale steps or by semitones, Measures the measures the occurrences start in, Phrases the phrases they lie in (an occurrence across a phrase boundary lies in none), and Transformations how many occurrences are of each kind the library names against the first occurrence (exact, real-transposed, tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).
+
+| Family | Notes | Pattern | Occurrences | Measures | Phrases | Transformations |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 4 | scale steps | 4 | 31, 50, 58, 64 | 6, 10 | exact 1, real-transposed 2, fragmented 1 |
+
+### Development
+
+Each family's occurrences in time order, as the measure they start in and the kind the library names against the family's prototype, which is the original.
+
+- **Family 1:** m31 original > m50 real-transposed > m58 real-transposed > m64 fragmented
+
 ## Progression patterns
 
 31 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
