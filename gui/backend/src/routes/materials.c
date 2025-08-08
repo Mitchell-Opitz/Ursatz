@@ -283,6 +283,231 @@ static int handle_delete_project(struct mg_connection *conn, const char *id) {
   return send_ok(conn);
 }
 
+/* --- items and versions -------------------------------------------------- */
+
+/* The value of a query parameter into out; false when absent or too long. */
+static bool query_value(const struct mg_connection *conn, const char *name, char *out, size_t out_size) {
+  const struct mg_request_info *info = mg_get_request_info(conn);
+  if (!info->query_string) {
+    return false;
+  }
+  return mg_get_var(info->query_string, strlen(info->query_string), name, out, out_size) > 0;
+}
+
+static int handle_list_items(struct mg_connection *conn) {
+  char project[256];
+  char type[32];
+  cJSON *items = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_list(
+      query_value(conn, "project", project, sizeof(project)) ? project : NULL,
+      query_value(conn, "type", type, sizeof(type)) ? type : NULL, &items);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "items", items);
+}
+
+static int handle_create_item(struct mg_connection *conn) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *type = optional_string(body, "type", &bad);
+  const char *name = optional_string(body, "name", &bad);
+  const char *project_id = optional_string(body, "project_id", &bad);
+  const cJSON *version_body = cJSON_GetObjectItemCaseSensitive(body, "body");
+  if (bad || !type || !name || !project_id || !cJSON_IsObject(version_body)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "type, name, project_id and an object body are required");
+  }
+  cJSON *item = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_create(type, name, project_id, version_body, &item);
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
+/* The item answer: {"ok":true,"item":meta,"body":current,"uses_status":[...],"used_by":[...]}. */
+static int handle_get_item(struct mg_connection *conn, const char *id) {
+  cJSON *meta = NULL;
+  cJSON *body = NULL;
+  cJSON *uses_status = NULL;
+  cJSON *used_by = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &body);
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = ursatz_gui_material_uses_status(id, &uses_status);
+  }
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = ursatz_gui_material_used_by(id, &used_by);
+  }
+  cJSON *object = result == URSATZ_GUI_MATERIAL_OK ? cJSON_CreateObject() : NULL;
+  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "item", meta)) {
+    cJSON_Delete(object);
+    cJSON_Delete(meta);
+    cJSON_Delete(body);
+    cJSON_Delete(uses_status);
+    cJSON_Delete(used_by);
+    return result == URSATZ_GUI_MATERIAL_OK ? send_failure(conn, 500, "out of memory")
+                                            : send_material_failure(conn, result);
+  }
+  cJSON_AddItemToObject(object, "body", body);
+  cJSON_AddItemToObject(object, "uses_status", uses_status);
+  cJSON_AddItemToObject(object, "used_by", used_by);
+  return send_object(conn, object);
+}
+
+static int handle_patch_item(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *name = optional_string(body, "name", &bad);
+  const char *project_id = optional_string(body, "project_id", &bad);
+  if (bad || (!name && !project_id)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "give name and/or project_id as strings");
+  }
+  /* The project is checked up front, so a bad second field cannot leave the rename applied. */
+  cJSON *item = NULL;
+  UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+  if (project_id) {
+    cJSON *project = NULL;
+    result = ursatz_gui_material_project_get(project_id, &project);
+    cJSON_Delete(project);
+  }
+  if (result == URSATZ_GUI_MATERIAL_OK && name) {
+    result = ursatz_gui_material_item_rename(id, name, &item);
+  }
+  if (result == URSATZ_GUI_MATERIAL_OK && project_id) {
+    cJSON_Delete(item);
+    item = NULL;
+    result = ursatz_gui_material_item_move(id, project_id, &item);
+  }
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(item);
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
+static int handle_delete_item(struct mg_connection *conn, const char *id) {
+  char force[8];
+  bool forced = query_value(conn, "force", force, sizeof(force)) && strcmp(force, "1") == 0;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_delete(id, forced);
+  if (result == URSATZ_GUI_MATERIAL_ERR_REFERENCED) {
+    cJSON *used_by = NULL;
+    cJSON *object = cJSON_CreateObject();
+    if (ursatz_gui_material_used_by(id, &used_by) != URSATZ_GUI_MATERIAL_OK || !object ||
+        !cJSON_AddBoolToObject(object, "ok", 0) || !cJSON_AddStringToObject(object, "error", material_message(result))) {
+      cJSON_Delete(used_by);
+      cJSON_Delete(object);
+      return send_failure(conn, 500, "out of memory");
+    }
+    cJSON_AddItemToObject(object, "used_by", used_by);
+    char *text = cJSON_PrintUnformatted(object);
+    cJSON_Delete(object);
+    if (!text) {
+      return send_failure(conn, 500, "out of memory");
+    }
+    send_json_status(conn, 409, reason_for(409), text);
+    free(text);
+    return 409;
+  }
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok(conn);
+}
+
+static int handle_add_version(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *note = optional_string(body, "note", &bad);
+  const cJSON *version_body = cJSON_GetObjectItemCaseSensitive(body, "body");
+  if (bad || !cJSON_IsObject(version_body)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "an object body is required; note is a string");
+  }
+  cJSON *item = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_add_version(id, version_body, note, &item);
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
+static int handle_get_version(struct mg_connection *conn, const char *id, const char *number_text) {
+  char *end = NULL;
+  long number = strtol(number_text, &end, 10);
+  if (end == number_text || *end != '\0' || number < 1 || number > 1000000) {
+    return send_failure(conn, 404, "version not found");
+  }
+  cJSON *version_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  cJSON *object = cJSON_CreateObject();
+  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddNumberToObject(object, "number", (double)number)) {
+    cJSON_Delete(object);
+    cJSON_Delete(version_body);
+    return send_failure(conn, 500, "out of memory");
+  }
+  cJSON_AddItemToObject(object, "body", version_body);
+  return send_object(conn, object);
+}
+
+static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
+  cJSON *item = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
+static int route_items(struct mg_connection *conn, const char *method, char segments[][256], int count) {
+  bool get = strcmp(method, "GET") == 0;
+  bool post = strcmp(method, "POST") == 0;
+  if (count == 1) {
+    if (get) {
+      return handle_list_items(conn);
+    }
+    return post ? handle_create_item(conn) : send_method_not_allowed(conn);
+  }
+  if (count == 2) {
+    if (get) {
+      return handle_get_item(conn, segments[1]);
+    }
+    if (strcmp(method, "PATCH") == 0) {
+      return handle_patch_item(conn, segments[1]);
+    }
+    return strcmp(method, "DELETE") == 0 ? handle_delete_item(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "versions") == 0) {
+    return post ? handle_add_version(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 4 && strcmp(segments[2], "versions") == 0) {
+    return get ? handle_get_version(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
+  }
+  if (count == 5 && strcmp(segments[2], "uses") == 0 && strcmp(segments[4], "update") == 0) {
+    return post ? handle_update_use(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
+  }
+  return send_not_found(conn);
+}
+
 /*
  * Splits the part of local_uri after prefix into path segments (copied into
  * storage). Returns the segment count, or -1 when there are too many, an
@@ -358,6 +583,9 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (strcmp(segments[0], "projects") == 0) {
     return route_projects(conn, method, segments, count);
+  }
+  if (strcmp(segments[0], "items") == 0) {
+    return route_items(conn, method, segments, count);
   }
   return send_not_found(conn);
 }
