@@ -716,6 +716,82 @@ A later theme recalls an earlier one when the kernel's thematic return detection
       - subphrase 2 (mm. 20 to 21)
         - idea contrasting-idea (mm. 20 to 21)
 
+## Motives
+
+The library's motive analysis found 32 motive families in the soprano, the highest sounding note at each attack. A family is a short figure that recurs; Notes is the length of the figure, Pattern whether its occurrences match by scale steps or by semitones, Measures the measures the occurrences start in, Phrases the phrases they lie in (an occurrence across a phrase boundary lies in none), and Transformations how many occurrences are of each kind the library names against the first occurrence (exact, real-transposed, tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).
+
+| Family | Notes | Pattern | Occurrences | Measures | Phrases | Transformations |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 8 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
+| 2 | 8 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
+| 3 | 8 | scale steps | 8 | 1, 4, 7, 10, 14, 17, 20, 23 | 1, 2 | exact 4, fragmented 4 |
+| 4 | 8 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
+| 5 | 8 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
+| 6 | 8 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
+| 7 | 8 | scale steps | 6 | 2, 5, 6, 8, 11, 12 | 1 | exact 4, fragmented 2 |
+| 8 | 8 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 2, fragmented 2 |
+| 9 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 10 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 11 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 12 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 13 | 8 | scale steps | 2 | 5, 11 | 1 | exact 2 |
+| 14 | 8 | scale steps | 2 | 6, 12 | 1 | exact 2 |
+| 15 | 7 | scale steps | 6 | 6, 2, 5, 8, 11, 12 | 1 | exact 2, fragmented 4 |
+| 16 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 17 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 18 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 19 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 20 | 8 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
+| 21 | 8 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
+| 22 | 8 | scale steps | 4 | 14, 17, 20, 23 | 1, 2 | exact 2, fragmented 2 |
+| 23 | 8 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
+| 24 | 8 | scale steps | 2 | 15, 21 | 1, 2 | exact 2 |
+| 25 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 26 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 27 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 28 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 29 | 8 | scale steps | 2 | 17, 23 | 2 | exact 2 |
+| 30 | 8 | scale steps | 2 | 17, 23 | 2 | exact 2 |
+| 31 | 4 | scale steps | 2 | 18, 24 | 2 | exact 2 |
+| 32 | 6 | scale steps | 2 | 18, 24 | 2 | exact 2 |
+
+### Development
+
+Each family's occurrences in time order, as the measure they start in and the kind the library names against the family's prototype, which is the original.
+
+- **Family 1:** m1 original > m4 exact > m7 exact > m10 exact
+- **Family 2:** m1 original > m4 exact > m7 exact > m10 exact
+- **Family 3:** m1 original > m4 exact > m7 exact > m10 exact > m14 fragmented > m17 fragmented > m20 fragmented > m23 fragmented
+- **Family 4:** m1 original > m4 exact > m7 exact > m10 exact
+- **Family 5:** m2 original > m5 exact > m8 exact > m11 exact
+- **Family 6:** m2 original > m5 exact > m8 exact > m11 exact
+- **Family 7:** m2 original > m5 exact > m6 fragmented > m8 exact > m11 exact > m12 fragmented
+- **Family 8:** m2 original > m5 fragmented > m8 exact > m11 fragmented
+- **Family 9:** m3 original > m9 exact
+- **Family 10:** m3 original > m9 exact
+- **Family 11:** m3 original > m9 exact
+- **Family 12:** m3 original > m9 exact
+- **Family 13:** m5 original > m11 exact
+- **Family 14:** m6 original > m12 exact
+- **Family 15:** m2 fragmented > m5 fragmented > m6 original > m8 fragmented > m11 fragmented > m12 exact
+- **Family 16:** m13 original > m19 exact
+- **Family 17:** m13 original > m19 exact
+- **Family 18:** m13 original > m19 exact
+- **Family 19:** m13 original > m19 exact
+- **Family 20:** m14 original > m20 exact
+- **Family 21:** m14 original > m20 exact
+- **Family 22:** m14 original > m17 fragmented > m20 exact > m23 fragmented
+- **Family 23:** m14 original > m20 exact
+- **Family 24:** m15 original > m21 exact
+- **Family 25:** m16 original > m22 exact
+- **Family 26:** m16 original > m22 exact
+- **Family 27:** m16 original > m22 exact
+- **Family 28:** m16 original > m22 exact
+- **Family 29:** m17 original > m23 exact
+- **Family 30:** m17 original > m23 exact
+- **Family 31:** m18 original > m24 exact
+- **Family 32:** m18 original > m24 exact
+
 ## Progression patterns
 
 38 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.

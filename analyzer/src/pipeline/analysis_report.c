@@ -99,6 +99,14 @@ void analysis_report_destroy(AnalysisReport *report) {
     free(report->expansions);
     free(report->sections);
     free(report->thematic_returns);
+    for (size_t i = 0; i < report->motive_count; i++) {
+        for (size_t o = 0; o < report->motives[i].occurrence_count; o++) {
+            free(report->motives[i].occurrences[o].note_ids);
+        }
+        free(report->motives[i].occurrences);
+        free(report->motives[i].development);
+    }
+    free(report->motives);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -131,6 +139,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->section_count = 0;
     report->thematic_returns = NULL;
     report->thematic_return_count = 0;
+    report->motives = NULL;
+    report->motive_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

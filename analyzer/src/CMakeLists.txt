@@ -14,6 +14,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/form_boundary.c
     pipeline/form_pipeline.c
     pipeline/form_plan_pipeline.c
+    pipeline/motive_pipeline.c
     pipeline/progression_pipeline.c
     pipeline/harmonic_rhythm_pipeline.c
     pipeline/analysis_report.c

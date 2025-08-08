@@ -165,7 +165,9 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !form_stage_run(&chain->form, chain->notes, &chain->voice_segmentation, segmentation, &chain->lines,
                         &chain->harmony) ||
         !form_stage_collect(&chain->form, report) || !harmony_stage_collect_phrase_model(&chain->harmony, report) ||
-        !form_plan_stage_collect(&chain->form, report)) {
+        !form_plan_stage_collect(&chain->form, report) ||
+        !motive_stage_run(&chain->motives, chain->notes, segmentation, &chain->harmony, report) ||
+        !motive_stage_collect(&chain->motives, report)) {
         return false;
     }
     sync_key_change_extents(&chain->key_regions, report->key_changes);
@@ -198,6 +200,7 @@ void chain_pass_destroy(AnalysisChain *chain) {
     outer_voice_lines_destroy(&chain->lines);
     chain->lines = (OuterVoiceLines){NULL, NULL, 0};
     form_stage_destroy(&chain->form);
+    motive_stage_destroy(&chain->motives);
     harmony_stage_destroy(&chain->harmony);
     analysis_report_destroy(&chain->report);
     memset(&chain->report, 0, sizeof(chain->report));

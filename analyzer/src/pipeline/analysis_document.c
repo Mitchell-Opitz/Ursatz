@@ -2444,6 +2444,121 @@ static cJSON *chord_vocabulary_json(const AnalysisReport *report, const cJSON *c
     return list;
 }
 
+/* ---- Motives ---- */
+
+/* One occurrence of a motive family as a claim over its soprano notes. The label is the library's kind of the
+   occurrence relative to the family's prototype (the transformation: "exact", "real-transposed" for the same semitone
+   intervals from another pitch, "tonal-transposed" for the same scale steps, "inverted", "retrograde", "augmented",
+   "diminished", "fragmented" or "varied"). measures run from the measure of its first note to the measure of its last;
+   beat is the 1-based beat of the first measure its first note starts on. score is the library's match score and
+   mismatches the interval mismatches of a varied occurrence out of intervals compared. A fragmented occurrence
+   names the part of the prototype it is (fragment: "prefix" or "suffix") and says whether it lies in a continuation
+   (in_continuation). phrase is the index into "phrases" of the phrase the whole occurrence lies in, and idea the
+   index (within that phrase's "ideas") of the idea it lies in; each is null when the occurrence crosses a boundary.
+   Both are placed by span against the report's phrases and ideas. */
+static cJSON *motive_occurrence_json(const ImportedNotes *notes, const AnalysisReport *report, const char *framework,
+                                     const AnalysisMotiveOccurrence *occurrence) {
+    Rational start = rational_make(occurrence->start_numerator, occurrence->start_denominator);
+    Rational end = rational_make(occurrence->end_numerator, occurrence->end_denominator);
+    cJSON *claim = claim_json_with(framework, notes, occurrence->note_ids, occurrence->note_id_count, start, end,
+                                   occurrence->kind, cJSON_CreateNumber(occurrence->uncertainty));
+    if (!(claim && add(claim, "index", cJSON_CreateNumber((double)occurrence->index)) &&
+          add(claim, "measures", measures_json(occurrence->first_measure, occurrence->last_measure)) &&
+          add(claim, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
+          add(claim, "score", cJSON_CreateNumber(occurrence->score)) &&
+          add(claim, "mismatches", cJSON_CreateNumber(occurrence->mismatches)) &&
+          add(claim, "intervals", cJSON_CreateNumber(occurrence->intervals)) &&
+          add(claim, "fragment", string_or_null_json(occurrence->fragment)) &&
+          add(claim, "in_continuation", cJSON_CreateBool(occurrence->in_continuation)) &&
+          add(claim, "phrase", occurrence->has_phrase ? cJSON_CreateNumber((double)occurrence->phrase) : cJSON_CreateNull()) &&
+          add(claim, "idea",
+              occurrence->has_idea ? cJSON_CreateNumber(report->ideas[occurrence->idea].index) : cJSON_CreateNull()))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The development of a family: a step per occurrence in time order. transformation is the library's kind of that
+   occurrence against the prototype, null for the prototype itself (which is not always the earliest: the library
+   searches continuations for fragments first). from is the occurrence before it in time (null for the first);
+   occurrence and from are indices into the family's "occurrences". */
+static cJSON *motive_development_json(const AnalysisMotive *motive) {
+    cJSON *steps = cJSON_CreateArray();
+    if (!steps) {
+        return NULL;
+    }
+    for (size_t k = 0; k < motive->occurrence_count; k++) {
+        size_t index = motive->development[k];
+        const AnalysisMotiveOccurrence *occurrence = &motive->occurrences[index];
+        cJSON *step = cJSON_CreateObject();
+        if (!(step && add(step, "occurrence", cJSON_CreateNumber((double)index)) &&
+              add(step, "measure", cJSON_CreateNumber(occurrence->first_measure)) &&
+              add(step, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
+              add(step, "transformation", index == 0 ? cJSON_CreateNull() : cJSON_CreateString(occurrence->kind)) &&
+              add(step, "from", k == 0 ? cJSON_CreateNull() : cJSON_CreateNumber((double)motive->development[k - 1])))) {
+            cJSON_Delete(step);
+            cJSON_Delete(steps);
+            return NULL;
+        }
+        if (!append(steps, step)) {
+            cJSON_Delete(steps);
+            return NULL;
+        }
+    }
+    return steps;
+}
+
+/* One claim per motive family, in the library's order. Its span, note ids and location are the prototype's (the first
+   occurrence); note_count is the prototype's length; generic says the pattern is the scale-step interval sequence
+   rather than the semitones; uncertainty is the greatest of its occurrences'. occurrences are the claims of every
+   occurrence, the prototype first and the rest in the library's order (not always time order); development is the
+   family's occurrences in time order as steps. */
+static cJSON *motives_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    const char *framework = framework_name(standard_form_framework());
+    for (size_t i = 0; i < report->motive_count; i++) {
+        const AnalysisMotive *motive = &report->motives[i];
+        const AnalysisMotiveOccurrence *prototype = &motive->occurrences[0];
+        double uncertainty = 0.0;
+        for (size_t o = 0; o < motive->occurrence_count; o++) {
+            if (motive->occurrences[o].uncertainty > uncertainty) {
+                uncertainty = motive->occurrences[o].uncertainty;
+            }
+        }
+        Rational start = rational_make(prototype->start_numerator, prototype->start_denominator);
+        Rational end = rational_make(prototype->end_numerator, prototype->end_denominator);
+        cJSON *claim = claim_json_with(framework, notes, prototype->note_ids, prototype->note_id_count, start, end,
+                                       "motive", cJSON_CreateNumber(uncertainty));
+        cJSON *occurrences = cJSON_CreateArray();
+        bool ok = claim && occurrences;
+        for (size_t o = 0; ok && o < motive->occurrence_count; o++) {
+            ok = append(occurrences, motive_occurrence_json(notes, report, framework, &motive->occurrences[o]));
+        }
+        bool taken = false; /* add() takes the occurrences over, and frees them itself when it fails */
+        if (!(ok && add(claim, "index", cJSON_CreateNumber((double)motive->index)) &&
+              add(claim, "note_count", cJSON_CreateNumber(motive->note_count)) &&
+              add(claim, "generic", cJSON_CreateBool(motive->generic)) &&
+              (taken = true, add(claim, "occurrences", occurrences)) &&
+              add(claim, "development", motive_development_json(motive)))) {
+            if (!taken) {
+                cJSON_Delete(occurrences);
+            }
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -2462,7 +2577,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "cadences", cadences_json(notes, report)) &&
           add(document, "phrases", phrases_json(notes, report)) &&
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
-          add(document, "motives", cJSON_CreateArray()) && add(document, "melody", cJSON_CreateArray()) &&
+          add(document, "motives", motives_json(notes, report)) && add(document, "melody", cJSON_CreateArray()) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&

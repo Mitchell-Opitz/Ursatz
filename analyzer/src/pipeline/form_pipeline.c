@@ -23,7 +23,7 @@
 #define CADENCE_ID_PREFIX "chain-"
 
 /* A span [start, end) kept by the stage; NULL on failure. */
-static const TimeSpan *keep_span(FormStage *stage, const MusicalTime *start, const MusicalTime *end) {
+const TimeSpan *form_stage_keep_span(FormStage *stage, const MusicalTime *start, const MusicalTime *end) {
     if (stage->span_count == stage->span_capacity) {
         size_t capacity = stage->span_capacity == 0 ? 256 : stage->span_capacity * 2;
         TimeSpan **grown = realloc(stage->spans, capacity * sizeof(TimeSpan *));
@@ -76,7 +76,7 @@ static bool add_melody(FormStage *stage, const ImportedNotes *notes, const Segme
         const char *id = entry && entry->present && member < segment->member_count ? entity_id_value(entry->note_id)
                                                                                    : NULL;
         if (current_id != NULL && (id == NULL || strcmp(id, current_id) != 0)) {
-            const TimeSpan *span = keep_span(stage, current_start, current_end);
+            const TimeSpan *span = form_stage_keep_span(stage, current_start, current_end);
             size_t before = stage->input.note_count;
             if (!span || standard_form_input_add_note(&stage->input, current_id, current_event, span, NULL,
                                                       current_semitone) == STANDARD_FORM_ANALYSIS_ERR_ALLOC) {
@@ -103,7 +103,7 @@ static bool add_melody(FormStage *stage, const ImportedNotes *notes, const Segme
     return true;
 }
 
-static bool add_segments(FormStage *stage, const Segmentation *segmentation) {
+bool form_stage_add_segments(FormStage *stage, const Segmentation *segmentation) {
     for (size_t i = 0; i < segmentation->segment_count; i++) {
         StandardFormAnalysisStatus status = standard_form_input_add_segment(
             &stage->input, segmentation->segment_ids[i], window_of(segmentation, i), 0, 0);
@@ -114,12 +114,12 @@ static bool add_segments(FormStage *stage, const Segmentation *segmentation) {
     return true;
 }
 
-static bool add_cadences(FormStage *stage, const Segmentation *segmentation, const HarmonyStage *harmony) {
+bool form_stage_add_cadences(FormStage *stage, const Segmentation *segmentation, const HarmonyStage *harmony) {
     for (size_t i = 0; i < harmony->cadences.count; i++) {
         const HarmonyCadenceResult *found = &harmony->cadences.items[i];
         const TimeSpan *first = window_of(segmentation, found->arrival_first);
         const TimeSpan *last = window_of(segmentation, found->arrival_last);
-        const TimeSpan *span = keep_span(stage, time_span_start(first), time_span_end(last));
+        const TimeSpan *span = form_stage_keep_span(stage, time_span_start(first), time_span_end(last));
         char id[32];
         snprintf(id, sizeof(id), CADENCE_ID_PREFIX "%zu", i);
         if (!span || standard_form_input_add_cadence(&stage->input, id, span, found->type,
@@ -131,19 +131,7 @@ static bool add_cadences(FormStage *stage, const Segmentation *segmentation, con
     return true;
 }
 
-bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmentation *voices,
-                    const Segmentation *segmentation, const OuterVoiceLines *lines, const HarmonyStage *harmony) {
-    memset(stage, 0, sizeof(*stage));
-    if (!notes->meter.meter_map || segmentation->segment_count == 0 || lines->count == 0 ||
-        lines->count != voices->segment_count) {
-        return true; /* nothing to read phrases from */
-    }
-    standard_form_input_init(&stage->input, notes->meter.meter_map);
-    stage->built = true;
-    if (!add_melody(stage, notes, voices, lines) || !add_segments(stage, segmentation) ||
-        !add_cadences(stage, segmentation, harmony)) {
-        return false;
-    }
+bool form_stage_analyze(FormStage *stage) {
     StandardFormAnalysisStatus status = standard_form_input_finish(&stage->input);
     if (status == STANDARD_FORM_ANALYSIS_ERR_ALLOC) {
         return false;
@@ -169,6 +157,22 @@ bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmenta
     status = standard_form_detect_expansions(&stage->input, &stage->phrases, &stage->segmentation, &stage->themes, NULL,
                                              &stage->expansions);
     return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+}
+
+bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmentation *voices,
+                    const Segmentation *segmentation, const OuterVoiceLines *lines, const HarmonyStage *harmony) {
+    memset(stage, 0, sizeof(*stage));
+    if (!notes->meter.meter_map || segmentation->segment_count == 0 || lines->count == 0 ||
+        lines->count != voices->segment_count) {
+        return true; /* nothing to read phrases from */
+    }
+    standard_form_input_init(&stage->input, notes->meter.meter_map);
+    stage->built = true;
+    if (!add_melody(stage, notes, voices, lines) || !form_stage_add_segments(stage, segmentation) ||
+        !form_stage_add_cadences(stage, segmentation, harmony)) {
+        return false;
+    }
+    return form_stage_analyze(stage);
 }
 
 long form_stage_phrase_cadence(const FormStage *stage, size_t phrase) {

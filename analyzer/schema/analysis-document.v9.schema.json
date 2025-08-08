@@ -90,7 +90,10 @@
     "form": {
       "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/form" }]
     },
-    "motives": { "type": "array" },
+    "motives": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/motive_claim" }
+    },
     "melody": { "type": "array" },
     "rhythm": { "type": "array" },
     "texture": { "type": "array" },
@@ -536,6 +539,69 @@
             "idea_count": { "type": "integer", "minimum": 1 },
             "measures": { "$ref": "#/$defs/phrase_measures" },
             "length": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "motive_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "note_count", "generic", "occurrences", "development"],
+          "properties": {
+            "label": { "const": "motive" },
+            "index": { "type": "integer", "minimum": 0 },
+            "note_count": { "type": "integer", "minimum": 2 },
+            "generic": { "type": "boolean" },
+            "occurrences": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "$ref": "#/$defs/motive_occurrence_claim" }
+            },
+            "development": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "$ref": "#/$defs/motive_development_step" }
+            }
+          }
+        }
+      ]
+    },
+    "motive_development_step": {
+      "type": "object",
+      "required": ["occurrence", "measure", "beat", "transformation", "from"],
+      "properties": {
+        "occurrence": { "type": "integer", "minimum": 0 },
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "number", "minimum": 1 },
+        "transformation": {
+          "enum": ["exact", "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented", "diminished",
+                   "fragmented", "varied", null]
+        },
+        "from": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "motive_occurrence_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "measures", "beat", "score", "mismatches", "intervals", "fragment", "in_continuation", "phrase",
+                       "idea"],
+          "properties": {
+            "label": { "enum": ["exact", "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented",
+                                "diminished", "fragmented", "varied"] },
+            "index": { "type": "integer", "minimum": 0 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "beat": { "type": "number", "minimum": 1 },
+            "score": { "type": "number", "minimum": 0, "maximum": 1 },
+            "mismatches": { "type": "integer", "minimum": 0 },
+            "intervals": { "type": "integer", "minimum": 0 },
+            "fragment": { "enum": ["prefix", "suffix", null] },
+            "in_continuation": { "type": "boolean" },
+            "phrase": { "type": ["integer", "null"], "minimum": 0 },
+            "idea": { "type": ["integer", "null"], "minimum": 0 }
           }
         }
       ]

@@ -30,7 +30,7 @@ newline. The same input and build always give the same bytes.
 | `phrases` | array of phrase claims | Filled: the library's standard-form phrases, with their ideas, subphrases, phrase model and expansions. See below. |
 | `themes` | array of theme claims | Optional, after `phrases`. Filled: the library's themes (sentences, periods, hybrids, compound periods, repeated phrases). See below. |
 | `form` | form object or null | Filled: the tree of sections, phrases, subphrases and ideas, and the thematic returns. See below; `null` when the library found no phrases. |
-| `motives` | array | Placeholder: `[]`. |
+| `motives` | array of motive claims | Filled: the library's motive families with every occurrence and their development. See below. |
 | `melody` | array | Placeholder: `[]`. |
 | `rhythm` | array | Placeholder: `[]`. |
 | `texture` | array | Placeholder: `[]`. |
@@ -535,8 +535,9 @@ subphrases and phrase model.
 phrases, ideas and subphrases above, in the library's order: a compound period comes after its two sentences, so a
 theme may start before the one before it. The analyzer runs `standard_form_identify_themes` and
 `standard_form_detect_expansions` with the default config (`src/pipeline/form_pipeline.c`); every form, part name and
-judgement is the library's. The form's bass is not part of the input: the library reads the bass only for motives, which
-a later branch fills, so no bass notes are added and the cadential ending is never identified (README, Known limits).
+judgement is the library's. The form's bass is not part of the input: the library reads the bass only for motives,
+and the analyzer finds motives in the soprano only (see Motives), so no bass notes are added and the cadential ending
+is never identified (README, Known limits).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -623,6 +624,63 @@ earlier:
 The Markdown report renders `## Form plan` from this object: a row per section (letter, measures, key, phrases, closing
 cadence, the return that lettered it), the returns, and the tree as an indented outline.
 
+### Motives
+
+`motives` holds one claim per motive family the library's standard-form motive analysis finds
+(`analysis/analysis_motive.h`), in the library's order: by prototype, longer first. The analyzer runs
+`standard_form_find_motives` with the default config (3 to 8 notes, one mismatch for a varied motive, soprano only) in
+`src/pipeline/motive_pipeline.c`, ported from Ursatz's `tests/integration/motive_util.h`, `form_kernel_bridge.h` and
+`test_motive_mozart545.c`. A motive is a short figure that recurs; its occurrences, their kinds and their scores are the
+library's.
+
+The motive analysis needs a note-level soprano, which the outer voices cannot give (they keep one note per voice
+segment). The analyzer builds it as the highest sounding note at each attack, the later attack among equals, kept when
+it is attacked there, with each note's scale degree in the key region it starts in. It builds a form input of its own
+from that soprano, the chord segments and the cadences, and reruns the library's phrases, ideas and themes on it
+(they are the motive analysis's input). Those are not the report's phrases, which come from the voice-segment
+soprano, so each occurrence is placed in the report's phrases and ideas by span.
+
+A motive is a claim (`framework` `"standard-form-v1"`; `span`, `location` and `note_ids` are the prototype's):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `label` | `"motive"` | |
+| `uncertainty` | number | The greatest uncertainty of its occurrences. |
+| `index` | integer | The family's position in `motives`, from 0. |
+| `note_count` | integer | The prototype's length in notes, 3 to 8. |
+| `generic` | boolean | The pattern is the scale-step interval sequence, so a diatonic transposition matches; otherwise the semitone sequence. |
+| `occurrences` | array | Every occurrence, at least two: the prototype first, then the library's order, which is not always time order (it searches continuations for fragments first, so a prototype can come after fragments of itself). |
+| `development` | array | The occurrences in time order (see below). |
+
+An occurrence is a claim over its soprano notes. Its `label` is the library's kind of the occurrence against the
+family's prototype, the transformation: `"exact"` (the same pitches and rhythm; the prototype is always exact),
+`"real-transposed"` (the same semitone intervals from another pitch), `"tonal-transposed"` (the same scale steps), and
+`"inverted"`, `"retrograde"`, `"augmented"`, `"diminished"`, `"fragmented"` and `"varied"`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `span`, `location`, `note_ids` | | From the first note's start to the last note's end; the soprano notes of the occurrence. |
+| `uncertainty` | number | 1 minus `score`. |
+| `index` | integer | Within the family; 0 is the prototype. |
+| `measures` | object | `{"first", "last"}`: the measure the first note starts in, and the last note. |
+| `beat` | number | The 1-based beat of the first measure the first note starts on, fractional off the beat. |
+| `score` | number | The library's match score, 1 minus `mismatches` over `intervals`, times its rhythm factor. |
+| `mismatches`, `intervals` | integer | The interval mismatches of a varied occurrence (else 0), and the intervals compared. |
+| `fragment` | string or null | A fragmented occurrence: `"prefix"` or `"suffix"` of the prototype. |
+| `in_continuation` | boolean | A fragment found inside a continuation span of a theme. |
+| `phrase` | integer or null | The index into `phrases` of the phrase the whole occurrence lies in; `null` when it crosses a phrase boundary. |
+| `idea` | integer or null | The index (within that phrase's `ideas`) of the idea it lies in; `null` when it lies in none. |
+
+`development` is the family's occurrences in time order, one step per occurrence, the sequence of transformations the
+figure goes through in the piece; the analyzer only orders them. A step is `{"occurrence", "measure", "beat",
+"transformation", "from"}`: `occurrence` is the index into the family's `occurrences`, `transformation` the library's
+kind of that occurrence (`null` for the prototype, the original, which is not always the earliest), and `from` the
+occurrence before it in time (`null` for the first).
+
+The Markdown report renders `## Motives` from this section, a row per family (notes, pattern, occurrence count,
+measures, phrases, kinds), and `### Development`, a line per family as `m1 original > m3 real-transposed > m5
+fragmented`.
+
 ### Progressions
 
 `progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
@@ -696,7 +754,7 @@ before those:
   entries are new), which is additive. `phrases` is filled (its claims are new, with the optional `subphrases`,
   `ideas` and `phrase_model`), and chord claims gain the optional `phrase_model`; all additive. The optional
   top-level `themes` follows `phrases`, and phrase claims gain the optional `expansions`; both are additive. `form` is
-  filled (its object is new), which is additive.
+  filled (its object is new), which is additive. `motives` is filled (its claims are new), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,

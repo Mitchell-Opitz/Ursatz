@@ -146,6 +146,12 @@ target_compile_definitions(test_form_plan PRIVATE
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_form_plan COMMAND test_form_plan)
 
+add_executable(test_motives test_motives.c)
+target_link_libraries(test_motives PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_motives PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_motives COMMAND test_motives)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE

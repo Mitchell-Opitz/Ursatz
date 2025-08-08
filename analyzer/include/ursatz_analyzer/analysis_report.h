@@ -450,6 +450,47 @@ typedef struct {
     size_t window_length;      /* notes compared */
 } AnalysisThematicReturn;
 
+/* One occurrence of a motive family from the library's motive analysis (analysis/analysis_motive.h) over the
+   note-level soprano: the highest sounding note at each attack. The first occurrence of a family is its prototype. */
+typedef struct {
+    size_t index;            /* within the family; 0 is the prototype */
+    long start_numerator;    /* whole notes: the first note's start to the last note's end */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;       /* the library's measure numbers (a pickup is 0) */
+    int last_measure;        /* the measure the last note starts in */
+    double first_beat;       /* 1-based, in beats of the first measure */
+    size_t *note_ids;        /* owned; ImportedNotes indices of the occurrence's soprano notes */
+    size_t note_id_count;
+    const char *kind;        /* the library's StandardFormMotiveKind name, relative to the family's prototype: "exact",
+                                "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented",
+                                "diminished", "fragmented" or "varied"; the prototype is "exact" */
+    double score;            /* the library's, in [0, 1]: 1 minus mismatches over intervals, times its rhythm factor */
+    int mismatches;          /* interval mismatches of a varied occurrence, else 0 */
+    int intervals;           /* the intervals compared */
+    const char *fragment;    /* a fragmented occurrence: "prefix" or "suffix" of the prototype; else NULL */
+    bool in_continuation;    /* a fragment found inside a continuation span of a theme */
+    bool has_phrase;         /* the whole occurrence lies in one of phrases; false when it crosses a phrase boundary */
+    size_t phrase;           /* index into phrases; valid only when has_phrase */
+    bool has_idea;           /* it lies in one idea of that phrase */
+    size_t idea;             /* index into ideas; valid only when has_idea */
+    double uncertainty;      /* the library's, 1 minus its score, in [0, 1]; higher is LESS certain */
+} AnalysisMotiveOccurrence;
+
+/* One motive family: a short figure that recurs. Its occurrences are the prototype first and then the library's order,
+   which is not always time order (it searches continuations for fragments first); development is the time order. */
+typedef struct {
+    size_t index;            /* within the piece, in the library's order: by prototype, longer first */
+    int note_count;          /* the prototype's */
+    bool generic;            /* the pattern is the scale-step interval sequence (else the semitones) */
+    AnalysisMotiveOccurrence *occurrences; /* owned */
+    size_t occurrence_count;
+    size_t *development;     /* owned; occurrence_count indices into occurrences in time order, earliest first: the
+                                family's development through the piece. Each step's transformation is the occurrence's
+                                kind (the library's, against the prototype); the analyzer only orders */
+} AnalysisMotive;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -488,14 +529,16 @@ typedef struct {
     AnalysisThematicReturn *thematic_returns; /* owned; by later theme, then earlier theme; empty when the library
                                                  found none */
     size_t thematic_return_count;
+    AnalysisMotive *motives; /* owned; the library's motive families, in its order; empty when it found none */
+    size_t motive_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
 } AnalysisReport;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
-   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections and
-   thematic returns. */
+   prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
+   thematic returns and motives. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
