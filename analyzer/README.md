@@ -146,8 +146,10 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
 9. `form_plan_pipeline`: groups the phrases into sections with Ursatz's form structure detection, finds the
    thematic returns between the themes, and letters the sections (see "Form plan"). The sections are reported only:
    they do not feed back into the cadences or the key regions.
+10. `motive_pipeline`: builds a note-level soprano, reruns the form adapter's phrases, ideas and themes on it, and finds
+   the motive families with Ursatz's motive analysis (see "Motives").
 
-Steps 2 to 9 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+Steps 2 to 10 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
 regions of the second pass, whose results are the report (R-039, R-043).
 
@@ -492,6 +494,38 @@ never a section boundary in the kernel's rule. Mozart 545's 77 returns are almos
 phrases whose six-note stretches share a contour and rhythm (similarity 0.80 to 1.00), so they say that stock figures
 recur, not that a theme returns; only the opening themes decide the letters.
 
+## Motives
+
+Over a note-level soprano (`src/pipeline/motive_pipeline.c`, ported from Ursatz's `tests/integration/motive_util.h`,
+`form_kernel_bridge.h` and `test_motive_mozart545.c` as a rewrite with error returns), the analyzer runs the library's
+motive analysis with the default config: motives of 3 to 8 notes that recur, in the soprano only. The soprano is the
+highest sounding note at each attack, because the outer voices keep one note per voice segment and would thin a run of
+sixteenths; each note carries its scale degree in its key region, so a diatonic sequence matches. The motive analysis
+needs phrases, ideas and themes on the same notes, so the stage reruns them on its own input; its occurrences are then
+placed in the report's phrases and ideas by span (an occurrence that crosses a phrase boundary lies in none).
+
+A family has a prototype and occurrences, each with the library's kind against the prototype (exact, real-transposed,
+tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied) and its score. The development of a
+family is its occurrences in time order. The prototype is not always the earliest occurrence, because the library
+searches continuations for fragments first. The document's `motives` holds all of it; the Markdown report has a
+`## Motives` table and a `### Development` list.
+
+Measured on the reference pieces (MIDI):
+
+| Piece | Families | Occurrences | Kinds |
+| --- | --- | --- | --- |
+| Bach 114 | 32 | 92 | exact 78, fragmented 14 |
+| Clementi 36 | 0 | 0 | |
+| Mozart 545 | 214 | 1610 | exact 556, fragmented 695, tonal-transposed 163, real-transposed 101, varied 38, inverted 35, retrograde 20, augmented 2 |
+| Field 1 | 1 | 4 | exact 1, real-transposed 2, fragmented 1 |
+| Field 5 | 10 | 48 | exact 32, inverted 8, fragmented 6, tonal-transposed 2 |
+
+`test_motives` checks Mozart 545 against Ursatz's hand annotation of the exposition
+(`tests/fixtures/annotations/mozart545_motives.txt`, a draft reading): all 7 annotated families are found, and 20 of
+the 21 annotated occurrences are found with the right kind (95.2%; the miss is the tonal-transposed occurrence at
+measure 21 beat 2), against the library test's 75% target. The Analyzer finds the motives over the whole piece with
+its own cadences, not over the exposition with annotated phrase ends.
+
 ## Known limits
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
@@ -517,6 +551,10 @@ recur, not that a theme returns; only the opening themes decide the letters.
   found, and its claim gives no acceleration or sequence trait. A constructed period cannot end its antecedent on a
   half cadence: a V followed by I reads as an authentic cadence, so the constructed antecedent ends on an imperfect
   authentic one.
+- Motives: only the soprano is read (the library's `include_bass` is off), so there are no bass motives. The soprano is
+  the highest sounding note at each attack, so a left-hand note is the line where the right hand rests. Clementi 36
+  yields no family. Mozart 545 yields 214 families and 1610 occurrences, 168 of which cross a phrase boundary and lie in
+  no phrase. A family's prototype can come after fragments of itself.
 - Form plan: the kernel's sections close only on perfect and imperfect authentic cadences, so a piece of half
   cadences and deceptive endings is one section, and the final phrase never closes one. Returns compare six-note
   stretches by contour and rhythm, so a figure that recurs inside a hybrid reads as a return (Mozart 545: 77). A
