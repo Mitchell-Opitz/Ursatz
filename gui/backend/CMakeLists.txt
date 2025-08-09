@@ -16,6 +16,7 @@ add_executable(ursatz-gui-backend
   src/routes/corpus.c
   src/routes/composer.c
   src/routes/styles.c
+  src/routes/materials.c
 )
 
 target_include_directories(ursatz-gui-backend PRIVATE

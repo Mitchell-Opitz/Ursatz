@@ -15,6 +15,7 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
 )
 
 target_include_directories(test_health_route PRIVATE
@@ -52,6 +53,7 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
 )
 
 target_include_directories(test_analyzer_route PRIVATE
@@ -99,6 +101,7 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
 )
 
 target_include_directories(test_corpus_route PRIVATE
@@ -162,6 +165,7 @@ add_executable(test_composer_route test_composer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
 )
 
 target_include_directories(test_composer_route PRIVATE
@@ -205,6 +209,7 @@ add_executable(test_styles_route test_styles_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
 )
 
 target_include_directories(test_styles_route PRIVATE
