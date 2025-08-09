@@ -9,8 +9,10 @@
 #include <civetweb.h>
 
 #include "../service/material_service.h"
+#include "../service/subject_service.h"
 
 static const char *kMaterialsPrefix = "/api/materials";
+static const char *kSubjectsPrefix = "/api/subjects";
 static const size_t kMaxRequestBodySize = 256 * 1024;
 static const int kMaxSegments = 6;
 
@@ -567,6 +569,218 @@ static int route_projects(struct mg_connection *conn, const char *method, char s
   return send_not_found(conn);
 }
 
+/* --- subjects ------------------------------------------------------------ */
+
+static int subject_status(UrsatzGuiSubjectResult result) {
+  switch (result) {
+    case URSATZ_GUI_SUBJECT_OK:
+      return 200;
+    case URSATZ_GUI_SUBJECT_ERR_INVALID_ID:
+    case URSATZ_GUI_SUBJECT_ERR_INVALID_NAME:
+    case URSATZ_GUI_SUBJECT_ERR_INVALID_KIND:
+    case URSATZ_GUI_SUBJECT_ERR_SELF:
+      return 400;
+    case URSATZ_GUI_SUBJECT_ERR_NOT_FOUND:
+    case URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND:
+    case URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND:
+    case URSATZ_GUI_SUBJECT_ERR_NOT_LINKED:
+    case URSATZ_GUI_SUBJECT_ERR_NOT_RELATED:
+      return 404;
+    default:
+      return 500;
+  }
+}
+
+static const char *subject_message(UrsatzGuiSubjectResult result) {
+  switch (result) {
+    case URSATZ_GUI_SUBJECT_ERR_INVALID_ID:
+      return "invalid id";
+    case URSATZ_GUI_SUBJECT_ERR_INVALID_NAME:
+      return "invalid name or note";
+    case URSATZ_GUI_SUBJECT_ERR_INVALID_KIND:
+      return "invalid kind";
+    case URSATZ_GUI_SUBJECT_ERR_SELF:
+      return "a subject cannot relate to itself";
+    case URSATZ_GUI_SUBJECT_ERR_NOT_FOUND:
+      return "subject not found";
+    case URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND:
+      return "item not found";
+    case URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND:
+      return "piece not found";
+    case URSATZ_GUI_SUBJECT_ERR_NOT_LINKED:
+      return "not linked";
+    case URSATZ_GUI_SUBJECT_ERR_NOT_RELATED:
+      return "not related";
+    default:
+      return "subject store failure";
+  }
+}
+
+static int send_subject_failure(struct mg_connection *conn, UrsatzGuiSubjectResult result) {
+  return send_failure(conn, subject_status(result), subject_message(result));
+}
+
+static int handle_list_subjects(struct mg_connection *conn) {
+  cJSON *subjects = NULL;
+  UrsatzGuiSubjectResult result = ursatz_gui_subject_list(&subjects);
+  if (result != URSATZ_GUI_SUBJECT_OK) {
+    return send_subject_failure(conn, result);
+  }
+  return send_ok_with(conn, "subjects", subjects);
+}
+
+static int handle_subject_groups(struct mg_connection *conn) {
+  cJSON *groups = NULL;
+  UrsatzGuiSubjectResult result = ursatz_gui_subject_groups(&groups);
+  if (result != URSATZ_GUI_SUBJECT_OK) {
+    return send_subject_failure(conn, result);
+  }
+  return send_ok_with(conn, "groups", groups);
+}
+
+static int handle_create_subject(struct mg_connection *conn) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *name = optional_string(body, "name", &bad);
+  const char *kind = optional_string(body, "kind", &bad);
+  const char *note = optional_string(body, "note", &bad);
+  if (bad || !name || !kind) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "name and kind are required; name, kind and note are strings");
+  }
+  cJSON *subject = NULL;
+  UrsatzGuiSubjectResult result = ursatz_gui_subject_create(name, kind, note, &subject);
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_SUBJECT_OK) {
+    return send_subject_failure(conn, result);
+  }
+  return send_ok_with(conn, "subject", subject);
+}
+
+static int handle_get_subject(struct mg_connection *conn, const char *id) {
+  cJSON *subject = NULL;
+  UrsatzGuiSubjectResult result = ursatz_gui_subject_get(id, &subject);
+  if (result != URSATZ_GUI_SUBJECT_OK) {
+    return send_subject_failure(conn, result);
+  }
+  return send_ok_with(conn, "subject", subject);
+}
+
+static int handle_patch_subject(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *name = optional_string(body, "name", &bad);
+  const char *kind = optional_string(body, "kind", &bad);
+  const char *note = optional_string(body, "note", &bad);
+  if (bad || (!name && !kind && !note)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "give name, kind and/or note as strings");
+  }
+  cJSON *subject = NULL;
+  UrsatzGuiSubjectResult result = ursatz_gui_subject_update(id, name, kind, note, &subject);
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_SUBJECT_OK) {
+    return send_subject_failure(conn, result);
+  }
+  return send_ok_with(conn, "subject", subject);
+}
+
+static int handle_delete_subject(struct mg_connection *conn, const char *id) {
+  UrsatzGuiSubjectResult result = ursatz_gui_subject_delete(id);
+  if (result != URSATZ_GUI_SUBJECT_OK) {
+    return send_subject_failure(conn, result);
+  }
+  return send_ok(conn);
+}
+
+/* {"ok":true,"subject":...} plus "already" for a link or relation that was in place. */
+static int send_subject_after(struct mg_connection *conn, cJSON *subject, bool already, bool with_already) {
+  cJSON *object = cJSON_CreateObject();
+  if (!object || !subject || !cJSON_AddBoolToObject(object, "ok", 1) ||
+      (with_already && !cJSON_AddBoolToObject(object, "already", already ? 1 : 0))) {
+    cJSON_Delete(object);
+    cJSON_Delete(subject);
+    return send_failure(conn, 500, "out of memory");
+  }
+  cJSON_AddItemToObject(object, "subject", subject);
+  return send_object(conn, object);
+}
+
+/* kind is "items", "pieces" or "related"; POST adds the link, DELETE removes it. */
+static int handle_subject_link(struct mg_connection *conn, const char *method, const char *id, const char *kind,
+                               const char *other) {
+  bool post = strcmp(method, "POST") == 0;
+  if (!post && strcmp(method, "DELETE") != 0) {
+    return send_method_not_allowed(conn);
+  }
+  bool already = false;
+  cJSON *subject = NULL;
+  UrsatzGuiSubjectResult result;
+  if (strcmp(kind, "items") == 0) {
+    result = post ? ursatz_gui_subject_link_item(id, other, &already, &subject)
+                  : ursatz_gui_subject_unlink_item(id, other, &subject);
+  } else if (strcmp(kind, "pieces") == 0) {
+    result = post ? ursatz_gui_subject_link_piece(id, other, &already, &subject)
+                  : ursatz_gui_subject_unlink_piece(id, other, &subject);
+  } else {
+    result = post ? ursatz_gui_subject_relate(id, other, &already, &subject)
+                  : ursatz_gui_subject_unrelate(id, other, &subject);
+  }
+  if (result != URSATZ_GUI_SUBJECT_OK) {
+    return send_subject_failure(conn, result);
+  }
+  return send_subject_after(conn, subject, already, post);
+}
+
+static int route_subjects(struct mg_connection *conn, const char *method, char segments[][256], int count) {
+  bool get = strcmp(method, "GET") == 0;
+  if (count == 0) {
+    if (get) {
+      return handle_list_subjects(conn);
+    }
+    return strcmp(method, "POST") == 0 ? handle_create_subject(conn) : send_method_not_allowed(conn);
+  }
+  if (count == 1) {
+    if (strcmp(segments[0], "groups") == 0) {
+      return get ? handle_subject_groups(conn) : send_method_not_allowed(conn);
+    }
+    if (get) {
+      return handle_get_subject(conn, segments[0]);
+    }
+    if (strcmp(method, "PATCH") == 0) {
+      return handle_patch_subject(conn, segments[0]);
+    }
+    return strcmp(method, "DELETE") == 0 ? handle_delete_subject(conn, segments[0]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && (strcmp(segments[1], "items") == 0 || strcmp(segments[1], "pieces") == 0 ||
+                     strcmp(segments[1], "related") == 0)) {
+    return handle_subject_link(conn, method, segments[0], segments[1], segments[2]);
+  }
+  return send_not_found(conn);
+}
+
+/*
+ * Handler registered at "/api/subjects"; same dispatch as the materials handler.
+ */
+static int subjects_handler(struct mg_connection *conn, void *cbdata) {
+  (void)cbdata;
+  const struct mg_request_info *info = mg_get_request_info(conn);
+  char segments[6][256];
+  int count = split_path(info->local_uri + strlen(kSubjectsPrefix), segments);
+  if (count < 0) {
+    return send_not_found(conn);
+  }
+  return route_subjects(conn, info->request_method, segments, count);
+}
+
 /*
  * Handler registered at "/api/materials". civetweb sends the exact prefix
  * and any "prefix/something" URI here (see the note in styles.c), so every
@@ -592,4 +806,5 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
 
 void ursatz_gui_materials_register(struct mg_context *ctx) {
   mg_set_request_handler(ctx, kMaterialsPrefix, materials_handler, NULL);
+  mg_set_request_handler(ctx, kSubjectsPrefix, subjects_handler, NULL);
 }
