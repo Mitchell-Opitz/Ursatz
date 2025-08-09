@@ -333,12 +333,13 @@ static int handle_create_item(struct mg_connection *conn) {
   return send_ok_with(conn, "item", item);
 }
 
-/* The item answer: {"ok":true,"item":meta,"body":current,"uses_status":[...],"used_by":[...]}. */
+/* The item answer: {"ok":true,"item":meta,"body":current,"uses_status":[...],"used_by":[...],"subjects":[...]}. */
 static int handle_get_item(struct mg_connection *conn, const char *id) {
   cJSON *meta = NULL;
   cJSON *body = NULL;
   cJSON *uses_status = NULL;
   cJSON *used_by = NULL;
+  cJSON *subjects = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &body);
   if (result == URSATZ_GUI_MATERIAL_OK) {
     result = ursatz_gui_material_uses_status(id, &uses_status);
@@ -346,19 +347,24 @@ static int handle_get_item(struct mg_connection *conn, const char *id) {
   if (result == URSATZ_GUI_MATERIAL_OK) {
     result = ursatz_gui_material_used_by(id, &used_by);
   }
-  cJSON *object = result == URSATZ_GUI_MATERIAL_OK ? cJSON_CreateObject() : NULL;
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    subjects = ursatz_gui_materials_subjects_for("items", id);
+  }
+  cJSON *object = result == URSATZ_GUI_MATERIAL_OK && subjects ? cJSON_CreateObject() : NULL;
   if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "item", meta)) {
     cJSON_Delete(object);
     cJSON_Delete(meta);
     cJSON_Delete(body);
     cJSON_Delete(uses_status);
     cJSON_Delete(used_by);
+    cJSON_Delete(subjects);
     return result == URSATZ_GUI_MATERIAL_OK ? send_failure(conn, 500, "out of memory")
                                             : send_material_failure(conn, result);
   }
   cJSON_AddItemToObject(object, "body", body);
   cJSON_AddItemToObject(object, "uses_status", uses_status);
   cJSON_AddItemToObject(object, "used_by", used_by);
+  cJSON_AddItemToObject(object, "subjects", subjects);
   return send_object(conn, object);
 }
 
@@ -618,6 +624,50 @@ static const char *subject_message(UrsatzGuiSubjectResult result) {
 
 static int send_subject_failure(struct mg_connection *conn, UrsatzGuiSubjectResult result) {
   return send_failure(conn, subject_status(result), subject_message(result));
+}
+
+cJSON *ursatz_gui_materials_subjects_for(const char *kind, const char *id) {
+  cJSON *rows = NULL;
+  cJSON *found = cJSON_CreateArray();
+  if (!found || ursatz_gui_subject_list(&rows) != URSATZ_GUI_SUBJECT_OK) {
+    cJSON_Delete(found);
+    return NULL;
+  }
+  const cJSON *row = NULL;
+  cJSON_ArrayForEach(row, rows) {
+    const cJSON *row_id = cJSON_GetObjectItemCaseSensitive(row, "id");
+    cJSON *subject = NULL;
+    if (!cJSON_IsString(row_id) || ursatz_gui_subject_get(row_id->valuestring, &subject) != URSATZ_GUI_SUBJECT_OK) {
+      continue;
+    }
+    const cJSON *links = cJSON_GetObjectItemCaseSensitive(subject, kind);
+    const cJSON *link = NULL;
+    bool linked = false;
+    cJSON_ArrayForEach(link, links) {
+      if (cJSON_IsString(link) && strcmp(link->valuestring, id) == 0) {
+        linked = true;
+        break;
+      }
+    }
+    cJSON *entry = linked ? cJSON_CreateObject() : NULL;
+    if (entry) {
+      const cJSON *name = cJSON_GetObjectItemCaseSensitive(subject, "name");
+      const cJSON *subject_kind = cJSON_GetObjectItemCaseSensitive(subject, "kind");
+      if (!cJSON_AddStringToObject(entry, "id", row_id->valuestring) ||
+          !cJSON_AddStringToObject(entry, "name", cJSON_IsString(name) ? name->valuestring : "") ||
+          !cJSON_AddStringToObject(entry, "kind", cJSON_IsString(subject_kind) ? subject_kind->valuestring : "")) {
+        cJSON_Delete(entry);
+        cJSON_Delete(subject);
+        cJSON_Delete(rows);
+        cJSON_Delete(found);
+        return NULL;
+      }
+      cJSON_AddItemToArray(found, entry);
+    }
+    cJSON_Delete(subject);
+  }
+  cJSON_Delete(rows);
+  return found;
 }
 
 static int handle_list_subjects(struct mg_connection *conn) {
