@@ -10,7 +10,10 @@
 int run_variants(int argc, char **argv);
 
 /* The line of the usage text that names the subcommand. */
-#define VARIANTS_USAGE_LINE \
-    "       ursatz-composer variants --list-ops [--json]"
+#define VARIANTS_USAGE_LINE                                                                                          \
+    "       ursatz-composer variants --list-ops [--json]\n"                                                          \
+    "       ursatz-composer variants <motive-input> [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] " \
+    "[--form <full|rhythm|contour>] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--chain <file.json>] "         \
+    "[--count <n>] [--seed <n>]"
 
 #endif
