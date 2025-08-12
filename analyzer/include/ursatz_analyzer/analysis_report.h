@@ -491,6 +491,51 @@ typedef struct {
                                 kind (the library's, against the prototype); the analyzer only orders */
 } AnalysisMotive;
 
+/* The melody of one phrase: the soprano notes (the outer voice line, one entry per melody note) that start inside the
+   phrase's span, read by the melody adapter of standard-counterpoint (analysis/analysis_melody.h). A note held in from
+   the phrase before is not one of them, and a rest in the line breaks the chain: no interval is formed across it. The
+   Analyzer counts and groups; the pitches, positions, directions and every verdict are the library's. */
+typedef struct {
+    size_t phrase;           /* index into phrases */
+    const char *framework;   /* the library's framework name for the claims */
+    long start_numerator;    /* the phrase's span, whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;       /* the phrase's, as the library numbers them (a pickup is 0) */
+    int last_measure;
+    size_t *note_ids;        /* owned; ImportedNotes indices of the melody notes, in time order */
+    size_t note_id_count;
+    long lowest_pitch;       /* MIDI note numbers: the first note at the lowest and at the highest pitch */
+    size_t lowest_note;      /* ImportedNotes indices */
+    char lowest_name[16];    /* e.g. "E5", spelled as the outer voice lines spell it */
+    long highest_pitch;
+    size_t highest_note;
+    char highest_name[16];
+    long range_semitones;    /* highest minus lowest */
+    /* The climax (analysis_melody_climax.h): the highest pitch, and the first note at it. */
+    size_t climax_note;      /* ImportedNotes index of the first note at the highest pitch */
+    int climax_occurrences;  /* notes at the highest pitch */
+    bool climax_unique;
+    double climax_relative_position; /* the first occurrence's rank among the notes over (notes - 1), by note order */
+    bool climax_has_strength;
+    const char *climax_strength;     /* the library's BeatStrength name; valid only when climax_has_strength */
+    bool climax_by_leap;     /* the first occurrence is approached by a leap */
+    bool climax_final;       /* the first occurrence is the phrase's last note */
+    /* The contour (analysis_melody.h): the library's direction of each interval between consecutive notes. */
+    int up;
+    int down;
+    int same;
+    int step_count;
+    int leap_count;
+    const char *net_direction; /* "up", "down" or "same": the last note against the first */
+    long net_semitones;
+    const char **directions;   /* owned array of direction_count names ("up", "down", "same"), one per interval, in
+                                  time order; the names are static */
+    size_t direction_count;
+    double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisMelody;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -531,6 +576,8 @@ typedef struct {
     size_t thematic_return_count;
     AnalysisMotive *motives; /* owned; the library's motive families, in its order; empty when it found none */
     size_t motive_count;
+    AnalysisMelody *melodies; /* owned; one per phrase with melody notes, in phrase order */
+    size_t melody_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -538,7 +585,7 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns and motives. */
+   thematic returns, motives and melodies. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

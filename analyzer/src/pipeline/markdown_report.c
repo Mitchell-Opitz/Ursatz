@@ -1147,6 +1147,44 @@ static bool append_measures(StringBuilder *sb, const cJSON *measures) {
     return first == last ? sb_appendf(sb, "m. %d", first) : sb_appendf(sb, "mm. %d to %d", first, last);
 }
 
+/* ---- Melody ---- */
+
+static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON *melody) {
+    (void)document;
+    bool ok = sb_append(sb, "## Melody\n\n") &&
+              sb_append(sb, "The library's melody adapter read the soprano of each phrase as a line of notes: the soprano "
+                            "notes that start in the phrase. Range is the lowest and highest note and the semitones between "
+                            "them; Climax is the first note at the highest pitch, with how many notes sound it when it is "
+                            "not one; Contour counts the intervals between consecutive notes that go up, go down and "
+                            "repeat, and how many of them are steps and leaps.\n\n") &&
+              sb_append(sb, "| Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *entry;
+    cJSON_ArrayForEach(entry, melody) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *range = cJSON_GetObjectItemCaseSensitive(entry, "range");
+        const cJSON *climax = cJSON_GetObjectItemCaseSensitive(entry, "climax");
+        const cJSON *contour = cJSON_GetObjectItemCaseSensitive(entry, "contour");
+        const cJSON *highest = cJSON_GetObjectItemCaseSensitive(range, "highest");
+        int occurrences = (int)number_member(climax, "occurrences");
+        ok = sb_appendf(sb, "| %d | ", (int)number_member(entry, "index") + 1) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(entry, "measures")) &&
+             sb_appendf(sb, " | %d | %s to %s (%d) | %s, ", (int)number_member(entry, "note_count"),
+                        string_member(cJSON_GetObjectItemCaseSensitive(range, "lowest"), "name"),
+                        string_member(highest, "name"), (int)number_member(range, "semitones"),
+                        string_member(highest, "name")) &&
+             append_position(sb, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(climax, "location"),
+                                                                  "start")) &&
+             (occurrences > 1 ? sb_appendf(sb, ", %d notes", occurrences) : true) &&
+             sb_appendf(sb, " | %d | %d | %d | %d | %d |\n", (int)number_member(contour, "up"),
+                        (int)number_member(contour, "down"), (int)number_member(contour, "same"),
+                        (int)number_member(contour, "steps"), (int)number_member(contour, "leaps"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 /* The cadence that ends a phrase as "perfect-authentic (m. 8)", or "none". */
 static bool append_phrase_cadence(StringBuilder *sb, const cJSON *document, const cJSON *phrase) {
     const cJSON *index = cJSON_GetObjectItemCaseSensitive(phrase, "cadence");
@@ -1602,6 +1640,7 @@ static const struct {
     {"themes", render_themes},
     {"form", render_form_plan},
     {"motives", render_motives},
+    {"melody", render_melody},
     {"motives", render_motive_development},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},

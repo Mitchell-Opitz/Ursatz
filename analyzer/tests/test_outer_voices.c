@@ -187,7 +187,6 @@ static void check_document_lines(const Analyzed *analyzed) {
     const cJSON *chords = cJSON_GetObjectItemCaseSensitive(analyzed->document, "chords");
     CHECK(cJSON_IsObject(outer));
     CHECK(cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(analyzed->document, "melody")));
-    CHECK(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(analyzed->document, "melody")) == 0);
     for (int voice = 0; voice < 2; voice++) {
         const char *name = voice == 0 ? "soprano" : "bass";
         const cJSON *line = cJSON_GetObjectItemCaseSensitive(outer, name);

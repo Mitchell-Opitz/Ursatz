@@ -15,6 +15,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/form_pipeline.c
     pipeline/form_plan_pipeline.c
     pipeline/motive_pipeline.c
+    pipeline/melody_pipeline.c
     pipeline/progression_pipeline.c
     pipeline/harmonic_rhythm_pipeline.c
     pipeline/analysis_report.c
@@ -29,13 +30,18 @@ add_library(ursatz_analyzer STATIC
 # analyzer includes the form ones as "standard-form/analysis/...", from the frameworks directory.
 get_target_property(STANDARD_FORM_SOURCE_DIR standard_form SOURCE_DIR)
 get_filename_component(URSATZ_FRAMEWORKS_DIR "${STANDARD_FORM_SOURCE_DIR}/.." ABSOLUTE)
+get_target_property(STANDARD_COUNTERPOINT_SOURCE_DIR standard_counterpoint SOURCE_DIR)
+# standard-counterpoint's headers name each other without a directory, and its framework.h shares a name with other
+# frameworks', so only the melody pipeline sees its directories.
+set_source_files_properties(pipeline/melody_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
+    "${STANDARD_COUNTERPOINT_SOURCE_DIR};${STANDARD_COUNTERPOINT_SOURCE_DIR}/analysis")
 target_include_directories(ursatz_analyzer
     PUBLIC ${PROJECT_SOURCE_DIR}/include ${URSATZ_FRAMEWORKS_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
     PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
-    PRIVATE cjson
+    PRIVATE cjson $<LINK_ONLY:standard_counterpoint>
 )
 target_compile_definitions(ursatz_analyzer PRIVATE
     URSATZ_ANALYZER_VERSION="${PROJECT_VERSION}"

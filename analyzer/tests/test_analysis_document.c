@@ -179,12 +179,27 @@ int main(void) {
     assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
     assert(cJSON_IsNull(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));
-    static const char *const EMPTY_SECTIONS[] = {"cadences", "motives", "melody",        "rhythm",
-                                                 "texture",  "voice_leading", "schemas", "progressions"};
+    static const char *const EMPTY_SECTIONS[] = {"cadences", "motives",       "rhythm",  "texture",
+                                                 "voice_leading", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
         const cJSON *section = member(document, EMPTY_SECTIONS[i]);
         assert(cJSON_IsArray(section));
         assert(cJSON_GetArraySize(section) == 0);
+    }
+
+    /* Melody: one claim per phrase with melody notes, in phrase order, each with its range, climax and contour. */
+    const cJSON *melody = member(document, "melody");
+    assert(cJSON_IsArray(melody));
+    for (int i = 0; i < cJSON_GetArraySize(melody); i++) {
+        const cJSON *entry = cJSON_GetArrayItem(melody, i);
+        check_claim(entry);
+        assert(strcmp(string(entry, "label"), "melody") == 0);
+        assert(number(entry, "index") < cJSON_GetArraySize(member(document, "phrases")));
+        assert(number(entry, "note_count") == cJSON_GetArraySize(member(entry, "note_ids")));
+        assert(number(member(member(entry, "range"), "highest"), "pitch") >=
+               number(member(member(entry, "range"), "lowest"), "pitch"));
+        assert(strcmp(string(member(entry, "climax"), "label"), "climax") == 0);
+        assert(cJSON_GetArraySize(member(member(entry, "contour"), "directions")) < number(entry, "note_count"));
     }
 
     /* Phrases: one claim each in time order, with measures, length, cadence (an index or null) and signal. */

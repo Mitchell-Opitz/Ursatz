@@ -2559,6 +2559,111 @@ static cJSON *motives_json(const ImportedNotes *notes, const AnalysisReport *rep
     return list;
 }
 
+/* ---- Melody ---- */
+
+/* A pitch and the note it is the pitch of: { "pitch": MIDI note number, "name": "E5", "note_id": ImportedNotes
+   index }. */
+static cJSON *melody_pitch_json(long pitch, const char *name, size_t note) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "pitch", cJSON_CreateNumber((double)pitch)) &&
+                    add(object, "name", cJSON_CreateString(name)) &&
+                    add(object, "note_id", cJSON_CreateNumber((double)note)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *melody_range_json(const AnalysisMelody *melody) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "lowest", melody_pitch_json(melody->lowest_pitch, melody->lowest_name, melody->lowest_note)) &&
+                    add(object, "highest", melody_pitch_json(melody->highest_pitch, melody->highest_name, melody->highest_note)) &&
+                    add(object, "semitones", cJSON_CreateNumber((double)melody->range_semitones)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The climax as a claim over its first note: the highest pitch, how many notes sound it, and where the first one
+   stands (its place among the notes, its beat strength, whether a leap approaches it, whether it ends the phrase). */
+static cJSON *melody_climax_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    Rational start;
+    Rational end;
+    notes_span(notes, &melody->climax_note, 1, &start, &end);
+    cJSON *claim = claim_json_with(melody->framework, notes, &melody->climax_note, 1, start, end, "climax",
+                                   cJSON_CreateNumber(melody->uncertainty));
+    if (!(claim && add(claim, "pitch", cJSON_CreateNumber((double)melody->highest_pitch)) &&
+          add(claim, "occurrences", cJSON_CreateNumber(melody->climax_occurrences)) &&
+          add(claim, "unique", cJSON_CreateBool(melody->climax_unique)) &&
+          add(claim, "relative_position", cJSON_CreateNumber(melody->climax_relative_position)) &&
+          add(claim, "strength",
+              melody->climax_has_strength ? cJSON_CreateString(melody->climax_strength) : cJSON_CreateNull()) &&
+          add(claim, "by_leap", cJSON_CreateBool(melody->climax_by_leap)) &&
+          add(claim, "final_note", cJSON_CreateBool(melody->climax_final)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The contour: how many intervals go up, down and stay, how many are steps and leaps, the last note against the first,
+   and the direction of each interval in time order. No shape is named. */
+static cJSON *melody_contour_json(const AnalysisMelody *melody) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *directions = cJSON_CreateArray();
+    bool ok = object && directions;
+    for (size_t k = 0; ok && k < melody->direction_count; k++) {
+        ok = append(directions, cJSON_CreateString(melody->directions[k]));
+    }
+    bool taken = false; /* add() takes the directions over, and frees them itself when it fails */
+    if (!(ok && add(object, "up", cJSON_CreateNumber(melody->up)) &&
+          add(object, "down", cJSON_CreateNumber(melody->down)) &&
+          add(object, "same", cJSON_CreateNumber(melody->same)) &&
+          add(object, "steps", cJSON_CreateNumber(melody->step_count)) &&
+          add(object, "leaps", cJSON_CreateNumber(melody->leap_count)) &&
+          add(object, "net_direction", cJSON_CreateString(melody->net_direction)) &&
+          add(object, "net_semitones", cJSON_CreateNumber((double)melody->net_semitones)) &&
+          (taken = true, add(object, "directions", directions)))) {
+        if (!taken) {
+            cJSON_Delete(directions);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One claim per phrase with melody notes, in phrase order: the soprano notes that start in the phrase. index is the
+   phrase's, measures its measures; range, climax and contour are the melody adapter's results over the notes. */
+static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    for (size_t i = 0; i < report->melody_count; i++) {
+        const AnalysisMelody *melody = &report->melodies[i];
+        Rational start = rational_make(melody->start_numerator, melody->start_denominator);
+        Rational end = rational_make(melody->end_numerator, melody->end_denominator);
+        cJSON *claim = claim_json_with(melody->framework, notes, melody->note_ids, melody->note_id_count, start, end,
+                                       "melody", cJSON_CreateNumber(melody->uncertainty));
+        if (!(claim && add(claim, "index", cJSON_CreateNumber((double)melody->phrase)) &&
+              add(claim, "measures", measures_json(melody->first_measure, melody->last_measure)) &&
+              add(claim, "note_count", cJSON_CreateNumber((double)melody->note_id_count)) &&
+              add(claim, "range", melody_range_json(melody)) && add(claim, "climax", melody_climax_json(notes, melody)) &&
+              add(claim, "contour", melody_contour_json(melody)))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -2577,7 +2682,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "cadences", cadences_json(notes, report)) &&
           add(document, "phrases", phrases_json(notes, report)) &&
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
-          add(document, "motives", motives_json(notes, report)) && add(document, "melody", cJSON_CreateArray()) &&
+          add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&

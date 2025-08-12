@@ -1,0 +1,301 @@
+#include "pipeline/melody_pipeline.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "analysis_melody.h"
+#include "analysis_melody_climax.h"
+#include "key_vocabulary.h"
+#include "outer_scale_degrees.h"
+#include "pipeline/pitch_class_util.h"
+#include "pipeline/spelling_util.h"
+#include "semantics/beat_strength.h"
+#include "standard-counterpoint/framework.h"
+#include "theory/framework.h"
+
+/* a/b compared with c/d for positive denominators: negative, zero or positive. */
+static int compare_rational(long long a, long long b, long long c, long long d) {
+    long long left = a * d;
+    long long right = c * b;
+    return left < right ? -1 : (left > right ? 1 : 0);
+}
+
+/* A phrase's line: the library's line and, per entry, the ImportedNotes index of its note (SIZE_MAX for a rest). */
+typedef struct {
+    StandardCounterpointMelodyLine line;
+    size_t *note;
+    char (*name)[16]; /* each entry's note name, e.g. "E5"; empty for a rest */
+    size_t note_count; /* entries that are notes */
+} PhraseLine;
+
+static void phrase_line_destroy(PhraseLine *built) {
+    standard_counterpoint_melody_line_destroy(&built->line);
+    free(built->note);
+    free(built->name);
+    memset(built, 0, sizeof(*built));
+}
+
+/* The position of the voice segment's member that is the entry's note, or member_count when it is none. */
+static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
+    const char *id = entity_id_value(entry->note_id);
+    for (size_t m = 0; m < segment->member_count; m++) {
+        if (strcmp(segment->members[m].note_id, id) == 0) {
+            return m;
+        }
+    }
+    return segment->member_count;
+}
+
+/* The key region the time lies in, or the last one for a time past the end; NULL with none. */
+static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long long n, long long d) {
+    for (size_t r = 0; r < report->key_region_count; r++) {
+        const AnalysisKeyRegion *region = &report->key_regions[r];
+        if (compare_rational(n, d, region->end_numerator, (long long)region->end_denominator) < 0) {
+            return region;
+        }
+    }
+    return report->key_region_count > 0 ? &report->key_regions[report->key_region_count - 1] : NULL;
+}
+
+/* A degree label as the library names it: "1" to "7", with a "b" or "#" before it for an altered degree. */
+static bool parse_degree(const char *label, int *degree, int *alteration) {
+    *alteration = 0;
+    if (!label) {
+        return false;
+    }
+    if (*label == 'b') {
+        *alteration = -1;
+        label++;
+    } else if (*label == '#') {
+        *alteration = 1;
+        label++;
+    }
+    if (*label < '1' || *label > '7') {
+        return false;
+    }
+    *degree = *label - '0';
+    return true;
+}
+
+/* The note's name as the outer voice lines name it: as the input spells it when it does, else by the key region's
+   flats or sharps. */
+static void name_note(const ImportedNotes *notes, size_t note, long pitch, const AnalysisKeyRegion *region,
+                      char out[16]) {
+    if (notes->source.spelling_notated && spelled_note_name(notes->events[note], pitch, true, out)) {
+        return;
+    }
+    snprintf(out, 16, "%s%d", pitch_class_name(pitch_class_of(pitch), region ? region->prefer_flats : false),
+             (int)(pitch / 12) - 1);
+}
+
+/* Adds the soprano note of voice segment v to the line. False on allocation or library failure. */
+static bool add_note(PhraseLine *built, const ImportedNotes *notes, const AnalysisReport *report,
+                     const Segmentation *voices, size_t v, const OuterVoiceEntry *entry, size_t member) {
+    const Segment *segment = &voices->segments[v];
+    const CommonPracticeMember *attack = &segment->members[member];
+    StandardCounterpointMelodyNote note;
+    memset(&note, 0, sizeof(note));
+    note.present = true;
+    note.note_id = entity_id_value(entry->note_id);
+    note.pitch = entry->pitch;
+    note.confidence = 1.0;
+    note.has_strength = !attack->held;
+    note.strength = attack->strength;
+    const AnalysisKeyRegion *region = region_at(report, segment->start_numerator, (long long)segment->start_denominator);
+    long pitch = pitch_numeric_value_position_numerator(entry->pitch);
+    if (region) {
+        parse_degree(common_practice_scale_degree_label(
+                         (int)(((pitch % 12) + 12) % 12), region->tonic_pitch_class,
+                         region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR),
+                     &note.degree, &note.alteration);
+    }
+    built->note[built->line.count] = segment->note_indices[member];
+    name_note(notes, segment->note_indices[member], pitch, region, built->name[built->line.count]);
+    if (standard_counterpoint_melody_line_add_note(&built->line, &note) != STANDARD_COUNTERPOINT_MELODY_OK) {
+        return false;
+    }
+    built->note_count++;
+    return true;
+}
+
+/* Builds the line of the soprano notes whose voice segment starts in [start, end). */
+static bool build_phrase_line(const ImportedNotes *notes, const Segmentation *voices, const OuterVoiceLines *lines, const AnalysisReport *report,
+                              const AnalysisPhrase *phrase, PhraseLine *built) {
+    memset(built, 0, sizeof(*built));
+    standard_counterpoint_melody_line_init(&built->line);
+    built->note = malloc(sizeof(size_t) * (voices->segment_count + 1));
+    built->name = calloc(voices->segment_count + 1, sizeof(char[16]));
+    if (!built->note || !built->name) {
+        return false;
+    }
+    const char *previous = NULL;
+    bool started = false;
+    for (size_t v = 0; v < voices->segment_count; v++) {
+        const Segment *segment = &voices->segments[v];
+        if (compare_rational(segment->start_numerator, (long long)segment->start_denominator, phrase->start_numerator,
+                             (long long)phrase->start_denominator) < 0) {
+            continue;
+        }
+        if (compare_rational(segment->start_numerator, (long long)segment->start_denominator, phrase->end_numerator,
+                             (long long)phrase->end_denominator) >= 0) {
+            break;
+        }
+        const OuterVoiceEntry *entry = &lines->soprano[v];
+        size_t member = entry->present ? member_of(segment, entry) : segment->member_count;
+        if (member >= segment->member_count) {
+            if (started && previous != NULL) { /* one rest for a gap, none before the first note */
+                built->note[built->line.count] = SIZE_MAX;
+                if (standard_counterpoint_melody_line_add_rest(&built->line) != STANDARD_COUNTERPOINT_MELODY_OK) {
+                    return false;
+                }
+            }
+            previous = NULL;
+            continue;
+        }
+        const char *id = entity_id_value(entry->note_id);
+        if (previous != NULL && strcmp(previous, id) == 0) {
+            continue; /* the same note, held into this segment */
+        }
+        previous = id;
+        if (!started && segment->members[member].held) {
+            continue; /* held in from the phrase before: not an attack of this phrase */
+        }
+        started = true;
+        if (!add_note(built, notes, report, voices, v, entry, member)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static const char *direction_name(int direction) {
+    return direction == CONTOUR_DIRECTION_UP ? "up" : (direction == CONTOUR_DIRECTION_DOWN ? "down" : "same");
+}
+
+static long pitch_of(const PhraseLine *built, int entry) {
+    return pitch_numeric_value_position_numerator(built->line.notes[entry].pitch);
+}
+
+typedef enum { ANALYZE_OK, ANALYZE_DECLINED, ANALYZE_ALLOC } AnalyzeResult;
+
+/* Reads the library's results for one phrase's line into out. ANALYZE_DECLINED when the library gives none for the
+   line (out is then released by the caller). */
+static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index, const AnalysisPhrase *phrase,
+                           AnalysisMelody *out) {
+    StandardCounterpointMelodicIntervals intervals = {0};
+    StandardCounterpointContourSummaries summaries = {0};
+    StandardCounterpointClimaxes climaxes = {0};
+    AnalyzeResult result = ANALYZE_DECLINED;
+    StandardCounterpointMelodyStatus status =
+        standard_counterpoint_melody_intervals(&built->line, NULL, &intervals);
+    if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
+        status = standard_counterpoint_melody_contour_summaries(&built->line, &intervals, NULL, 0, &summaries);
+    }
+    if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
+        status = standard_counterpoint_melody_climaxes(&built->line, &intervals, NULL, 0, &climaxes);
+    }
+    if (status == STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC) {
+        result = ANALYZE_ALLOC;
+        goto done;
+    }
+    if (status != STANDARD_COUNTERPOINT_MELODY_OK || summaries.count != 1 || climaxes.count != 1) {
+        goto done;
+    }
+    const StandardCounterpointContourSummaryClaim *contour = &summaries.items[0].claim;
+    const StandardCounterpointClimaxClaim *climax = &climaxes.items[0].claim;
+
+    out->phrase = phrase_index;
+    out->framework = framework_name(standard_counterpoint_framework());
+    out->start_numerator = phrase->start_numerator;
+    out->start_denominator = phrase->start_denominator;
+    out->end_numerator = phrase->end_numerator;
+    out->end_denominator = phrase->end_denominator;
+    out->first_measure = phrase->first_measure;
+    out->last_measure = phrase->last_measure;
+    out->note_ids = malloc(sizeof(size_t) * built->note_count);
+    out->directions = malloc(sizeof(const char *) * (intervals.count > 0 ? intervals.count : 1));
+    if (!out->note_ids || !out->directions) {
+        result = ANALYZE_ALLOC;
+        goto done;
+    }
+    for (size_t i = 0; i < built->line.count; i++) {
+        if (built->line.notes[i].present) {
+            out->note_ids[out->note_id_count++] = built->note[i];
+        }
+    }
+    out->lowest_pitch = pitch_of(built, contour->lowest_index);
+    out->lowest_note = built->note[contour->lowest_index];
+    out->highest_pitch = pitch_of(built, contour->highest_index);
+    out->highest_note = built->note[contour->highest_index];
+    memcpy(out->lowest_name, built->name[contour->lowest_index], sizeof(out->lowest_name));
+    memcpy(out->highest_name, built->name[contour->highest_index], sizeof(out->highest_name));
+    out->range_semitones = contour->range_semitones;
+    out->climax_note = built->note[climax->first_index];
+    out->climax_occurrences = climax->occurrence_count;
+    out->climax_unique = climax->unique != 0;
+    out->climax_relative_position = climax->relative_position;
+    out->climax_has_strength = climax->has_strength != 0;
+    out->climax_strength = climax->has_strength ? beat_strength_name((BeatStrength)climax->strength) : NULL;
+    out->climax_by_leap = climax->by_leap != 0;
+    out->climax_final = climax->final_note != 0;
+    out->up = contour->up;
+    out->down = contour->down;
+    out->same = contour->same;
+    out->step_count = contour->step_count;
+    out->leap_count = contour->leap_count;
+    out->net_direction = direction_name(contour->net_direction);
+    out->net_semitones = contour->net_semitones;
+    for (size_t k = 0; k < intervals.count; k++) {
+        out->directions[out->direction_count++] = direction_name(intervals.items[k].claim.direction);
+    }
+    out->uncertainty = summaries.items[0].uncertainty > climaxes.items[0].uncertainty ? summaries.items[0].uncertainty
+                                                                                    : climaxes.items[0].uncertainty;
+    result = ANALYZE_OK;
+done:
+    standard_counterpoint_climaxes_destroy(&climaxes);
+    standard_counterpoint_contour_summaries_destroy(&summaries);
+    standard_counterpoint_melodic_intervals_destroy(&intervals);
+    return result;
+}
+
+bool melody_stage_collect(const ImportedNotes *notes, const Segmentation *voices, const OuterVoiceLines *lines,
+                          AnalysisReport *report) {
+    if (report->phrase_count == 0 || lines->count == 0 || lines->count != voices->segment_count) {
+        return true;
+    }
+    AnalysisMelody *melodies = calloc(report->phrase_count, sizeof(AnalysisMelody));
+    if (!melodies) {
+        return false;
+    }
+    size_t count = 0;
+    bool ok = true;
+    for (size_t p = 0; ok && p < report->phrase_count; p++) {
+        PhraseLine built;
+        ok = build_phrase_line(notes, voices, lines, report, &report->phrases[p], &built);
+        if (ok && built.note_count > 0) {
+            AnalyzeResult result = analyze_phrase(&built, p, &report->phrases[p], &melodies[count]);
+            ok = result != ANALYZE_ALLOC;
+            if (result == ANALYZE_OK) {
+                count++;
+            } else {
+                free(melodies[count].note_ids);
+                free(melodies[count].directions);
+                memset(&melodies[count], 0, sizeof(melodies[count]));
+            }
+        }
+        phrase_line_destroy(&built);
+    }
+    if (!ok) {
+        for (size_t i = 0; i < count; i++) {
+            free(melodies[i].note_ids);
+            free(melodies[i].directions);
+        }
+        free(melodies);
+        return false;
+    }
+    report->melodies = melodies;
+    report->melody_count = count;
+    return true;
+}
