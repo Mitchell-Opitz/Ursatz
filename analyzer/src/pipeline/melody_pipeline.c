@@ -7,6 +7,7 @@
 
 #include "analysis_melody.h"
 #include "analysis_melody_climax.h"
+#include "analysis_melody_leaps.h"
 #include "key_vocabulary.h"
 #include "outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
@@ -178,6 +179,13 @@ static long pitch_of(const PhraseLine *built, int entry) {
     return pitch_numeric_value_position_numerator(built->line.notes[entry].pitch);
 }
 
+static void free_melody(AnalysisMelody *melody) {
+    free(melody->note_ids);
+    free(melody->directions);
+    free(melody->leaps);
+    free(melody->consecutive_leaps);
+}
+
 typedef enum { ANALYZE_OK, ANALYZE_DECLINED, ANALYZE_ALLOC } AnalyzeResult;
 
 /* Reads the library's results for one phrase's line into out. ANALYZE_DECLINED when the library gives none for the
@@ -187,6 +195,8 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     StandardCounterpointMelodicIntervals intervals = {0};
     StandardCounterpointContourSummaries summaries = {0};
     StandardCounterpointClimaxes climaxes = {0};
+    StandardCounterpointLeapRecoveries recoveries = {0};
+    StandardCounterpointConsecutiveLeapList consecutive = {0};
     AnalyzeResult result = ANALYZE_DECLINED;
     StandardCounterpointMelodyStatus status =
         standard_counterpoint_melody_intervals(&built->line, NULL, &intervals);
@@ -195,6 +205,12 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     }
     if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
         status = standard_counterpoint_melody_climaxes(&built->line, &intervals, NULL, 0, &climaxes);
+    }
+    if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
+        status = standard_counterpoint_melody_leap_recoveries(&built->line, &intervals, &recoveries);
+    }
+    if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
+        status = standard_counterpoint_melody_consecutive_leaps(&built->line, &intervals, &consecutive);
     }
     if (status == STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC) {
         result = ANALYZE_ALLOC;
@@ -216,7 +232,9 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     out->last_measure = phrase->last_measure;
     out->note_ids = malloc(sizeof(size_t) * built->note_count);
     out->directions = malloc(sizeof(const char *) * (intervals.count > 0 ? intervals.count : 1));
-    if (!out->note_ids || !out->directions) {
+    out->leaps = calloc(recoveries.count > 0 ? recoveries.count : 1, sizeof(AnalysisMelodyLeap));
+    out->consecutive_leaps = calloc(consecutive.count > 0 ? consecutive.count : 1, sizeof(AnalysisMelodyConsecutiveLeaps));
+    if (!out->note_ids || !out->directions || !out->leaps || !out->consecutive_leaps) {
         result = ANALYZE_ALLOC;
         goto done;
     }
@@ -250,10 +268,34 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     for (size_t k = 0; k < intervals.count; k++) {
         out->directions[out->direction_count++] = direction_name(intervals.items[k].claim.direction);
     }
+    for (size_t k = 0; k < recoveries.count; k++) {
+        const StandardCounterpointLeapRecoveryClaim *claim = &recoveries.items[k].claim;
+        AnalysisMelodyLeap *leap = &out->leaps[out->leap_total++];
+        leap->from_note = built->note[claim->from];
+        leap->to_note = built->note[claim->to];
+        leap->semitones = claim->semitones;
+        leap->direction = direction_name(claim->direction);
+        leap->generic_size = claim->generic_size;
+        leap->approximate = claim->approximate != 0;
+        leap->status = standard_counterpoint_leap_status_name((StandardCounterpointLeapStatus)claim->status);
+        leap->uncertainty = recoveries.items[k].uncertainty;
+    }
+    for (size_t k = 0; k < consecutive.count; k++) {
+        const StandardCounterpointConsecutiveLeapsClaim *claim = &consecutive.items[k].claim;
+        AnalysisMelodyConsecutiveLeaps *pair = &out->consecutive_leaps[out->consecutive_leap_count++];
+        pair->first_note = built->note[claim->first_from];
+        pair->middle_note = built->note[claim->middle];
+        pair->last_note = built->note[claim->last_to];
+        pair->same_direction = claim->same_direction != 0;
+        pair->three_in_a_row = claim->three_in_a_row != 0;
+        pair->uncertainty = consecutive.items[k].uncertainty;
+    }
     out->uncertainty = summaries.items[0].uncertainty > climaxes.items[0].uncertainty ? summaries.items[0].uncertainty
                                                                                     : climaxes.items[0].uncertainty;
     result = ANALYZE_OK;
 done:
+    standard_counterpoint_consecutive_leap_list_destroy(&consecutive);
+    standard_counterpoint_leap_recoveries_destroy(&recoveries);
     standard_counterpoint_climaxes_destroy(&climaxes);
     standard_counterpoint_contour_summaries_destroy(&summaries);
     standard_counterpoint_melodic_intervals_destroy(&intervals);
@@ -280,8 +322,7 @@ bool melody_stage_collect(const ImportedNotes *notes, const Segmentation *voices
             if (result == ANALYZE_OK) {
                 count++;
             } else {
-                free(melodies[count].note_ids);
-                free(melodies[count].directions);
+                free_melody(&melodies[count]);
                 memset(&melodies[count], 0, sizeof(melodies[count]));
             }
         }
@@ -289,8 +330,7 @@ bool melody_stage_collect(const ImportedNotes *notes, const Segmentation *voices
     }
     if (!ok) {
         for (size_t i = 0; i < count; i++) {
-            free(melodies[i].note_ids);
-            free(melodies[i].directions);
+            free_melody(&melodies[i]);
         }
         free(melodies);
         return false;

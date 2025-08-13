@@ -614,7 +614,7 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "measures", "note_count", "range", "climax", "contour"],
+          "required": ["index", "measures", "note_count", "range", "climax", "contour", "leaps", "consecutive_leaps"],
           "properties": {
             "label": { "const": "melody" },
             "index": { "type": "integer", "minimum": 0 },
@@ -630,6 +630,24 @@
               }
             },
             "climax": { "$ref": "#/$defs/melody_climax_claim" },
+            "leaps": {
+              "type": "object",
+              "required": ["recovered", "unrecovered", "not_required", "not_judged", "items"],
+              "properties": {
+                "recovered": { "type": "integer", "minimum": 0 },
+                "unrecovered": { "type": "integer", "minimum": 0 },
+                "not_required": { "type": "integer", "minimum": 0 },
+                "not_judged": { "type": "integer", "minimum": 0 },
+                "items": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/melody_leap_claim" }
+                }
+              }
+            },
+            "consecutive_leaps": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/melody_consecutive_leaps_claim" }
+            },
             "contour": {
               "type": "object",
               "required": ["up", "down", "same", "steps", "leaps", "net_direction", "net_semitones", "directions"],
@@ -647,6 +665,37 @@
                 }
               }
             }
+          }
+        }
+      ]
+    },
+    "melody_leap_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["semitones", "direction", "generic_size", "approximate", "status"],
+          "properties": {
+            "label": { "const": "leap" },
+            "semitones": { "type": "integer" },
+            "direction": { "enum": ["up", "down"] },
+            "generic_size": { "type": ["integer", "null"], "minimum": 3 },
+            "approximate": { "type": "boolean" },
+            "status": { "enum": ["recovered", "unrecovered", "not-required", "not-judged"] }
+          }
+        }
+      ]
+    },
+    "melody_consecutive_leaps_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["same_direction", "three_in_a_row"],
+          "properties": {
+            "label": { "const": "consecutive-leaps" },
+            "same_direction": { "type": "boolean" },
+            "three_in_a_row": { "type": "boolean" }
           }
         }
       ]

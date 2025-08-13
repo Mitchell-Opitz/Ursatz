@@ -1182,6 +1182,26 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
                         (int)number_member(contour, "down"), (int)number_member(contour, "same"),
                         (int)number_member(contour, "steps"), (int)number_member(contour, "leaps"));
     }
+    ok = ok && sb_append(sb, "\n") &&
+         sb_append(sb, "### Leaps\n\n") &&
+         sb_append(sb, "A leap is an interval of a third or larger. The library's rule asks a leap of a fourth or "
+                       "larger to be followed by a step in the opposite direction: such a leap is Recovered when one "
+                       "follows, Unrecovered when a step the same way, a repeated note or another leap does, and Not "
+                       "judged when nothing follows it; a third asks nothing (Not required). Consecutive counts the "
+                       "pairs of leaps in a row the library's rule finds fault with.\n\n") &&
+         sb_append(sb, "| Phrase | Leaps | Recovered | Unrecovered | Not required | Not judged | Consecutive |\n"
+                       "| --- | --- | --- | --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(entry, melody) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *leaps = cJSON_GetObjectItemCaseSensitive(entry, "leaps");
+        ok = sb_appendf(sb, "| %d | %d | %d | %d | %d | %d | %d |\n", (int)number_member(entry, "index") + 1,
+                        cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(leaps, "items")),
+                        (int)number_member(leaps, "recovered"), (int)number_member(leaps, "unrecovered"),
+                        (int)number_member(leaps, "not_required"), (int)number_member(leaps, "not_judged"),
+                        cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(entry, "consecutive_leaps")));
+    }
     return ok && sb_append(sb, "\n");
 }
 

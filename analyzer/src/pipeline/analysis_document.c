@@ -2634,8 +2634,78 @@ static cJSON *melody_contour_json(const AnalysisMelody *melody) {
     return object;
 }
 
+/* One leap as a claim over its two notes: the interval in semitones and in letter names (null when the library has no
+   size), whether it was read from the semitones alone, and the library's verdict on its recovery. */
+static cJSON *melody_leap_json(const ImportedNotes *notes, const char *framework, const AnalysisMelodyLeap *leap) {
+    size_t ids[2] = {leap->from_note, leap->to_note};
+    Rational start;
+    Rational end;
+    notes_span(notes, ids, 2, &start, &end);
+    cJSON *claim = claim_json_with(framework, notes, ids, 2, start, end, "leap", cJSON_CreateNumber(leap->uncertainty));
+    if (!(claim && add(claim, "semitones", cJSON_CreateNumber((double)leap->semitones)) &&
+          add(claim, "direction", cJSON_CreateString(leap->direction)) &&
+          add(claim, "generic_size", leap->generic_size > 0 ? cJSON_CreateNumber(leap->generic_size) : cJSON_CreateNull()) &&
+          add(claim, "approximate", cJSON_CreateBool(leap->approximate)) &&
+          add(claim, "status", cJSON_CreateString(leap->status)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The leaps of a phrase: how many the library finds recovered, unrecovered, not required and not judged, and every
+   leap as a claim in time order. */
+static cJSON *melody_leaps_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    static const char *const STATUSES[4] = {"recovered", "unrecovered", "not-required", "not-judged"};
+    static const char *const KEYS[4] = {"recovered", "unrecovered", "not_required", "not_judged"};
+    cJSON *object = cJSON_CreateObject();
+    cJSON *items = cJSON_CreateArray();
+    bool ok = object && items;
+    for (size_t k = 0; ok && k < 4; k++) {
+        size_t count = 0;
+        for (size_t i = 0; i < melody->leap_total; i++) {
+            count += strcmp(melody->leaps[i].status, STATUSES[k]) == 0 ? 1 : 0;
+        }
+        ok = add(object, KEYS[k], cJSON_CreateNumber((double)count));
+    }
+    for (size_t i = 0; ok && i < melody->leap_total; i++) {
+        ok = append(items, melody_leap_json(notes, melody->framework, &melody->leaps[i]));
+    }
+    bool taken = false; /* add() takes the items over, and frees them itself when it fails */
+    if (!(ok && (taken = true, add(object, "items", items)))) {
+        if (!taken) {
+            cJSON_Delete(items);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The pairs of leaps in a row the library's rule finds fault with, each a claim over its three notes. */
+static cJSON *melody_consecutive_leaps_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < melody->consecutive_leap_count; i++) {
+        const AnalysisMelodyConsecutiveLeaps *pair = &melody->consecutive_leaps[i];
+        size_t ids[3] = {pair->first_note, pair->middle_note, pair->last_note};
+        Rational start;
+        Rational end;
+        notes_span(notes, ids, 3, &start, &end);
+        cJSON *claim = claim_json_with(melody->framework, notes, ids, 3, start, end, "consecutive-leaps",
+                                       cJSON_CreateNumber(pair->uncertainty));
+        if (!(claim && add(claim, "same_direction", cJSON_CreateBool(pair->same_direction)) &&
+              add(claim, "three_in_a_row", cJSON_CreateBool(pair->three_in_a_row)) && append(list, claim))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* One claim per phrase with melody notes, in phrase order: the soprano notes that start in the phrase. index is the
-   phrase's, measures its measures; range, climax and contour are the melody adapter's results over the notes. */
+   phrase's, measures its measures; range, climax, contour, leaps and consecutive leaps are the melody adapter's results
+   over the notes. */
 static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -2651,7 +2721,9 @@ static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *repo
               add(claim, "measures", measures_json(melody->first_measure, melody->last_measure)) &&
               add(claim, "note_count", cJSON_CreateNumber((double)melody->note_id_count)) &&
               add(claim, "range", melody_range_json(melody)) && add(claim, "climax", melody_climax_json(notes, melody)) &&
-              add(claim, "contour", melody_contour_json(melody)))) {
+              add(claim, "contour", melody_contour_json(melody)) &&
+              add(claim, "leaps", melody_leaps_json(notes, melody)) &&
+              add(claim, "consecutive_leaps", melody_consecutive_leaps_json(notes, melody)))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;

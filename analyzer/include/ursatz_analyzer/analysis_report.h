@@ -491,6 +491,32 @@ typedef struct {
                                 kind (the library's, against the prototype); the analyzer only orders */
 } AnalysisMotive;
 
+/* One leap of a melody (an interval of a third or larger) and the library's verdict on its recovery
+   (analysis_melody_leaps.h, the cantus firmus rule LEAP_RECOVERY): a leap of a fourth or larger should be followed by a
+   step in the opposite direction. */
+typedef struct {
+    size_t from_note;          /* ImportedNotes indices of the two notes */
+    size_t to_note;
+    long semitones;            /* signed */
+    const char *direction;     /* "up" or "down" */
+    int generic_size;          /* the size in letter names (a third is 3); 0 when the library has none */
+    bool approximate;          /* the library read it from the semitones, with no letter names or scale degrees */
+    const char *status;        /* the library's name: "recovered", "unrecovered", "not-required" (a third) or
+                                  "not-judged" (a fourth or larger with nothing after it) */
+    double uncertainty;        /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisMelodyLeap;
+
+/* Two leaps in a row that the library's rule CONSECUTIVE_LEAPS finds fault with: the second starts where the first
+   ends. */
+typedef struct {
+    size_t first_note;         /* ImportedNotes indices: the first leap is first to middle, the second middle to last */
+    size_t middle_note;
+    size_t last_note;
+    bool same_direction;       /* the two go the same way and are not two thirds outlining a perfect fifth */
+    bool three_in_a_row;       /* a third leap follows */
+    double uncertainty;
+} AnalysisMelodyConsecutiveLeaps;
+
 /* The melody of one phrase: the soprano notes (the outer voice line, one entry per melody note) that start inside the
    phrase's span, read by the melody adapter of standard-counterpoint (analysis/analysis_melody.h). A note held in from
    the phrase before is not one of them, and a rest in the line breaks the chain: no interval is formed across it. The
@@ -533,6 +559,10 @@ typedef struct {
     const char **directions;   /* owned array of direction_count names ("up", "down", "same"), one per interval, in
                                   time order; the names are static */
     size_t direction_count;
+    AnalysisMelodyLeap *leaps; /* owned; every leap in time order */
+    size_t leap_total;
+    AnalysisMelodyConsecutiveLeaps *consecutive_leaps; /* owned; one per offending pair, in time order */
+    size_t consecutive_leap_count;
     double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
 } AnalysisMelody;
 
