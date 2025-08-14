@@ -14,6 +14,6 @@ int run_variants(int argc, char **argv);
     "       ursatz-composer variants --list-ops [--json]\n"                                                          \
     "       ursatz-composer variants <motive-input> [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] " \
     "[--form <full|rhythm|contour>] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--chain <file.json>] "         \
-    "[--count <n>] [--seed <n>]"
+    "[--count <n>] [--seed <n>] [--json]"
 
 #endif

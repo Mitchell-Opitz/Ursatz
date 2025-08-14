@@ -8,6 +8,7 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "cli_options.h"
@@ -43,7 +44,8 @@ static void print_help(FILE *out) {
     fprintf(out, "                       chain for every variant. Default: each variant gets its own random chain\n");
     fprintf(out, "  --count <n>          how many variants, 1 to %d (default %d); variant i uses seed + i\n", VARIANTS_COUNT_MAX, VARIANTS_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
-    fprintf(out, "  --json               print as JSON\n");
+    fprintf(out, "  --json               print as JSON: the seed, the source, and for each variant its seed, chain, kind, kept,\n");
+    fprintf(out, "                       changed, derivation, recognizability and motive (with its analysis)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument, or an unreadable chain file; 2 the input cannot\n");
     fprintf(out, "be loaded or a step of the chain is refused.\n\n");
@@ -386,6 +388,77 @@ static void print_text(unsigned long seed, const Motive *source, const Variant *
     }
 }
 
+/* The motive and its analysis as the motive command's --json document, parsed. NULL on failure. */
+static cJSON *motive_document(const Motive *motive) {
+    MotiveAnalysis analysis;
+    if (!motive_analyze(motive, &analysis)) {
+        return NULL;
+    }
+    char *text = motive_analysis_to_json(motive, &analysis);
+    cJSON *document = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    return document;
+}
+
+/* A variant: its record as variant_record_to_json writes it, then "motive". NULL on failure. */
+static cJSON *variant_object(const Variant *variant) {
+    char *text = variant_record_to_json(&variant->record);
+    cJSON *object = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    cJSON *motive = object ? motive_document(&variant->motive) : NULL;
+    if (!motive) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    cJSON_AddItemToObject(object, "motive", motive);
+    return object;
+}
+
+/* {"seed", "source", "variants"}, printed with 2-space indent. False on failure. */
+static bool print_json(unsigned long seed, const Motive *source, const Variant *variants, size_t count) {
+    cJSON *document = cJSON_CreateObject();
+    cJSON *source_document = document ? motive_document(source) : NULL;
+    cJSON *array = source_document ? cJSON_CreateArray() : NULL;
+    if (!array) {
+        cJSON_Delete(source_document);
+        cJSON_Delete(document);
+        return false;
+    }
+    cJSON_AddNumberToObject(document, "seed", (double)seed);
+    cJSON_AddItemToObject(document, "source", source_document);
+    cJSON_AddItemToObject(document, "variants", array);
+    for (size_t i = 0; i < count; i++) {
+        cJSON *object = variant_object(&variants[i]);
+        if (!object) {
+            cJSON_Delete(document);
+            return false;
+        }
+        cJSON_AddItemToArray(array, object);
+    }
+    char *printed = cJSON_Print(document);
+    cJSON_Delete(document);
+    if (!printed) {
+        return false;
+    }
+    /* cJSON indents with tabs and puts one after each colon; the other commands write 2 spaces and one space. */
+    for (const char *c = printed; *c; c++) {
+        if (*c == '\n') {
+            putchar('\n');
+            size_t tabs = 0;
+            while (c[1] == '\t') {
+                tabs++;
+                c++;
+            }
+            printf("%*s", (int)(tabs * 2), "");
+        } else {
+            putchar(*c == '\t' ? ' ' : *c);
+        }
+    }
+    putchar('\n');
+    cJSON_free(printed);
+    return true;
+}
+
 /* The variants command proper: load the source, make --count variants, print them. */
 static int make_variants(const Options *options) {
     unsigned long count = VARIANTS_COUNT_DEFAULT;
@@ -397,9 +470,6 @@ static int make_variants(const Options *options) {
     if (options->seed_text && !cli_parse_whole_number(options->seed_text, CLI_SEED_MAX - VARIANTS_COUNT_MAX, &seed)) {
         return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'",
                         CLI_SEED_MAX - VARIANTS_COUNT_MAX, options->seed_text);
-    }
-    if (options->json) {
-        return cli_fail(CLI_EXIT_USAGE, "--json is only for --list-ops");
     }
     VariantChain file_chain;
     if (options->chain_path) {
@@ -445,7 +515,14 @@ static int make_variants(const Options *options) {
         free(variants);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "no variant could be made of this motive");
     }
-    print_text(seed, &source, variants, made);
+    if (options->json) {
+        if (!print_json(seed, &source, variants, made)) {
+            free(variants);
+            return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        }
+    } else {
+        print_text(seed, &source, variants, made);
+    }
     free(variants);
     return 0;
 }
