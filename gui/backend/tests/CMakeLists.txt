@@ -275,3 +275,44 @@ target_link_libraries(test_subject_service PRIVATE cjson ursatz)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
 add_test(NAME subject_service COMMAND test_subject_service
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
+
+add_executable(test_materials_route test_materials_route.c
+  ${CMAKE_SOURCE_DIR}/backend/src/server.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+)
+
+target_include_directories(test_materials_route PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/include
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_materials_route PRIVATE
+  ursatz_analyzer
+  cjson
+  ursatz
+  civetweb-c-library
+)
+
+if(WIN32)
+  target_link_libraries(test_materials_route PRIVATE ws2_32)
+endif()
+
+# The test creates materials/, subjects/ and pieces/ in its own working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/materials_route)
+add_test(NAME materials_route COMMAND test_materials_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/materials_route)
