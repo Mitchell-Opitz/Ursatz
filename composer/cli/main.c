@@ -10,6 +10,7 @@
 #include "progression.h"
 #include "regenerate.h"
 #include "variations.h"
+#include "variants_cmd.h"
 #include "cli_options.h"
 
 #include <ursatz_composer/composer.h>
@@ -30,6 +31,7 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", LOCK_USAGE_LINE);
     fprintf(out, "%s\n", REGENERATE_USAGE_LINE);
     fprintf(out, "%s\n", VARIATIONS_USAGE_LINE);
+    fprintf(out, "%s\n", VARIANTS_USAGE_LINE);
     fprintf(out, "%s\n", HARMONIZE_USAGE_LINE);
 }
 
@@ -149,6 +151,9 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "variations") == 0) {
         return run_variations(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "variants") == 0) {
+        return run_variants(argc, argv);
     }
     if (argc >= 2 && strcmp(argv[1], "harmonize") == 0) {
         return run_harmonize(argc, argv);

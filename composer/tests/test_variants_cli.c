@@ -1,0 +1,185 @@
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+
+/*
+ * The `variants` command, run as a process: the operation list, variants from a chain file, that the same seed gives
+ * the same output and another seed does not, the JSON shape, and the exit status and message for a refused step.
+ */
+
+#define FIXTURE(name) COMPOSER_FIXTURE_DIR "/" name
+#define THEME FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\""
+
+/* Runs the command with these arguments; stdout and stderr go to files. Returns the exit status. */
+static int run(const char *arguments, const char *out_file, const char *err_file) {
+    char command[2048];
+    snprintf(command, sizeof(command), "\"%s\" variants %s >%s 2>%s", COMPOSER_CLI_PATH, arguments, out_file, err_file);
+    int status = system(command);
+    assert(WIFEXITED(status));
+    return WEXITSTATUS(status);
+}
+
+static char *read_file(const char *path) {
+    FILE *file = fopen(path, "rb");
+    assert(file);
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *text = malloc((size_t)length + 1);
+    assert(text);
+    size_t read = fread(text, 1, (size_t)length, file);
+    assert(read == (size_t)length);
+    text[length] = '\0';
+    fclose(file);
+    return text;
+}
+
+static void write_file(const char *path, const char *text) {
+    FILE *file = fopen(path, "wb");
+    assert(file);
+    fputs(text, file);
+    fclose(file);
+}
+
+/* The standard output of a command that must succeed. */
+static char *output_of(const char *arguments) {
+    assert(run(arguments, "variants_cli_out.txt", "variants_cli_err.txt") == 0);
+    char *err = read_file("variants_cli_err.txt");
+    assert(err[0] == '\0');
+    free(err);
+    return read_file("variants_cli_out.txt");
+}
+
+static void expect_failure(const char *arguments, int status, const char *message) {
+    assert(run(arguments, "variants_cli_out.txt", "variants_cli_err.txt") == status);
+    char *err = read_file("variants_cli_err.txt");
+    if (strstr(err, message) == NULL) {
+        fprintf(stderr, "'%s': expected '%s' in: %s\n", arguments, message, err);
+    }
+    assert(strstr(err, message) != NULL);
+    assert(strncmp(err, "Error: ", 7) == 0);
+    free(err);
+}
+
+static size_t count_of(const char *text, const char *needle) {
+    size_t count = 0;
+    for (const char *at = strstr(text, needle); at; at = strstr(at + 1, needle)) {
+        count++;
+    }
+    return count;
+}
+
+static void test_list_ops(void) {
+    char *out = output_of("--list-ops");
+    static const char *const NAMES[] = {"exact", "transpose", "invert", "retrograde", "interval-change",
+                                        "fragment", "liquidate", "augment", "diminish"};
+    for (size_t i = 0; i < sizeof(NAMES) / sizeof(NAMES[0]); i++) {
+        char line[64];
+        snprintf(line, sizeof(line), "\n%s  ", NAMES[i]);
+        assert(i == 0 ? strncmp(out, line + 1, strlen(line) - 1) == 0 : strstr(out, line) != NULL);
+    }
+    assert(strstr(out, "(intervals; ch. III, Exs. 14, 19)") != NULL);
+    assert(strstr(out, "forms: full, contour") != NULL);
+    free(out);
+
+    out = output_of("--list-ops --json");
+    assert(strstr(out, "\"operations\"") != NULL);
+    assert(count_of(out, "\"citation\"") == 9);
+    free(out);
+}
+
+static void test_chain_file(void) {
+    write_file("variants_cli_chain.json",
+               "{\"steps\": [{\"op\": \"invert\", \"params\": {\"tonal\": true}}, "
+               "{\"op\": \"augment\", \"params\": {\"ratio\": \"2:1\"}}]}");
+    char *out = output_of(THEME " --chain variants_cli_chain.json --count 2 --seed 1");
+    assert(strstr(out, "Source: D4:q F4:e A4:e D5:h") != NULL);
+    assert(strstr(out, "Seed: 1") != NULL);
+    assert(strstr(out, "Variant 1 (seed 1): invert, augment") != NULL);
+    assert(strstr(out, "Variant 2 (seed 2): invert, augment") != NULL);
+    assert(strstr(out, "Inverted about") != NULL && strstr(out, "then augmented 2:1") != NULL);
+    assert(strstr(out, "Kept the rhythm's proportions") != NULL);
+    free(out);
+}
+
+/* The same input, options and seed give the same output, and another seed does not. */
+static void test_seeds(void) {
+    char *first = output_of(THEME " --count 4 --seed 9");
+    assert(count_of(first, "\nVariant ") == 4);
+    char *again = output_of(THEME " --count 4 --seed 9");
+    assert(strcmp(first, again) == 0);
+    free(again);
+
+    bool differs = false;
+    for (int seed = 10; seed <= 20 && !differs; seed++) {
+        char arguments[256];
+        snprintf(arguments, sizeof(arguments), THEME " --count 4 --seed %d", seed);
+        char *other = output_of(arguments);
+        differs = strcmp(first, other) != 0;
+        free(other);
+    }
+    assert(differs);
+    free(first);
+
+    /* The default is six variants, and the seed is printed. */
+    char *six = output_of(THEME " --seed 2");
+    assert(count_of(six, "\nVariant ") == 6 && strstr(six, "Seed: 2") != NULL);
+    free(six);
+}
+
+static void test_json(void) {
+    char *out = output_of(THEME " --count 2 --seed 3 --json");
+    assert(strncmp(out, "{\n  \"seed\": 3,\n  \"source\": {", 28) == 0);
+    assert(strstr(out, "\"variants\": [") != NULL);
+    assert(count_of(out, "\"derivation\"") == 2);
+    assert(count_of(out, "\"functions\": []") == 2);
+    assert(count_of(out, "\"recognizability\"") == 2);
+    assert(count_of(out, "\"kind\"") == 2);
+    /* The source and each variant carry the motive document: the motive, and the analysis with its text forms. */
+    assert(count_of(out, "\"notes_text\"") == 3 && count_of(out, "\"degrees_text\"") == 3);
+    assert(strstr(out, "\"notes_text\": \"D4:q F4:e A4:e D5:h\"") != NULL);
+    free(out);
+}
+
+static void test_bad_arguments(void) {
+    expect_failure(THEME " --count 0", 1, "--count must be a whole number from 1 to 16");
+    expect_failure(THEME " --count 17", 1, "--count must be a whole number from 1 to 16");
+    expect_failure(THEME " --seed x", 1, "--seed must be a whole number");
+    expect_failure(THEME " --chain missing.json", 1, "cannot read chain file 'missing.json'");
+    expect_failure("--list-ops " FIXTURE("motive_d_minor.txt"), 1, "--list-ops takes no motive input");
+    expect_failure("", 1, "variants needs --list-ops or a motive input");
+    expect_failure(FIXTURE("motive_missing.txt") " --meter 4/4", 2, "cannot load");
+
+    write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"spin\"}]}");
+    expect_failure(THEME " --chain variants_cli_bad.json", 1, "step 1: unknown operation 'spin'");
+    write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"invert\", \"params\": {\"by\": 2}}]}");
+    expect_failure(THEME " --chain variants_cli_bad.json", 1, "invert has no parameter 'by'");
+    write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"augment\", \"params\": {\"ratio\": 2}}]}");
+    expect_failure(THEME " --chain variants_cli_bad.json", 1, "'ratio' of augment must be a ratio text");
+}
+
+/* A step an operation does not apply to says which step and why. */
+static void test_refused_step(void) {
+    write_file("variants_cli_refused.json",
+               "{\"steps\": [{\"op\": \"retrograde\"}, {\"op\": \"interval-change\"}]}");
+    write_file("variants_cli_contour.txt", "0 2 1 3\n");
+    expect_failure("variants_cli_contour.txt --form contour --meter 4/4 --chain variants_cli_refused.json", 2,
+                   "step 2 of the chain: interval-change does not apply to a contour motive");
+    char *out = read_file("variants_cli_out.txt");
+    assert(out[0] == '\0');
+    free(out);
+}
+
+int main(void) {
+    test_list_ops();
+    test_chain_file();
+    test_seeds();
+    test_json();
+    test_bad_arguments();
+    test_refused_step();
+    printf("variants cli tests passed\n");
+    return 0;
+}
