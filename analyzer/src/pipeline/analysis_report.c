@@ -112,6 +112,7 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->melodies[i].directions);
         free(report->melodies[i].leaps);
         free(report->melodies[i].consecutive_leaps);
+        free(report->melodies[i].ncts);
     }
     free(report->melodies);
     report->entries = NULL;

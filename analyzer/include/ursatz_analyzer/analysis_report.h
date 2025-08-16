@@ -517,6 +517,17 @@ typedef struct {
     double uncertainty;
 } AnalysisMelodyConsecutiveLeaps;
 
+/* The non-chord-tone types the melody counts, one per type of the library's NonChordTone. */
+#define ANALYSIS_MELODY_NCT_TYPES 10
+
+/* A melody note the library's chord identification found not to be a tone of its chord, with the type it gave
+   (analysis_melody_nct.h attaches that result to the note; the melody adapter labels nothing itself). */
+typedef struct {
+    size_t note;               /* ImportedNotes index */
+    const char *type;          /* the library's NonChordTone name, e.g. "passing" or "escape-tone" */
+    double uncertainty;        /* the library's: 1 minus the note's confidence */
+} AnalysisMelodyNct;
+
 /* The melody of one phrase: the soprano notes (the outer voice line, one entry per melody note) that start inside the
    phrase's span, read by the melody adapter of standard-counterpoint (analysis/analysis_melody.h). A note held in from
    the phrase before is not one of them, and a rest in the line breaks the chain: no interval is formed across it. The
@@ -563,6 +574,15 @@ typedef struct {
     size_t leap_total;
     AnalysisMelodyConsecutiveLeaps *consecutive_leaps; /* owned; one per offending pair, in time order */
     size_t consecutive_leap_count;
+    /* Non-chord tones: each melody note against the chord of the segment it starts in (the first of its segments). A
+       note in a segment with no chord, or one the library left unclassified, is counted as unclassified. */
+    int chord_tone_count;
+    int unclassified_count;
+    int non_chord_tone_count;
+    const char *nct_type_names[ANALYSIS_MELODY_NCT_TYPES]; /* the library's NonChordTone names, in its order */
+    int nct_by_type[ANALYSIS_MELODY_NCT_TYPES];            /* non-chord tones by type, parallel to the names */
+    AnalysisMelodyNct *ncts;   /* owned; the non-chord tones in time order */
+    size_t nct_total;
     double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
 } AnalysisMelody;
 

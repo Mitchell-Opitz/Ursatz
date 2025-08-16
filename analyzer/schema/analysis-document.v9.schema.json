@@ -614,7 +614,7 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "measures", "note_count", "range", "climax", "contour", "leaps", "consecutive_leaps"],
+          "required": ["index", "measures", "note_count", "range", "climax", "contour", "leaps", "consecutive_leaps", "non_chord_tones"],
           "properties": {
             "label": { "const": "melody" },
             "index": { "type": "integer", "minimum": 0 },
@@ -647,6 +647,30 @@
             "consecutive_leaps": {
               "type": "array",
               "items": { "$ref": "#/$defs/melody_consecutive_leaps_claim" }
+            },
+            "non_chord_tones": {
+              "type": "object",
+              "required": ["chord_tones", "non_chord_tones", "unclassified", "by_type", "items"],
+              "properties": {
+                "chord_tones": { "type": "integer", "minimum": 0 },
+                "non_chord_tones": { "type": "integer", "minimum": 0 },
+                "unclassified": { "type": "integer", "minimum": 0 },
+                "by_type": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["type", "count"],
+                    "properties": {
+                      "type": { "type": "string" },
+                      "count": { "type": "integer", "minimum": 1 }
+                    }
+                  }
+                },
+                "items": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/claim" }
+                }
+              }
             },
             "contour": {
               "type": "object",

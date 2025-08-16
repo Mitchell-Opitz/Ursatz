@@ -8,6 +8,7 @@
 #include "analysis_melody.h"
 #include "analysis_melody_climax.h"
 #include "analysis_melody_leaps.h"
+#include "analysis_melody_nct.h"
 #include "key_vocabulary.h"
 #include "outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
@@ -22,6 +23,8 @@ static int compare_rational(long long a, long long b, long long c, long long d) 
     long long right = c * b;
     return left < right ? -1 : (left > right ? 1 : 0);
 }
+
+_Static_assert(NON_CHORD_TONE_COUNT == ANALYSIS_MELODY_NCT_TYPES, "the report counts every NonChordTone");
 
 /* A phrase's line: the library's line and, per entry, the ImportedNotes index of its note (SIZE_MAX for a rest). */
 typedef struct {
@@ -91,9 +94,45 @@ static void name_note(const ImportedNotes *notes, size_t note, long pitch, const
              (int)(pitch / 12) - 1);
 }
 
+/* The library's non-chord-tone result for a note, from the chord identification of the chord segment its voice segment
+   starts in: no chord gives UNCLASSIFIED; a note listed among the chord's non-chord tones gives NON_CHORD_TONE with the
+   type (UNCLASSIFIED when the library left the type open); a note not listed gives CHORD_TONE. Ported from
+   melody_build_from_line. chord is a cursor over the entries, which only moves forward. */
+static void classify_note(const AnalysisReport *report, const Segment *segment, size_t note, size_t *chord,
+                          size_t *tone, StandardCounterpointMelodyNote *out) {
+    out->nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
+    while (*chord + 1 < report->entry_count &&
+           compare_rational(segment->start_numerator, (long long)segment->start_denominator,
+                            report->entries[*chord].end_numerator,
+                            (long long)report->entries[*chord].end_denominator) >= 0) {
+        (*chord)++;
+    }
+    if (*chord >= report->entry_count || report->entries[*chord].chord.label == NULL) {
+        return;
+    }
+    out->nct = STANDARD_COUNTERPOINT_NCT_CHORD_TONE;
+    while (*tone < report->non_chord_tone_count && report->non_chord_tones[*tone].chord_index < *chord) {
+        (*tone)++;
+    }
+    for (size_t t = *tone; t < report->non_chord_tone_count && report->non_chord_tones[t].chord_index == *chord; t++) {
+        const AnalysisNonChordTone *found = &report->non_chord_tones[t];
+        if (found->note_id != note) {
+            continue;
+        }
+        out->nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
+        for (int type = 0; found->type && type < NON_CHORD_TONE_COUNT; type++) {
+            if (strcmp(non_chord_tone_name((NonChordTone)type), found->type) == 0) {
+                out->nct = STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE;
+                out->nct_type = (NonChordTone)type;
+            }
+        }
+    }
+}
+
 /* Adds the soprano note of voice segment v to the line. False on allocation or library failure. */
 static bool add_note(PhraseLine *built, const ImportedNotes *notes, const AnalysisReport *report,
-                     const Segmentation *voices, size_t v, const OuterVoiceEntry *entry, size_t member) {
+                     const Segmentation *voices, size_t v, const OuterVoiceEntry *entry, size_t member,
+                     size_t *chord, size_t *tone) {
     const Segment *segment = &voices->segments[v];
     const CommonPracticeMember *attack = &segment->members[member];
     StandardCounterpointMelodyNote note;
@@ -112,6 +151,10 @@ static bool add_note(PhraseLine *built, const ImportedNotes *notes, const Analys
                          region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR),
                      &note.degree, &note.alteration);
     }
+    classify_note(report, segment, segment->note_indices[member], chord, tone, &note);
+    char ref[96];
+    snprintf(ref, sizeof(ref), "%s/%s", voices->segment_ids[v], note.note_id);
+    note.nct_ref = ref;
     built->note[built->line.count] = segment->note_indices[member];
     name_note(notes, segment->note_indices[member], pitch, region, built->name[built->line.count]);
     if (standard_counterpoint_melody_line_add_note(&built->line, &note) != STANDARD_COUNTERPOINT_MELODY_OK) {
@@ -133,6 +176,8 @@ static bool build_phrase_line(const ImportedNotes *notes, const Segmentation *vo
     }
     const char *previous = NULL;
     bool started = false;
+    size_t chord = 0;
+    size_t tone = 0;
     for (size_t v = 0; v < voices->segment_count; v++) {
         const Segment *segment = &voices->segments[v];
         if (compare_rational(segment->start_numerator, (long long)segment->start_denominator, phrase->start_numerator,
@@ -164,7 +209,7 @@ static bool build_phrase_line(const ImportedNotes *notes, const Segmentation *vo
             continue; /* held in from the phrase before: not an attack of this phrase */
         }
         started = true;
-        if (!add_note(built, notes, report, voices, v, entry, member)) {
+        if (!add_note(built, notes, report, voices, v, entry, member, &chord, &tone)) {
             return false;
         }
     }
@@ -184,6 +229,7 @@ static void free_melody(AnalysisMelody *melody) {
     free(melody->directions);
     free(melody->leaps);
     free(melody->consecutive_leaps);
+    free(melody->ncts);
 }
 
 typedef enum { ANALYZE_OK, ANALYZE_DECLINED, ANALYZE_ALLOC } AnalyzeResult;
@@ -197,6 +243,8 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     StandardCounterpointClimaxes climaxes = {0};
     StandardCounterpointLeapRecoveries recoveries = {0};
     StandardCounterpointConsecutiveLeapList consecutive = {0};
+    StandardCounterpointNctLabels labels = {0};
+    StandardCounterpointNctCountList counts = {0};
     AnalyzeResult result = ANALYZE_DECLINED;
     StandardCounterpointMelodyStatus status =
         standard_counterpoint_melody_intervals(&built->line, NULL, &intervals);
@@ -212,11 +260,18 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
         status = standard_counterpoint_melody_consecutive_leaps(&built->line, &intervals, &consecutive);
     }
+    if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
+        status = standard_counterpoint_melody_nct_labels(&built->line, &labels);
+    }
+    if (status == STANDARD_COUNTERPOINT_MELODY_OK) {
+        status = standard_counterpoint_melody_nct_counts(&built->line, NULL, 0, &counts);
+    }
     if (status == STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC) {
         result = ANALYZE_ALLOC;
         goto done;
     }
-    if (status != STANDARD_COUNTERPOINT_MELODY_OK || summaries.count != 1 || climaxes.count != 1) {
+    if (status != STANDARD_COUNTERPOINT_MELODY_OK || summaries.count != 1 || climaxes.count != 1 ||
+        counts.count != 1) {
         goto done;
     }
     const StandardCounterpointContourSummaryClaim *contour = &summaries.items[0].claim;
@@ -234,7 +289,8 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     out->directions = malloc(sizeof(const char *) * (intervals.count > 0 ? intervals.count : 1));
     out->leaps = calloc(recoveries.count > 0 ? recoveries.count : 1, sizeof(AnalysisMelodyLeap));
     out->consecutive_leaps = calloc(consecutive.count > 0 ? consecutive.count : 1, sizeof(AnalysisMelodyConsecutiveLeaps));
-    if (!out->note_ids || !out->directions || !out->leaps || !out->consecutive_leaps) {
+    out->ncts = calloc(labels.count > 0 ? labels.count : 1, sizeof(AnalysisMelodyNct));
+    if (!out->note_ids || !out->directions || !out->leaps || !out->consecutive_leaps || !out->ncts) {
         result = ANALYZE_ALLOC;
         goto done;
     }
@@ -290,10 +346,29 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
         pair->three_in_a_row = claim->three_in_a_row != 0;
         pair->uncertainty = consecutive.items[k].uncertainty;
     }
+    const StandardCounterpointNctCountsClaim *tally = &counts.items[0].claim;
+    out->chord_tone_count = tally->chord_tones;
+    out->unclassified_count = tally->unclassified;
+    out->non_chord_tone_count = tally->non_chord_tones;
+    for (int type = 0; type < NON_CHORD_TONE_COUNT; type++) {
+        out->nct_type_names[type] = non_chord_tone_name((NonChordTone)type);
+        out->nct_by_type[type] = tally->by_type[type];
+    }
+    for (size_t k = 0; k < labels.count; k++) {
+        const StandardCounterpointNctClaim *claim = &labels.items[k].claim;
+        if (claim->status == (int)STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE) {
+            AnalysisMelodyNct *nct = &out->ncts[out->nct_total++];
+            nct->note = built->note[claim->index];
+            nct->type = non_chord_tone_name((NonChordTone)claim->type);
+            nct->uncertainty = labels.items[k].uncertainty;
+        }
+    }
     out->uncertainty = summaries.items[0].uncertainty > climaxes.items[0].uncertainty ? summaries.items[0].uncertainty
                                                                                     : climaxes.items[0].uncertainty;
     result = ANALYZE_OK;
 done:
+    standard_counterpoint_nct_count_list_destroy(&counts);
+    standard_counterpoint_nct_labels_destroy(&labels);
     standard_counterpoint_consecutive_leap_list_destroy(&consecutive);
     standard_counterpoint_leap_recoveries_destroy(&recoveries);
     standard_counterpoint_climaxes_destroy(&climaxes);

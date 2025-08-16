@@ -1202,6 +1202,30 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
                         (int)number_member(leaps, "not_required"), (int)number_member(leaps, "not_judged"),
                         cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(entry, "consecutive_leaps")));
     }
+    ok = ok && sb_append(sb, "\n") &&
+         sb_append(sb, "### Non-chord tones\n\n") &&
+         sb_append(sb, "Each melody note is set against the chord of the segment it starts in, as the library's chord "
+                       "identification reads it: a Chord tone is one of the chord's tones, a Non-chord tone is one it "
+                       "left over and named, and Unclassified notes are in a segment with no chord or were left "
+                       "unnamed. By type counts the non-chord tones under the library's names.\n\n") &&
+         sb_append(sb, "| Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |\n"
+                       "| --- | --- | --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(entry, melody) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *tones = cJSON_GetObjectItemCaseSensitive(entry, "non_chord_tones");
+        const cJSON *by_type = cJSON_GetObjectItemCaseSensitive(tones, "by_type");
+        ok = sb_appendf(sb, "| %d | %d | %d | %d | %d | ", (int)number_member(entry, "index") + 1,
+                        (int)number_member(entry, "note_count"), (int)number_member(tones, "chord_tones"),
+                        (int)number_member(tones, "non_chord_tones"), (int)number_member(tones, "unclassified"));
+        const cJSON *type;
+        cJSON_ArrayForEach(type, by_type) {
+            ok = ok && sb_appendf(sb, "%s%s %d", type == by_type->child ? "" : ", ", string_member(type, "type"),
+                                  (int)number_member(type, "count"));
+        }
+        ok = ok && sb_append(sb, cJSON_GetArraySize(by_type) == 0 ? "-" : "") && sb_append(sb, " |\n");
+    }
     return ok && sb_append(sb, "\n");
 }
 
