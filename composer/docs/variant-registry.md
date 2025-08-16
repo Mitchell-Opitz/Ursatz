@@ -4,7 +4,7 @@
 #include <ursatz_composer/variant_registry.h>
 ```
 
-The variant registry lists every way a motive can be made into a variant, one table row each. The 9 rows are the development operations of `motive_develop` (`motive_develop.h`), each with the category and the citation of Schoenberg's *Fundamentals of Musical Composition* it belongs to. A variant is made by a chain of up to 4 operations applied from a seed, and comes with a record of how it was made and what it kept and changed. The `variants` command (a later branch) is built on this; the library works on its own.
+The variant registry lists every way a motive can be made into a variant, one table row each. The 9 rows are the development operations of `motive_develop` (`motive_develop.h`), each with the category and the citation of Schoenberg's *Fundamentals of Musical Composition* it belongs to. A variant is made by a chain of up to 4 operations applied from a seed, and comes with a record of how it was made and what it kept and changed. The [variants command](cli-variants.md) is built on this; the library works on its own.
 
 ## Operations
 

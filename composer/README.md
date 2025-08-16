@@ -95,6 +95,13 @@ ursatz-composer develop theme.txt --op restate --tonal --meter 4/4 --key "D mino
 how recognizable each is. See [docs/cli-develop.md](docs/cli-develop.md).
 
 ```sh
+ursatz-composer variants theme.txt --meter 4/4 --key "D minor" --count 4 --seed 7
+```
+
+`variants` makes variants of a motive from chains of registry operations, at random or from a chain file, reproducibly from a seed, and
+says how each was derived. `variants --list-ops` lists the operations. See [docs/cli-variants.md](docs/cli-variants.md).
+
+```sh
 ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --seed 7 --out theme.json --midi theme.mid
 ```
 
