@@ -411,3 +411,11 @@ add_executable(test_variant_registry test_variant_registry.c)
 target_link_libraries(test_variant_registry PRIVATE ursatz_composer)
 target_compile_options(test_variant_registry PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_variant_registry COMMAND test_variant_registry)
+
+add_executable(test_variants_cli test_variants_cli.c)
+target_link_libraries(test_variants_cli PRIVATE ursatz_composer)
+target_compile_options(test_variants_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_variants_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_variants_cli ursatz-composer)
+add_test(NAME test_variants_cli COMMAND test_variants_cli)
