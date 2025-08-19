@@ -24,6 +24,7 @@
 #define BIG_LEAP_STEPS 4       /* a leap over a fourth, in scale steps; the next move is one step back */
 #define REPEAT_ONE_IN 8        /* a repeated pitch in one move of this many */
 #define ATTEMPTS_PER_MOTIVE 256
+#define STYLE_CANDIDATES 8   /* candidates drawn per motive when there is a style */
 
 /* Lengths in half-beats (1, 2 and 4: the beat unit's half, itself and double) and how often each is drawn. */
 static const long DURATIONS[] = {1, 2, 4};
@@ -221,6 +222,45 @@ static bool already_made(const Motive *made, size_t count, const Motive *motive)
     return false;
 }
 
+/* ------------------------------------------------------------------ style */
+
+/*
+ * How close a full candidate is to the style: its melody labels, and of those only the category the form keeps (the
+ * durations of a rhythm, the contour of a contour), scored by composer_style_closeness. False on allocation failure.
+ */
+static bool candidate_closeness(const MotiveRandomOptions *options, const Motive *full, ComposerRatio *out) {
+    ComposerStyleNote notes[MAX_NOTES];
+    for (size_t i = 0; i < full->note_count; i++) {
+        notes[i].pitch = full->notes[i].midi_pitch;
+        notes[i].duration_numerator = (unsigned long)full->notes[i].duration.num;
+        notes[i].duration_denominator = full->notes[i].duration.den;
+    }
+    ComposerStyleLabels *all = composer_style_labels_create();
+    ComposerStyleLabels *kept = options->form == MOTIVE_FORM_FULL ? all : composer_style_labels_create();
+    const char *category_kept = options->form == MOTIVE_FORM_RHYTHM ? "duration" : "contour";
+    bool ok = all && kept && composer_style_labels_add_melody(all, NULL, notes, full->note_count);
+    for (size_t i = 0; ok && kept != all && i < composer_style_labels_count(all); i++) {
+        const char *category;
+        const char *label;
+        ok = composer_style_labels_at(all, i, &category, &label) &&
+             (strcmp(category, category_kept) != 0 || composer_style_labels_add(kept, category, label));
+    }
+    ok = ok && composer_style_closeness(options->style, kept, out);
+    if (kept != all) {
+        composer_style_labels_destroy(kept);
+    }
+    composer_style_labels_destroy(all);
+    return ok;
+}
+
+/* -1, 0 or 1 as a is less than, equal to or more than b. */
+static int ratio_compare(const ComposerRatio *a, const ComposerRatio *b) {
+    __extension__ typedef unsigned __int128 wide;
+    wide left = (wide)a->numerator * b->denominator;
+    wide right = (wide)b->numerator * a->denominator;
+    return left < right ? -1 : left > right ? 1 : 0;
+}
+
 /* ---------------------------------------------------------------- the call */
 
 static bool valid_beat_unit(int unit) {
@@ -255,25 +295,44 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
 
     FillRng rng;
     fill_rng_seed(&rng, options->seed);
+    size_t want = options->style ? STYLE_CANDIDATES : 1;
     size_t made = 0;
     while (made < options->count) {
-        bool kept = false;
-        for (size_t attempt = 0; !kept && attempt < ATTEMPTS_PER_MOTIVE; attempt++) {
+        Motive pool[STYLE_CANDIDATES];
+        size_t have = 0;
+        size_t best = 0;
+        size_t ties = 0;
+        ComposerRatio best_closeness = {0, 1};
+        for (size_t attempt = 0; have < want && attempt < ATTEMPTS_PER_MOTIVE; attempt++) {
             Motive full;
-            Motive shown;
             bool found;
             if (!draw_candidate(options, &key, &rng, &full, &found)) {
                 return MOTIVE_RANDOM_ERR_ALLOC;
             }
-            if (found && apply_form(options, &full, &shown) && !already_made(out, made, &shown)) {
-                out[made] = shown;
-                kept = true;
+            if (!found || !apply_form(options, &full, &pool[have]) || already_made(out, made, &pool[have]) ||
+                already_made(pool, have, &pool[have])) {
+                continue;
             }
+            if (options->style) {
+                ComposerRatio closeness;
+                if (!candidate_closeness(options, &full, &closeness)) {
+                    return MOTIVE_RANDOM_ERR_ALLOC;
+                }
+                int order = have == 0 ? 1 : ratio_compare(&closeness, &best_closeness);
+                if (order > 0) {
+                    best = have;
+                    best_closeness = closeness;
+                    ties = 1;
+                } else if (order == 0 && fill_rng_below(&rng, ++ties) == 0) {
+                    best = have;
+                }
+            }
+            have++;
         }
-        if (!kept) {
+        if (have == 0) {
             return MOTIVE_RANDOM_ERR_UNSATISFIABLE;
         }
-        made++;
+        out[made++] = pool[best];
     }
     *out_count = made;
     return MOTIVE_RANDOM_OK;
