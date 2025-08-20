@@ -7,7 +7,10 @@
 
 #include <cJSON.h>
 #include <civetweb.h>
+#include <ctype.h>
+#include <unistd.h>
 
+#include "../service/composer_service.h"
 #include "../service/material_service.h"
 #include "../service/subject_service.h"
 
@@ -309,6 +312,138 @@ static int handle_list_items(struct mg_connection *conn) {
   return send_ok_with(conn, "items", items);
 }
 
+/* ---- motif analysis on save ----------------------------------------- */
+
+/* meter ^[0-9]{1,2}/[0-9]{1,2}$ */
+static bool analysis_meter_ok(const char *text) {
+  size_t i = 0;
+  while (isdigit((unsigned char)text[i])) {
+    i++;
+  }
+  if (i < 1 || i > 2 || text[i] != '/') {
+    return false;
+  }
+  size_t start = ++i;
+  while (isdigit((unsigned char)text[i])) {
+    i++;
+  }
+  return i - start >= 1 && i - start <= 2 && text[i] == '\0';
+}
+
+/* key ^[A-Ga-g][#b]? (major|minor)$ */
+static bool analysis_key_ok(const char *text) {
+  if (!((text[0] >= 'A' && text[0] <= 'G') || (text[0] >= 'a' && text[0] <= 'g'))) {
+    return false;
+  }
+  const char *rest = text + 1;
+  if (*rest == '#' || *rest == 'b') {
+    rest++;
+  }
+  return strcmp(rest, " major") == 0 || strcmp(rest, " minor") == 0;
+}
+
+typedef enum {
+  ANALYSIS_DONE,
+  ANALYSIS_ALLOC
+} AnalysisOutcome;
+
+static void set_motif_analysis(cJSON *motif, cJSON *analysis) {
+  if (cJSON_GetObjectItemCaseSensitive(motif, "analysis")) {
+    cJSON_ReplaceItemInObjectCaseSensitive(motif, "analysis", analysis);
+  } else {
+    cJSON_AddItemToObject(motif, "analysis", analysis);
+  }
+}
+
+/* Runs the Composer's motive analysis on a motif body and stores the result as motif.analysis. A body without a
+   valid full motif is left alone for the material service to judge. When the Composer cannot run, the analysis is
+   stored as null and *analysis_error names the reason. */
+static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **analysis_error) {
+  *analysis_error = NULL;
+  cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  if (!cJSON_IsObject(motif)) {
+    return ANALYSIS_DONE;
+  }
+  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
+  const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  if (!cJSON_IsString(form) || strcmp(form->valuestring, "full") != 0) {
+    set_motif_analysis(motif, cJSON_CreateNull());
+    return ANALYSIS_DONE;
+  }
+  bool has_key = cJSON_IsString(key) && key->valuestring[0] != '\0';
+  if (!cJSON_IsString(notes) || !cJSON_IsString(meter) || !analysis_meter_ok(meter->valuestring) ||
+      (has_key && !analysis_key_ok(key->valuestring))) {
+    return ANALYSIS_DONE;
+  }
+  const char *tmp_dir = getenv("TMPDIR");
+  char path[512];
+  if (!tmp_dir || tmp_dir[0] != '/' || snprintf(path, sizeof(path), "%s/ursatz-motif-XXXXXX", tmp_dir) >= (int)sizeof(path)) {
+    snprintf(path, sizeof(path), "/tmp/ursatz-motif-XXXXXX");
+  }
+  int fd = mkstemp(path);
+  if (fd < 0) {
+    *analysis_error = "could not write the note list for the Composer";
+    set_motif_analysis(motif, cJSON_CreateNull());
+    return ANALYSIS_DONE;
+  }
+  size_t length = strlen(notes->valuestring);
+  bool written = write(fd, notes->valuestring, length) == (ssize_t)length;
+  close(fd);
+  cJSON *analysis = NULL;
+  if (!written) {
+    *analysis_error = "could not write the note list for the Composer";
+  } else {
+    const char *args[12];
+    int n = 0;
+    args[n++] = "motive";
+    args[n++] = path;
+    args[n++] = "--format";
+    args[n++] = "notes";
+    args[n++] = "--meter";
+    args[n++] = meter->valuestring;
+    if (has_key) {
+      args[n++] = "--key";
+      args[n++] = key->valuestring;
+    }
+    args[n++] = "--json";
+    args[n] = NULL;
+    UrsatzGuiComposerOutput out = {0, NULL, NULL};
+    UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
+    if (result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
+      *analysis_error = "composer not found";
+    } else if (result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
+      *analysis_error = "composer timed out";
+    } else if (result != URSATZ_GUI_COMPOSER_OK) {
+      *analysis_error = "composer could not be started";
+    } else {
+      analysis = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
+      if (!analysis) {
+        *analysis_error = "composer could not analyze the motif";
+      }
+      ursatz_gui_composer_output_destroy(&out);
+    }
+  }
+  unlink(path);
+  if (!analysis) {
+    analysis = cJSON_CreateNull();
+  }
+  if (!analysis) {
+    return ANALYSIS_ALLOC;
+  }
+  set_motif_analysis(motif, analysis);
+  return ANALYSIS_DONE;
+}
+
+/* Adds "analysis_error" to the item answer when the Composer was unavailable. */
+static int send_item_answer(struct mg_connection *conn, cJSON *item, const char *analysis_error) {
+  if (item && analysis_error) {
+    cJSON_AddStringToObject(item, "analysis_error", analysis_error);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
 static int handle_create_item(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -324,13 +459,18 @@ static int handle_create_item(struct mg_connection *conn) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "type, name, project_id and an object body are required");
   }
+  const char *analysis_error = NULL;
+  if (analyze_motif_body((cJSON *)version_body, &analysis_error) == ANALYSIS_ALLOC) {
+    cJSON_Delete(body);
+    return send_failure(conn, 500, "out of memory");
+  }
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_item_create(type, name, project_id, version_body, &item);
   cJSON_Delete(body);
   if (result != URSATZ_GUI_MATERIAL_OK) {
     return send_material_failure(conn, result);
   }
-  return send_ok_with(conn, "item", item);
+  return send_item_answer(conn, item, analysis_error);
 }
 
 /* The item answer: {"ok":true,"item":meta,"body":current,"uses_status":[...],"used_by":[...],"subjects":[...]}. */
@@ -447,13 +587,18 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "an object body is required; note is a string");
   }
+  const char *analysis_error = NULL;
+  if (analyze_motif_body((cJSON *)version_body, &analysis_error) == ANALYSIS_ALLOC) {
+    cJSON_Delete(body);
+    return send_failure(conn, 500, "out of memory");
+  }
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_item_add_version(id, version_body, note, &item);
   cJSON_Delete(body);
   if (result != URSATZ_GUI_MATERIAL_OK) {
     return send_material_failure(conn, result);
   }
-  return send_ok_with(conn, "item", item);
+  return send_item_answer(conn, item, analysis_error);
 }
 
 static int handle_get_version(struct mg_connection *conn, const char *id, const char *number_text) {
