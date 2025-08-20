@@ -13,6 +13,7 @@
 #include "../service/collection_service.h"
 #include "../service/piece_metadata.h"
 #include "../service/subject_service.h"
+#include "materials.h"
 
 static const char *kPiecesDir = "pieces";
 static const size_t kReadChunkSize = 65536;
@@ -535,6 +536,14 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   /* The stored document is already JSON; it is inlined as is. */
   json_buffer_append(&buf, "],\"document\":");
   json_buffer_append(&buf, detail->document_json);
+
+  /* The subjects that link this piece (R-117). */
+  cJSON *subjects = ursatz_gui_materials_subjects_for("pieces", detail->id);
+  char *subjects_text = subjects ? cJSON_PrintUnformatted(subjects) : NULL;
+  cJSON_Delete(subjects);
+  json_buffer_append(&buf, ",\"subjects\":");
+  json_buffer_append(&buf, subjects_text ? subjects_text : "[]");
+  free(subjects_text);
   json_buffer_append(&buf, "}");
 
   ursatz_gui_piece_detail_destroy(detail);
