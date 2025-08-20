@@ -757,6 +757,63 @@ A style is a snapshot: tagging, untagging or deleting a piece later changes
 it only when it is rebuilt, and a Composer plan keeps naming the file, so a
 rebuild changes what that plan's later steps use.
 
+### Materials and subjects routes
+
+Both stores are described under "Material store" and "Subjects" above; these
+routes only dispatch into them (`routes/materials.c`). Every answer is JSON.
+A success is `{"ok":true,...}`; a failure is `{"ok":false,"error":"..."}` with
+`400` for an invalid id, name, kind, type or body, `404` for something not
+found, `409` for a project that still holds items or an item that other items
+use, `405` for a method the route does not take and `413` for a request body
+over 256 KB.
+
+Projects:
+
+- `GET /api/materials/projects`: `{"projects":[{...,"item_count"}]}` by name.
+- `POST /api/materials/projects`: `{"name","description"?}` answers `{"project"}`.
+- `GET|PATCH|DELETE /api/materials/projects/<id>`: read, change `name` and/or
+  `description`, delete (`409` while it holds items).
+
+Items:
+
+- `GET /api/materials/items?project=<id>&type=<motif|theme|piece>`: `{"items"}`,
+  newest update first; both filters are optional.
+- `POST /api/materials/items`: `{"type","name","project_id","body"}` answers
+  `{"item"}` (the item meta) with the body stored as version 1.
+- `GET /api/materials/items/<id>`: `{"item","body","uses_status","used_by",
+  "subjects"}`: the meta, the current version's body, how each use's source
+  stands, the items that use this one and the subjects that link it.
+- `PATCH /api/materials/items/<id>`: `{"name"?,"project_id"?}` renames and/or
+  moves (a missing project is `404` before anything changes).
+- `DELETE /api/materials/items/<id>`: `409` with `{"ok":false,"error",
+  "used_by":[...]}` while other items use it; `?force=1` deletes anyway and
+  the users' uses then report `missing`.
+- `POST /api/materials/items/<id>/versions`: `{"body","note"?}` writes the next
+  version and answers `{"item"}`.
+- `GET /api/materials/items/<id>/versions/<n>`: `{"number","body"}`; `404`
+  outside 1 to the current version.
+- `POST /api/materials/items/<id>/uses/<source>/update`: writes a new version
+  of the item with every use of `<source>` moved to the source's current
+  version; answers `{"item"}`.
+
+Subjects:
+
+- `GET /api/subjects`: `{"subjects"}` with `item_count`, `piece_count` and
+  `related_count`; `GET /api/subjects/groups`: `{"groups"}`, four kinds in the
+  order character, place, idea, note.
+- `POST /api/subjects`: `{"name","kind","note"?}` answers `{"subject"}`.
+- `GET|PATCH|DELETE /api/subjects/<id>`: read, change `name`, `kind` and/or
+  `note`, delete.
+- `POST|DELETE /api/subjects/<id>/items/<item>`, `.../pieces/<piece>` and
+  `.../related/<other>`: link or unlink an item, a Library piece, or relate
+  two subjects. POST answers `{"subject","already"}` (`already` is true when
+  nothing changed); DELETE answers `{"subject"}`. A missing item, piece or
+  subject is `404`, unlinking something not linked is `404`, relating a
+  subject to itself is `400`.
+
+`GET /api/analyzer/pieces/<id>` also returns `"subjects"`: the subjects that
+link the piece, `[{id,name,kind}]`.
+
 ### Composer routes
 
 The Composer tool grows themes, plans and fills pieces, and makes variations.
@@ -990,7 +1047,7 @@ it.
 
 ## Tests
 
-`ctest` runs the backend tests (health, analyzer, corpus, styles, composer and id routes, the piece metadata rules and the material store) and,
+`ctest` runs the backend tests (health, analyzer, corpus, styles, composer, materials, subjects and id routes, the piece metadata rules and the material store) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be
