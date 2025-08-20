@@ -1,5 +1,6 @@
 #include "pipeline/melody_pipeline.h"
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,12 +10,15 @@
 #include "analysis_melody_climax.h"
 #include "analysis_melody_leaps.h"
 #include "analysis_melody_nct.h"
+#include "cantus_firmus_rules.h"
 #include "key_vocabulary.h"
 #include "outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
 #include "semantics/beat_strength.h"
+#include "pitch/pitch_spelling.h"
 #include "standard-counterpoint/framework.h"
+#include "tendency_rules.h"
 #include "theory/framework.h"
 
 /* a/b compared with c/d for positive denominators: negative, zero or positive. */
@@ -31,6 +35,7 @@ typedef struct {
     StandardCounterpointMelodyLine line;
     size_t *note;
     char (*name)[16]; /* each entry's note name, e.g. "E5"; empty for a rest */
+    const AnalysisKeyRegion **region; /* the key region each note starts in; NULL for a rest or outside every region */
     size_t note_count; /* entries that are notes */
 } PhraseLine;
 
@@ -38,6 +43,7 @@ static void phrase_line_destroy(PhraseLine *built) {
     standard_counterpoint_melody_line_destroy(&built->line);
     free(built->note);
     free(built->name);
+    free(built->region);
     memset(built, 0, sizeof(*built));
 }
 
@@ -157,6 +163,7 @@ static bool add_note(PhraseLine *built, const ImportedNotes *notes, const Analys
     note.nct_ref = ref;
     built->note[built->line.count] = segment->note_indices[member];
     name_note(notes, segment->note_indices[member], pitch, region, built->name[built->line.count]);
+    built->region[built->line.count] = region;
     if (standard_counterpoint_melody_line_add_note(&built->line, &note) != STANDARD_COUNTERPOINT_MELODY_OK) {
         return false;
     }
@@ -171,7 +178,8 @@ static bool build_phrase_line(const ImportedNotes *notes, const Segmentation *vo
     standard_counterpoint_melody_line_init(&built->line);
     built->note = malloc(sizeof(size_t) * (voices->segment_count + 1));
     built->name = calloc(voices->segment_count + 1, sizeof(char[16]));
-    if (!built->note || !built->name) {
+    built->region = calloc(voices->segment_count + 1, sizeof(const AnalysisKeyRegion *));
+    if (!built->note || !built->name || !built->region) {
         return false;
     }
     const char *previous = NULL;
@@ -230,9 +238,102 @@ static void free_melody(AnalysisMelody *melody) {
     free(melody->leaps);
     free(melody->consecutive_leaps);
     free(melody->ncts);
+    free(melody->seventh_breaks);
 }
 
 typedef enum { ANALYZE_OK, ANALYZE_DECLINED, ANALYZE_ALLOC } AnalyzeResult;
+
+/* The spelling of a note name such as "F#4", "Bb3" or "E5": a letter, accidentals (# b x) and an octave. 1 on success,
+   0 for a name that is not one, -1 on allocation failure. */
+static int spell_name(const char *name, PitchSpelling **out) {
+    *out = NULL;
+    if (name[0] < 'A' || name[0] > 'G') {
+        return 0;
+    }
+    int accidental = 0;
+    const char *rest = name + 1;
+    for (; *rest == '#' || *rest == 'b' || *rest == 'x'; rest++) {
+        accidental += *rest == '#' ? 1 : (*rest == 'b' ? -1 : 2);
+    }
+    char *end = NULL;
+    long octave = strtol(rest, &end, 10);
+    if (end == rest || *end != '\0') {
+        return 0;
+    }
+    PitchSpellingResult result = pitch_spelling_create((PitchLetter)(name[0] - 'A'), accidental, (int)octave, out);
+    return result == PITCH_SPELLING_OK ? 1 : (result == PITCH_SPELLING_ERR_ALLOC ? -1 : 0);
+}
+
+/* The seventh degree and the library's tendencies of a phrase's line, judged on spellings the way the outer voice lines
+   spell the notes. Leaves the tendency fields empty when a note's name does not spell. */
+static AnalyzeResult read_tendencies(const PhraseLine *built, AnalysisMelody *out) {
+    size_t count = built->line.count;
+    PitchSpelling **spelled = calloc(count + 1, sizeof(PitchSpelling *));
+    const PitchSpelling **notes_only = calloc(count + 1, sizeof(const PitchSpelling *));
+    out->seventh_breaks = calloc(count + 1, sizeof(AnalysisMelodyBreak));
+    AnalyzeResult result = ANALYZE_ALLOC;
+    if (!spelled || !notes_only || !out->seventh_breaks) {
+        goto done;
+    }
+    out->seventh_rule = standard_counterpoint_cantus_rule_name(STANDARD_COUNTERPOINT_CANTUS_RULE_LEADING_TONE);
+    size_t note_count = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (!built->line.notes[i].present) {
+            continue;
+        }
+        int spell = spell_name(built->name[i], &spelled[i]);
+        if (spell < 0) {
+            goto done;
+        }
+        if (spell == 0) {
+            result = ANALYZE_DECLINED;
+            goto done;
+        }
+        notes_only[note_count++] = spelled[i];
+    }
+    StandardCounterpointLine line = {notes_only, note_count};
+    for (int t = 0; t < ANALYSIS_MELODY_TENDENCIES; t++) {
+        out->tendency_names[t] = standard_counterpoint_tendency_name((StandardCounterpointTendency)t);
+        out->tendency_holds[t] = standard_counterpoint_tendency_holds((StandardCounterpointTendency)t, &line);
+    }
+    for (size_t i = 0; i + 1 < count; i++) {
+        const StandardCounterpointMelodyNote *note = &built->line.notes[i];
+        if (!note->present || note->degree != 7 || !built->line.notes[i + 1].present || !built->region[i]) {
+            continue;
+        }
+        const AnalysisKeyRegion *region = built->region[i];
+        char tonic_name[16];
+        snprintf(tonic_name, sizeof(tonic_name), "%s4", pitch_class_name(region->tonic_pitch_class, region->prefer_flats));
+        PitchSpelling *tonic = NULL;
+        int spell = spell_name(tonic_name, &tonic);
+        if (spell <= 0) {
+            result = spell < 0 ? ANALYZE_ALLOC : ANALYZE_DECLINED;
+            goto done;
+        }
+        const PitchSpelling *pair_notes[2] = {spelled[i], spelled[i + 1]};
+        StandardCounterpointLine pair = {pair_notes, 2};
+        bool followed = standard_counterpoint_cantus_rule_holds(STANDARD_COUNTERPOINT_CANTUS_RULE_LEADING_TONE, &pair,
+                                                                 tonic);
+        pitch_spelling_destroy(tonic);
+        if (followed) {
+            out->seventh_followed++;
+        } else {
+            AnalysisMelodyBreak *broken = &out->seventh_breaks[out->seventh_broken++];
+            broken->note = built->note[i];
+            broken->next_note = built->note[i + 1];
+            broken->uncertainty = region->uncertainty;
+        }
+    }
+    result = ANALYZE_OK;
+done:
+    for (size_t i = 0; spelled && i < count; i++) {
+        pitch_spelling_destroy(spelled[i]);
+    }
+    free(spelled);
+    free(notes_only);
+    return result;
+}
+
 
 /* Reads the library's results for one phrase's line into out. ANALYZE_DECLINED when the library gives none for the
    line (out is then released by the caller). */
@@ -362,6 +463,18 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
             nct->type = non_chord_tone_name((NonChordTone)claim->type);
             nct->uncertainty = labels.items[k].uncertainty;
         }
+    }
+    AnalyzeResult tendencies = read_tendencies(built, out);
+    if (tendencies == ANALYZE_ALLOC) {
+        result = ANALYZE_ALLOC;
+        goto done;
+    }
+    if (tendencies == ANALYZE_DECLINED) { /* a name that does not spell: no tendencies for this phrase */
+        memset(out->tendency_names, 0, sizeof(out->tendency_names));
+        memset(out->tendency_holds, 0, sizeof(out->tendency_holds));
+        out->seventh_rule = NULL;
+        out->seventh_followed = 0;
+        out->seventh_broken = 0;
     }
     out->uncertainty = summaries.items[0].uncertainty > climaxes.items[0].uncertainty ? summaries.items[0].uncertainty
                                                                                     : climaxes.items[0].uncertainty;

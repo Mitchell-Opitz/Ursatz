@@ -614,7 +614,7 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "measures", "note_count", "range", "climax", "contour", "leaps", "consecutive_leaps", "non_chord_tones"],
+          "required": ["index", "measures", "note_count", "range", "climax", "contour", "leaps", "consecutive_leaps", "non_chord_tones", "tendencies"],
           "properties": {
             "label": { "const": "melody" },
             "index": { "type": "integer", "minimum": 0 },
@@ -647,6 +647,49 @@
             "consecutive_leaps": {
               "type": "array",
               "items": { "$ref": "#/$defs/melody_consecutive_leaps_claim" }
+            },
+            "tendencies": {
+              "type": "object",
+              "required": ["line", "seventh_degree"],
+              "properties": {
+                "line": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["tendency", "holds"],
+                    "properties": {
+                      "tendency": {
+                        "enum": [
+                          "pitch-proximity",
+                          "step-declination",
+                          "step-inertia",
+                          "melodic-regression",
+                          "melodic-arch"
+                        ]
+                      },
+                      "holds": { "type": "boolean" }
+                    }
+                  }
+                },
+                "seventh_degree": {
+                  "oneOf": [
+                    { "type": "null" },
+                    {
+                      "type": "object",
+                      "required": ["rule", "followed", "broken", "breaks"],
+                      "properties": {
+                        "rule": { "const": "leading-tone" },
+                        "followed": { "type": "integer", "minimum": 0 },
+                        "broken": { "type": "integer", "minimum": 0 },
+                        "breaks": {
+                          "type": "array",
+                          "items": { "$ref": "#/$defs/claim" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
             },
             "non_chord_tones": {
               "type": "object",

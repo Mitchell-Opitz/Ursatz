@@ -1226,6 +1226,50 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
         }
         ok = ok && sb_append(sb, cJSON_GetArraySize(by_type) == 0 ? "-" : "") && sb_append(sb, " |\n");
     }
+    ok = ok && sb_append(sb, "\n") &&
+         sb_append(sb, "### Tendencies\n\n") &&
+         sb_append(sb, "The library's melodic tendencies are soft preferences a well-formed line usually shows: Pitch "
+                       "proximity (steps outnumber leaps, small leaps outnumber large ones), Step declination "
+                       "(descending steps outnumber ascending ones), Step inertia (the line continues in its "
+                       "direction at least as often as it reverses), Melodic regression (extreme notes turn back "
+                       "toward the middle) and Melodic arch (the line rises to a climax in its middle half and ends "
+                       "below it); a phrase either shows a tendency or does not. The seventh degree column counts the "
+                       "notes the library labels the seventh degree that another note follows, judged by its leading "
+                       "tone rule: a leading tone goes up to the tonic by step, and a seventh a whole step below the "
+                       "tonic does not. Followed is the count that did, Broken the count that did not, with where "
+                       "each broken one stands.\n\n") &&
+         sb_append(sb, "| Phrase | Pitch proximity | Step declination | Step inertia | Melodic regression | Melodic arch "
+                       "| Seventh degree followed | Seventh degree broken |\n"
+                       "| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(entry, melody) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *tendencies = cJSON_GetObjectItemCaseSensitive(entry, "tendencies");
+        const cJSON *line = cJSON_GetObjectItemCaseSensitive(tendencies, "line");
+        const cJSON *seventh = cJSON_GetObjectItemCaseSensitive(tendencies, "seventh_degree");
+        ok = sb_appendf(sb, "| %d | ", (int)number_member(entry, "index") + 1);
+        for (int t = 0; ok && t < 5; t++) {
+            const cJSON *item = cJSON_GetArrayItem(line, t);
+            ok = sb_appendf(sb, "%s | ",
+                            item ? (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(item, "holds")) ? "holds" : "does not hold")
+                                 : "-");
+        }
+        if (ok && cJSON_IsObject(seventh)) {
+            ok = sb_appendf(sb, "%d | %d", (int)number_member(seventh, "followed"), (int)number_member(seventh, "broken"));
+            const cJSON *broken;
+            const cJSON *breaks = cJSON_GetObjectItemCaseSensitive(seventh, "breaks");
+            cJSON_ArrayForEach(broken, breaks) {
+                ok = ok && sb_append(sb, broken == breaks->child ? " (" : "; ") &&
+                     append_position(sb, cJSON_GetObjectItemCaseSensitive(
+                                             cJSON_GetObjectItemCaseSensitive(broken, "location"), "start")) &&
+                     (broken->next ? true : sb_append(sb, ")"));
+            }
+            ok = ok && sb_append(sb, " |\n");
+        } else {
+            ok = ok && sb_append(sb, "- | - |\n");
+        }
+    }
     return ok && sb_append(sb, "\n");
 }
 

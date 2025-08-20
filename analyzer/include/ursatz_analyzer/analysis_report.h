@@ -528,6 +528,17 @@ typedef struct {
     double uncertainty;        /* the library's: 1 minus the note's confidence */
 } AnalysisMelodyNct;
 
+/* The library's melodic tendencies of a line (tendency_rules.h, after Huron): pitch proximity, step declination, step
+   inertia, melodic regression and melodic arch. Soft preferences a well-formed line usually shows. */
+#define ANALYSIS_MELODY_TENDENCIES 5
+
+/* A seventh degree the library's rule LEADING_TONE finds the melody not to follow: the note, and the note after it. */
+typedef struct {
+    size_t note;               /* ImportedNotes indices */
+    size_t next_note;
+    double uncertainty;        /* the key region's, in [0, 1]: the degree is read in its key */
+} AnalysisMelodyBreak;
+
 /* The melody of one phrase: the soprano notes (the outer voice line, one entry per melody note) that start inside the
    phrase's span, read by the melody adapter of standard-counterpoint (analysis/analysis_melody.h). A note held in from
    the phrase before is not one of them, and a rest in the line breaks the chain: no interval is formed across it. The
@@ -583,6 +594,17 @@ typedef struct {
     int nct_by_type[ANALYSIS_MELODY_NCT_TYPES];            /* non-chord tones by type, parallel to the names */
     AnalysisMelodyNct *ncts;   /* owned; the non-chord tones in time order */
     size_t nct_total;
+    /* Tendencies. The library's line tendencies need every note spelled (the line's letter names); the Analyzer spells a
+       note as the outer voice lines do, so they are read for every phrase. */
+    const char *tendency_names[ANALYSIS_MELODY_TENDENCIES]; /* the library's names, in its order */
+    bool tendency_holds[ANALYSIS_MELODY_TENDENCIES];
+    /* The seventh degree: each note the library labels degree 7 that another note follows is judged by the cantus
+       firmus rule LEADING_TONE on the pair, in the key of the note's region: a leading tone goes up to the tonic by
+       step, and a seventh a whole step below the tonic does not. followed + broken is the number judged. */
+    const char *seventh_rule;  /* the library's rule name: "leading-tone" */
+    int seventh_followed;
+    int seventh_broken;
+    AnalysisMelodyBreak *seventh_breaks; /* owned; seventh_broken of them, in time order */
     double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
 } AnalysisMelody;
 

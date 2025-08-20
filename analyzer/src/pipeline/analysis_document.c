@@ -2752,9 +2752,72 @@ static cJSON *melody_non_chord_tones_json(const ImportedNotes *notes, const Anal
     return object;
 }
 
+/* The library's line tendencies as { "tendency": name, "holds": bool }, in its order; empty when the phrase's notes do not
+   spell. */
+static cJSON *melody_line_tendencies_json(const AnalysisMelody *melody) {
+    cJSON *list = cJSON_CreateArray();
+    for (int t = 0; list && t < ANALYSIS_MELODY_TENDENCIES && melody->tendency_names[t]; t++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "tendency", cJSON_CreateString(melody->tendency_names[t])) &&
+              add(entry, "holds", cJSON_CreateBool(melody->tendency_holds[t])) && append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The seventh degree: the notes the library labels degree 7 that a note follows, judged by its rule LEADING_TONE: how many
+   followed it and how many broke it, with each broken one as a claim over the seventh and the note after it. Null when
+   the phrase's notes do not spell. */
+static cJSON *melody_seventh_degree_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    if (!melody->seventh_rule) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    cJSON *breaks = cJSON_CreateArray();
+    bool ok = object && breaks;
+    for (int i = 0; ok && i < melody->seventh_broken; i++) {
+        const AnalysisMelodyBreak *broken = &melody->seventh_breaks[i];
+        size_t ids[2] = {broken->note, broken->next_note};
+        Rational start;
+        Rational end;
+        notes_span(notes, ids, 2, &start, &end);
+        cJSON *claim = claim_json_with(melody->framework, notes, ids, 2, start, end, melody->seventh_rule,
+                                       cJSON_CreateNumber(broken->uncertainty));
+        ok = claim && append(breaks, claim);
+        if (!ok) {
+            cJSON_Delete(claim);
+        }
+    }
+    bool taken = false; /* add() takes the breaks over, and frees them itself when it fails */
+    if (!(ok && add(object, "rule", cJSON_CreateString(melody->seventh_rule)) &&
+          add(object, "followed", cJSON_CreateNumber(melody->seventh_followed)) &&
+          add(object, "broken", cJSON_CreateNumber(melody->seventh_broken)) &&
+          (taken = true, add(object, "breaks", breaks)))) {
+        if (!taken) {
+            cJSON_Delete(breaks);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *melody_tendencies_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "line", melody_line_tendencies_json(melody)) &&
+                    add(object, "seventh_degree", melody_seventh_degree_json(notes, melody)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* One claim per phrase with melody notes, in phrase order: the soprano notes that start in the phrase. index is the
-   phrase's, measures its measures; range, climax, contour, leaps, consecutive leaps and non-chord tones are the melody
-   adapter's results over the notes. */
+   phrase's, measures its measures; range, climax, contour, leaps, consecutive leaps, non-chord tones and tendencies are
+   the melody adapter's and the library's rules' results over the notes. */
 static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -2773,7 +2836,8 @@ static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *repo
               add(claim, "contour", melody_contour_json(melody)) &&
               add(claim, "leaps", melody_leaps_json(notes, melody)) &&
               add(claim, "consecutive_leaps", melody_consecutive_leaps_json(notes, melody)) &&
-              add(claim, "non_chord_tones", melody_non_chord_tones_json(notes, melody)))) {
+              add(claim, "non_chord_tones", melody_non_chord_tones_json(notes, melody)) &&
+              add(claim, "tendencies", melody_tendencies_json(notes, melody)))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
