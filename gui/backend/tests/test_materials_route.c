@@ -163,6 +163,9 @@ static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"D4:q F4:e A4:e D5:h\","
     "\"meter\":\"4/4\",\"key\":\"D minor\",\"pickup\":\"0\",\"features\":[{\"label\":\"a\",\"first\":0,\"last\":2}],"
     "\"analysis\":null,\"derived\":null}}";
+static const char *kBadMotifBody =
+    "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"zzz\",\"meter\":\"4/4\",\"key\":null,"
+    "\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}";
 static const char *kThemeBody = "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}";
 
 /* Sends {"type","name","project_id","body"} and returns the item id (caller frees), or NULL. */
@@ -381,6 +384,84 @@ static void test_items(void) {
   free(motif);
 }
 
+/* The Composer's analysis is stored with a saved motif (needs the Composer built with the backend). */
+static void test_motif_analysis(void) {
+  int status = 0;
+  char project[64] = "";
+  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  snprintf(project, sizeof(project), "%s",
+           string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
+  cJSON_Delete(answer);
+
+  char *motif = create_item("motif", "Analyzed", project, kMotifBody);
+  check(motif != NULL, "a full motif is saved");
+  if (!motif) {
+    return;
+  }
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s", motif);
+  answer = json_exchange("GET", path, NULL, &status);
+  const cJSON *body = cJSON_GetObjectItemCaseSensitive(answer, "body");
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "analysis");
+  const cJSON *inner = cJSON_GetObjectItemCaseSensitive(analysis, "analysis");
+  check(cJSON_IsObject(analysis), "the saved motif carries the Composer's analysis");
+  check(cJSON_GetObjectItemCaseSensitive(inner, "scale_degrees") != NULL &&
+            cJSON_GetObjectItemCaseSensitive(inner, "implied_harmony") != NULL,
+        "the analysis has scale degrees and implied harmony");
+  cJSON_Delete(answer);
+
+  char request[2048];
+  snprintf(request, sizeof(request), "{\"note\":\"again\",\"body\":%s}", kMotifBody);
+  char versions[300];
+  snprintf(versions, sizeof(versions), "%s/versions", path);
+  answer = json_exchange("POST", versions, request, &status);
+  check(status == 200 && ok_true(answer) && !cJSON_GetObjectItemCaseSensitive(answer, "analysis_error"),
+        "a new motif version is saved with its analysis");
+  cJSON_Delete(answer);
+  free(motif);
+}
+
+/* A note list the Composer cannot read is refused and no version is written. */
+static void test_motif_refused(void) {
+  int status = 0;
+  char project[64] = "";
+  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  snprintf(project, sizeof(project), "%s",
+           string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
+  cJSON_Delete(answer);
+
+  char *motif = create_item("motif", "Refused", project, kMotifBody);
+  check(motif != NULL, "a motif is saved before a bad version");
+  if (!motif) {
+    return;
+  }
+  char path[256];
+  char versions[300];
+  snprintf(path, sizeof(path), "/api/materials/items/%s", motif);
+  snprintf(versions, sizeof(versions), "%s/versions", path);
+
+  char bad_notes[2048];
+  snprintf(bad_notes, sizeof(bad_notes), "{\"body\":%s}", kBadMotifBody);
+  answer = json_exchange("POST", versions, bad_notes, &status);
+  check(status == 400 && !ok_true(answer) && strlen(string_of(answer, "error")) > 0, "a bad note list is 400 with the message");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("GET", path, NULL, &status);
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
+  check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(item, "versions")) == 1 &&
+            number_of(item, "current_version") == 1,
+        "the version count is unchanged");
+  cJSON_Delete(answer);
+
+  char request[2048];
+  snprintf(request, sizeof(request), "{\"type\":\"motif\",\"name\":\"Bad\",\"project_id\":\"%s\",\"body\":%s}", project,
+           kBadMotifBody);
+  answer = json_exchange("POST", "/api/materials/items", request, &status);
+  check(status == 400, "a new motif with a bad note list is 400");
+  cJSON_Delete(answer);
+  free(motif);
+}
+
 static void test_body_limit(void) {
   size_t size = 300 * 1024;
   char *big = malloc(size + 64);
@@ -422,6 +503,8 @@ int main(void) {
 
   test_projects();
   test_items();
+  test_motif_analysis();
+  test_motif_refused();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
