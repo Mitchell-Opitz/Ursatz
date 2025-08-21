@@ -520,6 +520,23 @@ An item can use other items, from any project. Each entry of a body's `uses` is
   are; their uses report `missing: true`. Saving a new version of such a user
   needs the missing use removed first.
 
+#### Motif analysis on save
+
+`POST /api/materials/items` and `POST /api/materials/items/<id>/versions`
+analyze a motif with `form` `full` before it is written. The route writes
+`notes` to a temporary file and runs `ursatz-composer motive <file> --format
+notes --meter <meter> [--key <key>] --json`, then stores the output as
+`motif.analysis` (scale degrees, implied harmony, intervals, rhythm). Meter
+(`^[0-9]{1,2}/[0-9]{1,2}$`) and key (`^[A-Ga-g][#b]? (major|minor)$`) are
+checked before they reach the argument list.
+
+- A note list or key the Composer refuses is 400 with its message, and no
+  version is written.
+- Composer missing, timed out or not startable: the version is saved with
+  `analysis: null` and the answer carries `analysis_error`.
+- `rhythm` and `contour` motifs are saved with `analysis: null` until P13.
+  The stored `pickup` is not passed to the Composer yet.
+
 ### Subjects
 
 A subject is a character, place, idea or note that items and Library pieces
