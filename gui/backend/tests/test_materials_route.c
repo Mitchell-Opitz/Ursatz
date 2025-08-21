@@ -381,6 +381,43 @@ static void test_items(void) {
   free(motif);
 }
 
+/* The Composer's analysis is stored with a saved motif (needs the Composer built with the backend). */
+static void test_motif_analysis(void) {
+  int status = 0;
+  char project[64] = "";
+  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  snprintf(project, sizeof(project), "%s",
+           string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
+  cJSON_Delete(answer);
+
+  char *motif = create_item("motif", "Analyzed", project, kMotifBody);
+  check(motif != NULL, "a full motif is saved");
+  if (!motif) {
+    return;
+  }
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s", motif);
+  answer = json_exchange("GET", path, NULL, &status);
+  const cJSON *body = cJSON_GetObjectItemCaseSensitive(answer, "body");
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "analysis");
+  const cJSON *inner = cJSON_GetObjectItemCaseSensitive(analysis, "analysis");
+  check(cJSON_IsObject(analysis), "the saved motif carries the Composer's analysis");
+  check(cJSON_GetObjectItemCaseSensitive(inner, "scale_degrees") != NULL &&
+            cJSON_GetObjectItemCaseSensitive(inner, "implied_harmony") != NULL,
+        "the analysis has scale degrees and implied harmony");
+  cJSON_Delete(answer);
+
+  char request[2048];
+  snprintf(request, sizeof(request), "{\"note\":\"again\",\"body\":%s}", kMotifBody);
+  char versions[300];
+  snprintf(versions, sizeof(versions), "%s/versions", path);
+  answer = json_exchange("POST", versions, request, &status);
+  check(status == 200 && ok_true(answer) && !cJSON_GetObjectItemCaseSensitive(answer, "analysis_error"),
+        "a new motif version is saved with its analysis");
+  cJSON_Delete(answer);
+  free(motif);
+}
+
 static void test_body_limit(void) {
   size_t size = 300 * 1024;
   char *big = malloc(size + 64);
@@ -422,6 +459,7 @@ int main(void) {
 
   test_projects();
   test_items();
+  test_motif_analysis();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
