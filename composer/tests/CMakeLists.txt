@@ -419,3 +419,10 @@ target_compile_definitions(test_variants_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET
                                                      COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_variants_cli ursatz-composer)
 add_test(NAME test_variants_cli COMMAND test_variants_cli)
+
+add_executable(test_motive_random test_motive_random.c)
+target_link_libraries(test_motive_random PRIVATE ursatz_composer cjson)
+target_include_directories(test_motive_random PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_motive_random PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_motive_random PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_test(NAME test_motive_random COMMAND test_motive_random)
