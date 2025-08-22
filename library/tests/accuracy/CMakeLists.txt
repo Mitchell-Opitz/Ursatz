@@ -63,7 +63,7 @@ add_library(accuracy_chain STATIC chorale_chain.c)
 target_include_directories(accuracy_chain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE common_practice_minimal standard_meter standard_tonality)
 
-add_executable(accuracy_harness accuracy_harness.c accuracy_report.c fixtures.c)
+add_executable(accuracy_harness accuracy_harness.c accuracy_report.c accuracy_gate.c fixtures.c)
 target_link_libraries(accuracy_harness PRIVATE accuracy_chain
     accuracy_fixture_cadences accuracy_fixture_form accuracy_fixture_texture accuracy_fixture_rhythm
     accuracy_fixture_melody accuracy_fixture_motive accuracy_fixture_phrase_model accuracy_fixture_schema)
@@ -71,4 +71,9 @@ target_compile_definitions(accuracy_harness PRIVATE
     URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus"
     URSATZ_ACCURACY_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     URSATZ_ACCURACY_OUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
+# The harness fails when an overall metric is more than the baseline's tolerance below tests/accuracy/baseline.json.
 add_test(NAME accuracy_harness COMMAND accuracy_harness)
+
+add_executable(test_accuracy_gate test_accuracy_gate.c accuracy_gate.c accuracy_report.c)
+target_include_directories(test_accuracy_gate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_test(NAME accuracy_gate COMMAND test_accuracy_gate WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "accuracy_gate.h"
 #include "accuracy_report.h"
 #include "chorale_chain.h"
 #include "fixtures.h"
@@ -26,6 +27,8 @@
  *   --update-baseline    also write baseline.json and copy the report next to it (tests/accuracy), recording this
  *                        run as the baseline. Raising the baseline is a deliberate act; see docs/testing/accuracy.md.
  *   --baseline FILE      the baseline file (default: tests/accuracy/baseline.json)
+ *   --no-gate            report only: do not compare with the baseline (the default run fails when an overall
+ *                        metric is more than the baseline's tolerance below it; accuracy_gate.h)
  *   --tolerance POINTS   the tolerance written by --update-baseline (default 0.5)
  */
 
@@ -63,6 +66,7 @@ int main(int argc, char **argv) {
     const char *report_dir = URSATZ_ACCURACY_OUT_DIR;
     const char *baseline_path = URSATZ_ACCURACY_DIR "/baseline.json";
     bool update_baseline = false;
+    bool gate = true;
     double tolerance = 0.5;
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--corpus-dir") == 0 && i + 1 < argc) {
@@ -75,6 +79,8 @@ int main(int argc, char **argv) {
             tolerance = atof(argv[++i]);
         } else if (strcmp(argv[i], "--update-baseline") == 0) {
             update_baseline = true;
+        } else if (strcmp(argv[i], "--no-gate") == 0) {
+            gate = false;
         } else {
             fprintf(stderr, "accuracy_harness: unknown or incomplete option %s\n", argv[i]);
             return 2;
@@ -166,6 +172,22 @@ int main(int argc, char **argv) {
         printf("baseline written to %s (tolerance %.2f points)\n", baseline_path, tolerance);
     }
 
+    int exit_code = 0;
+    if (gate && !update_baseline) {
+        GateResult result;
+        GateParseStatus status = GATE_PARSE_OK;
+        if (!accuracy_gate_evaluate_file(baseline_path, &report, &result, &status)) {
+            fprintf(stderr, "accuracy gate: cannot read %s (record one with --update-baseline)\n", baseline_path);
+            exit_code = 1;
+        } else if (status != GATE_PARSE_OK) {
+            fprintf(stderr, "accuracy gate: %s is not a baseline this harness wrote (parse status %d)\n", baseline_path,
+                    (int)status);
+            exit_code = 1;
+        } else {
+            accuracy_gate_print(&result, stdout);
+            exit_code = result.failures == 0 ? 0 : 1;
+        }
+    }
     printf("accuracy_harness: %zu chorales, %.1fs\n", chorales, seconds_since(&start));
-    return 0;
+    return exit_code;
 }
