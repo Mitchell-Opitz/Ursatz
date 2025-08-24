@@ -222,7 +222,7 @@ static bool draw_motive(const InventRequest *request, FillRng *rng, Motive *out)
 /* -------------------------------------------------------------- checking */
 
 /* standard-counterpoint's hard melodic rules on the motive, as one line; the clausula vera is for strict species. */
-static bool invent_melodic_fault(const Motive *motive, const char **fault) {
+bool motive_melodic_fault(const Motive *motive, const char **fault) {
     PitchSpelling *spellings[MOTIVE_MAX_NOTES];
     size_t made = 0;
     bool ok = true;
@@ -352,7 +352,7 @@ static bool invent_generate(const PiecePlan *plan, FillTarget target, FillRng *r
             continue;
         }
         /* Only motives that keep the hard melodic rules are proposed, as melody-fill proposes its melodies. */
-        if (!invent_melodic_fault(&motive, &fault)) {
+        if (!motive_melodic_fault(&motive, &fault)) {
             return false;
         }
         if (fault) {
@@ -428,7 +428,7 @@ bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillO
         return true;
     }
     const char *fault;
-    if (!invent_melodic_fault(&payload->motive, &fault)) {
+    if (!motive_melodic_fault(&payload->motive, &fault)) {
         return false;
     }
     if (fault) {

@@ -79,4 +79,11 @@ MotiveResult motive_read_midi(const unsigned char *data, size_t size, Motive *mo
 MotiveResult motive_read_musicxml(const char *data, size_t size, Motive *motive, MotiveDocument *document,
                                   MotiveError *error);
 
+/*
+ * standard-counterpoint's hard melodic rules on the motive, as one line (the clausula vera is for strict species and is
+ * left out). False when the check itself could not run; otherwise true, with *fault the name of the first hard rule
+ * broken, or NULL when none is.
+ */
+bool motive_melodic_fault(const Motive *motive, const char **fault);
+
 #endif

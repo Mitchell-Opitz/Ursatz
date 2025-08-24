@@ -102,6 +102,13 @@ ursatz-composer variants theme.txt --meter 4/4 --key "D minor" --count 4 --seed 
 says how each was derived. `variants --list-ops` lists the operations. See [docs/cli-variants.md](docs/cli-variants.md).
 
 ```sh
+ursatz-composer random-motive --mode minor --meter 3/4 --count 4 --seed 7
+```
+
+`random-motive` makes random motives from a mode and a meter, in any form, optionally in a key and close to a style, reproducibly from a
+seed. Their length, pickup, number of notes, rhythm and range come from tunable defaults. See [docs/cli-random-motive.md](docs/cli-random-motive.md).
+
+```sh
 ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --seed 7 --out theme.json --midi theme.mid
 ```
 
