@@ -608,6 +608,23 @@ bool motive_equal(const Motive *a, const Motive *b) {
             return false;
         }
     }
+    if (a->harmony_count != b->harmony_count || a->feature_count != b->feature_count || a->role != b->role) {
+        return false;
+    }
+    for (size_t i = 0; i < a->harmony_count; i++) {
+        const MotiveChord *x = &a->harmony[i];
+        const MotiveChord *y = &b->harmony[i];
+        if (plan_time_compare(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
+            x->inversion != y->inversion || x->seventh != y->seventh) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < a->feature_count; i++) {
+        if (strcmp(a->features[i].label, b->features[i].label) != 0 || a->features[i].first != b->features[i].first ||
+            a->features[i].last != b->features[i].last) {
+            return false;
+        }
+    }
     return true;
 }
 
