@@ -2658,4 +2658,5 @@ function mountTagsPanel() {
 }
 
 mountTagsPanel();
+mountProjectPicker();
 selectTool("library");
