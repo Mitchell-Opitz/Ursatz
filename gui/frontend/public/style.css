@@ -2043,3 +2043,22 @@ body {
 .materials-status.error {
   color: #f87171;
 }
+
+.materials-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.materials-list li.error {
+  color: #f87171;
+}
+
+.materials-version-body {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  max-width: 900px;
+  overflow-x: auto;
+  font-size: 12px;
+}
