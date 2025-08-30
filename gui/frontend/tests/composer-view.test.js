@@ -155,7 +155,7 @@ check(composer.composerVersionLabel({ n: 2, action: "regenerate", seed: 9, creat
 // Wiring.
 const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
-check(/id: "composer", label: "Composer"/.test(appSource), "the nav has a Composer entry");
+check(/id: "composer", label: "Composer \(old\)"/.test(appSource), "the nav has the old Composer entry");
 check(!/Generator/.test(appSource), "the Generator placeholder is gone");
 check(indexSource.indexOf("app.js") < indexSource.indexOf("composer.js"), "composer.js loads after app.js");
 
