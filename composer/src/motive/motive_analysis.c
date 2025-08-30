@@ -736,6 +736,11 @@ static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis,
     if (ok && motive->form == MOTIVE_FORM_CONTOUR) {
         ok = contour_text && json_add(body, "contour_text", cJSON_CreateString(contour_text));
     }
+    if (ok && motive->harmony_count > 0) {
+        char *harmony_text = motive_harmony_to_text(motive);
+        ok = harmony_text && json_add(body, "harmony_text", cJSON_CreateString(harmony_text));
+        free(harmony_text);
+    }
     free(notes_text);
     free(degrees_text);
     free(rhythm_text);

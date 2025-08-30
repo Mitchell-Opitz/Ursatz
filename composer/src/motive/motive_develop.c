@@ -433,7 +433,7 @@ static size_t minimum_length(const MotiveDevSpec *spec) {
 }
 
 static MotiveDevResult fragment_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes,
-                                      size_t *count) {
+                                      size_t *count, size_t *origin) {
     size_t total = source->note_count;
     if (spec->length < minimum_length(spec)) {
         return MOTIVE_DEV_ERR_TOO_SHORT;
@@ -469,13 +469,14 @@ static MotiveDevResult fragment_notes(const Motive *source, const MotiveDevSpec 
         PlanTime start = notes[0].offset;
         for (size_t i = 0; i < *count; i++) {
             notes[i].offset = motive_time_minus(notes[i].offset, start);
+            origin[i] = first + i;
         }
     }
     return status;
 }
 
 static MotiveDevResult liquidate_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes,
-                                       size_t *count) {
+                                       size_t *count, size_t *origin) {
     size_t total = source->note_count;
     if (spec->drop == 0) {
         return MOTIVE_DEV_ERR_INVALID;
@@ -500,6 +501,14 @@ static MotiveDevResult liquidate_notes(const Motive *source, const MotiveDevSpec
     }
     MotiveDevResult status = ursatz_select(&bridge, dropped, true, notes, count);
     bridge_close(&bridge);
+    if (status == MOTIVE_DEV_OK) {
+        size_t next = 0;
+        for (size_t i = 0; i < total; i++) {
+            if (!dropped[i]) {
+                origin[next++] = i;
+            }
+        }
+    }
     if (status == MOTIVE_DEV_OK && !spec->keep_rhythm) {
         PlanTime at = motive_time(0, 1);
         for (size_t i = 0; i < *count; i++) {
@@ -619,14 +628,18 @@ static int direction_of(int semitones) {
 
 /* The notes of the development; *out_count is how many (the source's, unless notes were taken out). */
 static MotiveDevResult develop_notes(const Motive *source, const MotiveDevSpec *spec, PlanNote *notes,
-                                     size_t *out_count) {
+                                     size_t *out_count, size_t *origin) {
     size_t count = source->note_count;
     *out_count = count;
+    /* Which note of the source each note of the result is: the same one, unless the kind says otherwise. */
+    for (size_t i = 0; i < count; i++) {
+        origin[i] = spec->kind == MOTIVE_DEV_RETROGRADE ? count - 1 - i : i;
+    }
     if (spec->kind == MOTIVE_DEV_FRAGMENT) {
-        return fragment_notes(source, spec, notes, out_count);
+        return fragment_notes(source, spec, notes, out_count, origin);
     }
     if (spec->kind == MOTIVE_DEV_LIQUIDATE) {
-        return liquidate_notes(source, spec, notes, out_count);
+        return liquidate_notes(source, spec, notes, out_count, origin);
     }
     if (spec->kind == MOTIVE_DEV_AUGMENT || spec->kind == MOTIVE_DEV_DIMINISH) {
         return scale_notes(source, spec, notes);
@@ -686,6 +699,73 @@ static MotiveDevResult develop_notes(const Motive *source, const MotiveDevSpec *
     return status;
 }
 
+/* The features whose notes are all still there, on the notes they moved to. origin[j] is the source note of note j. */
+static void carry_features(const Motive *source, const size_t *origin, Motive *result) {
+    result->feature_count = 0;
+    for (size_t f = 0; f < source->feature_count; f++) {
+        const MotiveFeature *feature = &source->features[f];
+        size_t low = result->note_count;
+        size_t high = 0;
+        bool survives = true;
+        for (size_t old = feature->first; old <= feature->last && survives; old++) {
+            survives = false;
+            for (size_t j = 0; j < result->note_count && !survives; j++) {
+                if (origin[j] == old) {
+                    low = j < low ? j : low;
+                    high = j > high ? j : high;
+                    survives = true;
+                }
+            }
+        }
+        if (survives && high - low == feature->last - feature->first) {
+            MotiveFeature *kept = &result->features[result->feature_count++];
+            *kept = *feature;
+            kept->first = low;
+            kept->last = high;
+        }
+    }
+}
+
+/*
+ * The own harmony the result keeps. A scaled motive scales the onsets; a fragment keeps the chords from its first
+ * note on, the one sounding there at 0; the others keep the chords that still start inside.
+ */
+static void carry_harmony(const Motive *source, const MotiveDevSpec *spec, const size_t *origin, Motive *result) {
+    result->harmony_count = 0;
+    if (source->harmony_count == 0) {
+        return;
+    }
+    PlanTime start = motive_time(0, 1);
+    unsigned long num = 1;
+    unsigned long den = 1;
+    if (spec->kind == MOTIVE_DEV_FRAGMENT) {
+        start = source->notes[origin[0]].offset;
+    } else if (spec->kind == MOTIVE_DEV_AUGMENT || spec->kind == MOTIVE_DEV_DIMINISH) {
+        bool augment = spec->kind == MOTIVE_DEV_AUGMENT;
+        num = spec->ratio_num != 0 ? spec->ratio_num : (augment ? 2 : 1);
+        den = spec->ratio_den != 0 ? spec->ratio_den : (augment ? 1 : 2);
+    }
+    for (size_t i = 0; i < source->harmony_count; i++) {
+        MotiveChord chord = source->harmony[i];
+        if (plan_time_compare(chord.onset, start) <= 0 && start.num > 0) {
+            /* A chord at or before the start: the last of them sounds at 0. */
+            bool later = i + 1 < source->harmony_count && plan_time_compare(source->harmony[i + 1].onset, start) <= 0;
+            if (later) {
+                continue;
+            }
+            chord.onset = motive_time(0, 1);
+        } else {
+            chord.onset = motive_time_minus(chord.onset, start);
+            if (num != den) {
+                chord.onset = motive_time(chord.onset.num * (long)num, chord.onset.den * den);
+            }
+        }
+        if (plan_time_compare(chord.onset, result->length) < 0) {
+            result->harmony[result->harmony_count++] = chord;
+        }
+    }
+}
+
 MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, Motive *out) {
     if (!source || !spec || !out) {
         return MOTIVE_DEV_ERR_NULL;
@@ -696,7 +776,8 @@ MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, 
     }
     Motive result = *source;
     size_t count = source->note_count;
-    MotiveDevResult status = develop_notes(source, spec, result.notes, &count);
+    size_t origin[MOTIVE_MAX_NOTES];
+    MotiveDevResult status = develop_notes(source, spec, result.notes, &count, origin);
     if (status != MOTIVE_DEV_OK) {
         return status;
     }
@@ -705,6 +786,8 @@ MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, 
     if (motive_check_notes(&result, &result.length, NULL) != MOTIVE_OK) {
         return MOTIVE_DEV_ERR_INVALID;
     }
+    carry_features(source, origin, &result);
+    carry_harmony(source, spec, origin, &result);
     if (spec->kind == MOTIVE_DEV_INTERVAL_CHANGE && spec->keep_contour) {
         for (size_t i = 0; i + 1 < source->note_count; i++) {
             int before = direction_of(source->notes[i + 1].midi_pitch - source->notes[i].midi_pitch);

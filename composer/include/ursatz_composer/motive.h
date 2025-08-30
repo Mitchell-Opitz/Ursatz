@@ -264,7 +264,11 @@ MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *opt
  *    "key": {"tonic_pitch_class": 2, "mode": "minor"},
  *    "notes": [{"midi_pitch": 62, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}}]}
  *
- * "meter" and "key" are optional. Unknown fields are ignored.
+ * "meter" and "key" are optional. Unknown fields are ignored. Own harmony, features and the role are optional too:
+ *
+ *   "harmony": "I V6@2 I@3",
+ *   "features": [{"label": "a", "first": 0, "last": 2}],
+ *   "role": "accompaniment"
  */
 MotiveResult motive_from_json(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
@@ -306,6 +310,30 @@ char *motive_to_contour_text(const Motive *motive);
  * out may be the source.
  */
 bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out);
+
+/*
+ * Own harmony as text: chords separated by white space, each a Roman numeral and an optional onset.
+ *
+ *   I V6@2 I@3
+ *
+ * A chord is an optional b or # (a lowered or raised root), an upper case numeral I to VII, a figure (none for a triad
+ * in root position, 6, 64; 7, 65, 43 or 42 for a seventh chord) and "@" with the onset in beats of the meter's beat
+ * unit from the start of the motive, a whole number or a fraction as in @1/2. The first chord needs no onset (it is at
+ * 0); the others do, and the onsets rise. At most MOTIVE_MAX_CHORDS chords; text with no chord is zero chords.
+ * Whether the chords fall inside the motive is checked when the motive is read.
+ */
+MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveChord *out, size_t *count,
+                                  MotiveError *error);
+/* The motive's own harmony as text, in the form motive_harmony_parse reads ("" when it has none); NULL on failure. */
+char *motive_harmony_to_text(const Motive *motive);
+
+/* A feature as "label:first-last" or "label:index", as in "a:0-2". The label is 1 to 8 characters. */
+MotiveResult motive_feature_parse(const char *text, MotiveFeature *out, MotiveError *error);
+
+/* Reads "melodic" or "accompaniment". False for any other text. */
+bool motive_role_parse(const char *name, MotiveRole *out);
+/* "melodic" or "accompaniment". */
+const char *motive_role_name(MotiveRole role);
 
 /* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
 char *motive_to_json(const Motive *motive);

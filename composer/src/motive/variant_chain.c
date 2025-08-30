@@ -159,6 +159,12 @@ static bool normalize_contour(const Motive *source, Motive *result) {
         if (source->key_source != MOTIVE_KEY_UNSPECIFIED) {
             read.key = source->key;
         }
+        /* Harmony, features and role are not in a contour's text; the result keeps what the development gave it. */
+        memcpy(read.harmony, result->harmony, sizeof(read.harmony));
+        read.harmony_count = result->harmony_count;
+        memcpy(read.features, result->features, sizeof(read.features));
+        read.feature_count = result->feature_count;
+        read.role = result->role;
         *result = read;
     }
     return ok;
