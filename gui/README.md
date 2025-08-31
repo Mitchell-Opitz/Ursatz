@@ -45,12 +45,27 @@ a monolithic application.
   viewed last this session; before any piece has been opened it points at
   the Library.
 - **Collections**: named groups of piece ids (the Corpus routes, below).
-- **Composer**: start a theme or a piece and work on it (Composer view,
+- **Composer (old)**: start a theme or a piece and work on it (Composer view,
   below).
+- **Motifs**, **Themes**, **Pieces**: the items of the material store (see
+  Materials views, below).
 - **Health**: last entry in the sidebar. Shows the backend health check; a
   failed check appears only here.
 
 The GUI opens on the Library.
+
+### Materials views
+
+The project picker sits at the top of the sidebar: All projects plus each
+project, with New, Rename and Delete (Rename and Delete need a project
+picked; deleting a project that still holds items shows the backend's 409
+message). The choice filters the Motifs, Themes and Pieces views and is
+remembered in the browser. Each view lists its items (name, project, current
+version, updated) with a New row (name and project). A row opens the detail:
+the name and project are editable, the uses are listed, and the versions list
+(number, date, note) lets any version be viewed read-only. Themes and pieces
+have no body editor yet. The motif editor, subjects and item references come
+in later branches.
 
 ### Composer view
 

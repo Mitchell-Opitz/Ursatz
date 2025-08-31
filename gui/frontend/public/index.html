@@ -16,6 +16,16 @@
 
   <div class="layout">
     <nav class="sidebar">
+      <section id="materials-projects" class="materials-projects">
+        <div class="sidebar-label">Project</div>
+        <select id="materials-project-select" class="materials-project-select" aria-label="Project"></select>
+        <div class="materials-project-actions">
+          <button id="materials-project-new" type="button">New</button>
+          <button id="materials-project-rename" type="button">Rename</button>
+          <button id="materials-project-delete" type="button">Delete</button>
+        </div>
+        <div id="materials-projects-status" class="materials-status" role="status"></div>
+      </section>
       <div class="sidebar-label">Tools</div>
       <ul id="tool-list" class="tool-list"></ul>
       <section id="tags-panel" class="sidebar-groups">
@@ -47,6 +57,8 @@
   <script src="tags-panel.js"></script>
   <script src="style-view.js"></script>
   <script src="notation-panel.js"></script>
+  <script src="materials-model.js"></script>
+  <script src="materials-view.js"></script>
   <script src="app.js"></script>
   <script src="composer.js"></script>
 </body>

@@ -5,7 +5,10 @@ const TOOLS = [
   { id: "library", label: "Library", active: true, render: renderLibraryView },
   { id: "analysis", label: "Analysis", active: false, render: renderAnalysisTool },
   { id: "corpus", label: "Collections", active: false, render: renderCorpusView },
-  { id: "composer", label: "Composer", active: false, render: () => renderComposerView() },
+  { id: "composer", label: "Composer (old)", active: false, render: () => renderComposerView() },
+  { id: "motifs", label: "Motifs", active: false, render: () => renderMaterialsView("motif") },
+  { id: "themes", label: "Themes", active: false, render: () => renderMaterialsView("theme") },
+  { id: "pieces", label: "Pieces", active: false, render: () => renderMaterialsView("piece") },
   { id: "health", label: "Health", active: false, render: renderHealthView },
 ];
 
@@ -2655,4 +2658,5 @@ function mountTagsPanel() {
 }
 
 mountTagsPanel();
+mountProjectPicker();
 selectTool("library");

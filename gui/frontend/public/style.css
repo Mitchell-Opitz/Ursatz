@@ -1994,3 +1994,71 @@ body {
   font-family: inherit;
   font-size: 12px;
 }
+
+/* Materials: project picker and views (P12) */
+.materials-projects {
+  margin-bottom: 20px;
+}
+
+.materials-project-select {
+  width: 100%;
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.materials-project-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.materials-project-actions button {
+  flex: 1;
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 4px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.materials-project-actions button:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.materials-status {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.materials-status.error {
+  color: #f87171;
+}
+
+.materials-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.materials-list li.error {
+  color: #f87171;
+}
+
+.materials-version-body {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  max-width: 900px;
+  overflow-x: auto;
+  font-size: 12px;
+}
