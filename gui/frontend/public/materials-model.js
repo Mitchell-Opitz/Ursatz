@@ -217,6 +217,103 @@
     }));
   }
 
+
+  const NOTE_HINT = "Pitch:duration, e.g. D4:q F4:e A4:e D5:h. r is a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
+  const MOTIF_ROLES = [
+    { value: "melodic", label: "Melodic" },
+    { value: "accompaniment", label: "Accompaniment" },
+  ];
+  /* Only the full form is editable in P12; the others arrive in P13. */
+  const MOTIF_FORMS = [
+    { value: "full", label: "Full", enabled: true },
+    { value: "rhythm", label: "Rhythm (P13)", enabled: false },
+    { value: "contour", label: "Contour (P13)", enabled: false },
+  ];
+
+  /* The editor's field values for a motif body (null for a new motif). */
+  function motifFormValues(body) {
+    const motif = body && body.motif ? body.motif : {};
+    return {
+      role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
+      form: motif.form || "full",
+      notes: typeof motif.notes === "string" ? motif.notes : "",
+      meter: typeof motif.meter === "string" ? motif.meter : "4/4",
+      key: typeof motif.key === "string" ? motif.key : "",
+      pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
+      features: Array.isArray(motif.features)
+        ? motif.features.map((feature) => ({
+            label: String(feature.label),
+            first: Number(feature.first) + 1,
+            last: Number(feature.last) + 1,
+          }))
+        : [],
+    };
+  }
+
+  /* Problems with the form values as {field, message}; empty when it can be
+   * sent. The Composer judges the note list itself. */
+  function motifFormProblems(values) {
+    const problems = [];
+    if (String(values.notes || "").trim() === "") {
+      problems.push({ field: "notes", message: "Enter at least one note." });
+    }
+    if (!/^\d{1,2}\/\d{1,2}$/.test(String(values.meter || "").trim())) {
+      problems.push({ field: "meter", message: "Meter looks like 4/4." });
+    }
+    const key = String(values.key || "").trim();
+    if (key !== "" && !/^[A-Ga-g][#b]? (major|minor)$/i.test(key)) {
+      problems.push({ field: "key", message: "Key looks like D minor, or leave it empty." });
+    }
+    if (!/^\d+(\/\d+)?$/.test(String(values.pickup || "").trim())) {
+      problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
+    }
+    return problems;
+  }
+
+  /* The version body for the form values. `previous` is the body being
+   * edited: its uses and derived data carry over. The backend fills in the
+   * analysis. */
+  function buildMotifBody(values, previous) {
+    const before = previous || {};
+    const motif = before.motif || {};
+    return {
+      uses: Array.isArray(before.uses) ? before.uses : [],
+      motif: {
+        role: values.role,
+        form: values.form,
+        notes: String(values.notes).trim(),
+        meter: String(values.meter).trim(),
+        key: String(values.key || "").trim() === "" ? null : String(values.key).trim(),
+        pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
+        features: (values.features || []).map((feature) => ({
+          label: String(feature.label).trim(),
+          first: Number(feature.first) - 1,
+          last: Number(feature.last) - 1,
+        })),
+        analysis: null,
+        derived: motif.derived || null,
+      },
+    };
+  }
+
+  /* Saving a motif: a new item when id is empty, else a new version. */
+  function buildSaveMotifRequest(options) {
+    const o = options || {};
+    if (!o.id) {
+      return jsonRequest("POST", "/api/materials/items", {
+        type: "motif",
+        name: String(o.name || "").trim(),
+        project_id: o.project_id,
+        body: o.body,
+      });
+    }
+    const request = { body: o.body };
+    if (o.note && String(o.note).trim() !== "") {
+      request.note = String(o.note).trim();
+    }
+    return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(o.id)}/versions`, request);
+  }
+
   const api = {
     ALL_PROJECTS,
     TYPES,
@@ -244,6 +341,13 @@
     itemRows,
     versionRows,
     useRows,
+    NOTE_HINT,
+    MOTIF_ROLES,
+    MOTIF_FORMS,
+    motifFormValues,
+    motifFormProblems,
+    buildMotifBody,
+    buildSaveMotifRequest,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

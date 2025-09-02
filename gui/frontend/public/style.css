@@ -2062,3 +2062,37 @@ body {
   overflow-x: auto;
   font-size: 12px;
 }
+
+.materials-editor {
+  max-width: 900px;
+  margin-top: 16px;
+}
+
+.materials-editor .filter-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.materials-notes {
+  width: 100%;
+  max-width: 600px;
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px;
+  font-family: monospace;
+}
+
+.materials-hint {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin: 4px 0 8px;
+}
+
+.materials-field-error {
+  color: #f87171;
+  font-size: 12px;
+  min-height: 0;
+}
