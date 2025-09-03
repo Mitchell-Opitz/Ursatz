@@ -362,6 +362,58 @@ function buildMotifEditor(body) {
   pickup.size = 6;
   field("Pickup (beats)", pickup, "pickup");
 
+  el.appendChild(materialsElement("h2", "section-title", "Features"));
+  const featureTable = materialsElement("table", "library-table materials-features");
+  el.appendChild(featureTable);
+  errors.features = materialsElement("div", "materials-field-error");
+  el.appendChild(errors.features);
+  let featureRows = initial.features.map((feature) => ({ ...feature }));
+
+  function drawFeatures() {
+    featureTable.innerHTML = "";
+    if (featureRows.length > 0) {
+      const head = materialsElement("tr");
+      for (const label of ["Label", "First note", "Last note", ""]) {
+        head.appendChild(materialsElement("th", "", label));
+      }
+      featureTable.appendChild(head);
+    }
+    featureRows.forEach((row, index) => {
+      const tr = materialsElement("tr");
+      for (const prop of ["label", "first", "last"]) {
+        const input = materialsElement("input");
+        input.type = "text";
+        input.size = prop === "label" ? 8 : 4;
+        input.value = String(row[prop]);
+        input.setAttribute("aria-label", `Feature ${index + 1} ${prop}`);
+        input.addEventListener("input", () => {
+          row[prop] = prop === "label" ? input.value : input.value.trim() === "" ? NaN : Number(input.value);
+        });
+        const cell = materialsElement("td");
+        cell.appendChild(input);
+        tr.appendChild(cell);
+      }
+      const remove = materialsElement("button", "", "Remove");
+      remove.type = "button";
+      remove.addEventListener("click", () => {
+        featureRows.splice(index, 1);
+        drawFeatures();
+      });
+      const last = materialsElement("td");
+      last.appendChild(remove);
+      tr.appendChild(last);
+      featureTable.appendChild(tr);
+    });
+  }
+  drawFeatures();
+  const addFeature = materialsElement("button", "", "Add feature");
+  addFeature.type = "button";
+  addFeature.addEventListener("click", () => {
+    featureRows.push(MaterialsModel.newFeatureRow(featureRows));
+    drawFeatures();
+  });
+  el.appendChild(addFeature);
+
   function values() {
     return {
       role: role.value,
@@ -370,7 +422,7 @@ function buildMotifEditor(body) {
       meter: meter.value,
       key: key.value,
       pickup: pickup.value,
-      features: initial.features,
+      features: featureRows.map((row) => ({ ...row })),
     };
   }
 

@@ -267,7 +267,42 @@
     if (!/^\d+(\/\d+)?$/.test(String(values.pickup || "").trim())) {
       problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
     }
+    for (const message of featureProblems(values.features)) {
+      problems.push({ field: "features", message });
+    }
     return problems;
+  }
+
+  /* Messages for the feature rows (1-based first and last note). */
+  function featureProblems(features) {
+    const messages = [];
+    const seen = new Set();
+    (features || []).forEach((feature, index) => {
+      const row = `Feature ${index + 1}`;
+      const label = String(feature.label || "").trim();
+      if (label === "" || Array.from(label).length > 8) {
+        messages.push(`${row}: the label is 1 to 8 characters.`);
+      } else if (seen.has(label)) {
+        messages.push(`${row}: the label ${label} is used twice.`);
+      }
+      seen.add(label);
+      const first = Number(feature.first);
+      const last = Number(feature.last);
+      if (!Number.isInteger(first) || !Number.isInteger(last) || first < 1 || last < first) {
+        messages.push(`${row}: first and last are note numbers from 1, first not after last.`);
+      }
+    });
+    return messages;
+  }
+
+  /* An empty feature row to add. */
+  function newFeatureRow(features) {
+    const used = new Set((features || []).map((feature) => feature.label));
+    let label = "a";
+    for (let code = 97; code <= 122 && used.has(label); code++) {
+      label = String.fromCharCode(code + 1);
+    }
+    return { label, first: 1, last: 1 };
   }
 
   /* The version body for the form values. `previous` is the body being
@@ -346,6 +381,8 @@
     MOTIF_FORMS,
     motifFormValues,
     motifFormProblems,
+    featureProblems,
+    newFeatureRow,
     buildMotifBody,
     buildSaveMotifRequest,
   };

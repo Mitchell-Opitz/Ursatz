@@ -2096,3 +2096,8 @@ body {
   font-size: 12px;
   min-height: 0;
 }
+
+.materials-features {
+  max-width: 420px;
+  margin-bottom: 8px;
+}
