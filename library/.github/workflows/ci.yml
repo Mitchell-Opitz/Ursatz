@@ -16,3 +16,13 @@ jobs:
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-tests=error
+      - name: Accuracy gate
+        run: ./build/tests/accuracy/accuracy_harness
+      - name: Upload accuracy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accuracy-report
+          path: |
+            build/tests/accuracy/report.md
+            build/tests/accuracy/report.json
