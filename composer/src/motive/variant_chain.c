@@ -229,6 +229,20 @@ static bool harmony_kept(const MotiveAnalysis *a, const MotiveAnalysis *b) {
     return strcmp(a->candidates[0].roman, b->candidates[0].roman) == 0;
 }
 
+/* Own harmony, when either motive has it: kept when every chord's degree and onset match. */
+static bool own_harmony_kept(const Motive *a, const Motive *b) {
+    if (a->harmony_count != b->harmony_count) {
+        return false;
+    }
+    for (size_t i = 0; i < a->harmony_count; i++) {
+        if (a->harmony[i].degree != b->harmony[i].degree ||
+            plan_time_compare(a->harmony[i].onset, b->harmony[i].onset) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void note_dimension(VariantRecord *record, const char *name, bool kept) {
     if (kept) {
         record->kept[record->kept_count++] = name;
@@ -253,7 +267,9 @@ static void record_difference(const Motive *source, const Motive *result, Varian
         if (before.contour_known) {
             note_dimension(record, "contour", contour_kept(&before, &after));
         }
-        if (before.harmony_known && after.harmony_known) {
+        if (source->harmony_count > 0 || result->harmony_count > 0) {
+            note_dimension(record, "harmony", own_harmony_kept(source, result));
+        } else if (before.harmony_known && after.harmony_known) {
             note_dimension(record, "harmony", harmony_kept(&before, &after));
         }
     }
