@@ -164,6 +164,10 @@ function buildNewItemControls(type, info, statusEl, reload) {
   create.type = "button";
   create.disabled = materialsState.projects.length === 0;
   async function submit() {
+    if (type === "motif") {
+      renderNewMotif(name.value, project.value);
+      return;
+    }
     if (name.value.trim() === "") {
       return;
     }
@@ -298,7 +302,245 @@ function buildVersionsList(item, viewEl, statusEl) {
   return section;
 }
 
-async function renderMaterialsDetail(type, id) {
+/* The motif form. Returns {el, values(), showProblems(problems), showError(text)}.
+ * body is the version body being edited, or null for a new motif. */
+function buildMotifEditor(body) {
+  const initial = MaterialsModel.motifFormValues(body);
+  const el = materialsElement("section", "panel materials-editor");
+  const errors = {};
+
+  function field(labelText, control, key) {
+    const label = materialsElement("label", "filter-field", labelText + " ");
+    label.appendChild(control);
+    el.appendChild(label);
+    errors[key] = materialsElement("div", "materials-field-error");
+    el.appendChild(errors[key]);
+    return control;
+  }
+
+  const role = materialsElement("select");
+  for (const option of MaterialsModel.MOTIF_ROLES) {
+    const o = materialsElement("option", "", option.label);
+    o.value = option.value;
+    role.appendChild(o);
+  }
+  role.value = initial.role;
+  field("Role", role, "role");
+
+  const form = materialsElement("select");
+  for (const option of MaterialsModel.MOTIF_FORMS) {
+    const o = materialsElement("option", "", option.label);
+    o.value = option.value;
+    o.disabled = !option.enabled;
+    form.appendChild(o);
+  }
+  form.value = initial.form;
+  field("Form", form, "form");
+
+  const notes = materialsElement("textarea", "materials-notes");
+  notes.rows = 4;
+  notes.spellcheck = false;
+  notes.value = initial.notes;
+  field("Notes", notes, "notes");
+  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.NOTE_HINT));
+
+  const meter = materialsElement("input");
+  meter.type = "text";
+  meter.value = initial.meter;
+  meter.size = 6;
+  field("Meter", meter, "meter");
+
+  const key = materialsElement("input");
+  key.type = "text";
+  key.value = initial.key;
+  key.placeholder = "D minor (optional)";
+  field("Key", key, "key");
+
+  const pickup = materialsElement("input");
+  pickup.type = "text";
+  pickup.value = initial.pickup;
+  pickup.size = 6;
+  field("Pickup (beats)", pickup, "pickup");
+
+  el.appendChild(materialsElement("h2", "section-title", "Features"));
+  const featureTable = materialsElement("table", "library-table materials-features");
+  el.appendChild(featureTable);
+  errors.features = materialsElement("div", "materials-field-error");
+  el.appendChild(errors.features);
+  let featureRows = initial.features.map((feature) => ({ ...feature }));
+
+  function drawFeatures() {
+    featureTable.innerHTML = "";
+    if (featureRows.length > 0) {
+      const head = materialsElement("tr");
+      for (const label of ["Label", "First note", "Last note", ""]) {
+        head.appendChild(materialsElement("th", "", label));
+      }
+      featureTable.appendChild(head);
+    }
+    featureRows.forEach((row, index) => {
+      const tr = materialsElement("tr");
+      for (const prop of ["label", "first", "last"]) {
+        const input = materialsElement("input");
+        input.type = "text";
+        input.size = prop === "label" ? 8 : 4;
+        input.value = String(row[prop]);
+        input.setAttribute("aria-label", `Feature ${index + 1} ${prop}`);
+        input.addEventListener("input", () => {
+          row[prop] = prop === "label" ? input.value : input.value.trim() === "" ? NaN : Number(input.value);
+        });
+        const cell = materialsElement("td");
+        cell.appendChild(input);
+        tr.appendChild(cell);
+      }
+      const remove = materialsElement("button", "", "Remove");
+      remove.type = "button";
+      remove.addEventListener("click", () => {
+        featureRows.splice(index, 1);
+        drawFeatures();
+      });
+      const last = materialsElement("td");
+      last.appendChild(remove);
+      tr.appendChild(last);
+      featureTable.appendChild(tr);
+    });
+  }
+  drawFeatures();
+  const addFeature = materialsElement("button", "", "Add feature");
+  addFeature.type = "button";
+  addFeature.addEventListener("click", () => {
+    featureRows.push(MaterialsModel.newFeatureRow(featureRows));
+    drawFeatures();
+  });
+  el.appendChild(addFeature);
+
+  function values() {
+    return {
+      role: role.value,
+      form: form.value,
+      notes: notes.value,
+      meter: meter.value,
+      key: key.value,
+      pickup: pickup.value,
+      features: featureRows.map((row) => ({ ...row })),
+    };
+  }
+
+  function showError(text, fieldName) {
+    for (const holder of Object.values(errors)) {
+      holder.textContent = "";
+    }
+    if (text) {
+      errors[fieldName || "notes"].textContent = text;
+    }
+  }
+
+  function showProblems(problems) {
+    showError("");
+    for (const problem of problems) {
+      const holder = errors[problem.field];
+      holder.textContent = holder.textContent ? `${holder.textContent} ${problem.message}` : problem.message;
+    }
+  }
+
+  return { el, values, showProblems, showError };
+}
+
+/* The Save controls of a motif editor: an optional version note and a
+ * button. onSave(values, note) resolves to the answer; its error text shows
+ * beside the note list and the input stays. */
+function buildMotifSaveControls(editor, statusEl, label, withNote, onSave) {
+  const controls = materialsElement("div", "upload-controls");
+  const note = materialsElement("input");
+  note.type = "text";
+  note.placeholder = "Version note (optional)";
+  const save = materialsElement("button", "", label);
+  save.type = "button";
+  save.addEventListener("click", async () => {
+    const values = editor.values();
+    const problems = MaterialsModel.motifFormProblems(values);
+    editor.showProblems(problems);
+    if (problems.length > 0) {
+      return;
+    }
+    save.disabled = true;
+    statusEl.textContent = "";
+    statusEl.classList.remove("error");
+    const answer = await onSave(values, note.value);
+    save.disabled = false;
+    if (answer && !answer.ok) {
+      editor.showError(MaterialsModel.errorText(answer.data, "Could not save the motif"));
+    }
+  });
+  if (withNote) {
+    controls.appendChild(note);
+  }
+  controls.appendChild(save);
+  return controls;
+}
+
+function renderNewMotif(draftName, draftProject) {
+  const content = getContentEl();
+  content.innerHTML = "";
+  const back = materialsElement("a", "back-link clickable", "Back to Motifs");
+  back.addEventListener("click", () => renderMaterialsView("motif"));
+  content.appendChild(back);
+  content.appendChild(materialsElement("h1", "view-title", "New motif"));
+  const statusEl = materialsElement("div", "upload-status");
+  statusEl.setAttribute("role", "status");
+
+  const meta = materialsElement("div", "upload-controls");
+  const name = materialsElement("input");
+  name.type = "text";
+  name.placeholder = "Motif name";
+  name.value = draftName || "";
+  const project = materialsElement("select");
+  fillProjectSelect(project, draftProject);
+  meta.append(name, project);
+  content.append(meta, statusEl);
+
+  const editor = buildMotifEditor(null);
+  content.appendChild(editor.el);
+  content.appendChild(
+    buildMotifSaveControls(editor, statusEl, "Save motif", false, async (values) => {
+      if (name.value.trim() === "" || project.value === "") {
+        statusEl.textContent = "Give the motif a name and a project.";
+        statusEl.classList.add("error");
+        return null;
+      }
+      const request = MaterialsModel.buildSaveMotifRequest({
+        name: name.value,
+        project_id: project.value,
+        body: MaterialsModel.buildMotifBody(values, null),
+      });
+      const answer = await sendMaterialsRequest(request);
+      if (answer.ok) {
+        renderMaterialsDetail("motif", answer.data.item.id, answer.data.item.analysis_error);
+      }
+      return answer;
+    }),
+  );
+}
+
+/* The Composer's analysis of a motif version body, or why there is none. */
+function buildAnalysisPanel(body, analysisError) {
+  const info = MaterialsModel.analysisRows(body && body.motif, analysisError);
+  const section = materialsElement("section", "panel materials-analysis");
+  section.appendChild(materialsElement("h2", "section-title", "Analysis"));
+  if (!info.analyzed) {
+    section.appendChild(materialsElement("div", "piece-list-status", info.message));
+    return section;
+  }
+  const list = materialsElement("dl", "materials-analysis-list");
+  for (const row of info.rows) {
+    list.appendChild(materialsElement("dt", "", row.label));
+    list.appendChild(materialsElement("dd", "", row.text));
+  }
+  section.appendChild(list);
+  return section;
+}
+
+async function renderMaterialsDetail(type, id, analysisError) {
   const info = MaterialsModel.typeInfo(type);
   const content = getContentEl();
   content.innerHTML = "";
@@ -348,6 +590,25 @@ async function renderMaterialsDetail(type, id) {
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
+  if (type === "motif") {
+    const editor = buildMotifEditor(answer.data.body);
+    content.appendChild(editor.el);
+    content.appendChild(buildAnalysisPanel(answer.data.body, analysisError));
+    content.appendChild(
+      buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
+        const request = MaterialsModel.buildSaveMotifRequest({
+          id,
+          note,
+          body: MaterialsModel.buildMotifBody(values, answer.data.body),
+        });
+        const saved = await sendMaterialsRequest(request);
+        if (saved.ok) {
+          renderMaterialsDetail(type, id, saved.data.item.analysis_error);
+        }
+        return saved;
+      }),
+    );
+  }
   content.appendChild(buildUsesList(answer.data.uses_status));
   content.appendChild(buildVersionsList(item, versionEl, statusEl));
   content.appendChild(versionEl);

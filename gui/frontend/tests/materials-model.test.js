@@ -81,6 +81,93 @@ check(vrows[1].note === "first" && !vrows[1].current, "older version row");
 const uses = M.useRows([{ item_id: "mot-1", name: "Hook", version: 2, missing: false }, { item_id: "mot-9", version: 1, missing: true }]);
 check(uses[0].label === "Hook v2" && uses[1].missing && uses[1].label === "mot-9 v1", "use rows");
 
+// Motif editor helpers.
+const body = {
+  uses: [{ item_id: "mot-9", version: 1, copy: {} }],
+  motif: {
+    role: "accompaniment",
+    form: "full",
+    notes: "D4:q F4:e",
+    meter: "3/4",
+    key: "D minor",
+    pickup: "1/2",
+    features: [{ label: "a", first: 0, last: 1 }],
+    analysis: { analysis: {} },
+    derived: { source_item: "mot-1" },
+  },
+};
+const values = M.motifFormValues(body);
+check(values.role === "accompaniment" && values.key === "D minor" && values.pickup === "1/2", "form values read the motif");
+check(same(values.features, [{ label: "a", first: 1, last: 2 }]), "features show note numbers from 1");
+const blank = M.motifFormValues(null);
+check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && blank.form === "full", "a new motif form has defaults");
+check(M.motifFormProblems(blank).length === 1 && M.motifFormProblems(blank)[0].field === "notes", "empty notes are a problem");
+check(M.motifFormProblems(values).length === 0, "a filled form has no problems");
+check(M.motifFormProblems({ ...values, meter: "four" })[0].field === "meter", "a bad meter is a problem");
+check(M.motifFormProblems({ ...values, key: "Dm" })[0].field === "key", "a bad key is a problem");
+check(M.motifFormProblems({ ...values, key: "" }).length === 0, "an empty key is fine");
+check(M.motifFormProblems({ ...values, pickup: "x" })[0].field === "pickup", "a bad pickup is a problem");
+
+const rebuilt = M.buildMotifBody({ ...values, notes: " D4:q ", key: " ", pickup: "" }, body);
+check(rebuilt.motif.notes === "D4:q" && rebuilt.motif.key === null && rebuilt.motif.pickup === "0", "body trims notes, empty key is null, empty pickup is 0");
+check(same(rebuilt.motif.features, [{ label: "a", first: 0, last: 1 }]), "body stores features from 0");
+check(rebuilt.uses.length === 1 && rebuilt.motif.derived.source_item === "mot-1", "body keeps uses and derived");
+check(rebuilt.motif.analysis === null, "body leaves the analysis to the backend");
+check(M.buildMotifBody(blank, null).uses.length === 0 && M.buildMotifBody(blank, null).motif.derived === null, "a new body has no uses or derived");
+check(M.MOTIF_FORMS.filter((f) => f.enabled).map((f) => f.value).join() === "full", "only the full form is enabled");
+
+const saveNew = M.buildSaveMotifRequest({ name: " Hook ", project_id: "prj-a", body: rebuilt });
+check(saveNew.url === "/api/materials/items" && JSON.parse(saveNew.body).type === "motif", "a new motif posts an item");
+check(JSON.parse(saveNew.body).name === "Hook", "new motif name is trimmed");
+const saveVersion = M.buildSaveMotifRequest({ id: "mot-1", note: " tweak ", body: rebuilt });
+check(saveVersion.url === "/api/materials/items/mot-1/versions" && JSON.parse(saveVersion.body).note === "tweak", "an existing motif posts a version with its note");
+check(!("note" in JSON.parse(M.buildSaveMotifRequest({ id: "mot-1", note: " ", body: rebuilt }).body)), "an empty note is left out");
+
+// Features.
+check(M.featureProblems([{ label: "a", first: 1, last: 2 }]).length === 0, "a good feature row passes");
+check(M.featureProblems([{ label: "", first: 1, last: 1 }]).length === 1, "an empty label fails");
+check(M.featureProblems([{ label: "abcdefghi", first: 1, last: 1 }]).length === 1, "a label over 8 characters fails");
+check(M.featureProblems([{ label: "a", first: 1, last: 1 }, { label: "a", first: 2, last: 2 }]).length === 1, "a repeated label fails");
+check(M.featureProblems([{ label: "a", first: 3, last: 2 }]).length === 1, "first after last fails");
+check(M.featureProblems([{ label: "a", first: 0, last: 1 }]).length === 1, "note numbers start at 1");
+check(M.featureProblems([{ label: "a", first: NaN, last: 1 }]).length === 1, "a blank number fails");
+check(M.motifFormProblems({ ...values, features: [{ label: "", first: 1, last: 1 }] })[0].field === "features", "feature problems show on the form");
+check(M.newFeatureRow([]).label === "a" && M.newFeatureRow([{ label: "a" }]).label === "b", "a new feature row takes the next free letter");
+
+// Analysis rows.
+const heard = {
+  analysis: {
+    motive: {},
+    analysis: {
+      scale_degrees: { all: [{ degree: 1, alteration: 0 }, { degree: 3, alteration: 0 }, { degree: 4, alteration: 1 }] },
+      intervals: [{ semitones: 3, steps: 2 }, { semitones: -1, steps: -1 }],
+      contour: { shape: "arch", directions: ["up", "down"] },
+      rhythm: [
+        { bar: 0, beat: { num: 0, den: 1 }, duration: { num: 1, den: 4 }, on_beat: true },
+        { bar: 1, beat: { num: 3, den: 2 }, duration: { num: 1, den: 8 }, on_beat: false },
+      ],
+      implied_harmony: { key_known: true, candidates: [{ roman_numeral: "i", function: "tonic", fit: 0.8333 }] },
+    },
+  },
+};
+const info = M.analysisRows(heard);
+check(info.analyzed && info.rows.map((r) => r.label).join() === "Scale degrees,Intervals,Contour,Rhythm,Implied harmony", "analysis rows in order");
+const text = (label) => info.rows.find((r) => r.label === label).text;
+check(text("Scale degrees") === "1 3 #4", "scale degrees show raised degrees");
+check(text("Intervals") === "+3 (+2 steps), -1 (-1 steps)", "intervals show semitones and steps");
+check(text("Contour") === "arch (up, down)", "contour shows shape and directions");
+check(text("Rhythm") === "bar 1 beat 1, length 1/4; bar 2 beat 2+1/2, length 1/8 (off the beat)", "rhythm shows bar, beat and length");
+check(text("Implied harmony") === "i (tonic) 83%", "harmony shows numeral, function and fit");
+const unkeyed = M.analysisRows({
+  analysis: { analysis: { scale_degrees: null, intervals: [{ semitones: 2, steps: null }], contour: { shape: "single note", directions: [] }, rhythm: [], implied_harmony: { key_known: false, candidates: [] } } },
+});
+check(unkeyed.rows.every((r) => r.label !== "Scale degrees"), "no scale degrees without a key");
+check(unkeyed.rows.find((r) => r.label === "Intervals").text === "+2", "intervals without a key are semitones");
+check(unkeyed.rows.find((r) => r.label === "Implied harmony").text === "needs a key", "harmony needs a key");
+const none = M.analysisRows({ analysis: null }, "composer not found");
+check(!none.analyzed && none.message === "Not analyzed: composer not found", "a null analysis names the reason");
+check(M.analysisRows(null).message === "Not analyzed", "no motif is not analyzed");
+
 if (failures > 0) {
   process.exit(1);
 }

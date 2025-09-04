@@ -217,6 +217,216 @@
     }));
   }
 
+
+  const NOTE_HINT = "Pitch:duration, e.g. D4:q F4:e A4:e D5:h. r is a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
+  const MOTIF_ROLES = [
+    { value: "melodic", label: "Melodic" },
+    { value: "accompaniment", label: "Accompaniment" },
+  ];
+  /* Only the full form is editable in P12; the others arrive in P13. */
+  const MOTIF_FORMS = [
+    { value: "full", label: "Full", enabled: true },
+    { value: "rhythm", label: "Rhythm (P13)", enabled: false },
+    { value: "contour", label: "Contour (P13)", enabled: false },
+  ];
+
+  /* The editor's field values for a motif body (null for a new motif). */
+  function motifFormValues(body) {
+    const motif = body && body.motif ? body.motif : {};
+    return {
+      role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
+      form: motif.form || "full",
+      notes: typeof motif.notes === "string" ? motif.notes : "",
+      meter: typeof motif.meter === "string" ? motif.meter : "4/4",
+      key: typeof motif.key === "string" ? motif.key : "",
+      pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
+      features: Array.isArray(motif.features)
+        ? motif.features.map((feature) => ({
+            label: String(feature.label),
+            first: Number(feature.first) + 1,
+            last: Number(feature.last) + 1,
+          }))
+        : [],
+    };
+  }
+
+  /* Problems with the form values as {field, message}; empty when it can be
+   * sent. The Composer judges the note list itself. */
+  function motifFormProblems(values) {
+    const problems = [];
+    if (String(values.notes || "").trim() === "") {
+      problems.push({ field: "notes", message: "Enter at least one note." });
+    }
+    if (!/^\d{1,2}\/\d{1,2}$/.test(String(values.meter || "").trim())) {
+      problems.push({ field: "meter", message: "Meter looks like 4/4." });
+    }
+    const key = String(values.key || "").trim();
+    if (key !== "" && !/^[A-Ga-g][#b]? (major|minor)$/i.test(key)) {
+      problems.push({ field: "key", message: "Key looks like D minor, or leave it empty." });
+    }
+    if (!/^\d+(\/\d+)?$/.test(String(values.pickup || "").trim())) {
+      problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
+    }
+    for (const message of featureProblems(values.features)) {
+      problems.push({ field: "features", message });
+    }
+    return problems;
+  }
+
+  /* Messages for the feature rows (1-based first and last note). */
+  function featureProblems(features) {
+    const messages = [];
+    const seen = new Set();
+    (features || []).forEach((feature, index) => {
+      const row = `Feature ${index + 1}`;
+      const label = String(feature.label || "").trim();
+      if (label === "" || Array.from(label).length > 8) {
+        messages.push(`${row}: the label is 1 to 8 characters.`);
+      } else if (seen.has(label)) {
+        messages.push(`${row}: the label ${label} is used twice.`);
+      }
+      seen.add(label);
+      const first = Number(feature.first);
+      const last = Number(feature.last);
+      if (!Number.isInteger(first) || !Number.isInteger(last) || first < 1 || last < first) {
+        messages.push(`${row}: first and last are note numbers from 1, first not after last.`);
+      }
+    });
+    return messages;
+  }
+
+  /* An empty feature row to add. */
+  function newFeatureRow(features) {
+    const used = new Set((features || []).map((feature) => feature.label));
+    let label = "a";
+    for (let code = 97; code <= 122 && used.has(label); code++) {
+      label = String.fromCharCode(code + 1);
+    }
+    return { label, first: 1, last: 1 };
+  }
+
+  /* The version body for the form values. `previous` is the body being
+   * edited: its uses and derived data carry over. The backend fills in the
+   * analysis. */
+  function buildMotifBody(values, previous) {
+    const before = previous || {};
+    const motif = before.motif || {};
+    return {
+      uses: Array.isArray(before.uses) ? before.uses : [],
+      motif: {
+        role: values.role,
+        form: values.form,
+        notes: String(values.notes).trim(),
+        meter: String(values.meter).trim(),
+        key: String(values.key || "").trim() === "" ? null : String(values.key).trim(),
+        pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
+        features: (values.features || []).map((feature) => ({
+          label: String(feature.label).trim(),
+          first: Number(feature.first) - 1,
+          last: Number(feature.last) - 1,
+        })),
+        analysis: null,
+        derived: motif.derived || null,
+      },
+    };
+  }
+
+  /* Saving a motif: a new item when id is empty, else a new version. */
+  function buildSaveMotifRequest(options) {
+    const o = options || {};
+    if (!o.id) {
+      return jsonRequest("POST", "/api/materials/items", {
+        type: "motif",
+        name: String(o.name || "").trim(),
+        project_id: o.project_id,
+        body: o.body,
+      });
+    }
+    const request = { body: o.body };
+    if (o.note && String(o.note).trim() !== "") {
+      request.note = String(o.note).trim();
+    }
+    return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(o.id)}/versions`, request);
+  }
+
+  function timeText(time) {
+    if (!time || typeof time.num !== "number" || !time.den) {
+      return "?";
+    }
+    return time.den === 1 ? String(time.num) : `${time.num}/${time.den}`;
+  }
+
+  /* "2" or "2+1/2": a beat position counted from 1. */
+  function beatText(time) {
+    if (!time || typeof time.num !== "number" || !time.den) {
+      return "?";
+    }
+    const whole = Math.floor(time.num / time.den);
+    const rest = time.num - whole * time.den;
+    return rest === 0 ? String(whole + 1) : `${whole + 1}+${rest}/${time.den}`;
+  }
+
+  function signed(n) {
+    return n > 0 ? `+${n}` : String(n);
+  }
+
+  function degreeText(degree) {
+    return `${degree.alteration ? "#" : ""}${degree.degree}`;
+  }
+
+  /* What the Composer heard, as rows {label, text} for the analysis panel.
+   * `motif` is the body's motif object. A motif without an analysis gives
+   * {analyzed: false, message} (message names analysisError when given);
+   * otherwise {analyzed: true, rows}. */
+  function analysisRows(motif, analysisError) {
+    const outer = motif && motif.analysis;
+    const a = outer && outer.analysis;
+    if (!a || typeof a !== "object") {
+      const reason = analysisError ? `: ${analysisError}` : "";
+      return { analyzed: false, message: `Not analyzed${reason}`, rows: [] };
+    }
+    const rows = [];
+    const keyed = Array.isArray(a.scale_degrees && a.scale_degrees.all);
+    if (keyed) {
+      rows.push({ label: "Scale degrees", text: a.scale_degrees.all.map(degreeText).join(" ") });
+    }
+    const intervals = Array.isArray(a.intervals) ? a.intervals : [];
+    rows.push({
+      label: "Intervals",
+      text:
+        intervals.length === 0
+          ? "none"
+          : intervals
+              .map((i) => (typeof i.steps === "number" ? `${signed(i.semitones)} (${signed(i.steps)} steps)` : signed(i.semitones)))
+              .join(", "),
+    });
+    if (a.contour) {
+      const directions = Array.isArray(a.contour.directions) ? a.contour.directions : [];
+      rows.push({
+        label: "Contour",
+        text: directions.length > 0 ? `${a.contour.shape} (${directions.join(", ")})` : String(a.contour.shape),
+      });
+    }
+    const rhythm = Array.isArray(a.rhythm) ? a.rhythm : [];
+    rows.push({
+      label: "Rhythm",
+      text: rhythm
+        .map((r) => `bar ${r.bar + 1} beat ${beatText(r.beat)}, length ${timeText(r.duration)}${r.on_beat ? "" : " (off the beat)"}`)
+        .join("; "),
+    });
+    const candidates = a.implied_harmony && Array.isArray(a.implied_harmony.candidates) ? a.implied_harmony.candidates : [];
+    rows.push({
+      label: "Implied harmony",
+      text:
+        candidates.length === 0
+          ? keyed
+            ? "no chord fits"
+            : "needs a key"
+          : candidates.map((c) => `${c.roman_numeral} (${c.function}) ${Math.round(c.fit * 100)}%`).join(", "),
+    });
+    return { analyzed: true, message: "", rows };
+  }
+
   const api = {
     ALL_PROJECTS,
     TYPES,
@@ -244,6 +454,16 @@
     itemRows,
     versionRows,
     useRows,
+    NOTE_HINT,
+    MOTIF_ROLES,
+    MOTIF_FORMS,
+    motifFormValues,
+    motifFormProblems,
+    featureProblems,
+    newFeatureRow,
+    buildMotifBody,
+    buildSaveMotifRequest,
+    analysisRows,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
