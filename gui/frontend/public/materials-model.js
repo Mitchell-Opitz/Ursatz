@@ -349,6 +349,84 @@
     return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(o.id)}/versions`, request);
   }
 
+  function timeText(time) {
+    if (!time || typeof time.num !== "number" || !time.den) {
+      return "?";
+    }
+    return time.den === 1 ? String(time.num) : `${time.num}/${time.den}`;
+  }
+
+  /* "2" or "2+1/2": a beat position counted from 1. */
+  function beatText(time) {
+    if (!time || typeof time.num !== "number" || !time.den) {
+      return "?";
+    }
+    const whole = Math.floor(time.num / time.den);
+    const rest = time.num - whole * time.den;
+    return rest === 0 ? String(whole + 1) : `${whole + 1}+${rest}/${time.den}`;
+  }
+
+  function signed(n) {
+    return n > 0 ? `+${n}` : String(n);
+  }
+
+  function degreeText(degree) {
+    return `${degree.alteration ? "#" : ""}${degree.degree}`;
+  }
+
+  /* What the Composer heard, as rows {label, text} for the analysis panel.
+   * `motif` is the body's motif object. A motif without an analysis gives
+   * {analyzed: false, message} (message names analysisError when given);
+   * otherwise {analyzed: true, rows}. */
+  function analysisRows(motif, analysisError) {
+    const outer = motif && motif.analysis;
+    const a = outer && outer.analysis;
+    if (!a || typeof a !== "object") {
+      const reason = analysisError ? `: ${analysisError}` : "";
+      return { analyzed: false, message: `Not analyzed${reason}`, rows: [] };
+    }
+    const rows = [];
+    const keyed = Array.isArray(a.scale_degrees && a.scale_degrees.all);
+    if (keyed) {
+      rows.push({ label: "Scale degrees", text: a.scale_degrees.all.map(degreeText).join(" ") });
+    }
+    const intervals = Array.isArray(a.intervals) ? a.intervals : [];
+    rows.push({
+      label: "Intervals",
+      text:
+        intervals.length === 0
+          ? "none"
+          : intervals
+              .map((i) => (typeof i.steps === "number" ? `${signed(i.semitones)} (${signed(i.steps)} steps)` : signed(i.semitones)))
+              .join(", "),
+    });
+    if (a.contour) {
+      const directions = Array.isArray(a.contour.directions) ? a.contour.directions : [];
+      rows.push({
+        label: "Contour",
+        text: directions.length > 0 ? `${a.contour.shape} (${directions.join(", ")})` : String(a.contour.shape),
+      });
+    }
+    const rhythm = Array.isArray(a.rhythm) ? a.rhythm : [];
+    rows.push({
+      label: "Rhythm",
+      text: rhythm
+        .map((r) => `bar ${r.bar + 1} beat ${beatText(r.beat)}, length ${timeText(r.duration)}${r.on_beat ? "" : " (off the beat)"}`)
+        .join("; "),
+    });
+    const candidates = a.implied_harmony && Array.isArray(a.implied_harmony.candidates) ? a.implied_harmony.candidates : [];
+    rows.push({
+      label: "Implied harmony",
+      text:
+        candidates.length === 0
+          ? keyed
+            ? "no chord fits"
+            : "needs a key"
+          : candidates.map((c) => `${c.roman_numeral} (${c.function}) ${Math.round(c.fit * 100)}%`).join(", "),
+    });
+    return { analyzed: true, message: "", rows };
+  }
+
   const api = {
     ALL_PROJECTS,
     TYPES,
@@ -385,6 +463,7 @@
     newFeatureRow,
     buildMotifBody,
     buildSaveMotifRequest,
+    analysisRows,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

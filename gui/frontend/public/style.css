@@ -2101,3 +2101,23 @@ body {
   max-width: 420px;
   margin-bottom: 8px;
 }
+
+.materials-analysis {
+  max-width: 900px;
+  margin-top: 16px;
+}
+
+.materials-analysis-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.materials-analysis-list dt {
+  color: var(--text-dim);
+}
+
+.materials-analysis-list dd {
+  margin: 0;
+}

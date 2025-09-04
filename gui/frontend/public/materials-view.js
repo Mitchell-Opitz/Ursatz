@@ -515,14 +515,32 @@ function renderNewMotif(draftName, draftProject) {
       });
       const answer = await sendMaterialsRequest(request);
       if (answer.ok) {
-        renderMaterialsDetail("motif", answer.data.item.id);
+        renderMaterialsDetail("motif", answer.data.item.id, answer.data.item.analysis_error);
       }
       return answer;
     }),
   );
 }
 
-async function renderMaterialsDetail(type, id) {
+/* The Composer's analysis of a motif version body, or why there is none. */
+function buildAnalysisPanel(body, analysisError) {
+  const info = MaterialsModel.analysisRows(body && body.motif, analysisError);
+  const section = materialsElement("section", "panel materials-analysis");
+  section.appendChild(materialsElement("h2", "section-title", "Analysis"));
+  if (!info.analyzed) {
+    section.appendChild(materialsElement("div", "piece-list-status", info.message));
+    return section;
+  }
+  const list = materialsElement("dl", "materials-analysis-list");
+  for (const row of info.rows) {
+    list.appendChild(materialsElement("dt", "", row.label));
+    list.appendChild(materialsElement("dd", "", row.text));
+  }
+  section.appendChild(list);
+  return section;
+}
+
+async function renderMaterialsDetail(type, id, analysisError) {
   const info = MaterialsModel.typeInfo(type);
   const content = getContentEl();
   content.innerHTML = "";
@@ -575,6 +593,7 @@ async function renderMaterialsDetail(type, id) {
   if (type === "motif") {
     const editor = buildMotifEditor(answer.data.body);
     content.appendChild(editor.el);
+    content.appendChild(buildAnalysisPanel(answer.data.body, analysisError));
     content.appendChild(
       buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
         const request = MaterialsModel.buildSaveMotifRequest({
@@ -584,7 +603,7 @@ async function renderMaterialsDetail(type, id) {
         });
         const saved = await sendMaterialsRequest(request);
         if (saved.ok) {
-          renderMaterialsDetail(type, id);
+          renderMaterialsDetail(type, id, saved.data.item.analysis_error);
         }
         return saved;
       }),
