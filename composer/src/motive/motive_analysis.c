@@ -411,6 +411,18 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
     } else {
         fprintf(out, "Length: %ld/%lu bars\n", analysis->bars.num, analysis->bars.den);
     }
+    if (motive->harmony_count > 0) {
+        char *harmony = motive_harmony_to_text(motive);
+        fprintf(out, "Own harmony: %s\n", harmony ? harmony : "");
+        free(harmony);
+    }
+    for (size_t i = 0; i < motive->feature_count; i++) {
+        fprintf(out, "%s%s: notes %zu to %zu\n", i == 0 ? "Features:\n  " : "  ", motive->features[i].label,
+                motive->features[i].first, motive->features[i].last);
+    }
+    if (motive->role != MOTIVE_ROLE_MELODIC) {
+        fprintf(out, "Role: %s\n", motive_role_name(motive->role));
+    }
 
     if (analysis->intervals_known) {
         fprintf(out, "Intervals:");

@@ -13,7 +13,7 @@ int run_variants(int argc, char **argv);
 #define VARIANTS_USAGE_LINE                                                                                          \
     "       ursatz-composer variants --list-ops [--json]\n"                                                          \
     "       ursatz-composer variants <motive-input> [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] " \
-    "[--form <full|rhythm|contour>] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--chain <file.json>] "         \
+    "[--form <full|rhythm|contour>] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--harmony \"<text>\"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--chain <file.json>] "         \
     "[--count <n>] [--seed <n>] [--json]"
 
 #endif
