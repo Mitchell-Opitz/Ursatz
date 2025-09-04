@@ -64,8 +64,26 @@ remembered in the browser. Each view lists its items (name, project, current
 version, updated) with a New row (name and project). A row opens the detail:
 the name and project are editable, the uses are listed, and the versions list
 (number, date, note) lets any version be viewed read-only. Themes and pieces
-have no body editor yet. The motif editor, subjects and item references come
-in later branches.
+have no body editor yet. Subjects and item references come in later
+branches.
+
+#### Motif editor
+
+A motif's detail holds the editor; New on the Motifs view opens the same
+editor empty, and the first Save creates the motif (it needs a name and a
+project). The form has the role (melodic or accompaniment), the form (only
+full can be chosen; rhythm and contour are shown disabled, P13), the note
+list with its syntax hint, the meter, an optional key, the pickup in exact
+beats (`0`, `1` or `1/2`) and a features table (label of 1 to 8 characters,
+first and last note counted from 1; rows are added and removed in place).
+Save as new version writes a version with an optional note; the Composer's
+message for a note list it cannot read shows beside the note list and the
+input is kept. The Analysis panel under the form shows the scale degrees,
+intervals (semitones and steps), contour, rhythm and implied harmony stored
+in `motif.analysis`; a motif without one reads "Not analyzed", with the
+reason when the save said why. The helpers (`motifFormValues`,
+`motifFormProblems`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
+in `materials-model.js`.
 
 ### Composer view
 
