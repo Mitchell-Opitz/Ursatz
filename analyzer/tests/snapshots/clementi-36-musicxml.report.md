@@ -858,6 +858,74 @@ A later theme recalls an earlier one when the kernel's thematic return detection
       - idea basic-idea (mm. 34 to 35)
       - idea contrasting-idea (mm. 36 to 38)
 
+## Melody
+
+The library's melody adapter read the soprano of each phrase as a line of notes: the soprano notes that start in the phrase. Range is the lowest and highest note and the semitones between them; Climax is the first note at the highest pitch, with how many notes sound it when it is not one; Contour counts the intervals between consecutive notes that go up, go down and repeat, and how many of them are steps and leaps.
+
+| Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 2 | 5 | G4 to E5 (9) | E5, m. 1, beat 2 | 2 | 2 | 0 | 0 | 4 |
+| 2 | mm. 3 to 4 | 7 | B4 to F5 (6) | F5, m. 3, beat 1 | 2 | 3 | 1 | 4 | 1 |
+| 3 | mm. 5 to 10 | 25 | G4 to A5 (14) | A5, m. 9, beat 2, 3 notes | 11 | 10 | 3 | 10 | 11 |
+| 4 | mm. 11 to 14 | 21 | B4 to D6 (15) | D6, m. 12, beat 2.5 | 6 | 11 | 3 | 9 | 8 |
+| 5 | mm. 15 to 19 | 13 | G4 to G5 (12) | G5, m. 17, beat 4 | 5 | 5 | 1 | 3 | 7 |
+| 6 | mm. 20 to 23 | 18 | D3 to G5 (29) | G5, m. 20, beat 1, 9 notes | 3 | 6 | 7 | 4 | 5 |
+| 7 | mm. 24 to 25 | 5 | G3 to E4 (9) | E4, m. 24, beat 2 | 2 | 2 | 0 | 0 | 4 |
+| 8 | mm. 26 to 27 | 7 | B3 to F4 (6) | F4, m. 26, beat 1 | 2 | 3 | 1 | 4 | 1 |
+| 9 | mm. 28 to 33 | 25 | G3 to D5 (19) | D5, m. 32, beat 2, 3 notes | 12 | 8 | 4 | 9 | 11 |
+| 10 | mm. 34 to 38 | 25 | C3 to A5 (33) | A5, m. 36, beat 1 | 6 | 14 | 3 | 10 | 10 |
+
+### Leaps
+
+A leap is an interval of a third or larger. The library's rule asks a leap of a fourth or larger to be followed by a step in the opposite direction: such a leap is Recovered when one follows, Unrecovered when a step the same way, a repeated note or another leap does, and Not judged when nothing follows it; a third asks nothing (Not required). Consecutive counts the pairs of leaps in a row the library's rule finds fault with.
+
+| Phrase | Leaps | Recovered | Unrecovered | Not required | Not judged | Consecutive |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 4 | 0 | 1 | 2 | 1 | 2 |
+| 2 | 1 | 0 | 0 | 1 | 0 | 0 |
+| 3 | 11 | 0 | 4 | 6 | 1 | 6 |
+| 4 | 8 | 0 | 2 | 6 | 0 | 1 |
+| 5 | 7 | 0 | 2 | 4 | 1 | 3 |
+| 6 | 5 | 0 | 0 | 4 | 1 | 1 |
+| 7 | 4 | 0 | 1 | 2 | 1 | 2 |
+| 8 | 1 | 0 | 0 | 1 | 0 | 0 |
+| 9 | 11 | 0 | 6 | 4 | 1 | 5 |
+| 10 | 10 | 0 | 3 | 7 | 0 | 1 |
+
+### Non-chord tones
+
+Each melody note is set against the chord of the segment it starts in, as the library's chord identification reads it: a Chord tone is one of the chord's tones, a Non-chord tone is one it left over and named, and Unclassified notes are in a segment with no chord or were left unnamed. By type counts the non-chord tones under the library's names.
+
+| Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 5 | 0 | 0 | - |
+| 2 | 7 | 7 | 0 | 0 | - |
+| 3 | 25 | 23 | 1 | 1 | passing 1 |
+| 4 | 21 | 21 | 0 | 0 | - |
+| 5 | 13 | 12 | 1 | 0 | passing 1 |
+| 6 | 18 | 12 | 1 | 5 | passing 1 |
+| 7 | 5 | 5 | 0 | 0 | - |
+| 8 | 7 | 7 | 0 | 0 | - |
+| 9 | 25 | 24 | 1 | 0 | passing 1 |
+| 10 | 25 | 24 | 1 | 0 | escape-tone 1 |
+
+### Tendencies
+
+The library's melodic tendencies are soft preferences a well-formed line usually shows: Pitch proximity (steps outnumber leaps, small leaps outnumber large ones), Step declination (descending steps outnumber ascending ones), Step inertia (the line continues in its direction at least as often as it reverses), Melodic regression (extreme notes turn back toward the middle) and Melodic arch (the line rises to a climax in its middle half and ends below it); a phrase either shows a tendency or does not. The seventh degree column counts the notes the library labels the seventh degree that another note follows, judged by its leading tone rule: a leading tone goes up to the tonic by step, and a seventh a whole step below the tonic does not. Followed is the count that did, Broken the count that did not, with where each broken one stands.
+
+| Phrase | Pitch proximity | Step declination | Step inertia | Melodic regression | Melodic arch | Seventh degree followed | Seventh degree broken |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | does not hold | holds | does not hold | holds | does not hold | 0 | 0 |
+| 2 | holds | holds | holds | does not hold | does not hold | 1 | 0 |
+| 3 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 1 (m. 7, beat 3) |
+| 4 | holds | holds | holds | does not hold | holds | 1 | 2 (m. 13, beat 2.5; m. 13, beat 4) |
+| 5 | does not hold | holds | does not hold | holds | holds | 0 | 1 (m. 16, beat 1) |
+| 6 | does not hold | holds | does not hold | does not hold | does not hold | 3 | 0 |
+| 7 | does not hold | holds | does not hold | holds | does not hold | 0 | 0 |
+| 8 | holds | holds | holds | does not hold | does not hold | 1 | 0 |
+| 9 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 0 |
+| 10 | does not hold | holds | holds | does not hold | holds | 0 | 1 (m. 36, beat 4) |
+
 ## Progression patterns
 
 58 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
