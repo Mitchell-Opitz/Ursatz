@@ -148,8 +148,10 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    they do not feed back into the cadences or the key regions.
 10. `motive_pipeline`: builds a note-level soprano, reruns the form adapter's phrases, ideas and themes on it, and finds
    the motive families with Ursatz's motive analysis (see "Motives").
+11. `melody_pipeline`: builds the soprano line of each phrase and reads it with the melody adapter of standard-counterpoint
+   (see "Melody").
 
-Steps 2 to 10 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+Steps 2 to 11 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
 regions of the second pass, whose results are the report (R-039, R-043).
 
@@ -526,6 +528,39 @@ the 21 annotated occurrences are found with the right kind (95.2%; the miss is t
 measure 21 beat 2), against the library test's 75% target. The Analyzer finds the motives over the whole piece with
 its own cadences, not over the exposition with annotated phrase ends.
 
+## Melody
+
+For each phrase, the analyzer builds the soprano as the neutral line of the melody adapter of Ursatz's
+standard-counterpoint (`src/pipeline/melody_pipeline.c`, ported from `tests/integration/melody_util.h` and
+`test_melody_bach114.c`) and reports the library's results: the range, the climax (the first note at the highest pitch),
+the contour (the library's direction of each interval, counted, no shape named), every leap with its recovery status
+(the cantus firmus rule LEAP_RECOVERY), the pairs of leaps in a row the library's rule faults, the non-chord tones by
+type (the chord identification's result attached to each note), and the tendencies. The line is the outer voice soprano
+of the phrase, one note per melody note (consecutive voice segments with the same note are one note, a note held in from
+the previous phrase is left out, a gap is a rest); each note carries its scale degree in its key region and its beat
+strength. The library has no table of scale-degree tendencies, so the report gives the five line tendencies of
+`tendency_rules.h` (pitch proximity, step declination, step inertia, melodic regression, melodic arch) as held or not, and
+the seventh degree judged by the cantus firmus rule LEADING_TONE: how many sevenths a note follows that follow the rule,
+and where the broken ones stand. The document's `melody` holds all of it; the Markdown report has a `## Melody` table and
+the subsections `### Leaps`, `### Non-chord tones` and `### Tendencies`.
+
+Measured on the reference pieces (MIDI), summed over the phrases:
+
+| Piece | Phrases | Notes | Leaps (recovered / unrecovered / third / not judged) | Faulted pairs | Non-chord tones | Seventh followed / broken |
+| --- | --- | --- | --- | --- | --- | --- |
+| Bach 114 | 2 | 149 | 9 / 27 / 18 / 0 | 2 | 11 | 16 / 4 |
+| Clementi 36 | 10 | 151 | 0 / 19 / 37 / 6 | 21 | 3 | 8 / 5 |
+| Mozart 545 | 52 | 910 | 30 / 217 / 232 / 27 | 189 | 94 | 30 / 45 |
+| Field 1 | 10 | 164 | 11 / 26 / 24 / 4 | 22 | 15 | 4 / 8 |
+| Field 5 | 9 | 113 | 6 / 20 / 11 / 1 | 4 | 4 | 5 / 4 |
+
+`test_melody` checks the structure of the section on Bach 114 (the range, climax, contour, leaps and non-chord tones agree
+with the notes), and its floors against Ursatz's hand annotation of the first eight measures
+(`tests/fixtures/annotations/bach114_melody.txt`, a draft reading with placeholder phrase spans): both climaxes are right,
+none of the ranges and 4 of the 11 annotated leaps have the annotated status, the same as Ursatz's own whole-chain run.
+`test_melody_bach_114_target` asserts the library test's target (every climax and range, at least 90% of the leaps) and is
+marked `WILL_FAIL` (see "Known limits").
+
 ## Known limits
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
@@ -555,6 +590,13 @@ its own cadences, not over the exposition with annotated phrase ends.
   the highest sounding note at each attack, so a left-hand note is the line where the right hand rests. Clementi 36
   yields no family. Mozart 545 yields 214 families and 1610 occurrences, 168 of which cross a phrase boundary and lie in
   no phrase. A family's prototype can come after fragments of itself.
+- Melody: only the soprano is read (the bass line is not asked for), and the outer voice extraction keeps one soprano
+  note per voice segment, which drops the quick notes some leaps arrive on, and adopts a left-hand note where the right
+  hand rests (Bach 114 measure 4). Bach 114 gets none of the annotated ranges and 4 of the 11 annotated leaps with the
+  annotated status (36.4%, target 90%): `test_melody_bach_114_target` is `WILL_FAIL`. A MIDI file has no spellings, so the
+  library reads a leap's size from the scale degrees, and two notes a semitone apart whose degrees are a fifth apart read
+  as a leap of a fifth (Bach 114, measures 13 and 19). A phrase is one line, so a leap at its end has nothing after it (not judged). The line
+  tendencies treat a rest in the line as no gap.
 - Form plan: the kernel's sections close only on perfect and imperfect authentic cadences, so a piece of half
   cadences and deceptive endings is one section, and the final phrase never closes one. Returns compare six-note
   stretches by contour and rhythm, so a figure that recurs inside a hybrid reads as a return (Mozart 545: 77). A

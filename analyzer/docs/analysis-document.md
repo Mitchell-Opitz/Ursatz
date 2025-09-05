@@ -31,7 +31,7 @@ newline. The same input and build always give the same bytes.
 | `themes` | array of theme claims | Optional, after `phrases`. Filled: the library's themes (sentences, periods, hybrids, compound periods, repeated phrases). See below. |
 | `form` | form object or null | Filled: the tree of sections, phrases, subphrases and ideas, and the thematic returns. See below; `null` when the library found no phrases. |
 | `motives` | array of motive claims | Filled: the library's motive families with every occurrence and their development. See below. |
-| `melody` | array | Placeholder: `[]`. |
+| `melody` | array of melody claims | Filled: the melody of each phrase, read by the library's melody adapter. See below. |
 | `rhythm` | array | Placeholder: `[]`. |
 | `texture` | array | Placeholder: `[]`. |
 | `voice_leading` | array | Placeholder: `[]`. |
@@ -399,7 +399,7 @@ entry at index `i` of either line belongs to the chord at index `i` of `chords` 
 too). A line is not a melody: it is the highest (soprano) or lowest (bass) sounding note at the start
 of each chord's span (the library extracts the lines over segments that are not merged over unchanged
 harmony, one per melody note, and each chord takes the entry at its start), theory-neutral pitch height with the scale degree read against the local key. It is the
-shared input for voice-leading (A6.1), melody (A5.1, whose `melody` section stays reserved) and schema
+shared input for voice-leading (A6.1), melody (A5.1, whose `melody` section is read from these lines) and schema
 (A6.2) analysis, and for the Composer's schema recognition. Nothing in it is a voice-leading, melodic
 or schema claim.
 
@@ -681,6 +681,50 @@ The Markdown report renders `## Motives` from this section, a row per family (no
 measures, phrases, kinds), and `### Development`, a line per family as `m1 original > m3 real-transposed > m5
 fragmented`.
 
+### Melody
+
+`melody` holds one claim per phrase that has soprano notes, in phrase order: the melody of that phrase, read by the
+melody adapter of Ursatz's standard-counterpoint (`analysis/analysis_melody.h` and the files beside it). The analyzer
+builds the adapter's neutral line in `src/pipeline/melody_pipeline.c`, ported from Ursatz's
+`tests/integration/melody_util.h` and `test_melody_bach114.c`, and groups the results; every interval, direction,
+climax and verdict is the library's. The line of a phrase is the outer voice soprano (the highest sounding line, one
+entry per voice segment) for the notes whose first segment starts inside the phrase's span: consecutive segments with
+the same note id are one note, a note held in from the previous phrase is left out, and a gap in the line is a rest that
+breaks the chain, so no interval is formed across it. Each note carries its scale degree in the key region it starts in
+and the beat strength of its attack. The bass is not read.
+
+A melody is a claim (`framework` `"standard-counterpoint-v1"`; `span` is the phrase's, `location` its position and
+`note_ids` the soprano notes of the line, in time order):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `label` | `"melody"` | |
+| `uncertainty` | number | The library's, from the confidence of the notes (the line gives each note full confidence, so 0). |
+| `index` | integer | The phrase's index into `phrases`. |
+| `measures` | object | `{"first", "last"}`: the phrase's measures, as in `phrases`. |
+| `note_count` | integer | The notes of the line. |
+| `range` | object | `{"lowest", "highest", "semitones"}`; `lowest` and `highest` are `{"pitch", "name", "note_id"}`: the MIDI number, the name as the outer voices spell it (`"F#4"`), and the first note at that pitch. |
+| `climax` | claim | The climax, the first note at the highest pitch (the melodic rules' definition), as a claim over that note (`label` `"climax"`) with `pitch`, `occurrences` (the notes at the highest pitch), `unique`, `relative_position` (its rank among the notes over the notes less one, by note order, not by time), `strength` (the library's beat strength name of its attack, or `null`), `by_leap` (a leap approaches it) and `final_note` (it is the phrase's last note). |
+| `contour` | object | The intervals between consecutive notes: `up`, `down` and `same` counts, `steps` and `leaps` counts (a step is a second, a leap a third or larger, by letter names where the line has them), `net_direction` (`"up"`, `"down"` or `"same"`: the last note against the first), `net_semitones`, and `directions`, the library's direction of each interval in time order. No shape is named. |
+| `leaps` | object | `{"recovered", "unrecovered", "not_required", "not_judged", "items"}`: the counts of the library's verdicts and `items`, one claim over the two notes of every leap (`label` `"leap"`) with `semitones`, `direction`, `generic_size` (the size in letter names, a third is 3, or `null`), `approximate` (read from the semitones alone) and `status`. The verdict is the cantus firmus rule LEAP_RECOVERY: a leap of a fourth or larger is `"recovered"` when a step in the opposite direction follows, `"unrecovered"` when a step the same way, a repeated note or another leap does, and `"not-judged"` when nothing follows; a third is `"not-required"`. |
+| `consecutive_leaps` | array | The pairs of leaps in a row that the library's rule CONSECUTIVE_LEAPS finds fault with, each a claim over the three notes (`label` `"consecutive-leaps"`) with `same_direction` (the two go the same way and are not two thirds outlining a perfect fifth) and `three_in_a_row`. |
+| `non_chord_tones` | object | `{"chord_tones", "non_chord_tones", "unclassified", "by_type", "items"}`: each note set against the chord of the segment it starts in, as the library's chord identification reads it. `unclassified` counts the notes in a segment with no chord, or that the library left unnamed. `by_type` is `[{"type", "count"}]` for the types that occur, in the library's order; `items` is a claim over each non-chord tone labelled with the library's type (`"passing"`, `"neighbor"`, `"escape-tone"`, ...). The adapter labels nothing itself: it attaches the chord identification's result to the note. |
+| `tendencies` | object | `{"line", "seventh_degree"}`; see below. |
+
+The library names its tendencies in two places, and neither is a table of scale-degree pairs, so the analyzer reports
+what is there. `line` is `[{"tendency", "holds"}]` for the five melodic tendencies of `tendency_rules.h` (after Huron):
+`"pitch-proximity"`, `"step-declination"`, `"step-inertia"`, `"melodic-regression"` and `"melodic-arch"`, each judged by
+the library over the phrase's notes (the line of notes with rests dropped), spelled as the outer voices spell them (empty
+when a note's name does not spell). `seventh_degree` is `{"rule", "followed", "broken", "breaks"}`, or `null` when the
+notes do not spell: every note the library labels the seventh degree of its key region, with a note after it, is judged by
+the cantus firmus rule LEADING_TONE (`"leading-tone"`) on the pair, in the key of the note's region. A leading tone (a
+half step below the tonic) goes up to the tonic by step, and a seventh a whole step below the tonic does not step up to
+it. `followed` counts the notes that follow the rule and `broken` those that do not, and `breaks` has a claim over each
+broken seventh and the note after it (`label` `"leading-tone"`). The library has no rule for 4 to 3 or any other pair.
+
+The Markdown report renders `## Melody` from this section, a row per phrase (notes, range, climax, contour counts), and
+the subsections `### Leaps`, `### Non-chord tones` and `### Tendencies`.
+
 ### Progressions
 
 `progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
@@ -754,7 +798,8 @@ before those:
   entries are new), which is additive. `phrases` is filled (its claims are new, with the optional `subphrases`,
   `ideas` and `phrase_model`), and chord claims gain the optional `phrase_model`; all additive. The optional
   top-level `themes` follows `phrases`, and phrase claims gain the optional `expansions`; both are additive. `form` is
-  filled (its object is new), which is additive. `motives` is filled (its claims are new), which is additive.
+  filled (its object is new), which is additive. `motives` is filled (its claims are new), which is additive. `melody` is filled
+  (its claims are new), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
