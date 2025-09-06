@@ -2657,6 +2657,33 @@ function mountTagsPanel() {
   tagsPanel.refresh();
 }
 
+/* The sidebar Subjects panel; null until mounted. Call notifySubjectsChanged()
+ * after any subject or link change so its counts follow. */
+let subjectsPanel = null;
+
+async function fetchSubjectGroups() {
+  const result = await fetchJsonResult("/api/subjects/groups");
+  if (!(result.ok && result.data && result.data.ok)) {
+    throw new Error("subject groups unavailable");
+  }
+  return result.data.groups;
+}
+
+function notifySubjectsChanged() {
+  if (subjectsPanel) {
+    subjectsPanel.refresh();
+  }
+}
+
+function mountSubjectsPanel() {
+  subjectsPanel = SubjectsPanel.mount(document.getElementById("subjects-panel"), {
+    fetchGroups: fetchSubjectGroups,
+    onSelect: () => {},
+  });
+  subjectsPanel.refresh();
+}
+
 mountTagsPanel();
+mountSubjectsPanel();
 mountProjectPicker();
 selectTool("library");
