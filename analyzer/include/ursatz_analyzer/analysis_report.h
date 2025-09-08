@@ -491,6 +491,123 @@ typedef struct {
                                 kind (the library's, against the prototype); the analyzer only orders */
 } AnalysisMotive;
 
+/* One leap of a melody (an interval of a third or larger) and the library's verdict on its recovery
+   (analysis_melody_leaps.h, the cantus firmus rule LEAP_RECOVERY): a leap of a fourth or larger should be followed by a
+   step in the opposite direction. */
+typedef struct {
+    size_t from_note;          /* ImportedNotes indices of the two notes */
+    size_t to_note;
+    long semitones;            /* signed */
+    const char *direction;     /* "up" or "down" */
+    int generic_size;          /* the size in letter names (a third is 3); 0 when the library has none */
+    bool approximate;          /* the library read it from the semitones, with no letter names or scale degrees */
+    const char *status;        /* the library's name: "recovered", "unrecovered", "not-required" (a third) or
+                                  "not-judged" (a fourth or larger with nothing after it) */
+    double uncertainty;        /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisMelodyLeap;
+
+/* Two leaps in a row that the library's rule CONSECUTIVE_LEAPS finds fault with: the second starts where the first
+   ends. */
+typedef struct {
+    size_t first_note;         /* ImportedNotes indices: the first leap is first to middle, the second middle to last */
+    size_t middle_note;
+    size_t last_note;
+    bool same_direction;       /* the two go the same way and are not two thirds outlining a perfect fifth */
+    bool three_in_a_row;       /* a third leap follows */
+    double uncertainty;
+} AnalysisMelodyConsecutiveLeaps;
+
+/* The non-chord-tone types the melody counts, one per type of the library's NonChordTone. */
+#define ANALYSIS_MELODY_NCT_TYPES 10
+
+/* A melody note the library's chord identification found not to be a tone of its chord, with the type it gave
+   (analysis_melody_nct.h attaches that result to the note; the melody adapter labels nothing itself). */
+typedef struct {
+    size_t note;               /* ImportedNotes index */
+    const char *type;          /* the library's NonChordTone name, e.g. "passing" or "escape-tone" */
+    double uncertainty;        /* the library's: 1 minus the note's confidence */
+} AnalysisMelodyNct;
+
+/* The library's melodic tendencies of a line (tendency_rules.h, after Huron): pitch proximity, step declination, step
+   inertia, melodic regression and melodic arch. Soft preferences a well-formed line usually shows. */
+#define ANALYSIS_MELODY_TENDENCIES 5
+
+/* A seventh degree the library's rule LEADING_TONE finds the melody not to follow: the note, and the note after it. */
+typedef struct {
+    size_t note;               /* ImportedNotes indices */
+    size_t next_note;
+    double uncertainty;        /* the key region's, in [0, 1]: the degree is read in its key */
+} AnalysisMelodyBreak;
+
+/* The melody of one phrase: the soprano notes (the outer voice line, one entry per melody note) that start inside the
+   phrase's span, read by the melody adapter of standard-counterpoint (analysis/analysis_melody.h). A note held in from
+   the phrase before is not one of them, and a rest in the line breaks the chain: no interval is formed across it. The
+   Analyzer counts and groups; the pitches, positions, directions and every verdict are the library's. */
+typedef struct {
+    size_t phrase;           /* index into phrases */
+    const char *framework;   /* the library's framework name for the claims */
+    long start_numerator;    /* the phrase's span, whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    int first_measure;       /* the phrase's, as the library numbers them (a pickup is 0) */
+    int last_measure;
+    size_t *note_ids;        /* owned; ImportedNotes indices of the melody notes, in time order */
+    size_t note_id_count;
+    long lowest_pitch;       /* MIDI note numbers: the first note at the lowest and at the highest pitch */
+    size_t lowest_note;      /* ImportedNotes indices */
+    char lowest_name[16];    /* e.g. "E5", spelled as the outer voice lines spell it */
+    long highest_pitch;
+    size_t highest_note;
+    char highest_name[16];
+    long range_semitones;    /* highest minus lowest */
+    /* The climax (analysis_melody_climax.h): the highest pitch, and the first note at it. */
+    size_t climax_note;      /* ImportedNotes index of the first note at the highest pitch */
+    int climax_occurrences;  /* notes at the highest pitch */
+    bool climax_unique;
+    double climax_relative_position; /* the first occurrence's rank among the notes over (notes - 1), by note order */
+    bool climax_has_strength;
+    const char *climax_strength;     /* the library's BeatStrength name; valid only when climax_has_strength */
+    bool climax_by_leap;     /* the first occurrence is approached by a leap */
+    bool climax_final;       /* the first occurrence is the phrase's last note */
+    /* The contour (analysis_melody.h): the library's direction of each interval between consecutive notes. */
+    int up;
+    int down;
+    int same;
+    int step_count;
+    int leap_count;
+    const char *net_direction; /* "up", "down" or "same": the last note against the first */
+    long net_semitones;
+    const char **directions;   /* owned array of direction_count names ("up", "down", "same"), one per interval, in
+                                  time order; the names are static */
+    size_t direction_count;
+    AnalysisMelodyLeap *leaps; /* owned; every leap in time order */
+    size_t leap_total;
+    AnalysisMelodyConsecutiveLeaps *consecutive_leaps; /* owned; one per offending pair, in time order */
+    size_t consecutive_leap_count;
+    /* Non-chord tones: each melody note against the chord of the segment it starts in (the first of its segments). A
+       note in a segment with no chord, or one the library left unclassified, is counted as unclassified. */
+    int chord_tone_count;
+    int unclassified_count;
+    int non_chord_tone_count;
+    const char *nct_type_names[ANALYSIS_MELODY_NCT_TYPES]; /* the library's NonChordTone names, in its order */
+    int nct_by_type[ANALYSIS_MELODY_NCT_TYPES];            /* non-chord tones by type, parallel to the names */
+    AnalysisMelodyNct *ncts;   /* owned; the non-chord tones in time order */
+    size_t nct_total;
+    /* Tendencies. The library's line tendencies need every note spelled (the line's letter names); the Analyzer spells a
+       note as the outer voice lines do, so they are read for every phrase. */
+    const char *tendency_names[ANALYSIS_MELODY_TENDENCIES]; /* the library's names, in its order */
+    bool tendency_holds[ANALYSIS_MELODY_TENDENCIES];
+    /* The seventh degree: each note the library labels degree 7 that another note follows is judged by the cantus
+       firmus rule LEADING_TONE on the pair, in the key of the note's region: a leading tone goes up to the tonic by
+       step, and a seventh a whole step below the tonic does not. followed + broken is the number judged. */
+    const char *seventh_rule;  /* the library's rule name: "leading-tone" */
+    int seventh_followed;
+    int seventh_broken;
+    AnalysisMelodyBreak *seventh_breaks; /* owned; seventh_broken of them, in time order */
+    double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisMelody;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -531,6 +648,8 @@ typedef struct {
     size_t thematic_return_count;
     AnalysisMotive *motives; /* owned; the library's motive families, in its order; empty when it found none */
     size_t motive_count;
+    AnalysisMelody *melodies; /* owned; one per phrase with melody notes, in phrase order */
+    size_t melody_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -538,7 +657,7 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns and motives. */
+   thematic returns, motives and melodies. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

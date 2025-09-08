@@ -5680,6 +5680,242 @@ The library's motive analysis found 214 motive families in the soprano, the high
 | 213 | 8 | scale steps | 3 | 333, 302, 335 | 43, 52 | exact 2, fragmented 1 |
 | 214 | 8 | scale steps | 2 | 334, 336 | 52 | exact 2 |
 
+## Melody
+
+The library's melody adapter read the soprano of each phrase as a line of notes: the soprano notes that start in the phrase. Range is the lowest and highest note and the semitones between them; Climax is the first note at the highest pitch, with how many notes sound it when it is not one; Contour counts the intervals between consecutive notes that go up, go down and repeat, and how many of them are steps and leaps.
+
+| Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 13 | 49 | D4 to C6 (22) | C6, m. 3, beat 4, 2 notes | 23 | 23 | 2 | 9 | 36 |
+| 2 | mm. 14 to 21 | 20 | D4 to D6 (24) | D6, m. 14, beat 1, 3 notes | 7 | 10 | 0 | 3 | 14 |
+| 3 | mm. 22 to 27 | 21 | A4 to D6 (17) | D6, m. 24, beat 2, 2 notes | 8 | 5 | 7 | 5 | 7 |
+| 4 | mm. 28 to 29 | 4 | G4 to B5 (16) | B5, m. 28, beat 2 | 1 | 2 | 0 | 0 | 3 |
+| 5 | mm. 30 to 41 | 46 | D4 to C6 (22) | C6, m. 31, beat 4, 2 notes | 21 | 22 | 2 | 9 | 33 |
+| 6 | mm. 42 to 49 | 20 | D4 to D6 (24) | D6, m. 42, beat 1, 3 notes | 7 | 10 | 0 | 3 | 14 |
+| 7 | mm. 50 to 55 | 21 | A4 to D6 (17) | D6, m. 52, beat 2, 2 notes | 8 | 5 | 7 | 5 | 7 |
+| 8 | mm. 56 to 57 | 4 | G4 to B5 (16) | B5, m. 56, beat 2 | 1 | 2 | 0 | 0 | 3 |
+| 9 | m. 58 | 1 | G5 to G5 (0) | G5, m. 58, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 10 | mm. 59 to 63 | 15 | F4 to E6 (23) | E6, m. 60, beat 3.5 | 2 | 9 | 1 | 3 | 7 |
+| 11 | mm. 64 to 71 | 28 | D4 to E6 (26) | E6, m. 65, beat 1.5 | 10 | 15 | 0 | 4 | 21 |
+| 12 | mm. 72 to 86 | 56 | C4 to F6 (29) | F6, m. 72, beat 4 | 23 | 25 | 3 | 11 | 35 |
+| 13 | mm. 87 to 94 | 19 | G4 to E6 (21) | E6, m. 93, beat 2.25 | 8 | 10 | 0 | 3 | 15 |
+| 14 | mm. 95 to 100 | 17 | C5 to E6 (16) | E6, m. 97, beat 2.5 | 5 | 6 | 5 | 4 | 7 |
+| 15 | m. 101 | 3 | C4 to C6 (24) | C6, m. 101, beat 2 | 1 | 1 | 0 | 0 | 2 |
+| 16 | mm. 102 to 104 | 9 | G4 to D6 (19) | D6, m. 102, beat 3 | 3 | 5 | 0 | 2 | 5 |
+| 17 | mm. 105 to 108 | 12 | F4 to E6 (23) | E6, m. 105, beat 3.5 | 2 | 7 | 1 | 3 | 5 |
+| 18 | mm. 109 to 116 | 28 | D4 to E6 (26) | E6, m. 110, beat 1.5 | 10 | 15 | 0 | 4 | 21 |
+| 19 | mm. 117 to 131 | 56 | C4 to F6 (29) | F6, m. 117, beat 4 | 23 | 25 | 3 | 11 | 35 |
+| 20 | mm. 132 to 139 | 19 | G4 to E6 (21) | E6, m. 138, beat 2.25 | 8 | 10 | 0 | 3 | 15 |
+| 21 | mm. 140 to 145 | 17 | C5 to E6 (16) | E6, m. 142, beat 2.5 | 5 | 6 | 5 | 4 | 7 |
+| 22 | m. 146 | 3 | C4 to C6 (24) | C6, m. 146, beat 2 | 1 | 1 | 0 | 0 | 2 |
+| 23 | mm. 147 to 149 | 1 | B4 to B4 (0) | B4, m. 149, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 24 | mm. 150 to 162 | 32 | A4 to B5 (14) | B5, m. 162, beat 3.25 | 15 | 15 | 0 | 13 | 16 |
+| 25 | mm. 163 to 181 | 47 | G4 to B5 (16) | B5, m. 178, beat 3.25 | 22 | 22 | 1 | 18 | 25 |
+| 26 | mm. 182 to 187 | 17 | G4 to B5 (16) | B5, m. 185, beat 3 | 10 | 4 | 2 | 6 | 8 |
+| 27 | mm. 188 to 197 | 26 | G4 to B5 (16) | B5, m. 194, beat 3.25 | 13 | 11 | 1 | 10 | 14 |
+| 28 | mm. 198 to 203 | 17 | G4 to B5 (16) | B5, m. 201, beat 3 | 10 | 4 | 2 | 6 | 8 |
+| 29 | mm. 204 to 216 | 31 | G4 to B5 (16) | B5, m. 210, beat 3.25 | 15 | 13 | 2 | 13 | 15 |
+| 30 | mm. 217 to 227 | 28 | G4 to D#6 (20) | D#6, m. 225, beat 3.5 | 12 | 11 | 3 | 6 | 17 |
+| 31 | mm. 228 to 242 | 37 | G#4 to B5 (15) | B5, m. 242, beat 3.25 | 18 | 16 | 1 | 14 | 17 |
+| 32 | mm. 243 to 252 | 30 | G4 to A5 (14) | A5, m. 245, beat 2.75, 2 notes | 17 | 10 | 2 | 10 | 16 |
+| 33 | m. 253 | 3 | B4 to D5 (3) | D5, m. 253, beat 2.75 | 1 | 0 | 1 | 0 | 1 |
+| 34 | m. 254 | 1 | G4 to G4 (0) | G4, m. 254, beat 2 | 0 | 0 | 0 | 0 | 0 |
+| 35 | mm. 255 to 262 | 15 | C5 to A5 (9) | A5, m. 261, beat 2, 2 notes | 3 | 6 | 2 | 3 | 6 |
+| 36 | mm. 263 to 264 | 4 | C5 to F5 (5) | F5, m. 263, beat 1.75 | 1 | 2 | 0 | 2 | 1 |
+| 37 | mm. 265 to 266 | 4 | D5 to F5 (3) | F5, m. 265, beat 2, 2 notes | 0 | 1 | 1 | 0 | 1 |
+| 38 | mm. 267 to 270 | 9 | C5 to A5 (9) | A5, m. 269, beat 2, 2 notes | 3 | 3 | 1 | 2 | 4 |
+| 39 | mm. 271 to 272 | 5 | C5 to G5 (7) | G5, m. 272, beat 2.75 | 2 | 2 | 0 | 2 | 2 |
+| 40 | mm. 273 to 278 | 12 | D5 to E6 (14) | E6, m. 274, beat 2 | 4 | 6 | 1 | 3 | 7 |
+| 41 | mm. 279 to 286 | 18 | G4 to A5 (14) | A5, m. 283, beat 1 | 5 | 8 | 1 | 6 | 6 |
+| 42 | mm. 287 to 296 | 20 | C5 to C6 (12) | C6, m. 294, beat 2.5 | 7 | 8 | 1 | 5 | 10 |
+| 43 | mm. 297 to 307 | 24 | B3 to C6 (25) | C6, m. 299, beat 1.5 | 10 | 10 | 2 | 10 | 10 |
+| 44 | mm. 308 to 312 | 13 | A4 to F6 (20) | F6, m. 308, beat 1.5 | 1 | 10 | 1 | 9 | 2 |
+| 45 | m. 313 | 1 | A4 to A4 (0) | A4, m. 313, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 46 | m. 314 | 1 | A4 to A4 (0) | A4, m. 314, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 47 | m. 315 | 1 | E5 to E5 (0) | E5, m. 315, beat 1.25 | 0 | 0 | 0 | 0 | 0 |
+| 48 | mm. 316 to 319 | 5 | D5 to G5 (5) | G5, m. 317, beat 2.5 | 0 | 2 | 1 | 0 | 2 |
+| 49 | mm. 320 to 323 | 9 | C5 to A5 (9) | A5, m. 322, beat 2, 2 notes | 3 | 3 | 1 | 2 | 4 |
+| 50 | mm. 324 to 325 | 4 | C5 to F5 (5) | F5, m. 324, beat 1.75 | 1 | 2 | 0 | 2 | 1 |
+| 51 | mm. 326 to 333 | 16 | G4 to D6 (19) | D6, m. 327, beat 2, 2 notes | 6 | 8 | 1 | 1 | 13 |
+| 52 | mm. 334 to 338 | 11 | G4 to C6 (17) | C6, m. 337, beat 1.5 | 2 | 4 | 4 | 0 | 6 |
+
+### Leaps
+
+A leap is an interval of a third or larger. The library's rule asks a leap of a fourth or larger to be followed by a step in the opposite direction: such a leap is Recovered when one follows, Unrecovered when a step the same way, a repeated note or another leap does, and Not judged when nothing follows it; a third asks nothing (Not required). Consecutive counts the pairs of leaps in a row the library's rule finds fault with.
+
+| Phrase | Leaps | Recovered | Unrecovered | Not required | Not judged | Consecutive |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 36 | 1 | 20 | 15 | 0 | 19 |
+| 2 | 14 | 1 | 9 | 4 | 0 | 6 |
+| 3 | 7 | 0 | 1 | 5 | 1 | 3 |
+| 4 | 3 | 0 | 1 | 1 | 1 | 2 |
+| 5 | 33 | 1 | 19 | 13 | 0 | 17 |
+| 6 | 14 | 1 | 9 | 4 | 0 | 6 |
+| 7 | 7 | 0 | 1 | 5 | 1 | 3 |
+| 8 | 3 | 0 | 1 | 1 | 1 | 2 |
+| 9 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 10 | 7 | 0 | 2 | 4 | 1 | 2 |
+| 11 | 21 | 0 | 12 | 8 | 1 | 15 |
+| 12 | 35 | 4 | 17 | 13 | 1 | 18 |
+| 13 | 15 | 1 | 9 | 5 | 0 | 9 |
+| 14 | 7 | 0 | 3 | 3 | 1 | 2 |
+| 15 | 2 | 0 | 1 | 0 | 1 | 0 |
+| 16 | 5 | 0 | 2 | 2 | 1 | 1 |
+| 17 | 5 | 0 | 2 | 3 | 0 | 1 |
+| 18 | 21 | 0 | 12 | 8 | 1 | 15 |
+| 19 | 35 | 4 | 17 | 13 | 1 | 18 |
+| 20 | 15 | 1 | 9 | 5 | 0 | 9 |
+| 21 | 7 | 0 | 3 | 3 | 1 | 2 |
+| 22 | 2 | 0 | 1 | 0 | 1 | 0 |
+| 23 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 24 | 16 | 0 | 3 | 12 | 1 | 1 |
+| 25 | 25 | 0 | 7 | 17 | 1 | 3 |
+| 26 | 8 | 3 | 2 | 3 | 0 | 0 |
+| 27 | 14 | 0 | 5 | 9 | 0 | 3 |
+| 28 | 8 | 3 | 2 | 3 | 0 | 0 |
+| 29 | 15 | 0 | 4 | 10 | 1 | 3 |
+| 30 | 17 | 2 | 7 | 8 | 0 | 5 |
+| 31 | 17 | 0 | 3 | 13 | 1 | 1 |
+| 32 | 16 | 1 | 2 | 13 | 0 | 2 |
+| 33 | 1 | 0 | 0 | 1 | 0 | 0 |
+| 34 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 35 | 6 | 0 | 2 | 2 | 2 | 1 |
+| 36 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 37 | 1 | 0 | 0 | 1 | 0 | 0 |
+| 38 | 4 | 0 | 2 | 1 | 1 | 1 |
+| 39 | 2 | 1 | 0 | 0 | 1 | 0 |
+| 40 | 7 | 1 | 2 | 4 | 0 | 1 |
+| 41 | 6 | 1 | 3 | 2 | 0 | 1 |
+| 42 | 10 | 1 | 3 | 5 | 1 | 2 |
+| 43 | 10 | 1 | 5 | 3 | 1 | 2 |
+| 44 | 2 | 0 | 1 | 1 | 0 | 0 |
+| 45 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 46 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 47 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 48 | 2 | 0 | 0 | 1 | 1 | 0 |
+| 49 | 4 | 0 | 2 | 1 | 1 | 1 |
+| 50 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 51 | 13 | 0 | 6 | 6 | 1 | 10 |
+| 52 | 6 | 0 | 5 | 1 | 0 | 2 |
+
+### Non-chord tones
+
+Each melody note is set against the chord of the segment it starts in, as the library's chord identification reads it: a Chord tone is one of the chord's tones, a Non-chord tone is one it left over and named, and Unclassified notes are in a segment with no chord or were left unnamed. By type counts the non-chord tones under the library's names.
+
+| Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 49 | 42 | 2 | 5 | passing 1, neighbor 1 |
+| 2 | 20 | 20 | 0 | 0 | - |
+| 3 | 21 | 15 | 5 | 1 | passing 1, neighbor 1, anticipation 3 |
+| 4 | 4 | 4 | 0 | 0 | - |
+| 5 | 46 | 39 | 2 | 5 | passing 1, neighbor 1 |
+| 6 | 20 | 20 | 0 | 0 | - |
+| 7 | 21 | 15 | 5 | 1 | passing 1, neighbor 1, anticipation 3 |
+| 8 | 4 | 4 | 0 | 0 | - |
+| 9 | 1 | 1 | 0 | 0 | - |
+| 10 | 15 | 9 | 1 | 5 | appoggiatura 1 |
+| 11 | 28 | 25 | 1 | 2 | passing 1 |
+| 12 | 56 | 49 | 2 | 5 | passing 1, neighbor 1 |
+| 13 | 19 | 19 | 0 | 0 | - |
+| 14 | 17 | 12 | 3 | 2 | passing 2, neighbor 1 |
+| 15 | 3 | 3 | 0 | 0 | - |
+| 16 | 9 | 7 | 0 | 2 | - |
+| 17 | 12 | 10 | 0 | 2 | - |
+| 18 | 28 | 25 | 1 | 2 | passing 1 |
+| 19 | 56 | 49 | 2 | 5 | passing 1, neighbor 1 |
+| 20 | 19 | 19 | 0 | 0 | - |
+| 21 | 17 | 12 | 3 | 2 | passing 2, neighbor 1 |
+| 22 | 3 | 3 | 0 | 0 | - |
+| 23 | 1 | 1 | 0 | 0 | - |
+| 24 | 32 | 24 | 5 | 3 | passing 3, neighbor 1, appoggiatura 1 |
+| 25 | 47 | 35 | 9 | 3 | passing 3, neighbor 1, appoggiatura 5 |
+| 26 | 17 | 12 | 4 | 1 | passing 2, appoggiatura 2 |
+| 27 | 26 | 20 | 5 | 1 | passing 1, neighbor 1, appoggiatura 3 |
+| 28 | 17 | 12 | 4 | 1 | passing 2, appoggiatura 2 |
+| 29 | 31 | 23 | 7 | 1 | passing 1, neighbor 2, anticipation 1, appoggiatura 2, escape-tone 1 |
+| 30 | 28 | 20 | 5 | 3 | appoggiatura 5 |
+| 31 | 37 | 28 | 5 | 4 | passing 3, neighbor 1, appoggiatura 1 |
+| 32 | 30 | 15 | 7 | 8 | neighbor 2, appoggiatura 5 |
+| 33 | 3 | 3 | 0 | 0 | - |
+| 34 | 1 | 1 | 0 | 0 | - |
+| 35 | 15 | 11 | 2 | 2 | passing 1, escape-tone 1 |
+| 36 | 4 | 4 | 0 | 0 | - |
+| 37 | 4 | 4 | 0 | 0 | - |
+| 38 | 9 | 7 | 2 | 0 | passing 1, escape-tone 1 |
+| 39 | 5 | 5 | 0 | 0 | - |
+| 40 | 12 | 11 | 0 | 1 | - |
+| 41 | 18 | 16 | 0 | 2 | - |
+| 42 | 20 | 17 | 3 | 0 | passing 1, appoggiatura 1, escape-tone 1 |
+| 43 | 24 | 16 | 1 | 7 | appoggiatura 1 |
+| 44 | 13 | 7 | 5 | 1 | appoggiatura 5 |
+| 45 | 1 | 1 | 0 | 0 | - |
+| 46 | 1 | 1 | 0 | 0 | - |
+| 47 | 1 | 1 | 0 | 0 | - |
+| 48 | 5 | 5 | 0 | 0 | - |
+| 49 | 9 | 7 | 2 | 0 | passing 1, escape-tone 1 |
+| 50 | 4 | 4 | 0 | 0 | - |
+| 51 | 16 | 14 | 1 | 1 | anticipation 1 |
+| 52 | 11 | 11 | 0 | 0 | - |
+
+### Tendencies
+
+The library's melodic tendencies are soft preferences a well-formed line usually shows: Pitch proximity (steps outnumber leaps, small leaps outnumber large ones), Step declination (descending steps outnumber ascending ones), Step inertia (the line continues in its direction at least as often as it reverses), Melodic regression (extreme notes turn back toward the middle) and Melodic arch (the line rises to a climax in its middle half and ends below it); a phrase either shows a tendency or does not. The seventh degree column counts the notes the library labels the seventh degree that another note follows, judged by its leading tone rule: a leading tone goes up to the tonic by step, and a seventh a whole step below the tonic does not. Followed is the count that did, Broken the count that did not, with where each broken one stands.
+
+| Phrase | Pitch proximity | Step declination | Step inertia | Melodic regression | Melodic arch | Seventh degree followed | Seventh degree broken |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 5 (m. 2, beat 1; m. 6, beat 1.75; m. 7, beat 4; m. 11, beat 2; m. 11, beat 4) |
+| 2 | does not hold | holds | does not hold | holds | does not hold | 0 | 1 (m. 19, beat 4.5) |
+| 3 | does not hold | holds | holds | does not hold | holds | 0 | 0 |
+| 4 | does not hold | holds | holds | holds | holds | 0 | 0 |
+| 5 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 5 (m. 30, beat 1; m. 34, beat 1.75; m. 35, beat 4; m. 39, beat 2; m. 39, beat 4) |
+| 6 | does not hold | holds | does not hold | holds | does not hold | 0 | 1 (m. 47, beat 4.5) |
+| 7 | does not hold | holds | holds | does not hold | holds | 0 | 0 |
+| 8 | does not hold | holds | holds | holds | holds | 0 | 0 |
+| 9 | holds | holds | holds | holds | does not hold | 0 | 0 |
+| 10 | does not hold | holds | does not hold | does not hold | holds | 2 | 0 |
+| 11 | does not hold | does not hold | holds | does not hold | does not hold | 2 | 2 (m. 68, beat 2; m. 71, beat 1) |
+| 12 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 6 (m. 75, beat 1.75; m. 76, beat 4; m. 79, beat 3; m. 81, beat 4; m. 84, beat 2; m. 84, beat 4) |
+| 13 | does not hold | holds | does not hold | does not hold | does not hold | 2 | 1 (m. 92, beat 4.5) |
+| 14 | does not hold | holds | holds | does not hold | holds | 1 | 0 |
+| 15 | does not hold | holds | does not hold | holds | holds | 0 | 0 |
+| 16 | does not hold | holds | holds | does not hold | does not hold | 1 | 0 |
+| 17 | does not hold | holds | holds | does not hold | does not hold | 2 | 0 |
+| 18 | does not hold | does not hold | holds | does not hold | does not hold | 2 | 2 (m. 113, beat 2; m. 116, beat 1) |
+| 19 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 6 (m. 120, beat 1.75; m. 121, beat 4; m. 124, beat 3; m. 126, beat 4; m. 129, beat 2; m. 129, beat 4) |
+| 20 | does not hold | holds | does not hold | does not hold | does not hold | 2 | 1 (m. 137, beat 4.5) |
+| 21 | does not hold | holds | holds | does not hold | holds | 1 | 0 |
+| 22 | does not hold | holds | does not hold | holds | holds | 0 | 0 |
+| 23 | holds | holds | holds | holds | does not hold | 0 | 0 |
+| 24 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 3 (m. 151, beat 3; m. 155, beat 2; m. 159, beat 3) |
+| 25 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 3 (m. 167, beat 3; m. 171, beat 2; m. 175, beat 3) |
+| 26 | does not hold | does not hold | does not hold | does not hold | holds | 0 | 0 |
+| 27 | does not hold | does not hold | holds | does not hold | holds | 1 | 2 (m. 188, beat 3; m. 191, beat 3) |
+| 28 | does not hold | does not hold | does not hold | does not hold | holds | 0 | 0 |
+| 29 | does not hold | does not hold | does not hold | does not hold | holds | 1 | 2 (m. 204, beat 3; m. 207, beat 3) |
+| 30 | does not hold | does not hold | does not hold | holds | does not hold | 1 | 1 (m. 217, beat 3) |
+| 31 | holds | does not hold | holds | does not hold | does not hold | 1 | 3 (m. 231, beat 3; m. 235, beat 2; m. 239, beat 3) |
+| 32 | does not hold | does not hold | does not hold | does not hold | does not hold | 3 | 0 |
+| 33 | does not hold | holds | holds | holds | does not hold | 0 | 0 |
+| 34 | holds | holds | holds | holds | does not hold | 0 | 0 |
+| 35 | does not hold | does not hold | does not hold | holds | does not hold | 2 | 0 |
+| 36 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
+| 37 | holds | does not hold | holds | holds | holds | 0 | 0 |
+| 38 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
+| 39 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
+| 40 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
+| 41 | holds | does not hold | holds | does not hold | holds | 0 | 1 (m. 283, beat 2.5) |
+| 42 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 0 |
+| 43 | holds | does not hold | does not hold | does not hold | holds | 2 | 0 |
+| 44 | holds | holds | holds | holds | does not hold | 1 | 0 |
+| 45 | holds | holds | holds | holds | does not hold | 0 | 0 |
+| 46 | holds | holds | holds | holds | does not hold | 0 | 0 |
+| 47 | holds | holds | holds | holds | does not hold | 0 | 0 |
+| 48 | does not hold | does not hold | does not hold | holds | does not hold | 1 | 0 |
+| 49 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
+| 50 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
+| 51 | does not hold | holds | holds | holds | does not hold | 0 | 0 |
+| 52 | does not hold | holds | does not hold | holds | holds | 0 | 0 |
+
 ### Development
 
 Each family's occurrences in time order, as the measure they start in and the kind the library names against the family's prototype, which is the original.

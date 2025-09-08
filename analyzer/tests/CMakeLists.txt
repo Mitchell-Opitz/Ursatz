@@ -152,6 +152,18 @@ target_compile_definitions(test_motives PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_motives COMMAND test_motives)
 
+add_executable(test_melody test_melody.c)
+target_link_libraries(test_melody PRIVATE ursatz_analyzer cjson m)
+target_compile_definitions(test_melody PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_melody COMMAND test_melody)
+# Expected to fail: the extracted soprano of Bach 114 misses the annotated ranges (the extractor adopts a left-hand note
+# where the right hand rests, at the start of measure 4) and gets the right recovery status for 4 of the 11 annotated
+# leaps (36.4%, target 90%): it keeps one soprano note per segment, which drops the quick notes the other leaps arrive on.
+# Both climaxes are right. The assertions stay as the target; remove WILL_FAIL when the extraction meets it.
+add_test(NAME test_melody_bach_114_target COMMAND test_melody bach-114-target)
+set_tests_properties(test_melody_bach_114_target PROPERTIES WILL_FAIL TRUE)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE

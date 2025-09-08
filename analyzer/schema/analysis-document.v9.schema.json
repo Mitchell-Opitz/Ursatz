@@ -94,7 +94,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/motive_claim" }
     },
-    "melody": { "type": "array" },
+    "melody": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/melody_claim" }
+    },
     "rhythm": { "type": "array" },
     "texture": { "type": "array" },
     "voice_leading": { "type": "array" },
@@ -602,6 +605,192 @@
             "in_continuation": { "type": "boolean" },
             "phrase": { "type": ["integer", "null"], "minimum": 0 },
             "idea": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "melody_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "measures", "note_count", "range", "climax", "contour", "leaps", "consecutive_leaps", "non_chord_tones", "tendencies"],
+          "properties": {
+            "label": { "const": "melody" },
+            "index": { "type": "integer", "minimum": 0 },
+            "measures": { "$ref": "#/$defs/phrase_measures" },
+            "note_count": { "type": "integer", "minimum": 1 },
+            "range": {
+              "type": "object",
+              "required": ["lowest", "highest", "semitones"],
+              "properties": {
+                "lowest": { "$ref": "#/$defs/melody_pitch" },
+                "highest": { "$ref": "#/$defs/melody_pitch" },
+                "semitones": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "climax": { "$ref": "#/$defs/melody_climax_claim" },
+            "leaps": {
+              "type": "object",
+              "required": ["recovered", "unrecovered", "not_required", "not_judged", "items"],
+              "properties": {
+                "recovered": { "type": "integer", "minimum": 0 },
+                "unrecovered": { "type": "integer", "minimum": 0 },
+                "not_required": { "type": "integer", "minimum": 0 },
+                "not_judged": { "type": "integer", "minimum": 0 },
+                "items": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/melody_leap_claim" }
+                }
+              }
+            },
+            "consecutive_leaps": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/melody_consecutive_leaps_claim" }
+            },
+            "tendencies": {
+              "type": "object",
+              "required": ["line", "seventh_degree"],
+              "properties": {
+                "line": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["tendency", "holds"],
+                    "properties": {
+                      "tendency": {
+                        "enum": [
+                          "pitch-proximity",
+                          "step-declination",
+                          "step-inertia",
+                          "melodic-regression",
+                          "melodic-arch"
+                        ]
+                      },
+                      "holds": { "type": "boolean" }
+                    }
+                  }
+                },
+                "seventh_degree": {
+                  "oneOf": [
+                    { "type": "null" },
+                    {
+                      "type": "object",
+                      "required": ["rule", "followed", "broken", "breaks"],
+                      "properties": {
+                        "rule": { "const": "leading-tone" },
+                        "followed": { "type": "integer", "minimum": 0 },
+                        "broken": { "type": "integer", "minimum": 0 },
+                        "breaks": {
+                          "type": "array",
+                          "items": { "$ref": "#/$defs/claim" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "non_chord_tones": {
+              "type": "object",
+              "required": ["chord_tones", "non_chord_tones", "unclassified", "by_type", "items"],
+              "properties": {
+                "chord_tones": { "type": "integer", "minimum": 0 },
+                "non_chord_tones": { "type": "integer", "minimum": 0 },
+                "unclassified": { "type": "integer", "minimum": 0 },
+                "by_type": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["type", "count"],
+                    "properties": {
+                      "type": { "type": "string" },
+                      "count": { "type": "integer", "minimum": 1 }
+                    }
+                  }
+                },
+                "items": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/claim" }
+                }
+              }
+            },
+            "contour": {
+              "type": "object",
+              "required": ["up", "down", "same", "steps", "leaps", "net_direction", "net_semitones", "directions"],
+              "properties": {
+                "up": { "type": "integer", "minimum": 0 },
+                "down": { "type": "integer", "minimum": 0 },
+                "same": { "type": "integer", "minimum": 0 },
+                "steps": { "type": "integer", "minimum": 0 },
+                "leaps": { "type": "integer", "minimum": 0 },
+                "net_direction": { "enum": ["up", "down", "same"] },
+                "net_semitones": { "type": "integer" },
+                "directions": {
+                  "type": "array",
+                  "items": { "enum": ["up", "down", "same"] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "melody_leap_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["semitones", "direction", "generic_size", "approximate", "status"],
+          "properties": {
+            "label": { "const": "leap" },
+            "semitones": { "type": "integer" },
+            "direction": { "enum": ["up", "down"] },
+            "generic_size": { "type": ["integer", "null"], "minimum": 3 },
+            "approximate": { "type": "boolean" },
+            "status": { "enum": ["recovered", "unrecovered", "not-required", "not-judged"] }
+          }
+        }
+      ]
+    },
+    "melody_consecutive_leaps_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["same_direction", "three_in_a_row"],
+          "properties": {
+            "label": { "const": "consecutive-leaps" },
+            "same_direction": { "type": "boolean" },
+            "three_in_a_row": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "melody_pitch": {
+      "type": "object",
+      "required": ["pitch", "name", "note_id"],
+      "properties": {
+        "pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "name": { "type": "string" },
+        "note_id": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "melody_climax_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["pitch", "occurrences", "unique", "relative_position", "strength", "by_leap", "final_note"],
+          "properties": {
+            "label": { "const": "climax" },
+            "pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
+            "occurrences": { "type": "integer", "minimum": 1 },
+            "unique": { "type": "boolean" },
+            "relative_position": { "type": "number", "minimum": 0, "maximum": 1 },
+            "strength": { "enum": ["strong", "medium", "weak", null] },
+            "by_leap": { "type": "boolean" },
+            "final_note": { "type": "boolean" }
           }
         }
       ]

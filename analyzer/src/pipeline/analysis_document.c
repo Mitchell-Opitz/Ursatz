@@ -2559,6 +2559,297 @@ static cJSON *motives_json(const ImportedNotes *notes, const AnalysisReport *rep
     return list;
 }
 
+/* ---- Melody ---- */
+
+/* A pitch and the note it is the pitch of: { "pitch": MIDI note number, "name": "E5", "note_id": ImportedNotes
+   index }. */
+static cJSON *melody_pitch_json(long pitch, const char *name, size_t note) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "pitch", cJSON_CreateNumber((double)pitch)) &&
+                    add(object, "name", cJSON_CreateString(name)) &&
+                    add(object, "note_id", cJSON_CreateNumber((double)note)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *melody_range_json(const AnalysisMelody *melody) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "lowest", melody_pitch_json(melody->lowest_pitch, melody->lowest_name, melody->lowest_note)) &&
+                    add(object, "highest", melody_pitch_json(melody->highest_pitch, melody->highest_name, melody->highest_note)) &&
+                    add(object, "semitones", cJSON_CreateNumber((double)melody->range_semitones)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The climax as a claim over its first note: the highest pitch, how many notes sound it, and where the first one
+   stands (its place among the notes, its beat strength, whether a leap approaches it, whether it ends the phrase). */
+static cJSON *melody_climax_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    Rational start;
+    Rational end;
+    notes_span(notes, &melody->climax_note, 1, &start, &end);
+    cJSON *claim = claim_json_with(melody->framework, notes, &melody->climax_note, 1, start, end, "climax",
+                                   cJSON_CreateNumber(melody->uncertainty));
+    if (!(claim && add(claim, "pitch", cJSON_CreateNumber((double)melody->highest_pitch)) &&
+          add(claim, "occurrences", cJSON_CreateNumber(melody->climax_occurrences)) &&
+          add(claim, "unique", cJSON_CreateBool(melody->climax_unique)) &&
+          add(claim, "relative_position", cJSON_CreateNumber(melody->climax_relative_position)) &&
+          add(claim, "strength",
+              melody->climax_has_strength ? cJSON_CreateString(melody->climax_strength) : cJSON_CreateNull()) &&
+          add(claim, "by_leap", cJSON_CreateBool(melody->climax_by_leap)) &&
+          add(claim, "final_note", cJSON_CreateBool(melody->climax_final)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The contour: how many intervals go up, down and stay, how many are steps and leaps, the last note against the first,
+   and the direction of each interval in time order. No shape is named. */
+static cJSON *melody_contour_json(const AnalysisMelody *melody) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *directions = cJSON_CreateArray();
+    bool ok = object && directions;
+    for (size_t k = 0; ok && k < melody->direction_count; k++) {
+        ok = append(directions, cJSON_CreateString(melody->directions[k]));
+    }
+    bool taken = false; /* add() takes the directions over, and frees them itself when it fails */
+    if (!(ok && add(object, "up", cJSON_CreateNumber(melody->up)) &&
+          add(object, "down", cJSON_CreateNumber(melody->down)) &&
+          add(object, "same", cJSON_CreateNumber(melody->same)) &&
+          add(object, "steps", cJSON_CreateNumber(melody->step_count)) &&
+          add(object, "leaps", cJSON_CreateNumber(melody->leap_count)) &&
+          add(object, "net_direction", cJSON_CreateString(melody->net_direction)) &&
+          add(object, "net_semitones", cJSON_CreateNumber((double)melody->net_semitones)) &&
+          (taken = true, add(object, "directions", directions)))) {
+        if (!taken) {
+            cJSON_Delete(directions);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One leap as a claim over its two notes: the interval in semitones and in letter names (null when the library has no
+   size), whether it was read from the semitones alone, and the library's verdict on its recovery. */
+static cJSON *melody_leap_json(const ImportedNotes *notes, const char *framework, const AnalysisMelodyLeap *leap) {
+    size_t ids[2] = {leap->from_note, leap->to_note};
+    Rational start;
+    Rational end;
+    notes_span(notes, ids, 2, &start, &end);
+    cJSON *claim = claim_json_with(framework, notes, ids, 2, start, end, "leap", cJSON_CreateNumber(leap->uncertainty));
+    if (!(claim && add(claim, "semitones", cJSON_CreateNumber((double)leap->semitones)) &&
+          add(claim, "direction", cJSON_CreateString(leap->direction)) &&
+          add(claim, "generic_size", leap->generic_size > 0 ? cJSON_CreateNumber(leap->generic_size) : cJSON_CreateNull()) &&
+          add(claim, "approximate", cJSON_CreateBool(leap->approximate)) &&
+          add(claim, "status", cJSON_CreateString(leap->status)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The leaps of a phrase: how many the library finds recovered, unrecovered, not required and not judged, and every
+   leap as a claim in time order. */
+static cJSON *melody_leaps_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    static const char *const STATUSES[4] = {"recovered", "unrecovered", "not-required", "not-judged"};
+    static const char *const KEYS[4] = {"recovered", "unrecovered", "not_required", "not_judged"};
+    cJSON *object = cJSON_CreateObject();
+    cJSON *items = cJSON_CreateArray();
+    bool ok = object && items;
+    for (size_t k = 0; ok && k < 4; k++) {
+        size_t count = 0;
+        for (size_t i = 0; i < melody->leap_total; i++) {
+            count += strcmp(melody->leaps[i].status, STATUSES[k]) == 0 ? 1 : 0;
+        }
+        ok = add(object, KEYS[k], cJSON_CreateNumber((double)count));
+    }
+    for (size_t i = 0; ok && i < melody->leap_total; i++) {
+        ok = append(items, melody_leap_json(notes, melody->framework, &melody->leaps[i]));
+    }
+    bool taken = false; /* add() takes the items over, and frees them itself when it fails */
+    if (!(ok && (taken = true, add(object, "items", items)))) {
+        if (!taken) {
+            cJSON_Delete(items);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The pairs of leaps in a row the library's rule finds fault with, each a claim over its three notes. */
+static cJSON *melody_consecutive_leaps_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < melody->consecutive_leap_count; i++) {
+        const AnalysisMelodyConsecutiveLeaps *pair = &melody->consecutive_leaps[i];
+        size_t ids[3] = {pair->first_note, pair->middle_note, pair->last_note};
+        Rational start;
+        Rational end;
+        notes_span(notes, ids, 3, &start, &end);
+        cJSON *claim = claim_json_with(melody->framework, notes, ids, 3, start, end, "consecutive-leaps",
+                                       cJSON_CreateNumber(pair->uncertainty));
+        if (!(claim && add(claim, "same_direction", cJSON_CreateBool(pair->same_direction)) &&
+              add(claim, "three_in_a_row", cJSON_CreateBool(pair->three_in_a_row)) && append(list, claim))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The non-chord tones of a phrase's melody: the library's counts (chord tones, non-chord tones, unclassified notes, and
+   the non-chord tones by type, the types that occur in the library's order) and each non-chord tone as a claim over its
+   note, labelled with the library's type. */
+static cJSON *melody_non_chord_tones_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *by_type = cJSON_CreateArray();
+    cJSON *items = cJSON_CreateArray();
+    bool ok = object && by_type && items;
+    for (int type = 0; ok && type < ANALYSIS_MELODY_NCT_TYPES; type++) {
+        if (melody->nct_by_type[type] > 0) {
+            cJSON *entry = cJSON_CreateObject();
+            ok = entry && add(entry, "type", cJSON_CreateString(melody->nct_type_names[type])) &&
+                 add(entry, "count", cJSON_CreateNumber(melody->nct_by_type[type])) && append(by_type, entry);
+            if (!ok) {
+                cJSON_Delete(entry);
+            }
+        }
+    }
+    for (size_t i = 0; ok && i < melody->nct_total; i++) {
+        const AnalysisMelodyNct *nct = &melody->ncts[i];
+        Rational start;
+        Rational end;
+        notes_span(notes, &nct->note, 1, &start, &end);
+        cJSON *claim = claim_json_with(melody->framework, notes, &nct->note, 1, start, end, nct->type,
+                                       cJSON_CreateNumber(nct->uncertainty));
+        ok = claim && append(items, claim);
+        if (!ok) {
+            cJSON_Delete(claim);
+        }
+    }
+    bool by_type_taken = false; /* add() takes each array over, and frees it itself when it fails */
+    bool items_taken = false;
+    if (!(ok && add(object, "chord_tones", cJSON_CreateNumber(melody->chord_tone_count)) &&
+          add(object, "non_chord_tones", cJSON_CreateNumber(melody->non_chord_tone_count)) &&
+          add(object, "unclassified", cJSON_CreateNumber(melody->unclassified_count)) &&
+          (by_type_taken = true, add(object, "by_type", by_type)) &&
+          (items_taken = true, add(object, "items", items)))) {
+        if (!by_type_taken) {
+            cJSON_Delete(by_type);
+        }
+        if (!items_taken) {
+            cJSON_Delete(items);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The library's line tendencies as { "tendency": name, "holds": bool }, in its order; empty when the phrase's notes do not
+   spell. */
+static cJSON *melody_line_tendencies_json(const AnalysisMelody *melody) {
+    cJSON *list = cJSON_CreateArray();
+    for (int t = 0; list && t < ANALYSIS_MELODY_TENDENCIES && melody->tendency_names[t]; t++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!(entry && add(entry, "tendency", cJSON_CreateString(melody->tendency_names[t])) &&
+              add(entry, "holds", cJSON_CreateBool(melody->tendency_holds[t])) && append(list, entry))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The seventh degree: the notes the library labels degree 7 that a note follows, judged by its rule LEADING_TONE: how many
+   followed it and how many broke it, with each broken one as a claim over the seventh and the note after it. Null when
+   the phrase's notes do not spell. */
+static cJSON *melody_seventh_degree_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    if (!melody->seventh_rule) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    cJSON *breaks = cJSON_CreateArray();
+    bool ok = object && breaks;
+    for (int i = 0; ok && i < melody->seventh_broken; i++) {
+        const AnalysisMelodyBreak *broken = &melody->seventh_breaks[i];
+        size_t ids[2] = {broken->note, broken->next_note};
+        Rational start;
+        Rational end;
+        notes_span(notes, ids, 2, &start, &end);
+        cJSON *claim = claim_json_with(melody->framework, notes, ids, 2, start, end, melody->seventh_rule,
+                                       cJSON_CreateNumber(broken->uncertainty));
+        ok = claim && append(breaks, claim);
+        if (!ok) {
+            cJSON_Delete(claim);
+        }
+    }
+    bool taken = false; /* add() takes the breaks over, and frees them itself when it fails */
+    if (!(ok && add(object, "rule", cJSON_CreateString(melody->seventh_rule)) &&
+          add(object, "followed", cJSON_CreateNumber(melody->seventh_followed)) &&
+          add(object, "broken", cJSON_CreateNumber(melody->seventh_broken)) &&
+          (taken = true, add(object, "breaks", breaks)))) {
+        if (!taken) {
+            cJSON_Delete(breaks);
+        }
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *melody_tendencies_json(const ImportedNotes *notes, const AnalysisMelody *melody) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "line", melody_line_tendencies_json(melody)) &&
+                    add(object, "seventh_degree", melody_seventh_degree_json(notes, melody)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One claim per phrase with melody notes, in phrase order: the soprano notes that start in the phrase. index is the
+   phrase's, measures its measures; range, climax, contour, leaps, consecutive leaps, non-chord tones and tendencies are
+   the melody adapter's and the library's rules' results over the notes. */
+static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (!list) {
+        return NULL;
+    }
+    for (size_t i = 0; i < report->melody_count; i++) {
+        const AnalysisMelody *melody = &report->melodies[i];
+        Rational start = rational_make(melody->start_numerator, melody->start_denominator);
+        Rational end = rational_make(melody->end_numerator, melody->end_denominator);
+        cJSON *claim = claim_json_with(melody->framework, notes, melody->note_ids, melody->note_id_count, start, end,
+                                       "melody", cJSON_CreateNumber(melody->uncertainty));
+        if (!(claim && add(claim, "index", cJSON_CreateNumber((double)melody->phrase)) &&
+              add(claim, "measures", measures_json(melody->first_measure, melody->last_measure)) &&
+              add(claim, "note_count", cJSON_CreateNumber((double)melody->note_id_count)) &&
+              add(claim, "range", melody_range_json(melody)) && add(claim, "climax", melody_climax_json(notes, melody)) &&
+              add(claim, "contour", melody_contour_json(melody)) &&
+              add(claim, "leaps", melody_leaps_json(notes, melody)) &&
+              add(claim, "consecutive_leaps", melody_consecutive_leaps_json(notes, melody)) &&
+              add(claim, "non_chord_tones", melody_non_chord_tones_json(notes, melody)) &&
+              add(claim, "tendencies", melody_tendencies_json(notes, melody)))) {
+            cJSON_Delete(claim);
+            cJSON_Delete(list);
+            return NULL;
+        }
+        if (!append(list, claim)) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -2577,7 +2868,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "cadences", cadences_json(notes, report)) &&
           add(document, "phrases", phrases_json(notes, report)) &&
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
-          add(document, "motives", motives_json(notes, report)) && add(document, "melody", cJSON_CreateArray()) &&
+          add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
           add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
