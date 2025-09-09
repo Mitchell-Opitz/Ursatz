@@ -268,6 +268,171 @@ static void test_help(void) {
     free(out);
 }
 
+/* ------------------------------------------- harmony, features and role */
+
+/* Runs another subcommand; the output goes to the files of this test. Returns the exit status. */
+static int run_sub(const char *subcommand, const char *arguments) {
+    char command[2048];
+    snprintf(command, sizeof(command), "\"%s\" %s %s >motive_cli_out.txt 2>motive_cli_err.txt", COMPOSER_CLI_PATH,
+             subcommand, arguments);
+    int status = system(command);
+    assert(WIFEXITED(status));
+    return WEXITSTATUS(status);
+}
+
+static void expect_sub_failure(const char *subcommand, const char *arguments, int status, const char *message) {
+    assert(run_sub(subcommand, arguments) == status);
+    char *err = read_file("motive_cli_err.txt");
+    if (strstr(err, message) == NULL) {
+        fprintf(stderr, "%s '%s': expected '%s' in: %s\n", subcommand, arguments, message, err);
+    }
+    assert(strstr(err, message) != NULL);
+    assert(strncmp(err, "Error: ", 7) == 0);
+    free(err);
+}
+
+#define EXTRAS " --harmony \"I V6@2 I@3\" --feature a:0-1 --feature b:2-3 --role accompaniment"
+
+static void test_extras_in_motive(void) {
+    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"" EXTRAS, "motive_cli_out.txt",
+               "motive_cli_err.txt") == 0);
+    char *out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "Own harmony: I V6@2 I@3") != NULL);
+    assert(strstr(out, "  a: notes 0 to 1") != NULL && strstr(out, "  b: notes 2 to 3") != NULL);
+    assert(strstr(out, "Role: accompaniment") != NULL);
+    free(out);
+
+    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json" EXTRAS, "motive_cli_out.txt",
+               "motive_cli_err.txt") == 0);
+    out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "\"harmony\": \"I V6@2 I@3\"") != NULL && strstr(out, "\"harmony_text\": \"I V6@2 I@3\"") != NULL);
+    assert(strstr(out, "\"label\": \"b\"") != NULL && strstr(out, "\"role\": \"accompaniment\"") != NULL);
+    free(out);
+
+    /* Nothing asked, nothing printed. */
+    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json", "motive_cli_out.txt",
+               "motive_cli_err.txt") == 0);
+    out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "harmony_text") == NULL && strstr(out, "\"role\"") == NULL && strstr(out, "\"features\"") == NULL);
+    free(out);
+
+    /* The onsets are in beats of the file's own meter; a pickup given at the same time still applies. */
+    assert(run(FIXTURE("motive_d_minor.mid") " --harmony \"I V@2\" --pickup 1/2", "motive_cli_out.txt",
+               "motive_cli_err.txt") == 0);
+    out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "Own harmony: I V@2") != NULL && strstr(out, "Pickup: 1/2") != NULL);
+    free(out);
+
+    /* An empty text clears the harmony. */
+    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --harmony \"\"", "motive_cli_out.txt",
+               "motive_cli_err.txt") == 0);
+    out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "Own harmony") == NULL);
+    free(out);
+}
+
+static void test_extras_errors(void) {
+    const char *input = FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" ";
+    char arguments[512];
+    struct {
+        const char *extra;
+        int status;
+        const char *message;
+    } cases[] = {
+        {"--harmony \"I V6\"", 1, "--harmony 'I V6' at token 2 (column 3)"},
+        {"--harmony \"I iv@1\"", 1, "token 2 (column 3)"},
+        {"--harmony \"I V@2 I@1\"", 1, "must come after"},
+        {"--harmony \"I V@2\" --harmony \"I\"", 1, "--harmony given twice"},
+        {"--harmony", 1, "--harmony needs a value"},
+        {"--harmony \"I V@4\"", 2, "harmony[1]"},
+        {"--feature a", 1, "--feature 'a'"},
+        {"--feature a:3-1", 1, "runs backwards"},
+        {"--feature abcdefghi:1", 1, "1 to 8 characters"},
+        {"--feature a:0-1 --feature a:2-3", 1, "label 'a' is used twice"},
+        {"--feature a:0-4", 2, "features[0]"},
+        {"--feature", 1, "--feature needs a value"},
+        {"--role bass", 1, "--role must be melodic or accompaniment, not 'bass'"},
+        {"--role melodic --role accompaniment", 1, "--role given twice"},
+        {"--feature a:0 --feature b:0 --feature c:0 --feature d:0 --feature e:0 --feature f:0 --feature g:0 "
+         "--feature h:0 --feature i:0",
+         1, "at most 8 features"},
+    };
+    for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
+        snprintf(arguments, sizeof(arguments), "%s%s", input, cases[c].extra);
+        expect_failure(arguments, cases[c].status, cases[c].message);
+    }
+}
+
+static void write_chain(const char *text) {
+    FILE *file = fopen("motive_cli_chain.json", "wb");
+    assert(file);
+    fputs(text, file);
+    fclose(file);
+}
+
+static void test_extras_in_variants(void) {
+    const char *input = FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"" EXTRAS;
+    char arguments[1024];
+    write_chain("{\"steps\": [{\"op\": \"fragment\", \"params\": {\"position\": \"trailing\", \"length\": 2}}]}");
+    snprintf(arguments, sizeof(arguments), "%s --chain motive_cli_chain.json --count 1 --seed 3 --json", input);
+    assert(run_sub("variants", arguments) == 0);
+    char *out = read_file("motive_cli_out.txt");
+    /* The source keeps all of it. The fragment keeps the feature it holds whole, the chords from its start (the one
+       sounding there at 0), and the role. */
+    assert(strstr(out, "\"harmony\": \"I V6@2 I@3\"") != NULL);
+    assert(strstr(out, "\"harmony\": \"I V6@1/2 I@3/2\"") != NULL);
+    char *fragment = strstr(out, "\"variants\"");
+    assert(fragment != NULL);
+    assert(strstr(fragment, "\"label\": \"b\"") != NULL && strstr(fragment, "\"label\": \"a\"") == NULL);
+    assert(strstr(fragment, "\"role\": \"accompaniment\"") != NULL);
+    free(out);
+
+    snprintf(arguments, sizeof(arguments), "%s --count 2 --seed 3", input);
+    assert(run_sub("variants", arguments) == 0);
+    expect_sub_failure("variants", FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --harmony \"I V6\"", 1,
+                       "token 2");
+    expect_sub_failure("variants", FIXTURE("motive_d_minor.txt") " --meter 4/4 --role bass", 1, "--role must be");
+    expect_sub_failure("variants", "--list-ops --role accompaniment", 1, "takes no motive input");
+}
+
+static void test_extras_in_grow_and_random_motive(void) {
+    const char *grow = FIXTURE("motive_d_minor.txt") " --into sentence --key \"D minor\" --meter 4/4 --seed 1";
+    char arguments[1024];
+    snprintf(arguments, sizeof(arguments), "%s --harmony \"I V@2\" --feature a:0-1 --role melodic", grow);
+    assert(run_sub("grow", arguments) == 0);
+    snprintf(arguments, sizeof(arguments), "%s --harmony \"I V\"", grow);
+    expect_sub_failure("grow", arguments, 1, "token 2");
+    snprintf(arguments, sizeof(arguments), "%s --feature a:0-9", grow);
+    expect_sub_failure("grow", arguments, 2, "features[0]");
+
+    assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --count 2 --role accompaniment --json") == 0);
+    char *out = read_file("motive_cli_out.txt");
+    const char *first = strstr(out, "\"role\": \"accompaniment\"");
+    assert(first != NULL && strstr(first + 1, "\"role\": \"accompaniment\"") != NULL);
+    free(out);
+    assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --role melodic --json") == 0);
+    out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "\"role\"") == NULL);
+    free(out);
+    expect_sub_failure("random-motive", "--mode major --meter 4/4 --role bass", 1, "--role must be");
+    expect_sub_failure("random-motive", "--mode major --meter 4/4 --harmony I", 1, "unknown option '--harmony'");
+    expect_sub_failure("random-motive", "--mode major --meter 4/4 --feature a:0", 1, "unknown option '--feature'");
+}
+
+static void test_extras_help(void) {
+    const char *commands[] = {"motive", "variants", "grow"};
+    for (size_t c = 0; c < sizeof(commands) / sizeof(commands[0]); c++) {
+        assert(run_sub(commands[c], "--help") == 0);
+        char *out = read_file("motive_cli_out.txt");
+        assert(strstr(out, "--harmony") != NULL && strstr(out, "--feature") != NULL && strstr(out, "--role") != NULL);
+        free(out);
+    }
+    assert(run_sub("random-motive", "--help") == 0);
+    char *out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "--role") != NULL && strstr(out, "--harmony") == NULL);
+    free(out);
+}
+
 int main(void) {
     test_text_output();
     test_json_output();
@@ -277,6 +442,11 @@ int main(void) {
     test_forms_and_pickup_errors();
     test_render();
     test_help();
+    test_extras_in_motive();
+    test_extras_errors();
+    test_extras_in_variants();
+    test_extras_in_grow_and_random_motive();
+    test_extras_help();
     puts("test_motive_cli: ok");
     return 0;
 }
