@@ -9,6 +9,7 @@ const TOOLS = [
   { id: "motifs", label: "Motifs", active: false, render: () => renderMaterialsView("motif") },
   { id: "themes", label: "Themes", active: false, render: () => renderMaterialsView("theme") },
   { id: "pieces", label: "Pieces", active: false, render: () => renderMaterialsView("piece") },
+  { id: "subjects", label: "Subjects", active: false, render: renderSubjectsView },
   { id: "health", label: "Health", active: false, render: renderHealthView },
 ];
 
@@ -2678,7 +2679,7 @@ function notifySubjectsChanged() {
 function mountSubjectsPanel() {
   subjectsPanel = SubjectsPanel.mount(document.getElementById("subjects-panel"), {
     fetchGroups: fetchSubjectGroups,
-    onSelect: () => {},
+    onSelect: openSubject,
   });
   subjectsPanel.refresh();
 }
