@@ -294,6 +294,35 @@ static void test_invert_changes_contour(void) {
     assert(record.recognizability.denominator >= 1 && record.recognizability.numerator <= record.recognizability.denominator);
 }
 
+static void test_own_harmony_in_kept_and_changed(void) {
+    Motive source = source_motive();
+    MotiveError error;
+    assert(motive_harmony_parse("I V@2", &source.meter, source.harmony, &source.harmony_count, &error) == MOTIVE_OK);
+    Motive out;
+    VariantRecord record;
+
+    /* Moving the pitches leaves the chords where they were: kept, whatever chord the new notes imply. */
+    VariantStep step = step_of("transpose");
+    assert(variant_step_set(&step, "by", 2, 0));
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(out.harmony_count == 2 && out.harmony[1].degree == 5);
+    assert(kept(&record, "harmony") && !changed(&record, "harmony"));
+
+    /* Scaled in time the chords move with the notes, and their onsets are no longer the source's. */
+    step = step_of("augment");
+    assert(variant_step_set(&step, "ratio", 2, 1));
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(out.harmony_count == 2 && out.harmony[1].onset.num == 1 && out.harmony[1].onset.den == 1);
+    assert(changed(&record, "harmony") && !kept(&record, "harmony"));
+
+    /* A cut that loses a chord changes the harmony. */
+    step = step_of("fragment");
+    assert(variant_step_set(&step, "position", 1, 0));
+    assert(variant_step_set(&step, "length", 2, 0));
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(out.harmony_count == 1 && changed(&record, "harmony"));
+}
+
 static void test_augment_keeps_rhythm_proportions(void) {
     Motive source = source_motive();
     VariantStep step = step_of("augment");
@@ -421,6 +450,7 @@ int main(void) {
     test_refused_steps();
     test_transpose_tonal_is_exact();
     test_invert_changes_contour();
+    test_own_harmony_in_kept_and_changed();
     test_augment_keeps_rhythm_proportions();
     test_forms_have_only_their_dimensions();
     test_derivation_sentence();
