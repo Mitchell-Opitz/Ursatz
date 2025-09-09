@@ -555,7 +555,7 @@ int run_variants(int argc, char **argv) {
     if (!options.list_ops && !options.input) {
         return cli_fail(CLI_EXIT_USAGE, "variants needs --list-ops or a motive input\n%s", VARIANTS_USAGE_LINE);
     }
-    if (options.list_ops && options.input) {
+    if (options.list_ops && (options.input || motive_extras_given(&options.extras))) {
         return cli_fail(CLI_EXIT_USAGE, "--list-ops takes no motive input");
     }
     if (!options.list_ops) {
