@@ -44,7 +44,7 @@ typedef enum {
     PLAN_EXPORT_ERR_IO,                 /* the file could not be written */
     PLAN_EXPORT_ERR_NOT_REPRESENTABLE,  /* Ursatz refused the notes, meter or key as given */
     PLAN_EXPORT_ERR_TOO_MANY_VOICES,    /* MIDI has 15 voice tracks */
-    PLAN_EXPORT_ERR_OVERLAP,            /* two notes overlap within one voice (MusicXML) */
+    PLAN_EXPORT_ERR_OVERLAP,            /* two notes overlap within one voice; MusicXML now writes them as extra voices, so this is unused */
     PLAN_EXPORT_ERR_ALLOC
 } PlanExportResult;
 
