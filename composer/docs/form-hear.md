@@ -15,6 +15,10 @@ if (form_hear(plan, span, &heard) == FORM_HEAR_OK) {
 form_heard_destroy(&heard);
 ```
 
+## Where a phrase starts
+
+Ursatz reads a V followed by I6 as an evaded cadence, and reads a root-position V directly before a section start as a half cadence (R-090, R-091). From the music alone `form_hear` cannot tell the two, so a period whose consequent opens on I6 is heard as one phrase. `form_hear_with_sections(plan, span, starts, count, &heard)` takes the plan times where phrases are known to start; the V before each is the half cadence of the phrase before. `form_hear` is that call with no starts. Nothing in the Composer passes starts yet: a general way to hear the boundary from the music is open work.
+
 ## What is read
 
 Only the plan's written lanes over the span. Constraints and nodes are never read, so a cadence
