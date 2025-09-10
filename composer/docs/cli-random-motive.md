@@ -1,7 +1,7 @@
 # random-motive command
 
 ```sh
-ursatz-composer random-motive --mode <major|minor> --meter <n/m> [--key <key>] [--form <full|rhythm|contour>] [--style <file>] [--count <n>] [--seed <n>] [--json]
+ursatz-composer random-motive --mode <major|minor> --meter <n/m> [--key <key>] [--form <full|rhythm|contour>] [--role <melodic|accompaniment>] [--style <file>] [--count <n>] [--seed <n>] [--json]
 ```
 
 Makes random motives from a mode and a meter. Every motive keeps the hard melodic rules of standard counterpoint, the ones motive invention keeps, and the same options and seed always give the same motives.
@@ -24,6 +24,7 @@ The length, pickup, number of notes, rhythm and range are not options. They are 
 | `--meter <n/m>` | Beats over a beat unit, as in `4/4` or `6/8`. Required. |
 | `--key <key>` | For example `"D minor"`. Its mode must be `--mode`. Without it the motive is made in C major or A minor and carries that key, so it can be stored. |
 | `--form <form>` | `full` (pitches and rhythm, the default), `rhythm` (the rhythm of a full motive) or `contour` (its contour, in quarter notes with no pickup). These are read as the [motive command](cli-motive.md) reads them. |
+| `--role <role>` | `melodic` (the default) or `accompaniment`: the role every motive of the run is given. |
 | `--style <file>` | A style model file. For each motive, 8 candidates are made and the one closest to the style is kept (ties broken by the seed), by the style's closeness on the candidate's melody labels: all of them for a full motive, the durations for a rhythm, the contour for a contour. |
 | `--count <n>` | How many motives, 1 to 16, 1 by default. The motives of one run are all different. |
 | `--seed <n>` | A whole number from 0. By default from the clock. The seed is printed. |

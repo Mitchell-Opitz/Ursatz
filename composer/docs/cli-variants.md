@@ -2,12 +2,12 @@
 
 ```sh
 ursatz-composer variants --list-ops [--json]
-ursatz-composer variants <motive-input> [--format ...] [--form ...] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--chain <file.json>] [--count <n>] [--seed <n>] [--json]
+ursatz-composer variants <motive-input> [--format ...] [--form ...] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--chain <file.json>] [--count <n>] [--seed <n>] [--json]
 ```
 
 Lists the operations of the [variant registry](variant-registry.md), or makes variants of a motive. Each variant applies a chain of up to 4 operations. A parameter the chain leaves open is drawn from the seed, so the same motive, chain and seed always give the same variant, and a reroll is the same chain with another seed.
 
-The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a MusicXML file, a note list or a motive JSON file, with `--format`, `--form`, `--meter`, `--key` and `--pickup` meaning the same. A rhythm (`x:q x:e`) or a contour (`0 2 1 3`) is read with `--form rhythm` or `--form contour`, and only the operations that apply to that form can be used on it.
+The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a MusicXML file, a note list or a motive JSON file, with `--format`, `--form`, `--meter`, `--key`, `--pickup`, `--harmony`, `--feature` and `--role` meaning the same (see [Harmony, features and role](cli-motive.md#harmony-features-and-role)). A rhythm (`x:q x:e`) or a contour (`0 2 1 3`) is read with `--form rhythm` or `--form contour`, and only the operations that apply to that form can be used on it.
 
 ## Options
 
@@ -18,6 +18,8 @@ The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a M
 | `--count <n>` | How many variants, 1 to 16, 6 by default. Variant i uses seed + i. |
 | `--seed <n>` | A whole number from 0. By default from the clock. The seed is printed. |
 | `--json` | Print as JSON (below). |
+
+Harmony, features and the role go through the variants. A variant keeps the features whose notes it still holds, renumbered (a retrograde turns them round; a fragment keeps the ones inside it whole, and a liquidation drops those that lose a note), and its chords: a fragment keeps those from its first note, the chord sounding there at 0, a scaled variant moves them with the notes, and the others keep the ones that still start inside. A motive with chords of its own is compared by them: its `harmony` is kept when every chord keeps its degree and onset, else changed; without chords of its own the best implied chord is compared. `--list-ops` takes none of these options.
 
 ## Chain file
 

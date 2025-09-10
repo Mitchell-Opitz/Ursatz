@@ -44,6 +44,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
 | `--from-corpus <dir>` | Start from material in a corpus instead of a motive input: the output directory of `ursatz-analyzer --corpus`. Needs `--like`; not with a motive input. The source piece, its measures and the score are printed (JSON: `source`) and kept in the plan on the motive node. Exit 2 when no passage scores 1/2 or more. See [style.md](style.md). |
 | `--like <file>` | With `--from-corpus`: a MIDI or MusicXML passage. One bar of a similar passage of the corpus, picked by the seed among the best, becomes the motive, in `--key`. |
+| `--harmony "<text>"`, `--feature <label:first-last>`, `--role <role>` | The motive's own chords, labelled features and role, as for the [motive command](cli-motive.md#harmony-features-and-role). The chord onsets are in beats of `--meter`. They are kept with the motive; the theme is not grown from them yet. Not with `--from-corpus`. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same input, options and seed give the same output. |
 | `--suggest <n>` | 1 to 16 different themes instead of one. |
 | `--out <file.json>` | The plan as JSON, as `plan_write_json_file` writes it. |

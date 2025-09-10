@@ -76,7 +76,7 @@ A chain that cannot be applied returns one of `VARIANT_ERR_EMPTY`, `VARIANT_ERR_
   - rhythm is kept when the durations and onsets are the source's times one common factor (`rhythm_scaled` says the factor is not 1).
   - intervals are kept when every diatonic step (semitones without a key) is the source's.
   - contour is kept when every direction is the source's.
-  - harmony is kept when the best implied chord's degree is the source's (a full motive with a key only).
+  - harmony is kept when the best implied chord's degree is the source's (a full motive with a key only). When either motive has chords of its own it is kept when the chords of both have the same degrees at the same onsets.
   - A dimension the motive's form does not have is in neither list: a rhythm motive has only the rhythm, a contour motive only the contour.
 - `recognizability`: the total of `motive_recognizability` against the source, as a fraction.
 - `derivation`: each step's phrase, joined by "then", and what was kept and changed: "Inverted about D4 in the key's scale, then augmented 2:1. Kept the rhythm's proportions; changed the intervals, the contour and the harmony."
