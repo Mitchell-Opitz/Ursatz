@@ -247,6 +247,16 @@
     });
   }
 
+  /* Chips {id, label, title} for the subjects linked to an item or piece
+   * (the {id, name, kind} rows the item and piece answers carry). */
+  function chipRows(subjects) {
+    return (Array.isArray(subjects) ? subjects : []).map((subject) => ({
+      id: subject.id,
+      label: subject.name,
+      title: kindLabel(subject.kind),
+    }));
+  }
+
   /* The error text of a failed answer, or the fallback. */
   function errorText(data, fallback) {
     if (data && typeof data.error === "string" && data.error !== "") {
@@ -271,6 +281,7 @@
     relatedRows,
     itemLinkRows,
     pieceLinkRows,
+    chipRows,
     errorText,
   };
   if (typeof module !== "undefined" && module.exports) {

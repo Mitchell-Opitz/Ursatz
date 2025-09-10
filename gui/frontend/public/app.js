@@ -897,6 +897,10 @@ async function startLibraryEdit(row, piece) {
   source.value = piece.source || "";
   source.setAttribute("list", "editor-sources");
   const tagInput = buildTagInput(piece.tags);
+  const subjectsField = buildSubjectsField("pieces", piece.id, null);
+  fetchJsonResult(`/api/analyzer/pieces/${piece.id}`).then((detail) => {
+    subjectsField.setSubjects(detail.ok && detail.data && Array.isArray(detail.data.subjects) ? detail.data.subjects : []);
+  });
 
   const errorEl = document.createElement("div");
   errorEl.classList.add("piece-list-status", "error");
@@ -914,6 +918,7 @@ async function startLibraryEdit(row, piece) {
     buildEditorField("Composer", composer),
     buildEditorField("Source", source),
     buildEditorField("Tags", tagInput.el),
+    buildEditorField("Subjects", subjectsField.el),
   );
   const buttons = document.createElement("div");
   buttons.classList.add("editor-buttons");

@@ -265,3 +265,121 @@ async function renderSubjectDetail(id) {
     ),
   );
 }
+
+/* The Subjects field of an item detail or a Library piece editor: chips with
+ * remove, a picker over the existing subjects, and an inline create. group is
+ * "items" or "pieces"; targetId the item or piece id. Returns
+ * {el, setSubjects(list)}; the field shows "Loading..." until subjects are
+ * set. Every change refreshes the sidebar panel. */
+function buildSubjectsField(group, targetId, initial) {
+  const el = materialsElement("div", "materials-subjects");
+  let current = Array.isArray(initial) ? initial.slice() : null;
+  let all = [];
+  const errorEl = materialsElement("div", "materials-field-error");
+
+  async function changeLink(subjectId, add) {
+    const answer = await sendMaterialsRequest(SubjectsPanel.buildLinkRequest(subjectId, group, targetId, add));
+    if (!answer.ok) {
+      errorEl.textContent = SubjectsPanel.errorText(answer.data, "Could not change the subject");
+      return false;
+    }
+    errorEl.textContent = "";
+    const subject = answer.data.subject;
+    current = add
+      ? current.some((entry) => entry.id === subject.id)
+        ? current
+        : [...current, { id: subject.id, name: subject.name, kind: subject.kind }]
+      : current.filter((entry) => entry.id !== subjectId);
+    notifySubjectsChanged();
+    return true;
+  }
+
+  async function draw() {
+    el.innerHTML = "";
+    if (current === null) {
+      el.appendChild(materialsElement("span", "piece-list-status", "Loading..."));
+      return;
+    }
+    const chips = materialsElement("div", "materials-chips");
+    for (const chip of SubjectsPanel.chipRows(current)) {
+      const span = materialsElement("span", "materials-chip", chip.label);
+      span.title = chip.title;
+      const remove = materialsElement("button", "", "×");
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Remove ${chip.label}`);
+      remove.addEventListener("click", async () => {
+        if (await changeLink(chip.id, false)) {
+          draw();
+        }
+      });
+      span.appendChild(remove);
+      chips.appendChild(span);
+    }
+    if (current.length === 0) {
+      chips.appendChild(materialsElement("span", "piece-list-status", "No subjects."));
+    }
+    el.appendChild(chips);
+
+    const options = SubjectsPanel.pickerOptions(all, current.map((entry) => entry.id));
+    if (options.length > 0) {
+      const picker = materialsElement("div", "upload-controls");
+      const select = materialsElement("select");
+      for (const option of options) {
+        const o = materialsElement("option", "", option.label);
+        o.value = option.value;
+        select.appendChild(o);
+      }
+      const add = materialsElement("button", "", "Add subject");
+      add.type = "button";
+      add.addEventListener("click", async () => {
+        if (await changeLink(select.value, true)) {
+          draw();
+        }
+      });
+      picker.append(select, add);
+      el.appendChild(picker);
+    }
+
+    const create = materialsElement("div", "upload-controls");
+    const name = materialsElement("input");
+    name.type = "text";
+    name.placeholder = "New subject name";
+    const kind = materialsElement("select");
+    fillKindSelect(kind);
+    const make = materialsElement("button", "", "Create and add");
+    make.type = "button";
+    make.addEventListener("click", async () => {
+      if (name.value.trim() === "") {
+        return;
+      }
+      const made = await sendMaterialsRequest(
+        SubjectsPanel.buildCreateSubjectRequest({ name: name.value, kind: kind.value }),
+      );
+      if (!made.ok) {
+        errorEl.textContent = SubjectsPanel.errorText(made.data, "Could not create the subject");
+        return;
+      }
+      all = [...all, made.data.subject];
+      if (await changeLink(made.data.subject.id, true)) {
+        draw();
+      }
+    });
+    create.append(name, kind, make);
+    el.appendChild(create);
+    el.appendChild(errorEl);
+  }
+
+  async function setSubjects(list) {
+    current = Array.isArray(list) ? list.slice() : [];
+    await loadSubjectList();
+    all = subjectsState.subjects;
+    draw();
+  }
+
+  if (current !== null) {
+    setSubjects(current);
+  } else {
+    draw();
+  }
+  return { el, setSubjects };
+}
