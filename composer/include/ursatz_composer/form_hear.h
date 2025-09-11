@@ -71,6 +71,15 @@ const char *form_hear_result_name(FormHearResult result);
 /* Hears the form of plan over span into *out, which the caller destroys. On failure *out is empty. */
 FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out);
 
+/*
+ * form_hear with the starts of the sections or phrases the caller knows of, plan times inside span. Ursatz reads a
+ * root-position V before such a start as a half cadence (the authentic cadence into the tonic competes with it), and
+ * a V to I6 with no start there as an evaded cadence, so a period whose consequent opens on I6 is heard as a period
+ * only when the start of the consequent is given. NULL and 0 is form_hear.
+ */
+FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const PlanTime *section_starts,
+                                       size_t section_count, FormHeard *out);
+
 /* standard-form's own name of a PhraseLevelForm ("sentence", "period", ...). */
 const char *form_hear_form_name(int form);
 

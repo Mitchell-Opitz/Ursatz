@@ -343,7 +343,8 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
 }
 
 bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
-                                size_t count, HarmonyCadences *out) {
+                                size_t count, const PlanTime *section_starts, size_t section_count,
+                                HarmonyCadences *out) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PlanKeyMode modes[HARMONY_MAX_CHORDS];
@@ -362,6 +363,20 @@ bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMod
     size_t segment_count;
     const HarmonySegment *segments = harmony_segments_get(set, &segment_count);
     bool ok = harmony_analysis_find_cadences(segments, segment_count, NULL, out) == HARMONY_CADENCE_ANALYSIS_OK;
+    if (ok && section_count > 0) {
+        /* Ursatz counts the starts in whole notes from the start of the range heard. */
+        double starts[HARMONY_MAX_CHORDS];
+        size_t used = 0;
+        double origin = (double)span.start.num / (double)span.start.den;
+        for (size_t i = 0; i < section_count && used < HARMONY_MAX_CHORDS; i++) {
+            starts[used++] = (double)section_starts[i].num / (double)section_starts[i].den - origin;
+        }
+        if (harmony_analysis_add_boundary_cadences(segments, segment_count, NULL, starts, used, out) !=
+            HARMONY_CADENCE_ANALYSIS_OK) {
+            harmony_cadences_destroy(out);
+            ok = false;
+        }
+    }
     harmony_segments_destroy(set);
     return ok;
 }

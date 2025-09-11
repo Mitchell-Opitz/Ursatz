@@ -160,9 +160,14 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
  * Every cadence the recognizer hears over the harmony lane chords of span (read as harmony_read_lane does), the
  * soprano over chord i being soprano[i], a scale degree or 0 for none; count must be the number of chords. On true,
  * *out is the caller's (harmony_cadences_destroy), in order of arrival, its segment indices the chords'.
+ *
+ * section_starts (section_count of them, plan times inside span; NULL and 0 for none) are where the caller says a
+ * section or phrase begins. Ursatz reads a V before such a start as a half cadence, with the authentic cadence into
+ * the tonic as its competing reading; without one, a V to I6 is an evaded cadence (R-090, R-091).
  */
 bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
-                                size_t count, HarmonyCadences *out);
+                                size_t count, const PlanTime *section_starts, size_t section_count,
+                                HarmonyCadences *out);
 
 /* How many strong beats a bar of the meter has, which is where a chord may start. False for a meter not supported. */
 bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);

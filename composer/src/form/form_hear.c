@@ -383,7 +383,8 @@ static FormHearResult copy_themes(const HearRun *run, FormHeard *out) {
 }
 
 /* Everything after the checks: the lanes as the adapter's input, then its three steps. */
-static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, const KeyMap *keys, FormHeard *out) {
+static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, const KeyMap *keys,
+                           const PlanTime *section_starts, size_t section_count, FormHeard *out) {
     PlanRenderResult rendered = plan_render(plan, &run->rendered);
     if (rendered != PLAN_RENDER_OK) {
         return rendered == PLAN_RENDER_ERR_ALLOC ? FORM_HEAR_ERR_ALLOC : FORM_HEAR_ERR_ANALYSIS;
@@ -407,7 +408,8 @@ static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, c
     if (collect_notes(&run->rendered, PLAN_LANE_MELODY, span, &melody, &melody_count) &&
         collect_notes(&run->rendered, PLAN_LANE_BASS, span, &bass, &bass_count)) {
         soprano_over_chords(plan, keys, chords, chord_count, melody, melody_count, soprano);
-        result = harmony_hear_lane_cadences(plan, span, keys->key[0].mode, soprano, chord_count, &run->cadences)
+        result = harmony_hear_lane_cadences(plan, span, keys->key[0].mode, soprano, chord_count, section_starts, section_count,
+                                       &run->cadences)
                      ? FORM_HEAR_OK
                      : FORM_HEAR_ERR_ANALYSIS;
     }
@@ -449,6 +451,11 @@ static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, c
 }
 
 FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {
+    return form_hear_with_sections(plan, span, NULL, 0, out);
+}
+
+FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const PlanTime *section_starts,
+                                       size_t section_count, FormHeard *out) {
     if (!out) {
         return FORM_HEAR_ERR_NULL;
     }
@@ -471,7 +478,7 @@ FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {
     }
     HearRun run;
     memset(&run, 0, sizeof(run));
-    FormHearResult result = hear(&run, plan, span, &keys, out);
+    FormHearResult result = hear(&run, plan, span, &keys, section_starts, section_count, out);
     run_destroy(&run);
     if (result != FORM_HEAR_OK) {
         form_heard_destroy(out);
