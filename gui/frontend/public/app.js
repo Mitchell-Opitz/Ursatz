@@ -9,6 +9,7 @@ const TOOLS = [
   { id: "motifs", label: "Motifs", active: false, render: () => renderMaterialsView("motif") },
   { id: "themes", label: "Themes", active: false, render: () => renderMaterialsView("theme") },
   { id: "pieces", label: "Pieces", active: false, render: () => renderMaterialsView("piece") },
+  { id: "subjects", label: "Subjects", active: false, render: renderSubjectsView },
   { id: "health", label: "Health", active: false, render: renderHealthView },
 ];
 
@@ -896,6 +897,10 @@ async function startLibraryEdit(row, piece) {
   source.value = piece.source || "";
   source.setAttribute("list", "editor-sources");
   const tagInput = buildTagInput(piece.tags);
+  const subjectsField = buildSubjectsField("pieces", piece.id, null);
+  fetchJsonResult(`/api/analyzer/pieces/${piece.id}`).then((detail) => {
+    subjectsField.setSubjects(detail.ok && detail.data && Array.isArray(detail.data.subjects) ? detail.data.subjects : []);
+  });
 
   const errorEl = document.createElement("div");
   errorEl.classList.add("piece-list-status", "error");
@@ -913,6 +918,7 @@ async function startLibraryEdit(row, piece) {
     buildEditorField("Composer", composer),
     buildEditorField("Source", source),
     buildEditorField("Tags", tagInput.el),
+    buildEditorField("Subjects", subjectsField.el),
   );
   const buttons = document.createElement("div");
   buttons.classList.add("editor-buttons");
@@ -2657,6 +2663,33 @@ function mountTagsPanel() {
   tagsPanel.refresh();
 }
 
+/* The sidebar Subjects panel; null until mounted. Call notifySubjectsChanged()
+ * after any subject or link change so its counts follow. */
+let subjectsPanel = null;
+
+async function fetchSubjectGroups() {
+  const result = await fetchJsonResult("/api/subjects/groups");
+  if (!(result.ok && result.data && result.data.ok)) {
+    throw new Error("subject groups unavailable");
+  }
+  return result.data.groups;
+}
+
+function notifySubjectsChanged() {
+  if (subjectsPanel) {
+    subjectsPanel.refresh();
+  }
+}
+
+function mountSubjectsPanel() {
+  subjectsPanel = SubjectsPanel.mount(document.getElementById("subjects-panel"), {
+    fetchGroups: fetchSubjectGroups,
+    onSelect: openSubject,
+  });
+  subjectsPanel.refresh();
+}
+
 mountTagsPanel();
+mountSubjectsPanel();
 mountProjectPicker();
 selectTool("library");

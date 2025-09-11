@@ -590,6 +590,10 @@ async function renderMaterialsDetail(type, id, analysisError) {
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
+  const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
+  const subjectsRow = materialsElement("div", "materials-subjects-row");
+  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+  content.appendChild(subjectsRow);
   if (type === "motif") {
     const editor = buildMotifEditor(answer.data.body);
     content.appendChild(editor.el);
