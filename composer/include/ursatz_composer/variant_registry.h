@@ -88,6 +88,11 @@ struct VariantOperation {
     unsigned forms; /* a bit mask of 1u << MotiveForm: the forms the operation applies to */
     VariantApplyFn apply;
     VariantDescribeFn describe;
+    /*
+     * The library relation (a MotiveRelationKind of analysis/motive_relation.h) this row maps to: the relation of the
+     * same name, with the row's parameters in the relation's order.
+     */
+    int relation;
 };
 
 #define VARIANT_FORM_BIT(form) (1u << (unsigned)(form))
@@ -101,7 +106,7 @@ const VariantOperation *variant_registry_find(const char *name);
 /*
  * The registry as JSON, 2-space indent, trailing newline; NULL on failure, caller frees:
  *   {"operations": [{"name", "label", "category", "citation",
- *                    "params": [{"name", "kind", "min", "max", "description", "optional"}],
+ *                    "relation", "params": [{"name", "kind", "min", "max", "description", "optional"}],
  *                    "forms": ["full", "rhythm", "contour"]}]}
  */
 char *variant_registry_to_json(void);

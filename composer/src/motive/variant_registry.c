@@ -5,6 +5,8 @@
 
 #include <ursatz_composer/motive_analysis.h>
 
+#include "analysis/motive_relation.h"
+
 #include "motive/motive_internal.h"
 #include "plan/plan_json_internal.h"
 
@@ -271,23 +273,23 @@ static void describe_diminish(const VariantValue *values, char *out, size_t size
  */
 static const VariantOperation OPERATIONS[] = {
     {"exact", "Exact", VARIANT_CATEGORY_EXACT, "Schoenberg ch. III, Ex. 14", NULL, 0, FORMS_ALL, apply_exact,
-     describe_exact},
+     describe_exact, MOTIVE_RELATION_EXACT},
     {"transpose", "Transpose", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Exs. 14, 28", PARAMS(TRANSPOSE_PARAMS),
-     FORMS_FULL, apply_transpose, describe_transpose},
+     FORMS_FULL, apply_transpose, describe_transpose, MOTIVE_RELATION_TRANSPOSE},
     {"invert", "Invert", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 14, 19", PARAMS(INVERT_PARAMS), FORMS_FULL_CONTOUR,
-     apply_invert, describe_invert},
+     apply_invert, describe_invert, MOTIVE_RELATION_INVERT},
     {"retrograde", "Retrograde", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 14, 19", NULL, 0, FORMS_ALL,
-     apply_retrograde, describe_retrograde},
+     apply_retrograde, describe_retrograde, MOTIVE_RELATION_RETROGRADE},
     {"interval-change", "Interval change", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21", PARAMS(INTERVAL_PARAMS),
-     FORMS_FULL, apply_interval_change, describe_interval_change},
+     FORMS_FULL, apply_interval_change, describe_interval_change, MOTIVE_RELATION_INTERVAL_CHANGE},
     {"fragment", "Fragment", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21; ch. VIII, Ex. 52", PARAMS(FRAGMENT_PARAMS),
-     FORMS_ALL, apply_fragment, describe_fragment},
+     FORMS_ALL, apply_fragment, describe_fragment, MOTIVE_RELATION_FRAGMENT},
     {"liquidate", "Liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52", PARAMS(LIQUIDATE_PARAMS),
-     FORMS_FULL_RHYTHM, apply_liquidate, describe_liquidate},
+     FORMS_FULL_RHYTHM, apply_liquidate, describe_liquidate, MOTIVE_RELATION_LIQUIDATE},
     {"augment", "Augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(AUGMENT_PARAMS), FORMS_FULL_RHYTHM,
-     apply_augment, describe_augment},
+     apply_augment, describe_augment, MOTIVE_RELATION_AUGMENT},
     {"diminish", "Diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(DIMINISH_PARAMS), FORMS_FULL_RHYTHM,
-     apply_diminish, describe_diminish}};
+     apply_diminish, describe_diminish, MOTIVE_RELATION_DIMINISH}};
 
 size_t variant_registry_count(void) {
     return sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);
@@ -348,7 +350,8 @@ static cJSON *operation_json(const VariantOperation *operation) {
     bool ok = object && json_add(object, "name", cJSON_CreateString(operation->name)) &&
               json_add(object, "label", cJSON_CreateString(operation->label)) &&
               json_add(object, "category", cJSON_CreateString(variant_category_name(operation->category))) &&
-              json_add(object, "citation", cJSON_CreateString(operation->citation));
+              json_add(object, "citation", cJSON_CreateString(operation->citation)) &&
+              json_add(object, "relation", cJSON_CreateString(motive_relation_name((MotiveRelationKind)operation->relation)));
     cJSON *params = ok ? add_array(object, "params") : NULL;
     cJSON *forms = ok ? add_array(object, "forms") : NULL;
     ok = ok && params && forms;
