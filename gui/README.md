@@ -47,6 +47,8 @@ a monolithic application.
 - **Collections**: named groups of piece ids (the Corpus routes, below).
 - **Composer (old)**: start a theme or a piece and work on it (Composer view,
   below).
+- **Subjects**: named characters, places, ideas and notes that items and
+  Library pieces link to (see Subjects views, below).
 - **Motifs**, **Themes**, **Pieces**: the items of the material store (see
   Materials views, below).
 - **Health**: last entry in the sidebar. Shows the backend health check; a
@@ -84,6 +86,22 @@ in `motif.analysis`; a motif without one reads "Not analyzed", with the
 reason when the save said why. The helpers (`motifFormValues`,
 `motifFormProblems`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
 in `materials-model.js`.
+
+### Subjects views
+
+A Subjects panel sits in the sidebar under Tags: subjects grouped by kind
+(Characters, Places, Ideas, Notes), each group collapsible (the choice is
+remembered in the browser) with the number of links beside each name. A click
+opens the subject. The Subjects entry lists every subject (name, kind, item,
+piece and related counts) with a New row (name, kind, note). The detail edits
+the name, kind and note, deletes the subject (its links go with it), and
+lists its related subjects (add from a picker, remove), linked items (any
+project; a click opens the item in its own tool) and linked Library pieces (a
+click opens the analysis). Linking starts from the other side: an item's
+detail and the Library piece editor have a Subjects field with chips (with
+remove), a picker over the existing subjects, and a name and kind to create
+one inline. The sidebar panel refreshes after any subject or link change.
+Style tags are separate and unchanged.
 
 ### Composer view
 
