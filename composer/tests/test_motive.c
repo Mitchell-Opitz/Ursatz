@@ -5,6 +5,7 @@
 
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -1017,6 +1018,323 @@ static void test_render_in_another_key(void) {
     assert(!motive_in_key(NULL, &G_MINOR, &moved) && !motive_in_key(&source, NULL, &moved));
 }
 
+/* ------------------------------------------------- harmony, features and role */
+
+static void test_harmony_text(void) {
+    MotiveChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = 0;
+    MotiveError error;
+    assert(motive_harmony_parse("I V6@2 I@3", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK);
+    assert(count == 3);
+    assert(time_is(chords[0].onset, 0, 1) && chords[0].degree == 1 && chords[0].inversion == 0 && !chords[0].seventh);
+    assert(time_is(chords[1].onset, 1, 2) && chords[1].degree == 5 && chords[1].inversion == 1);
+    assert(time_is(chords[2].onset, 3, 4) && chords[2].degree == 1);
+
+    /* Beats are of the beat unit: 6/8's beat is an eighth. */
+    assert(motive_harmony_parse("I V7@3", &(PlanMeter){6, 8, 0}, chords, &count, &error) == MOTIVE_OK);
+    assert(time_is(chords[1].onset, 3, 8) && chords[1].seventh);
+
+    /* Alterations, every figure, fractions, and a first chord that starts late. */
+    assert(motive_harmony_parse("bVII64@1/2 #IV65@3/2 bII42@2 VI43@5/2", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK);
+    assert(count == 4);
+    assert(chords[0].degree == 7 && chords[0].alteration == -1 && chords[0].inversion == 2 && !chords[0].seventh);
+    assert(time_is(chords[0].onset, 1, 8));
+    assert(chords[1].degree == 4 && chords[1].alteration == 1 && chords[1].inversion == 1 && chords[1].seventh);
+    assert(chords[2].degree == 2 && chords[2].inversion == 3 && chords[2].seventh);
+    assert(chords[3].degree == 6 && chords[3].inversion == 2 && chords[3].seventh);
+
+    /* Nothing is no chords. */
+    assert(motive_harmony_parse("  ", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK && count == 0);
+
+    /* Written back, the text reads as the same chords. */
+    Motive motive = load_notes("C4:q E4:q G4:q C5:q", &FOUR_FOUR, &C_MAJOR);
+    const char *texts[] = {"I V6@2 I@3", "bVII64@1/2 #IV65@3/2 bII42@2 VI43@5/2", "V7@1", "I"};
+    for (size_t t = 0; t < sizeof(texts) / sizeof(texts[0]); t++) {
+        assert(motive_harmony_parse(texts[t], &FOUR_FOUR, motive.harmony, &motive.harmony_count, &error) == MOTIVE_OK);
+        char *written = motive_harmony_to_text(&motive);
+        assert(written && strcmp(written, texts[t]) == 0);
+        free(written);
+    }
+    motive.harmony_count = 0;
+    char *none = motive_harmony_to_text(&motive);
+    assert(none && none[0] == '\0');
+    free(none);
+}
+
+static void test_harmony_errors(void) {
+    MotiveChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = 0;
+    MotiveError error;
+    struct {
+        const char *text;
+        MotiveResult result;
+        const char *location;
+    } cases[] = {
+        {"I V6", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},          /* later chords need an onset */
+        {"I x@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},         /* not a numeral */
+        {"I iv@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* numerals are upper case */
+        {"I V8@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* not a figure */
+        {"I V6@x", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* not an onset */
+        {"I V@-1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* a negative onset */
+        {"I  V@2 I@2", MOTIVE_ERR_VALUE, "token 3 (column 8)"},     /* onsets must rise */
+        {"V@2 I@1", MOTIVE_ERR_VALUE, "token 2 (column 5)"},
+        {"I I@1 I@2 I@3 I@4 I@5 I@6 I@7 I@8", MOTIVE_ERR_VALUE, "token 9 (column 31)"}, /* nine chords */
+    };
+    for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
+        MotiveResult result = motive_harmony_parse(cases[c].text, &FOUR_FOUR, chords, &count, &error);
+        if (result != cases[c].result || strcmp(error.location, cases[c].location) != 0) {
+            fprintf(stderr, "'%s': %s at '%s' (%s)\n", cases[c].text, motive_result_name(result), error.location,
+                    error.message);
+        }
+        assert(result == cases[c].result);
+        assert(strcmp(error.location, cases[c].location) == 0);
+        assert(error.message[0] != '\0');
+    }
+    assert(motive_harmony_parse(NULL, &FOUR_FOUR, chords, &count, &error) == MOTIVE_ERR_NULL);
+}
+
+static void test_feature_and_role_text(void) {
+    MotiveFeature feature;
+    MotiveError error;
+    assert(motive_feature_parse("a:0-2", &feature, &error) == MOTIVE_OK);
+    assert(strcmp(feature.label, "a") == 0 && feature.first == 0 && feature.last == 2);
+    assert(motive_feature_parse("turn:3", &feature, &error) == MOTIVE_OK);
+    assert(strcmp(feature.label, "turn") == 0 && feature.first == 3 && feature.last == 3);
+    assert(motive_feature_parse("abcdefgh:1-5", &feature, &error) == MOTIVE_OK && strcmp(feature.label, "abcdefgh") == 0);
+
+    const char *bad[] = {"a", ":1-2", "abcdefghi:1", "a:", "a:x", "a:1-", "a:1-2-3", "a b:1", "a:3-1", "a:-1"};
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+        assert(motive_feature_parse(bad[i], &feature, &error) != MOTIVE_OK);
+        assert(strcmp(error.location, bad[i]) == 0 && error.message[0] != '\0');
+    }
+
+    MotiveRole role;
+    assert(motive_role_parse("melodic", &role) && role == MOTIVE_ROLE_MELODIC);
+    assert(motive_role_parse("accompaniment", &role) && role == MOTIVE_ROLE_ACCOMPANIMENT);
+    assert(!motive_role_parse("bass", &role) && !motive_role_parse("", &role) && !motive_role_parse(NULL, &role));
+    assert(strcmp(motive_role_name(MOTIVE_ROLE_MELODIC), "melodic") == 0);
+    assert(strcmp(motive_role_name(MOTIVE_ROLE_ACCOMPANIMENT), "accompaniment") == 0);
+}
+
+static const char *const EXTRAS_JSON =
+    "{\"meter\": {\"beats_per_bar\": 4, \"beat_unit\": 4}, \"key\": {\"tonic_pitch_class\": 0, \"mode\": \"major\"},"
+    " \"notes\": [{\"midi_pitch\": 60, \"offset\": {\"num\": 0, \"den\": 1}, \"duration\": {\"num\": 1, \"den\": 4}},"
+    " {\"midi_pitch\": 64, \"offset\": {\"num\": 1, \"den\": 4}, \"duration\": {\"num\": 1, \"den\": 4}},"
+    " {\"midi_pitch\": 67, \"offset\": {\"num\": 1, \"den\": 2}, \"duration\": {\"num\": 1, \"den\": 4}},"
+    " {\"midi_pitch\": 72, \"offset\": {\"num\": 3, \"den\": 4}, \"duration\": {\"num\": 1, \"den\": 4}}],"
+    " \"harmony\": \"I V6@2 I@3\","
+    " \"features\": [{\"label\": \"a\", \"first\": 0, \"last\": 1}, {\"label\": \"b\", \"first\": 2, \"last\": 3}],"
+    " \"role\": \"accompaniment\"}";
+
+static void test_extras_in_json(void) {
+    Motive motive;
+    MotiveError error;
+    assert(motive_from_json(EXTRAS_JSON, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive.harmony_count == 3 && motive.feature_count == 2 && motive.role == MOTIVE_ROLE_ACCOMPANIMENT);
+    assert(motive.harmony[1].degree == 5 && motive.harmony[1].inversion == 1 && time_is(motive.harmony[1].onset, 1, 2));
+    assert(strcmp(motive.features[1].label, "b") == 0 && motive.features[1].first == 2 && motive.features[1].last == 3);
+
+    /* The JSON written reads back as the same motive; a motive with none of it writes none of it. */
+    char *written = motive_to_json(&motive);
+    assert(written && strstr(written, "\"harmony\": \"I V6@2 I@3\"") && strstr(written, "\"role\": \"accompaniment\""));
+    Motive again;
+    assert(motive_from_json(written, NULL, &again, &error) == MOTIVE_OK);
+    assert(motive_equal(&motive, &again));
+    free(written);
+    Motive plain = load_notes("C4:q E4:q G4:q C5:q", &FOUR_FOUR, &C_MAJOR);
+    written = motive_to_json(&plain);
+    assert(written && !strstr(written, "harmony") && !strstr(written, "features") && !strstr(written, "role"));
+    free(written);
+
+    /* The analysis document carries the harmony as text, only for a motive that has its own. */
+    MotiveAnalysis analysis;
+    assert(motive_analyze(&motive, &analysis));
+    written = motive_analysis_to_json(&motive, &analysis);
+    assert(written && strstr(written, "\"harmony_text\": \"I V6@2 I@3\""));
+    free(written);
+    assert(motive_analyze(&plain, &analysis));
+    written = motive_analysis_to_json(&plain, &analysis);
+    assert(written && !strstr(written, "harmony_text"));
+    free(written);
+
+    /* Options replace what the input says. */
+    MotiveOptions options = options_with(NULL, NULL);
+    options.has_role = true;
+    options.role = MOTIVE_ROLE_MELODIC;
+    options.has_features = true;
+    options.feature_count = 1;
+    strcpy(options.features[0].label, "x");
+    options.features[0].last = 3;
+    options.has_harmony = true;
+    options.harmony_count = 1;
+    options.harmony[0] = (MotiveChord){{0, 1}, 4, 0, 0, false};
+    assert(motive_from_json(EXTRAS_JSON, &options, &again, &error) == MOTIVE_OK);
+    assert(again.role == MOTIVE_ROLE_MELODIC && again.feature_count == 1 && again.harmony_count == 1);
+    assert(again.harmony[0].degree == 4 && strcmp(again.features[0].label, "x") == 0);
+    options.harmony_count = 0;
+    assert(motive_from_json(EXTRAS_JSON, &options, &again, &error) == MOTIVE_OK && again.harmony_count == 0);
+}
+
+static void test_extras_errors(void) {
+    Motive motive;
+    MotiveError error;
+    const MotiveOptions base = options_with(&FOUR_FOUR, &C_MAJOR);
+    MotiveOptions options = base;
+    options.has_harmony = true;
+    options.harmony_count = 2;
+    options.harmony[0] = (MotiveChord){{0, 1}, 1, 0, 0, false};
+    options.harmony[1] = (MotiveChord){{1, 1}, 5, 0, 0, false}; /* at the end of a one-bar motive */
+    assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
+    assert(strcmp(error.location, "harmony[1]") == 0);
+
+    options = base;
+    options.has_harmony = true;
+    options.harmony_count = 1;
+    options.harmony[0] = (MotiveChord){{0, 1}, 8, 0, 0, false};
+    assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
+    options.harmony[0] = (MotiveChord){{0, 1}, 5, 0, 3, false}; /* a third inversion needs a seventh */
+    assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
+
+    options = base;
+    options.has_features = true;
+    options.feature_count = 1;
+    strcpy(options.features[0].label, "a");
+    options.features[0].first = 2;
+    options.features[0].last = 4; /* the motive has notes 0 to 3 */
+    assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
+    assert(strcmp(error.location, "features[0]") == 0);
+    options.features[0].last = 3;
+    options.feature_count = 2;
+    strcpy(options.features[1].label, "a"); /* the same label twice */
+    options.features[1].last = 1;
+    assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
+    assert(strcmp(error.location, "features[1]") == 0);
+
+    /* In JSON the mistake is named with its place in the document. */
+    const char *bad_harmony = "\"harmony\": \"I V6\"";
+    char *text = malloc(strlen(EXTRAS_JSON) + 64);
+    assert(text);
+    const char *at = strstr(EXTRAS_JSON, "\"harmony\": \"I V6@2 I@3\"");
+    assert(at);
+    snprintf(text, strlen(EXTRAS_JSON) + 64, "%.*s%s%s", (int)(at - EXTRAS_JSON), EXTRAS_JSON, bad_harmony,
+             at + strlen("\"harmony\": \"I V6@2 I@3\""));
+    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_ERR_SYNTAX);
+    assert(strcmp(error.location, "harmony") == 0 && strstr(error.message, "token 2"));
+    free(text);
+    assert(motive_from_json("{\"role\": \"bass\", \"notes\": []}", NULL, &motive, &error) == MOTIVE_ERR_VALUE);
+    assert(strcmp(error.location, "role") == 0);
+}
+
+static void test_equal_compares_extras(void) {
+    Motive a;
+    Motive b;
+    MotiveError error;
+    assert(motive_from_json(EXTRAS_JSON, NULL, &a, &error) == MOTIVE_OK);
+    b = a;
+    assert(motive_equal(&a, &b));
+    b.harmony[1].degree = 4;
+    assert(!motive_equal(&a, &b));
+    b = a;
+    b.harmony[2].onset = (PlanTime){7, 8};
+    assert(!motive_equal(&a, &b));
+    b = a;
+    b.harmony_count = 2;
+    assert(!motive_equal(&a, &b));
+    b = a;
+    b.features[0].last = 2;
+    assert(!motive_equal(&a, &b));
+    b = a;
+    strcpy(b.features[1].label, "c");
+    assert(!motive_equal(&a, &b));
+    b = a;
+    b.feature_count = 0;
+    assert(!motive_equal(&a, &b));
+    b = a;
+    b.role = MOTIVE_ROLE_MELODIC;
+    assert(!motive_equal(&a, &b));
+}
+
+static Motive six_notes(void) {
+    Motive motive = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q", &(PlanMeter){6, 4, 0}, &C_MAJOR);
+    MotiveError error;
+    assert(motive_harmony_parse("I V@2 IV@4", &motive.meter, motive.harmony, &motive.harmony_count, &error) == MOTIVE_OK);
+    const char *features[] = {"a:0-1", "b:2-3", "c:4-5"};
+    for (size_t i = 0; i < 3; i++) {
+        assert(motive_feature_parse(features[i], &motive.features[i], &error) == MOTIVE_OK);
+    }
+    motive.feature_count = 3;
+    motive.role = MOTIVE_ROLE_ACCOMPANIMENT;
+    return motive;
+}
+
+static bool feature_is(const Motive *motive, size_t index, const char *label, size_t first, size_t last) {
+    return index < motive->feature_count && strcmp(motive->features[index].label, label) == 0 &&
+           motive->features[index].first == first && motive->features[index].last == last;
+}
+
+static void test_features_follow_the_notes(void) {
+    Motive source = six_notes();
+    Motive result;
+    MotiveDevSpec spec;
+
+    /* Moving the pitches leaves every feature where it was, and the role stays. */
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_TRANSPOSE;
+    spec.amount = 2;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.feature_count == 3 && feature_is(&result, 1, "b", 2, 3));
+    assert(result.role == MOTIVE_ROLE_ACCOMPANIMENT && result.harmony_count == 3);
+
+    /* A retrograde turns them round. */
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_RETROGRADE;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.feature_count == 3);
+    assert(feature_is(&result, 0, "a", 4, 5) && feature_is(&result, 1, "b", 2, 3) && feature_is(&result, 2, "c", 0, 1));
+    assert(result.notes[0].midi_pitch == 69);
+
+    /* A fragment keeps the features it holds whole, renumbered from its first note. */
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_FRAGMENT;
+    spec.position = PLAN_FRAGMENT_TRAILING;
+    spec.length = 4;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.note_count == 4 && result.feature_count == 2);
+    assert(feature_is(&result, 0, "b", 0, 1) && feature_is(&result, 1, "c", 2, 3));
+    /* The chord sounding at its start (V, from beat 2) stands at 0; the chord at beat 4 moves up to beat 2. */
+    assert(result.harmony_count == 2 && result.harmony[0].degree == 5 && time_is(result.harmony[0].onset, 0, 1));
+    assert(result.harmony[1].degree == 4 && time_is(result.harmony[1].onset, 1, 2));
+
+    /* A fragment through the middle of a feature drops it. */
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_FRAGMENT;
+    spec.position = PLAN_FRAGMENT_LEADING;
+    spec.length = 3;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.feature_count == 1 && feature_is(&result, 0, "a", 0, 1));
+    assert(result.harmony_count == 2 && result.harmony[1].degree == 5);
+
+    /* Dropping a note takes its feature with it and renumbers the ones after. */
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_LIQUIDATE;
+    spec.drop = 1;
+    spec.min_length = 2;
+    spec.keep_rhythm = true;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.note_count == 5 && result.feature_count == 2);
+
+    /* Augmentation moves the chords with the notes. */
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.ratio_num = 2;
+    spec.ratio_den = 1;
+    Motive shorter = load_notes("C4:e D4:e E4:e F4:e", &FOUR_FOUR, &C_MAJOR);
+    MotiveError error;
+    assert(motive_harmony_parse("I V@1", &shorter.meter, shorter.harmony, &shorter.harmony_count, &error) == MOTIVE_OK);
+    assert(motive_develop(&shorter, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.harmony_count == 2 && time_is(result.harmony[1].onset, 1, 2));
+}
+
 int main(void) {
     test_same_motive_from_each_format();
     test_options();
@@ -1039,6 +1357,13 @@ int main(void) {
     test_pickup_and_form_in_json();
     test_analysis_by_form();
     test_render_in_another_key();
+    test_harmony_text();
+    test_harmony_errors();
+    test_feature_and_role_text();
+    test_extras_in_json();
+    test_extras_errors();
+    test_equal_compares_extras();
+    test_features_follow_the_notes();
     puts("test_motive: ok");
     return 0;
 }

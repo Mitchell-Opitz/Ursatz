@@ -12,6 +12,7 @@
 #include <texture_rules.h>
 
 #include "cli_options.h"
+#include "motive_extras.h"
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/export.h>
@@ -60,6 +61,7 @@ typedef struct {
     PlanExportOptions export_options;
     const char *explain_path;
     const char *format_text;
+    MotiveExtras extras;
     /* Read from the text above. */
     Into into;
     PlanThemePairing pairing;
@@ -123,6 +125,7 @@ static void print_help(FILE *out) {
     fprintf(out, "                       are printed and kept in the plan. Exit 2 when no passage scores 1/2 or more\n");
     fprintf(out, "  --like <file>        with --from-corpus: a MIDI or MusicXML passage; the first bar of a similar passage of the\n");
     fprintf(out, "                       corpus (picked by the seed among the best) becomes the motive, in --key\n");
+    motive_extras_print_help(out, false);
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
     fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
     fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
@@ -178,11 +181,16 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
 
 static int read_options(int argc, char **argv, Options *options) {
     memset(options, 0, sizeof(*options));
+    int extras_status = 0;
     for (int i = 2; i < argc; i++) {
         const char *arg = argv[i];
         const char **target = NULL;
         if (strcmp(arg, "--help") == 0) {
             options->help = true;
+        } else if (motive_extras_take(&options->extras, argc, argv, &i, false, &extras_status)) {
+            if (extras_status != 0) {
+                return extras_status;
+            }
         } else if (strcmp(arg, "--from-corpus") == 0) {
             target = &options->from_corpus;
         } else if (strcmp(arg, "--like") == 0) {
@@ -1097,6 +1105,13 @@ int run_grow(int argc, char **argv) {
     motive_options.meter = options.meter;
     motive_options.has_key = true;
     motive_options.key = options.key;
+    if (options.from_corpus && motive_extras_given(&options.extras)) {
+        return cli_fail(CLI_EXIT_USAGE, "--harmony, --feature and --role describe a motive file, not one seeded from a corpus");
+    }
+    status = motive_extras_options(&options.extras, &options.meter, &motive_options);
+    if (status != 0) {
+        return status;
+    }
     Motive motive;
     if (options.from_corpus) {
         /* The passage is chosen once, by the first seed; the seeds tried after it grow from the same motive. */

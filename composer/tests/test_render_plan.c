@@ -373,8 +373,9 @@ static void test_export_errors(void) {
     PiecePlan *plan = plan_with_one_melody(overlapping, 2, PLAN_STATE_REALIZED);
     assert(plan_export_midi(plan, NULL, "render_test_overlap.mid", &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
     assert(error.message[0] != '\0');
-    assert(plan_export_musicxml(plan, NULL, "render_test_overlap.xml", &error) == PLAN_EXPORT_ERR_OVERLAP);
-    assert(!file_exists("render_test_overlap.mid") && !file_exists("render_test_overlap.xml"));
+    /* MusicXML writes the overlap as a second voice of the part; MIDI refuses it and writes nothing. */
+    assert(plan_export_musicxml(plan, NULL, "render_test_overlap.xml", &error) == PLAN_EXPORT_OK);
+    assert(!file_exists("render_test_overlap.mid") && file_exists("render_test_overlap.xml"));
     plan_destroy(plan);
 
     /* A file that cannot be written. */

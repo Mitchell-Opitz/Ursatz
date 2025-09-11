@@ -10,6 +10,7 @@
 #include <ursatz_composer/motive_random.h>
 
 #include "cli_options.h"
+#include "motive_extras.h"
 
 #define RANDOM_MOTIVE_COUNT_DEFAULT 1
 
@@ -21,6 +22,7 @@ typedef struct {
     const char *style_path;
     const char *count_text;
     const char *seed_text;
+    MotiveExtras extras;
     bool json;
     bool help;
 } Options;
@@ -34,6 +36,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --meter <n/m>        beats over a beat unit, as in 4/4 or 6/8 (required)\n");
     fprintf(out, "  --key <key>          for example \"D minor\"; its mode must be --mode. Default: C major or A minor\n");
     fprintf(out, "  --form <form>        full (pitches and rhythm, the default), rhythm or contour\n");
+    motive_extras_print_help(out, true);
     fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motive and keep the closest to it\n");
     fprintf(out, "  --count <n>          how many motives, 1 to %d (default %d)\n", MOTIVE_RANDOM_MAX_COUNT, RANDOM_MOTIVE_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
@@ -46,10 +49,15 @@ static void print_help(FILE *out) {
 
 static int read_options(int argc, char **argv, Options *options) {
     memset(options, 0, sizeof(*options));
+    int extras_status = 0;
     for (int i = 2; i < argc; i++) {
         const char *argument = argv[i];
         if (strcmp(argument, "--help") == 0) {
             options->help = true;
+        } else if (motive_extras_take(&options->extras, argc, argv, &i, true, &extras_status)) {
+            if (extras_status != 0) {
+                return extras_status;
+            }
         } else if (strcmp(argument, "--json") == 0) {
             options->json = true;
         } else if (strcmp(argument, "--mode") == 0 || strcmp(argument, "--meter") == 0 ||
@@ -199,6 +207,12 @@ int run_random_motive(int argc, char **argv) {
     if (status != 0) {
         return status;
     }
+    MotiveOptions extras;
+    memset(&extras, 0, sizeof(extras));
+    status = motive_extras_options(&options.extras, NULL, &extras);
+    if (status != 0) {
+        return status;
+    }
     ComposerStyle *style = NULL;
     if (options.style_path) {
         status = cli_load_style(options.style_path, &style);
@@ -213,6 +227,9 @@ int run_random_motive(int argc, char **argv) {
     composer_style_destroy(style);
     if (result != MOTIVE_RANDOM_OK) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot make random motives (%s)", motive_random_result_name(result));
+    }
+    for (size_t i = 0; extras.has_role && i < made; i++) {
+        motives[i].role = extras.role;
     }
     if (options.json) {
         if (!print_json(request.seed, motives, made)) {

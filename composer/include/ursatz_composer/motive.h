@@ -46,6 +46,9 @@
 #define MOTIVE_MAX_NOTES 64
 #define MOTIVE_ERROR_LOCATION_MAX 128
 #define MOTIVE_ERROR_MESSAGE_MAX 160
+#define MOTIVE_MAX_CHORDS 8
+#define MOTIVE_MAX_FEATURES 8
+#define MOTIVE_FEATURE_LABEL_MAX 8
 
 typedef enum {
     MOTIVE_OK = 0,
@@ -78,6 +81,31 @@ typedef enum {
     MOTIVE_FORM_CONTOUR
 } MotiveForm;
 
+/*
+ * A chord of a motive's own harmony, in the motive's key: degree 1 to 7 of the scale, alteration -1 (flat), 0 or 1
+ * (sharp), inversion 0 to 3 (3 needs a seventh), and the onset in whole notes from the start of the motive.
+ */
+typedef struct {
+    PlanTime onset;
+    int degree;
+    int alteration;
+    int inversion;
+    bool seventh;
+} MotiveChord;
+
+/* A labelled run of the motive's notes: first and last are 0-based note indices, inclusive. */
+typedef struct {
+    char label[MOTIVE_FEATURE_LABEL_MAX + 1];
+    size_t first;
+    size_t last;
+} MotiveFeature;
+
+/* What part a motive plays: the tune, or what goes under it. */
+typedef enum {
+    MOTIVE_ROLE_MELODIC = 0,
+    MOTIVE_ROLE_ACCOMPANIMENT
+} MotiveRole;
+
 typedef struct {
     PlanMeter meter;
     /* Valid when key_source is not MOTIVE_KEY_UNSPECIFIED. */
@@ -92,6 +120,17 @@ typedef struct {
     /* How much of the meter's bar comes before the first barline, in whole notes. The motive still starts at offset 0;
        bars and beats are counted from -pickup. */
     PlanTime pickup;
+    /*
+     * Its own harmony: up to MOTIVE_MAX_CHORDS chords with ascending onsets inside the length. Zero chords means none,
+     * and wherever a relation needs chords the best implied chord at 0 stands in.
+     */
+    MotiveChord harmony[MOTIVE_MAX_CHORDS];
+    size_t harmony_count;
+    /* Labelled features, distinct labels. Zero-initialized means none. */
+    MotiveFeature features[MOTIVE_MAX_FEATURES];
+    size_t feature_count;
+    /* Zero-initialized means melodic. */
+    MotiveRole role;
 } Motive;
 
 /* What the caller says about the motive. NULL options mean nothing. */
@@ -106,6 +145,16 @@ typedef struct {
     /* The most bars the notes may fill, or 0 for no limit. The readers themselves set none: a line of any length up to
        MOTIVE_MAX_NOTES notes is read, and the commands that take a one-bar motive check it after. */
     size_t max_bars;
+    /* Own harmony, features and role; each replaces what the input says when its has_ flag is set. The chords are
+       checked against the length, the features against the note count. */
+    bool has_harmony;
+    MotiveChord harmony[MOTIVE_MAX_CHORDS];
+    size_t harmony_count;
+    bool has_features;
+    MotiveFeature features[MOTIVE_MAX_FEATURES];
+    size_t feature_count;
+    bool has_role;
+    MotiveRole role;
 } MotiveOptions;
 
 /* Filled on failure. Pass NULL when the details are not wanted. */
@@ -215,7 +264,11 @@ MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *opt
  *    "key": {"tonic_pitch_class": 2, "mode": "minor"},
  *    "notes": [{"midi_pitch": 62, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}}]}
  *
- * "meter" and "key" are optional. Unknown fields are ignored.
+ * "meter" and "key" are optional. Unknown fields are ignored. Own harmony, features and the role are optional too:
+ *
+ *   "harmony": "I V6@2 I@3",
+ *   "features": [{"label": "a", "first": 0, "last": 2}],
+ *   "role": "accompaniment"
  */
 MotiveResult motive_from_json(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
@@ -231,7 +284,7 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
 MotiveResult motive_load_file(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
                               MotiveError *error);
 
-/* The same meter, key and notes. */
+/* The same meter, key, notes, harmony, features and role. */
 bool motive_equal(const Motive *a, const Motive *b);
 
 /*
@@ -257,6 +310,30 @@ char *motive_to_contour_text(const Motive *motive);
  * out may be the source.
  */
 bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out);
+
+/*
+ * Own harmony as text: chords separated by white space, each a Roman numeral and an optional onset.
+ *
+ *   I V6@2 I@3
+ *
+ * A chord is an optional b or # (a lowered or raised root), an upper case numeral I to VII, a figure (none for a triad
+ * in root position, 6, 64; 7, 65, 43 or 42 for a seventh chord) and "@" with the onset in beats of the meter's beat
+ * unit from the start of the motive, a whole number or a fraction as in @1/2. The first chord needs no onset (it is at
+ * 0); the others do, and the onsets rise. At most MOTIVE_MAX_CHORDS chords; text with no chord is zero chords.
+ * Whether the chords fall inside the motive is checked when the motive is read.
+ */
+MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveChord *out, size_t *count,
+                                  MotiveError *error);
+/* The motive's own harmony as text, in the form motive_harmony_parse reads ("" when it has none); NULL on failure. */
+char *motive_harmony_to_text(const Motive *motive);
+
+/* A feature as "label:first-last" or "label:index", as in "a:0-2". The label is 1 to 8 characters. */
+MotiveResult motive_feature_parse(const char *text, MotiveFeature *out, MotiveError *error);
+
+/* Reads "melodic" or "accompaniment". False for any other text. */
+bool motive_role_parse(const char *name, MotiveRole *out);
+/* "melodic" or "accompaniment". */
+const char *motive_role_name(MotiveRole role);
 
 /* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
 char *motive_to_json(const Motive *motive);

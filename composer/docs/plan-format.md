@@ -212,6 +212,9 @@ lanes, and `notes` is the note payload of a melody lane, with times as in the co
 | `notes` | A non-empty array of at most 64 `{"midi_pitch": 0 to 127, "offset": <time>, "duration": <time>}`. `offset` is measured from the start of the motive, so a gap between notes is a rest and a first note after 0 is a leading rest. Notes are in order and do not overlap. A tie is one note as long as both. |
 | `form` | Optional, `full` (the default), `rhythm` or `contour`. A rhythm keeps only the durations and onsets (every note sounds on one pitch); a contour only the heights of the notes in relation to each other (even quarters). Written only when it is not `full`. |
 | `pickup` | Optional. A time in whole notes: the length before the first barline, shorter than one bar. The notes still start at 0; bars and beats are counted from the barline. Written only when it is not 0. |
+| `harmony` | Optional. The motive's own chords as text, `"I V6@2 I@3"`: upper case Roman numerals (`b` or `#` before one for an altered root; figures `6`, `64`, `7`, `65`, `43`, `42`) and `@` and the onset in beats of the beat unit from the start of the motive, a whole number or a fraction. The first chord needs no onset. At most 8 chords, onsets rising and inside the motive. Written only when the motive has chords. |
+| `features` | Optional. Up to 8 labelled runs of notes, `{"label": 1 to 8 characters, "first": note index, "last": note index}`, 0-based and inclusive, labels different. Written only when the motive has features. |
+| `role` | Optional, `melodic` (the default) or `accompaniment`. Written only when it is not `melodic`. |
 
 The motive ends where its last note ends. Unknown fields are ignored; a value that is not allowed is an error
 that names the field, for example `notes[2].duration.den`.
@@ -253,6 +256,7 @@ document above) and an `analysis` member (and, from `motive --render-key`, `--mi
 | `rhythm` | `null` for a contour. Otherwise one per note: `onset`, `duration`, `bar` (the first full bar is 0, and a pickup's notes are in bar -1), `beat` (the position in the bar in beats of the beat unit, 0 is the downbeat; a time), `on_beat`, `dotted` (the duration is 3 or 7 over a power of two) and `rest_before` (a time). |
 | `range` | `null` for a rhythm or a contour. Otherwise `lowest` and `highest` MIDI pitch, and `semitones` between them. |
 | `scale_degrees` | `null` without a key, and for a rhythm or a contour. Otherwise `start`, `end` and `all` (one per note), each `{"degree": 1 to 7, "alteration": 0 or 1}`; 1 is a raised degree. |
+| `harmony_text` | Only for a motive with chords of its own: the chords as text, as `harmony` above. |
 | `implied_harmony` | `key_known`, and `candidates`, best fit first: `roman_numeral`, `function`, `fit` (the share of the motive that is chord tones, 0 to 1, to four places), `chord_tones` and `non_chord_tones`. Empty without a key, and for a rhythm or a contour. |
 
 For the motive above, `scale_degrees` gives `1 3 5 1`, the contour is `ascending` and the intervals are `+3`, `+4`

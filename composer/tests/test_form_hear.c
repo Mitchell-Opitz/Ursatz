@@ -61,7 +61,11 @@ static void test_sentence(void) {
 static void test_period(void) {
     PiecePlan *plan = load("period_a_minor.json");
     FormHeard heard;
-    assert(form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
+    /* The consequent opens on i6 after the V, which Ursatz reads as an evaded cadence unless it is told a phrase
+       starts there (R-090, R-091): the start of bar 5 is given, so the V is the half cadence of the antecedent. */
+    PlanTime consequent;
+    assert(plan_time_make(4, 1, &consequent) == PLAN_OK);
+    assert(form_hear_with_sections(plan, bars(0, 8), &consequent, 1, &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 2);
     assert(heard.count == 1);
     const FormHeardTheme *theme = &heard.themes[0];

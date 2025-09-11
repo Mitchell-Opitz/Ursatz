@@ -82,6 +82,12 @@ target_compile_definitions(test_motive_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_F
 add_dependencies(test_motive_cli ursatz-composer)
 add_test(NAME test_motive_cli COMMAND test_motive_cli)
 
+add_executable(test_motive_sketch_bridge test_motive_sketch_bridge.c)
+target_link_libraries(test_motive_sketch_bridge PRIVATE ursatz_composer)
+target_include_directories(test_motive_sketch_bridge PRIVATE ${PROJECT_SOURCE_DIR}/external/ursatz/src)
+target_compile_options(test_motive_sketch_bridge PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_sketch_bridge COMMAND test_motive_sketch_bridge)
+
 add_executable(test_motive_develop test_motive_develop.c)
 target_link_libraries(test_motive_develop PRIVATE ursatz_composer)
 target_compile_options(test_motive_develop PRIVATE -Wall -Wextra -Wpedantic)

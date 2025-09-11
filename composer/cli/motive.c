@@ -11,6 +11,7 @@
 #include <ursatz_composer/motive_render.h>
 
 #include "cli_options.h"
+#include "motive_extras.h"
 
 #define EXIT_USAGE 1
 #define EXIT_UNLOADABLE 2
@@ -27,6 +28,7 @@ typedef struct {
     const char *midi_path;
     const char *musicxml_path;
     const char *tempo_text;
+    MotiveExtras extras;
     bool json;
     bool help;
 } Options;
@@ -43,6 +45,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --form <name>        full (default), rhythm or contour; rhythm and contour read the text as a\n");
     fprintf(out, "                       rhythm (x:q x:e) or a contour (0 2 1 3) instead of a note list\n");
     fprintf(out, "  --pickup <beats>     the beats before the first barline, as 1 or 1/2; default 0\n");
+    motive_extras_print_help(out, false);
     fprintf(out, "  --render-key <key>   hear the motive in this key (same degrees); default the motive's key\n");
     fprintf(out, "  --midi <file>        write the motive as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the motive as a MusicXML file (a pickup is an implicit first measure)\n");
@@ -84,12 +87,17 @@ static int fail(int status, const char *format, ...) {
 
 static int read_options(int argc, char **argv, Options *options) {
     memset(options, 0, sizeof(*options));
+    int extras_status = 0;
     for (int i = 2; i < argc; i++) {
         const char *argument = argv[i];
         if (strcmp(argument, "--help") == 0) {
             options->help = true;
         } else if (strcmp(argument, "--json") == 0) {
             options->json = true;
+        } else if (motive_extras_take(&options->extras, argc, argv, &i, false, &extras_status)) {
+            if (extras_status != 0) {
+                return extras_status;
+            }
         } else if (strcmp(argument, "--meter") == 0 || strcmp(argument, "--key") == 0 ||
                    strcmp(argument, "--format") == 0 || strcmp(argument, "--form") == 0 ||
                    strcmp(argument, "--pickup") == 0 || strcmp(argument, "--render-key") == 0 ||
@@ -182,14 +190,21 @@ int run_motive(int argc, char **argv) {
     Motive motive;
     MotiveError error;
     MotiveResult result = motive_load_file(options.input, format, &motive_options, &motive, &error);
-    if (result == MOTIVE_OK && options.pickup_text) {
-        /* The pickup is in beats of the motive's meter, which a file may declare, so it is read after the first load. */
-        PlanTime pickup;
-        if (!parse_pickup(options.pickup_text, motive.meter.beat_unit, &pickup)) {
-            return fail(EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2", options.pickup_text);
+    if (result == MOTIVE_OK && (options.pickup_text || motive_extras_given(&options.extras))) {
+        /* The pickup and the chord onsets are in beats of the motive's meter, which a file may declare, so they are
+           read after the first load. */
+        if (options.pickup_text) {
+            PlanTime pickup;
+            if (!parse_pickup(options.pickup_text, motive.meter.beat_unit, &pickup)) {
+                return fail(EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2", options.pickup_text);
+            }
+            motive_options.has_pickup = true;
+            motive_options.pickup = pickup;
         }
-        motive_options.has_pickup = true;
-        motive_options.pickup = pickup;
+        status = motive_extras_options(&options.extras, &motive.meter, &motive_options);
+        if (status != 0) {
+            return status;
+        }
         result = motive_load_file(options.input, format, &motive_options, &motive, &error);
     }
     if (result != MOTIVE_OK) {

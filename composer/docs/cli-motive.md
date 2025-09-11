@@ -1,7 +1,7 @@
 # motive command
 
 ```sh
-ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--json]
+ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--json]
 ```
 
 Loads a motive, a short cell of notes (one bar or less, as a rule), and prints its analysis: the
@@ -100,6 +100,26 @@ each note a quarter. Only the contour is analyzed.
 and beats are counted from the first barline: the pickup's notes are in bar 0 of the text output (bar -1
 in the JSON, where the first full bar is 0), so in 3/4 a note at the start of a one-beat pickup is in
 bar 0, beat 3. The pickup is in beats of the file's own meter for MIDI and MusicXML.
+
+## Harmony, features and role
+
+A motive can carry its own harmony, labelled features and a role.
+
+| Flag | Meaning |
+| --- | --- |
+| `--harmony "<text>"` | The motive's own chords: Roman numerals with their onsets in beats, `"I V6@2 I@3"`. Up to 8. An empty text clears the chords the input has. |
+| `--feature <label:first-last>` | A labelled run of notes by 0-based index, inclusive: `a:0-2`, or `turn:3` for one note. The label is 1 to 8 characters. Repeat the flag for more, up to 8, each label different. |
+| `--role <role>` | `melodic` (the default) or `accompaniment`. |
+
+Each one replaces what the input says (a JSON document may carry `harmony`, `features` and `role`).
+
+Chords. A chord is an upper case numeral `I` to `VII`, with `b` or `#` before it for a lowered or raised root, and a figure after it: none for a triad in root position, `6` and `64` for its inversions, `7`, `65`, `43` and `42` for a seventh chord and its inversions. `@` and the onset in beats of the meter's beat unit, counted from the start of the motive, a whole number or a fraction (`@1/2`), says when it starts. The first chord needs no onset (it starts at 0); the others do, and the onsets rise. Every chord starts inside the motive. A motive without chords of its own uses its best implied chord, one chord at 0, wherever a relation needs chords.
+
+The onsets are in beats of the motive's meter, which a MIDI or MusicXML file may declare, so with such a file the file is read twice, as for `--pickup`. A text that is not a chord is exit status 1 and names the token and column (`token 2 (column 4)`); a chord that starts outside the motive, or a feature outside its notes, is exit status 2 and names the place (`harmony[1]`, `features[0]`).
+
+The text output lists `Own harmony:`, the features and the role when the motive has them. The `--json` document has them in `motive` and `harmony_text` in `analysis` (see [plan-format.md](plan-format.md#motive-analysis)).
+
+The same three options are read by [variants](cli-variants.md) and [grow](cli-grow.md); [random-motive](cli-random-motive.md) takes `--role`.
 
 ## Meter and key
 

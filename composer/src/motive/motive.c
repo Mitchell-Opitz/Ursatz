@@ -405,6 +405,100 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
         return MOTIVE_ERR_VALUE;
     }
     motive->key = key;
+
+    /* Own harmony, features and role: the caller's replace the input's. The chords' onsets are in beats, so they are
+       read here, once the meter is settled. */
+    motive->harmony_count = 0;
+    motive->feature_count = 0;
+    motive->role = MOTIVE_ROLE_MELODIC;
+    if (options && options->has_harmony) {
+        if (options->harmony_count > MOTIVE_MAX_CHORDS) {
+            motive_set_error(error, "harmony", "a motive has at most %d chords", MOTIVE_MAX_CHORDS);
+            return MOTIVE_ERR_VALUE;
+        }
+        memcpy(motive->harmony, options->harmony, options->harmony_count * sizeof(MotiveChord));
+        motive->harmony_count = options->harmony_count;
+    } else if (document->has_harmony_text) {
+        MotiveError parsed;
+        MotiveResult read = motive_harmony_parse(document->harmony_text, &motive->meter, motive->harmony,
+                                                 &motive->harmony_count, &parsed);
+        if (read != MOTIVE_OK) {
+            motive_set_error(error, "harmony", "%s: %s", parsed.location, parsed.message);
+            return read;
+        }
+    }
+    if (options && options->has_features) {
+        if (options->feature_count > MOTIVE_MAX_FEATURES) {
+            motive_set_error(error, "features", "a motive has at most %d features", MOTIVE_MAX_FEATURES);
+            return MOTIVE_ERR_VALUE;
+        }
+        memcpy(motive->features, options->features, options->feature_count * sizeof(MotiveFeature));
+        motive->feature_count = options->feature_count;
+    } else if (document->has_features) {
+        memcpy(motive->features, document->features, document->feature_count * sizeof(MotiveFeature));
+        motive->feature_count = document->feature_count;
+    }
+    if (options && options->has_role) {
+        motive->role = options->role;
+    } else if (document->has_role) {
+        motive->role = document->role;
+    }
+    return motive_check_extras(motive, error);
+}
+
+MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
+    if (motive->harmony_count > MOTIVE_MAX_CHORDS) {
+        motive_set_error(error, "harmony", "a motive has at most %d chords", MOTIVE_MAX_CHORDS);
+        return MOTIVE_ERR_VALUE;
+    }
+    for (size_t i = 0; i < motive->harmony_count; i++) {
+        const MotiveChord *chord = &motive->harmony[i];
+        char location[MOTIVE_ERROR_LOCATION_MAX];
+        snprintf(location, sizeof(location), "harmony[%zu]", i);
+        if (chord->degree < 1 || chord->degree > 7 || chord->alteration < -1 || chord->alteration > 1 ||
+            chord->inversion < 0 || chord->inversion > 3 || (chord->inversion == 3 && !chord->seventh)) {
+            motive_set_error(error, location,
+                             "a chord is degree 1 to 7, altered by -1 to 1, in inversion 0 to 2 (3 only on a seventh)");
+            return MOTIVE_ERR_VALUE;
+        }
+        if (chord->onset.den == 0 || chord->onset.num < 0 || plan_time_compare(chord->onset, motive->length) >= 0) {
+            motive_set_error(error, location, "the chord must start inside the motive, before %ld/%lu",
+                             motive->length.num, motive->length.den);
+            return MOTIVE_ERR_VALUE;
+        }
+        if (i > 0 && plan_time_compare(chord->onset, motive->harmony[i - 1].onset) <= 0) {
+            motive_set_error(error, location, "the chord must come after the one before it");
+            return MOTIVE_ERR_VALUE;
+        }
+    }
+    if (motive->feature_count > MOTIVE_MAX_FEATURES) {
+        motive_set_error(error, "features", "a motive has at most %d features", MOTIVE_MAX_FEATURES);
+        return MOTIVE_ERR_VALUE;
+    }
+    for (size_t i = 0; i < motive->feature_count; i++) {
+        const MotiveFeature *feature = &motive->features[i];
+        char location[MOTIVE_ERROR_LOCATION_MAX];
+        snprintf(location, sizeof(location), "features[%zu]", i);
+        size_t label_size = 0;
+        while (label_size < sizeof(feature->label) && feature->label[label_size] != '\0') {
+            label_size++;
+        }
+        if (label_size < 1 || label_size > MOTIVE_FEATURE_LABEL_MAX) {
+            motive_set_error(error, location, "a feature label is 1 to %d characters", MOTIVE_FEATURE_LABEL_MAX);
+            return MOTIVE_ERR_VALUE;
+        }
+        if (feature->first > feature->last || feature->last >= motive->note_count) {
+            motive_set_error(error, location, "the feature '%s' covers notes %zu to %zu; the motive has notes 0 to %zu",
+                             feature->label, feature->first, feature->last, motive->note_count - 1);
+            return MOTIVE_ERR_VALUE;
+        }
+        for (size_t j = 0; j < i; j++) {
+            if (strcmp(motive->features[j].label, feature->label) == 0) {
+                motive_set_error(error, location, "the label '%s' is used twice", feature->label);
+                return MOTIVE_ERR_VALUE;
+            }
+        }
+    }
     return MOTIVE_OK;
 }
 
@@ -608,6 +702,23 @@ bool motive_equal(const Motive *a, const Motive *b) {
             return false;
         }
     }
+    if (a->harmony_count != b->harmony_count || a->feature_count != b->feature_count || a->role != b->role) {
+        return false;
+    }
+    for (size_t i = 0; i < a->harmony_count; i++) {
+        const MotiveChord *x = &a->harmony[i];
+        const MotiveChord *y = &b->harmony[i];
+        if (plan_time_compare(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
+            x->inversion != y->inversion || x->seventh != y->seventh) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < a->feature_count; i++) {
+        if (strcmp(a->features[i].label, b->features[i].label) != 0 || a->features[i].first != b->features[i].first ||
+            a->features[i].last != b->features[i].last) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -666,6 +777,27 @@ static cJSON *notes_json(const Motive *motive) {
     return array;
 }
 
+static cJSON *features_json(const Motive *motive) {
+    cJSON *array = cJSON_CreateArray();
+    for (size_t i = 0; array && i < motive->feature_count; i++) {
+        const MotiveFeature *feature = &motive->features[i];
+        cJSON *object = cJSON_CreateObject();
+        bool ok = object && json_add(object, "label", cJSON_CreateString(feature->label)) &&
+                  json_add(object, "first", json_number((long)feature->first)) &&
+                  json_add(object, "last", json_number((long)feature->last));
+        if (!ok) {
+            cJSON_Delete(object);
+            cJSON_Delete(array);
+            return NULL;
+        }
+        if (!json_append(array, object)) {
+            cJSON_Delete(array);
+            return NULL;
+        }
+    }
+    return array;
+}
+
 cJSON *motive_json_object(const Motive *motive) {
     cJSON *document = cJSON_CreateObject();
     bool ok = document && json_add(document, "meter", meter_json(&motive->meter));
@@ -679,6 +811,17 @@ cJSON *motive_json_object(const Motive *motive) {
     }
     if (ok && motive_pickup(motive).num != 0) {
         ok = json_add(document, "pickup", motive_time_json(motive_pickup(motive)));
+    }
+    if (ok && motive->harmony_count > 0) {
+        char *harmony = motive_harmony_to_text(motive);
+        ok = harmony && json_add(document, "harmony", cJSON_CreateString(harmony));
+        free(harmony);
+    }
+    if (ok && motive->feature_count > 0) {
+        ok = json_add(document, "features", features_json(motive));
+    }
+    if (ok && motive->role != MOTIVE_ROLE_MELODIC) {
+        ok = json_add(document, "role", cJSON_CreateString(motive_role_name(motive->role)));
     }
     if (!ok) {
         cJSON_Delete(document);
@@ -812,6 +955,46 @@ static bool read_notes(JsonReader *reader, const cJSON *array, Motive *motive) {
     return true;
 }
 
+static bool read_features(JsonReader *reader, const cJSON *array, MotiveDocument *document) {
+    if (!cJSON_IsArray(array)) {
+        return json_bad_format(reader, "features", "expected an array");
+    }
+    int count = cJSON_GetArraySize(array);
+    if (count > MOTIVE_MAX_FEATURES) {
+        return json_fail(reader, PLAN_ERR_FORMAT, "features", "the motive has %d features; the most is %d", count,
+                         MOTIVE_MAX_FEATURES);
+    }
+    for (int i = 0; i < count; i++) {
+        const cJSON *item = cJSON_GetArrayItem(array, i);
+        char path[PLAN_JSON_PATH_MAX];
+        json_index_path(path, "features", (size_t)i);
+        if (!cJSON_IsObject(item)) {
+            return json_bad_format(reader, path, "expected an object");
+        }
+        const cJSON *label = json_member(reader, item, path, "label", true);
+        long first;
+        long last;
+        if (!label || !json_read_int_member(reader, item, path, "first", 0, 1000000L, &first) ||
+            !json_read_int_member(reader, item, path, "last", 0, 1000000L, &last)) {
+            return false;
+        }
+        size_t label_size = cJSON_IsString(label) ? strlen(label->valuestring) : 0;
+        if (label_size < 1 || label_size > MOTIVE_FEATURE_LABEL_MAX) {
+            char at[PLAN_JSON_PATH_MAX];
+            json_child_path(at, path, "label");
+            return json_bad_format(reader, at, "expected text of 1 to 8 characters");
+        }
+        MotiveFeature *feature = &document->features[i];
+        memset(feature, 0, sizeof(*feature));
+        memcpy(feature->label, label->valuestring, label_size);
+        feature->first = (size_t)first;
+        feature->last = (size_t)last;
+    }
+    document->feature_count = (size_t)count;
+    document->has_features = true;
+    return true;
+}
+
 MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
     const char *end = NULL;
     cJSON *root = cJSON_ParseWithLengthOpts(text, strlen(text) + 1, &end, true);
@@ -838,6 +1021,23 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     if (ok && pickup && !cJSON_IsNull(pickup)) {
         ok = read_time(&reader, pickup, "pickup", 0, &document->pickup);
         document->has_pickup = ok;
+    }
+    const cJSON *harmony = ok ? cJSON_GetObjectItemCaseSensitive(root, "harmony") : NULL;
+    const cJSON *features = ok ? cJSON_GetObjectItemCaseSensitive(root, "features") : NULL;
+    const cJSON *role = ok ? cJSON_GetObjectItemCaseSensitive(root, "role") : NULL;
+    if (ok && harmony && !cJSON_IsNull(harmony)) {
+        ok = (cJSON_IsString(harmony) && strlen(harmony->valuestring) < sizeof(document->harmony_text)) ||
+             json_bad_format(&reader, "harmony", "expected chord text such as \"I V6@2 I@3\"");
+        if (ok) {
+            snprintf(document->harmony_text, sizeof(document->harmony_text), "%s", harmony->valuestring);
+            document->has_harmony_text = true;
+        }
+    }
+    ok = ok && (!features || cJSON_IsNull(features) || read_features(&reader, features, document));
+    if (ok && role && !cJSON_IsNull(role)) {
+        ok = (cJSON_IsString(role) && motive_role_parse(role->valuestring, &document->role)) ||
+             json_bad_format(&reader, "role", "expected \"melodic\" or \"accompaniment\"");
+        document->has_role = ok;
     }
     ok = ok && read_notes(&reader, json_member(&reader, root, "", "notes", true), motive);
     cJSON_Delete(root);

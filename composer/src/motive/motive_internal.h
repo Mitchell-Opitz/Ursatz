@@ -6,6 +6,8 @@
 #include <cJSON.h>
 #include <ursatz_composer/motive.h>
 
+#define MOTIVE_HARMONY_TEXT_MAX 256
+
 /* What an input says about the motive besides its notes. */
 typedef struct {
     bool has_meter;
@@ -18,6 +20,14 @@ typedef struct {
     MotiveForm form;
     bool has_pickup;
     PlanTime pickup;
+    /* A JSON "harmony" (text, read once the meter is settled), "features" and "role". */
+    bool has_harmony_text;
+    char harmony_text[MOTIVE_HARMONY_TEXT_MAX];
+    bool has_features;
+    MotiveFeature features[MOTIVE_MAX_FEATURES];
+    size_t feature_count;
+    bool has_role;
+    MotiveRole role;
 } MotiveDocument;
 
 /* Records the first problem only. error may be NULL. */
@@ -72,6 +82,12 @@ PlanKey motive_key_from_signature(int sharps_flats, PlanKeyMode mode);
  */
 void motive_scale_position(const PlanKey *key, int pitch, long *position, int *alteration);
 int motive_position_pitch(const PlanKey *key, long position, int alteration);
+
+/*
+ * Checks the motive's own harmony and features: chords ascending inside the length, degree 1 to 7, alteration -1 to 1,
+ * inversion 0 to 3 (3 only on a seventh); features with a label of 1 to 8 characters, distinct, inside the notes.
+ */
+MotiveResult motive_check_extras(const Motive *motive, MotiveError *error);
 
 /* The files, filling a motive's notes and a document. */
 MotiveResult motive_read_midi(const unsigned char *data, size_t size, Motive *motive, MotiveDocument *document,

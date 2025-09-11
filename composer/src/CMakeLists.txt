@@ -54,6 +54,7 @@ add_library(ursatz_composer STATIC
     motive/motive_random.c
     motive/variant_registry.c
     motive/variant_chain.c
+    motive/motive_sketch_bridge.c
     melody/melody_check.c
     melody/melody_context.c
     melody/melody_contour.c
