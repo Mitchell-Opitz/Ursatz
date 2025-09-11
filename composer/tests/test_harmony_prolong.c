@@ -137,7 +137,7 @@ static void check_filled(const Scenario *scenario, const Fixture *fixture) {
 
     /* No cadence is heard inside or at the end, with no soprano given. */
     HarmonyCadences found = {NULL, 0};
-    assert(harmony_hear_lane_cadences(fixture->plan, fixture->span, scenario->mode, soprano, count, &found));
+    assert(harmony_hear_lane_cadences(fixture->plan, fixture->span, scenario->mode, soprano, count, NULL, 0, &found));
     assert(found.count == 0);
     harmony_cadences_destroy(&found);
 }
