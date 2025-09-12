@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "analysis/motive_relation.h"
 
@@ -257,6 +258,178 @@ static void describe_diminish(const VariantValue *values, char *out, size_t size
     describe_ratio("diminished", 1, 2, values, out, size);
 }
 
+/* ------------------------------------------------------- library relations */
+
+static MotiveDevResult relation_status(MotiveRelationResult result) {
+    switch (result) {
+    case MOTIVE_RELATION_OK:
+        return MOTIVE_DEV_OK;
+    case MOTIVE_RELATION_UNCHANGED:
+        return MOTIVE_DEV_ERR_UNCHANGED;
+    case MOTIVE_RELATION_RANGE:
+        return MOTIVE_DEV_ERR_RANGE;
+    case MOTIVE_RELATION_NOT_EXPRESSIBLE:
+        return MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+    case MOTIVE_RELATION_NO_SCALE:
+        return MOTIVE_DEV_ERR_NO_KEY;
+    case MOTIVE_RELATION_INVALID:
+        return MOTIVE_DEV_ERR_INVALID;
+    default:
+        return MOTIVE_DEV_ERR_NOT_APPLICABLE;
+    }
+}
+
+/*
+ * Applies the library relation of the same name to source: the motive as a sketch, the relation with the row's
+ * parameters in the relation's order (a parameter not set is 0), and the result back as a motive in the source's meter
+ * and key.
+ */
+static MotiveDevResult relation_apply(MotiveRelationKind kind, const Motive *source, const VariantValue *values,
+                                      Motive *out) {
+    MotiveSketch sketch;
+    MotiveSketch result;
+    if (!motive_to_sketch(source, &sketch)) {
+        return MOTIVE_DEV_ERR_INVALID;
+    }
+    MotiveRelationStep step;
+    memset(&step, 0, sizeof(step));
+    step.kind = kind;
+    size_t count = motive_relation_param_count(kind);
+    for (size_t i = 0; i < count && i < MOTIVE_RELATION_MAX_PARAMS; i++) {
+        if (values[i].set) {
+            step.value[i] = values[i].value;
+            step.den[i] = values[i].den;
+        }
+    }
+    MotiveDevResult status = relation_status(motive_relation_apply(&sketch, &step, &result));
+    if (status != MOTIVE_DEV_OK) {
+        return status;
+    }
+    return motive_from_sketch(&result, source, out) ? MOTIVE_DEV_OK : MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+}
+
+static const char *const ORDINALS[] = {"first", "second", "third",   "fourth", "fifth",
+                                       "sixth", "seventh", "eighth", "ninth",  "tenth"};
+
+/* "third" for the 0-based index 2; "note 12" style numbers are the caller's for indexes past the table. */
+static const char *ordinal(long index) {
+    return index >= 0 && index < (long)(sizeof(ORDINALS) / sizeof(ORDINALS[0])) ? ORDINALS[index] : NULL;
+}
+
+/* "the third note", or "note 12". */
+static void note_name(long index, char *out, size_t size) {
+    const char *word = ordinal(index);
+    if (word) {
+        snprintf(out, size, "the %s note", word);
+    } else {
+        snprintf(out, size, "note %ld", index + 1);
+    }
+}
+
+/* A part of a whole note as plain words: "a quarter note", "3:8 of a whole note". */
+static void whole_note_part(const VariantValue *value, char *out, size_t size) {
+    if (value->value == 1 && value->den == 4) {
+        snprintf(out, size, "a quarter note");
+    } else if (value->value == 1 && value->den == 8) {
+        snprintf(out, size, "an eighth note");
+    } else if (value->value == 1 && value->den == 2) {
+        snprintf(out, size, "a half note");
+    } else {
+        snprintf(out, size, "%ld:%ld of a whole note", value->value, value->den);
+    }
+}
+
+/* ----------------------------------------------------------------- rhythm */
+
+enum { NOTE_REPEAT_NOTE, NOTE_REPEAT_COUNT };
+
+static const VariantParam NOTE_REPEAT_PARAMS[] = {
+    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note split into repeated notes", false, true, false},
+    {"count", VARIANT_PARAM_INT, 2, 4, "how many equal notes it becomes", false, false, false}};
+
+static MotiveDevResult apply_note_repeat(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_NOTE_REPEAT, source, values, out);
+}
+
+static void describe_note_repeat(const VariantValue *values, char *out, size_t size) {
+    char name[24];
+    note_name(value_or(&values[NOTE_REPEAT_NOTE], 0), name, sizeof(name));
+    long count = value_or(&values[NOTE_REPEAT_COUNT], 2);
+    char times[16] = "twice";
+    if (count != 2) {
+        snprintf(times, sizeof(times), "%ld times", count);
+    }
+    snprintf(out, size, "repeated %s %s", name, times);
+}
+
+enum { RHYTHM_REPEAT_FIRST, RHYTHM_REPEAT_LENGTH, RHYTHM_REPEAT_TARGET };
+
+static const VariantParam RHYTHM_REPEAT_PARAMS[] = {
+    {"first", VARIANT_PARAM_INT, 0, 16, "the 0-based first note whose durations are copied", false, true, false},
+    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes' durations are copied", false, true, false},
+    {"target", VARIANT_PARAM_INT, 0, 16, "the 0-based note the copied durations start on", false, true, false}};
+
+static MotiveDevResult apply_rhythm_repeat(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_RHYTHM_REPEAT, source, values, out);
+}
+
+static void describe_rhythm_repeat(const VariantValue *values, char *out, size_t size) {
+    long first = value_or(&values[RHYTHM_REPEAT_FIRST], 0) + 1;
+    long length = value_or(&values[RHYTHM_REPEAT_LENGTH], 1);
+    long target = value_or(&values[RHYTHM_REPEAT_TARGET], 0) + 1;
+    if (length == 1) {
+        snprintf(out, size, "gave note %ld the rhythm of note %ld", target, first);
+    } else {
+        snprintf(out, size, "gave the notes from %ld the rhythm of notes %ld to %ld", target, first, first + length - 1);
+    }
+}
+
+static const VariantParam RHYTHM_SHIFT_PARAMS[] = {
+    {"offset", VARIANT_PARAM_RATIO, 1, 4, "how far later in the bar the motive starts, in whole notes, n:m below 1",
+     false, false, true}};
+
+static MotiveDevResult apply_rhythm_shift(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_RHYTHM_SHIFT, source, values, out);
+}
+
+static void describe_rhythm_shift(const VariantValue *values, char *out, size_t size) {
+    VariantValue offset = values[0].set ? values[0] : (VariantValue){true, 1, 4};
+    char part[32];
+    whole_note_part(&offset, part, sizeof(part));
+    snprintf(out, size, "shifted %s later in the bar", part);
+}
+
+enum { UPBEAT_COUNT, UPBEAT_APPROACH };
+
+static const VariantParam ADD_UPBEAT_PARAMS[] = {
+    {"count", VARIANT_PARAM_INT, 1, 3, "how many half-beat notes lead into the first note", false, false, false},
+    {"approach", VARIANT_PARAM_INT, -1, 1, "1 stepping up from below the first note, -1 down from above", false, false,
+     false}};
+
+static MotiveDevResult apply_add_upbeat(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_ADD_UPBEAT, source, values, out);
+}
+
+static void describe_add_upbeat(const VariantValue *values, char *out, size_t size) {
+    long count = value_or(&values[UPBEAT_COUNT], 1);
+    snprintf(out, size, "added %ld upbeat note%s stepping in from %s", count, count == 1 ? "" : "s",
+             value_or(&values[UPBEAT_APPROACH], 1) < 0 ? "above" : "below");
+}
+
+enum { CHANGE_METER_NUM, CHANGE_METER_DEN };
+
+static const VariantParam CHANGE_METER_PARAMS[] = {
+    {"num", VARIANT_PARAM_INT, 1, 16, "the new meter's beats per bar", false, false, false},
+    {"den", VARIANT_PARAM_INT, 1, 16, "the new meter's beat unit: 1, 2, 4, 8 or 16", false, false, false}};
+
+static MotiveDevResult apply_change_meter(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_CHANGE_METER, source, values, out);
+}
+
+static void describe_change_meter(const VariantValue *values, char *out, size_t size) {
+    snprintf(out, size, "put into %ld/%ld", value_or(&values[CHANGE_METER_NUM], 4), value_or(&values[CHANGE_METER_DEN], 4));
+}
+
 /* ----------------------------------------------------------------- table */
 
 #define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
@@ -289,7 +462,17 @@ static const VariantOperation OPERATIONS[] = {
     {"augment", "Augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(AUGMENT_PARAMS), FORMS_FULL_RHYTHM,
      apply_augment, describe_augment, MOTIVE_RELATION_AUGMENT},
     {"diminish", "Diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(DIMINISH_PARAMS), FORMS_FULL_RHYTHM,
-     apply_diminish, describe_diminish, MOTIVE_RELATION_DIMINISH}};
+     apply_diminish, describe_diminish, MOTIVE_RELATION_DIMINISH},
+    {"note-repeat", "Note repeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 17h, i, k, l, n", PARAMS(NOTE_REPEAT_PARAMS),
+     FORMS_FULL_RHYTHM, apply_note_repeat, describe_note_repeat, MOTIVE_RELATION_NOTE_REPEAT},
+    {"rhythm-repeat", "Rhythm repeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 17l, m, 18e", PARAMS(RHYTHM_REPEAT_PARAMS),
+     FORMS_FULL_RHYTHM, apply_rhythm_repeat, describe_rhythm_repeat, MOTIVE_RELATION_RHYTHM_REPEAT},
+    {"rhythm-shift", "Rhythm shift", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 23", PARAMS(RHYTHM_SHIFT_PARAMS),
+     FORMS_FULL_RHYTHM, apply_rhythm_shift, describe_rhythm_shift, MOTIVE_RELATION_RHYTHM_SHIFT},
+    {"add-upbeat", "Add upbeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 22", PARAMS(ADD_UPBEAT_PARAMS),
+     FORMS_FULL_RHYTHM, apply_add_upbeat, describe_add_upbeat, MOTIVE_RELATION_ADD_UPBEAT},
+    {"change-meter", "Change meter", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 24", PARAMS(CHANGE_METER_PARAMS),
+     FORMS_FULL_RHYTHM, apply_change_meter, describe_change_meter, MOTIVE_RELATION_CHANGE_METER}};
 
 size_t variant_registry_count(void) {
     return sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);

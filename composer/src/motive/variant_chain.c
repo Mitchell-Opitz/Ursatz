@@ -433,7 +433,9 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     size_t count = 0;
     for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
         const VariantOperation *operation = variant_registry_at(i);
-        if (operation->category != VARIANT_CATEGORY_EXACT && (operation->forms & VARIANT_FORM_BIT(source->form)) != 0) {
+        /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it. */
+        if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
+            (operation->forms & VARIANT_FORM_BIT(source->form)) != 0) {
             candidates[count++] = operation;
         }
     }
