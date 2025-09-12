@@ -24,8 +24,7 @@ static bool measure_at(const MeterMap *map, long numerator, unsigned long denomi
     return true;
 }
 
-/* Whether entry starts different harmony from previous: another base numeral, or another key region. */
-static bool is_change(const AnalysisReportEntry *previous, const AnalysisReportEntry *entry) {
+bool harmonic_rhythm_is_change(const AnalysisReportEntry *previous, const AnalysisReportEntry *entry) {
     if (previous->in_region != entry->in_region || (entry->in_region && previous->region != entry->region)) {
         return true;
     }
@@ -108,7 +107,7 @@ bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *r
         rhythm[m].measure = first + (int)m;
     }
     for (size_t i = 0; i < count; i++) {
-        if (i == 0 || is_change(&report->entries[i - 1], &report->entries[i])) {
+        if (i == 0 || harmonic_rhythm_is_change(&report->entries[i - 1], &report->entries[i])) {
             rhythm[measures[i] - first].changes++;
         }
     }

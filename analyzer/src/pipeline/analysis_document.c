@@ -2850,6 +2850,87 @@ static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *repo
     return list;
 }
 
+/* ---- Rhythm and meter ---- */
+
+/* The line a density profile is of, as the document names it: "all" for every note of the phrase, then the outer-voice
+   soprano and bass, and "other" for the rest. */
+static const char *rhythm_line_name(int line) {
+    switch (line) {
+        case 0:
+            return "soprano";
+        case 1:
+            return "bass";
+        case 2:
+            return "other";
+        default:
+            return "all";
+    }
+}
+
+static cJSON *density_durations_json(const AnalysisDensity *density) {
+    cJSON *list = cJSON_CreateArray();
+    for (unsigned b = 0; list && b < density->bin_count; b++) {
+        cJSON *bin = cJSON_CreateObject();
+        if (!(bin &&
+              add(bin, "duration", rational_json(rational_make(density->bins[b].numerator, density->bins[b].denominator))) &&
+              add(bin, "count", cJSON_CreateNumber((double)density->bins[b].count)) && append(list, bin))) {
+            cJSON_Delete(bin);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+static cJSON *density_per_beat_json(const AnalysisDensity *density) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "mean", cJSON_CreateNumber(density->attacks_per_beat_mean)) &&
+                    add(object, "max", cJSON_CreateNumber(density->attacks_per_beat_max)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* A density claim: the library's profile of a phrase's notes (all of them, or one line's), over the phrase's span. */
+static cJSON *density_json(const ImportedNotes *notes, const AnalysisReport *report, const AnalysisDensity *density) {
+    const AnalysisPhrase *phrase = &report->phrases[density->phrase];
+    Rational start = rational_make(phrase->start_numerator, phrase->start_denominator);
+    Rational end = rational_make(phrase->end_numerator, phrase->end_denominator);
+    cJSON *claim = claim_json_with(density->framework, notes, density->note_ids, density->note_id_count, start, end,
+                                   "density", cJSON_CreateNumber(density->uncertainty));
+    if (!(claim && add(claim, "phrase", cJSON_CreateNumber((double)density->phrase)) &&
+          add(claim, "measures", measures_json(phrase->first_measure, phrase->last_measure)) &&
+          add(claim, "line", cJSON_CreateString(rhythm_line_name(density->line))) &&
+          add(claim, "notes", cJSON_CreateNumber((double)density->notes)) &&
+          add(claim, "attacks", cJSON_CreateNumber((double)density->attacks)) &&
+          add(claim, "measure_count", cJSON_CreateNumber(density->measures)) &&
+          add(claim, "attacks_per_beat", density_per_beat_json(density)) &&
+          add(claim, "mean_inter_onset", cJSON_CreateNumber(density->mean_inter_onset)) &&
+          add(claim, "on_beat_share", cJSON_CreateNumber(density->on_beat_share)) &&
+          add(claim, "off_beat_share", cJSON_CreateNumber(density->off_beat_share)) &&
+          add(claim, "durations", density_durations_json(density)) &&
+          add(claim, "durations_truncated", cJSON_CreateBool(density->bins_truncated)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The rhythm section: a list of claims, each labelled by the result it is ("density"). The library's results are
+   claims over the notes of a phrase or a measure, so the list is flat and the label says which kind. Empty for a piece
+   without phrases. */
+static cJSON *rhythm_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < report->density_count; i++) {
+        if (!append(list, density_json(notes, report, &report->densities[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -2869,7 +2950,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "phrases", phrases_json(notes, report)) &&
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
           add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
-          add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
+          add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&

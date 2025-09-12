@@ -116,6 +116,10 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->melodies[i].seventh_breaks);
     }
     free(report->melodies);
+    for (size_t i = 0; i < report->density_count; i++) {
+        free(report->densities[i].note_ids);
+    }
+    free(report->densities);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -152,6 +156,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->motive_count = 0;
     report->melodies = NULL;
     report->melody_count = 0;
+    report->densities = NULL;
+    report->density_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

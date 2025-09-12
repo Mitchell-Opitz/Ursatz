@@ -1704,6 +1704,81 @@ static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, con
     return ok && (section_is_empty(approaches) || render_cadence_approaches(sb, approaches));
 }
 
+/* ---- Rhythm and meter ---- */
+
+/* The rhythm claims are one flat list, each labelled by the result it is. */
+static bool has_label(const cJSON *claim, const char *label) {
+    const char *own = string_member(claim, "label");
+    return own && strcmp(own, label) == 0;
+}
+
+static bool has_claims(const cJSON *rhythm, const char *label) {
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (has_label(claim, label)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The durations of a density claim, shortest first, as "1/8 (12), 1/4 (3)". */
+static bool append_durations(StringBuilder *sb, const cJSON *claim) {
+    const cJSON *durations = cJSON_GetObjectItemCaseSensitive(claim, "durations");
+    const cJSON *bin;
+    bool ok = true;
+    cJSON_ArrayForEach(bin, durations) {
+        const cJSON *duration = cJSON_GetObjectItemCaseSensitive(bin, "duration");
+        ok = ok && sb_appendf(sb, "%s%d/%d (%d)", bin == durations->child ? "" : ", ", (int)number_member(duration, "num"),
+                              (int)number_member(duration, "den"), (int)number_member(bin, "count"));
+    }
+    const cJSON *truncated = cJSON_GetObjectItemCaseSensitive(claim, "durations_truncated");
+    return ok && sb_append(sb, cJSON_GetArraySize(durations) == 0 ? "-" : "") &&
+           sb_append(sb, cJSON_IsTrue(truncated) ? ", ..." : "");
+}
+
+static bool render_densities(StringBuilder *sb, const cJSON *rhythm) {
+    bool ok = sb_append(sb, "### Density\n\n") &&
+              sb_append(sb, "The library's density profile of each phrase, for all its notes and for each line that has a "
+                            "note in it (the soprano and bass of the outer voices, and Other for the rest). A note is in a "
+                            "phrase when its onset is; a chord is one attack. Attacks per beat is read measure by measure "
+                            "over the beats the phrase spans in it, as a mean and the largest; Mean gap is the mean "
+                            "distance between attacks in whole notes; On the beat is the share of attacks exactly on a "
+                            "beat. Durations lists the notes' lengths in whole notes, shortest first, with how many "
+                            "notes have each. The patterns that recur are the motive families' rhythms (see Motives).\n\n") &&
+              sb_append(sb, "| Phrase | Measures | Line | Notes | Attacks | Per beat | Max per beat | Mean gap | On the beat | "
+                            "Durations |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "density")) {
+            continue;
+        }
+        const cJSON *per_beat = cJSON_GetObjectItemCaseSensitive(claim, "attacks_per_beat");
+        char mean[32];
+        char max[32];
+        char gap[32];
+        format_number(number_member(per_beat, "mean"), mean, sizeof(mean));
+        format_number(number_member(per_beat, "max"), max, sizeof(max));
+        format_number(number_member(claim, "mean_inter_onset"), gap, sizeof(gap));
+        ok = sb_appendf(sb, "| %d | ", (int)number_member(claim, "phrase") + 1) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+             sb_appendf(sb, " | %s | %d | %d | %s | %s | %s | %.1f%% | ", string_member(claim, "line"),
+                        (int)number_member(claim, "notes"), (int)number_member(claim, "attacks"), mean, max, gap,
+                        100.0 * number_member(claim, "on_beat_share")) &&
+             append_durations(sb, claim) && sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_rhythm(StringBuilder *sb, const cJSON *document, const cJSON *rhythm) {
+    (void)document;
+    return sb_append(sb, "## Rhythm and meter\n\n") && (!has_claims(rhythm, "density") || render_densities(sb, rhythm));
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -1732,6 +1807,7 @@ static const struct {
     {"motives", render_motive_development},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
+    {"rhythm", render_rhythm},
 };
 
 static bool section_is_empty(const cJSON *section) {

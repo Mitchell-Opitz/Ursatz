@@ -608,6 +608,42 @@ typedef struct {
     double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
 } AnalysisMelody;
 
+/* One duration of a density profile's histogram: how many notes of the phrase have it, as an exact rational of a
+   whole note. */
+typedef struct {
+    long numerator;
+    unsigned long denominator;
+    unsigned count;
+} AnalysisDurationBin;
+
+#define ANALYSIS_DENSITY_BINS 16
+
+/* The rhythmic density of one phrase, for all its notes or for one line (the library's standard-meter/density claim,
+   analysis/meter_analysis_density.h). The Analyzer only builds the library's input (every imported note, the line it
+   belongs to, the chord changes and the phrases) and copies the profile; the counts and shares are the library's. A note
+   belongs to a phrase when its onset, snapped to the library's grid, is in the phrase's span. The recurring rhythm
+   patterns are the motive families' rhythms (motives), not a second detector. */
+typedef struct {
+    size_t phrase;           /* index into phrases */
+    int line;                /* -1 all notes, 0 the outer-voice soprano, 1 the bass, 2 any other note */
+    const char *framework;   /* the library's framework name for the claim */
+    size_t *note_ids;        /* owned; ImportedNotes indices of the notes counted, in time order */
+    size_t note_id_count;
+    unsigned notes;          /* the library's counts: notes, and the distinct onsets among them */
+    unsigned attacks;
+    int measures;            /* the measures the phrase touches */
+    double attacks_per_beat_mean; /* per measure, the attacks over the beats the phrase's part of it spans; the mean
+                                     over the measures and the largest */
+    double attacks_per_beat_max;
+    double mean_inter_onset; /* whole notes; 0 with fewer than two attacks */
+    double on_beat_share;    /* of the attacks, the share exactly on a beat and the rest */
+    double off_beat_share;
+    AnalysisDurationBin bins[ANALYSIS_DENSITY_BINS]; /* the notes' durations, ascending */
+    unsigned bin_count;
+    bool bins_truncated;     /* longer durations were left out of the bins */
+    double uncertainty;      /* the library's: 0, the profile describes the notes as given */
+} AnalysisDensity;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -650,6 +686,8 @@ typedef struct {
     size_t motive_count;
     AnalysisMelody *melodies; /* owned; one per phrase with melody notes, in phrase order */
     size_t melody_count;
+    AnalysisDensity *densities; /* owned; per phrase, all notes first and then each line that has a note in it */
+    size_t density_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -657,7 +695,7 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns, motives and melodies. */
+   thematic returns, motives, melodies and densities. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

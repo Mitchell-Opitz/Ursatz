@@ -179,7 +179,7 @@ int main(void) {
     assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
     assert(cJSON_IsNull(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));
-    static const char *const EMPTY_SECTIONS[] = {"cadences", "motives",       "rhythm",  "texture",
+    static const char *const EMPTY_SECTIONS[] = {"cadences",      "motives", "texture",
                                                  "voice_leading", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
         const cJSON *section = member(document, EMPTY_SECTIONS[i]);
@@ -201,6 +201,35 @@ int main(void) {
         assert(strcmp(string(member(entry, "climax"), "label"), "climax") == 0);
         assert(cJSON_GetArraySize(member(member(entry, "contour"), "directions")) < number(entry, "note_count"));
     }
+
+    /* Rhythm: one flat list of labelled claims. The density claims come phrase by phrase, all notes first and then each
+       line that has a note in it, and the lines' notes add up to the phrase's. */
+    const cJSON *rhythm = member(document, "rhythm");
+    assert(cJSON_IsArray(rhythm));
+    int phrase_count = cJSON_GetArraySize(member(document, "phrases"));
+    double all_notes = 0;
+    double line_notes = 0;
+    int all_seen = 0;
+    for (int i = 0; i < cJSON_GetArraySize(rhythm); i++) {
+        const cJSON *entry = cJSON_GetArrayItem(rhythm, i);
+        check_claim(entry);
+        assert(strcmp(string(entry, "label"), "density") == 0);
+        assert(number(entry, "phrase") < phrase_count);
+        assert(number(entry, "attacks") <= number(entry, "notes"));
+        assert(number(entry, "notes") == cJSON_GetArraySize(member(entry, "note_ids")));
+        assert(number(entry, "on_beat_share") >= 0 && number(entry, "on_beat_share") <= 1);
+        assert(number(entry, "on_beat_share") + number(entry, "off_beat_share") <= 1.000001);
+        if (strcmp(string(entry, "line"), "all") == 0) {
+            assert(i == 0 || line_notes == all_notes);
+            all_notes = number(entry, "notes");
+            line_notes = 0;
+            all_seen++;
+        } else {
+            line_notes += number(entry, "notes");
+        }
+    }
+    assert(line_notes == all_notes);
+    assert(all_seen == (phrase_count > 0 && cJSON_GetArraySize(rhythm) > 0 ? phrase_count : 0));
 
     /* Phrases: one claim each in time order, with measures, length, cadence (an index or null) and signal. */
     const cJSON *phrases = member(document, "phrases");

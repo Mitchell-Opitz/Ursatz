@@ -98,7 +98,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/melody_claim" }
     },
-    "rhythm": { "type": "array" },
+    "rhythm": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rhythm_claim" }
+    },
     "texture": { "type": "array" },
     "voice_leading": { "type": "array" },
     "schemas": { "type": "array" },
@@ -608,6 +611,51 @@
           }
         }
       ]
+    },
+    "rhythm_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        { "oneOf": [{ "$ref": "#/$defs/density_claim" }] }
+      ]
+    },
+    "density_claim": {
+      "type": "object",
+      "required": [
+        "label", "phrase", "measures", "line", "notes", "attacks", "measure_count", "attacks_per_beat",
+        "mean_inter_onset", "on_beat_share", "off_beat_share", "durations", "durations_truncated"
+      ],
+      "properties": {
+        "label": { "const": "density" },
+        "phrase": { "type": "integer", "minimum": 0 },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "line": { "enum": ["all", "soprano", "bass", "other"] },
+        "notes": { "type": "integer", "minimum": 0 },
+        "attacks": { "type": "integer", "minimum": 0 },
+        "measure_count": { "type": "integer", "minimum": 0 },
+        "attacks_per_beat": {
+          "type": "object",
+          "required": ["mean", "max"],
+          "properties": {
+            "mean": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 }
+          }
+        },
+        "mean_inter_onset": { "type": "number", "minimum": 0 },
+        "on_beat_share": { "type": "number", "minimum": 0, "maximum": 1 },
+        "off_beat_share": { "type": "number", "minimum": 0, "maximum": 1 },
+        "durations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["duration", "count"],
+            "properties": {
+              "duration": { "$ref": "#/$defs/rational" },
+              "count": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "durations_truncated": { "type": "boolean" }
+      }
     },
     "melody_claim": {
       "allOf": [
