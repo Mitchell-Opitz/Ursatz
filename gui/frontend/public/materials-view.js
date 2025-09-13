@@ -248,19 +248,100 @@ async function renderMaterialsView(type) {
   listEl.appendChild(panel);
 }
 
-function buildUsesList(uses) {
-  const rows = MaterialsModel.useRows(uses);
+/* The Uses section: the uses of this version, remove, and an Add use picker
+ * over the items of every project. Adding or removing writes a new version.
+ * ctx: {id, type, body, statuses, allItems, statusEl}. */
+function buildUsesSection(ctx) {
+  const rows = MaterialsModel.useRows(ctx.statuses, materialsState.projects);
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Uses"));
+
+  async function change(sourceId, version, add, note) {
+    const next = MaterialsModel.bodyWithUse(ctx.body, sourceId, version, add);
+    const saved = await sendMaterialsRequest(MaterialsModel.buildAddVersionRequest(ctx.id, next, note));
+    if (!saved.ok) {
+      ctx.statusEl.textContent = MaterialsModel.errorText(saved.data, "Could not change the uses");
+      ctx.statusEl.classList.add("error");
+      return;
+    }
+    renderMaterialsDetail(ctx.type, ctx.id, saved.data.item.analysis_error);
+  }
+
   if (rows.length === 0) {
     section.appendChild(materialsElement("div", "piece-list-status", "Uses nothing yet."));
-    return section;
+  } else {
+    const table = materialsElement("table", "library-table");
+    const head = materialsElement("tr");
+    for (const label of ["Name", "Type", "Project", "Used version", ""]) {
+      head.appendChild(materialsElement("th", "", label));
+    }
+    table.appendChild(head);
+    for (const row of rows) {
+      const tr = materialsElement("tr");
+      tr.appendChild(materialsElement("td", row.missing ? "error" : "", row.name));
+      tr.appendChild(materialsElement("td", "", row.type));
+      tr.appendChild(materialsElement("td", "", row.project));
+      tr.appendChild(materialsElement("td", "", `v${row.version}`));
+      const actions = materialsElement("td");
+      const remove = materialsElement("button", "", "Remove");
+      remove.type = "button";
+      remove.addEventListener("click", () => change(row.item_id, row.version, false, `Removed use of ${row.name}`));
+      actions.appendChild(remove);
+      tr.appendChild(actions);
+      table.appendChild(tr);
+    }
+    section.appendChild(table);
   }
-  const list = materialsElement("ul", "materials-list");
-  for (const row of rows) {
-    list.appendChild(materialsElement("li", row.missing ? "error" : "", row.missing ? `${row.label} (missing)` : row.label));
+
+  const picker = materialsElement("div", "upload-controls");
+  const query = materialsElement("input");
+  query.type = "text";
+  query.placeholder = "Search items by name";
+  const typeSelect = materialsElement("select");
+  for (const entry of [{ type: "all", label: "All types" }, ...MaterialsModel.TYPES]) {
+    const option = materialsElement("option", "", entry.label);
+    option.value = entry.type;
+    typeSelect.appendChild(option);
   }
-  section.appendChild(list);
+  const projectSelect = materialsElement("select");
+  for (const option of MaterialsModel.projectOptions(materialsState.projects)) {
+    const o = materialsElement("option", "", option.label);
+    o.value = option.value;
+    projectSelect.appendChild(o);
+  }
+  const choice = materialsElement("select", "materials-use-choice");
+  const add = materialsElement("button", "", "Add use");
+  add.type = "button";
+
+  function fillChoices() {
+    const found = MaterialsModel.pickerItems(ctx.allItems, materialsState.projects, {
+      query: query.value,
+      type: typeSelect.value,
+      project: projectSelect.value,
+      exclude: [ctx.id, ...rows.map((row) => row.item_id)],
+    });
+    choice.innerHTML = "";
+    for (const item of found) {
+      const option = materialsElement("option", "", item.label);
+      option.value = item.id;
+      option.dataset.version = String(item.version);
+      option.dataset.name = item.name;
+      choice.appendChild(option);
+    }
+    add.disabled = found.length === 0;
+  }
+  for (const control of [query, typeSelect, projectSelect]) {
+    control.addEventListener("input", fillChoices);
+  }
+  add.addEventListener("click", () => {
+    const selected = choice.selectedOptions[0];
+    if (selected) {
+      change(selected.value, selected.dataset.version, true, `Added use of ${selected.dataset.name}`);
+    }
+  });
+  fillChoices();
+  picker.append(query, typeSelect, projectSelect, choice, add);
+  section.appendChild(picker);
   return section;
 }
 
@@ -613,7 +694,17 @@ async function renderMaterialsDetail(type, id, analysisError) {
       }),
     );
   }
-  content.appendChild(buildUsesList(answer.data.uses_status));
+  const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
+  content.appendChild(
+    buildUsesSection({
+      id,
+      type,
+      body: answer.data.body,
+      statuses: answer.data.uses_status,
+      allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      statusEl,
+    }),
+  );
   content.appendChild(buildVersionsList(item, versionEl, statusEl));
   content.appendChild(versionEl);
 }
