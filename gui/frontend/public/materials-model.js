@@ -217,10 +217,31 @@
         type: use.type || "",
         project: use.project_id ? projectName(projects, use.project_id) : "",
         version: Number(use.version),
+        current: Number(use.current_version),
         label: `${name} v${use.version}`,
         missing: Boolean(use.missing),
+        stale: !use.missing && Number(use.current_version) > Number(use.version),
+        note: use.missing
+          ? "source deleted"
+          : Number(use.current_version) > Number(use.version)
+            ? `source updated to v${use.current_version}`
+            : "",
       };
     });
+  }
+
+  /* True when any use of an item has a newer source version. */
+  function hasUpdatedUse(statuses) {
+    return useRows(statuses, []).some((row) => row.stale);
+  }
+
+  /* Moves a use to the source's current version (writes a new version). */
+  function buildUpdateUseRequest(id, sourceId) {
+    return jsonRequest(
+      "POST",
+      `/api/materials/items/${encodeURIComponent(id)}/uses/${encodeURIComponent(sourceId)}/update`,
+      {},
+    );
   }
 
   function buildAllItemsRequest() {
@@ -510,6 +531,8 @@
     itemRows,
     versionRows,
     useRows,
+    hasUpdatedUse,
+    buildUpdateUseRequest,
     buildAllItemsRequest,
     pickerItems,
     bodyWithUse,
