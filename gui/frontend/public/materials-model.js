@@ -244,6 +244,19 @@
     );
   }
 
+  /* Rows for the Used by section from the item answer's used_by: the items
+   * whose current version uses this one, and the version they use. */
+  function usedByRows(users, projects) {
+    return (Array.isArray(users) ? users : []).map((user) => ({
+      id: user.id,
+      name: user.name || user.id,
+      type: user.type || "",
+      project: user.project_id ? projectName(projects, user.project_id) : "",
+      version: Number(user.version),
+      label: `${user.name || user.id} (${user.type || "item"}) uses v${user.version}`,
+    }));
+  }
+
   function buildAllItemsRequest() {
     return jsonRequest("GET", "/api/materials/items");
   }
@@ -531,6 +544,7 @@
     itemRows,
     versionRows,
     useRows,
+    usedByRows,
     hasUpdatedUse,
     buildUpdateUseRequest,
     buildAllItemsRequest,

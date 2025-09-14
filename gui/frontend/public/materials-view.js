@@ -411,6 +411,28 @@ function buildUsesSection(ctx) {
   return section;
 }
 
+/* The Used by section: the items that use this one; each opens its detail. */
+function buildUsedBySection(users) {
+  const rows = MaterialsModel.usedByRows(users, materialsState.projects);
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h2", "section-title", "Used by"));
+  if (rows.length === 0) {
+    section.appendChild(materialsElement("div", "piece-list-status", "Not used by any item."));
+    return section;
+  }
+  const list = materialsElement("ul", "materials-list");
+  for (const row of rows) {
+    const li = materialsElement("li");
+    const open = materialsElement("a", "clickable", row.label);
+    open.addEventListener("click", () => openLinkedItem(row.type, row.id));
+    li.appendChild(open);
+    li.appendChild(document.createTextNode(row.project ? ` · ${row.project}` : ""));
+    list.appendChild(li);
+  }
+  section.appendChild(list);
+  return section;
+}
+
 function buildVersionsList(item, viewEl, statusEl) {
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Versions"));
@@ -771,6 +793,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
       statusEl,
     }),
   );
+  content.appendChild(buildUsedBySection(answer.data.used_by));
   content.appendChild(buildVersionsList(item, versionEl, statusEl));
   content.appendChild(versionEl);
 }
