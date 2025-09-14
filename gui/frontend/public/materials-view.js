@@ -755,7 +755,29 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }
     renderMaterialsDetail(type, id);
   });
-  controls.append(name, project, save);
+  const del = materialsElement("button", "", "Delete");
+  del.type = "button";
+  del.addEventListener("click", async () => {
+    if (!window.confirm(`Delete ${info.singular} "${item.name}" and all its versions?`)) {
+      return;
+    }
+    let result = await sendMaterialsRequest(MaterialsModel.buildDeleteItemRequest(id, false));
+    const warning = MaterialsModel.deleteWarning(item.name, result.status, result.data);
+    if (warning) {
+      if (!window.confirm(warning.message)) {
+        return;
+      }
+      result = await sendMaterialsRequest(MaterialsModel.buildDeleteItemRequest(id, true));
+    }
+    if (!result.ok) {
+      statusEl.textContent = MaterialsModel.errorText(result.data, `Could not delete the ${info.singular}`);
+      statusEl.classList.add("error");
+      return;
+    }
+    notifySubjectsChanged();
+    renderMaterialsView(type);
+  });
+  controls.append(name, project, save, del);
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");

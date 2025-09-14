@@ -257,6 +257,25 @@
     }));
   }
 
+  /* force true adds ?force=1, which deletes an item other items use. */
+  function buildDeleteItemRequest(id, force) {
+    return jsonRequest("DELETE", `/api/materials/items/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
+  }
+
+  /* The warning for a refused delete (status 409 with used_by), or null when
+   * the answer is not that refusal. */
+  function deleteWarning(name, status, data) {
+    if (status !== 409 || !data || !Array.isArray(data.used_by)) {
+      return null;
+    }
+    const users = data.used_by.map((user) => user.name || user.id);
+    const count = users.length;
+    return {
+      users,
+      message: `${name} is used by ${count} item${count === 1 ? "" : "s"}: ${users.join(", ")}. Their copies stay, and their uses will report the source as deleted. Delete anyway?`,
+    };
+  }
+
   function buildAllItemsRequest() {
     return jsonRequest("GET", "/api/materials/items");
   }
@@ -544,6 +563,8 @@
     itemRows,
     versionRows,
     useRows,
+    buildDeleteItemRequest,
+    deleteWarning,
     usedByRows,
     hasUpdatedUse,
     buildUpdateUseRequest,
