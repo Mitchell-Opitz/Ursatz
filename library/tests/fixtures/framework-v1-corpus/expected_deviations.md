@@ -1,0 +1,107 @@
+# Expected deviations
+
+The Framework v1 verification (`tests/integration/framework_v1_verification.c`, `framework_v1_thematic_returns.c`) checks the full chain on the five reference pieces against
+`tests/fixtures/annotations/<piece>_v1_expected.txt`. A location where the chain does not give the expected value is a **deviation**, listed
+below with the exact value the chain gives (the **actual** column) and its cause. The tests READ this file: a check that still deviates must match its row
+exactly (expected, actual, cause known); a check that now passes while its row is still here fails; a row no check uses fails. Nothing is skipped, no threshold is
+chosen, and no default is tuned to a piece. See `tests/integration/framework_v1_deviations.h`.
+
+The expected values are **draft hand readings, unverified against the editions** (see the headers of the `_v1_expected.txt` files). Two kinds of cause are
+therefore recorded: a **method** limit (a documented or demonstrable limit of an L2/L3 stage, with the roadmap item that would remove it) and a **convention**
+(the draft fixtures and a library rule define the same thing differently, so the difference ends only when the drafts are checked against the editions).
+
+Roadmap items are named here and have no number yet: the **Roadmap ID** column reads `unassigned` until the Registry gives one.
+
+## Causes
+
+| ID | Limit | Roadmap item | Roadmap ID |
+|---|---|---|---|
+| C1 | [method] Key regions come from 4-measure windows scored against pitch-class profiles with a change penalty (`key_regions.h`, REGION PATH); a window labels the measure at its centre, so a region's edge lands up to two measures from the barline where the music changes, and a one- or two-measure excursion is stretched to a window or absorbed | Key regions placed on harmonic evidence (cadence- and pivot-informed boundaries) | unassigned |
+| C2 | [method] The key of a window is the best correlation of its pooled pitch-class weights with the 24 profiles; closely related keys (the dominant, the subdominant, the relative minor) and passages of scales or a dominant pedal are read as the neighbouring key | Harmony-aware key estimation (the key from chord functions, not pitch-class weights alone) | unassigned |
+| C3 | [method] The extent of a key change is read from the lengths of the regions and their return only; no cadence is looked for (`cadence_confirmed` is always false, `key_regions.h`), so a change that a cadence confirms reads as a weak modulation or a tonicization | KeyChangeExtent confirmed by cadences (named as later work in `key_regions.h`) | unassigned |
+| C4 | [method] The cadence adapter looks only for arrivals on at least a medium beat (`min_arrival_strength`, `analysis_cadence.h`); an arrival on a weak beat or a weak half beat is not found. Bach 114's arrivals are on beat 3 and on the half beat before it, both weak in 3/4 | Cadence arrival on weak beats (arrival found independently of the metric strength) | unassigned |
+| C5 | [method] Chords are read from the pitch classes sounding in each adaptive segment, ranked among the diatonic triads and sevenths of the region's key: a segment holding only a melody note (a sparse left hand), an alternating or ornamented texture, or a chord outside the vocabulary is read as another chord or none, so the V-I that the music has is hidden and a V-I the music does not have can appear | Chord identification with context (non-chord-tone filtering, harmonic continuity across melody-only segments, non-diatonic chords) | unassigned |
+| C6 | [method] A bass that is not a member of the chord reads as root position (`roman_numeral_adapter.h`); the segment's bass is its lowest sounding pitch, so a neighbour or passing bass tone turns a dominant seventh that is prolonged in an inversion into a root-position V7 (and a tonic with an ornamental bass into I6) | Inversion read from the chord's bass tone when the lowest pitch is ornamental | unassigned |
+| C7 | [convention] The cadence adapter defines SUBVERTED as a cadential dominant that resolves to I6 or another non-tonic (`analysis_cadence.h`); the older cadence drafts do not mark such places (a V-I6 prolongs there) | Fixture check against the editions, then one cadence convention across the drafts and the adapter | unassigned |
+| C8 | [method] L3.6 builds phrases, themes and expansions from the cadences it is given; where the cadences upstream are missing or wrong (C4, C5, C6) the phrase ends, the themes and their parts, and the expansions are missing or fall on other measures | Re-verification of L3.6 once the cadence items (C4, C5, C6) are done | unassigned |
+| C9 | [convention] A dominant that ends a development and resolves into the recapitulation's tonic is a root-position V to I, which the adapter calls an authentic cadence; the draft reads the dominant as the development's half cadence and the recapitulation as a new start | Cadences across a formal boundary (the adapter has no notion of form sections); fixture check against the edition | unassigned |
+
+## Deviations
+
+| ID | Piece | Area | Location | Expected | Actual | Cause |
+|---|---|---|---|---|---|---|
+| DEV-001 | bach114 | keys | region 19-20 | D major 19-20 | D major 19-22 | C1 |
+| DEV-002 | bach114 | keys | region 21-26 | G major 21-26 | D major 19-22, G major 23-26 | C1 |
+| DEV-003 | bach114 | keys | region 27-28 | D major 27-28 | D major 27-32 | C1 |
+| DEV-004 | bach114 | keys | region 29-32 | G major 29-32 | D major 27-32 | C1 |
+| DEV-005 | bach114 | keys | change 21 | weak-modulation return at 21 | none | C1 |
+| DEV-006 | bach114 | keys | change 29 | weak-modulation return at 29 | none | C1 |
+| DEV-007 | bach114 | cadences | m4 b3 | hc | none | C4 |
+| DEV-008 | bach114 | cadences | m8 b2.5 | pac | none | C4 |
+| DEV-009 | bach114 | cadences | m12 b3 | hc | none | C4 |
+| DEV-010 | bach114 | cadences | m16 b2.5 | pac | none | C4 |
+| DEV-011 | bach114 | cadences | m20 b2.5 | pac | none | C4 |
+| DEV-012 | bach114 | cadences | m24 b2.5 | pac | none | C4 |
+| DEV-013 | bach114 | cadences | m28 b2.5 | pac | none | C4 |
+| DEV-014 | bach114 | cadences | m32 b2.5 | pac | none | C4 |
+| DEV-015 | bach114 | cadences | extra m23 b1 | none | subverted | C5 |
+| DEV-016 | bach114 | cadences | extra m31 b1 | none | subverted | C5 |
+| DEV-017 | bach114 | phrase-form | end m4 | hc at m4 | none | C8 |
+| DEV-018 | bach114 | phrase-form | end m12 | hc at m12 | none | C8 |
+| DEV-019 | bach114 | phrase-form | end m20 | pac at m20 | none | C8 |
+| DEV-020 | bach114 | phrase-form | end m24 | pac at m24 | none | C8 |
+| DEV-021 | bach114 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | none | C8 |
+| DEV-022 | bach114 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
+| DEV-023 | mozart545 | keys | region 1-12 | C major 1-12 | C major 1-7, F major 8-11, G major 12-20 | C1,C2 |
+| DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 12-20, A minor 21-24, G major 25-29 | C1,C2 |
+| DEV-025 | mozart545 | keys | region 29-40 | C major 29-40 | G major 25-29, C major 30-35, F major 36-39, G major 40-48 | C1,C2 |
+| DEV-026 | mozart545 | keys | region 41-56 | G major 41-56 | G major 40-48, A minor 49-52, G major 53-60 | C1,C2 |
+| DEV-027 | mozart545 | keys | region 70-78 | F major 70-78 | F major 69-84 | C1 |
+| DEV-028 | mozart545 | keys | region 79-101 | C major 79-101 | F major 69-84, G major 85-87, E minor 88-93, D minor 94-97, C major 98-103 | C1,C2 |
+| DEV-029 | mozart545 | keys | region 115-123 | F major 115-123 | F major 114-129 | C1 |
+| DEV-030 | mozart545 | keys | region 124-146 | C major 124-146 | F major 114-129, G major 130-132, E minor 133-138, D minor 139-142, C major 143-146 | C1,C2 |
+| DEV-031 | mozart545 | keys | change 79 | modulation at 79 | none | C1,C2 |
+| DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
+| DEV-033 | mozart545 | cadences | m11 b1 | hc | none | C5 |
+| DEV-034 | mozart545 | cadences | m26 b1 | pac | none | C5 |
+| DEV-035 | mozart545 | cadences | extra m5 b1 | none | subverted | C5 |
+| DEV-036 | mozart545 | cadences | extra m15 b1 | none | hc | C6 |
+| DEV-037 | mozart545 | cadences | extra m17 b1 | none | hc | C6 |
+| DEV-038 | mozart545 | phrase-form | end m12 | hc at m12 | none | C8 |
+| DEV-039 | clementi36 | keys | region 1-5 | C major 1-5 | C major 1-7 | C1 |
+| DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-15 | C1 |
+| DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 16-19, G major 20-23 | C1,C2 |
+| DEV-042 | clementi36 | keys | change 6 | modulation at 6 | none | C1 |
+| DEV-043 | clementi36 | keys | change 16 | modulation at 16 | weak-modulation at 16 | C3 |
+| DEV-044 | clementi36 | cadences | m8 b1 | pac | none | C1,C5 |
+| DEV-045 | clementi36 | cadences | m15 b1 | pac | none | C5 |
+| DEV-046 | clementi36 | cadences | m23 b1 | hc | none | C1,C2 |
+| DEV-047 | clementi36 | cadences | m38 b1 | pac | none | C5 |
+| DEV-048 | clementi36 | cadences | extra m2 b1 | none | pac | C5 |
+| DEV-049 | clementi36 | cadences | extra m2 b3 | none | hc | C5 |
+| DEV-050 | clementi36 | cadences | extra m6 b1 | none | iac | C5 |
+| DEV-051 | clementi36 | cadences | extra m10 b1 | none | iac | C5 |
+| DEV-052 | clementi36 | cadences | extra m12 b1 | none | subverted | C5,C7 |
+| DEV-053 | clementi36 | cadences | extra m14 b3 | none | hc | C5 |
+| DEV-054 | clementi36 | cadences | extra m24 b1 | none | pac | C9 |
+| DEV-055 | clementi36 | cadences | extra m25 b1 | none | pac | C5 |
+| DEV-056 | clementi36 | cadences | extra m25 b3 | none | hc | C5 |
+| DEV-057 | clementi36 | cadences | extra m29 b3 | none | hc | C5 |
+| DEV-058 | clementi36 | cadences | extra m33 b1 | none | iac | C5 |
+| DEV-059 | clementi36 | cadences | extra m35 b1 | none | subverted | C5,C7 |
+| DEV-060 | clementi36 | cadences | extra m37 b3 | none | subverted | C5,C7 |
+| DEV-061 | clementi36 | phrase-form | end m8 | pac at m8 | none | C8 |
+| DEV-062 | clementi36 | phrase-form | end m38 | pac at m38 | none | C8 |
+| DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | none | C8 |
+| DEV-064 | clementi36 | phrase-form | theme period 24-38 | period 24-38 parts 24-27 28-38 | period 11-24 parts 11-14 15-24 | C8 |
+| DEV-065 | clementi36 | phrase-form | expansion internal 28-38 | internal 28-38 7 measures | external 34-38 5 measures | C8 |
+| DEV-066 | field1 | cadences | m8 b1 | pac | none | C5,C6 |
+| DEV-067 | field1 | cadences | m12 b1 | iac | none | C5,C6 |
+| DEV-068 | field1 | cadences | m16 b1 | pac | none | C5,C6 |
+| DEV-069 | field1 | cadences | extra m2 b1 | none | pac | C5 |
+| DEV-070 | field1 | cadences | extra m3 b1 | none | hc | C5 |
+| DEV-071 | field1 | cadences | extra m7 b1 | none | hc | C5 |
+| DEV-072 | field1 | phrase-form | end m12 | iac at m12 | none | C8 |
+| DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | none | C8 |
+| DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
+| DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-4, D minor 5-8 | C1,C2 |
