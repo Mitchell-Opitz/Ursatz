@@ -87,6 +87,23 @@ reason when the save said why. The helpers (`motifFormValues`,
 `motifFormProblems`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
 in `materials-model.js`.
 
+### Item references in the GUI
+
+An item's detail has a Uses section: each use shows the source's name, type,
+project and the version used, with Remove. Add use picks from the items of
+every project (search by name, filter by type and project, the item itself and
+its current uses left out); the use points at the source's current version.
+Adding or removing a use writes a new version of the item with a note. A use
+whose source has a newer version reads "source updated to v<n>" with Update
+(moves the use to the current version, as a new version) and Compare (the used
+and current versions side by side, read only). A use whose source was deleted
+reads "source deleted"; its copy is kept. Used by lists the items that use
+this one, each opening its detail. In the Motifs, Themes and Pieces lists a
+row gets an "uses updated" badge when any of its uses has a newer source.
+Delete asks to confirm; when other items use the item it names them and asks
+again, and confirming deletes with `?force=1` (their copies stay and their
+uses report the source as deleted).
+
 ### Subjects views
 
 A Subjects panel sits in the sidebar under Tags: subjects grouped by kind
