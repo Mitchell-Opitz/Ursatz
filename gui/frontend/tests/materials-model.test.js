@@ -168,6 +168,60 @@ const none = M.analysisRows({ analysis: null }, "composer not found");
 check(!none.analyzed && none.message === "Not analyzed: composer not found", "a null analysis names the reason");
 check(M.analysisRows(null).message === "Not analyzed", "no motif is not analyzed");
 
+// Item references.
+const statuses = [
+  { item_id: "mot-1", version: 1, current_version: 3, name: "Hook", type: "motif", project_id: "prj-a", missing: false },
+  { item_id: "mot-2", version: 2, current_version: 2, name: "Tail", type: "motif", project_id: "prj-b", missing: false },
+  { item_id: "mot-9", version: 1, name: "Gone", missing: true },
+];
+const useInfo = M.useRows(statuses, projects);
+check(useInfo[0].stale && useInfo[0].note === "source updated to v3" && useInfo[0].current === 3, "a newer source version flags the use");
+check(!useInfo[1].stale && useInfo[1].note === "", "an unchanged source is not flagged");
+check(useInfo[2].missing && !useInfo[2].stale && useInfo[2].note === "source deleted", "a missing source says deleted, not updated");
+check(useInfo[0].project === "Sonata" && useInfo[0].type === "motif", "use rows carry project and type");
+check(M.hasUpdatedUse(statuses) && !M.hasUpdatedUse([statuses[1], statuses[2]]) && !M.hasUpdatedUse(null), "badge only for a newer source");
+const upd = M.buildUpdateUseRequest("thm-1", "mot-1");
+check(upd.method === "POST" && upd.url === "/api/materials/items/thm-1/uses/mot-1/update", "update use route");
+
+const all = [
+  { id: "mot-1", type: "motif", name: "Hook", project_id: "prj-a", current_version: 3 },
+  { id: "mot-2", type: "motif", name: "Tail", project_id: "prj-b", current_version: 1 },
+  { id: "thm-1", type: "theme", name: "Main hook", project_id: "prj-b", current_version: 2 },
+];
+check(same(M.pickerItems(all, projects, {}).map((i) => i.id), ["mot-1", "thm-1", "mot-2"]), "picker lists items of every project by name");
+check(same(M.pickerItems(all, projects, { query: "HOOK" }).map((i) => i.id), ["mot-1", "thm-1"]), "picker searches by name, any case");
+check(same(M.pickerItems(all, projects, { type: "theme" }).map((i) => i.id), ["thm-1"]), "picker filters by type");
+check(same(M.pickerItems(all, projects, { project: "prj-b" }).map((i) => i.id), ["thm-1", "mot-2"]), "picker filters by project");
+check(same(M.pickerItems(all, projects, { type: "all", project: "all" }).map((i) => i.id), ["mot-1", "thm-1", "mot-2"]), "all means no filter");
+check(same(M.pickerItems(all, projects, { exclude: ["mot-1", "mot-2"] }).map((i) => i.id), ["thm-1"]), "picker leaves out excluded items");
+check(M.pickerItems(all, projects, {})[0].label === "Hook (motif, Sonata) v3", "picker label");
+check(M.pickerItems(null, projects, {}).length === 0, "no items, no choices");
+
+const base = { uses: [{ item_id: "mot-1", version: 1, copy: {} }], motif: { notes: "x" } };
+const added = M.bodyWithUse(base, "mot-2", 4, true);
+check(added.uses.length === 2 && same(added.uses[1], { item_id: "mot-2", version: 4 }), "adding a use appends it at that version");
+check(base.uses.length === 1, "the original body is not changed");
+check(M.bodyWithUse(base, "mot-1", 3, true).uses.length === 1 && M.bodyWithUse(base, "mot-1", 3, true).uses[0].version === 3, "adding an existing use replaces its version");
+check(M.bodyWithUse(base, "mot-1", 1, false).uses.length === 0, "removing a use drops it");
+check(M.bodyWithUse(base, "mot-1", 1, false).motif.notes === "x", "the rest of the body is kept");
+check(M.bodyWithUse(null, "mot-1", 1, true).uses.length === 1, "a missing body gets a uses array");
+const vreq = M.buildAddVersionRequest("thm-1", added, " Added use ");
+check(vreq.url === "/api/materials/items/thm-1/versions" && JSON.parse(vreq.body).note === "Added use", "version request with note");
+check(!("note" in JSON.parse(M.buildAddVersionRequest("thm-1", added).body)), "version request without note");
+
+const users = M.usedByRows([{ id: "thm-1", name: "Main", type: "theme", project_id: "prj-b", version: 2 }], projects);
+check(users[0].label === "Main (theme) uses v2" && users[0].project === "Etudes", "used by rows");
+check(M.usedByRows(null, projects).length === 0, "no users, no rows");
+
+check(M.buildDeleteItemRequest("mot-1", false).url === "/api/materials/items/mot-1", "delete without force");
+check(M.buildDeleteItemRequest("mot-1", true).url === "/api/materials/items/mot-1?force=1", "delete with force");
+check(M.buildDeleteItemRequest("mot-1", true).method === "DELETE", "delete uses DELETE");
+const warn = M.deleteWarning("Hook", 409, { ok: false, error: "item is used", used_by: [{ id: "a", name: "Main" }, { id: "b" }] });
+check(warn && warn.users.join() === "Main,b" && warn.message.includes("used by 2 items: Main, b"), "warning names the users");
+check(M.deleteWarning("Hook", 409, { used_by: [{ id: "a", name: "Main" }] }).message.includes("1 item:"), "warning uses the singular");
+check(M.deleteWarning("Hook", 404, { error: "not found" }) === null, "another failure is not the warning");
+check(M.deleteWarning("Hook", 409, null) === null, "a 409 without users is not the warning");
+
 if (failures > 0) {
   process.exit(1);
 }

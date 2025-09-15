@@ -198,6 +198,7 @@ function buildItemTable(rows, onOpen) {
   table.appendChild(head);
   for (const row of rows) {
     const tr = materialsElement("tr", "clickable");
+    tr.dataset.id = row.id;
     for (const value of [row.name, row.project, row.version, row.updated]) {
       tr.appendChild(materialsElement("td", "", value));
     }
@@ -244,21 +245,189 @@ async function renderMaterialsView(type) {
     return;
   }
   const panel = materialsElement("section", "panel library-panel");
-  panel.appendChild(buildItemTable(rows, (id) => renderMaterialsDetail(type, id)));
+  const table = buildItemTable(rows, (id) => renderMaterialsDetail(type, id));
+  panel.appendChild(table);
   listEl.appendChild(panel);
+  markUpdatedUses(table, rows, type);
 }
 
-function buildUsesList(uses) {
-  const rows = MaterialsModel.useRows(uses);
+/* Adds an "uses updated" badge to the rows of items with a newer source. */
+async function markUpdatedUses(table, rows, type) {
+  const answers = await Promise.all(
+    rows.map((row) => sendMaterialsRequest(MaterialsModel.buildItemGetRequest(row.id))),
+  );
+  if (!materialsViewActive() || materialsState.type !== type || !table.isConnected) {
+    return;
+  }
+  rows.forEach((row, index) => {
+    const answer = answers[index];
+    if (answer.ok && MaterialsModel.hasUpdatedUse(answer.data.uses_status)) {
+      const cell = table.querySelector(`tr[data-id="${row.id}"] td`);
+      if (cell) {
+        cell.appendChild(materialsElement("span", "materials-badge", "uses updated"));
+      }
+    }
+  });
+}
+
+/* Shows the version a use holds and the source's current version side by
+ * side, read only. */
+async function showUseComparison(el, row, statusEl) {
+  const [used, current] = await Promise.all([
+    sendMaterialsRequest(MaterialsModel.buildVersionGetRequest(row.item_id, row.version)),
+    sendMaterialsRequest(MaterialsModel.buildVersionGetRequest(row.item_id, row.current)),
+  ]);
+  if (!used.ok || !current.ok) {
+    statusEl.textContent = MaterialsModel.errorText((used.ok ? current : used).data, "Could not load the versions");
+    statusEl.classList.add("error");
+    return;
+  }
+  el.innerHTML = "";
+  el.appendChild(materialsElement("h3", "", `${row.name}: v${row.version} (used) and v${row.current} (current), read only`));
+  const grid = materialsElement("div", "materials-compare");
+  for (const [title, answer] of [[`v${row.version} (used)`, used], [`v${row.current} (current)`, current]]) {
+    const column = materialsElement("div");
+    column.appendChild(materialsElement("h4", "", title));
+    column.appendChild(materialsElement("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
+    grid.appendChild(column);
+  }
+  el.appendChild(grid);
+}
+
+/* The Uses section: the uses of this version, remove, and an Add use picker
+ * over the items of every project. Adding or removing writes a new version.
+ * ctx: {id, type, body, statuses, allItems, statusEl}. */
+function buildUsesSection(ctx) {
+  const rows = MaterialsModel.useRows(ctx.statuses, materialsState.projects);
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Uses"));
+  const compareEl = materialsElement("div");
+
+  async function change(sourceId, version, add, note) {
+    const next = MaterialsModel.bodyWithUse(ctx.body, sourceId, version, add);
+    const saved = await sendMaterialsRequest(MaterialsModel.buildAddVersionRequest(ctx.id, next, note));
+    if (!saved.ok) {
+      ctx.statusEl.textContent = MaterialsModel.errorText(saved.data, "Could not change the uses");
+      ctx.statusEl.classList.add("error");
+      return;
+    }
+    renderMaterialsDetail(ctx.type, ctx.id, saved.data.item.analysis_error);
+  }
+
   if (rows.length === 0) {
     section.appendChild(materialsElement("div", "piece-list-status", "Uses nothing yet."));
+  } else {
+    const table = materialsElement("table", "library-table");
+    const head = materialsElement("tr");
+    for (const label of ["Name", "Type", "Project", "Used version", "Source", ""]) {
+      head.appendChild(materialsElement("th", "", label));
+    }
+    table.appendChild(head);
+    for (const row of rows) {
+      const tr = materialsElement("tr");
+      tr.appendChild(materialsElement("td", row.missing ? "error" : "", row.name));
+      tr.appendChild(materialsElement("td", "", row.type));
+      tr.appendChild(materialsElement("td", "", row.project));
+      tr.appendChild(materialsElement("td", "", `v${row.version}`));
+      tr.appendChild(materialsElement("td", row.missing ? "error" : "", row.note));
+      const actions = materialsElement("td");
+      if (row.stale) {
+        const update = materialsElement("button", "", "Update");
+        update.type = "button";
+        update.addEventListener("click", async () => {
+          const answer = await sendMaterialsRequest(MaterialsModel.buildUpdateUseRequest(ctx.id, row.item_id));
+          if (!answer.ok) {
+            ctx.statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not update the use");
+            ctx.statusEl.classList.add("error");
+            return;
+          }
+          renderMaterialsDetail(ctx.type, ctx.id, answer.data.item.analysis_error);
+        });
+        const compare = materialsElement("button", "", "Compare");
+        compare.type = "button";
+        compare.addEventListener("click", () => showUseComparison(compareEl, row, ctx.statusEl));
+        actions.append(update, compare);
+      }
+      const remove = materialsElement("button", "", "Remove");
+      remove.type = "button";
+      remove.addEventListener("click", () => change(row.item_id, row.version, false, `Removed use of ${row.name}`));
+      actions.appendChild(remove);
+      tr.appendChild(actions);
+      table.appendChild(tr);
+    }
+    section.appendChild(table);
+  }
+
+  const picker = materialsElement("div", "upload-controls");
+  const query = materialsElement("input");
+  query.type = "text";
+  query.placeholder = "Search items by name";
+  const typeSelect = materialsElement("select");
+  for (const entry of [{ type: "all", label: "All types" }, ...MaterialsModel.TYPES]) {
+    const option = materialsElement("option", "", entry.label);
+    option.value = entry.type;
+    typeSelect.appendChild(option);
+  }
+  const projectSelect = materialsElement("select");
+  for (const option of MaterialsModel.projectOptions(materialsState.projects)) {
+    const o = materialsElement("option", "", option.label);
+    o.value = option.value;
+    projectSelect.appendChild(o);
+  }
+  const choice = materialsElement("select", "materials-use-choice");
+  const add = materialsElement("button", "", "Add use");
+  add.type = "button";
+
+  function fillChoices() {
+    const found = MaterialsModel.pickerItems(ctx.allItems, materialsState.projects, {
+      query: query.value,
+      type: typeSelect.value,
+      project: projectSelect.value,
+      exclude: [ctx.id, ...rows.map((row) => row.item_id)],
+    });
+    choice.innerHTML = "";
+    for (const item of found) {
+      const option = materialsElement("option", "", item.label);
+      option.value = item.id;
+      option.dataset.version = String(item.version);
+      option.dataset.name = item.name;
+      choice.appendChild(option);
+    }
+    add.disabled = found.length === 0;
+  }
+  for (const control of [query, typeSelect, projectSelect]) {
+    control.addEventListener("input", fillChoices);
+  }
+  add.addEventListener("click", () => {
+    const selected = choice.selectedOptions[0];
+    if (selected) {
+      change(selected.value, selected.dataset.version, true, `Added use of ${selected.dataset.name}`);
+    }
+  });
+  fillChoices();
+  picker.append(query, typeSelect, projectSelect, choice, add);
+  section.appendChild(picker);
+  section.appendChild(compareEl);
+  return section;
+}
+
+/* The Used by section: the items that use this one; each opens its detail. */
+function buildUsedBySection(users) {
+  const rows = MaterialsModel.usedByRows(users, materialsState.projects);
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h2", "section-title", "Used by"));
+  if (rows.length === 0) {
+    section.appendChild(materialsElement("div", "piece-list-status", "Not used by any item."));
     return section;
   }
   const list = materialsElement("ul", "materials-list");
   for (const row of rows) {
-    list.appendChild(materialsElement("li", row.missing ? "error" : "", row.missing ? `${row.label} (missing)` : row.label));
+    const li = materialsElement("li");
+    const open = materialsElement("a", "clickable", row.label);
+    open.addEventListener("click", () => openLinkedItem(row.type, row.id));
+    li.appendChild(open);
+    li.appendChild(document.createTextNode(row.project ? ` · ${row.project}` : ""));
+    list.appendChild(li);
   }
   section.appendChild(list);
   return section;
@@ -586,7 +755,29 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }
     renderMaterialsDetail(type, id);
   });
-  controls.append(name, project, save);
+  const del = materialsElement("button", "", "Delete");
+  del.type = "button";
+  del.addEventListener("click", async () => {
+    if (!window.confirm(`Delete ${info.singular} "${item.name}" and all its versions?`)) {
+      return;
+    }
+    let result = await sendMaterialsRequest(MaterialsModel.buildDeleteItemRequest(id, false));
+    const warning = MaterialsModel.deleteWarning(item.name, result.status, result.data);
+    if (warning) {
+      if (!window.confirm(warning.message)) {
+        return;
+      }
+      result = await sendMaterialsRequest(MaterialsModel.buildDeleteItemRequest(id, true));
+    }
+    if (!result.ok) {
+      statusEl.textContent = MaterialsModel.errorText(result.data, `Could not delete the ${info.singular}`);
+      statusEl.classList.add("error");
+      return;
+    }
+    notifySubjectsChanged();
+    renderMaterialsView(type);
+  });
+  controls.append(name, project, save, del);
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
@@ -613,7 +804,18 @@ async function renderMaterialsDetail(type, id, analysisError) {
       }),
     );
   }
-  content.appendChild(buildUsesList(answer.data.uses_status));
+  const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
+  content.appendChild(
+    buildUsesSection({
+      id,
+      type,
+      body: answer.data.body,
+      statuses: answer.data.uses_status,
+      allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      statusEl,
+    }),
+  );
+  content.appendChild(buildUsedBySection(answer.data.used_by));
   content.appendChild(buildVersionsList(item, versionEl, statusEl));
   content.appendChild(versionEl);
 }

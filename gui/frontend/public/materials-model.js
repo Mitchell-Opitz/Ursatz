@@ -207,16 +207,125 @@
       .sort((a, b) => b.number - a.number);
   }
 
-  /* One line per use: "Name v2" (Name vN, missing when the source is gone). */
-  function useRows(uses) {
-    return (Array.isArray(uses) ? uses : []).map((use) => ({
-      item_id: use.item_id,
-      name: use.name || use.item_id,
-      label: `${use.name || use.item_id} v${use.version}`,
-      missing: Boolean(use.missing),
+  /* Rows for the Uses section from the item answer's uses_status. */
+  function useRows(statuses, projects) {
+    return (Array.isArray(statuses) ? statuses : []).map((use) => {
+      const name = use.name || use.item_id;
+      return {
+        item_id: use.item_id,
+        name,
+        type: use.type || "",
+        project: use.project_id ? projectName(projects, use.project_id) : "",
+        version: Number(use.version),
+        current: Number(use.current_version),
+        label: `${name} v${use.version}`,
+        missing: Boolean(use.missing),
+        stale: !use.missing && Number(use.current_version) > Number(use.version),
+        note: use.missing
+          ? "source deleted"
+          : Number(use.current_version) > Number(use.version)
+            ? `source updated to v${use.current_version}`
+            : "",
+      };
+    });
+  }
+
+  /* True when any use of an item has a newer source version. */
+  function hasUpdatedUse(statuses) {
+    return useRows(statuses, []).some((row) => row.stale);
+  }
+
+  /* Moves a use to the source's current version (writes a new version). */
+  function buildUpdateUseRequest(id, sourceId) {
+    return jsonRequest(
+      "POST",
+      `/api/materials/items/${encodeURIComponent(id)}/uses/${encodeURIComponent(sourceId)}/update`,
+      {},
+    );
+  }
+
+  /* Rows for the Used by section from the item answer's used_by: the items
+   * whose current version uses this one, and the version they use. */
+  function usedByRows(users, projects) {
+    return (Array.isArray(users) ? users : []).map((user) => ({
+      id: user.id,
+      name: user.name || user.id,
+      type: user.type || "",
+      project: user.project_id ? projectName(projects, user.project_id) : "",
+      version: Number(user.version),
+      label: `${user.name || user.id} (${user.type || "item"}) uses v${user.version}`,
     }));
   }
 
+  /* force true adds ?force=1, which deletes an item other items use. */
+  function buildDeleteItemRequest(id, force) {
+    return jsonRequest("DELETE", `/api/materials/items/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
+  }
+
+  /* The warning for a refused delete (status 409 with used_by), or null when
+   * the answer is not that refusal. */
+  function deleteWarning(name, status, data) {
+    if (status !== 409 || !data || !Array.isArray(data.used_by)) {
+      return null;
+    }
+    const users = data.used_by.map((user) => user.name || user.id);
+    const count = users.length;
+    return {
+      users,
+      message: `${name} is used by ${count} item${count === 1 ? "" : "s"}: ${users.join(", ")}. Their copies stay, and their uses will report the source as deleted. Delete anyway?`,
+    };
+  }
+
+  function buildAllItemsRequest() {
+    return jsonRequest("GET", "/api/materials/items");
+  }
+
+  /* Items to pick from, by name (case-insensitive part), type and project
+   * ("all" or empty for any); excluded ids are left out. */
+  function pickerItems(items, projects, filter) {
+    const f = filter || {};
+    const query = String(f.query || "").trim().toLowerCase();
+    const skip = new Set(f.exclude || []);
+    return (Array.isArray(items) ? items : [])
+      .filter(
+        (item) =>
+          !skip.has(item.id) &&
+          (!f.type || f.type === "all" || item.type === f.type) &&
+          (!f.project || f.project === ALL_PROJECTS || item.project_id === f.project) &&
+          (query === "" || String(item.name).toLowerCase().includes(query)),
+      )
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        project: projectName(projects, item.project_id),
+        version: Number(item.current_version),
+        label: `${item.name} (${item.type}, ${projectName(projects, item.project_id)}) v${item.current_version}`,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /* A copy of the version body with a use added (at the item's current
+   * version; an existing use of it is replaced) or removed. The backend
+   * fills in each use's copy. */
+  function bodyWithUse(body, sourceId, version, add) {
+    const next = JSON.parse(JSON.stringify(body || { uses: [] }));
+    const uses = (Array.isArray(next.uses) ? next.uses : []).filter((use) => use.item_id !== sourceId);
+    if (add) {
+      uses.push({ item_id: sourceId, version: Number(version) });
+    }
+    next.uses = uses;
+    return next;
+  }
+
+  /* A new version of an item with the given body and an optional note. */
+  function buildAddVersionRequest(id, body, note) {
+    const request = { body };
+    if (note && String(note).trim() !== "") {
+      request.note = String(note).trim();
+    }
+    return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
+  }
 
   const NOTE_HINT = "Pitch:duration, e.g. D4:q F4:e A4:e D5:h. r is a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
   const MOTIF_ROLES = [
@@ -454,6 +563,15 @@
     itemRows,
     versionRows,
     useRows,
+    buildDeleteItemRequest,
+    deleteWarning,
+    usedByRows,
+    hasUpdatedUse,
+    buildUpdateUseRequest,
+    buildAllItemsRequest,
+    pickerItems,
+    bodyWithUse,
+    buildAddVersionRequest,
     NOTE_HINT,
     MOTIF_ROLES,
     MOTIF_FORMS,
