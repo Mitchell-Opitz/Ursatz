@@ -1125,7 +1125,7 @@ pinned at PR #38 (`8a2fd29`).
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
-`external/ursatz-composer`, pinned at PR #34 (`1786b33`). It is built by an
+`external/ursatz-composer`, pinned at PR #40 (`466b38c`). It is built by an
 `ExternalProject` in `build/composer` (its tests off), so it brings its own
 Ursatz and Analyzer; the build runs it as `ursatz-composer` and does not link
 it.
