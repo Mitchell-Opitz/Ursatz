@@ -55,6 +55,8 @@ typedef struct {
     bool notes_limit;
     /* A ratio: drawn below 1 instead of above it. */
     bool shrinks;
+    /* A 0-based index into the motive's labelled features: the largest value drawn is the feature count less one. */
+    bool features_limit;
 } VariantParam;
 
 /*

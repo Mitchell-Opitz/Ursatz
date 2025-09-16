@@ -121,6 +121,9 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         if (param->notes_limit && (long)current->note_count - 1 < max) {
             max = (long)current->note_count - 1;
         }
+        if (param->features_limit && (long)current->feature_count - 1 < max) {
+            max = (long)current->feature_count - 1;
+        }
         value.value = draw_int(rng, param->min, max < param->min ? param->min : max);
         break;
     }
@@ -412,7 +415,11 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
             }
         }
         if (status != MOTIVE_DEV_OK) {
-            record_error(log, s, "%s: %s", operation->name, motive_dev_result_name(status));
+            if (status == MOTIVE_DEV_ERR_NO_FEATURE) {
+                record_error(log, s, "%s needs a labelled feature", operation->name);
+            } else {
+                record_error(log, s, "%s: %s", operation->name, motive_dev_result_name(status));
+            }
             return VARIANT_ERR_REFUSED;
         }
         log->step_count = s + 1;
