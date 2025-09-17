@@ -348,18 +348,53 @@ typedef enum {
   ANALYSIS_ALLOC
 } AnalysisOutcome;
 
-static void set_motif_analysis(cJSON *motif, cJSON *analysis) {
-  if (cJSON_GetObjectItemCaseSensitive(motif, "analysis")) {
-    cJSON_ReplaceItemInObjectCaseSensitive(motif, "analysis", analysis);
+static void set_motif_member(cJSON *motif, const char *name, cJSON *value) {
+  if (cJSON_GetObjectItemCaseSensitive(motif, name)) {
+    cJSON_ReplaceItemInObjectCaseSensitive(motif, name, value);
   } else {
-    cJSON_AddItemToObject(motif, "analysis", analysis);
+    cJSON_AddItemToObject(motif, name, value);
   }
 }
 
-/* Runs the Composer's motive analysis on a motif body and stores the result as motif.analysis. A body without a
-   valid full motif is left alone for the material service to judge. When the Composer cannot run, the analysis is
-   stored as null and *analysis_error names the reason. When the Composer reads the input and refuses it, the
-   result is REFUSED and refusal holds its message. */
+static void set_motif_analysis(cJSON *motif, cJSON *analysis) {
+  set_motif_member(motif, "analysis", analysis);
+}
+
+/* pickup ^[0-9]{1,2}(/[0-9]{1,2})?$ */
+static bool analysis_pickup_ok(const char *text) {
+  size_t i = 0;
+  while (isdigit((unsigned char)text[i])) {
+    i++;
+  }
+  if (i < 1 || i > 2) {
+    return false;
+  }
+  if (text[i] == '\0') {
+    return true;
+  }
+  if (text[i] != '/') {
+    return false;
+  }
+  size_t start = ++i;
+  while (isdigit((unsigned char)text[i])) {
+    i++;
+  }
+  return i - start >= 1 && i - start <= 2 && text[i] == '\0';
+}
+
+/* The text the Composer returned for the form: degrees_text, rhythm_text or contour_text, or NULL. */
+static const char *analysis_degrees_text(const cJSON *output, const char *form) {
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(output, "analysis");
+  const char *name = strcmp(form, "rhythm") == 0 ? "rhythm_text" : strcmp(form, "contour") == 0 ? "contour_text" : "degrees_text";
+  const cJSON *text = cJSON_GetObjectItemCaseSensitive(analysis, name);
+  return cJSON_IsString(text) ? text->valuestring : NULL;
+}
+
+/* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
+   motif.analysis and its degree, rhythm or contour list as motif.degrees. A body without a valid motif is left alone
+   for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
+   *analysis_error names the reason. When the Composer reads the input and refuses it, or a full motif has no key to
+   write its degrees in, the result is REFUSED and refusal holds its message. */
 static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **analysis_error, char *refusal,
                                           size_t refusal_size) {
   *analysis_error = NULL;
@@ -371,15 +406,19 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
   const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
-  if (!cJSON_IsString(form) || strcmp(form->valuestring, "full") != 0) {
-    set_motif_analysis(motif, cJSON_CreateNull());
+  const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
+  if (!cJSON_IsString(form) ||
+      (strcmp(form->valuestring, "full") != 0 && strcmp(form->valuestring, "rhythm") != 0 &&
+       strcmp(form->valuestring, "contour") != 0)) {
     return ANALYSIS_DONE;
   }
   bool has_key = cJSON_IsString(key) && key->valuestring[0] != '\0';
   if (!cJSON_IsString(notes) || !cJSON_IsString(meter) || !analysis_meter_ok(meter->valuestring) ||
-      (has_key && !analysis_key_ok(key->valuestring))) {
+      (has_key && !analysis_key_ok(key->valuestring)) || !cJSON_IsString(pickup) ||
+      !analysis_pickup_ok(pickup->valuestring)) {
     return ANALYSIS_DONE;
   }
+  bool full = strcmp(form->valuestring, "full") == 0;
   const char *tmp_dir = getenv("TMPDIR");
   char path[512];
   if (!tmp_dir || tmp_dir[0] != '/' || snprintf(path, sizeof(path), "%s/ursatz-motif-XXXXXX", tmp_dir) >= (int)sizeof(path)) {
@@ -389,6 +428,7 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   if (fd < 0) {
     *analysis_error = "could not write the note list for the Composer";
     set_motif_analysis(motif, cJSON_CreateNull());
+    set_motif_member(motif, "degrees", cJSON_CreateNull());
     return ANALYSIS_DONE;
   }
   size_t length = strlen(notes->valuestring);
@@ -399,18 +439,20 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   if (!written) {
     *analysis_error = "could not write the note list for the Composer";
   } else {
-    const char *args[12];
+    const char *args[14];
     int n = 0;
     args[n++] = "motive";
     args[n++] = path;
-    args[n++] = "--format";
-    args[n++] = "notes";
+    args[n++] = full ? "--format" : "--form";
+    args[n++] = full ? "notes" : form->valuestring;
     args[n++] = "--meter";
     args[n++] = meter->valuestring;
     if (has_key) {
       args[n++] = "--key";
       args[n++] = key->valuestring;
     }
+    args[n++] = "--pickup";
+    args[n++] = pickup->valuestring;
     args[n++] = "--json";
     args[n] = NULL;
     UrsatzGuiComposerOutput out = {0, NULL, NULL};
@@ -440,13 +482,23 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   if (refused) {
     return ANALYSIS_REFUSED;
   }
+  const char *degrees_text = analysis ? analysis_degrees_text(analysis, form->valuestring) : NULL;
+  if (analysis && full && !degrees_text) {
+    cJSON_Delete(analysis);
+    snprintf(refusal, refusal_size, "give a key");
+    return ANALYSIS_REFUSED;
+  }
+  cJSON *degrees = degrees_text ? cJSON_CreateString(degrees_text) : cJSON_CreateNull();
   if (!analysis) {
     analysis = cJSON_CreateNull();
   }
-  if (!analysis) {
+  if (!analysis || !degrees) {
+    cJSON_Delete(analysis);
+    cJSON_Delete(degrees);
     return ANALYSIS_ALLOC;
   }
   set_motif_analysis(motif, analysis);
+  set_motif_member(motif, "degrees", degrees);
   return ANALYSIS_DONE;
 }
 

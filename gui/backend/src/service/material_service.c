@@ -893,6 +893,11 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
     if (analysis && !cJSON_IsNull(analysis) && !cJSON_IsObject(analysis)) {
         return invalid_body(error, error_size, "motif analysis must be null or an object");
     }
+    const cJSON *degrees = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
+    if (degrees && !cJSON_IsNull(degrees) &&
+        (!cJSON_IsString(degrees) || utf8_length(degrees->valuestring) > NOTES_MAX_CHARS)) {
+        return invalid_body(error, error_size, "motif degrees must be null or a string of at most 4000 characters");
+    }
     return is_absent_or_null(motif, "derived")
                ? URSATZ_GUI_MATERIAL_OK
                : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error, error_size);
