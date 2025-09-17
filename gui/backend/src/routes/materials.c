@@ -510,6 +510,173 @@ static int send_item_answer(struct mg_connection *conn, cJSON *item, const char 
   return send_ok_with(conn, "item", item);
 }
 
+/* ---- motif import from a MIDI file ------------------------------------ */
+
+/* Reads the raw request body (a file) of up to kMaxRequestBodySize bytes. NULL after sending the failure. */
+static unsigned char *read_file_body(struct mg_connection *conn, size_t *size, int *status) {
+  size_t capacity = 4096;
+  unsigned char *buffer = malloc(capacity);
+  size_t total = 0;
+  if (!buffer) {
+    *status = send_failure(conn, 500, "out of memory");
+    return NULL;
+  }
+  for (;;) {
+    if (total == capacity) {
+      unsigned char *grown = realloc(buffer, capacity * 2);
+      if (!grown) {
+        free(buffer);
+        *status = send_failure(conn, 500, "out of memory");
+        return NULL;
+      }
+      buffer = grown;
+      capacity *= 2;
+    }
+    int n = mg_read(conn, buffer + total, capacity - total);
+    if (n < 0) {
+      free(buffer);
+      *status = send_failure(conn, 400, "cannot read the request body");
+      return NULL;
+    }
+    if (n == 0) {
+      break;
+    }
+    total += (size_t)n;
+    if (total > kMaxRequestBodySize) {
+      free(buffer);
+      *status = send_failure(conn, 413, "request body too large");
+      return NULL;
+    }
+  }
+  if (total == 0) {
+    free(buffer);
+    *status = send_failure(conn, 400, "a MIDI file is required");
+    return NULL;
+  }
+  *size = total;
+  *status = 200;
+  return buffer;
+}
+
+/* The key of a motive document as "D minor", or NULL when it has none. */
+static bool import_key_text(const cJSON *document, char *out, size_t out_size) {
+  static const char *const names[] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "key");
+  const cJSON *tonic = cJSON_GetObjectItemCaseSensitive(key, "tonic_pitch_class");
+  const cJSON *mode = cJSON_GetObjectItemCaseSensitive(key, "mode");
+  if (!cJSON_IsNumber(tonic) || tonic->valueint < 0 || tonic->valueint > 11 || !cJSON_IsString(mode)) {
+    return false;
+  }
+  snprintf(out, out_size, "%s %s", names[tonic->valueint], mode->valuestring);
+  return true;
+}
+
+/* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers
+   {"ok":true,"notes_text":...,"meter":"4/4","key":"D minor"|null,"pickup":"0","analysis":{...}} and saves nothing. */
+static int handle_import_motif(struct mg_connection *conn) {
+  char meter[16];
+  char key[32];
+  bool has_meter = query_value(conn, "meter", meter, sizeof(meter));
+  bool has_key = query_value(conn, "key", key, sizeof(key));
+  if ((has_meter && !analysis_meter_ok(meter)) || (has_key && !analysis_key_ok(key))) {
+    return send_failure(conn, 400, "meter must look like 4/4 and key like D minor");
+  }
+  int status = 0;
+  size_t size = 0;
+  unsigned char *bytes = read_file_body(conn, &size, &status);
+  if (!bytes) {
+    return status;
+  }
+  const char *tmp_dir = getenv("TMPDIR");
+  char path[512];
+  if (!tmp_dir || tmp_dir[0] != '/' || snprintf(path, sizeof(path), "%s/ursatz-import-XXXXXX", tmp_dir) >= (int)sizeof(path)) {
+    snprintf(path, sizeof(path), "/tmp/ursatz-import-XXXXXX");
+  }
+  int fd = mkstemp(path);
+  if (fd < 0) {
+    free(bytes);
+    return send_failure(conn, 500, "could not write the MIDI file for the Composer");
+  }
+  bool written = write(fd, bytes, size) == (ssize_t)size;
+  close(fd);
+  free(bytes);
+  if (!written) {
+    unlink(path);
+    return send_failure(conn, 500, "could not write the MIDI file for the Composer");
+  }
+  const char *args[10];
+  int n = 0;
+  args[n++] = "motive";
+  args[n++] = path;
+  args[n++] = "--format";
+  args[n++] = "midi";
+  if (has_meter) {
+    args[n++] = "--meter";
+    args[n++] = meter;
+  }
+  if (has_key) {
+    args[n++] = "--key";
+    args[n++] = key;
+  }
+  args[n++] = "--json";
+  args[n] = NULL;
+  UrsatzGuiComposerOutput out = {0, NULL, NULL};
+  UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
+  unlink(path);
+  if (result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
+    return send_failure(conn, 503, "composer not found");
+  }
+  if (result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
+    return send_failure(conn, 504, "composer timed out");
+  }
+  if (result != URSATZ_GUI_COMPOSER_OK) {
+    return send_failure(conn, 500, "composer could not be started");
+  }
+  if (out.exit_status != 0) {
+    char message[512];
+    snprintf(message, sizeof(message), "%s", out.stderr_text && out.stderr_text[0] ? out.stderr_text : "composer could not read the MIDI file");
+    size_t end = strlen(message);
+    while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
+      message[--end] = '\0';
+    }
+    ursatz_gui_composer_output_destroy(&out);
+    return send_failure(conn, 400, message);
+  }
+  cJSON *document = cJSON_Parse(out.stdout_text);
+  ursatz_gui_composer_output_destroy(&out);
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
+  const cJSON *notes_text = cJSON_GetObjectItemCaseSensitive(analysis, "notes_text");
+  const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(analysis, "pickup");
+  const cJSON *bar = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "meter");
+  const cJSON *beats = cJSON_GetObjectItemCaseSensitive(bar, "beats_per_bar");
+  const cJSON *unit = cJSON_GetObjectItemCaseSensitive(bar, "beat_unit");
+  if (!cJSON_IsString(notes_text) || !cJSON_IsString(pickup) || !cJSON_IsNumber(beats) || !cJSON_IsNumber(unit)) {
+    cJSON_Delete(document);
+    return send_failure(conn, 500, "composer could not analyze the MIDI file");
+  }
+  char meter_text[16];
+  char key_text[32];
+  snprintf(meter_text, sizeof(meter_text), "%d/%d", beats->valueint, unit->valueint);
+  bool keyed = import_key_text(document, key_text, sizeof(key_text));
+  cJSON *answer = cJSON_CreateObject();
+  if (!answer) {
+    cJSON_Delete(document);
+    return send_failure(conn, 500, "out of memory");
+  }
+  cJSON_AddBoolToObject(answer, "ok", 1);
+  cJSON_AddStringToObject(answer, "notes_text", notes_text->valuestring);
+  cJSON_AddStringToObject(answer, "meter", meter_text);
+  if (keyed) {
+    cJSON_AddStringToObject(answer, "key", key_text);
+  } else {
+    cJSON_AddNullToObject(answer, "key");
+  }
+  cJSON_AddStringToObject(answer, "pickup", pickup->valuestring);
+  cJSON_AddItemToObject(answer, "analysis", cJSON_DetachItemFromObjectCaseSensitive(document, "analysis"));
+  cJSON_Delete(document);
+  return send_object(conn, answer);
+}
+
 static int handle_create_item(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -1065,6 +1232,9 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (strcmp(segments[0], "items") == 0) {
     return route_items(conn, method, segments, count);
+  }
+  if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "import") == 0) {
+    return strcmp(method, "POST") == 0 ? handle_import_motif(conn) : send_method_not_allowed(conn);
   }
   return send_not_found(conn);
 }
