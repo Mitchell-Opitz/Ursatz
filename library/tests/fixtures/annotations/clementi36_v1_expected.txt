@@ -1,0 +1,71 @@
+# Expected results for the Framework v1 verification of Clementi, Sonatina in C major, Op. 36 No. 1, first movement.
+#
+# SOURCE: the Breitkopf and Haertel edition of the Sonatinas Op. 36 and the IMSLP scan. The edition was not available when this file was written, so it is the one to check against.
+# STATUS: DRAFT, UNVERIFIED AGAINST THE EDITION. A hand reading of tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (the top line and the bass of each measure, dumped beat by beat; the first 38 measures: the exposition, a short development and the recapitulation up to its closing cadence),
+# written before the verification test was run and NOT derived from the output of any analysis stage. Where the older annotation
+# files for this piece (key regions, cadences, phrase form) cover the same ground their values are copied here, and
+# framework_v1_fixture_consistency checks that the two agree. A human should confirm it against the edition before it is relied on.
+#
+# Every list below is COMPLETE for its scope: a cadence the music does not have is a claim, not an omission, so a cadence the chain
+# reports inside the cadence scope that is not listed is reported as a deviation. (Phrase ends, themes, expansions and
+# returns are checked only as listed: the form readings say what could be read with confidence.)
+#
+# FORMAT, one per line (blank lines and lines starting with # are ignored):
+#   piece <id>
+#   meter <beats per measure> <beat length as a fraction of a whole note>
+#   home <tonic> <major|minor>                          the piece's key
+#   keys-scope <first> <last>                           the measures the chain runs over; the key regions are checked here
+#   region <first> <last> <tonic> <major|minor>         the key of those measures (a region is two measures or more; a passing one-measure tonicization is not one)
+#   unscored <first> <last>                             measures left out of the key check
+#   change <measure> <extent> [return]                  the key change that STARTS at this measure; extent is tonicization, extended-tonicization,
+#                                                       weak-modulation or modulation (a cadence in the new key that the music then leaves is a weak
+#                                                       modulation); 'return' marks the change back to the key before the excursion
+#   cadence-scope <first> <last>                        the measures whose cadences are listed
+#   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here (beats are 1-based)
+#   form-scope <first> <last>
+#   phrase-end <measure> <pac|iac|hc>                   a phrase ends in this measure (the measure its arrival chord ends in)
+#   theme <form> <first> <last> [parts <a-first> <a-last> <b-first> <b-last>]   a theme and its two parts
+#   expansion <internal|contraction|external> <first> <last> <measures>
+#   original <name> <first> <last>                      a theme that later returns (thematic returns)
+#   return <name> <first> <last>                        a later statement of the original called <name>
+#
+# Tolerances (the verification test): a key region's edges and a phrase end or a theme edge are matched within one measure; a cadence's
+# arrival within one beat and its type exactly (PAC and IAC are different types).
+
+piece clementi36
+meter 4 1/4
+home C major
+keys-scope 1 38
+# copied from clementi36_key_regions.txt
+region 1 5 C major
+region 6 15 G major
+region 16 22 C minor
+region 23 38 C major
+change 6 modulation
+change 16 modulation
+change 23 modulation
+cadence-scope 1 38
+# the antecedent's half cadence on G (4), the perfect authentic cadence in G that closes the consequent (8) and the second theme (15), the half cadence that closes the
+# development on G (23), the recapitulated antecedent's half cadence (27) and the closing perfect authentic cadence (38); measures 28-37 expand the cadence without
+# completing it (see clementi36_phrase_form.txt)
+cadence 4 1 hc
+cadence 8 1 pac
+cadence 15 1 pac
+cadence 23 1 hc
+cadence 27 1 hc
+cadence 38 1 pac
+form-scope 1 38
+phrase-end 4 hc
+phrase-end 8 pac
+phrase-end 15 pac
+phrase-end 23 hc
+phrase-end 27 hc
+phrase-end 38 pac
+theme period 1 8 parts 1 4 5 8
+theme period 24 38 parts 24 27 28 38
+expansion internal 28 38 7
+# thematic returns: the main theme (1-4) returns in the recapitulation (24); the second theme (9-15, in G) returns in C major in the recapitulation's closing section (32-38)
+original main 1 4
+return main 24 27
+original second 9 15
+return second 32 38
