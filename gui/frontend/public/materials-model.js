@@ -332,12 +332,18 @@
     { value: "melodic", label: "Melodic" },
     { value: "accompaniment", label: "Accompaniment" },
   ];
-  /* Only the full form is editable in P12; the others arrive in P13. */
+  const RHYTHM_HINT = "Rhythm only, e.g. x:q x:e x:e x:h. x is a note, r a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
+  const CONTOUR_HINT = "Contour only: ranks separated by spaces, e.g. 0 2 1 3. 0 is the lowest, equal ranks are the same height, no durations.";
   const MOTIF_FORMS = [
     { value: "full", label: "Full", enabled: true },
-    { value: "rhythm", label: "Rhythm (P13)", enabled: false },
-    { value: "contour", label: "Contour (P13)", enabled: false },
+    { value: "rhythm", label: "Rhythm only", enabled: true },
+    { value: "contour", label: "Contour only", enabled: true },
   ];
+
+  /* The syntax hint under the note list for a motif form. */
+  function formHint(form) {
+    return form === "rhythm" ? RHYTHM_HINT : form === "contour" ? CONTOUR_HINT : NOTE_HINT;
+  }
 
   /* The editor's field values for a motif body (null for a new motif). */
   function motifFormValues(body) {
@@ -373,7 +379,7 @@
     if (key !== "" && !/^[A-Ga-g][#b]? (major|minor)$/i.test(key)) {
       problems.push({ field: "key", message: "Key looks like D minor, or leave it empty." });
     }
-    if (!/^\d+(\/\d+)?$/.test(String(values.pickup || "").trim())) {
+    if (!/^\d{1,2}(\/\d{1,2})?$/.test(String(values.pickup || "").trim())) {
       problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
     }
     for (const message of featureProblems(values.features)) {
@@ -416,7 +422,7 @@
 
   /* The version body for the form values. `previous` is the body being
    * edited: its uses and derived data carry over. The backend fills in the
-   * analysis. */
+   * analysis and the degrees (they are sent back as they were read). */
   function buildMotifBody(values, previous) {
     const before = previous || {};
     const motif = before.motif || {};
@@ -435,6 +441,7 @@
           last: Number(feature.last) - 1,
         })),
         analysis: null,
+        degrees: typeof motif.degrees === "string" ? motif.degrees : null,
         derived: motif.derived || null,
       },
     };
@@ -573,6 +580,7 @@
     bodyWithUse,
     buildAddVersionRequest,
     NOTE_HINT,
+    formHint,
     MOTIF_ROLES,
     MOTIF_FORMS,
     motifFormValues,

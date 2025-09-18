@@ -511,7 +511,11 @@ function buildMotifEditor(body) {
   notes.spellcheck = false;
   notes.value = initial.notes;
   field("Notes", notes, "notes");
-  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.NOTE_HINT));
+  const hint = materialsElement("div", "materials-hint", MaterialsModel.formHint(initial.form));
+  el.appendChild(hint);
+  form.addEventListener("change", () => {
+    hint.textContent = MaterialsModel.formHint(form.value);
+  });
 
   const meter = materialsElement("input");
   meter.type = "text";
