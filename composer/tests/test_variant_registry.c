@@ -6,6 +6,8 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "analysis/motive_relation.h"
+
 /*
  * The variant registry and chains: the 9 development operations with their categories and citations, chains applied
  * from a seed (the same chain and seed give the same variant, open parameters are drawn and recorded), and what each
@@ -63,7 +65,7 @@ static void test_registry_entries(void) {
         {"liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52"},
         {"augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"},
         {"diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"}};
-    assert(variant_registry_count() == 9);
+    assert(variant_registry_count() == 20);
     for (size_t i = 0; i < 9; i++) {
         const VariantOperation *operation = variant_registry_at(i);
         assert(operation && strcmp(operation->name, ENTRIES[i].name) == 0);
@@ -74,17 +76,20 @@ static void test_registry_entries(void) {
         assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
         assert(operation->param_count <= VARIANT_PARAM_MAX);
     }
-    assert(variant_registry_at(9) == NULL);
+    assert(variant_registry_at(20) == NULL);
     assert(variant_registry_find("nope") == NULL);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_MELODY_ADAPTATION), "melody-adaptation") == 0);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_EXACT), "exact") == 0);
 }
 
 static void test_registry_forms(void) {
-    /* A rhythm motive takes exact, retrograde, fragment, liquidate, augment, diminish; a contour motive exact,
-       invert, retrograde, fragment. */
-    static const char *const RHYTHM[] = {"exact", "retrograde", "fragment", "liquidate", "augment", "diminish"};
-    static const char *const CONTOUR[] = {"exact", "invert", "retrograde", "fragment"};
+    /* A rhythm motive takes exact, retrograde, fragment, liquidate, augment, diminish, the rhythm rows and condense; a
+       contour motive exact, invert, retrograde, fragment, add-interval, omit-interval and repeat-feature. */
+    static const char *const RHYTHM[] = {"exact",       "retrograde",   "fragment",     "liquidate",
+                                         "augment",     "diminish",     "note-repeat",  "rhythm-repeat",
+                                         "rhythm-shift", "add-upbeat",  "change-meter", "condense"};
+    static const char *const CONTOUR[] = {"exact",        "invert",        "retrograde",     "fragment",
+                                          "add-interval", "omit-interval", "repeat-feature"};
     size_t rhythm = 0;
     size_t contour = 0;
     for (size_t i = 0; i < variant_registry_count(); i++) {
@@ -92,11 +97,11 @@ static void test_registry_forms(void) {
         rhythm += (operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM)) != 0;
         contour += (operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0;
     }
-    assert(rhythm == 6 && contour == 4);
-    for (size_t i = 0; i < 6; i++) {
+    assert(rhythm == 12 && contour == 7);
+    for (size_t i = 0; i < 12; i++) {
         assert((variant_registry_find(RHYTHM[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM)) != 0);
     }
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 7; i++) {
         assert((variant_registry_find(CONTOUR[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0);
     }
 }
@@ -382,6 +387,16 @@ static void test_derivation_sentence(void) {
 
 /* ------------------------------------------------------- random chains, JSON */
 
+/* The source with a labelled feature on its last two notes. */
+static Motive featured_source(void) {
+    Motive source = source_motive();
+    snprintf(source.features[0].label, sizeof(source.features[0].label), "a");
+    source.features[0].first = 2;
+    source.features[0].last = 3;
+    source.feature_count = 1;
+    return source;
+}
+
 static void test_random_chains(void) {
     Motive source = source_motive();
     Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
@@ -390,7 +405,7 @@ static void test_random_chains(void) {
     bool two_steps = false;
     bool one_step_seen = false;
     for (size_t m = 0; m < 3; m++) {
-        for (unsigned long seed = 0; seed < 24; seed++) {
+        for (unsigned long seed = 0; seed < 200; seed++) {
             VariantChain a;
             VariantChain b;
             assert(variant_random_chain(sources[m], seed, &a) && variant_random_chain(sources[m], seed, &b));
@@ -401,6 +416,7 @@ static void test_random_chains(void) {
                 const VariantOperation *operation = variant_registry_find(a.steps[s].op);
                 assert(operation && strcmp(a.steps[s].op, b.steps[s].op) == 0);
                 assert(strcmp(operation->name, "exact") != 0);
+                assert(strcmp(operation->name, "change-meter") != 0);
                 assert((operation->forms & VARIANT_FORM_BIT(sources[m]->form)) != 0);
                 for (size_t p = 0; p < VARIANT_PARAM_MAX; p++) {
                     assert(!a.steps[s].values[p].set);
@@ -410,6 +426,23 @@ static void test_random_chains(void) {
         }
     }
     assert(two_steps && one_step_seen);
+
+    /* A feature operation is only drawn for a motive that has a labelled feature. */
+    Motive featured = featured_source();
+    bool feature_drawn = false;
+    for (unsigned long seed = 0; seed < 200; seed++) {
+        VariantChain chain;
+        assert(variant_random_chain(&source, seed, &chain));
+        for (size_t s = 0; s < chain.step_count; s++) {
+            assert(strcmp(chain.steps[s].op, "repeat-feature") != 0 && strcmp(chain.steps[s].op, "shift-feature") != 0);
+        }
+        assert(variant_random_chain(&featured, seed, &chain));
+        for (size_t s = 0; s < chain.step_count; s++) {
+            feature_drawn = feature_drawn || strcmp(chain.steps[s].op, "repeat-feature") == 0 ||
+                            strcmp(chain.steps[s].op, "shift-feature") == 0;
+        }
+    }
+    assert(feature_drawn);
 }
 
 static void test_json(void) {
@@ -418,6 +451,7 @@ static void test_json(void) {
     assert(strstr(registry, "\"operations\"") && strstr(registry, "\"interval-change\""));
     assert(strstr(registry, "\"melody-adaptation\"") && strstr(registry, "ch. VIII, Ex. 52"));
     assert(strstr(registry, "\"keep-contour\"") && strstr(registry, "\"forms\""));
+    assert(strstr(registry, "\"relation\": \"interval-change\"") && strstr(registry, "\"relation\": \"note-repeat\""));
     free(registry);
 
     Motive source = source_motive();
@@ -440,6 +474,163 @@ static void test_json(void) {
     assert(variant_record_to_json(NULL) == NULL);
 }
 
+/* ------------------------------------------------ rhythm and interval rows */
+
+static void test_rows_name_their_relations(void) {
+    for (size_t i = 0; i < variant_registry_count(); i++) {
+        const VariantOperation *operation = variant_registry_at(i);
+        assert(operation->relation >= 0 && operation->relation < MOTIVE_RELATION_KIND_COUNT);
+        assert(strcmp(motive_relation_name((MotiveRelationKind)operation->relation), operation->name) == 0);
+        assert(operation->param_count == motive_relation_param_count((MotiveRelationKind)operation->relation));
+    }
+}
+
+typedef struct {
+    const char *name;
+    long value;
+    long den;
+} Setting;
+
+typedef struct {
+    const char *op;
+    const char *citation;
+    VariantCategory category;
+    Setting settings[3];
+    size_t setting_count;
+    size_t notes; /* the variant's note count */
+} Row;
+
+static const Row ROWS[] = {
+    {"note-repeat", "ch. III, Exs. 17h, i, k, l, n", VARIANT_CATEGORY_RHYTHM, {{"note", 2, 0}, {"count", 2, 0}}, 2, 5},
+    {"rhythm-repeat", "ch. III, Exs. 17l, m, 18e", VARIANT_CATEGORY_RHYTHM,
+     {{"first", 0, 0}, {"length", 1, 0}, {"target", 3, 0}}, 3, 4},
+    {"rhythm-shift", "ch. III, Ex. 23", VARIANT_CATEGORY_RHYTHM, {{"offset", 1, 4}}, 1, 4},
+    {"add-upbeat", "ch. III, Ex. 22", VARIANT_CATEGORY_RHYTHM, {{"count", 2, 0}, {"approach", 1, 0}}, 2, 6},
+    {"change-meter", "ch. III, Ex. 24", VARIANT_CATEGORY_RHYTHM, {{"num", 3, 0}, {"den", 4, 0}}, 2, 4},
+    {"add-interval", "ch. III, Ex. 21", VARIANT_CATEGORY_INTERVALS, {{"interval", 1, 0}, {"steps", 1, 0}}, 2, 5},
+    {"omit-interval", "ch. III, Ex. 21", VARIANT_CATEGORY_INTERVALS, {{"interval", 2, 0}}, 1, 3},
+    {"ancillary-fill", "ch. III, Exs. 18, 20", VARIANT_CATEGORY_INTERVALS, {{"interval", 3, 0}, {"kind", 0, 0}}, 2, 6},
+    {"condense", "ch. III, Ex. 21; ch. VIII, Ex. 52", VARIANT_CATEGORY_INTERVALS,
+     {{"first", 1, 0}, {"last", 3, 0}, {"ratio", 1, 2}}, 3, 4},
+    {"repeat-feature", "ch. III, Exs. 20h, 22a, b, d", VARIANT_CATEGORY_INTERVALS,
+     {{"feature", 0, 0}, {"times", 1, 0}, {"steps", 1, 0}}, 3, 6},
+    {"shift-feature", "ch. III, Ex. 23", VARIANT_CATEGORY_INTERVALS, {{"feature", 0, 0}, {"offset", 1, 4}}, 2, 4}};
+
+#define ROW_COUNT (sizeof(ROWS) / sizeof(ROWS[0]))
+
+static void test_each_row_applies(void) {
+    Motive source = featured_source();
+    Motive before = source;
+    for (size_t i = 0; i < ROW_COUNT; i++) {
+        const Row *row = &ROWS[i];
+        const VariantOperation *operation = variant_registry_find(row->op);
+        assert(operation && operation->category == row->category);
+        assert(strcmp(operation->citation, row->citation) == 0);
+        assert(operation->label && operation->describe && operation->apply);
+        VariantStep step = step_of(row->op);
+        for (size_t k = 0; k < row->setting_count; k++) {
+            assert(variant_step_set(&step, row->settings[k].name, row->settings[k].value, row->settings[k].den));
+        }
+        Motive out;
+        VariantRecord record;
+        assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
+        assert(out.note_count == row->notes);
+        assert(!motive_equal(&source, &out));
+        assert(motive_equal(&source, &before));
+        assert(record.step_count == 1 && record.derivation[0] >= 'A' && record.derivation[0] <= 'Z');
+        for (size_t p = 0; p < operation->param_count; p++) {
+            assert(!record.steps[0].open[p]);
+        }
+    }
+}
+
+static void test_rows_draw_open_parameters(void) {
+    Motive source = featured_source();
+    for (size_t i = 0; i < ROW_COUNT; i++) {
+        unsigned ok = 0;
+        for (unsigned long seed = 0; seed < 40; seed++) {
+            Motive out;
+            VariantRecord record;
+            if (run_one(&source, step_of(ROWS[i].op), seed, &out, &record) == VARIANT_OK) {
+                ok++;
+                for (size_t p = 0; p < record.steps[0].param_count; p++) {
+                    assert(record.steps[0].values[p].set);
+                }
+            }
+        }
+        assert(ok > 0);
+    }
+}
+
+static void test_row_forms(void) {
+    Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
+    Motive contour = load("0 2 1 3", "4/4", NULL, MOTIVE_FORMAT_CONTOUR);
+    Motive out;
+    VariantRecord record;
+
+    /* A rhythm motive takes the rhythm rows and condense; a contour motive add-interval, omit-interval and
+       repeat-feature. */
+    static const char *const RHYTHM_OK[] = {"note-repeat", "rhythm-repeat", "rhythm-shift",
+                                            "add-upbeat",  "change-meter",  "condense"};
+    static const char *const RHYTHM_NO[] = {"add-interval", "omit-interval", "ancillary-fill", "repeat-feature",
+                                            "shift-feature"};
+    static const char *const CONTOUR_OK[] = {"add-interval", "omit-interval", "repeat-feature"};
+    static const char *const CONTOUR_NO[] = {"note-repeat", "rhythm-repeat", "rhythm-shift", "add-upbeat",
+                                             "change-meter", "ancillary-fill", "condense", "shift-feature"};
+    for (size_t i = 0; i < sizeof(RHYTHM_OK) / sizeof(RHYTHM_OK[0]); i++) {
+        assert((variant_registry_find(RHYTHM_OK[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM)) != 0);
+    }
+    for (size_t i = 0; i < sizeof(RHYTHM_NO) / sizeof(RHYTHM_NO[0]); i++) {
+        assert(run_one(&rhythm, step_of(RHYTHM_NO[i]), 1, &out, &record) == VARIANT_ERR_FORM);
+    }
+    for (size_t i = 0; i < sizeof(CONTOUR_OK) / sizeof(CONTOUR_OK[0]); i++) {
+        assert((variant_registry_find(CONTOUR_OK[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0);
+    }
+    for (size_t i = 0; i < sizeof(CONTOUR_NO) / sizeof(CONTOUR_NO[0]); i++) {
+        assert(run_one(&contour, step_of(CONTOUR_NO[i]), 1, &out, &record) == VARIANT_ERR_FORM);
+    }
+    for (size_t i = 0; i < ROW_COUNT; i++) {
+        assert((variant_registry_find(ROWS[i].op)->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
+    }
+
+    VariantStep repeat = step_of("note-repeat");
+    assert(variant_step_set(&repeat, "note", 1, 0) && variant_step_set(&repeat, "count", 2, 0));
+    assert(run_one(&rhythm, repeat, 1, &out, &record) == VARIANT_OK && out.note_count == 5);
+    VariantStep omit = step_of("omit-interval");
+    assert(variant_step_set(&omit, "interval", 2, 0));
+    assert(run_one(&contour, omit, 1, &out, &record) == VARIANT_OK && out.note_count == 3);
+}
+
+static void test_feature_rows_need_a_feature(void) {
+    Motive source = source_motive();
+    static const char *const OPS[] = {"repeat-feature", "shift-feature"};
+    for (size_t i = 0; i < 2; i++) {
+        Motive out;
+        VariantRecord record;
+        assert(run_one(&source, step_of(OPS[i]), 1, &out, &record) == VARIANT_ERR_REFUSED);
+        char expected[64];
+        snprintf(expected, sizeof(expected), "%s needs a labelled feature", OPS[i]);
+        assert(record.failed_step == 0 && strcmp(record.error, expected) == 0);
+    }
+}
+
+static void test_row_phrases(void) {
+    char text[96];
+    VariantValue values[VARIANT_PARAM_MAX];
+    memset(values, 0, sizeof(values));
+    values[0] = (VariantValue){true, 2, 0};
+    values[1] = (VariantValue){true, 2, 0};
+    variant_registry_find("note-repeat")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "repeated the third note twice") == 0);
+    values[0] = (VariantValue){true, 1, 4};
+    variant_registry_find("rhythm-shift")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "shifted a quarter note later in the bar") == 0);
+    values[0] = (VariantValue){true, 2, 0};
+    values[1] = (VariantValue){true, 0, 0};
+    variant_registry_find("ancillary-fill")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "filled the leap after note 2 with passing notes") == 0);
+}
+
 int main(void) {
     test_registry_entries();
     test_registry_forms();
@@ -456,6 +647,12 @@ int main(void) {
     test_derivation_sentence();
     test_random_chains();
     test_json();
+    test_rows_name_their_relations();
+    test_each_row_applies();
+    test_rows_draw_open_parameters();
+    test_row_forms();
+    test_feature_rows_need_a_feature();
+    test_row_phrases();
     puts("test_variant_registry: ok");
     return 0;
 }

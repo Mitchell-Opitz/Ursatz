@@ -415,6 +415,7 @@ endforeach()
 
 add_executable(test_variant_registry test_variant_registry.c)
 target_link_libraries(test_variant_registry PRIVATE ursatz_composer)
+target_include_directories(test_variant_registry PRIVATE ${PROJECT_SOURCE_DIR}/external/ursatz/src)
 target_compile_options(test_variant_registry PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_variant_registry COMMAND test_variant_registry)
 

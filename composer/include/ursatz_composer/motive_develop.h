@@ -87,7 +87,8 @@ typedef enum {
     MOTIVE_DEV_ERR_NOT_APPLICABLE, /* nothing to do: one note has no intervals, the contour would change */
     MOTIVE_DEV_ERR_TOO_SHORT,      /* a fragment or liquidation with fewer notes than the minimum */
     MOTIVE_DEV_ERR_NOT_EXPRESSIBLE, /* the rhythm cannot be written in the meter, see MotiveDevSpec */
-    MOTIVE_DEV_ERR_INVALID         /* the spec asks for something that is not a parameter */
+    MOTIVE_DEV_ERR_INVALID,        /* the spec asks for something that is not a parameter */
+    MOTIVE_DEV_ERR_NO_FEATURE      /* a feature operation on a motive with no labelled feature */
 } MotiveDevResult;
 
 /* Applies spec to source. *out is written only on MOTIVE_DEV_OK; its meter and key are the source's. */

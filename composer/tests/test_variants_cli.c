@@ -87,7 +87,7 @@ static void test_list_ops(void) {
 
     out = output_of("--list-ops --json");
     assert(strstr(out, "\"operations\"") != NULL);
-    assert(count_of(out, "\"citation\"") == 9);
+    assert(count_of(out, "\"citation\"") == 20);
     free(out);
 }
 

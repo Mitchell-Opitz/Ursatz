@@ -14,7 +14,7 @@ The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a M
 | Option | Meaning |
 | --- | --- |
 | `--list-ops` | Print every operation: name, label, category, citation, parameters and forms. Takes no input. |
-| `--chain <file>` | A chain file (below), used for every variant. Without it, each variant gets its own random chain of 1 or 2 operations that the motive's form takes. |
+| `--chain <file>` | A chain file (below), used for every variant. Without it, each variant gets its own random chain of 1 or 2 operations that the motive's form takes (never `change-meter`, and a feature operation only when the motive has a labelled feature). |
 | `--count <n>` | How many variants, 1 to 16, 6 by default. Variant i uses seed + i. |
 | `--seed <n>` | A whole number from 0. By default from the clock. The seed is printed. |
 | `--json` | Print as JSON (below). |
@@ -27,7 +27,7 @@ Harmony, features and the role go through the variants. A variant keeps the feat
 {"steps": [{"op": "invert", "params": {"tonal": true}}, {"op": "augment", "params": {"ratio": "2:1"}}]}
 ```
 
-`op` is an operation name from `--list-ops`. `params` is optional and holds the parameters to fix, named as in the list: a boolean for `tonal`, `keep-contour` and `keep-rhythm`, a whole number for the others (a MIDI note number for `axis`), the text `"2:1"` for `ratio` and `"leading"`, `"trailing"` or `"middle"` for `position`. A parameter not listed is open and drawn from the seed.
+`op` is an operation name from `--list-ops`. `params` is optional and holds the parameters to fix, named as in the list: a boolean for `tonal`, `keep-contour` and `keep-rhythm`, a whole number for the others (a MIDI note number for `axis`), the text `"2:1"` for `ratio` and `"leading"`, `"trailing"` or `"middle"` for `position`. A parameter not listed is open and drawn from the seed. `offset` and `ratio` are ratio texts (`"1:4"`), and `feature` is the 0-based index of a labelled feature (`--feature`); `repeat-feature` and `shift-feature` are refused on a motive with none (`repeat-feature needs a labelled feature`).
 
 ## Output
 

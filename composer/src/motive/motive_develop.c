@@ -854,7 +854,7 @@ void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size) {
 
 static const char *const RESULT_NAMES[] = {"ok",        "null",      "alloc",          "no key",
                                            "range",     "unchanged", "not applicable", "too short",
-                                           "not expressible", "invalid"};
+                                           "not expressible", "invalid",    "no feature"};
 
 const char *motive_dev_result_name(MotiveDevResult result) {
     return (size_t)result < sizeof(RESULT_NAMES) / sizeof(RESULT_NAMES[0]) ? RESULT_NAMES[result] : "unknown";
