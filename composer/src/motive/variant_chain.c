@@ -432,6 +432,16 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     return VARIANT_OK;
 }
 
+/* Whether the operation works on one of the motive's labelled features. */
+static bool takes_feature(const VariantOperation *operation) {
+    for (size_t p = 0; p < operation->param_count; p++) {
+        if (operation->params[p].features_limit) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out) {
     if (!source || !out) {
         return false;
@@ -440,9 +450,11 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     size_t count = 0;
     for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
         const VariantOperation *operation = variant_registry_at(i);
-        /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it. */
+        /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it, and a feature operation needs
+           a labelled feature to work on. */
         if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
-            (operation->forms & VARIANT_FORM_BIT(source->form)) != 0) {
+            (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
+            (source->feature_count > 0 || !takes_feature(operation))) {
             candidates[count++] = operation;
         }
     }
