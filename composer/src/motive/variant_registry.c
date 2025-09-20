@@ -542,6 +542,97 @@ static void describe_shift_feature(const VariantValue *values, char *out, size_t
     snprintf(out, size, "shifted feature %ld %s later", value_or(&values[SHIFT_FEATURE_WHICH], 0) + 1, part);
 }
 
+/* ---------------------------------------------------------------- harmony */
+
+static const char *const ROMAN[] = {"", "I", "II", "III", "IV", "V", "VI", "VII"};
+
+static const char *roman_of(long degree) {
+    return degree >= 1 && degree <= 7 ? ROMAN[degree] : "I";
+}
+
+/* "the first chord", or "chord 12". */
+static void chord_name(long index, char *out, size_t size) {
+    const char *word = ordinal(index);
+    if (word) {
+        snprintf(out, size, "the %s chord", word);
+    } else {
+        snprintf(out, size, "chord %ld", index + 1);
+    }
+}
+
+enum { HARMONY_INVERSION_CHORD, HARMONY_INVERSION_INVERSION };
+
+static const VariantParam HARMONY_INVERSION_PARAMS[] = {
+    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is inverted", false, false, false, false},
+    {"inversion", VARIANT_PARAM_INT, 0, 3, "0 root position, 1 first, 2 second, 3 third (a seventh chord)", false, false,
+     false, false}};
+
+static MotiveDevResult apply_harmony_inversion(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_HARMONY_INVERSION, source, values, out);
+}
+
+static void describe_harmony_inversion(const VariantValue *values, char *out, size_t size) {
+    static const char *const POSITIONS[] = {"root position", "first inversion", "second inversion", "third inversion"};
+    char chord[24];
+    chord_name(value_or(&values[HARMONY_INVERSION_CHORD], 0), chord, sizeof(chord));
+    long inversion = value_or(&values[HARMONY_INVERSION_INVERSION], 1);
+    snprintf(out, size, "put %s in %s, melody adapted", chord, POSITIONS[inversion >= 0 && inversion <= 3 ? inversion : 1]);
+}
+
+enum { HARMONY_APPEND_DEGREE, HARMONY_APPEND_SEVENTH };
+
+static const VariantParam HARMONY_APPEND_PARAMS[] = {
+    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord added at the end", false, false, false, false},
+    {"seventh", VARIANT_PARAM_BOOL, 0, 1, "make the added chord a seventh chord", false, false, false, false}};
+
+static MotiveDevResult apply_harmony_append(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_HARMONY_APPEND, source, values, out);
+}
+
+static void describe_harmony_append(const VariantValue *values, char *out, size_t size) {
+    snprintf(out, size, "added %s%s at the end, melody adapted", roman_of(value_or(&values[HARMONY_APPEND_DEGREE], 1)),
+             value_or(&values[HARMONY_APPEND_SEVENTH], 0) != 0 ? "7" : "");
+}
+
+enum { HARMONY_INSERT_CHORD, HARMONY_INSERT_DEGREE };
+
+static const VariantParam HARMONY_INSERT_PARAMS[] = {
+    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord the new one is inserted after", false, false, false, false},
+    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the inserted chord", false, false, false, false}};
+
+static MotiveDevResult apply_harmony_insert(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_HARMONY_INSERT, source, values, out);
+}
+
+static void describe_harmony_insert(const VariantValue *values, char *out, size_t size) {
+    char chord[24];
+    chord_name(value_or(&values[HARMONY_INSERT_CHORD], 0), chord, sizeof(chord));
+    snprintf(out, size, "inserted %s after %s, melody adapted", roman_of(value_or(&values[HARMONY_INSERT_DEGREE], 1)), chord);
+}
+
+enum { HARMONY_SUBSTITUTE_CHORD, HARMONY_SUBSTITUTE_DEGREE, HARMONY_SUBSTITUTE_THEN };
+
+static const VariantParam HARMONY_SUBSTITUTE_PARAMS[] = {
+    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is replaced", false, false, false, false},
+    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord put in its place", false, false, false, false},
+    {"then", VARIANT_PARAM_INT, 1, 7, "a second degree that follows it in the same time; not set for none", true, false,
+     false, false}};
+
+static MotiveDevResult apply_harmony_substitute(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_HARMONY_SUBSTITUTE, source, values, out);
+}
+
+static void describe_harmony_substitute(const VariantValue *values, char *out, size_t size) {
+    char chord[24];
+    chord_name(value_or(&values[HARMONY_SUBSTITUTE_CHORD], 0), chord, sizeof(chord));
+    char second[24] = "";
+    if (values[HARMONY_SUBSTITUTE_THEN].set) {
+        snprintf(second, sizeof(second), " then %s", roman_of(values[HARMONY_SUBSTITUTE_THEN].value));
+    }
+    snprintf(out, size, "substituted %s%s for %s, melody adapted", roman_of(value_or(&values[HARMONY_SUBSTITUTE_DEGREE], 1)),
+             second, chord);
+}
+
 /* ----------------------------------------------------------------- table */
 
 #define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
@@ -554,7 +645,7 @@ static void describe_shift_feature(const VariantValue *values, char *out, size_t
 /*
  * One row per operation. The citations are the ones decided for the phase (R-133). A rhythm motive takes exact,
  * retrograde, fragment, liquidate, augment and diminish; a contour motive takes exact, invert, retrograde and
- * fragment. Harmony has no row until P14.
+ * fragment. Harmony rows take a full motive with a key.
  */
 static const VariantOperation OPERATIONS[] = {
     {"exact", "Exact", VARIANT_CATEGORY_EXACT, "Schoenberg ch. III, Ex. 14", NULL, 0, FORMS_ALL, apply_exact,
@@ -597,7 +688,18 @@ static const VariantOperation OPERATIONS[] = {
      PARAMS(REPEAT_FEATURE_PARAMS), FORMS_FULL_CONTOUR, apply_repeat_feature, describe_repeat_feature,
      MOTIVE_RELATION_REPEAT_FEATURE},
     {"shift-feature", "Shift feature", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 23", PARAMS(SHIFT_FEATURE_PARAMS),
-     FORMS_FULL, apply_shift_feature, describe_shift_feature, MOTIVE_RELATION_SHIFT_FEATURE}};
+     FORMS_FULL, apply_shift_feature, describe_shift_feature, MOTIVE_RELATION_SHIFT_FEATURE},
+    {"harmony-inversion", "Harmony inversion", VARIANT_CATEGORY_HARMONY, "ch. III, Exs. 25a, b",
+     PARAMS(HARMONY_INVERSION_PARAMS), FORMS_FULL, apply_harmony_inversion, describe_harmony_inversion,
+     MOTIVE_RELATION_HARMONY_INVERSION},
+    {"harmony-append", "Harmony append", VARIANT_CATEGORY_HARMONY, "ch. III, Exs. 25c to i",
+     PARAMS(HARMONY_APPEND_PARAMS), FORMS_FULL, apply_harmony_append, describe_harmony_append,
+     MOTIVE_RELATION_HARMONY_APPEND},
+    {"harmony-insert", "Harmony insert", VARIANT_CATEGORY_HARMONY, "ch. III, Ex. 26", PARAMS(HARMONY_INSERT_PARAMS),
+     FORMS_FULL, apply_harmony_insert, describe_harmony_insert, MOTIVE_RELATION_HARMONY_INSERT},
+    {"harmony-substitute", "Harmony substitute", VARIANT_CATEGORY_HARMONY, "ch. III, Exs. 27a to i",
+     PARAMS(HARMONY_SUBSTITUTE_PARAMS), FORMS_FULL, apply_harmony_substitute, describe_harmony_substitute,
+     MOTIVE_RELATION_HARMONY_SUBSTITUTE}};
 
 size_t variant_registry_count(void) {
     return sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);
