@@ -421,6 +421,83 @@ static void test_motif_analysis(void) {
   free(motif);
 }
 
+/* The id of the first project (the default one). */
+static void first_project(char *out, size_t out_size) {
+  int status = 0;
+  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  snprintf(out, out_size, "%s",
+           string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
+  cJSON_Delete(answer);
+}
+
+/* Saves a motif of the given form; *status gets the HTTP status and the answer is the parsed body (caller deletes). */
+static cJSON *save_motif_form(const char *project, const char *form, const char *notes, const char *key_json,
+                              const char *pickup, int *status) {
+  char request[2048];
+  snprintf(request, sizeof(request),
+           "{\"type\":\"motif\",\"name\":\"Form\",\"project_id\":\"%s\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\","
+           "\"form\":\"%s\",\"notes\":\"%s\",\"meter\":\"4/4\",\"key\":%s,\"pickup\":\"%s\",\"features\":[],"
+           "\"analysis\":null,\"derived\":null}}}",
+           project, form, notes, key_json, pickup);
+  return json_exchange("POST", "/api/materials/items", request, status);
+}
+
+/* The saved motif object of an item answer, read back. */
+static cJSON *read_motif(const cJSON *saved) {
+  char path[256];
+  int status = 0;
+  snprintf(path, sizeof(path), "/api/materials/items/%s", string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id"));
+  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *motif = cJSON_DetachItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif");
+  cJSON_Delete(answer);
+  return motif;
+}
+
+/* Rhythm and contour motifs are analyzed too, and every form stores its list as motif.degrees. */
+static void test_motif_forms(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  int status = 0;
+
+  cJSON *saved = save_motif_form(project, "rhythm", "x:q x:e x:e x:h", "null", "0", &status);
+  check(status == 200 && ok_true(saved), "a rhythm-only motif without a key is saved");
+  cJSON *motif = read_motif(saved);
+  check(strcmp(string_of(motif, "degrees"), "x:q x:e x:e x:h") == 0, "a rhythm motif stores its rhythm list as degrees");
+  check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(motif, "analysis")), "a rhythm motif carries the analysis");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "contour", "0 2 1 3", "null", "0", &status);
+  check(status == 200 && ok_true(saved), "a contour-only motif is saved");
+  motif = read_motif(saved);
+  check(strcmp(string_of(motif, "degrees"), "0 2 1 3") == 0, "a contour motif stores its contour list as degrees");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  check(status == 200 && ok_true(saved), "a full motif with a key is saved");
+  motif = read_motif(saved);
+  check(strcmp(string_of(motif, "degrees"), "1:q 3:e 5:e 1':h") == 0, "a full motif stores its degree list");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "null", "1", &status);
+  check(status == 200 && ok_true(saved), "a motif with a pickup is saved");
+  motif = read_motif(saved);
+  const cJSON *inner = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motif, "analysis"), "analysis");
+  check(strcmp(string_of(inner, "pickup"), "1") == 0, "the pickup reaches the Composer");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "null", "0", &status);
+  check(status == 400 && strstr(string_of(saved, "error"), "give a key") != NULL, "a full motif without a key is 400");
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "null", "1;rm", &status);
+  check(status == 400, "a pickup that is not beats is 400");
+  cJSON_Delete(saved);
+}
+
 /* A note list the Composer cannot read is refused and no version is written. */
 static void test_motif_refused(void) {
   int status = 0;
@@ -505,6 +582,7 @@ int main(void) {
   test_items();
   test_motif_analysis();
   test_motif_refused();
+  test_motif_forms();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
