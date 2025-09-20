@@ -121,6 +121,7 @@ int variant_operation_param_index(const VariantOperation *operation, const char 
 #define VARIANT_CHAIN_MAX 4
 #define VARIANT_ERROR_MAX 160
 #define VARIANT_DERIVATION_MAX 512
+#define VARIANT_HARMONY_MAX 256
 
 /* One operation and the parameters Michelle (or a chain file) set. A parameter not set is open. */
 typedef struct {
@@ -183,6 +184,8 @@ typedef struct {
     const char *changed[VARIANT_DIMENSIONS];
     size_t changed_count;
     bool rhythm_scaled;
+    /* The result's own harmony as text ("V I@2"), or "" when it has none. */
+    char harmony[VARIANT_HARMONY_MAX];
     /* motive_recognizability of the result against the source, the total. */
     MotiveScore recognizability;
     /*
@@ -222,9 +225,10 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
  * A record as JSON, 2-space indent, trailing newline; NULL on failure, caller frees. A parameter's value is a boolean,
  * a number (an int or a MIDI pitch), a position name ("leading") or a ratio text ("2:1"):
  *   {"seed", "chain": {"steps": [{"op", "params": {"tonal": true}, "open": ["by"]}]},
- *    "kind", "kept": [], "changed": [], "functions": [], "derivation", "recognizability": 0.8571}
- * params holds every resolved parameter that has a value; open names those the seed drew. functions stays [] until
- * the function tags of P14.
+ *    "kind", "kept": [], "changed": [], "harmony": "V I@2", "functions": [], "derivation", "recognizability": 0.8571}
+ * params holds every resolved parameter that has a value; open names those the seed drew. harmony is the result's own
+ * harmony as text, written only when the result has chords of its own. functions stays [] until the function tags of
+ * P14.
  */
 char *variant_record_to_json(const VariantRecord *record);
 

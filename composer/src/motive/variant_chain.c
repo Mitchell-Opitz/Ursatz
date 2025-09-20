@@ -429,6 +429,13 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     }
 
     record_difference(source, &current, log);
+    if (current.harmony_count > 0) {
+        char *harmony = motive_harmony_to_text(&current);
+        if (harmony) {
+            snprintf(log->harmony, sizeof(log->harmony), "%s", harmony);
+            free(harmony);
+        }
+    }
     record_derivation(log);
     *out = current;
     return VARIANT_OK;
@@ -559,6 +566,7 @@ char *variant_record_to_json(const VariantRecord *record) {
     ok = ok && json_add(document, "kind", cJSON_CreateString(variant_kind_name(record->kind))) &&
          names_json(document, "kept", record->kept, record->kept_count) &&
          names_json(document, "changed", record->changed, record->changed_count) &&
+         (record->harmony[0] == '\0' || json_add(document, "harmony", cJSON_CreateString(record->harmony))) &&
          names_json(document, "functions", NULL, 0) &&
          json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
          json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0));
