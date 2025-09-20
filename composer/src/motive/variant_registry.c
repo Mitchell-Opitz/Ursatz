@@ -663,6 +663,17 @@ static void describe_counter_line(const VariantValue *values, char *out, size_t 
     snprintf(out, size, "gave the repeated notes a counter-line moving within each chord");
 }
 
+/* ----------------------------------------------------------- dominant form */
+
+static MotiveDevResult apply_dominant_form(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_DOMINANT_FORM, source, values, out);
+}
+
+static void describe_dominant_form(const VariantValue *values, char *out, size_t size) {
+    (void)values;
+    snprintf(out, size, "put in the dominant form, harmony and melody moved to the dominant");
+}
+
 /* ----------------------------------------------------------------- table */
 
 #define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
@@ -734,7 +745,9 @@ static const VariantOperation OPERATIONS[] = {
      PARAMS(PASSING_HARMONY_PARAMS), FORMS_FULL, apply_passing_harmony, describe_passing_harmony,
      MOTIVE_RELATION_PASSING_HARMONY},
     {"counter-line", "Counter line", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Ex. 29", NULL, 0, FORMS_FULL,
-     apply_counter_line, describe_counter_line, MOTIVE_RELATION_COUNTER_LINE}};
+     apply_counter_line, describe_counter_line, MOTIVE_RELATION_COUNTER_LINE},
+    {"dominant-form", "Dominant form", VARIANT_CATEGORY_HARMONY, "ch. V, the dominant form", NULL, 0, FORMS_FULL,
+     apply_dominant_form, describe_dominant_form, MOTIVE_RELATION_DOMINANT_FORM}};
 
 size_t variant_registry_count(void) {
     return sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);
