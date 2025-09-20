@@ -232,13 +232,14 @@ static bool harmony_kept(const MotiveAnalysis *a, const MotiveAnalysis *b) {
     return strcmp(a->candidates[0].roman, b->candidates[0].roman) == 0;
 }
 
-/* Own harmony, when either motive has it: kept when every chord's degree and onset match. */
+/* Own harmony, when either motive has it: kept when every chord's degree, alteration, inversion, seventh and onset match. */
 static bool own_harmony_kept(const Motive *a, const Motive *b) {
     if (a->harmony_count != b->harmony_count) {
         return false;
     }
     for (size_t i = 0; i < a->harmony_count; i++) {
-        if (a->harmony[i].degree != b->harmony[i].degree ||
+        if (a->harmony[i].degree != b->harmony[i].degree || a->harmony[i].alteration != b->harmony[i].alteration ||
+            a->harmony[i].inversion != b->harmony[i].inversion || a->harmony[i].seventh != b->harmony[i].seventh ||
             plan_time_compare(a->harmony[i].onset, b->harmony[i].onset) != 0) {
             return false;
         }
