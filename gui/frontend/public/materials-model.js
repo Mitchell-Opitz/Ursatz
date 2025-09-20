@@ -365,6 +365,28 @@
     };
   }
 
+  /* The MIDI import route (POST, the file as the body). */
+  function buildImportMidiRequest(file) {
+    return {
+      method: "POST",
+      url: "/api/materials/motifs/import",
+      headers: { "Content-Type": "audio/midi" },
+      body: file,
+    };
+  }
+
+  /* The editor's field values for an import answer {notes_text, meter, key, pickup}: a full motif. */
+  function importToFormValues(answer) {
+    const a = answer || {};
+    return {
+      form: "full",
+      notes: typeof a.notes_text === "string" ? a.notes_text : "",
+      meter: typeof a.meter === "string" ? a.meter : "4/4",
+      key: typeof a.key === "string" ? a.key : "",
+      pickup: typeof a.pickup === "string" ? a.pickup : "0",
+    };
+  }
+
   /* Problems with the form values as {field, message}; empty when it can be
    * sent. The Composer judges the note list itself. */
   function motifFormProblems(values) {
@@ -490,6 +512,8 @@
     return `${degree.alteration ? "#" : ""}${degree.degree}`;
   }
 
+  const DEGREES_LABELS = { full: "Degree list", rhythm: "Rhythm list", contour: "Contour list" };
+
   /* What the Composer heard, as rows {label, text} for the analysis panel.
    * `motif` is the body's motif object. A motif without an analysis gives
    * {analyzed: false, message} (message names analysisError when given);
@@ -502,20 +526,26 @@
       return { analyzed: false, message: `Not analyzed${reason}`, rows: [] };
     }
     const rows = [];
+    const listText = typeof motif.degrees === "string" ? motif.degrees : "";
+    if (listText !== "") {
+      rows.push({ label: DEGREES_LABELS[motif.form] || DEGREES_LABELS.full, text: listText });
+    }
     const keyed = Array.isArray(a.scale_degrees && a.scale_degrees.all);
     if (keyed) {
       rows.push({ label: "Scale degrees", text: a.scale_degrees.all.map(degreeText).join(" ") });
     }
     const intervals = Array.isArray(a.intervals) ? a.intervals : [];
-    rows.push({
-      label: "Intervals",
-      text:
-        intervals.length === 0
-          ? "none"
-          : intervals
-              .map((i) => (typeof i.steps === "number" ? `${signed(i.semitones)} (${signed(i.steps)} steps)` : signed(i.semitones)))
-              .join(", "),
-    });
+    if (Array.isArray(a.intervals)) {
+      rows.push({
+        label: "Intervals",
+        text:
+          intervals.length === 0
+            ? "none"
+            : intervals
+                .map((i) => (typeof i.steps === "number" ? `${signed(i.semitones)} (${signed(i.steps)} steps)` : signed(i.semitones)))
+                .join(", "),
+      });
+    }
     if (a.contour) {
       const directions = Array.isArray(a.contour.directions) ? a.contour.directions : [];
       rows.push({
@@ -523,13 +553,17 @@
         text: directions.length > 0 ? `${a.contour.shape} (${directions.join(", ")})` : String(a.contour.shape),
       });
     }
-    const rhythm = Array.isArray(a.rhythm) ? a.rhythm : [];
-    rows.push({
-      label: "Rhythm",
-      text: rhythm
-        .map((r) => `bar ${r.bar + 1} beat ${beatText(r.beat)}, length ${timeText(r.duration)}${r.on_beat ? "" : " (off the beat)"}`)
-        .join("; "),
-    });
+    if (Array.isArray(a.rhythm)) {
+      rows.push({
+        label: "Rhythm",
+        text: a.rhythm
+          .map((r) => `bar ${r.bar + 1} beat ${beatText(r.beat)}, length ${timeText(r.duration)}${r.on_beat ? "" : " (off the beat)"}`)
+          .join("; "),
+      });
+    }
+    if (!a.implied_harmony) {
+      return { analyzed: true, message: "", rows };
+    }
     const candidates = a.implied_harmony && Array.isArray(a.implied_harmony.candidates) ? a.implied_harmony.candidates : [];
     rows.push({
       label: "Implied harmony",
@@ -581,6 +615,8 @@
     buildAddVersionRequest,
     NOTE_HINT,
     formHint,
+    buildImportMidiRequest,
+    importToFormValues,
     MOTIF_ROLES,
     MOTIF_FORMS,
     motifFormValues,

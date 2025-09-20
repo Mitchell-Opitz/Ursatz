@@ -517,6 +517,42 @@ function buildMotifEditor(body) {
     hint.textContent = MaterialsModel.formHint(form.value);
   });
 
+  const importRow = materialsElement("div", "upload-controls");
+  const importButton = materialsElement("button", "", "Upload MIDI");
+  importButton.type = "button";
+  const importFile = materialsElement("input");
+  importFile.type = "file";
+  importFile.accept = ".mid,.midi";
+  importFile.hidden = true;
+  const importStatus = materialsElement("span", "upload-status");
+  importStatus.setAttribute("role", "status");
+  importRow.append(importButton, importFile, importStatus);
+  el.appendChild(importRow);
+  importButton.addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", async () => {
+    const file = importFile.files && importFile.files[0];
+    importFile.value = "";
+    if (!file) {
+      return;
+    }
+    importStatus.classList.remove("error");
+    importStatus.textContent = "Reading the file...";
+    const answer = await sendMaterialsRequest(MaterialsModel.buildImportMidiRequest(file));
+    if (!answer.ok) {
+      importStatus.classList.add("error");
+      importStatus.textContent = MaterialsModel.errorText(answer.data, "Could not read the MIDI file");
+      return;
+    }
+    const filled = MaterialsModel.importToFormValues(answer.data);
+    form.value = filled.form;
+    hint.textContent = MaterialsModel.formHint(filled.form);
+    notes.value = filled.notes;
+    meter.value = filled.meter;
+    key.value = filled.key;
+    pickup.value = filled.pickup;
+    importStatus.textContent = "Filled from the MIDI file.";
+  });
+
   const meter = materialsElement("input");
   meter.type = "text";
   meter.value = initial.meter;
