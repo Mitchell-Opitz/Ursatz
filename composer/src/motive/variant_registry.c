@@ -633,6 +633,36 @@ static void describe_harmony_substitute(const VariantValue *values, char *out, s
              second, chord);
 }
 
+/* ------------------------------------------------------ melody adaptation */
+
+enum { PASSING_HARMONY_CHORD };
+
+static const VariantParam PASSING_HARMONY_PARAMS[] = {
+    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord whose change into the next gets a passing chord", false, false,
+     false, false}};
+
+static MotiveDevResult apply_passing_harmony(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_PASSING_HARMONY, source, values, out);
+}
+
+static void describe_passing_harmony(const VariantValue *values, char *out, size_t size) {
+    char chord[24];
+    chord_name(value_or(&values[PASSING_HARMONY_CHORD], 0), chord, sizeof(chord));
+    snprintf(out, size, "put a passing chord before the change from %s, melody adapted", chord);
+}
+
+static MotiveDevResult apply_counter_line(const Motive *source, const VariantValue *values, Motive *out) {
+    if (source->role != MOTIVE_ROLE_ACCOMPANIMENT) {
+        return MOTIVE_DEV_ERR_NO_ACCOMPANIMENT;
+    }
+    return relation_apply(MOTIVE_RELATION_COUNTER_LINE, source, values, out);
+}
+
+static void describe_counter_line(const VariantValue *values, char *out, size_t size) {
+    (void)values;
+    snprintf(out, size, "gave the repeated notes a counter-line moving within each chord");
+}
+
 /* ----------------------------------------------------------------- table */
 
 #define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
@@ -699,7 +729,12 @@ static const VariantOperation OPERATIONS[] = {
      FORMS_FULL, apply_harmony_insert, describe_harmony_insert, MOTIVE_RELATION_HARMONY_INSERT},
     {"harmony-substitute", "Harmony substitute", VARIANT_CATEGORY_HARMONY, "ch. III, Exs. 27a to i",
      PARAMS(HARMONY_SUBSTITUTE_PARAMS), FORMS_FULL, apply_harmony_substitute, describe_harmony_substitute,
-     MOTIVE_RELATION_HARMONY_SUBSTITUTE}};
+     MOTIVE_RELATION_HARMONY_SUBSTITUTE},
+    {"passing-harmony", "Passing harmony", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Ex. 29",
+     PARAMS(PASSING_HARMONY_PARAMS), FORMS_FULL, apply_passing_harmony, describe_passing_harmony,
+     MOTIVE_RELATION_PASSING_HARMONY},
+    {"counter-line", "Counter line", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Ex. 29", NULL, 0, FORMS_FULL,
+     apply_counter_line, describe_counter_line, MOTIVE_RELATION_COUNTER_LINE}};
 
 size_t variant_registry_count(void) {
     return sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);

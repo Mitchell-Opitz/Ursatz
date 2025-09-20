@@ -417,6 +417,8 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
         if (status != MOTIVE_DEV_OK) {
             if (status == MOTIVE_DEV_ERR_NO_FEATURE) {
                 record_error(log, s, "%s needs a labelled feature", operation->name);
+            } else if (status == MOTIVE_DEV_ERR_NO_ACCOMPANIMENT) {
+                record_error(log, s, "%s needs an accompaniment motive", operation->name);
             } else {
                 record_error(log, s, "%s: %s", operation->name, motive_dev_result_name(status));
             }
@@ -430,6 +432,11 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     record_derivation(log);
     *out = current;
     return VARIANT_OK;
+}
+
+/* Whether the operation works on a motive of the accompaniment role only. */
+static bool needs_accompaniment(const VariantOperation *operation) {
+    return strcmp(operation->name, "counter-line") == 0;
 }
 
 /* Whether the operation works on one of the motive's labelled features. */
@@ -451,10 +458,11 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
         const VariantOperation *operation = variant_registry_at(i);
         /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it, and a feature operation needs
-           a labelled feature to work on. */
+           a labelled feature to work on, and counter-line the accompaniment role. */
         if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
             (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
-            (source->feature_count > 0 || !takes_feature(operation))) {
+            (source->feature_count > 0 || !takes_feature(operation)) &&
+            (source->role == MOTIVE_ROLE_ACCOMPANIMENT || !needs_accompaniment(operation))) {
             candidates[count++] = operation;
         }
     }
