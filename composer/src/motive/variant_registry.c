@@ -279,6 +279,12 @@ static MotiveDevResult relation_status(MotiveRelationResult result) {
     }
 }
 
+/* The relations that change the harmony: the four harmony rows, passing-harmony and the dominant form. */
+static bool changes_harmony(MotiveRelationKind kind) {
+    return (kind >= MOTIVE_RELATION_HARMONY_INVERSION && kind <= MOTIVE_RELATION_PASSING_HARMONY) ||
+           kind == MOTIVE_RELATION_DOMINANT_FORM;
+}
+
 /*
  * Applies the library relation of the same name to source: the motive as a sketch, the relation with the row's
  * parameters in the relation's order (a parameter not set is 0), and the result back as a motive in the source's meter
@@ -309,7 +315,15 @@ static MotiveDevResult relation_apply(MotiveRelationKind kind, const Motive *sou
     if (status != MOTIVE_DEV_OK) {
         return status;
     }
-    return motive_from_sketch(&result, source, out) ? MOTIVE_DEV_OK : MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+    /* A harmony row's chords are the variant's own, even a single one that the new melody also implies, which the
+       bridge would leave out of a template without harmony (a template that has some keeps every chord). */
+    Motive template_motive = *source;
+    if (changes_harmony(kind) && template_motive.harmony_count == 0) {
+        memset(&template_motive.harmony[0], 0, sizeof(template_motive.harmony[0]));
+        template_motive.harmony[0].degree = 1;
+        template_motive.harmony_count = 1;
+    }
+    return motive_from_sketch(&result, &template_motive, out) ? MOTIVE_DEV_OK : MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
 }
 
 static const char *const ORDINALS[] = {"first", "second", "third",   "fourth", "fifth",
