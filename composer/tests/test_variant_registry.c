@@ -65,7 +65,7 @@ static void test_registry_entries(void) {
         {"liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52"},
         {"augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"},
         {"diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"}};
-    assert(variant_registry_count() == 20);
+    assert(variant_registry_count() == 27);
     for (size_t i = 0; i < 9; i++) {
         const VariantOperation *operation = variant_registry_at(i);
         assert(operation && strcmp(operation->name, ENTRIES[i].name) == 0);
@@ -76,7 +76,7 @@ static void test_registry_entries(void) {
         assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
         assert(operation->param_count <= VARIANT_PARAM_MAX);
     }
-    assert(variant_registry_at(20) == NULL);
+    assert(variant_registry_at(27) == NULL);
     assert(variant_registry_find("nope") == NULL);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_MELODY_ADAPTATION), "melody-adaptation") == 0);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_EXACT), "exact") == 0);
@@ -631,6 +631,181 @@ static void test_row_phrases(void) {
     assert(strcmp(text, "filled the leap after note 2 with passing notes") == 0);
 }
 
+/* ----------------------------------------------------------------- harmony */
+
+static Motive harmonized_source(void) {
+    Motive source = load("C4:q E4:q G4:q E4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    MotiveError error;
+    assert(motive_harmony_parse("I V@2", &source.meter, source.harmony, &source.harmony_count, &error) == MOTIVE_OK);
+    return source;
+}
+
+typedef struct {
+    const char *op;
+    const char *citation;
+    VariantCategory category;
+    Setting settings[3];
+    size_t setting_count;
+    const char *harmony; /* the variant's own harmony */
+} HarmonyRow;
+
+static const HarmonyRow HARMONY_ROWS[] = {
+    {"harmony-inversion", "ch. III, Exs. 25a, b", VARIANT_CATEGORY_HARMONY, {{"chord", 0, 0}, {"inversion", 1, 0}}, 2,
+     "I6 V@2"},
+    {"harmony-append", "ch. III, Exs. 25c to i", VARIANT_CATEGORY_HARMONY, {{"degree", 1, 0}, {"seventh", 0, 0}}, 2,
+     "I V@2 I@3"},
+    {"harmony-insert", "ch. III, Ex. 26", VARIANT_CATEGORY_HARMONY, {{"chord", 0, 0}, {"degree", 4, 0}}, 2,
+     "I IV@1 V@2"},
+    {"harmony-substitute", "ch. III, Exs. 27a to i", VARIANT_CATEGORY_HARMONY,
+     {{"chord", 1, 0}, {"degree", 4, 0}}, 2, "I IV@2"},
+    {"passing-harmony", "ch. III, Ex. 29", VARIANT_CATEGORY_MELODY_ADAPTATION, {{"chord", 0, 0}}, 1,
+     "I VII@1 V@2"},
+    {"dominant-form", "ch. V, the dominant form", VARIANT_CATEGORY_HARMONY, {{0, 0, 0}}, 0, "V I@2"}};
+
+static void test_harmony_rows(void) {
+    Motive source = harmonized_source();
+    Motive before = source;
+    for (size_t i = 0; i < sizeof(HARMONY_ROWS) / sizeof(HARMONY_ROWS[0]); i++) {
+        const HarmonyRow *row = &HARMONY_ROWS[i];
+        const VariantOperation *operation = variant_registry_find(row->op);
+        assert(operation && operation->category == row->category);
+        assert(strcmp(operation->citation, row->citation) == 0);
+        assert(operation->forms == VARIANT_FORM_BIT(MOTIVE_FORM_FULL));
+        VariantStep step = step_of(row->op);
+        for (size_t k = 0; k < row->setting_count; k++) {
+            assert(variant_step_set(&step, row->settings[k].name, row->settings[k].value, row->settings[k].den));
+        }
+        Motive out;
+        VariantRecord record;
+        assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
+        assert(motive_equal(&source, &before) && !motive_equal(&source, &out));
+        /* The chords the row made are the variant's own, and the record writes them as text. */
+        assert(out.harmony_count > 0);
+        assert(strcmp(record.harmony, row->harmony) == 0);
+        assert(changed(&record, "harmony"));
+        assert(out.note_count == source.note_count);
+        assert(kept(&record, "rhythm"));
+    }
+    VariantRecord record;
+    Motive out;
+    assert(run_one(&source, step_of("exact"), 1, &out, &record) == VARIANT_OK);
+    assert(strcmp(record.harmony, "I V@2") == 0);
+}
+
+static void test_dominant_form_answers_i_v(void) {
+    Motive source = harmonized_source();
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step_of("dominant-form"), 1, &out, &record) == VARIANT_OK);
+    assert(out.harmony_count == 2 && out.harmony[0].degree == 5 && out.harmony[1].degree == 1);
+    assert(plan_time_compare(out.harmony[1].onset, source.harmony[1].onset) == 0);
+    /* The melody moves with the harmony, and the rhythm and the contour stay. */
+    assert(kept(&record, "rhythm") && kept(&record, "contour") && changed(&record, "intervals"));
+    assert(out.notes[0].midi_pitch != source.notes[0].midi_pitch);
+}
+
+static void test_harmony_rows_need_a_key(void) {
+    Motive source = load("C4:q E4:q G4:q E4:q", "4/4", NULL, MOTIVE_FORMAT_NOTES);
+    for (size_t i = 0; i < sizeof(HARMONY_ROWS) / sizeof(HARMONY_ROWS[0]); i++) {
+        const HarmonyRow *row = &HARMONY_ROWS[i];
+        VariantStep step = step_of(row->op);
+        for (size_t k = 0; k < row->setting_count; k++) {
+            assert(variant_step_set(&step, row->settings[k].name, row->settings[k].value, row->settings[k].den));
+        }
+        Motive out;
+        VariantRecord record;
+        assert(run_one(&source, step, 1, &out, &record) == VARIANT_ERR_REFUSED);
+        assert(record.failed_step == 0 && strstr(record.error, "no key") != NULL);
+    }
+}
+
+static void test_harmony_rows_without_own_harmony(void) {
+    /* The best implied chord stands in at 0, so a motive without chords of its own still takes a harmony row. */
+    Motive source = load("C4:q E4:q G4:q E4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step_of("dominant-form"), 1, &out, &record) == VARIANT_OK);
+    assert(out.harmony_count == 1 && out.harmony[0].degree == 5 && strcmp(record.harmony, "V") == 0);
+    /* A variant made without a harmony row has no chords of its own to write. */
+    VariantStep step = step_of("transpose");
+    assert(variant_step_set(&step, "by", 2, 0));
+    assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK && record.harmony[0] == '\0');
+}
+
+static void test_counter_line_needs_an_accompaniment(void) {
+    Motive melody = load("C4:q C4:q C4:q C4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&melody, step_of("counter-line"), 1, &out, &record) == VARIANT_ERR_REFUSED);
+    assert(record.failed_step == 0 && strcmp(record.error, "counter-line needs an accompaniment motive") == 0);
+
+    Motive accompaniment = melody;
+    accompaniment.role = MOTIVE_ROLE_ACCOMPANIMENT;
+    assert(run_one(&accompaniment, step_of("counter-line"), 1, &out, &record) == VARIANT_OK);
+    assert(out.role == MOTIVE_ROLE_ACCOMPANIMENT && out.note_count == 4 && kept(&record, "rhythm"));
+    assert(!motive_equal(&accompaniment, &out));
+
+    /* A random chain draws counter-line for an accompaniment only. */
+    bool drawn = false;
+    for (unsigned long seed = 0; seed < 400; seed++) {
+        VariantChain chain;
+        assert(variant_random_chain(&melody, seed, &chain));
+        for (size_t s = 0; s < chain.step_count; s++) {
+            assert(strcmp(chain.steps[s].op, "counter-line") != 0);
+        }
+        assert(variant_random_chain(&accompaniment, seed, &chain));
+        for (size_t s = 0; s < chain.step_count; s++) {
+            drawn = drawn || strcmp(chain.steps[s].op, "counter-line") == 0;
+        }
+    }
+    assert(drawn);
+}
+
+static void test_harmony_rows_draw_open_parameters(void) {
+    Motive source = harmonized_source();
+    static const char *const OPS[] = {"harmony-inversion", "harmony-append", "harmony-insert", "harmony-substitute",
+                                      "passing-harmony"};
+    for (size_t i = 0; i < sizeof(OPS) / sizeof(OPS[0]); i++) {
+        unsigned ok = 0;
+        for (unsigned long seed = 0; seed < 40; seed++) {
+            Motive out;
+            VariantRecord record;
+            if (run_one(&source, step_of(OPS[i]), seed, &out, &record) == VARIANT_OK) {
+                ok++;
+                assert(record.harmony[0] != '\0');
+            }
+        }
+        assert(ok > 0);
+    }
+}
+
+static void test_harmony_row_phrases(void) {
+    char text[128];
+    VariantValue values[VARIANT_PARAM_MAX];
+    memset(values, 0, sizeof(values));
+    values[0] = (VariantValue){true, 1, 0};
+    values[1] = (VariantValue){true, 4, 0};
+    variant_registry_find("harmony-substitute")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "substituted IV for the second chord, melody adapted") == 0);
+    values[2] = (VariantValue){true, 5, 0};
+    variant_registry_find("harmony-substitute")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "substituted IV then V for the second chord, melody adapted") == 0);
+    values[0] = (VariantValue){true, 0, 0};
+    values[1] = (VariantValue){true, 2, 0};
+    variant_registry_find("harmony-inversion")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "put the first chord in second inversion, melody adapted") == 0);
+    values[0] = (VariantValue){true, 5, 0};
+    values[1] = (VariantValue){true, 1, 0};
+    variant_registry_find("harmony-append")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "added V7 at the end, melody adapted") == 0);
+    values[0] = (VariantValue){true, 0, 0};
+    values[1] = (VariantValue){true, 2, 0};
+    variant_registry_find("harmony-insert")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "inserted II after the first chord, melody adapted") == 0);
+    variant_registry_find("dominant-form")->describe(values, text, sizeof(text));
+    assert(strcmp(text, "put in the dominant form, harmony and melody moved to the dominant") == 0);
+}
+
 int main(void) {
     test_registry_entries();
     test_registry_forms();
@@ -653,6 +828,13 @@ int main(void) {
     test_row_forms();
     test_feature_rows_need_a_feature();
     test_row_phrases();
+    test_harmony_rows();
+    test_dominant_form_answers_i_v();
+    test_harmony_rows_need_a_key();
+    test_harmony_rows_without_own_harmony();
+    test_counter_line_needs_an_accompaniment();
+    test_harmony_rows_draw_open_parameters();
+    test_harmony_row_phrases();
     puts("test_variant_registry: ok");
     return 0;
 }
