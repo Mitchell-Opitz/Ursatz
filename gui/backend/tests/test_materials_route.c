@@ -498,6 +498,72 @@ static void test_motif_forms(void) {
   cJSON_Delete(saved);
 }
 
+/* A format 0 MIDI file of one track holding the given events (the track length is filled in). */
+static size_t midi_file(unsigned char *out, const unsigned char *events, size_t event_count) {
+  static const unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T', 'r', 'k'};
+  memcpy(out, header, sizeof(header));
+  size_t at = sizeof(header);
+  out[at++] = 0;
+  out[at++] = 0;
+  out[at++] = 0;
+  out[at++] = (unsigned char)event_count;
+  memcpy(out + at, events, event_count);
+  return at + event_count;
+}
+
+static cJSON *import_exchange(const unsigned char *file, size_t file_size, const char *query, int *status) {
+  char path[128];
+  snprintf(path, sizeof(path), "/api/materials/motifs/import%s", query);
+  char *response = http_exchange("POST", path, "Content-Type: audio/midi\r\n", file, file_size);
+  *status = response && strncmp(response, "HTTP/1.1 ", 9) == 0 ? atoi(response + 9) : 0;
+  cJSON *json = response ? cJSON_Parse(response_body(response)) : NULL;
+  free(response);
+  return json;
+}
+
+/* A MIDI file is read into a motif without saving anything. */
+static void test_motif_import(void) {
+  /* D4 then F4, a quarter note each. */
+  static const unsigned char one_voice[] = {0x00, 0x90, 0x3E, 0x64, 0x83, 0x60, 0x80, 0x3E, 0x00, 0x00, 0x90,
+                                            0x41, 0x64, 0x83, 0x60, 0x80, 0x41, 0x00, 0x00, 0xFF, 0x2F, 0x00};
+  /* D4 and F4 sounding together. */
+  static const unsigned char two_voices[] = {0x00, 0x90, 0x3E, 0x64, 0x00, 0x90, 0x41, 0x64, 0x83, 0x60, 0x80,
+                                             0x3E, 0x00, 0x00, 0x80, 0x41, 0x00, 0x00, 0xFF, 0x2F, 0x00};
+  unsigned char file[128];
+  int status = 0;
+
+  size_t size = midi_file(file, one_voice, sizeof(one_voice));
+  cJSON *answer = import_exchange(file, size, "?key=D%20minor", &status);
+  check(status == 200 && ok_true(answer), "a one-voice MIDI file is imported");
+  check(strcmp(string_of(answer, "notes_text"), "D4:q F4:q") == 0, "the import answers the notes as a note list");
+  check(strcmp(string_of(answer, "meter"), "4/4") == 0, "the import answers the meter");
+  check(strcmp(string_of(answer, "key"), "D minor") == 0, "the import answers the given key");
+  check(strcmp(string_of(answer, "pickup"), "0") == 0, "the import answers the pickup");
+  check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "analysis")), "the import answers the analysis");
+  cJSON_Delete(answer);
+
+  answer = import_exchange(file, size, "", &status);
+  check(status == 200 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(answer, "key")), "a file without a key answers null");
+  cJSON_Delete(answer);
+
+  size = midi_file(file, two_voices, sizeof(two_voices));
+  answer = import_exchange(file, size, "", &status);
+  check(status == 400 && strlen(string_of(answer, "error")) > 0, "a polyphonic MIDI file is 400 with the Composer's message");
+  cJSON_Delete(answer);
+
+  answer = import_exchange(file, 0, "", &status);
+  check(status == 400, "an empty body is 400");
+  cJSON_Delete(answer);
+
+  answer = import_exchange(file, size, "?meter=nope", &status);
+  check(status == 400, "a bad meter is 400");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("GET", "/api/materials/motifs/import", NULL, &status);
+  check(status == 405, "importing is POST only");
+  cJSON_Delete(answer);
+}
+
 /* A note list the Composer cannot read is refused and no version is written. */
 static void test_motif_refused(void) {
   int status = 0;
@@ -583,6 +649,7 @@ int main(void) {
   test_motif_analysis();
   test_motif_refused();
   test_motif_forms();
+  test_motif_import();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
