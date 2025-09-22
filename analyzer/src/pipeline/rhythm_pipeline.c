@@ -10,10 +10,14 @@
 #include "pitch/pitch_numeric_value.h"
 #include "identity/entity_id.h"
 #include "meter_analysis_density.h"
+#include "meter_analysis_hemiola.h"
+#include "meter_analysis_hypermeter.h"
 #include "meter_analysis_input.h"
+#include "meter_analysis_syncopation.h"
 #include "meter_analysis_time.h"
 #include "theory/framework.h"
 #include "standard-meter/framework.h"
+#include "structure/structure.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
@@ -102,6 +106,12 @@ static const char **line_ids(const OuterVoiceEntry *entries, size_t count, size_
 
 static bool in_ids(const char **ids, size_t count, const char *id) {
     return bsearch(&id, ids, count, sizeof(char *), compare_ids) != NULL;
+}
+
+static int compare_sizes(const void *a, const void *b) {
+    size_t x = *(const size_t *)a;
+    size_t y = *(const size_t *)b;
+    return x < y ? -1 : (x > y ? 1 : 0);
 }
 
 static int compare_id_index(const void *a, const void *b) {
@@ -326,6 +336,180 @@ static bool collect_densities(const RhythmBuild *build, const ImportedNotes *not
     return true;
 }
 
+/* ---- Syncopation ---- */
+
+/* The library's StandardMeterLevel names. */
+static const char *level_name(int level) {
+    static const char *const NAMES[] = {"downbeat", "secondary-beat", "beat", "offbeat", "finer"};
+    return level >= 0 && level < 5 ? NAMES[level] : "finer";
+}
+
+static bool collect_syncopations(const RhythmBuild *build, AnalysisReport *report) {
+    StandardMeterSyncopations found = {NULL, 0};
+    if (standard_meter_find_syncopations(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
+        return false;
+    }
+    size_t count = found.count;
+    AnalysisSyncopation *items = calloc(count > 0 ? count : 1, sizeof(AnalysisSyncopation));
+    const char *framework = framework_name(standard_meter_framework());
+    bool ok = items != NULL;
+    for (size_t i = 0; ok && i < count; i++) {
+        const StandardMeterSyncopationClaim *claim = &found.items[i].claim;
+        AnalysisSyncopation *item = &items[i];
+        item->framework = framework;
+        item->note = note_of_id(build, claim->note_id);
+        ok = item->note != SIZE_MAX;
+        item->line = claim->line;
+        item->measure = claim->measure;
+        item->beat = claim->beat;
+        item->attack_level = level_name(claim->attack_level);
+        item->through_level = level_name(claim->through_level);
+        item->strength = claim->strength;
+        item->through_measure = claim->through_measure;
+        item->through_beat = claim->through_beat;
+        item->uncertainty = found.items[i].uncertainty;
+    }
+    standard_meter_syncopations_destroy(&found);
+    if (!ok) {
+        free(items);
+        return false;
+    }
+    report->syncopations = items;
+    report->syncopation_count = count;
+    return true;
+}
+
+/* ---- Hemiola ---- */
+
+static void free_hemiolas(AnalysisHemiola *items, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        free(items[i].note_ids);
+    }
+    free(items);
+}
+
+static bool collect_hemiolas(const RhythmBuild *build, AnalysisReport *report) {
+    StandardMeterHemiolas found = {NULL, 0};
+    if (standard_meter_find_hemiolas(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
+        return false;
+    }
+    size_t count = found.count;
+    AnalysisHemiola *items = calloc(count > 0 ? count : 1, sizeof(AnalysisHemiola));
+    const char *framework = framework_name(standard_meter_framework());
+    bool ok = items != NULL;
+    for (size_t i = 0; ok && i < count; i++) {
+        const StandardMeterHemiola *hemiola = &found.items[i];
+        AnalysisHemiola *item = &items[i];
+        item->framework = framework;
+        item->first_measure = hemiola->claim.first_measure;
+        item->last_measure = hemiola->claim.last_measure;
+        item->duration_evidence = hemiola->claim.duration_evidence;
+        item->chord_evidence = hemiola->claim.chord_evidence;
+        item->accent_evidence = hemiola->claim.accent_evidence;
+        item->agreeing = hemiola->claim.agreeing;
+        item->available = hemiola->claim.available;
+        item->uncertainty = hemiola->uncertainty;
+        size_t ids = structure_event_id_count(hemiola->shell);
+        item->note_ids = malloc((ids > 0 ? ids : 1) * sizeof(size_t));
+        ok = item->note_ids != NULL;
+        for (size_t n = 0; ok && n < ids; n++) {
+            size_t note = note_of_id(build, entity_id_value(structure_event_id_at(hemiola->shell, n)));
+            if (note != SIZE_MAX) {
+                item->note_ids[item->note_id_count++] = note;
+            }
+        }
+        if (ok && item->note_id_count > 1) {
+            qsort(item->note_ids, item->note_id_count, sizeof(size_t), compare_sizes);
+        }
+    }
+    standard_meter_hemiolas_destroy(&found);
+    if (!ok) {
+        free_hemiolas(items, count);
+        return false;
+    }
+    report->hemiolas = items;
+    report->hemiola_count = count;
+    return true;
+}
+
+/* ---- Hypermeter ---- */
+
+static const char *hypermeasure_kind_name(int kind) {
+    switch (kind) {
+        case STANDARD_METER_HYPERMEASURE_SHORT:
+            return "short";
+        case STANDARD_METER_HYPERMEASURE_EXPANDED:
+            return "expanded";
+        case STANDARD_METER_HYPERMEASURE_EXTENSION:
+            return "extension";
+        case STANDARD_METER_HYPERMEASURE_CONTRACTED:
+            return "contracted";
+        default:
+            return "regular";
+    }
+}
+
+static void free_hypermeters(AnalysisHypermeter *items, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        free(items[i].hypermeasures);
+        free(items[i].note_ids);
+    }
+    free(items);
+}
+
+static bool collect_hypermeter(const RhythmBuild *build, const ImportedNotes *notes, AnalysisReport *report) {
+    StandardMeterHypermeter found;
+    memset(&found, 0, sizeof(found));
+    if (standard_meter_find_hypermeter(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
+        return false;
+    }
+    size_t count = found.phrase_count;
+    AnalysisHypermeter *items = calloc(count > 0 ? count : 1, sizeof(AnalysisHypermeter));
+    const char *framework = framework_name(standard_meter_framework());
+    bool ok = items != NULL;
+    for (size_t i = 0; ok && i < count; i++) {
+        const StandardMeterPhraseHypermeter *phrase = &found.phrases[i];
+        AnalysisHypermeter *item = &items[i];
+        item->framework = framework;
+        item->phrase = (size_t)phrase->phrase;
+        item->first_measure = phrase->first_measure;
+        item->measures = phrase->measures;
+        item->length = phrase->length;
+        item->score = phrase->score;
+        item->has_arrival = phrase->arrival_measure >= 0;
+        item->arrival_measure = phrase->arrival_measure;
+        item->hypermeasures = calloc(phrase->hypermeasure_count > 0 ? phrase->hypermeasure_count : 1,
+                                     sizeof(AnalysisHypermeasure));
+        ok = item->hypermeasures != NULL;
+        for (size_t h = 0; ok && h < phrase->hypermeasure_count; h++) {
+            const StandardMeterHypermeasure *source = &found.hypermeasures[phrase->hypermeasure_first + h];
+            AnalysisHypermeasure *target = &item->hypermeasures[h];
+            target->index = source->claim.hypermeasure;
+            target->first_measure = source->claim.first_measure;
+            target->last_measure = source->claim.last_measure;
+            target->measures = source->claim.measures;
+            target->kind = hypermeasure_kind_name(source->claim.kind);
+            target->extra_hyperbeats = source->claim.extra_hyperbeats;
+            target->contains_cadence = source->claim.contains_cadence != 0;
+            target->score = source->claim.score;
+            target->uncertainty = source->uncertainty;
+        }
+        item->hypermeasure_count = phrase->hypermeasure_count;
+        if (ok) {
+            item->note_ids = phrase_notes(build, notes, item->phrase, -1, &item->note_id_count);
+            ok = item->note_ids != NULL;
+        }
+    }
+    standard_meter_hypermeter_destroy(&found);
+    if (!ok) {
+        free_hypermeters(items, count);
+        return false;
+    }
+    report->hypermeters = items;
+    report->hypermeter_count = count;
+    return true;
+}
+
 bool rhythm_stage_collect(const ImportedNotes *notes, const OuterVoiceLines *lines, const FormStage *form,
                           AnalysisReport *report) {
     const MeterMap *map = notes->meter.meter_map;
@@ -339,7 +523,8 @@ bool rhythm_stage_collect(const ImportedNotes *notes, const OuterVoiceLines *lin
         return false;
     }
     bool ok = build_notes(&build, notes, lines) && build_chord_changes(&build, report) && build_phrases(&build, form) &&
-              collect_densities(&build, notes, report);
+              collect_densities(&build, notes, report) && collect_syncopations(&build, report) &&
+              collect_hemiolas(&build, report) && collect_hypermeter(&build, notes, report);
     build_destroy(&build);
     return ok;
 }

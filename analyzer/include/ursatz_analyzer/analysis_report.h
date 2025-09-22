@@ -644,6 +644,76 @@ typedef struct {
     double uncertainty;      /* the library's: 0, the profile describes the notes as given */
 } AnalysisDensity;
 
+/* A note held through a stronger metric position than it was attacked at, with no note attacked there (the library's
+   THROUGH_STRONGER rule, analysis/meter_analysis_syncopation.h). Each line is read on its own. The levels are the
+   library's StandardMeterLevel: "downbeat", "secondary-beat", "beat", "offbeat" or "finer"; the strength is the
+   difference of the two (1 to 4). */
+typedef struct {
+    const char *framework;   /* the library's framework name for the claim */
+    size_t note;             /* ImportedNotes index of the syncopated note */
+    int line;                /* 0 the outer-voice soprano, 1 the bass, 2 any other note */
+    int measure;             /* where it is attacked, as the library numbers them (a pickup is 0) */
+    double beat;             /* 1-based, fractional */
+    const char *attack_level;
+    const char *through_level;
+    unsigned strength;
+    int through_measure;     /* the position it is held through */
+    double through_beat;
+    double uncertainty;      /* the library's: 0.1 when the snap moved the onset, otherwise 0 */
+} AnalysisSyncopation;
+
+/* A hemiola: six pulses read as three duple units (analysis/meter_analysis_hemiola.h). It is one when at least two of
+   the evidence types that are available agree. An evidence value is 1 when it agrees, 0 when it does not and -1 when it
+   is unavailable (the chord evidence, with no chord changes). */
+typedef struct {
+    const char *framework;
+    int first_measure;       /* the window: two measures of a simple triple meter, or one of 6/8 */
+    int last_measure;
+    int duration_evidence;
+    int chord_evidence;
+    int accent_evidence;
+    unsigned agreeing;
+    unsigned available;
+    size_t *note_ids;        /* owned; ImportedNotes indices of the notes attacked on the window's pulses */
+    size_t note_id_count;
+    double uncertainty;      /* the library's: 1 - agreeing / 3 */
+} AnalysisHemiola;
+
+/* One hypermeasure of a phrase (analysis/meter_analysis_hypermeter.h). The kind is the library's
+   StandardMeterHypermeasureKind: "regular", "short", "expanded", "extension" or "contracted". */
+typedef struct {
+    int index;               /* in the phrase, from 0 */
+    int first_measure;
+    int last_measure;
+    int measures;
+    const char *kind;
+    int extra_hyperbeats;    /* measures - the phrase's nominal length: positive when expanded, negative when short or
+                                contracted */
+    bool contains_cadence;   /* the cadence arrival is in this hypermeasure */
+    double score;
+    double uncertainty;      /* the library's: 1 - score */
+} AnalysisHypermeasure;
+
+/* The hypermeter of one phrase: the hypermeasure length (2 or 4 measures) that fills the phrase and holds the cadence
+   arrival in its last hypermeasure, and the hypermeasures that follow one another from the phrase's first measure
+   (the library fills the last one to its length, so it can run past the phrase's measures). The first measure of each is
+   a hyperdownbeat. Elided cadences are not reported by the form adapter, so no phrase is read as elided and the library
+   reports no reinterpretation. */
+typedef struct {
+    const char *framework;
+    size_t phrase;           /* index into phrases */
+    int first_measure;       /* the phrase's first full measure (a pickup is not counted) */
+    int measures;            /* of the phrase's span, its extension included */
+    unsigned length;         /* the hypermeasure length chosen: 2 or 4 */
+    double score;
+    bool has_arrival;
+    int arrival_measure;     /* valid only when has_arrival */
+    AnalysisHypermeasure *hypermeasures; /* owned; in time order */
+    size_t hypermeasure_count;
+    size_t *note_ids;        /* owned; ImportedNotes indices of the notes in the phrase */
+    size_t note_id_count;
+} AnalysisHypermeter;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -688,6 +758,12 @@ typedef struct {
     size_t melody_count;
     AnalysisDensity *densities; /* owned; per phrase, all notes first and then each line that has a note in it */
     size_t density_count;
+    AnalysisSyncopation *syncopations; /* owned; each line's in onset order, the lines in order */
+    size_t syncopation_count;
+    AnalysisHemiola *hemiolas; /* owned; in time order */
+    size_t hemiola_count;
+    AnalysisHypermeter *hypermeters; /* owned; one per phrase that has a measure, in phrase order */
+    size_t hypermeter_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -695,7 +771,7 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns, motives, melodies and densities. */
+   thematic returns, motives, melodies, densities, syncopations, hemiolas and hypermeters. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

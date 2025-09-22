@@ -202,34 +202,64 @@ int main(void) {
         assert(cJSON_GetArraySize(member(member(entry, "contour"), "directions")) < number(entry, "note_count"));
     }
 
-    /* Rhythm: one flat list of labelled claims. The density claims come phrase by phrase, all notes first and then each
-       line that has a note in it, and the lines' notes add up to the phrase's. */
+    /* Rhythm: one flat list of labelled claims, the densities first and then the syncopations, hemiolas and hypermeters. The
+       density claims come phrase by phrase, all notes first and then each line that has a note in it, and the lines' notes
+       add up to the phrase's. */
     const cJSON *rhythm = member(document, "rhythm");
     assert(cJSON_IsArray(rhythm));
     int phrase_count = cJSON_GetArraySize(member(document, "phrases"));
     double all_notes = 0;
     double line_notes = 0;
     int all_seen = 0;
+    int hypermeters = 0;
+    int syncopations_seen = 0;
     for (int i = 0; i < cJSON_GetArraySize(rhythm); i++) {
         const cJSON *entry = cJSON_GetArrayItem(rhythm, i);
+        const char *label = string(entry, "label");
         check_claim(entry);
-        assert(strcmp(string(entry, "label"), "density") == 0);
-        assert(number(entry, "phrase") < phrase_count);
-        assert(number(entry, "attacks") <= number(entry, "notes"));
-        assert(number(entry, "notes") == cJSON_GetArraySize(member(entry, "note_ids")));
-        assert(number(entry, "on_beat_share") >= 0 && number(entry, "on_beat_share") <= 1);
-        assert(number(entry, "on_beat_share") + number(entry, "off_beat_share") <= 1.000001);
-        if (strcmp(string(entry, "line"), "all") == 0) {
-            assert(i == 0 || line_notes == all_notes);
-            all_notes = number(entry, "notes");
-            line_notes = 0;
-            all_seen++;
+        if (strcmp(label, "density") == 0) {
+            assert(syncopations_seen == 0 && hypermeters == 0);
+            assert(number(entry, "phrase") < phrase_count);
+            assert(number(entry, "attacks") <= number(entry, "notes"));
+            assert(number(entry, "notes") == cJSON_GetArraySize(member(entry, "note_ids")));
+            assert(number(entry, "on_beat_share") >= 0 && number(entry, "on_beat_share") <= 1);
+            assert(number(entry, "on_beat_share") + number(entry, "off_beat_share") <= 1.000001);
+            if (strcmp(string(entry, "line"), "all") == 0) {
+                assert(all_seen == 0 || line_notes == all_notes);
+                all_notes = number(entry, "notes");
+                line_notes = 0;
+                all_seen++;
+            } else {
+                line_notes += number(entry, "notes");
+            }
+        } else if (strcmp(label, "syncopation") == 0) {
+            syncopations_seen++;
+            assert(cJSON_GetArraySize(member(entry, "note_ids")) == 1);
+            assert(number(entry, "strength") >= 1 && number(entry, "strength") <= 4);
+            assert(number(entry, "beat") >= 1);
+        } else if (strcmp(label, "hemiola") == 0) {
+            assert(number(member(entry, "evidence"), "agreeing") >= 2);
+            assert(number(member(entry, "evidence"), "agreeing") <= number(member(entry, "evidence"), "available"));
         } else {
-            line_notes += number(entry, "notes");
+            assert(strcmp(label, "hypermeter") == 0);
+            hypermeters++;
+            const cJSON *measures = member(entry, "hypermeasures");
+            assert(cJSON_GetArraySize(measures) > 0);
+            assert(cJSON_GetArraySize(measures) == cJSON_GetArraySize(member(entry, "hyperdownbeats")));
+            /* the hypermeasures follow one another from the phrase's first measure (the library fills the last one
+               to its length, so it can run past the phrase's measures) */
+            double next = number(member(entry, "measures"), "first");
+            for (int h = 0; h < cJSON_GetArraySize(measures); h++) {
+                const cJSON *hypermeasure = cJSON_GetArrayItem(measures, h);
+                assert(number(member(hypermeasure, "measures"), "first") == next);
+                next = number(member(hypermeasure, "measures"), "last") + 1;
+            }
+            assert(next >= number(member(entry, "measures"), "last") + 1);
         }
     }
     assert(line_notes == all_notes);
     assert(all_seen == (phrase_count > 0 && cJSON_GetArraySize(rhythm) > 0 ? phrase_count : 0));
+    assert(hypermeters <= phrase_count);
 
     /* Phrases: one claim each in time order, with measures, length, cadence (an index or null) and signal. */
     const cJSON *phrases = member(document, "phrases");
