@@ -442,6 +442,11 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     return VARIANT_OK;
 }
 
+/* Whether the operation needs two chords to work on: the source's own, or the one implied chord is too few. */
+static bool needs_two_chords(const VariantOperation *operation) {
+    return strcmp(operation->name, "passing-harmony") == 0;
+}
+
 /* Whether the operation works on a motive of the accompaniment role only. */
 static bool needs_accompaniment(const VariantOperation *operation) {
     return strcmp(operation->name, "counter-line") == 0;
@@ -466,11 +471,12 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
         const VariantOperation *operation = variant_registry_at(i);
         /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it, and a feature operation needs
-           a labelled feature to work on, and counter-line the accompaniment role. */
+           a labelled feature to work on, counter-line the accompaniment role and passing-harmony two chords. */
         if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
             (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
             (source->feature_count > 0 || !takes_feature(operation)) &&
-            (source->role == MOTIVE_ROLE_ACCOMPANIMENT || !needs_accompaniment(operation))) {
+            (source->role == MOTIVE_ROLE_ACCOMPANIMENT || !needs_accompaniment(operation)) &&
+            (source->harmony_count >= 2 || !needs_two_chords(operation))) {
             candidates[count++] = operation;
         }
     }
