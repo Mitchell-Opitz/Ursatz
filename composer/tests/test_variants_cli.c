@@ -87,7 +87,7 @@ static void test_list_ops(void) {
 
     out = output_of("--list-ops --json");
     assert(strstr(out, "\"operations\"") != NULL);
-    assert(count_of(out, "\"citation\"") == 20);
+    assert(count_of(out, "\"citation\"") == 27);
     free(out);
 }
 
@@ -173,6 +173,42 @@ static void test_refused_step(void) {
     free(out);
 }
 
+/* A harmony row writes the variant's own harmony in the record and in its motive; a variant without some has neither. */
+static void test_harmony_json(void) {
+    write_file("variants_cli_harmony.json",
+               "{\"steps\": [{\"op\": \"harmony-substitute\", \"params\": {\"chord\": 1, \"degree\": 4}}]}");
+    char *out = output_of(THEME " --harmony \"I V@2\" --chain variants_cli_harmony.json --count 1 --seed 1 --json");
+    /* The source's harmony, then the record's, then the variant's motive. */
+    assert(count_of(out, "\"harmony\": \"I V@2\"") == 1);
+    assert(count_of(out, "\"harmony\": \"I IV@2\"") == 2);
+    assert(count_of(out, "\"harmony_text\": \"I IV@2\"") == 1);
+    const char *changed = strstr(out, "\"changed\"");
+    assert(changed != NULL && strstr(changed, "\"harmony\"") != NULL);
+    free(out);
+
+    out = output_of(THEME " --harmony \"I V@2\" --chain variants_cli_harmony.json --count 1 --seed 1");
+    assert(strstr(out, "Substituted IV for the second chord, melody adapted.") != NULL);
+    free(out);
+
+    write_file("variants_cli_transpose.json", "{\"steps\": [{\"op\": \"transpose\", \"params\": {\"by\": 2}}]}");
+    out = output_of(THEME " --chain variants_cli_transpose.json --count 1 --seed 1 --json");
+    assert(count_of(out, "\"harmony\": \"") == 0);
+    free(out);
+}
+
+/* Counter-line is refused for a melodic motive and works on an accompaniment. */
+static void test_counter_line(void) {
+    write_file("variants_cli_counter.json", "{\"steps\": [{\"op\": \"counter-line\"}]}");
+    write_file("variants_cli_repeated.txt", "C4:q C4:q C4:q C4:q\n");
+    expect_failure("variants_cli_repeated.txt --meter 4/4 --key \"C major\" --chain variants_cli_counter.json", 2,
+                   "step 1 of the chain: counter-line needs an accompaniment motive");
+    char *out = output_of("variants_cli_repeated.txt --meter 4/4 --key \"C major\" --role accompaniment "
+                          "--chain variants_cli_counter.json --seed 1");
+    assert(strstr(out, "Variant 1 (seed 1): counter-line") != NULL);
+    free(out);
+    expect_failure(THEME " --chain variants_cli_counter.json", 2, "step 1 of the chain: counter-line needs an accompaniment");
+}
+
 int main(void) {
     test_list_ops();
     test_chain_file();
@@ -180,6 +216,8 @@ int main(void) {
     test_json();
     test_bad_arguments();
     test_refused_step();
+    test_harmony_json();
+    test_counter_line();
     printf("variants cli tests passed\n");
     return 0;
 }
