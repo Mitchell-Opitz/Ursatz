@@ -62,10 +62,10 @@ static void describe_exact(const VariantValue *values, char *out, size_t size) {
 enum { TRANSPOSE_TONAL, TRANSPOSE_BY, TRANSPOSE_DEGREE };
 
 static const VariantParam TRANSPOSE_PARAMS[] = {
-    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "move in steps of the key's scale instead of semitones", false, false, false, false},
-    {"by", VARIANT_PARAM_INT, -12, 12, "how far to move: semitones, or steps when tonal; not 0", false, false, false, false},
+    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "move in steps of the key's scale instead of semitones", false, false, false, false, false},
+    {"by", VARIANT_PARAM_INT, -12, 12, "how far to move: semitones, or steps when tonal; not 0", false, false, false, false, false},
     {"degree", VARIANT_PARAM_INT, 1, 7, "move the first note to this scale degree instead of using by; tonal", true,
-     false, false, false}};
+     false, false, false, false}};
 
 static MotiveDevResult apply_transpose(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -102,8 +102,8 @@ static void describe_transpose(const VariantValue *values, char *out, size_t siz
 enum { INVERT_AXIS, INVERT_TONAL };
 
 static const VariantParam INVERT_PARAMS[] = {
-    {"axis", VARIANT_PARAM_PITCH, 0, 127, "the pitch mirrored about; the first note when not set", false, false, false, false},
-    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "mirror in steps of the key's scale instead of semitones", false, false, false, false}};
+    {"axis", VARIANT_PARAM_PITCH, 0, 127, "the pitch mirrored about; the first note when not set", false, false, false, false, false},
+    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "mirror in steps of the key's scale instead of semitones", false, false, false, false, false}};
 
 static MotiveDevResult apply_invert(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -142,9 +142,9 @@ static void describe_retrograde(const VariantValue *values, char *out, size_t si
 enum { INTERVAL_WHICH, INTERVAL_AMOUNT, INTERVAL_KEEP_CONTOUR };
 
 static const VariantParam INTERVAL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 0, 16, "the 1-based interval changed; 0 for every one", false, true, false, false},
-    {"amount", VARIANT_PARAM_INT, -6, 6, "semitones to widen by, negative to narrow; not 0", false, false, false, false},
-    {"keep-contour", VARIANT_PARAM_BOOL, 0, 1, "refuse a result that changes a direction", false, false, false, false}};
+    {"interval", VARIANT_PARAM_INT, 0, 16, "the 1-based interval changed; 0 for every one", false, true, false, false, false},
+    {"amount", VARIANT_PARAM_INT, -6, 6, "semitones to widen by, negative to narrow; not 0", false, false, false, false, false},
+    {"keep-contour", VARIANT_PARAM_BOOL, 0, 1, "refuse a result that changes a direction", false, false, false, false, false}};
 
 static MotiveDevResult apply_interval_change(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -173,9 +173,9 @@ enum { FRAGMENT_POSITION, FRAGMENT_LENGTH, FRAGMENT_MIN };
 
 static const VariantParam FRAGMENT_PARAMS[] = {
     {"position", VARIANT_PARAM_POSITION, 1, 3, "where the fragment is taken from: leading, trailing or middle", false,
-     false, false, false},
-    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes the fragment has", false, true, false, false},
-    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false}};
+     false, false, false, false},
+    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes the fragment has", false, true, false, false, false},
+    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false, false}};
 
 static MotiveDevResult apply_fragment(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -197,9 +197,9 @@ static void describe_fragment(const VariantValue *values, char *out, size_t size
 enum { LIQUIDATE_DROP, LIQUIDATE_KEEP_RHYTHM, LIQUIDATE_MIN };
 
 static const VariantParam LIQUIDATE_PARAMS[] = {
-    {"drop", VARIANT_PARAM_INT, 1, 16, "how many notes to drop, the weakest first", false, true, false, false},
-    {"keep-rhythm", VARIANT_PARAM_BOOL, 0, 1, "leave a dropped note's time as a rest", false, false, false, false},
-    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false}};
+    {"drop", VARIANT_PARAM_INT, 1, 16, "how many notes to drop, the weakest first", false, true, false, false, false},
+    {"keep-rhythm", VARIANT_PARAM_BOOL, 0, 1, "leave a dropped note's time as a rest", false, false, false, false, false},
+    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false, false}};
 
 static MotiveDevResult apply_liquidate(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -220,11 +220,11 @@ static void describe_liquidate(const VariantValue *values, char *out, size_t siz
 
 static const VariantParam AUGMENT_PARAMS[] = {
     {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor durations are multiplied by, n:m above 1; 2:1 when not set", false,
-     false, false, false}};
+     false, false, false, false}};
 
 static const VariantParam DIMINISH_PARAMS[] = {
     {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor durations are multiplied by, n:m below 1; 1:2 when not set", false,
-     false, true, false}};
+     false, true, false, false}};
 
 static MotiveDevResult apply_ratio(MotiveDevKind kind, const Motive *source, const VariantValue *values, Motive *out) {
     MotiveDevSpec spec;
@@ -362,8 +362,8 @@ static void whole_note_part(const VariantValue *value, char *out, size_t size) {
 enum { NOTE_REPEAT_NOTE, NOTE_REPEAT_COUNT };
 
 static const VariantParam NOTE_REPEAT_PARAMS[] = {
-    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note split into repeated notes", false, true, false, false},
-    {"count", VARIANT_PARAM_INT, 2, 4, "how many equal notes it becomes", false, false, false, false}};
+    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note split into repeated notes", false, true, false, false, false},
+    {"count", VARIANT_PARAM_INT, 2, 4, "how many equal notes it becomes", false, false, false, false, false}};
 
 static MotiveDevResult apply_note_repeat(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_NOTE_REPEAT, source, values, out);
@@ -383,9 +383,9 @@ static void describe_note_repeat(const VariantValue *values, char *out, size_t s
 enum { RHYTHM_REPEAT_FIRST, RHYTHM_REPEAT_LENGTH, RHYTHM_REPEAT_TARGET };
 
 static const VariantParam RHYTHM_REPEAT_PARAMS[] = {
-    {"first", VARIANT_PARAM_INT, 0, 16, "the 0-based first note whose durations are copied", false, true, false, false},
-    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes' durations are copied", false, true, false, false},
-    {"target", VARIANT_PARAM_INT, 0, 16, "the 0-based note the copied durations start on", false, true, false, false}};
+    {"first", VARIANT_PARAM_INT, 0, 16, "the 0-based first note whose durations are copied", false, true, false, false, false},
+    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes' durations are copied", false, true, false, false, false},
+    {"target", VARIANT_PARAM_INT, 0, 16, "the 0-based note the copied durations start on", false, true, false, false, false}};
 
 static MotiveDevResult apply_rhythm_repeat(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_RHYTHM_REPEAT, source, values, out);
@@ -404,7 +404,7 @@ static void describe_rhythm_repeat(const VariantValue *values, char *out, size_t
 
 static const VariantParam RHYTHM_SHIFT_PARAMS[] = {
     {"offset", VARIANT_PARAM_RATIO, 1, 4, "how far later in the bar the motive starts, in whole notes, n:m below 1",
-     false, false, true, false}};
+     false, false, true, false, false}};
 
 static MotiveDevResult apply_rhythm_shift(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_RHYTHM_SHIFT, source, values, out);
@@ -420,9 +420,9 @@ static void describe_rhythm_shift(const VariantValue *values, char *out, size_t 
 enum { UPBEAT_COUNT, UPBEAT_APPROACH };
 
 static const VariantParam ADD_UPBEAT_PARAMS[] = {
-    {"count", VARIANT_PARAM_INT, 1, 3, "how many half-beat notes lead into the first note", false, false, false, false},
+    {"count", VARIANT_PARAM_INT, 1, 3, "how many half-beat notes lead into the first note", false, false, false, false, false},
     {"approach", VARIANT_PARAM_INT, -1, 1, "1 stepping up from below the first note, -1 down from above", false, false,
-     false, false}};
+     false, false, false}};
 
 static MotiveDevResult apply_add_upbeat(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_ADD_UPBEAT, source, values, out);
@@ -437,8 +437,8 @@ static void describe_add_upbeat(const VariantValue *values, char *out, size_t si
 enum { CHANGE_METER_NUM, CHANGE_METER_DEN };
 
 static const VariantParam CHANGE_METER_PARAMS[] = {
-    {"num", VARIANT_PARAM_INT, 1, 16, "the new meter's beats per bar", false, false, false, false},
-    {"den", VARIANT_PARAM_INT, 1, 16, "the new meter's beat unit: 1, 2, 4, 8 or 16", false, false, false, false}};
+    {"num", VARIANT_PARAM_INT, 1, 16, "the new meter's beats per bar", false, false, false, false, false},
+    {"den", VARIANT_PARAM_INT, 1, 16, "the new meter's beat unit: 1, 2, 4, 8 or 16", false, false, false, false, false}};
 
 static MotiveDevResult apply_change_meter(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_CHANGE_METER, source, values, out);
@@ -453,8 +453,8 @@ static void describe_change_meter(const VariantValue *values, char *out, size_t 
 enum { ADD_INTERVAL_WHICH, ADD_INTERVAL_STEPS };
 
 static const VariantParam ADD_INTERVAL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval a note is added in", false, true, false, false},
-    {"steps", VARIANT_PARAM_INT, -7, 7, "scale steps from the note before the interval; not 0", false, false, false, false}};
+    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval a note is added in", false, true, false, false, false},
+    {"steps", VARIANT_PARAM_INT, -7, 7, "scale steps from the note before the interval; not 0", false, false, false, false, false}};
 
 static MotiveDevResult apply_add_interval(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_ADD_INTERVAL, source, values, out);
@@ -468,7 +468,7 @@ static void describe_add_interval(const VariantValue *values, char *out, size_t 
 }
 
 static const VariantParam OMIT_INTERVAL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval whose second note goes", false, true, false, false}};
+    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval whose second note goes", false, true, false, false, false}};
 
 static MotiveDevResult apply_omit_interval(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_OMIT_INTERVAL, source, values, out);
@@ -481,8 +481,8 @@ static void describe_omit_interval(const VariantValue *values, char *out, size_t
 enum { FILL_WHICH, FILL_KIND };
 
 static const VariantParam ANCILLARY_FILL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval that is filled", false, true, false, false},
-    {"kind", VARIANT_PARAM_INT, 0, 1, "0 for passing notes, 1 for a neighbor note", false, false, false, false}};
+    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval that is filled", false, true, false, false, false},
+    {"kind", VARIANT_PARAM_INT, 0, 1, "0 for passing notes, 1 for a neighbor note", false, false, false, false, false}};
 
 static MotiveDevResult apply_ancillary_fill(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_ANCILLARY_FILL, source, values, out);
@@ -500,9 +500,9 @@ static void describe_ancillary_fill(const VariantValue *values, char *out, size_
 enum { CONDENSE_FIRST, CONDENSE_LAST, CONDENSE_RATIO };
 
 static const VariantParam CONDENSE_PARAMS[] = {
-    {"first", VARIANT_PARAM_INT, 0, 16, "the 0-based first note compressed", false, true, false, false},
-    {"last", VARIANT_PARAM_INT, 0, 16, "the 0-based last note compressed", false, true, false, false},
-    {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor their time is multiplied by, n:m below 1", false, false, true, false}};
+    {"first", VARIANT_PARAM_INT, 0, 16, "the 0-based first note compressed", false, true, false, false, false},
+    {"last", VARIANT_PARAM_INT, 0, 16, "the 0-based last note compressed", false, true, false, false, false},
+    {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor their time is multiplied by, n:m below 1", false, false, true, false, false}};
 
 static MotiveDevResult apply_condense(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_CONDENSE, source, values, out);
@@ -519,9 +519,9 @@ static void describe_condense(const VariantValue *values, char *out, size_t size
 enum { REPEAT_FEATURE_WHICH, REPEAT_FEATURE_TIMES, REPEAT_FEATURE_STEPS };
 
 static const VariantParam REPEAT_FEATURE_PARAMS[] = {
-    {"feature", VARIANT_PARAM_INT, 0, 7, "the 0-based labelled feature repeated", false, false, false, true},
-    {"times", VARIANT_PARAM_INT, 1, 2, "how many times it is repeated after itself", false, false, false, false},
-    {"steps", VARIANT_PARAM_INT, -7, 7, "scale steps each repeat is moved by", false, false, false, false}};
+    {"feature", VARIANT_PARAM_INT, 0, 7, "the 0-based labelled feature repeated", false, false, false, true, false},
+    {"times", VARIANT_PARAM_INT, 1, 2, "how many times it is repeated after itself", false, false, false, false, false},
+    {"steps", VARIANT_PARAM_INT, -7, 7, "scale steps each repeat is moved by", false, false, false, false, false}};
 
 static MotiveDevResult apply_repeat_feature(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_REPEAT_FEATURE, source, values, out);
@@ -542,8 +542,8 @@ static void describe_repeat_feature(const VariantValue *values, char *out, size_
 enum { SHIFT_FEATURE_WHICH, SHIFT_FEATURE_OFFSET };
 
 static const VariantParam SHIFT_FEATURE_PARAMS[] = {
-    {"feature", VARIANT_PARAM_INT, 0, 7, "the 0-based labelled feature moved later", false, false, false, true},
-    {"offset", VARIANT_PARAM_RATIO, 1, 4, "how far later, in whole notes, n:m below 1", false, false, true, false}};
+    {"feature", VARIANT_PARAM_INT, 0, 7, "the 0-based labelled feature moved later", false, false, false, true, false},
+    {"offset", VARIANT_PARAM_RATIO, 1, 4, "how far later, in whole notes, n:m below 1", false, false, true, false, false}};
 
 static MotiveDevResult apply_shift_feature(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_SHIFT_FEATURE, source, values, out);
@@ -577,9 +577,9 @@ static void chord_name(long index, char *out, size_t size) {
 enum { HARMONY_INVERSION_CHORD, HARMONY_INVERSION_INVERSION };
 
 static const VariantParam HARMONY_INVERSION_PARAMS[] = {
-    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is inverted", false, false, false, false},
+    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is inverted", false, false, false, false, true},
     {"inversion", VARIANT_PARAM_INT, 0, 3, "0 root position, 1 first, 2 second, 3 third (a seventh chord)", false, false,
-     false, false}};
+     false, false, false}};
 
 static MotiveDevResult apply_harmony_inversion(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_INVERSION, source, values, out);
@@ -596,8 +596,8 @@ static void describe_harmony_inversion(const VariantValue *values, char *out, si
 enum { HARMONY_APPEND_DEGREE, HARMONY_APPEND_SEVENTH };
 
 static const VariantParam HARMONY_APPEND_PARAMS[] = {
-    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord added at the end", false, false, false, false},
-    {"seventh", VARIANT_PARAM_BOOL, 0, 1, "make the added chord a seventh chord", false, false, false, false}};
+    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord added at the end", false, false, false, false, false},
+    {"seventh", VARIANT_PARAM_BOOL, 0, 1, "make the added chord a seventh chord", false, false, false, false, false}};
 
 static MotiveDevResult apply_harmony_append(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_APPEND, source, values, out);
@@ -611,8 +611,9 @@ static void describe_harmony_append(const VariantValue *values, char *out, size_
 enum { HARMONY_INSERT_CHORD, HARMONY_INSERT_DEGREE };
 
 static const VariantParam HARMONY_INSERT_PARAMS[] = {
-    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord the new one is inserted after", false, false, false, false},
-    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the inserted chord", false, false, false, false}};
+    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord the new one is inserted after", false, false, false, false,
+     true},
+    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the inserted chord", false, false, false, false, false}};
 
 static MotiveDevResult apply_harmony_insert(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_INSERT, source, values, out);
@@ -627,10 +628,10 @@ static void describe_harmony_insert(const VariantValue *values, char *out, size_
 enum { HARMONY_SUBSTITUTE_CHORD, HARMONY_SUBSTITUTE_DEGREE, HARMONY_SUBSTITUTE_THEN };
 
 static const VariantParam HARMONY_SUBSTITUTE_PARAMS[] = {
-    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is replaced", false, false, false, false},
-    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord put in its place", false, false, false, false},
+    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is replaced", false, false, false, false, true},
+    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord put in its place", false, false, false, false, false},
     {"then", VARIANT_PARAM_INT, 1, 7, "a second degree that follows it in the same time; not set for none", true, false,
-     false, false}};
+     false, false, false}};
 
 static MotiveDevResult apply_harmony_substitute(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_SUBSTITUTE, source, values, out);
@@ -653,7 +654,7 @@ enum { PASSING_HARMONY_CHORD };
 
 static const VariantParam PASSING_HARMONY_PARAMS[] = {
     {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord whose change into the next gets a passing chord", false, false,
-     false, false}};
+     false, false, true}};
 
 static MotiveDevResult apply_passing_harmony(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_PASSING_HARMONY, source, values, out);

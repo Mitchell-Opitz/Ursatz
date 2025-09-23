@@ -57,6 +57,9 @@ typedef struct {
     bool shrinks;
     /* A 0-based index into the motive's labelled features: the largest value drawn is the feature count less one. */
     bool features_limit;
+    /* A 0-based index into the motive's chords: the largest value drawn is the chord count less one. A motive without
+       chords of its own has one, the best implied chord. */
+    bool chords_limit;
 } VariantParam;
 
 /*

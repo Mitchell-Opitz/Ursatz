@@ -124,6 +124,10 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         if (param->features_limit && (long)current->feature_count - 1 < max) {
             max = (long)current->feature_count - 1;
         }
+        if (param->chords_limit) {
+            long chords = current->harmony_count > 0 ? (long)current->harmony_count : 1;
+            max = chords - 1 < max ? chords - 1 : max;
+        }
         value.value = draw_int(rng, param->min, max < param->min ? param->min : max);
         break;
     }
