@@ -761,6 +761,24 @@ static void test_counter_line_needs_an_accompaniment(void) {
     assert(drawn);
 }
 
+static void test_random_chains_skip_passing_harmony_without_two_chords(void) {
+    Motive plain = load("C4:q E4:q G4:q E4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    Motive harmonized = harmonized_source();
+    bool drawn = false;
+    for (unsigned long seed = 0; seed < 400; seed++) {
+        VariantChain chain;
+        assert(variant_random_chain(&plain, seed, &chain));
+        for (size_t s = 0; s < chain.step_count; s++) {
+            assert(strcmp(chain.steps[s].op, "passing-harmony") != 0);
+        }
+        assert(variant_random_chain(&harmonized, seed, &chain));
+        for (size_t s = 0; s < chain.step_count; s++) {
+            drawn = drawn || strcmp(chain.steps[s].op, "passing-harmony") == 0;
+        }
+    }
+    assert(drawn);
+}
+
 static void test_harmony_rows_draw_open_parameters(void) {
     Motive source = harmonized_source();
     static const char *const OPS[] = {"harmony-inversion", "harmony-append", "harmony-insert", "harmony-substitute",
@@ -833,6 +851,7 @@ int main(void) {
     test_harmony_rows_need_a_key();
     test_harmony_rows_without_own_harmony();
     test_counter_line_needs_an_accompaniment();
+    test_random_chains_skip_passing_harmony_without_two_chords();
     test_harmony_rows_draw_open_parameters();
     test_harmony_row_phrases();
     puts("test_variant_registry: ok");
