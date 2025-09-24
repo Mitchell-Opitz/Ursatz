@@ -25,6 +25,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | C7 | [convention] The cadence adapter defines SUBVERTED as a cadential dominant that resolves to I6 or another non-tonic (`analysis_cadence.h`); the older cadence drafts do not mark such places (a V-I6 prolongs there) | Fixture check against the editions, then one cadence convention across the drafts and the adapter | unassigned |
 | C8 | [method] L3.6 builds phrases, themes and expansions from the cadences it is given; where the cadences upstream are missing or wrong (C4, C5, C6) the phrase ends, the themes and their parts, and the expansions are missing or fall on other measures | Re-verification of L3.6 once the cadence items (C4, C5, C6) are done | unassigned |
 | C9 | [convention] A dominant that ends a development and resolves into the recapitulation's tonic is a root-position V to I, which the adapter calls an authentic cadence; the draft reads the dominant as the development's half cadence and the recapitulation as a new start | Cadences across a formal boundary (the adapter has no notion of form sections); fixture check against the edition | unassigned |
+| C10 | [method] The kernel's thematic return detection compares whole windows (the soprano notes of one L3.6 theme) for exact equality of contour and rhythm, with a minimum of 4 events; a return is found only where an L3.6 theme starts at it and repeats the earlier theme's contour and rhythm note for note. A return inside a longer theme, a return cut at other measures because the themes follow the chain's cadences (C8), or a transposed statement with a change of rhythm or contour is not matched | Thematic return detection with partial and varied matches (matching inside themes and with variation) | unassigned |
 
 ## Deviations
 
@@ -105,3 +106,10 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | none | C8 |
 | DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
 | DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-4, D minor 5-8 | C1,C2 |
+| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
+| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
+| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
+| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
+| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
+| DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m11-24) | C8,C10 |
+| DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m11-24) | C8,C10 |
