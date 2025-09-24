@@ -75,6 +75,10 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
     }
     assert(contour_create(pitch_ids, count, directions, count - 1, contour) == CONTOUR_OK);
     assert(rhythmic_pattern_create(durations, count, rhythm) == RHYTHMIC_PATTERN_OK);
+    /* the Contour and the RhythmicPattern own the elements and copy the arrays, which are ours to free */
+    free(pitch_ids);
+    free(directions);
+    free(durations);
     window->contour = *contour;
     window->rhythm = *rhythm;
     window->event_ids = ids;
@@ -121,6 +125,7 @@ static Occs fv1_occurrences(const Chain *c) {
             continue;
         }
         assert(theme_occurrence_create(occurrence, region, n, &o->occurrence) == THEME_OCCURRENCE_OK);
+        free(region); /* the ThemeOccurrence owns the ids and copies the array */
         o->window_ids = (const EntityID **)calloc(n, sizeof(EntityID *));
         assert(o->window_ids != NULL);
         for (size_t i = 0; i < n; i++) {
