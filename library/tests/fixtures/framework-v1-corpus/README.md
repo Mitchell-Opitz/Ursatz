@@ -12,3 +12,7 @@ The Framework v1 reference test corpus: five MIDI files.
 test-run time, registers one Corpus piece_ref per `.mid` file found, and
 asserts the Corpus reflects exactly that set. It checks registration only, not
 analysis output.
+
+The Framework v1 verification suite (tests/integration/framework_v1_verification.c and framework_v1_thematic_returns.c) checks the full chain
+on these five files against `tests/fixtures/annotations/<piece>_v1_expected.txt`. Where the chain does not give an expected value the
+location is a deviation listed in `expected_deviations.md` here; see docs/testing/framework_v1_verification.md.
