@@ -14,12 +14,12 @@ The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a M
 | Option | Meaning |
 | --- | --- |
 | `--list-ops` | Print every operation: name, label, category, citation, parameters and forms. Takes no input. |
-| `--chain <file>` | A chain file (below), used for every variant. Without it, each variant gets its own random chain of 1 or 2 operations that the motive's form takes (never `change-meter`, and a feature operation only when the motive has a labelled feature). |
+| `--chain <file>` | A chain file (below), used for every variant. Without it, each variant gets its own random chain of 1 or 2 operations that the motive's form takes (never `change-meter`, a feature operation only when the motive has a labelled feature, `counter-line` only for an accompaniment, `passing-harmony` only for a motive with two or more chords). |
 | `--count <n>` | How many variants, 1 to 16, 6 by default. Variant i uses seed + i. |
 | `--seed <n>` | A whole number from 0. By default from the clock. The seed is printed. |
 | `--json` | Print as JSON (below). |
 
-Harmony, features and the role go through the variants. A variant keeps the features whose notes it still holds, renumbered (a retrograde turns them round; a fragment keeps the ones inside it whole, and a liquidation drops those that lose a note), and its chords: a fragment keeps those from its first note, the chord sounding there at 0, a scaled variant moves them with the notes, and the others keep the ones that still start inside. A motive with chords of its own is compared by them: its `harmony` is kept when every chord keeps its degree and onset, else changed; without chords of its own the best implied chord is compared. `--list-ops` takes none of these options.
+Harmony, features and the role go through the variants. A variant keeps the features whose notes it still holds, renumbered (a retrograde turns them round; a fragment keeps the ones inside it whole, and a liquidation drops those that lose a note), and its chords: a fragment keeps those from its first note, the chord sounding there at 0, a scaled variant moves them with the notes, and the others keep the ones that still start inside. A motive with chords of its own is compared by them: its `harmony` is kept when every chord keeps its degree, alteration, inversion, seventh and onset, else changed; without chords of its own the best implied chord is compared. The harmony rows (`harmony-inversion`, `harmony-append`, `harmony-insert`, `harmony-substitute`, `passing-harmony`, `dominant-form`) take a full motive with a key and give the variant the new chords as its own harmony; `counter-line` takes a motive with `--role accompaniment` and is refused otherwise (`counter-line needs an accompaniment motive`). A random chain draws `counter-line` only for an accompaniment and `passing-harmony` only for a motive with two or more chords of its own. `--list-ops` takes none of these options.
 
 ## Chain file
 
@@ -44,11 +44,11 @@ JSON:
 ```json
 {"seed": 3, "source": {"motive": {}, "analysis": {}},
  "variants": [{"seed": 3, "chain": {"steps": [{"op": "invert", "params": {"axis": 65, "tonal": true}, "open": ["axis"]}]},
-               "kind": "motive-form", "kept": [], "changed": [], "functions": [],
+               "kind": "motive-form", "kept": [], "changed": [], "harmony": "", "functions": [],
                "derivation": "", "recognizability": 0.8571, "motive": {"motive": {}, "analysis": {}}}]}
 ```
 
-`source` and each variant's `motive` are the document of `motive --json`, with `notes_text`, `degrees_text` and the analysis. `chain` holds every resolved parameter, and `open` names those the seed drew. `kind` is `exact` or `motive-form`; `functions` stays empty until the function tags of a later phase.
+`source` and each variant's `motive` are the document of `motive --json`, with `notes_text`, `degrees_text` and the analysis. `chain` holds every resolved parameter, and `open` names those the seed drew. `kind` is `exact` or `motive-form`; `harmony` is the variant's own harmony as text (`I IV@2`), written only when it has chords of its own, and its `motive` holds them as `harmony` too; `functions` stays empty until the function tags of a later phase.
 
 ## Exit status
 
