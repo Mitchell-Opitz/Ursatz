@@ -12,9 +12,15 @@
  * then asserts the Corpus reflects exactly that set. Runs against whatever
  * fixture files are present -- zero files (the pre-fixture state) is
  * expected, not a failure.
+ *
+ * It also asserts that every registered piece has its Framework v1 expected values, tests/fixtures/annotations/<piece>_v1_expected.txt
+ * (<piece> is the file name in lower case without spaces: "Bach 114.mid" is bach114). Those values are what the Framework v1 verification suite
+ * checks the full chain against (tests/integration/framework_v1_verification.c, registered as framework_v1_verification); this test links
+ * the kernel only and cannot run that suite, so it guards the pairing: a piece added to the reference set without expected values fails here.
  */
 
 #define FIXTURE_DIR "../fixtures/framework-v1-corpus"
+#define ANNOTATION_DIR "../fixtures/annotations"
 #define MAX_FIXTURES 256
 
 static int has_mid_suffix(const char *name) {
@@ -85,6 +91,24 @@ int main(void) {
             }
         }
         assert(matched);
+
+        /* the piece's expected values: "Bach 114.mid" -> bach114_v1_expected.txt */
+        char prefix[64];
+        size_t n = 0;
+        for (const char *p = fixture_names[i]; *p != '\0' && *p != '.' && n + 1 < sizeof(prefix); p++) {
+            if (*p != ' ') {
+                prefix[n++] = (char)((*p >= 'A' && *p <= 'Z') ? *p - 'A' + 'a' : *p);
+            }
+        }
+        prefix[n] = '\0';
+        char expected_path[256];
+        snprintf(expected_path, sizeof(expected_path), "%s/%s_v1_expected.txt", ANNOTATION_DIR, prefix);
+        FILE *expected = fopen(expected_path, "r");
+        if (expected == NULL) {
+            fprintf(stderr, "%s has no Framework v1 expected values (%s)\n", fixture_names[i], expected_path);
+        }
+        assert(expected != NULL);
+        fclose(expected);
         free(fixture_names[i]);
     }
 

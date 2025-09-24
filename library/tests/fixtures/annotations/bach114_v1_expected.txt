@@ -1,0 +1,71 @@
+# Expected results for the Framework v1 verification of Bach, Minuet in G, BWV Anh. 114 (Notebook for Anna Magdalena Bach, 1725).
+#
+# SOURCE: the Neue Bach-Ausgabe (V/4) and the IMSLP scan of the Notebook. The edition was not available when this file was written, so it is the one to check against.
+# STATUS: DRAFT, UNVERIFIED AGAINST THE EDITION. A hand reading of tests/fixtures/framework-v1-corpus/"Bach 114.mid" (the top line and the bass of each measure, dumped beat by beat; the file declares 4/4, the piece is 3/4, and its repeats are written out),
+# written before the verification test was run and NOT derived from the output of any analysis stage. Where the older annotation
+# files for this piece (key regions, cadences, phrase form) cover the same ground their values are copied here, and
+# framework_v1_fixture_consistency checks that the two agree. A human should confirm it against the edition before it is relied on.
+#
+# Every list below is COMPLETE for its scope: a cadence the music does not have is a claim, not an omission, so a cadence the chain
+# reports inside the cadence scope that is not listed is reported as a deviation. (Phrase ends, themes, expansions and
+# returns are checked only as listed: the form readings say what could be read with confidence.)
+#
+# FORMAT, one per line (blank lines and lines starting with # are ignored):
+#   piece <id>
+#   meter <beats per measure> <beat length as a fraction of a whole note>
+#   home <tonic> <major|minor>                          the piece's key
+#   keys-scope <first> <last>                           the measures the chain runs over; the key regions are checked here
+#   region <first> <last> <tonic> <major|minor>         the key of those measures (a region is two measures or more; a passing one-measure tonicization is not one)
+#   unscored <first> <last>                             measures left out of the key check
+#   change <measure> <extent> [return]                  the key change that STARTS at this measure; extent is tonicization, extended-tonicization,
+#                                                       weak-modulation or modulation (a cadence in the new key that the music then leaves is a weak
+#                                                       modulation); 'return' marks the change back to the key before the excursion
+#   cadence-scope <first> <last>                        the measures whose cadences are listed
+#   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here (beats are 1-based)
+#   form-scope <first> <last>
+#   phrase-end <measure> <pac|iac|hc>                   a phrase ends in this measure (the measure its arrival chord ends in)
+#   theme <form> <first> <last> [parts <a-first> <a-last> <b-first> <b-last>]   a theme and its two parts
+#   expansion <internal|contraction|external> <first> <last> <measures>
+#   original <name> <first> <last>                      a theme that later returns (thematic returns)
+#   return <name> <first> <last>                        a later statement of the original called <name>
+#
+# Tolerances (the verification test): a key region's edges and a phrase end or a theme edge are matched within one measure; a cadence's
+# arrival within one beat and its type exactly (PAC and IAC are different types).
+
+piece bach114
+meter 3 1/4
+home G major
+keys-scope 1 32
+# The first strain (1-8) and its repeat (9-16) stay in G. In the second strain (17-24) the A major chord of measure 18 and the A7 of measure 19 lead to a perfect
+# authentic cadence in D at measure 20, and measure 21 is back in G (the D chord of measure 23 is the dominant of G); the repeat (25-32) does the same.
+region 1 18 G major
+region 19 20 D major
+region 21 26 G major
+region 27 28 D major
+region 29 32 G major
+change 19 weak-modulation
+change 21 weak-modulation return
+change 27 weak-modulation
+change 29 weak-modulation return
+cadence-scope 1 32
+# the half cadence of measures 4 and 12 arrives on the D (the dominant) at beat 3; the perfect authentic cadences arrive on the tonic at the half beat before beat 3
+cadence 4 3 hc
+cadence 8 2.5 pac
+cadence 12 3 hc
+cadence 16 2.5 pac
+cadence 20 2.5 pac
+cadence 24 2.5 pac
+cadence 28 2.5 pac
+cadence 32 2.5 pac
+form-scope 1 32
+phrase-end 4 hc
+phrase-end 8 pac
+phrase-end 12 hc
+phrase-end 16 pac
+phrase-end 20 pac
+phrase-end 24 pac
+phrase-end 28 pac
+phrase-end 32 pac
+# measures 1-4 and 5-8 are an antecedent and a consequent that restates the same basic idea: a period; so are 9-12 and 13-16
+theme period 1 8 parts 1 4 5 8
+theme period 9 16 parts 9 12 13 16

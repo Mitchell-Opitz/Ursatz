@@ -1,0 +1,76 @@
+# Expected results for the Framework v1 verification of Mozart, Piano Sonata in C major K. 545, first movement.
+#
+# SOURCE: the Neue Mozart-Ausgabe (IX/25/2) and the IMSLP scan of the first edition. The edition was not available when this file was written, so it is the one to check against.
+# STATUS: DRAFT, UNVERIFIED AGAINST THE EDITION. A hand reading of tests/fixtures/framework-v1-corpus/"Mozart 545.mid" (the top line and the bass of each measure, dumped beat by beat; the first movement is its first 146 measures, with both repeats written out),
+# written before the verification test was run and NOT derived from the output of any analysis stage. Where the older annotation
+# files for this piece (key regions, cadences, phrase form) cover the same ground their values are copied here, and
+# framework_v1_fixture_consistency checks that the two agree. A human should confirm it against the edition before it is relied on.
+#
+# Every list below is COMPLETE for its scope: a cadence the music does not have is a claim, not an omission, so a cadence the chain
+# reports inside the cadence scope that is not listed is reported as a deviation. (Phrase ends, themes, expansions and
+# returns are checked only as listed: the form readings say what could be read with confidence.)
+#
+# FORMAT, one per line (blank lines and lines starting with # are ignored):
+#   piece <id>
+#   meter <beats per measure> <beat length as a fraction of a whole note>
+#   home <tonic> <major|minor>                          the piece's key
+#   keys-scope <first> <last>                           the measures the chain runs over; the key regions are checked here
+#   region <first> <last> <tonic> <major|minor>         the key of those measures (a region is two measures or more; a passing one-measure tonicization is not one)
+#   unscored <first> <last>                             measures left out of the key check
+#   change <measure> <extent> [return]                  the key change that STARTS at this measure; extent is tonicization, extended-tonicization,
+#                                                       weak-modulation or modulation (a cadence in the new key that the music then leaves is a weak
+#                                                       modulation); 'return' marks the change back to the key before the excursion
+#   cadence-scope <first> <last>                        the measures whose cadences are listed
+#   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here (beats are 1-based)
+#   form-scope <first> <last>
+#   phrase-end <measure> <pac|iac|hc>                   a phrase ends in this measure (the measure its arrival chord ends in)
+#   theme <form> <first> <last> [parts <a-first> <a-last> <b-first> <b-last>]   a theme and its two parts
+#   expansion <internal|contraction|external> <first> <last> <measures>
+#   original <name> <first> <last>                      a theme that later returns (thematic returns)
+#   return <name> <first> <last>                        a later statement of the original called <name>
+#
+# Tolerances (the verification test): a key region's edges and a phrase end or a theme edge are matched within one measure; a cadence's
+# arrival within one beat and its type exactly (PAC and IAC are different types).
+
+piece mozart545
+meter 4 1/4
+home C major
+keys-scope 1 146
+# copied from mozart545_key_regions.txt (the development, 57-69 and 102-114, is not scored); the extent of each change is the one the music has
+region 1 12 C major
+region 13 28 G major
+region 29 40 C major
+region 41 56 G major
+unscored 57 69
+region 70 78 F major
+region 79 101 C major
+unscored 102 114
+region 115 123 F major
+region 124 146 C major
+change 13 modulation
+change 29 modulation
+change 41 modulation
+change 79 modulation
+change 124 modulation
+# the exposition (1-28): a half cadence on V at measure 11, the closing section in G major with a perfect authentic cadence in each of measures 26, 27 and 28
+# (copied from mozart545_cadences.txt); the repeat starts at measure 29
+cadence-scope 1 28
+cadence 11 1 hc
+cadence 26 1 pac
+cadence 27 1 pac
+cadence 28 1 pac
+form-scope 1 28
+# no cadence ends the four-measure opening (measure 4 reaches I6): the first phrase runs to the half cadence that sounds into measure 12; the exposition closes at 28
+phrase-end 12 hc
+phrase-end 28 pac
+# thematic returns over the whole movement (keys-scope). The main theme is measures 1-4 and returns in the written-out repeat (29), and in the
+# recapitulation, which opens in F major (70) and again in its repeat (115). The second theme is measures 14-17 (G major) and returns in the repeat (42),
+# in C major in the recapitulation (87) and in its repeat (132).
+original main 1 4
+return main 29 32
+return main 70 73
+return main 115 118
+original second 14 17
+return second 42 45
+return second 87 90
+return second 132 135

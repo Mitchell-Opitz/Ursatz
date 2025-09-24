@@ -79,3 +79,25 @@ target_compile_definitions(test_schema_sequence PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/galant"
     URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 add_test(NAME schema_sequence COMMAND test_schema_sequence)
+
+add_executable(test_framework_v1_verification framework_v1_verification.c)
+target_link_libraries(test_framework_v1_verification PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_framework_v1_verification PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_framework_v1_verification PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
+    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md"
+    URSATZ_VERIFICATION_SUMMARY="${CMAKE_CURRENT_BINARY_DIR}/framework_v1_verification_summary.txt")
+add_test(NAME framework_v1_verification COMMAND test_framework_v1_verification)
+
+add_executable(test_framework_v1_thematic_returns framework_v1_thematic_returns.c)
+target_link_libraries(test_framework_v1_thematic_returns PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_framework_v1_thematic_returns PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_framework_v1_thematic_returns PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
+    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md"
+    URSATZ_RETURNS_SUMMARY="${CMAKE_CURRENT_BINARY_DIR}/framework_v1_returns_summary.txt")
+add_test(NAME framework_v1_thematic_returns COMMAND test_framework_v1_thematic_returns)

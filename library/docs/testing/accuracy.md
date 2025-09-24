@@ -139,3 +139,5 @@ corpus changed, or a loss is accepted and understood. Never to make a failing ru
 
 `--corpus-dir DIR`, `--report-dir DIR`, `--baseline FILE`, `--tolerance POINTS` (written by `--update-baseline`),
 `--update-baseline`, `--no-gate`.
+
+The five reference pieces are also verified against exact expected values (keys, cadences, phrase form, thematic returns): `docs/testing/framework_v1_verification.md`.
