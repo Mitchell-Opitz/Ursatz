@@ -4,7 +4,7 @@
 #include <ursatz_composer/variant_registry.h>
 ```
 
-The variant registry lists every way a motive can be made into a variant, one table row each. The first 9 rows are the development operations of `motive_develop` (`motive_develop.h`); the rhythm and interval rows that follow apply the library's motive relations. Each row has the category and the citation of Schoenberg's *Fundamentals of Musical Composition* it belongs to, and the `relation` it maps to: the relation of the same name in the Ursatz library (`analysis/motive_relation.h`), with the row's parameters in the relation's order. A variant is made by a chain of up to 4 operations applied from a seed, and comes with a record of how it was made and what it kept and changed. The [variants command](cli-variants.md) is built on this; the library works on its own.
+The variant registry lists every way a motive can be made into a variant, one table row each. The first 9 rows are the development operations of `motive_develop` (`motive_develop.h`); the rhythm, interval, harmony and melody-adaptation rows that follow apply the library's motive relations. Each row has the category and the citation of Schoenberg's *Fundamentals of Musical Composition* it belongs to, and the `relation` it maps to: the relation of the same name in the Ursatz library (`analysis/motive_relation.h`), with the row's parameters in the relation's order. A variant is made by a chain of up to 4 operations applied from a seed, and comes with a record of how it was made and what it kept and changed. The [variants command](cli-variants.md) is built on this; the library works on its own.
 
 ## Operations
 
@@ -30,10 +30,19 @@ The variant registry lists every way a motive can be made into a variant, one ta
 | `condense` | Condense | intervals | ch. III, Ex. 21; ch. VIII, Ex. 52 | `first`, `last`, `ratio` | full, rhythm |
 | `repeat-feature` | Repeat feature | intervals | ch. III, Exs. 20h, 22a, b, d | `feature`, `times`, `steps` | full, contour |
 | `shift-feature` | Shift feature | intervals | ch. III, Ex. 23 | `feature`, `offset` | full |
+| `harmony-inversion` | Harmony inversion | harmony | ch. III, Exs. 25a, b | `chord`, `inversion` | full |
+| `harmony-append` | Harmony append | harmony | ch. III, Exs. 25c to i | `degree`, `seventh` | full |
+| `harmony-insert` | Harmony insert | harmony | ch. III, Ex. 26 | `chord`, `degree` | full |
+| `harmony-substitute` | Harmony substitute | harmony | ch. III, Exs. 27a to i | `chord`, `degree`, `then` | full |
+| `passing-harmony` | Passing harmony | melody-adaptation | ch. III, Ex. 29 | `chord` | full |
+| `counter-line` | Counter line | melody-adaptation | ch. III, Ex. 29 | none | full |
+| `dominant-form` | Dominant form | harmony | ch. V, the dominant form | none | full |
 
-Categories: `exact`, `rhythm`, `intervals`, `harmony`, `melody-adaptation`. Harmony has no row until P14.
+Categories: `exact`, `rhythm`, `intervals`, `harmony`, `melody-adaptation`.
 
 The first 9 rows call `motive_develop`; every later row converts the motive to a sketch, calls `motive_relation_apply` and converts the result back (`motive_sketch_bridge.h`). An operation refuses what its function refuses (an unchanged result, a tonal step with no key, a rhythm that cannot be written in the meter, a relation that does not apply). A feature row (`repeat-feature`, `shift-feature`) needs a labelled feature and is refused with `repeat-feature needs a labelled feature` on a motive that has none; a random chain only draws one for a motive that has a feature. `change-meter` is seldom usable (ch. III), so a random chain never draws it. A contour motive is only its ranks, so after an operation its result is read back from its own contour.
+
+The harmony rows and the dominant form take a full motive with a key and are refused without one (`no key`). A motive without chords of its own is given its best implied chord at 0 first, so its result has chords. Each row changes the chords and then adapts the melody: a note on a beat whose chord changed that is not a chord tone moves to the nearest chord tone, keeping the rhythm and as much of the contour as it can. A variant made by one of these rows keeps the result's chords as its own harmony, even a single chord that its melody also implies. `passing-harmony` puts a chord between two chords (it needs two, and a random chain draws it only for a motive with two or more of its own); `dominant-form` turns I into V, I-V and any other harmony starting on I into V-I and I-V-I into V-I-V, moving the melody a fourth down (a fifth up when that is out of range) with rhythm and contour kept, and is refused when the first chord is not I. `counter-line` works on an accompaniment motive only (`--role accompaniment`): runs of one repeated pitch inside a chord become a line moving between its tones. On a melodic motive it is refused with `counter-line needs an accompaniment motive`, and a random chain draws it only for an accompaniment.
 
 ### Parameters
 
@@ -64,6 +73,11 @@ The parameters are the `develop` command's options without the dashes.
 | `kind` | int | 0 or 1 | `ancillary-fill`: 0 passing notes, 1 a neighbor note. |
 | `feature` | int | 0 to the feature count less 1 | The 0-based labelled feature. |
 | `times` | int | 1 or 2 | How many times `repeat-feature` repeats the feature. |
+| `chord` | int | 0 to the chord count less 1 (the one implied chord when the motive has none of its own) | The 0-based chord a harmony row changes: inverted, inserted after, replaced, or the first of the two a passing chord goes between. |
+| `inversion` | int | 0 to 3 | `harmony-inversion`: root position, first, second or third inversion (third needs a seventh chord). |
+| `degree` | int | 1 to 7 | The scale degree of the chord a harmony row adds or puts in place. |
+| `seventh` | bool | 0 or 1 | `harmony-append`: the added chord is a seventh chord. |
+| `then` | int | 1 to 7 | `harmony-substitute`: a second chord that follows the first in the same time. Optional: never drawn. |
 
 ## Chains
 
@@ -97,8 +111,9 @@ A chain that cannot be applied returns one of `VARIANT_ERR_EMPTY`, `VARIANT_ERR_
   - rhythm is kept when the durations and onsets are the source's times one common factor (`rhythm_scaled` says the factor is not 1).
   - intervals are kept when every diatonic step (semitones without a key) is the source's.
   - contour is kept when every direction is the source's.
-  - harmony is kept when the best implied chord's degree is the source's (a full motive with a key only). When either motive has chords of its own it is kept when the chords of both have the same degrees at the same onsets.
+  - harmony is kept when the best implied chord's degree is the source's (a full motive with a key only). When either motive has chords of its own it is kept when the chords of both have the same degrees, alterations, inversions, sevenths and onsets.
   - A dimension the motive's form does not have is in neither list: a rhythm motive has only the rhythm, a contour motive only the contour.
+- `harmony`: the result's own harmony as text (`I IV@2`), empty when it has none.
 - `recognizability`: the total of `motive_recognizability` against the source, as a fraction.
 - `derivation`: each step's phrase, joined by "then", and what was kept and changed: "Inverted about D4 in the key's scale, then augmented 2:1. Kept the rhythm's proportions; changed the intervals, the contour and the harmony."
 
@@ -115,13 +130,14 @@ A chain that cannot be applied returns one of `VARIANT_ERR_EMPTY`, `VARIANT_ERR_
   "kind": "motive-form",
   "kept": ["rhythm"],
   "changed": ["intervals", "contour"],
+  "harmony": "I IV@2",
   "functions": [],
   "derivation": "Inverted about A4 in the key's scale. Kept the rhythm; changed the intervals and the contour.",
   "recognizability": 0.6429
 }
 ```
 
-A parameter value is a boolean, a number (an int or a MIDI pitch), a position name or a ratio text (`"2:1"`). `functions` stays `[]` until the function tags of P14.
+A parameter value is a boolean, a number (an int or a MIDI pitch), a position name or a ratio text (`"2:1"`). `harmony` is written only when the result has chords of its own. `functions` stays `[]` until the function tags of P14.
 
 ## Adding an entry
 

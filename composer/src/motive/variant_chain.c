@@ -124,6 +124,10 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         if (param->features_limit && (long)current->feature_count - 1 < max) {
             max = (long)current->feature_count - 1;
         }
+        if (param->chords_limit) {
+            long chords = current->harmony_count > 0 ? (long)current->harmony_count : 1;
+            max = chords - 1 < max ? chords - 1 : max;
+        }
         value.value = draw_int(rng, param->min, max < param->min ? param->min : max);
         break;
     }
@@ -232,13 +236,14 @@ static bool harmony_kept(const MotiveAnalysis *a, const MotiveAnalysis *b) {
     return strcmp(a->candidates[0].roman, b->candidates[0].roman) == 0;
 }
 
-/* Own harmony, when either motive has it: kept when every chord's degree and onset match. */
+/* Own harmony, when either motive has it: kept when every chord's degree, alteration, inversion, seventh and onset match. */
 static bool own_harmony_kept(const Motive *a, const Motive *b) {
     if (a->harmony_count != b->harmony_count) {
         return false;
     }
     for (size_t i = 0; i < a->harmony_count; i++) {
-        if (a->harmony[i].degree != b->harmony[i].degree ||
+        if (a->harmony[i].degree != b->harmony[i].degree || a->harmony[i].alteration != b->harmony[i].alteration ||
+            a->harmony[i].inversion != b->harmony[i].inversion || a->harmony[i].seventh != b->harmony[i].seventh ||
             plan_time_compare(a->harmony[i].onset, b->harmony[i].onset) != 0) {
             return false;
         }
@@ -417,6 +422,8 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
         if (status != MOTIVE_DEV_OK) {
             if (status == MOTIVE_DEV_ERR_NO_FEATURE) {
                 record_error(log, s, "%s needs a labelled feature", operation->name);
+            } else if (status == MOTIVE_DEV_ERR_NO_ACCOMPANIMENT) {
+                record_error(log, s, "%s needs an accompaniment motive", operation->name);
             } else {
                 record_error(log, s, "%s: %s", operation->name, motive_dev_result_name(status));
             }
@@ -427,9 +434,26 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     }
 
     record_difference(source, &current, log);
+    if (current.harmony_count > 0) {
+        char *harmony = motive_harmony_to_text(&current);
+        if (harmony) {
+            snprintf(log->harmony, sizeof(log->harmony), "%s", harmony);
+            free(harmony);
+        }
+    }
     record_derivation(log);
     *out = current;
     return VARIANT_OK;
+}
+
+/* Whether the operation needs two chords to work on: the source's own, or the one implied chord is too few. */
+static bool needs_two_chords(const VariantOperation *operation) {
+    return strcmp(operation->name, "passing-harmony") == 0;
+}
+
+/* Whether the operation works on a motive of the accompaniment role only. */
+static bool needs_accompaniment(const VariantOperation *operation) {
+    return strcmp(operation->name, "counter-line") == 0;
 }
 
 /* Whether the operation works on one of the motive's labelled features. */
@@ -451,10 +475,12 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
         const VariantOperation *operation = variant_registry_at(i);
         /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it, and a feature operation needs
-           a labelled feature to work on. */
+           a labelled feature to work on, counter-line the accompaniment role and passing-harmony two chords. */
         if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
             (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
-            (source->feature_count > 0 || !takes_feature(operation))) {
+            (source->feature_count > 0 || !takes_feature(operation)) &&
+            (source->role == MOTIVE_ROLE_ACCOMPANIMENT || !needs_accompaniment(operation)) &&
+            (source->harmony_count >= 2 || !needs_two_chords(operation))) {
             candidates[count++] = operation;
         }
     }
@@ -551,6 +577,7 @@ char *variant_record_to_json(const VariantRecord *record) {
     ok = ok && json_add(document, "kind", cJSON_CreateString(variant_kind_name(record->kind))) &&
          names_json(document, "kept", record->kept, record->kept_count) &&
          names_json(document, "changed", record->changed, record->changed_count) &&
+         (record->harmony[0] == '\0' || json_add(document, "harmony", cJSON_CreateString(record->harmony))) &&
          names_json(document, "functions", NULL, 0) &&
          json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
          json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0));
