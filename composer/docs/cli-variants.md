@@ -44,7 +44,7 @@ JSON:
 ```json
 {"seed": 3, "source": {"motive": {}, "analysis": {}},
  "variants": [{"seed": 3, "chain": {"steps": [{"op": "invert", "params": {"axis": 65, "tonal": true}, "open": ["axis"]}]},
-               "kind": "motive-form", "kept": [], "changed": [], "harmony": "", "functions": [],
+               "kind": "motive-form", "kept": [], "changed": [], "functions": [],
                "derivation": "", "recognizability": 0.8571, "motive": {"motive": {}, "analysis": {}}}]}
 ```
 
