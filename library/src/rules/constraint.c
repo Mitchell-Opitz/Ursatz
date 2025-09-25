@@ -106,9 +106,15 @@ ConstraintEvaluateFn constraint_evaluate_fn(const Constraint *constraint) {
 }
 
 ConstraintEvalResult constraint_evaluate(const Constraint *constraint, const Value *candidate, const Context *context) {
-    (void)context;
     if (constraint == NULL || candidate == NULL) {
         return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
     }
-    return CONSTRAINT_EVAL_NOT_IMPLEMENTED;
+    /* A CONTEXTUAL constraint's condition is about ambient context; with none supplied it cannot hold. */
+    if (constraint->type == CONSTRAINT_TYPE_CONTEXTUAL && context == NULL) {
+        return CONSTRAINT_EVAL_NOT_APPLICABLE;
+    }
+    if (constraint->evaluate == NULL) {
+        return CONSTRAINT_EVAL_NOT_IMPLEMENTED;
+    }
+    return constraint->evaluate(constraint, candidate, context);
 }
