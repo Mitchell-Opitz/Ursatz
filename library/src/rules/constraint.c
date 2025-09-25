@@ -10,6 +10,7 @@ struct Constraint {
     unsigned long weight_numerator;
     unsigned long weight_denominator;
     Value *condition;
+    ConstraintEvaluateFn evaluate;
 };
 
 ConstraintResult constraint_create(EntityID *id, const Framework *framework, Value *scope, ConstraintType type,
@@ -42,6 +43,7 @@ ConstraintResult constraint_create(EntityID *id, const Framework *framework, Val
     constraint->weight_numerator = weight_numerator;
     constraint->weight_denominator = weight_denominator;
     constraint->condition = condition;
+    constraint->evaluate = NULL;
 
     *out = constraint;
     return CONSTRAINT_OK;
@@ -90,6 +92,17 @@ bool constraint_identity_equals(const Constraint *a, const Constraint *b) {
         return false;
     }
     return entity_id_equals(a->id, b->id);
+}
+
+void constraint_set_evaluate_fn(Constraint *constraint, ConstraintEvaluateFn evaluate) {
+    if (constraint == NULL) {
+        return;
+    }
+    constraint->evaluate = evaluate;
+}
+
+ConstraintEvaluateFn constraint_evaluate_fn(const Constraint *constraint) {
+    return constraint == NULL ? NULL : constraint->evaluate;
 }
 
 ConstraintEvalResult constraint_evaluate(const Constraint *constraint, const Value *candidate, const Context *context) {

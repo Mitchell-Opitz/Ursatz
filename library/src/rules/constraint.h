@@ -78,6 +78,17 @@ typedef enum {
 } ConstraintEvalResult;
 
 /*
+ * Evaluation callback a framework registers on a Constraint (see
+ * constraint_set_evaluate_fn). A Constraint holds only this pointer: the
+ * framework owns the callback and any data behind it, and nothing owned is
+ * embedded in Constraint. candidate and context are the arguments given to
+ * constraint_evaluate (already checked non-NULL for candidate; context may be
+ * NULL) and are referenced only for the duration of the call.
+ */
+typedef ConstraintEvalResult (*ConstraintEvaluateFn)(const Constraint *constraint, const Value *candidate,
+                                                      const Context *context);
+
+/*
  * Takes ownership of id (and of scope/condition, if non-NULL) on
  * success -- all destroyed by constraint_destroy. framework is
  * required and referenced only, not owned; it must outlive this
@@ -100,6 +111,16 @@ unsigned long constraint_weight_denominator(const Constraint *constraint);
 const Value *constraint_condition(const Constraint *constraint);
 
 bool constraint_identity_equals(const Constraint *a, const Constraint *b);
+
+/*
+ * Registers (or, with NULL, clears) the evaluation callback. Constraint
+ * keeps the pointer only and never owns what is behind it. A Constraint
+ * starts with no callback. No-op on a NULL constraint.
+ */
+void constraint_set_evaluate_fn(Constraint *constraint, ConstraintEvaluateFn evaluate);
+
+/* The registered callback, or NULL if none (or constraint is NULL). */
+ConstraintEvaluateFn constraint_evaluate_fn(const Constraint *constraint);
 
 /*
  * Stub -- see file header. Never performs evaluation logic in this
