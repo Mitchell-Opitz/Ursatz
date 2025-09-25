@@ -561,7 +561,7 @@
           .join("; "),
       });
     }
-    if (!a.implied_harmony) {
+    if (!a.implied_harmony || !Array.isArray(a.intervals)) {
       return { analyzed: true, message: "", rows };
     }
     const candidates = a.implied_harmony && Array.isArray(a.implied_harmony.candidates) ? a.implied_harmony.candidates : [];
