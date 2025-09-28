@@ -1,6 +1,7 @@
 #include "rule_table.h"
 
 #include <stdio.h>
+#include <string.h>
 
 bool standard_counterpoint_rule_table_valid(const StandardCounterpointRuleTable *table, int which) {
     return table != NULL && which >= 0 && which < table->count;
@@ -31,7 +32,7 @@ static void ensure_built(const StandardCounterpointRuleTable *table, int which) 
     }
     standard_counterpoint_build_rule_pair(
         name, standard_counterpoint_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
-        &table->pairs[which]);
+        table->evaluate, &table->pairs[which]);
 }
 
 const Rule *standard_counterpoint_rule_table_rule(const StandardCounterpointRuleTable *table, int which) {
@@ -65,4 +66,46 @@ void standard_counterpoint_rule_table_check(const StandardCounterpointRuleTable 
     }
     *hard_violations = hard;
     *soft_violations = soft;
+}
+
+bool standard_counterpoint_rule_table_candidate_type(const StandardCounterpointRuleTable *table, char *out,
+                                                     size_t capacity) {
+    if (table == NULL || table->prefix == NULL || out == NULL) {
+        return false;
+    }
+    int written = snprintf(out, capacity, "standard-counterpoint/%s", table->prefix);
+    return written > 0 && (size_t)written < capacity;
+}
+
+ConstraintEvalResult standard_counterpoint_rule_table_evaluate(const StandardCounterpointRuleTable *table,
+                                                               StandardCounterpointRuleHolds holds,
+                                                               size_t subject_size, const Constraint *constraint,
+                                                               const Value *candidate) {
+    if (table == NULL || holds == NULL || constraint == NULL || candidate == NULL) {
+        return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
+    }
+    int which = -1;
+    for (int i = 0; i < table->count; i++) {
+        if (table->built[i] && table->pairs[i].constraint == constraint) {
+            which = i;
+            break;
+        }
+    }
+    if (which < 0) {
+        return CONSTRAINT_EVAL_NOT_IMPLEMENTED;
+    }
+
+    char tag[96];
+    if (!standard_counterpoint_rule_table_candidate_type(table, tag, sizeof(tag))) {
+        return CONSTRAINT_EVAL_NOT_IMPLEMENTED;
+    }
+    if (strcmp(value_type(candidate), tag) != 0) {
+        return CONSTRAINT_EVAL_NOT_APPLICABLE;
+    }
+    size_t size = 0;
+    const void *subject = value_content(candidate, &size);
+    if (subject == NULL || size != subject_size) {
+        return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
+    }
+    return holds(which, subject) ? CONSTRAINT_EVAL_PASS : CONSTRAINT_EVAL_FAIL;
 }

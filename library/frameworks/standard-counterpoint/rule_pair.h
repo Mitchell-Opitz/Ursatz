@@ -12,8 +12,9 @@
  * referencing standard_counterpoint_framework(). A rule that states what
  * a line or interval pair must be is hard; a rule written as "limit",
  * "avoid", or "prefer" is soft, so failing it never makes a line
- * invalid. constraint_evaluate is never called here: it stays reserved
- * for real L8 generation-pipeline work (docs/modules/rules.md).
+ * invalid. This module never calls constraint_evaluate; it only registers
+ * the evaluation callback a rule table supplies (rule_table.h) on each
+ * Constraint it builds.
  */
 
 typedef struct {
@@ -25,10 +26,12 @@ typedef struct {
  * Builds the pair with ids "standard-counterpoint-rule-<name>" and
  * "standard-counterpoint-constraint-<name>"; the constraint has the given
  * type (never WEIGHTED: no weight is supplied). Returns false (leaving
- * *out untouched) on allocation failure or a WEIGHTED type. The caller
- * owns nothing it must free separately -- callers cache the pair for
- * process lifetime.
+ * *out untouched) on allocation failure or a WEIGHTED type. evaluate is the
+ * callback registered on the Constraint (constraint_set_evaluate_fn); NULL
+ * leaves it unregistered. The caller owns nothing it must free separately --
+ * callers cache the pair for process lifetime.
  */
-bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type, StandardCounterpointRulePair *out);
+bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type, ConstraintEvaluateFn evaluate,
+                                           StandardCounterpointRulePair *out);
 
 #endif

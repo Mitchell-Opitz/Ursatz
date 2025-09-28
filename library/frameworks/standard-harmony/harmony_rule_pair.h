@@ -11,9 +11,9 @@
  * Every rule is backed by one Rule and one Constraint referencing
  * standard_harmony_framework(). A rule that states what the style
  * requires is hard; a rule written as "limit", "avoid", or "prefer" is
- * soft, so failing it never makes a subject invalid. constraint_evaluate is
- * never called here: it stays reserved for real L8 generation-pipeline
- * work (docs/modules/rules.md).
+ * soft, so failing it never makes a subject invalid. This module never calls
+ * constraint_evaluate; it only registers the evaluation callback a rule table
+ * supplies (harmony_rule_table.h) on each Constraint it builds.
  */
 
 typedef struct {
@@ -25,9 +25,11 @@ typedef struct {
  * Builds the pair with ids "scale-rule-<name>" and
  * "scale-constraint-<name>"; the constraint has the given type
  * (never WEIGHTED: no weight is supplied). Returns false (leaving *out
- * untouched) on allocation failure or a WEIGHTED type. Callers cache the
- * pair for process lifetime.
+ * untouched) on allocation failure or a WEIGHTED type. evaluate is the
+ * callback registered on the Constraint (constraint_set_evaluate_fn); NULL
+ * leaves it unregistered. Callers cache the pair for process lifetime.
  */
-bool harmony_build_rule_pair(const char *name, ConstraintType type, HarmonyRulePair *out);
+bool harmony_build_rule_pair(const char *name, ConstraintType type, ConstraintEvaluateFn evaluate,
+                             HarmonyRulePair *out);
 
 #endif

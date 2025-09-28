@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "rule_pair.h"
+#include "core/value.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
 
@@ -27,6 +28,13 @@
  * the life of the process. Rules are numbered 0 to count - 1, the values of
  * the module's enum; every function returns false or NULL for a number out of
  * range.
+ *
+ * Evaluation through constraint_evaluate: a table may carry an evaluate
+ * callback, registered on each of its Constraints when the pair is built. A
+ * table with none (NULL) leaves its Constraints unregistered, so
+ * constraint_evaluate reports NOT_IMPLEMENTED for them. The callback is
+ * normally defined with STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR below and
+ * calls standard_counterpoint_rule_table_evaluate.
  */
 
 /* True when rule `which` is hard. */
@@ -45,6 +53,8 @@ typedef struct {
     StandardCounterpointRuleHard is_hard;
     StandardCounterpointRulePair *pairs;
     bool *built;
+    /* NULL when the table registers no evaluation callback. */
+    ConstraintEvaluateFn evaluate;
 } StandardCounterpointRuleTable;
 
 /* True for a rule number from 0 to count - 1. */
@@ -66,6 +76,44 @@ const char *standard_counterpoint_rule_table_name(const StandardCounterpointRule
 void standard_counterpoint_rule_table_check(const StandardCounterpointRuleTable *table,
                                             StandardCounterpointRuleHolds holds, const void *subject,
                                             unsigned *hard_violations, unsigned *soft_violations);
+
+/*
+ * Writes the type tag of a candidate Value for this table into out:
+ * "standard-counterpoint/<prefix>". Returns false if the table has no prefix
+ * or out is too small.
+ */
+bool standard_counterpoint_rule_table_candidate_type(const StandardCounterpointRuleTable *table, char *out,
+                                                     size_t capacity);
+
+/*
+ * Evaluates `constraint` (one of the table's own) on `candidate`.
+ * - candidate whose type tag is not this table's: NOT_APPLICABLE (a different
+ *   kind of candidate is not a failure);
+ * - right tag but content not exactly subject_size bytes: ERR_NULL_CANDIDATE;
+ * - otherwise PASS if holds(rule, subject) else FAIL. The subject is the
+ *   candidate's bytes, borrowed for the call only; it may itself point at
+ *   data the caller keeps alive.
+ * Returns NOT_IMPLEMENTED when constraint is not one of the table's.
+ */
+ConstraintEvalResult standard_counterpoint_rule_table_evaluate(const StandardCounterpointRuleTable *table,
+                                                               StandardCounterpointRuleHolds holds,
+                                                               size_t subject_size, const Constraint *constraint,
+                                                               const Value *candidate);
+
+/*
+ * Defines the evaluate callback for a table: a ConstraintEvaluateFn named
+ * `fn` that evaluates against `table` with `holds`, for candidates whose
+ * content is a `subject_type`. Use after the table and its holds adapter; the
+ * table's initializer names `fn`, so declare it first:
+ *   static ConstraintEvalResult fn(const Constraint *, const Value *, const Context *);
+ */
+#define STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(fn, table, holds, subject_type)                           \
+    static ConstraintEvalResult fn(const Constraint *constraint, const Value *candidate,                     \
+                                   const Context *context) {                                                  \
+        (void)context;                                                                                        \
+        return standard_counterpoint_rule_table_evaluate(&(table), (holds), sizeof(subject_type), constraint, \
+                                                         candidate);                                          \
+    }
 
 /* Hardness predicate for a table whose rules are all soft. */
 bool standard_counterpoint_rule_table_never_hard(int which);
