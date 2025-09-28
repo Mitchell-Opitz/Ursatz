@@ -9,6 +9,7 @@
 #include "plan.h"
 #include "progression.h"
 #include "random_motive.h"
+#include "recognize.h"
 #include "regenerate.h"
 #include "variations.h"
 #include "variants_cmd.h"
@@ -33,6 +34,7 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", REGENERATE_USAGE_LINE);
     fprintf(out, "%s\n", VARIATIONS_USAGE_LINE);
     fprintf(out, "%s\n", VARIANTS_USAGE_LINE);
+    fprintf(out, "%s\n", RECOGNIZE_USAGE_LINE);
     fprintf(out, "%s\n", RANDOM_MOTIVE_USAGE_LINE);
     fprintf(out, "%s\n", HARMONIZE_USAGE_LINE);
 }
@@ -156,6 +158,9 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "variants") == 0) {
         return run_variants(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "recognize") == 0) {
+        return run_recognize(argc, argv);
     }
     if (argc >= 2 && strcmp(argv[1], "random-motive") == 0) {
         return run_random_motive(argc, argv);
