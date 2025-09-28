@@ -23,16 +23,25 @@ static const VariantOperation *operation_of(MotiveRelationKind kind) {
 
 /*
  * A relation step as a registry step: the row's parameters are the relation's, in order. A value the registry range does
- * not hold is a parameter that was not given (0, or -1 for the invert axis), which an optional parameter leaves open.
+ * not hold is a parameter that was not given (0, or -1 for the invert axis). An optional parameter stays open, which the
+ * row does without; the invert axis is not optional (a chain would draw it), so it is set to the pitch of the first note
+ * of motive, the motive the step is applied to.
  */
-static bool step_from_relation(const MotiveRelationStep *relation, VariantStep *step) {
+static bool step_from_relation(const MotiveRelationStep *relation, const Motive *motive, VariantStep *step) {
     const VariantOperation *operation = operation_of(relation->kind);
     if (!operation || !variant_step_init(step, operation->name)) {
         return false;
     }
     for (size_t p = 0; p < operation->param_count; p++) {
         const VariantParam *param = &operation->params[p];
-        if (variant_step_set(step, param->name, relation->value[p], relation->den[p])) {
+        long value = relation->value[p];
+        if (relation->kind == MOTIVE_RELATION_INVERT && p == 0 && value == -1) {
+            if (motive->note_count == 0) {
+                return false;
+            }
+            value = motive->notes[0].midi_pitch;
+        }
+        if (variant_step_set(step, param->name, value, relation->den[p])) {
             continue;
         }
         if (!param->optional) {
@@ -84,12 +93,18 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     memset(&record, 0, sizeof(record));
     bool replayed = false;
     if (recognition.found) {
+        Motive current = *source;
         for (size_t s = 0; s < recognition.step_count; s++) {
-            if (!step_from_relation(&recognition.steps[s], &chain->steps[s])) {
+            if (!step_from_relation(&recognition.steps[s], &current, &chain->steps[s])) {
                 memset(chain, 0, sizeof(*chain));
                 break;
             }
             chain->step_count = s + 1;
+            /* The motive the next step is applied to. */
+            VariantChain prefix = *chain;
+            if (variant_apply_chain(source, &prefix, 0, &current, NULL) != VARIANT_OK) {
+                break;
+            }
         }
         Motive replay;
         replayed = chain->step_count == recognition.step_count &&
