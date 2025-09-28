@@ -1899,11 +1899,76 @@ static bool render_hypermeters(StringBuilder *sb, const cJSON *rhythm) {
     return ok && sb_append(sb, "\n");
 }
 
+static bool render_tuplets(StringBuilder *sb, const cJSON *rhythm) {
+    bool ok = sb_append(sb, "### Tuplets and borrowed divisions\n\n");
+    if (!has_claims(rhythm, "tuplet")) {
+        return ok && sb_append(sb, "No tuplets were found.\n\n");
+    }
+    ok = ok && sb_append(sb, "A meter divides its beat two ways (simple) or three (compound). A tuplet divides it the other "
+                             "way: a triplet in a simple meter or a duplet in a compound one is a borrowed division. The "
+                             "library names those two and says at which level a group occurs (the whole Beat, a "
+                             "Subdivision of it, or several beats) and whether that is typical. Only triplets (sextuplets "
+                             "included) and duplets are looked for, read from the notes' times alone, rounded to a grid "
+                             "of 96 to the whole note. A run is two or more consecutive attacks of one ratio.\n\n") &&
+         sb_append(sb, "| Ratio | Name | Runs | Attacks | Borrowed |\n| --- | --- | --- | --- | --- |\n");
+    /* one row per ratio; the claims of a ratio are together, the smaller actual count first */
+    const cJSON *claim;
+    long previous = -1;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(claim, "ratio");
+        if (!has_label(claim, "tuplet") || (long)number_member(ratio, "actual") == previous) {
+            continue;
+        }
+        previous = (long)number_member(ratio, "actual");
+        int runs = 0;
+        int attacks = 0;
+        int borrowed = 0;
+        const cJSON *other;
+        cJSON_ArrayForEach(other, rhythm) {
+            if (has_label(other, "tuplet") &&
+                (long)number_member(cJSON_GetObjectItemCaseSensitive(other, "ratio"), "actual") == previous) {
+                runs++;
+                attacks += (int)number_member(other, "attacks");
+                borrowed += cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(other, "borrowed")) ? 1 : 0;
+            }
+        }
+        ok = sb_appendf(sb, "| %d:%d | %s | %d | %d | %s |\n", (int)previous,
+                        (int)number_member(ratio, "normal"), string_member(claim, "name"), runs, attacks,
+                        borrowed == 0 ? "no" : (borrowed == runs ? "yes" : "some"));
+    }
+    ok = ok && sb_append(sb, "\n| Measure | Beat | Ratio | Name | Meter | Borrowed | Level | Attacks |\n"
+                             "| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "tuplet")) {
+            continue;
+        }
+        const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(claim, "ratio");
+        const cJSON *level = cJSON_GetObjectItemCaseSensitive(claim, "level");
+        const cJSON *typical = cJSON_GetObjectItemCaseSensitive(claim, "level_typical");
+        char beat[32];
+        format_number(number_member(claim, "beat"), beat, sizeof(beat));
+        ok = sb_appendf(sb, "| %d | %s | %d:%d | %s | %s | %s | ", (int)number_member(claim, "measure"), beat, (int)number_member(ratio, "actual"),
+                        (int)number_member(ratio, "normal"), string_member(claim, "name"),
+                        string_member(claim, "meter"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(claim, "borrowed")) ? "yes" : "no") &&
+             (cJSON_IsString(level) ? sb_appendf(sb, "%s%s", level->valuestring, cJSON_IsTrue(typical) ? "" : " (not typical)")
+                                    : sb_append(sb, "not placed")) &&
+             sb_appendf(sb, " | %d |\n", (int)number_member(claim, "attacks"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static bool render_rhythm(StringBuilder *sb, const cJSON *document, const cJSON *rhythm) {
     (void)document;
     return sb_append(sb, "## Rhythm and meter\n\n") && (!has_claims(rhythm, "density") || render_densities(sb, rhythm)) &&
            render_syncopations(sb, rhythm) && render_hemiolas(sb, rhythm) &&
-           (!has_claims(rhythm, "hypermeter") || render_hypermeters(sb, rhythm));
+           (!has_claims(rhythm, "hypermeter") || render_hypermeters(sb, rhythm)) && render_tuplets(sb, rhythm);
 }
 
 /* Report sections in document section order. Adding a section means

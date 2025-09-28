@@ -714,6 +714,29 @@ typedef struct {
     size_t note_id_count;
 } AnalysisHypermeter;
 
+/* A run of tuplet notes: consecutive attacks of the piece that divide the meter's steps the way it does not. The
+   Analyzer finds them from the notes' times alone (the importers carry no notated tuplets, R-056): times are rounded
+   to a 1/96 grid (a time further than a quarter of a step from it is not read), and a note whose attack or length is
+   not a whole step of the library's 1/32 grid is a triplet note (3:2, which includes sextuplets); in a compound meter
+   two notes that halve a beat are a duplet (2:3). Other ratios are not looked for. Naming the ratio borrowed, and
+   the level it occurs at, is the library's (borrowed_rules.h). */
+typedef struct {
+    const char *framework;   /* the library's framework name for the claim */
+    unsigned actual;         /* the ratio actual:normal, e.g. 3:2 */
+    unsigned normal;
+    const char *name;        /* "triplet", "duplet" (the only ratios the library names) or "tuplet" */
+    const char *meter;       /* the meter of the first note: "simple" or "compound" */
+    bool borrowed;           /* the library's BORROWED rule: a triplet in a simple meter or a duplet in a compound one */
+    bool has_level;          /* the library's LEVEL rule could place the group */
+    const char *level;       /* "beat", "subdivision" or "multi-beat"; valid only when has_level */
+    bool level_typical;      /* the library's TYPICAL_LEVEL rule; valid only when has_level */
+    int measure;             /* of the first note */
+    double beat;
+    unsigned attacks;        /* distinct attacks in the run, at least 2 */
+    size_t *note_ids;        /* owned; ImportedNotes indices, in time order */
+    size_t note_id_count;
+} AnalysisTuplet;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -764,6 +787,8 @@ typedef struct {
     size_t hemiola_count;
     AnalysisHypermeter *hypermeters; /* owned; one per phrase that has a measure, in phrase order */
     size_t hypermeter_count;
+    AnalysisTuplet *tuplets; /* owned; grouped by ratio (the smaller actual count first), each in time order */
+    size_t tuplet_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -771,7 +796,7 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns, motives, melodies, densities, syncopations, hemiolas and hypermeters. */
+   thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters and tuplets. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

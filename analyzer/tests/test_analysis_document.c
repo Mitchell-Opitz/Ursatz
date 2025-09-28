@@ -240,6 +240,16 @@ int main(void) {
         } else if (strcmp(label, "hemiola") == 0) {
             assert(number(member(entry, "evidence"), "agreeing") >= 2);
             assert(number(member(entry, "evidence"), "agreeing") <= number(member(entry, "evidence"), "available"));
+        } else if (strcmp(label, "tuplet") == 0) {
+            /* a run of two or more attacks; the library's BORROWED rule: a triplet in a simple meter, a duplet in a
+               compound one */
+            assert(number(entry, "attacks") >= 2);
+            assert(cJSON_IsNull(member(entry, "uncertainty")));
+            const char *name = string(entry, "name");
+            const char *meter = string(entry, "meter");
+            bool borrowed = (strcmp(name, "triplet") == 0 && strcmp(meter, "simple") == 0) ||
+                            (strcmp(name, "duplet") == 0 && strcmp(meter, "compound") == 0);
+            assert(cJSON_IsTrue(member(entry, "borrowed")) == borrowed);
         } else {
             assert(strcmp(label, "hypermeter") == 0);
             hypermeters++;

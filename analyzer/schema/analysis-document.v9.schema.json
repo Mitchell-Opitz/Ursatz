@@ -620,7 +620,8 @@
             { "$ref": "#/$defs/density_claim" },
             { "$ref": "#/$defs/syncopation_claim" },
             { "$ref": "#/$defs/hemiola_claim" },
-            { "$ref": "#/$defs/hypermeter_claim" }
+            { "$ref": "#/$defs/hypermeter_claim" },
+            { "$ref": "#/$defs/tuplet_claim" }
           ]
         }
       ]
@@ -735,6 +736,30 @@
             }
           }
         }
+      }
+    },
+    "tuplet_claim": {
+      "type": "object",
+      "required": ["label", "ratio", "name", "meter", "borrowed", "level", "level_typical", "measure", "beat", "attacks"],
+      "properties": {
+        "label": { "const": "tuplet" },
+        "uncertainty": { "type": "null" },
+        "ratio": {
+          "type": "object",
+          "required": ["actual", "normal"],
+          "properties": {
+            "actual": { "type": "integer", "minimum": 2 },
+            "normal": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "name": { "enum": ["triplet", "duplet", "tuplet"] },
+        "meter": { "enum": ["simple", "compound", "unclassified"] },
+        "borrowed": { "type": "boolean" },
+        "level": { "enum": ["beat", "subdivision", "multi-beat", null] },
+        "level_typical": { "type": ["boolean", "null"] },
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "number", "minimum": 1 },
+        "attacks": { "type": "integer", "minimum": 1 }
       }
     },
     "melody_claim": {

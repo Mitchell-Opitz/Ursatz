@@ -130,6 +130,10 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->hypermeters[i].note_ids);
     }
     free(report->hypermeters);
+    for (size_t i = 0; i < report->tuplet_count; i++) {
+        free(report->tuplets[i].note_ids);
+    }
+    free(report->tuplets);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -174,6 +178,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->hemiola_count = 0;
     report->hypermeters = NULL;
     report->hypermeter_count = 0;
+    report->tuplets = NULL;
+    report->tuplet_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

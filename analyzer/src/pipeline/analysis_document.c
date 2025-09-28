@@ -3035,8 +3035,40 @@ static cJSON *hypermeter_json(const ImportedNotes *notes, const AnalysisReport *
     return claim;
 }
 
+static cJSON *tuplet_ratio_json(const AnalysisTuplet *tuplet) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "actual", cJSON_CreateNumber((double)tuplet->actual)) &&
+                    add(object, "normal", cJSON_CreateNumber((double)tuplet->normal)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* A tuplet claim: a run of notes that divide the beat the way the meter does not. The library gives it no uncertainty
+   (the borrowed-division rules are rules, not a detector), so the claim's is null. */
+static cJSON *tuplet_json(const ImportedNotes *notes, const AnalysisTuplet *tuplet) {
+    Rational start;
+    Rational end;
+    notes_span(notes, tuplet->note_ids, tuplet->note_id_count, &start, &end);
+    cJSON *claim = claim_json_with(tuplet->framework, notes, tuplet->note_ids, tuplet->note_id_count, start, end,
+                                   "tuplet", cJSON_CreateNull());
+    if (!(claim && add(claim, "ratio", tuplet_ratio_json(tuplet)) && add(claim, "name", cJSON_CreateString(tuplet->name)) &&
+          add(claim, "meter", cJSON_CreateString(tuplet->meter)) &&
+          add(claim, "borrowed", cJSON_CreateBool(tuplet->borrowed)) &&
+          add(claim, "level", tuplet->has_level ? cJSON_CreateString(tuplet->level) : cJSON_CreateNull()) &&
+          add(claim, "level_typical", tuplet->has_level ? cJSON_CreateBool(tuplet->level_typical) : cJSON_CreateNull()) &&
+          add(claim, "measure", cJSON_CreateNumber(tuplet->measure)) &&
+          add(claim, "beat", cJSON_CreateNumber(tuplet->beat)) &&
+          add(claim, "attacks", cJSON_CreateNumber((double)tuplet->attacks)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
 /* The rhythm section: a list of claims, each labelled by the result it is ("density", "syncopation", "hemiola",
-   "hypermeter"), the densities first and then each kind in time order. The library's results are
+   "hypermeter", "tuplet"), the densities first and then each kind in time order. The library's results are
    claims over the notes of a phrase or a measure, so the list is flat and the label says which kind. Empty for a piece
    without phrases. */
 static cJSON *rhythm_json(const ImportedNotes *notes, const AnalysisReport *report) {
@@ -3061,6 +3093,12 @@ static cJSON *rhythm_json(const ImportedNotes *notes, const AnalysisReport *repo
     }
     for (size_t i = 0; list && i < report->hypermeter_count; i++) {
         if (!append(list, hypermeter_json(notes, report, &report->hypermeters[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->tuplet_count; i++) {
+        if (!append(list, tuplet_json(notes, &report->tuplets[i]))) {
             cJSON_Delete(list);
             return NULL;
         }
