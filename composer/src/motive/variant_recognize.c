@@ -59,6 +59,15 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     if (!motive_to_sketch(source, &from) || !motive_to_sketch(target, &to)) {
         return VARIANT_ERR_PARAM;
     }
+    /* motive_to_sketch gives a motive without chords of its own the best implied chord. A variant keeps no chord it did not
+       get from a harmony row, so the implied chords would stop a transposition from matching a target that implies
+       another chord; a harmony relation adds the implied chord to a source without chords itself. */
+    if (source->harmony_count == 0) {
+        from.chord_count = 0;
+    }
+    if (target->harmony_count == 0) {
+        to.chord_count = 0;
+    }
     MotiveRecognizeOptions options;
     motive_recognize_options_default(&options);
     options.max_depth = depth;
