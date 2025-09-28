@@ -766,6 +766,20 @@ static void carry_harmony(const Motive *source, const MotiveDevSpec *spec, const
     }
 }
 
+/* The pickup of a scaled motive: the source's times the ratio, which must stay inside the bar on the 1/32 grid. */
+static MotiveDevResult scale_pickup(const Motive *source, const MotiveDevSpec *spec, Motive *result) {
+    bool augment = spec->kind == MOTIVE_DEV_AUGMENT;
+    unsigned long num = spec->ratio_num != 0 ? spec->ratio_num : (augment ? 2 : 1);
+    unsigned long den = spec->ratio_den != 0 ? spec->ratio_den : (augment ? 1 : 2);
+    PlanTime pickup = motive_time(source->pickup.num * (long)num, source->pickup.den * den);
+    PlanTime bar = motive_time(source->meter.beats_per_bar, (unsigned long)source->meter.beat_unit);
+    if (plan_time_compare(pickup, bar) >= 0 || 32 % pickup.den != 0) {
+        return MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+    }
+    result->pickup = pickup;
+    return MOTIVE_DEV_OK;
+}
+
 MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, Motive *out) {
     if (!source || !spec || !out) {
         return MOTIVE_DEV_ERR_NULL;
@@ -785,6 +799,12 @@ MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, 
     sort_notes(result.notes, result.note_count);
     if (motive_check_notes(&result, &result.length, NULL) != MOTIVE_OK) {
         return MOTIVE_DEV_ERR_INVALID;
+    }
+    if (spec->kind == MOTIVE_DEV_AUGMENT || spec->kind == MOTIVE_DEV_DIMINISH) {
+        status = scale_pickup(source, spec, &result);
+        if (status != MOTIVE_DEV_OK) {
+            return status;
+        }
     }
     carry_features(source, origin, &result);
     carry_harmony(source, spec, origin, &result);
