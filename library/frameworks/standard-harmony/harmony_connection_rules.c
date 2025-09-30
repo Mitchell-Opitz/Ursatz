@@ -12,7 +12,10 @@ static const char *const NAMES[HARMONY_CONNECTION_RULE_COUNT] = {"progression", 
 
 static HarmonyRulePair g_pairs[HARMONY_CONNECTION_RULE_COUNT];
 static bool g_built[HARMONY_CONNECTION_RULE_COUNT];
-static const HarmonyRuleTable TABLE = {"connection", NAMES, HARMONY_CONNECTION_RULE_COUNT, NULL, g_pairs, g_built};
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
+static const HarmonyRuleTable TABLE = {"connection", NAMES, HARMONY_CONNECTION_RULE_COUNT, NULL, g_pairs, g_built,
+                                       evaluate_candidate};
 
 const Rule *harmony_connection_rule(HarmonyConnectionRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -149,6 +152,8 @@ bool harmony_connection_rule_holds(HarmonyConnectionRule which, const HarmonyCon
 static bool holds_adapter(int which, const void *subject) {
     return harmony_connection_rule_holds((HarmonyConnectionRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyConnection)
 
 bool harmony_connection_check(const HarmonyConnection *connection, unsigned *hard_violations,
                               unsigned *soft_violations) {

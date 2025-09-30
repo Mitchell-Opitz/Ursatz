@@ -11,7 +11,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_CHAIN_RULE_COUNT];
 static bool g_built[HARMONY_CHAIN_RULE_COUNT];
-static const HarmonyRuleTable TABLE = {"chain", NAMES, HARMONY_CHAIN_RULE_COUNT, table_is_hard, g_pairs, g_built};
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
+static const HarmonyRuleTable TABLE = {"chain", NAMES, HARMONY_CHAIN_RULE_COUNT, table_is_hard, g_pairs, g_built,
+                                       evaluate_candidate};
 
 const Rule *harmony_chain_rule(HarmonyChainRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -87,6 +90,8 @@ bool harmony_chain_rule_holds(HarmonyChainRule which, const HarmonyProlongationC
 static bool holds_adapter(int which, const void *subject) {
     return harmony_chain_rule_holds((HarmonyChainRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyProlongationChain)
 
 bool harmony_chain_check(const HarmonyProlongationChain *chain, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_chain_valid(chain)) {

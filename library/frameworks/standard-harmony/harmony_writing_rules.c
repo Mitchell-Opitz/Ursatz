@@ -11,7 +11,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_WRITING_RULE_COUNT];
 static bool g_built[HARMONY_WRITING_RULE_COUNT];
-static const HarmonyRuleTable TABLE = {"writing", NAMES, HARMONY_WRITING_RULE_COUNT, table_is_hard, g_pairs, g_built};
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
+static const HarmonyRuleTable TABLE = {"writing", NAMES, HARMONY_WRITING_RULE_COUNT, table_is_hard, g_pairs, g_built,
+                                       evaluate_candidate};
 
 const Rule *harmony_writing_rule(HarmonyWritingRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -84,6 +87,8 @@ bool harmony_writing_rule_holds(HarmonyWritingRule which, const HarmonyCadenceWr
 static bool holds_adapter(int which, const void *subject) {
     return harmony_writing_rule_holds((HarmonyWritingRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyCadenceWriting)
 
 bool harmony_writing_check(const HarmonyCadenceWriting *writing, unsigned *hard_violations,
                            unsigned *soft_violations) {

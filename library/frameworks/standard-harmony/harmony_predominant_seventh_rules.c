@@ -18,8 +18,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_PREDOMINANT_SEVENTH_RULE_COUNT];
 static bool g_built[HARMONY_PREDOMINANT_SEVENTH_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
 static const HarmonyRuleTable TABLE = {"predominant-seventh", NAMES, HARMONY_PREDOMINANT_SEVENTH_RULE_COUNT,
-                                       table_is_hard,         g_pairs, g_built};
+                                       table_is_hard,         g_pairs, g_built, evaluate_candidate};
 
 const Rule *harmony_predominant_seventh_rule(HarmonyPredominantSeventhRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -163,6 +165,8 @@ bool harmony_predominant_seventh_rule_holds(HarmonyPredominantSeventhRule which,
 static bool holds_adapter(int which, const void *subject) {
     return harmony_predominant_seventh_rule_holds((HarmonyPredominantSeventhRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyPredominantSeventh)
 
 bool harmony_predominant_seventh_check(const HarmonyPredominantSeventh *subject, unsigned *hard_violations,
                                        unsigned *soft_violations) {

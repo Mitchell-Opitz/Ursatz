@@ -22,8 +22,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_CADENTIAL_RULE_COUNT];
 static bool g_built[HARMONY_CADENTIAL_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
 static const HarmonyRuleTable TABLE = {"cadential", NAMES, HARMONY_CADENTIAL_RULE_COUNT, table_is_hard, g_pairs,
-                                       g_built};
+                                       g_built, evaluate_candidate};
 
 const Rule *harmony_cadential_rule(HarmonyCadentialRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -164,6 +166,8 @@ bool harmony_cadential_rule_holds(HarmonyCadentialRule which, const HarmonyCaden
 static bool holds_adapter(int which, const void *subject) {
     return harmony_cadential_rule_holds((HarmonyCadentialRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyCadentialSixFour)
 
 bool harmony_cadential_check(const HarmonyCadentialSixFour *cadential, unsigned *hard_violations,
                              unsigned *soft_violations) {

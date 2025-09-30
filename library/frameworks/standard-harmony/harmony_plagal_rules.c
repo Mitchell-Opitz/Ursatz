@@ -14,7 +14,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_PLAGAL_RULE_COUNT];
 static bool g_built[HARMONY_PLAGAL_RULE_COUNT];
-static const HarmonyRuleTable TABLE = {"plagal", NAMES, HARMONY_PLAGAL_RULE_COUNT, table_is_hard, g_pairs, g_built};
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
+static const HarmonyRuleTable TABLE = {"plagal", NAMES, HARMONY_PLAGAL_RULE_COUNT, table_is_hard, g_pairs, g_built,
+                                       evaluate_candidate};
 
 const Rule *harmony_plagal_rule(HarmonyPlagalRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -124,6 +127,8 @@ bool harmony_plagal_rule_holds(HarmonyPlagalRule which, const HarmonyPlagalMotio
 static bool holds_adapter(int which, const void *subject) {
     return harmony_plagal_rule_holds((HarmonyPlagalRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyPlagalMotion)
 
 bool harmony_plagal_check(const HarmonyPlagalMotion *motion, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_plagal_motion_valid(motion)) {

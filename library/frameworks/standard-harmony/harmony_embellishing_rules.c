@@ -12,8 +12,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_EMBELLISHING_RULE_COUNT];
 static bool g_built[HARMONY_EMBELLISHING_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
 static const HarmonyRuleTable TABLE = {"embellishing", NAMES, HARMONY_EMBELLISHING_RULE_COUNT, table_is_hard,
-                                       g_pairs, g_built};
+                                       g_pairs, g_built, evaluate_candidate};
 
 const Rule *harmony_embellishing_rule(HarmonyEmbellishingRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -78,6 +80,8 @@ bool harmony_embellishing_rule_holds(HarmonyEmbellishingRule which, const Harmon
 static bool holds_adapter(int which, const void *subject) {
     return harmony_embellishing_rule_holds((HarmonyEmbellishingRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyGesture)
 
 bool harmony_embellishing_check(const HarmonyGesture *gesture, unsigned *hard_violations,
                                 unsigned *soft_violations) {

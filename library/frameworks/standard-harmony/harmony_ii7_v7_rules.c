@@ -10,7 +10,10 @@ static const char *const NAMES[HARMONY_II7_V7_RULE_COUNT] = {"progression", "cho
 
 static HarmonyRulePair g_pairs[HARMONY_II7_V7_RULE_COUNT];
 static bool g_built[HARMONY_II7_V7_RULE_COUNT];
-static const HarmonyRuleTable TABLE = {"ii7-v7", NAMES, HARMONY_II7_V7_RULE_COUNT, NULL, g_pairs, g_built};
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
+static const HarmonyRuleTable TABLE = {"ii7-v7", NAMES, HARMONY_II7_V7_RULE_COUNT, NULL, g_pairs, g_built,
+                                       evaluate_candidate};
 
 const Rule *harmony_ii7_v7_rule(HarmonyIi7V7Rule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -103,6 +106,8 @@ bool harmony_ii7_v7_rule_holds(HarmonyIi7V7Rule which, const HarmonyIi7V7 *subje
 static bool holds_adapter(int which, const void *subject) {
     return harmony_ii7_v7_rule_holds((HarmonyIi7V7Rule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyIi7V7)
 
 bool harmony_ii7_v7_check(const HarmonyIi7V7 *subject, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_ii7_v7_valid(subject)) {
