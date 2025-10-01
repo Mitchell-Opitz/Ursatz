@@ -73,18 +73,24 @@ branches.
 
 A motif's detail holds the editor; New on the Motifs view opens the same
 editor empty, and the first Save creates the motif (it needs a name and a
-project). The form has the role (melodic or accompaniment), the form (only
-full can be chosen; rhythm and contour are shown disabled, P13), the note
-list with its syntax hint, the meter, an optional key, the pickup in exact
+project). The form has the role (melodic or accompaniment), the form (full,
+rhythm only or contour only; the syntax hint under the note list follows it:
+`D4:q F4:e`, `x:q x:e x:e x:h`, `0 2 1 3`), an Upload MIDI button, the note
+list, the meter, an optional key, the pickup in exact
 beats (`0`, `1` or `1/2`) and a features table (label of 1 to 8 characters,
 first and last note counted from 1; rows are added and removed in place).
 Save as new version writes a version with an optional note; the Composer's
 message for a note list it cannot read shows beside the note list and the
-input is kept. The Analysis panel under the form shows the scale degrees,
-intervals (semitones and steps), contour, rhythm and implied harmony stored
-in `motif.analysis`; a motif without one reads "Not analyzed", with the
-reason when the save said why. The helpers (`motifFormValues`,
-`motifFormProblems`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
+input is kept. Upload MIDI sends a one-voice `.mid` file to the import route
+and fills the form (full) with its note list, meter, key and pickup; the
+Composer's message shows beside the button when it refuses the file (a
+polyphonic file, for one). The Analysis panel under the form shows the degree
+list (or the rhythm or contour list), then the scale degrees, intervals
+(semitones and steps), contour, rhythm and implied harmony stored in
+`motif.analysis` (a rhythm or contour motif shows only the parts it has); a
+motif without one reads "Not analyzed", with the reason when the save said
+why. The helpers (`motifFormValues`, `motifFormProblems`, `formHint`,
+`importToFormValues`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
 in `materials-model.js`.
 
 ### Item references in the GUI
@@ -561,7 +567,521 @@ materials/
 - A version body is validated by `ursatz_gui_material_body_validate` before it
   is written: an object with a `uses` array, and the member of its own type
   (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
-  `notes`, `meter`, `key`, `pickup`, `features`, `analysis` and `derived`; the
+  `notes`, `meter`, `key`, `pickup`, `features`, `analysis`, `degrees` (null or a
+  string of up to 4000 characters) and `derived`; the
+  rules are listed in `service/material_service.h`.
+- Projects and items are passed as cJSON objects; the caller frees what it
+  receives.
+
+#### Item references
+
+An item can use other items, from any project. Each entry of a body's `uses` is
+`{item_id, version, copy}`.
+
+- On create and on every new version the service checks that the item and
+  version exist (an unknown one, or an item using itself, is `INVALID_BODY`)
+  and fills `copy` with that version's body. A `copy` the client sends is
+  replaced.
+- `ursatz_gui_material_uses_status` reports each use of the current version
+  with the source's name, type, project and `current_version`. `updated` is
+  true when the source is newer than the used version.
+- `ursatz_gui_material_used_by` lists the items whose current version uses an
+  item.
+- `ursatz_gui_material_update_use` writes a new version that points the use at
+  the source's current version with a fresh copy (note
+  `updated <name> to v<n>`). Older versions keep their old copy.
+- `ursatz_gui_material_item_delete(id, force)` returns `ERR_REFERENCED` while
+  other items use the item. A forced delete leaves the users' copies as they
+  are; their uses report `missing: true`. Saving a new version of such a user
+  needs the missing use removed first.
+
+#### Motif analysis on save
+
+`POST /api/materials/items` and `POST /api/materials/items/<id>/versions`
+analyze a motif of every form before it is written. The route writes `notes`
+to a temporary file and runs `ursatz-composer motive <file> --format notes
+--meter <meter> [--key <key>] --pickup <pickup> --json` for a full motif, and
+`--form rhythm` or `--form contour` in place of `--format notes` for the two
+other forms. It stores the output as `motif.analysis` and the list the
+Composer wrote for the form (`degrees_text`, `rhythm_text` or `contour_text`)
+as `motif.degrees`. Meter (`^[0-9]{1,2}/[0-9]{1,2}$`), pickup
+(`^[0-9]{1,2}(/[0-9]{1,2})?$`) and key (`^[A-Ga-g][#b]? (major|minor)$`) are
+checked before they reach the argument list.
+
+- A note list or key the Composer refuses is 400 with its message, and no
+  version is written. A full motif with no given key and none the Composer can
+  infer is 400 `give a key`, since its degree list needs one.
+- Composer missing, timed out or not startable: the version is saved with
+  `analysis: null`, `degrees: null`, and the answer carries `analysis_error`.
+
+#### Motif import from MIDI
+
+`POST /api/materials/motifs/import` takes a MIDI file as the request body (up
+to 256 KB) and optional `?meter=` and `?key=`. It runs `ursatz-composer motive
+<file> --format midi --json` and answers `{"ok", "notes_text", "meter", "key",
+"pickup", "analysis"}` (`key` is null when the file gives none) without saving
+anything. A file the Composer cannot read as one voice is 400 with its
+message; an empty body is 400, a body over the limit 413.
+
+### Subjects views
+
+A Subjects panel sits in the sidebar under Tags: subjects grouped by kind
+(Characters, Places, Ideas, Notes), each group collapsible (the choice is
+remembered in the browser) with the number of links beside each name. A click
+opens the subject. The Subjects entry lists every subject (name, kind, item,
+piece and related counts) with a New row (name, kind, note). The detail edits
+the name, kind and note, deletes the subject (its links go with it), and
+lists its related subjects (add from a picker, remove), linked items (any
+project; a click opens the item in its own tool) and linked Library pieces (a
+click opens the analysis). Linking starts from the other side: an item's
+detail and the Library piece editor have a Subjects field with chips (with
+remove), a picker over the existing subjects, and a name and kind to create
+one inline. The sidebar panel refreshes after any subject or link change.
+Style tags are separate and unchanged.
+
+### Composer view
+
+The Composer entry drives the Composer routes (see Composer routes below).
+The page has two forms and the list of compositions; a row opens the
+composition. Every action waits for its answer with its buttons disabled and a
+spinner (a run can take tens of seconds); nothing is polled. A failed run shows
+the backend's message and the Composer's stderr.
+
+- **Grow a theme**: fill New theme (name, the motive as a note list such as
+  `D4:q F4:e A4:e D5:h`, into sentence, period or hybrid, key, meter, bars 4 to
+  8, optional cadence, accompaniment, check, seed and tempo) and press Grow
+  theme. The composition starts at version 1.
+- **Plan a piece**: fill New piece (name, form, key, meter, bars, count,
+  modulate, optional motive, optional given melody with where it goes, for
+  example `B` or `B:2`, accompaniment, check, seed, tempo) and press Plan
+  piece. The piece is planned and filled; the result is version 1.
+- **Compose in a style**: both forms have a Style select (None, then every
+  style built in the Collections view, with its piece count) and a Weight
+  select (Light 1/4, Normal 1/2, Strong 1; Normal by default, disabled while
+  Style is None). The result text includes the Composer's style distance line.
+  A composition keeps the path of its style file, so a later fill or
+  regenerate after the style was deleted fails with the Composer's message.
+- **A composition**: the version selector lists each version with its action,
+  seed and time. Below it: the plan tree (form, sections with their letters,
+  phrases and ideas, each with its bars and its state, Given or Realized), the
+  summary table (the form heard and the cadences per section), the score of the
+  version drawn with OpenSheetMusicDisplay, and a MIDI download.
+- **Lock and regenerate**: every section and node of the tree has Lock and
+  Regenerate. The Lane and Seed fields above the tree apply to the button
+  pressed (all lanes and a new random seed when left blank). Each action
+  writes the next version and opens it; the earlier versions stay.
+- **Variations**: pick a target (a section or node), a lane, a count from 1 to
+  8, an optional seed, and press Generate. The results show side by side as
+  small scores with their seeds and the form heard; Choose makes one the next
+  version. Harmonize (harmonizations of the whole section, no lane) is enabled
+  only when the section has a form letter and every melody span of the
+  section is Given.
+
+`composer.js` (loaded after `app.js`) holds the request builders and the plan
+tree as plain functions, tested by `frontend/tests/composer-view.test.js`
+against `frontend/tests/fixtures/composer-plan.json`, a plan the Composer CLI
+wrote. The score renderer (`drawMusicXmlScore`) and the fetch helpers
+(`fetchJsonResult`, `postJsonResult`) live in `app.js` and are shared with the
+Analysis view.
+
+### Analysis view
+
+Opening a piece shows the score workspace (`frontend/public/score-workspace.js`,
+global `ScoreWorkspace`). `ScoreWorkspace.mount(rootEl, options)` takes a
+title, a subtitle, the score and meta URLs, the analysis document, the note
+`xml:id` list, the toolbar actions and a back callback, and knows nothing
+else about the Analyzer, so the Composer can mount it too. It returns
+`{destroy, osmd, layout, xmlText, rerender, on, mode, setMode, setStatus,
+dataEl}` and emits `rendered` (with the extracted layout, after every OSMD
+render) and `modechange`.
+
+The toolbar (48 px) holds, from the left, a "Library" link, the filename and a
+dim line with the format, measure count and note count; a transport slot in
+the middle (empty until playback); and on the right a Score | Data switch, zoom
+out, the zoom (click to reset to 100%), zoom in, the Layers and Inspector
+toggles and "Re-run analysis", which runs the Analyzer again on the stored
+source and reloads the view. Below it are three columns: the Layers rail
+(248 px), the score and the Inspector (360 px). A closed panel takes no width.
+
+A Notation row (R-110) sits under the toolbar and at the top of the Data
+view's "Rhythm and meter" tab. It shows the reading the analysis used, the
+meter check's line from the `meter-fit` claim ("Declared 4/4 fits 41%. 3/4 with
+values doubled fits 93%."), Apply when the check found a better reading, and
+Edit, which opens meter, value scale (x1/4 to x4) and pickup fields with Save,
+Clear and Cancel. Apply and Save send `PATCH /api/analyzer/pieces/<id>` with
+`notation` (blank fields left out, Clear sends `null`), then load the analysis
+and score again. A rejected notation shows the backend's message
+(`invalid notation`) in the row. The model is `frontend/public/notation-panel.js`
+(global `NotationPanel`: `meterFitSummary`, `notationBody`, `readingText`),
+tested by `frontend/tests/notation-panel.test.js`. Nothing is applied
+automatically.
+
+| Window width | Panels |
+| --- | --- |
+| 1280 px and wider | Rail and Inspector beside the score |
+| 1024 to 1279 px | Rail beside the score, Inspector floats over its right side |
+| Below 1024 px | Both float |
+
+A floating panel starts closed, sits above the score with a shadow and
+closes on Escape or a click on the score. Only the score canvas, the rail and
+the Inspector scroll. The score is drawn on white paper with OSMD (no title or
+composer, part names on, no automatic resize). A `ResizeObserver` redraws it
+150 ms after the width stops changing, and every redraw keeps the measure at
+the top of the viewport at the top. The meter caption stays above the paper.
+
+Zoom runs 50%, 62.5%, 75%, 87.5%, 100%, 125%, 150%, 175%, 200%. Keys (ignored
+while typing in a field, or with Ctrl, Meta or Alt held; the `?` dialog lists
+them):
+
+| Key | Action |
+| --- | --- |
+| `Space` | Play or pause |
+| `Home` | Stop and go back to the start |
+| `C` | Follow the cursor: turn Follow on and scroll to it |
+| `Enter` | Play the selected claim (not while a button or the List has focus) |
+| `L` | Layers panel |
+| `I` | Inspector panel |
+| `F` | Focus mode: both panels closed, then restored |
+| `+` or `=` | Zoom in |
+| `-` | Zoom out |
+| `0` | Zoom to 100% |
+| `[` and `]` | Select the previous or next item of the selected layer |
+| `?` | Shortcut list |
+| `Escape` | Close the shortcut list, else a floating panel, else clear the selection |
+
+The zoom, the docked panels and the mode are remembered in `localStorage` under
+`ursatz.workspace.v1` (`{layersOpen, inspectorOpen, zoom, mode}`). The pure
+part (zoom steps, panel modes, shortcut table, saved state) is
+`frontend/public/workspace-state.js` (global `WorkspaceState`, no DOM).
+
+Data mode replaces the score with the Provenance list and the claim tabs
+below. Provenance lists the document's metadata (source file, analyzer
+version, Ursatz commit, document schema, input format, source type, meter,
+key signature, spelling, importer warnings).
+
+There is one tab per group of document sections, in this order:
+
+| Tab | Sections |
+| --- | --- |
+| Keys | `keys`, `tonicizations`, `modulations`, `pivot_chords` |
+| Chords | `chords`, `chord_vocabulary`, `non_chord_tones`, `prolongations` |
+| Cadences | `cadences` |
+| Progressions | `progressions`, `harmonic_rhythm` |
+| Phrases | `phrases` |
+| Themes and form | `themes`, `form` |
+| Motives | `motives` |
+| Melody | `melody`, `outer_voices` |
+| Rhythm and meter | `meter`, `rhythm` |
+| Texture | `texture`, `voice_leading` |
+| Schemas | `schemas` |
+| Markings | `markings` |
+| Counterpoint | `counterpoint_check` |
+| Notes | `notes` |
+
+A tab shows the number of rows it holds. A tab whose sections are all empty
+arrays or null is disabled and reads "(none)".
+
+Each item of an array section is one row: its name (the item's `label`, else
+its `numeral`, `type` or `key`), where it is (`m<measure> b<beat>` for the
+start and the end, `-` when the location is null), and a Fields toggle that
+shows the item's remaining fields as formatted JSON. An object section
+(`keys`, `form`, `meter`, `harmonic_rhythm`, `outer_voices`, `markings`,
+`counterpoint_check`) is shown as one JSON block, and the arrays of claims
+inside it (the key regions, the form's sections and returns, the soprano and
+bass lines) are rows. Choosing a row switches to Score mode and selects that
+claim there (see [Selecting claims](#selecting-claims-and-the-inspector)).
+
+The tab logic is in `frontend/public/analysis-tabs.js` (no DOM, loaded by
+`index.html` before `app.js` and by the frontend tests); `app.js` renders it.
+
+### Score
+
+Score mode fetches `GET /api/analyzer/pieces/<id>/musicxml` and renders it with
+[OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/), vendored as a
+static UMD build under `frontend/public/vendor/opensheetmusicdisplay/` and
+loaded by a plain `<script>` tag (`frontend/` has no `package.json` or
+bundler). A caption below the score ("This file declares no time signature;
+shown in 4/4") shows when `GET .../musicxml/meta` reports
+`meter_defaulted: true`, that is, when the source file gave no meter. When the
+response is not a 2xx XML document, `ScoreNotes.scoreResponseProblem` turns it
+into a message and the paper shows "Could not load score: <message>" instead of
+handing the body to OSMD.
+
+The score is written in notated values: the export quantizes the played times
+to the beat grid (`score_quantize_options_default()`), so notes carry `<type>`,
+dots, triplet brackets and `<beam>`. Each source part is a part with its
+instrument and General MIDI program (`midi_program`), a piano part draws on two
+staves, `<work-title>` is the piece title (the filename without its extension)
+and the composer from `meta.json` is written as the composer credit.
+
+A claim's `note_ids` are mapped to `<note xml:id>` values through the piece's
+`note_xml_ids`. OSMD does not keep `xml:id`, so the score finds each
+note by its position and pitch (`frontend/public/score-notes.js`, no DOM,
+loaded by `index.html` before `app.js` and by the frontend tests):
+
+- The key is `<part index>|<measure number>|<staff>|<voice>|<onset>|<pitch>`.
+  Onset is the position in the measure as a reduced fraction of a whole note
+  (`1/4`); pitch is step, alter and octave (`E-1/5`). Rests have no key.
+- The key is built from the MusicXML text (`<divisions>`, `<duration>`,
+  `<backup>`, `<forward>`, `<chord/>`) and from each OSMD `GraphicalNote`
+  (`ParentStaff` for part and staff, measure number, voice id, `Timestamp`,
+  `Pitch`). Equal keys are the same note, so multi-part, multi-voice scores
+  highlight exactly the claim's notes.
+- OSMD 3.10.1's voice ids equal the MusicXML `<voice>` numbers, so the voice
+  is part of the key and there is no voice-less fallback.
+- A claim's note id also matches its barline fragments (`<id>_a`, `<id>_2`).
+- Rendered notes whose key matches no `xml:id` are counted; the count is
+  logged once per score with `console.warn`.
+
+#### Layers on the score
+
+The Layers rail (left of the score) lists the layers of
+[Score layers](#score-layers) in groups, each with a switch, its color, its
+name and the number of items in the piece. A layer with no items is disabled
+("None found in this piece"). The chips at the top apply a preset (None,
+Harmony, Structure). Everything is off by default; the choice is remembered
+and toggling never reloads the piece.
+
+`frontend/public/score-overlay.js` (global `ScoreOverlay`) draws the layers
+that are on in one SVG laid over the OSMD SVG, redrawn from scratch after
+every render and toggle. Positions come from `ScoreGeometry` (a piece position
+plus the timeline offset is an OSMD time).
+
+- Ribbons (keys, key changes, prolongations, progressions, form, themes,
+  phrases, schemas, texture, Other layers) sit in lanes above each system, one
+  18 px row each, up to four rows per layer. A ribbon is a tinted bar with a
+  solid edge at its start and its label inside, shortened to fit; a span that
+  crosses systems continues on the next one with open ends. Tonicizations are
+  dashed, subphrases thin. An item that fits none of the four rows becomes a
+  "+" in the lane's last row whose tooltip counts the hidden items.
+- Cadences are pills at the arrival (PAC, HC, ...). A cadence with a competing
+  reading shows a white dot and the tooltip "Also read as <abbr> (<share>%)".
+- Chord numerals sit below each system. A numeral that would come within 4 px
+  of the previous drawn one becomes a tick (`chordLabelsToDraw`), so zooming
+  in shows more.
+- Notes layers (non-chord tones, motives, melody) color noteheads
+  (`.vf-notehead` paths) without a re-render; the first layer in the table
+  owns a shared note, and turning a layer off restores the original colors.
+- Ribbons and marks have `role="button"` and an accessible name
+  "<layer> <text>, <location>"; color is never the only cue.
+
+Lanes need room, so after a toggle the workspace sets OSMD's
+`MinimumDistanceBetweenSystems` and `PageTopMargin` from
+`ScoreGeometry.systemSpacingUnits` and renders again only when those values
+change (the scroll position is kept). The timeline offset is calibrated once
+per piece from the first 50 notes found in the score, paired with their
+positions from `GET /api/analyzer/pieces/<id>/playback`; a console warning
+reports notes that do not fit it.
+
+#### Selecting claims and the Inspector
+
+One item is selected at a time. Click a ribbon, a cadence pill or a numeral,
+or a notehead colored by a notes layer (of the layers that are on, the item
+with the shortest span that holds the note is chosen; the others are listed
+as "Also here" links). A claim row in Data mode and a row of the Inspector's
+List also select: they switch to Score mode, turn the claim's layer on when it
+is off (a polite status line says "Phrases layer turned on") and scroll so
+the claim's first system sits at 25% of the canvas height. Selecting from
+the score opens the Inspector when it is closed.
+
+On the score the selected ribbon or pill gets a 2 px dark outline (a ribbon
+turns solid). Cadence, chord and notes layers put an amber halo around each
+notehead of the claim; ribbon layers tint the span over the full system
+height instead, since a key region can hold thousands of notes. Escape clears
+the selection, and `[` and `]` select the previous and next item of the same
+layer.
+
+The Inspector has two tabs.
+
+- Claim: the layer, the title, the location and the measure count; Previous,
+  Next and Copy JSON; Readings for a cadence (each reading with a share bar,
+  and for a competing reading a button that shows its arrival notes with
+  dashed halos); Evidence, one row per remaining field in claim order, where a
+  sub-span such as `arrival` has a Show button that tints it, and a list of
+  sub-claims (subphrases, occurrences) expands into rows that select their
+  item when a layer shows it and tint their span otherwise; Scores
+  (`uncertainty`, `score`, `confidence.*`, as the Analyzer wrote them); and
+  the raw JSON under "Raw fields". The footer names the framework and the item
+  key.
+- List: a search field (matches the text and label), then the claims of the
+  layers that are on, sorted by start. With no layer on it shows "Turn on
+  layers to list their claims" and an "All layers" switch that lists every
+  layer. The first 500 rows are drawn, then "Show more". Up and Down move the
+  highlight, Enter selects.
+
+The pure part (picking, neighbors, filtering, formatting, the evidence rows)
+is `frontend/public/inspector-model.js` (global `InspectorModel`, no DOM); the
+panel is `inspector-view.js`; the selection and the overlay drawing live in
+`score-workspace.js` and `score-overlay.js`.
+
+### Playback
+
+The score workspace plays the piece from the toolbar. Space plays or pauses,
+Home stops and goes back to the start. The first Play creates the audio
+context (browsers block audio before a click) and loads the piano; the button
+reads "Loading piano..." until the samples are decoded.
+
+- Transport: Play/Pause, Stop and a readout "m<measure> <m:ss> / <m:ss>". The
+  times follow the current tempo.
+- Tempo: a percentage with minus and plus buttons in 5% steps from 50% to
+  150%; clicking the percentage resets it to 100%. It applies while playing
+  and resets for each piece. The tempo itself comes from the playback route's
+  `tempo` regions (a MIDI file's set-tempo events, a score's tempo and
+  metronome marks). With `tempo_source` "default" the file gave none, the
+  piece plays at 120 and the Sound menu says so.
+- Volume: a slider, 0 to 100, default 80. Saved in `ursatz.workspace.v1`.
+- Sound menu: one row per part with a select of the registered sounds, a
+  Reverb slider (0 to 100, default 20, saved with the volume), and the credit
+  lines of the sounds in use. Reverb is a generated convolution tail
+  (`reverb.js`, 2.2 s), no impulse file is shipped; its dry and wet gains are
+  an equal-power crossfade that keeps the dry signal audible, and both move
+  with a short time constant so the slider makes no clicks.
+- Cursor: a 2 px line over the playing system's staves with a soft teal band
+  behind it, drawn in the score overlay. It glides through each measure
+  (redrawn every animation frame while playing); with reduced motion it steps
+  from note onset to note onset. It stays at the pause or stop position and is
+  hidden only before the first play or click.
+- Follow: while playing, when the cursor's system leaves the band between 10%
+  and 75% of the score's height, the score scrolls so that system's top sits
+  at 20% (smooth unless reduced motion). The wheel, touch, a drag on the
+  scrollbar or a scroll key (arrows, Page Up and Down, End) turns Follow off
+  and shows a "Follow" pill at the bottom right. The pill or `C` turns it on
+  and scrolls to the cursor; each new Play turns it on again. The rule is the
+  pure `WorkspaceState.followScrollTarget(viewport, systemRect)`.
+- Clicking to seek: a click on bare paper (not on a ribbon, mark or colored
+  note) finds the system under the click, converts the x position to a
+  position in the piece (`tAt` minus the timeline offset) and snaps it to the
+  nearest note onset in that system (`PlaybackEngine.nearestOnset`). Playback
+  continues from there if it was playing; stopped, the next Play starts there.
+  A click on a colored note seeks to that note's onset and selects its claim.
+- Playing a claim: the Play button in the Inspector's actions row, `Enter`
+  with a claim selected, or a double-click on a ribbon or mark plays the
+  claim's span (a cadence plays from the dominant to the end of the arrival)
+  and, at the end, the cursor returns to the claim's start. A span with no
+  length plays a quarter note.
+- Output: every note is a voice into one bus (at most 64 voices, the oldest
+  stops first), then the dry path and the reverb send, a master gain and a
+  compressor. Velocity is fixed at 0.7 (the playback data has none).
+
+Adding a sound is one `register` and one `mapProgram`, with no change to the
+engine or the transport. A source is `{id, label, credit, load(ctx, {pitches}),
+start(ctx, destination, {pitch, velocity, when, duration}) -> {stop(when)}}`:
+
+```js
+const registry = SoundSources.createDefaultRegistry(Instruments);
+registry.register(mySource);
+registry.mapProgram(73, "my-source"); // MIDI program 73 plays it
+registry.setPartSource(2, "my-source"); // or override one part
+```
+
+The registry is `frontend/public/instruments.js` (global `Instruments`), the
+built-in sounds are `sound-sources.js` (`gm-piano`, the default, and
+`basic-synth`, the fallback that needs no files), the timing is
+`playback-engine.js` (a timeline with tempo regions and a transport that
+schedules notes 120 ms ahead of an injected clock) and the reverb helpers are
+`reverb.js`. If the piano cannot load, playback uses the basic synth and the
+status line says "Piano samples could not load; using basic synth".
+
+The piano is the FluidR3 GM acoustic grand piano, vendored in
+`frontend/public/vendor/soundfonts/fluidr3-gm/` with its source, checksum and
+license in `vendor/soundfonts/README.md`. FluidR3_GM by Frank Wen, rendered by
+Benjamin Gleitzman (midi-js-soundfonts), licensed Creative Commons
+Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/us/).
+
+## Architecture
+
+Three layers, in order of how rarely they should change:
+
+- **Shared service layer** (`backend/src/service/`): the only code allowed to
+  call into Ursatz's persistence and query functions or the Analyzer
+  library. Every tool goes through this layer; nothing calls Ursatz directly
+  from route code. This boundary is the one thing the scaffold is strict
+  about, because it is expensive to untangle later.
+- **Tool modules** (`backend/src/routes/`): independent GUI features
+  (Analysis, Corpus and Composer). Each tool registers its own
+  HTTP routes under an `/api/<tool_name>/...` prefix and never calls another
+  tool directly. See `backend/include/ursatz_gui/tool.h` for the
+  registration convention and `backend/src/routes/health.c` as the reference
+  tool.
+- **Host/shell** (`backend/src/server.c`, `frontend/public/`): starts the
+  HTTP server, wires tool routes together, and serves the static frontend
+  shell (top bar, tool sidebar, content area) that tool UIs render into.
+
+New tool code goes in `backend/src/routes/`. New shared persistence or query
+logic goes in `backend/src/service/`. If you find yourself calling an Ursatz
+function from inside `routes/`, it belongs in `service/` instead.
+
+The Analyzer library (`external/ursatz-analyzer`, linked as
+`ursatz_analyzer`) is the only analysis path: `analysis_service.c` calls
+`input_pipeline_import_file`, `run_analysis_pipeline` and
+`analysis_document_build`, and the GUI keeps no analysis code of its own.
+Analysis therefore changes only when the Analyzer submodule is bumped.
+
+## Backend
+
+C HTTP server using [civetweb](https://github.com/civetweb/civetweb) (MIT),
+fetched by CMake `FetchContent`. Civetweb is small, permissively licensed
+and has a simple C API, with no GPL or commercial dual-licensing.
+
+### Piece store
+
+Each piece is a directory `pieces/<id>/`. Ids are `piece-<16 lowercase hex>`
+from `ursatz_gui_new_id` in `service/id_service.c` (8 bytes of
+`/dev/urandom`, with a hash fallback), redrawn if the directory exists, at
+most 8 tries.
+
+- `source.mid` or `source.musicxml`: the upload's bytes, written unchanged. A
+  `.xml` or `.mxl` upload keeps its extension (`source.xml`, `source.mxl`).
+- `analysis.json`: the Analyzer's analysis document (schema v9).
+- `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
+  (ISO 8601 UTC), "analyzer_version", "document_schema_version"}` plus the
+  optional `"composer"` and `"source"` (strings) and `"tags"` (array of
+  strings). A member that is absent reads as `""` or no tags, so pieces
+  stored before the metadata existed list as unassigned.
+
+Metadata rules (`service/piece_metadata.c`): composer and source are trimmed,
+runs of whitespace become one space and control characters are dropped; `""`
+means unset; at most 120 bytes. A tag gets the same treatment, is lowercased
+(ASCII), must not be empty, longer than 48 bytes or contain a comma, and a
+piece holds at most 32 tags in insertion order. Values and tags are compared
+case-insensitively.
+
+Every file is written to `<name>.tmp` and renamed, and a failed analysis
+removes the directory. Re-running the analysis rewrites `analysis.json` and
+the two version fields of `meta.json`; the filename and `uploaded_at` stay.
+Pieces saved by earlier versions (`pieces/<id>.db`) are ignored: they are
+not listed and cannot be opened, so upload those files again.
+
+### Material store
+
+Motifs, themes and pieces live in `materials/` beside `pieces/`, `collections/`
+and `compositions/`. `service/material_service.c` is the only code that touches
+it; every operation runs under one mutex, and every file is written to
+`<name>.tmp` and renamed.
+
+```
+materials/
+  projects/<prj-id>.json   {id, name, description, created_at, updated_at}
+  items/<id>/item.json     {id, type, name, project_id, current_version,
+                            versions: [{number, created_at, note}],
+                            created_at, updated_at}
+  items/<id>/v<n>.json     the version body
+```
+
+- Ids are `<prefix>-<16 lowercase hex>` from `ursatz_gui_new_id`: `prj` for
+  projects, `mot`, `thm` and `pce` for motif, theme and piece items.
+- On first start a project named `General` is created. A project name is 1 to
+  200 characters after trimming, a description at most 2000; a project that
+  holds items cannot be deleted.
+- Versions are numbered from 1 and never deleted or rewritten. Saving a new
+  body writes `v<n+1>.json` and then `item.json`, which advances
+  `current_version`; rename and move change `item.json` only. Deleting an item
+  removes its whole directory.
+- A version body is validated by `ursatz_gui_material_body_validate` before it
+  is written: an object with a `uses` array, and the member of its own type
+  (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
+  `notes`, `meter`, `key`, `pickup`, `features`, `analysis`, `degrees` (null or a
+  string of up to 4000 characters) and `derived`; the
   rules are listed in `service/material_service.h`.
 - Projects and items are passed as cJSON objects; the caller frees what it
   receives.
@@ -861,6 +1381,8 @@ Projects:
 
 Items:
 
+- `POST /api/materials/motifs/import`: a MIDI file body, answers the motif it
+  holds (see Motif import from MIDI); nothing is saved.
 - `GET /api/materials/items?project=<id>&type=<motif|theme|piece>`: `{"items"}`,
   newest update first; both filters are optional.
 - `POST /api/materials/items`: `{"type","name","project_id","body"}` answers
