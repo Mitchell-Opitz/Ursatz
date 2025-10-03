@@ -25,8 +25,10 @@ static bool table_is_hard(int which) {
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
-    "harmonic", NAMES, STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT, table_is_hard, g_pairs, g_built};
+    "harmonic", NAMES, STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT, table_is_hard, g_pairs, g_built, evaluate_candidate};
 
 static bool valid_rule(StandardCounterpointHarmonicRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -206,6 +208,8 @@ bool standard_counterpoint_harmonic_rule_holds(StandardCounterpointHarmonicRule 
 static bool holds_adapter(int which, const void *subject) {
     return standard_counterpoint_harmonic_rule_holds((StandardCounterpointHarmonicRule)which, subject);
 }
+
+STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointPair)
 
 bool standard_counterpoint_harmonic_check(const StandardCounterpointPair *pair, unsigned *hard_violations,
                                           unsigned *soft_violations) {

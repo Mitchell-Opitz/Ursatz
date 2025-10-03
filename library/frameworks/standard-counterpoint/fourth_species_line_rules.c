@@ -6,6 +6,7 @@
 #include "counterpoint_interval.h"
 #include "counterpoint_line.h"
 #include "counterpoint_pitch.h"
+#include "counterpoint_subject.h"
 #include "rule_table.h"
 
 #define BUFFER_SIZE (STANDARD_COUNTERPOINT_FOURTH_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_FOURTH_SPECIES_MAX_BARS)
@@ -24,8 +25,11 @@ static bool table_is_hard(int which) {
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
-    "fourth-species-line", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built};
+    "fourth-species-line", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built,
+    evaluate_candidate};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesLineRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -152,16 +156,15 @@ bool standard_counterpoint_fourth_species_line_rule_holds(StandardCounterpointFo
     }
 }
 
-typedef struct {
-    const StandardCounterpointFourthSpeciesExercise *exercise;
-    const PitchSpelling *tonic;
-} Subject;
+typedef StandardCounterpointFourthSpeciesTonic Subject;
 
 static bool holds_adapter(int which, const void *subject) {
     const Subject *s = subject;
     return standard_counterpoint_fourth_species_line_rule_holds((StandardCounterpointFourthSpeciesLineRule)which,
                                                                 s->exercise, s->tonic);
 }
+
+STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_fourth_species_line_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *hard_violations,
