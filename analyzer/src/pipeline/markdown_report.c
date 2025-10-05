@@ -1832,7 +1832,7 @@ static bool render_hemiolas(StringBuilder *sb, const cJSON *rhythm) {
             continue;
         }
         const cJSON *evidence = cJSON_GetObjectItemCaseSensitive(claim, "evidence");
-        ok = append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+        ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
              sb_appendf(sb, " | %s | %s | %s | %d of %d |\n", evidence_text(evidence, "duration"),
                         evidence_text(evidence, "chord"), evidence_text(evidence, "accent"),
                         (int)number_member(evidence, "agreeing"), (int)number_member(evidence, "available"));
