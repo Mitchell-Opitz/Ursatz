@@ -164,6 +164,19 @@ add_test(NAME test_melody COMMAND test_melody)
 add_test(NAME test_melody_bach_114_target COMMAND test_melody bach-114-target)
 set_tests_properties(test_melody_bach_114_target PROPERTIES WILL_FAIL TRUE)
 
+add_executable(test_rhythm test_rhythm.c)
+target_link_libraries(test_rhythm PRIVATE ursatz_analyzer cjson m)
+target_compile_definitions(test_rhythm PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_rhythm COMMAND test_rhythm)
+add_test(NAME test_rhythm_constructed COMMAND test_rhythm constructed)
+# Expected to fail: the form adapter reports no elided cadence, so the hypermeter has no reinterpretation, and Field 5's
+# annotation has one (measure 9, where the phrase of measures 5 to 8 is elided with the next). The syncopation, the
+# hemiolas (none) and 7 of 8 hyperdownbeats (87.5%, target 80%; measure 18 is missed) meet the target. The assertions
+# stay as the target; remove WILL_FAIL when the form adapter reports elision.
+add_test(NAME test_rhythm_field5_target COMMAND test_rhythm field5-target)
+set_tests_properties(test_rhythm_field5_target PROPERTIES WILL_FAIL TRUE)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE
