@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/value.h"
 #include "identity/entity_id.h"
 #include "rule_check.h"
 #include "rule_table.h"
@@ -32,6 +33,15 @@ static const StandardCounterpointRuleTable SOFT = {
 static bool holds(int which, const void *subject) {
     return (*(const unsigned *)subject & (1u << which)) != 0;
 }
+
+/* A table that registers an evaluation callback; the subject is the same bit mask of the rules that hold. */
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
+static StandardCounterpointRulePair g_eval_pairs[COUNT];
+static bool g_eval_built[COUNT];
+static const StandardCounterpointRuleTable EVAL = {"test-eval", NAMES, COUNT,         is_hard,
+                                                   g_eval_pairs,  g_eval_built, evaluate_candidate};
+STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, EVAL, holds, unsigned)
 
 static void test_valid_and_names(void) {
     for (int i = 0; i < COUNT; i++) {
@@ -118,11 +128,77 @@ static void test_check(void) {
     assert(soft == all);
 }
 
+static ConstraintEvalResult evaluate_mask(const Constraint *constraint, const char *tag, unsigned mask) {
+    Value *candidate;
+    assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
+    ConstraintEvalResult result = constraint_evaluate(constraint, candidate, NULL);
+    value_destroy(candidate);
+    return result;
+}
+
+static void test_evaluate(void) {
+    const char *tag = "standard-counterpoint/test-eval";
+    char written[64];
+    assert(standard_counterpoint_rule_table_candidate_type(&EVAL, written, sizeof(written)));
+    assert(strcmp(written, tag) == 0);
+    assert(!standard_counterpoint_rule_table_candidate_type(&EVAL, written, 8));
+    assert(!standard_counterpoint_rule_table_candidate_type(&BARE, written, sizeof(written)));
+    assert(!standard_counterpoint_rule_table_candidate_type(NULL, written, sizeof(written)));
+
+    /* Only a table with a callback registers it; the others report NOT_IMPLEMENTED. */
+    for (int i = 0; i < COUNT; i++) {
+        assert(constraint_evaluate_fn(standard_counterpoint_rule_table_constraint(&EVAL, i)) == evaluate_candidate);
+        assert(constraint_evaluate_fn(table_constraint(i)) == NULL);
+        assert(evaluate_mask(table_constraint(i), tag, 0) == CONSTRAINT_EVAL_NOT_IMPLEMENTED);
+    }
+
+    /* PASS when the rule holds, FAIL when it does not, for every rule. */
+    unsigned all = (1u << COUNT) - 1;
+    for (int i = 0; i < COUNT; i++) {
+        const Constraint *constraint = standard_counterpoint_rule_table_constraint(&EVAL, i);
+        assert(evaluate_mask(constraint, tag, all) == CONSTRAINT_EVAL_PASS);
+        assert(evaluate_mask(constraint, tag, 1u << i) == CONSTRAINT_EVAL_PASS);
+        assert(evaluate_mask(constraint, tag, all & ~(1u << i)) == CONSTRAINT_EVAL_FAIL);
+        assert(evaluate_mask(constraint, tag, 0) == CONSTRAINT_EVAL_FAIL);
+        /* A candidate of another type is NOT_APPLICABLE, not a failure. */
+        assert(evaluate_mask(constraint, "standard-counterpoint/other", all) == CONSTRAINT_EVAL_NOT_APPLICABLE);
+    }
+
+    /* The right tag with content of the wrong size is rejected. */
+    const Constraint *alpha = standard_counterpoint_rule_table_constraint(&EVAL, ALPHA);
+    Value *wrong_size;
+    assert(value_create(tag, "ab", 2, &wrong_size) == VALUE_OK);
+    assert(constraint_evaluate(alpha, wrong_size, NULL) == CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
+    value_destroy(wrong_size);
+
+    /* The helper itself: NULL arguments, a constraint that is not the table's, a table with no prefix. */
+    Value *candidate;
+    unsigned mask = all;
+    assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
+    assert(standard_counterpoint_rule_table_evaluate(NULL, holds, sizeof(mask), alpha, candidate) ==
+           CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
+    assert(standard_counterpoint_rule_table_evaluate(&EVAL, NULL, sizeof(mask), alpha, candidate) ==
+           CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
+    assert(standard_counterpoint_rule_table_evaluate(&EVAL, holds, sizeof(mask), NULL, candidate) ==
+           CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
+    assert(standard_counterpoint_rule_table_evaluate(&EVAL, holds, sizeof(mask), alpha, NULL) ==
+           CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
+    assert(standard_counterpoint_rule_table_evaluate(&EVAL, holds, sizeof(mask), table_constraint(ALPHA), candidate) ==
+           CONSTRAINT_EVAL_NOT_IMPLEMENTED);
+    assert(standard_counterpoint_rule_table_evaluate(&EVAL, holds, sizeof(mask), alpha, candidate) ==
+           CONSTRAINT_EVAL_PASS);
+    assert(standard_counterpoint_rule_table_evaluate(&BARE, holds, sizeof(mask),
+                                                     standard_counterpoint_rule_table_constraint(&BARE, ALPHA),
+                                                     candidate) == CONSTRAINT_EVAL_NOT_IMPLEMENTED);
+    value_destroy(candidate);
+}
+
 int main(void) {
     test_valid_and_names();
     test_hardness();
     test_pairs();
     test_check();
+    test_evaluate();
     printf("test_rule_table (standard-counterpoint): ok\n");
     return 0;
 }

@@ -5,6 +5,12 @@
 #include "rule_check.h"
 #include "third_species_ends_rules.h"
 #include "third_species_test_util.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-ends", STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT);
+#define standard_counterpoint_third_species_ends_rule_holds(which, a, b) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_third_species_ends_constraint, standard_counterpoint_third_species_ends_rule_holds, StandardCounterpointThirdSpeciesTonic, which, a, b)
 
 #define ENDS(name) STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_##name
 

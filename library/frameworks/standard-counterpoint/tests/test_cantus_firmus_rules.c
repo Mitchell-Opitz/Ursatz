@@ -5,6 +5,12 @@
 #include "cantus_firmus_rules.h"
 #include "counterpoint_test_util.h"
 #include "rule_check.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "cantus-firmus", STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT);
+#define standard_counterpoint_cantus_rule_holds(which, a, b) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_cantus_constraint, standard_counterpoint_cantus_rule_holds, StandardCounterpointLineTonic, which, a, b)
 
 static bool holds(StandardCounterpointCantusRule rule, const PitchSpelling *const *notes, size_t count,
                   const PitchSpelling *tonic) {
