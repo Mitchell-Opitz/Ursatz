@@ -114,7 +114,7 @@ check(same(rebuilt.motif.features, [{ label: "a", first: 0, last: 1 }]), "body s
 check(rebuilt.uses.length === 1 && rebuilt.motif.derived.source_item === "mot-1", "body keeps uses and derived");
 check(rebuilt.motif.analysis === null, "body leaves the analysis to the backend");
 check(M.buildMotifBody(blank, null).uses.length === 0 && M.buildMotifBody(blank, null).motif.derived === null, "a new body has no uses or derived");
-check(M.MOTIF_FORMS.filter((f) => f.enabled).map((f) => f.value).join() === "full", "only the full form is enabled");
+check(M.MOTIF_FORMS.filter((f) => f.enabled).map((f) => f.value).join() === "full,rhythm,contour", "all three forms are enabled");
 
 const saveNew = M.buildSaveMotifRequest({ name: " Hook ", project_id: "prj-a", body: rebuilt });
 check(saveNew.url === "/api/materials/items" && JSON.parse(saveNew.body).type === "motif", "a new motif posts an item");
@@ -167,6 +167,37 @@ check(unkeyed.rows.find((r) => r.label === "Implied harmony").text === "needs a 
 const none = M.analysisRows({ analysis: null }, "composer not found");
 check(!none.analyzed && none.message === "Not analyzed: composer not found", "a null analysis names the reason");
 check(M.analysisRows(null).message === "Not analyzed", "no motif is not analyzed");
+
+// Motif forms: hints, MIDI import, degrees.
+check(M.formHint("full") === M.NOTE_HINT, "the full form shows the note list hint");
+check(M.formHint("rhythm").includes("x:q x:e x:e x:h"), "the rhythm form shows the rhythm syntax");
+check(M.formHint("contour").includes("0 2 1 3"), "the contour form shows the contour syntax");
+check(M.formHint("rhythm") !== M.formHint("contour"), "each form has its own hint");
+const imported = M.importToFormValues({ notes_text: "D4:q F4:q", meter: "3/4", key: "D minor", pickup: "1" });
+check(imported.form === "full" && imported.notes === "D4:q F4:q" && imported.meter === "3/4", "an import fills a full motif");
+check(imported.key === "D minor" && imported.pickup === "1", "an import fills the key and pickup");
+const unkeyedImport = M.importToFormValues({ notes_text: "D4:q", meter: "4/4", key: null, pickup: "0" });
+check(unkeyedImport.key === "" && unkeyedImport.pickup === "0", "an import without a key leaves it empty");
+check(M.importToFormValues(null).meter === "4/4" && M.importToFormValues(null).notes === "", "an empty import answer gives defaults");
+const importRequest = M.buildImportMidiRequest("file");
+check(importRequest.method === "POST" && importRequest.url === "/api/materials/motifs/import" && importRequest.body === "file", "the import posts the file");
+check(M.buildMotifBody(values, { ...body, motif: { ...body.motif, degrees: "1:q 3:e" } }).motif.degrees === "1:q 3:e", "body keeps the degrees");
+check(M.buildMotifBody(blank, null).motif.degrees === null, "a new body has no degrees");
+check(M.motifFormProblems({ ...values, pickup: "123" })[0].field === "pickup", "a pickup of three digits is a problem");
+const withDegrees = M.analysisRows({ form: "full", degrees: "1:q 3:e", analysis: heard.analysis });
+check(withDegrees.rows[0].label === "Degree list" && withDegrees.rows[0].text === "1:q 3:e", "the degree list is the first analysis row");
+const rhythmRows = M.analysisRows({
+  form: "rhythm",
+  degrees: "x:q x:e",
+  analysis: { analysis: { intervals: null, contour: null, rhythm: [{ bar: 0, beat: { num: 0, den: 1 }, duration: { num: 1, den: 4 }, on_beat: true }], implied_harmony: { key_known: false, candidates: [] } } },
+});
+check(rhythmRows.rows.map((r) => r.label).join() === "Rhythm list,Rhythm", "a rhythm motif shows its list and rhythm only");
+const contourRows = M.analysisRows({
+  form: "contour",
+  degrees: "0 2 1",
+  analysis: { analysis: { intervals: null, contour: { shape: "arch", directions: ["up", "down"] }, rhythm: null, implied_harmony: { key_known: false, candidates: [] } } },
+});
+check(contourRows.rows.map((r) => r.label).join() === "Contour list,Contour", "a contour motif shows its list and contour only");
 
 // Item references.
 const statuses = [

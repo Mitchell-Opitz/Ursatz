@@ -332,12 +332,18 @@
     { value: "melodic", label: "Melodic" },
     { value: "accompaniment", label: "Accompaniment" },
   ];
-  /* Only the full form is editable in P12; the others arrive in P13. */
+  const RHYTHM_HINT = "Rhythm only, e.g. x:q x:e x:e x:h. x is a note, r a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
+  const CONTOUR_HINT = "Contour only: ranks separated by spaces, e.g. 0 2 1 3. 0 is the lowest, equal ranks are the same height, no durations.";
   const MOTIF_FORMS = [
     { value: "full", label: "Full", enabled: true },
-    { value: "rhythm", label: "Rhythm (P13)", enabled: false },
-    { value: "contour", label: "Contour (P13)", enabled: false },
+    { value: "rhythm", label: "Rhythm only", enabled: true },
+    { value: "contour", label: "Contour only", enabled: true },
   ];
+
+  /* The syntax hint under the note list for a motif form. */
+  function formHint(form) {
+    return form === "rhythm" ? RHYTHM_HINT : form === "contour" ? CONTOUR_HINT : NOTE_HINT;
+  }
 
   /* The editor's field values for a motif body (null for a new motif). */
   function motifFormValues(body) {
@@ -359,6 +365,28 @@
     };
   }
 
+  /* The MIDI import route (POST, the file as the body). */
+  function buildImportMidiRequest(file) {
+    return {
+      method: "POST",
+      url: "/api/materials/motifs/import",
+      headers: { "Content-Type": "audio/midi" },
+      body: file,
+    };
+  }
+
+  /* The editor's field values for an import answer {notes_text, meter, key, pickup}: a full motif. */
+  function importToFormValues(answer) {
+    const a = answer || {};
+    return {
+      form: "full",
+      notes: typeof a.notes_text === "string" ? a.notes_text : "",
+      meter: typeof a.meter === "string" ? a.meter : "4/4",
+      key: typeof a.key === "string" ? a.key : "",
+      pickup: typeof a.pickup === "string" ? a.pickup : "0",
+    };
+  }
+
   /* Problems with the form values as {field, message}; empty when it can be
    * sent. The Composer judges the note list itself. */
   function motifFormProblems(values) {
@@ -373,7 +401,7 @@
     if (key !== "" && !/^[A-Ga-g][#b]? (major|minor)$/i.test(key)) {
       problems.push({ field: "key", message: "Key looks like D minor, or leave it empty." });
     }
-    if (!/^\d+(\/\d+)?$/.test(String(values.pickup || "").trim())) {
+    if (!/^\d{1,2}(\/\d{1,2})?$/.test(String(values.pickup || "").trim())) {
       problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
     }
     for (const message of featureProblems(values.features)) {
@@ -416,7 +444,7 @@
 
   /* The version body for the form values. `previous` is the body being
    * edited: its uses and derived data carry over. The backend fills in the
-   * analysis. */
+   * analysis and the degrees (they are sent back as they were read). */
   function buildMotifBody(values, previous) {
     const before = previous || {};
     const motif = before.motif || {};
@@ -435,6 +463,7 @@
           last: Number(feature.last) - 1,
         })),
         analysis: null,
+        degrees: typeof motif.degrees === "string" ? motif.degrees : null,
         derived: motif.derived || null,
       },
     };
@@ -483,6 +512,8 @@
     return `${degree.alteration ? "#" : ""}${degree.degree}`;
   }
 
+  const DEGREES_LABELS = { full: "Degree list", rhythm: "Rhythm list", contour: "Contour list" };
+
   /* What the Composer heard, as rows {label, text} for the analysis panel.
    * `motif` is the body's motif object. A motif without an analysis gives
    * {analyzed: false, message} (message names analysisError when given);
@@ -495,20 +526,26 @@
       return { analyzed: false, message: `Not analyzed${reason}`, rows: [] };
     }
     const rows = [];
+    const listText = typeof motif.degrees === "string" ? motif.degrees : "";
+    if (listText !== "") {
+      rows.push({ label: DEGREES_LABELS[motif.form] || DEGREES_LABELS.full, text: listText });
+    }
     const keyed = Array.isArray(a.scale_degrees && a.scale_degrees.all);
     if (keyed) {
       rows.push({ label: "Scale degrees", text: a.scale_degrees.all.map(degreeText).join(" ") });
     }
     const intervals = Array.isArray(a.intervals) ? a.intervals : [];
-    rows.push({
-      label: "Intervals",
-      text:
-        intervals.length === 0
-          ? "none"
-          : intervals
-              .map((i) => (typeof i.steps === "number" ? `${signed(i.semitones)} (${signed(i.steps)} steps)` : signed(i.semitones)))
-              .join(", "),
-    });
+    if (Array.isArray(a.intervals)) {
+      rows.push({
+        label: "Intervals",
+        text:
+          intervals.length === 0
+            ? "none"
+            : intervals
+                .map((i) => (typeof i.steps === "number" ? `${signed(i.semitones)} (${signed(i.steps)} steps)` : signed(i.semitones)))
+                .join(", "),
+      });
+    }
     if (a.contour) {
       const directions = Array.isArray(a.contour.directions) ? a.contour.directions : [];
       rows.push({
@@ -516,13 +553,17 @@
         text: directions.length > 0 ? `${a.contour.shape} (${directions.join(", ")})` : String(a.contour.shape),
       });
     }
-    const rhythm = Array.isArray(a.rhythm) ? a.rhythm : [];
-    rows.push({
-      label: "Rhythm",
-      text: rhythm
-        .map((r) => `bar ${r.bar + 1} beat ${beatText(r.beat)}, length ${timeText(r.duration)}${r.on_beat ? "" : " (off the beat)"}`)
-        .join("; "),
-    });
+    if (Array.isArray(a.rhythm)) {
+      rows.push({
+        label: "Rhythm",
+        text: a.rhythm
+          .map((r) => `bar ${r.bar + 1} beat ${beatText(r.beat)}, length ${timeText(r.duration)}${r.on_beat ? "" : " (off the beat)"}`)
+          .join("; "),
+      });
+    }
+    if (!a.implied_harmony || !Array.isArray(a.intervals)) {
+      return { analyzed: true, message: "", rows };
+    }
     const candidates = a.implied_harmony && Array.isArray(a.implied_harmony.candidates) ? a.implied_harmony.candidates : [];
     rows.push({
       label: "Implied harmony",
@@ -573,6 +614,9 @@
     bodyWithUse,
     buildAddVersionRequest,
     NOTE_HINT,
+    formHint,
+    buildImportMidiRequest,
+    importToFormValues,
     MOTIF_ROLES,
     MOTIF_FORMS,
     motifFormValues,

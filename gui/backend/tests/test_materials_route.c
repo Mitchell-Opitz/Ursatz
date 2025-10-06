@@ -421,6 +421,149 @@ static void test_motif_analysis(void) {
   free(motif);
 }
 
+/* The id of the first project (the default one). */
+static void first_project(char *out, size_t out_size) {
+  int status = 0;
+  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  snprintf(out, out_size, "%s",
+           string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
+  cJSON_Delete(answer);
+}
+
+/* Saves a motif of the given form; *status gets the HTTP status and the answer is the parsed body (caller deletes). */
+static cJSON *save_motif_form(const char *project, const char *form, const char *notes, const char *key_json,
+                              const char *pickup, int *status) {
+  char request[2048];
+  snprintf(request, sizeof(request),
+           "{\"type\":\"motif\",\"name\":\"Form\",\"project_id\":\"%s\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\","
+           "\"form\":\"%s\",\"notes\":\"%s\",\"meter\":\"4/4\",\"key\":%s,\"pickup\":\"%s\",\"features\":[],"
+           "\"analysis\":null,\"derived\":null}}}",
+           project, form, notes, key_json, pickup);
+  return json_exchange("POST", "/api/materials/items", request, status);
+}
+
+/* The saved motif object of an item answer, read back. */
+static cJSON *read_motif(const cJSON *saved) {
+  char path[256];
+  int status = 0;
+  snprintf(path, sizeof(path), "/api/materials/items/%s", string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id"));
+  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *motif = cJSON_DetachItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif");
+  cJSON_Delete(answer);
+  return motif;
+}
+
+/* Rhythm and contour motifs are analyzed too, and every form stores its list as motif.degrees. */
+static void test_motif_forms(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  int status = 0;
+
+  cJSON *saved = save_motif_form(project, "rhythm", "x:q x:e x:e x:h", "null", "0", &status);
+  check(status == 200 && ok_true(saved), "a rhythm-only motif without a key is saved");
+  cJSON *motif = read_motif(saved);
+  check(strcmp(string_of(motif, "degrees"), "x:q x:e x:e x:h") == 0, "a rhythm motif stores its rhythm list as degrees");
+  check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(motif, "analysis")), "a rhythm motif carries the analysis");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "contour", "0 2 1 3", "null", "0", &status);
+  check(status == 200 && ok_true(saved), "a contour-only motif is saved");
+  motif = read_motif(saved);
+  check(strcmp(string_of(motif, "degrees"), "0 2 1 3") == 0, "a contour motif stores its contour list as degrees");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  check(status == 200 && ok_true(saved), "a full motif with a key is saved");
+  motif = read_motif(saved);
+  check(strcmp(string_of(motif, "degrees"), "1:q 3:e 5:e 1':h") == 0, "a full motif stores its degree list");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "null", "1", &status);
+  check(status == 200 && ok_true(saved), "a motif with a pickup is saved");
+  motif = read_motif(saved);
+  const cJSON *inner = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motif, "analysis"), "analysis");
+  check(strcmp(string_of(inner, "pickup"), "1") == 0, "the pickup reaches the Composer");
+  cJSON_Delete(motif);
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "null", "0", &status);
+  check(status == 400 && strstr(string_of(saved, "error"), "give a key") != NULL, "a full motif without a key is 400");
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "null", "1;rm", &status);
+  check(status == 400, "a pickup that is not beats is 400");
+  cJSON_Delete(saved);
+}
+
+/* A format 0 MIDI file of one track holding the given events (the track length is filled in). */
+static size_t midi_file(unsigned char *out, const unsigned char *events, size_t event_count) {
+  static const unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T', 'r', 'k'};
+  memcpy(out, header, sizeof(header));
+  size_t at = sizeof(header);
+  out[at++] = 0;
+  out[at++] = 0;
+  out[at++] = 0;
+  out[at++] = (unsigned char)event_count;
+  memcpy(out + at, events, event_count);
+  return at + event_count;
+}
+
+static cJSON *import_exchange(const unsigned char *file, size_t file_size, const char *query, int *status) {
+  char path[128];
+  snprintf(path, sizeof(path), "/api/materials/motifs/import%s", query);
+  char *response = http_exchange("POST", path, "Content-Type: audio/midi\r\n", file, file_size);
+  *status = response && strncmp(response, "HTTP/1.1 ", 9) == 0 ? atoi(response + 9) : 0;
+  cJSON *json = response ? cJSON_Parse(response_body(response)) : NULL;
+  free(response);
+  return json;
+}
+
+/* A MIDI file is read into a motif without saving anything. */
+static void test_motif_import(void) {
+  /* D4 then F4, a quarter note each. */
+  static const unsigned char one_voice[] = {0x00, 0x90, 0x3E, 0x64, 0x83, 0x60, 0x80, 0x3E, 0x00, 0x00, 0x90,
+                                            0x41, 0x64, 0x83, 0x60, 0x80, 0x41, 0x00, 0x00, 0xFF, 0x2F, 0x00};
+  /* D4 and F4 sounding together. */
+  static const unsigned char two_voices[] = {0x00, 0x90, 0x3E, 0x64, 0x00, 0x90, 0x41, 0x64, 0x83, 0x60, 0x80,
+                                             0x3E, 0x00, 0x00, 0x80, 0x41, 0x00, 0x00, 0xFF, 0x2F, 0x00};
+  unsigned char file[128];
+  int status = 0;
+
+  size_t size = midi_file(file, one_voice, sizeof(one_voice));
+  cJSON *answer = import_exchange(file, size, "?key=D%20minor", &status);
+  check(status == 200 && ok_true(answer), "a one-voice MIDI file is imported");
+  check(strcmp(string_of(answer, "notes_text"), "D4:q F4:q") == 0, "the import answers the notes as a note list");
+  check(strcmp(string_of(answer, "meter"), "4/4") == 0, "the import answers the meter");
+  check(strcmp(string_of(answer, "key"), "D minor") == 0, "the import answers the given key");
+  check(strcmp(string_of(answer, "pickup"), "0") == 0, "the import answers the pickup");
+  check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "analysis")), "the import answers the analysis");
+  cJSON_Delete(answer);
+
+  answer = import_exchange(file, size, "", &status);
+  check(status == 200 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(answer, "key")), "a file without a key answers null");
+  cJSON_Delete(answer);
+
+  size = midi_file(file, two_voices, sizeof(two_voices));
+  answer = import_exchange(file, size, "", &status);
+  check(status == 400 && strlen(string_of(answer, "error")) > 0, "a polyphonic MIDI file is 400 with the Composer's message");
+  cJSON_Delete(answer);
+
+  answer = import_exchange(file, 0, "", &status);
+  check(status == 400, "an empty body is 400");
+  cJSON_Delete(answer);
+
+  answer = import_exchange(file, size, "?meter=nope", &status);
+  check(status == 400, "a bad meter is 400");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("GET", "/api/materials/motifs/import", NULL, &status);
+  check(status == 405, "importing is POST only");
+  cJSON_Delete(answer);
+}
+
 /* A note list the Composer cannot read is refused and no version is written. */
 static void test_motif_refused(void) {
   int status = 0;
@@ -505,6 +648,8 @@ int main(void) {
   test_items();
   test_motif_analysis();
   test_motif_refused();
+  test_motif_forms();
+  test_motif_import();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
