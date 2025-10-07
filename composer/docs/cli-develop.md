@@ -50,10 +50,10 @@ candidates are printed.
 
 ### How each is made
 
-The real transformations call Ursatz's transforms: transposition, inversion, retrograde, intervallic
-manipulation, augmentation and diminution (durations), fragmentation and contraction. Ursatz has no
-diatonic transformation, so `--tonal` is worked out here from the key's scale, the same steps the
-motive analysis counts. A pitch outside the scale keeps its place, raised, in its step.
+Every development applies the Ursatz library relation of the same name (`analysis/motive_relation.h`):
+transpose, invert, retrograde, interval change, fragment, liquidate, augment and diminish. A tonal step
+is counted in the key's scale: a note on a scale degree stays on a degree (F and B in C major never
+become F sharp or C sharp), and a pitch outside the scale keeps its place, raised, in its step.
 
 - A development that is the same as its source is not offered, except the exact repetition.
 - A development that would put a pitch outside MIDI 0 to 127 is not offered.
@@ -66,6 +66,10 @@ motive analysis counts. A pitch outside the scale keeps its place, raised, in it
   value (`w h q e s t`, up to two dots), every onset a multiple of a thirty-second, and, when the
   source is a whole number of beats long, the result too. Otherwise that ratio is not offered; a
   motive is never bent to fit.
+- A pickup scales with the ratio, like the notes. If the scaled pickup reaches a bar or is not a
+  multiple of a thirty-second, that ratio is not offered.
+- Chords move with the notes they sit on: a chord goes to the first kept note at or after it, so a
+  fragment or liquidation drops a chord that has no kept note after it.
 - A motive of one note can be repeated, moved, mirrored about another pitch, augmented and
   diminished. It has no intervals to change, nothing to fragment or drop, and its retrograde is itself.
 
