@@ -8,6 +8,7 @@
 #include <ursatz_composer/fill_rng.h>
 
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "motive/motive_internal.h"
 #include "plan/plan_json_internal.h"
@@ -142,39 +143,12 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
  * are no longer those, so the result is read back from its own contour.
  */
 static bool normalize_contour(const Motive *source, Motive *result) {
-    char *text = motive_to_contour_text(result);
-    if (!text) {
+    MotiveSketch sketch;
+    if (!motive_to_sketch(result, &sketch) || !motive_sketch_contour_normalize(&sketch, &sketch)) {
         return false;
     }
-    MotiveOptions options;
-    memset(&options, 0, sizeof(options));
-    options.has_meter = true;
-    options.meter = source->meter;
-    if (source->key_source != MOTIVE_KEY_UNSPECIFIED) {
-        options.has_key = true;
-        options.key = source->key;
-    }
-    if (source->pickup.den != 0 && source->pickup.num != 0) {
-        options.has_pickup = true;
-        options.pickup = source->pickup;
-    }
-    Motive read;
-    bool ok = motive_from_contour_text(text, &options, &read, NULL) == MOTIVE_OK;
-    free(text);
-    if (ok) {
-        read.key_source = source->key_source;
-        if (source->key_source != MOTIVE_KEY_UNSPECIFIED) {
-            read.key = source->key;
-        }
-        /* Harmony, features and role are not in a contour's text; the result keeps what the development gave it. */
-        memcpy(read.harmony, result->harmony, sizeof(read.harmony));
-        read.harmony_count = result->harmony_count;
-        memcpy(read.features, result->features, sizeof(read.features));
-        read.feature_count = result->feature_count;
-        read.role = result->role;
-        *result = read;
-    }
-    return ok;
+    /* Harmony, features and role are the sketch's; the meter, the key and the form are the source's. */
+    return motive_from_sketch(&sketch, source, result);
 }
 
 /* ------------------------------------------------------------ kept, changed */
