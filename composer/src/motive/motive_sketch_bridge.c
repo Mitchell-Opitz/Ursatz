@@ -152,7 +152,7 @@ bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motiv
             return false;
         }
     }
-    if (!plan_time(sketch->pickup, &motive.pickup)) {
+    if (!plan_time(sketch->pickup, &motive.pickup) || 32 % motive.pickup.den != 0) {
         return false;
     }
     if (sketch->has_scale &&

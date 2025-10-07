@@ -36,7 +36,7 @@ bool motive_to_sketch(const Motive *motive, MotiveSketch *out);
  * The implied chord motive_to_sketch added is not written back: a single chord at 0 that is the best implied chord of
  * the notes is left out when the template has no harmony of its own, so a motive and its round trip are equal.
  *
- * False, with *out untouched, for NULL arguments, a time the Composer cannot hold, a meter it does not have, or a
+ * False, with *out untouched, for NULL arguments, a time the Composer cannot hold (a pickup must be a multiple of a thirty-second), a meter it does not have, or a
  * sketch that is not a valid motive. out may be the template.
  */
 bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motive, Motive *out);
