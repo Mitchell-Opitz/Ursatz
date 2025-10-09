@@ -1203,6 +1203,63 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
+/* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default:
+   the motif's own key). Both render the version's motif.degrees with the Composer. */
+static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
+  char *end = NULL;
+  long number = strtol(number_text, &end, 10);
+  if (end == number_text || *end != '\0' || number < 1 || number > 1000000) {
+    return send_failure(conn, 404, "version not found");
+  }
+  char render_key[32];
+  bool has_render_key = query_value(conn, "key", render_key, sizeof(render_key));
+  if (has_render_key && !analysis_key_ok(render_key)) {
+    return send_failure(conn, 400, "key must look like D minor");
+  }
+  cJSON *version_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  RenderInput in = {0};
+  in.form = optional_string(motif, "form", &(bool){false});
+  in.degrees = optional_string(motif, "degrees", &(bool){false});
+  in.meter = optional_string(motif, "meter", &(bool){false});
+  in.key = optional_string(motif, "key", &(bool){false});
+  in.pickup = optional_string(motif, "pickup", &(bool){false});
+  in.role = optional_string(version_body, "role", &(bool){false});
+  if (!in.role) {
+    in.role = optional_string(motif, "role", &(bool){false});
+  }
+  in.render_key = has_render_key ? render_key : NULL;
+  if (!cJSON_IsObject(motif) || !in.degrees) {
+    cJSON_Delete(version_body);
+    return send_failure(conn, 404, "this version has no degrees to render");
+  }
+  if (!in.pickup) {
+    in.pickup = "0";
+  }
+  char *xml = NULL;
+  cJSON *playback = NULL;
+  RenderFailure failure = {0, ""};
+  bool ok = render_motif(&in, &xml, &playback, &failure);
+  cJSON_Delete(version_body);
+  if (!ok) {
+    return send_failure(conn, failure.status, failure.message);
+  }
+  if (playback_only) {
+    free(xml);
+    return send_object(conn, playback);
+  }
+  size_t length = strlen(xml);
+  mg_send_http_ok(conn, "application/xml", (long long)length);
+  mg_write(conn, xml, length);
+  cJSON_Delete(playback);
+  free(xml);
+  return 200;
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -1235,6 +1292,11 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 4 && strcmp(segments[2], "versions") == 0) {
     return get ? handle_get_version(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
+  }
+  if (count == 5 && strcmp(segments[2], "versions") == 0 &&
+      (strcmp(segments[4], "score") == 0 || strcmp(segments[4], "playback") == 0)) {
+    return get ? handle_version_render(conn, segments[1], segments[3], strcmp(segments[4], "playback") == 0)
+               : send_method_not_allowed(conn);
   }
   if (count == 5 && strcmp(segments[2], "uses") == 0 && strcmp(segments[4], "update") == 0) {
     return post ? handle_update_use(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
