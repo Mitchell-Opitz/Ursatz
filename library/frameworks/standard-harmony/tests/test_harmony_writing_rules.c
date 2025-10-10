@@ -5,6 +5,12 @@
 #include "harmony_rule_check.h"
 #include "harmony_test_util.h"
 #include "harmony_writing_rules.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "writing", HARMONY_WRITING_RULE_COUNT);
+#define harmony_writing_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_writing_constraint, harmony_writing_rule_holds, HarmonyCadenceWriting, which, subject)
 
 #define WRITING(name) HARMONY_WRITING_##name
 

@@ -5,6 +5,12 @@
 #include "harmony_deceptive_rules.h"
 #include "harmony_deceptive_test_util.h"
 #include "harmony_rule_check.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "deceptive", HARMONY_DECEPTIVE_RULE_COUNT);
+#define harmony_deceptive_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_deceptive_constraint, harmony_deceptive_rule_holds, HarmonyDeceptiveMotion, which, subject)
 
 #define DEC(name) HARMONY_DECEPTIVE_##name
 #define BIT(rule) (1u << (rule))

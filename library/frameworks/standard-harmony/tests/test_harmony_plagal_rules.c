@@ -5,6 +5,12 @@
 #include "harmony_plagal_rules.h"
 #include "harmony_plagal_test_util.h"
 #include "harmony_rule_check.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "plagal", HARMONY_PLAGAL_RULE_COUNT);
+#define harmony_plagal_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_plagal_constraint, harmony_plagal_rule_holds, HarmonyPlagalMotion, which, subject)
 
 #define PLG(name) HARMONY_PLAGAL_##name
 #define BIT(rule) (1u << (rule))

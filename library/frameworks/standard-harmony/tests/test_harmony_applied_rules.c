@@ -5,6 +5,12 @@
 #include "harmony_applied_rules.h"
 #include "harmony_rule_check.h"
 #include "harmony_test_util.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "applied", HARMONY_APPLIED_RULE_COUNT);
+#define harmony_applied_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_applied_constraint, harmony_applied_rule_holds, HarmonyAppliedMotion, which, subject)
 
 #define AR(name) HARMONY_APPLIED_##name
 #define BIT(rule) (1u << (rule))

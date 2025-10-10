@@ -5,6 +5,12 @@
 #include "harmony_neighbor_rules.h"
 #include "harmony_rule_check.h"
 #include "harmony_six_four_test_util.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "neighbor", HARMONY_NEIGHBOR_RULE_COUNT);
+#define harmony_neighbor_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_neighbor_constraint, harmony_neighbor_rule_holds, HarmonySixFour, which, subject)
 
 #define NBR(name) HARMONY_NEIGHBOR_##name
 
