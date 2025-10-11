@@ -55,6 +55,7 @@ static void test_the_worked_examples(void) {
         expect_breaks(&vi, 0, 0);
         expect_breaks(&v7, 0, 0);
         expect_breaks(&iv6, 0, BIT(DEC(PREFER_VI)));
+        assert(!holds(DEC(PREFER_VI), &iv6));
     }
 }
 

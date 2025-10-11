@@ -55,11 +55,13 @@ static void test_the_worked_example_in_major_breaks_no_rule(void) {
 static void test_the_root_position_v_breaks_only_the_soft_rule(void) {
     HarmonyIv6Prolongation p = example_iv6_v(HARMONY_MODE_MAJOR);
     expect_breaks(&p, 0, BIT(IV6(PREFER_V6)));
+    assert(!holds(IV6(PREFER_V6), &p));
 }
 
 static void test_minor_breaks_only_the_soft_rule(void) {
     HarmonyIv6Prolongation p = example_iv6_v6(HARMONY_MODE_MINOR);
     expect_breaks(&p, 0, BIT(IV6(AVOID_IN_MINOR)));
+    assert(!holds(IV6(AVOID_IN_MINOR), &p));
 }
 
 static void test_progression_and_bass_line(void) {

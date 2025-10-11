@@ -191,6 +191,7 @@ static void test_the_half_diminished_chord_is_rare(void) {
     m.alter[0][B] = 0; /* E natural, the seventh of the half-diminished chord */
     assert(holds(AR(CHORD_NOTES), &m));
     expect_breaks(&m, 0, BIT(AR(AVOID_HALF_DIMINISHED)));
+    assert(!holds(AR(AVOID_HALF_DIMINISHED), &m));
 }
 
 static void test_an_applied_chord_without_accidentals_is_rare(void) {
@@ -199,6 +200,7 @@ static void test_an_applied_chord_without_accidentals_is_rare(void) {
         assert(holds((HarmonyAppliedRule)rule, &m));
     }
     expect_breaks(&m, 0, BIT(AR(CHROMATIC)));
+    assert(!holds(AR(CHROMATIC), &m));
 }
 
 static void test_invalid_subject(void) {

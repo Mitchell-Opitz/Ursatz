@@ -80,7 +80,9 @@ static void test_going_directly_to_v_breaks_only_soft_rules(void) {
     HarmonyMediant major = example_direct(HARMONY_MODE_MAJOR);
     HarmonyMediant minor = example_direct(HARMONY_MODE_MINOR);
     expect_breaks(&major, 0, BIT(MED(THROUGH_PREDOMINANT)));
+    assert(!holds(MED(THROUGH_PREDOMINANT), &major));
     expect_breaks(&minor, 0, BIT(MED(THROUGH_PREDOMINANT)) | BIT(MED(AVOID_V_IN_MINOR)));
+    assert(!holds(MED(AVOID_V_IN_MINOR), &minor));
 }
 
 static void test_progression(void) {

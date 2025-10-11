@@ -51,6 +51,9 @@ static void test_good_line(void) {
     unsigned hard = 99, soft = 99;
     assert(standard_counterpoint_second_species_line_check(&exercise, P(D, 0, 4), &hard, &soft));
     assert(hard == 0 && soft == 0);
+    for (int rule = 0; rule < STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT; rule++) {
+        assert(holds((StandardCounterpointSecondSpeciesLineRule)rule, &exercise));
+    }
 }
 
 static void test_leaps(void) {
