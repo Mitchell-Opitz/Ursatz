@@ -5,6 +5,12 @@
 #include "counterpoint_test_util.h"
 #include "harmonic_rules.h"
 #include "rule_check.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "harmonic", STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT);
+#define standard_counterpoint_harmonic_rule_holds(which, subject) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_harmonic_constraint, standard_counterpoint_harmonic_rule_holds, StandardCounterpointPair, which, subject)
 
 static bool holds(StandardCounterpointHarmonicRule rule, const PitchSpelling *const *upper_notes,
                   const PitchSpelling *const *lower_notes, size_t count) {

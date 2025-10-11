@@ -5,6 +5,12 @@
 #include "harmony_applied_rules.h"
 #include "harmony_rule_check.h"
 #include "harmony_test_util.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "applied", HARMONY_APPLIED_RULE_COUNT);
+#define harmony_applied_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_applied_constraint, harmony_applied_rule_holds, HarmonyAppliedMotion, which, subject)
 
 #define AR(name) HARMONY_APPLIED_##name
 #define BIT(rule) (1u << (rule))
@@ -185,6 +191,7 @@ static void test_the_half_diminished_chord_is_rare(void) {
     m.alter[0][B] = 0; /* E natural, the seventh of the half-diminished chord */
     assert(holds(AR(CHORD_NOTES), &m));
     expect_breaks(&m, 0, BIT(AR(AVOID_HALF_DIMINISHED)));
+    assert(!holds(AR(AVOID_HALF_DIMINISHED), &m));
 }
 
 static void test_an_applied_chord_without_accidentals_is_rare(void) {
@@ -193,6 +200,7 @@ static void test_an_applied_chord_without_accidentals_is_rare(void) {
         assert(holds((HarmonyAppliedRule)rule, &m));
     }
     expect_breaks(&m, 0, BIT(AR(CHROMATIC)));
+    assert(!holds(AR(CHROMATIC), &m));
 }
 
 static void test_invalid_subject(void) {

@@ -8,8 +8,10 @@ static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolv
 
 static HarmonyRulePair g_pairs[HARMONY_RESOLUTION_RULE_COUNT];
 static bool g_built[HARMONY_RESOLUTION_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
 static const HarmonyRuleTable TABLE = {"resolution", NAMES,   HARMONY_RESOLUTION_RULE_COUNT,
-                                       NULL,         g_pairs, g_built};
+                                       NULL,         g_pairs, g_built, evaluate_candidate};
 
 const Rule *harmony_resolution_rule(HarmonyResolutionRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -76,4 +78,21 @@ bool harmony_resolution_rule_holds(HarmonyResolutionRule which,
     return !resolution->outer && resolution->complete_dominant_seventh &&
            resolution->from.seventh && resolution->from.degree == 5 && move == -2 &&
            harmony_step_degree(resolution->to_step) == 5;
+}
+
+static bool holds_adapter(int which, const void *subject) {
+    return harmony_resolution_rule_holds((HarmonyResolutionRule)which, subject);
+}
+
+static bool applies_adapter(int which, const void *subject) {
+    return harmony_resolution_rule_applies((HarmonyResolutionRule)which, subject);
+}
+
+/* A rule that does not apply to the voice (not the seventh, not the leading tone) is NOT_APPLICABLE rather than a
+ * vacuous PASS. */
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context) {
+    (void)context;
+    return harmony_rule_table_evaluate(&TABLE, holds_adapter, applies_adapter, sizeof(HarmonyVoiceResolution),
+                                       constraint, candidate);
 }

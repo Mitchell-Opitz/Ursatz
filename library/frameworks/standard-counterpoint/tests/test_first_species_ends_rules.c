@@ -6,6 +6,12 @@
 #include "first_species_ends_rules.h"
 #include "first_species_test_util.h"
 #include "rule_check.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-ends", STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT);
+#define standard_counterpoint_first_species_ends_rule_holds(which, a, b, c) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS3(g_eval, standard_counterpoint_first_species_ends_constraint, standard_counterpoint_first_species_ends_rule_holds, StandardCounterpointPairCantusTonic, which, a, b, c)
 
 #define CANTUS_LOWER STANDARD_COUNTERPOINT_CANTUS_IN_LOWER
 #define CANTUS_UPPER STANDARD_COUNTERPOINT_CANTUS_IN_UPPER

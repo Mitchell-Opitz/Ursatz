@@ -5,6 +5,12 @@
 #include "rule_check.h"
 #include "second_species_line_rules.h"
 #include "second_species_test_util.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "second-species-line", STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT);
+#define standard_counterpoint_second_species_line_rule_holds(which, a, b) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_second_species_line_constraint, standard_counterpoint_second_species_line_rule_holds, StandardCounterpointSecondSpeciesTonic, which, a, b)
 
 #define WHOLE(pitch) ATK(pitch), TIE(pitch)
 
@@ -45,6 +51,9 @@ static void test_good_line(void) {
     unsigned hard = 99, soft = 99;
     assert(standard_counterpoint_second_species_line_check(&exercise, P(D, 0, 4), &hard, &soft));
     assert(hard == 0 && soft == 0);
+    for (int rule = 0; rule < STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT; rule++) {
+        assert(holds((StandardCounterpointSecondSpeciesLineRule)rule, &exercise));
+    }
 }
 
 static void test_leaps(void) {

@@ -11,9 +11,11 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT]
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "first-species-motion", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT, standard_counterpoint_rule_table_never_hard,
-    g_pairs, g_built};
+    g_pairs, g_built, evaluate_candidate};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesMotionRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -108,6 +110,8 @@ static bool holds_adapter(int which, const void *subject) {
     return standard_counterpoint_first_species_motion_rule_holds((StandardCounterpointFirstSpeciesMotionRule)which,
                                                                  subject);
 }
+
+STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointPair)
 
 bool standard_counterpoint_first_species_motion_check(const StandardCounterpointPair *pair, unsigned *violations) {
     if (!standard_counterpoint_pair_valid(pair) || violations == NULL) {

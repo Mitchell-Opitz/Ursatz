@@ -35,8 +35,10 @@ phrase model, six-four, prolongation and cadence Interpretations (PAC and IAC to
 
 Every rule group has Rule/Constraint pairs referencing this Framework plus pure
 check functions. A rule that states what the music requires is hard; "usually",
-"almost always", and "not common" features are soft. `constraint_evaluate` is
-never called here.
+"almost always", and "not common" features are soft. Each rule table registers an
+evaluation callback on its Constraints, so `constraint_evaluate` runs the same check
+(`harmony_rule_table_evaluate`) on a candidate `Value` tagged `standard-harmony/<table prefix>`
+holding the rule's subject struct.
 
 - **Harmonic function** (`harmony_functions.h`): the function of a chord by the
   scale degree of its root, whatever its inversion. Tonic: I (minor: i).

@@ -5,7 +5,8 @@
 #include "harmony_framework.h"
 #include "identity/entity_id.h"
 
-bool harmony_build_rule_pair(const char *name, ConstraintType type, HarmonyRulePair *out) {
+bool harmony_build_rule_pair(const char *name, ConstraintType type, ConstraintEvaluateFn evaluate,
+                             HarmonyRulePair *out) {
     if (type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
@@ -39,6 +40,8 @@ bool harmony_build_rule_pair(const char *name, ConstraintType type, HarmonyRuleP
         rule_destroy(rule);
         return false;
     }
+
+    constraint_set_evaluate_fn(constraint, evaluate);
 
     out->rule = rule;
     out->constraint = constraint;

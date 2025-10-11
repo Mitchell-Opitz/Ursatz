@@ -13,8 +13,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_ARPEGGIATING_RULE_COUNT];
 static bool g_built[HARMONY_ARPEGGIATING_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
 static const HarmonyRuleTable TABLE = {"arpeggiating", NAMES, HARMONY_ARPEGGIATING_RULE_COUNT, table_is_hard,
-                                       g_pairs, g_built};
+                                       g_pairs, g_built, evaluate_candidate};
 
 const Rule *harmony_arpeggiating_rule(HarmonyArpeggiatingRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -68,6 +70,8 @@ bool harmony_arpeggiating_rule_holds(HarmonyArpeggiatingRule which, const Harmon
 static bool holds_adapter(int which, const void *subject) {
     return harmony_arpeggiating_rule_holds((HarmonyArpeggiatingRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonySixFour)
 
 bool harmony_arpeggiating_check(const HarmonySixFour *six_four, unsigned *hard_violations,
                                 unsigned *soft_violations) {

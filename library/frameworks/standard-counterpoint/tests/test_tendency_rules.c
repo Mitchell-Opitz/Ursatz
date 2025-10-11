@@ -5,6 +5,12 @@
 #include "counterpoint_test_util.h"
 #include "rule_check.h"
 #include "tendency_rules.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "tendency", STANDARD_COUNTERPOINT_TENDENCY_COUNT);
+#define standard_counterpoint_tendency_holds(which, subject) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_tendency_constraint, standard_counterpoint_tendency_holds, StandardCounterpointLine, which, subject)
 
 static bool holds(StandardCounterpointTendency which, const PitchSpelling *const *notes, size_t count) {
     StandardCounterpointLine line = {notes, count};

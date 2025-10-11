@@ -14,8 +14,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_DECEPTIVE_RULE_COUNT];
 static bool g_built[HARMONY_DECEPTIVE_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
 static const HarmonyRuleTable TABLE = {"deceptive", NAMES, HARMONY_DECEPTIVE_RULE_COUNT, table_is_hard, g_pairs,
-                                       g_built};
+                                       g_built, evaluate_candidate};
 
 const Rule *harmony_deceptive_rule(HarmonyDeceptiveRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -133,6 +135,8 @@ bool harmony_deceptive_rule_holds(HarmonyDeceptiveRule which, const HarmonyDecep
 static bool holds_adapter(int which, const void *subject) {
     return harmony_deceptive_rule_holds((HarmonyDeceptiveRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyDeceptiveMotion)
 
 bool harmony_deceptive_check(const HarmonyDeceptiveMotion *motion, unsigned *hard_violations,
                              unsigned *soft_violations) {

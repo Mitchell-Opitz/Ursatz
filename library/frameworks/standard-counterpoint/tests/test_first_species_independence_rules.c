@@ -5,6 +5,12 @@
 #include "counterpoint_test_util.h"
 #include "first_species_independence_rules.h"
 #include "rule_check.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-independence", STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT);
+#define standard_counterpoint_first_species_independence_rule_holds(which, a, b) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_first_species_independence_constraint, standard_counterpoint_first_species_independence_rule_holds, StandardCounterpointPairCantus, which, a, b)
 
 #define CANTUS_LOWER STANDARD_COUNTERPOINT_CANTUS_IN_LOWER
 #define CANTUS_UPPER STANDARD_COUNTERPOINT_CANTUS_IN_UPPER

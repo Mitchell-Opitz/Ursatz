@@ -5,6 +5,12 @@
 #include "fifth_species_line_rules.h"
 #include "fifth_species_test_util.h"
 #include "rule_check.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fifth-species-line", STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_COUNT);
+#define standard_counterpoint_fifth_species_line_rule_holds(which, a, b) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_fifth_species_line_constraint, standard_counterpoint_fifth_species_line_rule_holds, StandardCounterpointFifthSpeciesTonic, which, a, b)
 
 #define LINE(name) STANDARD_COUNTERPOINT_FIFTH_SPECIES_LINE_##name
 

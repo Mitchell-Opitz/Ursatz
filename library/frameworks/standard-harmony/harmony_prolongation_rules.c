@@ -14,8 +14,10 @@ static bool table_is_hard(int which) {
 
 static HarmonyRulePair g_pairs[HARMONY_PROLONGATION_RULE_COUNT];
 static bool g_built[HARMONY_PROLONGATION_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
 static const HarmonyRuleTable TABLE = {"prolongation", NAMES, HARMONY_PROLONGATION_RULE_COUNT, table_is_hard,
-                                       g_pairs, g_built};
+                                       g_pairs, g_built, evaluate_candidate};
 
 const Rule *harmony_prolongation_rule(HarmonyProlongationRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -244,6 +246,8 @@ bool harmony_prolongation_rule_holds(HarmonyProlongationRule which, const Harmon
 static bool holds_adapter(int which, const void *subject) {
     return harmony_prolongation_rule_holds((HarmonyProlongationRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyTonicProlongation)
 
 bool harmony_prolongation_check(const HarmonyTonicProlongation *prolongation, unsigned *hard_violations,
                                 unsigned *soft_violations) {

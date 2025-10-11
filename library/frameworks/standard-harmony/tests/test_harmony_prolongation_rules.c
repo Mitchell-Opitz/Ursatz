@@ -4,6 +4,12 @@
 
 #include "harmony_prolongation_test_util.h"
 #include "harmony_rule_check.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "prolongation", HARMONY_PROLONGATION_RULE_COUNT);
+#define harmony_prolongation_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_prolongation_constraint, harmony_prolongation_rule_holds, HarmonyTonicProlongation, which, subject)
 
 #define PRO(name) HARMONY_PROLONGATION_##name
 

@@ -5,6 +5,12 @@
 #include "harmony_iv6_prolongation_rules.h"
 #include "harmony_iv6_prolongation_test_util.h"
 #include "harmony_rule_check.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "iv6-prolongation", HARMONY_IV6_PROLONGATION_RULE_COUNT);
+#define harmony_iv6_prolongation_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_iv6_prolongation_constraint, harmony_iv6_prolongation_rule_holds, HarmonyIv6Prolongation, which, subject)
 
 #define IV6(name) HARMONY_IV6_PROLONGATION_##name
 #define BIT(rule) (1u << (rule))
@@ -49,11 +55,13 @@ static void test_the_worked_example_in_major_breaks_no_rule(void) {
 static void test_the_root_position_v_breaks_only_the_soft_rule(void) {
     HarmonyIv6Prolongation p = example_iv6_v(HARMONY_MODE_MAJOR);
     expect_breaks(&p, 0, BIT(IV6(PREFER_V6)));
+    assert(!holds(IV6(PREFER_V6), &p));
 }
 
 static void test_minor_breaks_only_the_soft_rule(void) {
     HarmonyIv6Prolongation p = example_iv6_v6(HARMONY_MODE_MINOR);
     expect_breaks(&p, 0, BIT(IV6(AVOID_IN_MINOR)));
+    assert(!holds(IV6(AVOID_IN_MINOR), &p));
 }
 
 static void test_progression_and_bass_line(void) {

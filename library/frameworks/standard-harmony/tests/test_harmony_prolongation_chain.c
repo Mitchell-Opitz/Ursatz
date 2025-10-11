@@ -5,6 +5,12 @@
 #include "harmony_prolongation_chain.h"
 #include "harmony_prolongation_test_util.h"
 #include "harmony_rule_check.h"
+#include "harmony_eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+HARMONY_EVAL_TABLE(g_eval, "chain", HARMONY_CHAIN_RULE_COUNT);
+#define harmony_chain_rule_holds(which, subject) \
+    HARMONY_EVAL_HOLDS(g_eval, harmony_chain_constraint, harmony_chain_rule_holds, HarmonyProlongationChain, which, subject)
 
 #define CHAIN(name) HARMONY_CHAIN_##name
 

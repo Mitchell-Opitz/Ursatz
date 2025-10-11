@@ -20,8 +20,11 @@ static bool table_is_hard(int which) {
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
-    "fourth-species-weak", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT, table_is_hard, g_pairs, g_built};
+    "fourth-species-weak", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT, table_is_hard, g_pairs, g_built,
+    evaluate_candidate};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesWeakRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -176,6 +179,8 @@ static bool holds_adapter(int which, const void *subject) {
     return standard_counterpoint_fourth_species_weak_rule_holds((StandardCounterpointFourthSpeciesWeakRule)which,
                                                                 subject);
 }
+
+STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
 
 bool standard_counterpoint_fourth_species_weak_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                      unsigned *hard_violations, unsigned *soft_violations) {

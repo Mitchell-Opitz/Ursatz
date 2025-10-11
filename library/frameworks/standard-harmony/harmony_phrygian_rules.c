@@ -11,7 +11,10 @@ static const char *const NAMES[HARMONY_PHRYGIAN_RULE_COUNT] = {"progression", "c
 
 static HarmonyRulePair g_pairs[HARMONY_PHRYGIAN_RULE_COUNT];
 static bool g_built[HARMONY_PHRYGIAN_RULE_COUNT];
-static const HarmonyRuleTable TABLE = {"phrygian", NAMES, HARMONY_PHRYGIAN_RULE_COUNT, NULL, g_pairs, g_built};
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
+static const HarmonyRuleTable TABLE = {"phrygian", NAMES, HARMONY_PHRYGIAN_RULE_COUNT, NULL, g_pairs, g_built,
+                                       evaluate_candidate};
 
 const Rule *harmony_phrygian_rule(HarmonyPhrygianRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -103,6 +106,8 @@ bool harmony_phrygian_rule_holds(HarmonyPhrygianRule which, const HarmonyPhrygia
 static bool holds_adapter(int which, const void *subject) {
     return harmony_phrygian_rule_holds((HarmonyPhrygianRule)which, subject);
 }
+
+HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyPhrygian)
 
 bool harmony_phrygian_check(const HarmonyPhrygian *phrygian, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_phrygian_valid(phrygian)) {

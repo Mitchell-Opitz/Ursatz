@@ -44,7 +44,9 @@ textbook; each README names the chapters it covers.
   these inputs. That bridge is the next piece of work (see the project roadmap).
 - **Framework singleton.** Each exposes one lazily built `Framework` instance plus one
   `Rule`/`Constraint` pair per rule. Rules are checked with the framework's own
-  `*_rule_holds()` functions, never with `constraint_evaluate()`, which is still a stub.
+  `*_rule_holds()` functions. standard-harmony and standard-counterpoint also register an evaluation
+  callback on each Constraint, so `constraint_evaluate()` runs the same check; the other
+  frameworks never call it and their Constraints return `CONSTRAINT_EVAL_NOT_IMPLEMENTED`.
 - **Hard vs. soft.** Rules phrased as "must" are hard. Rules phrased as "limit", "avoid" or
   "prefer" are soft.
 - **Dependency ceiling.** L0 to L6 plus `theory/framework.h`, `rules/rule.h` and

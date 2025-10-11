@@ -5,6 +5,12 @@
 #include "fifth_species_rhythm_rules.h"
 #include "fifth_species_test_util.h"
 #include "rule_check.h"
+#include "eval_check.h"
+
+/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
+STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fifth-species-rhythm", STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_RULE_COUNT);
+#define standard_counterpoint_fifth_species_rhythm_rule_holds(which, subject) \
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_fifth_species_rhythm_constraint, standard_counterpoint_fifth_species_rhythm_rule_holds, StandardCounterpointFifthSpeciesExercise, which, subject)
 
 #define RHYTHM(name) STANDARD_COUNTERPOINT_FIFTH_SPECIES_RHYTHM_##name
 

@@ -4,6 +4,7 @@
 
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
+#include "counterpoint_subject.h"
 #include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT] = {"begin", "opening-bar", "final-bar",
@@ -11,8 +12,11 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT] =
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
-    "third-species-ends", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built};
+    "third-species-ends", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built,
+    evaluate_candidate};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesEndsRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -116,16 +120,15 @@ bool standard_counterpoint_third_species_ends_rule_holds(StandardCounterpointThi
     }
 }
 
-typedef struct {
-    const StandardCounterpointThirdSpeciesExercise *exercise;
-    const PitchSpelling *tonic;
-} Subject;
+typedef StandardCounterpointThirdSpeciesTonic Subject;
 
 static bool holds_adapter(int which, const void *subject) {
     const Subject *s = subject;
     return standard_counterpoint_third_species_ends_rule_holds((StandardCounterpointThirdSpeciesEndsRule)which,
                                                                s->exercise, s->tonic);
 }
+
+STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_third_species_ends_check(const StandardCounterpointThirdSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *violations) {

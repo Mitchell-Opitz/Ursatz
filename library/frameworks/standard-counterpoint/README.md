@@ -20,7 +20,11 @@ of sounding `PitchSpelling`s, one per note. A two-part texture is
 i of the upper line sounding with the note at position i of the lower line.
 Rhythm is not modeled. Each group below has a Rule/Constraint pair per rule
 referencing this Framework plus a pure check function.
-`constraint_evaluate` is never called here.
+Each rule table (except consonance and motion, which only classify) registers an
+evaluation callback on its Constraints, so `constraint_evaluate` runs the same check
+(`standard_counterpoint_rule_table_evaluate`) on a candidate `Value` tagged
+`standard-counterpoint/<table prefix>` holding the rule's subject; the multi-input subjects are in
+`counterpoint_subject.h`.
 
 - **Consonance** (`consonance_rules.h`): harmonic intervals are perfect
   consonances (unison, fifth, octave), imperfect consonances (major and minor

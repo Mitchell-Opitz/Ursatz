@@ -5,6 +5,7 @@
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
 #include "fourth_species_suspension.h"
+#include "counterpoint_subject.h"
 #include "rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT] = {
@@ -12,8 +13,11 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT] 
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT];
 static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
-    "fourth-species-ends", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built};
+    "fourth-species-ends", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built,
+    evaluate_candidate};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesEndsRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -113,16 +117,15 @@ bool standard_counterpoint_fourth_species_ends_rule_holds(StandardCounterpointFo
     }
 }
 
-typedef struct {
-    const StandardCounterpointFourthSpeciesExercise *exercise;
-    const PitchSpelling *tonic;
-} Subject;
+typedef StandardCounterpointFourthSpeciesTonic Subject;
 
 static bool holds_adapter(int which, const void *subject) {
     const Subject *s = subject;
     return standard_counterpoint_fourth_species_ends_rule_holds((StandardCounterpointFourthSpeciesEndsRule)which,
                                                                 s->exercise, s->tonic);
 }
+
+STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_fourth_species_ends_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *violations) {

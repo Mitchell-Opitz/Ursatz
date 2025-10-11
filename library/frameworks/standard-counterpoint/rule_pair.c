@@ -5,7 +5,8 @@
 #include "framework.h"
 #include "identity/entity_id.h"
 
-bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type, StandardCounterpointRulePair *out) {
+bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type, ConstraintEvaluateFn evaluate,
+                                           StandardCounterpointRulePair *out) {
     if (type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
@@ -39,6 +40,8 @@ bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type
         rule_destroy(rule);
         return false;
     }
+
+    constraint_set_evaluate_fn(constraint, evaluate);
 
     out->rule = rule;
     out->constraint = constraint;
