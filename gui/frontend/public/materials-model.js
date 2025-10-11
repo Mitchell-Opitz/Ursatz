@@ -469,6 +469,36 @@
     };
   }
 
+  const KEY_TONICS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+  /* The 24 keys a motif can sound in, as the Composer writes them. */
+  const RENDER_KEYS = KEY_TONICS.flatMap((tonic) => [`${tonic} major`, `${tonic} minor`]);
+
+  /* The POST that renders a motif body to MusicXML and playback in renderKey (default: the motif's own key). */
+  function renderRequest(body, renderKey) {
+    const motif = body && body.motif ? body.motif : {};
+    const request = {
+      form: motif.form || "full",
+      degrees: typeof motif.degrees === "string" ? motif.degrees : "",
+      meter: typeof motif.meter === "string" ? motif.meter : "4/4",
+      pickup: typeof motif.pickup === "string" && motif.pickup !== "" ? motif.pickup : "0",
+      role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
+    };
+    if (typeof motif.key === "string" && motif.key !== "") {
+      request.key = motif.key;
+    }
+    if (renderKey) {
+      request.render_key = renderKey;
+    }
+    return jsonRequest("POST", "/api/materials/render", request);
+  }
+
+  /* The score and playback URLs of one stored version in renderKey. */
+  function versionScoreUrls(id, number, renderKey) {
+    const base = `/api/materials/items/${encodeURIComponent(id)}/versions/${Number(number)}`;
+    const query = renderKey ? `?key=${encodeURIComponent(renderKey)}` : "";
+    return { musicxmlUrl: `${base}/score${query}`, playbackUrl: `${base}/playback${query}` };
+  }
+
   /* Saving a motif: a new item when id is empty, else a new version. */
   function buildSaveMotifRequest(options) {
     const o = options || {};
@@ -626,6 +656,9 @@
     buildMotifBody,
     buildSaveMotifRequest,
     analysisRows,
+    RENDER_KEYS,
+    renderRequest,
+    versionScoreUrls,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

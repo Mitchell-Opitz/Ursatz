@@ -731,6 +731,50 @@ function renderNewMotif(draftName, draftProject) {
   );
 }
 
+/* The score and playback of a motif version in the score workspace, with a render key select in the header. Nothing
+ * here is saved: the key only changes how the stored degrees are sounded. */
+function buildMotifScore(id, item, body) {
+  const motif = (body && body.motif) || {};
+  const section = materialsElement("section", "panel materials-score");
+  if (typeof motif.degrees !== "string" || motif.degrees === "") {
+    return null;
+  }
+  const mountEl = materialsElement("div", "materials-score-mount");
+  const keySelect = materialsElement("select");
+  const keys = MaterialsModel.RENDER_KEYS.slice();
+  if (typeof motif.key === "string" && motif.key !== "" && !keys.includes(motif.key)) {
+    keys.unshift(motif.key);
+  }
+  for (const key of keys) {
+    const o = materialsElement("option", "", key);
+    o.value = key;
+    keySelect.appendChild(o);
+  }
+  keySelect.value = typeof motif.key === "string" && motif.key !== "" ? motif.key : "C major";
+  const keyLabel = materialsElement("label", "filter-field", "Render key ");
+  keyLabel.appendChild(keySelect);
+  let workspace = null;
+  function mountScore() {
+    if (workspace) {
+      workspace.destroy();
+    }
+    mountEl.innerHTML = "";
+    const urls = MaterialsModel.versionScoreUrls(id, item.current_version, keySelect.value);
+    workspace = ScoreWorkspace.mount(mountEl, {
+      title: item.name,
+      subtitle: `${motif.form || "full"} motif · v${item.current_version} · ${keySelect.value}`,
+      musicxmlUrl: urls.musicxmlUrl,
+      playbackUrl: urls.playbackUrl,
+      headerExtra: keyLabel,
+    });
+  }
+  keySelect.addEventListener("change", mountScore);
+  section.appendChild(materialsElement("h2", "section-title", "Score"));
+  section.appendChild(mountEl);
+  mountScore();
+  return section;
+}
+
 /* The Composer's analysis of a motif version body, or why there is none. */
 function buildAnalysisPanel(body, analysisError) {
   const info = MaterialsModel.analysisRows(body && body.motif, analysisError);
@@ -829,6 +873,10 @@ async function renderMaterialsDetail(type, id, analysisError) {
     const editor = buildMotifEditor(answer.data.body);
     content.appendChild(editor.el);
     content.appendChild(buildAnalysisPanel(answer.data.body, analysisError));
+    const score = buildMotifScore(id, item, answer.data.body);
+    if (score) {
+      content.appendChild(score);
+    }
     content.appendChild(
       buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
         const request = MaterialsModel.buildSaveMotifRequest({
