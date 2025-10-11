@@ -605,6 +605,92 @@ static void test_motif_refused(void) {
   free(motif);
 }
 
+/* The first note of a playback answer: its pitch, and its position as num/den. */
+static bool first_note(const cJSON *playback, int *pitch, int *on_num, int *on_den) {
+  const cJSON *note = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(playback, "notes"), 0);
+  const cJSON *on = cJSON_GetObjectItemCaseSensitive(note, "on");
+  if (!note || !on) {
+    return false;
+  }
+  *pitch = cJSON_GetObjectItemCaseSensitive(note, "pitch")->valueint;
+  *on_num = cJSON_GetArrayItem(on, 0)->valueint;
+  *on_den = cJSON_GetArrayItem(on, 1)->valueint;
+  return true;
+}
+
+static cJSON *render_exchange(const char *key, const char *render_key, const char *pickup, int *status) {
+  char request[512];
+  snprintf(request, sizeof(request),
+           "{\"form\":\"full\",\"degrees\":\"1:q 3:e 5:e 1':h\",\"meter\":\"4/4\",\"key\":\"%s\",\"pickup\":\"%s\","
+           "\"render_key\":\"%s\",\"role\":\"melodic\"}",
+           key, pickup, render_key);
+  return json_exchange("POST", "/api/materials/render", request, status);
+}
+
+/* A motif renders to MusicXML and playback data, in any key, from a request or from a stored version. */
+static void test_motif_render(void) {
+  int status = 0;
+  int pitch = 0;
+  int on_num = -1;
+  int on_den = 0;
+
+  cJSON *answer = render_exchange("D minor", "D minor", "0", &status);
+  check(status == 200 && ok_true(answer), "a degree list renders");
+  check(strstr(string_of(answer, "musicxml"), "<score-partwise") != NULL, "the render answers MusicXML");
+  const cJSON *playback = cJSON_GetObjectItemCaseSensitive(answer, "playback");
+  check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(playback, "notes")) == 4, "the playback holds the four notes");
+  check(strcmp(string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(playback, "parts"), 0), "name"), "melodic") == 0,
+        "the playback has one part named after the role");
+  check(first_note(playback, &pitch, &on_num, &on_den) && pitch == 62, "the first note sounds the tonic");
+  cJSON_Delete(answer);
+
+  answer = render_exchange("D minor", "D minor", "1", &status);
+  playback = cJSON_GetObjectItemCaseSensitive(answer, "playback");
+  check(status == 200 && first_note(playback, &pitch, &on_num, &on_den) && on_num == 0 && on_den == 1,
+        "the first note is at the pickup start");
+  cJSON_Delete(answer);
+
+  answer = render_exchange("D minor", "G minor", "0", &status);
+  playback = cJSON_GetObjectItemCaseSensitive(answer, "playback");
+  check(status == 200 && first_note(playback, &pitch, &on_num, &on_den) && pitch == 67,
+        "another render key moves the pitches");
+  cJSON_Delete(answer);
+
+  answer = render_exchange("D minor", "H major", "0", &status);
+  check(status == 400, "a render key that is not a key is 400");
+  cJSON_Delete(answer);
+
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  cJSON *saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  const char *id = string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id");
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
+  answer = json_exchange("GET", path, NULL, &status);
+  check(status == 200 && first_note(answer, &pitch, &on_num, &on_den) && pitch == 62,
+        "a version sounds in its own key by default");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?key=G%%20minor", id);
+  answer = json_exchange("GET", path, NULL, &status);
+  check(status == 200 && first_note(answer, &pitch, &on_num, &on_den) && pitch == 67,
+        "a version sounds in the chosen key");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score?key=G%%20minor", id);
+  char *response = http_exchange("GET", path, NULL, NULL, 0);
+  check(response && strncmp(response, "HTTP/1.1 200", 12) == 0 && strstr(response, "<score-partwise") != NULL,
+        "a version's score is MusicXML");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score?key=nope", id);
+  response = http_exchange("GET", path, NULL, NULL, 0);
+  check(response && strncmp(response, "HTTP/1.1 400", 12) == 0, "a bad key on a version's score is 400");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/9/score", id);
+  response = http_exchange("GET", path, NULL, NULL, 0);
+  check(response && strncmp(response, "HTTP/1.1 404", 12) == 0, "a missing version's score is 404");
+  free(response);
+  cJSON_Delete(saved);
+}
+
 static void test_body_limit(void) {
   size_t size = 300 * 1024;
   char *big = malloc(size + 64);
@@ -650,6 +736,7 @@ int main(void) {
   test_motif_refused();
   test_motif_forms();
   test_motif_import();
+  test_motif_render();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
