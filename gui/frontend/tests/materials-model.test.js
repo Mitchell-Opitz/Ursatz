@@ -253,6 +253,22 @@ check(M.deleteWarning("Hook", 409, { used_by: [{ id: "a", name: "Main" }] }).mes
 check(M.deleteWarning("Hook", 404, { error: "not found" }) === null, "another failure is not the warning");
 check(M.deleteWarning("Hook", 409, null) === null, "a 409 without users is not the warning");
 
+const renderBody = {
+  motif: { role: "accompaniment", form: "full", meter: "3/4", key: "D minor", pickup: "1", degrees: "1:q 3:e 5:e" },
+};
+const rendered = M.renderRequest(renderBody, "G minor");
+const renderedBody = JSON.parse(rendered.body);
+check(rendered.method === "POST" && rendered.url === "/api/materials/render", "render request is a POST to /render");
+check(renderedBody.degrees === "1:q 3:e 5:e" && renderedBody.key === "D minor" && renderedBody.pickup === "1", "render request carries the stored motif");
+check(renderedBody.render_key === "G minor" && renderedBody.role === "accompaniment", "render request carries the render key and role");
+const plain = JSON.parse(M.renderRequest({ motif: { form: "rhythm", degrees: "x:q x:q", meter: "4/4", key: null } }).body);
+check(!("key" in plain) && !("render_key" in plain) && plain.pickup === "0" && plain.role === "melodic", "render request leaves out a missing key and defaults the pickup and role");
+check(M.RENDER_KEYS.length === 24 && M.RENDER_KEYS[0] === "C major" && M.RENDER_KEYS.includes("Bb minor"), "24 render keys");
+const urls = M.versionScoreUrls("mot-1", 2, "D minor");
+check(urls.musicxmlUrl === "/api/materials/items/mot-1/versions/2/score?key=D%20minor", "score url carries the key");
+check(urls.playbackUrl === "/api/materials/items/mot-1/versions/2/playback?key=D%20minor", "playback url carries the key");
+check(M.versionScoreUrls("mot-1", 2).playbackUrl === "/api/materials/items/mot-1/versions/2/playback", "no key, no query");
+
 if (failures > 0) {
   process.exit(1);
 }
