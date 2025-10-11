@@ -5,6 +5,7 @@
 struct Preference {
     EntityID *id;
     const Framework *framework;
+    PreferenceScoreFn score;
 };
 
 PreferenceResult preference_create(EntityID *id, const Framework *framework, Preference **out) {
@@ -22,6 +23,7 @@ PreferenceResult preference_create(EntityID *id, const Framework *framework, Pre
 
     preference->id = id;
     preference->framework = framework;
+    preference->score = NULL;
 
     *out = preference;
     return PREFERENCE_OK;
@@ -48,6 +50,17 @@ bool preference_identity_equals(const Preference *a, const Preference *b) {
         return false;
     }
     return entity_id_equals(a->id, b->id);
+}
+
+void preference_set_score_fn(Preference *preference, PreferenceScoreFn score) {
+    if (preference == NULL) {
+        return;
+    }
+    preference->score = score;
+}
+
+PreferenceScoreFn preference_score_fn(const Preference *preference) {
+    return preference == NULL ? NULL : preference->score;
 }
 
 PreferenceRankResult preference_rank(const Preference *preference, const Value *candidate,
