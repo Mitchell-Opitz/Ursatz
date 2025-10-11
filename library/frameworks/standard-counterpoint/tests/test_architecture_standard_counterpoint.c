@@ -15,7 +15,7 @@
  * and MUST NOT depend on any other theory/ or rules/ header
  * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference,
  * RuleEvaluation are not needed by this extension; constraint_evaluate
- * itself is never called here -- see rule_pair.c).
+ * itself is never called here; rule tables only register its callback -- see rule_pair.h).
  *
  * Scans every .h/.c file directly under frameworks/standard-counterpoint/
  * (and its analysis/ subdirectory; not its tests/ subdirectory) and flags any local include ("...")

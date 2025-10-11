@@ -31,23 +31,30 @@
  * scope is kept as an opaque, nullable Value, same placeholder
  * treatment Rule and Relationship give their own scope fields.
  *
- * constraint_evaluate is a machine-evaluable stub (TDD §96): it only
- * validates its own arguments and reports that no evaluation logic is
- * wired up yet. Actually deciding whether a candidate satisfies a
- * Constraint is a generation-pipeline concern (music-generation, L8)
- * and is out of scope for this pass -- this stub exists so an L8
- * consumer has a stable call shape to wire up against, not to perform
- * evaluation itself.
+ * constraint_evaluate (TDD §96) decides whether a candidate satisfies a
+ * Constraint by calling the evaluation callback (ConstraintEvaluateFn) the
+ * Constraint's framework registered on it. Constraint holds only that
+ * pointer: the framework owns the callback and whatever data is behind it,
+ * and nothing owned is embedded in Constraint. A Constraint with no callback
+ * reports CONSTRAINT_EVAL_NOT_IMPLEMENTED. Frameworks that never register one
+ * are unaffected.
  *
- * constraint_evaluate takes an optional context (context/context.h),
- * widened now rather than as a later breaking change: CONDITIONAL and
- * CONTEXTUAL constraints need ambient context to decide whether their
- * condition even applies, and no real callers exist yet to break.
- * context is a reference only, not owned. CONSTRAINT_EVAL_NOT_APPLICABLE
- * is the result reserved for a CONDITIONAL/CONTEXTUAL constraint whose
- * condition does not hold for the given candidate/context -- kept
- * distinct from CONSTRAINT_EVAL_FAIL so a caller aggregating scores
- * downstream never conflates "did not apply" with "failed."
+ * The result contract is the same for every ConstraintType:
+ * CONSTRAINT_EVAL_PASS, _FAIL, _NOT_APPLICABLE, or _ERR_NULL_CANDIDATE.
+ * A WEIGHTED constraint stays on this contract too: its weight is read
+ * separately through constraint_weight_numerator/_denominator.
+ *
+ * constraint_evaluate takes an optional context (context/context.h):
+ * CONDITIONAL and CONTEXTUAL constraints need ambient context to decide
+ * whether their condition even applies. context is a reference only, not
+ * owned. CONSTRAINT_EVAL_NOT_APPLICABLE is the result for a CONDITIONAL/
+ * CONTEXTUAL constraint whose condition does not hold for the given
+ * candidate/context -- kept distinct from CONSTRAINT_EVAL_FAIL so a caller
+ * aggregating scores downstream never conflates "did not apply" with
+ * "failed." constraint_evaluate itself returns it only for a CONTEXTUAL
+ * constraint called with no context (the condition is about ambient context,
+ * so with none it cannot hold); the condition Value is opaque, so any other
+ * condition is the callback's to decide.
  */
 
 typedef struct Constraint Constraint;
@@ -123,8 +130,11 @@ void constraint_set_evaluate_fn(Constraint *constraint, ConstraintEvaluateFn eva
 ConstraintEvaluateFn constraint_evaluate_fn(const Constraint *constraint);
 
 /*
- * Stub -- see file header. Never performs evaluation logic in this
- * pass. context is optional -- pass NULL if not supplied.
+ * Evaluates candidate against constraint -- see file header. Returns
+ * ERR_NULL_CANDIDATE for a NULL constraint or candidate, NOT_APPLICABLE for a
+ * CONTEXTUAL constraint with a NULL context, otherwise the registered
+ * callback's result, or NOT_IMPLEMENTED when none is registered. context is
+ * optional -- pass NULL if not supplied.
  */
 ConstraintEvalResult constraint_evaluate(const Constraint *constraint, const Value *candidate, const Context *context);
 
