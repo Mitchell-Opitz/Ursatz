@@ -677,6 +677,350 @@ static int handle_import_motif(struct mg_connection *conn) {
   return send_object(conn, answer);
 }
 
+typedef struct {
+  const char *form;
+  const char *degrees;
+  const char *meter;
+  const char *key;
+  const char *pickup;
+  const char *render_key;
+  const char *role;
+  int tempo;
+} RenderInput;
+
+typedef struct {
+  int status;
+  char message[512];
+} RenderFailure;
+
+static void render_fail(RenderFailure *failure, int status, const char *message) {
+  failure->status = status;
+  snprintf(failure->message, sizeof(failure->message), "%s", message);
+}
+
+static long long fraction_gcd(long long a, long long b) {
+  while (b != 0) {
+    long long t = a % b;
+    a = b;
+    b = t;
+  }
+  return a;
+}
+
+static bool fraction_member(const cJSON *object, const char *name, long long *num, long long *den) {
+  const cJSON *fraction = cJSON_GetObjectItemCaseSensitive(object, name);
+  const cJSON *n = cJSON_GetObjectItemCaseSensitive(fraction, "num");
+  const cJSON *d = cJSON_GetObjectItemCaseSensitive(fraction, "den");
+  if (!cJSON_IsNumber(n) || !cJSON_IsNumber(d) || n->valuedouble < 0 || d->valuedouble < 1) {
+    return false;
+  }
+  long long g = fraction_gcd((long long)n->valuedouble, (long long)d->valuedouble);
+  g = g == 0 ? 1 : g;
+  *num = (long long)n->valuedouble / g;
+  *den = (long long)d->valuedouble / g;
+  return true;
+}
+
+static cJSON *fraction_pair(long long num, long long den) {
+  cJSON *pair = cJSON_CreateArray();
+  if (pair) {
+    cJSON_AddItemToArray(pair, cJSON_CreateNumber((double)num));
+    cJSON_AddItemToArray(pair, cJSON_CreateNumber((double)den));
+  }
+  return pair;
+}
+
+/* The playback shape of analysis_service.h for the Composer's rendered notes: one part named after the role, each
+   position and length in whole notes from the pickup start (the Composer's offsets already start there). */
+static cJSON *build_motif_playback(const cJSON *rendered_notes, const char *role, int tempo) {
+  cJSON *playback = cJSON_CreateObject();
+  cJSON *tempo_list = cJSON_CreateArray();
+  cJSON *parts = cJSON_CreateArray();
+  cJSON *notes = cJSON_CreateArray();
+  cJSON *region = cJSON_CreateObject();
+  cJSON *part = cJSON_CreateObject();
+  if (!playback || !tempo_list || !parts || !notes || !region || !part) {
+    cJSON_Delete(playback);
+    cJSON_Delete(tempo_list);
+    cJSON_Delete(parts);
+    cJSON_Delete(notes);
+    cJSON_Delete(region);
+    cJSON_Delete(part);
+    return NULL;
+  }
+  cJSON_AddItemToObject(region, "at", fraction_pair(0, 1));
+  cJSON_AddNumberToObject(region, "qpm", tempo > 0 ? tempo : 120);
+  cJSON_AddItemToArray(tempo_list, region);
+  cJSON_AddNumberToObject(part, "index", 0);
+  cJSON_AddStringToObject(part, "name", role);
+  cJSON_AddNumberToObject(part, "program", 0);
+  cJSON_AddItemToArray(parts, part);
+  long long end_num = 0;
+  long long end_den = 1;
+  int index = 0;
+  const cJSON *note = NULL;
+  cJSON_ArrayForEach(note, rendered_notes) {
+    long long on_num, on_den, len_num, len_den;
+    const cJSON *pitch = cJSON_GetObjectItemCaseSensitive(note, "midi_pitch");
+    if (!cJSON_IsNumber(pitch) || !fraction_member(note, "offset", &on_num, &on_den) ||
+        !fraction_member(note, "duration", &len_num, &len_den)) {
+      cJSON_Delete(playback);
+      cJSON_Delete(tempo_list);
+      cJSON_Delete(parts);
+      cJSON_Delete(notes);
+      return NULL;
+    }
+    cJSON *entry = cJSON_CreateObject();
+    if (!entry) {
+      cJSON_Delete(playback);
+      cJSON_Delete(tempo_list);
+      cJSON_Delete(parts);
+      cJSON_Delete(notes);
+      return NULL;
+    }
+    cJSON_AddNumberToObject(entry, "i", index++);
+    cJSON_AddItemToObject(entry, "on", fraction_pair(on_num, on_den));
+    cJSON_AddItemToObject(entry, "len", fraction_pair(len_num, len_den));
+    cJSON_AddNumberToObject(entry, "pitch", pitch->valueint);
+    cJSON_AddNumberToObject(entry, "part", 0);
+    cJSON_AddItemToArray(notes, entry);
+    long long stop_num = on_num * len_den + len_num * on_den;
+    long long stop_den = on_den * len_den;
+    long long g = fraction_gcd(stop_num, stop_den);
+    g = g == 0 ? 1 : g;
+    stop_num /= g;
+    stop_den /= g;
+    if (stop_num * end_den > end_num * stop_den) {
+      end_num = stop_num;
+      end_den = stop_den;
+    }
+  }
+  cJSON_AddBoolToObject(playback, "ok", 1);
+  cJSON_AddStringToObject(playback, "tempo_source", tempo > 0 ? "given" : "default");
+  cJSON_AddItemToObject(playback, "tempo", tempo_list);
+  cJSON_AddItemToObject(playback, "parts", parts);
+  cJSON_AddItemToObject(playback, "end", fraction_pair(end_num, end_den));
+  cJSON_AddItemToObject(playback, "notes", notes);
+  return playback;
+}
+
+static bool temp_file(char *path, size_t size, const char *stem) {
+  const char *tmp_dir = getenv("TMPDIR");
+  if (!tmp_dir || tmp_dir[0] != '/' || snprintf(path, size, "%s/%s-XXXXXX", tmp_dir, stem) >= (int)size) {
+    snprintf(path, size, "/tmp/%s-XXXXXX", stem);
+  }
+  int fd = mkstemp(path);
+  if (fd < 0) {
+    return false;
+  }
+  close(fd);
+  return true;
+}
+
+static char *read_whole_file(const char *path) {
+  FILE *file = fopen(path, "rb");
+  if (!file) {
+    return NULL;
+  }
+  size_t capacity = 8192;
+  size_t total = 0;
+  char *text = malloc(capacity);
+  while (text) {
+    size_t n = fread(text + total, 1, capacity - total - 1, file);
+    total += n;
+    if (n == 0) {
+      break;
+    }
+    if (total + 1 >= capacity) {
+      char *grown = realloc(text, capacity * 2);
+      if (!grown) {
+        free(text);
+        text = NULL;
+        break;
+      }
+      text = grown;
+      capacity *= 2;
+    }
+  }
+  fclose(file);
+  if (text) {
+    text[total] = '\0';
+  }
+  return text;
+}
+
+/* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text
+   and *out_playback its playback data (caller-owned). On failure failure holds the status and message. */
+static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_playback, RenderFailure *failure) {
+  const char *form = in->form;
+  if (!form || (strcmp(form, "full") != 0 && strcmp(form, "rhythm") != 0 && strcmp(form, "contour") != 0)) {
+    render_fail(failure, 400, "form must be full, rhythm or contour");
+    return false;
+  }
+  size_t degrees_length = in->degrees ? strlen(in->degrees) : 0;
+  if (degrees_length == 0 || degrees_length > 4000) {
+    render_fail(failure, 400, "degrees must be a list of 1 to 4000 characters");
+    return false;
+  }
+  bool has_key = in->key && in->key[0] != '\0';
+  const char *render_key = in->render_key && in->render_key[0] != '\0' ? in->render_key : (has_key ? in->key : NULL);
+  if (!in->meter || !analysis_meter_ok(in->meter) || (has_key && !analysis_key_ok(in->key)) ||
+      (render_key && !analysis_key_ok(render_key)) || !in->pickup || !analysis_pickup_ok(in->pickup)) {
+    render_fail(failure, 400, "meter must look like 4/4, key like D minor and pickup like 1 or 1/2");
+    return false;
+  }
+  if (!render_key) {
+    render_fail(failure, 400, "give a key");
+    return false;
+  }
+  if (in->tempo < 0 || in->tempo > 400 || (in->tempo > 0 && in->tempo < 20)) {
+    render_fail(failure, 400, "tempo must be 20 to 400");
+    return false;
+  }
+  char input_path[512];
+  char xml_path[512];
+  if (!temp_file(input_path, sizeof(input_path), "ursatz-render")) {
+    render_fail(failure, 500, "could not write the list for the Composer");
+    return false;
+  }
+  if (!temp_file(xml_path, sizeof(xml_path), "ursatz-render-xml")) {
+    unlink(input_path);
+    render_fail(failure, 500, "could not write the list for the Composer");
+    return false;
+  }
+  FILE *file = fopen(input_path, "wb");
+  bool written = file && fwrite(in->degrees, 1, degrees_length, file) == degrees_length;
+  if (file) {
+    written = fclose(file) == 0 && written;
+  }
+  bool ok = false;
+  if (!written) {
+    render_fail(failure, 500, "could not write the list for the Composer");
+  } else {
+    char tempo_text[16];
+    snprintf(tempo_text, sizeof(tempo_text), "%d", in->tempo);
+    const char *args[24];
+    int n = 0;
+    args[n++] = "motive";
+    args[n++] = input_path;
+    args[n++] = "--format";
+    args[n++] = strcmp(form, "full") == 0 ? "degrees" : form;
+    args[n++] = "--form";
+    args[n++] = form;
+    args[n++] = "--meter";
+    args[n++] = in->meter;
+    if (has_key) {
+      args[n++] = "--key";
+      args[n++] = in->key;
+    }
+    args[n++] = "--pickup";
+    args[n++] = in->pickup;
+    args[n++] = "--render-key";
+    args[n++] = render_key;
+    args[n++] = "--musicxml";
+    args[n++] = xml_path;
+    if (in->tempo > 0) {
+      args[n++] = "--tempo";
+      args[n++] = tempo_text;
+    }
+    args[n++] = "--json";
+    args[n] = NULL;
+    UrsatzGuiComposerOutput out = {0, NULL, NULL};
+    UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
+    if (result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
+      render_fail(failure, 503, "composer not found");
+    } else if (result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
+      render_fail(failure, 504, "composer timed out");
+    } else if (result != URSATZ_GUI_COMPOSER_OK) {
+      render_fail(failure, 500, "composer could not be started");
+    } else {
+      if (out.exit_status == 1 || out.exit_status == 2) {
+        char message[512];
+        snprintf(message, sizeof(message), "%s", out.stderr_text[0] ? out.stderr_text : "composer could not render the motif");
+        size_t end = strlen(message);
+        while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
+          message[--end] = '\0';
+        }
+        render_fail(failure, 400, message);
+      } else {
+        cJSON *document = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
+        const cJSON *notes = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "rendered"), "notes");
+        char *xml = document && cJSON_IsArray(notes) ? read_whole_file(xml_path) : NULL;
+        cJSON *playback = xml ? build_motif_playback(notes, in->role && in->role[0] ? in->role : "motif", in->tempo) : NULL;
+        if (playback) {
+          *out_xml = xml;
+          *out_playback = playback;
+          ok = true;
+        } else {
+          free(xml);
+          render_fail(failure, 500, "composer could not render the motif");
+        }
+        cJSON_Delete(document);
+      }
+      ursatz_gui_composer_output_destroy(&out);
+    }
+  }
+  unlink(input_path);
+  unlink(xml_path);
+  return ok;
+}
+
+/* Sends {"ok":true,"musicxml":...,"playback":{...}} and frees xml and playback. */
+static int send_render_answer(struct mg_connection *conn, char *xml, cJSON *playback) {
+  cJSON *answer = cJSON_CreateObject();
+  if (!answer || !cJSON_AddBoolToObject(answer, "ok", 1) || !cJSON_AddStringToObject(answer, "musicxml", xml)) {
+    cJSON_Delete(answer);
+    cJSON_Delete(playback);
+    free(xml);
+    return send_failure(conn, 500, "out of memory");
+  }
+  free(xml);
+  cJSON_AddItemToObject(answer, "playback", playback);
+  return send_object(conn, answer);
+}
+
+/* POST /api/materials/render {form, degrees, meter, key?, pickup?, render_key?, tempo?, role?}: nothing is saved. */
+static int handle_render(struct mg_connection *conn) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  RenderInput in = {0};
+  in.form = optional_string(body, "form", &bad);
+  in.degrees = optional_string(body, "degrees", &bad);
+  in.meter = optional_string(body, "meter", &bad);
+  in.key = optional_string(body, "key", &bad);
+  in.pickup = optional_string(body, "pickup", &bad);
+  in.render_key = optional_string(body, "render_key", &bad);
+  in.role = optional_string(body, "role", &bad);
+  if (!in.pickup) {
+    in.pickup = "0";
+  }
+  const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(body, "tempo");
+  if (tempo && !cJSON_IsNull(tempo)) {
+    if (!cJSON_IsNumber(tempo) || tempo->valuedouble != (double)tempo->valueint) {
+      bad = true;
+    } else {
+      in.tempo = tempo->valueint;
+    }
+  }
+  if (bad) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "form, degrees, meter, key, pickup, render_key and role must be text and tempo a whole number");
+  }
+  char *xml = NULL;
+  cJSON *playback = NULL;
+  RenderFailure failure = {0, ""};
+  bool ok = render_motif(&in, &xml, &playback, &failure);
+  cJSON_Delete(body);
+  if (!ok) {
+    return send_failure(conn, failure.status, failure.message);
+  }
+  return send_render_answer(conn, xml, playback);
+}
+
 static int handle_create_item(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -859,6 +1203,63 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
+/* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default:
+   the motif's own key). Both render the version's motif.degrees with the Composer. */
+static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
+  char *end = NULL;
+  long number = strtol(number_text, &end, 10);
+  if (end == number_text || *end != '\0' || number < 1 || number > 1000000) {
+    return send_failure(conn, 404, "version not found");
+  }
+  char render_key[32];
+  bool has_render_key = query_value(conn, "key", render_key, sizeof(render_key));
+  if (has_render_key && !analysis_key_ok(render_key)) {
+    return send_failure(conn, 400, "key must look like D minor");
+  }
+  cJSON *version_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  RenderInput in = {0};
+  in.form = optional_string(motif, "form", &(bool){false});
+  in.degrees = optional_string(motif, "degrees", &(bool){false});
+  in.meter = optional_string(motif, "meter", &(bool){false});
+  in.key = optional_string(motif, "key", &(bool){false});
+  in.pickup = optional_string(motif, "pickup", &(bool){false});
+  in.role = optional_string(version_body, "role", &(bool){false});
+  if (!in.role) {
+    in.role = optional_string(motif, "role", &(bool){false});
+  }
+  in.render_key = has_render_key ? render_key : NULL;
+  if (!cJSON_IsObject(motif) || !in.degrees) {
+    cJSON_Delete(version_body);
+    return send_failure(conn, 404, "this version has no degrees to render");
+  }
+  if (!in.pickup) {
+    in.pickup = "0";
+  }
+  char *xml = NULL;
+  cJSON *playback = NULL;
+  RenderFailure failure = {0, ""};
+  bool ok = render_motif(&in, &xml, &playback, &failure);
+  cJSON_Delete(version_body);
+  if (!ok) {
+    return send_failure(conn, failure.status, failure.message);
+  }
+  if (playback_only) {
+    free(xml);
+    return send_object(conn, playback);
+  }
+  size_t length = strlen(xml);
+  mg_send_http_ok(conn, "application/xml", (long long)length);
+  mg_write(conn, xml, length);
+  cJSON_Delete(playback);
+  free(xml);
+  return 200;
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -891,6 +1292,11 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 4 && strcmp(segments[2], "versions") == 0) {
     return get ? handle_get_version(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
+  }
+  if (count == 5 && strcmp(segments[2], "versions") == 0 &&
+      (strcmp(segments[4], "score") == 0 || strcmp(segments[4], "playback") == 0)) {
+    return get ? handle_version_render(conn, segments[1], segments[3], strcmp(segments[4], "playback") == 0)
+               : send_method_not_allowed(conn);
   }
   if (count == 5 && strcmp(segments[2], "uses") == 0 && strcmp(segments[4], "update") == 0) {
     return post ? handle_update_use(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
@@ -1232,6 +1638,9 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (strcmp(segments[0], "items") == 0) {
     return route_items(conn, method, segments, count);
+  }
+  if (count == 1 && strcmp(segments[0], "render") == 0) {
+    return strcmp(method, "POST") == 0 ? handle_render(conn) : send_method_not_allowed(conn);
   }
   if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "import") == 0) {
     return strcmp(method, "POST") == 0 ? handle_import_motif(conn) : send_method_not_allowed(conn);
