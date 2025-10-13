@@ -10,6 +10,12 @@
 #include <ctype.h>
 #include <unistd.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
+
 #include "../service/composer_service.h"
 #include "../service/material_service.h"
 #include "../service/subject_service.h"
@@ -1260,6 +1266,67 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   return 200;
 }
 
+/* ---- variants ---------------------------------------------------------- */
+
+/* Runs the Composer with args and parses its JSON output. Returns NULL after setting *status and message (500 when the
+   Composer cannot run, 400 when it refuses the input, which is its exit status 1 or 2). */
+static cJSON *composer_json(const char *const *args, int *status, char *message, size_t message_size) {
+  UrsatzGuiComposerOutput out = {0, NULL, NULL};
+  UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
+  if (result != URSATZ_GUI_COMPOSER_OK) {
+    *status = 500;
+    snprintf(message, message_size, "%s",
+             result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY  ? "composer not found"
+             : result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT ? "composer timed out"
+                                                          : "composer could not be started");
+    return NULL;
+  }
+  cJSON *json = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
+  if (!json) {
+    *status = out.exit_status == 1 || out.exit_status == 2 ? 400 : 500;
+    snprintf(message, message_size, "%s", out.stderr_text[0] ? out.stderr_text : "composer could not make variants");
+    size_t end = strlen(message);
+    while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
+      message[--end] = '\0';
+    }
+  }
+  ursatz_gui_composer_output_destroy(&out);
+  return json;
+}
+
+static cJSON *g_variant_operations = NULL;
+#ifdef _WIN32
+static SRWLOCK g_variant_operations_lock = SRWLOCK_INIT;
+#define OPERATIONS_LOCK() AcquireSRWLockExclusive(&g_variant_operations_lock)
+#define OPERATIONS_UNLOCK() ReleaseSRWLockExclusive(&g_variant_operations_lock)
+#else
+static pthread_mutex_t g_variant_operations_lock = PTHREAD_MUTEX_INITIALIZER;
+#define OPERATIONS_LOCK() pthread_mutex_lock(&g_variant_operations_lock)
+#define OPERATIONS_UNLOCK() pthread_mutex_unlock(&g_variant_operations_lock)
+#endif
+
+/* GET /api/materials/variant-operations: the Composer's operation list, read once and kept for the server's life. */
+static int handle_variant_operations(struct mg_connection *conn) {
+  OPERATIONS_LOCK();
+  if (!g_variant_operations) {
+    const char *args[] = {"variants", "--list-ops", "--json", NULL};
+    int status = 0;
+    char message[512];
+    g_variant_operations = composer_json(args, &status, message, sizeof(message));
+    if (!g_variant_operations) {
+      OPERATIONS_UNLOCK();
+      return send_failure(conn, status, message);
+    }
+  }
+  cJSON *copy = cJSON_Duplicate(g_variant_operations, 1);
+  OPERATIONS_UNLOCK();
+  if (!copy || !cJSON_AddBoolToObject(copy, "ok", 1)) {
+    cJSON_Delete(copy);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, copy);
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -1638,6 +1705,9 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (strcmp(segments[0], "items") == 0) {
     return route_items(conn, method, segments, count);
+  }
+  if (count == 1 && strcmp(segments[0], "variant-operations") == 0) {
+    return strcmp(method, "GET") == 0 ? handle_variant_operations(conn) : send_method_not_allowed(conn);
   }
   if (count == 1 && strcmp(segments[0], "render") == 0) {
     return strcmp(method, "POST") == 0 ? handle_render(conn) : send_method_not_allowed(conn);
