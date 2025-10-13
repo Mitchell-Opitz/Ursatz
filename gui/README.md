@@ -605,6 +605,30 @@ checked before they reach the argument list.
 - `rhythm` and `contour` motifs are saved with `analysis: null` until P13.
   The stored `pickup` is not passed to the Composer yet.
 
+#### Motif score and playback
+
+A motif's stored `motif.degrees` is shown in the score workspace and sounded
+in any of the 24 keys. Nothing is saved; the key only changes how the stored
+list is sounded.
+
+- `POST /api/materials/render` takes `{form, degrees, meter, key?, pickup?,
+  render_key?, tempo?, role?}` (`form` `full`, `rhythm` or `contour`;
+  `degrees` 1 to 4000 characters; `tempo` 20 to 400) and answers
+  `{ok, musicxml, playback}`. The route runs `ursatz-composer motive <file>
+  --format degrees|rhythm|contour --form <form> --meter <m> [--key <k>]
+  --pickup <p> --render-key <k> --musicxml <file> [--tempo <n>] --json`.
+  `render_key` defaults to `key`; without either the answer is 400 "give a
+  key". A list the Composer refuses is 400 with its message.
+- `playback` has the shape of the Analyzer's playback (`tempo`, one part
+  named after the role, `end`, `notes`). Positions are whole notes from the
+  pickup start, so the first note is at `[0, 1]`.
+- `GET /api/materials/items/<id>/versions/<n>/score?key=` answers MusicXML
+  and `.../playback?key=` answers the playback JSON for that stored version;
+  `key` defaults to the motif's own key, and a version without degrees is 404.
+- The motif detail mounts `ScoreWorkspace` with these URLs and a render key
+  select in the header. `MaterialsModel.renderRequest(body, renderKey)` builds
+  the POST for an unsaved candidate.
+
 ### Subjects
 
 A subject is a character, place, idea or note that items and Library pieces
