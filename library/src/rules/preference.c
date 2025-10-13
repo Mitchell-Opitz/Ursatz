@@ -63,13 +63,23 @@ PreferenceScoreFn preference_score_fn(const Preference *preference) {
     return preference == NULL ? NULL : preference->score;
 }
 
-PreferenceRankResult preference_rank(const Preference *preference, const Value *candidate,
-                                      unsigned long *out_numerator, unsigned long *out_denominator) {
-    (void)preference;
-    (void)out_numerator;
-    (void)out_denominator;
-    if (candidate == NULL) {
+PreferenceRankResult preference_rank(const Preference *preference, const Value *candidate, const Context *context,
+                                     unsigned long *out_numerator, unsigned long *out_denominator) {
+    if (preference == NULL || candidate == NULL) {
         return PREFERENCE_RANK_ERR_NULL_CANDIDATE;
     }
-    return PREFERENCE_RANK_NOT_IMPLEMENTED;
+    if (preference->score == NULL) {
+        return PREFERENCE_RANK_NOT_IMPLEMENTED;
+    }
+    PreferenceScore score = preference->score(preference, candidate, context);
+    if (score.denominator == 0) {
+        return PREFERENCE_RANK_NOT_IMPLEMENTED;
+    }
+    if (out_numerator != NULL) {
+        *out_numerator = score.numerator;
+    }
+    if (out_denominator != NULL) {
+        *out_denominator = score.denominator;
+    }
+    return PREFERENCE_RANK_COMPUTED;
 }

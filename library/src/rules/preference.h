@@ -87,13 +87,17 @@ void preference_set_score_fn(Preference *preference, PreferenceScoreFn score);
 PreferenceScoreFn preference_score_fn(const Preference *preference);
 
 /*
- * Stub -- see file header. Never rejects/invalidates a candidate: on
- * PREFERENCE_RANK_COMPUTED, out_numerator/out_denominator are set;
- * this pass never reaches PREFERENCE_RANK_COMPUTED since no ranking
- * logic is wired up yet (always returns PREFERENCE_RANK_NOT_IMPLEMENTED
- * for a non-NULL candidate).
+ * Ranks candidate by calling the scoring callback the Preference's framework
+ * registered. Never rejects/invalidates a candidate: on
+ * PREFERENCE_RANK_COMPUTED, out_numerator/out_denominator hold the callback's
+ * score (each is written only if non-NULL). Returns
+ * PREFERENCE_RANK_ERR_NULL_CANDIDATE for a NULL preference or candidate, and
+ * PREFERENCE_RANK_NOT_IMPLEMENTED when no callback is registered or the
+ * callback could not score the candidate (a score with denominator 0); the
+ * outputs are left untouched in both cases. context is optional -- pass NULL
+ * if not supplied.
  */
-PreferenceRankResult preference_rank(const Preference *preference, const Value *candidate,
-                                      unsigned long *out_numerator, unsigned long *out_denominator);
+PreferenceRankResult preference_rank(const Preference *preference, const Value *candidate, const Context *context,
+                                     unsigned long *out_numerator, unsigned long *out_denominator);
 
 #endif
