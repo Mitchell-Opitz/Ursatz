@@ -1327,6 +1327,167 @@ static int handle_variant_operations(struct mg_connection *conn) {
   return send_object(conn, copy);
 }
 
+/* Writes text to a new temp file named after stem; path receives its name. */
+static bool write_temp_text(char *path, size_t size, const char *stem, const char *text) {
+  if (!temp_file(path, size, stem)) {
+    return false;
+  }
+  FILE *file = fopen(path, "wb");
+  size_t length = strlen(text);
+  bool written = file && fwrite(text, 1, length, file) == length;
+  if (file && fclose(file) != 0) {
+    written = false;
+  }
+  if (!written) {
+    unlink(path);
+  }
+  return written;
+}
+
+/* The largest seed the Composer takes: its cap is 4294967295 less the 16 variants of a run. */
+static const double kMaxVariantSeed = 4294967279.0;
+
+/* Runs `variants` on the motif member of a version body (its degrees, form, meter, key and pickup). chain (an object
+   {"steps": [...]}) is optional and means random chains when NULL; seed is optional (negative: the clock). On success
+   returns the Composer's document; otherwise NULL with *status and message set. */
+static cJSON *run_variants(const cJSON *motif, const cJSON *chain, int count, double seed, int *status, char *message,
+                           size_t message_size) {
+  bool bad = false;
+  const char *form = optional_string(motif, "form", &bad);
+  const char *degrees = optional_string(motif, "degrees", &bad);
+  const char *meter = optional_string(motif, "meter", &bad);
+  const char *key = optional_string(motif, "key", &bad);
+  const char *pickup = optional_string(motif, "pickup", &bad);
+  if (bad || !form || !degrees || degrees[0] == '\0' || !meter) {
+    *status = 400;
+    snprintf(message, message_size, "this motif has no degrees to vary");
+    return NULL;
+  }
+  char input_path[512];
+  char chain_path[512] = "";
+  if (!write_temp_text(input_path, sizeof(input_path), "ursatz-variants", degrees)) {
+    *status = 500;
+    snprintf(message, message_size, "could not write the degrees for the Composer");
+    return NULL;
+  }
+  bool full = strcmp(form, "full") == 0;
+  if (chain) {
+    char *chain_text = cJSON_PrintUnformatted(chain);
+    bool written = chain_text && write_temp_text(chain_path, sizeof(chain_path), "ursatz-chain", chain_text);
+    free(chain_text);
+    if (!written) {
+      unlink(input_path);
+      *status = 500;
+      snprintf(message, message_size, "could not write the chain for the Composer");
+      return NULL;
+    }
+  }
+  char count_text[16];
+  char seed_text[32];
+  snprintf(count_text, sizeof(count_text), "%d", count);
+  snprintf(seed_text, sizeof(seed_text), "%.0f", seed);
+  const char *args[24];
+  int n = 0;
+  args[n++] = "variants";
+  args[n++] = input_path;
+  args[n++] = full ? "--format" : "--form";
+  args[n++] = full ? "degrees" : form;
+  args[n++] = "--meter";
+  args[n++] = meter;
+  if (key && key[0] != '\0') {
+    args[n++] = "--key";
+    args[n++] = key;
+  }
+  if (pickup) {
+    args[n++] = "--pickup";
+    args[n++] = pickup;
+  }
+  if (chain) {
+    args[n++] = "--chain";
+    args[n++] = chain_path;
+  }
+  args[n++] = "--count";
+  args[n++] = count_text;
+  if (seed >= 0) {
+    args[n++] = "--seed";
+    args[n++] = seed_text;
+  }
+  args[n++] = "--json";
+  args[n] = NULL;
+  cJSON *document = composer_json(args, status, message, message_size);
+  unlink(input_path);
+  if (chain) {
+    unlink(chain_path);
+  }
+  return document;
+}
+
+/* POST /api/materials/items/<id>/variants {chain?, count?, seed?}: candidates from the item's current degrees; nothing is
+   saved. The answer is the Composer's document plus "ok" and "seed". */
+static int handle_variants(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *chain = cJSON_GetObjectItemCaseSensitive(body, "chain");
+  const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
+  const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  if (cJSON_IsNull(chain)) {
+    chain = NULL;
+  }
+  if (cJSON_IsNull(count_item)) {
+    count_item = NULL;
+  }
+  if (cJSON_IsNull(seed_item)) {
+    seed_item = NULL;
+  }
+  int count = 6;
+  double seed = -1;
+  bool valid = (!chain || (cJSON_IsObject(chain) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(chain, "steps")))) &&
+               (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
+                                count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
+               (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
+                               seed_item->valuedouble <= kMaxVariantSeed &&
+                               seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
+  if (!valid) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16 and seed a whole number from 0");
+  }
+  if (count_item) {
+    count = (int)count_item->valuedouble;
+  }
+  if (seed_item) {
+    seed = seed_item->valuedouble;
+  }
+  cJSON *item_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &item_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, result);
+  }
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
+  char message[512];
+  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, chain, count, seed, &status, message, sizeof(message))
+                                          : NULL;
+  if (!cJSON_IsObject(motif)) {
+    status = 400;
+    snprintf(message, sizeof(message), "only a motif has variants");
+  }
+  cJSON_Delete(body);
+  cJSON_Delete(item_body);
+  if (!document) {
+    return send_failure(conn, status, message);
+  }
+  const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");
+  if (!cJSON_AddBoolToObject(document, "ok", 1) ||
+      (!run_seed && !cJSON_AddNumberToObject(document, "seed", seed >= 0 ? seed : 0))) {
+    cJSON_Delete(document);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, document);
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -1364,6 +1525,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
       (strcmp(segments[4], "score") == 0 || strcmp(segments[4], "playback") == 0)) {
     return get ? handle_version_render(conn, segments[1], segments[3], strcmp(segments[4], "playback") == 0)
                : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "variants") == 0) {
+    return post ? handle_variants(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 5 && strcmp(segments[2], "uses") == 0 && strcmp(segments[4], "update") == 0) {
     return post ? handle_update_use(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
