@@ -109,6 +109,7 @@ add_library(ursatz
     rules/constraint.c
     rules/preference.c
     rules/preference_weight.c
+    rules/preference_ranking.c
     rules/rule_evaluation.c
     theory/heuristic.c
     theory/tendency.c
