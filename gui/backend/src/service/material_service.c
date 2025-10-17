@@ -1094,7 +1094,7 @@ static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON
 }
 
 static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *name, const char *project_id,
-                                                  const cJSON *body, cJSON **out_item) {
+                                                  const cJSON *body, const char *note, cJSON **out_item) {
     const char *prefix = prefix_for_type(type);
     if (!prefix) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE;
@@ -1103,7 +1103,15 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
     char *clean_name = NULL;
+    char *clean_note = NULL;
     UrsatzGuiMaterialResult result = normalize_name(name, &clean_name);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        bool alloc_failed = false;
+        clean_note = trim_text(note, NOTE_MAX_CHARS, &alloc_failed);
+        if (!clean_note) {
+            result = alloc_failed ? URSATZ_GUI_MATERIAL_ERR_ALLOC : URSATZ_GUI_MATERIAL_ERR_INVALID_NAME;
+        }
+    }
     if (result == URSATZ_GUI_MATERIAL_OK && !project_exists_locked(project_id)) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
@@ -1142,7 +1150,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
                   cJSON_AddStringToObject(item, "name", clean_name) &&
                   cJSON_AddStringToObject(item, "project_id", project_id) &&
                   cJSON_AddStringToObject(item, "created_at", now) && cJSON_AddStringToObject(item, "updated_at", now) &&
-                  append_version_entry(item, 1, "");
+                  append_version_entry(item, 1, clean_note);
         if (!ok) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
         } else if (!make_dir(dir)) {
@@ -1168,19 +1176,26 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
     cJSON_Delete(stored);
     free(id);
     free(clean_name);
+    free(clean_note);
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, const char *name,
+                                                               const char *project_id, const cJSON *body,
+                                                               const char *note, cJSON **out_item) {
+    if (out_item) {
+        *out_item = NULL;
+    }
+    LOCK();
+    UrsatzGuiMaterialResult result = g_ready ? create_item_locked(type, name, project_id, body, note, out_item)
+                                             : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    UNLOCK();
     return result;
 }
 
 UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const char *name, const char *project_id,
                                                          const cJSON *body, cJSON **out_item) {
-    if (out_item) {
-        *out_item = NULL;
-    }
-    LOCK();
-    UrsatzGuiMaterialResult result = g_ready ? create_item_locked(type, name, project_id, body, out_item)
-                                             : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
-    UNLOCK();
-    return result;
+    return ursatz_gui_material_item_create_noted(type, name, project_id, body, NULL, out_item);
 }
 
 static int compare_items(const void *a, const void *b) {
