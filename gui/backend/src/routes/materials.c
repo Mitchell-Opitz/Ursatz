@@ -1671,6 +1671,63 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
   return send_ok_with(conn, "item", item);
 }
 
+static bool kind_ok(const char *kind) {
+  return kind && (strcmp(kind, "exact") == 0 || strcmp(kind, "motive-form") == 0 || strcmp(kind, "variant") == 0);
+}
+
+/* The derived object of a motif version body, NULL when it has none. */
+static cJSON *derived_of(cJSON *version_body) {
+  cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version_body, "motif"), "derived");
+  return cJSON_IsObject(derived) ? derived : NULL;
+}
+
+/* Replaces a string member of object. */
+static bool set_string(cJSON *object, const char *name, const char *value) {
+  cJSON_DeleteItemFromObjectCaseSensitive(object, name);
+  return cJSON_AddStringToObject(object, name, value) != NULL;
+}
+
+/* POST /api/materials/items/<id>/flag {flag, kind?}: a new version that changes only derived.flag (and kind). */
+static int handle_flag(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *flag = optional_string(body, "flag", &bad);
+  const char *kind = optional_string(body, "kind", &bad);
+  if (bad || !flag_ok(flag) || (kind && !kind_ok(kind))) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "flag is approved, rejected or unflagged; kind is exact, motive-form or variant");
+  }
+  cJSON *current = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, result);
+  }
+  cJSON *derived = derived_of(current);
+  if (!derived) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 400, "only a derived motif has a flag");
+  }
+  if (!set_string(derived, "flag", flag) || (kind && !set_string(derived, "kind", kind))) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 500, "out of memory");
+  }
+  cJSON *item = NULL;
+  result = ursatz_gui_material_item_add_version(id, current, flag, &item);
+  cJSON_Delete(body);
+  cJSON_Delete(current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -1714,6 +1771,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 4 && strcmp(segments[2], "variants") == 0 && strcmp(segments[3], "save") == 0) {
     return post ? handle_variant_save(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "flag") == 0) {
+    return post ? handle_flag(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 5 && strcmp(segments[2], "uses") == 0 && strcmp(segments[4], "update") == 0) {
     return post ? handle_update_use(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
