@@ -8,6 +8,7 @@
 #include <cJSON.h>
 #include <civetweb.h>
 #include <ctype.h>
+#include <math.h>
 #include <unistd.h>
 
 #ifdef _WIN32
@@ -1529,6 +1530,18 @@ static cJSON *derived_record(const char *source_id, int source_version, const cJ
   return derived;
 }
 
+/* Writes prefix and text into out (501 bytes), cut with "..." on a character boundary when over 500 bytes. */
+static void bounded_note(char *out, size_t size, const char *prefix, const char *text) {
+  snprintf(out, size, "%s%s", prefix, text);
+  if (strlen(prefix) + strlen(text) > size - 1) {
+    size_t cut = size - 4;
+    while (cut > 0 && ((unsigned char)out[cut] & 0xC0) == 0x80) {
+      cut--;
+    }
+    snprintf(out + cut, size - cut, "...");
+  }
+}
+
 /* True when the variant document carries what a derived motif is made from. */
 static bool variant_ok(const cJSON *variant) {
   const cJSON *chain = cJSON_GetObjectItemCaseSensitive(variant, "chain");
@@ -1613,14 +1626,7 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
                        default_name, sizeof(default_name));
   const cJSON *derivation = cJSON_GetObjectItemCaseSensitive(variant, "derivation");
   char note[501];
-  snprintf(note, sizeof(note), "%s", derivation->valuestring);
-  if (strlen(derivation->valuestring) > 500) {
-    size_t cut = 497;
-    while (cut > 0 && ((unsigned char)note[cut] & 0xC0) == 0x80) {
-      cut--;
-    }
-    snprintf(note + cut, sizeof(note) - cut, "...");
-  }
+  bounded_note(note, sizeof(note), "", derivation->valuestring);
 
   cJSON *new_body = cJSON_CreateObject();
   cJSON *new_motif = cJSON_CreateObject();
@@ -1728,6 +1734,150 @@ static int handle_flag(struct mg_connection *conn, const char *id) {
   return send_ok_with(conn, "item", item);
 }
 
+/* A chain for the Composer from stored operations: the steps with their params, less the ones the seed drew (`open`),
+   so a rerun draws them again. NULL when out of memory. */
+static cJSON *chain_for_reroll(const cJSON *operations) {
+  cJSON *chain = cJSON_CreateObject();
+  cJSON *steps = chain ? cJSON_AddArrayToObject(chain, "steps") : NULL;
+  const cJSON *step = NULL;
+  cJSON_ArrayForEach(step, operations) {
+    const cJSON *op = cJSON_GetObjectItemCaseSensitive(step, "op");
+    const cJSON *params = cJSON_GetObjectItemCaseSensitive(step, "params");
+    const cJSON *open = cJSON_GetObjectItemCaseSensitive(step, "open");
+    cJSON *entry = cJSON_CreateObject();
+    cJSON *kept = cJSON_CreateObject();
+    if (!steps || !entry || !kept || !cJSON_IsString(op) || !cJSON_AddStringToObject(entry, "op", op->valuestring)) {
+      cJSON_Delete(entry);
+      cJSON_Delete(kept);
+      cJSON_Delete(chain);
+      return NULL;
+    }
+    const cJSON *param = NULL;
+    cJSON_ArrayForEach(param, params) {
+      bool drawn = false;
+      const cJSON *name = NULL;
+      cJSON_ArrayForEach(name, open) {
+        drawn = drawn || (cJSON_IsString(name) && param->string && strcmp(name->valuestring, param->string) == 0);
+      }
+      if (!drawn && !cJSON_AddItemToObject(kept, param->string, cJSON_Duplicate(param, 1))) {
+        cJSON_Delete(entry);
+        cJSON_Delete(kept);
+        cJSON_Delete(chain);
+        return NULL;
+      }
+    }
+    if (!cJSON_AddItemToObject(entry, "params", kept)) {
+      cJSON_Delete(entry);
+      cJSON_Delete(kept);
+      cJSON_Delete(chain);
+      return NULL;
+    }
+    cJSON_AddItemToArray(steps, entry);
+  }
+  return chain;
+}
+
+/* Replaces the member name of object with value (moved in). */
+static bool replace_member(cJSON *object, const char *name, cJSON *value) {
+  cJSON_DeleteItemFromObjectCaseSensitive(object, name);
+  if (value && cJSON_AddItemToObject(object, name, value)) {
+    return true;
+  }
+  cJSON_Delete(value);
+  return false;
+}
+
+/* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and
+   stores the result as a new version. */
+static int handle_reroll(struct mg_connection *conn, const char *id) {
+  cJSON *current = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  cJSON *motif = cJSON_GetObjectItemCaseSensitive(current, "motif");
+  cJSON *derived = derived_of(current);
+  const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
+  const cJSON *source_version = cJSON_GetObjectItemCaseSensitive(derived, "source_version");
+  const cJSON *stored_seed = cJSON_GetObjectItemCaseSensitive(derived, "seed");
+  const cJSON *form_item = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  if (!derived || !cJSON_IsString(source_item) || !cJSON_IsNumber(source_version) || !cJSON_IsString(form_item)) {
+    cJSON_Delete(current);
+    return send_failure(conn, 400, "only a derived motif can be rerolled");
+  }
+  const char *form = form_item->valuestring;
+  cJSON *source = NULL;
+  result = ursatz_gui_material_item_get_version(source_item->valuestring, source_version->valueint, &source);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(current);
+    return send_failure(conn, 404, "the source motif or its version is gone");
+  }
+  cJSON *chain = chain_for_reroll(cJSON_GetObjectItemCaseSensitive(derived, "operations"));
+  const cJSON *shown = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
+  int status = 500;
+  char message[512] = "out of memory";
+  cJSON *document = NULL;
+  const cJSON *variant = NULL;
+  double base = cJSON_IsNumber(stored_seed) ? stored_seed->valuedouble : 0;
+  double seed = 0;
+  for (int attempt = 0; chain && attempt < 16; attempt++) {
+    seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
+    cJSON_Delete(document);
+    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), chain, 1, seed, &status, message,
+                            sizeof(message));
+    if (!document) {
+      break;
+    }
+    variant = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "variants"), 0);
+    const char *degrees = variant_ok(variant) ? variant_text(variant, form, true) : NULL;
+    if (!degrees) {
+      status = 500;
+      snprintf(message, sizeof(message), "composer returned no variant");
+      cJSON_Delete(document);
+      document = NULL;
+      break;
+    }
+    if (!cJSON_IsString(shown) || strcmp(degrees, shown->valuestring) != 0) {
+      break;
+    }
+    variant = NULL;
+  }
+  cJSON_Delete(source);
+  cJSON_Delete(chain);
+  if (!document || !variant) {
+    bool same = document != NULL;
+    cJSON_Delete(document);
+    cJSON_Delete(current);
+    return same ? send_failure(conn, 409, "rerolling gives the same motif") : send_failure(conn, status, message);
+  }
+  const cJSON *chain_out = cJSON_GetObjectItemCaseSensitive(variant, "chain");
+  const cJSON *kind = cJSON_GetObjectItemCaseSensitive(variant, "kind");
+  const cJSON *derivation = cJSON_GetObjectItemCaseSensitive(variant, "derivation");
+  const char *notes = variant_text(variant, form, false);
+  bool ok = notes && cJSON_IsString(kind) && cJSON_IsString(derivation) &&
+            replace_member(motif, "notes", cJSON_CreateString(notes)) &&
+            replace_member(motif, "degrees", cJSON_CreateString(variant_text(variant, form, true))) &&
+            replace_member(motif, "analysis", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "motive"), 1)) &&
+            replace_member(derived, "operations", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(chain_out, "steps"), 1)) &&
+            replace_member(derived, "seed", cJSON_CreateNumber(seed)) &&
+            replace_member(derived, "kind", cJSON_CreateString(kind->valuestring)) &&
+            replace_member(derived, "kept", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "kept"), 1)) &&
+            replace_member(derived, "changed", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "changed"), 1)) &&
+            set_string(derived, "flag", "unflagged");
+  char note[501];
+  if (ok) {
+    bounded_note(note, sizeof(note), "rerolled: ", derivation->valuestring);
+  }
+  cJSON *item = NULL;
+  result = ok ? ursatz_gui_material_item_add_version(id, current, note, &item) : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  cJSON_Delete(document);
+  cJSON_Delete(current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -1771,6 +1921,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 4 && strcmp(segments[2], "variants") == 0 && strcmp(segments[3], "save") == 0) {
     return post ? handle_variant_save(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "reroll") == 0) {
+    return post ? handle_reroll(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "flag") == 0) {
     return post ? handle_flag(conn, segments[1]) : send_method_not_allowed(conn);
