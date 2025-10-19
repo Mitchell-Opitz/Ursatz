@@ -75,6 +75,18 @@ static bool replay_chain(const Motive *source, const Motive *target, const Motiv
            motive_equal(&replay, target);
 }
 
+/*
+ * The steps the registry can replay (R-152): the relation has a row, the row takes the source's form and every parameter
+ * is in the row's range. The recognizer skips any other proposal, so a chain it finds is one the registry replays.
+ */
+static bool admit_step(const MotiveRelationStep *relation, const void *context) {
+    const Motive *source = context;
+    const VariantOperation *operation = operation_of(relation->kind);
+    VariantStep step;
+    return operation && (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
+           step_from_relation(relation, source, &step);
+}
+
 VariantResult variant_recognize_depth(const Motive *source, const Motive *target, size_t depth, VariantChain *chain,
                                       VariantRecognition *out) {
     if (!source || !target || !chain || !out) {
@@ -107,6 +119,8 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     /* A contour form compares by rank (R-148): the Composer normalizes a contour after every step, so exact pitches would not
        reach it. */
     options.contour = source->form == MOTIVE_FORM_CONTOUR;
+    options.admit = admit_step;
+    options.admit_context = source;
     MotiveRecognition recognition;
     MotiveRecognizeResult searched = motive_variant_recognize(&from, &to, &options, &recognition);
     if (searched == MOTIVE_RECOGNIZE_NO_MEMORY) {
