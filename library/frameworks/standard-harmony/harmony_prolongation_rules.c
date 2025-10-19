@@ -16,8 +16,9 @@ static HarmonyRulePair g_pairs[HARMONY_PROLONGATION_RULE_COUNT];
 static bool g_built[HARMONY_PROLONGATION_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"prolongation", NAMES, HARMONY_PROLONGATION_RULE_COUNT, table_is_hard,
-                                       g_pairs, g_built, evaluate_candidate};
+                                       g_pairs, g_built, evaluate_candidate, score_candidate};
 
 const Rule *harmony_prolongation_rule(HarmonyProlongationRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -25,6 +26,10 @@ const Rule *harmony_prolongation_rule(HarmonyProlongationRule which) {
 
 const Constraint *harmony_prolongation_constraint(HarmonyProlongationRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_prolongation_preference(HarmonyProlongationRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_prolongation_rule_name(HarmonyProlongationRule which) {
@@ -248,6 +253,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyTonicProlongation)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyTonicProlongation)
 
 bool harmony_prolongation_check(const HarmonyTonicProlongation *prolongation, unsigned *hard_violations,
                                 unsigned *soft_violations) {

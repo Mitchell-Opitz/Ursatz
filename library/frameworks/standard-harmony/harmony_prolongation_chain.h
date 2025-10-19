@@ -6,6 +6,7 @@
 
 #include "harmony_prolongation_rules.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -50,6 +51,8 @@ bool harmony_chain_valid(const HarmonyProlongationChain *chain);
 
 const Rule *harmony_chain_rule(HarmonyChainRule which);
 const Constraint *harmony_chain_constraint(HarmonyChainRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_chain_preference(HarmonyChainRule which);
 
 /* "links-valid" "linked" "same-mode"; NULL for an invalid rule. */
 const char *harmony_chain_rule_name(HarmonyChainRule which);

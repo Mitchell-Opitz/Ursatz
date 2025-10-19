@@ -13,8 +13,9 @@ static HarmonyRulePair g_pairs[HARMONY_WRITING_RULE_COUNT];
 static bool g_built[HARMONY_WRITING_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"writing", NAMES, HARMONY_WRITING_RULE_COUNT, table_is_hard, g_pairs, g_built,
-                                       evaluate_candidate};
+                                       evaluate_candidate, score_candidate};
 
 const Rule *harmony_writing_rule(HarmonyWritingRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -22,6 +23,10 @@ const Rule *harmony_writing_rule(HarmonyWritingRule which) {
 
 const Constraint *harmony_writing_constraint(HarmonyWritingRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_writing_preference(HarmonyWritingRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_writing_rule_name(HarmonyWritingRule which) {
@@ -89,6 +94,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyCadenceWriting)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyCadenceWriting)
 
 bool harmony_writing_check(const HarmonyCadenceWriting *writing, unsigned *hard_violations,
                            unsigned *soft_violations) {

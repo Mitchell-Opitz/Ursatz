@@ -5,6 +5,7 @@
 
 #include "harmony_six_four.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -53,6 +54,8 @@ typedef enum {
 
 const Rule *harmony_neighbor_rule(HarmonyNeighborRule which);
 const Constraint *harmony_neighbor_constraint(HarmonyNeighborRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_neighbor_preference(HarmonyNeighborRule which);
 
 /* "is-six-four" "static-bass" "same-outer-chords" "bass-is-root" "six-four-notes"
    "upper-neighbors" "prolongs-i-or-v"; NULL for an invalid rule. */

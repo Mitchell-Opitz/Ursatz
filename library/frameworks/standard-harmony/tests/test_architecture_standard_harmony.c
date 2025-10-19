@@ -10,11 +10,11 @@
  * canonical L0-L6 interfaces Framework itself is allowed to touch --
  * identity, core, time, pitch, events, containers, structure, context,
  * semantics, relationship, interpretation -- plus theory/framework.h,
- * rules/rule.h, and rules/constraint.h specifically, the three L7 types
+ * rules/rule.h, rules/constraint.h, and rules/preference.h specifically, the L7 types
  * this extension is explicitly built on top of. It MUST NOT depend on
  * music-analysis, music-generation, music-transform, or music-corpus,
  * and MUST NOT depend on any other theory/ or rules/ header
- * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference,
+ * (Heuristic/Tendency/StatisticalModel/StyleModel,
  * RuleEvaluation are not needed by this extension; constraint_evaluate
  * itself is never called here; rule tables only register its callback -- see rule_pair.h).
  *
@@ -53,7 +53,8 @@ static int check_file(const char *path) {
             continue; /* same-module header */
         }
         if (strcmp(start, "theory/framework.h") == 0 || strcmp(start, "rules/rule.h") == 0 ||
-            strcmp(start, "rules/constraint.h") == 0) {
+            strcmp(start, "rules/constraint.h") == 0 ||
+            strcmp(start, "rules/preference.h") == 0) {
             continue;
         }
 
@@ -66,7 +67,7 @@ static int check_file(const char *path) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "theory/framework.h, rules/rule.h, or rules/constraint.h)\n",
+                    "theory/framework.h, rules/rule.h, rules/constraint.h, or rules/preference.h)\n",
                     path, start);
             violations++;
         }

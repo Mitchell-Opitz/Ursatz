@@ -13,8 +13,9 @@ static HarmonyRulePair g_pairs[HARMONY_PHRYGIAN_RULE_COUNT];
 static bool g_built[HARMONY_PHRYGIAN_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"phrygian", NAMES, HARMONY_PHRYGIAN_RULE_COUNT, NULL, g_pairs, g_built,
-                                       evaluate_candidate};
+                                       evaluate_candidate, score_candidate};
 
 const Rule *harmony_phrygian_rule(HarmonyPhrygianRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -22,6 +23,10 @@ const Rule *harmony_phrygian_rule(HarmonyPhrygianRule which) {
 
 const Constraint *harmony_phrygian_constraint(HarmonyPhrygianRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_phrygian_preference(HarmonyPhrygianRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_phrygian_rule_name(HarmonyPhrygianRule which) {
@@ -108,6 +113,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyPhrygian)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyPhrygian)
 
 bool harmony_phrygian_check(const HarmonyPhrygian *phrygian, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_phrygian_valid(phrygian)) {

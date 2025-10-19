@@ -5,6 +5,7 @@
 
 #include "harmony_embellishing.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -57,6 +58,8 @@ typedef enum {
 
 const Rule *harmony_embellishing_rule(HarmonyEmbellishingRule which);
 const Constraint *harmony_embellishing_constraint(HarmonyEmbellishingRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_embellishing_preference(HarmonyEmbellishingRule which);
 
 /* "classifiable" "stronger-beat" "chord-tone-ends" "middle-not-chord-tone"
    "appoggiatura-strong-beat" "escape-tone-weak-beat" "anticipation-weak-beat"

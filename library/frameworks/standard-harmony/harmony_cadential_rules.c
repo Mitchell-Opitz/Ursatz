@@ -24,8 +24,9 @@ static HarmonyRulePair g_pairs[HARMONY_CADENTIAL_RULE_COUNT];
 static bool g_built[HARMONY_CADENTIAL_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"cadential", NAMES, HARMONY_CADENTIAL_RULE_COUNT, table_is_hard, g_pairs,
-                                       g_built, evaluate_candidate};
+                                       g_built, evaluate_candidate, score_candidate};
 
 const Rule *harmony_cadential_rule(HarmonyCadentialRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -33,6 +34,10 @@ const Rule *harmony_cadential_rule(HarmonyCadentialRule which) {
 
 const Constraint *harmony_cadential_constraint(HarmonyCadentialRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_cadential_preference(HarmonyCadentialRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_cadential_rule_name(HarmonyCadentialRule which) {
@@ -168,6 +173,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyCadentialSixFour)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyCadentialSixFour)
 
 bool harmony_cadential_check(const HarmonyCadentialSixFour *cadential, unsigned *hard_violations,
                              unsigned *soft_violations) {

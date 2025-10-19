@@ -16,8 +16,9 @@ static HarmonyRulePair g_pairs[HARMONY_APPLIED_RULE_COUNT];
 static bool g_built[HARMONY_APPLIED_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"applied", NAMES, HARMONY_APPLIED_RULE_COUNT, table_is_hard, g_pairs, g_built,
-                                       evaluate_candidate};
+                                       evaluate_candidate, score_candidate};
 
 const Rule *harmony_applied_rule(HarmonyAppliedRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -25,6 +26,10 @@ const Rule *harmony_applied_rule(HarmonyAppliedRule which) {
 
 const Constraint *harmony_applied_constraint(HarmonyAppliedRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_applied_preference(HarmonyAppliedRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_applied_rule_name(HarmonyAppliedRule which) {
@@ -167,6 +172,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyAppliedMotion)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyAppliedMotion)
 
 bool harmony_applied_check(const HarmonyAppliedMotion *motion, unsigned *hard_violations,
                            unsigned *soft_violations) {

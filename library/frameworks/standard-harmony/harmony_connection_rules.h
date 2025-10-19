@@ -5,6 +5,7 @@
 
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -59,6 +60,8 @@ bool harmony_connection_valid(const HarmonyConnection *connection);
 
 const Rule *harmony_connection_rule(HarmonyConnectionRule which);
 const Constraint *harmony_connection_constraint(HarmonyConnectionRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_connection_preference(HarmonyConnectionRule which);
 
 /* "progression" "bass-line" "chord-notes" "step-or-common-tone" "no-parallels"; NULL for an
    invalid rule. */

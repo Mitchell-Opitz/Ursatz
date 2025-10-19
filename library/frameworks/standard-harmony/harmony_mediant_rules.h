@@ -6,6 +6,7 @@
 #include "harmony_chord.h"
 #include "harmony_mediant.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -66,6 +67,8 @@ bool harmony_mediant_valid(const HarmonyMediant *mediant);
 
 const Rule *harmony_mediant_rule(HarmonyMediantRule which);
 const Constraint *harmony_mediant_constraint(HarmonyMediantRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_mediant_preference(HarmonyMediantRule which);
 
 /* "progression" "bass-line" "chord-notes" "descending-leading-tone" "no-parallels"
    "root-position" "through-predominant" "avoid-v-in-minor"; NULL for an invalid rule. */

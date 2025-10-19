@@ -5,6 +5,7 @@
 
 #include "harmony_cadence_rules.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -60,6 +61,8 @@ bool harmony_hearing_valid(const HarmonyCadenceHearing *hearing);
 
 const Rule *harmony_hearing_rule(HarmonyHearingRule which);
 const Constraint *harmony_hearing_constraint(HarmonyHearingRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_hearing_preference(HarmonyHearingRule which);
 
 /* "potential-cadence" "beginning-follows" "not-subverted" "phrase-length"; NULL
    for an invalid rule. */

@@ -13,8 +13,9 @@ static HarmonyRulePair g_pairs[HARMONY_CHAIN_RULE_COUNT];
 static bool g_built[HARMONY_CHAIN_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"chain", NAMES, HARMONY_CHAIN_RULE_COUNT, table_is_hard, g_pairs, g_built,
-                                       evaluate_candidate};
+                                       evaluate_candidate, score_candidate};
 
 const Rule *harmony_chain_rule(HarmonyChainRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -22,6 +23,10 @@ const Rule *harmony_chain_rule(HarmonyChainRule which) {
 
 const Constraint *harmony_chain_constraint(HarmonyChainRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_chain_preference(HarmonyChainRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_chain_rule_name(HarmonyChainRule which) {
@@ -92,6 +97,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyProlongationChain)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyProlongationChain)
 
 bool harmony_chain_check(const HarmonyProlongationChain *chain, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_chain_valid(chain)) {

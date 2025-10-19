@@ -6,6 +6,7 @@
 
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -61,6 +62,8 @@ bool harmony_phrase_valid(const HarmonyPhrase *phrase);
 
 const Rule *harmony_phrase_rule(HarmonyPhraseRule which);
 const Constraint *harmony_phrase_constraint(HarmonyPhraseRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_phrase_preference(HarmonyPhraseRule which);
 
 /* "tonic-then-dominant" "no-backward-motion" "weak-predominant-leads-on"
    "iv-before-ii"; NULL for an invalid rule. */

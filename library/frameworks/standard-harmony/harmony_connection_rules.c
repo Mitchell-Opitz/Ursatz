@@ -14,8 +14,9 @@ static HarmonyRulePair g_pairs[HARMONY_CONNECTION_RULE_COUNT];
 static bool g_built[HARMONY_CONNECTION_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"connection", NAMES, HARMONY_CONNECTION_RULE_COUNT, NULL, g_pairs, g_built,
-                                       evaluate_candidate};
+                                       evaluate_candidate, score_candidate};
 
 const Rule *harmony_connection_rule(HarmonyConnectionRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -23,6 +24,10 @@ const Rule *harmony_connection_rule(HarmonyConnectionRule which) {
 
 const Constraint *harmony_connection_constraint(HarmonyConnectionRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_connection_preference(HarmonyConnectionRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_connection_rule_name(HarmonyConnectionRule which) {
@@ -154,6 +159,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyConnection)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyConnection)
 
 bool harmony_connection_check(const HarmonyConnection *connection, unsigned *hard_violations,
                               unsigned *soft_violations) {

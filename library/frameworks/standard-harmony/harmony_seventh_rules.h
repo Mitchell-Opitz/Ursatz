@@ -5,6 +5,7 @@
 
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "seventh_resolution.h"
 #include "semantics/voice_part.h"
@@ -90,6 +91,8 @@ bool harmony_seventh_valid(const HarmonySeventhResolution *resolution);
 
 const Rule *harmony_seventh_rule(HarmonySeventhRule which);
 const Constraint *harmony_seventh_constraint(HarmonySeventhRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_seventh_preference(HarmonySeventhRule which);
 
 /* "bass-sol-to-do" "v7-notes" "active-notes-resolve" "tonic-notes"
    "minor-leading-tone" "avoid-re-to-mi"; NULL for an invalid rule. */
