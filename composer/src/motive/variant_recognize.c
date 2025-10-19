@@ -51,6 +51,30 @@ static bool step_from_relation(const MotiveRelationStep *relation, const Motive 
     return true;
 }
 
+/* Replays a recognized chain without the step at skip (none when skip is the step count) and compares with target. */
+static bool replay_chain(const Motive *source, const Motive *target, const MotiveRecognition *recognition, size_t skip,
+                         VariantChain *chain, VariantRecord *record) {
+    memset(chain, 0, sizeof(*chain));
+    Motive current = *source;
+    for (size_t s = 0; s < recognition->step_count; s++) {
+        if (s == skip) {
+            continue;
+        }
+        if (!step_from_relation(&recognition->steps[s], &current, &chain->steps[chain->step_count])) {
+            return false;
+        }
+        chain->step_count++;
+        /* The motive the next step is applied to. */
+        VariantChain prefix = *chain;
+        if (variant_apply_chain(source, &prefix, 0, &current, NULL) != VARIANT_OK) {
+            return false;
+        }
+    }
+    Motive replay;
+    return chain->step_count > 0 && variant_apply_chain(source, chain, 0, &replay, record) == VARIANT_OK &&
+           motive_equal(&replay, target);
+}
+
 VariantResult variant_recognize_depth(const Motive *source, const Motive *target, size_t depth, VariantChain *chain,
                                       VariantRecognition *out) {
     if (!source || !target || !chain || !out) {
@@ -96,22 +120,18 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     memset(&record, 0, sizeof(record));
     bool replayed = false;
     if (recognition.found) {
-        Motive current = *source;
-        for (size_t s = 0; s < recognition.step_count; s++) {
-            if (!step_from_relation(&recognition.steps[s], &current, &chain->steps[s])) {
-                memset(chain, 0, sizeof(*chain));
-                break;
+        /* A chain that does not replay may hold a harmony step that only adds the implied chord to a motive without chords of
+           its own; the registry refuses that step as unchanged, so each such step is tried left out (R-139). */
+        for (size_t skip = 0; skip <= recognition.step_count && !replayed; skip++) {
+            if (skip < recognition.step_count && recognition.steps[skip].kind != MOTIVE_RELATION_HARMONY_INVERSION &&
+                recognition.steps[skip].kind != MOTIVE_RELATION_HARMONY_SUBSTITUTE) {
+                continue;
             }
-            chain->step_count = s + 1;
-            /* The motive the next step is applied to. */
-            VariantChain prefix = *chain;
-            if (variant_apply_chain(source, &prefix, 0, &current, NULL) != VARIANT_OK) {
-                break;
-            }
+            replayed = replay_chain(source, target, &recognition, skip, chain, &record);
         }
-        Motive replay;
-        replayed = chain->step_count == recognition.step_count &&
-                   variant_apply_chain(source, chain, 0, &replay, &record) == VARIANT_OK && motive_equal(&replay, target);
+        if (!replayed) {
+            memset(chain, 0, sizeof(*chain));
+        }
     }
 
     if (replayed) {
