@@ -80,6 +80,9 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     MotiveRecognizeOptions options;
     motive_recognize_options_default(&options);
     options.max_depth = depth;
+    /* A contour form compares by rank (R-148): the Composer normalizes a contour after every step, so exact pitches would not
+       reach it. */
+    options.contour = source->form == MOTIVE_FORM_CONTOUR;
     MotiveRecognition recognition;
     MotiveRecognizeResult searched = motive_variant_recognize(&from, &to, &options, &recognition);
     if (searched == MOTIVE_RECOGNIZE_NO_MEMORY) {
