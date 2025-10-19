@@ -260,25 +260,6 @@ static void describe_diminish(const VariantValue *values, char *out, size_t size
 
 /* ------------------------------------------------------- library relations */
 
-static MotiveDevResult relation_status(MotiveRelationResult result) {
-    switch (result) {
-    case MOTIVE_RELATION_OK:
-        return MOTIVE_DEV_OK;
-    case MOTIVE_RELATION_UNCHANGED:
-        return MOTIVE_DEV_ERR_UNCHANGED;
-    case MOTIVE_RELATION_RANGE:
-        return MOTIVE_DEV_ERR_RANGE;
-    case MOTIVE_RELATION_NOT_EXPRESSIBLE:
-        return MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
-    case MOTIVE_RELATION_NO_SCALE:
-        return MOTIVE_DEV_ERR_NO_KEY;
-    case MOTIVE_RELATION_INVALID:
-        return MOTIVE_DEV_ERR_INVALID;
-    default:
-        return MOTIVE_DEV_ERR_NOT_APPLICABLE;
-    }
-}
-
 /* The relations that change the harmony: the four harmony rows, passing-harmony and the dominant form. */
 static bool changes_harmony(MotiveRelationKind kind) {
     return (kind >= MOTIVE_RELATION_HARMONY_INVERSION && kind <= MOTIVE_RELATION_PASSING_HARMONY) ||
@@ -311,7 +292,7 @@ static MotiveDevResult relation_apply(MotiveRelationKind kind, const Motive *sou
     if (applied == MOTIVE_RELATION_NO_FEATURE && source->feature_count == 0) {
         return MOTIVE_DEV_ERR_NO_FEATURE;
     }
-    MotiveDevResult status = relation_status(applied);
+    MotiveDevResult status = motive_sketch_result(applied);
     if (status != MOTIVE_DEV_OK) {
         return status;
     }

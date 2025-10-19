@@ -890,6 +890,48 @@ static bool score_is(MotiveScore score, unsigned long num, unsigned long den) {
     return score.numerator == num && score.denominator == den;
 }
 
+/* The pickup scales with augmentation and diminution, and a tonal transposition or inversion spells F and B as degrees. */
+static void test_pickups_and_tonal_spelling(void) {
+    const PlanMeter three_four = {3, 4, 0};
+    const PlanKey c_major = {0, PLAN_MODE_MAJOR};
+    Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
+    Motive result;
+    MotiveDevSpec spec;
+
+    source.pickup = tmake(1, 8);
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_AUGMENT;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
+    assert(is_time(result.pickup, 1, 4) && is_time(result.notes[1].offset, 1, 2));
+    spec.kind = MOTIVE_DEV_DIMINISH;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
+    assert(is_time(result.pickup, 1, 16) && is_time(result.notes[1].offset, 1, 8));
+
+    /* A pickup that reaches the bar, or leaves the thirty-second grid, is refused. */
+    source.pickup = tmake(3, 8);
+    spec.kind = MOTIVE_DEV_AUGMENT;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
+    source.pickup = tmake(1, 32);
+    spec.kind = MOTIVE_DEV_DIMINISH;
+    assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
+
+    /* F and B are natural degrees of C major: a step moves them to natural degrees, never to F sharp or C sharp. */
+    Motive line = load("C4:q F4:q B4:q E4:q", &(PlanMeter){4, 4, 0}, &c_major);
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_TRANSPOSE;
+    spec.tonal = true;
+    spec.amount = 1;
+    assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.notes[0].midi_pitch == 62 && result.notes[1].midi_pitch == 67 && result.notes[2].midi_pitch == 72 &&
+           result.notes[3].midi_pitch == 65);
+    memset(&spec, 0, sizeof(spec));
+    spec.kind = MOTIVE_DEV_INVERT;
+    spec.tonal = true;
+    assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
+    assert(result.notes[0].midi_pitch == 60 && result.notes[1].midi_pitch == 55 && result.notes[2].midi_pitch == 50 &&
+           result.notes[3].midi_pitch == 57);
+}
+
 static void test_recognizability(void) {
     PlanMeter meter = {4, 4, 0};
     PlanKey d_minor = {2, PLAN_MODE_MINOR};
@@ -1051,6 +1093,7 @@ int main(void) {
     test_every_development_is_a_relative();
     test_explicit_parameters();
     test_degenerate_cases();
+    test_pickups_and_tonal_spelling();
     test_recognizability();
     test_scores_in_the_loop();
     test_constraint_json();

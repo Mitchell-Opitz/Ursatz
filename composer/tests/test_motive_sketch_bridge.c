@@ -214,6 +214,24 @@ static void test_refusals(void) {
     assert(!motive_from_sketch(&sketch, &motive, &back));
 }
 
+static void test_result_mapping(void) {
+    static const struct {
+        MotiveRelationResult library;
+        MotiveDevResult composer;
+    } MAP[] = {{MOTIVE_RELATION_OK, MOTIVE_DEV_OK},
+               {MOTIVE_RELATION_NOT_APPLICABLE, MOTIVE_DEV_ERR_NOT_APPLICABLE},
+               {MOTIVE_RELATION_UNCHANGED, MOTIVE_DEV_ERR_UNCHANGED},
+               {MOTIVE_RELATION_RANGE, MOTIVE_DEV_ERR_RANGE},
+               {MOTIVE_RELATION_NOT_EXPRESSIBLE, MOTIVE_DEV_ERR_NOT_EXPRESSIBLE},
+               {MOTIVE_RELATION_NO_SCALE, MOTIVE_DEV_ERR_NO_KEY},
+               {MOTIVE_RELATION_NO_HARMONY, MOTIVE_DEV_ERR_NOT_APPLICABLE},
+               {MOTIVE_RELATION_NO_FEATURE, MOTIVE_DEV_ERR_NOT_APPLICABLE},
+               {MOTIVE_RELATION_INVALID, MOTIVE_DEV_ERR_INVALID}};
+    for (size_t i = 0; i < sizeof(MAP) / sizeof(MAP[0]); i++) {
+        assert(motive_sketch_result(MAP[i].library) == MAP[i].composer);
+    }
+}
+
 int main(void) {
     test_sketch_contents();
     test_implied_chord();
@@ -221,6 +239,7 @@ int main(void) {
     test_round_trips();
     test_a_relation_matches_the_registry();
     test_refusals();
+    test_result_mapping();
     puts("test_motive_sketch_bridge: ok");
     return 0;
 }

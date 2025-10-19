@@ -3,9 +3,11 @@
 
 #include <stdbool.h>
 
+#include "analysis/motive_relation.h"
 #include "analysis/motive_sketch.h"
 
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_develop.h>
 
 /*
  * The Composer's Motive and the library's MotiveSketch (analysis/motive_sketch.h), converted both ways. The library's
@@ -34,9 +36,15 @@ bool motive_to_sketch(const Motive *motive, MotiveSketch *out);
  * The implied chord motive_to_sketch added is not written back: a single chord at 0 that is the best implied chord of
  * the notes is left out when the template has no harmony of its own, so a motive and its round trip are equal.
  *
- * False, with *out untouched, for NULL arguments, a time the Composer cannot hold, a meter it does not have, or a
+ * False, with *out untouched, for NULL arguments, a time the Composer cannot hold (a pickup must be a multiple of a thirty-second), a meter it does not have, or a
  * sketch that is not a valid motive. out may be the template.
  */
 bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motive, Motive *out);
+
+/*
+ * The development result of a library relation result: OK, UNCHANGED, RANGE and NOT_EXPRESSIBLE keep their meaning,
+ * NO_SCALE is NO_KEY, INVALID is INVALID, and every other refusal is NOT_APPLICABLE.
+ */
+MotiveDevResult motive_sketch_result(MotiveRelationResult result);
 
 #endif

@@ -152,7 +152,7 @@ bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motiv
             return false;
         }
     }
-    if (!plan_time(sketch->pickup, &motive.pickup)) {
+    if (!plan_time(sketch->pickup, &motive.pickup) || 32 % motive.pickup.den != 0) {
         return false;
     }
     if (sketch->has_scale &&
@@ -198,4 +198,23 @@ bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motiv
     }
     *out = motive;
     return true;
+}
+
+MotiveDevResult motive_sketch_result(MotiveRelationResult result) {
+    switch (result) {
+    case MOTIVE_RELATION_OK:
+        return MOTIVE_DEV_OK;
+    case MOTIVE_RELATION_UNCHANGED:
+        return MOTIVE_DEV_ERR_UNCHANGED;
+    case MOTIVE_RELATION_RANGE:
+        return MOTIVE_DEV_ERR_RANGE;
+    case MOTIVE_RELATION_NOT_EXPRESSIBLE:
+        return MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+    case MOTIVE_RELATION_NO_SCALE:
+        return MOTIVE_DEV_ERR_NO_KEY;
+    case MOTIVE_RELATION_INVALID:
+        return MOTIVE_DEV_ERR_INVALID;
+    default:
+        return MOTIVE_DEV_ERR_NOT_APPLICABLE;
+    }
 }

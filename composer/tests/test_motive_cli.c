@@ -377,10 +377,10 @@ static void test_extras_in_variants(void) {
     snprintf(arguments, sizeof(arguments), "%s --chain motive_cli_chain.json --count 1 --seed 3 --json", input);
     assert(run_sub("variants", arguments) == 0);
     char *out = read_file("motive_cli_out.txt");
-    /* The source keeps all of it. The fragment keeps the feature it holds whole, the chords from its start (the one
-       sounding there at 0), and the role. */
+    /* The source keeps all of it. The fragment keeps the feature it holds whole, the chords that land on its notes (the
+       one sounding at its start at 0), and the role. */
     assert(strstr(out, "\"harmony\": \"I V6@2 I@3\"") != NULL);
-    assert(strstr(out, "\"harmony\": \"I V6@1/2 I@3/2\"") != NULL);
+    assert(strstr(out, "\"harmony\": \"I V6@1/2\"") != NULL);
     char *fragment = strstr(out, "\"variants\"");
     assert(fragment != NULL);
     assert(strstr(fragment, "\"label\": \"b\"") != NULL && strstr(fragment, "\"label\": \"a\"") == NULL);
