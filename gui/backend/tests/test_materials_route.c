@@ -691,6 +691,118 @@ static void test_motif_render(void) {
   cJSON_Delete(saved);
 }
 
+/* The source motif of the variant tests: saved and analyzed in D minor, so it has degrees. */
+static char *variant_source(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  int status = 0;
+  cJSON *saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  char *id = status == 200 ? strdup(string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id")) : NULL;
+  cJSON_Delete(saved);
+  return id;
+}
+
+/* POST /api/materials/items/<id>/<tail> with a JSON body. */
+static cJSON *item_post(const char *id, const char *tail, const char *body, int *status) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/%s", id, tail);
+  return json_exchange("POST", path, body, status);
+}
+
+static cJSON *item_get(const char *id, const char *tail, int *status) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s%s", id, tail);
+  return json_exchange("GET", path, NULL, status);
+}
+
+/* The degrees text of the i-th candidate of a variants answer. */
+static const char *candidate_degrees(const cJSON *answer, int i) {
+  const cJSON *variant = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "variants"), i);
+  return string_of(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "motive"), "analysis"),
+                   "degrees_text");
+}
+
+/* Variants are listed, generated without saving, and saved as derived motifs. */
+static void test_variants(void) {
+  int status = 0;
+  cJSON *answer = json_exchange("GET", "/api/materials/variant-operations", NULL, &status);
+  check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "operations")) >= 9,
+        "the variant operations are listed");
+  cJSON_Delete(answer);
+
+  char *id = variant_source();
+  check(id != NULL, "the source motif is saved");
+  if (!id) {
+    return;
+  }
+  const char *chain = "{\"steps\":[{\"op\":\"invert\"},{\"op\":\"augment\",\"params\":{\"ratio\":\"2:1\"}}]}";
+  char request[1024];
+  snprintf(request, sizeof(request), "{\"chain\":%s,\"count\":2,\"seed\":11}", chain);
+  answer = item_post(id, "variants", request, &status);
+  check(status == 200 && ok_true(answer) && number_of(answer, "seed") == 11, "variants answer with the seed");
+  check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "variants")) == 2, "two candidates are made");
+  char first[256];
+  snprintf(first, sizeof(first), "%s", candidate_degrees(answer, 0));
+  cJSON *again = item_post(id, "variants", request, &status);
+  check(status == 200 && strcmp(candidate_degrees(again, 0), first) == 0, "the same seed gives the same candidates");
+  cJSON_Delete(again);
+
+  cJSON *items = json_exchange("GET", "/api/materials/items?type=motif", NULL, &status);
+  int before = cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(items, "items"));
+  cJSON_Delete(items);
+  check(status == 200, "the motif list reads");
+
+  const cJSON *variant = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "variants"), 0);
+  cJSON *save = cJSON_CreateObject();
+  cJSON_AddItemToObject(save, "variant", cJSON_Duplicate(variant, 1));
+  cJSON_AddStringToObject(save, "flag", "approved");
+  char *save_text = cJSON_PrintUnformatted(save);
+  cJSON *saved = item_post(id, "variants/save", save_text, &status);
+  check(status == 200 && ok_true(saved), "a candidate is saved");
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(saved, "item");
+  check(strcmp(string_of(item, "name"), "Form invert + augment") == 0, "the name defaults to the source and its operations");
+  const char *derivation = string_of(variant, "derivation");
+  check(strcmp(string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(item, "versions"), 0), "note"), derivation) == 0,
+        "the version note is the derivation line");
+  char new_id[64];
+  snprintf(new_id, sizeof(new_id), "%s", string_of(item, "id"));
+
+  cJSON *read = item_get(new_id, "", &status);
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(read, "body"), "motif");
+  const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+  check(status == 200 && strcmp(string_of(derived, "source_item"), id) == 0 &&
+            number_of(derived, "source_version") == 1 && strcmp(string_of(derived, "flag"), "approved") == 0,
+        "the derived record names the source, its version and the flag");
+  check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(derived, "operations")) == 2 &&
+            number_of(derived, "seed") == 11 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(derived, "harmony")) &&
+            cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(derived, "functions")) == 0,
+        "the derived record holds the chain, the seed, no harmony and no functions");
+  check(strcmp(string_of(motif, "degrees"), first) == 0 && strcmp(string_of(motif, "meter"), "4/4") == 0 &&
+            strcmp(string_of(motif, "pickup"), "0") == 0,
+        "the saved motif has the candidate's degrees and the source's meter and pickup");
+  cJSON_Delete(read);
+
+  items = json_exchange("GET", "/api/materials/items?type=motif", NULL, &status);
+  check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(items, "items")) == before + 1, "saving adds one motif");
+  cJSON_Delete(items);
+
+  cJSON *refused = item_post(id, "variants/save", "{\"variant\":{}}", &status);
+  check(status == 400, "a candidate without a chain is refused");
+  cJSON_Delete(refused);
+  refused = item_post(id, "variants", "{\"count\":99}", &status);
+  check(status == 400, "a count over 16 is refused");
+  cJSON_Delete(refused);
+  refused = item_post(id, "variants", "{\"chain\":{\"steps\":[{\"op\":\"nonsense\"}]}}", &status);
+  check(status == 400, "an unknown operation is refused");
+  cJSON_Delete(refused);
+
+  free(save_text);
+  cJSON_Delete(save);
+  cJSON_Delete(saved);
+  cJSON_Delete(answer);
+  free(id);
+}
+
 static void test_body_limit(void) {
   size_t size = 300 * 1024;
   char *big = malloc(size + 64);
@@ -737,6 +849,7 @@ int main(void) {
   test_motif_forms();
   test_motif_import();
   test_motif_render();
+  test_variants();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
