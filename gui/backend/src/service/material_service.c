@@ -1430,6 +1430,62 @@ static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
     return result;
 }
 
+static UrsatzGuiMaterialResult derived_motifs_locked(cJSON **out) {
+    char dir[PATH_BYTES];
+    char **names = NULL;
+    size_t count = 0;
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+    }
+    cJSON *found = cJSON_CreateArray();
+    UrsatzGuiMaterialResult result = found ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+        cJSON *item = NULL;
+        cJSON *body = NULL;
+        if (load_item_locked(names[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+            continue;
+        }
+        if (strcmp(string_member(item, "type"), "motif") == 0 &&
+            read_version_locked(names[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
+            cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
+            if (cJSON_IsObject(derived)) {
+                cJSON *entry = cJSON_CreateObject();
+                cJSON *copy = cJSON_Duplicate(derived, 1);
+                bool ok = entry && copy && cJSON_AddStringToObject(entry, "id", names[i]) &&
+                          cJSON_AddStringToObject(entry, "name", string_member(item, "name")) &&
+                          cJSON_AddNumberToObject(entry, "current_version", current_version_of(item)) &&
+                          cJSON_AddItemToObject(entry, "derived", copy);
+                if (!ok) {
+                    if (entry && !cJSON_GetObjectItemCaseSensitive(entry, "derived")) {
+                        cJSON_Delete(copy);
+                    }
+                    cJSON_Delete(entry);
+                    result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                } else {
+                    cJSON_AddItemToArray(found, entry);
+                }
+            }
+        }
+        cJSON_Delete(item);
+        cJSON_Delete(body);
+    }
+    free_names(names, count);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        *out = found;
+    } else {
+        cJSON_Delete(found);
+    }
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_derived_motifs(cJSON **out_motifs) {
+    *out_motifs = NULL;
+    LOCK();
+    UrsatzGuiMaterialResult result = g_ready ? derived_motifs_locked(out_motifs) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    UNLOCK();
+    return result;
+}
+
 UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users) {
     *out_users = NULL;
     LOCK();

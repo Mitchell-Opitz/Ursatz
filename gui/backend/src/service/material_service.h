@@ -174,6 +174,12 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
 UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users);
 
 /*
+ * Lists, in one scan of the store, every motif whose current version has a derived record: *out_motifs is a
+ * caller-owned array of {id, name, current_version, derived}, in id order.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_derived_motifs(cJSON **out_motifs);
+
+/*
  * Writes a new version of item id identical to its current one, except that
  * every use of source_id points at the source's current version with a fresh
  * copy; the note is "updated <source name> to v<n>". NOT_FOUND when the item

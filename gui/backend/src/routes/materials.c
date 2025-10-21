@@ -1878,6 +1878,93 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   return send_ok_with(conn, "item", item);
 }
 
+static const int kMaxTreeDepth = 32;
+
+/* A tree node {id, name, current_version, derived, children: []} (derived is a copy, or null) with every entry of index
+   whose derived.source_item is id below it. ancestors lists the ids above, so a loop in the stored records ends. */
+static cJSON *variant_node(const cJSON *index, const char *id, const char *name, int version, const cJSON *derived,
+                           const char **ancestors, int depth) {
+  cJSON *node = cJSON_CreateObject();
+  cJSON *children = cJSON_CreateArray();
+  cJSON *copy = derived ? cJSON_Duplicate(derived, 1) : cJSON_CreateNull();
+  if (!node || !children || !copy || !cJSON_AddStringToObject(node, "id", id) ||
+      !cJSON_AddStringToObject(node, "name", name) || !cJSON_AddNumberToObject(node, "current_version", version) ||
+      !cJSON_AddItemToObject(node, "derived", copy)) {
+    if (!node || !cJSON_GetObjectItemCaseSensitive(node, "derived")) {
+      cJSON_Delete(copy);
+    }
+    cJSON_Delete(children);
+    cJSON_Delete(node);
+    return NULL;
+  }
+  if (!cJSON_AddItemToObject(node, "children", children)) {
+    cJSON_Delete(children);
+    cJSON_Delete(node);
+    return NULL;
+  }
+  if (depth >= kMaxTreeDepth) {
+    return node;
+  }
+  ancestors[depth] = id;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, index) {
+    const cJSON *entry_id = cJSON_GetObjectItemCaseSensitive(entry, "id");
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(entry, "derived"), "source_item");
+    if (!cJSON_IsString(entry_id) || !cJSON_IsString(source) || strcmp(source->valuestring, id) != 0) {
+      continue;
+    }
+    bool seen = false;
+    for (int i = 0; i <= depth; i++) {
+      seen = seen || strcmp(ancestors[i], entry_id->valuestring) == 0;
+    }
+    if (seen) {
+      continue;
+    }
+    const cJSON *entry_name = cJSON_GetObjectItemCaseSensitive(entry, "name");
+    const cJSON *entry_version = cJSON_GetObjectItemCaseSensitive(entry, "current_version");
+    cJSON *child = variant_node(index, entry_id->valuestring, cJSON_IsString(entry_name) ? entry_name->valuestring : "",
+                                cJSON_IsNumber(entry_version) ? entry_version->valueint : 0,
+                                cJSON_GetObjectItemCaseSensitive(entry, "derived"), ancestors, depth + 1);
+    if (!child) {
+      cJSON_Delete(node);
+      return NULL;
+    }
+    cJSON_AddItemToArray(children, child);
+  }
+  return node;
+}
+
+/* GET /api/materials/items/<id>/variant-tree: the item and, recursively, every motif derived from it. */
+static int handle_variant_tree(struct mg_connection *conn, const char *id) {
+  cJSON *meta = NULL;
+  cJSON *body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  cJSON *index = NULL;
+  if (!cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(body, "motif"))) {
+    cJSON_Delete(meta);
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "only a motif has variants");
+  }
+  result = ursatz_gui_material_derived_motifs(&index);
+  const char *name = optional_string(meta, "name", &(bool){false});
+  const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
+  const char *ancestors[33];
+  cJSON *tree = result == URSATZ_GUI_MATERIAL_OK
+                    ? variant_node(index, id, name ? name : "", cJSON_IsNumber(version) ? version->valueint : 0,
+                                   derived_of(body), ancestors, 0)
+                    : NULL;
+  cJSON_Delete(meta);
+  cJSON_Delete(body);
+  cJSON_Delete(index);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "tree", tree);
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -1921,6 +2008,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 4 && strcmp(segments[2], "variants") == 0 && strcmp(segments[3], "save") == 0) {
     return post ? handle_variant_save(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "variant-tree") == 0) {
+    return get ? handle_variant_tree(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "reroll") == 0) {
     return post ? handle_reroll(conn, segments[1]) : send_method_not_allowed(conn);
