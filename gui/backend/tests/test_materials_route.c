@@ -803,6 +803,114 @@ static void test_variants(void) {
   free(id);
 }
 
+/* Generates one candidate of id with an invert chain and saves it; returns the new item id (caller frees). */
+static char *save_inverted(const char *id, int seed) {
+  int status = 0;
+  char request[128];
+  snprintf(request, sizeof(request), "{\"chain\":{\"steps\":[{\"op\":\"invert\"}]},\"count\":1,\"seed\":%d}", seed);
+  cJSON *answer = item_post(id, "variants", request, &status);
+  char *new_id = NULL;
+  if (status == 200) {
+    cJSON *save = cJSON_CreateObject();
+    cJSON_AddItemToObject(save, "variant", cJSON_Duplicate(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "variants"), 0), 1));
+    char *text = cJSON_PrintUnformatted(save);
+    cJSON *saved = item_post(id, "variants/save", text, &status);
+    new_id = status == 200 ? strdup(string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id")) : NULL;
+    cJSON_Delete(saved);
+    free(text);
+    cJSON_Delete(save);
+  }
+  cJSON_Delete(answer);
+  return new_id;
+}
+
+static int version_count(const cJSON *answer) {
+  return cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions"));
+}
+
+/* Flags are new versions, a reroll changes the seed, and the tree nests the variants of variants. */
+static void test_variant_flags_and_tree(void) {
+  int status = 0;
+  char *source = variant_source();
+  char *child = source ? save_inverted(source, 3) : NULL;
+  char *grandchild = child ? save_inverted(child, 4) : NULL;
+  check(source && child && grandchild, "a source, a variant and a variant of the variant are saved");
+  if (!grandchild) {
+    free(source);
+    free(child);
+    return;
+  }
+
+  cJSON *answer = item_post(child, "flag", "{\"flag\":\"rejected\",\"kind\":\"variant\"}", &status);
+  check(status == 200 && version_count(answer) == 2, "a flag is a new version");
+  check(strcmp(string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions"), 1), "note"), "rejected") == 0,
+        "the version note is the flag");
+  cJSON_Delete(answer);
+  answer = item_get(child, "", &status);
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif");
+  const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+  check(strcmp(string_of(derived, "flag"), "rejected") == 0 && strcmp(string_of(derived, "kind"), "variant") == 0,
+        "the flag and the kind are changed");
+  char degrees[256];
+  snprintf(degrees, sizeof(degrees), "%s", string_of(motif, "degrees"));
+  double seed = number_of(derived, "seed");
+  cJSON_Delete(answer);
+  answer = item_get(child, "/versions/1", &status);
+  check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif"), "derived"), "flag"), "unflagged") == 0,
+        "the first version keeps the old flag");
+  cJSON_Delete(answer);
+  answer = item_post(child, "flag", "{\"flag\":\"maybe\"}", &status);
+  check(status == 400, "an unknown flag is 400");
+  cJSON_Delete(answer);
+  answer = item_post(source, "flag", "{\"flag\":\"approved\"}", &status);
+  check(status == 400, "a motif without derived has no flag");
+  cJSON_Delete(answer);
+
+  answer = item_post(child, "reroll", NULL, &status);
+  check(status == 200 && version_count(answer) == 3, "a reroll is a new version");
+  cJSON_Delete(answer);
+  answer = item_get(child, "", &status);
+  motif = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif");
+  derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+  check(number_of(derived, "seed") == seed + 1000003 && strcmp(string_of(motif, "degrees"), degrees) != 0,
+        "a reroll moves the seed and changes the degrees");
+  check(strcmp(string_of(derived, "flag"), "unflagged") == 0 && strcmp(string_of(derived, "source_item"), source) == 0,
+        "a reroll resets the flag and keeps the source");
+  cJSON_Delete(answer);
+  answer = item_get(child, "", &status);
+  check(strncmp(string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions"), 2), "note"), "rerolled: ", 10) == 0,
+        "the reroll note is the derivation");
+  cJSON_Delete(answer);
+  answer = item_post(source, "reroll", NULL, &status);
+  check(status == 400, "a motif without derived cannot be rerolled");
+  cJSON_Delete(answer);
+
+  answer = item_get(source, "/variant-tree", &status);
+  const cJSON *tree = cJSON_GetObjectItemCaseSensitive(answer, "tree");
+  const cJSON *kids = cJSON_GetObjectItemCaseSensitive(tree, "children");
+  check(status == 200 && strcmp(string_of(tree, "id"), source) == 0 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(tree, "derived")) &&
+            cJSON_GetArraySize(kids) == 1,
+        "the tree starts at the source with one child");
+  const cJSON *node = cJSON_GetArrayItem(kids, 0);
+  check(strcmp(string_of(node, "id"), child) == 0 && number_of(node, "current_version") == 3 &&
+            cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(node, "children")) == 1 &&
+            strcmp(string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(node, "children"), 0), "id"), grandchild) == 0,
+        "the tree nests the variant of the variant");
+  cJSON_Delete(answer);
+  answer = item_get(grandchild, "/variant-tree", &status);
+  check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "tree"), "children")) == 0 &&
+            strcmp(string_of(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "tree"), "derived"), "source_item"), child) == 0,
+        "a leaf has no children and its derived record");
+  cJSON_Delete(answer);
+  answer = item_get("mot-0000000000000000", "/variant-tree", &status);
+  check(status == 404, "the tree of a missing item is 404");
+  cJSON_Delete(answer);
+
+  free(source);
+  free(child);
+  free(grandchild);
+}
+
 static void test_body_limit(void) {
   size_t size = 300 * 1024;
   char *big = malloc(size + 64);
@@ -850,6 +958,7 @@ int main(void) {
   test_motif_import();
   test_motif_render();
   test_variants();
+  test_variant_flags_and_tree();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
