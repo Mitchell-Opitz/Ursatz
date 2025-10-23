@@ -904,6 +904,36 @@ Items:
 - `POST /api/materials/items/<id>/uses/<source>/update`: writes a new version
   of the item with every use of `<source>` moved to the source's current
   version; answers `{"item"}`.
+- `GET /api/materials/variant-operations`: `{"operations"}` from
+  `ursatz-composer variants --list-ops --json`, read once per server run.
+- `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?}`
+  runs `variants` on the motif's stored degrees, form, meter, key and pickup.
+  `chain` is `{"steps":[{"op","params"?}]}` (random chains when absent),
+  `count` 1 to 16 (default 6), `seed` a whole number from 0. Answers the
+  Composer's `{seed, source, variants}`; nothing is saved.
+- `POST /api/materials/items/<id>/variants/save`: `{"variant","name"?,
+  "flag"?}` with one candidate from the route above. Creates a motif in the
+  source's project with the candidate's notes and degrees, the source's role,
+  meter, key and pickup, and `derived` `{source_item, source_version,
+  operations, seed, kind, kept, changed, harmony: null, functions: [], flag}`
+  (`flag` `approved`, `rejected` or `unflagged`, default `unflagged`). The name
+  defaults to `<source> <op>[ + <op>]`; version 1's note is the derivation
+  line. Answers `{"item"}`.
+- `POST /api/materials/items/<id>/flag`: `{"flag","kind"?}` writes a new
+  version that changes only `derived.flag` (and `derived.kind`: `exact`,
+  `motive-form` or `variant`); the note is the flag. `400` for a motif
+  without `derived`.
+- `POST /api/materials/items/<id>/reroll`: reruns the stored chain, with the
+  parameters the seed drew drawn again, on the source's stored version with
+  seed + 1000003 (+1 while the result equals the current one, 16 tries).
+  Writes a new version with the new degrees, seed, kept, changed, kind and
+  analysis, the flag reset to `unflagged` and the note `rerolled: <derivation>`.
+  `400` without `derived`, `404` when the source is gone, `409` when no seed
+  gives a different motif.
+- `GET /api/materials/items/<id>/variant-tree`: `{"tree"}`, a node
+  `{id, name, current_version, derived, children}` for the item and for every
+  motif whose current `derived.source_item` leads back to it, built from one
+  scan of the store.
 
 Subjects:
 
