@@ -139,6 +139,10 @@ A chain that cannot be applied returns one of `VARIANT_ERR_EMPTY`, `VARIANT_ERR_
 
 A parameter value is a boolean, a number (an int or a MIDI pitch), a position name or a ratio text (`"2:1"`). `harmony` is written only when the result has chords of its own. `functions` stays `[]` until the function tags of P14.
 
+## Recognizing a variant
+
+`variant_recognize(source, target, &chain, &recognition)` is the reverse: it finds the chain of rows that turns `source` into `target`, `found`, its `distance` as a fraction, `kept`, `changed` and the derivation. Each library relation step becomes the registry step of the row whose `relation` it is, every parameter set; only steps the registry can replay are searched. See [docs/cli-recognize.md](cli-recognize.md).
+
 ## Adding an entry
 
 Add one row to the `OPERATIONS` table in `src/motive/variant_registry.c`, with its parameters, an `apply` function that returns the `motive_develop` result (a library relation goes through `relation_apply`), a `describe` function that returns its phrase, the forms it takes, its category and citation and the library relation it maps to. Chains, records, JSON, the random chains and the tests that walk the registry read the table; nothing else changes.
