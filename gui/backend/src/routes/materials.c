@@ -8,7 +8,14 @@
 #include <cJSON.h>
 #include <civetweb.h>
 #include <ctype.h>
+#include <math.h>
 #include <unistd.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
 #include "../service/composer_service.h"
 #include "../service/material_service.h"
@@ -1260,6 +1267,704 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   return 200;
 }
 
+/* ---- variants ---------------------------------------------------------- */
+
+/* Runs the Composer with args and parses its JSON output. Returns NULL after setting *status and message (500 when the
+   Composer cannot run, 400 when it refuses the input, which is its exit status 1 or 2). */
+static cJSON *composer_json(const char *const *args, int *status, char *message, size_t message_size) {
+  UrsatzGuiComposerOutput out = {0, NULL, NULL};
+  UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
+  if (result != URSATZ_GUI_COMPOSER_OK) {
+    *status = 500;
+    snprintf(message, message_size, "%s",
+             result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY  ? "composer not found"
+             : result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT ? "composer timed out"
+                                                          : "composer could not be started");
+    return NULL;
+  }
+  cJSON *json = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
+  if (!json) {
+    *status = out.exit_status == 1 || out.exit_status == 2 ? 400 : 500;
+    snprintf(message, message_size, "%s", out.stderr_text[0] ? out.stderr_text : "composer could not make variants");
+    size_t end = strlen(message);
+    while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
+      message[--end] = '\0';
+    }
+  }
+  ursatz_gui_composer_output_destroy(&out);
+  return json;
+}
+
+static cJSON *g_variant_operations = NULL;
+#ifdef _WIN32
+static SRWLOCK g_variant_operations_lock = SRWLOCK_INIT;
+#define OPERATIONS_LOCK() AcquireSRWLockExclusive(&g_variant_operations_lock)
+#define OPERATIONS_UNLOCK() ReleaseSRWLockExclusive(&g_variant_operations_lock)
+#else
+static pthread_mutex_t g_variant_operations_lock = PTHREAD_MUTEX_INITIALIZER;
+#define OPERATIONS_LOCK() pthread_mutex_lock(&g_variant_operations_lock)
+#define OPERATIONS_UNLOCK() pthread_mutex_unlock(&g_variant_operations_lock)
+#endif
+
+/* GET /api/materials/variant-operations: the Composer's operation list, read once and kept for the server's life. */
+static int handle_variant_operations(struct mg_connection *conn) {
+  OPERATIONS_LOCK();
+  if (!g_variant_operations) {
+    const char *args[] = {"variants", "--list-ops", "--json", NULL};
+    int status = 0;
+    char message[512];
+    g_variant_operations = composer_json(args, &status, message, sizeof(message));
+    if (!g_variant_operations) {
+      OPERATIONS_UNLOCK();
+      return send_failure(conn, status, message);
+    }
+  }
+  cJSON *copy = cJSON_Duplicate(g_variant_operations, 1);
+  OPERATIONS_UNLOCK();
+  if (!copy || !cJSON_AddBoolToObject(copy, "ok", 1)) {
+    cJSON_Delete(copy);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, copy);
+}
+
+/* Writes text to a new temp file named after stem; path receives its name. */
+static bool write_temp_text(char *path, size_t size, const char *stem, const char *text) {
+  if (!temp_file(path, size, stem)) {
+    return false;
+  }
+  FILE *file = fopen(path, "wb");
+  size_t length = strlen(text);
+  bool written = file && fwrite(text, 1, length, file) == length;
+  if (file && fclose(file) != 0) {
+    written = false;
+  }
+  if (!written) {
+    unlink(path);
+  }
+  return written;
+}
+
+/* The largest seed the Composer takes: its cap is 4294967295 less the 16 variants of a run. */
+static const double kMaxVariantSeed = 4294967279.0;
+
+/* Runs `variants` on the motif member of a version body (its degrees, form, meter, key and pickup). chain (an object
+   {"steps": [...]}) is optional and means random chains when NULL; seed is optional (negative: the clock). On success
+   returns the Composer's document; otherwise NULL with *status and message set. */
+static cJSON *run_variants(const cJSON *motif, const cJSON *chain, int count, double seed, int *status, char *message,
+                           size_t message_size) {
+  bool bad = false;
+  const char *form = optional_string(motif, "form", &bad);
+  const char *degrees = optional_string(motif, "degrees", &bad);
+  const char *meter = optional_string(motif, "meter", &bad);
+  const char *key = optional_string(motif, "key", &bad);
+  const char *pickup = optional_string(motif, "pickup", &bad);
+  if (bad || !form || !degrees || degrees[0] == '\0' || !meter) {
+    *status = 400;
+    snprintf(message, message_size, "this motif has no degrees to vary");
+    return NULL;
+  }
+  char input_path[512];
+  char chain_path[512] = "";
+  if (!write_temp_text(input_path, sizeof(input_path), "ursatz-variants", degrees)) {
+    *status = 500;
+    snprintf(message, message_size, "could not write the degrees for the Composer");
+    return NULL;
+  }
+  bool full = strcmp(form, "full") == 0;
+  if (chain) {
+    char *chain_text = cJSON_PrintUnformatted(chain);
+    bool written = chain_text && write_temp_text(chain_path, sizeof(chain_path), "ursatz-chain", chain_text);
+    free(chain_text);
+    if (!written) {
+      unlink(input_path);
+      *status = 500;
+      snprintf(message, message_size, "could not write the chain for the Composer");
+      return NULL;
+    }
+  }
+  char count_text[16];
+  char seed_text[32];
+  snprintf(count_text, sizeof(count_text), "%d", count);
+  snprintf(seed_text, sizeof(seed_text), "%.0f", seed);
+  const char *args[24];
+  int n = 0;
+  args[n++] = "variants";
+  args[n++] = input_path;
+  args[n++] = full ? "--format" : "--form";
+  args[n++] = full ? "degrees" : form;
+  args[n++] = "--meter";
+  args[n++] = meter;
+  if (key && key[0] != '\0') {
+    args[n++] = "--key";
+    args[n++] = key;
+  }
+  if (pickup) {
+    args[n++] = "--pickup";
+    args[n++] = pickup;
+  }
+  if (chain) {
+    args[n++] = "--chain";
+    args[n++] = chain_path;
+  }
+  args[n++] = "--count";
+  args[n++] = count_text;
+  if (seed >= 0) {
+    args[n++] = "--seed";
+    args[n++] = seed_text;
+  }
+  args[n++] = "--json";
+  args[n] = NULL;
+  cJSON *document = composer_json(args, status, message, message_size);
+  unlink(input_path);
+  if (chain) {
+    unlink(chain_path);
+  }
+  return document;
+}
+
+/* POST /api/materials/items/<id>/variants {chain?, count?, seed?}: candidates from the item's current degrees; nothing is
+   saved. The answer is the Composer's document plus "ok" and "seed". */
+static int handle_variants(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *chain = cJSON_GetObjectItemCaseSensitive(body, "chain");
+  const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
+  const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  if (cJSON_IsNull(chain)) {
+    chain = NULL;
+  }
+  if (cJSON_IsNull(count_item)) {
+    count_item = NULL;
+  }
+  if (cJSON_IsNull(seed_item)) {
+    seed_item = NULL;
+  }
+  int count = 6;
+  double seed = -1;
+  bool valid = (!chain || (cJSON_IsObject(chain) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(chain, "steps")))) &&
+               (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
+                                count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
+               (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
+                               seed_item->valuedouble <= kMaxVariantSeed &&
+                               seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
+  if (!valid) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16 and seed a whole number from 0");
+  }
+  if (count_item) {
+    count = (int)count_item->valuedouble;
+  }
+  if (seed_item) {
+    seed = seed_item->valuedouble;
+  }
+  cJSON *item_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &item_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, result);
+  }
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
+  char message[512];
+  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, chain, count, seed, &status, message, sizeof(message))
+                                          : NULL;
+  if (!cJSON_IsObject(motif)) {
+    status = 400;
+    snprintf(message, sizeof(message), "only a motif has variants");
+  }
+  cJSON_Delete(body);
+  cJSON_Delete(item_body);
+  if (!document) {
+    return send_failure(conn, status, message);
+  }
+  const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");
+  if (!cJSON_AddBoolToObject(document, "ok", 1) ||
+      (!run_seed && !cJSON_AddNumberToObject(document, "seed", seed >= 0 ? seed : 0))) {
+    cJSON_Delete(document);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, document);
+}
+
+/* The analysis text of a variant's motive document for the form: notes_text (degrees_text when degrees is set),
+   rhythm_text or contour_text. */
+static const char *variant_text(const cJSON *variant, const char *form, bool degrees) {
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "motive"), "analysis");
+  const char *name = strcmp(form, "rhythm") == 0 ? "rhythm_text" : strcmp(form, "contour") == 0 ? "contour_text" : degrees ? "degrees_text" : "notes_text";
+  const cJSON *text = cJSON_GetObjectItemCaseSensitive(analysis, name);
+  return cJSON_IsString(text) && text->valuestring[0] != '\0' ? text->valuestring : NULL;
+}
+
+/* Adds a duplicate of the member of from named name to object (an empty array when from has none of that type). */
+static bool copy_member(cJSON *object, const cJSON *from, const char *name, bool as_array) {
+  const cJSON *value = cJSON_GetObjectItemCaseSensitive(from, name);
+  cJSON *copy = (as_array ? cJSON_IsArray(value) : value != NULL) ? cJSON_Duplicate(value, 1) : cJSON_CreateArray();
+  return copy && cJSON_AddItemToObject(object, name, copy);
+}
+
+/* The derivation record of a stored variant: the chain steps, the seed, the kind and the dimensions kept and changed. */
+static cJSON *derived_record(const char *source_id, int source_version, const cJSON *variant, const char *flag) {
+  const cJSON *chain = cJSON_GetObjectItemCaseSensitive(variant, "chain");
+  const cJSON *seed = cJSON_GetObjectItemCaseSensitive(variant, "seed");
+  const cJSON *kind = cJSON_GetObjectItemCaseSensitive(variant, "kind");
+  cJSON *derived = cJSON_CreateObject();
+  cJSON *steps = cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(chain, "steps"), 1);
+  bool ok = derived && steps && cJSON_AddStringToObject(derived, "source_item", source_id) &&
+            cJSON_AddNumberToObject(derived, "source_version", source_version) &&
+            cJSON_AddItemToObject(derived, "operations", steps) &&
+            cJSON_AddNumberToObject(derived, "seed", cJSON_IsNumber(seed) ? seed->valuedouble : 0) &&
+            cJSON_AddStringToObject(derived, "kind", cJSON_IsString(kind) ? kind->valuestring : "motive-form") &&
+            copy_member(derived, variant, "kept", true) && copy_member(derived, variant, "changed", true) &&
+            cJSON_AddNullToObject(derived, "harmony") && cJSON_AddArrayToObject(derived, "functions") &&
+            cJSON_AddStringToObject(derived, "flag", flag);
+  if (!ok) {
+    if (derived && !cJSON_GetObjectItemCaseSensitive(derived, "operations")) {
+      cJSON_Delete(steps);
+    }
+    cJSON_Delete(derived);
+    return NULL;
+  }
+  return derived;
+}
+
+/* Writes prefix and text into out (501 bytes), cut with "..." on a character boundary when over 500 bytes. */
+static void bounded_note(char *out, size_t size, const char *prefix, const char *text) {
+  snprintf(out, size, "%s%s", prefix, text);
+  if (strlen(prefix) + strlen(text) > size - 1) {
+    size_t cut = size - 4;
+    while (cut > 0 && ((unsigned char)out[cut] & 0xC0) == 0x80) {
+      cut--;
+    }
+    snprintf(out + cut, size - cut, "...");
+  }
+}
+
+/* True when the variant document carries what a derived motif is made from. */
+static bool variant_ok(const cJSON *variant) {
+  const cJSON *chain = cJSON_GetObjectItemCaseSensitive(variant, "chain");
+  return cJSON_IsObject(variant) && cJSON_IsObject(chain) &&
+         cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(chain, "steps")) &&
+         cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(variant, "seed")) &&
+         cJSON_IsString(cJSON_GetObjectItemCaseSensitive(variant, "kind")) &&
+         cJSON_IsString(cJSON_GetObjectItemCaseSensitive(variant, "derivation")) &&
+         cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "motive"), "analysis"));
+}
+
+static bool flag_ok(const char *flag) {
+  return flag && (strcmp(flag, "approved") == 0 || strcmp(flag, "rejected") == 0 || strcmp(flag, "unflagged") == 0);
+}
+
+/* "<source name> <op>[ + <op>]", the source name cut so the whole stays within 200 bytes. */
+static void variant_default_name(const char *source_name, const cJSON *steps, char *out, size_t size) {
+  char ops[160] = "";
+  size_t used = 0;
+  const cJSON *step = NULL;
+  cJSON_ArrayForEach(step, steps) {
+    const cJSON *op = cJSON_GetObjectItemCaseSensitive(step, "op");
+    if (cJSON_IsString(op)) {
+      used += (size_t)snprintf(ops + used, sizeof(ops) - used, "%s%s", used ? " + " : "", op->valuestring);
+      if (used >= sizeof(ops)) {
+        used = sizeof(ops) - 1;
+        break;
+      }
+    }
+  }
+  size_t limit = size - 1 > 200 ? 200 : size - 1;
+  size_t keep = strlen(source_name);
+  size_t room = limit > used + 1 ? limit - used - 1 : 0;
+  if (keep > room) {
+    keep = room;
+    while (keep > 0 && ((unsigned char)source_name[keep] & 0xC0) == 0x80) {
+      keep--;
+    }
+  }
+  snprintf(out, size, "%.*s %s", (int)keep, source_name, ops);
+}
+
+/* POST /api/materials/items/<id>/variants/save {variant, name?, flag}: a derived motif made from one candidate. */
+static int handle_variant_save(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const cJSON *variant = cJSON_GetObjectItemCaseSensitive(body, "variant");
+  const char *name = optional_string(body, "name", &bad);
+  const char *flag = optional_string(body, "flag", &bad);
+  if (!flag) {
+    flag = "unflagged";
+  }
+  if (bad || !variant_ok(variant) || !flag_ok(flag)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "variant must be a candidate from the variants route; flag is approved, rejected or unflagged");
+  }
+  cJSON *meta = NULL;
+  cJSON *source = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &source);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, result);
+  }
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(source, "motif");
+  const char *form = optional_string(motif, "form", &(bool){false});
+  const char *text = form ? variant_text(variant, form, false) : NULL;
+  const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
+  if (!cJSON_IsObject(motif) || !form || !text || !variant_text(variant, form, true) || !cJSON_IsNumber(version)) {
+    cJSON_Delete(body);
+    cJSON_Delete(meta);
+    cJSON_Delete(source);
+    return send_failure(conn, 400, "the variant does not match this motif");
+  }
+  const char *source_name = optional_string(meta, "name", &(bool){false});
+  const char *project_id = optional_string(meta, "project_id", &(bool){false});
+  char default_name[256];
+  variant_default_name(source_name ? source_name : "", cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "chain"), "steps"),
+                       default_name, sizeof(default_name));
+  const cJSON *derivation = cJSON_GetObjectItemCaseSensitive(variant, "derivation");
+  char note[501];
+  bounded_note(note, sizeof(note), "", derivation->valuestring);
+
+  cJSON *new_body = cJSON_CreateObject();
+  cJSON *new_motif = cJSON_CreateObject();
+  cJSON *derived = derived_record(id, version->valueint, variant, flag);
+  const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
+  const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
+  cJSON *analysis = cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "motive"), 1);
+  bool ok = new_body && new_motif && derived && analysis && cJSON_IsString(role) && cJSON_IsString(meter) &&
+            cJSON_IsString(pickup) && cJSON_AddArrayToObject(new_body, "uses") &&
+            cJSON_AddStringToObject(new_motif, "role", role->valuestring) &&
+            cJSON_AddStringToObject(new_motif, "form", form) && cJSON_AddStringToObject(new_motif, "notes", text) &&
+            cJSON_AddStringToObject(new_motif, "meter", meter->valuestring) &&
+            (cJSON_IsString(key) ? cJSON_AddStringToObject(new_motif, "key", key->valuestring) != NULL
+                                 : cJSON_AddNullToObject(new_motif, "key") != NULL) &&
+            cJSON_AddStringToObject(new_motif, "pickup", pickup->valuestring) &&
+            cJSON_AddArrayToObject(new_motif, "features") && cJSON_AddItemToObject(new_motif, "analysis", analysis) &&
+            cJSON_AddStringToObject(new_motif, "degrees", variant_text(variant, form, true)) &&
+            cJSON_AddItemToObject(new_motif, "derived", derived) && cJSON_AddItemToObject(new_body, "motif", new_motif);
+  if (!ok) {
+    /* Whatever was not attached to a parent is still ours. */
+    if (analysis && !cJSON_GetObjectItemCaseSensitive(new_motif, "analysis")) {
+      cJSON_Delete(analysis);
+    }
+    if (derived && new_motif && !cJSON_GetObjectItemCaseSensitive(new_motif, "derived")) {
+      cJSON_Delete(derived);
+    }
+    if (new_motif && new_body && !cJSON_GetObjectItemCaseSensitive(new_body, "motif")) {
+      cJSON_Delete(new_motif);
+    }
+    cJSON_Delete(new_body);
+    cJSON_Delete(body);
+    cJSON_Delete(meta);
+    cJSON_Delete(source);
+    return send_failure(conn, 500, "out of memory");
+  }
+  cJSON *item = NULL;
+  result = ursatz_gui_material_item_create_noted("motif", name && name[0] != '\0' ? name : default_name,
+                                                 project_id ? project_id : "", new_body, note, &item);
+  cJSON_Delete(new_body);
+  cJSON_Delete(body);
+  cJSON_Delete(meta);
+  cJSON_Delete(source);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
+static bool kind_ok(const char *kind) {
+  return kind && (strcmp(kind, "exact") == 0 || strcmp(kind, "motive-form") == 0 || strcmp(kind, "variant") == 0);
+}
+
+/* The derived object of a motif version body, NULL when it has none. */
+static cJSON *derived_of(cJSON *version_body) {
+  cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version_body, "motif"), "derived");
+  return cJSON_IsObject(derived) ? derived : NULL;
+}
+
+/* Replaces a string member of object. */
+static bool set_string(cJSON *object, const char *name, const char *value) {
+  cJSON_DeleteItemFromObjectCaseSensitive(object, name);
+  return cJSON_AddStringToObject(object, name, value) != NULL;
+}
+
+/* POST /api/materials/items/<id>/flag {flag, kind?}: a new version that changes only derived.flag (and kind). */
+static int handle_flag(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *flag = optional_string(body, "flag", &bad);
+  const char *kind = optional_string(body, "kind", &bad);
+  if (bad || !flag_ok(flag) || (kind && !kind_ok(kind))) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "flag is approved, rejected or unflagged; kind is exact, motive-form or variant");
+  }
+  cJSON *current = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, result);
+  }
+  cJSON *derived = derived_of(current);
+  if (!derived) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 400, "only a derived motif has a flag");
+  }
+  if (!set_string(derived, "flag", flag) || (kind && !set_string(derived, "kind", kind))) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 500, "out of memory");
+  }
+  cJSON *item = NULL;
+  result = ursatz_gui_material_item_add_version(id, current, flag, &item);
+  cJSON_Delete(body);
+  cJSON_Delete(current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
+/* A chain for the Composer from stored operations: the steps with their params, less the ones the seed drew (`open`),
+   so a rerun draws them again. NULL when out of memory. */
+static cJSON *chain_for_reroll(const cJSON *operations) {
+  cJSON *chain = cJSON_CreateObject();
+  cJSON *steps = chain ? cJSON_AddArrayToObject(chain, "steps") : NULL;
+  const cJSON *step = NULL;
+  cJSON_ArrayForEach(step, operations) {
+    const cJSON *op = cJSON_GetObjectItemCaseSensitive(step, "op");
+    const cJSON *params = cJSON_GetObjectItemCaseSensitive(step, "params");
+    const cJSON *open = cJSON_GetObjectItemCaseSensitive(step, "open");
+    cJSON *entry = cJSON_CreateObject();
+    cJSON *kept = cJSON_CreateObject();
+    if (!steps || !entry || !kept || !cJSON_IsString(op) || !cJSON_AddStringToObject(entry, "op", op->valuestring)) {
+      cJSON_Delete(entry);
+      cJSON_Delete(kept);
+      cJSON_Delete(chain);
+      return NULL;
+    }
+    const cJSON *param = NULL;
+    cJSON_ArrayForEach(param, params) {
+      bool drawn = false;
+      const cJSON *name = NULL;
+      cJSON_ArrayForEach(name, open) {
+        drawn = drawn || (cJSON_IsString(name) && param->string && strcmp(name->valuestring, param->string) == 0);
+      }
+      if (!drawn && !cJSON_AddItemToObject(kept, param->string, cJSON_Duplicate(param, 1))) {
+        cJSON_Delete(entry);
+        cJSON_Delete(kept);
+        cJSON_Delete(chain);
+        return NULL;
+      }
+    }
+    if (!cJSON_AddItemToObject(entry, "params", kept)) {
+      cJSON_Delete(entry);
+      cJSON_Delete(kept);
+      cJSON_Delete(chain);
+      return NULL;
+    }
+    cJSON_AddItemToArray(steps, entry);
+  }
+  return chain;
+}
+
+/* Replaces the member name of object with value (moved in). */
+static bool replace_member(cJSON *object, const char *name, cJSON *value) {
+  cJSON_DeleteItemFromObjectCaseSensitive(object, name);
+  if (value && cJSON_AddItemToObject(object, name, value)) {
+    return true;
+  }
+  cJSON_Delete(value);
+  return false;
+}
+
+/* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and
+   stores the result as a new version. */
+static int handle_reroll(struct mg_connection *conn, const char *id) {
+  cJSON *current = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  cJSON *motif = cJSON_GetObjectItemCaseSensitive(current, "motif");
+  cJSON *derived = derived_of(current);
+  const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
+  const cJSON *source_version = cJSON_GetObjectItemCaseSensitive(derived, "source_version");
+  const cJSON *stored_seed = cJSON_GetObjectItemCaseSensitive(derived, "seed");
+  const cJSON *form_item = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  if (!derived || !cJSON_IsString(source_item) || !cJSON_IsNumber(source_version) || !cJSON_IsString(form_item)) {
+    cJSON_Delete(current);
+    return send_failure(conn, 400, "only a derived motif can be rerolled");
+  }
+  const char *form = form_item->valuestring;
+  cJSON *source = NULL;
+  result = ursatz_gui_material_item_get_version(source_item->valuestring, source_version->valueint, &source);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(current);
+    return send_failure(conn, 404, "the source motif or its version is gone");
+  }
+  cJSON *chain = chain_for_reroll(cJSON_GetObjectItemCaseSensitive(derived, "operations"));
+  const cJSON *shown = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
+  int status = 500;
+  char message[512] = "out of memory";
+  cJSON *document = NULL;
+  const cJSON *variant = NULL;
+  double base = cJSON_IsNumber(stored_seed) ? stored_seed->valuedouble : 0;
+  double seed = 0;
+  for (int attempt = 0; chain && attempt < 16; attempt++) {
+    seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
+    cJSON_Delete(document);
+    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), chain, 1, seed, &status, message,
+                            sizeof(message));
+    if (!document) {
+      break;
+    }
+    variant = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "variants"), 0);
+    const char *degrees = variant_ok(variant) ? variant_text(variant, form, true) : NULL;
+    if (!degrees) {
+      status = 500;
+      snprintf(message, sizeof(message), "composer returned no variant");
+      cJSON_Delete(document);
+      document = NULL;
+      break;
+    }
+    if (!cJSON_IsString(shown) || strcmp(degrees, shown->valuestring) != 0) {
+      break;
+    }
+    variant = NULL;
+  }
+  cJSON_Delete(source);
+  cJSON_Delete(chain);
+  if (!document || !variant) {
+    bool same = document != NULL;
+    cJSON_Delete(document);
+    cJSON_Delete(current);
+    return same ? send_failure(conn, 409, "rerolling gives the same motif") : send_failure(conn, status, message);
+  }
+  const cJSON *chain_out = cJSON_GetObjectItemCaseSensitive(variant, "chain");
+  const cJSON *kind = cJSON_GetObjectItemCaseSensitive(variant, "kind");
+  const cJSON *derivation = cJSON_GetObjectItemCaseSensitive(variant, "derivation");
+  const char *notes = variant_text(variant, form, false);
+  bool ok = notes && cJSON_IsString(kind) && cJSON_IsString(derivation) &&
+            replace_member(motif, "notes", cJSON_CreateString(notes)) &&
+            replace_member(motif, "degrees", cJSON_CreateString(variant_text(variant, form, true))) &&
+            replace_member(motif, "analysis", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "motive"), 1)) &&
+            replace_member(derived, "operations", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(chain_out, "steps"), 1)) &&
+            replace_member(derived, "seed", cJSON_CreateNumber(seed)) &&
+            replace_member(derived, "kind", cJSON_CreateString(kind->valuestring)) &&
+            replace_member(derived, "kept", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "kept"), 1)) &&
+            replace_member(derived, "changed", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "changed"), 1)) &&
+            set_string(derived, "flag", "unflagged");
+  char note[501];
+  if (ok) {
+    bounded_note(note, sizeof(note), "rerolled: ", derivation->valuestring);
+  }
+  cJSON *item = NULL;
+  result = ok ? ursatz_gui_material_item_add_version(id, current, note, &item) : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  cJSON_Delete(document);
+  cJSON_Delete(current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
+static const int kMaxTreeDepth = 32;
+
+/* A tree node {id, name, current_version, derived, children: []} (derived is a copy, or null) with every entry of index
+   whose derived.source_item is id below it. ancestors lists the ids above, so a loop in the stored records ends. */
+static cJSON *variant_node(const cJSON *index, const char *id, const char *name, int version, const cJSON *derived,
+                           const char **ancestors, int depth) {
+  cJSON *node = cJSON_CreateObject();
+  cJSON *children = cJSON_CreateArray();
+  cJSON *copy = derived ? cJSON_Duplicate(derived, 1) : cJSON_CreateNull();
+  if (!node || !children || !copy || !cJSON_AddStringToObject(node, "id", id) ||
+      !cJSON_AddStringToObject(node, "name", name) || !cJSON_AddNumberToObject(node, "current_version", version) ||
+      !cJSON_AddItemToObject(node, "derived", copy)) {
+    if (!node || !cJSON_GetObjectItemCaseSensitive(node, "derived")) {
+      cJSON_Delete(copy);
+    }
+    cJSON_Delete(children);
+    cJSON_Delete(node);
+    return NULL;
+  }
+  if (!cJSON_AddItemToObject(node, "children", children)) {
+    cJSON_Delete(children);
+    cJSON_Delete(node);
+    return NULL;
+  }
+  if (depth >= kMaxTreeDepth) {
+    return node;
+  }
+  ancestors[depth] = id;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, index) {
+    const cJSON *entry_id = cJSON_GetObjectItemCaseSensitive(entry, "id");
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(entry, "derived"), "source_item");
+    if (!cJSON_IsString(entry_id) || !cJSON_IsString(source) || strcmp(source->valuestring, id) != 0) {
+      continue;
+    }
+    bool seen = false;
+    for (int i = 0; i <= depth; i++) {
+      seen = seen || strcmp(ancestors[i], entry_id->valuestring) == 0;
+    }
+    if (seen) {
+      continue;
+    }
+    const cJSON *entry_name = cJSON_GetObjectItemCaseSensitive(entry, "name");
+    const cJSON *entry_version = cJSON_GetObjectItemCaseSensitive(entry, "current_version");
+    cJSON *child = variant_node(index, entry_id->valuestring, cJSON_IsString(entry_name) ? entry_name->valuestring : "",
+                                cJSON_IsNumber(entry_version) ? entry_version->valueint : 0,
+                                cJSON_GetObjectItemCaseSensitive(entry, "derived"), ancestors, depth + 1);
+    if (!child) {
+      cJSON_Delete(node);
+      return NULL;
+    }
+    cJSON_AddItemToArray(children, child);
+  }
+  return node;
+}
+
+/* GET /api/materials/items/<id>/variant-tree: the item and, recursively, every motif derived from it. */
+static int handle_variant_tree(struct mg_connection *conn, const char *id) {
+  cJSON *meta = NULL;
+  cJSON *body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  cJSON *index = NULL;
+  if (!cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(body, "motif"))) {
+    cJSON_Delete(meta);
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "only a motif has variants");
+  }
+  result = ursatz_gui_material_derived_motifs(&index);
+  const char *name = optional_string(meta, "name", &(bool){false});
+  const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
+  const char *ancestors[33];
+  cJSON *tree = result == URSATZ_GUI_MATERIAL_OK
+                    ? variant_node(index, id, name ? name : "", cJSON_IsNumber(version) ? version->valueint : 0,
+                                   derived_of(body), ancestors, 0)
+                    : NULL;
+  cJSON_Delete(meta);
+  cJSON_Delete(body);
+  cJSON_Delete(index);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "tree", tree);
+}
+
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
@@ -1297,6 +2002,21 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
       (strcmp(segments[4], "score") == 0 || strcmp(segments[4], "playback") == 0)) {
     return get ? handle_version_render(conn, segments[1], segments[3], strcmp(segments[4], "playback") == 0)
                : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "variants") == 0) {
+    return post ? handle_variants(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 4 && strcmp(segments[2], "variants") == 0 && strcmp(segments[3], "save") == 0) {
+    return post ? handle_variant_save(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "variant-tree") == 0) {
+    return get ? handle_variant_tree(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "reroll") == 0) {
+    return post ? handle_reroll(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "flag") == 0) {
+    return post ? handle_flag(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 5 && strcmp(segments[2], "uses") == 0 && strcmp(segments[4], "update") == 0) {
     return post ? handle_update_use(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
@@ -1638,6 +2358,9 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (strcmp(segments[0], "items") == 0) {
     return route_items(conn, method, segments, count);
+  }
+  if (count == 1 && strcmp(segments[0], "variant-operations") == 0) {
+    return strcmp(method, "GET") == 0 ? handle_variant_operations(conn) : send_method_not_allowed(conn);
   }
   if (count == 1 && strcmp(segments[0], "render") == 0) {
     return strcmp(method, "POST") == 0 ? handle_render(conn) : send_method_not_allowed(conn);

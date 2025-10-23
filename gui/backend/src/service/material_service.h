@@ -120,6 +120,11 @@ UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, cons
 UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const char *name, const char *project_id,
                                                          const cJSON *body, cJSON **out_item);
 
+/* As ursatz_gui_material_item_create, with note (trimmed, at most 500 characters, NULL or "" for none) on version 1. */
+UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, const char *name,
+                                                               const char *project_id, const cJSON *body,
+                                                               const char *note, cJSON **out_item);
+
 /*
  * Lists items, newest "updated_at" first, then id. project_id and type
  * (each may be NULL for any) filter the list. On OK, *out_items is a
@@ -167,6 +172,12 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
  * (the used one)}. id need not exist: a deleted source can still have users.
  */
 UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users);
+
+/*
+ * Lists, in one scan of the store, every motif whose current version has a derived record: *out_motifs is a
+ * caller-owned array of {id, name, current_version, derived}, in id order.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_derived_motifs(cJSON **out_motifs);
 
 /*
  * Writes a new version of item id identical to its current one, except that
