@@ -871,3 +871,65 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 | 3 | m. 20 | 7 | 4 | no |
 | 4 | m. 21 | 6 | 4 | no |
 | 5 | m. 23 | 4 | 6.5 | yes |
+
+## Rhythm and meter
+
+### Density
+
+The library's density profile of each phrase, for all its notes and for each line that has a note in it (the soprano and bass of the outer voices, and Other for the rest). A note is in a phrase when its onset is; a chord is one attack. Attacks per beat is read measure by measure over the beats the phrase spans in it, as a mean and the largest; Mean gap is the mean distance between attacks in whole notes; On the beat is the share of attacks exactly on a beat. Durations lists the notes' lengths in whole notes, shortest first, with how many notes have each. The patterns that recur are the motive families' rhythms (see Motives).
+
+| Phrase | Measures | Line | Notes | Attacks | Per beat | Max per beat | Mean gap | On the beat | Durations |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 15 | all | 269 | 192 | 3.2 | 3.75 | 0.08 | 30.2% | 1/64 (8), 1/32 (8), 1/16 (116), 1/8 (106), 1/4 (28), 3/8 (3) |
+| 1 | mm. 1 to 15 | soprano | 89 | 89 | 1.48 | 1.5 | 0.17 | 40.4% | 1/32 (4), 1/16 (37), 1/8 (44), 1/4 (4) |
+| 1 | mm. 1 to 15 | bass | 76 | 76 | 1.27 | 1.75 | 0.2 | 50.0% | 1/16 (6), 1/8 (49), 1/4 (18), 3/8 (3) |
+| 1 | mm. 1 to 15 | other | 104 | 98 | 1.63 | 2.25 | 0.15 | 23.5% | 1/64 (8), 1/32 (4), 1/16 (73), 1/8 (13), 1/4 (6) |
+| 2 | mm. 16 to 24 | all | 161 | 104 | 2.89 | 3.25 | 0.09 | 34.6% | 1/64 (2), 1/32 (4), 1/16 (54), 5/64 (2), 1/8 (83), 1/4 (13), 3/8 (3) |
+| 2 | mm. 16 to 24 | soprano | 60 | 60 | 1.67 | 2 | 0.15 | 31.7% | 1/32 (2), 1/16 (23), 1/8 (33), 1/4 (2) |
+| 2 | mm. 16 to 24 | bass | 58 | 58 | 1.61 | 2 | 0.16 | 51.7% | 1/8 (48), 1/4 (7), 3/8 (3) |
+| 2 | mm. 16 to 24 | other | 43 | 41 | 1.14 | 1.75 | 0.21 | 34.1% | 1/64 (2), 1/32 (2), 1/16 (31), 5/64 (2), 1/8 (2), 1/4 (4) |
+
+### Syncopation
+
+A note is syncopated when it is attacked at a weaker metric level and held through a stronger one that no note of its line attacks. Each line (the soprano and bass of the outer voices, and Other for the rest) is read on its own. Strength is the difference of the two levels, 1 to 4: an off-beat note held over the beat is 1, a note on a beat held over the barline is 2, an off-beat note held over the barline is 3.
+
+| Line | Measure | Beat | Attacked at | Held through | Strength |
+| --- | --- | --- | --- | --- | --- |
+| soprano | 6 | 3.5 | offbeat | beat (m. 6, beat 4) | 1 |
+| soprano | 12 | 3.5 | offbeat | beat (m. 12, beat 4) | 1 |
+| soprano | 18 | 3.5 | offbeat | beat (m. 18, beat 4) | 1 |
+| soprano | 24 | 3.5 | offbeat | beat (m. 24, beat 4) | 1 |
+| bass | 1 | 2.5 | offbeat | secondary-beat (m. 1, beat 3) | 2 |
+| bass | 2 | 1.5 | offbeat | beat (m. 2, beat 2) | 1 |
+| bass | 2 | 4.5 | offbeat | downbeat (m. 3, beat 1) | 3 |
+| bass | 8 | 1.5 | offbeat | beat (m. 8, beat 2) | 1 |
+| bass | 8 | 4.5 | offbeat | downbeat (m. 9, beat 1) | 3 |
+| bass | 13 | 2.5 | offbeat | secondary-beat (m. 13, beat 3) | 2 |
+| bass | 14 | 1.5 | offbeat | beat (m. 14, beat 2) | 1 |
+| bass | 17 | 1.5 | offbeat | beat (m. 17, beat 2) | 1 |
+| bass | 19 | 2.5 | offbeat | secondary-beat (m. 19, beat 3) | 2 |
+| bass | 20 | 1.5 | offbeat | beat (m. 20, beat 2) | 1 |
+| bass | 23 | 1.5 | offbeat | beat (m. 23, beat 2) | 1 |
+| other | 6 | 3.5 | offbeat | beat (m. 6, beat 4) | 1 |
+| other | 12 | 3.5 | offbeat | beat (m. 12, beat 4) | 1 |
+| other | 18 | 3.5 | offbeat | beat (m. 18, beat 4) | 1 |
+| other | 18 | 3.5 | offbeat | beat (m. 18, beat 4) | 1 |
+| other | 24 | 3.5 | offbeat | beat (m. 24, beat 4) | 1 |
+| other | 24 | 3.5 | offbeat | beat (m. 24, beat 4) | 1 |
+
+### Hemiola
+
+The library found no hemiola.
+
+### Hypermeter
+
+The library reads each phrase in hypermeasures of two or four measures: the length that fills the phrase and holds the cadence's arrival in the last one. The first measure of each hypermeasure is a hyperdownbeat. A phrase that does not fill its hypermeasures ends in a short one, an internal expansion makes the last one longer, an external expansion adds one of its own and a contraction shortens the last. Score is the library's confidence in the reading. The form adapter does not report elided cadences, so no phrase is read as elided.
+
+| Phrase | Measures | Length | Hyperdownbeats | Hypermeasures | Cadence arrives | Score |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 15 | 4 | 1, 5 | 1 regular, 1 expanded | m. 8 | 1 |
+| 2 | mm. 16 to 24 | 2 | 16, 18, 20, 22, 24, 26 | 5 regular, 1 short | m. 21 | 0.45 |
+
+### Tuplets and borrowed divisions
+
+No tuplets were found.
