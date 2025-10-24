@@ -102,6 +102,12 @@ ursatz-composer variants theme.txt --meter 4/4 --key "D minor" --count 4 --seed 
 says how each was derived. `variants --list-ops` lists the operations. See [docs/cli-variants.md](docs/cli-variants.md).
 
 ```sh
+ursatz-composer recognize theme.txt variant.txt --meter 4/4 --key "D minor"
+```
+
+`recognize` goes the other way: it names the chain of registry operations that turns one motive into another, with the distance and what was kept and changed. See [docs/cli-recognize.md](docs/cli-recognize.md).
+
+```sh
 ursatz-composer random-motive --mode minor --meter 3/4 --count 4 --seed 7
 ```
 

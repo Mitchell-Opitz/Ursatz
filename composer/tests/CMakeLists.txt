@@ -441,3 +441,21 @@ target_compile_definitions(test_random_motive_cli PRIVATE COMPOSER_CLI_PATH="$<T
                                                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_random_motive_cli ursatz-composer)
 add_test(NAME test_random_motive_cli COMMAND test_random_motive_cli)
+
+# Recognizing variants (docs/cli-recognize.md). The round trip makes every registry row and random chains on four
+# fixtures and recognizes each result; it is slow and CI leaves it out (ctest -LE slow). Its smoke test is the same
+# check on seeds 1 and 2. The cli test runs the command as a process.
+add_executable(test_variant_recognize test_variant_recognize.c)
+target_link_libraries(test_variant_recognize PRIVATE ursatz_composer)
+target_compile_options(test_variant_recognize PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_variant_recognize COMMAND test_variant_recognize)
+add_test(NAME test_variant_recognize_smoke COMMAND test_variant_recognize --smoke)
+set_tests_properties(test_variant_recognize PROPERTIES LABELS slow)
+
+add_executable(test_recognize_cli test_recognize_cli.c)
+target_link_libraries(test_recognize_cli PRIVATE ursatz_composer)
+target_compile_options(test_recognize_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_recognize_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                      COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_recognize_cli ursatz-composer)
+add_test(NAME test_recognize_cli COMMAND test_recognize_cli)

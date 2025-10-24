@@ -11,6 +11,7 @@
 #include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "motive/motive_internal.h"
+#include "motive/variant_internal.h"
 #include "plan/plan_json_internal.h"
 
 /* How many draws of its open parameters a refused step gets. */
@@ -22,7 +23,7 @@ const char *variant_kind_name(VariantKind kind) {
 
 const char *variant_result_name(VariantResult result) {
     static const char *const NAMES[] = {"ok",   "null",           "empty chain", "unknown operation",
-                                        "form", "bad parameter", "refused"};
+                                        "form", "bad parameter", "refused", "out of memory"};
     return (size_t)result < sizeof(NAMES) / sizeof(NAMES[0]) ? NAMES[result] : "unknown";
 }
 
@@ -234,7 +235,7 @@ static void note_dimension(VariantRecord *record, const char *name, bool kept) {
 }
 
 /* Fills the record's kind, kept, changed and recognizability from the source and the finished variant. */
-static void record_difference(const Motive *source, const Motive *result, VariantRecord *record) {
+void variant_record_difference(const Motive *source, const Motive *result, VariantRecord *record) {
     MotiveAnalysis before;
     MotiveAnalysis after;
     record->kept_count = 0;
@@ -288,7 +289,7 @@ static void append_list(char *out, size_t size, const char *const *names, size_t
 }
 
 /* One sentence for the steps, then one for what was kept and changed. */
-static void record_derivation(VariantRecord *record) {
+void variant_record_derivation(VariantRecord *record) {
     char *text = record->derivation;
     size_t size = sizeof(record->derivation);
     text[0] = '\0';
@@ -407,7 +408,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
         current = next;
     }
 
-    record_difference(source, &current, log);
+    variant_record_difference(source, &current, log);
     if (current.harmony_count > 0) {
         char *harmony = motive_harmony_to_text(&current);
         if (harmony) {
@@ -415,7 +416,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
             free(harmony);
         }
     }
-    record_derivation(log);
+    variant_record_derivation(log);
     *out = current;
     return VARIANT_OK;
 }

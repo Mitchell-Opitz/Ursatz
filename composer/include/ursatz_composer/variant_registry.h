@@ -208,7 +208,8 @@ typedef enum {
     VARIANT_ERR_UNKNOWN_OP, /* a step names an operation that is not in the registry */
     VARIANT_ERR_FORM,       /* the operation does not apply to the source's form */
     VARIANT_ERR_PARAM,      /* a set parameter is outside its range */
-    VARIANT_ERR_REFUSED     /* the operation refused the motive, on every draw of its open parameters */
+    VARIANT_ERR_REFUSED,    /* the operation refused the motive, on every draw of its open parameters */
+    VARIANT_ERR_MEMORY      /* the recognizer could not allocate its search */
 } VariantResult;
 
 /* "ok", "empty chain" and so on. */
@@ -241,5 +242,42 @@ char *variant_record_to_json(const VariantRecord *record);
  * arguments.
  */
 bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out);
+
+/* --- recognizing ---------------------------------------------------------- */
+
+/*
+ * How one motive derives from another, recognized (R-139). distance is the library's: the chain's summed relation costs
+ * over that sum plus 4, as a fraction (1/1 when no chain was found). kept, changed and derivation read as a record's
+ * do, for the motive the chain gives.
+ */
+typedef struct {
+    bool found;
+    unsigned long long distance_num;
+    unsigned long long distance_den;
+    const char *kept[VARIANT_DIMENSIONS];
+    size_t kept_count;
+    const char *changed[VARIANT_DIMENSIONS];
+    size_t changed_count;
+    bool rhythm_scaled;
+    char derivation[VARIANT_DERIVATION_MAX];
+} VariantRecognition;
+
+/*
+ * The chain of registry steps that turns source into target, searched to at most depth steps (1 to VARIANT_CHAIN_MAX)
+ * by the library's recognizer, each relation mapped to the registry row of that relation with every parameter set.
+ * found is true when the chain, replayed with variant_apply_chain, gives a motive equal to target (motive_equal); the op
+ * names may differ from the chain that made the target (inverting then transposing equals transposing then inverting).
+ * When nothing is found, *chain has no steps and the distance is 1; when the library's chain does not replay to the
+ * target, found is false and *chain holds that chain, for the caller to print.
+ *
+ * VARIANT_OK means the search ran, so read out->found; VARIANT_ERR_NULL for NULL arguments, VARIANT_ERR_PARAM for a depth
+ * out of range or a motive that is not a valid sketch, VARIANT_ERR_MEMORY for the search's allocation.
+ */
+VariantResult variant_recognize_depth(const Motive *source, const Motive *target, size_t depth, VariantChain *chain,
+                                      VariantRecognition *out);
+
+/* variant_recognize_depth at the depth VARIANT_CHAIN_MAX. */
+VariantResult variant_recognize(const Motive *source, const Motive *target, VariantChain *chain,
+                                VariantRecognition *out);
 
 #endif
