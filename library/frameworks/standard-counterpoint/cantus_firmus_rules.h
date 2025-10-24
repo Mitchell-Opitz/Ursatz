@@ -6,6 +6,7 @@
 #include "counterpoint_line.h"
 #include "pitch/pitch_spelling.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -73,6 +74,8 @@ typedef enum {
 
 const Rule *standard_counterpoint_cantus_rule(StandardCounterpointCantusRule which);
 const Constraint *standard_counterpoint_cantus_constraint(StandardCounterpointCantusRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_cantus_preference(StandardCounterpointCantusRule which);
 
 /* "length" "tonic-ends" "final-step" "melodic-consonance" "range"
    "single-climax" "leap-recovery" "consecutive-leaps" "leading-tone"

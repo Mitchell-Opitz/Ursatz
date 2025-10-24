@@ -32,7 +32,7 @@ static void ensure_built(const StandardCounterpointRuleTable *table, int which) 
     }
     standard_counterpoint_build_rule_pair(
         name, standard_counterpoint_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
-        table->evaluate, &table->pairs[which]);
+        table->evaluate, table->score, &table->pairs[which]);
 }
 
 const Rule *standard_counterpoint_rule_table_rule(const StandardCounterpointRuleTable *table, int which) {
@@ -43,6 +43,11 @@ const Rule *standard_counterpoint_rule_table_rule(const StandardCounterpointRule
 const Constraint *standard_counterpoint_rule_table_constraint(const StandardCounterpointRuleTable *table, int which) {
     ensure_built(table, which);
     return standard_counterpoint_rule_table_valid(table, which) ? table->pairs[which].constraint : NULL;
+}
+
+const Preference *standard_counterpoint_rule_table_preference(const StandardCounterpointRuleTable *table, int which) {
+    ensure_built(table, which);
+    return standard_counterpoint_rule_table_valid(table, which) ? table->pairs[which].preference : NULL;
 }
 
 const char *standard_counterpoint_rule_table_name(const StandardCounterpointRuleTable *table, int which) {
@@ -108,4 +113,32 @@ ConstraintEvalResult standard_counterpoint_rule_table_evaluate(const StandardCou
         return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
     }
     return holds(which, subject) ? CONSTRAINT_EVAL_PASS : CONSTRAINT_EVAL_FAIL;
+}
+
+PreferenceScore standard_counterpoint_rule_table_score(const StandardCounterpointRuleTable *table,
+                                                       StandardCounterpointRuleHolds holds, size_t subject_size,
+                                                       const Preference *preference, const Value *candidate) {
+    PreferenceScore unscorable = {0, 0};
+    if (table == NULL || holds == NULL || preference == NULL || candidate == NULL) {
+        return unscorable;
+    }
+    int which = -1;
+    for (int i = 0; i < table->count; i++) {
+        if (table->built[i] && table->pairs[i].preference == preference) {
+            which = i;
+            break;
+        }
+    }
+    char tag[96];
+    if (which < 0 || !standard_counterpoint_rule_table_candidate_type(table, tag, sizeof(tag)) ||
+        strcmp(value_type(candidate), tag) != 0) {
+        return unscorable;
+    }
+    size_t size = 0;
+    const void *subject = value_content(candidate, &size);
+    if (subject == NULL || size != subject_size) {
+        return unscorable;
+    }
+    PreferenceScore score = {holds(which, subject) ? 1UL : 0UL, 1UL};
+    return score;
 }

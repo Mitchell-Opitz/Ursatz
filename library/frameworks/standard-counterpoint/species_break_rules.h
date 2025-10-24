@@ -5,6 +5,7 @@
 
 #include "fourth_species_exercise.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -44,6 +45,8 @@ typedef enum {
 
 const Rule *standard_counterpoint_species_break_rule(StandardCounterpointSpeciesBreakRule which);
 const Constraint *standard_counterpoint_species_break_constraint(StandardCounterpointSpeciesBreakRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_species_break_preference(StandardCounterpointSpeciesBreakRule which);
 
 /* "downbeat-consonant" "weak-passing" "limits"; NULL for an invalid rule. */
 const char *standard_counterpoint_species_break_rule_name(StandardCounterpointSpeciesBreakRule which);

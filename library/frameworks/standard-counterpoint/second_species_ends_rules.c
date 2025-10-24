@@ -14,9 +14,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES
 static bool g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_ENDS_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "second-species-ends", NAMES, STANDARD_COUNTERPOINT_SECOND_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built,
-    evaluate_candidate};
+    evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesEndsRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -28,6 +29,10 @@ const Rule *standard_counterpoint_second_species_ends_rule(StandardCounterpointS
 
 const Constraint *standard_counterpoint_second_species_ends_constraint(StandardCounterpointSecondSpeciesEndsRule which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_second_species_ends_preference(StandardCounterpointSecondSpeciesEndsRule which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_second_species_ends_rule_name(StandardCounterpointSecondSpeciesEndsRule which) {
@@ -128,6 +133,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_second_species_ends_check(const StandardCounterpointSecondSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *violations) {

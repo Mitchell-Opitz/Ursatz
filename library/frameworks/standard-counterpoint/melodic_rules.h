@@ -6,6 +6,7 @@
 #include "counterpoint_limits.h"
 #include "counterpoint_line.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -67,6 +68,8 @@ typedef enum {
 
 const Rule *standard_counterpoint_melodic_rule(StandardCounterpointMelodicRule which);
 const Constraint *standard_counterpoint_melodic_constraint(StandardCounterpointMelodicRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_melodic_preference(StandardCounterpointMelodicRule which);
 
 /* "clausula-vera" "repeated-notes" "pitch-occurrences" "consecutive-leaps"
    "leap-density" "repeated-generic" "unique-climax" "climax-not-final"

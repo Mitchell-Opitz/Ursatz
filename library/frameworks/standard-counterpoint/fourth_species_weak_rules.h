@@ -5,6 +5,7 @@
 
 #include "fourth_species_exercise.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -52,6 +53,8 @@ typedef enum {
 
 const Rule *standard_counterpoint_fourth_species_weak_rule(StandardCounterpointFourthSpeciesWeakRule which);
 const Constraint *standard_counterpoint_fourth_species_weak_constraint(StandardCounterpointFourthSpeciesWeakRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_fourth_species_weak_preference(StandardCounterpointFourthSpeciesWeakRule which);
 
 /* "consonant" "no-repeated-perfect" "max-same-imperfect-run"
    "no-direct-perfect" "no-interior-unison"; NULL for an invalid rule. */

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "third_species_exercise.h"
 
@@ -71,6 +72,8 @@ typedef enum {
 const Rule *standard_counterpoint_third_species_strong_rule(StandardCounterpointThirdSpeciesStrongRule which);
 const Constraint *
 standard_counterpoint_third_species_strong_constraint(StandardCounterpointThirdSpeciesStrongRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_third_species_strong_preference(StandardCounterpointThirdSpeciesStrongRule which);
 
 /* "consonant" "imperfect-preferred" "no-strong-unison" "no-three-perfect"
    "max-same-imperfect-run" "no-dissonant-outline" "previous-bar-perfects"

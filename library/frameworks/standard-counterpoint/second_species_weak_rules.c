@@ -21,9 +21,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES
 static bool g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "second-species-weak", NAMES, STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate};
+    evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesWeakRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -35,6 +36,10 @@ const Rule *standard_counterpoint_second_species_weak_rule(StandardCounterpointS
 
 const Constraint *standard_counterpoint_second_species_weak_constraint(StandardCounterpointSecondSpeciesWeakRule which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_second_species_weak_preference(StandardCounterpointSecondSpeciesWeakRule which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_second_species_weak_rule_name(StandardCounterpointSecondSpeciesWeakRule which) {
@@ -155,6 +160,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointSecondSpeciesExercise)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointSecondSpeciesExercise)
 
 bool standard_counterpoint_second_species_weak_check(const StandardCounterpointSecondSpeciesExercise *exercise,
                                                      unsigned *hard_violations, unsigned *soft_violations) {

@@ -13,9 +13,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_TENDENCY_COUNT
 static bool g_built[STANDARD_COUNTERPOINT_TENDENCY_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "tendency", NAMES, STANDARD_COUNTERPOINT_TENDENCY_COUNT, standard_counterpoint_rule_table_never_hard,
-    g_pairs, g_built, evaluate_candidate};
+    g_pairs, g_built, evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointTendency which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -27,6 +28,10 @@ const Rule *standard_counterpoint_tendency_rule(StandardCounterpointTendency whi
 
 const Constraint *standard_counterpoint_tendency_constraint(StandardCounterpointTendency which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_tendency_preference(StandardCounterpointTendency which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_tendency_name(StandardCounterpointTendency which) {
@@ -148,6 +153,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointLine)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointLine)
 
 bool standard_counterpoint_tendency_check(const StandardCounterpointLine *line, unsigned *violations) {
     if (!standard_counterpoint_line_valid(line) || violations == NULL) {

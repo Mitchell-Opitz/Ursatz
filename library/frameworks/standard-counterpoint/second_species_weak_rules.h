@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "second_species_exercise.h"
 
@@ -51,6 +52,8 @@ typedef enum {
 
 const Rule *standard_counterpoint_second_species_weak_rule(StandardCounterpointSecondSpeciesWeakRule which);
 const Constraint *standard_counterpoint_second_species_weak_constraint(StandardCounterpointSecondSpeciesWeakRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_second_species_weak_preference(StandardCounterpointSecondSpeciesWeakRule which);
 
 /* "dissonant-passing" "pattern-fit" "mixture" "register-change-rare"; NULL
    for an invalid rule. */

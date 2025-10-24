@@ -6,6 +6,7 @@
 #include "counterpoint_line.h"
 #include "counterpoint_rules.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -47,6 +48,8 @@ const Rule *
 standard_counterpoint_first_species_independence_rule(StandardCounterpointFirstSpeciesIndependenceRule which);
 const Constraint *
 standard_counterpoint_first_species_independence_constraint(StandardCounterpointFirstSpeciesIndependenceRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_first_species_independence_preference(StandardCounterpointFirstSpeciesIndependenceRule which);
 
 /* "single-repeat" "no-repeat" "no-overlap" "emergency-gap"; NULL for an
    invalid rule. */

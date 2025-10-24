@@ -22,9 +22,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_SPECIES_BREAK_
 static bool g_built[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "species-break", NAMES, STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate};
+    evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointSpeciesBreakRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -36,6 +37,10 @@ const Rule *standard_counterpoint_species_break_rule(StandardCounterpointSpecies
 
 const Constraint *standard_counterpoint_species_break_constraint(StandardCounterpointSpeciesBreakRule which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_species_break_preference(StandardCounterpointSpeciesBreakRule which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_species_break_rule_name(StandardCounterpointSpeciesBreakRule which) {
@@ -140,6 +145,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
 
 bool standard_counterpoint_species_break_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                unsigned *hard_violations, unsigned *soft_violations) {

@@ -25,9 +25,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIFTH_SPECIES_
 static bool g_built[STANDARD_COUNTERPOINT_FIFTH_SPECIES_HARMONY_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "fifth-species-harmony", NAMES, STANDARD_COUNTERPOINT_FIFTH_SPECIES_HARMONY_RULE_COUNT, table_is_hard,
-    g_pairs, g_built, evaluate_candidate};
+    g_pairs, g_built, evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointFifthSpeciesHarmonyRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -39,6 +40,10 @@ const Rule *standard_counterpoint_fifth_species_harmony_rule(StandardCounterpoin
 
 const Constraint *standard_counterpoint_fifth_species_harmony_constraint(StandardCounterpointFifthSpeciesHarmonyRule which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_fifth_species_harmony_preference(StandardCounterpointFifthSpeciesHarmonyRule which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_fifth_species_harmony_rule_name(StandardCounterpointFifthSpeciesHarmonyRule which) {
@@ -194,6 +199,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointFifthSpeciesExercise)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointFifthSpeciesExercise)
 
 bool standard_counterpoint_fifth_species_harmony_check(const StandardCounterpointFifthSpeciesExercise *exercise,
                                                            unsigned *hard_violations, unsigned *soft_violations) {
