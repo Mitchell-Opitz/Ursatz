@@ -32,7 +32,7 @@ newline. The same input and build always give the same bytes.
 | `form` | form object or null | Filled: the tree of sections, phrases, subphrases and ideas, and the thematic returns. See below; `null` when the library found no phrases. |
 | `motives` | array of motive claims | Filled: the library's motive families with every occurrence and their development. See below. |
 | `melody` | array of melody claims | Filled: the melody of each phrase, read by the library's melody adapter. See below. |
-| `rhythm` | array | Placeholder: `[]`. |
+| `rhythm` | array of rhythm claims | Filled: the library's density, syncopation, hemiola, hypermeter and tuplet results, one flat list labelled by kind. See below. |
 | `texture` | array | Placeholder: `[]`. |
 | `voice_leading` | array | Placeholder: `[]`. |
 | `schemas` | array | Placeholder: `[]`. |
@@ -725,6 +725,87 @@ broken seventh and the note after it (`label` `"leading-tone"`). The library has
 The Markdown report renders `## Melody` from this section, a row per phrase (notes, range, climax, contour counts), and
 the subsections `### Leaps`, `### Non-chord tones` and `### Tendencies`.
 
+### Rhythm and meter
+
+`rhythm` is one flat array of claims, each labelled by the kind of result it is: the densities first (phrase by phrase),
+then the syncopations, hemiolas, hypermeters and tuplets, each kind in time order. A flat list keeps the placeholder's
+type (an array) from version 9; `label` says which of the five a claim is. The analyzer builds the neutral input of
+Ursatz's standard-meter adapter (`analysis/meter_analysis_input.h`) in `src/pipeline/rhythm_pipeline.c`, ported from
+`tests/integration/rhythm_util.h`, and copies the library's results; every count, level, share and verdict is the
+library's. The input holds every imported note (its onset to its release; `line` 0 when it is a note of the outer voice
+soprano, 1 for the bass, 2 for any other), a chord change at the start of every chord segment whose base numeral or key
+region differs from the segment before (the harmonic rhythm's definition) and the phrases of `phrases` with the
+arrival of their cadence and the length change of their expansion. The form adapter does not report elided cadences, so
+no phrase is elided and the library reports no hypermetric reinterpretation. A piece without phrases has an empty
+`rhythm`. A claim's `framework` is `"standard-meter-v1"`.
+
+**Density** (`label` `"density"`): the library's profile of a phrase's notes. One claim of all the notes of each phrase
+(`line` `"all"`) and one for each line that has a note in it (`"soprano"`, `"bass"`, `"other"`); `span` is the phrase's
+and `note_ids` the notes counted, whose onset (snapped to the library's grid) is in the phrase. The recurring rhythm
+patterns are the motive families' rhythms (`motives`), not a second detector.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uncertainty` | number | The library's: 0, the profile describes the notes as given. |
+| `phrase` | integer | The phrase's index into `phrases`. |
+| `measures` | object | `{"first", "last"}`: the phrase's measures, as in `phrases`. |
+| `line` | string | `"all"`, `"soprano"`, `"bass"` or `"other"`. |
+| `notes` | integer | The notes counted. |
+| `attacks` | integer | The distinct onsets among them (a chord is one attack). |
+| `measure_count` | integer | The measures the phrase touches. |
+| `attacks_per_beat` | object | `{"mean", "max"}`: for each measure the phrase touches, the attacks inside the phrase's part of it over the beats that part spans (the beat of the measure's reading, a dotted quarter in 6/8 and 12/8); the mean over the measures and the largest. |
+| `mean_inter_onset` | number | The mean distance between consecutive attacks, in whole notes; 0 with fewer than two attacks. |
+| `on_beat_share`, `off_beat_share` | number | The shares of the attacks that fall exactly on a beat, and the rest. |
+| `durations` | array | `[{"duration": {"num", "den"}, "count"}]`: the notes' lengths in whole notes, ascending, a chord's notes each counted. At most 16 are kept, the shortest first. |
+| `durations_truncated` | boolean | Some longer durations were left out. |
+
+**Syncopation** (`label` `"syncopation"`): the library's THROUGH_STRONGER rule. A note attacked at a weaker metric level
+and held through a stronger one that no note of its line attacks. Each line is read on its own. `span` and `note_ids`
+are the one note's. `line` is `"soprano"`, `"bass"` or `"other"`; `measure` and `beat` (1-based, fractional) are where it
+is attacked, `attack_level` its level and `strength` the difference of the two levels (1 to 4: an off-beat note held over
+the beat is 1, a note on a beat held over the barline 2, an off-beat note held over the barline 3). `held_through` is
+`{"level", "measure", "beat"}`. The levels are the library's `StandardMeterLevel`: `"downbeat"`, `"secondary-beat"`,
+`"beat"`, `"offbeat"` and `"finer"`. `uncertainty` is 0.1 when the library's snap moved the onset, otherwise 0.
+
+**Hemiola** (`label` `"hemiola"`): six pulses of two measures of a simple triple meter, or one of 6/8, read as three duple
+units. `measures` is `{"first", "last"}` and `note_ids` the notes attacked on the window's pulses. `evidence` is
+`{"duration", "chord", "accent", "agreeing", "available"}`: each type is `true` when it agrees, `false` when it does not
+and `null` when it is unavailable (the chord evidence, with no chord changes), and the claim is made when `agreeing`
+reaches 2. `uncertainty` is the library's, 1 - `agreeing` / 3. Signatures with no hemiola (12/8, 4/4) have none.
+
+**Hypermeter** (`label` `"hypermeter"`): one claim per phrase that has a measure; `span` and `note_ids` are the
+phrase's. `phrase` is its index, `measures` its measures (the span's, an extension included), `length` the hypermeasure
+length the library chose (2 or 4 measures: the one that fills the phrase and holds the cadence arrival in the last
+hypermeasure), `score` its confidence and `arrival_measure` the measure the cadence arrives in (`null` with none).
+`hyperdownbeats` lists the first measure of every hypermeasure, and `hypermeasures` has one object for each:
+`{"index", "measures", "kind", "extra_hyperbeats", "contains_cadence", "score", "uncertainty"}`. `kind` is the library's
+`"regular"`, `"short"` (a remainder), `"expanded"` (an internal expansion added hyperbeats), `"extension"` (an external
+expansion is a hypermeasure of its own) or `"contracted"`. The hypermeasures follow one another from the phrase's first
+measure; the library fills the last to its length, so it can run past `measures`. `uncertainty` of the claim is 1 -
+`score`.
+
+**Tuplet** (`label` `"tuplet"`): a run of two or more consecutive attacks of one ratio, found from the notes' times
+alone (the importers carry no notated tuplets, R-056), so only a ratio that falls on a grid of 96 to the whole note is
+read: MIDI times are rounded to that grid, and a time further than a quarter of a step from it is not read. A note whose
+attack, or distance to the next attack, is not a whole step of the library's 1/32 grid is a triplet note (3:2, which
+includes sextuplets); in a compound meter, two notes that halve a beat are a duplet (2:3). Other ratios are not looked
+for. All the notes are one stream. The library names the ratio and places it (`borrowed_rules.h`). `uncertainty` is
+`null`: the borrowed-division rules are rules, not a detector.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `ratio` | object | `{"actual", "normal"}`: 3 and 2 for a triplet, 2 and 3 for a duplet. |
+| `name` | string | `"triplet"`, `"duplet"` or `"tuplet"` (the library names the first two only). |
+| `meter` | string | The meter of the first note: `"simple"`, `"compound"` or `"unclassified"`. |
+| `borrowed` | boolean | The library's BORROWED rule: a triplet in a simple meter or a duplet in a compound one. |
+| `level` | string or null | The library's LEVEL rule for the span of the first group: `"beat"`, `"subdivision"` or `"multi-beat"`; `null` when it cannot place it. |
+| `level_typical` | boolean or null | The library's TYPICAL_LEVEL rule; `null` with `level`. |
+| `measure`, `beat` | number | Where the first note is attacked. |
+| `attacks` | integer | The attacks in the run, at least 2. |
+
+The Markdown report renders `## Rhythm and meter` from this section: `### Density` (a row per phrase and line),
+`### Syncopation`, `### Hemiola`, `### Hypermeter` and `### Tuplets and borrowed divisions`.
+
 ### Progressions
 
 `progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
@@ -799,7 +880,8 @@ before those:
   `ideas` and `phrase_model`), and chord claims gain the optional `phrase_model`; all additive. The optional
   top-level `themes` follows `phrases`, and phrase claims gain the optional `expansions`; both are additive. `form` is
   filled (its object is new), which is additive. `motives` is filled (its claims are new), which is additive. `melody` is filled
-  (its claims are new), which is additive.
+  (its claims are new), which is additive. `rhythm` is filled (its claims are new, as one flat array labelled by kind),
+  which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
