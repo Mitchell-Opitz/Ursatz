@@ -150,8 +150,10 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    the motive families with Ursatz's motive analysis (see "Motives").
 11. `melody_pipeline`: builds the soprano line of each phrase and reads it with the melody adapter of standard-counterpoint
    (see "Melody").
+12. `rhythm_pipeline`: builds the neutral input of the rhythm adapter of standard-meter from the notes, the chord changes
+   and the phrases, and reads the density, syncopation, hemiola and hypermeter; finds the tuplets (see "Rhythm and meter").
 
-Steps 2 to 11 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
+Steps 2 to 12 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
 regions of the second pass, whose results are the report (R-039, R-043).
 
@@ -561,6 +563,48 @@ none of the ranges and 4 of the 11 annotated leaps have the annotated status, th
 `test_melody_bach_114_target` asserts the library test's target (every climax and range, at least 90% of the leaps) and is
 marked `WILL_FAIL` (see "Known limits").
 
+## Rhythm and meter
+
+The analyzer builds the neutral input of the rhythm adapter of Ursatz's standard-meter
+(`src/pipeline/rhythm_pipeline.c`, ported from `tests/integration/rhythm_util.h`) and reports the library's results.
+The input holds every note (its line: the outer voice soprano, the bass or any other), a chord change wherever the base
+numeral or key region differs from the chord before, and the phrases with the arrival of their cadence and their length
+change. The document's `rhythm` is one flat list of claims labelled by kind:
+
+- **Density** per phrase, for all its notes and for each line: notes, attacks, attacks per beat, the mean distance
+  between attacks, the share of attacks on the beat and a histogram of the notes' lengths. The recurring rhythm patterns
+  are the motive families' rhythms (see "Motives"), not a second detector.
+- **Syncopation**: a note attacked at a weaker metric level and held through a stronger one that no note of its line
+  attacks, with the level it is attacked at, the one it is held through and the strength of the difference.
+- **Hemiola**: two measures of a simple triple meter, or one of 6/8, whose six pulses read as three duple units, with the
+  three kinds of evidence (the durations, the chord changes, the accents) and how many agree.
+- **Hypermeter**: for each phrase the hypermeasure length (2 or 4 measures) that fills it and holds the cadence in the
+  last hypermeasure, the hyperdownbeats and the hypermeasures (regular, short, expanded, extension or contracted).
+- **Tuplets**: runs of triplets (sextuplets included) and duplets, named borrowed or not and placed at a level by the
+  library's rules. The importers carry no notated tuplets, so they are read from the notes' times alone, rounded to a grid
+  of 96 to the whole note.
+
+The Markdown report has a `## Rhythm and meter` section with a subsection for each.
+
+Measured on the reference pieces (MIDI):
+
+| Piece | Meter read | Phrases | Syncopations (soprano / bass / other) | Hemiolas | Hypermeasures (regular / short / expanded / extension / contracted) | Tuplet runs |
+| --- | --- | --- | --- | --- | --- | --- |
+| Bach 114 | 4/4 | 2 | 21 (4 / 11 / 6) | 0 | 8 (6 / 1 / 1 / 0 / 0) | 0 |
+| Clementi 36 | 4/4 | 10 | 0 | 0 | 14 (9 / 2 / 0 / 0 / 3) | 0 |
+| Mozart 545 | 4/4 | 52 | 31 (29 / 0 / 2) | 0 | 113 (79 / 19 / 6 / 0 / 9) | 4 (triplets, borrowed) |
+| Field 1 | 12/8 | 10 | 146 (114 / 1 / 31) | 0 | 19 (11 / 3 / 2 / 1 / 2) | 83 (triplets, not borrowed) |
+| Field 5 | 12/8 | 9 | 11 (5 / 0 / 6) | 0 | 15 (6 / 6 / 2 / 1 / 0) | 2 (triplets, not borrowed) |
+
+`test_rhythm` checks the structure of the section on Field 5 and its floors against Ursatz's hand annotation
+(`tests/fixtures/annotations/field5_rhythm.txt`, a draft reading of measures 1 to 30 of the 12/8 score): the annotated
+syncopation (measure 14, beat 2) is found, no hemiola is annotated (12/8 has none) and 7 of the 8 annotated hyperdownbeats
+are the first measure of a hypermeasure, against the phrases the form adapter detects (Ursatz scores the annotated
+phrases). `test_rhythm_constructed` runs small pieces whose answer is known: eighth-note triplets in 4/4 (one run of six
+attacks, a borrowed division at the beat), a duplet in 6/8 and a hemiola in 3/4. `test_rhythm_field5_target` asserts
+Ursatz's target (80% of the syncopations and hyperdownbeats, every hemiola, every reinterpretation) and is marked
+`WILL_FAIL` (see "Known limits").
+
 ## Known limits
 
 - Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
@@ -597,6 +641,15 @@ marked `WILL_FAIL` (see "Known limits").
   library reads a leap's size from the scale degrees, and two notes a semitone apart whose degrees are a fifth apart read
   as a leap of a fifth (Bach 114, measures 13 and 19). A phrase is one line, so a leap at its end has nothing after it (not judged). The line
   tendencies treat a rest in the line as no gap.
+- Rhythm: the form adapter does not report elided cadences, so the hypermeter reads no phrase as elided and reports no
+  hypermetric reinterpretation. Field 5's annotation has one (measure 9, where the phrase of measures 5 to 8 is elided with
+  the next): `test_rhythm_field5_target` is `WILL_FAIL`, with the syncopation, the hemiolas (none) and 7 of 8
+  hyperdownbeats (87.5%, target 80%; measure 18 is missed) meeting its target. The hypermeter reads the phrases as the
+  form adapter cuts them, so a phrase of one or three measures takes the better of the two lengths and ends in a short
+  hypermeasure. Tuplets are read from times alone: only triplets, sextuplets and duplets are looked for, a MIDI file
+  whose times are not on the grid of 96 to the whole note (an expressive performance) yields few or none, and a duplet
+  in a compound meter is two notes that halve a beat, which sound the same as two dotted values. Field 1, a performed
+  12/8 file, yields 83 runs of triplets within the beat that the library does not call borrowed.
 - Form plan: the kernel's sections close only on perfect and imperfect authentic cadences, so a piece of half
   cadences and deceptive endings is one section, and the final phrase never closes one. Returns compare six-note
   stretches by contour and rhythm, so a figure that recurs inside a hybrid reads as a return (Mozart 545: 77). A

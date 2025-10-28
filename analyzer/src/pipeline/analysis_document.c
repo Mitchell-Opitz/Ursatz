@@ -2850,6 +2850,262 @@ static cJSON *melody_json(const ImportedNotes *notes, const AnalysisReport *repo
     return list;
 }
 
+/* ---- Rhythm and meter ---- */
+
+/* The line a density profile is of, as the document names it: "all" for every note of the phrase, then the outer-voice
+   soprano and bass, and "other" for the rest. */
+static const char *rhythm_line_name(int line) {
+    switch (line) {
+        case 0:
+            return "soprano";
+        case 1:
+            return "bass";
+        case 2:
+            return "other";
+        default:
+            return "all";
+    }
+}
+
+static cJSON *density_durations_json(const AnalysisDensity *density) {
+    cJSON *list = cJSON_CreateArray();
+    for (unsigned b = 0; list && b < density->bin_count; b++) {
+        cJSON *bin = cJSON_CreateObject();
+        if (!(bin &&
+              add(bin, "duration", rational_json(rational_make(density->bins[b].numerator, density->bins[b].denominator))) &&
+              add(bin, "count", cJSON_CreateNumber((double)density->bins[b].count)) && append(list, bin))) {
+            cJSON_Delete(bin);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+static cJSON *density_per_beat_json(const AnalysisDensity *density) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "mean", cJSON_CreateNumber(density->attacks_per_beat_mean)) &&
+                    add(object, "max", cJSON_CreateNumber(density->attacks_per_beat_max)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* A density claim: the library's profile of a phrase's notes (all of them, or one line's), over the phrase's span. */
+static cJSON *density_json(const ImportedNotes *notes, const AnalysisReport *report, const AnalysisDensity *density) {
+    const AnalysisPhrase *phrase = &report->phrases[density->phrase];
+    Rational start = rational_make(phrase->start_numerator, phrase->start_denominator);
+    Rational end = rational_make(phrase->end_numerator, phrase->end_denominator);
+    cJSON *claim = claim_json_with(density->framework, notes, density->note_ids, density->note_id_count, start, end,
+                                   "density", cJSON_CreateNumber(density->uncertainty));
+    if (!(claim && add(claim, "phrase", cJSON_CreateNumber((double)density->phrase)) &&
+          add(claim, "measures", measures_json(phrase->first_measure, phrase->last_measure)) &&
+          add(claim, "line", cJSON_CreateString(rhythm_line_name(density->line))) &&
+          add(claim, "notes", cJSON_CreateNumber((double)density->notes)) &&
+          add(claim, "attacks", cJSON_CreateNumber((double)density->attacks)) &&
+          add(claim, "measure_count", cJSON_CreateNumber(density->measures)) &&
+          add(claim, "attacks_per_beat", density_per_beat_json(density)) &&
+          add(claim, "mean_inter_onset", cJSON_CreateNumber(density->mean_inter_onset)) &&
+          add(claim, "on_beat_share", cJSON_CreateNumber(density->on_beat_share)) &&
+          add(claim, "off_beat_share", cJSON_CreateNumber(density->off_beat_share)) &&
+          add(claim, "durations", density_durations_json(density)) &&
+          add(claim, "durations_truncated", cJSON_CreateBool(density->bins_truncated)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+static cJSON *syncopation_through_json(const AnalysisSyncopation *syncopation) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "level", cJSON_CreateString(syncopation->through_level)) &&
+                    add(object, "measure", cJSON_CreateNumber(syncopation->through_measure)) &&
+                    add(object, "beat", cJSON_CreateNumber(syncopation->through_beat)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* A syncopation claim: one note, attacked at a weaker level and held through a stronger one that no note of its line
+   attacks. */
+static cJSON *syncopation_json(const ImportedNotes *notes, const AnalysisSyncopation *syncopation) {
+    Rational start;
+    Rational end;
+    notes_span(notes, &syncopation->note, 1, &start, &end);
+    cJSON *claim = claim_json_with(syncopation->framework, notes, &syncopation->note, 1, start, end, "syncopation",
+                                   cJSON_CreateNumber(syncopation->uncertainty));
+    if (!(claim && add(claim, "line", cJSON_CreateString(rhythm_line_name(syncopation->line))) &&
+          add(claim, "measure", cJSON_CreateNumber(syncopation->measure)) &&
+          add(claim, "beat", cJSON_CreateNumber(syncopation->beat)) &&
+          add(claim, "attack_level", cJSON_CreateString(syncopation->attack_level)) &&
+          add(claim, "strength", cJSON_CreateNumber((double)syncopation->strength)) &&
+          add(claim, "held_through", syncopation_through_json(syncopation)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* An evidence value of a hemiola: true when it agrees, false when it does not, null when it is unavailable. */
+static cJSON *evidence_json(int evidence) {
+    return evidence < 0 ? cJSON_CreateNull() : cJSON_CreateBool(evidence != 0);
+}
+
+static cJSON *hemiola_evidence_json(const AnalysisHemiola *hemiola) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "duration", evidence_json(hemiola->duration_evidence)) &&
+                    add(object, "chord", evidence_json(hemiola->chord_evidence)) &&
+                    add(object, "accent", evidence_json(hemiola->accent_evidence)) &&
+                    add(object, "agreeing", cJSON_CreateNumber((double)hemiola->agreeing)) &&
+                    add(object, "available", cJSON_CreateNumber((double)hemiola->available)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *hemiola_json(const ImportedNotes *notes, const AnalysisHemiola *hemiola) {
+    Rational start;
+    Rational end;
+    notes_span(notes, hemiola->note_ids, hemiola->note_id_count, &start, &end);
+    cJSON *claim = claim_json_with(hemiola->framework, notes, hemiola->note_ids, hemiola->note_id_count, start, end,
+                                   "hemiola", cJSON_CreateNumber(hemiola->uncertainty));
+    if (!(claim && add(claim, "measures", measures_json(hemiola->first_measure, hemiola->last_measure)) &&
+          add(claim, "evidence", hemiola_evidence_json(hemiola)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+static cJSON *hypermeasures_json(const AnalysisHypermeter *hypermeter) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t h = 0; list && h < hypermeter->hypermeasure_count; h++) {
+        const AnalysisHypermeasure *hypermeasure = &hypermeter->hypermeasures[h];
+        cJSON *item = cJSON_CreateObject();
+        if (!(item && add(item, "index", cJSON_CreateNumber(hypermeasure->index)) &&
+              add(item, "measures", measures_json(hypermeasure->first_measure, hypermeasure->last_measure)) &&
+              add(item, "kind", cJSON_CreateString(hypermeasure->kind)) &&
+              add(item, "extra_hyperbeats", cJSON_CreateNumber(hypermeasure->extra_hyperbeats)) &&
+              add(item, "contains_cadence", cJSON_CreateBool(hypermeasure->contains_cadence)) &&
+              add(item, "score", cJSON_CreateNumber(hypermeasure->score)) &&
+              add(item, "uncertainty", cJSON_CreateNumber(hypermeasure->uncertainty)) && append(list, item))) {
+            cJSON_Delete(item);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The first measure of every hypermeasure of the phrase: its hyperdownbeats. */
+static cJSON *hyperdownbeats_json(const AnalysisHypermeter *hypermeter) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t h = 0; list && h < hypermeter->hypermeasure_count; h++) {
+        if (!append(list, cJSON_CreateNumber(hypermeter->hypermeasures[h].first_measure))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* A hypermeter claim: one phrase read in hypermeasures of two or four measures. */
+static cJSON *hypermeter_json(const ImportedNotes *notes, const AnalysisReport *report,
+                              const AnalysisHypermeter *hypermeter) {
+    const AnalysisPhrase *phrase = &report->phrases[hypermeter->phrase];
+    Rational start = rational_make(phrase->start_numerator, phrase->start_denominator);
+    Rational end = rational_make(phrase->end_numerator, phrase->end_denominator);
+    cJSON *claim = claim_json_with(hypermeter->framework, notes, hypermeter->note_ids, hypermeter->note_id_count,
+                                   start, end, "hypermeter", cJSON_CreateNumber(1.0 - hypermeter->score));
+    if (!(claim && add(claim, "phrase", cJSON_CreateNumber((double)hypermeter->phrase)) &&
+          add(claim, "measures",
+              measures_json(hypermeter->first_measure, hypermeter->first_measure + hypermeter->measures - 1)) &&
+          add(claim, "length", cJSON_CreateNumber((double)hypermeter->length)) &&
+          add(claim, "score", cJSON_CreateNumber(hypermeter->score)) &&
+          add(claim, "arrival_measure",
+              hypermeter->has_arrival ? cJSON_CreateNumber(hypermeter->arrival_measure) : cJSON_CreateNull()) &&
+          add(claim, "hyperdownbeats", hyperdownbeats_json(hypermeter)) &&
+          add(claim, "hypermeasures", hypermeasures_json(hypermeter)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+static cJSON *tuplet_ratio_json(const AnalysisTuplet *tuplet) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "actual", cJSON_CreateNumber((double)tuplet->actual)) &&
+                    add(object, "normal", cJSON_CreateNumber((double)tuplet->normal)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* A tuplet claim: a run of notes that divide the beat the way the meter does not. The library gives it no uncertainty
+   (the borrowed-division rules are rules, not a detector), so the claim's is null. */
+static cJSON *tuplet_json(const ImportedNotes *notes, const AnalysisTuplet *tuplet) {
+    Rational start;
+    Rational end;
+    notes_span(notes, tuplet->note_ids, tuplet->note_id_count, &start, &end);
+    cJSON *claim = claim_json_with(tuplet->framework, notes, tuplet->note_ids, tuplet->note_id_count, start, end,
+                                   "tuplet", cJSON_CreateNull());
+    if (!(claim && add(claim, "ratio", tuplet_ratio_json(tuplet)) && add(claim, "name", cJSON_CreateString(tuplet->name)) &&
+          add(claim, "meter", cJSON_CreateString(tuplet->meter)) &&
+          add(claim, "borrowed", cJSON_CreateBool(tuplet->borrowed)) &&
+          add(claim, "level", tuplet->has_level ? cJSON_CreateString(tuplet->level) : cJSON_CreateNull()) &&
+          add(claim, "level_typical", tuplet->has_level ? cJSON_CreateBool(tuplet->level_typical) : cJSON_CreateNull()) &&
+          add(claim, "measure", cJSON_CreateNumber(tuplet->measure)) &&
+          add(claim, "beat", cJSON_CreateNumber(tuplet->beat)) &&
+          add(claim, "attacks", cJSON_CreateNumber((double)tuplet->attacks)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The rhythm section: a list of claims, each labelled by the result it is ("density", "syncopation", "hemiola",
+   "hypermeter", "tuplet"), the densities first and then each kind in time order. The library's results are
+   claims over the notes of a phrase or a measure, so the list is flat and the label says which kind. Empty for a piece
+   without phrases. */
+static cJSON *rhythm_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < report->density_count; i++) {
+        if (!append(list, density_json(notes, report, &report->densities[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->syncopation_count; i++) {
+        if (!append(list, syncopation_json(notes, &report->syncopations[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->hemiola_count; i++) {
+        if (!append(list, hemiola_json(notes, &report->hemiolas[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->hypermeter_count; i++) {
+        if (!append(list, hypermeter_json(notes, report, &report->hypermeters[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->tuplet_count; i++) {
+        if (!append(list, tuplet_json(notes, &report->tuplets[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -2869,7 +3125,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "phrases", phrases_json(notes, report)) &&
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
           add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
-          add(document, "rhythm", cJSON_CreateArray()) && add(document, "texture", cJSON_CreateArray()) &&
+          add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", cJSON_CreateArray()) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&

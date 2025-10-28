@@ -98,7 +98,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/melody_claim" }
     },
-    "rhythm": { "type": "array" },
+    "rhythm": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rhythm_claim" }
+    },
     "texture": { "type": "array" },
     "voice_leading": { "type": "array" },
     "schemas": { "type": "array" },
@@ -608,6 +611,156 @@
           }
         }
       ]
+    },
+    "rhythm_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "oneOf": [
+            { "$ref": "#/$defs/density_claim" },
+            { "$ref": "#/$defs/syncopation_claim" },
+            { "$ref": "#/$defs/hemiola_claim" },
+            { "$ref": "#/$defs/hypermeter_claim" },
+            { "$ref": "#/$defs/tuplet_claim" }
+          ]
+        }
+      ]
+    },
+    "density_claim": {
+      "type": "object",
+      "required": [
+        "label", "phrase", "measures", "line", "notes", "attacks", "measure_count", "attacks_per_beat",
+        "mean_inter_onset", "on_beat_share", "off_beat_share", "durations", "durations_truncated"
+      ],
+      "properties": {
+        "label": { "const": "density" },
+        "phrase": { "type": "integer", "minimum": 0 },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "line": { "enum": ["all", "soprano", "bass", "other"] },
+        "notes": { "type": "integer", "minimum": 0 },
+        "attacks": { "type": "integer", "minimum": 0 },
+        "measure_count": { "type": "integer", "minimum": 0 },
+        "attacks_per_beat": {
+          "type": "object",
+          "required": ["mean", "max"],
+          "properties": {
+            "mean": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 }
+          }
+        },
+        "mean_inter_onset": { "type": "number", "minimum": 0 },
+        "on_beat_share": { "type": "number", "minimum": 0, "maximum": 1 },
+        "off_beat_share": { "type": "number", "minimum": 0, "maximum": 1 },
+        "durations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["duration", "count"],
+            "properties": {
+              "duration": { "$ref": "#/$defs/rational" },
+              "count": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "durations_truncated": { "type": "boolean" }
+      }
+    },
+    "syncopation_claim": {
+      "type": "object",
+      "required": ["label", "line", "measure", "beat", "attack_level", "strength", "held_through"],
+      "properties": {
+        "label": { "const": "syncopation" },
+        "line": { "enum": ["soprano", "bass", "other"] },
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "number", "minimum": 1 },
+        "attack_level": { "$ref": "#/$defs/meter_level" },
+        "strength": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "held_through": {
+          "type": "object",
+          "required": ["level", "measure", "beat"],
+          "properties": {
+            "level": { "$ref": "#/$defs/meter_level" },
+            "measure": { "type": "integer", "minimum": 0 },
+            "beat": { "type": "number", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "meter_level": { "enum": ["downbeat", "secondary-beat", "beat", "offbeat", "finer"] },
+    "hemiola_claim": {
+      "type": "object",
+      "required": ["label", "measures", "evidence"],
+      "properties": {
+        "label": { "const": "hemiola" },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "evidence": {
+          "type": "object",
+          "required": ["duration", "chord", "accent", "agreeing", "available"],
+          "properties": {
+            "duration": { "type": ["boolean", "null"] },
+            "chord": { "type": ["boolean", "null"] },
+            "accent": { "type": ["boolean", "null"] },
+            "agreeing": { "type": "integer", "minimum": 0, "maximum": 3 },
+            "available": { "type": "integer", "minimum": 0, "maximum": 3 }
+          }
+        }
+      }
+    },
+    "hypermeter_claim": {
+      "type": "object",
+      "required": ["label", "phrase", "measures", "length", "score", "arrival_measure", "hyperdownbeats", "hypermeasures"],
+      "properties": {
+        "label": { "const": "hypermeter" },
+        "phrase": { "type": "integer", "minimum": 0 },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "length": { "enum": [2, 4] },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "arrival_measure": { "type": ["integer", "null"], "minimum": 0 },
+        "hyperdownbeats": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "hypermeasures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["index", "measures", "kind", "extra_hyperbeats", "contains_cadence", "score", "uncertainty"],
+            "properties": {
+              "index": { "type": "integer", "minimum": 0 },
+              "measures": { "$ref": "#/$defs/phrase_measures" },
+              "kind": { "enum": ["regular", "short", "expanded", "extension", "contracted"] },
+              "extra_hyperbeats": { "type": "integer" },
+              "contains_cadence": { "type": "boolean" },
+              "score": { "type": "number", "minimum": 0, "maximum": 1 },
+              "uncertainty": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "tuplet_claim": {
+      "type": "object",
+      "required": ["label", "ratio", "name", "meter", "borrowed", "level", "level_typical", "measure", "beat", "attacks"],
+      "properties": {
+        "label": { "const": "tuplet" },
+        "uncertainty": { "type": "null" },
+        "ratio": {
+          "type": "object",
+          "required": ["actual", "normal"],
+          "properties": {
+            "actual": { "type": "integer", "minimum": 2 },
+            "normal": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "name": { "enum": ["triplet", "duplet", "tuplet"] },
+        "meter": { "enum": ["simple", "compound", "unclassified"] },
+        "borrowed": { "type": "boolean" },
+        "level": { "enum": ["beat", "subdivision", "multi-beat", null] },
+        "level_typical": { "type": ["boolean", "null"] },
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "number", "minimum": 1 },
+        "attacks": { "type": "integer", "minimum": 1 }
+      }
     },
     "melody_claim": {
       "allOf": [

@@ -1704,6 +1704,273 @@ static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, con
     return ok && (section_is_empty(approaches) || render_cadence_approaches(sb, approaches));
 }
 
+/* ---- Rhythm and meter ---- */
+
+/* The rhythm claims are one flat list, each labelled by the result it is. */
+static bool has_label(const cJSON *claim, const char *label) {
+    const char *own = string_member(claim, "label");
+    return own && strcmp(own, label) == 0;
+}
+
+static bool has_claims(const cJSON *rhythm, const char *label) {
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (has_label(claim, label)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The durations of a density claim, shortest first, as "1/8 (12), 1/4 (3)". */
+static bool append_durations(StringBuilder *sb, const cJSON *claim) {
+    const cJSON *durations = cJSON_GetObjectItemCaseSensitive(claim, "durations");
+    const cJSON *bin;
+    bool ok = true;
+    cJSON_ArrayForEach(bin, durations) {
+        const cJSON *duration = cJSON_GetObjectItemCaseSensitive(bin, "duration");
+        ok = ok && sb_appendf(sb, "%s%d/%d (%d)", bin == durations->child ? "" : ", ", (int)number_member(duration, "num"),
+                              (int)number_member(duration, "den"), (int)number_member(bin, "count"));
+    }
+    const cJSON *truncated = cJSON_GetObjectItemCaseSensitive(claim, "durations_truncated");
+    return ok && sb_append(sb, cJSON_GetArraySize(durations) == 0 ? "-" : "") &&
+           sb_append(sb, cJSON_IsTrue(truncated) ? ", ..." : "");
+}
+
+static bool render_densities(StringBuilder *sb, const cJSON *rhythm) {
+    bool ok = sb_append(sb, "### Density\n\n") &&
+              sb_append(sb, "The library's density profile of each phrase, for all its notes and for each line that has a "
+                            "note in it (the soprano and bass of the outer voices, and Other for the rest). A note is in a "
+                            "phrase when its onset is; a chord is one attack. Attacks per beat is read measure by measure "
+                            "over the beats the phrase spans in it, as a mean and the largest; Mean gap is the mean "
+                            "distance between attacks in whole notes; On the beat is the share of attacks exactly on a "
+                            "beat. Durations lists the notes' lengths in whole notes, shortest first, with how many "
+                            "notes have each. The patterns that recur are the motive families' rhythms (see Motives).\n\n") &&
+              sb_append(sb, "| Phrase | Measures | Line | Notes | Attacks | Per beat | Max per beat | Mean gap | On the beat | "
+                            "Durations |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "density")) {
+            continue;
+        }
+        const cJSON *per_beat = cJSON_GetObjectItemCaseSensitive(claim, "attacks_per_beat");
+        char mean[32];
+        char max[32];
+        char gap[32];
+        format_number(number_member(per_beat, "mean"), mean, sizeof(mean));
+        format_number(number_member(per_beat, "max"), max, sizeof(max));
+        format_number(number_member(claim, "mean_inter_onset"), gap, sizeof(gap));
+        ok = sb_appendf(sb, "| %d | ", (int)number_member(claim, "phrase") + 1) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+             sb_appendf(sb, " | %s | %d | %d | %s | %s | %s | %.1f%% | ", string_member(claim, "line"),
+                        (int)number_member(claim, "notes"), (int)number_member(claim, "attacks"), mean, max, gap,
+                        100.0 * number_member(claim, "on_beat_share")) &&
+             append_durations(sb, claim) && sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_syncopations(StringBuilder *sb, const cJSON *rhythm) {
+    bool ok = sb_append(sb, "### Syncopation\n\n");
+    if (!has_claims(rhythm, "syncopation")) {
+        return ok && sb_append(sb, "The library found no syncopation.\n\n");
+    }
+    ok = ok && sb_append(sb, "A note is syncopated when it is attacked at a weaker metric level and held through a "
+                             "stronger one that no note of its line attacks. Each line (the soprano and bass of the outer "
+                             "voices, and Other for the rest) is read on its own. Strength is the difference of the two "
+                             "levels, 1 to 4: an off-beat note held over the beat is 1, a note on a beat held over the "
+                             "barline is 2, an off-beat note held over the barline is 3.\n\n") &&
+         sb_append(sb, "| Line | Measure | Beat | Attacked at | Held through | Strength |\n"
+                       "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "syncopation")) {
+            continue;
+        }
+        const cJSON *through = cJSON_GetObjectItemCaseSensitive(claim, "held_through");
+        char beat[32];
+        char through_beat[32];
+        format_number(number_member(claim, "beat"), beat, sizeof(beat));
+        format_number(number_member(through, "beat"), through_beat, sizeof(through_beat));
+        ok = sb_appendf(sb, "| %s | %d | %s | %s | %s (m. %d, beat %s) | %d |\n", string_member(claim, "line"),
+                        (int)number_member(claim, "measure"), beat, string_member(claim, "attack_level"),
+                        string_member(through, "level"), (int)number_member(through, "measure"), through_beat,
+                        (int)number_member(claim, "strength"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* "agrees", "does not" or "unavailable" for a hemiola's evidence value. */
+static const char *evidence_text(const cJSON *evidence, const char *key) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(evidence, key);
+    return cJSON_IsNull(value) ? "unavailable" : (cJSON_IsTrue(value) ? "agrees" : "does not");
+}
+
+static bool render_hemiolas(StringBuilder *sb, const cJSON *rhythm) {
+    bool ok = sb_append(sb, "### Hemiola\n\n");
+    if (!has_claims(rhythm, "hemiola")) {
+        return ok && sb_append(sb, "The library found no hemiola.\n\n");
+    }
+    ok = ok && sb_append(sb, "A hemiola reads the six pulses of two measures of a simple triple meter, or one of 6/8, as "
+                             "three duple units. It is one when at least two of the evidence types that are available "
+                             "agree: Duration (the attacks fall on the starts of the duple units), Chords (the changes "
+                             "of harmony do) and Accent (long notes begin on the second and third units).\n\n") &&
+         sb_append(sb, "| Measures | Duration | Chords | Accent | Agreeing |\n| --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "hemiola")) {
+            continue;
+        }
+        const cJSON *evidence = cJSON_GetObjectItemCaseSensitive(claim, "evidence");
+        ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+             sb_appendf(sb, " | %s | %s | %s | %d of %d |\n", evidence_text(evidence, "duration"),
+                        evidence_text(evidence, "chord"), evidence_text(evidence, "accent"),
+                        (int)number_member(evidence, "agreeing"), (int)number_member(evidence, "available"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* The hypermeasure kinds of a hypermeter claim, as "3 regular, 1 short". */
+static bool append_hypermeasure_kinds(StringBuilder *sb, const cJSON *hypermeasures) {
+    static const char *const KINDS[] = {"regular", "short", "expanded", "extension", "contracted"};
+    bool first = true;
+    bool ok = true;
+    for (size_t k = 0; ok && k < sizeof(KINDS) / sizeof(KINDS[0]); k++) {
+        int count = 0;
+        const cJSON *item;
+        cJSON_ArrayForEach(item, hypermeasures) {
+            const char *kind = string_member(item, "kind");
+            count += kind && strcmp(kind, KINDS[k]) == 0 ? 1 : 0;
+        }
+        if (count > 0) {
+            ok = sb_appendf(sb, "%s%d %s", first ? "" : ", ", count, KINDS[k]);
+            first = false;
+        }
+    }
+    return ok;
+}
+
+static bool render_hypermeters(StringBuilder *sb, const cJSON *rhythm) {
+    bool ok = sb_append(sb, "### Hypermeter\n\n") &&
+              sb_append(sb, "The library reads each phrase in hypermeasures of two or four measures: the length that "
+                            "fills the phrase and holds the cadence's arrival in the last one. The first measure of each "
+                            "hypermeasure is a hyperdownbeat. A phrase that does not fill its hypermeasures ends in a "
+                            "short one, an internal expansion makes the last one longer, an external expansion adds one "
+                            "of its own and a contraction shortens the last. Score is the library's confidence in the "
+                            "reading. The form adapter does not report elided cadences, so no phrase is read as "
+                            "elided.\n\n") &&
+              sb_append(sb, "| Phrase | Measures | Length | Hyperdownbeats | Hypermeasures | Cadence arrives | Score |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "hypermeter")) {
+            continue;
+        }
+        const cJSON *downbeats = cJSON_GetObjectItemCaseSensitive(claim, "hyperdownbeats");
+        const cJSON *arrival = cJSON_GetObjectItemCaseSensitive(claim, "arrival_measure");
+        char score[32];
+        format_number(number_member(claim, "score"), score, sizeof(score));
+        ok = sb_appendf(sb, "| %d | ", (int)number_member(claim, "phrase") + 1) &&
+             append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+             sb_appendf(sb, " | %d | ", (int)number_member(claim, "length"));
+        const cJSON *downbeat;
+        cJSON_ArrayForEach(downbeat, downbeats) {
+            ok = ok && sb_appendf(sb, "%s%d", downbeat == downbeats->child ? "" : ", ", (int)downbeat->valuedouble);
+        }
+        ok = ok && sb_append(sb, " | ") &&
+             append_hypermeasure_kinds(sb, cJSON_GetObjectItemCaseSensitive(claim, "hypermeasures")) &&
+             (cJSON_IsNumber(arrival) ? sb_appendf(sb, " | m. %d | ", (int)arrival->valuedouble)
+                                      : sb_append(sb, " | none | ")) &&
+             sb_appendf(sb, "%s |\n", score);
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_tuplets(StringBuilder *sb, const cJSON *rhythm) {
+    bool ok = sb_append(sb, "### Tuplets and borrowed divisions\n\n");
+    if (!has_claims(rhythm, "tuplet")) {
+        return ok && sb_append(sb, "No tuplets were found.\n\n");
+    }
+    ok = ok && sb_append(sb, "A meter divides its beat two ways (simple) or three (compound). A tuplet divides it the other "
+                             "way: a triplet in a simple meter or a duplet in a compound one is a borrowed division. The "
+                             "library names those two and says at which level a group occurs (the whole Beat, a "
+                             "Subdivision of it, or several beats) and whether that is typical. Only triplets (sextuplets "
+                             "included) and duplets are looked for, read from the notes' times alone, rounded to a grid "
+                             "of 96 to the whole note. A run is two or more consecutive attacks of one ratio.\n\n") &&
+         sb_append(sb, "| Ratio | Name | Runs | Attacks | Borrowed |\n| --- | --- | --- | --- | --- |\n");
+    /* one row per ratio; the claims of a ratio are together, the smaller actual count first */
+    const cJSON *claim;
+    long previous = -1;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(claim, "ratio");
+        if (!has_label(claim, "tuplet") || (long)number_member(ratio, "actual") == previous) {
+            continue;
+        }
+        previous = (long)number_member(ratio, "actual");
+        int runs = 0;
+        int attacks = 0;
+        int borrowed = 0;
+        const cJSON *other;
+        cJSON_ArrayForEach(other, rhythm) {
+            if (has_label(other, "tuplet") &&
+                (long)number_member(cJSON_GetObjectItemCaseSensitive(other, "ratio"), "actual") == previous) {
+                runs++;
+                attacks += (int)number_member(other, "attacks");
+                borrowed += cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(other, "borrowed")) ? 1 : 0;
+            }
+        }
+        ok = sb_appendf(sb, "| %d:%d | %s | %d | %d | %s |\n", (int)previous,
+                        (int)number_member(ratio, "normal"), string_member(claim, "name"), runs, attacks,
+                        borrowed == 0 ? "no" : (borrowed == runs ? "yes" : "some"));
+    }
+    ok = ok && sb_append(sb, "\n| Measure | Beat | Ratio | Name | Meter | Borrowed | Level | Attacks |\n"
+                             "| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "tuplet")) {
+            continue;
+        }
+        const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(claim, "ratio");
+        const cJSON *level = cJSON_GetObjectItemCaseSensitive(claim, "level");
+        const cJSON *typical = cJSON_GetObjectItemCaseSensitive(claim, "level_typical");
+        char beat[32];
+        format_number(number_member(claim, "beat"), beat, sizeof(beat));
+        ok = sb_appendf(sb, "| %d | %s | %d:%d | %s | %s | %s | ", (int)number_member(claim, "measure"), beat, (int)number_member(ratio, "actual"),
+                        (int)number_member(ratio, "normal"), string_member(claim, "name"),
+                        string_member(claim, "meter"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(claim, "borrowed")) ? "yes" : "no") &&
+             (cJSON_IsString(level) ? sb_appendf(sb, "%s%s", level->valuestring, cJSON_IsTrue(typical) ? "" : " (not typical)")
+                                    : sb_append(sb, "not placed")) &&
+             sb_appendf(sb, " | %d |\n", (int)number_member(claim, "attacks"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_rhythm(StringBuilder *sb, const cJSON *document, const cJSON *rhythm) {
+    (void)document;
+    return sb_append(sb, "## Rhythm and meter\n\n") && (!has_claims(rhythm, "density") || render_densities(sb, rhythm)) &&
+           render_syncopations(sb, rhythm) && render_hemiolas(sb, rhythm) &&
+           (!has_claims(rhythm, "hypermeter") || render_hypermeters(sb, rhythm)) && render_tuplets(sb, rhythm);
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -1732,6 +1999,7 @@ static const struct {
     {"motives", render_motive_development},
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
+    {"rhythm", render_rhythm},
 };
 
 static bool section_is_empty(const cJSON *section) {

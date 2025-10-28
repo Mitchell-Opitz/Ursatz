@@ -18,6 +18,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/melody_pipeline.c
     pipeline/progression_pipeline.c
     pipeline/harmonic_rhythm_pipeline.c
+    pipeline/rhythm_pipeline.c
     pipeline/analysis_report.c
     pipeline/chain.c
     pipeline/analysis_pipeline.c

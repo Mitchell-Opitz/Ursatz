@@ -981,3 +981,81 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 | 11 | m. 33 | 1.5 | 5.5 | yes |
 | 12 | m. 37 | 5 | 4.5 | no |
 | 13 | m. 38 | 4.5 | 5 | yes |
+
+## Rhythm and meter
+
+### Density
+
+The library's density profile of each phrase, for all its notes and for each line that has a note in it (the soprano and bass of the outer voices, and Other for the rest). A note is in a phrase when its onset is; a chord is one attack. Attacks per beat is read measure by measure over the beats the phrase spans in it, as a mean and the largest; Mean gap is the mean distance between attacks in whole notes; On the beat is the share of attacks exactly on a beat. Durations lists the notes' lengths in whole notes, shortest first, with how many notes have each. The patterns that recur are the motive families' rhythms (see Motives).
+
+| Phrase | Measures | Line | Notes | Attacks | Per beat | Max per beat | Mean gap | On the beat | Durations |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 2 | all | 8 | 6 | 1.12 | 1.25 | 0.2 | 83.3% | 1/8 (2), 1/4 (6) |
+| 1 | mm. 1 to 2 | soprano | 5 | 5 | 1 | 1 | 0.25 | 80.0% | 1/8 (2), 1/4 (3) |
+| 1 | mm. 1 to 2 | bass | 2 | 2 | 0.62 | 1 | 1 | 100.0% | 1/4 (2) |
+| 1 | mm. 1 to 2 | other | 1 | 1 | 0.12 | 0.25 | 0 | 100.0% | 1/4 (1) |
+| 2 | mm. 3 to 4 | all | 13 | 10 | 2 | 2 | 0.12 | 50.0% | 1/8 (10), 1/4 (3) |
+| 2 | mm. 3 to 4 | soprano | 7 | 7 | 1.25 | 1.5 | 0.17 | 57.1% | 1/8 (7) |
+| 2 | mm. 3 to 4 | bass | 3 | 3 | 0.75 | 1 | 0.5 | 100.0% | 1/4 (3) |
+| 2 | mm. 3 to 4 | other | 3 | 3 | 0.75 | 1 | 0.5 | 33.3% | 1/8 (3) |
+| 3 | mm. 5 to 10 | all | 50 | 37 | 1.79 | 2 | 0.14 | 56.8% | 1/8 (32), 1/4 (18) |
+| 3 | mm. 5 to 10 | soprano | 25 | 25 | 1.17 | 1.75 | 0.21 | 72.0% | 1/8 (17), 1/4 (8) |
+| 3 | mm. 5 to 10 | bass | 17 | 17 | 0.83 | 2 | 0.31 | 76.5% | 1/8 (8), 1/4 (9) |
+| 3 | mm. 5 to 10 | other | 8 | 8 | 0.46 | 1 | 0.64 | 37.5% | 1/8 (7), 1/4 (1) |
+| 4 | mm. 11 to 14 | all | 39 | 30 | 2 | 2 | 0.12 | 50.0% | 1/8 (30), 1/4 (9) |
+| 4 | mm. 11 to 14 | soprano | 21 | 21 | 1.4 | 1.75 | 0.17 | 66.7% | 1/8 (17), 1/4 (4) |
+| 4 | mm. 11 to 14 | bass | 13 | 13 | 0.85 | 2 | 0.29 | 69.2% | 1/8 (8), 1/4 (5) |
+| 4 | mm. 11 to 14 | other | 5 | 5 | 0.35 | 0.67 | 0.66 | 20.0% | 1/8 (5) |
+| 5 | mm. 15 to 19 | all | 31 | 25 | 1.25 | 1.5 | 0.2 | 76.0% | 1/8 (12), 1/4 (13), 1/2 (4), 1/1 (2) |
+| 5 | mm. 15 to 19 | soprano | 13 | 13 | 0.65 | 1 | 0.4 | 92.3% | 1/8 (4), 1/4 (8), 1/2 (1) |
+| 5 | mm. 15 to 19 | bass | 9 | 9 | 0.45 | 1 | 0.5 | 88.9% | 1/8 (3), 1/4 (1), 1/2 (3), 1/1 (2) |
+| 5 | mm. 15 to 19 | other | 9 | 9 | 0.45 | 0.75 | 0.52 | 55.6% | 1/8 (5), 1/4 (4) |
+| 6 | mm. 20 to 23 | all | 42 | 30 | 1.88 | 2 | 0.13 | 53.3% | 1/8 (28), 1/4 (14) |
+| 6 | mm. 20 to 23 | soprano | 18 | 18 | 1.12 | 1.5 | 0.23 | 72.2% | 1/8 (17), 1/4 (1) |
+| 6 | mm. 20 to 23 | bass | 12 | 12 | 0.75 | 1 | 0.3 | 100.0% | 1/4 (12) |
+| 6 | mm. 20 to 23 | other | 12 | 12 | 0.75 | 1 | 0.31 | 25.0% | 1/8 (11), 1/4 (1) |
+| 7 | mm. 24 to 25 | all | 8 | 6 | 1.12 | 1.25 | 0.2 | 83.3% | 1/8 (2), 1/4 (6) |
+| 7 | mm. 24 to 25 | soprano | 5 | 5 | 1 | 1 | 0.25 | 80.0% | 1/8 (2), 1/4 (3) |
+| 7 | mm. 24 to 25 | bass | 2 | 2 | 0.62 | 1 | 1 | 100.0% | 1/4 (2) |
+| 7 | mm. 24 to 25 | other | 1 | 1 | 0.12 | 0.25 | 0 | 100.0% | 1/4 (1) |
+| 8 | mm. 26 to 27 | all | 13 | 10 | 2 | 2 | 0.12 | 50.0% | 1/8 (10), 1/4 (3) |
+| 8 | mm. 26 to 27 | soprano | 7 | 7 | 1.25 | 1.5 | 0.17 | 57.1% | 1/8 (7) |
+| 8 | mm. 26 to 27 | bass | 3 | 3 | 0.75 | 1 | 0.5 | 100.0% | 1/4 (3) |
+| 8 | mm. 26 to 27 | other | 3 | 3 | 0.75 | 1 | 0.5 | 33.3% | 1/8 (3) |
+| 9 | mm. 28 to 33 | all | 46 | 32 | 1.58 | 2 | 0.17 | 65.6% | 1/8 (22), 1/4 (24) |
+| 9 | mm. 28 to 33 | soprano | 25 | 25 | 1.17 | 1.75 | 0.21 | 72.0% | 1/8 (12), 1/4 (13) |
+| 9 | mm. 28 to 33 | bass | 15 | 15 | 0.75 | 2 | 0.36 | 73.3% | 1/8 (8), 1/4 (7) |
+| 9 | mm. 28 to 33 | other | 6 | 6 | 0.38 | 1 | 0.9 | 100.0% | 1/8 (2), 1/4 (4) |
+| 10 | mm. 34 to 38 | all | 47 | 37 | 1.93 | 2 | 0.12 | 51.4% | 1/8 (36), 1/4 (11) |
+| 10 | mm. 34 to 38 | soprano | 25 | 25 | 1.28 | 1.75 | 0.18 | 56.0% | 1/8 (20), 1/4 (5) |
+| 10 | mm. 34 to 38 | bass | 17 | 17 | 0.92 | 2 | 0.28 | 70.6% | 1/8 (11), 1/4 (6) |
+| 10 | mm. 34 to 38 | other | 5 | 5 | 0.25 | 0.5 | 0.62 | 60.0% | 1/8 (5) |
+
+### Syncopation
+
+The library found no syncopation.
+
+### Hemiola
+
+The library found no hemiola.
+
+### Hypermeter
+
+The library reads each phrase in hypermeasures of two or four measures: the length that fills the phrase and holds the cadence's arrival in the last one. The first measure of each hypermeasure is a hyperdownbeat. A phrase that does not fill its hypermeasures ends in a short one, an internal expansion makes the last one longer, an external expansion adds one of its own and a contraction shortens the last. Score is the library's confidence in the reading. The form adapter does not report elided cadences, so no phrase is read as elided.
+
+| Phrase | Measures | Length | Hyperdownbeats | Hypermeasures | Cadence arrives | Score |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 2 | 2 | 1 | 1 regular | m. 2 | 1 |
+| 2 | mm. 3 to 4 | 2 | 3 | 1 regular | m. 4 | 1 |
+| 3 | mm. 5 to 10 | 4 | 5, 9 | 1 regular, 1 contracted | m. 10 | 1 |
+| 4 | mm. 11 to 14 | 4 | 11 | 1 regular | m. 14 | 1 |
+| 5 | mm. 15 to 19 | 4 | 15, 19 | 1 regular, 1 short | m. 19 | 0.9 |
+| 6 | mm. 20 to 23 | 4 | 20 | 1 regular | m. 23 | 1 |
+| 7 | mm. 24 to 25 | 4 | 24 | 1 contracted | m. 25 | 1 |
+| 8 | mm. 26 to 27 | 2 | 26 | 1 regular | m. 27 | 1 |
+| 9 | mm. 28 to 33 | 4 | 28, 32 | 1 regular, 1 contracted | m. 33 | 1 |
+| 10 | mm. 34 to 38 | 4 | 34, 38 | 1 regular, 1 short | m. 38 | 0.9 |
+
+### Tuplets and borrowed divisions
+
+No tuplets were found.

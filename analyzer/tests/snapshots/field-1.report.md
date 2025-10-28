@@ -1407,3 +1407,320 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 | 9 | m. 50 | 0.5 | 2 | yes |
 | 10 | m. 57 | 2 | 3 | yes |
 | 11 | m. 65 | 1.5 | 3.5 | yes |
+
+## Rhythm and meter
+
+### Density
+
+The library's density profile of each phrase, for all its notes and for each line that has a note in it (the soprano and bass of the outer voices, and Other for the rest). A note is in a phrase when its onset is; a chord is one attack. Attacks per beat is read measure by measure over the beats the phrase spans in it, as a mean and the largest; Mean gap is the mean distance between attacks in whole notes; On the beat is the share of attacks exactly on a beat. Durations lists the notes' lengths in whole notes, shortest first, with how many notes have each. The patterns that recur are the motive families' rhythms (see Motives).
+
+| Phrase | Measures | Line | Notes | Attacks | Per beat | Max per beat | Mean gap | On the beat | Durations |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 3 | all | 21 | 21 | 3 | 5 | 0.11 | 28.6% | 1/16 (1), 1/8 (8), 1/4 (6), 161/480 (1), 35/96 (1), 3/8 (2), 37/96 (1), 55/48 (1) |
+| 1 | mm. 1 to 3 | soprano | 4 | 4 | 0.33 | 0.75 | 0.61 | 25.0% | 1/16 (1), 161/480 (1), 3/8 (1), 55/48 (1) |
+| 1 | mm. 1 to 3 | bass | 5 | 5 | 0.67 | 1 | 0.38 | 100.0% | 1/8 (2), 1/4 (2), 3/8 (1) |
+| 1 | mm. 1 to 3 | other | 12 | 12 | 2 | 4 | 0.16 | 0.0% | 1/8 (6), 1/4 (4), 35/96 (1), 37/96 (1) |
+| 2 | m. 4 | all | 4 | 4 | 4 | 4 | 0.08 | 25.0% | 1/8 (2), 1/4 (1), 23/40 (1) |
+| 2 | m. 4 | soprano | 1 | 1 | 1 | 1 | 0 | 0.0% | 23/40 (1) |
+| 2 | m. 4 | bass | 1 | 1 | 1 | 1 | 0 | 100.0% | 1/8 (1) |
+| 2 | m. 4 | other | 2 | 2 | 2 | 2 | 0.12 | 0.0% | 1/8 (1), 1/4 (1) |
+| 3 | mm. 5 to 7 | all | 32 | 31 | 3.83 | 5 | 0.11 | 29.0% | 1/8 (14), 1/4 (10), 35/96 (1), 89/240 (1), 3/8 (3), 31/80 (1), 37/32 (1), 643/480 (1) |
+| 3 | mm. 5 to 7 | soprano | 4 | 4 | 0.58 | 1 | 1.12 | 25.0% | 89/240 (1), 31/80 (1), 37/32 (1), 643/480 (1) |
+| 3 | mm. 5 to 7 | bass | 9 | 9 | 1 | 1 | 0.38 | 100.0% | 1/8 (3), 1/4 (3), 3/8 (3) |
+| 3 | mm. 5 to 7 | other | 19 | 19 | 2.33 | 3 | 0.17 | 0.0% | 1/8 (11), 1/4 (7), 35/96 (1) |
+| 4 | mm. 8 to 15 | all | 126 | 121 | 3.78 | 4.5 | 0.1 | 26.4% | 11/480 (1), 1/32 (3), 17/480 (2), 11/240 (1), 23/480 (2), 1/20 (1), 1/16 (1), 1/8 (49), 23/160 (1), 7/32 (1), 1/4 (38), 41/160 (1), 5/16 (1), 43/120 (1), 29/80 (1), 59/160 (1), ... |
+| 4 | mm. 8 to 15 | soprano | 17 | 17 | 0.53 | 0.75 | 0.68 | 11.8% | 17/480 (1), 11/240 (1), 1/16 (1), 23/160 (1), 29/80 (1), 89/240 (1), 3/8 (1), 19/48 (1), 13/32 (1), 33/80 (1), 47/96 (1), 151/240 (1), 101/160 (1), 111/160 (1), 89/120 (1), 9/8 (1), ... |
+| 4 | mm. 8 to 15 | bass | 30 | 30 | 0.94 | 1 | 0.4 | 100.0% | 1/8 (8), 1/4 (13), 3/8 (9) |
+| 4 | mm. 8 to 15 | other | 79 | 78 | 2.44 | 3.25 | 0.15 | 5.1% | 11/480 (1), 1/32 (3), 17/480 (1), 23/480 (2), 1/20 (1), 1/8 (41), 7/32 (1), 1/4 (25), 41/160 (1), 5/16 (1), 43/120 (1), 59/160 (1) |
+| 5 | mm. 16 to 30 | all | 245 | 226 | 4.02 | 5.5 | 0.09 | 24.8% | 1/32 (2), 3/80 (1), 19/480 (1), 7/160 (1), 1/20 (1), 13/240 (1), 7/120 (2), 11/160 (1), 3/40 (1), 19/240 (1), 3/32 (4), 47/480 (1), 49/480 (1), 53/480 (1), 9/80 (1), 19/160 (2), ... |
+| 5 | mm. 16 to 30 | soprano | 37 | 37 | 0.67 | 1 | 0.58 | 13.5% | 1/32 (1), 19/480 (1), 1/20 (1), 7/120 (1), 3/32 (1), 49/480 (1), 9/80 (1), 19/160 (1), 1/8 (2), 13/96 (2), 67/480 (1), 17/120 (1), 73/480 (2), 5/32 (1), 3/16 (1), 23/120 (1), ... |
+| 5 | mm. 16 to 30 | bass | 56 | 56 | 0.98 | 1.25 | 0.38 | 94.6% | 1/8 (28), 17/120 (1), 1/4 (27) |
+| 5 | mm. 16 to 30 | other | 152 | 146 | 2.58 | 3.5 | 0.15 | 4.8% | 1/32 (1), 3/80 (1), 7/160 (1), 13/240 (1), 7/120 (1), 11/160 (1), 3/40 (1), 19/240 (1), 3/32 (3), 47/480 (1), 53/480 (1), 19/160 (1), 29/240 (1), 1/8 (84), 13/96 (1), 11/80 (1), ... |
+| 6 | mm. 31 to 37 | all | 96 | 90 | 3.64 | 4 | 0.11 | 27.8% | 17/160 (1), 13/120 (1), 9/80 (1), 11/96 (1), 1/8 (52), 21/160 (1), 71/480 (1), 73/480 (1), 5/32 (1), 7/32 (1), 1/4 (23), 173/480 (1), 89/240 (2), 3/8 (1), 91/240 (1), 47/120 (1), ... |
+| 6 | mm. 31 to 37 | soprano | 16 | 16 | 0.68 | 1 | 0.62 | 25.0% | 11/96 (1), 1/8 (2), 71/480 (1), 5/32 (1), 1/4 (1), 173/480 (1), 89/240 (1), 3/8 (1), 47/120 (1), 13/32 (1), 99/160 (1), 5/8 (1), 151/240 (1), 15/16 (1), 177/160 (1) |
+| 6 | mm. 31 to 37 | bass | 24 | 24 | 0.96 | 1 | 0.39 | 100.0% | 1/8 (11), 1/4 (13) |
+| 6 | mm. 31 to 37 | other | 56 | 56 | 2.21 | 3 | 0.17 | 3.6% | 17/160 (1), 13/120 (1), 9/80 (1), 1/8 (39), 21/160 (1), 73/480 (1), 7/32 (1), 1/4 (9), 89/240 (1), 91/240 (1) |
+| 7 | mm. 38 to 46 | all | 170 | 146 | 4.31 | 5.25 | 0.08 | 21.9% | 1/240 (1), 7/480 (1), 1/32 (1), 3/80 (1), 1/24 (3), 23/480 (1), 5/96 (1), 9/160 (1), 1/16 (2), 1/15 (1), 11/160 (1), 37/480 (1), 13/160 (1), 43/480 (2), 3/32 (5), 47/480 (1), ... |
+| 7 | mm. 38 to 46 | soprano | 24 | 24 | 0.75 | 1 | 0.52 | 16.7% | 1/24 (2), 5/96 (1), 9/160 (1), 1/16 (1), 43/480 (1), 1/10 (1), 1/8 (1), 2/15 (1), 13/96 (1), 11/80 (1), 5/32 (3), 13/80 (1), 31/96 (1), 11/30 (1), 59/160 (1), 89/240 (1), ... |
+| 7 | mm. 38 to 46 | bass | 34 | 34 | 1.03 | 1.25 | 0.36 | 88.2% | 1/8 (16), 1/4 (16), 3/8 (2) |
+| 7 | mm. 38 to 46 | other | 112 | 104 | 3.06 | 4.25 | 0.12 | 10.6% | 1/240 (1), 7/480 (1), 1/32 (1), 3/80 (1), 1/24 (1), 23/480 (1), 1/16 (1), 1/15 (1), 11/160 (1), 37/480 (1), 13/160 (1), 43/480 (1), 3/32 (5), 47/480 (1), 1/10 (1), 53/480 (2), ... |
+| 8 | mm. 47 to 50 | all | 81 | 62 | 4.81 | 5.75 | 0.08 | 21.0% | 1/32 (1), 1/16 (23), 41/480 (1), 3/32 (6), 1/8 (25), 31/240 (1), 7/32 (1), 1/4 (16), 5/16 (1), 3/8 (3), 63/160 (1), 17/32 (1), 27/32 (1) |
+| 8 | mm. 47 to 50 | soprano | 12 | 12 | 0.94 | 1 | 0.41 | 25.0% | 1/16 (2), 3/32 (2), 1/8 (3), 7/32 (1), 1/4 (1), 63/160 (1), 17/32 (1), 27/32 (1) |
+| 8 | mm. 47 to 50 | bass | 13 | 13 | 1 | 1 | 0.38 | 100.0% | 1/8 (4), 1/4 (6), 3/8 (3) |
+| 8 | mm. 47 to 50 | other | 56 | 48 | 3.75 | 5 | 0.1 | 8.3% | 1/32 (1), 1/16 (21), 41/480 (1), 3/32 (4), 1/8 (18), 31/240 (1), 1/4 (9), 5/16 (1) |
+| 9 | mm. 51 to 57 | all | 114 | 105 | 4.5 | 7 | 0.09 | 23.8% | 1/96 (1), 1/80 (1), 1/48 (1), 1/24 (1), 7/160 (1), 5/96 (2), 9/160 (1), 1/16 (5), 17/240 (1), 7/96 (1), 3/32 (5), 1/8 (48), 17/120 (1), 9/40 (1), 59/240 (1), 1/4 (28), ... |
+| 9 | mm. 51 to 57 | soprano | 19 | 19 | 0.79 | 1.25 | 0.48 | 15.8% | 5/96 (2), 1/16 (1), 3/32 (2), 1/8 (2), 9/40 (1), 59/240 (1), 1/4 (1), 11/30 (1), 59/160 (2), 3/8 (1), 13/32 (1), 223/480 (1), 19/40 (1), 247/480 (1), 61/96 (1) |
+| 9 | mm. 51 to 57 | bass | 24 | 24 | 1.07 | 2 | 0.4 | 95.8% | 1/8 (12), 1/4 (9), 3/8 (3) |
+| 9 | mm. 51 to 57 | other | 71 | 68 | 2.96 | 5 | 0.14 | 5.9% | 1/96 (1), 1/80 (1), 1/48 (1), 1/24 (1), 7/160 (1), 9/160 (1), 1/16 (4), 17/240 (1), 7/96 (1), 3/32 (3), 1/8 (34), 17/120 (1), 1/4 (18), 41/160 (1), 127/480 (1), 163/480 (1) |
+| 10 | mm. 58 to 67 | all | 213 | 174 | 4.35 | 6.25 | 0.08 | 22.4% | 1/32 (4), 17/480 (2), 1/24 (1), 1/20 (1), 1/16 (20), 11/160 (2), 17/240 (1), 7/96 (1), 13/160 (1), 41/480 (1), 43/480 (1), 3/32 (5), 1/10 (1), 5/48 (3), 7/60 (1), 19/160 (1), ... |
+| 10 | mm. 58 to 67 | soprano | 32 | 32 | 0.8 | 1 | 0.44 | 31.2% | 1/16 (3), 17/240 (1), 43/480 (1), 3/32 (1), 1/10 (1), 5/48 (1), 1/8 (3), 31/240 (1), 13/96 (1), 3/20 (1), 41/240 (2), 3/16 (1), 7/32 (1), 1/4 (6), 41/160 (2), 43/160 (1), ... |
+| 10 | mm. 58 to 67 | bass | 40 | 40 | 1 | 1.25 | 0.37 | 97.5% | 1/8 (14), 1/4 (20), 3/8 (6) |
+| 10 | mm. 58 to 67 | other | 141 | 122 | 3.05 | 5 | 0.12 | 5.7% | 1/32 (4), 17/480 (2), 1/24 (1), 1/20 (1), 1/16 (17), 11/160 (2), 7/96 (1), 13/160 (1), 41/480 (1), 3/32 (4), 5/48 (2), 7/60 (1), 19/160 (1), 1/8 (62), 31/240 (1), 21/160 (2), ... |
+
+### Syncopation
+
+A note is syncopated when it is attacked at a weaker metric level and held through a stronger one that no note of its line attacks. Each line (the soprano and bass of the outer voices, and Other for the rest) is read on its own. Strength is the difference of the two levels, 1 to 4: an off-beat note held over the beat is 1, a note on a beat held over the barline is 2, an off-beat note held over the barline is 3.
+
+| Line | Measure | Beat | Attacked at | Held through | Strength |
+| --- | --- | --- | --- | --- | --- |
+| soprano | 2 | 1.03 | finer | secondary-beat (m. 2, beat 3) | 3 |
+| soprano | 2 | 4.02 | finer | offbeat (m. 2, beat 4.33) | 1 |
+| soprano | 2 | 4.92 | finer | downbeat (m. 3, beat 1) | 4 |
+| soprano | 3 | 2.98 | finer | secondary-beat (m. 3, beat 3) | 3 |
+| soprano | 3 | 4.02 | finer | downbeat (m. 4, beat 1) | 4 |
+| soprano | 4 | 1.05 | finer | beat (m. 4, beat 2) | 2 |
+| soprano | 5 | 1.01 | finer | secondary-beat (m. 5, beat 3) | 3 |
+| soprano | 6 | 4.01 | finer | offbeat (m. 6, beat 4.33) | 1 |
+| soprano | 7 | 1.97 | finer | beat (m. 7, beat 2) | 2 |
+| soprano | 7 | 2.96 | finer | secondary-beat (m. 7, beat 3) | 3 |
+| soprano | 8 | 1.01 | finer | downbeat (m. 9, beat 1) | 4 |
+| soprano | 9 | 2.99 | finer | secondary-beat (m. 9, beat 3) | 3 |
+| soprano | 10 | 1.08 | finer | beat (m. 10, beat 2) | 2 |
+| soprano | 10 | 2.02 | finer | secondary-beat (m. 10, beat 3) | 3 |
+| soprano | 11 | 1.63 | finer | offbeat (m. 11, beat 1.67) | 1 |
+| soprano | 11 | 3.98 | finer | downbeat (m. 12, beat 1) | 4 |
+| soprano | 12 | 1.01 | finer | offbeat (m. 12, beat 1.33) | 1 |
+| soprano | 12 | 2 | beat | secondary-beat (m. 12, beat 3) | 1 |
+| soprano | 13 | 1.03 | finer | beat (m. 13, beat 2) | 2 |
+| soprano | 13 | 3.03 | finer | offbeat (m. 13, beat 3.33) | 1 |
+| soprano | 13 | 3.36 | finer | beat (m. 13, beat 4) | 2 |
+| soprano | 14 | 1.03 | finer | offbeat (m. 14, beat 1.33) | 1 |
+| soprano | 14 | 1.98 | finer | secondary-beat (m. 14, beat 3) | 3 |
+| soprano | 15 | 1.58 | finer | offbeat (m. 15, beat 1.67) | 1 |
+| soprano | 15 | 2.15 | finer | secondary-beat (m. 15, beat 3) | 3 |
+| soprano | 16 | 1.02 | finer | secondary-beat (m. 16, beat 3) | 3 |
+| soprano | 17 | 1.71 | finer | beat (m. 17, beat 2) | 2 |
+| soprano | 17 | 2.03 | finer | secondary-beat (m. 17, beat 3) | 3 |
+| soprano | 17 | 4.04 | finer | offbeat (m. 17, beat 4.33) | 1 |
+| soprano | 18 | 1.62 | finer | offbeat (m. 18, beat 1.67) | 1 |
+| soprano | 18 | 2.64 | finer | offbeat (m. 18, beat 2.67) | 1 |
+| soprano | 18 | 4.01 | finer | offbeat (m. 18, beat 4.33) | 1 |
+| soprano | 19 | 2.01 | finer | secondary-beat (m. 19, beat 3) | 3 |
+| soprano | 19 | 4.01 | finer | offbeat (m. 19, beat 4.33) | 1 |
+| soprano | 19 | 4.67 | offbeat | downbeat (m. 20, beat 1) | 3 |
+| soprano | 20 | 3.98 | finer | beat (m. 20, beat 4) | 2 |
+| soprano | 20 | 4.71 | finer | downbeat (m. 21, beat 1) | 4 |
+| soprano | 21 | 1.02 | finer | secondary-beat (m. 21, beat 3) | 3 |
+| soprano | 22 | 1.59 | finer | offbeat (m. 22, beat 1.67) | 1 |
+| soprano | 22 | 2.09 | finer | secondary-beat (m. 22, beat 3) | 3 |
+| soprano | 22 | 3.97 | finer | beat (m. 22, beat 4) | 2 |
+| soprano | 23 | 4.64 | finer | offbeat (m. 23, beat 4.67) | 1 |
+| soprano | 24 | 1.97 | finer | secondary-beat (m. 24, beat 3) | 3 |
+| soprano | 24 | 4.98 | finer | downbeat (m. 25, beat 1) | 4 |
+| soprano | 25 | 3.64 | finer | offbeat (m. 25, beat 3.67) | 1 |
+| soprano | 25 | 4.99 | finer | downbeat (m. 26, beat 1) | 4 |
+| soprano | 26 | 4.96 | finer | downbeat (m. 27, beat 1) | 4 |
+| soprano | 27 | 2 | beat | secondary-beat (m. 27, beat 3) | 1 |
+| soprano | 28 | 1.98 | finer | beat (m. 28, beat 2) | 2 |
+| soprano | 29 | 1.02 | finer | beat (m. 29, beat 2) | 2 |
+| soprano | 29 | 3.99 | finer | beat (m. 29, beat 4) | 2 |
+| soprano | 30 | 1.03 | finer | offbeat (m. 30, beat 1.33) | 1 |
+| soprano | 30 | 2.98 | finer | secondary-beat (m. 30, beat 3) | 3 |
+| soprano | 30 | 4.01 | finer | offbeat (m. 30, beat 4.33) | 1 |
+| soprano | 32 | 3.02 | finer | beat (m. 32, beat 4) | 2 |
+| soprano | 32 | 4.67 | offbeat | downbeat (m. 33, beat 1) | 3 |
+| soprano | 33 | 1.05 | finer | secondary-beat (m. 33, beat 3) | 3 |
+| soprano | 34 | 1.04 | finer | beat (m. 34, beat 2) | 2 |
+| soprano | 34 | 2.01 | finer | offbeat (m. 34, beat 2.33) | 1 |
+| soprano | 34 | 4.04 | finer | offbeat (m. 34, beat 4.33) | 1 |
+| soprano | 36 | 2 | beat | secondary-beat (m. 36, beat 3) | 1 |
+| soprano | 36 | 3.94 | finer | beat (m. 36, beat 4) | 2 |
+| soprano | 37 | 1.99 | finer | secondary-beat (m. 37, beat 3) | 3 |
+| soprano | 38 | 1.98 | finer | beat (m. 38, beat 2) | 2 |
+| soprano | 38 | 2.97 | finer | secondary-beat (m. 38, beat 3) | 3 |
+| soprano | 38 | 3.67 | offbeat | beat (m. 38, beat 4) | 1 |
+| soprano | 39 | 1.6 | finer | offbeat (m. 39, beat 1.67) | 1 |
+| soprano | 39 | 2.75 | finer | secondary-beat (m. 39, beat 3) | 3 |
+| soprano | 40 | 1.02 | finer | offbeat (m. 40, beat 1.33) | 1 |
+| soprano | 40 | 1.98 | finer | secondary-beat (m. 40, beat 3) | 3 |
+| soprano | 41 | 2 | beat | secondary-beat (m. 41, beat 3) | 1 |
+| soprano | 41 | 4.28 | finer | offbeat (m. 41, beat 4.33) | 1 |
+| soprano | 42 | 3.32 | finer | offbeat (m. 42, beat 3.33) | 1 |
+| soprano | 42 | 3.98 | finer | beat (m. 42, beat 4) | 2 |
+| soprano | 43 | 1.97 | finer | beat (m. 43, beat 2) | 2 |
+| soprano | 43 | 2.97 | finer | secondary-beat (m. 43, beat 3) | 3 |
+| soprano | 44 | 1.11 | finer | secondary-beat (m. 44, beat 3) | 3 |
+| soprano | 44 | 3.97 | finer | beat (m. 44, beat 4) | 2 |
+| soprano | 44 | 4.93 | finer | downbeat (m. 45, beat 1) | 4 |
+| soprano | 45 | 1.94 | finer | beat (m. 45, beat 2) | 2 |
+| soprano | 45 | 3.01 | finer | offbeat (m. 45, beat 3.33) | 1 |
+| soprano | 48 | 1.03 | finer | beat (m. 48, beat 2) | 2 |
+| soprano | 48 | 2.08 | finer | secondary-beat (m. 48, beat 3) | 3 |
+| soprano | 48 | 3.83 | finer | beat (m. 48, beat 4) | 2 |
+| soprano | 51 | 3.98 | finer | beat (m. 51, beat 4) | 2 |
+| soprano | 52 | 1.02 | finer | offbeat (m. 52, beat 1.33) | 1 |
+| soprano | 52 | 1.97 | finer | secondary-beat (m. 52, beat 3) | 3 |
+| soprano | 53 | 1.61 | finer | offbeat (m. 53, beat 1.67) | 1 |
+| soprano | 53 | 2.13 | finer | secondary-beat (m. 53, beat 3) | 3 |
+| soprano | 53 | 4 | beat | downbeat (m. 54, beat 1) | 2 |
+| soprano | 54 | 1.02 | finer | offbeat (m. 54, beat 1.33) | 1 |
+| soprano | 54 | 1.98 | finer | secondary-beat (m. 54, beat 3) | 3 |
+| soprano | 55 | 1.02 | finer | offbeat (m. 55, beat 1.33) | 1 |
+| soprano | 56 | 1.01 | finer | offbeat (m. 56, beat 1.33) | 1 |
+| soprano | 56 | 2.01 | finer | secondary-beat (m. 56, beat 3) | 3 |
+| soprano | 56 | 4.83 | finer | downbeat (m. 57, beat 1) | 4 |
+| soprano | 57 | 2.02 | finer | secondary-beat (m. 57, beat 3) | 3 |
+| soprano | 58 | 1.01 | finer | beat (m. 58, beat 2) | 2 |
+| soprano | 59 | 1.03 | finer | offbeat (m. 59, beat 1.33) | 1 |
+| soprano | 59 | 2.02 | finer | offbeat (m. 59, beat 2.33) | 1 |
+| soprano | 59 | 3.99 | finer | beat (m. 59, beat 4) | 2 |
+| soprano | 60 | 1.65 | finer | offbeat (m. 60, beat 1.67) | 1 |
+| soprano | 61 | 1.13 | finer | offbeat (m. 61, beat 1.33) | 1 |
+| soprano | 61 | 1.97 | finer | beat (m. 61, beat 2) | 2 |
+| soprano | 62 | 1.58 | finer | offbeat (m. 62, beat 1.67) | 1 |
+| soprano | 62 | 2.63 | finer | secondary-beat (m. 62, beat 3) | 3 |
+| soprano | 63 | 1.67 | offbeat | beat (m. 63, beat 2) | 1 |
+| soprano | 63 | 2.67 | offbeat | secondary-beat (m. 63, beat 3) | 2 |
+| soprano | 63 | 3.67 | offbeat | beat (m. 63, beat 4) | 1 |
+| soprano | 63 | 4.65 | finer | downbeat (m. 64, beat 1) | 4 |
+| soprano | 64 | 1.65 | finer | beat (m. 64, beat 2) | 2 |
+| soprano | 64 | 2.64 | finer | offbeat (m. 64, beat 2.67) | 1 |
+| soprano | 66 | 2.04 | finer | offbeat (m. 66, beat 2.33) | 1 |
+| soprano | 66 | 3.99 | finer | beat (m. 66, beat 4) | 2 |
+| bass | 20 | 4.37 | finer | offbeat (m. 20, beat 4.67) | 1 |
+| other | 3 | 1.97 | finer | beat (m. 3, beat 2) | 2 |
+| other | 7 | 4 | beat | downbeat (m. 8, beat 1) | 2 |
+| other | 10 | 4.98 | finer | downbeat (m. 11, beat 1) | 4 |
+| other | 11 | 1.99 | finer | beat (m. 11, beat 2) | 2 |
+| other | 17 | 3.65 | finer | beat (m. 17, beat 4) | 2 |
+| other | 17 | 4.65 | finer | downbeat (m. 18, beat 1) | 4 |
+| other | 18 | 1.88 | finer | beat (m. 18, beat 2) | 2 |
+| other | 19 | 3.65 | finer | beat (m. 19, beat 4) | 2 |
+| other | 22 | 1.92 | finer | beat (m. 22, beat 2) | 2 |
+| other | 23 | 1.97 | finer | secondary-beat (m. 23, beat 3) | 3 |
+| other | 24 | 3.98 | finer | beat (m. 24, beat 4) | 2 |
+| other | 25 | 1.98 | finer | secondary-beat (m. 25, beat 3) | 3 |
+| other | 26 | 2 | beat | secondary-beat (m. 26, beat 3) | 1 |
+| other | 30 | 1.98 | finer | beat (m. 30, beat 2) | 2 |
+| other | 36 | 4.97 | finer | downbeat (m. 37, beat 1) | 4 |
+| other | 40 | 3.97 | finer | beat (m. 40, beat 4) | 2 |
+| other | 41 | 4.99 | finer | downbeat (m. 42, beat 1) | 4 |
+| other | 42 | 4.69 | finer | downbeat (m. 43, beat 1) | 4 |
+| other | 43 | 1.97 | finer | beat (m. 43, beat 2) | 2 |
+| other | 43 | 4.07 | finer | downbeat (m. 44, beat 1) | 4 |
+| other | 45 | 4.04 | finer | offbeat (m. 45, beat 4.67) | 1 |
+| other | 47 | 3.99 | finer | beat (m. 47, beat 4) | 2 |
+| other | 52 | 4.98 | finer | downbeat (m. 53, beat 1) | 4 |
+| other | 55 | 3.96 | finer | beat (m. 55, beat 4) | 2 |
+| other | 57 | 1.58 | finer | offbeat (m. 57, beat 1.67) | 1 |
+| other | 60 | 2.63 | finer | secondary-beat (m. 60, beat 3) | 3 |
+| other | 62 | 1.92 | finer | beat (m. 62, beat 2) | 2 |
+| other | 64 | 3.67 | offbeat | beat (m. 64, beat 4) | 1 |
+| other | 66 | 2.05 | finer | secondary-beat (m. 66, beat 3) | 3 |
+| other | 66 | 2.98 | finer | secondary-beat (m. 66, beat 3) | 3 |
+| other | 66 | 2.99 | finer | secondary-beat (m. 66, beat 3) | 3 |
+
+### Hemiola
+
+The library found no hemiola.
+
+### Hypermeter
+
+The library reads each phrase in hypermeasures of two or four measures: the length that fills the phrase and holds the cadence's arrival in the last one. The first measure of each hypermeasure is a hyperdownbeat. A phrase that does not fill its hypermeasures ends in a short one, an internal expansion makes the last one longer, an external expansion adds one of its own and a contraction shortens the last. Score is the library's confidence in the reading. The form adapter does not report elided cadences, so no phrase is read as elided.
+
+| Phrase | Measures | Length | Hyperdownbeats | Hypermeasures | Cadence arrives | Score |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | mm. 1 to 3 | 2 | 1, 3 | 1 regular, 1 short | m. 3 | 0.83 |
+| 2 | m. 4 | 4 | 4 | 1 short | m. 4 | 0.5 |
+| 3 | mm. 5 to 7 | 2 | 5, 7 | 1 regular, 1 short | m. 7 | 0.83 |
+| 4 | mm. 8 to 15 | 4 | 8, 12 | 2 regular | none | 1 |
+| 5 | mm. 16 to 30 | 4 | 16, 20 | 1 regular, 1 expanded | m. 23 | 1 |
+| 6 | mm. 31 to 37 | 4 | 31, 35 | 1 regular, 1 contracted | m. 37 | 1 |
+| 7 | mm. 38 to 46 | 4 | 38, 42 | 1 regular, 1 expanded | m. 45 | 1 |
+| 8 | mm. 47 to 50 | 4 | 47 | 1 regular | m. 50 | 1 |
+| 9 | mm. 51 to 57 | 4 | 51, 55 | 1 regular, 1 contracted | m. 57 | 1 |
+| 10 | mm. 58 to 67 | 4 | 58, 62, 66 | 2 regular, 1 extension | m. 65 | 1 |
+
+### Tuplets and borrowed divisions
+
+A meter divides its beat two ways (simple) or three (compound). A tuplet divides it the other way: a triplet in a simple meter or a duplet in a compound one is a borrowed division. The library names those two and says at which level a group occurs (the whole Beat, a Subdivision of it, or several beats) and whether that is typical. Only triplets (sextuplets included) and duplets are looked for, read from the notes' times alone, rounded to a grid of 96 to the whole note. A run is two or more consecutive attacks of one ratio.
+
+| Ratio | Name | Runs | Attacks | Borrowed |
+| --- | --- | --- | --- | --- |
+| 3:2 | triplet | 83 | 201 | no |
+
+| Measure | Beat | Ratio | Name | Meter | Borrowed | Level | Attacks |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 2 | 4 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 3 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 3 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 3 | 4 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 4 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 7 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 7 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 10 | 2 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 11 | 1.75 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 13 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 13 | 3 | 3:2 | triplet | compound | no | not placed | 4 |
+| 14 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 15 | 1.83 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 16 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 17 | 2 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 18 | 1 | 3:2 | triplet | compound | no | not placed | 10 |
+| 18 | 3 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 19 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 20 | 3 | 3:2 | triplet | compound | no | multi-beat | 2 |
+| 22 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 22 | 3.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 23 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 23 | 3.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 23 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 24 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 24 | 3.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 24 | 4.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 25 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 25 | 3.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 25 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 26 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 30 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 30 | 2.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 33 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 35 | 4 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 35 | 4.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 36 | 3.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 36 | 4.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 37 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 38 | 2.67 | 3:2 | triplet | compound | no | not placed | 4 |
+| 38 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 39 | 4.33 | 3:2 | triplet | compound | no | not placed | 6 |
+| 40 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 40 | 3.67 | 3:2 | triplet | compound | no | subdivision | 3 |
+| 40 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 41 | 3.33 | 3:2 | triplet | compound | no | subdivision | 3 |
+| 41 | 4 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 42 | 2.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 42 | 3.33 | 3:2 | triplet | compound | no | not placed | 4 |
+| 42 | 4.67 | 3:2 | triplet | compound | no | not placed | 4 |
+| 43 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 43 | 2.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 44 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 44 | 3.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 45 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 47 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 48 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 51 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 52 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 52 | 4.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 53 | 1.33 | 3:2 | triplet | compound | no | not placed | 5 |
+| 55 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 55 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 57 | 1.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 57 | 1.67 | 3:2 | triplet | compound | no | subdivision | 5 |
+| 59 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 59 | 1.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 59 | 2.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 59 | 4.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 60 | 2 | 3:2 | triplet | compound | no | subdivision | 3 |
+| 60 | 3 | 3:2 | triplet | compound | no | not placed | 4 |
+| 60 | 4.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 61 | 1.33 | 3:2 | triplet | compound | no | not placed | 6 |
+| 61 | 3 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 62 | 2 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 62 | 3 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 63 | 1 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 63 | 2 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 63 | 4 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 64 | 2.33 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 66 | 2 | 3:2 | triplet | compound | no | subdivision | 2 |
+| 66 | 2.67 | 3:2 | triplet | compound | no | subdivision | 2 |

@@ -20,4 +20,8 @@
  */
 bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *report);
 
+/* Whether entry starts different harmony from previous: another base numeral, or another key region (a segment with no
+   numeral differs from one that has one). The rhythm stage uses the same definition for its chord changes. */
+bool harmonic_rhythm_is_change(const AnalysisReportEntry *previous, const AnalysisReportEntry *entry);
+
 #endif

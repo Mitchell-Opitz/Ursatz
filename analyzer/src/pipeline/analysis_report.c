@@ -116,6 +116,24 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->melodies[i].seventh_breaks);
     }
     free(report->melodies);
+    for (size_t i = 0; i < report->density_count; i++) {
+        free(report->densities[i].note_ids);
+    }
+    free(report->densities);
+    free(report->syncopations);
+    for (size_t i = 0; i < report->hemiola_count; i++) {
+        free(report->hemiolas[i].note_ids);
+    }
+    free(report->hemiolas);
+    for (size_t i = 0; i < report->hypermeter_count; i++) {
+        free(report->hypermeters[i].hypermeasures);
+        free(report->hypermeters[i].note_ids);
+    }
+    free(report->hypermeters);
+    for (size_t i = 0; i < report->tuplet_count; i++) {
+        free(report->tuplets[i].note_ids);
+    }
+    free(report->tuplets);
     report->entries = NULL;
     report->entry_count = 0;
     report->non_chord_tones = NULL;
@@ -152,6 +170,16 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->motive_count = 0;
     report->melodies = NULL;
     report->melody_count = 0;
+    report->densities = NULL;
+    report->density_count = 0;
+    report->syncopations = NULL;
+    report->syncopation_count = 0;
+    report->hemiolas = NULL;
+    report->hemiola_count = 0;
+    report->hypermeters = NULL;
+    report->hypermeter_count = 0;
+    report->tuplets = NULL;
+    report->tuplet_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;
