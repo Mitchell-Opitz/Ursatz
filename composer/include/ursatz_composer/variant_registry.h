@@ -192,6 +192,12 @@ typedef struct {
     /* motive_recognizability of the result against the source, the total. */
     MotiveScore recognizability;
     /*
+     * How far the result is from the basic motive, the tree root (R-142): the recognizer's distance as a fraction, 1/1 when
+     * no chain was found. remoteness_den is 0 until variant_set_remoteness fills it; the JSON then leaves "remoteness" out.
+     */
+    unsigned long long remoteness_num;
+    unsigned long long remoteness_den;
+    /*
      * How it was made in plain words: each step's phrase from the registry, joined by "then", and what was kept and
      * changed. "Inverted about D4 in the key's scale, then augmented 2:1. Kept the rhythm's proportions; changed
      * the intervals and the contour."
@@ -231,7 +237,8 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
  *   {"seed", "chain": {"steps": [{"op", "params": {"tonal": true}, "open": ["by"]}]},
  *    "kind", "kept": [], "changed": [], "harmony": "V I@2", "functions": [], "derivation", "recognizability": 0.8571}
  * params holds every resolved parameter that has a value; open names those the seed drew. harmony is the result's own
- * harmony as text, written only when the result has chords of its own. functions stays [] until the function tags of
+ * harmony as text, written only when the result has chords of its own. remoteness is a number to 4 places, written only
+ * once variant_set_remoteness has set it. functions stays [] until the function tags of
  * P14.
  */
 char *variant_record_to_json(const VariantRecord *record);
@@ -242,6 +249,13 @@ char *variant_record_to_json(const VariantRecord *record);
  * arguments.
  */
 bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out);
+
+/*
+ * Sets the record's remoteness: the distance of form from basic, searched to at most depth steps (R-142). Distance is
+ * from the basic motive, not from the form's parent. Returns what variant_recognize_depth returns; the record is
+ * untouched on an error other than VARIANT_OK.
+ */
+VariantResult variant_set_remoteness(const Motive *basic, const Motive *form, size_t depth, VariantRecord *record);
 
 /* --- recognizing ---------------------------------------------------------- */
 

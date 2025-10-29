@@ -95,3 +95,51 @@ int motive_input_load(const MotiveInput *options, Motive *out) {
     }
     return 0;
 }
+
+bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *index, int *status) {
+    const char *argument = argv[*index];
+    const char **slot = strcmp(argument, "--basic") == 0           ? &basic->path
+                        : strcmp(argument, "--basic-format") == 0  ? &basic->format_text
+                        : strcmp(argument, "--basic-pickup") == 0  ? &basic->pickup_text
+                        : strcmp(argument, "--basic-harmony") == 0 ? &basic->harmony_text
+                                                                   : NULL;
+    if (!slot) {
+        return false;
+    }
+    *status = 0;
+    if (*index + 1 >= argc) {
+        *status = cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
+    } else if (*slot) {
+        *status = cli_fail(CLI_EXIT_USAGE, "%s given twice", argument);
+    } else {
+        *slot = argv[++*index];
+    }
+    return true;
+}
+
+bool motive_input_basic_given(const BasicInput *basic) {
+    return basic->path || basic->format_text || basic->pickup_text || basic->harmony_text;
+}
+
+int motive_input_load_basic(const BasicInput *basic, const MotiveInput *source, Motive *out) {
+    if (!basic->path) {
+        return cli_fail(CLI_EXIT_USAGE, "--basic-format, --basic-pickup and --basic-harmony need --basic <file>");
+    }
+    MotiveInput input;
+    memset(&input, 0, sizeof(input));
+    input.path = basic->path;
+    input.meter_text = source->meter_text;
+    input.key_text = source->key_text;
+    input.form_text = source->form_text;
+    input.format_text = basic->format_text;
+    input.pickup_text = basic->pickup_text;
+    input.extras.harmony_text = basic->harmony_text;
+    input.extras.role_text = source->extras.role_text;
+    return motive_input_load(&input, out);
+}
+
+void motive_input_print_basic_help(FILE *out) {
+    fprintf(out, "  --basic <file>       the basic motive the family of forms comes from, read in the source's form, meter, key\n");
+    fprintf(out, "                       and role; remoteness is measured from it. Default: the source is the basic motive\n");
+    fprintf(out, "  --basic-format <f>, --basic-pickup <b>, --basic-harmony \"<text>\"   as for the basic motive's own file\n");
+}

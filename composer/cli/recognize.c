@@ -16,6 +16,7 @@
 typedef struct {
     MotiveInput source;
     MotiveInput target;
+    BasicInput basic;
     const char *target_format_text;
     const char *target_pickup_text;
     const char *target_harmony_text;
@@ -41,8 +42,9 @@ static void print_help(FILE *out) {
     fprintf(out, "  --target-harmony \"<text>\"   the target's own chords, as --harmony\n");
     fprintf(out, "  --target-feature <l:a-b>     a labelled run of the target's notes; repeatable. The target has the source's\n");
     fprintf(out, "                       --role\n");
+    motive_input_print_basic_help(out);
     fprintf(out, "  --depth <n>          the most operations in the chain, 1 to %d (default %d)\n", VARIANT_CHAIN_MAX, VARIANT_CHAIN_MAX);
-    fprintf(out, "  --json               print {found, chain, distance, kept, changed, derivation}\n");
+    fprintf(out, "  --json               print {found, chain, distance, remoteness, kept, changed, derivation}\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 the search ran, found or not; 1 usage, an invalid argument or an input that cannot be loaded.\n\n");
     fprintf(out, "Example:\n");
@@ -57,6 +59,10 @@ static int read_options(int argc, char **argv, Options *options) {
         if (strcmp(argument, "--help") == 0) {
             options->help = true;
         } else if (motive_extras_take(&options->source.extras, argc, argv, &i, false, &extras_status)) {
+            if (extras_status != 0) {
+                return extras_status;
+            }
+        } else if (motive_input_take_basic(&options->basic, argc, argv, &i, &extras_status)) {
             if (extras_status != 0) {
                 return extras_status;
             }
@@ -166,7 +172,12 @@ static void print_pretty(const char *printed) {
     putchar('\n');
 }
 
-static bool print_json(const Motive *source, const VariantChain *chain, const VariantRecognition *recognition) {
+static double fraction_value(unsigned long long numerator, unsigned long long denominator) {
+    return (double)numerator / (double)denominator;
+}
+
+static bool print_json(const Motive *source, const VariantChain *chain, const VariantRecognition *recognition,
+                       const VariantRecord *remoteness) {
     cJSON *document = cJSON_CreateObject();
     if (!document) {
         return false;
@@ -182,6 +193,9 @@ static bool print_json(const Motive *source, const VariantChain *chain, const Va
     cJSON_AddItemToObject(document, "chain", chain_json);
     /* Four decimals, as the record's recognizability. */
     cJSON_AddNumberToObject(document, "distance", (double)(long)(distance_value(recognition) * 10000.0 + 0.5) / 10000.0);
+    cJSON_AddNumberToObject(document, "remoteness",
+                            (double)(long)(fraction_value(remoteness->remoteness_num, remoteness->remoteness_den) * 10000.0 +
+                                           0.5) / 10000.0);
     cJSON_AddItemToObject(document, "kept", names_array(recognition->kept, recognition->kept_count));
     cJSON_AddItemToObject(document, "changed", names_array(recognition->changed, recognition->changed_count));
     cJSON_AddStringToObject(document, "derivation", recognition->derivation);
@@ -195,7 +209,7 @@ static bool print_json(const Motive *source, const VariantChain *chain, const Va
     return true;
 }
 
-static void print_text(const VariantChain *chain, const VariantRecognition *recognition) {
+static void print_text(const VariantChain *chain, const VariantRecognition *recognition, const VariantRecord *remoteness) {
     if (recognition->found) {
         printf("Chain:");
         for (size_t s = 0; s < chain->step_count; s++) {
@@ -206,6 +220,7 @@ static void print_text(const VariantChain *chain, const VariantRecognition *reco
         printf("No chain found\n");
     }
     printf("Distance: %llu/%llu\n", recognition->distance_num, recognition->distance_den);
+    printf("Remoteness: %llu/%llu\n", remoteness->remoteness_num, remoteness->remoteness_den);
     printf("%s\n", recognition->derivation);
 }
 
@@ -252,12 +267,28 @@ int run_recognize(int argc, char **argv) {
     if (result != VARIANT_OK) {
         return cli_fail(CLI_EXIT_USAGE, "cannot recognize: %s", variant_result_name(result));
     }
+    /* Remoteness is the distance from the basic motive; with no --basic the source is the basic motive. */
+    VariantRecord remoteness;
+    memset(&remoteness, 0, sizeof(remoteness));
+    if (motive_input_basic_given(&options.basic)) {
+        Motive basic;
+        if (motive_input_load_basic(&options.basic, &options.source, &basic) != 0) {
+            return CLI_EXIT_USAGE;
+        }
+        result = variant_set_remoteness(&basic, &target, depth, &remoteness);
+        if (result != VARIANT_OK) {
+            return cli_fail(CLI_EXIT_USAGE, "cannot recognize: %s", variant_result_name(result));
+        }
+    } else {
+        remoteness.remoteness_num = recognition.distance_num;
+        remoteness.remoteness_den = recognition.distance_den;
+    }
     if (options.json) {
-        if (!print_json(&source, &chain, &recognition)) {
+        if (!print_json(&source, &chain, &recognition, &remoteness)) {
             return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         }
     } else {
-        print_text(&chain, &recognition);
+        print_text(&chain, &recognition, &remoteness);
     }
     return 0;
 }

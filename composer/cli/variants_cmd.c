@@ -20,6 +20,7 @@
 
 typedef struct {
     MotiveInput in;
+    BasicInput basic;
     const char *chain_path;
     const char *count_text;
     const char *seed_text;
@@ -38,12 +39,13 @@ static void print_help(FILE *out) {
     fprintf(out, "  <input>              a MIDI file, a MusicXML file, a note list or a motive JSON file\n");
     fprintf(out, "  --format, --form, --meter, --key, --pickup   as for the motive command\n");
     motive_extras_print_help(out, false);
+    motive_input_print_basic_help(out);
     fprintf(out, "  --chain <file>       a JSON file {\"steps\": [{\"op\": \"invert\", \"params\": {\"tonal\": true}}]}, the same\n");
     fprintf(out, "                       chain for every variant. Default: each variant gets its own random chain\n");
     fprintf(out, "  --count <n>          how many variants, 1 to %d (default %d); variant i uses seed + i\n", VARIANTS_COUNT_MAX, VARIANTS_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
     fprintf(out, "  --json               print as JSON: the seed, the source, and for each variant its seed, chain, kind, kept,\n");
-    fprintf(out, "                       changed, derivation, recognizability and motive (with its analysis)\n");
+    fprintf(out, "                       changed, derivation, recognizability, remoteness and motive (with its analysis)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument, or an unreadable chain file; 2 the input cannot\n");
     fprintf(out, "be loaded or a step of the chain is refused.\n\n");
@@ -60,6 +62,10 @@ static int read_options(int argc, char **argv, Options *options) {
         if (strcmp(argument, "--help") == 0) {
             options->help = true;
         } else if (motive_extras_take(&options->in.extras, argc, argv, &i, false, &extras_status)) {
+            if (extras_status != 0) {
+                return extras_status;
+            }
+        } else if (motive_input_take_basic(&options->basic, argc, argv, &i, &extras_status)) {
             if (extras_status != 0) {
                 return extras_status;
             }
@@ -304,6 +310,7 @@ static void print_text(unsigned long seed, const Motive *source, const Variant *
         }
         char *text = motive_text(&variant->motive);
         printf("\n  %s\n  %s\n", text ? text : "", variant->record.derivation);
+        printf("  Remoteness: %llu/%llu\n", variant->record.remoteness_num, variant->record.remoteness_den);
         free(text);
     }
 }
@@ -403,6 +410,13 @@ static int make_variants(const Options *options) {
     if (status != 0) {
         return status;
     }
+    Motive basic = source;
+    if (motive_input_basic_given(&options->basic)) {
+        status = motive_input_load_basic(&options->basic, &options->in, &basic);
+        if (status != 0) {
+            return status;
+        }
+    }
 
     Variant *variants = calloc(count, sizeof(*variants));
     if (!variants) {
@@ -420,6 +434,12 @@ static int make_variants(const Options *options) {
         }
         VariantResult result = variant_apply_chain(&source, &variant->chain, variant_seed, &variant->motive, &variant->record);
         if (result == VARIANT_OK) {
+            /* From the basic motive, searched as deep as the chain that made the variant unless the basic is another motive. */
+            size_t depth = motive_input_basic_given(&options->basic) ? VARIANT_CHAIN_MAX : variant->record.step_count;
+            if (variant_set_remoteness(&basic, &variant->motive, depth, &variant->record) != VARIANT_OK) {
+                variant->record.remoteness_num = 1;
+                variant->record.remoteness_den = 1;
+            }
             made++;
         } else if (options->chain_path) {
             int failed = cli_fail(CLI_EXIT_UNSATISFIABLE, "step %zu of the chain: %s", variant->record.failed_step + 1,
@@ -460,7 +480,7 @@ int run_variants(int argc, char **argv) {
     if (!options.list_ops && !options.in.path) {
         return cli_fail(CLI_EXIT_USAGE, "variants needs --list-ops or a motive input\n%s", VARIANTS_USAGE_LINE);
     }
-    if (options.list_ops && (options.in.path || motive_extras_given(&options.in.extras))) {
+    if (options.list_ops && (options.in.path || motive_extras_given(&options.in.extras) || motive_input_basic_given(&options.basic))) {
         return cli_fail(CLI_EXIT_USAGE, "--list-ops takes no motive input");
     }
     if (!options.list_ops) {
