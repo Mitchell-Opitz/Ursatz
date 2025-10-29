@@ -184,6 +184,15 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
     notes.events = import.events;
     notes.pitch_values = import.pitch_values;
     notes.count = import.count;
+    notes.streams = malloc((import.count > 0 ? import.count : 1) * sizeof *notes.streams);
+    if (!notes.streams) {
+        musical_time_destroy(end_time);
+        imported_notes_destroy(&notes);
+        musicxml_import_destroy(&import);
+        fprintf(stderr, "Error: out of memory importing '%s'\n", path);
+        return MUSICXML_PIPELINE_ERR_IMPORT_FAILED;
+    }
+    memcpy(notes.streams, import.part_index, import.count * sizeof *notes.streams);
     notes.source.part_index = import.part_index;
     notes.source.staff = import.staff;
     notes.meter = (MidiMeterImport){import.meter_map, end_time, NULL, 0};

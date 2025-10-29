@@ -12,6 +12,7 @@ void imported_notes_destroy(ImportedNotes *notes) {
     }
     free(notes->events);
     free(notes->pitch_values);
+    free(notes->streams);
     midi_meter_import_destroy(&notes->meter);
     midi_key_signature_events_destroy(&notes->key_signature_events);
     for (size_t i = 0; i < notes->source.part_count; i++) {
@@ -25,6 +26,7 @@ void imported_notes_destroy(ImportedNotes *notes) {
     notes->meter = (MidiMeterImport){NULL, NULL, NULL, 0};
     notes->events = NULL;
     notes->pitch_values = NULL;
+    notes->streams = NULL;
     notes->count = 0;
     notes->ticks_per_quarter = 0;
 }
