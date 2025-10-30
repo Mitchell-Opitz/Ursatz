@@ -45,7 +45,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --count <n>          how many variants, 1 to %d (default %d); variant i uses seed + i\n", VARIANTS_COUNT_MAX, VARIANTS_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
     fprintf(out, "  --json               print as JSON: the seed, the source, and for each variant its seed, chain, kind, kept,\n");
-    fprintf(out, "                       changed, derivation, recognizability, remoteness and motive (with its analysis)\n");
+    fprintf(out, "                       changed, derivation, recognizability, remoteness, functions and motive (with its analysis)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument, or an unreadable chain file; 2 the input cannot\n");
     fprintf(out, "be loaded or a step of the chain is refused.\n\n");
@@ -311,6 +311,11 @@ static void print_text(unsigned long seed, const Motive *source, const Variant *
         char *text = motive_text(&variant->motive);
         printf("\n  %s\n  %s\n", text ? text : "", variant->record.derivation);
         printf("  Remoteness: %llu/%llu\n", variant->record.remoteness_num, variant->record.remoteness_den);
+        printf("  Functions:");
+        for (size_t f = 0; f < variant->record.function_count; f++) {
+            printf("%s %s", f ? "," : "", variant->record.functions[f]);
+        }
+        printf("%s\n", variant->record.function_count ? "" : " none");
         free(text);
     }
 }
@@ -440,6 +445,8 @@ static int make_variants(const Options *options) {
                 variant->record.remoteness_num = 1;
                 variant->record.remoteness_den = 1;
             }
+            variant_functions(&basic, &variant->motive, &variant->record, variant->record.functions,
+                              &variant->record.function_count);
             made++;
         } else if (options->chain_path) {
             int failed = cli_fail(CLI_EXIT_UNSATISFIABLE, "step %zu of the chain: %s", variant->record.failed_step + 1,
