@@ -142,7 +142,15 @@ const VariantTreeView = (function () {
     return { el: box, clear: () => { steps.length = 0; drawSteps(); } };
   }
 
-  function candidateCard(candidate) {
+  function actionButton(text, onClick) {
+    const button = h("button", "", text);
+    button.type = "button";
+    button.addEventListener("click", onClick);
+    return button;
+  }
+
+  /* actions: {approve, reject, reroll}, each called with no arguments. */
+  function candidateCard(candidate, actions) {
     const view = VariantTree.candidateView(candidate);
     const card = h("li", "variant-candidate");
     card.appendChild(h("div", "variant-derivation", view.derivation));
@@ -153,7 +161,32 @@ const VariantTreeView = (function () {
       meta.appendChild(h("span", "variant-recognizability", view.recognizability));
     }
     card.appendChild(meta);
+    const buttons = h("div", "variant-actions");
+    buttons.append(
+      actionButton("Approve", actions.approve),
+      actionButton("Reject", actions.reject),
+      actionButton("Reroll", actions.reroll),
+    );
+    card.appendChild(buttons);
     return card;
+  }
+
+  const REJECTED_KEY = "ursatz.variants.showRejected";
+
+  function loadShowRejected() {
+    try {
+      return window.localStorage.getItem(REJECTED_KEY) === "1";
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function storeShowRejected(value) {
+    try {
+      window.localStorage.setItem(REJECTED_KEY, value ? "1" : "0");
+    } catch (error) {
+      /* The toggle still works for this page view. */
+    }
   }
 
   function mount(parent, ctx) {
@@ -177,7 +210,12 @@ const VariantTreeView = (function () {
     generate.type = "button";
     const countLabel = h("label", "filter-field", "Count ");
     countLabel.appendChild(count);
-    controls.append(countLabel, seed, generate, summary);
+    const rejectedLabel = h("label", "filter-field", "Show rejected ");
+    const rejectedBox = h("input");
+    rejectedBox.type = "checkbox";
+    rejectedBox.checked = loadShowRejected();
+    rejectedLabel.appendChild(rejectedBox);
+    controls.append(countLabel, seed, generate, summary, rejectedLabel);
 
     const pickerHost = h("details", "variant-picker-host");
     pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
@@ -199,10 +237,50 @@ const VariantTreeView = (function () {
     });
 
     let shown = [];
+    const rejectedListeners = [];
+    rejectedBox.addEventListener("change", () => {
+      storeShowRejected(rejectedBox.checked);
+      for (const listener of rejectedListeners) {
+        listener(rejectedBox.checked);
+      }
+    });
+
+    /* Saves a candidate with a flag and takes it off the list. */
+    async function saveCandidate(candidate, flag) {
+      const answer = await ctx.send(VariantTree.saveRequest(ctx.id, candidate, flag));
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not save the variant"), true);
+        return;
+      }
+      shown = shown.filter((other) => other !== candidate);
+      drawCandidates();
+      setStatus(status, `Saved ${answer.data.item.name} as ${flag}`, false);
+    }
+
+    /* Regenerates only this candidate, with the next seed. */
+    async function rerollCandidate(candidate) {
+      setStatus(status, "Rerolling...", false);
+      const answer = await ctx.send(VariantTree.candidateRerollRequest(ctx.id, candidate));
+      const next = answer.ok && Array.isArray(answer.data.variants) ? answer.data.variants[0] : null;
+      if (!next) {
+        setStatus(status, errorText(answer.data, "No different variant came out"), true);
+        return;
+      }
+      shown = shown.map((other) => (other === candidate ? next : other));
+      drawCandidates();
+      setStatus(status, `Rerolled with seed ${next.seed}`, false);
+    }
+
     function drawCandidates() {
       candidates.innerHTML = "";
       for (const candidate of shown) {
-        candidates.appendChild(candidateCard(candidate));
+        candidates.appendChild(
+          candidateCard(candidate, {
+            approve: () => saveCandidate(candidate, "approved"),
+            reject: () => saveCandidate(candidate, "rejected"),
+            reroll: () => rerollCandidate(candidate),
+          }),
+        );
       }
     }
 
@@ -223,7 +301,7 @@ const VariantTreeView = (function () {
       setStatus(status, shown.length === 0 ? "No variants came out" : `Seed ${answer.data.seed}`, false);
     });
 
-    return { el: section };
+    return { el: section, showRejected: () => rejectedBox.checked, onShowRejected: (fn) => rejectedListeners.push(fn) };
   }
 
   return { mount };
