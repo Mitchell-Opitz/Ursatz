@@ -2162,3 +2162,34 @@ body {
   color: var(--accent);
   font-size: 11px;
 }
+
+/* Motif variants (P13 B9) */
+.materials-variants .variant-candidates,
+.materials-variants .variant-steps {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+.variant-candidate {
+  border-top: 1px solid var(--border, #ccc);
+  padding: 0.4rem 0;
+}
+.variant-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.variant-chip,
+.variant-badge {
+  border: 1px solid var(--border, #ccc);
+  border-radius: 0.6rem;
+  font-size: 0.8em;
+  padding: 0 0.45rem;
+}
+.variant-chip-changed {
+  font-weight: 600;
+}
+.variant-picker-host {
+  margin: 0.5rem 0;
+}

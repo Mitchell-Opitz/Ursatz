@@ -877,6 +877,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     if (score) {
       content.appendChild(score);
     }
+    VariantTreeView.mount(content, { id, name: item.name, body: answer.data.body, send: sendMaterialsRequest });
     content.appendChild(
       buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
         const request = MaterialsModel.buildSaveMotifRequest({
