@@ -1,6 +1,6 @@
 /* The Variants section of the motif detail (P13 B9): the Generate control
  * with its operation picker, and the unsaved candidates. Renders from
- * VariantTree; ctx is {id, name, body, send(request)}, send being the page's
+ * VariantTree; ctx is {id, name, body, send(request), open(id)}, send being the page's
  * JSON request helper that answers {ok, status, data}. */
 const VariantTreeView = (function () {
   function h(tag, className, text) {
@@ -171,6 +171,46 @@ const VariantTreeView = (function () {
     return card;
   }
 
+  /* One saved node: indented by depth, with its derivation, flag, kind and actions.
+   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id)}. */
+  function treeRow(row, actions) {
+    const item = h("li", `variant-node variant-flag-${row.flag.value}`);
+    item.style.marginLeft = `${row.depth * 1.5}rem`;
+    const title = h("div", "variant-node-title");
+    title.appendChild(h("strong", "", row.name));
+    title.appendChild(h("span", "variant-badge", `v${row.version}`));
+    if (!row.isRoot) {
+      title.appendChild(h("span", `variant-badge variant-flag-badge-${row.flag.value}`, row.flag.text));
+    }
+    item.appendChild(title);
+    if (row.isRoot) {
+      return item;
+    }
+    if (row.derivation) {
+      item.appendChild(h("div", "variant-derivation", row.derivation));
+    }
+    item.appendChild(chipRow(row.chips));
+    const buttons = h("div", "variant-actions");
+    const kind = h("select");
+    for (const value of VariantTree.KINDS) {
+      const o = h("option", "", VariantTree.KIND_LABELS[value]);
+      o.value = value;
+      kind.appendChild(o);
+    }
+    kind.value = row.kindValue;
+    kind.addEventListener("change", () => actions.kind(row.id, kind.value));
+    buttons.append(
+      kind,
+      actionButton("Approve", () => actions.flag(row.id, "approved")),
+      actionButton("Reject", () => actions.flag(row.id, "rejected")),
+      actionButton("Unflag", () => actions.flag(row.id, "unflagged")),
+      actionButton("Reroll", () => actions.reroll(row.id)),
+      actionButton("Open", () => actions.open(row.id)),
+    );
+    item.appendChild(buttons);
+    return item;
+  }
+
   const REJECTED_KEY = "ursatz.variants.showRejected";
 
   function loadShowRejected() {
@@ -220,7 +260,9 @@ const VariantTreeView = (function () {
     const pickerHost = h("details", "variant-picker-host");
     pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
     const candidates = h("ol", "variant-candidates");
-    section.append(controls, pickerHost, status, candidates);
+    const tree = h("ul", "variant-tree");
+    const treeNote = h("div", "piece-list-status");
+    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree);
     parent.appendChild(section);
 
     let picker = null;
@@ -255,6 +297,7 @@ const VariantTreeView = (function () {
       shown = shown.filter((other) => other !== candidate);
       drawCandidates();
       setStatus(status, `Saved ${answer.data.item.name} as ${flag}`, false);
+      refreshTree();
     }
 
     /* Regenerates only this candidate, with the next seed. */
@@ -284,6 +327,57 @@ const VariantTreeView = (function () {
       }
     }
 
+    let savedTree = null;
+    const treeActions = {
+      async flag(id, flag) {
+        const answer = await ctx.send(VariantTree.flagRequest(id, flag));
+        setStatus(status, answer.ok ? "" : errorText(answer.data, "Could not change the flag"), !answer.ok);
+        refreshTree();
+      },
+      async kind(id, kind) {
+        const row = VariantTree.treeRows(savedTree, true).rows.find((r) => r.id === id);
+        const flag = row ? row.flag.value : "unflagged";
+        const answer = await ctx.send(VariantTree.flagRequest(id, flag, kind));
+        setStatus(status, answer.ok ? "" : errorText(answer.data, "Could not change the kind"), !answer.ok);
+        refreshTree();
+      },
+      async reroll(id) {
+        setStatus(status, "Rerolling...", false);
+        const answer = await ctx.send(VariantTree.rerollRequest(id));
+        setStatus(status, answer.ok ? "Rerolled" : errorText(answer.data, "Could not reroll"), !answer.ok);
+        refreshTree();
+      },
+      open(id) {
+        ctx.open(id);
+      },
+    };
+
+    function drawTree() {
+      tree.innerHTML = "";
+      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked);
+      for (const row of shownRows.rows) {
+        tree.appendChild(treeRow(row, treeActions));
+      }
+      const saved = shownRows.rows.length - 1;
+      treeNote.textContent =
+        saved <= 0 && shownRows.hidden === 0
+          ? "No saved variants yet."
+          : shownRows.hidden > 0
+            ? `${shownRows.hidden} rejected hidden`
+            : "";
+    }
+
+    async function refreshTree() {
+      const answer = await ctx.send(VariantTree.treeRequest(ctx.id));
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not load the variant tree"), true);
+        return;
+      }
+      savedTree = answer.data.tree;
+      drawTree();
+    }
+    rejectedListeners.push(drawTree);
+
     generate.addEventListener("click", async () => {
       const made = VariantTree.generateRequest(ctx.id, { count: count.value, seed: seed.value, steps });
       if (made.error) {
@@ -301,6 +395,7 @@ const VariantTreeView = (function () {
       setStatus(status, shown.length === 0 ? "No variants came out" : `Seed ${answer.data.seed}`, false);
     });
 
+    refreshTree();
     return { el: section, showRejected: () => rejectedBox.checked, onShowRejected: (fn) => rejectedListeners.push(fn) };
   }
 
