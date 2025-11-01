@@ -149,7 +149,7 @@ const VariantTreeView = (function () {
     return button;
   }
 
-  /* actions: {approve, reject, reroll}, each called with no arguments. */
+  /* actions: {play, approve, reject, reroll}, each called with no arguments. */
   function candidateCard(candidate, actions) {
     const view = VariantTree.candidateView(candidate);
     const card = h("li", "variant-candidate");
@@ -163,6 +163,7 @@ const VariantTreeView = (function () {
     card.appendChild(meta);
     const buttons = h("div", "variant-actions");
     buttons.append(
+      actionButton("Play", actions.play),
       actionButton("Approve", actions.approve),
       actionButton("Reject", actions.reject),
       actionButton("Reroll", actions.reroll),
@@ -172,7 +173,7 @@ const VariantTreeView = (function () {
   }
 
   /* One saved node: indented by depth, with its derivation, flag, kind and actions.
-   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id)}. */
+   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id), play(row)}. */
   function treeRow(row, actions) {
     const item = h("li", `variant-node variant-flag-${row.flag.value}`);
     item.style.marginLeft = `${row.depth * 1.5}rem`;
@@ -201,6 +202,7 @@ const VariantTreeView = (function () {
     kind.addEventListener("change", () => actions.kind(row.id, kind.value));
     buttons.append(
       kind,
+      actionButton("Play", () => actions.play(row)),
       actionButton("Approve", () => actions.flag(row.id, "approved")),
       actionButton("Reject", () => actions.flag(row.id, "rejected")),
       actionButton("Unflag", () => actions.flag(row.id, "unflagged")),
@@ -262,7 +264,8 @@ const VariantTreeView = (function () {
     const candidates = h("ol", "variant-candidates");
     const tree = h("ul", "variant-tree");
     const treeNote = h("div", "piece-list-status");
-    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree);
+    const selectedEl = h("div", "variant-selected");
+    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, selectedEl);
     parent.appendChild(section);
 
     let picker = null;
@@ -319,12 +322,61 @@ const VariantTreeView = (function () {
       for (const candidate of shown) {
         candidates.appendChild(
           candidateCard(candidate, {
+            play: () => playCandidate(candidate),
             approve: () => saveCandidate(candidate, "approved"),
             reject: () => saveCandidate(candidate, "rejected"),
             reroll: () => rerollCandidate(candidate),
           }),
         );
       }
+    }
+
+    let workspace = null;
+    let blobUrls = [];
+    function clearSelection() {
+      if (workspace) {
+        workspace.destroy();
+        workspace = null;
+      }
+      for (const url of blobUrls) {
+        URL.revokeObjectURL(url);
+      }
+      blobUrls = [];
+      selectedEl.innerHTML = "";
+    }
+
+    /* Shows a score and playback in the workspace under the saved tree. urls is {musicxmlUrl, playbackUrl}. */
+    function showSelection(title, subtitle, urls) {
+      clearSelection();
+      workspace = ScoreWorkspace.mount(selectedEl, {
+        title,
+        subtitle,
+        musicxmlUrl: urls.musicxmlUrl,
+        playbackUrl: urls.playbackUrl,
+      });
+    }
+
+    /* An unsaved candidate: rendered by the Composer, mounted through blob URLs. */
+    async function playCandidate(candidate) {
+      const request = MaterialsModel.renderRequest(VariantTree.candidateBody(ctx.body, candidate));
+      setStatus(status, "Rendering...", false);
+      const answer = await ctx.send(request);
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not render the variant"), true);
+        return;
+      }
+      setStatus(status, "", false);
+      const xml = URL.createObjectURL(new Blob([answer.data.musicxml], { type: "application/xml" }));
+      const playback = URL.createObjectURL(new Blob([JSON.stringify(answer.data.playback)], { type: "application/json" }));
+      showSelection(VariantTree.candidateName(ctx.name, candidate), `candidate · seed ${candidate.seed}`, {
+        musicxmlUrl: xml,
+        playbackUrl: playback,
+      });
+      blobUrls = [xml, playback];
+    }
+
+    function playSaved(row) {
+      showSelection(row.name, `variant · v${row.version}`, MaterialsModel.versionScoreUrls(row.id, row.version));
     }
 
     let savedTree = null;
@@ -350,6 +402,7 @@ const VariantTreeView = (function () {
       open(id) {
         ctx.open(id);
       },
+      play: playSaved,
     };
 
     function drawTree() {
