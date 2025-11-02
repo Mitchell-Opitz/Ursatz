@@ -209,6 +209,43 @@ static void test_counter_line(void) {
     expect_failure(THEME " --chain variants_cli_counter.json", 2, "step 1 of the chain: counter-line needs an accompaniment");
 }
 
+/* --function keeps the variants that suit a function, drawing more chains to fill the count. */
+static void test_function_filter(void) {
+    char *out = output_of(THEME " --count 3 --seed 1 --function cadential");
+    size_t variants = count_of(out, "\nVariant ");
+    assert(variants >= 1 && variants <= 3 && count_of(out, "  Functions:") == variants);
+    assert(count_of(out, "cadential") == variants);
+    free(out);
+
+    /* Repeated, a variant suits any of them; in JSON each carries what it suits. */
+    out = output_of(THEME " --count 4 --seed 1 --function continuation --function contrast --json");
+    assert(count_of(out, "\"derivation\"") >= 1);
+    assert(count_of(out, "\"functions\": [\"") == count_of(out, "\"derivation\""));
+    free(out);
+
+    expect_failure(THEME " --function dramatic", 1, "--function must be beginning, continuation, contrast or cadential");
+    expect_failure(THEME " --function", 1, "--function needs a value");
+    expect_failure(THEME " --function cadential --function cadential --function cadential --function cadential "
+                         "--function cadential", 1, "--function is given at most 4 times");
+}
+
+/* Liquidation by features, from a chain file, and remoteness from a basic motive. */
+static void test_liquidate_features_and_basic(void) {
+    write_file("variants_cli_liquidate.json",
+               "{\"steps\": [{\"op\": \"liquidate-features\", \"params\": {\"steps\": 1, \"shorten\": false}}]}");
+    char *out = output_of(THEME " --chain variants_cli_liquidate.json --count 1 --seed 1");
+    assert(strstr(out, "Variant 1 (seed 1): liquidate-features") != NULL && strstr(out, "Liquidated 1 characteristic") != NULL);
+    assert(strstr(out, "Remoteness: 1/3") != NULL && strstr(out, "continuation") != NULL);
+    free(out);
+
+    /* From another basic motive the remoteness is measured from that one: the source itself is no distance. */
+    out = output_of(THEME " --chain variants_cli_liquidate.json --count 1 --seed 1 --basic " FIXTURE("motive_d_minor.txt"));
+    assert(strstr(out, "Remoteness: 1/3") != NULL);
+    free(out);
+    expect_failure(THEME " --basic-pickup 1", 1, "need --basic <file>");
+    expect_failure(THEME " --basic", 1, "--basic needs a value");
+}
+
 int main(void) {
     test_list_ops();
     test_chain_file();
@@ -218,6 +255,8 @@ int main(void) {
     test_refused_step();
     test_harmony_json();
     test_counter_line();
+    test_function_filter();
+    test_liquidate_features_and_basic();
     printf("variants cli tests passed\n");
     return 0;
 }

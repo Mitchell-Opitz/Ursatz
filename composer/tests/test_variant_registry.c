@@ -922,6 +922,59 @@ static void test_functions_by_the_rules(void) {
            !variant_functions(&basic, &out, &record, NULL, &count));
 }
 
+static void test_liquidate_features_row(void) {
+    /* Two labelled features: the first holds a leap, so it is the characteristic one and goes first. */
+    Motive source = load("C4:e G4:e E4:e F4:e G4:q A4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    snprintf(source.features[0].label, sizeof(source.features[0].label), "a");
+    source.features[0].first = 0;
+    source.features[0].last = 1;
+    snprintf(source.features[1].label, sizeof(source.features[1].label), "b");
+    source.features[1].first = 2;
+    source.features[1].last = 3;
+    source.feature_count = 2;
+
+    const VariantOperation *operation = variant_registry_find("liquidate-features");
+    assert(operation && operation->category == VARIANT_CATEGORY_INTERVALS);
+    assert(strcmp(operation->citation, "ch. VIII, Ex. 52") == 0 && operation->param_count == 2);
+    assert(operation->relation == MOTIVE_RELATION_LIQUIDATE_FEATURES);
+    assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
+
+    VariantStep step = step_of("liquidate-features");
+    assert(variant_step_set(&step, "steps", 1, 0) && variant_step_set(&step, "shorten", 0, 0));
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
+    assert(out.note_count == 5 && out.notes[0].midi_pitch == 60);
+    assert(plan_time_compare(out.notes[0].duration, (PlanTime){1, 4}) == 0);
+    assert(out.feature_count == 1 && strcmp(out.features[0].label, "b") == 0 && out.features[0].first == 1 &&
+           out.features[0].last == 2);
+    /* The chord the source implied stays under the thinned melody as its own harmony. */
+    assert(out.harmony_count == 1 && out.harmony[0].degree == 1);
+    assert(changed(&record, "rhythm") && changed(&record, "intervals"));
+
+    /* Shortened, the unit halves (ch. VIII): the result is half as long. */
+    VariantStep shorter = step_of("liquidate-features");
+    assert(variant_step_set(&shorter, "steps", 1, 0) && variant_step_set(&shorter, "shorten", 1, 0));
+    Motive half;
+    assert(run_one(&source, shorter, 1, &half, &record) == VARIANT_OK);
+    assert(half.note_count == 5 && plan_time_compare(half.length, out.length) < 0);
+
+    /* Without labelled features each beat group is one (R-144), so a plain motive works too. */
+    Motive plain = load("C4:e G4:e E4:q F4:q G4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    assert(run_one(&plain, step, 1, &out, &record) == VARIANT_OK && out.note_count == 4);
+
+    /* It needs a key and a full motive. */
+    Motive no_key = load("C4:e G4:e E4:q F4:q G4:q", "4/4", NULL, MOTIVE_FORMAT_NOTES);
+    assert(run_one(&no_key, step, 1, &out, &record) == VARIANT_ERR_REFUSED);
+    Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
+    assert(run_one(&rhythm, step, 1, &out, &record) == VARIANT_ERR_FORM);
+
+    char text[160];
+    VariantValue values[VARIANT_PARAM_MAX] = {{true, 2, 0}, {true, 1, 0}};
+    operation->describe(values, text, sizeof(text));
+    assert(strcmp(text, "liquidated 2 characteristic features, each reduced to one chord tone and shortened by half") == 0);
+}
+
 int main(void) {
     test_registry_entries();
     test_registry_forms();
@@ -954,6 +1007,7 @@ int main(void) {
     test_harmony_row_phrases();
     test_remoteness_is_from_the_root();
     test_functions_by_the_rules();
+    test_liquidate_features_row();
     puts("test_variant_registry: ok");
     return 0;
 }

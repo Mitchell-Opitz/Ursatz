@@ -127,6 +127,25 @@ static void test_json(void) {
     free(text);
 }
 
+/* Remoteness is from the basic motive, not the source: here one step from the source, two from the basic motive. */
+static void test_remoteness(void) {
+    write_file("recognize_cli_basic.txt", "C4:q E4:e G4:e F4:q E4:q");
+    write_file(SOURCE, "D4:q F#4:e A4:e G4:q F#4:q");
+    write_file(TARGET, "D4:h F#4:q A4:q G4:h F#4:h");
+    char *text = output_of(SOURCE " " TARGET MAJOR " --json");
+    expect_contains(text, "\"distance\": 0.2");
+    expect_contains(text, "\"remoteness\": 0.2");
+    free(text);
+    text = output_of(SOURCE " " TARGET MAJOR " --basic recognize_cli_basic.txt --json");
+    expect_contains(text, "\"distance\": 0.2");
+    expect_contains(text, "\"remoteness\": 0.3333");
+    free(text);
+    text = output_of(SOURCE " " TARGET MAJOR " --basic recognize_cli_basic.txt");
+    expect_contains(text, "Remoteness: 1/3");
+    free(text);
+    expect_failure(SOURCE " " TARGET MAJOR " --basic-harmony \"I\"", 1, "need --basic <file>");
+}
+
 static void test_contour(void) {
     write_file(SOURCE, "0 2 1 3 2");
     write_file(TARGET, "0 2 1 2");
@@ -142,6 +161,7 @@ int main(void) {
     test_not_found();
     test_bad_input();
     test_json();
+    test_remoteness();
     test_contour();
     printf("recognize cli: ok\n");
     return 0;
