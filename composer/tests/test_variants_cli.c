@@ -87,7 +87,7 @@ static void test_list_ops(void) {
 
     out = output_of("--list-ops --json");
     assert(strstr(out, "\"operations\"") != NULL);
-    assert(count_of(out, "\"citation\"") == 27);
+    assert(count_of(out, "\"citation\"") == 28);
     free(out);
 }
 
@@ -135,7 +135,7 @@ static void test_json(void) {
     assert(strncmp(out, "{\n  \"seed\": 3,\n  \"source\": {", 28) == 0);
     assert(strstr(out, "\"variants\": [") != NULL);
     assert(count_of(out, "\"derivation\"") == 2);
-    assert(count_of(out, "\"functions\": []") == 2);
+    assert(count_of(out, "\"functions\": [") == 2 && count_of(out, "\"remoteness\"") == 2);
     assert(count_of(out, "\"recognizability\"") == 2);
     assert(count_of(out, "\"kind\"") == 2);
     /* The source and each variant carry the motive document: the motive, and the analysis with its text forms. */
