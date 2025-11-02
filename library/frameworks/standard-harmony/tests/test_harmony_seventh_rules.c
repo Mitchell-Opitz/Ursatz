@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "seventh", HARMONY_SEVENTH_RULE_COUNT);
 #define harmony_seventh_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_seventh_constraint, harmony_seventh_rule_holds, HarmonySeventhResolution, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_seventh_constraint, harmony_seventh_preference, harmony_seventh_rule_holds, HarmonySeventhResolution, which, subject)
 
 #define SEVENTH(name) HARMONY_SEVENTH_##name
 

@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "embellishing", HARMONY_EMBELLISHING_RULE_COUNT);
 #define harmony_embellishing_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_embellishing_constraint, harmony_embellishing_rule_holds, HarmonyGesture, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_embellishing_constraint, harmony_embellishing_preference, harmony_embellishing_rule_holds, HarmonyGesture, which, subject)
 
 #define EMB(name) HARMONY_EMBELLISHING_##name
 

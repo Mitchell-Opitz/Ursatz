@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "predominant", HARMONY_PREDOMINANT_RULE_COUNT);
 #define harmony_predominant_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_predominant_constraint, harmony_predominant_rule_holds, HarmonyPredominantEnding, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_predominant_constraint, harmony_predominant_preference, harmony_predominant_rule_holds, HarmonyPredominantEnding, which, subject)
 
 #define PD(name) HARMONY_PREDOMINANT_##name
 

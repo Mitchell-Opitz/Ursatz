@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "connection", HARMONY_CONNECTION_RULE_COUNT);
 #define harmony_connection_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_connection_constraint, harmony_connection_rule_holds, HarmonyConnection, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_connection_constraint, harmony_connection_preference, harmony_connection_rule_holds, HarmonyConnection, which, subject)
 
 #define CON(name) HARMONY_CONNECTION_##name
 #define BIT(rule) (1u << (rule))
