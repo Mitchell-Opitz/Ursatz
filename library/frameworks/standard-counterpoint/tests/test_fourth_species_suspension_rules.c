@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fourth-species-suspension", STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT);
 #define standard_counterpoint_fourth_species_suspension_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_fourth_species_suspension_constraint, standard_counterpoint_fourth_species_suspension_rule_holds, StandardCounterpointFourthSpeciesExercise, which, subject)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_fourth_species_suspension_constraint, standard_counterpoint_fourth_species_suspension_preference, standard_counterpoint_fourth_species_suspension_rule_holds, StandardCounterpointFourthSpeciesExercise, which, subject)
 
 #define SUSPENSION(name) STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_##name
 

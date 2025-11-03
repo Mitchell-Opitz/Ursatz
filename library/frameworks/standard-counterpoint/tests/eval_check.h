@@ -10,6 +10,7 @@
 #include "core/value.h"
 #include "counterpoint_subject.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 
 /*
  * Runs a rule group through constraint_evaluate alongside its own
@@ -20,11 +21,16 @@
  * holding the same subject and asserts the result agrees: PASS when the rule
  * holds, FAIL when it does not.
  *
+ * A soft rule also has a Preference, which must score the same candidate 1/1
+ * when the rule holds and 0/1 when it does not (never a rejection); a hard rule
+ * has none.
+ *
  * For each rule it also asserts, once, that a candidate of another type tag is
- * NOT_APPLICABLE and that a candidate of the right tag but the wrong size is
- * rejected. When the test program exits, every rule of the group must have
- * been seen both passing and failing, so a rule with no passing or no failing
- * candidate fails the test.
+ * NOT_APPLICABLE (and unscorable for the Preference) and that a candidate of
+ * the right tag but the wrong size is rejected. When the test program exits,
+ * every rule of the group must have been seen both passing and failing, and
+ * every soft rule scoring both 1/1 and 0/1, so a rule with no passing or no
+ * failing candidate fails the test.
  */
 
 #define STANDARD_COUNTERPOINT_EVAL_MAX_RULES 32
@@ -32,7 +38,10 @@
 enum {
     STANDARD_COUNTERPOINT_EVAL_SEEN_PASS = 1,
     STANDARD_COUNTERPOINT_EVAL_SEEN_FAIL = 2,
-    STANDARD_COUNTERPOINT_EVAL_SEEN_OTHER_TAG = 8
+    STANDARD_COUNTERPOINT_EVAL_SEEN_OTHER_TAG = 8,
+    STANDARD_COUNTERPOINT_EVAL_SEEN_SOFT = 16,
+    STANDARD_COUNTERPOINT_EVAL_SEEN_BEST_SCORE = 32,
+    STANDARD_COUNTERPOINT_EVAL_SEEN_WORST_SCORE = 64
 };
 
 typedef struct {
@@ -53,6 +62,13 @@ static void counterpoint_eval_report(void) {
         const StandardCounterpointEvalState *state = g_counterpoint_eval_states[s];
         for (int i = 0; i < state->count; i++) {
             unsigned seen = state->seen[i];
+            if ((seen & STANDARD_COUNTERPOINT_EVAL_SEEN_SOFT) != 0 &&
+                ((seen & STANDARD_COUNTERPOINT_EVAL_SEEN_BEST_SCORE) == 0 ||
+                 (seen & STANDARD_COUNTERPOINT_EVAL_SEEN_WORST_SCORE) == 0)) {
+                fprintf(stderr, "standard-counterpoint/%s rule %d: preference_rank needs a 1/1 and a 0/1 score\n",
+                        state->prefix, i);
+                abort();
+            }
             if ((seen & STANDARD_COUNTERPOINT_EVAL_SEEN_PASS) == 0 ||
                 (seen & STANDARD_COUNTERPOINT_EVAL_SEEN_FAIL) == 0) {
                 fprintf(stderr,
@@ -69,8 +85,9 @@ static void counterpoint_eval_report(void) {
 }
 
 /* Returns holds. */
-static bool counterpoint_eval_holds(StandardCounterpointEvalState *state, const Constraint *constraint, int which,
-                                    const void *subject, size_t size, bool holds) {
+static bool counterpoint_eval_holds(StandardCounterpointEvalState *state, const Constraint *constraint,
+                                    const Preference *preference, int which, const void *subject, size_t size,
+                                    bool holds) {
     if (constraint == NULL || subject == NULL || which < 0 || which >= state->count) {
         return holds;
     }
@@ -89,6 +106,18 @@ static bool counterpoint_eval_holds(StandardCounterpointEvalState *state, const 
     Value *candidate;
     assert(value_create(tag, subject, size, &candidate) == VALUE_OK);
     ConstraintEvalResult result = constraint_evaluate(constraint, candidate, NULL);
+
+    /* A soft rule has a Preference that scores the candidate 1/1 or 0/1; a hard rule has none. */
+    assert((constraint_type(constraint) == CONSTRAINT_TYPE_SOFT) == (preference != NULL));
+    if (preference != NULL) {
+        unsigned long numerator = 99, denominator = 99;
+        assert(preference_score_fn(preference) != NULL);
+        assert(preference_rank(preference, candidate, NULL, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
+        assert(denominator == 1 && numerator == (holds ? 1UL : 0UL));
+        state->seen[which] |= STANDARD_COUNTERPOINT_EVAL_SEEN_SOFT |
+                              (holds ? STANDARD_COUNTERPOINT_EVAL_SEEN_BEST_SCORE
+                                     : STANDARD_COUNTERPOINT_EVAL_SEEN_WORST_SCORE);
+    }
     value_destroy(candidate);
 
     if (holds) {
@@ -104,28 +133,38 @@ static bool counterpoint_eval_holds(StandardCounterpointEvalState *state, const 
         Value *other;
         assert(value_create("not-this-group", subject, size, &other) == VALUE_OK);
         assert(constraint_evaluate(constraint, other, NULL) == CONSTRAINT_EVAL_NOT_APPLICABLE);
+        if (preference != NULL) {
+            assert(preference_rank(preference, other, NULL, NULL, NULL) == PREFERENCE_RANK_NOT_IMPLEMENTED);
+        }
         value_destroy(other);
         Value *short_candidate;
         assert(value_create(tag, subject, size - 1, &short_candidate) == VALUE_OK);
         assert(constraint_evaluate(constraint, short_candidate, NULL) == CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
+        if (preference != NULL) {
+            assert(preference_rank(preference, short_candidate, NULL, NULL, NULL) == PREFERENCE_RANK_NOT_IMPLEMENTED);
+        }
         value_destroy(short_candidate);
     }
     return holds;
 }
 
 /* The rule takes its whole subject as one pointer. */
-#define STANDARD_COUNTERPOINT_EVAL_HOLDS(state, constraint_fn, rule_holds_fn, subject_type, which, subject)      \
-    counterpoint_eval_holds(&(state), constraint_fn((which)), (int)(which), (subject), sizeof(subject_type),   \
-                            (rule_holds_fn)((which), (subject)))
+#define STANDARD_COUNTERPOINT_EVAL_HOLDS(state, constraint_fn, preference_fn, rule_holds_fn, subject_type, which,    \
+                                         subject)                                                              \
+    counterpoint_eval_holds(&(state), constraint_fn((which)), preference_fn((which)), (int)(which), (subject),  \
+                            sizeof(subject_type), (rule_holds_fn)((which), (subject)))
 
 /* The rule takes its subject as two arguments; subject_type is the struct they make up. */
-#define STANDARD_COUNTERPOINT_EVAL_HOLDS2(state, constraint_fn, rule_holds_fn, subject_type, which, a, b)        \
-    counterpoint_eval_holds(&(state), constraint_fn((which)), (int)(which), &(subject_type){(a), (b)},         \
-                            sizeof(subject_type), (rule_holds_fn)((which), (a), (b)))
+#define STANDARD_COUNTERPOINT_EVAL_HOLDS2(state, constraint_fn, preference_fn, rule_holds_fn, subject_type, which, \
+                                          a, b)                                                                  \
+    counterpoint_eval_holds(&(state), constraint_fn((which)), preference_fn((which)), (int)(which),             \
+                            &(subject_type){(a), (b)}, sizeof(subject_type), (rule_holds_fn)((which), (a), (b)))
 
 /* The rule takes its subject as three arguments. */
-#define STANDARD_COUNTERPOINT_EVAL_HOLDS3(state, constraint_fn, rule_holds_fn, subject_type, which, a, b, c)     \
-    counterpoint_eval_holds(&(state), constraint_fn((which)), (int)(which), &(subject_type){(a), (b), (c)},    \
-                            sizeof(subject_type), (rule_holds_fn)((which), (a), (b), (c)))
+#define STANDARD_COUNTERPOINT_EVAL_HOLDS3(state, constraint_fn, preference_fn, rule_holds_fn, subject_type, which, \
+                                          a, b, c)                                                               \
+    counterpoint_eval_holds(&(state), constraint_fn((which)), preference_fn((which)), (int)(which),             \
+                            &(subject_type){(a), (b), (c)}, sizeof(subject_type),                               \
+                            (rule_holds_fn)((which), (a), (b), (c)))
 
 #endif

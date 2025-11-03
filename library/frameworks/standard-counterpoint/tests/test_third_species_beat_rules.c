@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-beat", STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT);
 #define standard_counterpoint_third_species_beat_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_third_species_beat_constraint, standard_counterpoint_third_species_beat_rule_holds, StandardCounterpointThirdSpeciesExercise, which, subject)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_third_species_beat_constraint, standard_counterpoint_third_species_beat_preference, standard_counterpoint_third_species_beat_rule_holds, StandardCounterpointThirdSpeciesExercise, which, subject)
 
 #define BEAT(name) STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_##name
 

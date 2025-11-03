@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "species-break", STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT);
 #define standard_counterpoint_species_break_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_species_break_constraint, standard_counterpoint_species_break_rule_holds, StandardCounterpointFourthSpeciesExercise, which, subject)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_species_break_constraint, standard_counterpoint_species_break_preference, standard_counterpoint_species_break_rule_holds, StandardCounterpointFourthSpeciesExercise, which, subject)
 
 #define BREAK(name) STANDARD_COUNTERPOINT_SPECIES_BREAK_##name
 

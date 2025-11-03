@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-motion", STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT);
 #define standard_counterpoint_first_species_motion_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_first_species_motion_constraint, standard_counterpoint_first_species_motion_rule_holds, StandardCounterpointPair, which, subject)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_first_species_motion_constraint, standard_counterpoint_first_species_motion_preference, standard_counterpoint_first_species_motion_rule_holds, StandardCounterpointPair, which, subject)
 
 static bool holds(StandardCounterpointFirstSpeciesMotionRule rule, const PitchSpelling *const *upper_notes,
                   const PitchSpelling *const *lower_notes, size_t count) {

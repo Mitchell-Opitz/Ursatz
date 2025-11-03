@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "second-species-strong", STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT);
 #define standard_counterpoint_second_species_strong_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_second_species_strong_constraint, standard_counterpoint_second_species_strong_rule_holds, StandardCounterpointSecondSpeciesExercise, which, subject)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_second_species_strong_constraint, standard_counterpoint_second_species_strong_preference, standard_counterpoint_second_species_strong_rule_holds, StandardCounterpointSecondSpeciesExercise, which, subject)
 
 /* A bar that is one whole note: a note on the strong beat tied through the
    weak beat. */
