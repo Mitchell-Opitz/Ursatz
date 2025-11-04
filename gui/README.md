@@ -629,6 +629,27 @@ list is sounded.
   select in the header. `MaterialsModel.renderRequest(body, renderKey)` builds
   the POST for an unsaved candidate.
 
+#### Variant tree
+
+The motif detail has a Variants section (`variant-tree-view.js`, rendering
+from the pure `variant-tree.js`, global `VariantTree`).
+
+- Generate: a count (1 to 16, default 6), a seed (blank draws one) and an
+  optional chain. The operation picker lists the registry grouped by category
+  (exact, rhythm, intervals, harmony, melody adaptation) with each operation's
+  citation and its parameters; a parameter left empty is drawn from the seed.
+  With no steps the route draws random chains. Candidates are not saved.
+- A candidate shows its derivation, kind, kept and changed chips and
+  recognizability. Approve and Reject save it as a derived motif with that
+  flag; Reroll replaces only that candidate with the next seed (its drawn
+  parameters drawn again); Play renders it with `POST /api/materials/render`
+  and mounts the answer in the workspace through blob URLs.
+- Saved variants appear under the motif as the variant tree, indented by
+  depth, with the derivation, flag, a kind select, Approve, Reject, Unflag,
+  Reroll (the reroll route), Play (the stored version's score and playback)
+  and Open. Rejected variants and everything under them are hidden unless
+  "Show rejected" is on; the choice is kept in `localStorage`.
+
 ### Subjects
 
 A subject is a character, place, idea or note that items and Library pieces
