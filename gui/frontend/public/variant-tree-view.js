@@ -1,0 +1,456 @@
+/* The Variants section of the motif detail (P13 B9): the Generate control
+ * with its operation picker, and the unsaved candidates. Renders from
+ * VariantTree; ctx is {id, name, body, send(request), open(id)}, send being the page's
+ * JSON request helper that answers {ok, status, data}. */
+const VariantTreeView = (function () {
+  function h(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) {
+      el.className = className;
+    }
+    if (text !== undefined) {
+      el.textContent = text;
+    }
+    return el;
+  }
+
+  function setStatus(el, text, isError) {
+    el.textContent = text;
+    el.classList.toggle("error", Boolean(isError));
+  }
+
+  function errorText(data, fallback) {
+    return data && typeof data.error === "string" && data.error !== "" ? data.error : fallback;
+  }
+
+  function chipRow(chips) {
+    const row = h("span", "variant-chips");
+    for (const chip of chips) {
+      row.appendChild(h("span", `variant-chip variant-chip-${chip.state}`, chip.text));
+    }
+    return row;
+  }
+
+  /* One control per parameter of the chosen operation; an empty text leaves it open. */
+  function paramControls(operation, values) {
+    const box = h("div", "variant-params");
+    for (const param of operation.params) {
+      const label = h("label", "filter-field", `${param.name} `);
+      let control;
+      if (param.kind === "bool") {
+        control = h("input");
+        control.type = "checkbox";
+        control.addEventListener("change", () => {
+          values[param.name] = control.checked;
+        });
+      } else if (param.kind === "position") {
+        control = h("select");
+        for (const name of ["", "leading", "trailing", "middle"]) {
+          const o = h("option", "", name === "" ? "drawn" : name);
+          o.value = name;
+          control.appendChild(o);
+        }
+        control.addEventListener("change", () => {
+          values[param.name] = control.value;
+        });
+      } else {
+        control = h("input");
+        control.type = "text";
+        control.size = 8;
+        control.placeholder = param.kind === "ratio" ? "drawn, or 2:1" : "drawn";
+        control.addEventListener("input", () => {
+          values[param.name] = control.value;
+        });
+      }
+      control.title = param.description || "";
+      label.appendChild(control);
+      box.appendChild(label);
+    }
+    return box;
+  }
+
+  function buildPicker(groups, steps, onChange) {
+    const box = h("div", "variant-picker");
+    const list = h("ol", "variant-steps");
+    const select = h("select");
+    const byName = new Map();
+    for (const group of groups) {
+      const optgroup = h("optgroup");
+      optgroup.label = group.title;
+      for (const operation of group.operations) {
+        byName.set(operation.name, operation);
+        const o = h("option", "", `${operation.label} (${operation.citation})`);
+        o.value = operation.name;
+        optgroup.appendChild(o);
+      }
+      select.appendChild(optgroup);
+    }
+    const values = {};
+    const paramBox = h("div");
+    const error = h("div", "upload-status");
+    function showParams() {
+      const operation = byName.get(select.value);
+      for (const key of Object.keys(values)) {
+        delete values[key];
+      }
+      paramBox.innerHTML = "";
+      if (operation) {
+        paramBox.appendChild(paramControls(operation, values));
+      }
+    }
+    function drawSteps() {
+      list.innerHTML = "";
+      steps.forEach((step, index) => {
+        const item = h("li", "variant-step");
+        const params = step.params
+          ? ` (${Object.keys(step.params)
+              .map((name) => `${name} ${step.params[name]}`)
+              .join(", ")})`
+          : "";
+        item.appendChild(h("span", "", `${byName.has(step.op) ? byName.get(step.op).label : step.op}${params} `));
+        const remove = h("button", "", "Remove");
+        remove.type = "button";
+        remove.addEventListener("click", () => {
+          steps.splice(index, 1);
+          drawSteps();
+          onChange();
+        });
+        item.appendChild(remove);
+        list.appendChild(item);
+      });
+      onChange();
+    }
+    const add = h("button", "", "Add step");
+    add.type = "button";
+    add.addEventListener("click", () => {
+      const operation = byName.get(select.value);
+      if (!operation) {
+        return;
+      }
+      const made = VariantTree.stepFromValues(operation, values);
+      if (made.error) {
+        setStatus(error, made.error, true);
+        return;
+      }
+      setStatus(error, "", false);
+      steps.push(made.step);
+      drawSteps();
+    });
+    select.addEventListener("change", showParams);
+    box.append(select, paramBox, add, error, list);
+    showParams();
+    return { el: box, clear: () => { steps.length = 0; drawSteps(); } };
+  }
+
+  function actionButton(text, onClick) {
+    const button = h("button", "", text);
+    button.type = "button";
+    button.addEventListener("click", onClick);
+    return button;
+  }
+
+  /* actions: {play, approve, reject, reroll}, each called with no arguments. */
+  function candidateCard(candidate, actions) {
+    const view = VariantTree.candidateView(candidate);
+    const card = h("li", "variant-candidate");
+    card.appendChild(h("div", "variant-derivation", view.derivation));
+    const meta = h("div", "variant-meta");
+    meta.appendChild(h("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
+    meta.appendChild(chipRow(view.chips));
+    if (view.recognizability) {
+      meta.appendChild(h("span", "variant-recognizability", view.recognizability));
+    }
+    card.appendChild(meta);
+    const buttons = h("div", "variant-actions");
+    buttons.append(
+      actionButton("Play", actions.play),
+      actionButton("Approve", actions.approve),
+      actionButton("Reject", actions.reject),
+      actionButton("Reroll", actions.reroll),
+    );
+    card.appendChild(buttons);
+    return card;
+  }
+
+  /* One saved node: indented by depth, with its derivation, flag, kind and actions.
+   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id), play(row)}. */
+  function treeRow(row, actions) {
+    const item = h("li", `variant-node variant-flag-${row.flag.value}`);
+    item.style.marginLeft = `${row.depth * 1.5}rem`;
+    const title = h("div", "variant-node-title");
+    title.appendChild(h("strong", "", row.name));
+    title.appendChild(h("span", "variant-badge", `v${row.version}`));
+    if (!row.isRoot) {
+      title.appendChild(h("span", `variant-badge variant-flag-badge-${row.flag.value}`, row.flag.text));
+    }
+    item.appendChild(title);
+    if (row.isRoot) {
+      return item;
+    }
+    if (row.derivation) {
+      item.appendChild(h("div", "variant-derivation", row.derivation));
+    }
+    item.appendChild(chipRow(row.chips));
+    const buttons = h("div", "variant-actions");
+    const kind = h("select");
+    for (const value of VariantTree.KINDS) {
+      const o = h("option", "", VariantTree.KIND_LABELS[value]);
+      o.value = value;
+      kind.appendChild(o);
+    }
+    kind.value = row.kindValue;
+    kind.addEventListener("change", () => actions.kind(row.id, kind.value));
+    buttons.append(
+      kind,
+      actionButton("Play", () => actions.play(row)),
+      actionButton("Approve", () => actions.flag(row.id, "approved")),
+      actionButton("Reject", () => actions.flag(row.id, "rejected")),
+      actionButton("Unflag", () => actions.flag(row.id, "unflagged")),
+      actionButton("Reroll", () => actions.reroll(row.id)),
+      actionButton("Open", () => actions.open(row.id)),
+    );
+    item.appendChild(buttons);
+    return item;
+  }
+
+  const REJECTED_KEY = "ursatz.variants.showRejected";
+
+  function loadShowRejected() {
+    try {
+      return window.localStorage.getItem(REJECTED_KEY) === "1";
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function storeShowRejected(value) {
+    try {
+      window.localStorage.setItem(REJECTED_KEY, value ? "1" : "0");
+    } catch (error) {
+      /* The toggle still works for this page view. */
+    }
+  }
+
+  function mount(parent, ctx) {
+    const section = h("section", "panel materials-variants");
+    section.appendChild(h("h2", "section-title", "Variants"));
+    const status = h("div", "upload-status");
+    status.setAttribute("role", "status");
+    const steps = [];
+    const controls = h("div", "upload-controls");
+    const count = h("input");
+    count.type = "number";
+    count.min = "1";
+    count.max = String(VariantTree.MAX_COUNT);
+    count.value = String(VariantTree.DEFAULT_COUNT);
+    const seed = h("input");
+    seed.type = "text";
+    seed.size = 10;
+    seed.placeholder = "seed (random)";
+    const summary = h("span", "variant-chain-summary", "Random operations");
+    const generate = h("button", "", "Generate");
+    generate.type = "button";
+    const countLabel = h("label", "filter-field", "Count ");
+    countLabel.appendChild(count);
+    const rejectedLabel = h("label", "filter-field", "Show rejected ");
+    const rejectedBox = h("input");
+    rejectedBox.type = "checkbox";
+    rejectedBox.checked = loadShowRejected();
+    rejectedLabel.appendChild(rejectedBox);
+    controls.append(countLabel, seed, generate, summary, rejectedLabel);
+
+    const pickerHost = h("details", "variant-picker-host");
+    pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
+    const candidates = h("ol", "variant-candidates");
+    const tree = h("ul", "variant-tree");
+    const treeNote = h("div", "piece-list-status");
+    const selectedEl = h("div", "variant-selected");
+    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, selectedEl);
+    parent.appendChild(section);
+
+    let picker = null;
+    function updateSummary() {
+      summary.textContent = steps.length > 0 ? steps.map((step) => step.op).join(" then ") : "Random operations";
+    }
+    ctx.send(VariantTree.operationsRequest()).then((answer) => {
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not load the operations"), true);
+        return;
+      }
+      picker = buildPicker(VariantTree.operationGroups(answer.data.operations), steps, updateSummary);
+      pickerHost.appendChild(picker.el);
+    });
+
+    let shown = [];
+    const rejectedListeners = [];
+    rejectedBox.addEventListener("change", () => {
+      storeShowRejected(rejectedBox.checked);
+      for (const listener of rejectedListeners) {
+        listener(rejectedBox.checked);
+      }
+    });
+
+    /* Saves a candidate with a flag and takes it off the list. */
+    async function saveCandidate(candidate, flag) {
+      const answer = await ctx.send(VariantTree.saveRequest(ctx.id, candidate, flag));
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not save the variant"), true);
+        return;
+      }
+      shown = shown.filter((other) => other !== candidate);
+      drawCandidates();
+      setStatus(status, `Saved ${answer.data.item.name} as ${flag}`, false);
+      refreshTree();
+    }
+
+    /* Regenerates only this candidate, with the next seed. */
+    async function rerollCandidate(candidate) {
+      setStatus(status, "Rerolling...", false);
+      const answer = await ctx.send(VariantTree.candidateRerollRequest(ctx.id, candidate));
+      const next = answer.ok && Array.isArray(answer.data.variants) ? answer.data.variants[0] : null;
+      if (!next) {
+        setStatus(status, errorText(answer.data, "No different variant came out"), true);
+        return;
+      }
+      shown = shown.map((other) => (other === candidate ? next : other));
+      drawCandidates();
+      setStatus(status, `Rerolled with seed ${next.seed}`, false);
+    }
+
+    function drawCandidates() {
+      candidates.innerHTML = "";
+      for (const candidate of shown) {
+        candidates.appendChild(
+          candidateCard(candidate, {
+            play: () => playCandidate(candidate),
+            approve: () => saveCandidate(candidate, "approved"),
+            reject: () => saveCandidate(candidate, "rejected"),
+            reroll: () => rerollCandidate(candidate),
+          }),
+        );
+      }
+    }
+
+    let workspace = null;
+    let blobUrls = [];
+    function clearSelection() {
+      if (workspace) {
+        workspace.destroy();
+        workspace = null;
+      }
+      for (const url of blobUrls) {
+        URL.revokeObjectURL(url);
+      }
+      blobUrls = [];
+      selectedEl.innerHTML = "";
+    }
+
+    /* Shows a score and playback in the workspace under the saved tree. urls is {musicxmlUrl, playbackUrl}. */
+    function showSelection(title, subtitle, urls) {
+      clearSelection();
+      workspace = ScoreWorkspace.mount(selectedEl, {
+        title,
+        subtitle,
+        musicxmlUrl: urls.musicxmlUrl,
+        playbackUrl: urls.playbackUrl,
+      });
+    }
+
+    /* An unsaved candidate: rendered by the Composer, mounted through blob URLs. */
+    async function playCandidate(candidate) {
+      const request = MaterialsModel.renderRequest(VariantTree.candidateBody(ctx.body, candidate));
+      setStatus(status, "Rendering...", false);
+      const answer = await ctx.send(request);
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not render the variant"), true);
+        return;
+      }
+      setStatus(status, "", false);
+      const xml = URL.createObjectURL(new Blob([answer.data.musicxml], { type: "application/xml" }));
+      const playback = URL.createObjectURL(new Blob([JSON.stringify(answer.data.playback)], { type: "application/json" }));
+      showSelection(VariantTree.candidateName(ctx.name, candidate), `candidate · seed ${candidate.seed}`, {
+        musicxmlUrl: xml,
+        playbackUrl: playback,
+      });
+      blobUrls = [xml, playback];
+    }
+
+    function playSaved(row) {
+      showSelection(row.name, `variant · v${row.version}`, MaterialsModel.versionScoreUrls(row.id, row.version));
+    }
+
+    let savedTree = null;
+    const treeActions = {
+      async flag(id, flag) {
+        const answer = await ctx.send(VariantTree.flagRequest(id, flag));
+        setStatus(status, answer.ok ? "" : errorText(answer.data, "Could not change the flag"), !answer.ok);
+        refreshTree();
+      },
+      async kind(id, kind) {
+        const row = VariantTree.treeRows(savedTree, true).rows.find((r) => r.id === id);
+        const flag = row ? row.flag.value : "unflagged";
+        const answer = await ctx.send(VariantTree.flagRequest(id, flag, kind));
+        setStatus(status, answer.ok ? "" : errorText(answer.data, "Could not change the kind"), !answer.ok);
+        refreshTree();
+      },
+      async reroll(id) {
+        setStatus(status, "Rerolling...", false);
+        const answer = await ctx.send(VariantTree.rerollRequest(id));
+        setStatus(status, answer.ok ? "Rerolled" : errorText(answer.data, "Could not reroll"), !answer.ok);
+        refreshTree();
+      },
+      open(id) {
+        ctx.open(id);
+      },
+      play: playSaved,
+    };
+
+    function drawTree() {
+      tree.innerHTML = "";
+      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked);
+      for (const row of shownRows.rows) {
+        tree.appendChild(treeRow(row, treeActions));
+      }
+      const saved = shownRows.rows.length - 1;
+      treeNote.textContent =
+        saved <= 0 && shownRows.hidden === 0
+          ? "No saved variants yet."
+          : shownRows.hidden > 0
+            ? `${shownRows.hidden} rejected hidden`
+            : "";
+    }
+
+    async function refreshTree() {
+      const answer = await ctx.send(VariantTree.treeRequest(ctx.id));
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not load the variant tree"), true);
+        return;
+      }
+      savedTree = answer.data.tree;
+      drawTree();
+    }
+    rejectedListeners.push(drawTree);
+
+    generate.addEventListener("click", async () => {
+      const made = VariantTree.generateRequest(ctx.id, { count: count.value, seed: seed.value, steps });
+      if (made.error) {
+        setStatus(status, made.error, true);
+        return;
+      }
+      setStatus(status, "Generating...", false);
+      const answer = await ctx.send(made.request);
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not generate variants"), true);
+        return;
+      }
+      shown = Array.isArray(answer.data.variants) ? answer.data.variants : [];
+      drawCandidates();
+      setStatus(status, shown.length === 0 ? "No variants came out" : `Seed ${answer.data.seed}`, false);
+    });
+
+    refreshTree();
+    return { el: section, showRejected: () => rejectedBox.checked, onShowRejected: (fn) => rejectedListeners.push(fn) };
+  }
+
+  return { mount };
+})();
