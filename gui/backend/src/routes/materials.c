@@ -19,6 +19,7 @@
 
 #include "../service/composer_service.h"
 #include "../service/material_service.h"
+#include "../service/style_service.h"
 #include "../service/subject_service.h"
 
 static const char *kMaterialsPrefix = "/api/materials";
@@ -1974,6 +1975,95 @@ static int handle_update_use(struct mg_connection *conn, const char *id, const c
   return send_ok_with(conn, "item", item);
 }
 
+/* POST /api/materials/motifs/random {mode, meter, key?, form?, style_id?, count?, seed?}: random motives from the
+   Composer; nothing is saved. The answer is the Composer's document plus "ok". */
+static int handle_random_motifs(struct mg_connection *conn) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *mode = optional_string(body, "mode", &bad);
+  const char *meter = optional_string(body, "meter", &bad);
+  const char *key = optional_string(body, "key", &bad);
+  const char *form = optional_string(body, "form", &bad);
+  const char *style_id = optional_string(body, "style_id", &bad);
+  const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
+  const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  if (cJSON_IsNull(count_item)) {
+    count_item = NULL;
+  }
+  if (cJSON_IsNull(seed_item)) {
+    seed_item = NULL;
+  }
+  if (key && key[0] == '\0') {
+    key = NULL;
+  }
+  if (style_id && style_id[0] == '\0') {
+    style_id = NULL;
+  }
+  bool valid = !bad && mode && (strcmp(mode, "major") == 0 || strcmp(mode, "minor") == 0) && meter &&
+               analysis_meter_ok(meter) && (!key || analysis_key_ok(key)) &&
+               (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
+               (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
+                                count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
+               (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
+                               seed_item->valuedouble <= kMaxVariantSeed &&
+                               seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
+  if (!valid) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400,
+                        "mode is major or minor, meter like 3/4, key like D minor, form full, rhythm or contour, "
+                        "count 1 to 16 and seed a whole number from 0");
+  }
+  char style_path[1024] = "";
+  if (style_id && ursatz_gui_style_model_path(style_id, style_path, sizeof(style_path)) != URSATZ_GUI_STYLE_OK) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "unknown style");
+  }
+  char count_text[16];
+  char seed_text[32];
+  snprintf(count_text, sizeof(count_text), "%d", count_item ? (int)count_item->valuedouble : 6);
+  snprintf(seed_text, sizeof(seed_text), "%.0f", seed_item ? seed_item->valuedouble : 0.0);
+  const char *args[20];
+  int n = 0;
+  args[n++] = "random-motive";
+  args[n++] = "--mode";
+  args[n++] = mode;
+  args[n++] = "--meter";
+  args[n++] = meter;
+  if (key) {
+    args[n++] = "--key";
+    args[n++] = key;
+  }
+  args[n++] = "--form";
+  args[n++] = form ? form : "full";
+  if (style_id) {
+    args[n++] = "--style";
+    args[n++] = style_path;
+  }
+  args[n++] = "--count";
+  args[n++] = count_text;
+  if (seed_item) {
+    args[n++] = "--seed";
+    args[n++] = seed_text;
+  }
+  args[n++] = "--json";
+  args[n] = NULL;
+  char message[512];
+  cJSON *document = composer_json(args, &status, message, sizeof(message));
+  cJSON_Delete(body);
+  if (!document) {
+    return send_failure(conn, status, message);
+  }
+  if (!cJSON_AddBoolToObject(document, "ok", 1)) {
+    cJSON_Delete(document);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, document);
+}
+
 static int route_items(struct mg_connection *conn, const char *method, char segments[][256], int count) {
   bool get = strcmp(method, "GET") == 0;
   bool post = strcmp(method, "POST") == 0;
@@ -2364,6 +2454,9 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (count == 1 && strcmp(segments[0], "render") == 0) {
     return strcmp(method, "POST") == 0 ? handle_render(conn) : send_method_not_allowed(conn);
+  }
+  if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "random") == 0) {
+    return strcmp(method, "POST") == 0 ? handle_random_motifs(conn) : send_method_not_allowed(conn);
   }
   if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "import") == 0) {
     return strcmp(method, "POST") == 0 ? handle_import_motif(conn) : send_method_not_allowed(conn);
