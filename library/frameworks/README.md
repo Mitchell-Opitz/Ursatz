@@ -46,7 +46,8 @@ textbook; each README names the chapters it covers.
   `Rule`/`Constraint` pair per rule. Rules are checked with the framework's own
   `*_rule_holds()` functions. standard-harmony and standard-counterpoint also register an evaluation
   callback on each Constraint, so `constraint_evaluate()` runs the same check; the other
-  frameworks never call it and their Constraints return `CONSTRAINT_EVAL_NOT_IMPLEMENTED`.
+  frameworks never call it and their Constraints return `CONSTRAINT_EVAL_NOT_IMPLEMENTED`. They also
+  build a `Preference` per soft rule, scored through `preference_rank`; the other frameworks have none.
 - **Hard vs. soft.** Rules phrased as "must" are hard. Rules phrased as "limit", "avoid" or
   "prefer" are soft.
 - **Dependency ceiling.** L0 to L6 plus `theory/framework.h`, `rules/rule.h` and

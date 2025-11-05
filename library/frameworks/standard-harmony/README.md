@@ -38,7 +38,9 @@ check functions. A rule that states what the music requires is hard; "usually",
 "almost always", and "not common" features are soft. Each rule table registers an
 evaluation callback on its Constraints, so `constraint_evaluate` runs the same check
 (`harmony_rule_table_evaluate`) on a candidate `Value` tagged `standard-harmony/<table prefix>`
-holding the rule's subject struct.
+holding the rule's subject struct. Each soft rule also has a `Preference` (`harmony_*_preference`)
+whose scoring callback makes `preference_rank` score the same candidate 1/1 when the rule holds
+and 0/1 when it does not.
 
 - **Harmonic function** (`harmony_functions.h`): the function of a chord by the
   scale degree of its root, whatever its inversion. Tonic: I (minor: i).

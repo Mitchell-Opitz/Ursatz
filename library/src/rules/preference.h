@@ -20,13 +20,19 @@
  *
  * preference_rank is structurally distinct from Constraint's
  * evaluate: it has no PASS/FAIL vocabulary and no way to signal
- * rejection -- it only ever reports a rank magnitude (or that ranking
- * logic is not yet wired up) for a candidate, never that a candidate
- * is invalid. There is no rejection/invalidation return path anywhere
- * in this header. Like constraint_evaluate, it is a stub: actually
- * ranking candidates against generated material is a
- * generation-pipeline concern (music-generation, L8) and out of scope
- * for this pass.
+ * rejection -- it only ever reports a rank magnitude (or that no rank
+ * could be computed) for a candidate, never that a candidate is invalid.
+ * There is no rejection/invalidation return path anywhere in this header.
+ *
+ * preference_rank ranks a candidate by calling the scoring callback
+ * (PreferenceScoreFn) the Preference's framework registered on it. Like
+ * Constraint's evaluation callback, a Preference holds only that pointer:
+ * the framework owns the callback and whatever data is behind it, and
+ * nothing owned is embedded in Preference. A Preference with no callback
+ * reports PREFERENCE_RANK_NOT_IMPLEMENTED. A rank is an exact-rational
+ * score (numerator/denominator, never float/double) in [0, 1]. Ordering a
+ * set of candidates by weighted scores is rules/preference_ranking.h;
+ * exact-rational weights are rules/preference_weight.h.
  */
 
 typedef struct Preference Preference;
