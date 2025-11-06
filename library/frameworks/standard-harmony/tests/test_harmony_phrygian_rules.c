@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "phrygian", HARMONY_PHRYGIAN_RULE_COUNT);
 #define harmony_phrygian_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_phrygian_constraint, harmony_phrygian_rule_holds, HarmonyPhrygian, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_phrygian_constraint, harmony_phrygian_preference, harmony_phrygian_rule_holds, HarmonyPhrygian, which, subject)
 
 #define PHC(name) HARMONY_PHRYGIAN_##name
 #define BIT(rule) (1u << (rule))

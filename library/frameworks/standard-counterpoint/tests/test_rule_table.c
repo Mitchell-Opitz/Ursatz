@@ -37,11 +37,13 @@ static bool holds(int which, const void *subject) {
 /* A table that registers an evaluation callback; the subject is the same bit mask of the rules that hold. */
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static StandardCounterpointRulePair g_eval_pairs[COUNT];
 static bool g_eval_built[COUNT];
 static const StandardCounterpointRuleTable EVAL = {"test-eval", NAMES, COUNT,         is_hard,
-                                                   g_eval_pairs,  g_eval_built, evaluate_candidate};
+                                                   g_eval_pairs,  g_eval_built, evaluate_candidate, score_candidate};
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, EVAL, holds, unsigned)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, EVAL, holds, unsigned)
 
 static void test_valid_and_names(void) {
     for (int i = 0; i < COUNT; i++) {
@@ -193,7 +195,68 @@ static void test_evaluate(void) {
     value_destroy(candidate);
 }
 
+static PreferenceRankResult rank_mask(const Preference *preference, const char *tag, unsigned mask,
+                                      unsigned long *numerator, unsigned long *denominator) {
+    Value *candidate;
+    assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
+    PreferenceRankResult result = preference_rank(preference, candidate, NULL, numerator, denominator);
+    value_destroy(candidate);
+    return result;
+}
+
+static void test_preferences(void) {
+    const char *tag = "standard-counterpoint/test-eval";
+
+    /* A soft rule gets a Preference with the table's callback; a hard rule, and a table with no callback, get none. */
+    for (int i = 0; i < COUNT; i++) {
+        const Preference *preference = standard_counterpoint_rule_table_preference(&EVAL, i);
+        assert((preference != NULL) == !is_hard(i));
+        assert(standard_counterpoint_rule_table_preference(&TABLE, i) == NULL);
+        assert(standard_counterpoint_rule_table_preference(&BARE, i) == NULL);
+        if (preference != NULL) {
+            assert(preference_score_fn(preference) == score_candidate);
+        }
+    }
+    assert(standard_counterpoint_rule_table_preference(&EVAL, COUNT) == NULL);
+    assert(standard_counterpoint_rule_table_preference(&EVAL, -1) == NULL);
+    assert(standard_counterpoint_rule_table_preference(NULL, 0) == NULL);
+    const Preference *beta = standard_counterpoint_rule_table_preference(&EVAL, BETA);
+    assert(beta == standard_counterpoint_rule_table_preference(&EVAL, BETA));
+
+    /* The soft rule scores 1/1 when it holds and 0/1 when it does not, and never rejects: no other result exists. */
+    unsigned long numerator = 99, denominator = 99;
+    assert(rank_mask(beta, tag, 1u << BETA, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
+    assert(numerator == 1 && denominator == 1);
+    assert(rank_mask(beta, tag, 0, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
+    assert(numerator == 0 && denominator == 1);
+
+    /* A candidate it cannot score (another type, wrong size) is unscored rather than given a bad score. */
+    numerator = 99;
+    denominator = 99;
+    assert(rank_mask(beta, "standard-counterpoint/other", 1u << BETA, &numerator, &denominator) ==
+           PREFERENCE_RANK_NOT_IMPLEMENTED);
+    Value *wrong_size;
+    assert(value_create(tag, "ab", 2, &wrong_size) == VALUE_OK);
+    assert(preference_rank(beta, wrong_size, NULL, &numerator, &denominator) == PREFERENCE_RANK_NOT_IMPLEMENTED);
+    value_destroy(wrong_size);
+    assert(numerator == 99 && denominator == 99);
+
+    /* The helper itself: NULL arguments, a table with no prefix. */
+    unsigned mask = 1u << BETA;
+    Value *candidate;
+    assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
+    PreferenceScore score = standard_counterpoint_rule_table_score(&EVAL, holds, sizeof(mask), beta, candidate);
+    assert(score.numerator == 1 && score.denominator == 1);
+    assert(standard_counterpoint_rule_table_score(NULL, holds, sizeof(mask), beta, candidate).denominator == 0);
+    assert(standard_counterpoint_rule_table_score(&EVAL, NULL, sizeof(mask), beta, candidate).denominator == 0);
+    assert(standard_counterpoint_rule_table_score(&EVAL, holds, sizeof(mask), NULL, candidate).denominator == 0);
+    assert(standard_counterpoint_rule_table_score(&EVAL, holds, sizeof(mask), beta, NULL).denominator == 0);
+    assert(standard_counterpoint_rule_table_score(&BARE, holds, sizeof(mask), beta, candidate).denominator == 0);
+    value_destroy(candidate);
+}
+
 int main(void) {
+    test_preferences();
     test_valid_and_names();
     test_hardness();
     test_pairs();

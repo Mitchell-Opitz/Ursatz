@@ -5,6 +5,7 @@
 
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -49,6 +50,8 @@ bool harmony_phrygian_valid(const HarmonyPhrygian *phrygian);
 
 const Rule *harmony_phrygian_rule(HarmonyPhrygianRule which);
 const Constraint *harmony_phrygian_constraint(HarmonyPhrygianRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_phrygian_preference(HarmonyPhrygianRule which);
 
 /* "progression" "chord-notes" "doubled-do" "no-augmented-second" "no-parallels"; NULL for an
    invalid rule. */

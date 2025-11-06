@@ -6,6 +6,7 @@
 #include "harmony_chord.h"
 #include "harmony_predominant_seventh.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -62,6 +63,8 @@ bool harmony_predominant_seventh_valid(const HarmonyPredominantSeventh *subject)
 
 const Rule *harmony_predominant_seventh_rule(HarmonyPredominantSeventhRule which);
 const Constraint *harmony_predominant_seventh_constraint(HarmonyPredominantSeventhRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_predominant_seventh_preference(HarmonyPredominantSeventhRule which);
 
 /* "progression" "chord-notes" "seventh-approach" "seventh-resolves" "no-parallels"
    "preceded-by-i6" "root-position" "vi7-connects"; NULL for an invalid rule. */

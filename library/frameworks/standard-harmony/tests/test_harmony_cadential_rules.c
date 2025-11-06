@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "cadential", HARMONY_CADENTIAL_RULE_COUNT);
 #define harmony_cadential_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_cadential_constraint, harmony_cadential_rule_holds, HarmonyCadentialSixFour, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_cadential_constraint, harmony_cadential_preference, harmony_cadential_rule_holds, HarmonyCadentialSixFour, which, subject)
 
 #define CAD(name) HARMONY_CADENTIAL_##name
 

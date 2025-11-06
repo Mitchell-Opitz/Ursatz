@@ -30,9 +30,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_THIRD_SPECIES_
 static bool g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "third-species-line", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate};
+    evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesLineRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -44,6 +45,10 @@ const Rule *standard_counterpoint_third_species_line_rule(StandardCounterpointTh
 
 const Constraint *standard_counterpoint_third_species_line_constraint(StandardCounterpointThirdSpeciesLineRule which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_third_species_line_preference(StandardCounterpointThirdSpeciesLineRule which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_third_species_line_rule_name(StandardCounterpointThirdSpeciesLineRule which) {
@@ -212,6 +217,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_third_species_line_check(const StandardCounterpointThirdSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *hard_violations,

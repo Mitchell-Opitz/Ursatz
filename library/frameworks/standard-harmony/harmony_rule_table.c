@@ -28,7 +28,7 @@ static void ensure_built(const HarmonyRuleTable *table, int which) {
     snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
     harmony_build_rule_pair(
         name, harmony_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
-        table->evaluate, &table->pairs[which]);
+        table->evaluate, table->score, &table->pairs[which]);
 }
 
 const Rule *harmony_rule_table_rule(const HarmonyRuleTable *table, int which) {
@@ -39,6 +39,11 @@ const Rule *harmony_rule_table_rule(const HarmonyRuleTable *table, int which) {
 const Constraint *harmony_rule_table_constraint(const HarmonyRuleTable *table, int which) {
     ensure_built(table, which);
     return harmony_rule_table_valid(table, which) ? table->pairs[which].constraint : NULL;
+}
+
+const Preference *harmony_rule_table_preference(const HarmonyRuleTable *table, int which) {
+    ensure_built(table, which);
+    return harmony_rule_table_valid(table, which) ? table->pairs[which].preference : NULL;
 }
 
 const char *harmony_rule_table_name(const HarmonyRuleTable *table, int which) {
@@ -105,4 +110,31 @@ ConstraintEvalResult harmony_rule_table_evaluate(const HarmonyRuleTable *table, 
         return CONSTRAINT_EVAL_NOT_APPLICABLE;
     }
     return holds(which, subject) ? CONSTRAINT_EVAL_PASS : CONSTRAINT_EVAL_FAIL;
+}
+
+PreferenceScore harmony_rule_table_score(const HarmonyRuleTable *table, HarmonyRuleHolds holds, size_t subject_size,
+                                         const Preference *preference, const Value *candidate) {
+    PreferenceScore unscorable = {0, 0};
+    if (table == NULL || holds == NULL || preference == NULL || candidate == NULL) {
+        return unscorable;
+    }
+    int which = -1;
+    for (int i = 0; i < table->count; i++) {
+        if (table->built[i] && table->pairs[i].preference == preference) {
+            which = i;
+            break;
+        }
+    }
+    char tag[96];
+    if (which < 0 || !harmony_rule_table_candidate_type(table, tag, sizeof(tag)) ||
+        strcmp(value_type(candidate), tag) != 0) {
+        return unscorable;
+    }
+    size_t size = 0;
+    const void *subject = value_content(candidate, &size);
+    if (subject == NULL || size != subject_size) {
+        return unscorable;
+    }
+    PreferenceScore score = {holds(which, subject) ? 1UL : 0UL, 1UL};
+    return score;
 }

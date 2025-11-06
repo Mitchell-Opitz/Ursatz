@@ -5,6 +5,7 @@
 
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/beat_strength.h"
 #include "semantics/voice_part.h"
@@ -113,6 +114,8 @@ bool harmony_cadential_valid(const HarmonyCadentialSixFour *cadential);
 
 const Rule *harmony_cadential_rule(HarmonyCadentialRule which);
 const Constraint *harmony_cadential_constraint(HarmonyCadentialRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_cadential_preference(HarmonyCadentialRule which);
 
 /* "bass-stays" "six-four-notes" "resolves-six-five-four-three" "doubling-voice"
    "minor-leading-tone" "no-parallels" "smooth-approach" "no-leap-to-fourth"

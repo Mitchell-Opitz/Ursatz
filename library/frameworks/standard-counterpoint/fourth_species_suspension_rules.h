@@ -5,6 +5,7 @@
 
 #include "fourth_species_exercise.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -40,6 +41,8 @@ typedef enum {
 const Rule *standard_counterpoint_fourth_species_suspension_rule(StandardCounterpointFourthSpeciesSuspensionRule which);
 const Constraint *
 standard_counterpoint_fourth_species_suspension_constraint(StandardCounterpointFourthSpeciesSuspensionRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_fourth_species_suspension_preference(StandardCounterpointFourthSpeciesSuspensionRule which);
 
 /* "proper" "many" "few-nine-eight"; NULL for an invalid rule. */
 const char *

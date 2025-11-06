@@ -6,7 +6,7 @@
 #include "identity/entity_id.h"
 
 bool harmony_build_rule_pair(const char *name, ConstraintType type, ConstraintEvaluateFn evaluate,
-                             HarmonyRulePair *out) {
+                             PreferenceScoreFn score, HarmonyRulePair *out) {
     if (type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
@@ -43,7 +43,26 @@ bool harmony_build_rule_pair(const char *name, ConstraintType type, ConstraintEv
 
     constraint_set_evaluate_fn(constraint, evaluate);
 
+    Preference *preference = NULL;
+    if (type == CONSTRAINT_TYPE_SOFT && score != NULL) {
+        snprintf(id_value, sizeof(id_value), "standard-harmony-preference-%s", name);
+        EntityID *preference_id;
+        if (entity_id_create(id_value, &preference_id) != ENTITY_ID_OK) {
+            constraint_destroy(constraint);
+            rule_destroy(rule);
+            return false;
+        }
+        if (preference_create(preference_id, framework, &preference) != PREFERENCE_OK) {
+            entity_id_destroy(preference_id);
+            constraint_destroy(constraint);
+            rule_destroy(rule);
+            return false;
+        }
+        preference_set_score_fn(preference, score);
+    }
+
     out->rule = rule;
     out->constraint = constraint;
+    out->preference = preference;
     return true;
 }

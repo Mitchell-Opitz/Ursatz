@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "iv6-prolongation", HARMONY_IV6_PROLONGATION_RULE_COUNT);
 #define harmony_iv6_prolongation_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_iv6_prolongation_constraint, harmony_iv6_prolongation_rule_holds, HarmonyIv6Prolongation, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_iv6_prolongation_constraint, harmony_iv6_prolongation_preference, harmony_iv6_prolongation_rule_holds, HarmonyIv6Prolongation, which, subject)
 
 #define IV6(name) HARMONY_IV6_PROLONGATION_##name
 #define BIT(rule) (1u << (rule))

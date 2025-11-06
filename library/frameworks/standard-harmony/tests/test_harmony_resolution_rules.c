@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "resolution", HARMONY_RESOLUTION_RULE_COUNT);
 #define harmony_resolution_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS_APPLIES(g_eval, harmony_resolution_constraint, harmony_resolution_rule_holds, harmony_resolution_rule_applies, HarmonyVoiceResolution, which, subject)
+    HARMONY_EVAL_HOLDS_APPLIES(g_eval, harmony_resolution_constraint, harmony_eval_no_preference, harmony_resolution_rule_holds, harmony_resolution_rule_applies, HarmonyVoiceResolution, which, subject)
 
 #define R(name) HARMONY_RESOLUTION_##name
 

@@ -5,6 +5,7 @@
 
 #include "harmony_six_four.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -52,6 +53,8 @@ typedef enum {
 
 const Rule *harmony_passing_rule(HarmonyPassingRule which);
 const Constraint *harmony_passing_constraint(HarmonyPassingRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_passing_preference(HarmonyPassingRule which);
 
 /* "is-six-four" "stepwise-bass" "same-function" "six-four-notes"
    "prolongs-tonic-or-predominant" "soprano-by-step" "inner-voices-move-little"; NULL for an

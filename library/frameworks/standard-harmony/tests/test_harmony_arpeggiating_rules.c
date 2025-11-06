@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "arpeggiating", HARMONY_ARPEGGIATING_RULE_COUNT);
 #define harmony_arpeggiating_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_arpeggiating_constraint, harmony_arpeggiating_rule_holds, HarmonySixFour, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_arpeggiating_constraint, harmony_arpeggiating_preference, harmony_arpeggiating_rule_holds, HarmonySixFour, which, subject)
 
 #define ARP(name) HARMONY_ARPEGGIATING_##name
 

@@ -24,7 +24,9 @@ Each rule table (except consonance and motion, which only classify) registers an
 evaluation callback on its Constraints, so `constraint_evaluate` runs the same check
 (`standard_counterpoint_rule_table_evaluate`) on a candidate `Value` tagged
 `standard-counterpoint/<table prefix>` holding the rule's subject; the multi-input subjects are in
-`counterpoint_subject.h`.
+`counterpoint_subject.h`. Each soft rule also has a `Preference` (`standard_counterpoint_*_preference`)
+whose scoring callback makes `preference_rank` score the same candidate 1/1 when the rule holds
+and 0/1 when it does not.
 
 - **Consonance** (`consonance_rules.h`): harmonic intervals are perfect
   consonances (unison, fifth, octave), imperfect consonances (major and minor

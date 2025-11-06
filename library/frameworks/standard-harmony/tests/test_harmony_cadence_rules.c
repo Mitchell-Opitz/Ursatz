@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "cadence", HARMONY_CADENCE_RULE_COUNT);
 #define harmony_cadence_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_cadence_constraint, harmony_cadence_rule_holds, HarmonyCadence, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_cadence_constraint, harmony_cadence_preference, harmony_cadence_rule_holds, HarmonyCadence, which, subject)
 
 static HarmonyCadence cadence(HarmonyChord from, HarmonyChord to, int soprano) {
     return (HarmonyCadence){from, to, soprano, false};

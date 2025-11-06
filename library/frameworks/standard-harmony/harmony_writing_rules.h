@@ -5,6 +5,7 @@
 
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/cadence_type.h"
 
@@ -63,6 +64,8 @@ bool harmony_writing_valid(const HarmonyCadenceWriting *writing);
 
 const Rule *harmony_writing_rule(HarmonyWritingRule which);
 const Constraint *harmony_writing_constraint(HarmonyWritingRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_writing_preference(HarmonyWritingRule which);
 
 /* "bass-motion" "soprano-melody" "minor-leading-tone" "common-hc-soprano"; NULL
    for an invalid rule. */

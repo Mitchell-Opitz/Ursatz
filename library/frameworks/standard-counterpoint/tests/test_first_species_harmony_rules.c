@@ -11,7 +11,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-harmony", STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT);
 #define standard_counterpoint_first_species_harmony_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_first_species_harmony_constraint, standard_counterpoint_first_species_harmony_rule_holds, StandardCounterpointPair, which, subject)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_first_species_harmony_constraint, standard_counterpoint_first_species_harmony_preference, standard_counterpoint_first_species_harmony_rule_holds, StandardCounterpointPair, which, subject)
 
 static bool holds(StandardCounterpointFirstSpeciesHarmonyRule rule, const PitchSpelling *const *upper_notes,
                   const PitchSpelling *const *lower_notes, size_t count) {

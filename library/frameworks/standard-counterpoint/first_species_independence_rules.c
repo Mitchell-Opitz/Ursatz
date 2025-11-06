@@ -22,9 +22,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_
 static bool g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "first-species-independence", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT, table_is_hard,
-    g_pairs, g_built, evaluate_candidate};
+    g_pairs, g_built, evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesIndependenceRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -36,6 +37,10 @@ const Rule *standard_counterpoint_first_species_independence_rule(StandardCounte
 
 const Constraint *standard_counterpoint_first_species_independence_constraint(StandardCounterpointFirstSpeciesIndependenceRule which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_first_species_independence_preference(StandardCounterpointFirstSpeciesIndependenceRule which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_first_species_independence_rule_name(StandardCounterpointFirstSpeciesIndependenceRule which) {
@@ -111,6 +116,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_first_species_independence_check(const StandardCounterpointPair *pair,
                                                             StandardCounterpointCantusPart cantus_part,

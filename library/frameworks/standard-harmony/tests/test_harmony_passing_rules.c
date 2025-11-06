@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "passing", HARMONY_PASSING_RULE_COUNT);
 #define harmony_passing_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_passing_constraint, harmony_passing_rule_holds, HarmonySixFour, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_passing_constraint, harmony_passing_preference, harmony_passing_rule_holds, HarmonySixFour, which, subject)
 
 #define PASS(name) HARMONY_PASSING_##name
 

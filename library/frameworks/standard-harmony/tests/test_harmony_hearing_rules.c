@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "hearing", HARMONY_HEARING_RULE_COUNT);
 #define harmony_hearing_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_hearing_constraint, harmony_hearing_rule_holds, HarmonyCadenceHearing, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_hearing_constraint, harmony_hearing_preference, harmony_hearing_rule_holds, HarmonyCadenceHearing, which, subject)
 
 #define HEARING(name) HARMONY_HEARING_##name
 

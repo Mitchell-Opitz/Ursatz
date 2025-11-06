@@ -31,7 +31,8 @@
  * built on top of it downstream. NOT_IMPLEMENTED lets a caller record
  * "no evaluation logic is wired up yet" as a real outcome value rather
  * than a sentinel/error, consistent with constraint_evaluate and
- * preference_rank both being stubs in this pass.
+ * preference_rank both reporting it for a Constraint/Preference with no
+ * registered callback.
  *
  * finding is an optional, owned Interpretation* (interpretation/
  * interpretation.h) explaining the outcome -- kept explainable (TDD
@@ -58,8 +59,7 @@
  * invariants. Populating a real RuleEvaluation from constraint_evaluate/
  * preference_rank output against an actual candidate is
  * CandidateEvaluator's job (music-generation, L8) -- out of scope here,
- * the same L7/L8 split constraint_evaluate and preference_rank already
- * follow.
+ * the same L7/L8 split constraint_evaluate and preference_rank follow.
  */
 
 typedef enum {

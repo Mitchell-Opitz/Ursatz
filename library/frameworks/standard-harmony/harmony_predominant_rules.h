@@ -5,6 +5,7 @@
 
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -91,6 +92,8 @@ bool harmony_predominant_ending_valid(const HarmonyPredominantEnding *ending);
 
 const Rule *harmony_predominant_rule(HarmonyPredominantRule which);
 const Constraint *harmony_predominant_constraint(HarmonyPredominantRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_predominant_preference(HarmonyPredominantRule which);
 
 /* "strong-predominant" "bass-motion" "chord-notes" "active-note-resolves"
    "minor-leading-tone" "no-parallels" "not-all-voices-same-direction"

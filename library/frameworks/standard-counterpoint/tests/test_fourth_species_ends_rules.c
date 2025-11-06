@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fourth-species-ends", STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT);
 #define standard_counterpoint_fourth_species_ends_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_fourth_species_ends_constraint, standard_counterpoint_fourth_species_ends_rule_holds, StandardCounterpointFourthSpeciesTonic, which, a, b)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_fourth_species_ends_constraint, standard_counterpoint_fourth_species_ends_preference, standard_counterpoint_fourth_species_ends_rule_holds, StandardCounterpointFourthSpeciesTonic, which, a, b)
 
 #define ENDS(name) STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_##name
 

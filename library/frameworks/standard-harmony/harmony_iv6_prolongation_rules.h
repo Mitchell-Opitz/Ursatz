@@ -6,6 +6,7 @@
 #include "harmony_chord.h"
 #include "harmony_iv6_prolongation.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -62,6 +63,8 @@ bool harmony_iv6_prolongation_valid(const HarmonyIv6Prolongation *prolongation);
 
 const Rule *harmony_iv6_prolongation_rule(HarmonyIv6ProlongationRule which);
 const Constraint *harmony_iv6_prolongation_constraint(HarmonyIv6ProlongationRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_iv6_prolongation_preference(HarmonyIv6ProlongationRule which);
 
 /* "progression" "bass-line" "chord-notes" "no-parallels" "no-doubled-leading-tone"
    "soprano-line" "prefer-v6" "avoid-in-minor"; NULL for an invalid rule. */

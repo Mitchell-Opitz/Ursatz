@@ -6,6 +6,7 @@
 #include "harmony_chord.h"
 #include "harmony_prolongation.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/beat_strength.h"
 #include "semantics/voice_part.h"
@@ -110,6 +111,8 @@ bool harmony_prolongation_valid(const HarmonyTonicProlongation *prolongation);
 
 const Rule *harmony_prolongation_rule(HarmonyProlongationRule which);
 const Constraint *harmony_prolongation_constraint(HarmonyProlongationRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_prolongation_preference(HarmonyProlongationRule which);
 
 /* "progression" "bass-line" "chord-notes" "resolves" "minor-leading-tone"
    "no-parallels" "avoid-v6-triad" "avoid-v43-to-root" "middle-weaker-beat"

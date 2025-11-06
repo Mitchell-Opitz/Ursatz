@@ -13,8 +13,9 @@ static HarmonyRulePair g_pairs[HARMONY_HEARING_RULE_COUNT];
 static bool g_built[HARMONY_HEARING_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const HarmonyRuleTable TABLE = {"hearing", NAMES, HARMONY_HEARING_RULE_COUNT, table_is_hard, g_pairs, g_built,
-                                       evaluate_candidate};
+                                       evaluate_candidate, score_candidate};
 
 const Rule *harmony_hearing_rule(HarmonyHearingRule which) {
     return harmony_rule_table_rule(&TABLE, (int)which);
@@ -22,6 +23,10 @@ const Rule *harmony_hearing_rule(HarmonyHearingRule which) {
 
 const Constraint *harmony_hearing_constraint(HarmonyHearingRule which) {
     return harmony_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *harmony_hearing_preference(HarmonyHearingRule which) {
+    return harmony_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *harmony_hearing_rule_name(HarmonyHearingRule which) {
@@ -55,6 +60,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyCadenceHearing)
+HARMONY_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyCadenceHearing)
 
 bool harmony_hearing_check(const HarmonyCadenceHearing *hearing, unsigned *hard_violations,
                            unsigned *soft_violations) {

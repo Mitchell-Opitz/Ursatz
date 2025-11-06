@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "melodic", STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT);
 #define standard_counterpoint_melodic_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_melodic_constraint, standard_counterpoint_melodic_rule_holds, StandardCounterpointLineLimits, which, a, b)
+    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_melodic_constraint, standard_counterpoint_melodic_preference, standard_counterpoint_melodic_rule_holds, StandardCounterpointLineLimits, which, a, b)
 
 static bool holds_with(StandardCounterpointMelodicRule rule, const PitchSpelling *const *notes, size_t count,
                        const StandardCounterpointLimits *limits) {

@@ -6,6 +6,7 @@
 #include "harmony_applied.h"
 #include "harmony_chord.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -75,6 +76,8 @@ int harmony_applied_pitch(HarmonyMode mode, int step, int alter);
 
 const Rule *harmony_applied_rule(HarmonyAppliedRule which);
 const Constraint *harmony_applied_constraint(HarmonyAppliedRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_applied_preference(HarmonyAppliedRule which);
 
 /* "progression" "chord-notes" "leading-tone-resolves" "seventh-resolves" "no-parallels"
    "avoid-half-diminished" "chromatic"; NULL for an invalid rule. */

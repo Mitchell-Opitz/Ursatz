@@ -5,6 +5,7 @@
 
 #include "harmony_phrase_labels.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -48,6 +49,8 @@ bool harmony_heard_phrase_valid(const HarmonyHeardPhrase *heard);
 
 const Rule *harmony_labels_rule(HarmonyLabelsRule which);
 const Constraint *harmony_labels_constraint(HarmonyLabelsRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_labels_preference(HarmonyLabelsRule which);
 
 /* "ends-as-cadence" "starts-on-tonic" "has-strong-predominant"; NULL for an invalid
    rule. */

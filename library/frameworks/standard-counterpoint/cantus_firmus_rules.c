@@ -27,9 +27,10 @@ static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_CANTUS_RULE_CO
 static bool g_built[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const StandardCounterpointRuleTable TABLE = {
     "cantus-firmus", NAMES, STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate};
+    evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointCantusRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
@@ -41,6 +42,10 @@ const Rule *standard_counterpoint_cantus_rule(StandardCounterpointCantusRule whi
 
 const Constraint *standard_counterpoint_cantus_constraint(StandardCounterpointCantusRule which) {
     return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
+}
+
+const Preference *standard_counterpoint_cantus_preference(StandardCounterpointCantusRule which) {
+    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_cantus_rule_name(StandardCounterpointCantusRule which) {
@@ -292,6 +297,7 @@ static bool holds_adapter(int which, const void *subject) {
 }
 
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
+STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_cantus_check(const StandardCounterpointLine *line, const PitchSpelling *tonic,
                                         unsigned *hard_violations, unsigned *soft_violations) {

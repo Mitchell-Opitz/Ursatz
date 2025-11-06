@@ -6,6 +6,7 @@
 #include "fifth_species_exercise.h"
 #include "pitch/pitch_spelling.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -55,6 +56,8 @@ typedef enum {
 
 const Rule *standard_counterpoint_fifth_species_line_rule(StandardCounterpointFifthSpeciesLineRule which);
 const Constraint *standard_counterpoint_fifth_species_line_constraint(StandardCounterpointFifthSpeciesLineRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *standard_counterpoint_fifth_species_line_preference(StandardCounterpointFifthSpeciesLineRule which);
 
 /* "leaps" "final-step" "range" "leading-tone" "single-climax" "leap-recovery"
    "mostly-stepwise" "no-repeated-motive"; NULL for an invalid rule. */

@@ -5,6 +5,7 @@
 
 #include "harmony_six_four.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 
 /*
@@ -37,6 +38,8 @@ typedef enum {
 
 const Rule *harmony_arpeggiating_rule(HarmonyArpeggiatingRule which);
 const Constraint *harmony_arpeggiating_constraint(HarmonyArpeggiatingRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_arpeggiating_preference(HarmonyArpeggiatingRule which);
 
 /* "is-six-four" "same-chord" "bass-leaps-to-fifth" "upper-voices-sustain"; NULL for an
    invalid rule. */

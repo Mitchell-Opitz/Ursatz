@@ -10,7 +10,7 @@
 /* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
 HARMONY_EVAL_TABLE(g_eval, "plagal-six", HARMONY_PLAGAL_SIX_RULE_COUNT);
 #define harmony_plagal_six_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_plagal_six_constraint, harmony_plagal_six_rule_holds, HarmonyPlagalSix, which, subject)
+    HARMONY_EVAL_HOLDS(g_eval, harmony_plagal_six_constraint, harmony_plagal_six_preference, harmony_plagal_six_rule_holds, HarmonyPlagalSix, which, subject)
 
 #define PS(name) HARMONY_PLAGAL_SIX_##name
 #define BIT(rule) (1u << (rule))

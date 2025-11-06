@@ -6,6 +6,7 @@
 #include "harmony_chord.h"
 #include "harmony_plagal.h"
 #include "rules/constraint.h"
+#include "rules/preference.h"
 #include "rules/rule.h"
 #include "semantics/voice_part.h"
 
@@ -68,6 +69,8 @@ bool harmony_plagal_motion_valid(const HarmonyPlagalMotion *motion);
 
 const Rule *harmony_plagal_rule(HarmonyPlagalRule which);
 const Constraint *harmony_plagal_constraint(HarmonyPlagalRule which);
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_plagal_preference(HarmonyPlagalRule which);
 
 /* "progression" "chord-notes" "step-or-common-tone" "no-parallels" "soprano-do"
    "avoid-at-beginning"; NULL for an invalid rule. */
