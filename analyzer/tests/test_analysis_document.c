@@ -179,13 +179,34 @@ int main(void) {
     assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
     assert(cJSON_IsNull(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));
-    static const char *const EMPTY_SECTIONS[] = {"cadences",      "motives", "texture",
+    static const char *const EMPTY_SECTIONS[] = {"cadences",      "motives",
                                                  "voice_leading", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
         const cJSON *section = member(document, EMPTY_SECTIONS[i]);
         assert(cJSON_IsArray(section));
         assert(cJSON_GetArraySize(section) == 0);
     }
+
+    /* Texture: the passages in time order, each with its measures and texture, then the changes between them. */
+    const cJSON *texture = member(document, "texture");
+    assert(cJSON_IsArray(texture));
+    int passages = 0;
+    int changes = 0;
+    for (int i = 0; i < cJSON_GetArraySize(texture); i++) {
+        const cJSON *entry = cJSON_GetArrayItem(texture, i);
+        check_claim(entry);
+        if (strcmp(string(entry, "label"), "passage") == 0) {
+            assert(changes == 0);
+            passages++;
+            assert(number(member(entry, "measures"), "last") >= number(member(entry, "measures"), "first"));
+            assert(number(member(entry, "features"), "voices_max") >= 1);
+        } else {
+            assert(strcmp(string(entry, "label"), "change") == 0);
+            changes++;
+            assert(strcmp(string(entry, "from_texture"), string(entry, "to_texture")) != 0);
+        }
+    }
+    assert(passages == 0 ? changes == 0 : changes == passages - 1);
 
     /* Melody: one claim per phrase with melody notes, in phrase order, each with its range, climax and contour. */
     const cJSON *melody = member(document, "melody");

@@ -121,6 +121,11 @@ void analysis_report_destroy(AnalysisReport *report) {
     }
     free(report->densities);
     free(report->syncopations);
+    for (size_t i = 0; i < report->texture_passage_count; i++) {
+        free(report->texture_passages[i].note_ids);
+    }
+    free(report->texture_passages);
+    free(report->texture_changes);
     for (size_t i = 0; i < report->hemiola_count; i++) {
         free(report->hemiolas[i].note_ids);
     }
@@ -180,6 +185,10 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->hypermeter_count = 0;
     report->tuplets = NULL;
     report->tuplet_count = 0;
+    report->texture_passages = NULL;
+    report->texture_passage_count = 0;
+    report->texture_changes = NULL;
+    report->texture_change_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

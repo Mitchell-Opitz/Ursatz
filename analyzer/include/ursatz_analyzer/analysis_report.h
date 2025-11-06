@@ -644,6 +644,54 @@ typedef struct {
     double uncertainty;      /* the library's: 0, the profile describes the notes as given */
 } AnalysisDensity;
 
+/* One passage of the texture: a run of measures the library classifies as the same texture (the standard-texture
+   passage claim, analysis/texture_analysis_classify.h). The Analyzer only builds the library's input (every imported
+   note, the voice kernel's separation per stream) and copies the passages and changes; the texture, the category and
+   the measured features are the library's. A measure whose features fit no texture takes its neighbour's (counted in
+   unclassified_windows). The features are the means over the passage's measures, the voice count the largest. */
+typedef struct {
+    const char *framework;   /* the library's framework name for the claim */
+    int first_measure;       /* as the library numbers them (a pickup is 0) */
+    int last_measure;
+    long start_numerator;    /* the passage's span in whole notes: its first measure's start to its last measure's end */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    const char *texture;     /* the library's name: "monophony", "heterophony", "homophony", "homorhythm",
+                                "melody and accompaniment" or "polyphony" */
+    const char *category;    /* the texture's category: homorhythm and melody and accompaniment are homophony */
+    int windows;             /* measures in the passage, and those that took their neighbour's texture */
+    int unclassified_windows;
+    size_t *note_ids;        /* owned; ImportedNotes indices of the notes attacked in the passage, in time order */
+    size_t note_id_count;
+    double confidence;       /* the library's: of the texture, of the voice separation, and both together */
+    double texture_confidence;
+    double voice_confidence;
+    int voices_max;
+    double voices_mean;
+    double synchrony;
+    double independence;
+    double prominence;
+    double top_gap;
+    double register_span;
+    double spacing;
+    double density;          /* attack times per beat */
+    double pattern;          /* the repeated-pattern score, 0 to 1: evidence for an accompaniment figure, not a name */
+    double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
+} AnalysisTexturePassage;
+
+/* A change of texture: the boundary between two consecutive passages (the library's standard-texture change claim). */
+typedef struct {
+    const char *framework;
+    size_t from;             /* index into texture_passages; the passage changed to is from + 1 */
+    size_t to;
+    int boundary_measure;    /* the first measure of the passage changed to */
+    const char *from_texture;
+    const char *to_texture;
+    bool category_changed;   /* false for homorhythm to melody and accompaniment, both homophony */
+    double uncertainty;
+} AnalysisTextureChange;
+
 /* A note held through a stronger metric position than it was attacked at, with no note attacked there (the library's
    THROUGH_STRONGER rule, analysis/meter_analysis_syncopation.h). Each line is read on its own. The levels are the
    library's StandardMeterLevel: "downbeat", "secondary-beat", "beat", "offbeat" or "finer"; the strength is the
@@ -789,6 +837,10 @@ typedef struct {
     size_t hypermeter_count;
     AnalysisTuplet *tuplets; /* owned; grouped by ratio (the smaller actual count first), each in time order */
     size_t tuplet_count;
+    AnalysisTexturePassage *texture_passages; /* owned; in time order; empty when the library found no texture */
+    size_t texture_passage_count;
+    AnalysisTextureChange *texture_changes; /* owned; texture_passage_count - 1 of them */
+    size_t texture_change_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -796,7 +848,7 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters and tuplets. */
+   thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets and texture passages and changes. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif
