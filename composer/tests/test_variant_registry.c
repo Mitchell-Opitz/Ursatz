@@ -65,7 +65,7 @@ static void test_registry_entries(void) {
         {"liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52"},
         {"augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"},
         {"diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"}};
-    assert(variant_registry_count() == 27);
+    assert(variant_registry_count() == 28);
     for (size_t i = 0; i < 9; i++) {
         const VariantOperation *operation = variant_registry_at(i);
         assert(operation && strcmp(operation->name, ENTRIES[i].name) == 0);
@@ -76,7 +76,7 @@ static void test_registry_entries(void) {
         assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
         assert(operation->param_count <= VARIANT_PARAM_MAX);
     }
-    assert(variant_registry_at(27) == NULL);
+    assert(variant_registry_at(28) == NULL);
     assert(variant_registry_find("nope") == NULL);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_MELODY_ADAPTATION), "melody-adaptation") == 0);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_EXACT), "exact") == 0);
@@ -824,6 +824,157 @@ static void test_harmony_row_phrases(void) {
     assert(strcmp(text, "put in the dominant form, harmony and melody moved to the dominant") == 0);
 }
 
+/* ------------------------------------------------ remoteness and functions */
+
+static bool has_function(const char *const *names, size_t count, const char *name) {
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(names[i], name) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* A step's variant of source, with its record's remoteness from basic and its functions set. */
+static void make_form(const Motive *basic, const Motive *source, VariantChain chain, Motive *out, VariantRecord *record) {
+    assert(variant_apply_chain(source, &chain, 1, out, record) == VARIANT_OK);
+    assert(variant_set_remoteness(basic, out, VARIANT_CHAIN_MAX, record) == VARIANT_OK);
+    assert(variant_functions(basic, out, record, record->functions, &record->function_count));
+}
+
+static void test_remoteness_is_from_the_root(void) {
+    Motive basic = source_motive();
+    VariantRecord record;
+    Motive out;
+
+    /* Exact is no distance at all. */
+    make_form(&basic, &basic, one_step(step_of("exact")), &out, &record);
+    assert(record.remoteness_den != 0 && record.remoteness_num == 0);
+
+    /* A grandchild: a transposition (cost 1), then an augmentation (cost 1), is 2/6 from the root, though the
+       augmentation alone from the child is 1/5. */
+    VariantStep transpose = step_of("transpose");
+    assert(variant_step_set(&transpose, "tonal", 1, 0) && variant_step_set(&transpose, "by", 2, 0));
+    Motive child;
+    make_form(&basic, &basic, one_step(transpose), &child, &record);
+    assert(record.remoteness_num * 5 == record.remoteness_den);
+    VariantStep augment = step_of("augment");
+    assert(variant_step_set(&augment, "ratio", 2, 1));
+    Motive grandchild;
+    make_form(&basic, &child, one_step(augment), &grandchild, &record);
+    assert(record.remoteness_num * 3 == record.remoteness_den);
+    VariantRecord from_child;
+    memset(&from_child, 0, sizeof(from_child));
+    assert(variant_set_remoteness(&child, &grandchild, VARIANT_CHAIN_MAX, &from_child) == VARIANT_OK);
+    assert(from_child.remoteness_num * 5 == from_child.remoteness_den);
+
+    /* The JSON carries it as a number to 4 places, and only once it is set. */
+    char *json = variant_record_to_json(&record);
+    assert(json && strstr(json, "\"remoteness\": 0.3333"));
+    free(json);
+    VariantRecord unset;
+    Motive again;
+    assert(variant_apply_chain(&basic, &(VariantChain){.steps = {step_of("exact")}, .step_count = 1}, 1, &again, &unset) ==
+           VARIANT_OK);
+    json = variant_record_to_json(&unset);
+    assert(json && strstr(json, "\"remoteness\"") == NULL);
+    free(json);
+    assert(variant_set_remoteness(NULL, &basic, 4, &record) == VARIANT_ERR_NULL);
+}
+
+static void test_functions_by_the_rules(void) {
+    Motive basic = source_motive();
+    VariantRecord record;
+    Motive out;
+
+    /* The basic motive itself opens on I, keeps its rhythm and is no distance away; its long last note on the tonic
+       closes it too. */
+    make_form(&basic, &basic, one_step(step_of("exact")), &out, &record);
+    assert(has_function(record.functions, record.function_count, "beginning") && has_function(record.functions, record.function_count, "cadential"));
+    assert(!has_function(record.functions, record.function_count, "continuation") && !has_function(record.functions, record.function_count, "contrast"));
+
+    /* The dominant form starts on V: a contrast, and no beginning. */
+    make_form(&basic, &basic, one_step(step_of("dominant-form")), &out, &record);
+    assert(has_function(record.functions, record.function_count, "contrast") && !has_function(record.functions, record.function_count, "beginning"));
+
+    /* A fragment is shorter than the basic motive: a continuation. */
+    VariantStep fragment = step_of("fragment");
+    assert(variant_step_set(&fragment, "position", 1, 0) && variant_step_set(&fragment, "length", 2, 0));
+    make_form(&basic, &basic, one_step(fragment), &out, &record);
+    assert(has_function(record.functions, record.function_count, "continuation") && !has_function(record.functions, record.function_count, "beginning"));
+
+    /* A rhythm or contour form is only a continuation or a contrast. */
+    Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
+    make_form(&rhythm, &rhythm, one_step(step_of("exact")), &out, &record);
+    assert(record.function_count == 0);
+    VariantStep rhythm_fragment = step_of("fragment");
+    assert(variant_step_set(&rhythm_fragment, "position", 1, 0) && variant_step_set(&rhythm_fragment, "length", 2, 0));
+    make_form(&rhythm, &rhythm, one_step(rhythm_fragment), &out, &record);
+    assert(record.function_count == 1 && strcmp(record.functions[0], "continuation") == 0);
+
+    /* The JSON names them. */
+    char *json = variant_record_to_json(&record);
+    assert(json && strstr(json, "\"functions\": [\"continuation\"]"));
+    free(json);
+
+    size_t count = 0;
+    assert(!variant_functions(NULL, &out, &record, record.functions, &count) &&
+           !variant_functions(&basic, &out, &record, NULL, &count));
+}
+
+static void test_liquidate_features_row(void) {
+    /* Two labelled features: the first holds a leap, so it is the characteristic one and goes first. */
+    Motive source = load("C4:e G4:e E4:e F4:e G4:q A4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    snprintf(source.features[0].label, sizeof(source.features[0].label), "a");
+    source.features[0].first = 0;
+    source.features[0].last = 1;
+    snprintf(source.features[1].label, sizeof(source.features[1].label), "b");
+    source.features[1].first = 2;
+    source.features[1].last = 3;
+    source.feature_count = 2;
+
+    const VariantOperation *operation = variant_registry_find("liquidate-features");
+    assert(operation && operation->category == VARIANT_CATEGORY_INTERVALS);
+    assert(strcmp(operation->citation, "ch. VIII, Ex. 52") == 0 && operation->param_count == 2);
+    assert(operation->relation == MOTIVE_RELATION_LIQUIDATE_FEATURES);
+    assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
+
+    VariantStep step = step_of("liquidate-features");
+    assert(variant_step_set(&step, "steps", 1, 0) && variant_step_set(&step, "shorten", 0, 0));
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
+    assert(out.note_count == 5 && out.notes[0].midi_pitch == 60);
+    assert(plan_time_compare(out.notes[0].duration, (PlanTime){1, 4}) == 0);
+    assert(out.feature_count == 1 && strcmp(out.features[0].label, "b") == 0 && out.features[0].first == 1 &&
+           out.features[0].last == 2);
+    /* The chord the source implied stays under the thinned melody as its own harmony. */
+    assert(out.harmony_count == 1 && out.harmony[0].degree == 1);
+    assert(changed(&record, "rhythm") && changed(&record, "intervals"));
+
+    /* Shortened, the unit halves (ch. VIII): the result is half as long. */
+    VariantStep shorter = step_of("liquidate-features");
+    assert(variant_step_set(&shorter, "steps", 1, 0) && variant_step_set(&shorter, "shorten", 1, 0));
+    Motive half;
+    assert(run_one(&source, shorter, 1, &half, &record) == VARIANT_OK);
+    assert(half.note_count == 5 && plan_time_compare(half.length, out.length) < 0);
+
+    /* Without labelled features each beat group is one (R-144), so a plain motive works too. */
+    Motive plain = load("C4:e G4:e E4:q F4:q G4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    assert(run_one(&plain, step, 1, &out, &record) == VARIANT_OK && out.note_count == 4);
+
+    /* It needs a key and a full motive. */
+    Motive no_key = load("C4:e G4:e E4:q F4:q G4:q", "4/4", NULL, MOTIVE_FORMAT_NOTES);
+    assert(run_one(&no_key, step, 1, &out, &record) == VARIANT_ERR_REFUSED);
+    Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
+    assert(run_one(&rhythm, step, 1, &out, &record) == VARIANT_ERR_FORM);
+
+    char text[160];
+    VariantValue values[VARIANT_PARAM_MAX] = {{true, 2, 0}, {true, 1, 0}};
+    operation->describe(values, text, sizeof(text));
+    assert(strcmp(text, "liquidated 2 characteristic features, each reduced to one chord tone and shortened by half") == 0);
+}
+
 int main(void) {
     test_registry_entries();
     test_registry_forms();
@@ -854,6 +1005,9 @@ int main(void) {
     test_random_chains_skip_passing_harmony_without_two_chords();
     test_harmony_rows_draw_open_parameters();
     test_harmony_row_phrases();
+    test_remoteness_is_from_the_root();
+    test_functions_by_the_rules();
+    test_liquidate_features_row();
     puts("test_variant_registry: ok");
     return 0;
 }

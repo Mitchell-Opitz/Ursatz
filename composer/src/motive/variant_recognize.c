@@ -176,3 +176,17 @@ VariantResult variant_recognize(const Motive *source, const Motive *target, Vari
                                 VariantRecognition *out) {
     return variant_recognize_depth(source, target, VARIANT_CHAIN_MAX, chain, out);
 }
+
+VariantResult variant_set_remoteness(const Motive *basic, const Motive *form, size_t depth, VariantRecord *record) {
+    if (!basic || !form || !record) {
+        return VARIANT_ERR_NULL;
+    }
+    VariantChain chain;
+    VariantRecognition recognition;
+    VariantResult result = variant_recognize_depth(basic, form, depth, &chain, &recognition);
+    if (result == VARIANT_OK) {
+        record->remoteness_num = recognition.distance_num;
+        record->remoteness_den = recognition.distance_den;
+    }
+    return result;
+}

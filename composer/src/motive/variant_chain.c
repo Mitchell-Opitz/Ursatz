@@ -553,9 +553,13 @@ char *variant_record_to_json(const VariantRecord *record) {
          names_json(document, "kept", record->kept, record->kept_count) &&
          names_json(document, "changed", record->changed, record->changed_count) &&
          (record->harmony[0] == '\0' || json_add(document, "harmony", cJSON_CreateString(record->harmony))) &&
-         names_json(document, "functions", NULL, 0) &&
+         names_json(document, "functions", record->functions, record->function_count) &&
          json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
-         json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0));
+         json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0)) &&
+         (record->remoteness_den == 0 ||
+          json_add(document, "remoteness",
+                   cJSON_CreateNumber((double)(long)((double)record->remoteness_num / (double)record->remoteness_den *
+                                                         10000.0 + 0.5) / 10000.0)));
     if (!ok) {
         cJSON_Delete(document);
         return NULL;

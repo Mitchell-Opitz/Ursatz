@@ -17,12 +17,17 @@
 
 #define VARIANTS_COUNT_MAX 16
 #define VARIANTS_COUNT_DEFAULT 6
+/* With --function, up to this many chains are drawn for each variant asked for. */
+#define VARIANTS_DRAWS_PER_COUNT 4
 
 typedef struct {
     MotiveInput in;
+    BasicInput basic;
     const char *chain_path;
     const char *count_text;
     const char *seed_text;
+    const char *function_texts[VARIANT_FUNCTIONS];
+    size_t function_count;
     bool list_ops;
     bool json;
     bool help;
@@ -38,12 +43,16 @@ static void print_help(FILE *out) {
     fprintf(out, "  <input>              a MIDI file, a MusicXML file, a note list or a motive JSON file\n");
     fprintf(out, "  --format, --form, --meter, --key, --pickup   as for the motive command\n");
     motive_extras_print_help(out, false);
+    motive_input_print_basic_help(out);
+    fprintf(out, "  --function <name>    keep only variants that suit a function: beginning, continuation, contrast or\n");
+    fprintf(out, "                       cadential (repeatable: a variant that suits any of them). Draws up to %d chains for\n", VARIANTS_DRAWS_PER_COUNT);
+    fprintf(out, "                       each variant asked for, so fewer than --count may come back\n");
     fprintf(out, "  --chain <file>       a JSON file {\"steps\": [{\"op\": \"invert\", \"params\": {\"tonal\": true}}]}, the same\n");
     fprintf(out, "                       chain for every variant. Default: each variant gets its own random chain\n");
     fprintf(out, "  --count <n>          how many variants, 1 to %d (default %d); variant i uses seed + i\n", VARIANTS_COUNT_MAX, VARIANTS_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
     fprintf(out, "  --json               print as JSON: the seed, the source, and for each variant its seed, chain, kind, kept,\n");
-    fprintf(out, "                       changed, derivation, recognizability and motive (with its analysis)\n");
+    fprintf(out, "                       changed, derivation, recognizability, remoteness, functions and motive (with its analysis)\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument, or an unreadable chain file; 2 the input cannot\n");
     fprintf(out, "be loaded or a step of the chain is refused.\n\n");
@@ -63,10 +72,28 @@ static int read_options(int argc, char **argv, Options *options) {
             if (extras_status != 0) {
                 return extras_status;
             }
+        } else if (motive_input_take_basic(&options->basic, argc, argv, &i, &extras_status)) {
+            if (extras_status != 0) {
+                return extras_status;
+            }
         } else if (strcmp(argument, "--json") == 0) {
             options->json = true;
         } else if (strcmp(argument, "--list-ops") == 0) {
             options->list_ops = true;
+        } else if (strcmp(argument, "--function") == 0) {
+            if (i + 1 >= argc) {
+                return cli_fail(CLI_EXIT_USAGE, "--function needs a value");
+            }
+            const char *name = argv[++i];
+            if (strcmp(name, "beginning") != 0 && strcmp(name, "continuation") != 0 && strcmp(name, "contrast") != 0 &&
+                strcmp(name, "cadential") != 0) {
+                return cli_fail(CLI_EXIT_USAGE,
+                                "--function must be beginning, continuation, contrast or cadential, not '%s'", name);
+            }
+            if (options->function_count == VARIANT_FUNCTIONS) {
+                return cli_fail(CLI_EXIT_USAGE, "--function is given at most %d times", VARIANT_FUNCTIONS);
+            }
+            options->function_texts[options->function_count++] = name;
         } else if (strcmp(argument, "--meter") == 0 || strcmp(argument, "--key") == 0 ||
                    strcmp(argument, "--format") == 0 || strcmp(argument, "--form") == 0 ||
                    strcmp(argument, "--pickup") == 0 || strcmp(argument, "--chain") == 0 ||
@@ -304,6 +331,12 @@ static void print_text(unsigned long seed, const Motive *source, const Variant *
         }
         char *text = motive_text(&variant->motive);
         printf("\n  %s\n  %s\n", text ? text : "", variant->record.derivation);
+        printf("  Remoteness: %llu/%llu\n", variant->record.remoteness_num, variant->record.remoteness_den);
+        printf("  Functions:");
+        for (size_t f = 0; f < variant->record.function_count; f++) {
+            printf("%s %s", f ? "," : "", variant->record.functions[f]);
+        }
+        printf("%s\n", variant->record.function_count ? "" : " none");
         free(text);
     }
 }
@@ -379,6 +412,18 @@ static bool print_json(unsigned long seed, const Motive *source, const Variant *
     return true;
 }
 
+/* Whether the variant suits any function --function named. */
+static bool suits_a_function(const Options *options, const VariantRecord *record) {
+    for (size_t f = 0; f < record->function_count; f++) {
+        for (size_t w = 0; w < options->function_count; w++) {
+            if (strcmp(record->functions[f], options->function_texts[w]) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 /* The variants command proper: load the source, make --count variants, print them. */
 static int make_variants(const Options *options) {
     unsigned long count = VARIANTS_COUNT_DEFAULT;
@@ -387,9 +432,10 @@ static int make_variants(const Options *options) {
                         options->count_text);
     }
     unsigned long seed = cli_default_seed();
-    if (options->seed_text && !cli_parse_whole_number(options->seed_text, CLI_SEED_MAX - VARIANTS_COUNT_MAX, &seed)) {
-        return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'",
-                        CLI_SEED_MAX - VARIANTS_COUNT_MAX, options->seed_text);
+    unsigned long seed_max = CLI_SEED_MAX - VARIANTS_COUNT_MAX * VARIANTS_DRAWS_PER_COUNT;
+    if (options->seed_text && !cli_parse_whole_number(options->seed_text, seed_max, &seed)) {
+        return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'", seed_max,
+                        options->seed_text);
     }
     VariantChain file_chain;
     if (options->chain_path) {
@@ -403,13 +449,21 @@ static int make_variants(const Options *options) {
     if (status != 0) {
         return status;
     }
+    Motive basic = source;
+    if (motive_input_basic_given(&options->basic)) {
+        status = motive_input_load_basic(&options->basic, &options->in, &basic);
+        if (status != 0) {
+            return status;
+        }
+    }
 
     Variant *variants = calloc(count, sizeof(*variants));
     if (!variants) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     size_t made = 0;
-    for (unsigned long i = 0; i < count; i++) {
+    unsigned long draws = options->function_count > 0 ? count * VARIANTS_DRAWS_PER_COUNT : count;
+    for (unsigned long i = 0; i < draws && made < count; i++) {
         Variant *variant = &variants[made];
         unsigned long variant_seed = seed + i;
         if (options->chain_path) {
@@ -420,6 +474,17 @@ static int make_variants(const Options *options) {
         }
         VariantResult result = variant_apply_chain(&source, &variant->chain, variant_seed, &variant->motive, &variant->record);
         if (result == VARIANT_OK) {
+            /* From the basic motive, searched as deep as the chain that made the variant unless the basic is another motive. */
+            size_t depth = motive_input_basic_given(&options->basic) ? VARIANT_CHAIN_MAX : variant->record.step_count;
+            if (variant_set_remoteness(&basic, &variant->motive, depth, &variant->record) != VARIANT_OK) {
+                variant->record.remoteness_num = 1;
+                variant->record.remoteness_den = 1;
+            }
+            variant_functions(&basic, &variant->motive, &variant->record, variant->record.functions,
+                              &variant->record.function_count);
+            if (options->function_count > 0 && !suits_a_function(options, &variant->record)) {
+                continue;
+            }
             made++;
         } else if (options->chain_path) {
             int failed = cli_fail(CLI_EXIT_UNSATISFIABLE, "step %zu of the chain: %s", variant->record.failed_step + 1,
@@ -433,7 +498,13 @@ static int make_variants(const Options *options) {
     }
     if (made == 0) {
         free(variants);
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "no variant could be made of this motive");
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, options->function_count > 0
+                                                    ? "no variant that suits the function was found in %lu draws"
+                                                    : "no variant could be made of this motive",
+                        draws);
+    }
+    if (options->function_count > 0 && made < count) {
+        fprintf(stderr, "Only %zu of %lu variants suit the function within %lu draws\n", made, count, draws);
     }
     if (options->json) {
         if (!print_json(seed, &source, variants, made)) {
@@ -460,7 +531,7 @@ int run_variants(int argc, char **argv) {
     if (!options.list_ops && !options.in.path) {
         return cli_fail(CLI_EXIT_USAGE, "variants needs --list-ops or a motive input\n%s", VARIANTS_USAGE_LINE);
     }
-    if (options.list_ops && (options.in.path || motive_extras_given(&options.in.extras))) {
+    if (options.list_ops && (options.in.path || motive_extras_given(&options.in.extras) || motive_input_basic_given(&options.basic))) {
         return cli_fail(CLI_EXIT_USAGE, "--list-ops takes no motive input");
     }
     if (!options.list_ops) {

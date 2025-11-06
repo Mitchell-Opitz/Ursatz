@@ -125,6 +125,8 @@ int variant_operation_param_index(const VariantOperation *operation, const char 
 #define VARIANT_ERROR_MAX 160
 #define VARIANT_DERIVATION_MAX 512
 #define VARIANT_HARMONY_MAX 256
+/* The functions of a motive-form (R-143). */
+#define VARIANT_FUNCTIONS 4
 
 /* One operation and the parameters Michelle (or a chain file) set. A parameter not set is open. */
 typedef struct {
@@ -192,6 +194,15 @@ typedef struct {
     /* motive_recognizability of the result against the source, the total. */
     MotiveScore recognizability;
     /*
+     * How far the result is from the basic motive, the tree root (R-142): the recognizer's distance as a fraction, 1/1 when
+     * no chain was found. remoteness_den is 0 until variant_set_remoteness fills it; the JSON then leaves "remoteness" out.
+     */
+    unsigned long long remoteness_num;
+    unsigned long long remoteness_den;
+    /* The functions the form suits (variant_functions), in the order "beginning", "continuation", "contrast", "cadential". */
+    const char *functions[VARIANT_FUNCTIONS];
+    size_t function_count;
+    /*
      * How it was made in plain words: each step's phrase from the registry, joined by "then", and what was kept and
      * changed. "Inverted about D4 in the key's scale, then augmented 2:1. Kept the rhythm's proportions; changed
      * the intervals and the contour."
@@ -231,8 +242,8 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
  *   {"seed", "chain": {"steps": [{"op", "params": {"tonal": true}, "open": ["by"]}]},
  *    "kind", "kept": [], "changed": [], "harmony": "V I@2", "functions": [], "derivation", "recognizability": 0.8571}
  * params holds every resolved parameter that has a value; open names those the seed drew. harmony is the result's own
- * harmony as text, written only when the result has chords of its own. functions stays [] until the function tags of
- * P14.
+ * harmony as text, written only when the result has chords of its own. remoteness is a number to 4 places, written only
+ * once variant_set_remoteness has set it. functions holds the names variant_functions gave, [] until it has run.
  */
 char *variant_record_to_json(const VariantRecord *record);
 
@@ -242,6 +253,29 @@ char *variant_record_to_json(const VariantRecord *record);
  * arguments.
  */
 bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out);
+
+/*
+ * Sets the record's remoteness: the distance of form from basic, searched to at most depth steps (R-142). Distance is
+ * from the basic motive, not from the form's parent. Returns what variant_recognize_depth returns; the record is
+ * untouched on an error other than VARIANT_OK.
+ */
+VariantResult variant_set_remoteness(const Motive *basic, const Motive *form, size_t depth, VariantRecord *record);
+
+/*
+ * The functions a form suits in a phrase built from basic (R-143), several allowed, written to out in this order and
+ * counted in *count:
+ *   beginning     the form's first chord is I, its rhythm is the basic motive's (not scaled) and its remoteness is at most 1/2
+ *   continuation  the form is shorter than the basic motive, or the record's chain holds fragment, liquidate,
+ *                 liquidate-features, condense or repeat-feature
+ *   contrast      remoteness is over 1/2, or the form's first chord is not I
+ *   cadential     the form's last chord is I or V, its last note is degree 1, 3 or 5 and no note is longer than it
+ * A chord is the form's own harmony, else its best implied chord; a form without a key has no chord, so it is never
+ * beginning or cadential, and its first chord never makes it contrast. A rhythm or contour form is only continuation or
+ * contrast, by length and remoteness. Remoteness is the record's, or searched when the record has none. False for NULL
+ * arguments or a motive that is not valid.
+ */
+bool variant_functions(const Motive *basic, const Motive *form, const VariantRecord *record,
+                       const char *out[VARIANT_FUNCTIONS], size_t *count);
 
 /* --- recognizing ---------------------------------------------------------- */
 

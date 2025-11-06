@@ -260,10 +260,11 @@ static void describe_diminish(const VariantValue *values, char *out, size_t size
 
 /* ------------------------------------------------------- library relations */
 
-/* The relations that change the harmony: the four harmony rows, passing-harmony and the dominant form. */
+/* The relations that give the result chords: the four harmony rows, passing-harmony, the dominant form and liquidation by
+   features, which keeps the source's chord under the thinned melody. */
 static bool changes_harmony(MotiveRelationKind kind) {
     return (kind >= MOTIVE_RELATION_HARMONY_INVERSION && kind <= MOTIVE_RELATION_PASSING_HARMONY) ||
-           kind == MOTIVE_RELATION_DOMINANT_FORM;
+           kind == MOTIVE_RELATION_DOMINANT_FORM || kind == MOTIVE_RELATION_LIQUIDATE_FEATURES;
 }
 
 /*
@@ -670,6 +671,27 @@ static void describe_dominant_form(const VariantValue *values, char *out, size_t
     snprintf(out, size, "put in the dominant form, harmony and melody moved to the dominant");
 }
 
+/* ------------------------------------------------- liquidate by features */
+
+enum { LIQUIDATE_FEATURES_STEPS, LIQUIDATE_FEATURES_SHORTEN };
+
+static const VariantParam LIQUIDATE_FEATURES_PARAMS[] = {
+    {"steps", VARIANT_PARAM_INT, 1, 3, "how many features are liquidated, the characteristic ones first", false, false,
+     false, false, false},
+    {"shorten", VARIANT_PARAM_BOOL, 0, 1, "also diminish the result 1:2, the unit halving as in ch. VIII", false, false,
+     false, false, false}};
+
+/* A full motive with a key only: the features give way to the chord tone nearest the first note, which a rhythm has not. */
+static MotiveDevResult apply_liquidate_features(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_LIQUIDATE_FEATURES, source, values, out);
+}
+
+static void describe_liquidate_features(const VariantValue *values, char *out, size_t size) {
+    long steps = value_or(&values[LIQUIDATE_FEATURES_STEPS], 1);
+    snprintf(out, size, "liquidated %ld characteristic feature%s, each reduced to one chord tone%s", steps, steps == 1 ? "" : "s",
+             value_or(&values[LIQUIDATE_FEATURES_SHORTEN], 0) != 0 ? " and shortened by half" : "");
+}
+
 /* ----------------------------------------------------------------- table */
 
 #define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
@@ -743,7 +765,10 @@ static const VariantOperation OPERATIONS[] = {
     {"counter-line", "Counter line", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Ex. 29", NULL, 0, FORMS_FULL,
      apply_counter_line, describe_counter_line, MOTIVE_RELATION_COUNTER_LINE},
     {"dominant-form", "Dominant form", VARIANT_CATEGORY_HARMONY, "ch. V, the dominant form", NULL, 0, FORMS_FULL,
-     apply_dominant_form, describe_dominant_form, MOTIVE_RELATION_DOMINANT_FORM}};
+     apply_dominant_form, describe_dominant_form, MOTIVE_RELATION_DOMINANT_FORM},
+    {"liquidate-features", "Liquidate features", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52",
+     PARAMS(LIQUIDATE_FEATURES_PARAMS), FORMS_FULL, apply_liquidate_features, describe_liquidate_features,
+     MOTIVE_RELATION_LIQUIDATE_FEATURES}};
 
 size_t variant_registry_count(void) {
     return sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);
