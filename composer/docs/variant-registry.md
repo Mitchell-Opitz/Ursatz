@@ -37,6 +37,7 @@ The variant registry lists every way a motive can be made into a variant, one ta
 | `passing-harmony` | Passing harmony | melody-adaptation | ch. III, Ex. 29 | `chord` | full |
 | `counter-line` | Counter line | melody-adaptation | ch. III, Ex. 29 | none | full |
 | `dominant-form` | Dominant form | harmony | ch. V, the dominant form | none | full |
+| `liquidate-features` | Liquidate features | intervals | ch. VIII, Ex. 52 | `steps`, `shorten` | full |
 
 Categories: `exact`, `rhythm`, `intervals`, `harmony`, `melody-adaptation`.
 
@@ -95,6 +96,8 @@ VariantRecord record;
 VariantResult result = variant_apply_chain(&source, &chain, 42, &variant, &record);
 ```
 
+`liquidate-features` thins a full motive with a key by its characteristic features (R-144): each step replaces the heaviest feature of two notes or more by one note on the chord tone nearest its first note, lasting the feature's span. A feature's weight is its leaps (steps of 3 or more, semitones 3 or more without a scale) plus its notes whose duration occurs only once in the motive; equal weights go to the later one. A motive without labelled features takes each beat group (notes from one beat onset to the next) as a feature, `f1`, `f2` in order. `steps` is 1 to 3; `shorten` also diminishes the result 1:2, the unit halving as in ch. VIII, Ex. 52. It is refused when no feature has two notes or more (`not applicable`), and, as it chooses chord tones, without a key (`no key`); a rhythm motive has no chord tones, so the row takes the full form only. The variant keeps the chord the source implied (or its own chords) as its own harmony under the thinned melody, as the harmony rows do.
+
 `variant_apply_chain` applies the steps in order, each to the result of the one before. The open parameters of every step are drawn from one `FillRng` seeded once with the seed, in step order and in the order of the operation's parameters. A step the operation refuses is drawn again, up to 16 draws. The same chain and seed give the same variant; a reroll is the same chain with another seed.
 
 `variant_random_chain(source, seed, &chain)` draws 1 or 2 different operations that the source's form takes (never `exact`), all parameters open.
@@ -115,6 +118,8 @@ A chain that cannot be applied returns one of `VARIANT_ERR_EMPTY`, `VARIANT_ERR_
   - A dimension the motive's form does not have is in neither list: a rhythm motive has only the rhythm, a contour motive only the contour.
 - `harmony`: the result's own harmony as text (`I IV@2`), empty when it has none.
 - `recognizability`: the total of `motive_recognizability` against the source, as a fraction.
+- `remoteness_num` and `remoteness_den`: how far the result is from the basic motive, the tree root (R-142), set by `variant_set_remoteness(basic, form, depth, &record)`. It is the recognizer's distance (cost over cost plus 4) from the basic motive, not from the form's parent, and 1/1 when no chain within `depth` is found. `remoteness_den` is 0 until it is set.
+- `functions` and `function_count`: what `variant_functions` found, below.
 - `derivation`: each step's phrase, joined by "then", and what was kept and changed: "Inverted about D4 in the key's scale, then augmented 2:1. Kept the rhythm's proportions; changed the intervals, the contour and the harmony."
 
 ## JSON
@@ -131,13 +136,27 @@ A chain that cannot be applied returns one of `VARIANT_ERR_EMPTY`, `VARIANT_ERR_
   "kept": ["rhythm"],
   "changed": ["intervals", "contour"],
   "harmony": "I IV@2",
-  "functions": [],
+  "functions": ["continuation"],
   "derivation": "Inverted about A4 in the key's scale. Kept the rhythm; changed the intervals and the contour.",
-  "recognizability": 0.6429
+  "recognizability": 0.6429,
+  "remoteness": 0.3333
 }
 ```
 
-A parameter value is a boolean, a number (an int or a MIDI pitch), a position name or a ratio text (`"2:1"`). `harmony` is written only when the result has chords of its own. `functions` stays `[]` until the function tags of P14.
+A parameter value is a boolean, a number (an int or a MIDI pitch), a position name or a ratio text (`"2:1"`). `harmony` is written only when the result has chords of its own. `remoteness` is a number to 4 places, written only once `variant_set_remoteness` has set it. `functions` is `[]` until `variant_functions` has filled the record's `functions`; the `variants` command fills both.
+
+## Remoteness and functions
+
+`variant_functions(basic, form, &record, out, &count)` tags a form with the functions it suits in a phrase built from `basic` (R-143, Schoenberg ch. IV, V and VIII), several allowed, in this order:
+
+| Function | When |
+| --- | --- |
+| `beginning` | the form's first chord is I, its rhythm is the basic motive's (not scaled) and its remoteness is at most 1/2 |
+| `continuation` | the form is shorter than the basic motive, or the record's chain holds `fragment`, `liquidate`, `liquidate-features`, `condense` or `repeat-feature` |
+| `contrast` | its remoteness is over 1/2, or its first chord is not I |
+| `cadential` | its last chord is I or V, its last note is degree 1, 3 or 5 and no note is longer than the last |
+
+A chord is the form's own harmony, else its best implied chord. A form without a key has no chord, so it is never `beginning` or `cadential`, and its first chord does not make it `contrast`. A rhythm or contour form is only `continuation` or `contrast`, by length and remoteness. The dominant form starts on V, so it is a contrast, not a beginning. Remoteness is the record's, or searched when the record has none. Remoteness over 3/4 is penalized as a preference when phrases are built (ch. IV, "remote forms endanger comprehensibility"); nothing here refuses it.
 
 ## Recognizing a variant
 
