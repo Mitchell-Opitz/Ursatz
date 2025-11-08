@@ -492,6 +492,91 @@
     return jsonRequest("POST", "/api/materials/render", request);
   }
 
+  const RANDOM_MODES = ["major", "minor"];
+  const RANDOM_DEFAULT_COUNT = 6;
+  const RANDOM_MAX_COUNT = 16;
+
+  /* The random motifs POST for the dialog values {mode, meter, key, form, style_id, count, seed}. Empty key, style and
+   * seed are left out; count defaults to 6. */
+  function randomRequest(values) {
+    const v = values || {};
+    const request = {
+      mode: v.mode === "minor" ? "minor" : "major",
+      meter: String(v.meter || "").trim(),
+      form: v.form === "rhythm" || v.form === "contour" ? v.form : "full",
+      count: Number.isInteger(Number(v.count)) && Number(v.count) >= 1 ? Math.min(Number(v.count), RANDOM_MAX_COUNT) : RANDOM_DEFAULT_COUNT,
+    };
+    if (String(v.key || "").trim() !== "") {
+      request.key = String(v.key).trim();
+    }
+    if (String(v.style_id || "") !== "") {
+      request.style_id = String(v.style_id);
+    }
+    if (String(v.seed === undefined || v.seed === null ? "" : v.seed).trim() !== "") {
+      request.seed = Number(v.seed);
+    }
+    return jsonRequest("POST", "/api/materials/motifs/random", request);
+  }
+
+  /* Problems with the dialog values as {field, message}; empty when it can be sent. */
+  function randomProblems(values) {
+    const v = values || {};
+    const problems = [];
+    if (!/^\d{1,2}\/\d{1,2}$/.test(String(v.meter || "").trim())) {
+      problems.push({ field: "meter", message: "Meter looks like 4/4." });
+    }
+    const key = String(v.key || "").trim();
+    if (key !== "" && !/^[A-Ga-g][#b]? (major|minor)$/.test(key)) {
+      problems.push({ field: "key", message: "Key looks like D minor, or leave it empty." });
+    }
+    const seed = String(v.seed === undefined || v.seed === null ? "" : v.seed).trim();
+    if (seed !== "" && !/^\d{1,10}$/.test(seed)) {
+      problems.push({ field: "seed", message: "Seed is a whole number from 0, or leave it empty." });
+    }
+    const count = String(v.count === undefined || v.count === null ? "" : v.count).trim();
+    if (count !== "" && !(/^\d{1,2}$/.test(count) && Number(count) >= 1 && Number(count) <= RANDOM_MAX_COUNT)) {
+      problems.push({ field: "count", message: "Count is 1 to 16." });
+    }
+    return problems;
+  }
+
+  /* The key text of a random candidate's motive ("D minor"), or "" when it has none. */
+  function candidateKeyText(candidate) {
+    const key = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.key : null;
+    const tonic = key && Number.isInteger(key.tonic_pitch_class) ? KEY_TONICS[key.tonic_pitch_class] : null;
+    return tonic && typeof key.mode === "string" ? `${tonic} ${key.mode}` : "";
+  }
+
+  /* The motif body to store for a random candidate (an entry of the random route's `motives`). values: the dialog
+   * values {form, meter, key, role}. The backend fills in the analysis and the degrees on save. */
+  function randomCandidateToBody(candidate, values) {
+    const v = values || {};
+    const analysis = candidate && candidate.motive && candidate.motive.analysis ? candidate.motive.analysis : {};
+    const form = v.form === "rhythm" || v.form === "contour" ? v.form : "full";
+    const textName = form === "rhythm" ? "rhythm_text" : form === "contour" ? "contour_text" : "notes_text";
+    const key = candidateKeyText(candidate);
+    return {
+      uses: [],
+      motif: {
+        role: v.role === "accompaniment" ? "accompaniment" : "melodic",
+        form,
+        notes: typeof analysis[textName] === "string" ? analysis[textName] : "",
+        meter: String(v.meter || "").trim() || "4/4",
+        key: key === "" ? null : key,
+        pickup: typeof analysis.pickup === "string" && analysis.pickup !== "" ? analysis.pickup : "0",
+        features: [],
+        analysis: null,
+        degrees: null,
+        derived: null,
+      },
+    };
+  }
+
+  /* The next seed for rerolling one candidate: the candidate's own plus one. */
+  function rerollSeed(candidateSeed) {
+    return Number.isInteger(candidateSeed) ? candidateSeed + 1 : 0;
+  }
+
   /* The score and playback URLs of one stored version in renderKey. */
   function versionScoreUrls(id, number, renderKey) {
     const base = `/api/materials/items/${encodeURIComponent(id)}/versions/${Number(number)}`;
@@ -659,6 +744,12 @@
     RENDER_KEYS,
     renderRequest,
     versionScoreUrls,
+    RANDOM_MODES,
+    randomRequest,
+    randomProblems,
+    randomCandidateToBody,
+    candidateKeyText,
+    rerollSeed,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

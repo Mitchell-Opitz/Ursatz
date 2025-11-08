@@ -911,6 +911,51 @@ static void test_variant_flags_and_tree(void) {
   free(grandchild);
 }
 
+/* Random motifs come from the Composer unsaved, with a key of the mode, and bad inputs are refused. */
+static void test_random_motifs(void) {
+  int status = 0;
+  cJSON *answer = json_exchange("POST", "/api/materials/motifs/random",
+                                "{\"mode\":\"minor\",\"meter\":\"3/4\",\"form\":\"full\",\"count\":3,\"seed\":5}", &status);
+  const cJSON *motives = cJSON_GetObjectItemCaseSensitive(answer, "motives");
+  check(status == 200 && ok_true(answer) && cJSON_GetArraySize(motives) == 3, "three minor 3/4 motives are drawn");
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(motives, 0), "analysis");
+  check(string_of(analysis, "notes_text")[0] != '\0' && string_of(analysis, "degrees_text")[0] != '\0',
+        "a motive carries its note list and degrees");
+  char first[256];
+  snprintf(first, sizeof(first), "%s", string_of(analysis, "notes_text"));
+  cJSON_Delete(answer);
+  answer = json_exchange("POST", "/api/materials/motifs/random",
+                         "{\"mode\":\"minor\",\"meter\":\"3/4\",\"form\":\"full\",\"count\":3,\"seed\":5}", &status);
+  analysis = cJSON_GetObjectItemCaseSensitive(
+      cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "motives"), 0), "analysis");
+  check(status == 200 && strcmp(string_of(analysis, "notes_text"), first) == 0, "the same seed draws the same motives");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/motifs/random",
+                         "{\"mode\":\"major\",\"meter\":\"4/4\",\"key\":\"D major\",\"form\":\"rhythm\",\"count\":1}", &status);
+  analysis = cJSON_GetObjectItemCaseSensitive(
+      cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "motives"), 0), "analysis");
+  check(status == 200 && string_of(analysis, "rhythm_text")[0] != '\0', "a rhythm motive is drawn with a given key");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/motifs/random",
+                         "{\"mode\":\"major\",\"meter\":\"4/4\",\"style_id\":\"sty-0000000000000000\"}", &status);
+  check(status == 400, "an unknown style is refused");
+  cJSON_Delete(answer);
+  answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"four\"}", &status);
+  check(status == 400, "a bad meter is refused");
+  cJSON_Delete(answer);
+  answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
+  check(status == 400, "a church mode is refused");
+  cJSON_Delete(answer);
+  answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
+  check(status == 400, "a count over 16 is refused");
+  cJSON_Delete(answer);
+  answer = json_exchange("GET", "/api/materials/motifs/random", NULL, &status);
+  check(status == 405, "random motifs take only POST");
+  cJSON_Delete(answer);
+}
+
 static void test_body_limit(void) {
   size_t size = 300 * 1024;
   char *big = malloc(size + 64);
@@ -959,6 +1004,7 @@ int main(void) {
   test_motif_render();
   test_variants();
   test_variant_flags_and_tree();
+  test_random_motifs();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);

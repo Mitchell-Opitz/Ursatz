@@ -208,6 +208,217 @@ function buildItemTable(rows, onOpen) {
   return table;
 }
 
+/* The Random dialog of the Motifs list: draws candidates from the Composer, plays them through the score workspace and
+ * saves the ones kept as motif items. Nothing is stored until Save. */
+function buildRandomMotifs(statusEl, reload) {
+  const section = materialsElement("section", "panel materials-random");
+  const toggle = materialsElement("button", "", "Random");
+  toggle.type = "button";
+  const form = materialsElement("div", "upload-controls");
+  form.hidden = true;
+  const problemEl = materialsElement("div", "upload-status error");
+  const candidatesEl = materialsElement("ol", "variant-candidates");
+  const selectedEl = materialsElement("div");
+  let workspace = null;
+  let blobUrls = [];
+  let shown = [];
+  let runValues = null;
+
+  function field(labelText, control) {
+    const label = materialsElement("label", "filter-field", `${labelText} `);
+    label.appendChild(control);
+    form.appendChild(label);
+    return control;
+  }
+  function select(options) {
+    const el = materialsElement("select");
+    for (const [value, text] of options) {
+      const o = materialsElement("option", "", text);
+      o.value = value;
+      el.appendChild(o);
+    }
+    return el;
+  }
+  function input(placeholder, value) {
+    const el = materialsElement("input");
+    el.type = "text";
+    el.placeholder = placeholder;
+    el.value = value || "";
+    return el;
+  }
+  const mode = field("Mode", select([["major", "Major"], ["minor", "Minor"]]));
+  const meter = field("Meter", input("4/4", "4/4"));
+  const key = field("Key", input("optional, e.g. D minor"));
+  const formSelect = field("Form", select(MaterialsModel.MOTIF_FORMS.map((f) => [f.value, f.label])));
+  const style = field("Style", select([["", "No style"]]));
+  const count = field("Count", input("6", "6"));
+  const seed = field("Seed", input("random"));
+  const role = field("Role", select(MaterialsModel.MOTIF_ROLES.map((r) => [r.value, r.label])));
+  const generate = materialsElement("button", "", "Generate");
+  generate.type = "button";
+  form.appendChild(generate);
+
+  async function loadStyles() {
+    const answer = await sendMaterialsRequest({ method: "GET", url: "/api/styles" });
+    if (answer.ok && answer.data && Array.isArray(answer.data.styles)) {
+      for (const item of answer.data.styles) {
+        const o = materialsElement("option", "", item.name || item.id);
+        o.value = item.id;
+        style.appendChild(o);
+      }
+    }
+  }
+
+  function values() {
+    return {
+      mode: mode.value,
+      meter: meter.value,
+      key: key.value,
+      form: formSelect.value,
+      style_id: style.value,
+      count: count.value.trim() === "" ? 6 : count.value.trim(),
+      seed: seed.value,
+      role: role.value,
+    };
+  }
+
+  function clearSelection() {
+    if (workspace) {
+      workspace.destroy();
+      workspace = null;
+    }
+    for (const url of blobUrls) {
+      URL.revokeObjectURL(url);
+    }
+    blobUrls = [];
+    selectedEl.innerHTML = "";
+  }
+
+  async function play(candidate) {
+    const body = VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, runValues), candidate);
+    statusEl.classList.remove("error");
+    statusEl.textContent = "Rendering...";
+    const answer = await sendMaterialsRequest(MaterialsModel.renderRequest(body));
+    if (!answer.ok) {
+      statusEl.classList.add("error");
+      statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not render the motif");
+      return;
+    }
+    statusEl.textContent = "";
+    clearSelection();
+    const xml = URL.createObjectURL(new Blob([answer.data.musicxml], { type: "application/xml" }));
+    const playback = URL.createObjectURL(new Blob([JSON.stringify(answer.data.playback)], { type: "application/json" }));
+    blobUrls = [xml, playback];
+    workspace = ScoreWorkspace.mount(selectedEl, {
+      title: "Random motif",
+      subtitle: `candidate · seed ${candidate.seed}`,
+      musicxmlUrl: xml,
+      playbackUrl: playback,
+    });
+  }
+
+  async function reroll(candidate) {
+    const request = { ...runValues, count: 1, seed: MaterialsModel.rerollSeed(candidate.seed) };
+    const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(request));
+    const next = answer.ok && answer.data && answer.data.motives ? answer.data.motives[0] : null;
+    if (!next) {
+      statusEl.classList.add("error");
+      statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not draw another motif");
+      return;
+    }
+    next.seed = request.seed;
+    shown = shown.map((other) => (other === candidate ? next : other));
+    drawCandidates();
+  }
+
+  function saveControls(candidate) {
+    const row = materialsElement("div", "variant-actions");
+    const name = materialsElement("input");
+    name.type = "text";
+    name.placeholder = "Motif name";
+    const project = materialsElement("select");
+    fillProjectSelect(project, MaterialsModel.defaultProject(materialsState.filter, materialsState.projects));
+    const save = materialsElement("button", "", "Save");
+    save.type = "button";
+    save.addEventListener("click", async () => {
+      if (name.value.trim() === "" || project.value === "") {
+        statusEl.classList.add("error");
+        statusEl.textContent = "Give the motif a name and a project.";
+        return;
+      }
+      save.disabled = true;
+      const answer = await sendMaterialsRequest(
+        MaterialsModel.buildSaveMotifRequest({
+          name: name.value,
+          project_id: project.value,
+          body: MaterialsModel.randomCandidateToBody(candidate, runValues),
+        }),
+      );
+      save.disabled = false;
+      if (!answer.ok) {
+        statusEl.classList.add("error");
+        statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not save the motif");
+        return;
+      }
+      await reload();
+    });
+    row.append(name, project, save);
+    return row;
+  }
+
+  function drawCandidates() {
+    candidatesEl.innerHTML = "";
+    for (const candidate of shown) {
+      const card = materialsElement("li", "variant-candidate");
+      const analysis = (candidate.motive && candidate.motive.analysis) || {};
+      const textName = runValues.form === "rhythm" ? "rhythm_text" : runValues.form === "contour" ? "contour_text" : "notes_text";
+      const keyText = MaterialsModel.candidateKeyText(candidate);
+      card.appendChild(materialsElement("div", "variant-derivation", analysis[textName] || ""));
+      card.appendChild(materialsElement("div", "variant-meta", `${runValues.meter}${keyText ? ` · ${keyText}` : ""} · seed ${candidate.seed}`));
+      const buttons = materialsElement("div", "variant-actions");
+      for (const [text, action] of [["Play", () => play(candidate)], ["Reroll", () => reroll(candidate)]]) {
+        const button = materialsElement("button", "", text);
+        button.type = "button";
+        button.addEventListener("click", action);
+        buttons.appendChild(button);
+      }
+      card.append(buttons, saveControls(candidate));
+      candidatesEl.appendChild(card);
+    }
+  }
+
+  generate.addEventListener("click", async () => {
+    const current = values();
+    const problems = MaterialsModel.randomProblems(current);
+    problemEl.textContent = problems.map((p) => p.message).join(" ");
+    if (problems.length > 0) {
+      return;
+    }
+    generate.disabled = true;
+    statusEl.classList.remove("error");
+    statusEl.textContent = "Drawing motifs...";
+    const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(current));
+    generate.disabled = false;
+    if (!answer.ok) {
+      statusEl.classList.add("error");
+      statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not draw motifs");
+      return;
+    }
+    statusEl.textContent = "";
+    clearSelection();
+    runValues = current;
+    const start = Number.isInteger(answer.data.seed) ? answer.data.seed : 0;
+    shown = (answer.data.motives || []).map((motive, index) => ({ ...motive, seed: start + index }));
+    drawCandidates();
+  });
+  toggle.addEventListener("click", () => {
+    form.hidden = !form.hidden;
+  });
+  loadStyles();
+  section.append(toggle, form, problemEl, candidatesEl, selectedEl);
+  return section;
+}
+
 async function renderMaterialsView(type) {
   const info = MaterialsModel.typeInfo(type);
   materialsState.type = type;
@@ -227,7 +438,11 @@ async function renderMaterialsView(type) {
   if (materialsState.projects.length === 0) {
     statusEl.textContent = "Create a project from the sidebar first.";
   }
-  content.append(statusEl, listEl);
+  content.append(statusEl);
+  if (type === "motif" && materialsState.projects.length > 0) {
+    content.appendChild(buildRandomMotifs(statusEl, reload));
+  }
+  content.append(listEl);
 
   const answer = await sendMaterialsRequest(MaterialsModel.buildItemListRequest(type, materialsState.filter));
   if (!materialsViewActive() || materialsState.type !== type) {

@@ -269,6 +269,32 @@ check(urls.musicxmlUrl === "/api/materials/items/mot-1/versions/2/score?key=D%20
 check(urls.playbackUrl === "/api/materials/items/mot-1/versions/2/playback?key=D%20minor", "playback url carries the key");
 check(M.versionScoreUrls("mot-1", 2).playbackUrl === "/api/materials/items/mot-1/versions/2/playback", "no key, no query");
 
+const random = M.randomRequest({ mode: "minor", meter: " 3/4 ", key: "", form: "contour", style_id: "", count: "", seed: "" });
+const randomBody = JSON.parse(random.body);
+check(random.method === "POST" && random.url === "/api/materials/motifs/random", "random request is a POST to /motifs/random");
+check(randomBody.mode === "minor" && randomBody.meter === "3/4" && randomBody.form === "contour" && randomBody.count === 6, "random request defaults the count and trims the meter");
+check(!("key" in randomBody) && !("style_id" in randomBody) && !("seed" in randomBody), "random request leaves out an empty key, style and seed");
+const randomFull = JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", key: "D major", form: "full", style_id: "sty-1", count: 20, seed: "7" }).body);
+check(randomFull.key === "D major" && randomFull.style_id === "sty-1" && randomFull.seed === 7 && randomFull.count === 16, "random request carries the key, style and seed and caps the count");
+check(M.randomProblems({ meter: "4/4", key: "", seed: "", count: "6" }).length === 0, "good random values have no problems");
+check(M.randomProblems({ meter: "four", key: "H minor", seed: "x", count: "99" }).map((p) => p.field).join() === "meter,key,seed,count", "each bad random value is reported");
+
+const candidate = {
+  seed: 3,
+  motive: {
+    motive: { key: { tonic_pitch_class: 3, mode: "minor" } },
+    analysis: { notes_text: "c4:q eb4:e g4:e", degrees_text: "1:q b3:e 5:e", rhythm_text: "x:q x:e x:e", pickup: "1" },
+  },
+};
+check(M.candidateKeyText(candidate) === "Eb minor", "the candidate key is written as the Composer writes keys");
+const saved = M.randomCandidateToBody(candidate, { form: "full", meter: "3/4", role: "accompaniment" });
+check(saved.motif.notes === "c4:q eb4:e g4:e" && saved.motif.key === "Eb minor" && saved.motif.meter === "3/4", "a saved random motif keeps the notes, key and meter");
+check(saved.motif.pickup === "1" && saved.motif.role === "accompaniment" && saved.motif.form === "full" && saved.motif.degrees === null, "a saved random motif keeps the pickup and role and leaves the degrees to the backend");
+const savedRhythm = M.randomCandidateToBody(candidate, { form: "rhythm", meter: "4/4" });
+check(savedRhythm.motif.notes === "x:q x:e x:e" && savedRhythm.motif.role === "melodic", "a rhythm candidate is saved from its rhythm text");
+check(M.randomCandidateToBody({ motive: { analysis: {} } }, {}).motif.key === null, "a candidate without a key saves a null key");
+check(M.rerollSeed(3) === 4 && M.rerollSeed(undefined) === 0, "reroll uses the next seed");
+
 if (failures > 0) {
   process.exit(1);
 }
