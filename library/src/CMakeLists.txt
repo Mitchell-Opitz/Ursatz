@@ -177,6 +177,7 @@ add_library(ursatz
     corpus/corpus_api.c
     corpus_stats/corpus_stats_api.c
     corpus_stats/corpus_stats_tally.c
+    corpus_stats/corpus_stats_counts.c
     export/musicxml_export.c
 )
 target_include_directories(ursatz PUBLIC

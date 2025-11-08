@@ -97,4 +97,28 @@ CorpusStatsResult corpus_stats_most_common_chord(CorpusStoreHandle *corpus_handl
                                                   PersistenceHandle *persistence_handle, const char *corpus_id,
                                                   char **out_chord_label);
 
+/*
+ * Chord progressions: counts every run of n consecutive chords (an n-gram,
+ * n from CORPUS_STATS_MIN_PROGRESSION_LENGTH to _MAX_PROGRESSION_LENGTH)
+ * across the Corpus, reading each piece's persisted Chord interpretations in
+ * the order they were stored. A piece is a piece ref used as a context id:
+ * its chords are the stored Chords whose Interpretation has that context_id
+ * (persistence/persistence_context_query.h). A run never crosses from one
+ * piece into the next, and a piece with fewer than n chords contributes
+ * nothing. A chord that cannot be loaded breaks the run it falls in.
+ *
+ * A progression's label is its chord labels joined by " > " (e.g.
+ * "I > V > I"). Piece refs that resolve to no chords are skipped silently,
+ * as for corpus_stats_most_common_chord.
+ *
+ * CORPUS_STATS_ERR_INVALID_ARG if n is outside 2 to 6;
+ * CORPUS_STATS_NO_DATA (output untouched) if no n-gram was counted.
+ */
+#define CORPUS_STATS_MIN_PROGRESSION_LENGTH 2
+#define CORPUS_STATS_MAX_PROGRESSION_LENGTH 6
+
+CorpusStatsResult corpus_stats_chord_progressions(CorpusStoreHandle *corpus_handle,
+                                                  PersistenceHandle *persistence_handle, const char *corpus_id,
+                                                  size_t n, CorpusStatsCounts *out_counts);
+
 #endif
