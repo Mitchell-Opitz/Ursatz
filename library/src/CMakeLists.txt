@@ -176,6 +176,7 @@ add_library(ursatz
     corpus/persistence_corpus_membership.c
     corpus/corpus_api.c
     corpus_stats/corpus_stats_api.c
+    corpus_stats/corpus_stats_tally.c
     export/musicxml_export.c
 )
 target_include_directories(ursatz PUBLIC

@@ -1,6 +1,8 @@
 #ifndef MUSIC_CORPUS_STATS_CORPUS_STATS_API_H
 #define MUSIC_CORPUS_STATS_CORPUS_STATS_API_H
 
+#include <stddef.h>
+
 #include "corpus/corpus_api.h"
 #include "persistence/persistence.h"
 
@@ -33,8 +35,41 @@ typedef enum {
     CORPUS_STATS_NO_DATA,
     CORPUS_STATS_ERR_NULL_ARG,
     CORPUS_STATS_ERR_DB,
-    CORPUS_STATS_ERR_ALLOC
+    CORPUS_STATS_ERR_ALLOC,
+    /* An argument is out of its documented range (e.g. an n-gram length outside 2 to 6). */
+    CORPUS_STATS_ERR_INVALID_ARG
 } CorpusStatsResult;
+
+/*
+ * A count result: every distinct label seen, with how many times it was seen.
+ * Plain values only (a label string and an unsigned integer), the same opaque
+ * boundary as corpus_stats_most_common_chord: nothing here is an internal
+ * type, and nothing is authoritative -- it says what the persisted
+ * interpretations say.
+ *
+ * entries are ordered by count, highest first; labels with equal counts keep
+ * the order in which they were first seen (piece-ref order, then store order
+ * within a piece). total is the sum of all counts, so a label's frequency is
+ * count/total (an exact rational; no floating point anywhere). A result with
+ * no entries is never returned as OK: the function returns
+ * CORPUS_STATS_NO_DATA and leaves the output untouched.
+ *
+ * On CORPUS_STATS_OK the caller owns the result and frees it with
+ * corpus_stats_counts_free.
+ */
+typedef struct {
+    char *label;
+    unsigned long count;
+} CorpusStatsCount;
+
+typedef struct {
+    CorpusStatsCount *entries;
+    size_t entry_count;
+    unsigned long total;
+} CorpusStatsCounts;
+
+/* Frees the labels and entries and zeroes the struct. Safe on NULL and on an already-freed result. */
+void corpus_stats_counts_free(CorpusStatsCounts *counts);
 
 /*
  * Computes the most frequently occurring chord label across every
