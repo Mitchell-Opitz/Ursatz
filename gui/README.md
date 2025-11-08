@@ -650,6 +650,21 @@ from the pure `variant-tree.js`, global `VariantTree`).
   and Open. Rejected variants and everything under them are hidden unless
   "Show rejected" is on; the choice is kept in `localStorage`.
 
+#### Random motifs
+
+The Motifs view has a Random button. Its form takes a mode (major or minor), a meter, an optional key, a form (full,
+rhythm or contour), an optional style (from the styles list), a count (default 6) and an optional seed. Generate lists
+the candidates; each has Play (rendered by the Composer into the score workspace, nothing stored), Reroll (that one
+again with the next seed) and Save (a name, a project; the role comes from the form), which creates a motif item with
+the candidate's notes text, key, meter and pickup. The backend fills in the analysis and degrees as for any motif.
+
+- `POST /api/materials/motifs/random` `{mode, meter, key?, form?, style_id?, count?, seed?}` runs the Composer's
+  `random-motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
+  `3/4`, `key` is like `D minor`, `count` is 1 to 16, `seed` a whole number from 0. A bad input or an unknown style is
+  400. The style model path comes from `ursatz_gui_style_model_path`.
+- Pure helpers in `materials-model.js`: `randomRequest`, `randomProblems`, `randomCandidateToBody`,
+  `candidateKeyText`, `rerollSeed`.
+
 ### Subjects
 
 A subject is a character, place, idea or note that items and Library pieces
