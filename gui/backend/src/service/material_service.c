@@ -714,6 +714,7 @@ static bool project_exists_locked(const char *project_id) {
 
 #define LABEL_MAX_CHARS 8
 #define NOTES_MAX_CHARS 4000
+#define HARMONY_MAX_CHARS 200
 
 static UrsatzGuiMaterialResult invalid_body(char *error, size_t error_size, const char *message) {
     if (error && error_size > 0) {
@@ -888,6 +889,11 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
             !is_whole_number(last, 0) || first->valuedouble > last->valuedouble) {
             return invalid_body(error, error_size, "each feature needs a label of 1 to 8 characters and 0 <= first <= last");
         }
+    }
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(motif, "harmony");
+    if (harmony && !cJSON_IsNull(harmony) &&
+        (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
+        return invalid_body(error, error_size, "motif harmony must be null or a string of at most 200 characters");
     }
     const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
     if (analysis && !cJSON_IsNull(analysis) && !cJSON_IsObject(analysis)) {

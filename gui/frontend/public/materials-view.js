@@ -786,6 +786,15 @@ function buildMotifEditor(body) {
   pickup.size = 6;
   field("Pickup (beats)", pickup, "pickup");
 
+  const harmony = materialsElement("input");
+  harmony.type = "text";
+  harmony.value = initial.harmony;
+  harmony.size = 30;
+  harmony.maxLength = 200;
+  harmony.placeholder = "I V6@2 I@3 (optional)";
+  field("Harmony", harmony, "harmony");
+  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.HARMONY_HINT));
+
   el.appendChild(materialsElement("h2", "section-title", "Features"));
   const featureTable = materialsElement("table", "library-table materials-features");
   el.appendChild(featureTable);
@@ -846,6 +855,7 @@ function buildMotifEditor(body) {
       meter: meter.value,
       key: key.value,
       pickup: pickup.value,
+      harmony: harmony.value,
       features: featureRows.map((row) => ({ ...row })),
     };
   }
@@ -893,7 +903,8 @@ function buildMotifSaveControls(editor, statusEl, label, withNote, onSave) {
     const answer = await onSave(values, note.value);
     save.disabled = false;
     if (answer && !answer.ok) {
-      editor.showError(MaterialsModel.errorText(answer.data, "Could not save the motif"));
+      const message = MaterialsModel.errorText(answer.data, "Could not save the motif");
+      editor.showError(message, MaterialsModel.errorField(message));
     }
   });
   if (withNote) {

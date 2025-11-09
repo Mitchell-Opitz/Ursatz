@@ -398,6 +398,49 @@ static const char *analysis_degrees_text(const cJSON *output, const char *form) 
   return cJSON_IsString(text) ? text->valuestring : NULL;
 }
 
+/* The Composer options for a motif's harmony, features and role (R-140, R-141): --harmony "<text>", one --feature
+   label:first-last per feature (at most 8) and --role. The feature texts live in extras, which the caller keeps until
+   the Composer has run. harmony and role may be overridden (a variant's own harmony, a render's role); NULL means the
+   motif's own. Returns the new argument count. */
+#define MOTIF_FEATURES_MAX 8
+typedef struct {
+  char feature[MOTIF_FEATURES_MAX][64];
+} MotifExtras;
+#define MOTIF_EXTRA_ARGS (2 + 2 * MOTIF_FEATURES_MAX + 2)
+
+static int append_motif_extras(const char **args, int n, const char *harmony, const cJSON *features, const char *role,
+                               MotifExtras *extras) {
+  if (harmony && harmony[0] != '\0') {
+    args[n++] = "--harmony";
+    args[n++] = harmony;
+  }
+  int count = 0;
+  const cJSON *feature = NULL;
+  cJSON_ArrayForEach(feature, features) {
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
+    const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
+    const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
+    if (count == MOTIF_FEATURES_MAX || !cJSON_IsString(label) || !cJSON_IsNumber(first) || !cJSON_IsNumber(last)) {
+      break;
+    }
+    snprintf(extras->feature[count], sizeof(extras->feature[count]), "%s:%d-%d", label->valuestring, first->valueint,
+             last->valueint);
+    args[n++] = "--feature";
+    args[n++] = extras->feature[count++];
+  }
+  if (role && role[0] != '\0') {
+    args[n++] = "--role";
+    args[n++] = role;
+  }
+  return n;
+}
+
+/* The harmony text of a motif member, NULL when it has none. */
+static const char *motif_harmony(const cJSON *motif) {
+  const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(motif, "harmony");
+  return cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? harmony->valuestring : NULL;
+}
+
 /* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
    motif.analysis and its degree, rhythm or contour list as motif.degrees. A body without a valid motif is left alone
    for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
@@ -447,7 +490,8 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   if (!written) {
     *analysis_error = "could not write the note list for the Composer";
   } else {
-    const char *args[14];
+    const char *args[14 + MOTIF_EXTRA_ARGS];
+    MotifExtras extras;
     int n = 0;
     args[n++] = "motive";
     args[n++] = path;
@@ -461,6 +505,9 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
     }
     args[n++] = "--pickup";
     args[n++] = pickup->valuestring;
+    const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
+    n = append_motif_extras(args, n, motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
+                            cJSON_IsString(role) ? role->valuestring : NULL, &extras);
     args[n++] = "--json";
     args[n] = NULL;
     UrsatzGuiComposerOutput out = {0, NULL, NULL};
