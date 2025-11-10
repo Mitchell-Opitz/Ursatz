@@ -47,7 +47,29 @@ PersistenceQueryResult persistence_list_interpretation_ids_for_context(Persisten
                                                                        const char *claim_value_type,
                                                                        char ***out_ids, size_t *out_count);
 
-/* Frees a list returned by either function above. Safe on NULL. */
+/*
+ * The raw claim content of each stored Interpretation with this context_id
+ * and claim value type, in store order. A claim's content is opaque to
+ * persistence (an Interpretation's claim Value); this returns the bytes
+ * verbatim so a reader that knows the format of a claim type can decode it
+ * without touching the Value type itself. On success *out_contents is a newly
+ * allocated array of *out_count entries (NULL when *out_count is 0); free it
+ * with persistence_free_claim_contents.
+ */
+typedef struct {
+    void *bytes;
+    size_t size;
+} PersistenceClaimContent;
+
+PersistenceQueryResult persistence_list_claim_contents_for_context(PersistenceHandle *handle,
+                                                                   const char *context_id,
+                                                                   const char *claim_value_type,
+                                                                   PersistenceClaimContent **out_contents,
+                                                                   size_t *out_count);
+
+void persistence_free_claim_contents(PersistenceClaimContent *contents, size_t count);
+
+/* Frees a list returned by either id function above. Safe on NULL. */
 void persistence_free_id_list(char **ids, size_t count);
 
 #endif

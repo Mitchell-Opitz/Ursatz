@@ -77,3 +77,69 @@ PersistenceQueryResult persistence_list_interpretation_ids_for_context(Persisten
     sqlite3_finalize(stmt);
     return result;
 }
+
+void persistence_free_claim_contents(PersistenceClaimContent *contents, size_t count) {
+    if (contents == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        free(contents[i].bytes);
+    }
+    free(contents);
+}
+
+PersistenceQueryResult persistence_list_claim_contents_for_context(PersistenceHandle *handle,
+                                                                   const char *context_id,
+                                                                   const char *claim_value_type,
+                                                                   PersistenceClaimContent **out_contents,
+                                                                   size_t *out_count) {
+    if (handle == NULL || context_id == NULL || claim_value_type == NULL || out_contents == NULL ||
+        out_count == NULL) {
+        return PERSISTENCE_QUERY_ERR_NULL_ARG;
+    }
+    const char *sql = "SELECT claim_value_content, claim_value_content_size FROM interpretations WHERE context_id = ? "
+                      "AND claim_value_type = ? ORDER BY rowid";
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(persistence_db(handle), sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return PERSISTENCE_QUERY_ERR_DB;
+    }
+    sqlite3_bind_text(stmt, 1, context_id, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, claim_value_type, -1, SQLITE_TRANSIENT);
+
+    PersistenceClaimContent *contents = NULL;
+    size_t count = 0;
+    PersistenceQueryResult result = PERSISTENCE_QUERY_OK;
+    int rc;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        size_t size = (size_t)sqlite3_column_int64(stmt, 1);
+        const void *blob = sqlite3_column_blob(stmt, 0);
+        PersistenceClaimContent *grown = (PersistenceClaimContent *)realloc(contents, (count + 1) * sizeof(*grown));
+        if (grown == NULL) {
+            result = PERSISTENCE_QUERY_ERR_ALLOC;
+            break;
+        }
+        contents = grown;
+        contents[count].bytes = malloc(size == 0 ? 1 : size);
+        if (contents[count].bytes == NULL) {
+            result = PERSISTENCE_QUERY_ERR_ALLOC;
+            break;
+        }
+        if (size > 0 && blob != NULL) {
+            memcpy(contents[count].bytes, blob, size);
+        }
+        contents[count].size = size;
+        count++;
+    }
+    if (result == PERSISTENCE_QUERY_OK && rc != SQLITE_DONE) {
+        result = PERSISTENCE_QUERY_ERR_DB;
+    }
+    sqlite3_finalize(stmt);
+
+    if (result != PERSISTENCE_QUERY_OK) {
+        persistence_free_claim_contents(contents, count);
+        return result;
+    }
+    *out_contents = contents;
+    *out_count = count;
+    return PERSISTENCE_QUERY_OK;
+}
