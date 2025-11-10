@@ -191,3 +191,20 @@ CorpusStatsResult corpus_stats_cadence_types(CorpusStoreHandle *corpus_handle, P
     return count_claims(corpus_handle, persistence_handle, corpus_id, CORPUS_STATS_CADENCE_CLAIM_TYPE,
                         decode_cadence_type, out_counts);
 }
+
+/* "interval-analysis-directed-semitones": one signed long, the interval's size in semitones, negative downward. */
+static int decode_directed_interval(const void *bytes, size_t size, char *label, size_t capacity) {
+    if (size != sizeof(long)) {
+        return 0;
+    }
+    long semitones;
+    memcpy(&semitones, bytes, sizeof(semitones));
+    return snprintf(label, capacity, "%+ld", semitones) > 0;
+}
+
+CorpusStatsResult corpus_stats_directed_intervals(CorpusStoreHandle *corpus_handle,
+                                                  PersistenceHandle *persistence_handle, const char *corpus_id,
+                                                  CorpusStatsCounts *out_counts) {
+    return count_claims(corpus_handle, persistence_handle, corpus_id, CORPUS_STATS_INTERVAL_CLAIM_TYPE,
+                        decode_directed_interval, out_counts);
+}

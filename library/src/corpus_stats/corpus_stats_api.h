@@ -133,4 +133,19 @@ CorpusStatsResult corpus_stats_chord_progressions(CorpusStoreHandle *corpus_hand
 CorpusStatsResult corpus_stats_cadence_types(CorpusStoreHandle *corpus_handle, PersistenceHandle *persistence_handle,
                                              const char *corpus_id, CorpusStatsCounts *out_counts);
 
+/*
+ * Directed intervals: counts the size, in semitones, of every persisted
+ * interval interpretation (claim value type CORPUS_STATS_INTERVAL_CLAIM_TYPE,
+ * whose content is one signed long) across the Corpus, reading each piece ref
+ * as a context id. The label is the signed semitone count with its sign
+ * ("+2", "-3", "+0"). This counts what interval analysis persisted, nothing
+ * more; a claim whose content is not one long is skipped. NO_DATA (output
+ * untouched) if none count.
+ */
+#define CORPUS_STATS_INTERVAL_CLAIM_TYPE "interval-analysis-directed-semitones"
+
+CorpusStatsResult corpus_stats_directed_intervals(CorpusStoreHandle *corpus_handle,
+                                                  PersistenceHandle *persistence_handle, const char *corpus_id,
+                                                  CorpusStatsCounts *out_counts);
+
 #endif
