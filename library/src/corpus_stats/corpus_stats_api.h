@@ -121,4 +121,16 @@ CorpusStatsResult corpus_stats_chord_progressions(CorpusStoreHandle *corpus_hand
                                                   PersistenceHandle *persistence_handle, const char *corpus_id,
                                                   size_t n, CorpusStatsCounts *out_counts);
 
+/*
+ * Cadence types: counts the cadence type of every persisted cadence
+ * interpretation (claim value type CORPUS_STATS_CADENCE_CLAIM_TYPE, whose
+ * content is the type's label as a NUL-terminated string, e.g. "PAC") across
+ * the Corpus, reading each piece ref as a context id. A claim whose content
+ * is not such a string is skipped. NO_DATA (output untouched) if none count.
+ */
+#define CORPUS_STATS_CADENCE_CLAIM_TYPE "cadence-detection-top-candidate"
+
+CorpusStatsResult corpus_stats_cadence_types(CorpusStoreHandle *corpus_handle, PersistenceHandle *persistence_handle,
+                                             const char *corpus_id, CorpusStatsCounts *out_counts);
+
 #endif

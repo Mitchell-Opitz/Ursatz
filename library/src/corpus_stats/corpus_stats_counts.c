@@ -103,6 +103,57 @@ static CorpusStatsResult visit_progressions(PersistenceHandle *persistence_handl
     return result;
 }
 
+/*
+ * Claim-based statistics: the persisted interpretations of one claim value
+ * type, whose content has a plain, documented format that a decoder turns
+ * into a label. A claim whose content does not decode is skipped. Adding a
+ * statistic over another claim type is one decoder and one public function.
+ */
+typedef int (*ClaimLabelDecoder)(const void *bytes, size_t size, char *label, size_t capacity);
+
+typedef struct {
+    CorpusStatsTally *tally;
+    const char *claim_value_type;
+    ClaimLabelDecoder decode;
+} ClaimWalk;
+
+static CorpusStatsResult visit_claims(PersistenceHandle *persistence_handle, const char *piece_ref, void *user_data) {
+    ClaimWalk *walk = (ClaimWalk *)user_data;
+    PersistenceClaimContent *contents = NULL;
+    size_t content_count = 0;
+    if (persistence_list_claim_contents_for_context(persistence_handle, piece_ref, walk->claim_value_type, &contents,
+                                                    &content_count) != PERSISTENCE_QUERY_OK) {
+        return CORPUS_STATS_OK;
+    }
+    CorpusStatsResult result = CORPUS_STATS_OK;
+    for (size_t i = 0; i < content_count && result == CORPUS_STATS_OK; i++) {
+        char label[128];
+        if (walk->decode(contents[i].bytes, contents[i].size, label, sizeof(label))) {
+            result = corpus_stats_tally_add(walk->tally, label);
+        }
+    }
+    persistence_free_claim_contents(contents, content_count);
+    return result;
+}
+
+static CorpusStatsResult count_claims(CorpusStoreHandle *corpus_handle, PersistenceHandle *persistence_handle,
+                                      const char *corpus_id, const char *claim_value_type, ClaimLabelDecoder decode,
+                                      CorpusStatsCounts *out_counts) {
+    if (corpus_handle == NULL || persistence_handle == NULL || corpus_id == NULL || out_counts == NULL) {
+        return CORPUS_STATS_ERR_NULL_ARG;
+    }
+    CorpusStatsTally tally;
+    corpus_stats_tally_init(&tally);
+    ClaimWalk walk = {&tally, claim_value_type, decode};
+    CorpusStatsResult result =
+        corpus_stats_for_each_piece(corpus_handle, persistence_handle, corpus_id, visit_claims, &walk);
+    if (result != CORPUS_STATS_OK) {
+        corpus_stats_tally_free(&tally);
+        return result;
+    }
+    return corpus_stats_tally_finish(&tally, out_counts);
+}
+
 CorpusStatsResult corpus_stats_chord_progressions(CorpusStoreHandle *corpus_handle,
                                                   PersistenceHandle *persistence_handle, const char *corpus_id,
                                                   size_t n, CorpusStatsCounts *out_counts) {
@@ -123,4 +174,20 @@ CorpusStatsResult corpus_stats_chord_progressions(CorpusStoreHandle *corpus_hand
         return result;
     }
     return corpus_stats_tally_finish(&tally, out_counts);
+}
+
+/* "cadence-detection-top-candidate": the cadence type's label as a NUL-terminated string. */
+static int decode_cadence_type(const void *bytes, size_t size, char *label, size_t capacity) {
+    const char *text = (const char *)bytes;
+    if (size < 2 || size > capacity || text[size - 1] != '\0' || text[0] == '\0') {
+        return 0;
+    }
+    memcpy(label, text, size);
+    return 1;
+}
+
+CorpusStatsResult corpus_stats_cadence_types(CorpusStoreHandle *corpus_handle, PersistenceHandle *persistence_handle,
+                                             const char *corpus_id, CorpusStatsCounts *out_counts) {
+    return count_claims(corpus_handle, persistence_handle, corpus_id, CORPUS_STATS_CADENCE_CLAIM_TYPE,
+                        decode_cadence_type, out_counts);
 }
