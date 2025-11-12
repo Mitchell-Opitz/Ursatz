@@ -295,11 +295,27 @@
     return typeof analysis[key] === "string" ? analysis[key] : "";
   }
 
+  /* The labelled features a candidate kept, as the editor stores them. */
+  function candidateFeatures(candidate) {
+    const list = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.features : null;
+    return Array.isArray(list)
+      ? list.map((feature) => ({ label: String(feature.label), first: Number(feature.first), last: Number(feature.last) }))
+      : [];
+  }
+
   /* A motif body for rendering a candidate: the source body with the
-   * candidate's degrees. Feeds MaterialsModel.renderRequest. */
+   * candidate's degrees, harmony and features (the source's would not fit a
+   * fragment or a retrograde). Feeds MaterialsModel.renderRequest. */
   function candidateBody(sourceBody, candidate) {
     const motif = sourceBody && sourceBody.motif ? sourceBody.motif : {};
-    return { motif: { ...motif, degrees: candidateDegrees(candidate, motif.form || "full") } };
+    return {
+      motif: {
+        ...motif,
+        degrees: candidateDegrees(candidate, motif.form || "full"),
+        harmony: candidate && typeof candidate.harmony === "string" ? candidate.harmony : null,
+        features: candidateFeatures(candidate),
+      },
+    };
   }
 
   const api = {
@@ -324,6 +340,7 @@
     operationsRequest,
     candidateView,
     candidateDegrees,
+    candidateFeatures,
     candidateBody,
   };
   if (typeof module !== "undefined" && module.exports) {

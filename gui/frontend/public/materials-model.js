@@ -505,6 +505,12 @@
     if (typeof motif.key === "string" && motif.key !== "") {
       request.key = motif.key;
     }
+    if (typeof motif.harmony === "string" && motif.harmony !== "") {
+      request.harmony = motif.harmony;
+    }
+    if (Array.isArray(motif.features) && motif.features.length > 0) {
+      request.features = motif.features.map((feature) => ({ label: feature.label, first: feature.first, last: feature.last }));
+    }
     if (renderKey) {
       request.render_key = renderKey;
     }
@@ -527,6 +533,9 @@
     };
     if (String(v.key || "").trim() !== "") {
       request.key = String(v.key).trim();
+    }
+    if (v.role === "accompaniment") {
+      request.role = "accompaniment";
     }
     if (String(v.style_id || "") !== "") {
       request.style_id = String(v.style_id);
