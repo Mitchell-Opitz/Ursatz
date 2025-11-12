@@ -115,6 +115,8 @@ add_library(ursatz
     theory/tendency.c
     theory/statistical_model.c
     theory/style_model.c
+    theory/style_fraction.c
+    theory/style_features.c
     transform/transformation.c
     transform/transform_result.c
     transform/transposition.c
