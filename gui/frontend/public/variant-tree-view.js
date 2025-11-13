@@ -32,7 +32,7 @@ const VariantTreeView = (function () {
   }
 
   /* One control per parameter of the chosen operation; an empty text leaves it open. */
-  function paramControls(operation, values) {
+  function paramControls(operation, values, features) {
     const box = h("div", "variant-params");
     for (const param of operation.params) {
       const label = h("label", "filter-field", `${param.name} `);
@@ -42,6 +42,16 @@ const VariantTreeView = (function () {
         control.type = "checkbox";
         control.addEventListener("change", () => {
           values[param.name] = control.checked;
+        });
+      } else if (param.name === "feature" && param.kind === "int") {
+        control = h("select");
+        for (const option of VariantTree.featureOptions(features)) {
+          const o = h("option", "", option.text);
+          o.value = option.value;
+          control.appendChild(o);
+        }
+        control.addEventListener("change", () => {
+          values[param.name] = control.value;
         });
       } else if (param.kind === "position") {
         control = h("select");
@@ -69,7 +79,7 @@ const VariantTreeView = (function () {
     return box;
   }
 
-  function buildPicker(groups, steps, onChange) {
+  function buildPicker(groups, steps, onChange, features) {
     const box = h("div", "variant-picker");
     const list = h("ol", "variant-steps");
     const select = h("select");
@@ -95,7 +105,7 @@ const VariantTreeView = (function () {
       }
       paramBox.innerHTML = "";
       if (operation) {
-        paramBox.appendChild(paramControls(operation, values));
+        paramBox.appendChild(paramControls(operation, values, features));
       }
     }
     function drawSteps() {
@@ -304,7 +314,12 @@ const VariantTreeView = (function () {
         setStatus(status, errorText(answer.data, "Could not load the operations"), true);
         return;
       }
-      picker = buildPicker(VariantTree.operationGroups(answer.data.operations), steps, updateSummary);
+      picker = buildPicker(
+        VariantTree.operationGroups(answer.data.operations),
+        steps,
+        updateSummary,
+        ctx.body && ctx.body.motif ? ctx.body.motif.features : [],
+      );
       pickerHost.appendChild(picker.el);
     });
 

@@ -145,6 +145,16 @@
     }));
   }
 
+  /* The choices of a feature parameter: drawn, then one per labelled feature of the motif (the value is the 0-based
+   * index the chain file takes, the text the label and its 1-based notes). */
+  function featureOptions(features) {
+    const options = [{ value: "", text: "drawn" }];
+    (Array.isArray(features) ? features : []).forEach((feature, index) => {
+      options.push({ value: String(index), text: `${feature.label} (notes ${Number(feature.first) + 1}-${Number(feature.last) + 1})` });
+    });
+    return options;
+  }
+
   /* One chain step from the picker. values maps a parameter name to the text
    * or boolean the control holds; an empty text leaves the parameter open
    * (the seed draws it). Returns {step} or {error}. */
@@ -359,6 +369,7 @@
     MAX_COUNT,
     treeRows,
     operationGroups,
+    featureOptions,
     stepFromValues,
     chainFromSteps,
     generateRequest,
