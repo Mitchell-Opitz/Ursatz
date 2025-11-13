@@ -50,6 +50,27 @@
     return list;
   }
 
+  const FUNCTIONS = ["beginning", "continuation", "contrast", "cadential"];
+
+  /* One chip per function the form suits (R-143). */
+  function functionChips(functions) {
+    return (Array.isArray(functions) ? functions : [])
+      .filter((name) => FUNCTIONS.includes(name))
+      .map((name) => ({ name, state: "function", text: name }));
+  }
+
+  /* "N% remote from the basic motive" for a remoteness from 0 to 1; empty when it is unknown. */
+  function remotenessText(remoteness) {
+    return typeof remoteness === "number" && remoteness >= 0 && remoteness <= 1
+      ? `${Math.round(remoteness * 100)}% remote from the basic motive`
+      : "";
+  }
+
+  /* The harmony line of a form with chords of its own; empty without. */
+  function harmonyLine(harmony) {
+    return typeof harmony === "string" && harmony !== "" ? `Harmony: ${harmony}` : "";
+  }
+
   /* The derivation line of a stored variant: the steps joined by "then". */
   function derivationText(derived) {
     const steps = derived && Array.isArray(derived.operations) ? derived.operations : [];
@@ -83,6 +104,9 @@
         kind: derived ? badge(derived.kind, KIND_LABELS) : null,
         kindValue: derived && KINDS.includes(derived.kind) ? derived.kind : "motive-form",
         chips: derived ? chips(derived.kept, derived.changed) : [],
+        functions: derived ? functionChips(derived.functions) : [],
+        remoteness: derived ? remotenessText(derived.remoteness) : "",
+        harmony: derived ? harmonyLine(derived.harmony) : "",
         seed: derived && Number.isInteger(derived.seed) ? derived.seed : null,
       });
       for (const child of node.children || []) {
@@ -284,6 +308,9 @@
       derivation: String(c.derivation || ""),
       kind: badge(c.kind, KIND_LABELS),
       chips: chips(c.kept, c.changed),
+      functions: functionChips(c.functions),
+      remoteness: remotenessText(c.remoteness),
+      harmony: harmonyLine(c.harmony),
       recognizability: recognizability === null ? "" : `${Math.round(recognizability * 100)}% recognizable`,
     };
   }
@@ -323,6 +350,7 @@
     KINDS,
     KIND_LABELS,
     FLAG_LABELS,
+    FUNCTIONS,
     DEFAULT_COUNT,
     MAX_COUNT,
     treeRows,

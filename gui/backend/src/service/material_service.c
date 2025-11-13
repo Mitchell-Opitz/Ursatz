@@ -841,6 +841,16 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "functions"), functions)) {
         return invalid_body(error, error_size, "derived functions must list beginning, continuation, contrast or cadential");
     }
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(derived, "harmony");
+    if (harmony && !cJSON_IsNull(harmony) &&
+        (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
+        return invalid_body(error, error_size, "derived harmony must be null or a string of at most 200 characters");
+    }
+    const cJSON *remoteness = cJSON_GetObjectItemCaseSensitive(derived, "remoteness");
+    if (remoteness && !cJSON_IsNull(remoteness) &&
+        (!cJSON_IsNumber(remoteness) || remoteness->valuedouble < 0 || remoteness->valuedouble > 1)) {
+        return invalid_body(error, error_size, "derived remoteness must be null or a number from 0 to 1");
+    }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "flag"), flags)) {
         return invalid_body(error, error_size, "derived flag must be approved, rejected or unflagged");
     }

@@ -157,10 +157,17 @@ const VariantTreeView = (function () {
     const meta = h("div", "variant-meta");
     meta.appendChild(h("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
     meta.appendChild(chipRow(view.chips));
+    meta.appendChild(chipRow(view.functions));
     if (view.recognizability) {
       meta.appendChild(h("span", "variant-recognizability", view.recognizability));
     }
+    if (view.remoteness) {
+      meta.appendChild(h("span", "variant-remoteness", view.remoteness));
+    }
     card.appendChild(meta);
+    if (view.harmony) {
+      card.appendChild(h("div", "variant-harmony", view.harmony));
+    }
     const buttons = h("div", "variant-actions");
     buttons.append(
       actionButton("Play", actions.play),
@@ -191,6 +198,15 @@ const VariantTreeView = (function () {
       item.appendChild(h("div", "variant-derivation", row.derivation));
     }
     item.appendChild(chipRow(row.chips));
+    const meta = h("div", "variant-meta");
+    meta.appendChild(chipRow(row.functions));
+    if (row.remoteness) {
+      meta.appendChild(h("span", "variant-remoteness", row.remoteness));
+    }
+    item.appendChild(meta);
+    if (row.harmony) {
+      item.appendChild(h("div", "variant-harmony", row.harmony));
+    }
     const buttons = h("div", "variant-actions");
     const kind = h("select");
     for (const value of VariantTree.KINDS) {

@@ -1650,6 +1650,9 @@ static bool copy_member(cJSON *object, const cJSON *from, const char *name, bool
   return copy && cJSON_AddItemToObject(object, name, copy);
 }
 
+static bool apply_variant_extras(cJSON *derived, const cJSON *variant);
+static bool set_variant_motif_members(cJSON *motif, const cJSON *variant);
+
 /* The derivation record of a stored variant: the chain steps, the seed, the kind and the dimensions kept and changed. */
 static cJSON *derived_record(const char *source_id, int source_version, const cJSON *variant, const char *flag) {
   const cJSON *chain = cJSON_GetObjectItemCaseSensitive(variant, "chain");
@@ -1663,8 +1666,7 @@ static cJSON *derived_record(const char *source_id, int source_version, const cJ
             cJSON_AddNumberToObject(derived, "seed", cJSON_IsNumber(seed) ? seed->valuedouble : 0) &&
             cJSON_AddStringToObject(derived, "kind", cJSON_IsString(kind) ? kind->valuestring : "motive-form") &&
             copy_member(derived, variant, "kept", true) && copy_member(derived, variant, "changed", true) &&
-            cJSON_AddNullToObject(derived, "harmony") && cJSON_AddArrayToObject(derived, "functions") &&
-            cJSON_AddStringToObject(derived, "flag", flag);
+            apply_variant_extras(derived, variant) && cJSON_AddStringToObject(derived, "flag", flag);
   if (!ok) {
     if (derived && !cJSON_GetObjectItemCaseSensitive(derived, "operations")) {
       cJSON_Delete(steps);
@@ -1789,7 +1791,7 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
             (cJSON_IsString(key) ? cJSON_AddStringToObject(new_motif, "key", key->valuestring) != NULL
                                  : cJSON_AddNullToObject(new_motif, "key") != NULL) &&
             cJSON_AddStringToObject(new_motif, "pickup", pickup->valuestring) &&
-            cJSON_AddArrayToObject(new_motif, "features") && cJSON_AddItemToObject(new_motif, "analysis", analysis) &&
+            set_variant_motif_members(new_motif, variant) && cJSON_AddItemToObject(new_motif, "analysis", analysis) &&
             cJSON_AddStringToObject(new_motif, "degrees", variant_text(variant, form, true)) &&
             cJSON_AddItemToObject(new_motif, "derived", derived) && cJSON_AddItemToObject(new_body, "motif", new_motif);
   if (!ok) {
@@ -1932,6 +1934,52 @@ static bool replace_member(cJSON *object, const char *name, cJSON *value) {
   return false;
 }
 
+/* Sets motif.harmony (the variant's own chords as text, or null) and motif.features (the labelled runs it kept). */
+static bool set_variant_motif_members(cJSON *motif, const cJSON *variant) {
+  const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(variant, "harmony");
+  const cJSON *features = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "motive"), "motive"), "features");
+  cJSON *kept = cJSON_CreateArray();
+  const cJSON *feature = NULL;
+  cJSON_ArrayForEach(feature, features) {
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
+    const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
+    const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
+    cJSON *entry = cJSON_IsString(label) && cJSON_IsNumber(first) && cJSON_IsNumber(last) ? cJSON_CreateObject() : NULL;
+    if (entry && cJSON_AddStringToObject(entry, "label", label->valuestring) &&
+        cJSON_AddNumberToObject(entry, "first", first->valuedouble) && cJSON_AddNumberToObject(entry, "last", last->valuedouble)) {
+      cJSON_AddItemToArray(kept, entry);
+    } else {
+      cJSON_Delete(entry);
+    }
+  }
+  return replace_member(motif, "harmony",
+                        cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? cJSON_CreateString(harmony->valuestring)
+                                                                                    : cJSON_CreateNull()) &&
+         replace_member(motif, "features", kept);
+}
+
+/* Sets derived.harmony (the variant's own chords as text, or null), derived.functions (the names it suits) and
+   derived.remoteness (its distance from the basic motive, 0 to 1, or null) from a candidate. */
+static bool apply_variant_extras(cJSON *derived, const cJSON *variant) {
+  const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(variant, "harmony");
+  const cJSON *remoteness = cJSON_GetObjectItemCaseSensitive(variant, "remoteness");
+  cJSON *functions = cJSON_CreateArray();
+  const cJSON *name = NULL;
+  cJSON_ArrayForEach(name, cJSON_GetObjectItemCaseSensitive(variant, "functions")) {
+    if (cJSON_IsString(name) && function_name_ok(name->valuestring)) {
+      cJSON_AddItemToArray(functions, cJSON_CreateString(name->valuestring));
+    }
+  }
+  return replace_member(derived, "harmony",
+                        cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? cJSON_CreateString(harmony->valuestring)
+                                                                                    : cJSON_CreateNull()) &&
+         replace_member(derived, "functions", functions) &&
+         replace_member(derived, "remoteness",
+                        cJSON_IsNumber(remoteness) && remoteness->valuedouble >= 0 && remoteness->valuedouble <= 1
+                            ? cJSON_CreateNumber(remoteness->valuedouble)
+                            : cJSON_CreateNull());
+}
+
 /* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and
    stores the result as a new version. */
 static int handle_reroll(struct mg_connection *conn, const char *id) {
@@ -2010,6 +2058,7 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
             replace_member(derived, "kind", cJSON_CreateString(kind->valuestring)) &&
             replace_member(derived, "kept", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "kept"), 1)) &&
             replace_member(derived, "changed", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "changed"), 1)) &&
+            apply_variant_extras(derived, variant) && set_variant_motif_members(motif, variant) &&
             set_string(derived, "flag", "unflagged");
   char note[501];
   if (ok) {
