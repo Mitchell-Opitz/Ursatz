@@ -273,7 +273,18 @@ const VariantTreeView = (function () {
     rejectedBox.type = "checkbox";
     rejectedBox.checked = loadShowRejected();
     rejectedLabel.appendChild(rejectedBox);
+    const functionBoxes = new Map();
+    const functionFilter = h("span", "variant-function-filter", "Suits ");
+    for (const name of VariantTree.FUNCTIONS) {
+      const label = h("label", "filter-field", `${name} `);
+      const box = h("input");
+      box.type = "checkbox";
+      label.appendChild(box);
+      functionFilter.appendChild(label);
+      functionBoxes.set(name, box);
+    }
     controls.append(countLabel, seed, generate, summary, rejectedLabel);
+    controls.appendChild(functionFilter);
 
     const pickerHost = h("details", "variant-picker-host");
     pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
@@ -448,7 +459,12 @@ const VariantTreeView = (function () {
     rejectedListeners.push(drawTree);
 
     generate.addEventListener("click", async () => {
-      const made = VariantTree.generateRequest(ctx.id, { count: count.value, seed: seed.value, steps });
+      const made = VariantTree.generateRequest(ctx.id, {
+        count: count.value,
+        seed: seed.value,
+        steps,
+        functions: VariantTree.FUNCTIONS.filter((name) => functionBoxes.get(name).checked),
+      });
       if (made.error) {
         setStatus(status, made.error, true);
         return;

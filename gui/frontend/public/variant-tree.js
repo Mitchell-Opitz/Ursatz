@@ -205,7 +205,7 @@
     return /^\d+$/.test(value) && Number.isSafeInteger(number) && number >= min ? number : NaN;
   }
 
-  /* The variants POST. options: {count, seed, steps} (texts or numbers).
+  /* The variants POST. options: {count, seed, steps, functions} (texts or numbers; functions are the names to keep).
    * Returns {request} or {error}. */
   function generateRequest(id, options) {
     const o = options || {};
@@ -227,6 +227,10 @@
     const chain = chainFromSteps(o.steps);
     if (chain) {
       body.chain = chain;
+    }
+    const functions = FUNCTIONS.filter((name) => Array.isArray(o.functions) && o.functions.includes(name));
+    if (functions.length > 0) {
+      body.functions = functions;
     }
     return { request: jsonRequest("POST", itemUrl(id, "variants"), body) };
   }
