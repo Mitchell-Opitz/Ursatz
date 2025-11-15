@@ -6,6 +6,7 @@
 
 
 #include <civetweb.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -722,6 +723,88 @@ static const char *candidate_degrees(const cJSON *answer, int i) {
                    "degrees_text");
 }
 
+/* A motif with its own harmony and features: stored, refused when the Composer cannot read it, passed to variants. */
+static void test_harmony(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  int status = 0;
+  char request[2048];
+  const char *shape = "{\"type\":\"motif\",\"name\":\"Own chords\",\"project_id\":\"%s\",\"body\":{\"uses\":[],\"motif\":{"
+                      "\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"D4:q F4:e A4:e D5:h\",\"meter\":\"4/4\","
+                      "\"key\":\"D minor\",\"pickup\":\"0\",\"harmony\":%s,"
+                      "\"features\":[{\"label\":\"a\",\"first\":0,\"last\":1}],\"analysis\":null,\"derived\":null}}}";
+  snprintf(request, sizeof(request), shape, project, "\"I V@2\"");
+  cJSON *saved = json_exchange("POST", "/api/materials/items", request, &status);
+  check(status == 200 && ok_true(saved), "a motif with its own harmony is saved");
+  cJSON *motif = status == 200 ? read_motif(saved) : NULL;
+  check(strcmp(string_of(motif, "harmony"), "I V@2") == 0, "the harmony is stored with the motif");
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motif, "analysis"), "analysis");
+  check(strcmp(string_of(analysis, "harmony_text"), "I V@2") == 0, "the Composer analyzed the motif with its harmony");
+  cJSON_Delete(motif);
+  char id[64];
+  snprintf(id, sizeof(id), "%s", string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id"));
+  cJSON_Delete(saved);
+
+  snprintf(request, sizeof(request), shape, project, "\"not a chord\"");
+  saved = json_exchange("POST", "/api/materials/items", request, &status);
+  check(status == 400, "harmony the Composer cannot read refuses the save");
+  cJSON_Delete(saved);
+  snprintf(request, sizeof(request), shape, project, "5");
+  saved = json_exchange("POST", "/api/materials/items", request, &status);
+  check(status == 400, "harmony must be text");
+  cJSON_Delete(saved);
+
+  cJSON *answer = item_post(id, "variants", "{\"chain\":{\"steps\":[{\"op\":\"transpose\"}]},\"count\":1,\"seed\":3}", &status);
+  check(status == 200 && ok_true(answer), "variants take the motif's harmony and features");
+  const cJSON *variant = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "variants"), 0);
+  check(cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(variant, "remoteness")) &&
+            cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(variant, "functions")),
+        "a candidate has its remoteness and functions");
+  cJSON *save = cJSON_CreateObject();
+  cJSON_AddItemToObject(save, "variant", cJSON_Duplicate(variant, 1));
+  char *save_text = cJSON_PrintUnformatted(save);
+  cJSON *form = item_post(id, "variants/save", save_text, &status);
+  free(save_text);
+  cJSON_Delete(save);
+  check(status == 200 && ok_true(form), "the form with chords is saved");
+  motif = read_motif(form);
+  const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+  check(strcmp(string_of(motif, "harmony"), string_of(variant, "harmony")) == 0 &&
+            strcmp(string_of(derived, "harmony"), string_of(variant, "harmony")) == 0,
+        "the saved form keeps the variant's own harmony on the motif and in the record");
+  check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(motif, "features")) == 1 &&
+            fabs(number_of(derived, "remoteness") - number_of(variant, "remoteness")) < 1e-9,
+        "the saved form keeps its feature and its remoteness");
+  cJSON_Delete(motif);
+  char form_id[64];
+  snprintf(form_id, sizeof(form_id), "%s", string_of(cJSON_GetObjectItemCaseSensitive(form, "item"), "id"));
+  cJSON_Delete(form);
+  cJSON_Delete(answer);
+
+  /* A derived source measures remoteness from the basic motive, the root of the tree. */
+  answer = item_post(form_id, "variants", "{\"chain\":{\"steps\":[{\"op\":\"transpose\"}]},\"count\":1,\"seed\":4}", &status);
+  check(status == 200 && cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(
+                             cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "variants"), 0), "remoteness")),
+        "a form of a form has its remoteness from the basic motive");
+  cJSON_Delete(answer);
+
+  answer = item_post(id, "variants",
+                     "{\"functions\":[\"beginning\",\"continuation\",\"contrast\",\"cadential\"],\"count\":3,\"seed\":1}", &status);
+  bool all_suit = status == 200;
+  const cJSON *candidate = NULL;
+  cJSON_ArrayForEach(candidate, cJSON_GetObjectItemCaseSensitive(answer, "variants")) {
+    all_suit = all_suit && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(candidate, "functions")) > 0;
+  }
+  check(all_suit, "a function filter keeps only the forms that suit one");
+  cJSON_Delete(answer);
+  answer = item_post(id, "variants", "{\"functions\":[\"finale\"]}", &status);
+  check(status == 400, "an unknown function is refused");
+  cJSON_Delete(answer);
+  answer = item_post(id, "variants", "{\"functions\":\"contrast\"}", &status);
+  check(status == 400, "functions must be a list");
+  cJSON_Delete(answer);
+}
+
 /* Variants are listed, generated without saving, and saved as derived motifs. */
 static void test_variants(void) {
   int status = 0;
@@ -775,8 +858,10 @@ static void test_variants(void) {
         "the derived record names the source, its version and the flag");
   check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(derived, "operations")) == 2 &&
             number_of(derived, "seed") == 11 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(derived, "harmony")) &&
-            cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(derived, "functions")) == 0,
-        "the derived record holds the chain, the seed, no harmony and no functions");
+            cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(derived, "functions")) ==
+                cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(variant, "functions")) &&
+            fabs(number_of(derived, "remoteness") - number_of(variant, "remoteness")) < 1e-9,
+        "the derived record holds the chain, the seed, no harmony, its functions and its remoteness");
   check(strcmp(string_of(motif, "degrees"), first) == 0 && strcmp(string_of(motif, "meter"), "4/4") == 0 &&
             strcmp(string_of(motif, "pickup"), "0") == 0,
         "the saved motif has the candidate's degrees and the source's meter and pickup");
@@ -1002,6 +1087,7 @@ int main(void) {
   test_motif_forms();
   test_motif_import();
   test_motif_render();
+  test_harmony();
   test_variants();
   test_variant_flags_and_tree();
   test_random_motifs();
