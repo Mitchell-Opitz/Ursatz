@@ -398,6 +398,54 @@ static const char *analysis_degrees_text(const cJSON *output, const char *form) 
   return cJSON_IsString(text) ? text->valuestring : NULL;
 }
 
+/* The Composer options for a motif's harmony, features and role (R-140, R-141): --harmony "<text>", one --feature
+   label:first-last per feature (at most 8) and --role. The feature texts live in extras, which the caller keeps until
+   the Composer has run. harmony and role may be overridden (a variant's own harmony, a render's role); NULL means the
+   motif's own. Returns the new argument count. */
+#define MOTIF_FEATURES_MAX 8
+typedef struct {
+  char feature[MOTIF_FEATURES_MAX][64];
+} MotifExtras;
+#define MOTIF_EXTRA_ARGS (2 + 2 * MOTIF_FEATURES_MAX + 2)
+
+static int append_motif_extras(const char **args, int n, const char *harmony, const cJSON *features, const char *role,
+                               MotifExtras *extras) {
+  if (harmony && harmony[0] != '\0') {
+    args[n++] = "--harmony";
+    args[n++] = harmony;
+  }
+  int count = 0;
+  const cJSON *feature = NULL;
+  cJSON_ArrayForEach(feature, features) {
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
+    const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
+    const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
+    if (count == MOTIF_FEATURES_MAX || !cJSON_IsString(label) || !cJSON_IsNumber(first) || !cJSON_IsNumber(last)) {
+      break;
+    }
+    snprintf(extras->feature[count], sizeof(extras->feature[count]), "%s:%d-%d", label->valuestring, first->valueint,
+             last->valueint);
+    args[n++] = "--feature";
+    args[n++] = extras->feature[count++];
+  }
+  if (role && role[0] != '\0') {
+    args[n++] = "--role";
+    args[n++] = role;
+  }
+  return n;
+}
+
+/* The harmony text of a motif member, NULL when it has none. */
+static const char *motif_harmony(const cJSON *motif) {
+  const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(motif, "harmony");
+  return cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? harmony->valuestring : NULL;
+}
+
+/* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
+static const char *motif_role_option(const char *role) {
+  return role && (strcmp(role, "melodic") == 0 || strcmp(role, "accompaniment") == 0) ? role : NULL;
+}
+
 /* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
    motif.analysis and its degree, rhythm or contour list as motif.degrees. A body without a valid motif is left alone
    for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
@@ -447,7 +495,8 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   if (!written) {
     *analysis_error = "could not write the note list for the Composer";
   } else {
-    const char *args[14];
+    const char *args[14 + MOTIF_EXTRA_ARGS];
+    MotifExtras extras;
     int n = 0;
     args[n++] = "motive";
     args[n++] = path;
@@ -461,6 +510,9 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
     }
     args[n++] = "--pickup";
     args[n++] = pickup->valuestring;
+    const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
+    n = append_motif_extras(args, n, motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
+                            cJSON_IsString(role) ? role->valuestring : NULL, &extras);
     args[n++] = "--json";
     args[n] = NULL;
     UrsatzGuiComposerOutput out = {0, NULL, NULL};
@@ -693,6 +745,8 @@ typedef struct {
   const char *pickup;
   const char *render_key;
   const char *role;
+  const char *harmony;
+  const cJSON *features;
   int tempo;
 } RenderInput;
 
@@ -907,7 +961,8 @@ static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_play
   } else {
     char tempo_text[16];
     snprintf(tempo_text, sizeof(tempo_text), "%d", in->tempo);
-    const char *args[24];
+    const char *args[24 + MOTIF_EXTRA_ARGS];
+    MotifExtras extras;
     int n = 0;
     args[n++] = "motive";
     args[n++] = input_path;
@@ -923,6 +978,7 @@ static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_play
     }
     args[n++] = "--pickup";
     args[n++] = in->pickup;
+    n = append_motif_extras(args, n, in->harmony, in->features, motif_role_option(in->role), &extras);
     args[n++] = "--render-key";
     args[n++] = render_key;
     args[n++] = "--musicxml";
@@ -1003,6 +1059,8 @@ static int handle_render(struct mg_connection *conn) {
   in.pickup = optional_string(body, "pickup", &bad);
   in.render_key = optional_string(body, "render_key", &bad);
   in.role = optional_string(body, "role", &bad);
+  in.harmony = optional_string(body, "harmony", &bad);
+  in.features = cJSON_GetObjectItemCaseSensitive(body, "features");
   if (!in.pickup) {
     in.pickup = "0";
   }
@@ -1016,7 +1074,7 @@ static int handle_render(struct mg_connection *conn) {
   }
   if (bad) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "form, degrees, meter, key, pickup, render_key and role must be text and tempo a whole number");
+    return send_failure(conn, 400, "form, degrees, meter, key, pickup, render_key, role and harmony must be text and tempo a whole number");
   }
   char *xml = NULL;
   cJSON *playback = NULL;
@@ -1240,6 +1298,8 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   if (!in.role) {
     in.role = optional_string(motif, "role", &(bool){false});
   }
+  in.harmony = motif_harmony(motif);
+  in.features = cJSON_GetObjectItemCaseSensitive(motif, "features");
   in.render_key = has_render_key ? render_key : NULL;
   if (!cJSON_IsObject(motif) || !in.degrees) {
     cJSON_Delete(version_body);
@@ -1346,14 +1406,38 @@ static bool write_temp_text(char *path, size_t size, const char *stem, const cha
   return written;
 }
 
+/* The names --function takes; the same four the stored derived.functions hold. */
+static bool function_name_ok(const char *name) {
+  return strcmp(name, "beginning") == 0 || strcmp(name, "continuation") == 0 || strcmp(name, "contrast") == 0 ||
+         strcmp(name, "cadential") == 0;
+}
+
+/* The version body of the basic motive of motif's lineage: the end of its derived.source_item links, at most 32 hops.
+   Caller-owned; NULL when the motif is not derived or the lineage cannot be read. */
+static cJSON *lineage_root(const cJSON *motif) {
+  cJSON *root = NULL;
+  const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+  for (int hops = 0; hops < 32 && cJSON_IsObject(derived); hops++) {
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
+    cJSON *body = NULL;
+    if (!cJSON_IsString(source) || ursatz_gui_material_item_get(source->valuestring, NULL, &body) != URSATZ_GUI_MATERIAL_OK) {
+      break;
+    }
+    cJSON_Delete(root);
+    root = body;
+    derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(root, "motif"), "derived");
+  }
+  return cJSON_IsObject(derived) ? (cJSON_Delete(root), NULL) : root;
+}
+
 /* The largest seed the Composer takes: its cap is 4294967295 less the 16 variants of a run. */
 static const double kMaxVariantSeed = 4294967279.0;
 
 /* Runs `variants` on the motif member of a version body (its degrees, form, meter, key and pickup). chain (an object
    {"steps": [...]}) is optional and means random chains when NULL; seed is optional (negative: the clock). On success
    returns the Composer's document; otherwise NULL with *status and message set. */
-static cJSON *run_variants(const cJSON *motif, const cJSON *chain, int count, double seed, int *status, char *message,
-                           size_t message_size) {
+static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const cJSON *chain,
+                           int count, double seed, int *status, char *message, size_t message_size) {
   bool bad = false;
   const char *form = optional_string(motif, "form", &bad);
   const char *degrees = optional_string(motif, "degrees", &bad);
@@ -1367,18 +1451,34 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *chain, int count, do
   }
   char input_path[512];
   char chain_path[512] = "";
+  char basic_path[512] = "";
   if (!write_temp_text(input_path, sizeof(input_path), "ursatz-variants", degrees)) {
     *status = 500;
     snprintf(message, message_size, "could not write the degrees for the Composer");
     return NULL;
   }
   bool full = strcmp(form, "full") == 0;
+  /* The basic motive (the tree root) when this motif is derived: its list, pickup and harmony. */
+  const cJSON *basic = cJSON_GetObjectItemCaseSensitive(basic_body, "motif");
+  const char *basic_degrees = optional_string(basic, "degrees", &(bool){false});
+  const char *basic_pickup = optional_string(basic, "pickup", &(bool){false});
+  if (basic_degrees && basic_degrees[0] != '\0') {
+    if (!write_temp_text(basic_path, sizeof(basic_path), "ursatz-basic", basic_degrees)) {
+      unlink(input_path);
+      *status = 500;
+      snprintf(message, message_size, "could not write the basic motive for the Composer");
+      return NULL;
+    }
+  }
   if (chain) {
     char *chain_text = cJSON_PrintUnformatted(chain);
     bool written = chain_text && write_temp_text(chain_path, sizeof(chain_path), "ursatz-chain", chain_text);
     free(chain_text);
     if (!written) {
       unlink(input_path);
+      if (basic_path[0] != '\0') {
+        unlink(basic_path);
+      }
       *status = 500;
       snprintf(message, message_size, "could not write the chain for the Composer");
       return NULL;
@@ -1388,7 +1488,8 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *chain, int count, do
   char seed_text[32];
   snprintf(count_text, sizeof(count_text), "%d", count);
   snprintf(seed_text, sizeof(seed_text), "%.0f", seed);
-  const char *args[24];
+  const char *args[40 + MOTIF_EXTRA_ARGS];
+  MotifExtras extras;
   int n = 0;
   args[n++] = "variants";
   args[n++] = input_path;
@@ -1403,6 +1504,32 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *chain, int count, do
   if (pickup) {
     args[n++] = "--pickup";
     args[n++] = pickup;
+  }
+  const char *role = optional_string(motif, "role", &(bool){false});
+  n = append_motif_extras(args, n, motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
+                          motif_role_option(role), &extras);
+  if (basic_path[0] != '\0') {
+    args[n++] = "--basic";
+    args[n++] = basic_path;
+    args[n++] = "--basic-format";
+    args[n++] = full ? "degrees" : form;
+    if (basic_pickup) {
+      args[n++] = "--basic-pickup";
+      args[n++] = basic_pickup;
+    }
+    if (motif_harmony(basic)) {
+      args[n++] = "--basic-harmony";
+      args[n++] = motif_harmony(basic);
+    }
+  }
+  const cJSON *function = NULL;
+  int function_count = 0;
+  cJSON_ArrayForEach(function, functions) {
+    if (function_count++ == 4) {
+      break;
+    }
+    args[n++] = "--function";
+    args[n++] = function->valuestring;
   }
   if (chain) {
     args[n++] = "--chain";
@@ -1421,6 +1548,9 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *chain, int count, do
   if (chain) {
     unlink(chain_path);
   }
+  if (basic_path[0] != '\0') {
+    unlink(basic_path);
+  }
   return document;
 }
 
@@ -1435,6 +1565,10 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   const cJSON *chain = cJSON_GetObjectItemCaseSensitive(body, "chain");
   const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
   const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  const cJSON *functions = cJSON_GetObjectItemCaseSensitive(body, "functions");
+  if (cJSON_IsNull(functions)) {
+    functions = NULL;
+  }
   if (cJSON_IsNull(chain)) {
     chain = NULL;
   }
@@ -1446,7 +1580,14 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   }
   int count = 6;
   double seed = -1;
-  bool valid = (!chain || (cJSON_IsObject(chain) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(chain, "steps")))) &&
+  bool functions_ok = !functions || cJSON_IsArray(functions);
+  const cJSON *function = NULL;
+  cJSON_ArrayForEach(function, functions) {
+    functions_ok = functions_ok && cJSON_IsString(function) && function_name_ok(function->valuestring);
+  }
+  functions_ok = functions_ok && (!functions || cJSON_GetArraySize(functions) <= 4);
+  bool valid = functions_ok &&
+               (!chain || (cJSON_IsObject(chain) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(chain, "steps")))) &&
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
                (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
@@ -1454,7 +1595,7 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
                                seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
   if (!valid) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16 and seed a whole number from 0");
+    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16, seed a whole number from 0 and functions at most 4 of beginning, continuation, contrast, cadential");
   }
   if (count_item) {
     count = (int)count_item->valuedouble;
@@ -1470,8 +1611,11 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   }
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
   char message[512];
-  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, chain, count, seed, &status, message, sizeof(message))
+  cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
+  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, basic_body, functions, chain, count, seed, &status,
+                                                         message, sizeof(message))
                                           : NULL;
+  cJSON_Delete(basic_body);
   if (!cJSON_IsObject(motif)) {
     status = 400;
     snprintf(message, sizeof(message), "only a motif has variants");
@@ -1506,6 +1650,9 @@ static bool copy_member(cJSON *object, const cJSON *from, const char *name, bool
   return copy && cJSON_AddItemToObject(object, name, copy);
 }
 
+static bool apply_variant_extras(cJSON *derived, const cJSON *variant);
+static bool set_variant_motif_members(cJSON *motif, const cJSON *variant);
+
 /* The derivation record of a stored variant: the chain steps, the seed, the kind and the dimensions kept and changed. */
 static cJSON *derived_record(const char *source_id, int source_version, const cJSON *variant, const char *flag) {
   const cJSON *chain = cJSON_GetObjectItemCaseSensitive(variant, "chain");
@@ -1519,8 +1666,7 @@ static cJSON *derived_record(const char *source_id, int source_version, const cJ
             cJSON_AddNumberToObject(derived, "seed", cJSON_IsNumber(seed) ? seed->valuedouble : 0) &&
             cJSON_AddStringToObject(derived, "kind", cJSON_IsString(kind) ? kind->valuestring : "motive-form") &&
             copy_member(derived, variant, "kept", true) && copy_member(derived, variant, "changed", true) &&
-            cJSON_AddNullToObject(derived, "harmony") && cJSON_AddArrayToObject(derived, "functions") &&
-            cJSON_AddStringToObject(derived, "flag", flag);
+            apply_variant_extras(derived, variant) && cJSON_AddStringToObject(derived, "flag", flag);
   if (!ok) {
     if (derived && !cJSON_GetObjectItemCaseSensitive(derived, "operations")) {
       cJSON_Delete(steps);
@@ -1645,7 +1791,7 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
             (cJSON_IsString(key) ? cJSON_AddStringToObject(new_motif, "key", key->valuestring) != NULL
                                  : cJSON_AddNullToObject(new_motif, "key") != NULL) &&
             cJSON_AddStringToObject(new_motif, "pickup", pickup->valuestring) &&
-            cJSON_AddArrayToObject(new_motif, "features") && cJSON_AddItemToObject(new_motif, "analysis", analysis) &&
+            set_variant_motif_members(new_motif, variant) && cJSON_AddItemToObject(new_motif, "analysis", analysis) &&
             cJSON_AddStringToObject(new_motif, "degrees", variant_text(variant, form, true)) &&
             cJSON_AddItemToObject(new_motif, "derived", derived) && cJSON_AddItemToObject(new_body, "motif", new_motif);
   if (!ok) {
@@ -1788,6 +1934,52 @@ static bool replace_member(cJSON *object, const char *name, cJSON *value) {
   return false;
 }
 
+/* Sets motif.harmony (the variant's own chords as text, or null) and motif.features (the labelled runs it kept). */
+static bool set_variant_motif_members(cJSON *motif, const cJSON *variant) {
+  const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(variant, "harmony");
+  const cJSON *features = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "motive"), "motive"), "features");
+  cJSON *kept = cJSON_CreateArray();
+  const cJSON *feature = NULL;
+  cJSON_ArrayForEach(feature, features) {
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
+    const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
+    const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
+    cJSON *entry = cJSON_IsString(label) && cJSON_IsNumber(first) && cJSON_IsNumber(last) ? cJSON_CreateObject() : NULL;
+    if (entry && cJSON_AddStringToObject(entry, "label", label->valuestring) &&
+        cJSON_AddNumberToObject(entry, "first", first->valuedouble) && cJSON_AddNumberToObject(entry, "last", last->valuedouble)) {
+      cJSON_AddItemToArray(kept, entry);
+    } else {
+      cJSON_Delete(entry);
+    }
+  }
+  return replace_member(motif, "harmony",
+                        cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? cJSON_CreateString(harmony->valuestring)
+                                                                                    : cJSON_CreateNull()) &&
+         replace_member(motif, "features", kept);
+}
+
+/* Sets derived.harmony (the variant's own chords as text, or null), derived.functions (the names it suits) and
+   derived.remoteness (its distance from the basic motive, 0 to 1, or null) from a candidate. */
+static bool apply_variant_extras(cJSON *derived, const cJSON *variant) {
+  const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(variant, "harmony");
+  const cJSON *remoteness = cJSON_GetObjectItemCaseSensitive(variant, "remoteness");
+  cJSON *functions = cJSON_CreateArray();
+  const cJSON *name = NULL;
+  cJSON_ArrayForEach(name, cJSON_GetObjectItemCaseSensitive(variant, "functions")) {
+    if (cJSON_IsString(name) && function_name_ok(name->valuestring)) {
+      cJSON_AddItemToArray(functions, cJSON_CreateString(name->valuestring));
+    }
+  }
+  return replace_member(derived, "harmony",
+                        cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? cJSON_CreateString(harmony->valuestring)
+                                                                                    : cJSON_CreateNull()) &&
+         replace_member(derived, "functions", functions) &&
+         replace_member(derived, "remoteness",
+                        cJSON_IsNumber(remoteness) && remoteness->valuedouble >= 0 && remoteness->valuedouble <= 1
+                            ? cJSON_CreateNumber(remoteness->valuedouble)
+                            : cJSON_CreateNull());
+}
+
 /* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and
    stores the result as a new version. */
 static int handle_reroll(struct mg_connection *conn, const char *id) {
@@ -1814,6 +2006,7 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 404, "the source motif or its version is gone");
   }
   cJSON *chain = chain_for_reroll(cJSON_GetObjectItemCaseSensitive(derived, "operations"));
+  cJSON *basic_body = lineage_root(cJSON_GetObjectItemCaseSensitive(source, "motif"));
   const cJSON *shown = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
   int status = 500;
   char message[512] = "out of memory";
@@ -1824,8 +2017,8 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   for (int attempt = 0; chain && attempt < 16; attempt++) {
     seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
     cJSON_Delete(document);
-    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), chain, 1, seed, &status, message,
-                            sizeof(message));
+    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, chain, 1, seed, &status,
+                            message, sizeof(message));
     if (!document) {
       break;
     }
@@ -1845,6 +2038,7 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   }
   cJSON_Delete(source);
   cJSON_Delete(chain);
+  cJSON_Delete(basic_body);
   if (!document || !variant) {
     bool same = document != NULL;
     cJSON_Delete(document);
@@ -1864,6 +2058,7 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
             replace_member(derived, "kind", cJSON_CreateString(kind->valuestring)) &&
             replace_member(derived, "kept", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "kept"), 1)) &&
             replace_member(derived, "changed", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "changed"), 1)) &&
+            apply_variant_extras(derived, variant) && set_variant_motif_members(motif, variant) &&
             set_string(derived, "flag", "unflagged");
   char note[501];
   if (ok) {
@@ -1989,6 +2184,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   const char *key = optional_string(body, "key", &bad);
   const char *form = optional_string(body, "form", &bad);
   const char *style_id = optional_string(body, "style_id", &bad);
+  const char *role = optional_string(body, "role", &bad);
   const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
   const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
   if (cJSON_IsNull(count_item)) {
@@ -2003,7 +2199,10 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (style_id && style_id[0] == '\0') {
     style_id = NULL;
   }
-  bool valid = !bad && mode && (strcmp(mode, "major") == 0 || strcmp(mode, "minor") == 0) && meter &&
+  if (role && role[0] == '\0') {
+    role = NULL;
+  }
+  bool valid = !bad && mode && (!role || motif_role_option(role)) && (strcmp(mode, "major") == 0 || strcmp(mode, "minor") == 0) && meter &&
                analysis_meter_ok(meter) && (!key || analysis_key_ok(key)) &&
                (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
@@ -2014,7 +2213,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (!valid) {
     cJSON_Delete(body);
     return send_failure(conn, 400,
-                        "mode is major or minor, meter like 3/4, key like D minor, form full, rhythm or contour, "
+                        "mode is major or minor, meter like 3/4, key like D minor, form full, rhythm or contour, role melodic or accompaniment, "
                         "count 1 to 16 and seed a whole number from 0");
   }
   char style_path[1024] = "";
@@ -2026,7 +2225,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   char seed_text[32];
   snprintf(count_text, sizeof(count_text), "%d", count_item ? (int)count_item->valuedouble : 6);
   snprintf(seed_text, sizeof(seed_text), "%.0f", seed_item ? seed_item->valuedouble : 0.0);
-  const char *args[20];
+  const char *args[24];
   int n = 0;
   args[n++] = "random-motive";
   args[n++] = "--mode";
@@ -2039,6 +2238,10 @@ static int handle_random_motifs(struct mg_connection *conn) {
   }
   args[n++] = "--form";
   args[n++] = form ? form : "full";
+  if (role) {
+    args[n++] = "--role";
+    args[n++] = role;
+  }
   if (style_id) {
     args[n++] = "--style";
     args[n++] = style_path;

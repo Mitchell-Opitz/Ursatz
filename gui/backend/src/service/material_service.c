@@ -714,6 +714,7 @@ static bool project_exists_locked(const char *project_id) {
 
 #define LABEL_MAX_CHARS 8
 #define NOTES_MAX_CHARS 4000
+#define HARMONY_MAX_CHARS 200
 
 static UrsatzGuiMaterialResult invalid_body(char *error, size_t error_size, const char *message) {
     if (error && error_size > 0) {
@@ -840,6 +841,16 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "functions"), functions)) {
         return invalid_body(error, error_size, "derived functions must list beginning, continuation, contrast or cadential");
     }
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(derived, "harmony");
+    if (harmony && !cJSON_IsNull(harmony) &&
+        (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
+        return invalid_body(error, error_size, "derived harmony must be null or a string of at most 200 characters");
+    }
+    const cJSON *remoteness = cJSON_GetObjectItemCaseSensitive(derived, "remoteness");
+    if (remoteness && !cJSON_IsNull(remoteness) &&
+        (!cJSON_IsNumber(remoteness) || remoteness->valuedouble < 0 || remoteness->valuedouble > 1)) {
+        return invalid_body(error, error_size, "derived remoteness must be null or a number from 0 to 1");
+    }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "flag"), flags)) {
         return invalid_body(error, error_size, "derived flag must be approved, rejected or unflagged");
     }
@@ -888,6 +899,11 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
             !is_whole_number(last, 0) || first->valuedouble > last->valuedouble) {
             return invalid_body(error, error_size, "each feature needs a label of 1 to 8 characters and 0 <= first <= last");
         }
+    }
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(motif, "harmony");
+    if (harmony && !cJSON_IsNull(harmony) &&
+        (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
+        return invalid_body(error, error_size, "motif harmony must be null or a string of at most 200 characters");
     }
     const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
     if (analysis && !cJSON_IsNull(analysis) && !cJSON_IsObject(analysis)) {

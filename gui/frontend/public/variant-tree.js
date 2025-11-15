@@ -50,6 +50,27 @@
     return list;
   }
 
+  const FUNCTIONS = ["beginning", "continuation", "contrast", "cadential"];
+
+  /* One chip per function the form suits (R-143). */
+  function functionChips(functions) {
+    return (Array.isArray(functions) ? functions : [])
+      .filter((name) => FUNCTIONS.includes(name))
+      .map((name) => ({ name, state: "function", text: name }));
+  }
+
+  /* "N% remote from the basic motive" for a remoteness from 0 to 1; empty when it is unknown. */
+  function remotenessText(remoteness) {
+    return typeof remoteness === "number" && remoteness >= 0 && remoteness <= 1
+      ? `${Math.round(remoteness * 100)}% remote from the basic motive`
+      : "";
+  }
+
+  /* The harmony line of a form with chords of its own; empty without. */
+  function harmonyLine(harmony) {
+    return typeof harmony === "string" && harmony !== "" ? `Harmony: ${harmony}` : "";
+  }
+
   /* The derivation line of a stored variant: the steps joined by "then". */
   function derivationText(derived) {
     const steps = derived && Array.isArray(derived.operations) ? derived.operations : [];
@@ -83,6 +104,9 @@
         kind: derived ? badge(derived.kind, KIND_LABELS) : null,
         kindValue: derived && KINDS.includes(derived.kind) ? derived.kind : "motive-form",
         chips: derived ? chips(derived.kept, derived.changed) : [],
+        functions: derived ? functionChips(derived.functions) : [],
+        remoteness: derived ? remotenessText(derived.remoteness) : "",
+        harmony: derived ? harmonyLine(derived.harmony) : "",
         seed: derived && Number.isInteger(derived.seed) ? derived.seed : null,
       });
       for (const child of node.children || []) {
@@ -119,6 +143,16 @@
       title: titleOf(category),
       operations: groups.get(category),
     }));
+  }
+
+  /* The choices of a feature parameter: drawn, then one per labelled feature of the motif (the value is the 0-based
+   * index the chain file takes, the text the label and its 1-based notes). */
+  function featureOptions(features) {
+    const options = [{ value: "", text: "drawn" }];
+    (Array.isArray(features) ? features : []).forEach((feature, index) => {
+      options.push({ value: String(index), text: `${feature.label} (notes ${Number(feature.first) + 1}-${Number(feature.last) + 1})` });
+    });
+    return options;
   }
 
   /* One chain step from the picker. values maps a parameter name to the text
@@ -181,7 +215,7 @@
     return /^\d+$/.test(value) && Number.isSafeInteger(number) && number >= min ? number : NaN;
   }
 
-  /* The variants POST. options: {count, seed, steps} (texts or numbers).
+  /* The variants POST. options: {count, seed, steps, functions} (texts or numbers; functions are the names to keep).
    * Returns {request} or {error}. */
   function generateRequest(id, options) {
     const o = options || {};
@@ -203,6 +237,10 @@
     const chain = chainFromSteps(o.steps);
     if (chain) {
       body.chain = chain;
+    }
+    const functions = FUNCTIONS.filter((name) => Array.isArray(o.functions) && o.functions.includes(name));
+    if (functions.length > 0) {
+      body.functions = functions;
     }
     return { request: jsonRequest("POST", itemUrl(id, "variants"), body) };
   }
@@ -284,6 +322,9 @@
       derivation: String(c.derivation || ""),
       kind: badge(c.kind, KIND_LABELS),
       chips: chips(c.kept, c.changed),
+      functions: functionChips(c.functions),
+      remoteness: remotenessText(c.remoteness),
+      harmony: harmonyLine(c.harmony),
       recognizability: recognizability === null ? "" : `${Math.round(recognizability * 100)}% recognizable`,
     };
   }
@@ -295,11 +336,27 @@
     return typeof analysis[key] === "string" ? analysis[key] : "";
   }
 
+  /* The labelled features a candidate kept, as the editor stores them. */
+  function candidateFeatures(candidate) {
+    const list = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.features : null;
+    return Array.isArray(list)
+      ? list.map((feature) => ({ label: String(feature.label), first: Number(feature.first), last: Number(feature.last) }))
+      : [];
+  }
+
   /* A motif body for rendering a candidate: the source body with the
-   * candidate's degrees. Feeds MaterialsModel.renderRequest. */
+   * candidate's degrees, harmony and features (the source's would not fit a
+   * fragment or a retrograde). Feeds MaterialsModel.renderRequest. */
   function candidateBody(sourceBody, candidate) {
     const motif = sourceBody && sourceBody.motif ? sourceBody.motif : {};
-    return { motif: { ...motif, degrees: candidateDegrees(candidate, motif.form || "full") } };
+    return {
+      motif: {
+        ...motif,
+        degrees: candidateDegrees(candidate, motif.form || "full"),
+        harmony: candidate && typeof candidate.harmony === "string" ? candidate.harmony : null,
+        features: candidateFeatures(candidate),
+      },
+    };
   }
 
   const api = {
@@ -307,10 +364,12 @@
     KINDS,
     KIND_LABELS,
     FLAG_LABELS,
+    FUNCTIONS,
     DEFAULT_COUNT,
     MAX_COUNT,
     treeRows,
     operationGroups,
+    featureOptions,
     stepFromValues,
     chainFromSteps,
     generateRequest,
@@ -324,6 +383,7 @@
     operationsRequest,
     candidateView,
     candidateDegrees,
+    candidateFeatures,
     candidateBody,
   };
   if (typeof module !== "undefined" && module.exports) {

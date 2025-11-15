@@ -456,6 +456,10 @@ static void test_body_validation(void) {
     expect_motif("features", "[{\"label\":\"a\",\"first\":3,\"last\":2}]", INVALID);
     expect_motif("features", "[{\"label\":\"a\",\"first\":0.5,\"last\":2}]", INVALID);
     expect_motif("features", "[{\"label\":\"a\",\"first\":0}]", INVALID);
+    expect_motif("harmony", "null", OK);
+    expect_motif("harmony", "\"I V6@2 I@3\"", OK);
+    expect_motif("harmony", "5", INVALID);
+    expect_motif("harmony", "[]", INVALID);
     expect_motif("analysis", "{\"degrees\":[]}", OK);
     expect_motif("analysis", "[]", INVALID);
 
@@ -472,6 +476,8 @@ static void test_body_validation(void) {
         {"\"source_item\":\"mot-0123456789abcdef\"", "\"source_item\":\"a b\""},
         {"\"operations\":[]", "\"operations\":null"},
         {"\"seed\":42", "\"seed\":\"x\""},
+        {"\"seed\":42", "\"seed\":42,\"remoteness\":2"},
+        {"\"seed\":42", "\"seed\":42,\"harmony\":7"},
     };
     for (size_t i = 0; i < sizeof(edits) / sizeof(edits[0]); i++) {
         char *text = strdup(kDerived);

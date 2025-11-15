@@ -76,6 +76,7 @@
           meter: "4/4",
           key: null,
           pickup: "0",
+          harmony: null,
           features: [],
           analysis: null,
           derived: null,
@@ -340,6 +341,9 @@
     { value: "contour", label: "Contour only", enabled: true },
   ];
 
+  const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords; empty means none.";
+  const HARMONY_MAX_CHARS = 200;
+
   /* The syntax hint under the note list for a motif form. */
   function formHint(form) {
     return form === "rhythm" ? RHYTHM_HINT : form === "contour" ? CONTOUR_HINT : NOTE_HINT;
@@ -355,6 +359,7 @@
       meter: typeof motif.meter === "string" ? motif.meter : "4/4",
       key: typeof motif.key === "string" ? motif.key : "",
       pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
+      harmony: typeof motif.harmony === "string" ? motif.harmony : "",
       features: Array.isArray(motif.features)
         ? motif.features.map((feature) => ({
             label: String(feature.label),
@@ -404,10 +409,23 @@
     if (!/^\d{1,2}(\/\d{1,2})?$/.test(String(values.pickup || "").trim())) {
       problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
     }
+    if (Array.from(String(values.harmony || "")).length > HARMONY_MAX_CHARS) {
+      problems.push({ field: "harmony", message: `Harmony is at most ${HARMONY_MAX_CHARS} characters.` });
+    }
     for (const message of featureProblems(values.features)) {
       problems.push({ field: "features", message });
     }
     return problems;
+  }
+
+  /* The editor field a Composer refusal belongs to: harmony for a chord problem, features for a feature one, else the
+   * note list. */
+  function errorField(message) {
+    const text = String(message || "");
+    if (/harmony|chord|numeral|token \d+ \(column/i.test(text)) {
+      return "harmony";
+    }
+    return /feature/i.test(text) ? "features" : "notes";
   }
 
   /* Messages for the feature rows (1-based first and last note). */
@@ -457,6 +475,7 @@
         meter: String(values.meter).trim(),
         key: String(values.key || "").trim() === "" ? null : String(values.key).trim(),
         pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
+        harmony: String(values.harmony || "").trim() === "" ? null : String(values.harmony).trim(),
         features: (values.features || []).map((feature) => ({
           label: String(feature.label).trim(),
           first: Number(feature.first) - 1,
@@ -486,6 +505,12 @@
     if (typeof motif.key === "string" && motif.key !== "") {
       request.key = motif.key;
     }
+    if (typeof motif.harmony === "string" && motif.harmony !== "") {
+      request.harmony = motif.harmony;
+    }
+    if (Array.isArray(motif.features) && motif.features.length > 0) {
+      request.features = motif.features.map((feature) => ({ label: feature.label, first: feature.first, last: feature.last }));
+    }
     if (renderKey) {
       request.render_key = renderKey;
     }
@@ -508,6 +533,9 @@
     };
     if (String(v.key || "").trim() !== "") {
       request.key = String(v.key).trim();
+    }
+    if (v.role === "accompaniment") {
+      request.role = "accompaniment";
     }
     if (String(v.style_id || "") !== "") {
       request.style_id = String(v.style_id);
@@ -564,6 +592,7 @@
         meter: String(v.meter || "").trim() || "4/4",
         key: key === "" ? null : key,
         pickup: typeof analysis.pickup === "string" && analysis.pickup !== "" ? analysis.pickup : "0",
+        harmony: null,
         features: [],
         analysis: null,
         degrees: null,
@@ -730,6 +759,8 @@
     buildAddVersionRequest,
     NOTE_HINT,
     formHint,
+    errorField,
+    HARMONY_HINT,
     buildImportMidiRequest,
     importToFormValues,
     MOTIF_ROLES,

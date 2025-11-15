@@ -99,6 +99,17 @@ const body = {
 const values = M.motifFormValues(body);
 check(values.role === "accompaniment" && values.key === "D minor" && values.pickup === "1/2", "form values read the motif");
 check(same(values.features, [{ label: "a", first: 1, last: 2 }]), "features show note numbers from 1");
+check(values.harmony === "" && M.motifFormValues({ motif: { harmony: "I V6@2" } }).harmony === "I V6@2", "form values read the harmony");
+check(M.motifFormProblems({ ...values, harmony: "I V6@2 I@3" }).length === 0, "a harmony is fine");
+check(M.motifFormProblems({ ...values, harmony: "I ".repeat(101) })[0].field === "harmony", "a harmony over 200 characters is a problem");
+check(M.buildMotifBody({ ...values, harmony: " I V6@2 " }, null).motif.harmony === "I V6@2", "the body holds the trimmed harmony");
+check(M.buildMotifBody({ ...values, harmony: "  " }, null).motif.harmony === null, "an empty harmony is stored as null");
+check(M.newItemBody("motif").motif.harmony === null, "a new motif has no harmony");
+check(M.errorField("harmony: token 2 (column 4) is not a chord") === "harmony" && M.errorField("features[0] is outside the notes") === "features" && M.errorField("give a key") === "notes", "a Composer refusal goes to its field");
+const withHarmony = M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4", harmony: "I V@2", features: [{ label: "a", first: 0, last: 1 }] } });
+check(JSON.parse(withHarmony.body).harmony === "I V@2" && JSON.parse(withHarmony.body).features.length === 1, "a render passes the harmony and features");
+check(JSON.parse(M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4" } }).body).harmony === undefined, "a render without harmony leaves it out");
+check(JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", role: "accompaniment" }).body).role === "accompaniment" && JSON.parse(M.randomRequest({ mode: "major", meter: "4/4" }).body).role === undefined, "random motifs pass an accompaniment role");
 const blank = M.motifFormValues(null);
 check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && blank.form === "full", "a new motif form has defaults");
 check(M.motifFormProblems(blank).length === 1 && M.motifFormProblems(blank)[0].field === "notes", "empty notes are a problem");

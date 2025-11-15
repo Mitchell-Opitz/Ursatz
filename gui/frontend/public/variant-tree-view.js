@@ -32,7 +32,7 @@ const VariantTreeView = (function () {
   }
 
   /* One control per parameter of the chosen operation; an empty text leaves it open. */
-  function paramControls(operation, values) {
+  function paramControls(operation, values, features) {
     const box = h("div", "variant-params");
     for (const param of operation.params) {
       const label = h("label", "filter-field", `${param.name} `);
@@ -42,6 +42,16 @@ const VariantTreeView = (function () {
         control.type = "checkbox";
         control.addEventListener("change", () => {
           values[param.name] = control.checked;
+        });
+      } else if (param.name === "feature" && param.kind === "int") {
+        control = h("select");
+        for (const option of VariantTree.featureOptions(features)) {
+          const o = h("option", "", option.text);
+          o.value = option.value;
+          control.appendChild(o);
+        }
+        control.addEventListener("change", () => {
+          values[param.name] = control.value;
         });
       } else if (param.kind === "position") {
         control = h("select");
@@ -69,7 +79,7 @@ const VariantTreeView = (function () {
     return box;
   }
 
-  function buildPicker(groups, steps, onChange) {
+  function buildPicker(groups, steps, onChange, features) {
     const box = h("div", "variant-picker");
     const list = h("ol", "variant-steps");
     const select = h("select");
@@ -95,7 +105,7 @@ const VariantTreeView = (function () {
       }
       paramBox.innerHTML = "";
       if (operation) {
-        paramBox.appendChild(paramControls(operation, values));
+        paramBox.appendChild(paramControls(operation, values, features));
       }
     }
     function drawSteps() {
@@ -157,10 +167,17 @@ const VariantTreeView = (function () {
     const meta = h("div", "variant-meta");
     meta.appendChild(h("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
     meta.appendChild(chipRow(view.chips));
+    meta.appendChild(chipRow(view.functions));
     if (view.recognizability) {
       meta.appendChild(h("span", "variant-recognizability", view.recognizability));
     }
+    if (view.remoteness) {
+      meta.appendChild(h("span", "variant-remoteness", view.remoteness));
+    }
     card.appendChild(meta);
+    if (view.harmony) {
+      card.appendChild(h("div", "variant-harmony", view.harmony));
+    }
     const buttons = h("div", "variant-actions");
     buttons.append(
       actionButton("Play", actions.play),
@@ -191,6 +208,15 @@ const VariantTreeView = (function () {
       item.appendChild(h("div", "variant-derivation", row.derivation));
     }
     item.appendChild(chipRow(row.chips));
+    const meta = h("div", "variant-meta");
+    meta.appendChild(chipRow(row.functions));
+    if (row.remoteness) {
+      meta.appendChild(h("span", "variant-remoteness", row.remoteness));
+    }
+    item.appendChild(meta);
+    if (row.harmony) {
+      item.appendChild(h("div", "variant-harmony", row.harmony));
+    }
     const buttons = h("div", "variant-actions");
     const kind = h("select");
     for (const value of VariantTree.KINDS) {
@@ -257,7 +283,18 @@ const VariantTreeView = (function () {
     rejectedBox.type = "checkbox";
     rejectedBox.checked = loadShowRejected();
     rejectedLabel.appendChild(rejectedBox);
+    const functionBoxes = new Map();
+    const functionFilter = h("span", "variant-function-filter", "Suits ");
+    for (const name of VariantTree.FUNCTIONS) {
+      const label = h("label", "filter-field", `${name} `);
+      const box = h("input");
+      box.type = "checkbox";
+      label.appendChild(box);
+      functionFilter.appendChild(label);
+      functionBoxes.set(name, box);
+    }
     controls.append(countLabel, seed, generate, summary, rejectedLabel);
+    controls.appendChild(functionFilter);
 
     const pickerHost = h("details", "variant-picker-host");
     pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
@@ -277,7 +314,12 @@ const VariantTreeView = (function () {
         setStatus(status, errorText(answer.data, "Could not load the operations"), true);
         return;
       }
-      picker = buildPicker(VariantTree.operationGroups(answer.data.operations), steps, updateSummary);
+      picker = buildPicker(
+        VariantTree.operationGroups(answer.data.operations),
+        steps,
+        updateSummary,
+        ctx.body && ctx.body.motif ? ctx.body.motif.features : [],
+      );
       pickerHost.appendChild(picker.el);
     });
 
@@ -432,7 +474,12 @@ const VariantTreeView = (function () {
     rejectedListeners.push(drawTree);
 
     generate.addEventListener("click", async () => {
-      const made = VariantTree.generateRequest(ctx.id, { count: count.value, seed: seed.value, steps });
+      const made = VariantTree.generateRequest(ctx.id, {
+        count: count.value,
+        seed: seed.value,
+        steps,
+        functions: VariantTree.FUNCTIONS.filter((name) => functionBoxes.get(name).checked),
+      });
       if (made.error) {
         setStatus(status, made.error, true);
         return;
