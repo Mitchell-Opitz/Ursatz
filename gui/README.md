@@ -76,8 +76,14 @@ editor empty, and the first Save creates the motif (it needs a name and a
 project). The form has the role (melodic or accompaniment), the form (only
 full can be chosen; rhythm and contour are shown disabled, P13), the note
 list with its syntax hint, the meter, an optional key, the pickup in exact
-beats (`0`, `1` or `1/2`) and a features table (label of 1 to 8 characters,
-first and last note counted from 1; rows are added and removed in place).
+beats (`0`, `1` or `1/2`), an optional Harmony field and a features table
+(label of 1 to 8 characters, first and last note counted from 1; rows are
+added and removed in place). Harmony is the motif's own chords as the Composer
+reads them (`I V6@2 I@3`: upper case Roman numerals, `b` or `#` before one
+for an altered root, figures `6`, `64`, `7`, `65`, `43`, `42`, and `@` the
+onset in beats; the first chord needs no onset; up to 8 chords, at most 200
+characters; empty means none). A chord the Composer cannot read shows its
+message under the Harmony field.
 Save as new version writes a version with an optional note; the Composer's
 message for a note list it cannot read shows beside the note list and the
 input is kept. The Analysis panel under the form shows the scale degrees,
@@ -561,8 +567,9 @@ materials/
 - A version body is validated by `ursatz_gui_material_body_validate` before it
   is written: an object with a `uses` array, and the member of its own type
   (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
-  `notes`, `meter`, `key`, `pickup`, `features`, `analysis` and `derived`; the
-  rules are listed in `service/material_service.h`.
+  `notes`, `meter`, `key`, `pickup`, `harmony` (null or text, at most 200
+  characters), `features`, `analysis` and `derived`; the rules are listed in
+  `service/material_service.h`.
 - Projects and items are passed as cJSON objects; the caller frees what it
   receives.
 
@@ -612,11 +619,12 @@ in any of the 24 keys. Nothing is saved; the key only changes how the stored
 list is sounded.
 
 - `POST /api/materials/render` takes `{form, degrees, meter, key?, pickup?,
-  render_key?, tempo?, role?}` (`form` `full`, `rhythm` or `contour`;
+  render_key?, tempo?, role?, harmony?, features?}` (`form` `full`, `rhythm` or `contour`;
   `degrees` 1 to 4000 characters; `tempo` 20 to 400) and answers
   `{ok, musicxml, playback}`. The route runs `ursatz-composer motive <file>
   --format degrees|rhythm|contour --form <form> --meter <m> [--key <k>]
-  --pickup <p> --render-key <k> --musicxml <file> [--tempo <n>] --json`.
+  --pickup <p> [--harmony <text>] [--feature <label:first-last>]...
+  [--role <role>] --render-key <k> --musicxml <file> [--tempo <n>] --json`.
   `render_key` defaults to `key`; without either the answer is 400 "give a
   key". A list the Composer refuses is 400 with its message.
 - `playback` has the shape of the Analyzer's playback (`tempo`, one part
@@ -650,6 +658,30 @@ from the pure `variant-tree.js`, global `VariantTree`).
   and Open. Rejected variants and everything under them are hidden unless
   "Show rejected" is on; the choice is kept in `localStorage`.
 
+#### Motive-forms: harmony, functions and remoteness
+
+Every Composer call for a motif (`motive` on save, `variants`, render and
+`random-motive`) passes the motif's `--harmony`, one `--feature label:first-last`
+per feature (at most 8) and `--role` from the body. When the source of
+`POST /api/materials/items/<id>/variants` is itself derived, the route follows
+`derived.source_item` to the root of the tree (at most 32 steps) and passes it
+as `--basic` with `--basic-format`, `--basic-pickup` and `--basic-harmony`, so
+remoteness is measured from the basic motive, not from the parent.
+
+- `POST .../variants` also takes `functions`, up to four of `beginning`,
+  `continuation`, `contrast` and `cadential`, sent as `--function`; only
+  forms that suit one of them come back (the Composer fails when none does).
+  The generate panel has a checkbox for each.
+- A candidate carries `functions`, `remoteness` (0 to 1) and, when it has chords
+  of its own, `harmony`. Cards and tree rows show the function chips, "N% remote
+  from the basic motive" and a `Harmony:` line.
+- Saving a candidate (and rerolling a stored form) writes `motif.harmony`,
+  `motif.features` (the labelled runs the form kept) and `derived.harmony`,
+  `derived.functions` and `derived.remoteness`.
+- The operation picker offers the motif's feature labels for the `feature`
+  parameter of `repeat-feature` and `shift-feature`.
+- `POST /api/materials/motifs/random` also takes `role`.
+
 #### Random motifs
 
 The Motifs view has a Random button. Its form takes a mode (major or minor), a meter, an optional key, a form (full,
@@ -658,7 +690,7 @@ the candidates; each has Play (rendered by the Composer into the score workspace
 again with the next seed) and Save (a name, a project; the role comes from the form), which creates a motif item with
 the candidate's notes text, key, meter and pickup. The backend fills in the analysis and degrees as for any motif.
 
-- `POST /api/materials/motifs/random` `{mode, meter, key?, form?, style_id?, count?, seed?}` runs the Composer's
+- `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` runs the Composer's
   `random-motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
   `3/4`, `key` is like `D minor`, `count` is 1 to 16, `seed` a whole number from 0. A bad input or an unknown style is
   400. The style model path comes from `ursatz_gui_style_model_path`.
