@@ -118,6 +118,7 @@ add_library(ursatz
     theory/style_fraction.c
     theory/style_features.c
     theory/style_model_build.c
+    theory/style_model_blend.c
     transform/transformation.c
     transform/transform_result.c
     transform/transposition.c
