@@ -2114,6 +2114,149 @@ static bool apply_variant_extras(cJSON *derived, const cJSON *variant) {
                             : cJSON_CreateNull());
 }
 
+/* True when every step of the chain is the "exact" step the Composer names a motive that equals its source. */
+static bool steps_are_exact(const cJSON *steps) {
+  const cJSON *step = NULL;
+  cJSON_ArrayForEach(step, steps) {
+    const cJSON *op = cJSON_GetObjectItemCaseSensitive(step, "op");
+    if (!cJSON_IsString(op) || strcmp(op->valuestring, "exact") != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/* True when id is source_id or one of the items above it, following derived.source_item at most 32 hops. */
+static bool item_is_in_lineage(const char *id, const char *source_id) {
+  char current[128];
+  snprintf(current, sizeof(current), "%s", source_id);
+  for (int hops = 0; hops <= 32; hops++) {
+    if (strcmp(current, id) == 0) {
+      return true;
+    }
+    cJSON *body = NULL;
+    if (ursatz_gui_material_item_get(current, NULL, &body) != URSATZ_GUI_MATERIAL_OK) {
+      return false;
+    }
+    const cJSON *next = cJSON_GetObjectItemCaseSensitive(derived_of(body), "source_item");
+    bool more = cJSON_IsString(next) && strlen(next->valuestring) < sizeof(current);
+    if (more) {
+      snprintf(current, sizeof(current), "%s", next->valuestring);
+    }
+    cJSON_Delete(body);
+    if (!more) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/* The derivation record a recognition describes for the target: the source and its version, the chain, no seed, the
+   target's own chords, and the dimensions kept and changed. NULL when the recognition lacks them or on no memory. */
+static cJSON *derived_from_recognition(const char *source_id, int source_version, const cJSON *recognition,
+                                       const cJSON *target_motif) {
+  const cJSON *steps = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(recognition, "chain"), "steps");
+  const cJSON *kept = cJSON_GetObjectItemCaseSensitive(recognition, "kept");
+  const cJSON *changed = cJSON_GetObjectItemCaseSensitive(recognition, "changed");
+  const cJSON *remoteness = cJSON_GetObjectItemCaseSensitive(recognition, "remoteness");
+  if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(recognition, "found")) || !cJSON_IsArray(steps) ||
+      !cJSON_IsArray(kept) || !cJSON_IsArray(changed)) {
+    return NULL;
+  }
+  const char *harmony = motif_harmony(target_motif);
+  cJSON *derived = cJSON_CreateObject();
+  cJSON *functions = cJSON_CreateArray();
+  const cJSON *name = NULL;
+  cJSON_ArrayForEach(name, cJSON_GetObjectItemCaseSensitive(recognition, "functions")) {
+    if (cJSON_IsString(name) && function_name_ok(name->valuestring)) {
+      cJSON_AddItemToArray(functions, cJSON_CreateString(name->valuestring));
+    }
+  }
+  bool ok = derived && functions && cJSON_AddStringToObject(derived, "source_item", source_id) &&
+            cJSON_AddNumberToObject(derived, "source_version", source_version) &&
+            cJSON_AddItemToObject(derived, "operations", cJSON_Duplicate(steps, 1)) &&
+            cJSON_AddNullToObject(derived, "seed") &&
+            cJSON_AddStringToObject(derived, "kind", steps_are_exact(steps) ? "exact" : "motive-form") &&
+            cJSON_AddItemToObject(derived, "kept", cJSON_Duplicate(kept, 1)) &&
+            cJSON_AddItemToObject(derived, "changed", cJSON_Duplicate(changed, 1)) &&
+            (harmony ? cJSON_AddStringToObject(derived, "harmony", harmony) : cJSON_AddNullToObject(derived, "harmony")) &&
+            cJSON_AddItemToObject(derived, "functions", functions) &&
+            (cJSON_IsNumber(remoteness) ? cJSON_AddNumberToObject(derived, "remoteness", remoteness->valuedouble)
+                                        : cJSON_AddNullToObject(derived, "remoteness")) &&
+            cJSON_AddStringToObject(derived, "flag", "unflagged");
+  if (!ok) {
+    if (derived && !cJSON_GetObjectItemCaseSensitive(derived, "functions")) {
+      cJSON_Delete(functions);
+    }
+    cJSON_Delete(derived);
+    return NULL;
+  }
+  return derived;
+}
+
+/* POST /api/materials/items/<id>/link-form {source: {item, version}, recognition}: a new version of the item (the
+   target) whose derived record says it is a form of the source, from a recognition the recognize route gave. 409 when
+   the item is the source or above it in the source's lineage, since the tree would then loop. */
+static int handle_link_form(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *reference = cJSON_GetObjectItemCaseSensitive(body, "source");
+  const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(reference, "item");
+  const cJSON *source_version = cJSON_GetObjectItemCaseSensitive(reference, "version");
+  const cJSON *recognition = cJSON_GetObjectItemCaseSensitive(body, "recognition");
+  if (!cJSON_IsString(source_item) || !cJSON_IsNumber(source_version) || source_version->valuedouble < 1 ||
+      source_version->valuedouble != (int)source_version->valuedouble || !cJSON_IsObject(recognition) ||
+      !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(recognition, "found"))) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "link-form needs a source {item, version} and a recognition that found a chain");
+  }
+  cJSON *current = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  cJSON *source = NULL;
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = ursatz_gui_material_item_get_version(source_item->valuestring, source_version->valueint, &source);
+  }
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_material_failure(conn, result);
+  }
+  cJSON *motif = cJSON_GetObjectItemCaseSensitive(current, "motif");
+  if (!cJSON_IsObject(motif) || !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(source, "motif"))) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    cJSON_Delete(source);
+    return send_failure(conn, 400, "only a motif can be linked as a form of a motif");
+  }
+  cJSON_Delete(source);
+  if (item_is_in_lineage(id, source_item->valuestring)) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 409, "a motif cannot be a form of itself or of one of its own forms");
+  }
+  cJSON *derived = derived_from_recognition(source_item->valuestring, source_version->valueint, recognition, motif);
+  const cJSON *derivation = cJSON_GetObjectItemCaseSensitive(recognition, "derivation");
+  char note[501];
+  bounded_note(note, sizeof(note), "linked: ", cJSON_IsString(derivation) ? derivation->valuestring : "form of another motif");
+  if (!derived) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 400, "the recognition lacks a chain, kept and changed");
+  }
+  cJSON *item = NULL;
+  result = replace_member(motif, "derived", derived) ? ursatz_gui_material_item_add_version(id, current, note, &item)
+                                                     : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  cJSON_Delete(body);
+  cJSON_Delete(current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
 /* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and
    stores the result as a new version. */
 static int handle_reroll(struct mg_connection *conn, const char *id) {
@@ -2441,6 +2584,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 3 && strcmp(segments[2], "reroll") == 0) {
     return post ? handle_reroll(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "link-form") == 0) {
+    return post ? handle_link_form(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "flag") == 0) {
     return post ? handle_flag(conn, segments[1]) : send_method_not_allowed(conn);
