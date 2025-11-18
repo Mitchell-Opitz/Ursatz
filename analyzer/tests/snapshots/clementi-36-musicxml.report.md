@@ -1059,3 +1059,28 @@ The library reads each phrase in hypermeasures of two or four measures: the leng
 ### Tuplets and borrowed divisions
 
 No tuplets were found.
+
+## Texture
+
+The library's texture adapter read every measure of the piece from the voices the kernel separated in each track or part, classified it, and merged consecutive measures of the same texture into passages. Category is the main texture (homorhythm and melody and accompaniment are homophony). Voices is the most sounding at once, Synchrony the share of attack times where the voices attack together, Pattern the score of a repeated cell (0 to 1: evidence for an accompaniment figure, not a name for it). Confidence is the texture's margin from its thresholds times the voice separation's.
+
+| Measures | Texture | Category | Voices | Synchrony | Pattern | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| mm. 1 to 3 | melody and accompaniment | homophony | 2 | 0.22 | 0.19 | 0.61 |
+| m. 4 | polyphony | polyphony | 2 | 0.25 | 0.62 | 0.47 |
+| mm. 5 to 26 | melody and accompaniment | homophony | 3 | 0.28 | 0.34 | 0.63 |
+| m. 27 | polyphony | polyphony | 2 | 0.25 | 0.62 | 0.59 |
+| mm. 28 to 29 | melody and accompaniment | homophony | 2 | 0.2 | 0 | 0.69 |
+| m. 30 | homorhythm | homophony | 3 | 1 | 0.67 | 0.87 |
+| mm. 31 to 38 | melody and accompaniment | homophony | 2 | 0.26 | 0.44 | 0.56 |
+
+### Changes
+
+| Measure | From | To | Category changes |
+| --- | --- | --- | --- |
+| 4 | melody and accompaniment | polyphony | yes |
+| 5 | polyphony | melody and accompaniment | yes |
+| 27 | melody and accompaniment | polyphony | yes |
+| 28 | polyphony | melody and accompaniment | yes |
+| 30 | melody and accompaniment | homorhythm | no |
+| 31 | homorhythm | melody and accompaniment | no |

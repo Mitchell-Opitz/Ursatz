@@ -6636,3 +6636,288 @@ A meter divides its beat two ways (simple) or three (compound). A tuplet divides
 | 32 | 2 | 3:2 | triplet | simple | yes | subdivision | 3 |
 | 73 | 2 | 3:2 | triplet | simple | yes | subdivision | 3 |
 | 118 | 2 | 3:2 | triplet | simple | yes | subdivision | 3 |
+
+## Texture
+
+The library's texture adapter read every measure of the piece from the voices the kernel separated in each track or part, classified it, and merged consecutive measures of the same texture into passages. Category is the main texture (homorhythm and melody and accompaniment are homophony). Voices is the most sounding at once, Synchrony the share of attack times where the voices attack together, Pattern the score of a repeated cell (0 to 1: evidence for an accompaniment figure, not a name for it). Confidence is the texture's margin from its thresholds times the voice separation's.
+
+| Measures | Texture | Category | Voices | Synchrony | Pattern | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| mm. 1 to 3 | melody and accompaniment | homophony | 2 | 0.36 | 0.1 | 0.44 |
+| m. 4 | polyphony | polyphony | 2 | 0.36 | 0 | 0.36 |
+| mm. 5 to 11 | melody and accompaniment | homophony | 3 | 0.19 | 0.44 | 0.63 |
+| m. 12 | homorhythm | homophony | 4 | 1 | 0 | 0.61 |
+| m. 13 | monophony | monophony | 1 | 0 | 0.53 | 0.77 |
+| mm. 14 to 17 | melody and accompaniment | homophony | 2 | 0.35 | 0.51 | 0.47 |
+| mm. 18 to 21 | monophony | monophony | 1 | 0 | 0.33 | 0.63 |
+| m. 22 | homorhythm | homophony | 3 | 0.8 | 0.83 | 0.55 |
+| mm. 23 to 25 | melody and accompaniment | homophony | 3 | 0.53 | 0.67 | 0.65 |
+| mm. 26 to 27 | polyphony | polyphony | 4 | 0.15 | 0.21 | 0.59 |
+| m. 28 | homorhythm | homophony | 4 | 1 | 0.33 | 0.83 |
+| mm. 29 to 31 | melody and accompaniment | homophony | 2 | 0.36 | 0.1 | 0.44 |
+| m. 32 | polyphony | polyphony | 2 | 0.36 | 0 | 0.36 |
+| mm. 33 to 39 | melody and accompaniment | homophony | 3 | 0.19 | 0.44 | 0.63 |
+| m. 40 | homorhythm | homophony | 4 | 1 | 0 | 0.61 |
+| m. 41 | monophony | monophony | 1 | 0 | 0.53 | 0.77 |
+| mm. 42 to 45 | melody and accompaniment | homophony | 2 | 0.35 | 0.51 | 0.47 |
+| mm. 46 to 49 | monophony | monophony | 1 | 0 | 0.33 | 0.63 |
+| m. 50 | homorhythm | homophony | 3 | 0.8 | 0.83 | 0.55 |
+| mm. 51 to 53 | melody and accompaniment | homophony | 3 | 0.53 | 0.67 | 0.65 |
+| mm. 54 to 55 | polyphony | polyphony | 4 | 0.15 | 0.21 | 0.59 |
+| m. 56 | homorhythm | homophony | 4 | 1 | 0.33 | 0.83 |
+| m. 57 | melody and accompaniment | homophony | 4 | 0.15 | 0.36 | 0.8 |
+| m. 58 | polyphony | polyphony | 4 | 0.15 | 0.17 | 0.54 |
+| mm. 59 to 60 | monophony | monophony | 1 | 0 | 0.37 | 0.68 |
+| m. 61 | melody and accompaniment | homophony | 4 | 0.15 | 0.36 | 0.73 |
+| m. 62 | polyphony | polyphony | 4 | 0.15 | 0.17 | 0.54 |
+| m. 63 | melody and accompaniment | homophony | 2 | 0.06 | 0.36 | 0.74 |
+| mm. 64 to 68 | monophony | monophony | 1 | 0 | 0.48 | 0.78 |
+| mm. 69 to 72 | melody and accompaniment | homophony | 4 | 0.29 | 0.2 | 0.52 |
+| m. 73 | polyphony | polyphony | 2 | 0.36 | 0 | 0.3 |
+| mm. 74 to 84 | melody and accompaniment | homophony | 3 | 0.16 | 0.42 | 0.67 |
+| m. 85 | homorhythm | homophony | 4 | 1 | 0 | 0.61 |
+| m. 86 | monophony | monophony | 1 | 0 | 0.53 | 0.46 |
+| mm. 87 to 90 | melody and accompaniment | homophony | 2 | 0.35 | 0.51 | 0.52 |
+| mm. 91 to 94 | monophony | monophony | 1 | 0 | 0.32 | 0.65 |
+| mm. 95 to 96 | melody and accompaniment | homophony | 4 | 0.7 | 0.85 | 0.78 |
+| m. 97 | homorhythm | homophony | 2 | 0.94 | 0.69 | 0.61 |
+| mm. 98 to 99 | melody and accompaniment | homophony | 4 | 0.33 | 0.51 | 0.68 |
+| m. 100 | polyphony | polyphony | 4 | 0.15 | 0.33 | 0.62 |
+| m. 101 | homorhythm | homophony | 4 | 1 | 0 | 0.59 |
+| m. 102 | melody and accompaniment | homophony | 4 | 0.15 | 0.36 | 0.76 |
+| m. 103 | polyphony | polyphony | 4 | 0.15 | 0.17 | 0.54 |
+| mm. 104 to 105 | monophony | monophony | 1 | 0 | 0.37 | 0.68 |
+| m. 106 | melody and accompaniment | homophony | 4 | 0.15 | 0.36 | 0.73 |
+| m. 107 | polyphony | polyphony | 4 | 0.15 | 0.17 | 0.54 |
+| m. 108 | melody and accompaniment | homophony | 2 | 0.06 | 0.36 | 0.74 |
+| mm. 109 to 113 | monophony | monophony | 1 | 0 | 0.48 | 0.78 |
+| mm. 114 to 117 | melody and accompaniment | homophony | 4 | 0.29 | 0.2 | 0.52 |
+| m. 118 | polyphony | polyphony | 2 | 0.36 | 0 | 0.3 |
+| mm. 119 to 129 | melody and accompaniment | homophony | 3 | 0.16 | 0.42 | 0.67 |
+| m. 130 | homorhythm | homophony | 4 | 1 | 0 | 0.61 |
+| m. 131 | monophony | monophony | 1 | 0 | 0.53 | 0.46 |
+| mm. 132 to 135 | melody and accompaniment | homophony | 2 | 0.35 | 0.51 | 0.52 |
+| mm. 136 to 139 | monophony | monophony | 1 | 0 | 0.32 | 0.65 |
+| mm. 140 to 141 | melody and accompaniment | homophony | 4 | 0.7 | 0.85 | 0.78 |
+| m. 142 | homorhythm | homophony | 2 | 0.94 | 0.69 | 0.61 |
+| mm. 143 to 144 | melody and accompaniment | homophony | 4 | 0.33 | 0.51 | 0.68 |
+| m. 145 | polyphony | polyphony | 4 | 0.15 | 0.33 | 0.62 |
+| mm. 146 to 148 | homorhythm | homophony | 4 | 1 | 0 | 0.59 |
+| mm. 149 to 157 | melody and accompaniment | homophony | 3 | 0.38 | 0.44 | 0.44 |
+| mm. 158 to 159 | homorhythm | homophony | 2 | 0.92 | 0.66 | 0.38 |
+| m. 160 | melody and accompaniment | homophony | 2 | 0.42 | 0.66 | 0.41 |
+| m. 161 | homorhythm | homophony | 2 | 1 | 0.64 | 0.46 |
+| m. 162 | melody and accompaniment | homophony | 2 | 0.67 | 0.23 | 0.24 |
+| mm. 163 to 164 | homorhythm | homophony | 4 | 0.92 | 0.1 | 0.55 |
+| mm. 165 to 173 | melody and accompaniment | homophony | 3 | 0.38 | 0.43 | 0.42 |
+| mm. 174 to 175 | homorhythm | homophony | 2 | 0.92 | 0.66 | 0.38 |
+| m. 176 | melody and accompaniment | homophony | 2 | 0.42 | 0.66 | 0.41 |
+| m. 177 | homorhythm | homophony | 2 | 1 | 0.64 | 0.46 |
+| m. 178 | melody and accompaniment | homophony | 2 | 0.67 | 0.23 | 0.24 |
+| mm. 179 to 180 | homorhythm | homophony | 4 | 0.92 | 0.1 | 0.55 |
+| mm. 181 to 186 | melody and accompaniment | homophony | 2 | 0.53 | 0.4 | 0.47 |
+| m. 187 | homorhythm | homophony | 3 | 0.83 | 0.47 | 0.38 |
+| m. 188 | polyphony | polyphony | 4 | 0.22 | 0.17 | 0.44 |
+| m. 189 | melody and accompaniment | homophony | 2 | 0.67 | 0.42 | 0.22 |
+| mm. 190 to 191 | homorhythm | homophony | 2 | 0.92 | 0.66 | 0.36 |
+| m. 192 | melody and accompaniment | homophony | 2 | 0.42 | 0.66 | 0.43 |
+| m. 193 | homorhythm | homophony | 2 | 1 | 0.64 | 0.46 |
+| m. 194 | melody and accompaniment | homophony | 2 | 0.67 | 0.23 | 0.24 |
+| mm. 195 to 196 | homorhythm | homophony | 4 | 0.92 | 0.1 | 0.55 |
+| mm. 197 to 202 | melody and accompaniment | homophony | 2 | 0.53 | 0.4 | 0.47 |
+| m. 203 | homorhythm | homophony | 3 | 0.83 | 0.47 | 0.38 |
+| m. 204 | polyphony | polyphony | 4 | 0.22 | 0.17 | 0.44 |
+| m. 205 | melody and accompaniment | homophony | 2 | 0.67 | 0.42 | 0.22 |
+| mm. 206 to 207 | homorhythm | homophony | 2 | 0.92 | 0.66 | 0.36 |
+| m. 208 | melody and accompaniment | homophony | 2 | 0.42 | 0.66 | 0.43 |
+| m. 209 | homorhythm | homophony | 2 | 1 | 0.64 | 0.46 |
+| m. 210 | melody and accompaniment | homophony | 2 | 0.67 | 0.23 | 0.24 |
+| mm. 211 to 212 | homorhythm | homophony | 4 | 0.92 | 0.1 | 0.55 |
+| mm. 213 to 218 | melody and accompaniment | homophony | 2 | 0.53 | 0.43 | 0.41 |
+| m. 219 | homorhythm | homophony | 2 | 0.83 | 0.2 | 0.27 |
+| mm. 220 to 226 | melody and accompaniment | homophony | 4 | 0.47 | 0.43 | 0.46 |
+| m. 227 | homorhythm | homophony | 2 | 0.83 | 0.35 | 0.38 |
+| m. 228 | polyphony | polyphony | 4 | 0.22 | 0.2 | 0.47 |
+| mm. 229 to 237 | melody and accompaniment | homophony | 3 | 0.38 | 0.4 | 0.43 |
+| mm. 238 to 239 | homorhythm | homophony | 2 | 0.92 | 0.66 | 0.38 |
+| m. 240 | melody and accompaniment | homophony | 2 | 0.42 | 0.66 | 0.41 |
+| m. 241 | homorhythm | homophony | 2 | 1 | 0.64 | 0.46 |
+| m. 242 | melody and accompaniment | homophony | 2 | 0.67 | 0.23 | 0.24 |
+| m. 243 | homorhythm | homophony | 3 | 0.83 | 0.19 | 0.31 |
+| mm. 244 to 246 | melody and accompaniment | homophony | 3 | 0.36 | 0.6 | 0.47 |
+| m. 247 | homorhythm | homophony | 3 | 0.83 | 0.21 | 0.27 |
+| mm. 248 to 253 | melody and accompaniment | homophony | 3 | 0.27 | 0.5 | 0.44 |
+| mm. 254 to 258 | homorhythm | homophony | 4 | 0.88 | 0 | 0.78 |
+| mm. 259 to 260 | melody and accompaniment | homophony | 2 | 0.38 | 0.39 | 0.52 |
+| m. 261 | homorhythm | homophony | 4 | 1 | 0 | 1 |
+| mm. 262 to 263 | melody and accompaniment | homophony | 4 | 0.38 | 0.23 | 0.42 |
+| mm. 264 to 266 | homorhythm | homophony | 4 | 0.75 | 0 | 0.63 |
+| mm. 267 to 268 | melody and accompaniment | homophony | 2 | 0.38 | 0.39 | 0.52 |
+| m. 269 | homorhythm | homophony | 4 | 1 | 0 | 1 |
+| mm. 270 to 271 | melody and accompaniment | homophony | 4 | 0.38 | 0.23 | 0.42 |
+| mm. 272 to 275 | homorhythm | homophony | 3 | 0.96 | 0.41 | 0.45 |
+| m. 276 | melody and accompaniment | homophony | 2 | 0.5 | 0.2 | 0.44 |
+| mm. 277 to 278 | homorhythm | homophony | 4 | 0.75 | 0 | 1 |
+| mm. 279 to 282 | melody and accompaniment | homophony | 3 | 0.22 | 0.46 | 0.55 |
+| m. 283 | monophony | monophony | 1 | 0 | 1 | 0.45 |
+| m. 284 | melody and accompaniment | homophony | 2 | 0.67 | 0 | 0.45 |
+| mm. 285 to 286 | homorhythm | homophony | 4 | 0.75 | 0 | 1 |
+| mm. 287 to 288 | melody and accompaniment | homophony | 2 | 0.38 | 0.39 | 0.52 |
+| m. 289 | homorhythm | homophony | 4 | 1 | 0 | 1 |
+| mm. 290 to 291 | melody and accompaniment | homophony | 4 | 0.38 | 0.23 | 0.42 |
+| mm. 292 to 293 | homorhythm | homophony | 3 | 0.62 | 0.11 | 0.19 |
+| mm. 294 to 298 | melody and accompaniment | homophony | 3 | 0.4 | 0.28 | 0.61 |
+| m. 299 | polyphony | polyphony | 3 | 0.4 | 0 | 0.44 |
+| m. 300 | melody and accompaniment | homophony | 2 | 0.62 | 0.29 | 0.29 |
+| mm. 301 to 304 | homorhythm | homophony | 2 | 1 | 0.25 | 0.5 |
+| mm. 305 to 314 | melody and accompaniment | homophony | 3 | 0.51 | 0.33 | 0.5 |
+| mm. 315 to 319 | homorhythm | homophony | 4 | 0.88 | 0.09 | 0.68 |
+| mm. 320 to 321 | melody and accompaniment | homophony | 2 | 0.38 | 0.39 | 0.52 |
+| m. 322 | homorhythm | homophony | 4 | 1 | 0 | 1 |
+| mm. 323 to 324 | melody and accompaniment | homophony | 4 | 0.38 | 0.23 | 0.42 |
+| mm. 325 to 332 | homorhythm | homophony | 3 | 0.95 | 0.35 | 0.39 |
+| m. 333 | monophony | monophony | 2 | 1 | 0 | 0.19 |
+| m. 334 | homorhythm | homophony | 3 | 0.88 | 0.33 | 0.42 |
+| m. 335 | monophony | monophony | 2 | 1 | 0.17 | 0.15 |
+| mm. 336 to 338 | homorhythm | homophony | 4 | 0.96 | 0.11 | 0.75 |
+
+### Changes
+
+| Measure | From | To | Category changes |
+| --- | --- | --- | --- |
+| 4 | melody and accompaniment | polyphony | yes |
+| 5 | polyphony | melody and accompaniment | yes |
+| 12 | melody and accompaniment | homorhythm | no |
+| 13 | homorhythm | monophony | yes |
+| 14 | monophony | melody and accompaniment | yes |
+| 18 | melody and accompaniment | monophony | yes |
+| 22 | monophony | homorhythm | yes |
+| 23 | homorhythm | melody and accompaniment | no |
+| 26 | melody and accompaniment | polyphony | yes |
+| 28 | polyphony | homorhythm | yes |
+| 29 | homorhythm | melody and accompaniment | no |
+| 32 | melody and accompaniment | polyphony | yes |
+| 33 | polyphony | melody and accompaniment | yes |
+| 40 | melody and accompaniment | homorhythm | no |
+| 41 | homorhythm | monophony | yes |
+| 42 | monophony | melody and accompaniment | yes |
+| 46 | melody and accompaniment | monophony | yes |
+| 50 | monophony | homorhythm | yes |
+| 51 | homorhythm | melody and accompaniment | no |
+| 54 | melody and accompaniment | polyphony | yes |
+| 56 | polyphony | homorhythm | yes |
+| 57 | homorhythm | melody and accompaniment | no |
+| 58 | melody and accompaniment | polyphony | yes |
+| 59 | polyphony | monophony | yes |
+| 61 | monophony | melody and accompaniment | yes |
+| 62 | melody and accompaniment | polyphony | yes |
+| 63 | polyphony | melody and accompaniment | yes |
+| 64 | melody and accompaniment | monophony | yes |
+| 69 | monophony | melody and accompaniment | yes |
+| 73 | melody and accompaniment | polyphony | yes |
+| 74 | polyphony | melody and accompaniment | yes |
+| 85 | melody and accompaniment | homorhythm | no |
+| 86 | homorhythm | monophony | yes |
+| 87 | monophony | melody and accompaniment | yes |
+| 91 | melody and accompaniment | monophony | yes |
+| 95 | monophony | melody and accompaniment | yes |
+| 97 | melody and accompaniment | homorhythm | no |
+| 98 | homorhythm | melody and accompaniment | no |
+| 100 | melody and accompaniment | polyphony | yes |
+| 101 | polyphony | homorhythm | yes |
+| 102 | homorhythm | melody and accompaniment | no |
+| 103 | melody and accompaniment | polyphony | yes |
+| 104 | polyphony | monophony | yes |
+| 106 | monophony | melody and accompaniment | yes |
+| 107 | melody and accompaniment | polyphony | yes |
+| 108 | polyphony | melody and accompaniment | yes |
+| 109 | melody and accompaniment | monophony | yes |
+| 114 | monophony | melody and accompaniment | yes |
+| 118 | melody and accompaniment | polyphony | yes |
+| 119 | polyphony | melody and accompaniment | yes |
+| 130 | melody and accompaniment | homorhythm | no |
+| 131 | homorhythm | monophony | yes |
+| 132 | monophony | melody and accompaniment | yes |
+| 136 | melody and accompaniment | monophony | yes |
+| 140 | monophony | melody and accompaniment | yes |
+| 142 | melody and accompaniment | homorhythm | no |
+| 143 | homorhythm | melody and accompaniment | no |
+| 145 | melody and accompaniment | polyphony | yes |
+| 146 | polyphony | homorhythm | yes |
+| 149 | homorhythm | melody and accompaniment | no |
+| 158 | melody and accompaniment | homorhythm | no |
+| 160 | homorhythm | melody and accompaniment | no |
+| 161 | melody and accompaniment | homorhythm | no |
+| 162 | homorhythm | melody and accompaniment | no |
+| 163 | melody and accompaniment | homorhythm | no |
+| 165 | homorhythm | melody and accompaniment | no |
+| 174 | melody and accompaniment | homorhythm | no |
+| 176 | homorhythm | melody and accompaniment | no |
+| 177 | melody and accompaniment | homorhythm | no |
+| 178 | homorhythm | melody and accompaniment | no |
+| 179 | melody and accompaniment | homorhythm | no |
+| 181 | homorhythm | melody and accompaniment | no |
+| 187 | melody and accompaniment | homorhythm | no |
+| 188 | homorhythm | polyphony | yes |
+| 189 | polyphony | melody and accompaniment | yes |
+| 190 | melody and accompaniment | homorhythm | no |
+| 192 | homorhythm | melody and accompaniment | no |
+| 193 | melody and accompaniment | homorhythm | no |
+| 194 | homorhythm | melody and accompaniment | no |
+| 195 | melody and accompaniment | homorhythm | no |
+| 197 | homorhythm | melody and accompaniment | no |
+| 203 | melody and accompaniment | homorhythm | no |
+| 204 | homorhythm | polyphony | yes |
+| 205 | polyphony | melody and accompaniment | yes |
+| 206 | melody and accompaniment | homorhythm | no |
+| 208 | homorhythm | melody and accompaniment | no |
+| 209 | melody and accompaniment | homorhythm | no |
+| 210 | homorhythm | melody and accompaniment | no |
+| 211 | melody and accompaniment | homorhythm | no |
+| 213 | homorhythm | melody and accompaniment | no |
+| 219 | melody and accompaniment | homorhythm | no |
+| 220 | homorhythm | melody and accompaniment | no |
+| 227 | melody and accompaniment | homorhythm | no |
+| 228 | homorhythm | polyphony | yes |
+| 229 | polyphony | melody and accompaniment | yes |
+| 238 | melody and accompaniment | homorhythm | no |
+| 240 | homorhythm | melody and accompaniment | no |
+| 241 | melody and accompaniment | homorhythm | no |
+| 242 | homorhythm | melody and accompaniment | no |
+| 243 | melody and accompaniment | homorhythm | no |
+| 244 | homorhythm | melody and accompaniment | no |
+| 247 | melody and accompaniment | homorhythm | no |
+| 248 | homorhythm | melody and accompaniment | no |
+| 254 | melody and accompaniment | homorhythm | no |
+| 259 | homorhythm | melody and accompaniment | no |
+| 261 | melody and accompaniment | homorhythm | no |
+| 262 | homorhythm | melody and accompaniment | no |
+| 264 | melody and accompaniment | homorhythm | no |
+| 267 | homorhythm | melody and accompaniment | no |
+| 269 | melody and accompaniment | homorhythm | no |
+| 270 | homorhythm | melody and accompaniment | no |
+| 272 | melody and accompaniment | homorhythm | no |
+| 276 | homorhythm | melody and accompaniment | no |
+| 277 | melody and accompaniment | homorhythm | no |
+| 279 | homorhythm | melody and accompaniment | no |
+| 283 | melody and accompaniment | monophony | yes |
+| 284 | monophony | melody and accompaniment | yes |
+| 285 | melody and accompaniment | homorhythm | no |
+| 287 | homorhythm | melody and accompaniment | no |
+| 289 | melody and accompaniment | homorhythm | no |
+| 290 | homorhythm | melody and accompaniment | no |
+| 292 | melody and accompaniment | homorhythm | no |
+| 294 | homorhythm | melody and accompaniment | no |
+| 299 | melody and accompaniment | polyphony | yes |
+| 300 | polyphony | melody and accompaniment | yes |
+| 301 | melody and accompaniment | homorhythm | no |
+| 305 | homorhythm | melody and accompaniment | no |
+| 315 | melody and accompaniment | homorhythm | no |
+| 320 | homorhythm | melody and accompaniment | no |
+| 322 | melody and accompaniment | homorhythm | no |
+| 323 | homorhythm | melody and accompaniment | no |
+| 325 | melody and accompaniment | homorhythm | no |
+| 333 | homorhythm | monophony | yes |
+| 334 | monophony | homorhythm | yes |
+| 335 | homorhythm | monophony | yes |
+| 336 | monophony | homorhythm | yes |

@@ -1724,3 +1724,106 @@ A meter divides its beat two ways (simple) or three (compound). A tuplet divides
 | 64 | 2.33 | 3:2 | triplet | compound | no | subdivision | 2 |
 | 66 | 2 | 3:2 | triplet | compound | no | subdivision | 2 |
 | 66 | 2.67 | 3:2 | triplet | compound | no | subdivision | 2 |
+
+## Texture
+
+The library's texture adapter read every measure of the piece from the voices the kernel separated in each track or part, classified it, and merged consecutive measures of the same texture into passages. Category is the main texture (homorhythm and melody and accompaniment are homophony). Voices is the most sounding at once, Synchrony the share of attack times where the voices attack together, Pattern the score of a repeated cell (0 to 1: evidence for an accompaniment figure, not a name for it). Confidence is the texture's margin from its thresholds times the voice separation's.
+
+| Measures | Texture | Category | Voices | Synchrony | Pattern | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| mm. 1 to 3 | monophony | monophony | 1 | 0 | 0.18 | 0.73 |
+| m. 4 | melody and accompaniment | homophony | 2 | 0.08 | 0.22 | 0.59 |
+| m. 5 | monophony | monophony | 1 | 0 | 0.5 | 0.77 |
+| mm. 6 to 7 | melody and accompaniment | homophony | 2 | 0.07 | 0.24 | 0.44 |
+| m. 8 | monophony | monophony | 1 | 0 | 0.5 | 0.7 |
+| m. 9 | polyphony | polyphony | 2 | 0.08 | 0.17 | 0.75 |
+| mm. 10 to 11 | monophony | monophony | 1 | 0 | 0.22 | 0.76 |
+| m. 12 | polyphony | polyphony | 2 | 0.08 | 0.14 | 0.49 |
+| m. 13 | melody and accompaniment | homophony | 2 | 0.06 | 0.1 | 0.44 |
+| m. 14 | polyphony | polyphony | 2 | 0.07 | 0 | 0.56 |
+| mm. 15 to 16 | melody and accompaniment | homophony | 2 | 0.06 | 0.14 | 0.34 |
+| mm. 17 to 18 | monophony | monophony | 1 | 0 | 0.06 | 0.64 |
+| m. 19 | melody and accompaniment | homophony | 2 | 0.19 | 0.07 | 0.64 |
+| mm. 20 to 21 | polyphony | polyphony | 2 | 0.13 | 0.17 | 0.58 |
+| m. 22 | monophony | monophony | 1 | 0 | 0.17 | 0.77 |
+| mm. 23 to 25 | melody and accompaniment | homophony | 2 | 0.1 | 0.3 | 0.53 |
+| m. 26 | polyphony | polyphony | 2 | 0.25 | 0.1 | 0.45 |
+| mm. 27 to 28 | melody and accompaniment | homophony | 3 | 0.12 | 0.18 | 0.5 |
+| mm. 29 to 30 | monophony | monophony | 1 | 0 | 0.27 | 0.8 |
+| m. 31 | melody and accompaniment | homophony | 2 | 0.08 | 0.49 | 0.44 |
+| m. 32 | polyphony | polyphony | 2 | 0.08 | 0 | 0.62 |
+| m. 33 | monophony | monophony | 1 | 0 | 0.15 | 0.77 |
+| m. 34 | polyphony | polyphony | 2 | 0.07 | 0.12 | 0.55 |
+| mm. 35 to 37 | melody and accompaniment | homophony | 2 | 0.09 | 0.25 | 0.42 |
+| mm. 38 to 39 | polyphony | polyphony | 2 | 0.18 | 0.16 | 0.57 |
+| m. 40 | melody and accompaniment | homophony | 2 | 0.17 | 0 | 0.42 |
+| m. 41 | polyphony | polyphony | 3 | 0.3 | 0 | 0.42 |
+| m. 42 | melody and accompaniment | homophony | 2 | 0.19 | 0.19 | 0.37 |
+| m. 43 | polyphony | polyphony | 2 | 0.08 | 0.1 | 0.55 |
+| mm. 44 to 45 | monophony | monophony | 1 | 0 | 0.21 | 0.75 |
+| mm. 46 to 47 | melody and accompaniment | homophony | 2 | 0.23 | 0.19 | 0.5 |
+| mm. 48 to 49 | polyphony | polyphony | 3 | 0.32 | 0.15 | 0.42 |
+| m. 50 | melody and accompaniment | homophony | 2 | 0.14 | 0.11 | 0.39 |
+| m. 51 | monophony | monophony | 1 | 0 | 0.23 | 0.6 |
+| mm. 52 to 53 | melody and accompaniment | homophony | 2 | 0.06 | 0.18 | 0.46 |
+| m. 54 | monophony | monophony | 1 | 0 | 0.31 | 0.76 |
+| mm. 55 to 56 | melody and accompaniment | homophony | 3 | 0.15 | 0.17 | 0.39 |
+| m. 57 | polyphony | polyphony | 2 | 0.12 | 0.24 | 0.43 |
+| m. 58 | monophony | monophony | 1 | 0 | 0.5 | 0.6 |
+| m. 59 | polyphony | polyphony | 2 | 0.26 | 0.17 | 0.52 |
+| m. 60 | melody and accompaniment | homophony | 2 | 0.2 | 0.33 | 0.47 |
+| m. 61 | polyphony | polyphony | 2 | 0.26 | 0.19 | 0.43 |
+| m. 62 | monophony | monophony | 1 | 0 | 0.11 | 0.73 |
+| mm. 63 to 64 | polyphony | polyphony | 3 | 0.32 | 0.05 | 0.48 |
+| mm. 65 to 66 | melody and accompaniment | homophony | 2 | 0.27 | 0.38 | 0.3 |
+| m. 67 | polyphony | polyphony | 3 | 0.14 | 0 | 0.35 |
+
+### Changes
+
+| Measure | From | To | Category changes |
+| --- | --- | --- | --- |
+| 4 | monophony | melody and accompaniment | yes |
+| 5 | melody and accompaniment | monophony | yes |
+| 6 | monophony | melody and accompaniment | yes |
+| 8 | melody and accompaniment | monophony | yes |
+| 9 | monophony | polyphony | yes |
+| 10 | polyphony | monophony | yes |
+| 12 | monophony | polyphony | yes |
+| 13 | polyphony | melody and accompaniment | yes |
+| 14 | melody and accompaniment | polyphony | yes |
+| 15 | polyphony | melody and accompaniment | yes |
+| 17 | melody and accompaniment | monophony | yes |
+| 19 | monophony | melody and accompaniment | yes |
+| 20 | melody and accompaniment | polyphony | yes |
+| 22 | polyphony | monophony | yes |
+| 23 | monophony | melody and accompaniment | yes |
+| 26 | melody and accompaniment | polyphony | yes |
+| 27 | polyphony | melody and accompaniment | yes |
+| 29 | melody and accompaniment | monophony | yes |
+| 31 | monophony | melody and accompaniment | yes |
+| 32 | melody and accompaniment | polyphony | yes |
+| 33 | polyphony | monophony | yes |
+| 34 | monophony | polyphony | yes |
+| 35 | polyphony | melody and accompaniment | yes |
+| 38 | melody and accompaniment | polyphony | yes |
+| 40 | polyphony | melody and accompaniment | yes |
+| 41 | melody and accompaniment | polyphony | yes |
+| 42 | polyphony | melody and accompaniment | yes |
+| 43 | melody and accompaniment | polyphony | yes |
+| 44 | polyphony | monophony | yes |
+| 46 | monophony | melody and accompaniment | yes |
+| 48 | melody and accompaniment | polyphony | yes |
+| 50 | polyphony | melody and accompaniment | yes |
+| 51 | melody and accompaniment | monophony | yes |
+| 52 | monophony | melody and accompaniment | yes |
+| 54 | melody and accompaniment | monophony | yes |
+| 55 | monophony | melody and accompaniment | yes |
+| 57 | melody and accompaniment | polyphony | yes |
+| 58 | polyphony | monophony | yes |
+| 59 | monophony | polyphony | yes |
+| 60 | polyphony | melody and accompaniment | yes |
+| 61 | melody and accompaniment | polyphony | yes |
+| 62 | polyphony | monophony | yes |
+| 63 | monophony | polyphony | yes |
+| 65 | polyphony | melody and accompaniment | yes |
+| 67 | melody and accompaniment | polyphony | yes |

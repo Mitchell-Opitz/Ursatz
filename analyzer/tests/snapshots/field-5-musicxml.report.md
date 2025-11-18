@@ -1325,3 +1325,52 @@ A meter divides its beat two ways (simple) or three (compound). A tuplet divides
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 8 | 4.67 | 3:2 | triplet | compound | no | subdivision | 2 |
 | 43 | 3 | 3:2 | triplet | compound | no | subdivision | 3 |
+
+## Texture
+
+The library's texture adapter read every measure of the piece from the voices the kernel separated in each track or part, classified it, and merged consecutive measures of the same texture into passages. Category is the main texture (homorhythm and melody and accompaniment are homophony). Voices is the most sounding at once, Synchrony the share of attack times where the voices attack together, Pattern the score of a repeated cell (0 to 1: evidence for an accompaniment figure, not a name for it). Confidence is the texture's margin from its thresholds times the voice separation's.
+
+| Measures | Texture | Category | Voices | Synchrony | Pattern | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| mm. 1 to 2 | melody and accompaniment | homophony | 2 | 0.25 | 0.2 | 0.73 |
+| m. 3 | polyphony | polyphony | 2 | 0.25 | 0.17 | 0.52 |
+| m. 4 | melody and accompaniment | homophony | 2 | 0.23 | 0.37 | 0.41 |
+| m. 5 | polyphony | polyphony | 2 | 0.25 | 0.14 | 0.43 |
+| mm. 6 to 9 | melody and accompaniment | homophony | 2 | 0.32 | 0.19 | 0.44 |
+| m. 10 | polyphony | polyphony | 3 | 0.25 | 0.11 | 0.44 |
+| mm. 11 to 12 | melody and accompaniment | homophony | 2 | 0.24 | 0.4 | 0.79 |
+| mm. 13 to 15 | polyphony | polyphony | 3 | 0.31 | 0.08 | 0.61 |
+| mm. 16 to 17 | melody and accompaniment | homophony | 3 | 0.33 | 0.06 | 0.45 |
+| mm. 18 to 21 | homorhythm | homophony | 4 | 1 | 0.86 | 1 |
+| mm. 22 to 25 | melody and accompaniment | homophony | 4 | 0.31 | 0.24 | 0.74 |
+| m. 26 | polyphony | polyphony | 2 | 0.29 | 0.31 | 0.5 |
+| m. 27 | melody and accompaniment | homophony | 2 | 0.25 | 0.12 | 0.35 |
+| mm. 28 to 29 | polyphony | polyphony | 2 | 0.21 | 0.23 | 0.61 |
+| mm. 30 to 33 | melody and accompaniment | homophony | 3 | 0.35 | 0.16 | 0.5 |
+| m. 34 | polyphony | polyphony | 2 | 0.17 | 0 | 0.54 |
+| mm. 35 to 37 | melody and accompaniment | homophony | 2 | 0.44 | 0.2 | 0.89 |
+| mm. 38 to 42 | homorhythm | homophony | 4 | 0.93 | 0.7 | 1 |
+| m. 43 | melody and accompaniment | homophony | 4 | 0.6 | 0 | 0.52 |
+
+### Changes
+
+| Measure | From | To | Category changes |
+| --- | --- | --- | --- |
+| 3 | melody and accompaniment | polyphony | yes |
+| 4 | polyphony | melody and accompaniment | yes |
+| 5 | melody and accompaniment | polyphony | yes |
+| 6 | polyphony | melody and accompaniment | yes |
+| 10 | melody and accompaniment | polyphony | yes |
+| 11 | polyphony | melody and accompaniment | yes |
+| 13 | melody and accompaniment | polyphony | yes |
+| 16 | polyphony | melody and accompaniment | yes |
+| 18 | melody and accompaniment | homorhythm | no |
+| 22 | homorhythm | melody and accompaniment | no |
+| 26 | melody and accompaniment | polyphony | yes |
+| 27 | polyphony | melody and accompaniment | yes |
+| 28 | melody and accompaniment | polyphony | yes |
+| 30 | polyphony | melody and accompaniment | yes |
+| 34 | melody and accompaniment | polyphony | yes |
+| 35 | polyphony | melody and accompaniment | yes |
+| 38 | melody and accompaniment | homorhythm | no |
+| 43 | homorhythm | melody and accompaniment | no |
