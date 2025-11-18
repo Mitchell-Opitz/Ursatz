@@ -22,7 +22,7 @@
  * Every id passed in must be distinct (it is a PRIMARY KEY).
  */
 
-static Interpretation *stats_make_interpretation(const char *id_value, const char *claim_type, const void *claim_bytes,
+static inline Interpretation *stats_make_interpretation(const char *id_value, const char *claim_type, const void *claim_bytes,
                                                  size_t claim_size, const char *context_value) {
     EntityID *id = NULL;
     assert(entity_id_create(id_value, &id) == ENTITY_ID_OK);
@@ -51,7 +51,7 @@ static Interpretation *stats_make_interpretation(const char *id_value, const cha
 }
 
 /* Stores a Chord labelled `label` in the piece `piece`. */
-static void stats_store_chord(PersistenceHandle *persistence, const char *id_value, const char *label,
+static inline void stats_store_chord(PersistenceHandle *persistence, const char *id_value, const char *label,
                               const char *piece) {
     Interpretation *interpretation =
         stats_make_interpretation(id_value, "chord-label", label, strlen(label) + 1, piece);
@@ -62,7 +62,7 @@ static void stats_store_chord(PersistenceHandle *persistence, const char *id_val
 }
 
 /* Stores a generic interpretation with the given claim in the piece `piece`. */
-static void stats_store_claim(PersistenceHandle *persistence, const char *id_value, const char *claim_type,
+static inline void stats_store_claim(PersistenceHandle *persistence, const char *id_value, const char *claim_type,
                               const void *claim_bytes, size_t claim_size, const char *piece) {
     Interpretation *interpretation = stats_make_interpretation(id_value, claim_type, claim_bytes, claim_size, piece);
     assert(persistence_store_interpretation(persistence, interpretation) == PERSISTENCE_INTERPRETATION_OK);
