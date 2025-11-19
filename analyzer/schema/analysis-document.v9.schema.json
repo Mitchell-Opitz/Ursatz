@@ -102,7 +102,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/rhythm_claim" }
     },
-    "texture": { "type": "array" },
+    "texture": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/texture_claim" }
+    },
     "voice_leading": { "type": "array" },
     "schemas": { "type": "array" },
     "progressions": {
@@ -611,6 +614,72 @@
           }
         }
       ]
+    },
+    "texture_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "oneOf": [
+            { "$ref": "#/$defs/texture_passage_claim" },
+            { "$ref": "#/$defs/texture_change_claim" }
+          ]
+        }
+      ]
+    },
+    "texture_passage_claim": {
+      "type": "object",
+      "required": ["label", "texture", "category", "measures", "windows", "unclassified_windows", "confidence", "features"],
+      "properties": {
+        "label": { "const": "passage" },
+        "texture": {
+          "enum": ["monophony", "heterophony", "homophony", "homorhythm", "melody and accompaniment", "polyphony"]
+        },
+        "category": { "enum": ["monophony", "heterophony", "homophony", "polyphony"] },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "windows": { "type": "integer", "minimum": 1 },
+        "unclassified_windows": { "type": "integer", "minimum": 0 },
+        "confidence": {
+          "type": "object",
+          "required": ["texture", "voices", "overall"],
+          "properties": {
+            "texture": { "type": "number", "minimum": 0, "maximum": 1 },
+            "voices": { "type": "number", "minimum": 0, "maximum": 1 },
+            "overall": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "features": {
+          "type": "object",
+          "required": [
+            "voices_max", "voices_mean", "synchrony", "independence", "prominence", "top_gap", "register_span",
+            "spacing", "density", "pattern"
+          ],
+          "properties": {
+            "voices_max": { "type": "integer", "minimum": 0 },
+            "voices_mean": { "type": "number", "minimum": 0 },
+            "synchrony": { "type": "number", "minimum": 0, "maximum": 1 },
+            "independence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "prominence": { "type": "number", "minimum": 0 },
+            "top_gap": { "type": "number" },
+            "register_span": { "type": "number", "minimum": 0 },
+            "spacing": { "type": "number", "minimum": 0 },
+            "density": { "type": "number", "minimum": 0 },
+            "pattern": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+    "texture_change_claim": {
+      "type": "object",
+      "required": ["label", "from", "to", "boundary_measure", "from_texture", "to_texture", "category_changed"],
+      "properties": {
+        "label": { "const": "change" },
+        "from": { "type": "integer", "minimum": 0 },
+        "to": { "type": "integer", "minimum": 1 },
+        "boundary_measure": { "type": "integer" },
+        "from_texture": { "type": "string" },
+        "to_texture": { "type": "string" },
+        "category_changed": { "type": "boolean" }
+      }
     },
     "rhythm_claim": {
       "allOf": [

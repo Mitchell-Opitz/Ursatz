@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
@@ -27,6 +28,139 @@ static const char *midi_import_error_message(MidiImportResult result) {
         default:
             return "unknown MIDI import error";
     }
+}
+
+/* A note-on of the file with the track chunk it is in. */
+typedef struct {
+    long long tick;
+    int pitch;
+    size_t track;
+    bool used;
+} TrackNoteOn;
+
+/* Reads a variable-length quantity at data[at], within end; returns the bytes used, 0 when it runs past end. */
+static size_t read_vlq(const unsigned char *data, size_t at, size_t end, unsigned long *value) {
+    *value = 0;
+    size_t used = 0;
+    unsigned char c;
+    do {
+        if (at + used >= end || used >= 5) {
+            return 0;
+        }
+        c = data[at + used];
+        *value = (*value << 7) | (c & 0x7f);
+        used++;
+    } while ((c & 0x80) != 0);
+    return used;
+}
+
+/* The note-ons of every track chunk (running status honoured), ported from Ursatz's tests/integration/texture_util.h
+   texture_read_note_ons as a rewrite with error returns. false on a malformed track or allocation failure. */
+static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteOn **out, size_t *out_count) {
+    size_t capacity = 1024;
+    size_t count = 0;
+    TrackNoteOn *ons = malloc(capacity * sizeof *ons);
+    if (!ons) {
+        return false;
+    }
+    for (size_t t = 0; t < track_count; t++) {
+        const unsigned char *data = tracks[t].data;
+        size_t end = tracks[t].size;
+        size_t p = 0;
+        long long tick = 0;
+        unsigned char running = 0;
+        while (p < end) {
+            unsigned long delta = 0;
+            size_t used = read_vlq(data, p, end, &delta);
+            if (used == 0 || p + used >= end) {
+                free(ons);
+                return false;
+            }
+            p += used;
+            tick += (long long)delta;
+            unsigned char status = data[p];
+            if (status == 0xff || status == 0xf0 || status == 0xf7) {
+                unsigned long length = 0;
+                p += status == 0xff ? 2 : 1;
+                used = p < end ? read_vlq(data, p, end, &length) : 0;
+                if (used == 0 || p + used + length > end) {
+                    free(ons);
+                    return false;
+                }
+                p += used + length;
+                continue;
+            }
+            if ((status & 0x80) != 0) {
+                running = status;
+                p++;
+            } else {
+                status = running;
+            }
+            unsigned char kind = status & 0xf0;
+            size_t data_bytes = (kind == 0xc0 || kind == 0xd0) ? 1 : 2;
+            if (kind < 0x80 || p + data_bytes > end) {
+                free(ons);
+                return false;
+            }
+            if (kind == 0x90 && data[p + 1] > 0) {
+                if (count == capacity) {
+                    capacity *= 2;
+                    TrackNoteOn *grown = realloc(ons, capacity * sizeof *ons);
+                    if (!grown) {
+                        free(ons);
+                        return false;
+                    }
+                    ons = grown;
+                }
+                ons[count++] = (TrackNoteOn){tick, data[p], t, false};
+            }
+            p += data_bytes;
+        }
+    }
+    *out = ons;
+    *out_count = count;
+    return true;
+}
+
+/* The track chunk each imported note was read from, matched to the file's note-ons by tick and pitch. A note with no
+   match (the importer and this reader disagree) is in track 0. NULL on failure. */
+static size_t *note_streams(const unsigned char *buffer, size_t size, const NoteEvent *const *events,
+                            PitchNumericValue *const *pitch_values, size_t count) {
+    size_t *streams = calloc(count > 0 ? count : 1, sizeof *streams);
+    SmfHeader header;
+    SmfTrack *tracks = NULL;
+    size_t track_count = 0;
+    if (!streams || smf_reader_parse(buffer, size, &header, &tracks, &track_count) != SMF_READER_OK) {
+        free(streams);
+        return NULL;
+    }
+    TrackNoteOn *ons = NULL;
+    size_t on_count = 0;
+    bool ok = read_note_ons(tracks, track_count, &ons, &on_count);
+    free(tracks);
+    if (!ok) {
+        free(streams);
+        return NULL;
+    }
+    for (size_t i = 0; i < count; i++) {
+        const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(events[i]));
+        long long numerator = (long long)musical_time_numerator(onset) * 4 * (long long)header.division;
+        long long denominator = (long long)musical_time_denominator(onset);
+        if (denominator <= 0 || numerator % denominator != 0) {
+            continue;
+        }
+        long long tick = numerator / denominator;
+        int pitch = (int)pitch_numeric_value_position_numerator(pitch_values[i]);
+        for (size_t k = 0; k < on_count; k++) {
+            if (!ons[k].used && ons[k].tick == tick && ons[k].pitch == pitch) {
+                ons[k].used = true;
+                streams[i] = ons[k].track;
+                break;
+            }
+        }
+    }
+    free(ons);
+    return streams;
 }
 
 MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *out) {
@@ -94,6 +228,20 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
             key_signature_events = (MidiKeySignatureEvents){NULL, 0};
         }
     }
+    size_t *streams = NULL;
+    if (import_result == MIDI_IMPORT_OK) {
+        streams = note_streams(buffer, (size_t)size, (const NoteEvent *const *)events, pitch_values, count);
+        if (!streams) {
+            import_result = MIDI_IMPORT_ERR_ALLOC;
+            for (size_t i = 0; i < count; i++) {
+                note_event_destroy(events[i]);
+                pitch_numeric_value_destroy(pitch_values[i]);
+            }
+            free(events);
+            free(pitch_values);
+            midi_meter_import_destroy(&meter);
+        }
+    }
     free(buffer);
 
     if (import_result != MIDI_IMPORT_OK) {
@@ -105,6 +253,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     out->events = events;
     out->pitch_values = pitch_values;
     out->count = count;
+    out->streams = streams;
     out->key_signature = key_signature;
     out->key_signature_events = key_signature_events;
     out->ticks_per_quarter = ticks_per_quarter;

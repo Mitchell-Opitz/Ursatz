@@ -33,7 +33,7 @@ newline. The same input and build always give the same bytes.
 | `motives` | array of motive claims | Filled: the library's motive families with every occurrence and their development. See below. |
 | `melody` | array of melody claims | Filled: the melody of each phrase, read by the library's melody adapter. See below. |
 | `rhythm` | array of rhythm claims | Filled: the library's density, syncopation, hemiola, hypermeter and tuplet results, one flat list labelled by kind. See below. |
-| `texture` | array | Placeholder: `[]`. |
+| `texture` | array of texture claims | Filled: the library's texture passages and the changes between them, one flat list labelled by kind. See below. |
 | `voice_leading` | array | Placeholder: `[]`. |
 | `schemas` | array | Placeholder: `[]`. |
 | `progressions` | array of progression entries | Filled: the recurring progressions of two to six chords. See below. |
@@ -806,6 +806,47 @@ for. All the notes are one stream. The library names the ratio and places it (`b
 The Markdown report renders `## Rhythm and meter` from this section: `### Density` (a row per phrase and line),
 `### Syncopation`, `### Hemiola`, `### Hypermeter` and `### Tuplets and borrowed divisions`.
 
+### Texture
+
+`texture` is one flat array of claims: the passages in time order (`label` `"passage"`), then the changes between
+consecutive passages (`label` `"change"`). The analyzer builds the neutral input of Ursatz's standard-texture adapter
+(`analysis/texture_analysis_input.h`) in `src/pipeline/texture_pipeline.c`, ported from
+`tests/integration/texture_util.h`, and copies the library's results; every texture, category, feature and confidence is
+the library's. The input holds every imported note with its stream (`ImportedNotes.streams`: the MIDI track chunk, the
+MusicXML part), the voice the kernel's voice separation gave it inside that stream (0 the top) and the separation's
+confidence. The library measures every measure from the first that has a note to the last, classifies each with its
+default configuration and merges consecutive measures of the same texture into passages. A claim's `framework` is
+`"standard-texture-v1"`. A piece the separation or the library declines has an empty `texture`.
+
+**Passage** (`label` `"passage"`): `span` runs from the start of the passage's first measure to the end of its last, and
+`note_ids` are the notes attacked in it, in time order.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uncertainty` | number | The library's, in [0, 1]; higher is less certain. |
+| `texture` | string | `"monophony"`, `"heterophony"`, `"homophony"`, `"homorhythm"`, `"melody and accompaniment"` or `"polyphony"`. |
+| `category` | string | The main texture: `"monophony"`, `"heterophony"`, `"homophony"` or `"polyphony"`; homorhythm and melody and accompaniment are homophony. |
+| `measures` | object | `{"first", "last"}`, as the library numbers them (a pickup is 0). |
+| `windows` | integer | The measures in the passage. |
+| `unclassified_windows` | integer | Measures whose features fit no texture and took their neighbour's. |
+| `confidence` | object | `{"texture", "voices", "overall"}`: the texture's margin from its thresholds, the voice separation's, and both together. |
+| `features` | object | The library's means over the passage's measures: `voices_max` (the largest), `voices_mean`, `synchrony`, `independence`, `prominence`, `top_gap`, `register_span`, `spacing`, `density` (attack times per beat) and `pattern`. |
+
+`features.pattern` is the library's repeated-cell score, 0 to 1: evidence for an accompaniment figure. The library names
+no accompaniment pattern (block, arpeggiated, Alberti, oom-pah are not categories or subtypes of standard-texture), so
+the analyzer reports the score and names none (R-018).
+
+**Change** (`label` `"change"`): the boundary between two consecutive passages; `span` is the passage changed to and
+`note_ids` is empty.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uncertainty` | number | The library's. |
+| `from`, `to` | integer | Indices of the two passages among the passage claims (`to` is `from + 1`). |
+| `boundary_measure` | integer | The first measure of the passage changed to. |
+| `from_texture`, `to_texture` | string | The two textures. |
+| `category_changed` | boolean | False for homorhythm to melody and accompaniment, both homophony. |
+
 ### Progressions
 
 `progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
@@ -881,7 +922,7 @@ before those:
   top-level `themes` follows `phrases`, and phrase claims gain the optional `expansions`; both are additive. `form` is
   filled (its object is new), which is additive. `motives` is filled (its claims are new), which is additive. `melody` is filled
   (its claims are new), which is additive. `rhythm` is filled (its claims are new, as one flat array labelled by kind),
-  which is additive.
+  which is additive. `texture` is filled (its claims are new, as one flat array labelled by kind), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,

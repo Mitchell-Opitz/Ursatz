@@ -1971,6 +1971,62 @@ static bool render_rhythm(StringBuilder *sb, const cJSON *document, const cJSON 
            (!has_claims(rhythm, "hypermeter") || render_hypermeters(sb, rhythm)) && render_tuplets(sb, rhythm);
 }
 
+/* ---- Texture ---- */
+
+/* The texture claims are one flat list: the passages, then the changes between them. */
+static bool render_texture(StringBuilder *sb, const cJSON *document, const cJSON *texture) {
+    (void)document;
+    bool ok = sb_append(sb, "## Texture\n\n") &&
+              sb_append(sb, "The library's texture adapter read every measure of the piece from the voices the kernel "
+                            "separated in each track or part, classified it, and merged consecutive measures of the same "
+                            "texture into passages. Category is the main texture (homorhythm and melody and accompaniment "
+                            "are homophony). Voices is the most sounding at once, Synchrony the share of attack times "
+                            "where the voices attack together, Pattern the score of a repeated cell (0 to 1: evidence for "
+                            "an accompaniment figure, not a name for it). Confidence is the texture's margin from its "
+                            "thresholds times the voice separation's.\n\n") &&
+              sb_append(sb, "| Measures | Texture | Category | Voices | Synchrony | Pattern | Confidence |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, texture) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "passage")) {
+            continue;
+        }
+        const cJSON *features = cJSON_GetObjectItemCaseSensitive(claim, "features");
+        const cJSON *confidence = cJSON_GetObjectItemCaseSensitive(claim, "confidence");
+        char synchrony[32];
+        char pattern[32];
+        char overall[32];
+        format_number(number_member(features, "synchrony"), synchrony, sizeof(synchrony));
+        format_number(number_member(features, "pattern"), pattern, sizeof(pattern));
+        format_number(number_member(confidence, "overall"), overall, sizeof(overall));
+        ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+             sb_appendf(sb, " | %s | %s | %d | %s | %s | %s |\n", string_member(claim, "texture"),
+                        string_member(claim, "category"), (int)number_member(features, "voices_max"), synchrony, pattern,
+                        overall);
+    }
+    ok = ok && sb_append(sb, "\n");
+    if (!has_claims(texture, "change")) {
+        return ok && sb_append(sb, "The texture does not change.\n\n");
+    }
+    ok = ok && sb_append(sb, "### Changes\n\n") &&
+         sb_append(sb, "| Measure | From | To | Category changes |\n| --- | --- | --- | --- |\n");
+    cJSON_ArrayForEach(claim, texture) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "change")) {
+            continue;
+        }
+        ok = sb_appendf(sb, "| %d | %s | %s | %s |\n", (int)number_member(claim, "boundary_measure"),
+                        string_member(claim, "from_texture"), string_member(claim, "to_texture"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(claim, "category_changed")) ? "yes" : "no");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -2000,6 +2056,7 @@ static const struct {
     {"progressions", render_progression_patterns},
     {"harmonic_rhythm", render_harmonic_rhythm},
     {"rhythm", render_rhythm},
+    {"texture", render_texture},
 };
 
 static bool section_is_empty(const cJSON *section) {

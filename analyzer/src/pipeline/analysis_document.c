@@ -3106,6 +3106,101 @@ static cJSON *rhythm_json(const ImportedNotes *notes, const AnalysisReport *repo
     return list;
 }
 
+/* ---- Texture ---- */
+
+/* The measured features of a texture passage: the library's means over its measures, the voice count the largest. */
+static cJSON *texture_features_json(const AnalysisTexturePassage *passage) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "voices_max", cJSON_CreateNumber(passage->voices_max)) &&
+                    add(object, "voices_mean", cJSON_CreateNumber(passage->voices_mean)) &&
+                    add(object, "synchrony", cJSON_CreateNumber(passage->synchrony)) &&
+                    add(object, "independence", cJSON_CreateNumber(passage->independence)) &&
+                    add(object, "prominence", cJSON_CreateNumber(passage->prominence)) &&
+                    add(object, "top_gap", cJSON_CreateNumber(passage->top_gap)) &&
+                    add(object, "register_span", cJSON_CreateNumber(passage->register_span)) &&
+                    add(object, "spacing", cJSON_CreateNumber(passage->spacing)) &&
+                    add(object, "density", cJSON_CreateNumber(passage->density)) &&
+                    add(object, "pattern", cJSON_CreateNumber(passage->pattern)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *texture_confidence_json(const AnalysisTexturePassage *passage) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "texture", cJSON_CreateNumber(passage->texture_confidence)) &&
+                    add(object, "voices", cJSON_CreateNumber(passage->voice_confidence)) &&
+                    add(object, "overall", cJSON_CreateNumber(passage->confidence)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static Rational texture_passage_start(const AnalysisTexturePassage *passage) {
+    return rational_make(passage->start_numerator, passage->start_denominator);
+}
+
+static Rational texture_passage_end(const AnalysisTexturePassage *passage) {
+    return rational_make(passage->end_numerator, passage->end_denominator);
+}
+
+/* A texture passage claim: a run of measures with the same texture, as the library classifies it. */
+static cJSON *texture_passage_json(const ImportedNotes *notes, const AnalysisTexturePassage *passage) {
+    cJSON *claim = claim_json_with(passage->framework, notes, passage->note_ids, passage->note_id_count,
+                                   texture_passage_start(passage), texture_passage_end(passage), "passage",
+                                   cJSON_CreateNumber(passage->uncertainty));
+    if (!(claim && add(claim, "texture", cJSON_CreateString(passage->texture)) &&
+          add(claim, "category", cJSON_CreateString(passage->category)) &&
+          add(claim, "measures", measures_json(passage->first_measure, passage->last_measure)) &&
+          add(claim, "windows", cJSON_CreateNumber(passage->windows)) &&
+          add(claim, "unclassified_windows", cJSON_CreateNumber(passage->unclassified_windows)) &&
+          add(claim, "confidence", texture_confidence_json(passage)) &&
+          add(claim, "features", texture_features_json(passage)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* A texture change claim: the boundary between two consecutive passages, spanning the passage changed to. */
+static cJSON *texture_change_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                  const AnalysisTextureChange *change) {
+    const AnalysisTexturePassage *to = &report->texture_passages[change->to];
+    cJSON *claim = claim_json_with(change->framework, notes, NULL, 0, texture_passage_start(to), texture_passage_end(to),
+                                   "change", cJSON_CreateNumber(change->uncertainty));
+    if (!(claim && add(claim, "from", cJSON_CreateNumber((double)change->from)) &&
+          add(claim, "to", cJSON_CreateNumber((double)change->to)) &&
+          add(claim, "boundary_measure", cJSON_CreateNumber(change->boundary_measure)) &&
+          add(claim, "from_texture", cJSON_CreateString(change->from_texture)) &&
+          add(claim, "to_texture", cJSON_CreateString(change->to_texture)) &&
+          add(claim, "category_changed", cJSON_CreateBool(change->category_changed)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The texture section: a list of claims, the passages in time order (labelled "passage") and then the changes between
+   them (labelled "change"). Empty when the library found no texture. */
+static cJSON *texture_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < report->texture_passage_count; i++) {
+        if (!append(list, texture_passage_json(notes, &report->texture_passages[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->texture_change_count; i++) {
+        if (!append(list, texture_change_json(notes, report, &report->texture_changes[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -3125,7 +3220,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "phrases", phrases_json(notes, report)) &&
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
           add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
-          add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", cJSON_CreateArray()) &&
+          add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", texture_json(notes, report)) &&
           add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&

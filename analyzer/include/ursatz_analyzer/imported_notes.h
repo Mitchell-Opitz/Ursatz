@@ -83,6 +83,8 @@ typedef struct {
     NoteEvent **events;
     PitchNumericValue **pitch_values;
     size_t count;
+    size_t *streams; /* owned; count entries, parallel to events: the MIDI track chunk index the note was read from, the
+                        MusicXML part index (source.part_index); all 0 for a one-track file */
     MidiKeySignature key_signature;
     MidiKeySignatureEvents key_signature_events;
     unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */

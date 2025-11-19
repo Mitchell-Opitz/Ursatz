@@ -933,3 +933,32 @@ The library reads each phrase in hypermeasures of two or four measures: the leng
 ### Tuplets and borrowed divisions
 
 No tuplets were found.
+
+## Texture
+
+The library's texture adapter read every measure of the piece from the voices the kernel separated in each track or part, classified it, and merged consecutive measures of the same texture into passages. Category is the main texture (homorhythm and melody and accompaniment are homophony). Voices is the most sounding at once, Synchrony the share of attack times where the voices attack together, Pattern the score of a repeated cell (0 to 1: evidence for an accompaniment figure, not a name for it). Confidence is the texture's margin from its thresholds times the voice separation's.
+
+| Measures | Texture | Category | Voices | Synchrony | Pattern | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| mm. 1 to 2 | melody and accompaniment | homophony | 4 | 0.27 | 0.12 | 0.51 |
+| mm. 3 to 4 | polyphony | polyphony | 2 | 0.41 | 0.13 | 0.24 |
+| mm. 5 to 8 | melody and accompaniment | homophony | 4 | 0.35 | 0.17 | 0.41 |
+| mm. 9 to 10 | polyphony | polyphony | 2 | 0.41 | 0.13 | 0.24 |
+| mm. 11 to 14 | melody and accompaniment | homophony | 2 | 0.39 | 0.24 | 0.4 |
+| mm. 15 to 16 | homorhythm | homophony | 2 | 0.78 | 0.11 | 0.31 |
+| mm. 17 to 20 | melody and accompaniment | homophony | 4 | 0.39 | 0.2 | 0.41 |
+| mm. 21 to 22 | homorhythm | homophony | 2 | 0.78 | 0.11 | 0.26 |
+| mm. 23 to 24 | melody and accompaniment | homophony | 4 | 0.44 | 0.16 | 0.35 |
+
+### Changes
+
+| Measure | From | To | Category changes |
+| --- | --- | --- | --- |
+| 3 | melody and accompaniment | polyphony | yes |
+| 5 | polyphony | melody and accompaniment | yes |
+| 9 | melody and accompaniment | polyphony | yes |
+| 11 | polyphony | melody and accompaniment | yes |
+| 15 | melody and accompaniment | homorhythm | no |
+| 17 | homorhythm | melody and accompaniment | no |
+| 21 | melody and accompaniment | homorhythm | no |
+| 23 | homorhythm | melody and accompaniment | no |

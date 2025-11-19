@@ -177,6 +177,12 @@ add_test(NAME test_rhythm_constructed COMMAND test_rhythm constructed)
 add_test(NAME test_rhythm_field5_target COMMAND test_rhythm field5-target)
 set_tests_properties(test_rhythm_field5_target PROPERTIES WILL_FAIL TRUE)
 
+add_executable(test_texture test_texture.c)
+target_link_libraries(test_texture PRIVATE ursatz_analyzer)
+target_compile_definitions(test_texture PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+add_test(NAME test_texture COMMAND test_texture)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE

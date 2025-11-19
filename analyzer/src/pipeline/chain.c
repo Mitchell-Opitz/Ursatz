@@ -10,6 +10,7 @@
 #include "pipeline/outer_voice_pipeline.h"
 #include "pipeline/progression_pipeline.h"
 #include "pipeline/rhythm_pipeline.h"
+#include "pipeline/texture_pipeline.h"
 #include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/spelling_util.h"
 
@@ -171,7 +172,8 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !motive_stage_run(&chain->motives, chain->notes, segmentation, &chain->harmony, report) ||
         !motive_stage_collect(&chain->motives, report) ||
         !melody_stage_collect(chain->notes, &chain->voice_segmentation, &chain->lines, report) ||
-        !rhythm_stage_collect(chain->notes, &chain->lines, &chain->form, report)) {
+        !rhythm_stage_collect(chain->notes, &chain->lines, &chain->form, report) ||
+        !texture_stage_collect(chain->notes, report)) {
         return false;
     }
     sync_key_change_extents(&chain->key_regions, report->key_changes);
