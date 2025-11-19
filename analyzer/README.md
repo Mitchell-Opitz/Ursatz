@@ -152,6 +152,8 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    (see "Melody").
 12. `rhythm_pipeline`: builds the neutral input of the rhythm adapter of standard-meter from the notes, the chord changes
    and the phrases, and reads the density, syncopation, hemiola and hypermeter; finds the tuplets (see "Rhythm and meter").
+13. `texture_pipeline`: separates the voices of each stream (MIDI track or part) with the kernel, builds the neutral input of
+   the texture adapter of standard-texture and reads the texture per measure, merged into passages (see "Texture").
 
 Steps 2 to 12 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
@@ -604,6 +606,33 @@ phrases). `test_rhythm_constructed` runs small pieces whose answer is known: eig
 attacks, a borrowed division at the beat), a duplet in 6/8 and a hemiola in 3/4. `test_rhythm_field5_target` asserts
 Ursatz's target (80% of the syncopations and hyperdownbeats, every hemiola, every reinterpretation) and is marked
 `WILL_FAIL` (see "Known limits").
+
+## Texture
+
+The analyzer builds the neutral input of the texture adapter of Ursatz's standard-texture
+(`src/pipeline/texture_pipeline.c`, ported from `tests/integration/texture_util.h`) and reports the library's results.
+Every imported note carries a stream (`ImportedNotes.streams`: the MIDI track chunk, read back from the file, or the
+MusicXML part), the kernel's voice separation runs per stream (a track is usually a hand) and gives each note a voice and
+a confidence, and the library measures each measure, classifies it with its defaults and merges equal consecutive
+measures into passages. The document's `texture` has a claim per passage (texture, category, measures, confidence and
+the measured features) and one per change. The library names no accompaniment pattern, so the passage reports the
+repeated-pattern score only. The Markdown report's `## Texture` prints the passages and the changes.
+
+Measured on the reference pieces (MIDI), passages by texture:
+
+| Piece | Passages | Changes (category changes) | Monophony | Polyphony | Homorhythm | Melody and accompaniment |
+| --- | --- | --- | --- | --- | --- | --- |
+| Bach 114 | 9 | 8 (4) | 0 | 2 | 2 | 5 |
+| Clementi 36 | 7 | 6 (4) | 0 | 2 | 1 | 4 |
+| Mozart 545 | 137 | 136 (60) | 15 | 16 | 47 | 59 |
+| Field 1 | 10 | 9 (9) | 1 | 4 | 0 | 5 |
+| Field 5 | 19 | 18 (14) | 0 | 7 | 2 | 10 |
+
+`test_texture` checks the structure on Field 1 and scores it against Ursatz's hand annotation
+(`tests/fixtures/annotations/field1_texture.txt`, a draft reading): 59 of 65 annotated measures have the right category
+(90.8%, target 80%; measures 8, 40, 42, 43, 63 and 64 are read as polyphony, the annotation says homophony) and the one
+annotated change point (measure 2) is found. A MusicXML file's streams are its parts, so its passages can differ from the
+MIDI file's.
 
 ## Known limits
 
