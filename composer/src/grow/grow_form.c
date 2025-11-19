@@ -15,6 +15,8 @@
 /* The pitches a form may use, so the melody has room to place it (the contrasting ideas' range). */
 #define FORM_LOW 58
 #define FORM_HIGH 84
+/* The widest leap a form may have, a fifth, unless the basic idea has a wider one. */
+#define FORM_LEAP 7
 /* Draws of an operation's open parameters tried for each candidate, from fixed seeds. */
 #define FORM_SEEDS 3
 /* Candidates one slot offers at most. */
@@ -258,6 +260,15 @@ static bool within_range(const Motive *motive) {
     return true;
 }
 
+static int widest_leap(const Motive *motive) {
+    int widest = 0;
+    for (size_t i = 1; i < motive->note_count; i++) {
+        int leap = motive->notes[i].midi_pitch - motive->notes[i - 1].midi_pitch;
+        widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
+    }
+    return widest;
+}
+
 static bool same_pitches(const Motive *a, const Motive *b) {
     if (a->note_count != b->note_count) {
         return false;
@@ -295,11 +306,13 @@ static void label_of(const Payload *payload, char *out, size_t size) {
  */
 static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long seed, const char *function, bool contrast) {
     const Request *request = proposal->request;
+    bool fragment = request->slot == SLOT_FRAGMENT_1 || request->slot == SLOT_FRAGMENT_2;
     Motive result;
     VariantRecord record;
     if (proposal->out->count >= FORM_MAX ||
         variant_apply_chain(&request->basic, chain, seed, &result, &record) != VARIANT_OK ||
-        result.form != MOTIVE_FORM_FULL || result.note_count != request->basic.note_count || !within_range(&result) ||
+        result.form != MOTIVE_FORM_FULL || (!fragment && result.note_count != request->basic.note_count) ||
+        !within_range(&result) || widest_leap(&result) > (widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP) ||
         plan_time_compare(result.length, request->room) > 0 ||
         (contrast && grow_same_contour(&request->basic, &result))) {
         return true;
@@ -397,6 +410,25 @@ static bool offer_dominant_form(Proposal *proposal) {
     return variant_step_init(&chain.steps[0], "dominant-form") ? offer(proposal, &chain, 1, NULL, false) : true;
 }
 
+/*
+ * The liquidation of a continuation in units that halve (ch. VIII): the first fragment is the basic idea's characteristic
+ * features liquidated and shortened by half, the second is the first liquidated and shortened again. Both are chains
+ * from the basic idea, so a fragment does not wait for the one before it.
+ */
+static bool offer_liquidation(Proposal *proposal, size_t times) {
+    VariantChain chain;
+    memset(&chain, 0, sizeof(chain));
+    for (size_t t = 0; t < times; t++) {
+        VariantStep *step = &chain.steps[t];
+        if (!variant_step_init(step, "liquidate-features") || !variant_step_set(step, "steps", 1, 0) ||
+            !variant_step_set(step, "shorten", 1, 0)) {
+            return true;
+        }
+    }
+    chain.step_count = times;
+    return offer(proposal, &chain, 1, NULL, false);
+}
+
 static bool offer_exact(Proposal *proposal) {
     VariantChain chain;
     memset(&chain, 0, sizeof(chain));
@@ -451,7 +483,9 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     case SLOT_CADENTIAL:
         return offer_operations(&proposal, "cadential", false);
     case SLOT_FRAGMENT_1:
+        return offer_liquidation(&proposal, 1);
     case SLOT_FRAGMENT_2:
+        return offer_liquidation(&proposal, 2);
     case SLOT_NONE:
         break;
     }
