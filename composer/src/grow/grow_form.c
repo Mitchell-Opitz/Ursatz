@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_connect.h>
+#include <ursatz_composer/motive_sketch_bridge.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "grow/grow_internal.h"
@@ -48,6 +49,7 @@ typedef struct {
     size_t taken_count;
     PlanTime room;   /* the longest a form may be: the motive node's bar, or the idea if it is shorter */
     PlanSpan idea;
+    bool answers_in_dominant; /* the idea's chords start on the dominant: a response to the basic idea */
     bool has_cadence; /* the idea's melody ends in a cadence */
     PlanCadenceType cadence;
 } Request;
@@ -187,6 +189,19 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
         return false;
     }
     request.idea = plan_node_span(plan, idea);
+    LaneSpanId lanes[FORM_IDEAS];
+    size_t lane_count = plan_node_lane_spans(plan, idea, lanes, FORM_IDEAS);
+    for (size_t i = 0; i < lane_count && i < FORM_IDEAS; i++) {
+        for (size_t k = 0; plan_lane_span_lane(plan, lanes[i]) == PLAN_LANE_HARMONY &&
+                           k < plan_lane_span_constraint_count(plan, lanes[i]);
+             k++) {
+            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, lanes[i], k);
+            if (constraint->kind == PLAN_CONSTRAINT_HARMONY_SHAPE &&
+                constraint->params.harmony_shape.starts_on == PLAN_HARMONY_ANCHOR_DOMINANT) {
+                request.answers_in_dominant = true;
+            }
+        }
+    }
     request.room = plan_time_compare(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
     request.previous = request.basic;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -364,6 +379,24 @@ static bool offer_operations(Proposal *proposal, const char *function, bool cont
     return true;
 }
 
+/* The motive's first chord (its own harmony, else its best implied chord) is the unaltered tonic. */
+static bool opens_on_tonic(const Motive *motive) {
+    if (motive->harmony_count > 0) {
+        return motive->harmony[0].degree == 1 && motive->harmony[0].alteration == 0;
+    }
+    MotiveSketch sketch;
+    return motive_to_sketch(motive, &sketch) && sketch.chord_count > 0 && sketch.chords[0].degree == 1 &&
+           sketch.chords[0].alteration == 0;
+}
+
+/* The basic idea in its dominant form. */
+static bool offer_dominant_form(Proposal *proposal) {
+    VariantChain chain;
+    memset(&chain, 0, sizeof(chain));
+    chain.step_count = 1;
+    return variant_step_init(&chain.steps[0], "dominant-form") ? offer(proposal, &chain, 1, NULL, false) : true;
+}
+
 static bool offer_exact(Proposal *proposal) {
     VariantChain chain;
     memset(&chain, 0, sizeof(chain));
@@ -404,9 +437,15 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     case SLOT_RESTATED:
         return offer_exact(&proposal);
     case SLOT_REPETITION:
-        /* A restated repetition (the melody restates the basic idea) stays exact; a response is a transposition. */
-        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal)
-                                                                : offer_transpositions(&proposal);
+        /* A restated repetition (the melody restates the basic idea) stays exact. A response is the dominant form when
+           the basic idea opens on the tonic and the chords answer on the dominant; else a transposition. */
+        if (request.ref.transform == PLAN_TRANSFORM_RESTATED) {
+            return offer_exact(&proposal);
+        }
+        if (request.answers_in_dominant && opens_on_tonic(&request.basic) && !offer_dominant_form(&proposal)) {
+            return false;
+        }
+        return out->count > 0 ? true : offer_transpositions(&proposal);
     case SLOT_CONTRAST:
         return offer_operations(&proposal, "contrast", true);
     case SLOT_CADENTIAL:
