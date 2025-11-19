@@ -9,6 +9,7 @@
 #include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/form_return.h>
+#include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
@@ -292,7 +293,9 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
     case COMPOSE_STAGE_STRUCTURE:
         return grow_register(registry, &config->context);
     case COMPOSE_STAGE_MOTIVES:
-        return motive_develop_register(registry, motives);
+        /* The motive-forms first: a slot they have no form for is left to the P13 operators. */
+        result = grow_form_register(registry, motives);
+        return result == FILL_OK ? motive_develop_register(registry, motives) : result;
     case COMPOSE_STAGE_HARMONY:
         /* The harmony operators write chords that stand on a Given bass, carry a Given melody and join Given chords. */
         result = harmony_prolong_register_given(registry);
@@ -319,7 +322,7 @@ static FillCheckerFn checker_of(ComposeStage stage) {
     case COMPOSE_STAGE_STRUCTURE:
         return grow_checker;
     case COMPOSE_STAGE_MOTIVES:
-        return motive_develop_checker;
+        return grow_motives_checker;
     case COMPOSE_STAGE_HARMONY:
         return harmony_prolong_checker;
     case COMPOSE_STAGE_BASS:
@@ -708,6 +711,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     /* Fragments of one note are allowed: grow-theme shortens a fragment to fit its idea. */
     motive_develop_context_default(&run.motives);
     run.motives.min_length = 1;
+    run.motives.basic = config->basic;
     run.accompaniment = accompaniment_params_default();
     run.voicing = voicing_params_default();
     PieceResult result = PIECE_OK;
