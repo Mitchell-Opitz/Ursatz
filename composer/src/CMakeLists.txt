@@ -57,6 +57,7 @@ add_library(ursatz_composer STATIC
     motive/variant_functions.c
     motive/variant_recognize.c
     motive/motive_sketch_bridge.c
+    motive/motive_connect.c
     melody/melody_check.c
     melody/melody_context.c
     melody/melody_contour.c
@@ -71,6 +72,7 @@ add_library(ursatz_composer STATIC
     grow/grow_beginning.c
     grow/grow_ending.c
     grow/grow_check.c
+    grow/grow_form.c
     grow/grow_run.c
     piece/form_template.c
     piece/form_return.c
