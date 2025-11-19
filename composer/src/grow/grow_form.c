@@ -290,13 +290,19 @@ static bool has_function(const char *const *functions, size_t count, const char 
     return false;
 }
 
-/* The label of a candidate: its chain. */
+/*
+ * The label of a candidate, as the record and --explain show it: the chain, the connection score as a percentage, and the
+ * derivation in plain words, cut where the label ends. The record's score is 1 plus the connection (grow_motives_checker).
+ */
 static void label_of(const Payload *payload, char *out, size_t size) {
+    char chain[FILL_LABEL_MAX];
     size_t used = 0;
-    out[0] = '\0';
-    for (size_t s = 0; s < payload->record.step_count && used < size; s++) {
-        used += (size_t)snprintf(out + used, size - used, "%s%s", s > 0 ? " then " : "", payload->record.steps[s].op);
+    chain[0] = '\0';
+    for (size_t s = 0; s < payload->record.step_count && used < sizeof(chain); s++) {
+        used += (size_t)snprintf(chain + used, sizeof(chain) - used, "%s%s", s > 0 ? " then " : "", payload->record.steps[s].op);
     }
+    const MotiveScore *total = &payload->connection.total;
+    snprintf(out, size, "%s %lu%%: %s", chain, total->numerator * 100 / total->denominator, payload->record.derivation);
 }
 
 /*
