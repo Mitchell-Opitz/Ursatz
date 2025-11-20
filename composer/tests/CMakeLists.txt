@@ -459,3 +459,9 @@ target_compile_definitions(test_recognize_cli PRIVATE COMPOSER_CLI_PATH="$<TARGE
                                                       COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_recognize_cli ursatz-composer)
 add_test(NAME test_recognize_cli COMMAND test_recognize_cli)
+
+add_executable(test_motive_connect test_motive_connect.c)
+target_link_libraries(test_motive_connect PRIVATE ursatz_composer)
+target_include_directories(test_motive_connect PRIVATE ${PROJECT_SOURCE_DIR}/external/ursatz/src)
+target_compile_options(test_motive_connect PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_connect COMMAND test_motive_connect)
