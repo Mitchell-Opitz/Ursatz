@@ -232,7 +232,7 @@ const VariantTreeView = (function () {
       actionButton("Approve", () => actions.flag(row.id, "approved")),
       actionButton("Reject", () => actions.flag(row.id, "rejected")),
       actionButton("Unflag", () => actions.flag(row.id, "unflagged")),
-      actionButton("Reroll", () => actions.reroll(row.id)),
+      ...(row.seed === null ? [] : [actionButton("Reroll", () => actions.reroll(row.id))]),
       actionButton("Open", () => actions.open(row.id)),
     );
     item.appendChild(buttons);
@@ -496,7 +496,12 @@ const VariantTreeView = (function () {
     });
 
     refreshTree();
-    return { el: section, showRejected: () => rejectedBox.checked, onShowRejected: (fn) => rejectedListeners.push(fn) };
+    return {
+      el: section,
+      refresh: refreshTree,
+      showRejected: () => rejectedBox.checked,
+      onShowRejected: (fn) => rejectedListeners.push(fn),
+    };
   }
 
   return { mount };

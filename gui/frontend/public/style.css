@@ -2216,3 +2216,20 @@ body {
 .variant-flag-rejected {
   opacity: 0.7;
 }
+
+/* Compare motifs (P14 B10) */
+.materials-compare {
+  margin: 0.5rem 0;
+}
+.compare-result {
+  margin: 0.5rem 0;
+}
+.compare-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.compare-unrelated {
+  font-style: italic;
+}

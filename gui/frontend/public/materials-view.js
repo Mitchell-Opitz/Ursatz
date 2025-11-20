@@ -1095,6 +1095,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
   const subjectsRow = materialsElement("div", "materials-subjects-row");
   subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
   content.appendChild(subjectsRow);
+  const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
   if (type === "motif") {
     const editor = buildMotifEditor(answer.data.body);
     content.appendChild(editor.el);
@@ -1103,12 +1104,21 @@ async function renderMaterialsDetail(type, id, analysisError) {
     if (score) {
       content.appendChild(score);
     }
-    VariantTreeView.mount(content, {
+    const variants = VariantTreeView.mount(content, {
       id,
       name: item.name,
       body: answer.data.body,
       send: sendMaterialsRequest,
       open: (variantId) => renderMaterialsDetail(type, variantId),
+    });
+    MotifCompareView.mount(content, {
+      id,
+      version: item.current_version,
+      projectId: item.project_id,
+      projects: materialsState.projects,
+      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      send: sendMaterialsRequest,
+      linked: () => variants.refresh(),
     });
     content.appendChild(
       buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
@@ -1125,7 +1135,6 @@ async function renderMaterialsDetail(type, id, analysisError) {
       }),
     );
   }
-  const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
   content.appendChild(
     buildUsesSection({
       id,
