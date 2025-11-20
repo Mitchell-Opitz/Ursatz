@@ -113,6 +113,20 @@ check(same(filtered.functions, ["beginning", "cadential"]) && JSON.parse(V.gener
 check(same(V.featureOptions([{ label: "a", first: 0, last: 2 }, { label: "turn", first: 3, last: 3 }]), [{ value: "", text: "drawn" }, { value: "0", text: "a (notes 1-3)" }, { value: "1", text: "turn (notes 4-4)" }]) && V.featureOptions(null).length === 1, "feature parameters offer the motif's labels");
 check(V.stepFromValues({ name: "repeat-feature", params: [{ name: "feature", kind: "int", min: 0, max: 7 }] }, { feature: "1" }).step.params.feature === 1, "a chosen feature becomes its index");
 
+const compareReq = V.compareRequest({ item: "m1", version: 2 }, { item: "m2", version: 3 });
+check(compareReq.method === "POST" && compareReq.url === "/api/materials/recognize" && same(JSON.parse(compareReq.body), { source: { item: "m1", version: 2 }, target: { item: "m2", version: 3 } }), "the compare request names both motifs and their versions");
+const recognition = { found: true, chain: { steps: [{ op: "invert", params: {} }, { op: "augment", params: { ratio: "2:1" } }] }, distance: 0.25, kept: ["rhythm"], changed: ["intervals"], derivation: "Inverted, then augmented." };
+const linkReq = V.linkFormRequest("m2", { item: "m1", version: 2 }, recognition);
+check(linkReq.method === "POST" && linkReq.url === "/api/materials/items/m2/link-form" && same(JSON.parse(linkReq.body), { source: { item: "m1", version: 2 }, recognition }), "the link request goes to the target with the source and the recognition");
+const related = V.compareView(recognition);
+check(related.found && related.canLink && related.chain === "invert then augment" && related.related === "75% related" && related.derivation === "Inverted, then augmented.", "a found chain shows the chain, the derivation and N% related");
+check(same(related.chips.map((c) => c.text), ["kept rhythm", "changed intervals"]), "the compare result shows kept and changed chips");
+const unrelated = V.compareView({ found: false, chain: { steps: [] }, distance: 1, kept: [], changed: [] });
+check(!unrelated.found && !unrelated.canLink && unrelated.text === "Not related within 4 steps" && unrelated.related === "" && unrelated.chips.length === 0, "no chain reads Not related within 4 steps and cannot be linked");
+check(!V.compareView(null).found && V.compareView({ found: true, chain: { steps: [] }, distance: 0, kept: [], changed: [] }).related === "100% related", "a missing answer is not related and an exact one is 100% related");
+const linkedRows = V.treeRows({ id: "m1", name: "A", current_version: 1, derived: null, children: [{ id: "m2", name: "B", current_version: 2, derived: { kind: "motive-form", flag: "unflagged", kept: ["rhythm"], changed: ["intervals"], operations: [{ op: "invert" }], seed: null, functions: [], remoteness: 0.2, harmony: null }, children: [] }] }, false).rows;
+check(linkedRows.length === 2 && linkedRows[1].seed === null && linkedRows[1].derivation === "invert" && linkedRows[1].remoteness === "20% remote from the basic motive", "a linked form is a tree row with no seed");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
