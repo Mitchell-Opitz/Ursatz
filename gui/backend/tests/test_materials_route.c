@@ -913,6 +913,142 @@ static int version_count(const cJSON *answer) {
   return cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions"));
 }
 
+/* POST /api/materials/recognize {source, target} with the two references written out. */
+static cJSON *recognize_post(const char *source, int source_version, const char *target, int target_version, int *status) {
+  char request[512];
+  snprintf(request, sizeof(request), "{\"source\":{\"item\":\"%s\",\"version\":%d},\"target\":{\"item\":\"%s\",\"version\":%d}}",
+           source, source_version, target, target_version);
+  return json_exchange("POST", "/api/materials/recognize", request, status);
+}
+
+/* Recognizing how an inverted motif derives from its source, and what the route refuses. */
+static void test_recognize(void) {
+  int status = 0;
+  char *id = variant_source();
+  char *inverted = id ? save_inverted(id, 5) : NULL;
+  check(id && inverted, "a motif and its inversion are saved");
+  if (!id || !inverted) {
+    free(id);
+    free(inverted);
+    return;
+  }
+  cJSON *answer = recognize_post(id, 1, inverted, 1, &status);
+  const cJSON *steps = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "chain"), "steps");
+  check(status == 200 && ok_true(answer) && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "found")) &&
+            cJSON_GetArraySize(steps) == 1 && strcmp(string_of(cJSON_GetArrayItem(steps, 0), "op"), "invert") == 0,
+        "recognize finds the inversion");
+  check(cJSON_IsString(cJSON_GetObjectItemCaseSensitive(answer, "derivation")) &&
+            cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(answer, "kept")) &&
+            cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(answer, "distance")),
+        "recognize answers the derivation, what was kept and the distance");
+  cJSON_Delete(answer);
+
+  answer = recognize_post(id, 1, id, 1, &status);
+  check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "found")) &&
+            number_of(answer, "distance") == 0,
+        "a motif recognizes as itself at no distance");
+  cJSON_Delete(answer);
+
+  answer = recognize_post(id, 1, inverted, 9, &status);
+  check(status == 404, "a version that is not there is 404");
+  cJSON_Delete(answer);
+  answer = json_exchange("POST", "/api/materials/recognize", "{\"source\":{\"item\":\"x\"},\"target\":{}}", &status);
+  check(status == 400, "a reference without a version is 400");
+  cJSON_Delete(answer);
+  answer = json_exchange("GET", "/api/materials/recognize", NULL, &status);
+  check(status == 405, "recognize takes POST only");
+  cJSON_Delete(answer);
+
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  char *theme = create_item("theme", "Not a motif", project, "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}");
+  check(theme != NULL, "a theme is saved");
+  if (theme) {
+    answer = recognize_post(theme, 1, inverted, 1, &status);
+    check(status == 400, "a theme is not a motif to compare");
+    cJSON_Delete(answer);
+    free(theme);
+  }
+  free(id);
+  free(inverted);
+}
+
+/* POST /api/materials/items/<target>/link-form with the recognition of source -> target as the recognize route gave it. */
+static cJSON *link_form_post(const char *source, int source_version, const char *target, cJSON *recognition, int *status) {
+  cJSON *request = cJSON_CreateObject();
+  cJSON *reference = cJSON_AddObjectToObject(request, "source");
+  cJSON_AddStringToObject(reference, "item", source);
+  cJSON_AddNumberToObject(reference, "version", source_version);
+  cJSON_AddItemToObject(request, "recognition", cJSON_Duplicate(recognition, 1));
+  char *text = cJSON_PrintUnformatted(request);
+  cJSON *answer = item_post(target, "link-form", text, status);
+  free(text);
+  cJSON_Delete(request);
+  return answer;
+}
+
+/* Linking a motif as a form of another from a recognition writes a new version with derived; a loop is refused. */
+static void test_link_form(void) {
+  int status = 0;
+  char *id = variant_source();
+  char *other = variant_source();
+  char *inverted = id ? save_inverted(id, 6) : NULL;
+  check(id && other && inverted, "three motifs are saved to link");
+  if (!id || !other || !inverted) {
+    free(id);
+    free(other);
+    free(inverted);
+    return;
+  }
+  cJSON *recognition = recognize_post(other, 1, inverted, 1, &status);
+  cJSON *linked = link_form_post(other, 1, inverted, recognition, &status);
+  check(status == 200 && ok_true(linked) && version_count(linked) == 2, "linking writes a second version of the target");
+  cJSON *read = item_get(inverted, "", &status);
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(read, "body"), "motif");
+  const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+  check(status == 200 && strcmp(string_of(derived, "source_item"), other) == 0 &&
+            number_of(derived, "source_version") == 1 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(derived, "seed")) &&
+            strcmp(string_of(derived, "flag"), "unflagged") == 0,
+        "derived names the source and its version, has no seed and is unflagged");
+  check(strcmp(string_of(derived, "kind"), "motive-form") == 0 &&
+            cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(derived, "operations")) ==
+                cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(recognition, "chain"), "steps")) &&
+            cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(derived, "kept")) &&
+            cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(derived, "functions")),
+        "derived holds the recognition's chain, its kind and what it kept");
+  cJSON_Delete(read);
+  cJSON_Delete(linked);
+
+  cJSON *refused = link_form_post(inverted, 1, other, recognition, &status);
+  check(status == 409, "a motif is not a form of one of its own forms");
+  cJSON_Delete(refused);
+  refused = link_form_post(other, 1, other, recognition, &status);
+  check(status == 409, "a motif is not a form of itself");
+  cJSON_Delete(refused);
+  refused = link_form_post(inverted, 1, id, recognition, &status);
+  check(status == 200, "a form of a form can be linked");
+  cJSON_Delete(refused);
+  refused = link_form_post(id, 1, other, recognition, &status);
+  check(status == 409, "the root of a chain of forms is not a form of its last");
+  cJSON_Delete(refused);
+
+  cJSON *not_found = cJSON_Parse("{\"found\":false}");
+  refused = link_form_post(other, 1, inverted, not_found, &status);
+  check(status == 400, "a recognition that found no chain is refused");
+  cJSON_Delete(refused);
+  cJSON_Delete(not_found);
+  refused = link_form_post(other, 9, inverted, recognition, &status);
+  check(status == 404, "a source version that is not there is 404");
+  cJSON_Delete(refused);
+  refused = json_exchange("POST", "/api/materials/items/nothing/link-form", "{}", &status);
+  check(status == 400 || status == 404, "a request without a source is refused");
+  cJSON_Delete(refused);
+  cJSON_Delete(recognition);
+  free(id);
+  free(other);
+  free(inverted);
+}
+
 /* Flags are new versions, a reroll changes the seed, and the tree nests the variants of variants. */
 static void test_variant_flags_and_tree(void) {
   int status = 0;
@@ -1090,6 +1226,8 @@ int main(void) {
   test_harmony();
   test_variants();
   test_variant_flags_and_tree();
+  test_recognize();
+  test_link_form();
   test_random_motifs();
   test_body_limit();
 
