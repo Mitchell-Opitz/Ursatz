@@ -101,3 +101,14 @@ target_compile_definitions(test_framework_v1_thematic_returns PRIVATE
     URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md"
     URSATZ_RETURNS_SUMMARY="${CMAKE_CURRENT_BINARY_DIR}/framework_v1_returns_summary.txt")
 add_test(NAME framework_v1_thematic_returns COMMAND test_framework_v1_thematic_returns)
+
+add_executable(test_corpus_style_statistics test_corpus_style_statistics.c)
+target_link_libraries(test_corpus_style_statistics PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_corpus_style_statistics PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis
+                           ${PROJECT_SOURCE_DIR}/tests/corpus_stats)
+target_compile_definitions(test_corpus_style_statistics PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
+    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
+add_test(NAME corpus_style_statistics COMMAND test_corpus_style_statistics)
