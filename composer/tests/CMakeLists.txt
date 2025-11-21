@@ -157,7 +157,10 @@ foreach(beginning RANGE 2)
                      COMMAND test_grow_period_heard ${beginning} ${ending})
             # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test asserts
             # that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
-            set_tests_properties(test_grow_period_heard_${beginning_name}_${ending_name} PROPERTIES WILL_FAIL TRUE)
+            # The compound basic idea and a continuation is heard in every run since the motive-forms (docs/grow.md).
+            if(NOT (beginning EQUAL 2 AND ending EQUAL 0))
+                set_tests_properties(test_grow_period_heard_${beginning_name}_${ending_name} PROPERTIES WILL_FAIL TRUE)
+            endif()
         endif()
     endforeach()
 endforeach()
