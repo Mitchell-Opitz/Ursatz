@@ -316,8 +316,22 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     Motive result;
     VariantRecord record;
     if (proposal->out->count >= FORM_MAX ||
-        variant_apply_chain(&request->basic, chain, seed, &result, &record) != VARIANT_OK ||
-        result.form != MOTIVE_FORM_FULL || (!fragment && result.note_count != request->basic.note_count) ||
+        variant_apply_chain(&request->basic, chain, seed, &result, &record) != VARIANT_OK) {
+        return true;
+    }
+    /* A form that lies below the range (the dominant form of a low motive) is taken up an octave. */
+    int lowest = 127;
+    int highest = 0;
+    for (size_t i = 0; i < result.note_count; i++) {
+        lowest = result.notes[i].midi_pitch < lowest ? result.notes[i].midi_pitch : lowest;
+        highest = result.notes[i].midi_pitch > highest ? result.notes[i].midi_pitch : highest;
+    }
+    if (lowest < FORM_LOW && highest + 12 <= FORM_HIGH) {
+        for (size_t i = 0; i < result.note_count; i++) {
+            result.notes[i].midi_pitch += 12;
+        }
+    }
+    if (result.form != MOTIVE_FORM_FULL || (!fragment && result.note_count != request->basic.note_count) ||
         !within_range(&result) || widest_leap(&result) > (widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP) ||
         plan_time_compare(result.length, request->room) > 0 ||
         (contrast && grow_same_contour(&request->basic, &result))) {
