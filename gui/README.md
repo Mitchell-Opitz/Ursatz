@@ -658,6 +658,28 @@ from the pure `variant-tree.js`, global `VariantTree`).
   and Open. Rejected variants and everything under them are hidden unless
   "Show rejected" is on; the choice is kept in `localStorage`.
 
+#### Comparing and linking motifs
+
+The motif detail has a Compare section (`motif-compare-view.js`, rendering from `VariantTree.compareRequest`,
+`linkFormRequest` and `compareView`). Pick another motif, from the motif's own project or any project (a project select
+and a name search), and press "Compare with". The result panel shows the chain, the derivation sentence, the kept and
+changed chips and the distance as "N% related" (100 minus the Composer's distance in percent). When no chain of up to
+four steps turns this motif into the other, the panel says "Not related within 4 steps" and offers no link. "Link as a
+form of this motif" makes the picked motif a form of this one; the variant tree then shows it like a generated form
+(a linked form has no seed, so it has no Reroll).
+
+- `POST /api/materials/recognize` `{"source":{"item","version"},"target":{"item","version"}}` runs the Composer's
+  `recognize` on both versions' degrees, with each motif's harmony and features, and answers its JSON (`found`,
+  `chain`, `distance`, `remoteness`, `kept`, `changed`, `derivation`) plus `ok`. The two motifs need the same form,
+  meter and key. `400` for a body that is not a motif, has no degrees (not analyzed) or does not match in form, meter
+  and key, `404` for a version that is not there. The search is the Composer's beam search, not exhaustive.
+- `POST /api/materials/items/<id>/link-form` `{"source":{"item","version"},"recognition"}` writes a new version of the
+  item (the target) whose `derived` is `{source_item, source_version, operations, seed: null, kind, kept, changed,
+  harmony, functions, remoteness, flag: "unflagged"}` from the recognition: `kind` is `exact` when every step is
+  `exact`, otherwise `motive-form`; `harmony` is the target's own chords; `remoteness` is the recognition's. The note
+  is `linked: <derivation>`. Answers `{"item"}`. `400` when the recognition found no chain, `404` for a source
+  version that is not there, `409` when the item is the source or one of its ancestors.
+
 #### Motive-forms: harmony, functions and remoteness
 
 Every Composer call for a motif (`motive` on save, `variants`, render and

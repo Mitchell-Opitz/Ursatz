@@ -313,6 +313,42 @@
     return jsonRequest("GET", "/api/materials/variant-operations");
   }
 
+  /* The recognize request: how the target motif (an {item, version} reference) derives from the source. */
+  function compareRequest(source, target) {
+    return jsonRequest("POST", "/api/materials/recognize", {
+      source: { item: source.item, version: source.version },
+      target: { item: target.item, version: target.version },
+    });
+  }
+
+  /* The link-form request: the target item becomes a form of the source, from the recognition the compare gave. */
+  function linkFormRequest(targetId, source, recognition) {
+    return jsonRequest("POST", itemUrl(targetId, "link-form"), {
+      source: { item: source.item, version: source.version },
+      recognition,
+    });
+  }
+
+  /* What the compare panel shows for a recognize answer: the chain, the derivation, the kept and changed chips and the
+   * distance as "N% related". A search that found no chain is "Not related within 4 steps" and cannot be linked. */
+  function compareView(recognition) {
+    const r = recognition || {};
+    if (r.found !== true) {
+      return { found: false, text: "Not related within 4 steps", chain: "", derivation: "", chips: [], related: "", canLink: false };
+    }
+    const distance = typeof r.distance === "number" && r.distance >= 0 && r.distance <= 1 ? r.distance : null;
+    const steps = r.chain && Array.isArray(r.chain.steps) ? r.chain.steps : [];
+    return {
+      found: true,
+      text: "",
+      chain: steps.map((step) => step.op).join(" then "),
+      derivation: String(r.derivation || ""),
+      chips: chips(r.kept, r.changed),
+      related: distance === null ? "" : `${Math.round((1 - distance) * 100)}% related`,
+      canLink: true,
+    };
+  }
+
   /* What a candidate card shows. */
   function candidateView(candidate) {
     const c = candidate || {};
@@ -381,6 +417,9 @@
     rerollRequest,
     treeRequest,
     operationsRequest,
+    compareRequest,
+    linkFormRequest,
+    compareView,
     candidateView,
     candidateDegrees,
     candidateFeatures,
