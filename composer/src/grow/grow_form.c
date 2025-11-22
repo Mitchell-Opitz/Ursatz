@@ -19,6 +19,8 @@
 #define FORM_LEAP 7
 /* Draws of an operation's open parameters tried for each candidate, from fixed seeds. */
 #define FORM_SEEDS 3
+/* The step between the seeds of one operation's draws (any works). */
+#define FORM_SEED_STEP 7919UL
 /* Candidates one slot offers at most. */
 #define FORM_MAX 96
 #define FORM_IDEAS 16
@@ -312,7 +314,7 @@ static void label_of(const Payload *payload, char *out, size_t size) {
  */
 static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long seed, const char *function, bool contrast) {
     const Request *request = proposal->request;
-    bool fragment = request->slot == SLOT_FRAGMENT_1 || request->slot == SLOT_FRAGMENT_2;
+    bool fragment = request->slot == SLOT_FRAGMENT_1 || request->slot == SLOT_FRAGMENT_2 || request->slot == SLOT_CADENTIAL;
     Motive result;
     VariantRecord record;
     if (proposal->out->count >= FORM_MAX ||
@@ -351,6 +353,10 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
         if ((request->cadence == PLAN_CADENCE_PAC && last != 0) || (request->cadence == PLAN_CADENCE_IAC && last != third)) {
             return true;
         }
+    }
+    /* A cadential idea is a liquidation: fewer notes than the basic idea, as the P13 operators make it. */
+    if (request->slot == SLOT_CADENTIAL && result.note_count >= request->basic.note_count) {
+        return true;
     }
     /* A contrasting idea is not another idea's again. */
     for (size_t i = 0; contrast && i < request->taken_count; i++) {
@@ -403,7 +409,7 @@ static bool offer_operations(Proposal *proposal, const char *function, bool cont
             memset(&chain, 0, sizeof(chain));
             if (variant_step_init(&chain.steps[0], operation->name)) {
                 chain.step_count = 1;
-                if (!offer(proposal, &chain, seed * 7919UL + (unsigned long)o, function, contrast)) {
+                if (!offer(proposal, &chain, seed * FORM_SEED_STEP + (unsigned long)o, function, contrast)) {
                     return false;
                 }
             }
