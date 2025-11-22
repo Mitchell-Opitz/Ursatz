@@ -37,8 +37,11 @@
  *                style is byte for byte what main wrote (a hash of it was taken on main); with a style it carries the term
  */
 
-/* The fill record of rounded binary, seed 3, 24 bars in C major 4/4, as main wrote it with `fill --seed 3 --record`: FNV-1a 64. */
-#define MAIN_RECORD_HASH 0x80af6e9b05daa607ULL
+/*
+ * The fill record of rounded binary, seed 3, 24 bars in C major 4/4, as main writes it with `fill --seed 3 --record`:
+ * FNV-1a 64, taken after the motive-forms (P14 B8) changed the ideas' motives.
+ */
+#define MAIN_RECORD_HASH 0xe8bb6d9cde04ed7fULL
 
 static PiecePlan *rounded_binary(void) {
     PiecePlan *plan = NULL;

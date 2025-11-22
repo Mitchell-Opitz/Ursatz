@@ -540,11 +540,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
 }
 
 /*
- * The hashes of what main composed for this sentence, seeds 1 to 5 (FNV-1a 64 of the plan's JSON), taken before this
- * branch with the same request. A run without a style is byte for byte the same.
+ * The hashes of what main composed for this sentence, seeds 1 to 5 (FNV-1a 64 of the plan's JSON), taken with the same
+ * request after the motive-forms (P14 B8) changed the ideas' motives. A run without a style is byte for byte the same.
  */
-static const unsigned long long MAIN_HASH[5] = {0x8d7d87977c57a602ULL, 0x30271e5822ac25c8ULL, 0xcbb2597fce6d6872ULL,
-                                                0x329fc38d042c74abULL, 0x7e31d8cc418a6300ULL};
+static const unsigned long long MAIN_HASH[5] = {0x21743d327f94d3cfULL, 0x58c4f1b1184f8e2bULL, 0x689b3e2a50934d8cULL,
+                                                0x24f91965a5575a43ULL, 0x517d19b6484f0558ULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
