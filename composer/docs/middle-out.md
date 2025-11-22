@@ -111,14 +111,14 @@ stand on the given bass at each chord's start and carry the given melody's downb
 
 | Scenario | Completed | Sections heard | Cadence heard as planned |
 | --- | --- | --- | --- |
-| melody (ternary) | 10 of 10 | 14 of 30 | 16 of 30 |
-| progression (rounded binary) | 10 of 10 | 7 of 30 | 24 of 30 |
-| bass (binary) | 10 of 10 | 20 of 20 | 20 of 20 |
+| melody (ternary) | 10 of 10 | 12 of 30 | 12 of 30 |
+| progression (rounded binary) | 10 of 10 | 6 of 30 | 22 of 30 |
+| bass (binary) | 10 of 10 | 20 of 20 | 16 of 20 |
 
 A section is heard when standard-form hears a theme in it; it need not be the one planned. A cadence is heard as planned
 when the last cadence heard in a section is the type planned for it, arriving in its last bar. For comparison, the same
 three forms without given material, fill of seeds 1 to 10 (the sections heard): ternary 16 of 30, rounded binary 10 of
-30, binary 20 of 20. The share of sections heard in the progression scenario is under its control (7 against 10); why is not
+30, binary 20 of 20. The share of sections heard in the progression scenario is under its control (6 against 10); why is not
 investigated.
 
 The melody the test gives is `C5:h E5:h G5:q E5:q C5:h E5:h G5:h G5:q F5:q E5:h E5:h C5:h A4:q B4:q C5:h D5:h B4:h
