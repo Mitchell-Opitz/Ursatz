@@ -225,14 +225,15 @@ stuck more the longer the form: in A minor 3/4 with a given motive none of the s
 | `smoke` | Binary in C major: the first of seeds 1 to 5 composes, changes key and passes the checks. | |
 | `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
 
-Every completed run passes every check. The share of runs that complete is below 100% for every template but rounded
-binary and variations, so the other four tests are `WILL_FAIL`, with the measured shares:
+Every completed run passes every check. The share of runs that complete is below 100% for every template but variations
+(rounded binary was 100% until the motive-forms of P14 B8 left one run stuck), so the other five tests are `WILL_FAIL`,
+with the measured shares:
 
 | Template | Runs complete | Of them change key | Stuck at |
 | --- | --- | --- | --- |
-| binary | 13 of 20 (65%) | 11 | melody 4, bass 1, harmony 2 |
-| rounded binary | 20 of 20 (100%) | 16 | |
-| ternary | 16 of 20 (80%) | 14 | A minor only: harmony 2, melody 2 |
+| binary | 13 of 20 (65%) | 11 | melody 3, bass 2, harmony 2 |
+| rounded binary | 19 of 20 (95%) | 15 | A minor only: bass 1 |
+| ternary | 15 of 20 (75%) | 13 | A minor only: harmony 2, bass 2, melody 1 |
 | variations | 20 of 20 (100%) | 16 | |
 | loop | 10 of 20 (50%) | 0 | A minor only, all harmony |
 | layered | 10 of 20 (50%) | 0 | A minor: harmony 10 |

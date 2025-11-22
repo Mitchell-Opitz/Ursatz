@@ -112,8 +112,8 @@ stand on the given bass at each chord's start and carry the given melody's downb
 | Scenario | Completed | Sections heard | Cadence heard as planned |
 | --- | --- | --- | --- |
 | melody (ternary) | 10 of 10 | 12 of 30 | 12 of 30 |
-| progression (rounded binary) | 10 of 10 | 6 of 30 | 22 of 30 |
-| bass (binary) | 10 of 10 | 20 of 20 | 16 of 20 |
+| progression (rounded binary) | 10 of 10 | 6 of 30 | 24 of 30 |
+| bass (binary) | 9 of 10 | 18 of 18 | 18 of 18 |
 
 A section is heard when standard-form hears a theme in it; it need not be the one planned. A cadence is heard as planned
 when the last cadence heard in a section is the type planned for it, arriving in its last bar. For comparison, the same

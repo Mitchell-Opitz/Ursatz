@@ -41,7 +41,7 @@
  * The fill record of rounded binary, seed 3, 24 bars in C major 4/4, as main writes it with `fill --seed 3 --record`:
  * FNV-1a 64, taken after the motive-forms (P14 B8) changed the ideas' motives.
  */
-#define MAIN_RECORD_HASH 0xe8bb6d9cde04ed7fULL
+#define MAIN_RECORD_HASH 0xa31124c8d8f089d5ULL
 
 static PiecePlan *rounded_binary(void) {
     PiecePlan *plan = NULL;
