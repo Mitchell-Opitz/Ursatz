@@ -11,6 +11,7 @@
 #include <sentence_rules.h>
 
 #include <ursatz_composer/grow.h>
+#include <ursatz_composer/variant_registry.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
@@ -428,11 +429,123 @@ static void test_built_plan(void) {
     plan_destroy(plan);
 }
 
+/* The pitches and the length of the motive written on the motive node `name`. */
+static Motive written_motive(const PiecePlan *plan, const char *name, const Motive *template_motive) {
+    Motive motive = *template_motive;
+    motive.key.tonic_pitch_class = SCENARIOS[0].tonic;
+    motive.key.mode = SCENARIOS[0].mode;
+    motive.key_source = MOTIVE_KEY_GIVEN;
+    LaneSpanId span = PLAN_LANE_SPAN_NONE;
+    assert(plan_node_lane_spans(plan, find_node(plan, name), &span, 1) == 1);
+    const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
+    motive.note_count = notes->note_count;
+    memcpy(motive.notes, notes->notes, notes->note_count * sizeof(PlanNote));
+    motive.length = plan_lane_span_span(plan, span).length;
+    motive.harmony_count = 0;
+    motive.feature_count = 0;
+    return motive;
+}
+
+static bool same_notes(const Motive *a, const Motive *b) {
+    if (a->note_count != b->note_count) {
+        return false;
+    }
+    for (size_t i = 0; i < a->note_count; i++) {
+        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch || plan_time_compare(a->notes[i].offset, b->notes[i].offset) != 0 ||
+            plan_time_compare(a->notes[i].duration, b->notes[i].duration) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * Motive-forms (B8): in a sentence the repetition answers in the dominant form where its chords go to V (bars 3 and 4),
+ * the two fragments are the basic idea liquidated in units that halve, and the same seed gives the same theme.
+ */
+static void test_motive_forms(void) {
+    Motive motive = make_motive(&SCENARIOS[0]);
+    GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
+    size_t dominant = 0;
+    size_t halved = 0;
+    for (unsigned long seed = 1; seed <= 10; seed++) {
+        PiecePlan *plan = NULL;
+        GrowOutcome outcome;
+        GrowConfig config;
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        config.basic = &motive;
+        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_run(plan, &config, &outcome) == GROW_OK);
+
+        /* The repetition's chords: when the first one is the dominant, its motive is the basic idea's dominant form. */
+        NodeId repetition = find_node(plan, "repetition");
+        PlanSpan span = plan_node_span(plan, repetition);
+        LaneSpanId chord = PLAN_LANE_SPAN_NONE;
+        assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, &chord, 1) >= 1);
+        const char *numeral = plan_lane_span_payload(plan, chord)->harmony.roman_numeral;
+        Motive m0 = written_motive(plan, "m0", &motive);
+        Motive m1 = written_motive(plan, "m1", &motive);
+        if (numeral[0] == 'V' && numeral[1] != 'I') {
+            VariantChain chain;
+            Motive expected;
+            memset(&chain, 0, sizeof(chain));
+            assert(variant_step_init(&chain.steps[0], "dominant-form"));
+            chain.step_count = 1;
+            assert(variant_apply_chain(&m0, &chain, 1, &expected, NULL) == VARIANT_OK);
+            /* A form below C#4 is taken up an octave. */
+            int lowest = 127;
+            for (size_t n = 0; n < expected.note_count; n++) {
+                lowest = expected.notes[n].midi_pitch < lowest ? expected.notes[n].midi_pitch : lowest;
+            }
+            if (lowest < 58) {
+                for (size_t n = 0; n < expected.note_count; n++) {
+                    expected.notes[n].midi_pitch += 12;
+                }
+            }
+            if (same_notes(&m1, &expected)) {
+                dominant++;
+            }
+        }
+
+        /* The fragments: each half the unit of the one before (the basic idea, a bar here, then half, then a quarter). */
+        Motive m2 = written_motive(plan, "m2", &motive);
+        Motive m3 = written_motive(plan, "m3", &motive);
+        assert(ticks(m3.length) <= ticks(m2.length) && ticks(m2.length) < ticks(m0.length));
+        if (ticks(m2.length) * 2 == ticks(m0.length) && ticks(m3.length) * 4 == ticks(m0.length)) {
+            halved++;
+        }
+
+        /* The same seed gives the same theme, motives and records. */
+        PiecePlan *again = NULL;
+        GrowOutcome second;
+        assert(grow_build_plan(&request, &again) == GROW_OK && grow_run(again, &config, &second) == GROW_OK);
+        char *first_json = plan_to_json(plan, NULL);
+        char *second_json = plan_to_json(again, NULL);
+        char *first_records = records_text(&outcome);
+        char *second_records = records_text(&second);
+        assert(strcmp(first_json, second_json) == 0 && strcmp(first_records, second_records) == 0);
+        /* The motives stage names the chain, the connection and the derivation of each form. */
+        assert(strstr(first_records, "motive-form") != NULL && strstr(first_records, "%: ") != NULL);
+        free(first_json);
+        free(second_json);
+        free(first_records);
+        free(second_records);
+        grow_outcome_destroy(&outcome);
+        grow_outcome_destroy(&second);
+        plan_destroy(plan);
+        plan_destroy(again);
+    }
+    assert(dominant > 0);
+    assert(halved > 0);
+}
+
 int main(void) {
     test_built_plan();
     test_bad_requests();
     test_sentences();
     test_seeds_vary();
+    test_motive_forms();
     puts("test_grow_sentence: ok");
     return 0;
 }

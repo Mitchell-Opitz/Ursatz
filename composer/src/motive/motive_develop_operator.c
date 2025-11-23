@@ -82,7 +82,7 @@ static bool melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) 
 }
 
 /* The source motive: its notes, and the meter and key of the lanes over it, else the context's. */
-static bool read_source(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
+bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
     LaneSpanId span;
     if (!melody_span_of(plan, node, &span)) {
         return false;
@@ -145,7 +145,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
         Request request;
         memset(&request, 0, sizeof(request));
         request.ref = constraint->params.motive;
-        if (!read_source(plan, request.ref.motive, context, &request.source)) {
+        if (!motive_develop_read_node(plan, request.ref.motive, context, &request.source)) {
             continue;
         }
         request.start = span.start;

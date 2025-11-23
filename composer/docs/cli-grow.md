@@ -51,7 +51,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--midi <file>`, `--musicxml <file>` | The melody and the bass of the theme, and the accompaniment, one part for each voice of it. The source material is not part of the piece. |
 | `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
 | `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
-| `--explain <file>` | Why each candidate was chosen or rejected while the theme was grown: per target the chosen candidate, its runners-up and the rejected ones with their reasons, the form heard, the Analyzer check (with `--check`) and the seeds passed over. JSON when the file name ends in `.json`, else text; with `--suggest`, theme k goes to `<name>-k.<extension>` like the other files. See [explain.md](explain.md). |
+| `--explain <file>` | Why each candidate was chosen or rejected while the theme was grown: per target the chosen candidate, its runners-up and the rejected ones with their reasons, the form heard, the Analyzer check (with `--check`) and the seeds passed over. JSON when the file name ends in `.json`, else text; with `--suggest`, theme k goes to `<name>-k.<extension>` like the other files. The motives stage names each idea's motive-form with its chain, connection and derivation ([grow.md](grow.md#motive-forms)). See [explain.md](explain.md). |
 | `--format <text\|json>` | How the result is printed on stdout. Text by default. |
 
 ## Seeds

@@ -5,6 +5,7 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_develop.h>
 
 #define MOTIVE_HARMONY_TEXT_MAX 256
 
@@ -29,6 +30,12 @@ typedef struct {
     bool has_role;
     MotiveRole role;
 } MotiveDocument;
+
+/*
+ * The motive of a motive node's Given or Realized melody lane span: its notes, and the meter and key of the lanes over
+ * it, else the context's. False when the node has no such span. Shared with the motive-form operator.
+ */
+bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out);
 
 /* Records the first problem only. error may be NULL. */
 void motive_set_error(MotiveError *error, const char *location, const char *format, ...);

@@ -168,6 +168,11 @@ typedef struct {
     /* For motive_develop_checker: the weights of the score (all 0 means the default) and a floor under it. */
     MotiveScoreWeights weights;
     MotiveScore floor; /* a development scoring below it is rejected; a denominator of 0 means no floor */
+    /*
+     * The basic motive of a grow run with its own harmony, features and role (a plan keeps only the notes). The motive-form
+     * operator reads them for the motive node m0 when the notes are the plan's; NULL for none. Must outlive the registry.
+     */
+    const Motive *basic;
 } MotiveDevelopContext;
 
 void motive_develop_context_default(MotiveDevelopContext *context);

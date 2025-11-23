@@ -555,6 +555,7 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     GrowConfig config;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
+    config.basic = motive;
     config.style = options->style;
     config.style_weight = options->style_weight;
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);

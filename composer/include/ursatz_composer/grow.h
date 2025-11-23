@@ -149,6 +149,11 @@ typedef struct {
     size_t max_iterations;          /* per stage; 0 means FILL_DEFAULT_MAX_ITERATIONS */
     const ComposerStyle *style;     /* NULL for none; must outlive grow_run (compose.h) */
     ComposerRatio style_weight;     /* a denominator of 0 is 1/1 */
+    /*
+     * The basic motive the request was made from, for the harmony, features and role it carries, which the plan does
+     * not keep: the motive-form operator reads them for m0. NULL for none; its notes must be m0's. Must outlive grow_run.
+     */
+    const Motive *basic;
 } GrowConfig;
 
 typedef struct {

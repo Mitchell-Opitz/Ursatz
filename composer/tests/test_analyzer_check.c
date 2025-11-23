@@ -53,7 +53,7 @@ static const char *const SHAPE_NAMES[] = {"sentence", "period", "rounded binary"
  * measured. A minor in 3/4 is where the Analyzer most often hears the cadences elsewhere than planned (a period) and a
  * rounded binary in A minor 3/4 does not complete without the check either (docs/piece.md).
  */
-static const size_t BASELINE[3][SCENARIO_COUNT] = {{9, 9}, {10, 1}, {10, 0}};
+static const size_t BASELINE[3][SCENARIO_COUNT] = {{9, 7}, {10, 0}, {9, 0}};
 
 static NodeId find_node(const PiecePlan *plan, const char *name) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {

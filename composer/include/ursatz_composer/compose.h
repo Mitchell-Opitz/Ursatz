@@ -84,6 +84,7 @@ typedef struct {
     bool analyzer_check;            /* reject a complete run the Analyzer's analysis contradicts (false: no check) */
     const ComposerStyle *style;     /* NULL for none; must outlive compose_run */
     ComposerRatio style_weight;     /* a denominator of 0 (all-zero) is 1/1; unused without a style */
+    const Motive *basic;            /* GrowConfig.basic; NULL for none; must outlive compose_run */
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */

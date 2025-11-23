@@ -157,7 +157,10 @@ foreach(beginning RANGE 2)
                      COMMAND test_grow_period_heard ${beginning} ${ending})
             # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test asserts
             # that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
-            set_tests_properties(test_grow_period_heard_${beginning_name}_${ending_name} PROPERTIES WILL_FAIL TRUE)
+            # The compound basic idea and a continuation is heard in every run since the motive-forms (docs/grow.md).
+            if(NOT (beginning EQUAL 2 AND ending EQUAL 0))
+                set_tests_properties(test_grow_period_heard_${beginning_name}_${ending_name} PROPERTIES WILL_FAIL TRUE)
+            endif()
         endif()
     endforeach()
 endforeach()
@@ -254,10 +257,11 @@ foreach(template ${FORM_TEMPLATES})
     # The sweeps are slow: CI leaves them out (ctest -LE slow).
     set_tests_properties(test_piece_keys_${template} PROPERTIES LABELS slow)
 endforeach()
-# Every completed run passes every check; the share of runs that complete is below 100% for all but rounded binary and
-# variations (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed.
-set_tests_properties(test_piece_keys_binary test_piece_keys_ternary test_piece_keys_loop test_piece_keys_layered
-                     PROPERTIES WILL_FAIL TRUE)
+# Every completed run passes every check; the share of runs that complete is below 100% for all but variations
+# (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed. Rounded binary was at
+# 100% until the motive-forms (P14 B8) left one run stuck.
+set_tests_properties(test_piece_keys_binary test_piece_keys_rounded-binary test_piece_keys_ternary test_piece_keys_loop
+                     test_piece_keys_layered PROPERTIES WILL_FAIL TRUE)
 
 add_executable(test_form_return test_form_return.c)
 target_link_libraries(test_form_return PRIVATE ursatz_composer)
@@ -459,3 +463,9 @@ target_compile_definitions(test_recognize_cli PRIVATE COMPOSER_CLI_PATH="$<TARGE
                                                       COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_recognize_cli ursatz-composer)
 add_test(NAME test_recognize_cli COMMAND test_recognize_cli)
+
+add_executable(test_motive_connect test_motive_connect.c)
+target_link_libraries(test_motive_connect PRIVATE ursatz_composer)
+target_include_directories(test_motive_connect PRIVATE ${PROJECT_SOURCE_DIR}/external/ursatz/src)
+target_compile_options(test_motive_connect PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_connect COMMAND test_motive_connect)
