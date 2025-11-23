@@ -12,7 +12,9 @@ candidate was chosen or rejected. It is put together from what a run already kee
 | Sections | Per theme section: the form heard and the form asked for, and the Analyzer check items ([analyzer-check.md](analyzer-check.md)): each planned cadence and the key with what was heard, and any hard voice-leading fault. A section the check did not read (no `--check`, or a section it cannot read) says so. |
 | Rejections | Every whole run `compose_run` threw away and started again from the plan as given, with its round, its seed and the stage reached. The reason is `stuck` (a stage left a target open), `key` or `cadence` (the plan's keys or cadences, with the checker's text) or `analyzer` (the analysis contradicted the plan, with the items that disagreed). `grow` adds the seeds the command passed over. |
 
-Reasons are the checkers' own strings; nothing is put into words beyond them.
+Reasons are the checkers' own strings; nothing is put into words beyond them. A motive-form candidate of the motives stage
+([grow.md](grow.md#motive-forms)) is labelled with its chain, its connection score in percent and its derivation (`transpose 90%:
+Transposed +2 steps of the key's scale. Kept the`, cut at 63 characters), and scores 1 plus the connection.
 
 ## The style term
 

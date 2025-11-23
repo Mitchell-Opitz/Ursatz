@@ -59,7 +59,7 @@ with the stage in `GrowOutcome.stuck_stage`. `GrowOutcome.records` keeps the `Fi
 | Stage | Operators | Checker |
 | --- | --- | --- |
 | structure | `grow-theme` | `grow_checker` |
-| motives | `motive-restate`, `motive-fragment`, `motive-rhythm` | `motive_develop_checker` |
+| motives | `motive-form`, then `motive-restate`, `motive-fragment`, `motive-rhythm` | `grow_motives_checker` |
 | harmony | `harmony-prolongation`, `harmony-phrase-model` | `harmony_prolong_checker` |
 | bass | `harmony-bass` | `harmony_phrase_checker` |
 | melody | `melody-fill` | `melody_fill_checker` |
@@ -146,6 +146,8 @@ The operator proposes `GrowContext.candidates` (default 4) candidates, drawn fro
 - **Compound basic idea.** Its prolongation goes tonic to tonic or tonic to dominant.
 - **Fragments** (continuation). `fragmented`, leading, 2 or 3 notes, shortened until the fragment fits its idea.
 - **Cadential idea** (continuation). `liquidated`, dropping 1 to half of the motive's notes.
+
+These are the P13 motive refs the structure plans; the motives stage writes the [motive-forms](#motive-forms) instead when it has one for the idea, and these when it has none.
 - **Cadential ending.** Two ideas `liquidated` from `m0`, the second dropping at least as many notes as the first.
 
 A candidate is dropped when a motive it asks for cannot be made or does not fit its idea.
@@ -159,6 +161,41 @@ A candidate is dropped when a motive it asks for cannot be made or does not fit 
 | Sentence | `standard_form_subphrase_roles_in_order`, `standard_form_phrase_is_sentential`, `standard_form_pairing_form` a sentence, `standard_form_basic_idea_length_valid`, and each fragment shorter than the basic idea, as an idea and as a motive (`standard_form_is_fragmentation`) | `standard_form_sentence_is_archetypal`, `standard_form_presentation_length_usual` (which 4 bars do not meet), `standard_form_continuation_balanced`, and `standard_form_idea_reads_as_repetition` on the repetition's contour against `m0` |
 | Period | `standard_form_phrase_roles_in_order`, `standard_form_period_phrase_ideas_valid`, `standard_form_period_cadences_valid`, the basic idea's length, a contrasting idea that does not read as a repetition of `m0` (contour), the antecedent's cadence weaker than the consequent's by `harmony_cadence_strength` | `standard_form_antecedent_cadence_usual`, `standard_form_consequent_cadence_usual`, `standard_form_antecedent_length_usual`, `standard_form_consequent_length_usual`, `standard_form_consequent_contrast_usual` (the two contrasting ideas differ) |
 | Hybrid | `standard_form_pairing_is_hybrid`, the basic idea's length, a contrasting idea that does not read as a repetition, the antecedent's cadence weaker than the ending's, and for a continuation each fragment shorter than the basic idea | `standard_form_pairing_commonality` as three rules, of which a very common pairing meets all three, a slightly less common one two, an occasional one one and a rare one none; for a presentation the usual length and the repetition reading as one; for a continuation the balance |
+
+## Motive-forms
+
+The motives stage writes the motive node of each idea. `motive-form` (`<ursatz_composer/grow_form.h>`, `src/grow/grow_form.c`)
+asks the [variant registry](variant-registry.md) for forms of the basic idea that suit the idea's place and ranks them by
+how well they connect (`motive_connection`, `<ursatz_composer/motive_connect.h>`). The slot is the name of the idea whose
+melody asks for the motive node. A candidate is a chain of registry steps applied to the basic idea (`m0`, or the
+section's own motive), so the same plan always gives the same candidates; only a tie in the score is settled by the run's seed.
+
+| Idea | Forms |
+| --- | --- |
+| repetition, restated | `exact` when the repetition is a plain restatement (its melody restates the basic idea) |
+| repetition, answering | the `dominant-form` of the basic idea when the repetition's chords start on the dominant and the basic idea opens on the tonic; else a tonal transposition of 1 to 3 steps either way |
+| consequent's basic idea | `exact` |
+| contrasting ideas (antecedent, compound basic idea, consequent) | a one-step chain of any row whose result has the function `contrast` (R-143) and a contour other than the basic idea's, and is not another idea's motive |
+| fragment 1, fragment 2 (continuation) | `liquidate-features` with `steps 1` and `shorten 1` on the basic idea, and twice: the units halve (ch. VIII), so a basic idea of 2 bars gives 1 bar, then 1/2 bar |
+| cadential idea (continuation) | a one-step chain whose result has the function `cadential` and fewer notes than the basic idea |
+
+Every form is a full motive in the key's scale between MIDI 58 and 84 (a form below is taken up an octave), no leap wider
+than a fifth unless the basic idea has one, as many notes as the basic idea (a fragment or cadential idea has fewer), and
+fits its idea. An idea that ends in a cadence ends on its tone (the tonic for a PAC, the third for an IAC). The cadential ending's
+two ideas and the consequent's restated idea are not offered anything else, and a slot with no form is left to the P13
+operators below.
+
+The checker scores a form at 1 plus its connection score (R-145, `(2 x common + rhythm + harmony) / 4`, halved when the
+form is over 3/4 from the basic idea), so a form always outranks the P13 operators, whose recognizability is at most 1, and
+the part after the 1 is the connection. The connection is measured against the idea before (its motive when written, else
+the basic idea); the form's distance from the basic idea is its chain's cost over the cost plus 4.
+
+`GrowConfig.basic` gives `m0` its own harmony, features and role (a plan keeps only the notes): `grow` passes the motive
+it was given, so `--feature`, `--harmony` and `--role` reach the liquidation and the harmony rows. Its notes must be `m0`'s.
+
+The record and `grow --explain` name each form: the label is the chain, the connection in percent and the derivation in
+plain words ("transpose 90%: Transposed +2 steps of the key's scale. Kept the"), cut at 63 characters; the score shown is 1
+plus the connection.
 
 ## The harmony
 
@@ -202,20 +239,20 @@ the themes in `GrowOutcome.heard`. A theme heard as the form the section asks fo
 for (`requested_beginning`, `requested_ending`).
 
 Measured by `tests/test_grow_sentence_heard.c`, over four keys and meters and seeds 1 to 10 (`ctest` runs it as
-WILL_FAIL, since it asserts that every grown sentence is heard as a sentence):
+WILL_FAIL, since it asserts that every grown sentence is heard as a sentence; measured with the motive-forms):
 
 | Bars | Heard as a sentence | Heard as another form | No theme |
 | --- | --- | --- | --- |
-| 8 | 26 of 40 (65%) | 14 (hybrids: compound basic idea and continuation) | 0 |
+| 8 | 28 of 40 (70%) | 12 (hybrids: compound basic idea and continuation) | 0 |
 | 4 | 0 of 40 (0%) | 0 | 40 |
-| all | 26 of 80 (32%) | 14 | 40 |
+| all | 28 of 80 (35%) | 12 | 40 |
 
 The causes are limits of the adapter, not tuned away:
 
 - **Statement-response is heard as a hybrid.** The adapter compares ideas by the semitone interval and the onset
   rhythm of each pair of notes (75% must match). A tonal step up changes some intervals by a semitone, so the
-  repetition reads as a contrasting idea. Every exact repetition (26 of 26) is heard as a sentence; every
-  statement-response (0 of 14) as a hybrid.
+  repetition reads as a contrasting idea. The exact repetitions are heard as a sentence, the statement-responses (a
+  transposition or a dominant form) mostly as a hybrid.
 - **A sentence of 4 bars is not heard at all.** The adapter cuts a phrase into ideas of two measures, so 4 bars are
   two ideas, which it reads as one part, not as a presentation and a continuation: no theme.
 - **Fragmentation is not seen.** The nominal cut of 2 measures finds no 1 + 1 + 2 continuation, so `has_fragmentation`
@@ -224,18 +261,18 @@ The causes are limits of the adapter, not tuned away:
 ### Periods and hybrids
 
 Measured by `tests/test_grow_period_heard.c`, one `ctest` test for each pairing but the sentence, over four keys and
-meters and seeds 1 to 10 (`ctest` runs each as WILL_FAIL, since each asserts that every theme of 8 bars is heard as the
+meters and seeds 1 to 10 (`ctest` runs each as WILL_FAIL but the compound basic idea and continuation, which is heard in every run since the motive-forms, since each asserts that every theme of 8 bars is heard as the
 form it was grown as: a period for an antecedent and a consequent, a hybrid with the requested beginning and ending for
 the rest):
 
 | Pairing | 8 bars: heard as requested | Heard as another form or with other parts | No theme |
 | --- | --- | --- | --- |
-| Presentation + consequent | 2 of 40 (5%) | 38 (13 as a sentence, 25 as a hybrid with another beginning or ending) | 0 |
+| Presentation + consequent | 9 of 40 (22%) | 31 (14 as another form, 17 as a hybrid with other parts) | 0 |
 | Presentation + cadential | 0 of 40 (0%) | 40 (33 as a sentence, 7 as a hybrid) | 0 |
 | Antecedent + continuation | 30 of 40 (75%) | 0 | 10 |
 | Antecedent + consequent (period) | 0 of 40 (0%) | 10 (hybrids: antecedent and continuation) | 30 |
 | Antecedent + cadential | 0 of 40 (0%) | 40 (hybrids: compound basic idea and continuation) | 0 |
-| Compound basic idea + continuation | 39 of 40 (97%) | 1 (a sentence) | 0 |
+| Compound basic idea + continuation | 40 of 40 (100%) | 0 | 0 |
 | Compound basic idea + consequent | 19 of 40 (47%) | 21 (hybrids: compound basic idea and continuation) | 0 |
 | Compound basic idea + cadential | 0 of 40 (0%) | 40 (hybrids: compound basic idea and continuation) | 0 |
 
@@ -267,5 +304,5 @@ The causes are limits of the adapter, not tuned away:
   be a match and the second to differ. The consequent's restated basic idea is written over a phrase model, not over the
   prolongation the first half has, so the melody cannot always repeat its intervals (similarity 0.11 to 0.33 in the
   samples, where it needs a match): 2 of 40 after a presentation, 19 of 40 after a compound basic idea.
-- **A compound basic idea and a continuation is heard 39 times in 40**; the other theme's contrasting idea is read as a
+- **A compound basic idea and a continuation is heard 40 times in 40** since the motive-forms; before them 39, the other theme's contrasting idea read as a
   repetition of its basic idea, which makes it a presentation, so a sentence.
