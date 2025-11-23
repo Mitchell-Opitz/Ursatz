@@ -1,0 +1,231 @@
+#include "pipeline/voice_leading_pipeline.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "analysis/voice_separation.h"
+#include "analysis_grid.h"
+#include "analysis_motion.h"
+#include "events/note_event.h"
+#include "pipeline/spelling_util.h"
+#include "segmentation_beat_grid.h"
+#include "standard-counterpoint/framework.h"
+#include "theory/framework.h"
+#include "time/duration.h"
+#include "time/musical_time.h"
+#include "time/temporal_anchor.h"
+
+#define NO_NOTE SIZE_MAX
+
+/* The grid and what keeps it alive. */
+typedef struct {
+    size_t voice_count;
+    size_t row_count;
+    VoiceAssignment assignment;
+    StandardCounterpointVoiceCell *cells; /* row_count * voice_count */
+    size_t *note_of_cell;                 /* ImportedNotes index of each cell's note, NO_NOTE where the voice rests */
+    char (*names)[32];                    /* the rows' segment ids */
+    const char **ids;
+    StandardCounterpointVoiceGrid grid;
+    StandardCounterpointPreparedGrid prepared;
+    bool prepared_ok;
+} VoiceGrid;
+
+static void grid_destroy(VoiceGrid *build) {
+    if (build->prepared_ok) {
+        standard_counterpoint_grid_destroy(&build->prepared);
+    }
+    voice_assignment_destroy(&build->assignment);
+    free(build->cells);
+    free(build->note_of_cell);
+    free(build->names);
+    free(build->ids);
+    memset(build, 0, sizeof(*build));
+}
+
+/* a/b compared with c/d for positive denominators: negative, zero or positive. */
+static int compare_rational(long long a, long long b, long long c, long long d) {
+    long long left = a * d;
+    long long right = c * b;
+    return left < right ? -1 : (left > right ? 1 : 0);
+}
+
+/* The first entry that starts at or after n/d (entries are in time order); entry_count when there is none. */
+static size_t first_entry_from(const AnalysisReport *report, long long n, long long d) {
+    size_t low = 0;
+    size_t high = report->entry_count;
+    while (low < high) {
+        size_t middle = low + (high - low) / 2;
+        const AnalysisReportEntry *entry = &report->entries[middle];
+        if (compare_rational(entry->time_numerator, (long long)entry->time_denominator, n, d) < 0) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    return low;
+}
+
+/* Puts one note into the cells of the rows it sounds at the start of. false only on allocation failure. */
+static bool place_note(const ImportedNotes *notes, const AnalysisReport *report, VoiceGrid *build, size_t note) {
+    const VoiceAssignmentEntry *assigned = &build->assignment.entries[note];
+    if (assigned->voice >= build->voice_count) {
+        return true;
+    }
+    const NoteEvent *event = notes->events[note];
+    const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
+    MusicalTime *release = NULL;
+    if (musical_time_add(onset, note_event_duration(event), &release) != MUSICAL_TIME_OK) {
+        return false;
+    }
+    long long on_n = (long long)musical_time_numerator(onset);
+    long long on_d = (long long)musical_time_denominator(onset);
+    long long off_n = (long long)musical_time_numerator(release);
+    long long off_d = (long long)musical_time_denominator(release);
+    musical_time_destroy(release);
+    char name[16];
+    const PitchSpelling *spelling =
+        notes->source.spelling_notated &&
+                spelled_note_name(event, pitch_numeric_value_position_numerator(notes->pitch_values[note]), true, name)
+            ? note_event_optional_pitch_spelling(event)
+            : NULL;
+    for (size_t row = first_entry_from(report, on_n, on_d); row < report->entry_count; row++) {
+        const AnalysisReportEntry *entry = &report->entries[row];
+        if (compare_rational(entry->time_numerator, (long long)entry->time_denominator, off_n, off_d) >= 0) {
+            break;
+        }
+        size_t index = row * build->voice_count + assigned->voice;
+        if (build->cells[index].present) {
+            continue; /* an extra note in the same voice: the first stands */
+        }
+        double confidence = assigned->confidence < 0 ? 0 : (assigned->confidence > 1 ? 1 : assigned->confidence);
+        build->cells[index] = (StandardCounterpointVoiceCell){
+            true,
+            notes->pitch_values[note],
+            spelling,
+            entity_id_value(note_event_id(event)),
+            compare_rational(entry->time_numerator, (long long)entry->time_denominator, on_n, on_d) == 0,
+            confidence,
+        };
+        build->note_of_cell[index] = note;
+    }
+    return true;
+}
+
+/* Builds and prepares the grid. false only on allocation failure; *declined is set when the separation or the library
+   cannot take the piece. */
+static bool grid_build(const ImportedNotes *notes, const AnalysisReport *report, VoiceGrid *build, bool *declined) {
+    *declined = false;
+    VoiceSeparationResult separated =
+        voice_separate(notes->events, notes->pitch_values, notes->count, NULL, notes->meter.meter_map,
+                       standard_meter_segmentation_beat_grid, NULL, NULL, &build->assignment);
+    if (separated != VOICE_SEPARATION_OK) {
+        *declined = separated != VOICE_SEPARATION_ERR_ALLOC;
+        return *declined;
+    }
+    size_t voices = 0;
+    for (size_t i = 0; i < notes->count; i++) {
+        if (build->assignment.entries[i].voice + 1 > voices) {
+            voices = build->assignment.entries[i].voice + 1;
+        }
+    }
+    build->voice_count = voices > ANALYSIS_VOICE_LEADING_MAX_VOICES ? ANALYSIS_VOICE_LEADING_MAX_VOICES : voices;
+    build->row_count = report->entry_count;
+    if (build->voice_count == 0 || build->row_count == 0) {
+        *declined = true;
+        return true;
+    }
+    size_t cells = build->row_count * build->voice_count;
+    build->cells = calloc(cells, sizeof(StandardCounterpointVoiceCell));
+    build->note_of_cell = malloc(cells * sizeof(size_t));
+    build->names = calloc(build->row_count, sizeof(build->names[0]));
+    build->ids = calloc(build->row_count, sizeof(const char *));
+    if (!build->cells || !build->note_of_cell || !build->names || !build->ids) {
+        return false;
+    }
+    for (size_t i = 0; i < cells; i++) {
+        build->note_of_cell[i] = NO_NOTE;
+    }
+    for (size_t row = 0; row < build->row_count; row++) {
+        snprintf(build->names[row], sizeof(build->names[row]), "seg-%zu", row);
+        build->ids[row] = build->names[row];
+    }
+    for (size_t note = 0; note < notes->count; note++) {
+        if (!place_note(notes, report, build, note)) {
+            return false;
+        }
+    }
+    build->grid = (StandardCounterpointVoiceGrid){build->row_count, build->voice_count, build->ids, build->cells};
+    StandardCounterpointGridStatus status = standard_counterpoint_grid_prepare(&build->grid, &build->prepared);
+    if (status == STANDARD_COUNTERPOINT_GRID_ERR_ALLOC) {
+        return false;
+    }
+    build->prepared_ok = status == STANDARD_COUNTERPOINT_GRID_OK;
+    *declined = !build->prepared_ok;
+    return true;
+}
+
+/* The motions, counted in total and per voice pair. false only on allocation failure. */
+static bool collect_motions(const VoiceGrid *build, AnalysisVoiceLeading *out) {
+    StandardCounterpointMotions motions;
+    StandardCounterpointMotionStatus status = standard_counterpoint_classify_motions(&build->prepared, &motions);
+    if (status != STANDARD_COUNTERPOINT_MOTION_OK) {
+        return status != STANDARD_COUNTERPOINT_MOTION_ERR_ALLOC;
+    }
+    size_t voices = build->voice_count;
+    out->pairs = calloc(voices * (voices > 0 ? voices - 1 : 0) / 2 + 1, sizeof(AnalysisVoicePairMotion));
+    if (!out->pairs) {
+        standard_counterpoint_motions_destroy(&motions);
+        return false;
+    }
+    for (size_t upper = 0; upper < voices; upper++) {
+        for (size_t lower = upper + 1; lower < voices; lower++) {
+            out->pairs[out->pair_count++] = (AnalysisVoicePairMotion){.upper_voice = upper, .lower_voice = lower};
+        }
+    }
+    double uncertainty = 0;
+    for (size_t i = 0; i < motions.count; i++) {
+        const StandardCounterpointMotion *motion = &motions.items[i];
+        size_t pair = 0;
+        for (size_t upper = 0; upper < motion->upper_voice; upper++) {
+            pair += voices - 1 - upper;
+        }
+        pair += motion->lower_voice - motion->upper_voice - 1;
+        out->pairs[pair].counts[motion->type]++;
+        out->pairs[pair].total++;
+        out->motion_totals[motion->type]++;
+        uncertainty += motion->uncertainty;
+    }
+    out->motion_count = motions.count;
+    out->motion_uncertainty = motions.count > 0 ? uncertainty / (double)motions.count : 0;
+    standard_counterpoint_motions_destroy(&motions);
+    return true;
+}
+
+bool voice_leading_stage_collect(const ImportedNotes *notes, const HarmonyStage *harmony, AnalysisReport *report) {
+    (void)harmony;
+    if (notes->count == 0 || report->entry_count == 0 || !notes->meter.meter_map) {
+        return true;
+    }
+    VoiceGrid build;
+    memset(&build, 0, sizeof(build));
+    bool declined = false;
+    if (!grid_build(notes, report, &build, &declined)) {
+        grid_destroy(&build);
+        return false;
+    }
+    if (declined) {
+        grid_destroy(&build);
+        return true;
+    }
+    AnalysisVoiceLeading *out = &report->voice_leading;
+    out->present = true;
+    out->framework = framework_name(standard_counterpoint_framework());
+    out->voice_count = build.voice_count;
+    out->row_count = build.row_count;
+    bool ok = collect_motions(&build, out);
+    grid_destroy(&build);
+    return ok;
+}

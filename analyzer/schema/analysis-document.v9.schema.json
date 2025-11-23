@@ -106,7 +106,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/texture_claim" }
     },
-    "voice_leading": { "type": "array" },
+    "voice_leading": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/voice_leading_claim" }
+    },
     "schemas": { "type": "array" },
     "progressions": {
       "type": "array",
@@ -679,6 +682,51 @@
         "from_texture": { "type": "string" },
         "to_texture": { "type": "string" },
         "category_changed": { "type": "boolean" }
+      }
+    },
+    "voice_leading_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "oneOf": [
+            { "$ref": "#/$defs/voice_motions_claim" }
+          ]
+        }
+      ]
+    },
+    "motion_counts": {
+      "type": "object",
+      "required": ["contrary", "similar", "parallel", "oblique", "static"],
+      "properties": {
+        "contrary": { "type": "integer", "minimum": 0 },
+        "similar": { "type": "integer", "minimum": 0 },
+        "parallel": { "type": "integer", "minimum": 0 },
+        "oblique": { "type": "integer", "minimum": 0 },
+        "static": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "voice_motions_claim": {
+      "type": "object",
+      "required": ["label", "voices", "segments", "motion_count", "totals", "pairs"],
+      "properties": {
+        "label": { "const": "motions" },
+        "voices": { "type": "integer", "minimum": 1 },
+        "segments": { "type": "integer", "minimum": 1 },
+        "motion_count": { "type": "integer", "minimum": 0 },
+        "totals": { "$ref": "#/$defs/motion_counts" },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["upper_voice", "lower_voice", "total", "counts"],
+            "properties": {
+              "upper_voice": { "type": "integer", "minimum": 0 },
+              "lower_voice": { "type": "integer", "minimum": 1 },
+              "total": { "type": "integer", "minimum": 0 },
+              "counts": { "$ref": "#/$defs/motion_counts" }
+            }
+          }
+        }
       }
     },
     "rhythm_claim": {

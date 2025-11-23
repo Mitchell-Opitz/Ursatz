@@ -2027,6 +2027,63 @@ static bool render_texture(StringBuilder *sb, const cJSON *document, const cJSON
     return ok && sb_append(sb, "\n");
 }
 
+/* ---- Voice leading ---- */
+
+static const char *const MOTION_NAMES[] = {"contrary", "similar", "parallel", "oblique", "static"};
+
+static const cJSON *find_claim(const cJSON *claims, const char *label) {
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, claims) {
+        if (has_label(claim, label)) {
+            return claim;
+        }
+    }
+    return NULL;
+}
+
+static bool render_motions(StringBuilder *sb, const cJSON *claim) {
+    const cJSON *totals = cJSON_GetObjectItemCaseSensitive(claim, "totals");
+    bool ok = sb_appendf(sb, "%d %s over %d chord segments, %d motions between consecutive segments: ",
+                         (int)number_member(claim, "voices"),
+                         (int)number_member(claim, "voices") == 1 ? "voice" : "voices",
+                         (int)number_member(claim, "segments"), (int)number_member(claim, "motion_count"));
+    for (size_t type = 0; ok && type < sizeof(MOTION_NAMES) / sizeof(MOTION_NAMES[0]); type++) {
+        ok = sb_appendf(sb, "%s%d %s", type == 0 ? "" : ", ", (int)number_member(totals, MOTION_NAMES[type]),
+                        MOTION_NAMES[type]);
+    }
+    ok = ok && sb_append(sb, ".\n\n") &&
+         sb_append(sb, "| Voices | Contrary | Similar | Parallel | Oblique | Static |\n"
+                       "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *pair;
+    cJSON_ArrayForEach(pair, cJSON_GetObjectItemCaseSensitive(claim, "pairs")) {
+        if (!ok) {
+            break;
+        }
+        if ((int)number_member(pair, "total") == 0) {
+            continue;
+        }
+        const cJSON *counts = cJSON_GetObjectItemCaseSensitive(pair, "counts");
+        ok = sb_appendf(sb, "| %d and %d |", (int)number_member(pair, "upper_voice"),
+                        (int)number_member(pair, "lower_voice"));
+        for (size_t type = 0; ok && type < sizeof(MOTION_NAMES) / sizeof(MOTION_NAMES[0]); type++) {
+            ok = sb_appendf(sb, " %d |", (int)number_member(counts, MOTION_NAMES[type]));
+        }
+        ok = ok && sb_append(sb, "\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_voice_leading(StringBuilder *sb, const cJSON *document, const cJSON *voice_leading) {
+    (void)document;
+    bool ok = sb_append(sb, "## Voice leading\n\n") &&
+              sb_append(sb, "The kernel separated the notes of the whole piece into voices (voice 0 is the top) and "
+                            "the library's counterpoint adapter classified how each pair of voices moves from one "
+                            "chord segment to the next. Parallel motion keeps the interval type, similar motion "
+                            "changes it; a voice that rests in either segment gives no motion.\n\n");
+    const cJSON *motions = find_claim(voice_leading, "motions");
+    return ok && (!motions || render_motions(sb, motions));
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -2057,6 +2114,7 @@ static const struct {
     {"harmonic_rhythm", render_harmonic_rhythm},
     {"rhythm", render_rhythm},
     {"texture", render_texture},
+    {"voice_leading", render_voice_leading},
 };
 
 static bool section_is_empty(const cJSON *section) {

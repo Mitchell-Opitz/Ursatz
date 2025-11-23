@@ -692,6 +692,34 @@ typedef struct {
     double uncertainty;
 } AnalysisTextureChange;
 
+/* The motion of the voices, from the library's standard-counterpoint adapter (analysis/analysis_motion.h). The Analyzer
+   separates the notes of the whole piece into voices with the kernel's voice separation (voice 0 is the top, all tracks
+   and parts together), puts each voice's sounding note at the start of every chord segment into the library's voice-pitch
+   grid (one row per chord segment, one column per voice, at most ANALYSIS_VOICE_LEADING_MAX_VOICES; lower voices are left
+   out), and counts what the library classifies. The motion types are the library's: contrary, similar, parallel,
+   oblique and static, between consecutive chord segments for every pair of voices that sound in both. */
+#define ANALYSIS_VOICE_LEADING_MAX_VOICES 6
+#define ANALYSIS_MOTION_TYPES 5
+
+typedef struct {
+    size_t upper_voice;                       /* the voice nearer the top; voice 0 is the top */
+    size_t lower_voice;
+    size_t counts[ANALYSIS_MOTION_TYPES];     /* contrary, similar, parallel, oblique, static (the library's order) */
+    size_t total;
+} AnalysisVoicePairMotion;
+
+typedef struct {
+    bool present;                             /* the library took the voice grid; false for a piece it declined */
+    const char *framework;                    /* the library's framework name for the claims */
+    size_t voice_count;                       /* columns of the grid */
+    size_t row_count;                         /* chord segments, one row each */
+    size_t motion_count;                      /* motions classified */
+    size_t motion_totals[ANALYSIS_MOTION_TYPES];
+    AnalysisVoicePairMotion *pairs;           /* owned; every pair, the upper voice first */
+    size_t pair_count;
+    double motion_uncertainty;                /* the mean of the library's, in [0, 1]; higher is LESS certain */
+} AnalysisVoiceLeading;
+
 /* A note held through a stronger metric position than it was attacked at, with no note attacked there (the library's
    THROUGH_STRONGER rule, analysis/meter_analysis_syncopation.h). Each line is read on its own. The levels are the
    library's StandardMeterLevel: "downbeat", "secondary-beat", "beat", "offbeat" or "finer"; the strength is the
@@ -841,6 +869,7 @@ typedef struct {
     size_t texture_passage_count;
     AnalysisTextureChange *texture_changes; /* owned; texture_passage_count - 1 of them */
     size_t texture_change_count;
+    AnalysisVoiceLeading voice_leading; /* the voices' motion; present is false when the library declined the grid */
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -848,7 +877,8 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets and texture passages and changes. */
+   thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets, texture passages and changes
+   and the voice leading. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

@@ -3201,6 +3201,77 @@ static cJSON *texture_json(const ImportedNotes *notes, const AnalysisReport *rep
     return list;
 }
 
+/* ---- Voice leading ---- */
+
+static const char *const MOTION_NAMES[ANALYSIS_MOTION_TYPES] = {"contrary", "similar", "parallel", "oblique", "static"};
+
+static cJSON *motion_counts_json(const size_t *counts) {
+    cJSON *object = cJSON_CreateObject();
+    for (size_t type = 0; object && type < ANALYSIS_MOTION_TYPES; type++) {
+        if (!add(object, MOTION_NAMES[type], cJSON_CreateNumber((double)counts[type]))) {
+            cJSON_Delete(object);
+            return NULL;
+        }
+    }
+    return object;
+}
+
+static cJSON *motion_pairs_json(const AnalysisVoiceLeading *voice_leading) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < voice_leading->pair_count; i++) {
+        const AnalysisVoicePairMotion *pair = &voice_leading->pairs[i];
+        cJSON *object = cJSON_CreateObject();
+        if (!(object && add(object, "upper_voice", cJSON_CreateNumber((double)pair->upper_voice)) &&
+              add(object, "lower_voice", cJSON_CreateNumber((double)pair->lower_voice)) &&
+              add(object, "total", cJSON_CreateNumber((double)pair->total)) &&
+              add(object, "counts", motion_counts_json(pair->counts)) && append(list, object))) {
+            cJSON_Delete(object);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The start of the first entry and the end of the last: the span the voice leading covers. */
+static void voice_leading_span(const AnalysisReport *report, Rational *start, Rational *end) {
+    const AnalysisReportEntry *first = &report->entries[0];
+    const AnalysisReportEntry *last = &report->entries[report->entry_count - 1];
+    *start = rational_make(first->time_numerator, first->time_denominator);
+    *end = rational_make(last->end_numerator, last->end_denominator);
+}
+
+/* The motion claim: how the voices move against each other between consecutive chord segments, in total and per pair of
+   voices. It covers the whole piece. */
+static cJSON *voice_motions_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    const AnalysisVoiceLeading *voice_leading = &report->voice_leading;
+    Rational start;
+    Rational end;
+    voice_leading_span(report, &start, &end);
+    cJSON *claim = claim_json_with(voice_leading->framework, notes, NULL, 0, start, end, "motions",
+                                   cJSON_CreateNumber(voice_leading->motion_uncertainty));
+    if (!(claim && add(claim, "voices", cJSON_CreateNumber((double)voice_leading->voice_count)) &&
+          add(claim, "segments", cJSON_CreateNumber((double)voice_leading->row_count)) &&
+          add(claim, "motion_count", cJSON_CreateNumber((double)voice_leading->motion_count)) &&
+          add(claim, "totals", motion_counts_json(voice_leading->motion_totals)) &&
+          add(claim, "pairs", motion_pairs_json(voice_leading)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The voice leading section: a list of claims, each labelled by the result it is. Empty when the library declined the
+   voices. */
+static cJSON *voice_leading_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    if (list && report->voice_leading.present && !append(list, voice_motions_json(notes, report))) {
+        cJSON_Delete(list);
+        return NULL;
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -3221,7 +3292,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
           add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
           add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", texture_json(notes, report)) &&
-          add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
+          add(document, "voice_leading", voice_leading_json(notes, report)) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {

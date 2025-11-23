@@ -20,6 +20,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/harmonic_rhythm_pipeline.c
     pipeline/rhythm_pipeline.c
     pipeline/texture_pipeline.c
+    pipeline/voice_leading_pipeline.c
     pipeline/analysis_report.c
     pipeline/chain.c
     pipeline/analysis_pipeline.c
@@ -34,8 +35,8 @@ get_target_property(STANDARD_FORM_SOURCE_DIR standard_form SOURCE_DIR)
 get_filename_component(URSATZ_FRAMEWORKS_DIR "${STANDARD_FORM_SOURCE_DIR}/.." ABSOLUTE)
 get_target_property(STANDARD_COUNTERPOINT_SOURCE_DIR standard_counterpoint SOURCE_DIR)
 # standard-counterpoint's headers name each other without a directory, and its framework.h shares a name with other
-# frameworks', so only the melody pipeline sees its directories.
-set_source_files_properties(pipeline/melody_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
+# frameworks', so only the melody and voice leading pipelines see its directories.
+set_source_files_properties(pipeline/melody_pipeline.c pipeline/voice_leading_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
     "${STANDARD_COUNTERPOINT_SOURCE_DIR};${STANDARD_COUNTERPOINT_SOURCE_DIR}/analysis")
 # standard-texture's headers name each other without a directory and share names (rule_pair.h, framework.h) with other
 # frameworks', so only the texture pipeline sees its directories.
