@@ -16,6 +16,9 @@ typedef struct {
     size_t label_count;
 } StyleCategory;
 
+/* The motive categories of the Analyzer's style model. The Composer reads them out until P16 makes them preferences. */
+static const char *const motive_categories[] = {"motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
+
 struct ComposerStyle {
     StyleModel *model;
     size_t pieces;
@@ -145,7 +148,8 @@ ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out) {
     if (!style) {
         return COMPOSER_STYLE_ERR_ALLOC;
     }
-    StyleModelFileResult read = style_model_file_read(path, &style->model, &style->pieces);
+    StyleModelFileResult read = style_model_file_read_without(
+        path, motive_categories, sizeof(motive_categories) / sizeof(motive_categories[0]), &style->model, &style->pieces);
     if (read != STYLE_MODEL_FILE_OK) {
         free(style);
         switch (read) {
