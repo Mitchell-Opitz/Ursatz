@@ -3261,11 +3261,70 @@ static cJSON *voice_motions_json(const ImportedNotes *notes, const AnalysisRepor
     return claim;
 }
 
+/* The span from the start of one entry to the end of a later one. */
+static void voice_leading_entries_span(const AnalysisReport *report, size_t from, size_t to, Rational *start,
+                                       Rational *end) {
+    const AnalysisReportEntry *first = &report->entries[from];
+    const AnalysisReportEntry *last = &report->entries[to];
+    *start = rational_make(first->time_numerator, first->time_denominator);
+    *end = rational_make(last->end_numerator, last->end_denominator);
+}
+
+/* A fault of the voices' leading, as the claim for the move between two consecutive chords. */
+static cJSON *voice_violation_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                   const AnalysisVoiceLeading *voice_leading, const AnalysisVoiceViolation *violation) {
+    Rational start;
+    Rational end;
+    voice_leading_entries_span(report, violation->entry_from, violation->entry_to, &start, &end);
+    cJSON *claim = claim_json_with(voice_leading->framework, notes, violation->note_ids, 4, start, end, "violation",
+                                   cJSON_CreateNumber(violation->uncertainty));
+    if (!(claim && add(claim, "rule", cJSON_CreateString(violation->rule)) &&
+          add(claim, "upper_voice", cJSON_CreateNumber((double)violation->upper_voice)) &&
+          add(claim, "lower_voice", cJSON_CreateNumber((double)violation->lower_voice)) &&
+          add(claim, "interval", cJSON_CreateNumber(violation->arrival_interval)) &&
+          add(claim, "from_chord", cJSON_CreateNumber((double)violation->entry_from)) &&
+          add(claim, "to_chord", cJSON_CreateNumber((double)violation->entry_to)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* A tendency tone left unresolved when its chord changes. */
+static cJSON *voice_resolution_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                    const AnalysisVoiceLeading *voice_leading,
+                                    const AnalysisVoiceResolution *resolution) {
+    Rational start;
+    Rational end;
+    voice_leading_entries_span(report, resolution->entry_from, resolution->entry_to, &start, &end);
+    cJSON *claim = claim_json_with(voice_leading->framework, notes, resolution->note_ids, 2, start, end, "resolution",
+                                   cJSON_CreateNumber(resolution->uncertainty));
+    if (!(claim && add(claim, "rule", cJSON_CreateString(resolution->rule)) &&
+          add(claim, "voice", cJSON_CreateNumber((double)resolution->voice)) &&
+          add(claim, "from_chord", cJSON_CreateNumber((double)resolution->entry_from)) &&
+          add(claim, "to_chord", cJSON_CreateNumber((double)resolution->entry_to)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
 /* The voice leading section: a list of claims, each labelled by the result it is. Empty when the library declined the
    voices. */
 static cJSON *voice_leading_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
-    if (list && report->voice_leading.present && !append(list, voice_motions_json(notes, report))) {
+    const AnalysisVoiceLeading *voice_leading = &report->voice_leading;
+    if (!list || !voice_leading->present) {
+        return list;
+    }
+    bool ok = append(list, voice_motions_json(notes, report));
+    for (size_t i = 0; ok && i < voice_leading->violation_count; i++) {
+        ok = append(list, voice_violation_json(notes, report, voice_leading, &voice_leading->violations[i]));
+    }
+    for (size_t i = 0; ok && i < voice_leading->resolution_count; i++) {
+        ok = append(list, voice_resolution_json(notes, report, voice_leading, &voice_leading->resolutions[i]));
+    }
+    if (!ok) {
         cJSON_Delete(list);
         return NULL;
     }

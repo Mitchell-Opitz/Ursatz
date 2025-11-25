@@ -8,6 +8,9 @@
 #include "analysis/voice_separation.h"
 #include "analysis_grid.h"
 #include "analysis_motion.h"
+#include "analysis_perfects.h"
+#include "analysis_resolution.h"
+#include "analysis_voices.h"
 #include "events/note_event.h"
 #include "pipeline/spelling_util.h"
 #include "segmentation_beat_grid.h"
@@ -25,10 +28,12 @@ typedef struct {
     size_t row_count;
     VoiceAssignment assignment;
     StandardCounterpointVoiceCell *cells; /* row_count * voice_count */
+    HarmonyVoiceCell *harmony_cells;      /* the same cells for standard-harmony (identical semantics) */
     size_t *note_of_cell;                 /* ImportedNotes index of each cell's note, NO_NOTE where the voice rests */
     char (*names)[32];                    /* the rows' segment ids */
     const char **ids;
     StandardCounterpointVoiceGrid grid;
+    HarmonyVoiceGrid harmony_grid;
     StandardCounterpointPreparedGrid prepared;
     bool prepared_ok;
 } VoiceGrid;
@@ -39,6 +44,7 @@ static void grid_destroy(VoiceGrid *build) {
     }
     voice_assignment_destroy(&build->assignment);
     free(build->cells);
+    free(build->harmony_cells);
     free(build->note_of_cell);
     free(build->names);
     free(build->ids);
@@ -109,6 +115,9 @@ static bool place_note(const ImportedNotes *notes, const AnalysisReport *report,
             compare_rational(entry->time_numerator, (long long)entry->time_denominator, on_n, on_d) == 0,
             confidence,
         };
+        const StandardCounterpointVoiceCell *cell = &build->cells[index];
+        build->harmony_cells[index] = (HarmonyVoiceCell){cell->present,    cell->pitch,    cell->spelling,
+                                                         cell->note_id,    cell->attacked, cell->confidence};
         build->note_of_cell[index] = note;
     }
     return true;
@@ -139,10 +148,11 @@ static bool grid_build(const ImportedNotes *notes, const AnalysisReport *report,
     }
     size_t cells = build->row_count * build->voice_count;
     build->cells = calloc(cells, sizeof(StandardCounterpointVoiceCell));
+    build->harmony_cells = calloc(cells, sizeof(HarmonyVoiceCell));
     build->note_of_cell = malloc(cells * sizeof(size_t));
     build->names = calloc(build->row_count, sizeof(build->names[0]));
     build->ids = calloc(build->row_count, sizeof(const char *));
-    if (!build->cells || !build->note_of_cell || !build->names || !build->ids) {
+    if (!build->cells || !build->harmony_cells || !build->note_of_cell || !build->names || !build->ids) {
         return false;
     }
     for (size_t i = 0; i < cells; i++) {
@@ -158,6 +168,7 @@ static bool grid_build(const ImportedNotes *notes, const AnalysisReport *report,
         }
     }
     build->grid = (StandardCounterpointVoiceGrid){build->row_count, build->voice_count, build->ids, build->cells};
+    build->harmony_grid = (HarmonyVoiceGrid){build->row_count, build->voice_count, build->harmony_cells};
     StandardCounterpointGridStatus status = standard_counterpoint_grid_prepare(&build->grid, &build->prepared);
     if (status == STANDARD_COUNTERPOINT_GRID_ERR_ALLOC) {
         return false;
@@ -204,8 +215,77 @@ static bool collect_motions(const VoiceGrid *build, AnalysisVoiceLeading *out) {
     return true;
 }
 
+/* The notes of a voice in two rows. */
+static size_t note_at(const VoiceGrid *build, size_t row, size_t voice) {
+    return build->note_of_cell[row * build->voice_count + voice];
+}
+
+/* The parallel and direct fifths and octaves. false only on allocation failure. */
+static bool collect_perfects(const VoiceGrid *build, AnalysisVoiceLeading *out) {
+    StandardCounterpointViolations perfects;
+    StandardCounterpointPerfectsStatus status = standard_counterpoint_check_perfects(&build->prepared, &perfects);
+    if (status != STANDARD_COUNTERPOINT_PERFECTS_OK) {
+        return status != STANDARD_COUNTERPOINT_PERFECTS_ERR_ALLOC;
+    }
+    out->violations = calloc(perfects.count > 0 ? perfects.count : 1, sizeof(AnalysisVoiceViolation));
+    if (!out->violations) {
+        standard_counterpoint_violations_destroy(&perfects);
+        return false;
+    }
+    for (size_t i = 0; i < perfects.count; i++) {
+        const StandardCounterpointViolation *found = &perfects.items[i];
+        out->violations[i] = (AnalysisVoiceViolation){
+            standard_counterpoint_violation_rule_name(found->rule),
+            found->upper_voice,
+            found->lower_voice,
+            found->segment_from,
+            found->segment_to,
+            found->arrival_interval,
+            {note_at(build, found->segment_from, found->upper_voice), note_at(build, found->segment_to, found->upper_voice),
+             note_at(build, found->segment_from, found->lower_voice), note_at(build, found->segment_to, found->lower_voice)},
+            found->uncertainty,
+        };
+    }
+    out->violation_count = perfects.count;
+    standard_counterpoint_violations_destroy(&perfects);
+    return true;
+}
+
+/* The unresolved sevenths and leading tones, against the chords the harmony stage prepared (one per report entry).
+   false only on allocation failure. */
+static bool collect_resolutions(const VoiceGrid *build, const HarmonyStage *harmony, AnalysisVoiceLeading *out) {
+    if (!harmony->segments || harmony->count != build->row_count) {
+        return true;
+    }
+    HarmonyResolutions resolutions;
+    HarmonyResolutionStatus status =
+        harmony_analysis_check_resolutions(harmony->segments, harmony->count, &build->harmony_grid, NULL, &resolutions);
+    if (status != HARMONY_RESOLUTION_OK) {
+        return status != HARMONY_RESOLUTION_ERR_ALLOC;
+    }
+    out->resolutions = calloc(resolutions.count > 0 ? resolutions.count : 1, sizeof(AnalysisVoiceResolution));
+    if (!out->resolutions) {
+        harmony_resolutions_destroy(&resolutions);
+        return false;
+    }
+    for (size_t i = 0; i < resolutions.count; i++) {
+        const HarmonyResolutionResult *found = &resolutions.items[i];
+        out->resolutions[i] = (AnalysisVoiceResolution){
+            harmony_resolution_rule_name(found->rule),
+            found->voice,
+            found->segment_from,
+            found->segment_to,
+            {note_at(build, found->segment_from, found->voice), note_at(build, found->segment_to, found->voice)},
+            found->uncertainty,
+        };
+    }
+    out->resolution_count = resolutions.count;
+    out->resolutions_checked = true;
+    harmony_resolutions_destroy(&resolutions);
+    return true;
+}
+
 bool voice_leading_stage_collect(const ImportedNotes *notes, const HarmonyStage *harmony, AnalysisReport *report) {
-    (void)harmony;
     if (notes->count == 0 || report->entry_count == 0 || !notes->meter.meter_map) {
         return true;
     }
@@ -225,7 +305,7 @@ bool voice_leading_stage_collect(const ImportedNotes *notes, const HarmonyStage 
     out->framework = framework_name(standard_counterpoint_framework());
     out->voice_count = build.voice_count;
     out->row_count = build.row_count;
-    bool ok = collect_motions(&build, out);
+    bool ok = collect_motions(&build, out) && collect_perfects(&build, out) && collect_resolutions(&build, harmony, out);
     grid_destroy(&build);
     return ok;
 }

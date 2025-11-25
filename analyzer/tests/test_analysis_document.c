@@ -213,6 +213,16 @@ int main(void) {
     for (int i = 0; i < cJSON_GetArraySize(voice_leading); i++) {
         const cJSON *entry = cJSON_GetArrayItem(voice_leading, i);
         check_claim(entry);
+        if (strcmp(string(entry, "label"), "violation") == 0) {
+            assert(strncmp(string(entry, "rule"), "parallel-", 9) == 0 || strcmp(string(entry, "rule"), "direct-perfects") == 0);
+            assert(number(entry, "to_chord") == number(entry, "from_chord") + 1);
+            assert(number(entry, "upper_voice") < number(entry, "lower_voice"));
+            continue;
+        }
+        if (strcmp(string(entry, "label"), "resolution") == 0) {
+            assert(number(entry, "to_chord") > number(entry, "from_chord"));
+            continue;
+        }
         assert(strcmp(string(entry, "label"), "motions") == 0);
         const cJSON *totals = member(entry, "totals");
         double sum = number(totals, "contrary") + number(totals, "similar") + number(totals, "parallel") +

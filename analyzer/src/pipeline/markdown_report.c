@@ -2073,15 +2073,62 @@ static bool render_motions(StringBuilder *sb, const cJSON *claim) {
     return ok && sb_append(sb, "\n");
 }
 
+/* The faults and unresolved tones, by the library's rule name. */
+static int count_claims_with_rule(const cJSON *claims, const char *label, const char *rule) {
+    int count = 0;
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, claims) {
+        const char *own = string_member(claim, "rule");
+        count += has_label(claim, label) && own && strcmp(own, rule) == 0 ? 1 : 0;
+    }
+    return count;
+}
+
+static bool render_voice_faults(StringBuilder *sb, const cJSON *voice_leading) {
+    bool ok = sb_appendf(sb, "%d parallel %s, %d parallel %s, %d direct fifths or octaves in the outer voices, "
+                             "%d unresolved %s, %d %s that do not rise.\n\n",
+                         count_claims_with_rule(voice_leading, "violation", "parallel-fifths"),
+                         count_claims_with_rule(voice_leading, "violation", "parallel-fifths") == 1 ? "fifth" : "fifths",
+                         count_claims_with_rule(voice_leading, "violation", "parallel-octaves"),
+                         count_claims_with_rule(voice_leading, "violation", "parallel-octaves") == 1 ? "octave" : "octaves",
+                         count_claims_with_rule(voice_leading, "violation", "direct-perfects"),
+                         count_claims_with_rule(voice_leading, "resolution", "seventh-resolves-down"),
+                         count_claims_with_rule(voice_leading, "resolution", "seventh-resolves-down") == 1 ? "seventh" : "sevenths",
+                         count_claims_with_rule(voice_leading, "resolution", "leading-tone-resolves"),
+                         count_claims_with_rule(voice_leading, "resolution", "leading-tone-resolves") == 1 ? "leading tone" : "leading tones");
+    if (!has_claims(voice_leading, "violation") && !has_claims(voice_leading, "resolution")) {
+        return ok;
+    }
+    ok = ok && sb_append(sb, "| Location | Fault | Voices |\n| --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, voice_leading) {
+        if (!ok) {
+            break;
+        }
+        if (has_label(claim, "violation")) {
+            ok = sb_append(sb, "| ") && append_location(sb, claim) &&
+                 sb_appendf(sb, " | %s | %d and %d |\n", string_member(claim, "rule"),
+                            (int)number_member(claim, "upper_voice"), (int)number_member(claim, "lower_voice"));
+        } else if (has_label(claim, "resolution")) {
+            ok = sb_append(sb, "| ") && append_location(sb, claim) &&
+                 sb_appendf(sb, " | %s | %d |\n", string_member(claim, "rule"), (int)number_member(claim, "voice"));
+        }
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static bool render_voice_leading(StringBuilder *sb, const cJSON *document, const cJSON *voice_leading) {
     (void)document;
     bool ok = sb_append(sb, "## Voice leading\n\n") &&
               sb_append(sb, "The kernel separated the notes of the whole piece into voices (voice 0 is the top) and "
                             "the library's counterpoint adapter classified how each pair of voices moves from one "
                             "chord segment to the next. Parallel motion keeps the interval type, similar motion "
-                            "changes it; a voice that rests in either segment gives no motion.\n\n");
+                            "changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel "
+                            "fifths and octaves between any pair of voices, direct fifths and octaves in the outer "
+                            "pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is "
+                            "the top).\n\n");
     const cJSON *motions = find_claim(voice_leading, "motions");
-    return ok && (!motions || render_motions(sb, motions));
+    return ok && (!motions || render_motions(sb, motions)) && render_voice_faults(sb, voice_leading);
 }
 
 /* Report sections in document section order. Adding a section means

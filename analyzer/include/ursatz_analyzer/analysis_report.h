@@ -708,6 +708,33 @@ typedef struct {
     size_t total;
 } AnalysisVoicePairMotion;
 
+/* A fault the library finds in the voices' leading (standard-counterpoint's check_perfects): parallel fifths or
+   octaves between a pair of voices (any pair), or direct fifths and octaves ("direct-perfects": arrival by similar
+   motion with the top voice leaping, in the outer pair only). It is the move from chord segment entry_from to entry_to
+   (entries of the report, consecutive). The notes are the upper voice's at each segment, then the lower voice's. */
+typedef struct {
+    const char *rule;         /* the library's: "parallel-fifths", "parallel-octaves" or "direct-perfects" */
+    size_t upper_voice;
+    size_t lower_voice;
+    size_t entry_from;
+    size_t entry_to;
+    int arrival_interval;     /* the simple size arrived at: 5, 8 or 1 */
+    size_t note_ids[4];       /* ImportedNotes indices: upper at from, upper at to, lower at from, lower at to */
+    double uncertainty;       /* the library's: 1 less the least confidence of the voice separation, in [0, 1] */
+} AnalysisVoiceViolation;
+
+/* A tendency tone the library finds left unresolved when a chord changes (standard-harmony's check_resolutions): a
+   seventh that does not fall, or a leading tone that does not rise to the tonic. The voice moves from the last segment
+   of its chord (entry_from) to the first of the next (entry_to). */
+typedef struct {
+    const char *rule;         /* the library's: "seventh-resolves-down" or "leading-tone-resolves" */
+    size_t voice;
+    size_t entry_from;
+    size_t entry_to;
+    size_t note_ids[2];       /* ImportedNotes indices: the tone and the note it moved to */
+    double uncertainty;       /* the library's: the voice's and the chord's confidence together, in [0, 1] */
+} AnalysisVoiceResolution;
+
 typedef struct {
     bool present;                             /* the library took the voice grid; false for a piece it declined */
     const char *framework;                    /* the library's framework name for the claims */
@@ -718,6 +745,11 @@ typedef struct {
     AnalysisVoicePairMotion *pairs;           /* owned; every pair, the upper voice first */
     size_t pair_count;
     double motion_uncertainty;                /* the mean of the library's, in [0, 1]; higher is LESS certain */
+    AnalysisVoiceViolation *violations;       /* owned; in segment order, then voice pair */
+    size_t violation_count;
+    AnalysisVoiceResolution *resolutions;     /* owned; unresolved tones only, in order of chord change, then voice */
+    size_t resolution_count;
+    bool resolutions_checked;                 /* the library had prepared chords to check against */
 } AnalysisVoiceLeading;
 
 /* A note held through a stronger metric position than it was attacked at, with no note attacked there (the library's

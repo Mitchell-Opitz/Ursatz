@@ -689,7 +689,9 @@
         { "$ref": "#/$defs/claim" },
         {
           "oneOf": [
-            { "$ref": "#/$defs/voice_motions_claim" }
+            { "$ref": "#/$defs/voice_motions_claim" },
+            { "$ref": "#/$defs/voice_violation_claim" },
+            { "$ref": "#/$defs/voice_resolution_claim" }
           ]
         }
       ]
@@ -727,6 +729,30 @@
             }
           }
         }
+      }
+    },
+    "voice_violation_claim": {
+      "type": "object",
+      "required": ["label", "rule", "upper_voice", "lower_voice", "interval", "from_chord", "to_chord"],
+      "properties": {
+        "label": { "const": "violation" },
+        "rule": { "enum": ["parallel-fifths", "parallel-octaves", "direct-perfects"] },
+        "upper_voice": { "type": "integer", "minimum": 0 },
+        "lower_voice": { "type": "integer", "minimum": 1 },
+        "interval": { "enum": [1, 5, 8] },
+        "from_chord": { "type": "integer", "minimum": 0 },
+        "to_chord": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "voice_resolution_claim": {
+      "type": "object",
+      "required": ["label", "rule", "voice", "from_chord", "to_chord"],
+      "properties": {
+        "label": { "const": "resolution" },
+        "rule": { "enum": ["seventh-resolves-down", "leading-tone-resolves"] },
+        "voice": { "type": "integer", "minimum": 0 },
+        "from_chord": { "type": "integer", "minimum": 0 },
+        "to_chord": { "type": "integer", "minimum": 1 }
       }
     },
     "rhythm_claim": {
