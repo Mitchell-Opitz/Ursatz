@@ -1,6 +1,8 @@
 #ifndef MUSIC_CORPUS_STATS_CORPUS_STATS_API_H
 #define MUSIC_CORPUS_STATS_CORPUS_STATS_API_H
 
+#include <stddef.h>
+
 #include "corpus/corpus_api.h"
 #include "persistence/persistence.h"
 
@@ -14,8 +16,8 @@
  * Chord, via persistence/persistence_chord.h) to actually resolve piece
  * refs to chord data.
  *
- * Results here are a plain output value (a chord label string), not an
- * internal type -- the same "opaque value" boundary Theory's Tendency/
+ * Results here are plain output values (a chord label string, or a list of
+ * labels with integer counts), not an internal type -- the same "opaque value" boundary Theory's Tendency/
  * StatisticalModel will eventually consume this through, per Registry.
  * These results are explicitly non-authoritative: they describe what a
  * Corpus's already-persisted Chord interpretations say, not a
@@ -33,8 +35,41 @@ typedef enum {
     CORPUS_STATS_NO_DATA,
     CORPUS_STATS_ERR_NULL_ARG,
     CORPUS_STATS_ERR_DB,
-    CORPUS_STATS_ERR_ALLOC
+    CORPUS_STATS_ERR_ALLOC,
+    /* An argument is out of its documented range (e.g. an n-gram length outside 2 to 6). */
+    CORPUS_STATS_ERR_INVALID_ARG
 } CorpusStatsResult;
+
+/*
+ * A count result: every distinct label seen, with how many times it was seen.
+ * Plain values only (a label string and an unsigned integer), the same opaque
+ * boundary as corpus_stats_most_common_chord: nothing here is an internal
+ * type, and nothing is authoritative -- it says what the persisted
+ * interpretations say.
+ *
+ * entries are ordered by count, highest first; labels with equal counts keep
+ * the order in which they were first seen (piece-ref order, then store order
+ * within a piece). total is the sum of all counts, so a label's frequency is
+ * count/total (an exact rational; no floating point anywhere). A result with
+ * no entries is never returned as OK: the function returns
+ * CORPUS_STATS_NO_DATA and leaves the output untouched.
+ *
+ * On CORPUS_STATS_OK the caller owns the result and frees it with
+ * corpus_stats_counts_free.
+ */
+typedef struct {
+    char *label;
+    unsigned long count;
+} CorpusStatsCount;
+
+typedef struct {
+    CorpusStatsCount *entries;
+    size_t entry_count;
+    unsigned long total;
+} CorpusStatsCounts;
+
+/* Frees the labels and entries and zeroes the struct. Safe on NULL and on an already-freed result. */
+void corpus_stats_counts_free(CorpusStatsCounts *counts);
 
 /*
  * Computes the most frequently occurring chord label across every
@@ -61,5 +96,56 @@ typedef enum {
 CorpusStatsResult corpus_stats_most_common_chord(CorpusStoreHandle *corpus_handle,
                                                   PersistenceHandle *persistence_handle, const char *corpus_id,
                                                   char **out_chord_label);
+
+/*
+ * Chord progressions: counts every run of n consecutive chords (an n-gram,
+ * n from CORPUS_STATS_MIN_PROGRESSION_LENGTH to _MAX_PROGRESSION_LENGTH)
+ * across the Corpus, reading each piece's persisted Chord interpretations in
+ * the order they were stored. A piece is a piece ref used as a context id:
+ * its chords are the stored Chords whose Interpretation has that context_id
+ * (persistence/persistence_context_query.h). A run never crosses from one
+ * piece into the next, and a piece with fewer than n chords contributes
+ * nothing. A chord that cannot be loaded breaks the run it falls in.
+ *
+ * A progression's label is its chord labels joined by " > " (e.g.
+ * "I > V > I"). Piece refs that resolve to no chords are skipped silently,
+ * as for corpus_stats_most_common_chord.
+ *
+ * CORPUS_STATS_ERR_INVALID_ARG if n is outside 2 to 6;
+ * CORPUS_STATS_NO_DATA (output untouched) if no n-gram was counted.
+ */
+#define CORPUS_STATS_MIN_PROGRESSION_LENGTH 2
+#define CORPUS_STATS_MAX_PROGRESSION_LENGTH 6
+
+CorpusStatsResult corpus_stats_chord_progressions(CorpusStoreHandle *corpus_handle,
+                                                  PersistenceHandle *persistence_handle, const char *corpus_id,
+                                                  size_t n, CorpusStatsCounts *out_counts);
+
+/*
+ * Cadence types: counts the cadence type of every persisted cadence
+ * interpretation (claim value type CORPUS_STATS_CADENCE_CLAIM_TYPE, whose
+ * content is the type's label as a NUL-terminated string, e.g. "PAC") across
+ * the Corpus, reading each piece ref as a context id. A claim whose content
+ * is not such a string is skipped. NO_DATA (output untouched) if none count.
+ */
+#define CORPUS_STATS_CADENCE_CLAIM_TYPE "cadence-detection-top-candidate"
+
+CorpusStatsResult corpus_stats_cadence_types(CorpusStoreHandle *corpus_handle, PersistenceHandle *persistence_handle,
+                                             const char *corpus_id, CorpusStatsCounts *out_counts);
+
+/*
+ * Directed intervals: counts the size, in semitones, of every persisted
+ * interval interpretation (claim value type CORPUS_STATS_INTERVAL_CLAIM_TYPE,
+ * whose content is one signed long) across the Corpus, reading each piece ref
+ * as a context id. The label is the signed semitone count with its sign
+ * ("+2", "-3", "+0"). This counts what interval analysis persisted, nothing
+ * more; a claim whose content is not one long is skipped. NO_DATA (output
+ * untouched) if none count.
+ */
+#define CORPUS_STATS_INTERVAL_CLAIM_TYPE "interval-analysis-directed-semitones"
+
+CorpusStatsResult corpus_stats_directed_intervals(CorpusStoreHandle *corpus_handle,
+                                                  PersistenceHandle *persistence_handle, const char *corpus_id,
+                                                  CorpusStatsCounts *out_counts);
 
 #endif

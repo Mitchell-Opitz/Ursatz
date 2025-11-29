@@ -22,17 +22,33 @@ Corpus Statistics: the first cross-piece computation over a Corpus's membership 
 
 Every function returns a `CorpusStatsResult` (`CORPUS_STATS_OK` on success); DB-layer failures not covered by a more specific code map to `CORPUS_STATS_ERR_DB`, allocation failures to `CORPUS_STATS_ERR_ALLOC`.
 
+## Style statistics
+
+Counts over what a Corpus's persisted interpretations say, as plain `CorpusStatsCounts` (a label and an integer count per entry, highest count first with ties in first-seen order, plus the total, so a label's frequency is the exact rational `count/total`). Each returns `CORPUS_STATS_NO_DATA`, leaving its output untouched, when nothing counts. Free a result with `corpus_stats_counts_free`.
+
+A piece ref is a context id: a piece's interpretations are the ones persisted with that `context_id` (`persistence/persistence_context_query.h`), in the order they were stored. The existing `corpus_stats_most_common_chord` still resolves refs as Chord ids and is unchanged.
+
+- `corpus_stats_chord_progressions(..., n, out)`: every run of `n` consecutive persisted Chords (`n` from 2 to 6; anything else is `CORPUS_STATS_ERR_INVALID_ARG`), labelled by the chord labels joined with `" > "`. A run never crosses from one piece into the next; a piece with fewer than `n` chords contributes nothing; a chord that cannot be loaded breaks the run it falls in.
+- `corpus_stats_cadence_types`: the label of every persisted interpretation of claim value type `CORPUS_STATS_CADENCE_CLAIM_TYPE` (`cadence-detection-top-candidate`), whose content is the label as a NUL-terminated string.
+- `corpus_stats_directed_intervals`: the signed semitone size of every persisted interpretation of claim value type `CORPUS_STATS_INTERVAL_CLAIM_TYPE` (`interval-analysis-directed-semitones`), whose content is one `long`; labels are signed (`+2`, `-3`, `+0`). It counts what interval analysis persisted, nothing more.
+
+Claims are read as raw bytes through `persistence_list_claim_contents_for_context`, so `corpus_stats` needs no dependency on `core` or `analysis`; a claim whose content does not decode is skipped, as an unresolvable piece ref is. Adding a statistic over another claim type is one decoder and one public function.
+
+**Not counted yet** (nothing is invented to fill them): phrase forms (period and sentence claims are packed structs defined in `analysis/`), rhythm patterns (not interpretations), and motive transformations (the motif claim carries only an occurrence length, no transformation kind). They need a plain, documented claim format before they can be counted here.
+
+Counts reach `theory/` as plain values: `theory/style_model_build.h` builds a `StyleModel` from them and `theory/style_model_blend.h` blends two (see `docs/modules/theory.md`). Nothing here fits or trains a model, and nothing here can become a Rule or Constraint.
+
 ## Notes
 
 - No caching or precomputation -- every call recomputes the tally from scratch by iterating the Corpus's current piece refs.
-- One statistic only in this pass (most-common-chord); other statistics (key frequency, progressions, etc.) are deferred to later passes that would extend this module, not `corpus/`.
-- No float/double anywhere (Law 19 has nothing to apply to here -- tallies are plain counts).
+- Piece order is the order `corpus_api_list_piece_refs` returns.
+- No float/double anywhere (Law 19) -- tallies are plain counts and frequencies are `count/total`.
 
 ## Deferred
 
-- Any statistic beyond most-common-chord (key frequency, progressions, etc.).
-- Wiring into `ursatz-gui` or Theory/Tendency -- this module only builds the library-level capability.
-- Existence validation of piece refs at Corpus-membership time -- a separate, larger decision that this module's skip-on-unresolvable behavior works around rather than resolves.
+- Phrase forms, rhythm patterns and motive transformations (above).
+- Wiring into `ursatz-gui` or the Analyzer's style-profile report.
+- Existence validation of piece refs at Corpus-membership time.
 - Caching or precomputation of results.
 
 ## Dependencies

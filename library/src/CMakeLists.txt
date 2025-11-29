@@ -115,6 +115,10 @@ add_library(ursatz
     theory/tendency.c
     theory/statistical_model.c
     theory/style_model.c
+    theory/style_fraction.c
+    theory/style_features.c
+    theory/style_model_build.c
+    theory/style_model_blend.c
     transform/transformation.c
     transform/transform_result.c
     transform/transposition.c
@@ -170,11 +174,14 @@ add_library(ursatz
     persistence/persistence_interpretation.c
     persistence/persistence_chord.c
     persistence/persistence_key.c
+    persistence/persistence_context_query.c
     corpus/corpus.c
     corpus/persistence_corpus.c
     corpus/persistence_corpus_membership.c
     corpus/corpus_api.c
     corpus_stats/corpus_stats_api.c
+    corpus_stats/corpus_stats_tally.c
+    corpus_stats/corpus_stats_counts.c
     export/musicxml_export.c
 )
 target_include_directories(ursatz PUBLIC

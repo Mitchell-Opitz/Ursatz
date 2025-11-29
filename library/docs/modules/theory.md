@@ -12,7 +12,7 @@ Layer L7 (`music-theory`). Path `src/theory/`, tests `tests/theory/`. Sibling of
 - `Tendency`'s frequency is not a Rule/Constraint verdict. `TendencyResult` is a disjoint enum from `RuleResult` and `ConstraintResult`; no function converts a `Tendency` into either, and no function in `rule.h`/`constraint.h` accepts a `Tendency`. An observed frequency (TDD §99) never automatically becomes a must/must-not/valid/invalid claim.
 - `StatisticalModel`'s output cannot be silently promoted to a `Rule`. `theory/statistical_model.h` does not include `rules/rule.h`, and no function anywhere converts a `StatisticalModel` into a `Rule`. `training_corpus` is a plain string label (TDD §100), never a corpus object reference.
 - `Heuristic` exposes no evaluate/pass-fail API at all. `theory/heuristic.h` is identity plus a label only (TDD §98); nothing on the type could be evaluated as true or false in the first place.
-- `StyleModel` is shape only, same as `Tendency` and `StatisticalModel`. `style_features` is an opaque `Value`, `training_corpus` is a plain label string, and there is no fitting or comparison logic. Construction/shape tests only.
+- `StyleModel` keeps `style_features` as an opaque `Value` and `training_corpus` as a plain label string; its shape is unchanged. Corpus style statistics fill it (below). There is still no fitting: every number is a count or an exact rational.
 
 ## Theory to Corpus open issue (Dependency Spec §7.2)
 
@@ -31,3 +31,13 @@ shared conventions and the build note live in `frameworks/README.md`; each frame
 ## Dependencies
 
 Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5), and all four L6 modules only.
+
+## Style statistics and blending
+
+Corpus statistics reach `theory/` as plain values, never as a corpus type (the Theory -> Corpus open issue above stays open: `theory/` has no dependency on `corpus_stats/` or `corpus/`).
+
+- `style_features.h`: the one format `style_features` is given, `style-tendencies-v1`: text, one statistic per line (`category`, `label`, `count`, `total`, tab-separated), sorted by category then label, no duplicates. `style_features_encode`/`_decode` pack and read it back. Counts and totals are unsigned integers; a frequency is `count/total`.
+- `style_model_build.h`: `style_model_from_statistics` builds a `StyleModel` from an array of `StyleStatistic`, validating each (non-empty names without tab or newline, `total > 0`, `count <= total`, no duplicates). `style_model_tendencies` reads the model back as `Tendency` objects (label, frequency `count/total` unreduced, and the category and training corpus as observed data), so each statistic is observed behavior and nothing stronger.
+- `style_model_blend.h`: `style_model_blend` blends two models with an exact weight `w` in [0, 1] (`(1 - w) * a + w * b` per category and label, a missing label counting as 0, results reduced). Weight 0 gives A and weight 1 gives B as reduced fractions; a label whose blended frequency is 0 is left out. A zero denominator, a weight above 1, an input that is not statistics, and an overflow are explicit results, never wraparound. The caller supplies the result's id, name, training-corpus label and version. After a blend, a statistic's count and total are the numerator and denominator of the blended frequency, not a literal tally.
+- `style_fraction.h`: the small exact-fraction helper these use (reduce, add, multiply with overflow checks); `theory/` keeps its own copy because it cannot depend on `rules/`.
+- **No path to a Rule.** None of these files (nor `tendency.h`) names a `Rule` or `Constraint` or includes anything from `rules/`; `tests/theory/test_style_model_not_a_rule.c` checks it, and a statistic can never exceed 1. Statistics are non-authoritative.

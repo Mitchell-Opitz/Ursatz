@@ -114,3 +114,16 @@ CorpusStatsResult corpus_stats_most_common_chord(CorpusStoreHandle *corpus_handl
     *out_chord_label = winning_label;
     return CORPUS_STATS_OK;
 }
+
+void corpus_stats_counts_free(CorpusStatsCounts *counts) {
+    if (counts == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < counts->entry_count; i++) {
+        free(counts->entries[i].label);
+    }
+    free(counts->entries);
+    counts->entries = NULL;
+    counts->entry_count = 0;
+    counts->total = 0;
+}
