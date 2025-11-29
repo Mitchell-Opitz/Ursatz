@@ -16,8 +16,8 @@
  * Chord, via persistence/persistence_chord.h) to actually resolve piece
  * refs to chord data.
  *
- * Results here are a plain output value (a chord label string), not an
- * internal type -- the same "opaque value" boundary Theory's Tendency/
+ * Results here are plain output values (a chord label string, or a list of
+ * labels with integer counts), not an internal type -- the same "opaque value" boundary Theory's Tendency/
  * StatisticalModel will eventually consume this through, per Registry.
  * These results are explicitly non-authoritative: they describe what a
  * Corpus's already-persisted Chord interpretations say, not a
