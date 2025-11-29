@@ -188,6 +188,71 @@ static void check_corpus(CorpusStoreHandle *corpus, PersistenceHandle *persisten
     free(expected);
 }
 
+/*
+ * KNOWN COUNTS. What the chain finds on each piece, pinned: the cadence types it classifies, one chord progression of length 2 and the top one
+ * of length 3, each with its count and the n-gram total of the piece. These are the chain's own results (cross-checked above against a tally
+ * taken straight from the chain), not the hand annotations: the chain finds more cadences than the annotated ones in places (Mozart K. 545:
+ * 23 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). Field 5 gets no
+ * cadence, so its cadence count is NO_DATA.
+ */
+typedef struct {
+    const char *cadence_labels[4];
+    unsigned long cadence_counts[4];
+    size_t cadence_entries;
+    const char *pair;
+    unsigned long pair_count;
+    unsigned long pair_total;
+    const char *triple;
+    unsigned long triple_count;
+    unsigned long triple_total;
+} Known;
+
+static const Known KNOWN[5] = {
+    /* Bach 114 */ {{"subverted"}, {2}, 1, "I > I", 17, 148, "I > I > I", 6, 147},
+    /* Mozart 545 */ {{"pac", "subverted", "hc"}, {11, 6, 6}, 3, "I > I", 75, 570, "I > I > I", 37, 569},
+    /* Clementi 36 */ {{"hc", "pac", "iac", "subverted"}, {6, 3, 3, 3}, 4, "I > V", 13, 197, "I > iii > I", 6, 196},
+    /* Field 1 */ {{"pac", "hc"}, {2, 2}, 2, "I > I", 23, 59, "I > I > I", 18, 58},
+    /* Field 5 */ {{NULL}, {0}, 0, "I > I", 7, 28, "I > I > I", 5, 27},
+};
+
+static unsigned long count_of(const CorpusStatsCounts *counts, const char *label) {
+    for (size_t i = 0; i < counts->entry_count; i++) {
+        if (strcmp(counts->entries[i].label, label) == 0) {
+            return counts->entries[i].count;
+        }
+    }
+    return 0;
+}
+
+static void check_known(CorpusStoreHandle *corpus, PersistenceHandle *persistence, size_t piece) {
+    char corpus_id[64];
+    snprintf(corpus_id, sizeof(corpus_id), "piece-%zu", piece);
+    const Known *known = &KNOWN[piece];
+    CorpusStatsCounts counts = {NULL, 0, 0};
+
+    CorpusStatsResult result = corpus_stats_cadence_types(corpus, persistence, corpus_id, &counts);
+    if (known->cadence_entries == 0) {
+        assert(result == CORPUS_STATS_NO_DATA);
+    } else {
+        assert(result == CORPUS_STATS_OK);
+        assert(counts.entry_count == known->cadence_entries);
+        unsigned long total = 0;
+        for (size_t i = 0; i < known->cadence_entries; i++) {
+            assert(count_of(&counts, known->cadence_labels[i]) == known->cadence_counts[i]);
+            total += known->cadence_counts[i];
+        }
+        assert(counts.total == total);
+        corpus_stats_counts_free(&counts);
+    }
+
+    assert(corpus_stats_chord_progressions(corpus, persistence, corpus_id, 2, &counts) == CORPUS_STATS_OK);
+    assert(counts.total == known->pair_total && count_of(&counts, known->pair) == known->pair_count);
+    corpus_stats_counts_free(&counts);
+    assert(corpus_stats_chord_progressions(corpus, persistence, corpus_id, 3, &counts) == CORPUS_STATS_OK);
+    assert(counts.total == known->triple_total && count_of(&counts, known->triple) == known->triple_count);
+    corpus_stats_counts_free(&counts);
+}
+
 int main(void) {
     const char *path = "test_corpus_style_statistics.sqlite";
     remove(path);
@@ -220,6 +285,7 @@ int main(void) {
         char corpus_id[64];
         snprintf(corpus_id, sizeof(corpus_id), "piece-%zu", i);
         check_corpus(corpus, persistence, corpus_id, &chords[i], &cadences[i], 1);
+        check_known(corpus, persistence, i);
     }
     check_corpus(corpus, persistence, "all-five", chords, cadences, 5);
 
