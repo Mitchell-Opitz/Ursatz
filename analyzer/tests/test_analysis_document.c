@@ -223,6 +223,11 @@ int main(void) {
             assert(number(entry, "to_chord") > number(entry, "from_chord"));
             continue;
         }
+        if (strcmp(string(entry, "label"), "doubling") == 0) {
+            assert(number(entry, "voices") >= 3);
+            assert(cJSON_GetArraySize(member(entry, "gaps")) == (int)number(entry, "voices") - 1);
+            continue;
+        }
         assert(strcmp(string(entry, "label"), "motions") == 0);
         const cJSON *totals = member(entry, "totals");
         double sum = number(totals, "contrary") + number(totals, "similar") + number(totals, "parallel") +

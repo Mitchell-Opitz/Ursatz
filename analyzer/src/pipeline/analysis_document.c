@@ -3309,6 +3309,66 @@ static cJSON *voice_resolution_json(const ImportedNotes *notes, const AnalysisRe
     return claim;
 }
 
+static const char *const CHORD_MEMBER_NAMES[ANALYSIS_CHORD_MEMBERS] = {"root", "third", "fifth", "seventh"};
+
+static cJSON *chord_gaps_json(const AnalysisVoiceChord *chord) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < chord->gap_count; i++) {
+        if (!append(list, cJSON_CreateNumber((double)chord->gaps[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The spacing of a chord: whether the library judged it, and if so the upper voice of the first pair too wide. */
+static cJSON *chord_spacing_json(const AnalysisVoiceChord *chord) {
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "judged", cJSON_CreateBool(chord->spacing_judged)) &&
+          add(object, "valid", chord->spacing_judged ? cJSON_CreateBool(chord->wide_voice < 0) : cJSON_CreateNull()) &&
+          add(object, "wide_voice",
+              chord->spacing_judged && chord->wide_voice >= 0 ? cJSON_CreateNumber(chord->wide_voice) : cJSON_CreateNull()))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The doubling of a chord: the member most voices sound when more than one does, or null. */
+static cJSON *chord_doubled_json(const AnalysisVoiceChord *chord) {
+    if (chord->doubled_member < 0) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "member", cJSON_CreateString(CHORD_MEMBER_NAMES[chord->doubled_member])) &&
+                    add(object, "voices", cJSON_CreateNumber((double)chord->member_voices[chord->doubled_member])))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One chord's doubling and spacing, on the chord's own span. */
+static cJSON *voice_chord_json(const ImportedNotes *notes, const AnalysisReport *report,
+                               const AnalysisVoiceLeading *voice_leading, const AnalysisVoiceChord *chord) {
+    Rational start;
+    Rational end;
+    voice_leading_entries_span(report, chord->entry, chord->entry, &start, &end);
+    cJSON *claim = claim_json_with(voice_leading->framework, notes, chord->note_ids, chord->note_id_count, start, end,
+                                   "doubling", cJSON_CreateNumber(chord->uncertainty));
+    if (!(claim && add(claim, "chord", cJSON_CreateNumber((double)chord->entry)) &&
+          add(claim, "voices", cJSON_CreateNumber((double)chord->voices_sounding)) &&
+          add(claim, "doubled", chord_doubled_json(chord)) &&
+          add(claim, "non_chord_voices", cJSON_CreateNumber((double)chord->non_chord_voices)) &&
+          add(claim, "gaps", chord_gaps_json(chord)) && add(claim, "spacing", chord_spacing_json(chord)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
 /* The voice leading section: a list of claims, each labelled by the result it is. Empty when the library declined the
    voices. */
 static cJSON *voice_leading_json(const ImportedNotes *notes, const AnalysisReport *report) {
@@ -3323,6 +3383,9 @@ static cJSON *voice_leading_json(const ImportedNotes *notes, const AnalysisRepor
     }
     for (size_t i = 0; ok && i < voice_leading->resolution_count; i++) {
         ok = append(list, voice_resolution_json(notes, report, voice_leading, &voice_leading->resolutions[i]));
+    }
+    for (size_t i = 0; ok && i < voice_leading->chord_count; i++) {
+        ok = append(list, voice_chord_json(notes, report, voice_leading, &voice_leading->chords[i]));
     }
     if (!ok) {
         cJSON_Delete(list);

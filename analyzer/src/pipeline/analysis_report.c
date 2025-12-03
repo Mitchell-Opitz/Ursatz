@@ -130,6 +130,7 @@ void analysis_report_destroy(AnalysisReport *report) {
     free(report->voice_leading.pairs);
     free(report->voice_leading.violations);
     free(report->voice_leading.resolutions);
+    free(report->voice_leading.chords);
     for (size_t i = 0; i < report->hemiola_count; i++) {
         free(report->hemiolas[i].note_ids);
     }

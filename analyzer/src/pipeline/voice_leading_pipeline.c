@@ -12,7 +12,9 @@
 #include "analysis_resolution.h"
 #include "analysis_voices.h"
 #include "events/note_event.h"
+#include "pitch/pitch_numeric_value.h"
 #include "pipeline/spelling_util.h"
+#include "pipeline/voicing_check.h"
 #include "segmentation_beat_grid.h"
 #include "standard-counterpoint/framework.h"
 #include "theory/framework.h"
@@ -285,6 +287,104 @@ static bool collect_resolutions(const VoiceGrid *build, const HarmonyStage *harm
     return true;
 }
 
+/* The semitone of a sounding cell. */
+static long cell_semitone(const VoiceGrid *build, size_t row, size_t voice) {
+    const StandardCounterpointVoiceCell *cell = &build->cells[row * build->voice_count + voice];
+    return (long)pitch_numeric_value_position_numerator(cell->pitch);
+}
+
+static int pitch_class(long semitone) {
+    return (int)(((semitone % 12) + 12) % 12);
+}
+
+/* Fills the doubling and spacing of one row; false when the row has fewer than three voices or is not a chord the harmony
+   stage read. */
+static bool fill_chord(const VoiceGrid *build, const HarmonyStage *harmony, size_t row, AnalysisVoiceChord *chord) {
+    const HarmonySegmentInput *input = &harmony->inputs[row];
+    size_t sounding[ANALYSIS_VOICE_LEADING_MAX_VOICES];
+    size_t count = 0;
+    for (size_t voice = 0; voice < build->voice_count; voice++) {
+        if (build->cells[row * build->voice_count + voice].present) {
+            sounding[count++] = voice;
+        }
+    }
+    if (count < 3 || input->degree <= 0 || input->interval_count == 0 || input->inversion < 0 ||
+        (size_t)input->inversion >= input->interval_count || input->interval_count > ANALYSIS_CHORD_MEMBERS) {
+        return false;
+    }
+    size_t bass = sounding[0];
+    for (size_t i = 1; i < count; i++) {
+        if (cell_semitone(build, row, sounding[i]) < cell_semitone(build, row, bass)) {
+            bass = sounding[i];
+        }
+    }
+    int root = pitch_class(pitch_class(cell_semitone(build, row, bass)) - input->intervals[input->inversion]);
+    double least_confidence = 1;
+    chord->entry = row;
+    chord->voices_sounding = count;
+    chord->doubled_member = -1;
+    for (size_t i = 0; i < count; i++) {
+        const StandardCounterpointVoiceCell *cell = &build->cells[row * build->voice_count + sounding[i]];
+        int member = -1;
+        for (size_t m = 0; m < input->interval_count; m++) {
+            if (pitch_class(input->intervals[m]) == pitch_class(pitch_class(cell_semitone(build, row, sounding[i])) - root)) {
+                member = (int)m;
+                break;
+            }
+        }
+        if (member < 0) {
+            chord->non_chord_voices++;
+        } else {
+            chord->member_voices[member]++;
+        }
+        if (i + 1 < count) {
+            chord->gaps[chord->gap_count++] =
+                cell_semitone(build, row, sounding[i]) - cell_semitone(build, row, sounding[i + 1]);
+        }
+        chord->note_ids[chord->note_id_count++] = build->note_of_cell[row * build->voice_count + sounding[i]];
+        least_confidence = cell->confidence < least_confidence ? cell->confidence : least_confidence;
+    }
+    size_t most = 1;
+    for (size_t m = 0; m < ANALYSIS_CHORD_MEMBERS; m++) {
+        if (chord->member_voices[m] > most) {
+            most = chord->member_voices[m];
+            chord->doubled_member = (int)m;
+        }
+    }
+    chord->uncertainty = 1 - least_confidence;
+    if (build->voice_count == 4 && count == 4) {
+        const PitchSpelling *spellings[4];
+        for (size_t voice = 0; voice < 4; voice++) {
+            spellings[voice] = standard_counterpoint_grid_spelling(&build->prepared, row, voice);
+        }
+        int wide = voicing_first_wide_spacing(spellings);
+        chord->spacing_judged = wide != VOICING_SPACING_UNJUDGED;
+        chord->wide_voice = wide;
+    } else {
+        chord->wide_voice = VOICING_SPACING_VALID;
+    }
+    return true;
+}
+
+/* The doubling and spacing of every chord segment three or more voices sound. false only on allocation failure. */
+static bool collect_chords(const VoiceGrid *build, const HarmonyStage *harmony, AnalysisVoiceLeading *out) {
+    if (!harmony->inputs || harmony->count != build->row_count) {
+        return true;
+    }
+    out->chords = calloc(build->row_count, sizeof(AnalysisVoiceChord));
+    if (!out->chords) {
+        return false;
+    }
+    for (size_t row = 0; row < build->row_count; row++) {
+        AnalysisVoiceChord chord;
+        memset(&chord, 0, sizeof(chord));
+        if (fill_chord(build, harmony, row, &chord)) {
+            out->chords[out->chord_count++] = chord;
+        }
+    }
+    return true;
+}
+
 bool voice_leading_stage_collect(const ImportedNotes *notes, const HarmonyStage *harmony, AnalysisReport *report) {
     if (notes->count == 0 || report->entry_count == 0 || !notes->meter.meter_map) {
         return true;
@@ -305,7 +405,8 @@ bool voice_leading_stage_collect(const ImportedNotes *notes, const HarmonyStage 
     out->framework = framework_name(standard_counterpoint_framework());
     out->voice_count = build.voice_count;
     out->row_count = build.row_count;
-    bool ok = collect_motions(&build, out) && collect_perfects(&build, out) && collect_resolutions(&build, harmony, out);
+    bool ok = collect_motions(&build, out) && collect_perfects(&build, out) &&
+               collect_resolutions(&build, harmony, out) && collect_chords(&build, harmony, out);
     grid_destroy(&build);
     return ok;
 }

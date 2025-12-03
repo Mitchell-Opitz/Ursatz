@@ -691,7 +691,8 @@
           "oneOf": [
             { "$ref": "#/$defs/voice_motions_claim" },
             { "$ref": "#/$defs/voice_violation_claim" },
-            { "$ref": "#/$defs/voice_resolution_claim" }
+            { "$ref": "#/$defs/voice_resolution_claim" },
+            { "$ref": "#/$defs/voice_doubling_claim" }
           ]
         }
       ]
@@ -753,6 +754,34 @@
         "voice": { "type": "integer", "minimum": 0 },
         "from_chord": { "type": "integer", "minimum": 0 },
         "to_chord": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "voice_doubling_claim": {
+      "type": "object",
+      "required": ["label", "chord", "voices", "doubled", "non_chord_voices", "gaps", "spacing"],
+      "properties": {
+        "label": { "const": "doubling" },
+        "chord": { "type": "integer", "minimum": 0 },
+        "voices": { "type": "integer", "minimum": 3 },
+        "doubled": {
+          "type": ["object", "null"],
+          "required": ["member", "voices"],
+          "properties": {
+            "member": { "enum": ["root", "third", "fifth", "seventh"] },
+            "voices": { "type": "integer", "minimum": 2 }
+          }
+        },
+        "non_chord_voices": { "type": "integer", "minimum": 0 },
+        "gaps": { "type": "array", "items": { "type": "integer" } },
+        "spacing": {
+          "type": "object",
+          "required": ["judged", "valid", "wide_voice"],
+          "properties": {
+            "judged": { "type": "boolean" },
+            "valid": { "type": ["boolean", "null"] },
+            "wide_voice": { "type": ["integer", "null"], "minimum": 0, "maximum": 2 }
+          }
+        }
       }
     },
     "rhythm_claim": {

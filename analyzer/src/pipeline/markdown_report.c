@@ -2086,7 +2086,7 @@ static int count_claims_with_rule(const cJSON *claims, const char *label, const 
 
 static bool render_voice_faults(StringBuilder *sb, const cJSON *voice_leading) {
     bool ok = sb_appendf(sb, "%d parallel %s, %d parallel %s, %d direct fifths or octaves in the outer voices, "
-                             "%d unresolved %s, %d %s that do not rise.\n\n",
+                             "%d unresolved %s, %d unresolved %s.\n\n",
                          count_claims_with_rule(voice_leading, "violation", "parallel-fifths"),
                          count_claims_with_rule(voice_leading, "violation", "parallel-fifths") == 1 ? "fifth" : "fifths",
                          count_claims_with_rule(voice_leading, "violation", "parallel-octaves"),
@@ -2117,6 +2117,68 @@ static bool render_voice_faults(StringBuilder *sb, const cJSON *voice_leading) {
     return ok && sb_append(sb, "\n");
 }
 
+/* How many chords double each member, and the chords whose spacing the library finds too wide. */
+static bool render_voice_chords(StringBuilder *sb, const cJSON *voice_leading) {
+    static const char *const MEMBERS[] = {"root", "third", "fifth", "seventh"};
+    int chords = 0;
+    int doubled[4] = {0};
+    int none = 0;
+    int judged = 0;
+    int wide = 0;
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, voice_leading) {
+        if (!has_label(claim, "doubling")) {
+            continue;
+        }
+        chords++;
+        const cJSON *member = cJSON_GetObjectItemCaseSensitive(claim, "doubled");
+        const char *name = string_member(member, "member");
+        int index = -1;
+        for (int m = 0; name && m < 4; m++) {
+            index = strcmp(name, MEMBERS[m]) == 0 ? m : index;
+        }
+        if (index >= 0) {
+            doubled[index]++;
+        } else {
+            none++;
+        }
+        const cJSON *spacing = cJSON_GetObjectItemCaseSensitive(claim, "spacing");
+        if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(spacing, "judged"))) {
+            judged++;
+            wide += cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(spacing, "valid")) ? 1 : 0;
+        }
+    }
+    if (chords == 0) {
+        return true;
+    }
+    bool ok = sb_appendf(sb, "%d chords with three or more voices sounding: the root is doubled in %d, the third in %d, "
+                             "the fifth in %d, the seventh in %d, no member doubled in %d. Doubling is counted, not judged.",
+                         chords, doubled[0], doubled[1], doubled[2], doubled[3], none);
+    if (judged == 0) {
+        return ok && sb_append(sb, " Spacing is judged only when four voices sound together; no chord has them.\n\n");
+    }
+    ok = ok && sb_appendf(sb, " Spacing is judged by the library for the %d chords with four voices all sounding: %d too wide.\n\n",
+                          judged, wide);
+    if (wide == 0) {
+        return ok;
+    }
+    ok = ok && sb_append(sb, "| Location | Chord | Gap too wide |\n| --- | --- | --- |\n");
+    static const char *const PAIRS[] = {"voices 0 and 1", "voices 1 and 2", "voices 2 and 3"};
+    cJSON_ArrayForEach(claim, voice_leading) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *spacing = cJSON_GetObjectItemCaseSensitive(claim, "spacing");
+        if (!has_label(claim, "doubling") || !cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(spacing, "valid"))) {
+            continue;
+        }
+        int upper = (int)number_member(spacing, "wide_voice");
+        ok = sb_append(sb, "| ") && append_location(sb, claim) &&
+             sb_appendf(sb, " | %d | %s |\n", (int)number_member(claim, "chord"), PAIRS[upper < 0 || upper > 2 ? 0 : upper]);
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 static bool render_voice_leading(StringBuilder *sb, const cJSON *document, const cJSON *voice_leading) {
     (void)document;
     bool ok = sb_append(sb, "## Voice leading\n\n") &&
@@ -2128,7 +2190,8 @@ static bool render_voice_leading(StringBuilder *sb, const cJSON *document, const
                             "pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is "
                             "the top).\n\n");
     const cJSON *motions = find_claim(voice_leading, "motions");
-    return ok && (!motions || render_motions(sb, motions)) && render_voice_faults(sb, voice_leading);
+    return ok && (!motions || render_motions(sb, motions)) && render_voice_faults(sb, voice_leading) &&
+           render_voice_chords(sb, voice_leading);
 }
 
 /* Report sections in document section order. Adding a section means

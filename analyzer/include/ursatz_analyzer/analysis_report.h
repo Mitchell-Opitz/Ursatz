@@ -735,6 +735,30 @@ typedef struct {
     double uncertainty;       /* the library's: the voice's and the chord's confidence together, in [0, 1] */
 } AnalysisVoiceResolution;
 
+/* The doubling and spacing of one chord segment (a report entry) that three or more voices sound and the harmony stage
+   read as a chord. Doubling is counted, with no verdict: the voices' pitch classes are placed in the chord's interval set
+   (the library's, root first) by the chord's root, which is the bass's pitch class less the interval of the chord member
+   in the bass. Spacing is the semitone distance between adjacent sounding voices, top to bottom; when the grid has four
+   voices and all four sound, the library's standard-voicing spacing rule gives a verdict. */
+#define ANALYSIS_CHORD_MEMBERS 4
+
+typedef struct {
+    size_t entry;                         /* the chord segment, an index into entries */
+    size_t voices_sounding;
+    size_t member_voices[ANALYSIS_CHORD_MEMBERS]; /* voices on each member of the chord's interval set: root, third, fifth,
+                                                     seventh (positions in the set; 0 where the chord has fewer) */
+    size_t non_chord_voices;              /* voices on a pitch class the chord does not have */
+    int doubled_member;                   /* the member with the most voices when more than one; -1 when none */
+    long gaps[ANALYSIS_VOICE_LEADING_MAX_VOICES]; /* semitones from each sounding voice down to the next, top first */
+    size_t gap_count;
+    bool spacing_judged;                  /* the library's spacing rule was applied (four voices, all sounding) */
+    int wide_voice;                       /* when judged: -1 within the limits, else the upper voice (0, 1 or 2) of the
+                                             first pair that is too wide */
+    size_t note_ids[ANALYSIS_VOICE_LEADING_MAX_VOICES]; /* ImportedNotes indices, top voice first */
+    size_t note_id_count;
+    double uncertainty;                   /* 1 less the least confidence of the voice separation, in [0, 1] */
+} AnalysisVoiceChord;
+
 typedef struct {
     bool present;                             /* the library took the voice grid; false for a piece it declined */
     const char *framework;                    /* the library's framework name for the claims */
@@ -750,6 +774,8 @@ typedef struct {
     AnalysisVoiceResolution *resolutions;     /* owned; unresolved tones only, in order of chord change, then voice */
     size_t resolution_count;
     bool resolutions_checked;                 /* the library had prepared chords to check against */
+    AnalysisVoiceChord *chords;               /* owned; in time order */
+    size_t chord_count;
 } AnalysisVoiceLeading;
 
 /* A note held through a stronger metric position than it was attacked at, with no note attacked there (the library's
