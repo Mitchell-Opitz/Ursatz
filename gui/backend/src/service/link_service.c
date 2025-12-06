@@ -728,7 +728,7 @@ static void job_run(Job *job) {
         return;
     }
 
-    char cache_path[PATH_BYTES];
+    char cache_path[PATH_BYTES + 64];
     snprintf(cache_path, sizeof(cache_path), "%s/%s", g_state.dir, kCacheFile);
     MotiveLinkCache *cache = NULL;
     if (motive_link_cache_load(cache_path, &cache) != MOTIVE_LINKS_OK) {
