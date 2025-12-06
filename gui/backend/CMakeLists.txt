@@ -11,12 +11,14 @@ add_executable(ursatz-gui-backend
   src/service/composition_service.c
   src/service/material_service.c
   src/service/subject_service.c
+  src/service/link_service.c
   src/routes/health.c
   src/routes/analyzer.c
   src/routes/corpus.c
   src/routes/composer.c
   src/routes/styles.c
   src/routes/materials.c
+  src/routes/links.c
 )
 
 target_include_directories(ursatz-gui-backend PRIVATE

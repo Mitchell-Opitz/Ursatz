@@ -10,12 +10,14 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
 )
 
 target_include_directories(test_health_route PRIVATE
@@ -48,12 +50,14 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
 )
 
 target_include_directories(test_analyzer_route PRIVATE
@@ -96,12 +100,14 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
 )
 
 target_include_directories(test_corpus_route PRIVATE
@@ -160,12 +166,14 @@ add_executable(test_composer_route test_composer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
 )
 
 target_include_directories(test_composer_route PRIVATE
@@ -204,12 +212,14 @@ add_executable(test_styles_route test_styles_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
 )
 
 target_include_directories(test_styles_route PRIVATE
@@ -288,12 +298,14 @@ add_executable(test_materials_route test_materials_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
 )
 
 target_include_directories(test_materials_route PRIVATE
@@ -329,12 +341,14 @@ add_executable(test_subjects_route test_subjects_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
   ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
 )
 
 target_include_directories(test_subjects_route PRIVATE
@@ -360,3 +374,79 @@ target_compile_definitions(test_subjects_route PRIVATE
 )
 add_test(NAME subjects_route COMMAND test_subjects_route
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subjects_route)
+
+add_executable(test_link_service test_link_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
+)
+
+target_include_directories(test_link_service PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_link_service PRIVATE
+  ursatz_analyzer
+  cjson
+  ursatz
+)
+
+# The test creates pieces/, collections/, materials/, subjects/ and links/ in its own working directory and reads the
+# link fixtures.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/link_service)
+target_compile_definitions(test_link_service PRIVATE
+  URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
+)
+add_test(NAME link_service COMMAND test_link_service
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/link_service)
+
+add_executable(test_links_route test_links_route.c
+  ${CMAKE_SOURCE_DIR}/backend/src/server.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
+)
+
+target_include_directories(test_links_route PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/include
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_links_route PRIVATE
+  ursatz_analyzer
+  cjson
+  ursatz
+  civetweb-c-library
+)
+
+if(WIN32)
+  target_link_libraries(test_links_route PRIVATE ws2_32)
+endif()
+
+# The test creates pieces/, collections/, materials/, subjects/ and links/ in its own working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/links_route)
+target_compile_definitions(test_links_route PRIVATE
+  URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
+)
+add_test(NAME links_route COMMAND test_links_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/links_route)
