@@ -1084,3 +1084,31 @@ The library's texture adapter read every measure of the piece from the voices th
 | 28 | polyphony | melody and accompaniment | yes |
 | 30 | melody and accompaniment | homorhythm | no |
 | 31 | homorhythm | melody and accompaniment | no |
+
+## Voice leading
+
+The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
+
+3 voices over 205 chord segments, 55 motions between consecutive segments: 8 contrary, 5 similar, 3 parallel, 39 oblique, 0 static.
+
+| Voices | Contrary | Similar | Parallel | Oblique | Static |
+| --- | --- | --- | --- | --- | --- |
+| 0 and 1 | 6 | 4 | 3 | 26 | 0 |
+| 0 and 2 | 2 | 1 | 0 | 9 | 0 |
+| 1 and 2 | 0 | 0 | 0 | 4 | 0 |
+
+0 parallel fifths, 0 parallel octaves, 0 direct fifths or octaves in the outer voices, 9 unresolved sevenths, 0 unresolved leading tones.
+
+| Location | Fault | Voices |
+| --- | --- | --- |
+| m. 3, beat 3 to m. 3, beat 4.5 | seventh-resolves-down | 0 |
+| m. 8, beat 1 to m. 8, beat 2.5 | seventh-resolves-down | 0 |
+| m. 26, beat 3 to m. 26, beat 4.5 | seventh-resolves-down | 1 |
+| m. 34, beat 2 to m. 34, beat 3 | seventh-resolves-down | 0 |
+| m. 34, beat 2 to m. 34, beat 3 | seventh-resolves-down | 2 |
+| m. 34, beat 2.5 to m. 34, beat 3.5 | seventh-resolves-down | 0 |
+| m. 34, beat 3.5 to m. 34, beat 4.5 | seventh-resolves-down | 0 |
+| m. 34, beat 4 to m. 35, beat 1 | seventh-resolves-down | 0 |
+| m. 34, beat 4 to m. 35, beat 1 | seventh-resolves-down | 2 |
+
+3 chords with three or more voices sounding: the root is doubled in 1, the third in 0, the fifth in 1, the seventh in 0, no member doubled in 1. Doubling is counted, not judged. Spacing is judged only when four voices sound together; no chord has them.

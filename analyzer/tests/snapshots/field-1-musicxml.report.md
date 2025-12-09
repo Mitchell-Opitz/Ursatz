@@ -1827,3 +1827,53 @@ The library's texture adapter read every measure of the piece from the voices th
 | 63 | monophony | polyphony | yes |
 | 65 | polyphony | melody and accompaniment | yes |
 | 67 | melody and accompaniment | polyphony | yes |
+
+## Voice leading
+
+The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
+
+4 voices over 268 chord segments, 128 motions between consecutive segments: 25 contrary, 24 similar, 4 parallel, 72 oblique, 3 static.
+
+| Voices | Contrary | Similar | Parallel | Oblique | Static |
+| --- | --- | --- | --- | --- | --- |
+| 0 and 1 | 2 | 2 | 0 | 3 | 1 |
+| 0 and 2 | 3 | 2 | 0 | 7 | 0 |
+| 0 and 3 | 5 | 8 | 2 | 14 | 2 |
+| 1 and 2 | 2 | 3 | 0 | 5 | 0 |
+| 1 and 3 | 9 | 4 | 2 | 31 | 0 |
+| 2 and 3 | 4 | 5 | 0 | 12 | 0 |
+
+0 parallel fifths, 1 parallel octave, 1 direct fifths or octaves in the outer voices, 19 unresolved sevenths, 2 unresolved leading tones.
+
+| Location | Fault | Voices |
+| --- | --- | --- |
+| m. 23, beat 3 to m. 24, beat 1 | direct-perfects | 0 and 3 |
+| m. 41, beat 4 to m. 42, beat 1 | parallel-octaves | 1 and 3 |
+| m. 3, beat 4 to m. 4, beat 1 | seventh-resolves-down | 3 |
+| m. 7, beat 4 to m. 8, beat 2 | leading-tone-resolves | 0 |
+| m. 7, beat 4 to m. 8, beat 2 | seventh-resolves-down | 3 |
+| m. 17, beat 3 to m. 18, beat 1 | seventh-resolves-down | 3 |
+| m. 18, beat 2 to m. 18, beat 4 | seventh-resolves-down | 0 |
+| m. 19, beat 4.33 to m. 20, beat 2 | seventh-resolves-down | 3 |
+| m. 20, beat 4.37 to m. 21, beat 2 | seventh-resolves-down | 3 |
+| m. 23, beat 1 to m. 23, beat 3 | seventh-resolves-down | 3 |
+| m. 30, beat 2 to m. 30, beat 4 | seventh-resolves-down | 0 |
+| m. 31, beat 1 to m. 31, beat 3 | seventh-resolves-down | 3 |
+| m. 32, beat 2 to m. 32, beat 4 | seventh-resolves-down | 3 |
+| m. 33, beat 3 to m. 34, beat 1 | seventh-resolves-down | 1 |
+| m. 34, beat 2 to m. 34, beat 4 | seventh-resolves-down | 3 |
+| m. 36, beat 2 to m. 36, beat 4 | seventh-resolves-down | 2 |
+| m. 36, beat 4 to m. 37, beat 2 | seventh-resolves-down | 2 |
+| m. 42, beat 4 to m. 43, beat 2 | seventh-resolves-down | 3 |
+| m. 43, beat 1 to m. 43, beat 3 | seventh-resolves-down | 0 |
+| m. 48, beat 4 to m. 49, beat 2 | seventh-resolves-down | 3 |
+| m. 53, beat 2 to m. 53, beat 4 | seventh-resolves-down | 3 |
+| m. 55, beat 3 to m. 56, beat 1 | leading-tone-resolves | 3 |
+| m. 63, beat 4 to m. 64, beat 2 | seventh-resolves-down | 1 |
+
+43 chords with three or more voices sounding: the root is doubled in 13, the third in 5, the fifth in 2, the seventh in 2, no member doubled in 21. Doubling is counted, not judged. Spacing is judged by the library for the 4 chords with four voices all sounding: 2 too wide.
+
+| Location | Chord | Gap too wide |
+| --- | --- | --- |
+| m. 20, beat 3 to m. 20, beat 4 | 77 | voices 1 and 2 |
+| m. 66, beat 3 to m. 66, beat 4 | 263 | voices 1 and 2 |

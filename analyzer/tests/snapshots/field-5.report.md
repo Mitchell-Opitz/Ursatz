@@ -1374,3 +1374,95 @@ The library's texture adapter read every measure of the piece from the voices th
 | 35 | polyphony | melody and accompaniment | yes |
 | 38 | melody and accompaniment | homorhythm | no |
 | 43 | homorhythm | melody and accompaniment | no |
+
+## Voice leading
+
+The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
+
+4 voices over 169 chord segments, 531 motions between consecutive segments: 91 contrary, 78 similar, 5 parallel, 269 oblique, 88 static.
+
+| Voices | Contrary | Similar | Parallel | Oblique | Static |
+| --- | --- | --- | --- | --- | --- |
+| 0 and 1 | 11 | 14 | 0 | 53 | 4 |
+| 0 and 2 | 13 | 12 | 2 | 60 | 2 |
+| 0 and 3 | 9 | 13 | 2 | 58 | 2 |
+| 1 and 2 | 18 | 8 | 0 | 41 | 24 |
+| 1 and 3 | 17 | 14 | 1 | 32 | 24 |
+| 2 and 3 | 23 | 17 | 0 | 25 | 32 |
+
+0 parallel fifths, 0 parallel octaves, 2 direct fifths or octaves in the outer voices, 24 unresolved sevenths, 2 unresolved leading tones.
+
+| Location | Fault | Voices |
+| --- | --- | --- |
+| m. 7, beat 3 to m. 8, beat 1 | direct-perfects | 0 and 3 |
+| m. 37, beat 2 to m. 37, beat 4 | direct-perfects | 0 and 3 |
+| m. 2, beat 1 to m. 2, beat 3 | seventh-resolves-down | 2 |
+| m. 8, beat 2 to m. 8, beat 4 | leading-tone-resolves | 2 |
+| m. 8, beat 2 to m. 8, beat 4 | seventh-resolves-down | 3 |
+| m. 11, beat 4 to m. 12, beat 2 | leading-tone-resolves | 3 |
+| m. 14, beat 2 to m. 14, beat 4 | seventh-resolves-down | 3 |
+| m. 14, beat 4 to m. 15, beat 2 | seventh-resolves-down | 3 |
+| m. 15, beat 2 to m. 15, beat 4 | seventh-resolves-down | 2 |
+| m. 15, beat 3 to m. 16, beat 1 | seventh-resolves-down | 3 |
+| m. 17, beat 3 to m. 18, beat 1 | seventh-resolves-down | 3 |
+| m. 18, beat 2 to m. 18, beat 4 | seventh-resolves-down | 2 |
+| m. 18, beat 3 to m. 19, beat 1 | seventh-resolves-down | 0 |
+| m. 20, beat 2 to m. 20, beat 4 | seventh-resolves-down | 2 |
+| m. 20, beat 3 to m. 21, beat 1 | seventh-resolves-down | 0 |
+| m. 28, beat 3 to m. 29, beat 1 | seventh-resolves-down | 1 |
+| m. 28, beat 4 to m. 29, beat 2 | seventh-resolves-down | 2 |
+| m. 31, beat 1 to m. 31, beat 3 | seventh-resolves-down | 0 |
+| m. 31, beat 1 to m. 31, beat 3 | seventh-resolves-down | 3 |
+| m. 36, beat 2 to m. 36, beat 4 | seventh-resolves-down | 3 |
+| m. 36, beat 4 to m. 37, beat 2 | seventh-resolves-down | 3 |
+| m. 37, beat 3 to m. 38, beat 1 | seventh-resolves-down | 3 |
+| m. 37, beat 4 to m. 38, beat 2 | seventh-resolves-down | 2 |
+| m. 38, beat 2 to m. 38, beat 4 | seventh-resolves-down | 2 |
+| m. 38, beat 3 to m. 39, beat 1 | seventh-resolves-down | 0 |
+| m. 40, beat 2 to m. 40, beat 4 | seventh-resolves-down | 2 |
+| m. 40, beat 3 to m. 41, beat 1 | seventh-resolves-down | 0 |
+| m. 42, beat 4 to m. 43, beat 1.33 | seventh-resolves-down | 0 |
+
+127 chords with three or more voices sounding: the root is doubled in 28, the third in 7, the fifth in 11, the seventh in 0, no member doubled in 81. Doubling is counted, not judged. Spacing is judged by the library for the 83 chords with four voices all sounding: 39 too wide.
+
+| Location | Chord | Gap too wide |
+| --- | --- | --- |
+| m. 1, beat 4 to m. 2, beat 1 | 2 | voices 1 and 2 |
+| m. 2, beat 3 to m. 2, beat 4 | 5 | voices 0 and 1 |
+| m. 3, beat 3 to m. 3, beat 4 | 9 | voices 1 and 2 |
+| m. 4, beat 3 to m. 4, beat 4 | 13 | voices 1 and 2 |
+| m. 7, beat 3 to m. 7, beat 4 | 25 | voices 1 and 2 |
+| m. 7, beat 4 to m. 8, beat 1 | 26 | voices 1 and 2 |
+| m. 8, beat 1 to m. 8, beat 2 | 27 | voices 1 and 2 |
+| m. 9, beat 1 to m. 9, beat 3 | 31 | voices 1 and 2 |
+| m. 9, beat 3 to m. 9, beat 4 | 32 | voices 1 and 2 |
+| m. 10, beat 1 to m. 10, beat 2 | 34 | voices 0 and 1 |
+| m. 11, beat 3 to m. 11, beat 4 | 40 | voices 1 and 2 |
+| m. 12, beat 3 to m. 12, beat 4 | 44 | voices 1 and 2 |
+| m. 13, beat 3 to m. 13, beat 4 | 48 | voices 1 and 2 |
+| m. 14, beat 2 to m. 14, beat 3 | 51 | voices 1 and 2 |
+| m. 15, beat 2 to m. 15, beat 3 | 55 | voices 0 and 1 |
+| m. 15, beat 3 to m. 15, beat 4 | 56 | voices 1 and 2 |
+| m. 15, beat 4 to m. 16, beat 1 | 57 | voices 1 and 2 |
+| m. 16, beat 4 to m. 17, beat 1 | 61 | voices 1 and 2 |
+| m. 17, beat 3 to m. 17, beat 4 | 63 | voices 0 and 1 |
+| m. 17, beat 4 to m. 18, beat 1 | 64 | voices 0 and 1 |
+| m. 24, beat 3 to m. 24, beat 4 | 89 | voices 1 and 2 |
+| m. 25, beat 3 to m. 25, beat 4 | 93 | voices 0 and 1 |
+| m. 26, beat 3 to m. 26, beat 4 | 97 | voices 1 and 2 |
+| m. 27, beat 4 to m. 28, beat 1 | 102 | voices 1 and 2 |
+| m. 28, beat 4 to m. 29, beat 1 | 106 | voices 1 and 2 |
+| m. 29, beat 3 to m. 29, beat 4 | 109 | voices 0 and 1 |
+| m. 29, beat 4 to m. 30, beat 1 | 110 | voices 1 and 2 |
+| m. 31, beat 1 to m. 31, beat 2 | 115 | voices 1 and 2 |
+| m. 31, beat 4 to m. 32, beat 1 | 118 | voices 1 and 2 |
+| m. 32, beat 1 to m. 32, beat 2 | 119 | voices 1 and 2 |
+| m. 32, beat 4 to m. 33, beat 1 | 122 | voices 0 and 1 |
+| m. 35, beat 2 to m. 35, beat 3 | 132 | voices 1 and 2 |
+| m. 35, beat 3 to m. 35, beat 4 | 133 | voices 0 and 1 |
+| m. 36, beat 2 to m. 36, beat 3 | 136 | voices 1 and 2 |
+| m. 36, beat 3 to m. 36, beat 4 | 137 | voices 0 and 1 |
+| m. 37, beat 3 to m. 37, beat 4 | 141 | voices 1 and 2 |
+| m. 37, beat 4 to m. 38, beat 1 | 142 | voices 1 and 2 |
+| m. 42, beat 3 to m. 42, beat 3.33 | 162 | voices 1 and 2 |
+| m. 42, beat 4 to m. 43, beat 1 | 164 | voices 0 and 1 |
