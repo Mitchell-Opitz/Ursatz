@@ -14,6 +14,7 @@
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/progression_pipeline.h"
+#include "pipeline/voicing_check.h"
 #include "standard-form/framework.h"
 #include "theory/framework.h"
 #include "time/duration.h"
@@ -3297,7 +3298,7 @@ static cJSON *voice_resolution_json(const ImportedNotes *notes, const AnalysisRe
     Rational start;
     Rational end;
     voice_leading_entries_span(report, resolution->entry_from, resolution->entry_to, &start, &end);
-    cJSON *claim = claim_json_with(voice_leading->framework, notes, resolution->note_ids, 2, start, end, "resolution",
+    cJSON *claim = claim_json_with(framework_name(standard_harmony_framework()), notes, resolution->note_ids, 2, start, end, "resolution",
                                    cJSON_CreateNumber(resolution->uncertainty));
     if (!(claim && add(claim, "rule", cJSON_CreateString(resolution->rule)) &&
           add(claim, "voice", cJSON_CreateNumber((double)resolution->voice)) &&
@@ -3356,7 +3357,7 @@ static cJSON *voice_chord_json(const ImportedNotes *notes, const AnalysisReport 
     Rational start;
     Rational end;
     voice_leading_entries_span(report, chord->entry, chord->entry, &start, &end);
-    cJSON *claim = claim_json_with(voice_leading->framework, notes, chord->note_ids, chord->note_id_count, start, end,
+    cJSON *claim = claim_json_with(voicing_framework_name(), notes, chord->note_ids, chord->note_id_count, start, end,
                                    "doubling", cJSON_CreateNumber(chord->uncertainty));
     if (!(claim && add(claim, "chord", cJSON_CreateNumber((double)chord->entry)) &&
           add(claim, "voices", cJSON_CreateNumber((double)chord->voices_sounding)) &&
