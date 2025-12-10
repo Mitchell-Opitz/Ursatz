@@ -2027,6 +2027,173 @@ static bool render_texture(StringBuilder *sb, const cJSON *document, const cJSON
     return ok && sb_append(sb, "\n");
 }
 
+/* ---- Voice leading ---- */
+
+static const char *const MOTION_NAMES[] = {"contrary", "similar", "parallel", "oblique", "static"};
+
+static const cJSON *find_claim(const cJSON *claims, const char *label) {
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, claims) {
+        if (has_label(claim, label)) {
+            return claim;
+        }
+    }
+    return NULL;
+}
+
+static bool render_motions(StringBuilder *sb, const cJSON *claim) {
+    const cJSON *totals = cJSON_GetObjectItemCaseSensitive(claim, "totals");
+    bool ok = sb_appendf(sb, "%d %s over %d chord segments, %d motions between consecutive segments: ",
+                         (int)number_member(claim, "voices"),
+                         (int)number_member(claim, "voices") == 1 ? "voice" : "voices",
+                         (int)number_member(claim, "segments"), (int)number_member(claim, "motion_count"));
+    for (size_t type = 0; ok && type < sizeof(MOTION_NAMES) / sizeof(MOTION_NAMES[0]); type++) {
+        ok = sb_appendf(sb, "%s%d %s", type == 0 ? "" : ", ", (int)number_member(totals, MOTION_NAMES[type]),
+                        MOTION_NAMES[type]);
+    }
+    ok = ok && sb_append(sb, ".\n\n") &&
+         sb_append(sb, "| Voices | Contrary | Similar | Parallel | Oblique | Static |\n"
+                       "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *pair;
+    cJSON_ArrayForEach(pair, cJSON_GetObjectItemCaseSensitive(claim, "pairs")) {
+        if (!ok) {
+            break;
+        }
+        if ((int)number_member(pair, "total") == 0) {
+            continue;
+        }
+        const cJSON *counts = cJSON_GetObjectItemCaseSensitive(pair, "counts");
+        ok = sb_appendf(sb, "| %d and %d |", (int)number_member(pair, "upper_voice"),
+                        (int)number_member(pair, "lower_voice"));
+        for (size_t type = 0; ok && type < sizeof(MOTION_NAMES) / sizeof(MOTION_NAMES[0]); type++) {
+            ok = sb_appendf(sb, " %d |", (int)number_member(counts, MOTION_NAMES[type]));
+        }
+        ok = ok && sb_append(sb, "\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* The faults and unresolved tones, by the library's rule name. */
+static int count_claims_with_rule(const cJSON *claims, const char *label, const char *rule) {
+    int count = 0;
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, claims) {
+        const char *own = string_member(claim, "rule");
+        count += has_label(claim, label) && own && strcmp(own, rule) == 0 ? 1 : 0;
+    }
+    return count;
+}
+
+static bool render_voice_faults(StringBuilder *sb, const cJSON *voice_leading) {
+    bool ok = sb_appendf(sb, "%d parallel %s, %d parallel %s, %d direct fifths or octaves in the outer voices, "
+                             "%d unresolved %s, %d unresolved %s.\n\n",
+                         count_claims_with_rule(voice_leading, "violation", "parallel-fifths"),
+                         count_claims_with_rule(voice_leading, "violation", "parallel-fifths") == 1 ? "fifth" : "fifths",
+                         count_claims_with_rule(voice_leading, "violation", "parallel-octaves"),
+                         count_claims_with_rule(voice_leading, "violation", "parallel-octaves") == 1 ? "octave" : "octaves",
+                         count_claims_with_rule(voice_leading, "violation", "direct-perfects"),
+                         count_claims_with_rule(voice_leading, "resolution", "seventh-resolves-down"),
+                         count_claims_with_rule(voice_leading, "resolution", "seventh-resolves-down") == 1 ? "seventh" : "sevenths",
+                         count_claims_with_rule(voice_leading, "resolution", "leading-tone-resolves"),
+                         count_claims_with_rule(voice_leading, "resolution", "leading-tone-resolves") == 1 ? "leading tone" : "leading tones");
+    if (!has_claims(voice_leading, "violation") && !has_claims(voice_leading, "resolution")) {
+        return ok;
+    }
+    ok = ok && sb_append(sb, "| Location | Fault | Voices |\n| --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, voice_leading) {
+        if (!ok) {
+            break;
+        }
+        if (has_label(claim, "violation")) {
+            ok = sb_append(sb, "| ") && append_location(sb, claim) &&
+                 sb_appendf(sb, " | %s | %d and %d |\n", string_member(claim, "rule"),
+                            (int)number_member(claim, "upper_voice"), (int)number_member(claim, "lower_voice"));
+        } else if (has_label(claim, "resolution")) {
+            ok = sb_append(sb, "| ") && append_location(sb, claim) &&
+                 sb_appendf(sb, " | %s | %d |\n", string_member(claim, "rule"), (int)number_member(claim, "voice"));
+        }
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* How many chords double each member, and the chords whose spacing the library finds too wide. */
+static bool render_voice_chords(StringBuilder *sb, const cJSON *voice_leading) {
+    static const char *const MEMBERS[] = {"root", "third", "fifth", "seventh"};
+    int chords = 0;
+    int doubled[4] = {0};
+    int none = 0;
+    int judged = 0;
+    int wide = 0;
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, voice_leading) {
+        if (!has_label(claim, "doubling")) {
+            continue;
+        }
+        chords++;
+        const cJSON *member = cJSON_GetObjectItemCaseSensitive(claim, "doubled");
+        const char *name = string_member(member, "member");
+        int index = -1;
+        for (int m = 0; name && m < 4; m++) {
+            index = strcmp(name, MEMBERS[m]) == 0 ? m : index;
+        }
+        if (index >= 0) {
+            doubled[index]++;
+        } else {
+            none++;
+        }
+        const cJSON *spacing = cJSON_GetObjectItemCaseSensitive(claim, "spacing");
+        if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(spacing, "judged"))) {
+            judged++;
+            wide += cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(spacing, "valid")) ? 1 : 0;
+        }
+    }
+    if (chords == 0) {
+        return true;
+    }
+    bool ok = sb_appendf(sb, "%d chords with three or more voices sounding: the root is doubled in %d, the third in %d, "
+                             "the fifth in %d, the seventh in %d, no member doubled in %d. Doubling is counted, not judged.",
+                         chords, doubled[0], doubled[1], doubled[2], doubled[3], none);
+    if (judged == 0) {
+        return ok && sb_append(sb, " Spacing is judged only when four voices sound together; no chord has them.\n\n");
+    }
+    ok = ok && sb_appendf(sb, " Spacing is judged by the library for the %d chords with four voices all sounding: %d too wide.\n\n",
+                          judged, wide);
+    if (wide == 0) {
+        return ok;
+    }
+    ok = ok && sb_append(sb, "| Location | Chord | Gap too wide |\n| --- | --- | --- |\n");
+    static const char *const PAIRS[] = {"voices 0 and 1", "voices 1 and 2", "voices 2 and 3"};
+    cJSON_ArrayForEach(claim, voice_leading) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *spacing = cJSON_GetObjectItemCaseSensitive(claim, "spacing");
+        if (!has_label(claim, "doubling") || !cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(spacing, "valid"))) {
+            continue;
+        }
+        int upper = (int)number_member(spacing, "wide_voice");
+        ok = sb_append(sb, "| ") && append_location(sb, claim) &&
+             sb_appendf(sb, " | %d | %s |\n", (int)number_member(claim, "chord"), PAIRS[upper < 0 || upper > 2 ? 0 : upper]);
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_voice_leading(StringBuilder *sb, const cJSON *document, const cJSON *voice_leading) {
+    (void)document;
+    bool ok = sb_append(sb, "## Voice leading\n\n") &&
+              sb_append(sb, "The kernel separated the notes of the whole piece into voices (voice 0 is the top) and "
+                            "the library's counterpoint adapter classified how each pair of voices moves from one "
+                            "chord segment to the next. Parallel motion keeps the interval type, similar motion "
+                            "changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel "
+                            "fifths and octaves between any pair of voices, direct fifths and octaves in the outer "
+                            "pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is "
+                            "the top).\n\n");
+    const cJSON *motions = find_claim(voice_leading, "motions");
+    return ok && (!motions || render_motions(sb, motions)) && render_voice_faults(sb, voice_leading) &&
+           render_voice_chords(sb, voice_leading);
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -2057,6 +2224,7 @@ static const struct {
     {"harmonic_rhythm", render_harmonic_rhythm},
     {"rhythm", render_rhythm},
     {"texture", render_texture},
+    {"voice_leading", render_voice_leading},
 };
 
 static bool section_is_empty(const cJSON *section) {

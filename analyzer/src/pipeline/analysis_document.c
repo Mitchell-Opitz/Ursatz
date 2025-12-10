@@ -14,6 +14,7 @@
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/progression_pipeline.h"
+#include "pipeline/voicing_check.h"
 #include "standard-form/framework.h"
 #include "theory/framework.h"
 #include "time/duration.h"
@@ -3201,6 +3202,199 @@ static cJSON *texture_json(const ImportedNotes *notes, const AnalysisReport *rep
     return list;
 }
 
+/* ---- Voice leading ---- */
+
+static const char *const MOTION_NAMES[ANALYSIS_MOTION_TYPES] = {"contrary", "similar", "parallel", "oblique", "static"};
+
+static cJSON *motion_counts_json(const size_t *counts) {
+    cJSON *object = cJSON_CreateObject();
+    for (size_t type = 0; object && type < ANALYSIS_MOTION_TYPES; type++) {
+        if (!add(object, MOTION_NAMES[type], cJSON_CreateNumber((double)counts[type]))) {
+            cJSON_Delete(object);
+            return NULL;
+        }
+    }
+    return object;
+}
+
+static cJSON *motion_pairs_json(const AnalysisVoiceLeading *voice_leading) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < voice_leading->pair_count; i++) {
+        const AnalysisVoicePairMotion *pair = &voice_leading->pairs[i];
+        cJSON *object = cJSON_CreateObject();
+        if (!(object && add(object, "upper_voice", cJSON_CreateNumber((double)pair->upper_voice)) &&
+              add(object, "lower_voice", cJSON_CreateNumber((double)pair->lower_voice)) &&
+              add(object, "total", cJSON_CreateNumber((double)pair->total)) &&
+              add(object, "counts", motion_counts_json(pair->counts)) && append(list, object))) {
+            cJSON_Delete(object);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The start of the first entry and the end of the last: the span the voice leading covers. */
+static void voice_leading_span(const AnalysisReport *report, Rational *start, Rational *end) {
+    const AnalysisReportEntry *first = &report->entries[0];
+    const AnalysisReportEntry *last = &report->entries[report->entry_count - 1];
+    *start = rational_make(first->time_numerator, first->time_denominator);
+    *end = rational_make(last->end_numerator, last->end_denominator);
+}
+
+/* The motion claim: how the voices move against each other between consecutive chord segments, in total and per pair of
+   voices. It covers the whole piece. */
+static cJSON *voice_motions_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    const AnalysisVoiceLeading *voice_leading = &report->voice_leading;
+    Rational start;
+    Rational end;
+    voice_leading_span(report, &start, &end);
+    cJSON *claim = claim_json_with(voice_leading->framework, notes, NULL, 0, start, end, "motions",
+                                   cJSON_CreateNumber(voice_leading->motion_uncertainty));
+    if (!(claim && add(claim, "voices", cJSON_CreateNumber((double)voice_leading->voice_count)) &&
+          add(claim, "segments", cJSON_CreateNumber((double)voice_leading->row_count)) &&
+          add(claim, "motion_count", cJSON_CreateNumber((double)voice_leading->motion_count)) &&
+          add(claim, "totals", motion_counts_json(voice_leading->motion_totals)) &&
+          add(claim, "pairs", motion_pairs_json(voice_leading)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The span from the start of one entry to the end of a later one. */
+static void voice_leading_entries_span(const AnalysisReport *report, size_t from, size_t to, Rational *start,
+                                       Rational *end) {
+    const AnalysisReportEntry *first = &report->entries[from];
+    const AnalysisReportEntry *last = &report->entries[to];
+    *start = rational_make(first->time_numerator, first->time_denominator);
+    *end = rational_make(last->end_numerator, last->end_denominator);
+}
+
+/* A fault of the voices' leading, as the claim for the move between two consecutive chords. */
+static cJSON *voice_violation_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                   const AnalysisVoiceLeading *voice_leading, const AnalysisVoiceViolation *violation) {
+    Rational start;
+    Rational end;
+    voice_leading_entries_span(report, violation->entry_from, violation->entry_to, &start, &end);
+    cJSON *claim = claim_json_with(voice_leading->framework, notes, violation->note_ids, 4, start, end, "violation",
+                                   cJSON_CreateNumber(violation->uncertainty));
+    if (!(claim && add(claim, "rule", cJSON_CreateString(violation->rule)) &&
+          add(claim, "upper_voice", cJSON_CreateNumber((double)violation->upper_voice)) &&
+          add(claim, "lower_voice", cJSON_CreateNumber((double)violation->lower_voice)) &&
+          add(claim, "interval", cJSON_CreateNumber(violation->arrival_interval)) &&
+          add(claim, "from_chord", cJSON_CreateNumber((double)violation->entry_from)) &&
+          add(claim, "to_chord", cJSON_CreateNumber((double)violation->entry_to)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* A tendency tone left unresolved when its chord changes. */
+static cJSON *voice_resolution_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                    const AnalysisVoiceLeading *voice_leading,
+                                    const AnalysisVoiceResolution *resolution) {
+    Rational start;
+    Rational end;
+    voice_leading_entries_span(report, resolution->entry_from, resolution->entry_to, &start, &end);
+    cJSON *claim = claim_json_with(framework_name(standard_harmony_framework()), notes, resolution->note_ids, 2, start, end, "resolution",
+                                   cJSON_CreateNumber(resolution->uncertainty));
+    if (!(claim && add(claim, "rule", cJSON_CreateString(resolution->rule)) &&
+          add(claim, "voice", cJSON_CreateNumber((double)resolution->voice)) &&
+          add(claim, "from_chord", cJSON_CreateNumber((double)resolution->entry_from)) &&
+          add(claim, "to_chord", cJSON_CreateNumber((double)resolution->entry_to)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+static const char *const CHORD_MEMBER_NAMES[ANALYSIS_CHORD_MEMBERS] = {"root", "third", "fifth", "seventh"};
+
+static cJSON *chord_gaps_json(const AnalysisVoiceChord *chord) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < chord->gap_count; i++) {
+        if (!append(list, cJSON_CreateNumber((double)chord->gaps[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* The spacing of a chord: whether the library judged it, and if so the upper voice of the first pair too wide. */
+static cJSON *chord_spacing_json(const AnalysisVoiceChord *chord) {
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "judged", cJSON_CreateBool(chord->spacing_judged)) &&
+          add(object, "valid", chord->spacing_judged ? cJSON_CreateBool(chord->wide_voice < 0) : cJSON_CreateNull()) &&
+          add(object, "wide_voice",
+              chord->spacing_judged && chord->wide_voice >= 0 ? cJSON_CreateNumber(chord->wide_voice) : cJSON_CreateNull()))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The doubling of a chord: the member most voices sound when more than one does, or null. */
+static cJSON *chord_doubled_json(const AnalysisVoiceChord *chord) {
+    if (chord->doubled_member < 0) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "member", cJSON_CreateString(CHORD_MEMBER_NAMES[chord->doubled_member])) &&
+                    add(object, "voices", cJSON_CreateNumber((double)chord->member_voices[chord->doubled_member])))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One chord's doubling and spacing, on the chord's own span. */
+static cJSON *voice_chord_json(const ImportedNotes *notes, const AnalysisReport *report,
+                               const AnalysisVoiceLeading *voice_leading, const AnalysisVoiceChord *chord) {
+    Rational start;
+    Rational end;
+    voice_leading_entries_span(report, chord->entry, chord->entry, &start, &end);
+    cJSON *claim = claim_json_with(voicing_framework_name(), notes, chord->note_ids, chord->note_id_count, start, end,
+                                   "doubling", cJSON_CreateNumber(chord->uncertainty));
+    if (!(claim && add(claim, "chord", cJSON_CreateNumber((double)chord->entry)) &&
+          add(claim, "voices", cJSON_CreateNumber((double)chord->voices_sounding)) &&
+          add(claim, "doubled", chord_doubled_json(chord)) &&
+          add(claim, "non_chord_voices", cJSON_CreateNumber((double)chord->non_chord_voices)) &&
+          add(claim, "gaps", chord_gaps_json(chord)) && add(claim, "spacing", chord_spacing_json(chord)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The voice leading section: a list of claims, each labelled by the result it is. Empty when the library declined the
+   voices. */
+static cJSON *voice_leading_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    const AnalysisVoiceLeading *voice_leading = &report->voice_leading;
+    if (!list || !voice_leading->present) {
+        return list;
+    }
+    bool ok = append(list, voice_motions_json(notes, report));
+    for (size_t i = 0; ok && i < voice_leading->violation_count; i++) {
+        ok = append(list, voice_violation_json(notes, report, voice_leading, &voice_leading->violations[i]));
+    }
+    for (size_t i = 0; ok && i < voice_leading->resolution_count; i++) {
+        ok = append(list, voice_resolution_json(notes, report, voice_leading, &voice_leading->resolutions[i]));
+    }
+    for (size_t i = 0; ok && i < voice_leading->chord_count; i++) {
+        ok = append(list, voice_chord_json(notes, report, voice_leading, &voice_leading->chords[i]));
+    }
+    if (!ok) {
+        cJSON_Delete(list);
+        return NULL;
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -3221,7 +3415,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
           add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
           add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", texture_json(notes, report)) &&
-          add(document, "voice_leading", cJSON_CreateArray()) && add(document, "schemas", cJSON_CreateArray()) &&
+          add(document, "voice_leading", voice_leading_json(notes, report)) && add(document, "schemas", cJSON_CreateArray()) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {

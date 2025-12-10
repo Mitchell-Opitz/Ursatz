@@ -52,3 +52,7 @@ Written for this repository (same licence as the repository). Each is a few meas
 - `timewise.musicxml`: a `score-timewise` document.
 - `empty-score.musicxml`: valid, but its one measure is a rest.
 - `not-music.xml`: well-formed XML that is not a score.
+- `chorale-voice-leading.musicxml`: four parts (Soprano, Alto, Tenor, Bass) in C major, 4/4, one whole-note chord per
+  measure (I ii V I), written to hold exactly one fault of each kind the voice leading section flags: the tenor and the
+  bass move G3 to A3 over C3 to D3, a parallel fifth from measure 1 to 2, and the soprano's leading tone falls from B4 to
+  G4 instead of rising to C5 when V goes to I, from measure 3 to 4. Nothing else in it is a fault.

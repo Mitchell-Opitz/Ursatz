@@ -106,7 +106,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/texture_claim" }
     },
-    "voice_leading": { "type": "array" },
+    "voice_leading": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/voice_leading_claim" }
+    },
     "schemas": { "type": "array" },
     "progressions": {
       "type": "array",
@@ -679,6 +682,106 @@
         "from_texture": { "type": "string" },
         "to_texture": { "type": "string" },
         "category_changed": { "type": "boolean" }
+      }
+    },
+    "voice_leading_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "oneOf": [
+            { "$ref": "#/$defs/voice_motions_claim" },
+            { "$ref": "#/$defs/voice_violation_claim" },
+            { "$ref": "#/$defs/voice_resolution_claim" },
+            { "$ref": "#/$defs/voice_doubling_claim" }
+          ]
+        }
+      ]
+    },
+    "motion_counts": {
+      "type": "object",
+      "required": ["contrary", "similar", "parallel", "oblique", "static"],
+      "properties": {
+        "contrary": { "type": "integer", "minimum": 0 },
+        "similar": { "type": "integer", "minimum": 0 },
+        "parallel": { "type": "integer", "minimum": 0 },
+        "oblique": { "type": "integer", "minimum": 0 },
+        "static": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "voice_motions_claim": {
+      "type": "object",
+      "required": ["label", "voices", "segments", "motion_count", "totals", "pairs"],
+      "properties": {
+        "label": { "const": "motions" },
+        "voices": { "type": "integer", "minimum": 1 },
+        "segments": { "type": "integer", "minimum": 1 },
+        "motion_count": { "type": "integer", "minimum": 0 },
+        "totals": { "$ref": "#/$defs/motion_counts" },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["upper_voice", "lower_voice", "total", "counts"],
+            "properties": {
+              "upper_voice": { "type": "integer", "minimum": 0 },
+              "lower_voice": { "type": "integer", "minimum": 1 },
+              "total": { "type": "integer", "minimum": 0 },
+              "counts": { "$ref": "#/$defs/motion_counts" }
+            }
+          }
+        }
+      }
+    },
+    "voice_violation_claim": {
+      "type": "object",
+      "required": ["label", "rule", "upper_voice", "lower_voice", "interval", "from_chord", "to_chord"],
+      "properties": {
+        "label": { "const": "violation" },
+        "rule": { "enum": ["parallel-fifths", "parallel-octaves", "direct-perfects"] },
+        "upper_voice": { "type": "integer", "minimum": 0 },
+        "lower_voice": { "type": "integer", "minimum": 1 },
+        "interval": { "enum": [1, 5, 8] },
+        "from_chord": { "type": "integer", "minimum": 0 },
+        "to_chord": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "voice_resolution_claim": {
+      "type": "object",
+      "required": ["label", "rule", "voice", "from_chord", "to_chord"],
+      "properties": {
+        "label": { "const": "resolution" },
+        "rule": { "enum": ["seventh-resolves-down", "leading-tone-resolves"] },
+        "voice": { "type": "integer", "minimum": 0 },
+        "from_chord": { "type": "integer", "minimum": 0 },
+        "to_chord": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "voice_doubling_claim": {
+      "type": "object",
+      "required": ["label", "chord", "voices", "doubled", "non_chord_voices", "gaps", "spacing"],
+      "properties": {
+        "label": { "const": "doubling" },
+        "chord": { "type": "integer", "minimum": 0 },
+        "voices": { "type": "integer", "minimum": 3 },
+        "doubled": {
+          "type": ["object", "null"],
+          "required": ["member", "voices"],
+          "properties": {
+            "member": { "enum": ["root", "third", "fifth", "seventh"] },
+            "voices": { "type": "integer", "minimum": 2 }
+          }
+        },
+        "non_chord_voices": { "type": "integer", "minimum": 0 },
+        "gaps": { "type": "array", "items": { "type": "integer" } },
+        "spacing": {
+          "type": "object",
+          "required": ["judged", "valid", "wide_voice"],
+          "properties": {
+            "judged": { "type": "boolean" },
+            "valid": { "type": ["boolean", "null"] },
+            "wide_voice": { "type": ["integer", "null"], "minimum": 0, "maximum": 2 }
+          }
+        }
       }
     },
     "rhythm_claim": {

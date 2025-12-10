@@ -179,8 +179,7 @@ int main(void) {
     assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
     assert(cJSON_IsNull(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));
-    static const char *const EMPTY_SECTIONS[] = {"cadences",      "motives",
-                                                 "voice_leading", "schemas", "progressions"};
+    static const char *const EMPTY_SECTIONS[] = {"cadences", "motives", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
         const cJSON *section = member(document, EMPTY_SECTIONS[i]);
         assert(cJSON_IsArray(section));
@@ -207,6 +206,36 @@ int main(void) {
         }
     }
     assert(passages == 0 ? changes == 0 : changes == passages - 1);
+
+    /* Voice leading: a list of claims; the motion claim counts every pair of voices and its totals add up. */
+    const cJSON *voice_leading = member(document, "voice_leading");
+    assert(cJSON_IsArray(voice_leading));
+    for (int i = 0; i < cJSON_GetArraySize(voice_leading); i++) {
+        const cJSON *entry = cJSON_GetArrayItem(voice_leading, i);
+        check_claim(entry);
+        if (strcmp(string(entry, "label"), "violation") == 0) {
+            assert(strncmp(string(entry, "rule"), "parallel-", 9) == 0 || strcmp(string(entry, "rule"), "direct-perfects") == 0);
+            assert(number(entry, "to_chord") == number(entry, "from_chord") + 1);
+            assert(number(entry, "upper_voice") < number(entry, "lower_voice"));
+            continue;
+        }
+        if (strcmp(string(entry, "label"), "resolution") == 0) {
+            assert(number(entry, "to_chord") > number(entry, "from_chord"));
+            continue;
+        }
+        if (strcmp(string(entry, "label"), "doubling") == 0) {
+            assert(number(entry, "voices") >= 3);
+            assert(cJSON_GetArraySize(member(entry, "gaps")) == (int)number(entry, "voices") - 1);
+            continue;
+        }
+        assert(strcmp(string(entry, "label"), "motions") == 0);
+        const cJSON *totals = member(entry, "totals");
+        double sum = number(totals, "contrary") + number(totals, "similar") + number(totals, "parallel") +
+                     number(totals, "oblique") + number(totals, "static");
+        assert(sum == number(entry, "motion_count"));
+        assert(cJSON_GetArraySize(member(entry, "pairs")) ==
+               (int)(number(entry, "voices") * (number(entry, "voices") - 1) / 2));
+    }
 
     /* Melody: one claim per phrase with melody notes, in phrase order, each with its range, climax and contour. */
     const cJSON *melody = member(document, "melody");

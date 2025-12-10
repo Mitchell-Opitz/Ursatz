@@ -692,6 +692,92 @@ typedef struct {
     double uncertainty;
 } AnalysisTextureChange;
 
+/* The motion of the voices, from the library's standard-counterpoint adapter (analysis/analysis_motion.h). The Analyzer
+   separates the notes of the whole piece into voices with the kernel's voice separation (voice 0 is the top, all tracks
+   and parts together), puts each voice's sounding note at the start of every chord segment into the library's voice-pitch
+   grid (one row per chord segment, one column per voice, at most ANALYSIS_VOICE_LEADING_MAX_VOICES; lower voices are left
+   out), and counts what the library classifies. The motion types are the library's: contrary, similar, parallel,
+   oblique and static, between consecutive chord segments for every pair of voices that sound in both. */
+#define ANALYSIS_VOICE_LEADING_MAX_VOICES 6
+#define ANALYSIS_MOTION_TYPES 5
+
+typedef struct {
+    size_t upper_voice;                       /* the voice nearer the top; voice 0 is the top */
+    size_t lower_voice;
+    size_t counts[ANALYSIS_MOTION_TYPES];     /* contrary, similar, parallel, oblique, static (the library's order) */
+    size_t total;
+} AnalysisVoicePairMotion;
+
+/* A fault the library finds in the voices' leading (standard-counterpoint's check_perfects): parallel fifths or
+   octaves between a pair of voices (any pair), or direct fifths and octaves ("direct-perfects": arrival by similar
+   motion with the top voice leaping, in the outer pair only). It is the move from chord segment entry_from to entry_to
+   (entries of the report, consecutive). The notes are the upper voice's at each segment, then the lower voice's. */
+typedef struct {
+    const char *rule;         /* the library's: "parallel-fifths", "parallel-octaves" or "direct-perfects" */
+    size_t upper_voice;
+    size_t lower_voice;
+    size_t entry_from;
+    size_t entry_to;
+    int arrival_interval;     /* the simple size arrived at: 5, 8 or 1 */
+    size_t note_ids[4];       /* ImportedNotes indices: upper at from, upper at to, lower at from, lower at to */
+    double uncertainty;       /* the library's: 1 less the least confidence of the voice separation, in [0, 1] */
+} AnalysisVoiceViolation;
+
+/* A tendency tone the library finds left unresolved when a chord changes (standard-harmony's check_resolutions): a
+   seventh that does not fall, or a leading tone that does not rise to the tonic. The voice moves from the last segment
+   of its chord (entry_from) to the first of the next (entry_to). */
+typedef struct {
+    const char *rule;         /* the library's: "seventh-resolves-down" or "leading-tone-resolves" */
+    size_t voice;
+    size_t entry_from;
+    size_t entry_to;
+    size_t note_ids[2];       /* ImportedNotes indices: the tone and the note it moved to */
+    double uncertainty;       /* the library's: the voice's and the chord's confidence together, in [0, 1] */
+} AnalysisVoiceResolution;
+
+/* The doubling and spacing of one chord segment (a report entry) that three or more voices sound and the harmony stage
+   read as a chord. Doubling is counted, with no verdict: the voices' pitch classes are placed in the chord's interval set
+   (the library's, root first) by the chord's root, which is the bass's pitch class less the interval of the chord member
+   in the bass. Spacing is the semitone distance between adjacent sounding voices, top to bottom; when the grid has four
+   voices and all four sound, the library's standard-voicing spacing rule gives a verdict. */
+#define ANALYSIS_CHORD_MEMBERS 4
+
+typedef struct {
+    size_t entry;                         /* the chord segment, an index into entries */
+    size_t voices_sounding;
+    size_t member_voices[ANALYSIS_CHORD_MEMBERS]; /* voices on each member of the chord's interval set: root, third, fifth,
+                                                     seventh (positions in the set; 0 where the chord has fewer) */
+    size_t non_chord_voices;              /* voices on a pitch class the chord does not have */
+    int doubled_member;                   /* the member with the most voices when more than one; -1 when none */
+    long gaps[ANALYSIS_VOICE_LEADING_MAX_VOICES]; /* semitones from each sounding voice down to the next, top first */
+    size_t gap_count;
+    bool spacing_judged;                  /* the library's spacing rule was applied (four voices, all sounding) */
+    int wide_voice;                       /* when judged: -1 within the limits, else the upper voice (0, 1 or 2) of the
+                                             first pair that is too wide */
+    size_t note_ids[ANALYSIS_VOICE_LEADING_MAX_VOICES]; /* ImportedNotes indices, top voice first */
+    size_t note_id_count;
+    double uncertainty;                   /* 1 less the least confidence of the voice separation, in [0, 1] */
+} AnalysisVoiceChord;
+
+typedef struct {
+    bool present;                             /* the library took the voice grid; false for a piece it declined */
+    const char *framework;                    /* the library's framework name for the claims */
+    size_t voice_count;                       /* columns of the grid */
+    size_t row_count;                         /* chord segments, one row each */
+    size_t motion_count;                      /* motions classified */
+    size_t motion_totals[ANALYSIS_MOTION_TYPES];
+    AnalysisVoicePairMotion *pairs;           /* owned; every pair, the upper voice first */
+    size_t pair_count;
+    double motion_uncertainty;                /* the mean of the library's, in [0, 1]; higher is LESS certain */
+    AnalysisVoiceViolation *violations;       /* owned; in segment order, then voice pair */
+    size_t violation_count;
+    AnalysisVoiceResolution *resolutions;     /* owned; unresolved tones only, in order of chord change, then voice */
+    size_t resolution_count;
+    bool resolutions_checked;                 /* the library had prepared chords to check against */
+    AnalysisVoiceChord *chords;               /* owned; in time order */
+    size_t chord_count;
+} AnalysisVoiceLeading;
+
 /* A note held through a stronger metric position than it was attacked at, with no note attacked there (the library's
    THROUGH_STRONGER rule, analysis/meter_analysis_syncopation.h). Each line is read on its own. The levels are the
    library's StandardMeterLevel: "downbeat", "secondary-beat", "beat", "offbeat" or "finer"; the strength is the
@@ -841,6 +927,7 @@ typedef struct {
     size_t texture_passage_count;
     AnalysisTextureChange *texture_changes; /* owned; texture_passage_count - 1 of them */
     size_t texture_change_count;
+    AnalysisVoiceLeading voice_leading; /* the voices' motion; present is false when the library declined the grid */
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -848,7 +935,8 @@ typedef struct {
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
-   thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets and texture passages and changes. */
+   thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets, texture passages and changes
+   and the voice leading. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

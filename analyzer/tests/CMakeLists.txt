@@ -183,6 +183,12 @@ target_compile_definitions(test_texture PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_texture COMMAND test_texture)
 
+add_executable(test_voice_leading test_voice_leading.c)
+target_link_libraries(test_voice_leading PRIVATE ursatz_analyzer)
+target_compile_definitions(test_voice_leading PRIVATE
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_voice_leading COMMAND test_voice_leading)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE

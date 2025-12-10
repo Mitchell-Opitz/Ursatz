@@ -962,3 +962,32 @@ The library's texture adapter read every measure of the piece from the voices th
 | 17 | homorhythm | melody and accompaniment | no |
 | 21 | melody and accompaniment | homorhythm | no |
 | 23 | homorhythm | melody and accompaniment | no |
+
+## Voice leading
+
+The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
+
+4 voices over 155 chord segments, 74 motions between consecutive segments: 20 contrary, 6 similar, 13 parallel, 21 oblique, 14 static.
+
+| Voices | Contrary | Similar | Parallel | Oblique | Static |
+| --- | --- | --- | --- | --- | --- |
+| 0 and 1 | 4 | 2 | 0 | 4 | 2 |
+| 0 and 2 | 4 | 1 | 9 | 5 | 3 |
+| 0 and 3 | 4 | 2 | 2 | 5 | 2 |
+| 1 and 2 | 4 | 0 | 1 | 7 | 3 |
+| 1 and 3 | 4 | 1 | 1 | 0 | 2 |
+| 2 and 3 | 0 | 0 | 0 | 0 | 2 |
+
+0 parallel fifths, 0 parallel octaves, 0 direct fifths or octaves in the outer voices, 6 unresolved sevenths, 1 unresolved leading tone.
+
+| Location | Fault | Voices |
+| --- | --- | --- |
+| m. 3, beat 4 to m. 4, beat 2 | seventh-resolves-down | 0 |
+| m. 9, beat 4 to m. 10, beat 2 | seventh-resolves-down | 0 |
+| m. 17, beat 3 to m. 17, beat 4.5 | seventh-resolves-down | 3 |
+| m. 17, beat 4 to m. 18, beat 1 | seventh-resolves-down | 0 |
+| m. 18, beat 3 to m. 18, beat 4 | leading-tone-resolves | 1 |
+| m. 23, beat 3 to m. 23, beat 4.5 | seventh-resolves-down | 3 |
+| m. 23, beat 4 to m. 24, beat 1 | seventh-resolves-down | 0 |
+
+6 chords with three or more voices sounding: the root is doubled in 2, the third in 0, the fifth in 4, the seventh in 0, no member doubled in 0. Doubling is counted, not judged. Spacing is judged by the library for the 6 chords with four voices all sounding: 0 too wide.

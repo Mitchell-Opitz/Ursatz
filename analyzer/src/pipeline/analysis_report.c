@@ -1,6 +1,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 void analysis_outer_note_destroy(AnalysisOuterNote *note) {
     if (!note) {
@@ -126,6 +127,10 @@ void analysis_report_destroy(AnalysisReport *report) {
     }
     free(report->texture_passages);
     free(report->texture_changes);
+    free(report->voice_leading.pairs);
+    free(report->voice_leading.violations);
+    free(report->voice_leading.resolutions);
+    free(report->voice_leading.chords);
     for (size_t i = 0; i < report->hemiola_count; i++) {
         free(report->hemiolas[i].note_ids);
     }
@@ -189,6 +194,7 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->texture_passage_count = 0;
     report->texture_changes = NULL;
     report->texture_change_count = 0;
+    memset(&report->voice_leading, 0, sizeof(report->voice_leading));
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

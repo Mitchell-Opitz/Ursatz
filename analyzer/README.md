@@ -154,6 +154,10 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    and the phrases, and reads the density, syncopation, hemiola and hypermeter; finds the tuplets (see "Rhythm and meter").
 13. `texture_pipeline`: separates the voices of each stream (MIDI track or part) with the kernel, builds the neutral input of
    the texture adapter of standard-texture and reads the texture per measure, merged into passages (see "Texture").
+14. `voice_leading_pipeline`: separates the voices of the whole piece with the kernel, builds the voice-pitch grid of the
+   counterpoint and harmony adapters over the chord segments and reads the motion between voices, the parallel and
+   direct perfect intervals, the unresolved sevenths and leading tones, and the doubling and spacing of each chord (see
+   "Voice leading").
 
 Steps 2 to 12 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
@@ -633,6 +637,45 @@ Measured on the reference pieces (MIDI), passages by texture:
 (90.8%, target 80%; measures 8, 40, 42, 43, 63 and 64 are read as polyphony, the annotation says homophony) and the one
 annotated change point (measure 2) is found. A MusicXML file's streams are its parts, so its passages can differ from the
 MIDI file's.
+
+## Voice leading
+
+The analyzer builds the voice-pitch grid of the adapters of Ursatz's standard-counterpoint and standard-harmony
+(`src/pipeline/voice_leading_pipeline.c`, ported from `tests/integration/voice_leading_util.h` and
+`test_voice_leading_report.c`) and reports the library's results. The kernel's voice separation runs over every note of
+the piece as one stream (all tracks and parts together, voice 0 the top); the grid has one row per chord segment (a
+report entry) and one column per voice, up to six (lower voices are left out), and each cell holds the note of that voice
+sounding at the start of the segment. The cell's spelling is the input's own when it is notated and matches the sounding
+pitch, otherwise the library derives it from the semitone. The document's `voice_leading` has these claims:
+
+- `motions`, one claim: the library's classification (contrary, similar, parallel, oblique, static) of the motion between
+  consecutive chord segments for every pair of voices that sound in both, in total and per pair.
+- `violation`: a parallel fifth or octave between any pair of voices, or a direct fifth or octave in the outer pair
+  (`check_perfects`), with the voices, the two chords and the four notes.
+- `resolution`: a seventh or leading tone left unresolved when its chord changes (`check_resolutions`, against the chords
+  the harmony stage prepared), with the voice, the two chords and the two notes.
+- `doubling`: for each chord three or more voices sound, the chord member doubled, the voices on notes the chord does not
+  have, the semitone gaps between adjacent voices and, when exactly four voices sound, the verdict of standard-voicing's
+  spacing rule (`spacing_rules.h`: an octave between soprano and alto and between alto and tenor, a twelfth between tenor
+  and bass).
+
+Doubling is counted, not judged: the chord members are found from the chord's interval set and the bass, and
+standard-voicing's doubling rules need chord spellings the analyzer does not build (R-018). The Markdown report's
+`## Voice leading` prints the motion table, the faults and a summary of the doubling.
+
+Measured on the reference pieces (MIDI):
+
+| Piece | Voices | Chord segments | Motions | Parallel fifths | Parallel octaves | Direct | Unresolved sevenths | Unresolved leading tones | Chords with doubling | Four-voice chords, too wide |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Bach 114 | 4 | 155 | 74 | 0 | 0 | 0 | 6 | 1 | 6 | 0 of 6 |
+| Clementi 36 | 3 | 205 | 55 | 0 | 0 | 0 | 9 | 0 | 3 | none |
+| Mozart 545 | 4 | 1095 | 1025 | 2 | 11 | 0 | 57 | 12 | 289 | 22 of 88 |
+| Field 1 | 4 | 268 | 128 | 0 | 1 | 1 | 19 | 2 | 43 | 2 of 4 |
+| Field 5 | 4 | 169 | 531 | 0 | 0 | 2 | 24 | 2 | 127 | 39 of 83 |
+
+The counts follow the voice separation: a piece whose voices rest often has fewer motions than segments. `test_voice_leading`
+runs a constructed chorale (`tests/musicxml/chorale-voice-leading.musicxml`) with one parallel fifth and one unresolved
+leading tone and asserts that both are found at their measures and nothing else.
 
 ## Known limits
 
