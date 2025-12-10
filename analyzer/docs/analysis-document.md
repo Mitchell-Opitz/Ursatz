@@ -34,7 +34,7 @@ newline. The same input and build always give the same bytes.
 | `melody` | array of melody claims | Filled: the melody of each phrase, read by the library's melody adapter. See below. |
 | `rhythm` | array of rhythm claims | Filled: the library's density, syncopation, hemiola, hypermeter and tuplet results, one flat list labelled by kind. See below. |
 | `texture` | array of texture claims | Filled: the library's texture passages and the changes between them, one flat list labelled by kind. See below. |
-| `voice_leading` | array | Placeholder: `[]`. |
+| `voice_leading` | array of voice leading claims | Filled: the library's motion, parallel and direct perfect intervals, unresolved tendency tones, and doubling and spacing, one flat list labelled by kind. See below. |
 | `schemas` | array | Placeholder: `[]`. |
 | `progressions` | array of progression entries | Filled: the recurring progressions of two to six chords. See below. |
 | `harmonic_rhythm` | object or null | Filled: changes of harmony per measure and the approach to cadences. See below; `null` when the piece has no chords the meter can place. |
@@ -847,6 +847,64 @@ the analyzer reports the score and names none (R-018).
 | `from_texture`, `to_texture` | string | The two textures. |
 | `category_changed` | boolean | False for homorhythm to melody and accompaniment, both homophony. |
 
+### Voice leading
+
+`voice_leading` is one flat array of claims, each labelled by the result it is: one `"motions"` claim, then the
+`"violation"` claims in time order, the `"resolution"` claims, and the `"doubling"` claims. The analyzer builds the
+voice-pitch grid of the adapters of Ursatz's standard-counterpoint and standard-harmony in
+`src/pipeline/voice_leading_pipeline.c`, ported from `tests/integration/voice_leading_util.h`, and copies the library's
+results. The kernel's voice separation runs over every note as one stream (voice 0 is the top); the grid has one row
+per chord segment (row `i` is `chords[i]`), at most six voices (lower voices are left out), and each cell is the note of
+that voice sounding at the start of the segment. A claim's `framework` is the library's own: `"standard-counterpoint-v1"` for
+`motions` and `violation`, `"standard-harmony-v1"` for `resolution` and `"standard-voicing-v1"` for `doubling`. A piece
+the separation or the library declines has an empty `voice_leading`.
+
+**Motions** (`label` `"motions"`): `span` covers the whole piece and `note_ids` is every imported note.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uncertainty` | number | The mean of the library's per-motion uncertainty (1 less the least confidence of the voice separation), in [0, 1]. |
+| `voices`, `segments` | integer | The grid's columns and rows. |
+| `motion_count` | integer | Motions classified: each pair of voices that sound in two consecutive segments. |
+| `totals` | object | `{"contrary", "similar", "parallel", "oblique", "static"}`: the library's motion types, counted. |
+| `pairs` | array | One per pair of voices: `{"upper_voice", "lower_voice", "total", "counts"}`, `counts` as `totals`. |
+
+**Violation** (`label` `"violation"`): the move from chord `from_chord` to `to_chord` (consecutive); `span` runs from the
+start of the first chord to the end of the second, and `note_ids` are the upper voice's notes then the lower voice's.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uncertainty` | number | The library's: 1 less the least voice separation confidence of the four notes. |
+| `rule` | string | The library's name: `"parallel-fifths"` or `"parallel-octaves"` (any pair of voices; a twelfth is a fifth, a unison an octave) or `"direct-perfects"` (the outer pair, similar motion with the top voice leaping). |
+| `upper_voice`, `lower_voice` | integer | The voices of the pair (0 is the top). |
+| `interval` | integer | The simple size arrived at: 5, 8 or 1. |
+| `from_chord`, `to_chord` | integer | Indices into `chords`. |
+
+**Resolution** (`label` `"resolution"`): a tendency tone left unresolved; only unresolved tones are reported.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uncertainty` | number | The library's: the voice's and the chord's confidence together. |
+| `rule` | string | The library's name: `"seventh-resolves-down"` or `"leading-tone-resolves"`. |
+| `voice` | integer | The voice that carries the tone. |
+| `from_chord`, `to_chord` | integer | The last segment of the chord that resolves and the first of the next. `note_ids` are the tone and the note it moved to. |
+
+**Doubling** (`label` `"doubling"`): one per chord segment that three or more voices sound and the harmony stage read as a
+chord; `span` is the chord's and `note_ids` are the sounding voices' notes, top first.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uncertainty` | number | 1 less the least voice separation confidence of the sounding notes. |
+| `chord` | integer | Index into `chords`. |
+| `voices` | integer | Voices sounding (3 or more). |
+| `doubled` | object or null | `{"member", "voices"}`: the chord member (`"root"`, `"third"`, `"fifth"` or `"seventh"`, the positions of the chord's interval set) that most voices sound, when more than one does; null otherwise. Counted, not judged. |
+| `non_chord_voices` | integer | Voices on a pitch class the chord does not have. |
+| `gaps` | array | Semitones from each sounding voice down to the next, top first (`voices - 1` of them; negative when voices cross). |
+| `spacing` | object | `{"judged", "valid", "wide_voice"}`: judged only when the grid has four voices and all four sound; then standard-voicing's rule (an octave between soprano and alto and between alto and tenor, a twelfth between tenor and bass) gives `valid` and, when false, the upper voice (0, 1 or 2) of the first pair too wide. Otherwise `valid` and `wide_voice` are null. |
+
+The Markdown report renders `## Voice leading` from this section: the motion counts and table, the faults with their
+locations, and the doubling summary with the chords whose spacing is too wide.
+
 ### Progressions
 
 `progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
@@ -923,6 +981,7 @@ before those:
   filled (its object is new), which is additive. `motives` is filled (its claims are new), which is additive. `melody` is filled
   (its claims are new), which is additive. `rhythm` is filled (its claims are new, as one flat array labelled by kind),
   which is additive. `texture` is filled (its claims are new, as one flat array labelled by kind), which is additive.
+  `voice_leading` is filled (its claims are new, as one flat array labelled by kind), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
