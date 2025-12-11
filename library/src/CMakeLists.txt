@@ -164,6 +164,7 @@ add_library(ursatz
     generation/candidate_evaluator.c
     generation/generation_record.c
     generation/generator_registry.c
+    generation/generator_dispatch.c
     io/midi_importer.c
     io/midi_event_decoder.c
     io/midi_key_signature.c
