@@ -131,6 +131,11 @@ void analysis_report_destroy(AnalysisReport *report) {
     free(report->voice_leading.violations);
     free(report->voice_leading.resolutions);
     free(report->voice_leading.chords);
+    for (size_t i = 0; i < report->schema_count; i++) {
+        free(report->schemas[i].name);
+        free(report->schemas[i].stages);
+    }
+    free(report->schemas);
     for (size_t i = 0; i < report->hemiola_count; i++) {
         free(report->hemiolas[i].note_ids);
     }
@@ -195,6 +200,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->texture_changes = NULL;
     report->texture_change_count = 0;
     memset(&report->voice_leading, 0, sizeof(report->voice_leading));
+    report->schemas = NULL;
+    report->schema_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

@@ -110,7 +110,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/voice_leading_claim" }
     },
-    "schemas": { "type": "array" },
+    "schemas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/schemas_claim" }
+    },
     "progressions": {
       "type": "array",
       "items": { "$ref": "#/$defs/progression" }
@@ -617,6 +620,65 @@
           }
         }
       ]
+    },
+    "schemas_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "oneOf": [
+            { "$ref": "#/$defs/galant_schema_claim" }
+          ]
+        }
+      ]
+    },
+    "galant_degree": {
+      "type": "object",
+      "required": ["degree", "alteration"],
+      "properties": {
+        "degree": { "type": "integer", "minimum": 1, "maximum": 7 },
+        "alteration": { "type": "integer", "minimum": -2, "maximum": 2 }
+      }
+    },
+    "galant_schema_stage": {
+      "type": "object",
+      "required": ["span", "location", "measure", "soprano", "second_soprano", "bass", "bass_only", "credit"],
+      "properties": {
+        "span": { "$ref": "#/$defs/span" },
+        "location": { "$ref": "#/$defs/location" },
+        "measure": { "type": "integer", "minimum": 0 },
+        "soprano": { "oneOf": [{ "$ref": "#/$defs/galant_degree" }, { "type": "null" }] },
+        "second_soprano": { "oneOf": [{ "$ref": "#/$defs/galant_degree" }, { "type": "null" }] },
+        "bass": { "$ref": "#/$defs/galant_degree" },
+        "bass_only": { "type": "boolean" },
+        "credit": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "galant_schema_claim": {
+      "type": "object",
+      "required": ["label", "name", "function", "measures", "frame", "bass_only_stages", "confidence", "stages"],
+      "properties": {
+        "label": { "const": "schema" },
+        "name": { "type": "string" },
+        "function": { "enum": ["opening-gambit", "continuation", "pre-cadential", "cadence", "post-cadential"] },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "frame": { "$ref": "#/$defs/galant_degree" },
+        "bass_only_stages": { "type": "integer", "minimum": 0 },
+        "confidence": {
+          "type": "object",
+          "required": ["pair_share", "metric_fit", "mean_uncertainty", "overall"],
+          "properties": {
+            "pair_share": { "type": "number", "minimum": 0, "maximum": 1 },
+            "metric_fit": { "type": "number", "minimum": 0, "maximum": 1 },
+            "mean_uncertainty": { "type": "number", "minimum": 0, "maximum": 1 },
+            "overall": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/galant_schema_stage" }
+        }
+      }
     },
     "texture_claim": {
       "allOf": [

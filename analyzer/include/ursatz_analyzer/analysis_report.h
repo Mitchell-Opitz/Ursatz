@@ -692,6 +692,51 @@ typedef struct {
     double uncertainty;
 } AnalysisTextureChange;
 
+/* One stage of a galant schema (the library's GalantStageClaim, analysis/galant_analysis_match.h): the chords of the
+   segment it sits on (a held chord is one segment, so a range of entries) and the soprano and bass degrees the library
+   matched, in the schema's frame key. A degree is the library's letter distance from the tonic (1 to 7) and its
+   alteration in semitones against the major scale (-1 lowered, +1 raised). A stage the soprano is absent from is
+   bass_only; a two-note stage (the Monte's do-te and re-do) also sits on the next segment, with a second degree. */
+typedef struct {
+    size_t first_entry;
+    size_t last_entry;
+    bool has_melody;
+    int melody_degree;
+    int melody_alteration;
+    int bass_degree;
+    int bass_alteration;
+    bool has_second;
+    size_t second_first_entry; /* valid only when has_second */
+    size_t second_last_entry;
+    int second_degree;
+    int second_alteration;
+    bool bass_only;
+    double credit; /* the library's: 1 both voices match, 0.75 a non-defining bass that is not the usual one, 0.5 bass only */
+} AnalysisSchemaStage;
+
+/* One galant schema the library's galant-schemas adapter matched in the outer voices (analysis/galant_analysis_match.h):
+   the Analyzer builds the neutral per-chord input (outer voice degrees, local keys, Roman numerals, meter, held chords
+   merged) and copies the matches. The name, function, stages, frame and confidence are the library's; uncertainty is
+   1 - confidence. Entry ranges are indices into entries, inclusive. */
+typedef struct {
+    const char *framework;     /* the library's framework name for the claim */
+    char *name;                /* owned; the library's schema name, e.g. "romanesca" */
+    const char *function;      /* the library's SchemaFunction name: "opening-gambit", "continuation", "pre-cadential",
+                                  "cadence" or "post-cadential" */
+    AnalysisSchemaStage *stages; /* owned; in order */
+    size_t stage_count;
+    int frame_degree;          /* the key the stages are read in, as a degree of the home key (1 is the home key) */
+    int frame_alteration;
+    size_t bass_only_stages;
+    size_t first_entry;        /* the first stage's chords to the last chord the stages use */
+    size_t last_entry;
+    double pair_share;
+    double metric_fit;
+    double mean_uncertainty;
+    double confidence;
+    double uncertainty;        /* [0, 1], higher is LESS certain: 1 - confidence */
+} AnalysisSchema;
+
 /* The motion of the voices, from the library's standard-counterpoint adapter (analysis/analysis_motion.h). The Analyzer
    separates the notes of the whole piece into voices with the kernel's voice separation (voice 0 is the top, all tracks
    and parts together), puts each voice's sounding note at the start of every chord segment into the library's voice-pitch
@@ -928,6 +973,8 @@ typedef struct {
     AnalysisTextureChange *texture_changes; /* owned; texture_passage_count - 1 of them */
     size_t texture_change_count;
     AnalysisVoiceLeading voice_leading; /* the voices' motion; present is false when the library declined the grid */
+    AnalysisSchema *schemas; /* owned; in order of the first stage; empty when the library found none */
+    size_t schema_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -936,7 +983,7 @@ typedef struct {
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
    thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets, texture passages and changes
-   and the voice leading. */
+   the voice leading and the schemas. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

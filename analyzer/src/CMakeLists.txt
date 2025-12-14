@@ -22,6 +22,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/texture_pipeline.c
     pipeline/voice_leading_pipeline.c
     pipeline/voicing_check.c
+    pipeline/schema_pipeline.c
     pipeline/analysis_report.c
     pipeline/chain.c
     pipeline/analysis_pipeline.c
@@ -48,6 +49,11 @@ set_source_files_properties(pipeline/texture_pipeline.c PROPERTIES INCLUDE_DIREC
 # sees its directory.
 get_target_property(STANDARD_VOICING_SOURCE_DIR standard_voicing SOURCE_DIR)
 set_source_files_properties(pipeline/voicing_check.c PROPERTIES INCLUDE_DIRECTORIES "${STANDARD_VOICING_SOURCE_DIR}")
+# galant-schemas and scale-harmonization name their headers without a directory (and read standard-counterpoint's), so
+# only the schema pipeline sees their directories.
+get_target_property(GALANT_SCHEMAS_SOURCE_DIR galant_schemas SOURCE_DIR)
+set_source_files_properties(pipeline/schema_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
+    "${GALANT_SCHEMAS_SOURCE_DIR};${GALANT_SCHEMAS_SOURCE_DIR}/analysis;${STANDARD_COUNTERPOINT_SOURCE_DIR}")
 target_include_directories(ursatz_analyzer
     PUBLIC ${PROJECT_SOURCE_DIR}/include ${URSATZ_FRAMEWORKS_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -55,6 +61,7 @@ target_include_directories(ursatz_analyzer
 target_link_libraries(ursatz_analyzer
     PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
     PRIVATE cjson $<LINK_ONLY:standard_counterpoint> $<LINK_ONLY:standard_texture> $<LINK_ONLY:standard_voicing>
+    $<LINK_ONLY:galant_schemas>
 )
 target_compile_definitions(ursatz_analyzer PRIVATE
     URSATZ_ANALYZER_VERSION="${PROJECT_VERSION}"
