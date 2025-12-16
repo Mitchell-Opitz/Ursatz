@@ -98,7 +98,7 @@ static inline CandidateSet *test_make_set(const char *set_id, Candidate **candid
 #define TEST_DETERMINISTIC_VERSION "1.2.0"
 #define TEST_STOCHASTIC_VERSION "0.9.1"
 
-static GeneratorResult test_deterministic_generate(const GenerationPlan *plan, unsigned long random_seed,
+static inline GeneratorResult test_deterministic_generate(const GenerationPlan *plan, unsigned long random_seed,
                                                    const Value *configuration, CandidateSet **out) {
     if (plan == NULL) {
         return GENERATOR_ERR_NULL_PLAN;
@@ -116,7 +116,7 @@ static GeneratorResult test_deterministic_generate(const GenerationPlan *plan, u
     return GENERATOR_OK;
 }
 
-static GeneratorResult test_stochastic_generate(const GenerationPlan *plan, unsigned long random_seed,
+static inline GeneratorResult test_stochastic_generate(const GenerationPlan *plan, unsigned long random_seed,
                                                 const Value *configuration, CandidateSet **out) {
     if (plan == NULL) {
         return GENERATOR_ERR_NULL_PLAN;
@@ -149,7 +149,7 @@ static GeneratorResult test_stochastic_generate(const GenerationPlan *plan, unsi
     return GENERATOR_OK;
 }
 
-static GeneratorResult test_failing_generate(const GenerationPlan *plan, unsigned long random_seed,
+static inline GeneratorResult test_failing_generate(const GenerationPlan *plan, unsigned long random_seed,
                                              const Value *configuration, CandidateSet **out) {
     (void)plan;
     (void)random_seed;
@@ -158,7 +158,7 @@ static GeneratorResult test_failing_generate(const GenerationPlan *plan, unsigne
     return GENERATOR_ERR_GENERATION_FAILED;
 }
 
-static GeneratorResult test_alloc_failing_generate(const GenerationPlan *plan, unsigned long random_seed,
+static inline GeneratorResult test_alloc_failing_generate(const GenerationPlan *plan, unsigned long random_seed,
                                                    const Value *configuration, CandidateSet **out) {
     (void)plan;
     (void)random_seed;
@@ -167,7 +167,7 @@ static GeneratorResult test_alloc_failing_generate(const GenerationPlan *plan, u
     return GENERATOR_ERR_ALLOC;
 }
 
-static GeneratorResult test_no_set_generate(const GenerationPlan *plan, unsigned long random_seed,
+static inline GeneratorResult test_no_set_generate(const GenerationPlan *plan, unsigned long random_seed,
                                             const Value *configuration, CandidateSet **out) {
     (void)plan;
     (void)random_seed;
@@ -176,14 +176,14 @@ static GeneratorResult test_no_set_generate(const GenerationPlan *plan, unsigned
     return GENERATOR_OK; /* claims success but produced nothing */
 }
 
-static GeneratorResult test_wrong_seed_generate(const GenerationPlan *plan, unsigned long random_seed,
+static inline GeneratorResult test_wrong_seed_generate(const GenerationPlan *plan, unsigned long random_seed,
                                                 const Value *configuration, CandidateSet **out) {
     (void)plan;
     *out = test_make_set("wrong-seed-set", NULL, 0, random_seed + 1, "1.0.0", configuration);
     return GENERATOR_OK;
 }
 
-static GeneratorResult test_wrong_version_generate(const GenerationPlan *plan, unsigned long random_seed,
+static inline GeneratorResult test_wrong_version_generate(const GenerationPlan *plan, unsigned long random_seed,
                                                    const Value *configuration, CandidateSet **out) {
     (void)plan;
     *out = test_make_set("wrong-version-set", NULL, 0, random_seed, "9.9.9", configuration);
