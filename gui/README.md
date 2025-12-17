@@ -956,6 +956,57 @@ A style is a snapshot: tagging, untagging or deleting a piece later changes
 it only when it is rebuilt, and a Composer plan keeps naming the file, so a
 rebuild changes what that plan's later steps use.
 
+### Motive links routes
+
+Motive links show which motive families of different pieces are variants of one another: for each family the
+Analyzer finds the nearest families of other pieces and the chain of at most two relations that turns one prototype
+into the other (`ursatz_analyzer/motive_links.h`). `service/link_service.c` is the only code that calls it; it reads
+only analysis documents, never the scores.
+
+A scope names the pieces to link:
+`{"kind": "all" | "collection" | "filter" | "subject" | "project", "collection_id"?, "filter"?: {"composer"?,
+"source"?, "tag"?}, "subject_id"?, "project_id"?}`.
+
+- `all`: every Library piece.
+- `collection`: the pieces of that collection (`404` when it does not exist).
+- `filter`: the pieces that match, as the Library filters them; at least one value (else `400`).
+- `subject`: the Library pieces the subject links (`404` when it does not exist).
+- `project`: the Library pieces linked to every subject that links at least one item of the project (`404` when it
+  does not exist).
+
+Pieces are taken in id order. A scope that names no piece is `422`.
+
+- `POST /api/links/runs`: body `{"scope": {...}}`. Starts a run on a worker thread and answers `202` `{"ok":true,
+  "run":{...}}`. `400` for a scope that cannot be one (an unknown kind, a missing id, a filter without a value),
+  `404` for an unknown collection, subject or project, `422` for an empty scope, `409` while another run is in
+  progress (one run at a time).
+- `GET /api/links/runs`: `{"ok":true,"runs":[{"id","scope","status","created_at","finished_at","done","total"},...]}`,
+  newest first.
+- `GET /api/links/runs/<id>`: `{"ok":true,"run":{...}}`, the whole run; `404` when unknown. While it runs, `done` and
+  `total` are the pairs compared so far and the pairs to compare.
+- `DELETE /api/links/runs/<id>`: `{"ok":true}`; `404` when unknown, `409` while it runs.
+- `GET /api/links/pieces/<piece id>`: `{"ok":true,"links":[{"run","scope","link"},...]}`, the links with this piece on
+  either side, taken from the newest done run of each scope.
+
+A run is `{"id","scope","created_at","finished_at","status","message","done","total","skipped","result"}`. `status`
+is `running`, `done` or `failed` (`message` says why: `no analyzable pieces`, `linking failed`, `interrupted`).
+`skipped` lists `{"id","reason"}` for each piece that was left out, as styles do: `not found`, `re-analysis failed` or
+`unreadable analysis`. On `done`, `result` is the Analyzer's `motive_links_render` output
+(`schema/motive-links.v1.schema.json`): `pieces`, `pairs`, `compared`, `cached`, `cache_reset`, the `links` (each
+with ends `a` and `b`, `reversed`, the `steps` as text, the `distance` and the `similarity` by dimension) and the
+`groups` of linked families. Every link end and group member carries a `title` the route adds: the piece's filename
+without its extension, or its id when the piece is gone.
+
+A piece whose stored analysis has no motive features (an older analyzer version) is analyzed again first, as the
+re-run route does, and added again; one that still fails is skipped.
+
+Storage: `links/motive-link-cache.json` is one cache for every scope, keyed by the two sketches' fingerprints and valid
+only for the same Ursatz commit, analyzer version and link options, so a pair compared for one scope is not compared
+again for another and a second run over the same scope reports `compared` 0. Each run is
+`links/runs/<id>/run.json`, written to a temporary file and renamed; ids are `lnk-<16 lowercase hex>`. Progress is
+kept in memory and written to `run.json` at most once a second and at the end. A server restart marks a run left
+`running` as `failed` with `interrupted`.
+
 ### Materials and subjects routes
 
 Both stores are described under "Material store" and "Subjects" above; these
@@ -1276,7 +1327,7 @@ it.
 
 ## Tests
 
-`ctest` runs the backend tests (health, analyzer, corpus, styles, composer, materials, subjects and id routes, the piece metadata rules and the material store) and,
+`ctest` runs the backend tests (health, analyzer, corpus, styles, composer, materials, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be
@@ -1293,6 +1344,11 @@ covers list, detail, metadata editing, filtering and groups, rename,
 re-run and delete. `test_styles_route` uploads Clementi 36 and Mozart 545,
 tags them and builds styles from a tag, a collection and ids, then reads the
 model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
+`test_link_service` resolves each scope kind (a project through its subjects), runs the four link fixtures
+(`backend/tests/fixtures/links`, copied from the Analyzer's `tests/links`), checks that a second run over the same
+scope compares nothing, analyzes a document without features again and reads an interrupted run as failed.
+`test_links_route` starts runs over HTTP, polls them to done, and covers the `409`, `400`, `404` and `422` answers,
+the list, delete and a piece's links.
 `test_piece_metadata` covers the normalizing, grouping and
 filter rules without a server. `test_material_service` covers the projects,
 items, versions, version body rules and item references without a server. `style-view.test.js` covers the style detail
