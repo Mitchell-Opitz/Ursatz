@@ -7,7 +7,12 @@
 #include "galant_analysis_input.h"
 #include "galant_analysis_match.h"
 #include "galant_framework.h"
+#include "scale_analysis_detect.h"
+#include "scale_direction.h"
+#include "scale_framework.h"
+#include "scale_patterns.h"
 #include "schema_function.h"
+#include "sequence_kind.h"
 #include "semantics/beat_strength.h"
 #include "theory/framework.h"
 #include "time/duration.h"
@@ -257,6 +262,55 @@ static bool copy_schema(const SchemaBuild *build, const GalantSchemaMatch *match
     return true;
 }
 
+static bool copy_sequence_stage(const SchemaBuild *build, const ScaleStageClaim *claim, AnalysisSequenceStage *out) {
+    size_t segment = 0;
+    if (!segment_of_id(build, claim->segment_id, &segment)) {
+        return false;
+    }
+    out->first_entry = build->first_entry[segment];
+    out->last_entry = build->last_entry[segment];
+    out->bass_degree = claim->bass_degree;
+    out->bass_alteration = claim->bass_alteration;
+    out->has_soprano = claim->has_soprano != 0;
+    out->soprano_degree = claim->soprano_degree;
+    out->soprano_alteration = claim->soprano_alteration;
+    out->has_root = claim->has_root != 0;
+    out->root_degree = claim->root_degree;
+    out->root_alteration = claim->root_alteration;
+    return true;
+}
+
+static bool copy_sequence(const SchemaBuild *build, const ScaleSequenceMatch *match, const char *framework,
+                          AnalysisSequence *out) {
+    const ScaleSequenceClaim *claim = &match->claim;
+    out->framework = framework;
+    out->kind = sequence_kind_name((SequenceKind)claim->kind);
+    out->pattern = claim->pattern >= 0 ? scale_pattern_name((ScalePatternId)claim->pattern) : NULL;
+    out->direction = claim->direction >= 0 ? scale_direction_name((ScaleDirection)claim->direction) : NULL;
+    out->stages = calloc(claim->stage_count > 0 ? (size_t)claim->stage_count : 1, sizeof(AnalysisSequenceStage));
+    if (!out->kind || !out->stages) {
+        return false;
+    }
+    for (int k = 0; k < claim->stage_count; k++) {
+        if (!copy_sequence_stage(build, &claim->stages[k], &out->stages[k])) {
+            return false;
+        }
+        out->stage_count++;
+    }
+    out->rule_backed = claim->rule_backed != 0;
+    out->unit_length = claim->unit_length;
+    out->units = claim->units;
+    out->transposition_steps = claim->transposition_steps;
+    out->first_entry = build->first_entry[claim->first_segment];
+    out->last_entry = build->last_entry[claim->last_segment];
+    out->unit_share = claim->unit_share;
+    out->soprano_bonus = claim->soprano_bonus;
+    out->mean_uncertainty = claim->mean_uncertainty;
+    out->confidence = claim->confidence;
+    out->uncertainty = match->uncertainty;
+    return true;
+}
+
 bool schema_stage_collect(const ImportedNotes *notes, const Segmentation *segmentation, const RomanNumerals *romans,
                           AnalysisReport *report) {
     size_t count = segmentation->segment_count;
@@ -278,6 +332,18 @@ bool schema_stage_collect(const ImportedNotes *notes, const Segmentation *segmen
             report->schema_count++;
         }
     }
+    ScaleSequenceMatches sequences = {NULL, 0};
+    ok = ok && scale_sequence_detect(&build.list, NULL, &sequences) == GALANT_ANALYSIS_OK;
+    if (ok && sequences.count > 0) {
+        report->sequences = calloc(sequences.count, sizeof(AnalysisSequence));
+        ok = report->sequences != NULL;
+        const char *framework = framework_name(scale_harmonization_framework());
+        for (size_t i = 0; ok && i < sequences.count; i++) {
+            ok = copy_sequence(&build, &sequences.items[i], framework, &report->sequences[i]);
+            report->sequence_count++;
+        }
+    }
+    scale_sequence_matches_destroy(&sequences);
     galant_schema_matches_destroy(&schemas);
     build_destroy(&build);
     return ok;

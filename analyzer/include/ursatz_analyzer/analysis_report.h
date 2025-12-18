@@ -737,6 +737,49 @@ typedef struct {
     double uncertainty;        /* [0, 1], higher is LESS certain: 1 - confidence */
 } AnalysisSchema;
 
+/* One stage of a harmonic sequence (the library's ScaleStageClaim, analysis/scale_analysis_detect.h): the chords of the
+   segment it sits on and the bass, soprano and chord root degrees the library read there, in the HOME key (the
+   segment's key tonic added), as galant degrees (see AnalysisSchemaStage). A segment with no soprano or no Roman
+   numeral has no soprano or root. */
+typedef struct {
+    size_t first_entry;
+    size_t last_entry;
+    int bass_degree;
+    int bass_alteration;
+    bool has_soprano;
+    int soprano_degree;
+    int soprano_alteration;
+    bool has_root;
+    int root_degree;
+    int root_alteration;
+} AnalysisSequenceStage;
+
+/* One harmonic sequence the library's scale-harmonization adapter found (analysis/scale_analysis_detect.h): a model of
+   one or more chord segments repeated, transposed by a constant diatonic interval, at least three times. The Analyzer
+   reads the same neutral input as the schemas and copies the matches; the kind, pattern, direction, unit counts and
+   confidence are the library's. kind is "parallel-chords", "five-six", "seven-six" or "two-three" when a pattern of
+   the library's rules holds over whole units (rule_backed), or "cycle-of-fifths", which the library finds from the
+   Roman numerals without a rule to check it (rule_backed false). Entry ranges are indices into entries, inclusive. */
+typedef struct {
+    const char *framework;     /* the library's framework name for the claim */
+    const char *kind;          /* the library's SequenceKind name */
+    const char *pattern;       /* the library's ScalePattern name, NULL when no pattern encodes the kind */
+    bool rule_backed;
+    const char *direction;     /* "ascending" or "descending"; NULL for the cycle of fifths */
+    int unit_length;           /* chord segments in one unit */
+    int units;                 /* how often the model occurs: at least 3 */
+    int transposition_steps;   /* the bass, in diatonic steps, from the start of one unit to the next (up positive) */
+    AnalysisSequenceStage *stages; /* owned; in order */
+    size_t stage_count;
+    size_t first_entry;
+    size_t last_entry;
+    double unit_share;         /* the share of units that match the first in root motion and bass intervals */
+    double soprano_bonus;      /* 0.1 when the soprano's steps inside a unit repeat across the units, else 0 */
+    double mean_uncertainty;
+    double confidence;
+    double uncertainty;        /* [0, 1], higher is LESS certain: 1 - confidence */
+} AnalysisSequence;
+
 /* The motion of the voices, from the library's standard-counterpoint adapter (analysis/analysis_motion.h). The Analyzer
    separates the notes of the whole piece into voices with the kernel's voice separation (voice 0 is the top, all tracks
    and parts together), puts each voice's sounding note at the start of every chord segment into the library's voice-pitch
@@ -975,6 +1018,8 @@ typedef struct {
     AnalysisVoiceLeading voice_leading; /* the voices' motion; present is false when the library declined the grid */
     AnalysisSchema *schemas; /* owned; in order of the first stage; empty when the library found none */
     size_t schema_count;
+    AnalysisSequence *sequences; /* owned; in order of the first segment; empty when the library found none */
+    size_t sequence_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -983,7 +1028,7 @@ typedef struct {
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
    thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets, texture passages and changes
-   the voice leading and the schemas. */
+   the voice leading, the schemas and the sequences. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

@@ -136,6 +136,10 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->schemas[i].stages);
     }
     free(report->schemas);
+    for (size_t i = 0; i < report->sequence_count; i++) {
+        free(report->sequences[i].stages);
+    }
+    free(report->sequences);
     for (size_t i = 0; i < report->hemiola_count; i++) {
         free(report->hemiolas[i].note_ids);
     }
@@ -202,6 +206,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     memset(&report->voice_leading, 0, sizeof(report->voice_leading));
     report->schemas = NULL;
     report->schema_count = 0;
+    report->sequences = NULL;
+    report->sequence_count = 0;
     report->home_region = 0;
     report->home_duration_numerator = 0;
     report->home_duration_denominator = 1;

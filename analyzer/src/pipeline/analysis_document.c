@@ -3504,12 +3504,89 @@ static cJSON *schema_json(const ImportedNotes *notes, const AnalysisReport *repo
     return claim;
 }
 
-/* The schemas section: one flat list of claims labelled "schema" (and, with the sequences, "sequence"), the schemas in
-   order of their first stage. */
+/* One stage of a sequence: where it sits and the bass, soprano and chord root degrees the library read there in the home
+   key (soprano and root null where the segment has none). */
+static cJSON *sequence_stage_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                  const AnalysisSequenceStage *stage) {
+    Rational start = entry_start_time(&report->entries[stage->first_entry]);
+    Rational end = entry_end_time(&report->entries[stage->last_entry]);
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "span", span_json(start, end)) &&
+          add(object, "location", location_json(notes->meter.meter_map, start, end)) &&
+          add(object, "measure", cJSON_CreateNumber(measure_of_time(notes->meter.meter_map, start))) &&
+          add(object, "bass", galant_degree_json(stage->bass_degree, stage->bass_alteration)) &&
+          add(object, "soprano",
+              stage->has_soprano ? galant_degree_json(stage->soprano_degree, stage->soprano_alteration)
+                                 : cJSON_CreateNull()) &&
+          add(object, "root",
+              stage->has_root ? galant_degree_json(stage->root_degree, stage->root_alteration) : cJSON_CreateNull()))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *sequence_stages_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                   const AnalysisSequence *sequence) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < sequence->stage_count; i++) {
+        if (!append(list, sequence_stage_json(notes, report, &sequence->stages[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* One claim per sequence, in order of the first segment. The claim's span runs from the first segment to the end of
+   the last; the label is "sequence". kind is the library's name for what repeats; pattern and direction are null where
+   the library encodes none (the cycle of fifths has no rule, so rule_backed is false). */
+static cJSON *sequence_json(const ImportedNotes *notes, const AnalysisReport *report, const AnalysisSequence *sequence) {
+    size_t id_count = 0;
+    size_t *ids = entry_range_note_ids(report, sequence->first_entry, sequence->last_entry, &id_count);
+    cJSON *claim = ids ? claim_json_with(sequence->framework, notes, ids, id_count,
+                                         entry_start_time(&report->entries[sequence->first_entry]),
+                                         entry_end_time(&report->entries[sequence->last_entry]), "sequence",
+                                         cJSON_CreateNumber(sequence->uncertainty))
+                       : NULL;
+    free(ids);
+    cJSON *confidence = cJSON_CreateObject();
+    bool taken = false; /* add() takes the confidence over, and frees it itself when it fails */
+    if (!(claim && confidence && add(confidence, "unit_share", cJSON_CreateNumber(sequence->unit_share)) &&
+          add(confidence, "soprano_bonus", cJSON_CreateNumber(sequence->soprano_bonus)) &&
+          add(confidence, "mean_uncertainty", cJSON_CreateNumber(sequence->mean_uncertainty)) &&
+          add(confidence, "overall", cJSON_CreateNumber(sequence->confidence)) &&
+          add(claim, "kind", cJSON_CreateString(sequence->kind)) &&
+          add(claim, "pattern", optional_string_json(sequence->pattern)) &&
+          add(claim, "rule_backed", cJSON_CreateBool(sequence->rule_backed)) &&
+          add(claim, "direction", optional_string_json(sequence->direction)) &&
+          add(claim, "unit_length", cJSON_CreateNumber(sequence->unit_length)) &&
+          add(claim, "units", cJSON_CreateNumber(sequence->units)) &&
+          add(claim, "transposition_steps", cJSON_CreateNumber(sequence->transposition_steps)) &&
+          add(claim, "measures", entry_measures_json(notes, report, sequence->first_entry, sequence->last_entry)) &&
+          (taken = true, add(claim, "confidence", confidence)) &&
+          add(claim, "stages", sequence_stages_json(notes, report, sequence)))) {
+        if (!taken) {
+            cJSON_Delete(confidence);
+        }
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The schemas section: one flat list of claims, the schemas (labelled "schema") in order of their first stage and then
+   the sequences (labelled "sequence") in order of their first segment. */
 static cJSON *schemas_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < report->schema_count; i++) {
         if (!append(list, schema_json(notes, report, &report->schemas[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->sequence_count; i++) {
+        if (!append(list, sequence_json(notes, report, &report->sequences[i]))) {
             cJSON_Delete(list);
             return NULL;
         }

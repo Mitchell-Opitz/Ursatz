@@ -626,7 +626,8 @@
         { "$ref": "#/$defs/claim" },
         {
           "oneOf": [
-            { "$ref": "#/$defs/galant_schema_claim" }
+            { "$ref": "#/$defs/galant_schema_claim" },
+            { "$ref": "#/$defs/sequence_claim" }
           ]
         }
       ]
@@ -677,6 +678,51 @@
           "type": "array",
           "minItems": 1,
           "items": { "$ref": "#/$defs/galant_schema_stage" }
+        }
+      }
+    },
+    "sequence_stage": {
+      "type": "object",
+      "required": ["span", "location", "measure", "bass", "soprano", "root"],
+      "properties": {
+        "span": { "$ref": "#/$defs/span" },
+        "location": { "$ref": "#/$defs/location" },
+        "measure": { "type": "integer", "minimum": 0 },
+        "bass": { "$ref": "#/$defs/galant_degree" },
+        "soprano": { "oneOf": [{ "$ref": "#/$defs/galant_degree" }, { "type": "null" }] },
+        "root": { "oneOf": [{ "$ref": "#/$defs/galant_degree" }, { "type": "null" }] }
+      }
+    },
+    "sequence_claim": {
+      "type": "object",
+      "required": [
+        "label", "kind", "pattern", "rule_backed", "direction", "unit_length", "units", "transposition_steps",
+        "measures", "confidence", "stages"
+      ],
+      "properties": {
+        "label": { "const": "sequence" },
+        "kind": { "enum": ["parallel-chords", "five-six", "seven-six", "cycle-of-fifths", "two-three"] },
+        "pattern": { "type": ["string", "null"] },
+        "rule_backed": { "type": "boolean" },
+        "direction": { "enum": ["ascending", "descending", null] },
+        "unit_length": { "type": "integer", "minimum": 1 },
+        "units": { "type": "integer", "minimum": 2 },
+        "transposition_steps": { "type": "integer" },
+        "measures": { "$ref": "#/$defs/phrase_measures" },
+        "confidence": {
+          "type": "object",
+          "required": ["unit_share", "soprano_bonus", "mean_uncertainty", "overall"],
+          "properties": {
+            "unit_share": { "type": "number", "minimum": 0, "maximum": 1 },
+            "soprano_bonus": { "type": "number", "minimum": 0, "maximum": 1 },
+            "mean_uncertainty": { "type": "number", "minimum": 0, "maximum": 1 },
+            "overall": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "stages": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/sequence_stage" }
         }
       }
     },

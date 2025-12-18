@@ -52,8 +52,9 @@ set_source_files_properties(pipeline/voicing_check.c PROPERTIES INCLUDE_DIRECTOR
 # galant-schemas and scale-harmonization name their headers without a directory (and read standard-counterpoint's), so
 # only the schema pipeline sees their directories.
 get_target_property(GALANT_SCHEMAS_SOURCE_DIR galant_schemas SOURCE_DIR)
+get_target_property(SCALE_HARMONIZATION_SOURCE_DIR scale_harmonization SOURCE_DIR)
 set_source_files_properties(pipeline/schema_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
-    "${GALANT_SCHEMAS_SOURCE_DIR};${GALANT_SCHEMAS_SOURCE_DIR}/analysis;${STANDARD_COUNTERPOINT_SOURCE_DIR}")
+    "${GALANT_SCHEMAS_SOURCE_DIR};${GALANT_SCHEMAS_SOURCE_DIR}/analysis;${SCALE_HARMONIZATION_SOURCE_DIR};${SCALE_HARMONIZATION_SOURCE_DIR}/analysis;${STANDARD_COUNTERPOINT_SOURCE_DIR}")
 target_include_directories(ursatz_analyzer
     PUBLIC ${PROJECT_SOURCE_DIR}/include ${URSATZ_FRAMEWORKS_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -61,7 +62,7 @@ target_include_directories(ursatz_analyzer
 target_link_libraries(ursatz_analyzer
     PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
     PRIVATE cjson $<LINK_ONLY:standard_counterpoint> $<LINK_ONLY:standard_texture> $<LINK_ONLY:standard_voicing>
-    $<LINK_ONLY:galant_schemas>
+    $<LINK_ONLY:galant_schemas> $<LINK_ONLY:scale_harmonization>
 )
 target_compile_definitions(ursatz_analyzer PRIVATE
     URSATZ_ANALYZER_VERSION="${PROJECT_VERSION}"
