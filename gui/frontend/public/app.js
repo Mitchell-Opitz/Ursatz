@@ -10,6 +10,7 @@ const TOOLS = [
   { id: "themes", label: "Themes", active: false, render: () => renderMaterialsView("theme") },
   { id: "pieces", label: "Pieces", active: false, render: () => renderMaterialsView("piece") },
   { id: "subjects", label: "Subjects", active: false, render: renderSubjectsView },
+  { id: "motive-links", label: "Motive links", active: false, render: renderMotiveLinksView },
   { id: "health", label: "Health", active: false, render: renderHealthView },
 ];
 
