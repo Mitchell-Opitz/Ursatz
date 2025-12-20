@@ -11,3 +11,16 @@ add_ursatz_test(candidate)
 add_ursatz_test(candidate_evaluator)
 add_ursatz_test(generation_record)
 add_ursatz_architecture_test(generation)
+
+# Scoped memcheck coverage for the generator registry, dispatch and
+# reproducibility test binaries only (not a repo-wide valgrind mechanism -- see
+# tests/persistence/CMakeLists.txt for the same pattern). Skips silently if
+# valgrind isn't installed.
+find_program(URSATZ_GENERATION_VALGRIND valgrind)
+if(URSATZ_GENERATION_VALGRIND)
+  foreach(generation_test_name generator_registry generator_dispatch generator_reproducibility)
+    add_test(NAME ${generation_test_name}_valgrind
+             COMMAND ${URSATZ_GENERATION_VALGRIND} --leak-check=full --error-exitcode=1
+                     $<TARGET_FILE:test_${generation_test_name}>)
+  endforeach()
+endif()
