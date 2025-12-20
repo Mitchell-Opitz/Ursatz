@@ -1201,7 +1201,9 @@ function leaveWorkspace() {
   getContentEl().classList.remove("content--workspace");
 }
 
-function showAnalysisView(id) {
+/* options.motiveFamily opens the Data mode Motives tab and shows that family
+ * on the score. */
+function showAnalysisView(id, options) {
   lastAnalysisPieceId = id;
   setActiveTool("analysis");
   leaveWorkspace();
@@ -1220,7 +1222,7 @@ function showAnalysisView(id) {
         showAnalysisProblem(data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found");
         return;
       }
-      mountAnalysisWorkspace(content, id, data);
+      mountAnalysisWorkspace(content, id, data, options);
     })
     .catch((err) => {
       showAnalysisProblem(`Could not reach backend: ${err}`);
@@ -1253,7 +1255,7 @@ function analysisSubtitle(header) {
 
 /* Mounts the score workspace for a piece. Score mode is the default; Data
  * mode holds the Provenance list and the claim tabs. */
-function mountAnalysisWorkspace(content, id, data) {
+function mountAnalysisWorkspace(content, id, data, options) {
   const header = buildAnalysisHeader(data);
   const workspace = ScoreWorkspace.mount(content, {
     title: header.filename,
@@ -1285,7 +1287,12 @@ function mountAnalysisWorkspace(content, id, data) {
   });
   analysisWorkspace = workspace;
 
-  renderDataMode(workspace.dataEl(), data);
+  const family = options && Number.isInteger(options.motiveFamily) ? options.motiveFamily : null;
+  renderDataMode(workspace.dataEl(), data, family === null ? null : "motives");
+  const motives = data.document && Array.isArray(data.document.motives) ? data.document.motives : [];
+  if (family !== null && motives[family]) {
+    workspace.selectClaim(motives[family]);
+  }
 }
 
 /* The Notation row (R-110): the reading the analysis used, the meter
@@ -1390,7 +1397,7 @@ function buildNotationRow(data) {
 }
 
 /* Data mode: the Provenance list, then the claim tabs. */
-function renderDataMode(dataEl, data) {
+function renderDataMode(dataEl, data, tabId) {
   dataEl.innerHTML = `
     <div class="sidebar-label">Provenance</div>
     <dl id="analysis-provenance" class="provenance-list"></dl>
@@ -1398,7 +1405,7 @@ function renderDataMode(dataEl, data) {
     <div id="analysis-claims" class="analysis-claims"></div>
   `;
   renderProvenancePanel(data.document);
-  renderAnalysisTabs(data);
+  renderAnalysisTabs(data, tabId);
 }
 
 /* The metadata fields of the analysis document (buildProvenanceFields). */
@@ -1415,7 +1422,7 @@ function renderProvenancePanel(analysisDocument) {
   }
 }
 
-function renderAnalysisTabs(data) {
+function renderAnalysisTabs(data, initialTabId) {
   const tabsEl = document.getElementById("analysis-tabs");
   const claimsEl = document.getElementById("analysis-claims");
   const states = buildAllTabStates(data.document);
@@ -1444,7 +1451,7 @@ function renderAnalysisTabs(data) {
     tabsEl.appendChild(button);
   }
 
-  const firstFilled = states.find((state) => !state.empty);
+  const firstFilled = states.find((state) => state.tab.id === initialTabId && !state.empty) || states.find((state) => !state.empty);
   if (firstFilled) {
     selectTab(firstFilled.tab.id);
   } else {

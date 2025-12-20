@@ -62,6 +62,85 @@ function motiveLinksNames(choices) {
   };
 }
 
+/* Opens a piece's Analysis at one motive family. */
+function openMotiveFamily(pieceId, family) {
+  showAnalysisView(pieceId, { motiveFamily: family });
+}
+
+function motiveLinksTable(headings, rows) {
+  const table = materialsElement("table", "library-table");
+  const head = materialsElement("tr");
+  for (const label of headings) {
+    head.appendChild(materialsElement("th", "", label));
+  }
+  table.appendChild(head);
+  for (const cells of rows) {
+    const tr = materialsElement("tr");
+    for (const cell of cells) {
+      const td = materialsElement("td");
+      if (cell instanceof Node) {
+        td.appendChild(cell);
+      } else {
+        td.textContent = String(cell);
+      }
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+  }
+  const panel = materialsElement("section", "panel library-panel");
+  panel.appendChild(table);
+  return panel;
+}
+
+function motiveLinksPieceLink(row) {
+  const link = materialsElement("a", "clickable", row.title);
+  link.addEventListener("click", () => openMotiveFamily(row.piece, row.family));
+  return link;
+}
+
+/* The groups first, then the links table, of a done run's result. */
+function renderMotiveLinksResult(target, result) {
+  target.innerHTML = "";
+  const groups = MotiveLinksModel.groupRows(result);
+  target.appendChild(materialsElement("h2", "section-title", "Groups"));
+  if (groups.length === 0) {
+    target.appendChild(materialsElement("div", "piece-list-status", "No linked families."));
+  } else {
+    const rows = [];
+    groups.forEach((group, i) => {
+      for (const member of group.members) {
+        rows.push([i + 1, motiveLinksPieceLink(member), member.measures, member.degrees]);
+      }
+    });
+    target.appendChild(motiveLinksTable(["Group", "Piece", "Measures", "Degrees"], rows));
+  }
+
+  target.appendChild(materialsElement("h2", "section-title", "Links"));
+  const links = MotiveLinksModel.linkRows(result);
+  if (links.length === 0) {
+    target.appendChild(materialsElement("div", "piece-list-status", "No links found."));
+    return;
+  }
+  const rows = links.map((link) => [
+    motiveLinksPieceLink(link.a),
+    link.a.measures,
+    link.a.degrees,
+    motiveLinksPieceLink(link.b),
+    link.b.measures,
+    link.b.degrees,
+    link.steps,
+    link.distance,
+    link.kept.join(", "),
+    link.changed.join(", "),
+  ]);
+  target.appendChild(
+    motiveLinksTable(
+      ["Piece A", "Measures", "Degrees", "Piece B", "Measures", "Degrees", "Steps", "Distance", "Kept", "Changed"],
+      rows,
+    ),
+  );
+}
+
 async function renderMotiveLinksView() {
   stopMotiveLinksPolling();
   const content = getContentEl();
@@ -83,7 +162,9 @@ async function renderMotiveLinksView() {
   const progressEl = motiveLinksStatus("");
   const skippedEl = materialsElement("div", "piece-list-status");
   const resultEl = materialsElement("div");
-  content.append(controls, progressEl, skippedEl, resultEl);
+  const runsEl = materialsElement("div");
+  content.append(controls, progressEl, skippedEl, resultEl, materialsElement("h2", "section-title", "Earlier runs"), runsEl);
+  const names = motiveLinksNames(choices);
 
   function drawPickers() {
     pickers.innerHTML = "";
@@ -143,8 +224,62 @@ async function renderMotiveLinksView() {
     if (answer.data.run.status !== "running") {
       stopMotiveLinksPolling();
       run.disabled = false;
+      if (answer.data.run.status === "done") {
+        renderMotiveLinksResult(resultEl, answer.data.run.result);
+      }
+      loadRuns();
     }
   }
+
+  async function openRun(id) {
+    const answer = await fetchJsonResult(`/api/links/runs/${id}`);
+    if (!answer.ok || !answer.data || !answer.data.run) {
+      progressEl.textContent = (answer.data && (answer.data.message || answer.data.error)) || "Could not read the run";
+      progressEl.classList.add("error");
+      return;
+    }
+    progressEl.classList.remove("error");
+    showRun(answer.data.run);
+    resultEl.innerHTML = "";
+    if (answer.data.run.status === "done") {
+      renderMotiveLinksResult(resultEl, answer.data.run.result);
+    }
+  }
+
+  async function deleteRun(id) {
+    const answer = await fetchJsonResult(`/api/links/runs/${id}`, { method: "DELETE" });
+    if (!answer.ok) {
+      progressEl.textContent = (answer.data && (answer.data.message || answer.data.error)) || "Could not delete the run";
+      progressEl.classList.add("error");
+      return;
+    }
+    loadRuns();
+  }
+
+  async function loadRuns() {
+    const answer = await fetchJsonResult("/api/links/runs");
+    runsEl.innerHTML = "";
+    const rows = MotiveLinksModel.runRows(answer.ok && answer.data ? answer.data.runs : [], names);
+    if (rows.length === 0) {
+      runsEl.appendChild(materialsElement("div", "piece-list-status", "No earlier runs."));
+      return;
+    }
+    const list = materialsElement("ul", "materials-list");
+    for (const row of rows) {
+      const li = materialsElement("li");
+      const open = materialsElement("a", "clickable", row.label);
+      open.addEventListener("click", () => openRun(row.id));
+      li.append(open, document.createTextNode(row.progress ? ` (${row.progress}) ` : " "));
+      const del = materialsElement("button", "", "Delete");
+      del.type = "button";
+      del.disabled = row.status === "running";
+      del.addEventListener("click", () => deleteRun(row.id));
+      li.appendChild(del);
+      list.appendChild(li);
+    }
+    runsEl.appendChild(list);
+  }
+  loadRuns();
 
   run.addEventListener("click", async () => {
     const body = MotiveLinksModel.scopeBody(selection);
