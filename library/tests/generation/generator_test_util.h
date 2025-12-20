@@ -48,8 +48,8 @@ static inline GenerationPlan *test_make_plan(const char *plan_id) {
     Intent *intent = NULL;
     char intent_id[128];
     snprintf(intent_id, sizeof(intent_id), "intent-for-%s", plan_id);
-    assert(intent_create(test_id(intent_id), "counter-melody", "8-measure phrase", NULL, NULL, NULL, NULL, NULL,
-                         &intent) == INTENT_OK);
+    assert(intent_create(test_id(intent_id), "counter-melody", "8-measure phrase", NULL, NULL, NULL, NULL, NULL, 0, NULL, 0,
+                         NULL, test_absent_provenance(), &intent) == INTENT_OK);
     ConstraintExtraction *constraints = NULL;
     assert(constraint_extraction_create(NULL, 0, NULL, 0, &constraints) == CONSTRAINT_EXTRACTION_OK);
     GenerationPlan *plan = NULL;
