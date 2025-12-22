@@ -7050,3 +7050,23 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 322, beat 2 to m. 322, beat 2.5 | 1057 | voices 1 and 2 |
 | m. 337, beat 1.5 to m. 337, beat 2 | 1091 | voices 1 and 2 |
 | m. 338, beat 1 to m. 338, beat 2 | 1094 | voices 1 and 2 |
+
+## Schemas and sequences
+
+The library's galant-schemas adapter matched its schema prototypes against the outer voices: the soprano and bass degree of each chord in its local key, with the chord's Roman numeral and the strength of its beat. Each match lists its stages by the measure they start in and the soprano and bass degrees found there (b is lowered, # raised; a stage with no soprano reads "-" and matches on the bass alone). Frame is the key the stages are read in, as a degree of the home key (1 is the home key). Confidence is the library's: the share of stages whose voices match, times the metric fit, times one minus the mean uncertainty of the chords.
+
+| Measures | Schema | Function | Stages (soprano/bass) | Frame | Confidence |
+| --- | --- | --- | --- | --- | --- |
+| mm. 305 to 308 | jupiter | opening-gambit | m. 305 1/b3, m. 305 2/7, m. 307 4/1, m. 308 3/#5 | 4 | 0.25 |
+
+### Sequences
+
+The library's scale-harmonization adapter found a model of one or more chords repeated, transposed by a constant diatonic interval, at least three times. Kind is the library's name for it when its rules for that pattern hold over whole units (rule-backed); the cycle of fifths has no rule in the library yet, so it is found from the Roman numerals alone. Units is how often the model sounds and, in brackets, how many chords it has; Steps the bass's diatonic steps from one unit to the next (up is positive). Stages read as in the schemas, in the home key.
+
+| Measures | Kind | Rule-backed | Direction | Units (chords each) | Steps | Stages (soprano/bass) | Confidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| mm. 18 to 21 | cycle-of-fifths | no | - | 4 (2) | -1 | m. 18 5/3, m. 18 1/4, m. 19 4/2, m. 19 7/3, m. 20 3/1, m. 20 6/2, m. 21 2/7, m. 21 1/1 | 0.04 |
+| mm. 46 to 49 | cycle-of-fifths | no | - | 4 (2) | -1 | m. 46 5/3, m. 46 1/4, m. 47 4/2, m. 47 7/3, m. 48 3/1, m. 48 6/2, m. 49 2/7, m. 49 1/1 | 0.04 |
+| mm. 91 to 94 | cycle-of-fifths | no | - | 4 (2) | -1 | m. 91 1/6, m. 91 4/b7, m. 92 b7/5, m. 92 3/6, m. 93 6/4, m. 93 2/5, m. 94 5/3, m. 94 4/4 | 0.02 |
+| mm. 136 to 139 | cycle-of-fifths | no | - | 4 (2) | -1 | m. 136 1/6, m. 136 4/b7, m. 137 b7/5, m. 137 3/6, m. 138 6/4, m. 138 2/5, m. 139 5/3, m. 139 4/4 | 0.02 |
+| m. 283 | parallel-chords | yes | descending | 3 (1) | -1 | m. 283 b2/b2, m. 283 1/1, m. 283 7/7 | 0.48 |

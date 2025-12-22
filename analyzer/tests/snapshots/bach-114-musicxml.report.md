@@ -991,3 +991,18 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 23, beat 4 to m. 24, beat 1 | seventh-resolves-down | 0 |
 
 6 chords with three or more voices sounding: the root is doubled in 2, the third in 0, the fifth in 4, the seventh in 0, no member doubled in 0. Doubling is counted, not judged. Spacing is judged by the library for the 6 chords with four voices all sounding: 0 too wide.
+
+## Schemas and sequences
+
+The library's galant-schemas adapter matched its schema prototypes against the outer voices: the soprano and bass degree of each chord in its local key, with the chord's Roman numeral and the strength of its beat. Each match lists its stages by the measure they start in and the soprano and bass degrees found there (b is lowered, # raised; a stage with no soprano reads "-" and matches on the bass alone). Frame is the key the stages are read in, as a degree of the home key (1 is the home key). Confidence is the library's: the share of stages whose voices match, times the metric fit, times one minus the mean uncertainty of the chords.
+
+No galant schema was found.
+
+### Sequences
+
+The library's scale-harmonization adapter found a model of one or more chords repeated, transposed by a constant diatonic interval, at least three times. Kind is the library's name for it when its rules for that pattern hold over whole units (rule-backed); the cycle of fifths has no rule in the library yet, so it is found from the Roman numerals alone. Units is how often the model sounds and, in brackets, how many chords it has; Steps the bass's diatonic steps from one unit to the next (up is positive). Stages read as in the schemas, in the home key.
+
+| Measures | Kind | Rule-backed | Direction | Units (chords each) | Steps | Stages (soprano/bass) | Confidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| mm. 16 to 17 | parallel-chords | yes | descending | 3 (1) | -1 | m. 16 5/3, m. 16 4/2, m. 17 3/1 | 0.27 |
+| mm. 22 to 23 | parallel-chords | yes | descending | 3 (1) | -1 | m. 22 5/3, m. 22 4/2, m. 23 3/1 | 0.31 |
