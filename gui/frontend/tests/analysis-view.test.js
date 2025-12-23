@@ -192,7 +192,7 @@ check(
   appSource.includes("renderProvenancePanel(data.document)") && appSource.includes('class="sidebar-label">Provenance'),
   "Data mode lists the Provenance fields above the claim tabs",
 );
-check(appSource.includes("renderAnalysisTabs(data)"), "Data mode renders the claim tabs");
+check(appSource.includes("renderAnalysisTabs(data, tabId)"), "Data mode renders the claim tabs");
 check(appSource.includes("Re-run analysis") && appSource.includes("reanalyzePiece(id)"), "the toolbar offers Re-run analysis");
 check(appSource.includes("content--workspace") && appSource.includes("leaveWorkspace()"), "the content area is a workspace only while a piece is open");
 const indexSource = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");

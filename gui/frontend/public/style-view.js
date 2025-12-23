@@ -3,7 +3,18 @@
  * DOM. statistics is {dimension: {category: {labels: [{label, count,
  * total}], more}}}. */
 (function (root) {
+  /* Titles that are not the key spelled out: the motive categories. */
+  const CATEGORY_TITLES = {
+    "motive-degrees": "Motive degrees",
+    "motive-intervals": "Motive intervals",
+    "motive-rhythm": "Motive rhythms",
+    "motive-nct-figure": "Non-chord tones in motives",
+  };
+
   function titleOf(key) {
+    if (Object.prototype.hasOwnProperty.call(CATEGORY_TITLES, key)) {
+      return CATEGORY_TITLES[key];
+    }
     const text = String(key || "").replace(/[_-]+/g, " ").trim();
     return text ? text[0].toUpperCase() + text.slice(1) : "";
   }

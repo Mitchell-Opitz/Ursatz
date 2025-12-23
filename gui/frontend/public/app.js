@@ -10,6 +10,7 @@ const TOOLS = [
   { id: "themes", label: "Themes", active: false, render: () => renderMaterialsView("theme") },
   { id: "pieces", label: "Pieces", active: false, render: () => renderMaterialsView("piece") },
   { id: "subjects", label: "Subjects", active: false, render: renderSubjectsView },
+  { id: "motive-links", label: "Motive links", active: false, render: renderMotiveLinksView },
   { id: "health", label: "Health", active: false, render: renderHealthView },
 ];
 
@@ -1200,7 +1201,9 @@ function leaveWorkspace() {
   getContentEl().classList.remove("content--workspace");
 }
 
-function showAnalysisView(id) {
+/* options.motiveFamily opens the Data mode Motives tab and shows that family
+ * on the score. */
+function showAnalysisView(id, options) {
   lastAnalysisPieceId = id;
   setActiveTool("analysis");
   leaveWorkspace();
@@ -1219,7 +1222,7 @@ function showAnalysisView(id) {
         showAnalysisProblem(data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found");
         return;
       }
-      mountAnalysisWorkspace(content, id, data);
+      mountAnalysisWorkspace(content, id, data, options);
     })
     .catch((err) => {
       showAnalysisProblem(`Could not reach backend: ${err}`);
@@ -1252,7 +1255,7 @@ function analysisSubtitle(header) {
 
 /* Mounts the score workspace for a piece. Score mode is the default; Data
  * mode holds the Provenance list and the claim tabs. */
-function mountAnalysisWorkspace(content, id, data) {
+function mountAnalysisWorkspace(content, id, data, options) {
   const header = buildAnalysisHeader(data);
   const workspace = ScoreWorkspace.mount(content, {
     title: header.filename,
@@ -1284,7 +1287,12 @@ function mountAnalysisWorkspace(content, id, data) {
   });
   analysisWorkspace = workspace;
 
-  renderDataMode(workspace.dataEl(), data);
+  const family = options && Number.isInteger(options.motiveFamily) ? options.motiveFamily : null;
+  renderDataMode(workspace.dataEl(), data, family === null ? null : "motives");
+  const motives = data.document && Array.isArray(data.document.motives) ? data.document.motives : [];
+  if (family !== null && motives[family]) {
+    workspace.selectClaim(motives[family]);
+  }
 }
 
 /* The Notation row (R-110): the reading the analysis used, the meter
@@ -1389,7 +1397,7 @@ function buildNotationRow(data) {
 }
 
 /* Data mode: the Provenance list, then the claim tabs. */
-function renderDataMode(dataEl, data) {
+function renderDataMode(dataEl, data, tabId) {
   dataEl.innerHTML = `
     <div class="sidebar-label">Provenance</div>
     <dl id="analysis-provenance" class="provenance-list"></dl>
@@ -1397,7 +1405,7 @@ function renderDataMode(dataEl, data) {
     <div id="analysis-claims" class="analysis-claims"></div>
   `;
   renderProvenancePanel(data.document);
-  renderAnalysisTabs(data);
+  renderAnalysisTabs(data, tabId);
 }
 
 /* The metadata fields of the analysis document (buildProvenanceFields). */
@@ -1414,7 +1422,7 @@ function renderProvenancePanel(analysisDocument) {
   }
 }
 
-function renderAnalysisTabs(data) {
+function renderAnalysisTabs(data, initialTabId) {
   const tabsEl = document.getElementById("analysis-tabs");
   const claimsEl = document.getElementById("analysis-claims");
   const states = buildAllTabStates(data.document);
@@ -1423,7 +1431,7 @@ function renderAnalysisTabs(data) {
     for (const button of tabsEl.querySelectorAll("button")) {
       button.classList.toggle("active", button.dataset.tabId === tabId);
     }
-    renderTabBlocks(claimsEl, states.find((state) => state.tab.id === tabId), data.note_xml_ids);
+    renderTabBlocks(claimsEl, states.find((state) => state.tab.id === tabId), data.note_xml_ids, data.id);
     if (tabId === "rhythm-meter") {
       claimsEl.prepend(buildNotationRow(data));
     }
@@ -1443,7 +1451,7 @@ function renderAnalysisTabs(data) {
     tabsEl.appendChild(button);
   }
 
-  const firstFilled = states.find((state) => !state.empty);
+  const firstFilled = states.find((state) => state.tab.id === initialTabId && !state.empty) || states.find((state) => !state.empty);
   if (firstFilled) {
     selectTab(firstFilled.tab.id);
   } else {
@@ -1462,8 +1470,14 @@ function showClaimOnScore(claim) {
  * when it is an object, and its rows. A row is a claim: label, where it
  * is, and a toggle for its remaining fields. Choosing a row shows its
  * claim on the score (showClaimOnScore). */
-function renderTabBlocks(claimsEl, state, noteXmlIds) {
+function renderTabBlocks(claimsEl, state, noteXmlIds, pieceId) {
   claimsEl.innerHTML = "";
+  let pieceLinks = null;
+  if (state.tab.id === "motives" && pieceId) {
+    pieceLinks = fetchJsonResult(`/api/links/pieces/${pieceId}`).then((answer) =>
+      answer.ok && answer.data && Array.isArray(answer.data.links) ? answer.data.links : [],
+    );
+  }
 
   for (const block of state.blocks) {
     if (block.kind === "empty") {
@@ -1483,12 +1497,51 @@ function renderTabBlocks(claimsEl, state, noteXmlIds) {
     }
 
     if (block.rows.length > 0) {
-      claimsEl.appendChild(buildClaimRows(block.rows, noteXmlIds));
+      claimsEl.appendChild(buildClaimRows(block.rows, noteXmlIds, pieceId, pieceLinks));
     }
   }
 }
 
-function buildClaimRows(rows, noteXmlIds) {
+/* A motive family's features and its Linked list (links from the newest run
+ * of each scope; pieceLinks resolves to GET /api/links/pieces/<id> entries). */
+function buildMotiveExtras(row, pieceId, pieceLinks) {
+  const extras = document.createElement("div");
+  extras.classList.add("claim-row-extras");
+  for (const [name, value] of row.features) {
+    const line = document.createElement("div");
+    line.textContent = `${name}: ${value}`;
+    extras.appendChild(line);
+  }
+  const linked = document.createElement("div");
+  linked.textContent = "Linked: loading...";
+  extras.appendChild(linked);
+  pieceLinks.then((entries) => {
+    const links = MotiveLinksModel.pieceLinkRows(entries, pieceId, row.family);
+    linked.textContent = "";
+    if (links.length === 0) {
+      linked.textContent = "No links yet. Run Motive links over a scope with this piece.";
+      return;
+    }
+    linked.appendChild(document.createTextNode("Linked:"));
+    const list = document.createElement("ul");
+    for (const link of links) {
+      const li = document.createElement("li");
+      const open = document.createElement("a");
+      open.classList.add("clickable");
+      open.textContent = link.title;
+      open.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showAnalysisView(link.piece, { motiveFamily: link.family });
+      });
+      li.append(open, document.createTextNode(` ${link.measures}, ${link.steps} (${link.distance})`));
+      list.appendChild(li);
+    }
+    linked.appendChild(list);
+  });
+  return extras;
+}
+
+function buildClaimRows(rows, noteXmlIds, pieceId, pieceLinks) {
   const list = document.createElement("ul");
   list.classList.add("claim-list");
   for (const row of rows) {
@@ -1511,6 +1564,9 @@ function buildClaimRows(rows, noteXmlIds) {
     line.appendChild(where);
     line.appendChild(toggle);
     li.appendChild(line);
+    if (pieceLinks && row.family !== null) {
+      li.appendChild(buildMotiveExtras(row, pieceId, pieceLinks));
+    }
 
     const json = document.createElement("pre");
     json.classList.add("json-block");
