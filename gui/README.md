@@ -126,6 +126,19 @@ remove), a picker over the existing subjects, and a name and kind to create
 one inline. The sidebar panel refreshes after any subject or link change.
 Style tags are separate and unchanged.
 
+### Motive links view
+
+The Motive links entry (after Subjects) shows which motive families of different pieces are variants of one another
+(routes: "Motive links routes"). A scope picker offers All Library pieces, Collection, Composer / Source / Tag
+(any of the three), Subject and Project, each with a picker over the existing lists. Run starts a run and the
+progress line reads `Comparing <done> of <total> pairs`, polled every second; when it is done it reads
+`compared <n>, cached <n> of <n> pairs`, with the skipped pieces beside it. The result lists the groups of linked
+families first (piece, measures, degrees; a click opens that piece's Analysis on the motive), then the links table
+(both sides with measures and degrees, the steps joined by "then", the distance as a percent, and the dimensions kept
+and changed). Earlier runs are listed with their scope and date; each opens or is deleted. The model is
+`frontend/public/motive-links-model.js` (global `MotiveLinksModel`: `scopeBody`, `progressText`, `linkRows`,
+`groupRows`, `motiveFeatureRows`, `pieceLinkRows`); the DOM is `motive-links-view.js`.
+
 ### Composer view
 
 The Composer entry drives the Composer routes (see Composer routes below).
@@ -264,6 +277,10 @@ There is one tab per group of document sections, in this order:
 | Markings | `markings` |
 | Counterpoint | `counterpoint_check` |
 | Notes | `notes` |
+
+In the Motives tab each family shows its features (degrees, intervals, rhythm, non-chord tones by note) and a
+"Linked" list from `GET /api/links/pieces/<id>` (the other piece, its measures and the steps, each opening that
+piece on the motive); with none it reads "No links yet. Run Motive links over a scope with this piece."
 
 A tab shows the number of rows it holds. A tab whose sections are all empty
 arrays or null is disabled and reads "(none)".
@@ -1234,6 +1251,8 @@ Tags and Actions.
   analysis), the skipped pieces with the reason, and what the style learned:
   for each dimension and category the most common labels as a bar of
   `count/total` with the fraction as text, then "and <n> more".
+  The four motive categories read "Motive degrees", "Motive intervals", "Motive rhythms" and "Non-chord tones in
+  motives".
 
 ### Score layers
 
