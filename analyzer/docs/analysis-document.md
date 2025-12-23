@@ -35,7 +35,7 @@ newline. The same input and build always give the same bytes.
 | `rhythm` | array of rhythm claims | Filled: the library's density, syncopation, hemiola, hypermeter and tuplet results, one flat list labelled by kind. See below. |
 | `texture` | array of texture claims | Filled: the library's texture passages and the changes between them, one flat list labelled by kind. See below. |
 | `voice_leading` | array of voice leading claims | Filled: the library's motion, parallel and direct perfect intervals, unresolved tendency tones, and doubling and spacing, one flat list labelled by kind. See below. |
-| `schemas` | array | Placeholder: `[]`. |
+| `schemas` | array of schema and sequence claims | Filled: the library's galant schemas and harmonic sequences, one flat list labelled by kind. See below. |
 | `progressions` | array of progression entries | Filled: the recurring progressions of two to six chords. See below. |
 | `harmonic_rhythm` | object or null | Filled: changes of harmony per measure and the approach to cadences. See below; `null` when the piece has no chords the meter can place. |
 | `markings` | object or null | Placeholder: `null`. |
@@ -905,6 +905,46 @@ chord; `span` is the chord's and `note_ids` are the sounding voices' notes, top 
 The Markdown report renders `## Voice leading` from this section: the motion counts and table, the faults with their
 locations, and the doubling summary with the chords whose spacing is too wide.
 
+### Schemas and sequences
+
+`schemas` is one flat array of claims, each labelled by the result it is: the `"schema"` claims in order of their first
+stage, then the `"sequence"` claims in order of their first segment. The analyzer builds the neutral input of the
+galant-schemas and scale-harmonization adapters in `src/pipeline/schema_pipeline.c`, ported from
+`tests/integration/schema_util.h`, and copies the library's matches. A claim's `framework` is the library's own:
+`"galant-schemas-v1"` for schemas and `"scale-harmonization-v1"` for sequences. `span` runs from the first chord the
+claim uses to the end of the last, `note_ids` are the notes sounding in them and `uncertainty` is 1 less the library's
+confidence. A degree is `{"degree", "alteration"}`: the library's letter distance from the tonic (1 to 7) and the
+alteration in semitones against the major scale (-1 lowered, +1 raised). A piece with no key region has an empty `schemas`.
+
+**Schema** (`label` `"schema"`):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `name` | string | The library's schema name (`"romanesca"`, `"prinner"`, `"jupiter"`, ...). |
+| `function` | string | The library's: `"opening-gambit"`, `"continuation"`, `"pre-cadential"`, `"cadence"` or `"post-cadential"`. |
+| `measures` | object | `{"first", "last"}`: the measures of the first stage and of the last chord used. |
+| `frame` | degree | The key the stages were read in, as a degree of the home key (`1` is the home key itself). |
+| `bass_only_stages` | integer | Stages matched on the bass alone (the library allows one). |
+| `confidence` | object | The library's `{"pair_share", "metric_fit", "mean_uncertainty", "overall"}`, each in [0, 1]. |
+| `stages` | array | Per stage: `span`, `location`, `measure`, `soprano` (a degree, null for a bass-only stage), `second_soprano` (the second note of a two-note stage, else null), `bass` (a degree), `bass_only` and `credit` (1, 0.75 or 0.5). |
+
+**Sequence** (`label` `"sequence"`):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `kind` | string | The library's: `"parallel-chords"`, `"five-six"`, `"seven-six"`, `"two-three"` or `"cycle-of-fifths"`. |
+| `pattern` | string or null | The library's pattern name; null for the cycle of fifths, which no pattern encodes. |
+| `rule_backed` | boolean | The library's own rules hold over whole units; false for the cycle of fifths, found from the Roman numerals alone. |
+| `direction` | string or null | `"ascending"` or `"descending"`; null for the cycle of fifths. |
+| `unit_length`, `units` | integer | Chord segments in one model, and how often it sounds (3 or more). |
+| `transposition_steps` | integer | The bass, in diatonic steps, from the start of one unit to the next (up is positive). |
+| `measures` | object | `{"first", "last"}` as for a schema. |
+| `confidence` | object | The library's `{"unit_share", "soprano_bonus", "mean_uncertainty", "overall"}`. |
+| `stages` | array | Per segment: `span`, `location`, `measure`, `bass`, `soprano` and `root` (degrees in the home key; soprano and root null where the segment has none). |
+
+The Markdown report renders `## Schemas and sequences` from this section: a table of the schemas with their stages, and a
+`### Sequences` table.
+
 ### Progressions
 
 `progressions` lists the chord progressions that recur, counted over the library's Roman numerals (counting is not
@@ -981,7 +1021,8 @@ before those:
   filled (its object is new), which is additive. `motives` is filled (its claims are new), which is additive. `melody` is filled
   (its claims are new), which is additive. `rhythm` is filled (its claims are new, as one flat array labelled by kind),
   which is additive. `texture` is filled (its claims are new, as one flat array labelled by kind), which is additive.
-  `voice_leading` is filled (its claims are new, as one flat array labelled by kind), which is additive.
+  `voice_leading` is filled (its claims are new, as one flat array labelled by kind), which is additive. `schemas` is
+  filled (its claims are new, as one flat array labelled by kind), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,

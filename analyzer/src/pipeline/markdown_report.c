@@ -2194,6 +2194,125 @@ static bool render_voice_leading(StringBuilder *sb, const cJSON *document, const
            render_voice_chords(sb, voice_leading);
 }
 
+/* ---- Schemas and sequences ---- */
+
+/* A galant degree as it reads in a score: the letter distance from the tonic with a flat or sharp for its alteration
+   against the major scale ("3", "b3", "#4"); "-" for a null degree. */
+static bool append_galant_degree(StringBuilder *sb, const cJSON *degree) {
+    if (!cJSON_IsObject(degree)) {
+        return sb_append(sb, "-");
+    }
+    int alteration = (int)number_member(degree, "alteration");
+    const char *mark = alteration < 0 ? "b" : (alteration > 0 ? "#" : "");
+    return sb_appendf(sb, "%s%d", mark, (int)number_member(degree, "degree"));
+}
+
+/* "m. 1 1/1, m. 2 7/5": the measure, soprano degree and bass degree of each stage (a two-note stage shows both
+   soprano degrees, a bass-only stage "-"). */
+static bool append_schema_stages(StringBuilder *sb, const cJSON *stages) {
+    bool ok = true;
+    bool first = true;
+    const cJSON *stage;
+    cJSON_ArrayForEach(stage, stages) {
+        const cJSON *second = cJSON_GetObjectItemCaseSensitive(stage, "second_soprano");
+        ok = ok && (first || sb_append(sb, ", ")) && sb_appendf(sb, "m. %d ", (int)number_member(stage, "measure")) &&
+             append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "soprano")) &&
+             (!cJSON_IsObject(second) || (sb_append(sb, "+") && append_galant_degree(sb, second))) &&
+             sb_append(sb, "/") && append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "bass"));
+        first = false;
+    }
+    return ok;
+}
+
+static bool render_schema_matches(StringBuilder *sb, const cJSON *schemas) {
+    bool ok = sb_append(sb, "| Measures | Schema | Function | Stages (soprano/bass) | Frame | Confidence |\n"
+                            "| --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, schemas) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "schema")) {
+            continue;
+        }
+        char overall[32];
+        format_number(number_member(cJSON_GetObjectItemCaseSensitive(claim, "confidence"), "overall"), overall,
+                      sizeof(overall));
+        ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+             sb_appendf(sb, " | %s | %s | ", string_member(claim, "name"), string_member(claim, "function")) &&
+             append_schema_stages(sb, cJSON_GetObjectItemCaseSensitive(claim, "stages")) && sb_append(sb, " | ") &&
+             append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(claim, "frame")) &&
+             sb_appendf(sb, " | %s |\n", overall);
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* "m. 1 1/b3": the measure and the bass, soprano and root degrees of each stage of a sequence, in the home key. */
+static bool append_sequence_stages(StringBuilder *sb, const cJSON *stages) {
+    bool ok = true;
+    bool first = true;
+    const cJSON *stage;
+    cJSON_ArrayForEach(stage, stages) {
+        ok = ok && (first || sb_append(sb, ", ")) && sb_appendf(sb, "m. %d ", (int)number_member(stage, "measure")) &&
+             append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "soprano")) && sb_append(sb, "/") &&
+             append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "bass"));
+        first = false;
+    }
+    return ok;
+}
+
+static bool render_sequence_matches(StringBuilder *sb, const cJSON *schemas) {
+    bool ok = sb_append(sb, "### Sequences\n\n") &&
+              sb_append(sb, "The library's scale-harmonization adapter found a model of one or more chords repeated, "
+                            "transposed by a constant diatonic interval, at least three times. Kind is the library's "
+                            "name for it when its rules for that pattern hold over whole units (rule-backed); the "
+                            "cycle of fifths has no rule in the library yet, so it is found from the Roman numerals "
+                            "alone. Units is how often the model sounds and, in brackets, how many chords it has; Steps the bass's "
+                            "diatonic steps from one unit to the next (up is positive). Stages read as in the "
+                            "schemas, in the home key.\n\n") &&
+              sb_append(sb, "| Measures | Kind | Rule-backed | Direction | Units (chords each) | Steps | Stages (soprano/bass) | "
+                            "Confidence |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, schemas) {
+        if (!ok) {
+            break;
+        }
+        if (!has_label(claim, "sequence")) {
+            continue;
+        }
+        const char *direction = string_member(claim, "direction");
+        char overall[32];
+        format_number(number_member(cJSON_GetObjectItemCaseSensitive(claim, "confidence"), "overall"), overall,
+                      sizeof(overall));
+        ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
+             sb_appendf(sb, " | %s | %s | %s | %d (%d) | %+d | ", string_member(claim, "kind"),
+                        cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(claim, "rule_backed")) ? "yes" : "no",
+                        direction ? direction : "-", (int)number_member(claim, "units"),
+                        (int)number_member(claim, "unit_length"), (int)number_member(claim, "transposition_steps")) &&
+             append_sequence_stages(sb, cJSON_GetObjectItemCaseSensitive(claim, "stages")) &&
+             sb_appendf(sb, " | %s |\n", overall);
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+/* The schema claims and the sequence claims are one flat list, each labelled by the result it is. */
+static bool render_schemas(StringBuilder *sb, const cJSON *document, const cJSON *schemas) {
+    (void)document;
+    bool ok = sb_append(sb, "## Schemas and sequences\n\n") &&
+              sb_append(sb, "The library's galant-schemas adapter matched its schema prototypes against the outer "
+                            "voices: the soprano and bass degree of each chord in its local key, with the chord's "
+                            "Roman numeral and the strength of its beat. Each match lists its stages by the measure "
+                            "they start in and the soprano and bass degrees found there (b is lowered, # raised; a "
+                            "stage with no soprano reads \"-\" and matches on the bass alone). Frame is the key the "
+                            "stages are read in, as a degree of the home key (1 is the home key). Confidence is the "
+                            "library's: the share of stages whose voices match, times the metric fit, times one minus "
+                            "the mean uncertainty of the chords.\n\n");
+    ok = ok && (has_claims(schemas, "schema") ? render_schema_matches(sb, schemas)
+                                               : sb_append(sb, "No galant schema was found.\n\n"));
+    return ok && (!has_claims(schemas, "sequence") || render_sequence_matches(sb, schemas));
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -2225,6 +2344,7 @@ static const struct {
     {"rhythm", render_rhythm},
     {"texture", render_texture},
     {"voice_leading", render_voice_leading},
+    {"schemas", render_schemas},
 };
 
 static bool section_is_empty(const cJSON *section) {

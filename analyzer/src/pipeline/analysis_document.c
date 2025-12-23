@@ -3395,6 +3395,205 @@ static cJSON *voice_leading_json(const ImportedNotes *notes, const AnalysisRepor
     return list;
 }
 
+/* ---- Schemas and sequences ---- */
+
+/* The measure a time lies in, as the library numbers them (a pickup is 0); 0 when the position cannot be read. */
+static int measure_of_time(const MeterMap *map, Rational time) {
+    MusicalTime *musical_time = NULL;
+    MetricalPosition *position = NULL;
+    int measure = 0;
+    if (musical_time_create((long)time.num, (unsigned long)time.den, &musical_time) != MUSICAL_TIME_OK) {
+        return 0;
+    }
+    if (metrical_position_from_time(map, musical_time, &position) == METRICAL_POSITION_OK) {
+        measure = metrical_position_measure(position);
+        metrical_position_destroy(position);
+    }
+    musical_time_destroy(musical_time);
+    return measure;
+}
+
+/* A degree as the library's galant-schemas reads it: the letter distance from the tonic (1 to 7) and the alteration in
+   semitones against the major scale (-1 lowered, +1 raised). */
+static cJSON *galant_degree_json(int degree, int alteration) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "degree", cJSON_CreateNumber(degree)) &&
+                    add(object, "alteration", cJSON_CreateNumber(alteration)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The first and last measure of the chords entries[first..last] start in. */
+static cJSON *entry_measures_json(const ImportedNotes *notes, const AnalysisReport *report, size_t first, size_t last) {
+    const MeterMap *map = notes->meter.meter_map;
+    return measures_json(measure_of_time(map, entry_start_time(&report->entries[first])),
+                         measure_of_time(map, entry_start_time(&report->entries[last])));
+}
+
+/* One stage of a schema: where it sits (span, location and the measure it starts in), the soprano degree the library
+   matched (null for a bass-only stage), a two-note stage's second soprano degree (otherwise null), the bass degree and
+   the stage's credit. */
+static cJSON *schema_stage_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                const AnalysisSchemaStage *stage) {
+    Rational start = entry_start_time(&report->entries[stage->first_entry]);
+    Rational end = entry_end_time(&report->entries[stage->last_entry]);
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "span", span_json(start, end)) &&
+          add(object, "location", location_json(notes->meter.meter_map, start, end)) &&
+          add(object, "measure", cJSON_CreateNumber(measure_of_time(notes->meter.meter_map, start))) &&
+          add(object, "soprano",
+              stage->has_melody ? galant_degree_json(stage->melody_degree, stage->melody_alteration)
+                                : cJSON_CreateNull()) &&
+          add(object, "second_soprano",
+              stage->has_second ? galant_degree_json(stage->second_degree, stage->second_alteration)
+                                : cJSON_CreateNull()) &&
+          add(object, "bass", galant_degree_json(stage->bass_degree, stage->bass_alteration)) &&
+          add(object, "bass_only", cJSON_CreateBool(stage->bass_only)) &&
+          add(object, "credit", cJSON_CreateNumber(stage->credit)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *schema_stages_json(const ImportedNotes *notes, const AnalysisReport *report, const AnalysisSchema *schema) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < schema->stage_count; i++) {
+        if (!append(list, schema_stage_json(notes, report, &schema->stages[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* One claim per schema, in order of the first stage. The claim's span runs from the first stage's chord to the last
+   chord the stages use. frame is the key the stages were read in, as a degree of the home key; confidence holds the
+   library's parts (pair share, metric fit, mean uncertainty) and the whole. Everything else is the library's: the name,
+   function, stages and degrees. */
+static cJSON *schema_json(const ImportedNotes *notes, const AnalysisReport *report, const AnalysisSchema *schema) {
+    size_t id_count = 0;
+    size_t *ids = entry_range_note_ids(report, schema->first_entry, schema->last_entry, &id_count);
+    cJSON *claim = ids ? claim_json_with(schema->framework, notes, ids, id_count,
+                                         entry_start_time(&report->entries[schema->first_entry]),
+                                         entry_end_time(&report->entries[schema->last_entry]), "schema",
+                                         cJSON_CreateNumber(schema->uncertainty))
+                       : NULL;
+    free(ids);
+    cJSON *confidence = cJSON_CreateObject();
+    bool taken = false; /* add() takes the confidence over, and frees it itself when it fails */
+    if (!(claim && confidence && add(confidence, "pair_share", cJSON_CreateNumber(schema->pair_share)) &&
+          add(confidence, "metric_fit", cJSON_CreateNumber(schema->metric_fit)) &&
+          add(confidence, "mean_uncertainty", cJSON_CreateNumber(schema->mean_uncertainty)) &&
+          add(confidence, "overall", cJSON_CreateNumber(schema->confidence)) &&
+          add(claim, "name", cJSON_CreateString(schema->name)) &&
+          add(claim, "function", cJSON_CreateString(schema->function)) &&
+          add(claim, "measures", entry_measures_json(notes, report, schema->first_entry, schema->last_entry)) &&
+          add(claim, "frame", galant_degree_json(schema->frame_degree, schema->frame_alteration)) &&
+          add(claim, "bass_only_stages", cJSON_CreateNumber((double)schema->bass_only_stages)) &&
+          (taken = true, add(claim, "confidence", confidence)) &&
+          add(claim, "stages", schema_stages_json(notes, report, schema)))) {
+        if (!taken) {
+            cJSON_Delete(confidence);
+        }
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* One stage of a sequence: where it sits and the bass, soprano and chord root degrees the library read there in the home
+   key (soprano and root null where the segment has none). */
+static cJSON *sequence_stage_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                  const AnalysisSequenceStage *stage) {
+    Rational start = entry_start_time(&report->entries[stage->first_entry]);
+    Rational end = entry_end_time(&report->entries[stage->last_entry]);
+    cJSON *object = cJSON_CreateObject();
+    if (!(object && add(object, "span", span_json(start, end)) &&
+          add(object, "location", location_json(notes->meter.meter_map, start, end)) &&
+          add(object, "measure", cJSON_CreateNumber(measure_of_time(notes->meter.meter_map, start))) &&
+          add(object, "bass", galant_degree_json(stage->bass_degree, stage->bass_alteration)) &&
+          add(object, "soprano",
+              stage->has_soprano ? galant_degree_json(stage->soprano_degree, stage->soprano_alteration)
+                                 : cJSON_CreateNull()) &&
+          add(object, "root",
+              stage->has_root ? galant_degree_json(stage->root_degree, stage->root_alteration) : cJSON_CreateNull()))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *sequence_stages_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                   const AnalysisSequence *sequence) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < sequence->stage_count; i++) {
+        if (!append(list, sequence_stage_json(notes, report, &sequence->stages[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
+/* One claim per sequence, in order of the first segment. The claim's span runs from the first segment to the end of
+   the last; the label is "sequence". kind is the library's name for what repeats; pattern and direction are null where
+   the library encodes none (the cycle of fifths has no rule, so rule_backed is false). */
+static cJSON *sequence_json(const ImportedNotes *notes, const AnalysisReport *report, const AnalysisSequence *sequence) {
+    size_t id_count = 0;
+    size_t *ids = entry_range_note_ids(report, sequence->first_entry, sequence->last_entry, &id_count);
+    cJSON *claim = ids ? claim_json_with(sequence->framework, notes, ids, id_count,
+                                         entry_start_time(&report->entries[sequence->first_entry]),
+                                         entry_end_time(&report->entries[sequence->last_entry]), "sequence",
+                                         cJSON_CreateNumber(sequence->uncertainty))
+                       : NULL;
+    free(ids);
+    cJSON *confidence = cJSON_CreateObject();
+    bool taken = false; /* add() takes the confidence over, and frees it itself when it fails */
+    if (!(claim && confidence && add(confidence, "unit_share", cJSON_CreateNumber(sequence->unit_share)) &&
+          add(confidence, "soprano_bonus", cJSON_CreateNumber(sequence->soprano_bonus)) &&
+          add(confidence, "mean_uncertainty", cJSON_CreateNumber(sequence->mean_uncertainty)) &&
+          add(confidence, "overall", cJSON_CreateNumber(sequence->confidence)) &&
+          add(claim, "kind", cJSON_CreateString(sequence->kind)) &&
+          add(claim, "pattern", optional_string_json(sequence->pattern)) &&
+          add(claim, "rule_backed", cJSON_CreateBool(sequence->rule_backed)) &&
+          add(claim, "direction", optional_string_json(sequence->direction)) &&
+          add(claim, "unit_length", cJSON_CreateNumber(sequence->unit_length)) &&
+          add(claim, "units", cJSON_CreateNumber(sequence->units)) &&
+          add(claim, "transposition_steps", cJSON_CreateNumber(sequence->transposition_steps)) &&
+          add(claim, "measures", entry_measures_json(notes, report, sequence->first_entry, sequence->last_entry)) &&
+          (taken = true, add(claim, "confidence", confidence)) &&
+          add(claim, "stages", sequence_stages_json(notes, report, sequence)))) {
+        if (!taken) {
+            cJSON_Delete(confidence);
+        }
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The schemas section: one flat list of claims, the schemas (labelled "schema") in order of their first stage and then
+   the sequences (labelled "sequence") in order of their first segment. */
+static cJSON *schemas_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < report->schema_count; i++) {
+        if (!append(list, schema_json(notes, report, &report->schemas[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    for (size_t i = 0; list && i < report->sequence_count; i++) {
+        if (!append(list, sequence_json(notes, report, &report->sequences[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *document_json(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
@@ -3415,7 +3614,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "themes", themes_json(notes, report)) && add(document, "form", form_json(notes, report)) &&
           add(document, "motives", motives_json(notes, report)) && add(document, "melody", melody_json(notes, report)) &&
           add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", texture_json(notes, report)) &&
-          add(document, "voice_leading", voice_leading_json(notes, report)) && add(document, "schemas", cJSON_CreateArray()) &&
+          add(document, "voice_leading", voice_leading_json(notes, report)) && add(document, "schemas", schemas_json(notes, report)) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
           add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {

@@ -158,6 +158,9 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    counterpoint and harmony adapters over the chord segments and reads the motion between voices, the parallel and
    direct perfect intervals, the unresolved sevenths and leading tones, and the doubling and spacing of each chord (see
    "Voice leading").
+15. `schema_pipeline`: builds the neutral input of the galant-schemas and scale-harmonization adapters (the outer voices'
+   degrees, local keys, Roman numerals and meter per chord, held chords merged) and reads the galant schemas and the
+   harmonic sequences (see "Schemas and sequences").
 
 Steps 2 to 12 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
 classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
@@ -676,6 +679,43 @@ Measured on the reference pieces (MIDI):
 The counts follow the voice separation: a piece whose voices rest often has fewer motions than segments. `test_voice_leading`
 runs a constructed chorale (`tests/musicxml/chorale-voice-leading.musicxml`) with one parallel fifth and one unresolved
 leading tone and asserts that both are found at their measures and nothing else.
+
+## Schemas and sequences
+
+The analyzer builds the neutral input of Ursatz's galant-schemas and scale-harmonization adapters
+(`src/pipeline/schema_pipeline.c`, ported from `tests/integration/schema_util.h`) and reports the library's matches. Each
+chord segment becomes one input segment: the outer voices' pitch classes read as degrees of its local key (the Roman
+numeral input's tonic and mode) by the offset above the tonic, that key as a degree of the home key, the library's
+numeral (an applied chord's root from the tonicized degree), and the strength and length of its beat. Consecutive chords
+with the same key, outer voice degrees and numeral are one segment, with the uncertainty of the least certain; a chord
+outside every key region is left out, and a segment's uncertainty is its numeral's (0.5 with none). The library's defaults
+run unchanged. The document's `schemas` is one flat array with two kinds of claim:
+
+- `schema`: a galant schema with its function, the stages (each with the measure it starts in and the soprano and bass
+  degrees matched; a stage may match on the bass alone, and a two-note stage has a second soprano degree), the frame key
+  it was found in, and the library's confidence parts.
+- `sequence`: a model of one or more chords repeated, transposed by a constant diatonic interval, at least three times,
+  with its kind, units, direction, transposition in diatonic steps and stages (bass, soprano and root degrees in the home
+  key). The cycle of fifths has no rule in scale-harmonization yet, so the library reports it from the Roman numerals
+  alone (`rule_backed` false).
+
+The Markdown report's `## Schemas and sequences` prints a table of each.
+
+Measured on the reference pieces (MIDI, the library's defaults): no piece has more than one schema.
+
+| Piece | Schemas | Sequences |
+| --- | --- | --- |
+| Bach 114 | 0 | 2 (parallel chords) |
+| Clementi 36 | 0 | 7 (parallel chords) |
+| Mozart 545 | 1 (a Jupiter) | 5 (4 cycles of fifths, 1 parallel chords) |
+| Field 1 | 0 | 0 |
+| Field 5 | 0 | 0 |
+
+`test_schemas` writes the hand-written galant fixture of Ursatz's `test_schema_sequence.c` as a MIDI file and runs the whole
+chain on it, as Ursatz does for its chain: 5 of the 9 planted items are found (the Romanesca twice, the Prinner, the
+Do-Re-Mi and the ascending 5-6; the Meyer, Fonte, Monte and the cycle of fifths are missed), above the floor of 4 that
+Ursatz asserts. Ursatz also scores the adapters on the fixture's own segments (all 9 found); the analyzer has no such
+entry point. The reference pieces' counts above are pinned.
 
 ## Known limits
 

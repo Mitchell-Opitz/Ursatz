@@ -189,6 +189,13 @@ target_compile_definitions(test_voice_leading PRIVATE
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_voice_leading COMMAND test_voice_leading)
 
+add_executable(test_schemas test_schemas.c)
+target_link_libraries(test_schemas PRIVATE ursatz_analyzer m)
+target_compile_definitions(test_schemas PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
+add_test(NAME test_schemas COMMAND test_schemas)
+
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE
