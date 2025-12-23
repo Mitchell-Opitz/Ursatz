@@ -2,6 +2,11 @@
 // document each tab shows, and how a section turns into rows. No DOM here,
 // so frontend/tests/analysis-view.test.js loads this file directly.
 
+// The motive feature rows come from motive-links-model.js (a page global in
+// the browser, a module in Node).
+const motiveLinksModel =
+  typeof module !== "undefined" && module.exports ? require("./motive-links-model.js") : MotiveLinksModel;
+
 /* One tab per group of document sections, in display order. */
 const ANALYSIS_TABS = [
   { id: "keys", label: "Keys", sections: ["keys", "tonicizations", "modulations", "pivot_chords"] },
@@ -99,6 +104,8 @@ function buildRow(sectionName, item, index) {
     label: claimLabel(claim, index),
     where: formatLocation(claim.location),
     noteIds: Array.isArray(claim.note_ids) ? claim.note_ids : [],
+    features: sectionName === "motives" ? motiveLinksModel.motiveFeatureRows(claim) : [],
+    family: sectionName === "motives" ? index : null,
     claim,
     detail: claimDetailJson(claim),
   };
