@@ -22,7 +22,15 @@ void imported_notes_destroy(ImportedNotes *notes) {
     free(notes->source.parts);
     free(notes->source.part_index);
     free(notes->source.staff);
-    notes->source = (ImportedSource){INPUT_FORMAT_MIDI, false, false, false, NULL, 0, NULL, NULL, false, 0.0, 0, 0, 0};
+    for (size_t i = 0; i < notes->source.tempo_marking_count; i++) {
+        free(notes->source.tempo_markings[i].text);
+    }
+    free(notes->source.tempo_markings);
+    for (size_t i = 0; i < notes->source.dynamics_count; i++) {
+        free(notes->source.dynamics[i].marking);
+    }
+    free(notes->source.dynamics);
+    notes->source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
     notes->meter = (MidiMeterImport){NULL, NULL, NULL, 0};
     notes->events = NULL;
     notes->pitch_values = NULL;

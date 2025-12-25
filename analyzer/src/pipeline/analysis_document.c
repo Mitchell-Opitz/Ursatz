@@ -3202,6 +3202,93 @@ static cJSON *texture_json(const ImportedNotes *notes, const AnalysisReport *rep
     return list;
 }
 
+/* ---- Markings ---- */
+
+/* The metronome mark of a tempo claim: the beat unit in whole notes and the beats per minute, both rational. */
+static cJSON *metronome_json(const AnalysisTempoMarking *marking) {
+    if (!marking->has_metronome) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(add(object, "beat_unit",
+                        rational_json(rational_make((long long)marking->beat_unit_numerator,
+                                                    marking->beat_unit_denominator))) &&
+                    add(object, "per_minute",
+                        rational_json(rational_make((long long)marking->bpm_numerator, marking->bpm_denominator))))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static cJSON *tempo_marking_json(const ImportedNotes *notes, const AnalysisTempoMarking *marking) {
+    cJSON *claim = claim_json_with(marking->framework, notes, NULL, 0,
+                                   rational_make(marking->start_numerator, marking->start_denominator),
+                                   rational_make(marking->end_numerator, marking->end_denominator), "tempo",
+                                   cJSON_CreateNumber(marking->uncertainty));
+    if (!(claim && add(claim, "text", optional_string_json(marking->text)) &&
+          add(claim, "metronome", metronome_json(marking)) &&
+          add(claim, "part", cJSON_CreateNumber((double)marking->part)) &&
+          add(claim, "rank", marking->has_rank ? cJSON_CreateNumber(marking->rank) : cJSON_CreateNull()) &&
+          add(claim, "group", optional_string_json(marking->group)) &&
+          add(claim, "change", cJSON_CreateString(marking->change)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+static cJSON *dynamic_json(const ImportedNotes *notes, const AnalysisDynamic *dynamic) {
+    cJSON *claim = claim_json_with(dynamic->framework, notes, NULL, 0,
+                                   rational_make(dynamic->start_numerator, dynamic->start_denominator),
+                                   rational_make(dynamic->end_numerator, dynamic->end_denominator), "dynamic",
+                                   cJSON_CreateNumber(dynamic->uncertainty));
+    if (!(claim && add(claim, "marking", cJSON_CreateString(dynamic->marking)) &&
+          add(claim, "part", cJSON_CreateNumber((double)dynamic->part)) &&
+          add(claim, "staff", cJSON_CreateNumber(dynamic->staff)) &&
+          add(claim, "rank", dynamic->has_rank ? cJSON_CreateNumber(dynamic->rank) : cJSON_CreateNull()) &&
+          add(claim, "change", cJSON_CreateString(dynamic->change)) &&
+          add(claim, "relation", optional_string_json(dynamic->relation)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The markings section: what the notated input carries, read with standard-markings' rules. MIDI input has none
+   ("none"). The importer reads no articulations (R-056), so they are null and say so. */
+static cJSON *markings_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    bool notated = notes->source.format == INPUT_FORMAT_MUSICXML;
+    cJSON *object = cJSON_CreateObject();
+    cJSON *tempo = cJSON_CreateArray();
+    cJSON *dynamics = cJSON_CreateArray();
+    bool ok = object && tempo && dynamics;
+    for (size_t i = 0; ok && i < report->tempo_marking_count; i++) {
+        ok = append(tempo, tempo_marking_json(notes, &report->tempo_markings[i]));
+    }
+    for (size_t i = 0; ok && i < report->dynamic_count; i++) {
+        ok = append(dynamics, dynamic_json(notes, &report->dynamics[i]));
+    }
+    ok = ok && add(object, "source", cJSON_CreateString(notated ? "notated" : "none"));
+    if (ok) {
+        ok = add(object, "tempo", tempo); /* add() frees the item itself when it fails */
+        tempo = NULL;
+    }
+    if (ok) {
+        ok = add(object, "dynamics", dynamics);
+        dynamics = NULL;
+    }
+    ok = ok && add(object, "articulations", cJSON_CreateNull()) &&
+         add(object, "articulations_imported", cJSON_CreateBool(false));
+    if (!ok) {
+        cJSON_Delete(tempo);
+        cJSON_Delete(dynamics);
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* ---- Voice leading ---- */
 
 static const char *const MOTION_NAMES[ANALYSIS_MOTION_TYPES] = {"contrary", "similar", "parallel", "oblique", "static"};
@@ -3616,7 +3703,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", texture_json(notes, report)) &&
           add(document, "voice_leading", voice_leading_json(notes, report)) && add(document, "schemas", schemas_json(notes, report)) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
-          add(document, "markings", cJSON_CreateNull()) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
+          add(document, "markings", markings_json(notes, report)) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
           add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);
         return NULL;

@@ -2313,6 +2313,81 @@ static bool render_schemas(StringBuilder *sb, const cJSON *document, const cJSON
     return ok && (!has_claims(schemas, "sequence") || render_sequence_matches(sb, schemas));
 }
 
+/* ---- Markings ---- */
+
+/* The part's name from the metadata, else its number: the markings name the part by index. */
+static bool append_part(StringBuilder *sb, const cJSON *document, const cJSON *claim) {
+    int index = (int)number_member(claim, "part");
+    const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
+    const cJSON *input = cJSON_GetObjectItemCaseSensitive(metadata, "input");
+    const cJSON *part = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(input, "parts"), index);
+    const char *name = string_member(part, "name");
+    return name && name[0] ? sb_append(sb, name) : sb_appendf(sb, "part %d", index + 1);
+}
+
+static bool render_tempo_markings(StringBuilder *sb, const cJSON *tempo) {
+    bool ok = sb_append(sb, "### Tempo\n\n") &&
+              sb_append(sb, "| From | Text | Metronome | Group | Change |\n| --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, tempo) {
+        if (!ok) {
+            break;
+        }
+        const cJSON *metronome = cJSON_GetObjectItemCaseSensitive(claim, "metronome");
+        const char *text = string_member(claim, "text");
+        const char *group = string_member(claim, "group");
+        ok = sb_append(sb, "| ") &&
+             append_position(sb, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(claim, "location"),
+                                                                  "start")) &&
+             sb_appendf(sb, " | %s | ", text ? text : "-");
+        if (ok && cJSON_IsObject(metronome)) {
+            ok = append_rational(sb, cJSON_GetObjectItemCaseSensitive(metronome, "beat_unit")) && sb_append(sb, " = ") &&
+                 append_rational(sb, cJSON_GetObjectItemCaseSensitive(metronome, "per_minute"));
+        } else {
+            ok = ok && sb_append(sb, "-");
+        }
+        ok = ok && sb_appendf(sb, " | %s | %s |\n", group ? group : "-", string_member(claim, "change"));
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_dynamics(StringBuilder *sb, const cJSON *document, const cJSON *dynamics) {
+    bool ok = sb_append(sb, "### Dynamics\n\n") &&
+              sb_append(sb, "| From | Marking | Part | Change | Against the previous level |\n"
+                            "| --- | --- | --- | --- | --- |\n");
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, dynamics) {
+        if (!ok) {
+            break;
+        }
+        const char *relation = string_member(claim, "relation");
+        ok = sb_append(sb, "| ") &&
+             append_position(sb, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(claim, "location"),
+                                                                  "start")) &&
+             sb_appendf(sb, " | %s | ", string_member(claim, "marking")) && append_part(sb, document, claim) &&
+             sb_appendf(sb, " | %s | %s |\n", string_member(claim, "change"), relation ? relation : "-");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
+static bool render_markings(StringBuilder *sb, const cJSON *document, const cJSON *markings) {
+    const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(markings, "tempo");
+    const cJSON *dynamics = cJSON_GetObjectItemCaseSensitive(markings, "dynamics");
+    const char *source = string_member(markings, "source");
+    bool ok = sb_append(sb, "## Markings\n\n");
+    if (source && strcmp(source, "none") == 0) {
+        return ok && sb_append(sb, "A MIDI file carries no tempo or dynamics markings.\n\n");
+    }
+    ok = ok && sb_append(sb, "The tempo and dynamics markings the score notates, read with the library's "
+                             "standard-markings rules. A tempo holds until the next one, a dynamic until the next in its "
+                             "part. Group and the loudness comparison are the library's; a text it does not recognise "
+                             "has none. Wedges are not read, and articulations are not imported.\n\n");
+    ok = ok && (section_is_empty(tempo) ? sb_append(sb, "The score has no tempo marking.\n\n")
+                                        : render_tempo_markings(sb, tempo));
+    return ok && (section_is_empty(dynamics) ? sb_append(sb, "The score has no dynamics marking.\n\n")
+                                             : render_dynamics(sb, document, dynamics));
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -2345,6 +2420,7 @@ static const struct {
     {"texture", render_texture},
     {"voice_leading", render_voice_leading},
     {"schemas", render_schemas},
+    {"markings", render_markings},
 };
 
 static bool section_is_empty(const cJSON *section) {

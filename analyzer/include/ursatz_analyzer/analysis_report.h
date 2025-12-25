@@ -692,6 +692,49 @@ typedef struct {
     double uncertainty;
 } AnalysisTextureChange;
 
+/* A notated tempo marking read with standard-markings' rules. The words, the metronome mark and the position are the
+   score's; the group, the rank and the change are the library's (standard_markings_tempo_group, _tempo_text_rank,
+   _tempo_change). The marking holds from its position to the next tempo marking, or to the end of the piece. */
+typedef struct {
+    const char *framework;     /* the library's framework name for the claim */
+    char *text;                /* owned; NULL when the marking has only a metronome mark */
+    bool has_metronome;
+    unsigned long beat_unit_numerator;   /* the metronome mark: the beat unit in whole notes, beats per minute */
+    unsigned long beat_unit_denominator;
+    unsigned long bpm_numerator;
+    unsigned long bpm_denominator;
+    long start_numerator;      /* the span it holds over, in whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    size_t part;               /* index into the input's parts */
+    bool has_rank;             /* the text is a tempo word, optionally with modifiers */
+    int rank;                  /* the library's rank, 0 (grave) to 9 (presto) */
+    const char *group;         /* "slow", "medium" or "fast"; NULL unless has_rank */
+    const char *change;        /* "none", "gradually-slower", "gradually-faster" or "return" */
+    double uncertainty;        /* 0 when the library reads the text (or it has none), else 1 */
+} AnalysisTempoMarking;
+
+/* A notated dynamics marking read with standard-markings' rules. The marking, its span and its part are the score's;
+   the rank, the change and the comparison are the library's (standard_markings_dynamic_rank, _dynamic_change,
+   _dynamic_is_quieter). */
+typedef struct {
+    const char *framework;
+    char *marking;             /* owned; the score's text */
+    long start_numerator;      /* the span it holds over, in whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    size_t part;               /* index into the input's parts */
+    int staff;
+    bool has_rank;             /* the marking is a level (ppp to fff) */
+    int rank;                  /* the library's loudness rank: quiet marks negative, loud marks positive */
+    const char *change;        /* "none", "louder" or "quieter": a crescendo or diminuendo word, as the library reads it */
+    const char *relation;      /* "louder", "quieter" or "same" against the previous level marking in its part; NULL for
+                                  a first level marking or a marking that is not a level */
+    double uncertainty;        /* 0 when the library reads the marking, else 1 */
+} AnalysisDynamic;
+
 /* One stage of a galant schema (the library's GalantStageClaim, analysis/galant_analysis_match.h): the chords of the
    segment it sits on (a held chord is one segment, so a range of entries) and the soprano and bass degrees the library
    matched, in the schema's frame key. A degree is the library's letter distance from the tonic (1 to 7) and its
@@ -1020,6 +1063,10 @@ typedef struct {
     size_t schema_count;
     AnalysisSequence *sequences; /* owned; in order of the first segment; empty when the library found none */
     size_t sequence_count;
+    AnalysisTempoMarking *tempo_markings; /* owned; in time order; empty for MIDI input */
+    size_t tempo_marking_count;
+    AnalysisDynamic *dynamics; /* owned; in time order; empty for MIDI input */
+    size_t dynamic_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
@@ -1028,7 +1075,7 @@ typedef struct {
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
    thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets, texture passages and changes
-   the voice leading, the schemas and the sequences. */
+   the voice leading, the schemas, the sequences, and the tempo and dynamics markings. */
 void analysis_report_destroy(AnalysisReport *report);
 
 #endif

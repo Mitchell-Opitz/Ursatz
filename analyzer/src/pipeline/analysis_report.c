@@ -127,6 +127,14 @@ void analysis_report_destroy(AnalysisReport *report) {
     }
     free(report->texture_passages);
     free(report->texture_changes);
+    for (size_t i = 0; i < report->tempo_marking_count; i++) {
+        free(report->tempo_markings[i].text);
+    }
+    free(report->tempo_markings);
+    for (size_t i = 0; i < report->dynamic_count; i++) {
+        free(report->dynamics[i].marking);
+    }
+    free(report->dynamics);
     free(report->voice_leading.pairs);
     free(report->voice_leading.violations);
     free(report->voice_leading.resolutions);
@@ -203,6 +211,10 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->texture_passage_count = 0;
     report->texture_changes = NULL;
     report->texture_change_count = 0;
+    report->tempo_markings = NULL;
+    report->tempo_marking_count = 0;
+    report->dynamics = NULL;
+    report->dynamic_count = 0;
     memset(&report->voice_leading, 0, sizeof(report->voice_leading));
     report->schemas = NULL;
     report->schema_count = 0;

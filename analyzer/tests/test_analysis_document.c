@@ -177,7 +177,7 @@ int main(void) {
     assert(cJSON_GetArraySize(member(document, "phrases")) == 0 ? cJSON_IsNull(member(document, "form"))
                                                                 : cJSON_IsObject(member(document, "form")));
     assert(cJSON_IsObject(member(document, "harmonic_rhythm")));
-    assert(cJSON_IsNull(member(document, "markings")));
+    assert(cJSON_IsObject(member(document, "markings")));
     assert(cJSON_IsNull(member(document, "counterpoint_check")));
     static const char *const EMPTY_SECTIONS[] = {"cadences", "motives", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
