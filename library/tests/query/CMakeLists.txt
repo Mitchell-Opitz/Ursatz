@@ -1,0 +1,1 @@
+add_ursatz_architecture_test(query)
