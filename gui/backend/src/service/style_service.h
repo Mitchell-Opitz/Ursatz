@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "link_service.h"
+
 /*
  * Style service: builds a StyleModel file from a set of pieces through the
  * Analyzer's style profile (R-106).
@@ -11,10 +13,11 @@
  * A style is a directory styles/<id>/ holding:
  *   style-model.json   written by style_model_file_write; the Composer reads it with --style
  *   meta.json          {"id", "name", "created_at", "updated_at",
- *                       "source": {"kind": "filter" | "collection" | "pieces",
+ *                       "source": {"kind": "filter" | "collection" | "pieces" | "brief",
  *                                  "filter": {"composer", "source", "tag"} | null,
  *                                  "collection_id": "..." | null,
- *                                  "piece_ids": [...] | null},
+ *                                  "piece_ids": [...] | null,
+ *                                  "brief": {"scopes": [...], "piece_ids": [...], "style_ids": [...]} | null},
  *                       "pieces": [ids used], "skipped": [{"id", "reason"}],
  *                       "piece_count": n}
  * Both files are written to "<file>.tmp" and renamed, the model first. Ids are
@@ -39,8 +42,27 @@ typedef enum {
 typedef enum {
     URSATZ_GUI_STYLE_SOURCE_FILTER = 0,
     URSATZ_GUI_STYLE_SOURCE_COLLECTION,
-    URSATZ_GUI_STYLE_SOURCE_PIECES
+    URSATZ_GUI_STYLE_SOURCE_PIECES,
+    URSATZ_GUI_STYLE_SOURCE_BRIEF
 } UrsatzGuiStyleSourceKind;
+
+#define URSATZ_GUI_STYLE_BRIEF_MAX_SCOPES 16
+#define URSATZ_GUI_STYLE_BRIEF_MAX_PIECES 5000
+#define URSATZ_GUI_STYLE_BRIEF_MAX_STYLES 16
+
+/*
+ * A brief (R-167): the union of link scopes, piece ids and styles. The pieces are, in id order without repeats,
+ * every scope's pieces (ursatz_gui_link_scope_resolve; a scope that names no piece adds none), the piece ids, and
+ * each style's pieces (its last build). At most 16 scopes, 5000 piece ids and 16 styles; at least one entry in all.
+ */
+typedef struct {
+    UrsatzGuiLinkScope *scopes;
+    size_t scope_count;
+    char **piece_ids;
+    size_t piece_count;
+    char **style_ids;
+    size_t style_count;
+} UrsatzGuiStyleBrief;
 
 /*
  * Where the pieces of a style come from.
@@ -49,6 +71,7 @@ typedef enum {
  *               filters them
  *   COLLECTION  the pieces of the collection collection_id
  *   PIECES      the piece ids as given (repeated ids count once)
+ *   BRIEF       the pieces of the brief; an unknown collection, subject, project or style is NOT_FOUND
  */
 typedef struct {
     UrsatzGuiStyleSourceKind kind;
@@ -58,6 +81,7 @@ typedef struct {
     const char *collection_id;
     const char *const *piece_ids;
     size_t piece_count;
+    const UrsatzGuiStyleBrief *brief;
 } UrsatzGuiStyleSource;
 
 /* A piece that was left out, with the reason: "not found", "re-analysis failed" or "unreadable analysis". */
@@ -77,7 +101,7 @@ void ursatz_gui_style_skipped_free(UrsatzGuiStyleSkipped *skipped, size_t count)
  *
  * name is normalized like piece metadata values; when empty it becomes a
  * default: "Composer: X", "Source: X", "Tag: x" joined with " · " for a
- * filter, "Collection: <name>" for a collection, "Selected pieces" for ids.
+ * filter, "Collection: <name>" for a collection, "Selected pieces" for ids, "Brief" for a brief.
  *
  * On OK, *out_id is newly allocated and caller-owned, and *out_skipped
  * (may be NULL) receives the skipped pieces (free with
@@ -122,6 +146,7 @@ typedef struct {
     char *collection_id;
     char **source_piece_ids;
     size_t source_piece_count;
+    UrsatzGuiStyleBrief brief; /* for a brief source; owns its strings */
     char **pieces;
     size_t piece_count;
     UrsatzGuiStyleSkipped *skipped;
@@ -149,11 +174,14 @@ UrsatzGuiStyleResult ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_s
 
 void ursatz_gui_style_destroy(UrsatzGuiStyle *style);
 
+/* Frees the scopes, ids and style ids of a brief (the strings are owned only for a brief a style holds). */
+void ursatz_gui_style_brief_free(UrsatzGuiStyleBrief *brief);
+
 /*
  * Builds the style again from its stored source over today's pieces and
  * replaces its two files in place; id and name stay, updated_at changes, so a
  * plan that names the file uses the new counts. NOT_FOUND if the style is
- * absent, SOURCE_MISSING if its collection is gone, NO_PIECES if no piece
+ * absent, SOURCE_MISSING if its collection, subject, project or style is gone, NO_PIECES if no piece
  * could be added (the style is left as it was).
  */
 UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id);

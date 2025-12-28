@@ -14,7 +14,7 @@
 static const char *kStylesPrefix = "/api/styles";
 static const size_t kMaxRequestBodySize = 1024 * 1024;
 /* A style built from ids names every piece of a filtered Library. */
-static const size_t kMaxPieceIds = 5000;
+static const size_t kMaxPieceIds = URSATZ_GUI_STYLE_BRIEF_MAX_PIECES;
 
 static void send_json(struct mg_connection *conn, const char *body) {
   size_t len = strlen(body);
@@ -142,13 +142,68 @@ static const char *source_kind_label(UrsatzGuiStyleSourceKind kind) {
       return "filter";
     case URSATZ_GUI_STYLE_SOURCE_COLLECTION:
       return "collection";
+    case URSATZ_GUI_STYLE_SOURCE_BRIEF:
+      return "brief";
     case URSATZ_GUI_STYLE_SOURCE_PIECES:
     default:
       return "pieces";
   }
 }
 
-/* {"kind","filter","collection_id","piece_ids"}: the members that do not belong to the kind are null. */
+static const char *const kScopeKinds[] = {"all", "collection", "filter", "subject", "project"};
+
+/* {"kind","collection_id","filter":{"composer","source","tag"},"subject_id","project_id"} as the links routes take it. */
+static cJSON *scope_json(const UrsatzGuiLinkScope *scope) {
+  cJSON *object = cJSON_CreateObject();
+  cJSON *filter = cJSON_CreateObject();
+  bool ok = object && filter && (size_t)scope->kind < sizeof(kScopeKinds) / sizeof(kScopeKinds[0]) &&
+            cJSON_AddStringToObject(object, "kind", kScopeKinds[scope->kind]) &&
+            cJSON_AddItemToObject(object, "collection_id", string_or_null(scope->collection_id)) &&
+            cJSON_AddItemToObject(filter, "composer", string_or_null(scope->composer)) &&
+            cJSON_AddItemToObject(filter, "source", string_or_null(scope->source)) &&
+            cJSON_AddItemToObject(filter, "tag", string_or_null(scope->tag));
+  if (ok) {
+    cJSON_AddItemToObject(object, "filter", filter);
+    filter = NULL;
+    ok = cJSON_AddItemToObject(object, "subject_id", string_or_null(scope->subject_id)) &&
+         cJSON_AddItemToObject(object, "project_id", string_or_null(scope->project_id));
+  }
+  cJSON_Delete(filter);
+  if (!ok) {
+    cJSON_Delete(object);
+    return NULL;
+  }
+  return object;
+}
+
+/* {"scopes","piece_ids","style_ids"} */
+static cJSON *brief_json(const UrsatzGuiStyleBrief *brief) {
+  cJSON *object = cJSON_CreateObject();
+  cJSON *scopes = cJSON_CreateArray();
+  cJSON *piece_ids = string_array(brief->piece_ids, brief->piece_count);
+  cJSON *style_ids = string_array(brief->style_ids, brief->style_count);
+  bool ok = object && scopes && piece_ids && style_ids;
+  for (size_t i = 0; ok && i < brief->scope_count; i++) {
+    cJSON *scope = scope_json(&brief->scopes[i]);
+    ok = scope != NULL;
+    if (ok) {
+      cJSON_AddItemToArray(scopes, scope);
+    }
+  }
+  if (ok) {
+    cJSON_AddItemToObject(object, "scopes", scopes);
+    cJSON_AddItemToObject(object, "piece_ids", piece_ids);
+    cJSON_AddItemToObject(object, "style_ids", style_ids);
+    return object;
+  }
+  cJSON_Delete(object);
+  cJSON_Delete(scopes);
+  cJSON_Delete(piece_ids);
+  cJSON_Delete(style_ids);
+  return NULL;
+}
+
+/* {"kind","filter","collection_id","piece_ids","brief"}: the members that do not belong to the kind are null. */
 static cJSON *source_json(const UrsatzGuiStyle *style) {
   cJSON *source = cJSON_CreateObject();
   cJSON *filter = NULL;
@@ -168,19 +223,28 @@ static cJSON *source_json(const UrsatzGuiStyle *style) {
   } else if (ok) {
     piece_ids = cJSON_CreateNull();
   }
-  if (!ok || !piece_ids) {
+  cJSON *brief = NULL;
+  if (ok && style->source_kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+    brief = brief_json(&style->brief);
+  } else if (ok) {
+    brief = cJSON_CreateNull();
+  }
+  if (!ok || !piece_ids || !brief) {
     cJSON_Delete(filter);
     cJSON_Delete(piece_ids);
+    cJSON_Delete(brief);
     cJSON_Delete(source);
     return NULL;
   }
   cJSON_AddItemToObject(source, "filter", filter);
   if (!cJSON_AddItemToObject(source, "collection_id", string_or_null(style->collection_id))) {
     cJSON_Delete(piece_ids);
+    cJSON_Delete(brief);
     cJSON_Delete(source);
     return NULL;
   }
   cJSON_AddItemToObject(source, "piece_ids", piece_ids);
+  cJSON_AddItemToObject(source, "brief", brief);
   return source;
 }
 
@@ -279,7 +343,7 @@ static int send_style_failure(struct mg_connection *conn, UrsatzGuiStyleResult r
     case URSATZ_GUI_STYLE_ERR_NO_PIECES:
       return send_failure(conn, 422, "no analyzable pieces");
     case URSATZ_GUI_STYLE_ERR_SOURCE_MISSING:
-      return send_failure(conn, 422, "collection not found");
+      return send_failure(conn, 422, "source not found");
     case URSATZ_GUI_STYLE_ERR_ALLOC:
       return send_failure(conn, 500, "out of memory");
     case URSATZ_GUI_STYLE_ERR_FAILED:
@@ -311,6 +375,138 @@ static int send_built_style(struct mg_connection *conn, const char *id) {
   return send_object(conn, object);
 }
 
+/* --- brief ---------------------------------------------------------------- */
+
+/* A string member, or NULL when it is missing or null. *bad is set when it is some other type. */
+static const char *optional_string(const cJSON *object, const char *key, bool *bad) {
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+  if (!item || cJSON_IsNull(item)) {
+    return NULL;
+  }
+  if (!cJSON_IsString(item)) {
+    *bad = true;
+    return NULL;
+  }
+  return item->valuestring;
+}
+
+/* Reads a scope as the links routes take it. false when it cannot be a scope. */
+static bool parse_scope(const cJSON *json, UrsatzGuiLinkScope *scope) {
+  memset(scope, 0, sizeof(*scope));
+  if (!cJSON_IsObject(json)) {
+    return false;
+  }
+  bool bad = false;
+  const char *kind = optional_string(json, "kind", &bad);
+  bool known = false;
+  for (size_t i = 0; kind && !bad && i < sizeof(kScopeKinds) / sizeof(kScopeKinds[0]); i++) {
+    if (strcmp(kind, kScopeKinds[i]) == 0) {
+      scope->kind = (UrsatzGuiLinkScopeKind)i;
+      known = true;
+    }
+  }
+  if (!known) {
+    return false;
+  }
+  scope->collection_id = optional_string(json, "collection_id", &bad);
+  scope->subject_id = optional_string(json, "subject_id", &bad);
+  scope->project_id = optional_string(json, "project_id", &bad);
+  const cJSON *filter = cJSON_GetObjectItemCaseSensitive(json, "filter");
+  if (filter && !cJSON_IsNull(filter)) {
+    if (!cJSON_IsObject(filter)) {
+      return false;
+    }
+    scope->composer = optional_string(filter, "composer", &bad);
+    scope->source = optional_string(filter, "source", &bad);
+    scope->tag = optional_string(filter, "tag", &bad);
+  }
+  return !bad;
+}
+
+/* The strings of an optional array member into a new array of borrowed pointers. NULL array with *count 0 when the
+ * member is absent. Returns NULL in *failure's message on a bad member or a count over max. */
+static const char *read_id_array(const cJSON *body, const char *key, size_t max, char ***out, size_t *count) {
+  *out = NULL;
+  *count = 0;
+  const cJSON *array = cJSON_GetObjectItemCaseSensitive(body, key);
+  if (!array) {
+    return NULL;
+  }
+  if (!cJSON_IsArray(array)) {
+    return "invalid brief";
+  }
+  int length = cJSON_GetArraySize(array);
+  if ((size_t)length > max) {
+    return "too many entries in the brief";
+  }
+  if (length == 0) {
+    return NULL;
+  }
+  char **items = calloc((size_t)length, sizeof(*items));
+  if (!items) {
+    return "out of memory";
+  }
+  const cJSON *item = NULL;
+  cJSON_ArrayForEach(item, array) {
+    if (!cJSON_IsString(item) || !ursatz_gui_collection_is_valid_id(item->valuestring)) {
+      free(items);
+      return "invalid brief";
+    }
+    items[(*count)++] = item->valuestring;
+  }
+  *out = items;
+  return NULL;
+}
+
+/* Reads {"scopes": [...], "piece_ids": [...], "style_ids": [...]} into brief, whose arrays the caller frees with free
+ * (the strings stay owned by json). Returns a failure message, or NULL. */
+static const char *parse_brief(const cJSON *json, UrsatzGuiStyleBrief *brief) {
+  memset(brief, 0, sizeof(*brief));
+  if (!cJSON_IsObject(json)) {
+    return "invalid brief";
+  }
+  const cJSON *scopes = cJSON_GetObjectItemCaseSensitive(json, "scopes");
+  if (scopes) {
+    if (!cJSON_IsArray(scopes)) {
+      return "invalid brief";
+    }
+    int length = cJSON_GetArraySize(scopes);
+    if ((size_t)length > URSATZ_GUI_STYLE_BRIEF_MAX_SCOPES) {
+      return "too many entries in the brief";
+    }
+    if (length > 0) {
+      brief->scopes = calloc((size_t)length, sizeof(*brief->scopes));
+      if (!brief->scopes) {
+        return "out of memory";
+      }
+      const cJSON *entry = NULL;
+      cJSON_ArrayForEach(entry, scopes) {
+        if (!parse_scope(entry, &brief->scopes[brief->scope_count])) {
+          return "invalid scope";
+        }
+        brief->scope_count++;
+      }
+    }
+  }
+  const char *failure = read_id_array(json, "piece_ids", URSATZ_GUI_STYLE_BRIEF_MAX_PIECES, &brief->piece_ids,
+                                      &brief->piece_count);
+  if (!failure) {
+    failure = read_id_array(json, "style_ids", URSATZ_GUI_STYLE_BRIEF_MAX_STYLES, &brief->style_ids,
+                            &brief->style_count);
+  }
+  if (!failure && brief->scope_count + brief->piece_count + brief->style_count == 0) {
+    failure = "invalid brief";
+  }
+  return failure;
+}
+
+static void brief_arrays_free(UrsatzGuiStyleBrief *brief) {
+  free(brief->scopes);
+  free(brief->piece_ids);
+  free(brief->style_ids);
+  memset(brief, 0, sizeof(*brief));
+}
+
 static int handle_build_style(struct mg_connection *conn) {
   cJSON *body = read_json_body(conn);
   if (!body) {
@@ -325,18 +521,25 @@ static int handle_build_style(struct mg_connection *conn) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "invalid name");
   }
-  int sources = (filter_item != NULL) + (collection_item != NULL) + (ids_item != NULL);
+  const cJSON *brief_item = cJSON_GetObjectItemCaseSensitive(body, "brief");
+  int sources = (filter_item != NULL) + (collection_item != NULL) + (ids_item != NULL) + (brief_item != NULL);
   if (sources != 1) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "give exactly one of filter, collection_id and piece_ids");
+    return send_failure(conn, 400, "give exactly one of filter, collection_id, piece_ids and brief");
   }
 
   UrsatzGuiStyleSource source;
   memset(&source, 0, sizeof(source));
+  UrsatzGuiStyleBrief brief;
+  memset(&brief, 0, sizeof(brief));
   const char **ids = NULL;
   const char *failure = NULL;
 
-  if (filter_item) {
+  if (brief_item) {
+    source.kind = URSATZ_GUI_STYLE_SOURCE_BRIEF;
+    failure = parse_brief(brief_item, &brief);
+    source.brief = &brief;
+  } else if (filter_item) {
     source.kind = URSATZ_GUI_STYLE_SOURCE_FILTER;
     const cJSON *composer = cJSON_GetObjectItemCaseSensitive(filter_item, "composer");
     const cJSON *filter_source = cJSON_GetObjectItemCaseSensitive(filter_item, "source");
@@ -384,19 +587,25 @@ static int handle_build_style(struct mg_connection *conn) {
 
   if (failure) {
     free(ids);
+    brief_arrays_free(&brief);
     cJSON_Delete(body);
-    return send_failure(conn, 400, failure);
+    return send_failure(conn, strcmp(failure, "out of memory") == 0 ? 500 : 400, failure);
   }
 
   char *id = NULL;
   UrsatzGuiStyleResult result =
       ursatz_gui_style_build(name_item ? name_item->valuestring : NULL, &source, &id, NULL, NULL);
   free(ids);
+  brief_arrays_free(&brief);
   cJSON_Delete(body);
+  if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION) {
+    return send_failure(conn, 404, "collection not found");
+  }
+  if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+    return send_failure(conn, 404, "brief source not found");
+  }
   if (result != URSATZ_GUI_STYLE_OK) {
-    return source.kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION && result == URSATZ_GUI_STYLE_ERR_NOT_FOUND
-               ? send_failure(conn, 404, "collection not found")
-               : send_style_failure(conn, result);
+    return send_style_failure(conn, result);
   }
   int status = send_built_style(conn, id);
   free(id);
