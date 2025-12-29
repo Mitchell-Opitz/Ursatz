@@ -168,7 +168,7 @@ SimilarityScoreResult similarity_score(const SimilarityModel *model, const Simil
             const ContourDirection *directions_b = directions_of(b, &buffer_b, &count_b);
             if ((a->direction_count == 0 && a->interval_count > 0 && buffer_a == NULL) ||
                 (b->direction_count == 0 && b->interval_count > 0 && buffer_b == NULL)) {
-                status = SIMILARITY_SCORE_ERR_OVERFLOW; /* out of memory for the derived directions */
+                status = SIMILARITY_SCORE_ERR_ALLOC;
             } else {
                 status = similarity_contour_score(directions_a, count_a, directions_b, count_b, &score);
             }

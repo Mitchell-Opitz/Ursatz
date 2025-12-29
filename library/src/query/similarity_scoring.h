@@ -79,7 +79,8 @@ typedef enum {
     SIMILARITY_SCORE_OK = 0,
     SIMILARITY_SCORE_ERR_NULL_ARGUMENT,
     SIMILARITY_SCORE_ERR_INVALID_INPUT, /* an empty sequence on a counted dimension, or a duration with a zero part */
-    SIMILARITY_SCORE_ERR_OVERFLOW
+    SIMILARITY_SCORE_ERR_OVERFLOW,
+    SIMILARITY_SCORE_ERR_ALLOC /* no memory for the directions derived from intervals */
 } SimilarityScoreResult;
 
 typedef struct {
