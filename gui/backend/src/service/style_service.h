@@ -111,6 +111,16 @@ void ursatz_gui_style_skipped_free(UrsatzGuiStyleSkipped *skipped, size_t count)
 UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
                                             UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count);
 
+/*
+ * The same build into one model file at path (written to "<path>.tmp", then renamed), with no store entry (B8 builds
+ * a theme version's brief with it). name is the model's name, normalized and defaulted as above. On OK, *out_pieces
+ * (may be NULL) receives the ids used (free each with free, then the array) and *out_skipped the pieces left out.
+ * The errors are those of ursatz_gui_style_build; nothing is written unless it returns OK.
+ */
+UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, const char *name, const char *path,
+                                                 char ***out_pieces, size_t *out_piece_count,
+                                                 UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count);
+
 /* One label of a category: how often it was seen and how many things the category counted. */
 typedef struct {
     char *label;

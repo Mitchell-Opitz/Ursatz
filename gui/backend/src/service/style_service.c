@@ -956,54 +956,86 @@ static UrsatzGuiStyleResult style_name(const char *requested, const char *defaul
     return URSATZ_GUI_STYLE_OK;
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
-                                            UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
-    if (out_id) {
-        *out_id = NULL;
+/* Normalizes the source, adds its pieces and settles the name. The caller holds the lock; on OK it frees *normalized
+ * with normalized_source_free and *collected with collected_free. */
+static UrsatzGuiStyleResult prepare_build(const char *name, const UrsatzGuiStyleSource *source,
+                                          NormalizedSource *normalized, Collected *collected, char *final_name,
+                                          size_t final_name_size) {
+    memset(collected, 0, sizeof(*collected));
+    UrsatzGuiStyleResult result = normalized_source_make(source, normalized);
+    if (result != URSATZ_GUI_STYLE_OK) {
+        return result;
     }
+    result = collect_pieces(normalized, collected);
+    if (result == URSATZ_GUI_STYLE_OK) {
+        result = style_name(name, collected->default_name, final_name, final_name_size);
+        if (result != URSATZ_GUI_STYLE_OK) {
+            collected_free(collected);
+        }
+    }
+    if (result != URSATZ_GUI_STYLE_OK) {
+        normalized_source_free(normalized);
+    }
+    return result;
+}
+
+/* Hands the skipped pieces of a finished build to the caller. */
+static void give_skipped(Collected *collected, UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
+    if (out_skipped) {
+        *out_skipped = collected->skipped.items;
+        collected->skipped.items = NULL;
+        if (out_skipped_count) {
+            *out_skipped_count = collected->skipped.count;
+        }
+    }
+}
+
+static void reset_outputs(UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
     if (out_skipped) {
         *out_skipped = NULL;
     }
     if (out_skipped_count) {
         *out_skipped_count = 0;
     }
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
+                                            UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
+    if (out_id) {
+        *out_id = NULL;
+    }
+    reset_outputs(out_skipped, out_skipped_count);
     if (!source || !out_id) {
         return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
     }
 
+    LOCK();
     NormalizedSource normalized;
-    UrsatzGuiStyleResult result = normalized_source_make(source, &normalized);
+    Collected collected;
+    char final_name[NAME_MAX_BYTES + 1];
+    UrsatzGuiStyleResult result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
     if (result != URSATZ_GUI_STYLE_OK) {
+        UNLOCK();
         return result;
     }
 
-    LOCK();
-    Collected collected;
     char *id = NULL;
     char style_dir[PATH_BYTES];
     bool dir_made = false;
-
-    result = collect_pieces(&normalized, &collected);
-    char final_name[NAME_MAX_BYTES + 1];
-    if (result == URSATZ_GUI_STYLE_OK) {
-        result = style_name(name, collected.default_name, final_name, sizeof(final_name));
-    }
-    if (result == URSATZ_GUI_STYLE_OK) {
-        result = URSATZ_GUI_STYLE_ERR_FAILED;
-        if (ensure_dir(kStylesDir)) {
-            for (int attempt = 0; attempt < ID_MAX_TRIES && !dir_made; attempt++) {
-                id = ursatz_gui_new_id("sty");
-                if (!id) {
-                    result = URSATZ_GUI_STYLE_ERR_ALLOC;
-                    break;
-                }
-                if (snprintf(style_dir, sizeof(style_dir), "%s/%s", kStylesDir, id) < (int)sizeof(style_dir)) {
-                    dir_made = make_dir(style_dir);
-                }
-                if (!dir_made) {
-                    free(id);
-                    id = NULL;
-                }
+    result = URSATZ_GUI_STYLE_ERR_FAILED;
+    if (ensure_dir(kStylesDir)) {
+        for (int attempt = 0; attempt < ID_MAX_TRIES && !dir_made; attempt++) {
+            id = ursatz_gui_new_id("sty");
+            if (!id) {
+                result = URSATZ_GUI_STYLE_ERR_ALLOC;
+                break;
+            }
+            if (snprintf(style_dir, sizeof(style_dir), "%s/%s", kStylesDir, id) < (int)sizeof(style_dir)) {
+                dir_made = make_dir(style_dir);
+            }
+            if (!dir_made) {
+                free(id);
+                id = NULL;
             }
         }
     }
@@ -1019,18 +1051,57 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
     if (result == URSATZ_GUI_STYLE_OK) {
         *out_id = id;
         id = NULL;
-        if (out_skipped) {
-            *out_skipped = collected.skipped.items;
-            collected.skipped.items = NULL;
-            if (out_skipped_count) {
-                *out_skipped_count = collected.skipped.count;
-            }
-        }
+        give_skipped(&collected, out_skipped, out_skipped_count);
     }
     free(id);
-    if (collected.profile || collected.used.items || collected.skipped.items) {
-        collected_free(&collected);
+    collected_free(&collected);
+    UNLOCK();
+    normalized_source_free(&normalized);
+    return result;
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, const char *name, const char *path,
+                                                 char ***out_pieces, size_t *out_piece_count,
+                                                 UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
+    if (out_pieces) {
+        *out_pieces = NULL;
     }
+    if (out_piece_count) {
+        *out_piece_count = 0;
+    }
+    reset_outputs(out_skipped, out_skipped_count);
+    char tmp_path[PATH_BYTES + 8];
+    if (!source || !path || path[0] == '\0' || strlen(path) >= PATH_BYTES ||
+        snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
+        return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+    }
+
+    LOCK();
+    NormalizedSource normalized;
+    Collected collected;
+    char final_name[NAME_MAX_BYTES + 1];
+    UrsatzGuiStyleResult result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
+    if (result != URSATZ_GUI_STYLE_OK) {
+        UNLOCK();
+        return result;
+    }
+
+    if (style_model_file_write(collected.profile, final_name, tmp_path) != STYLE_MODEL_FILE_OK ||
+        !replace_file(tmp_path, path)) {
+        remove(tmp_path);
+        result = URSATZ_GUI_STYLE_ERR_FAILED;
+    } else {
+        if (out_pieces) {
+            *out_pieces = collected.used.items;
+            collected.used.items = NULL;
+            if (out_piece_count) {
+                *out_piece_count = collected.used.count;
+            }
+            collected.used.count = 0;
+        }
+        give_skipped(&collected, out_skipped, out_skipped_count);
+    }
+    collected_free(&collected);
     UNLOCK();
     normalized_source_free(&normalized);
     return result;
