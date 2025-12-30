@@ -50,4 +50,19 @@ check(
   "underscores become spaces in titles and a category with only more is kept",
 );
 
+const rhythm = V.styleSummaryRows({
+  rhythm: {
+    tempo: { labels: [{ label: "100-119", count: 2, total: 2 }], more: 0 },
+    "note-density": { labels: [{ label: "2", count: 3, total: 5 }], more: 0 },
+  },
+});
+check(
+  rhythm[0].categories[0].title === "Tempo (quarter notes per minute)",
+  "the tempo category is titled with its unit",
+);
+check(
+  rhythm[0].categories[1].title === "Note density (attacks per beat)",
+  "the note density category is titled with its unit",
+);
+
 process.exit(failures === 0 ? 0 : 1);
