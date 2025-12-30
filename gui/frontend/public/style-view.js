@@ -3,8 +3,10 @@
  * DOM. statistics is {dimension: {category: {labels: [{label, count,
  * total}], more}}}. */
 (function (root) {
-  /* Titles that are not the key spelled out: the motive categories. */
+  /* Titles that are not the key spelled out: the motive categories and the rhythm categories with a unit. */
   const CATEGORY_TITLES = {
+    tempo: "Tempo (quarter notes per minute)",
+    "note-density": "Note density (attacks per beat)",
     "motive-degrees": "Motive degrees",
     "motive-intervals": "Motive intervals",
     "motive-rhythm": "Motive rhythms",

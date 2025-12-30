@@ -931,18 +931,26 @@ form labels over the pieces they were built from.
     Library filters them; at least one value),
   - `"collection_id": "<id>"` (the pieces of that collection; `404` when it
     does not exist),
-  - `"piece_ids": ["<id>",...]` (at most 5000; repeated ids count once).
+  - `"piece_ids": ["<id>",...]` (at most 5000; repeated ids count once),
+  - `"brief": {"scopes": [scope,...], "piece_ids": [...], "style_ids": [...]}`
+    (a union, at most 16 scopes, 5000 ids and 16 styles, at least one entry; a
+    scope is an object as the links routes take it. The pieces are, in id
+    order without repeats, those of every scope, the ids, and each style's
+    pieces from its last build. A scope that names no piece adds none; an
+    unknown collection, subject, project or style is `404`).
 
   Answers `{"ok":true,"style":{list entry},"skipped":[{"id","reason"}]}`.
   `422` `{"ok":false,"message":"no analyzable pieces"}` when no piece could be
   added; nothing is written then. `name` is normalized like piece metadata
   values (at most 120 bytes, else `400`). When it is empty the default is
   `Composer: X`, `Source: X`, `Tag: x` joined with ` · ` for a filter,
-  `Collection: <name>` for a collection and `Selected pieces` for ids.
+  `Collection: <name>` for a collection, `Selected pieces` for ids and `Brief`
+  for a brief.
 - `GET /api/styles`: `{"ok":true,"styles":[list entry,...]}`, newest update
   first. A list entry is `{"id","name","piece_count","updated_at","source"}`,
-  where `source` is `{"kind":"filter"|"collection"|"pieces","filter":{"composer",
-  "source","tag"}|null,"collection_id":"..."|null,"piece_ids":[...]|null}`.
+  where `source` is `{"kind":"filter"|"collection"|"pieces"|"brief","filter":{"composer",
+  "source","tag"}|null,"collection_id":"..."|null,"piece_ids":[...]|null,
+  "brief":{"scopes","piece_ids","style_ids"}|null}`.
 - `GET /api/styles/<id>`: `{"ok":true,"style":{...}}`, the list entry plus
   `created_at`, `pieces` (the ids used), `skipped` and `statistics`:
   `{"<dimension>":{"<category>":{"labels":[{"label","count","total"}],"more":n}}}`
@@ -951,11 +959,16 @@ form labels over the pieces they were built from.
 - `POST /api/styles/<id>/rebuild`: builds the style again from its stored
   source over today's pieces (same id and name, files replaced in place,
   `updated_at` set) and answers like `POST /api/styles`. `422` when no piece
-  is left or the collection is gone; the style stays as it was.
+  is left or the collection, subject, project or style it names is gone; the
+  style stays as it was. A brief is resolved again.
 - `DELETE /api/styles/<id>`: `{"ok":true}`.
 
 An unknown style id is `404` `{"ok":false,"message":"style not found"}` on
 every route.
+
+The backend can also build a style into one model file at a path without a
+store entry (`ursatz_gui_style_build_file`, written to a temporary file and
+renamed); a theme version uses it for its brief.
 
 A piece that cannot be added is skipped with a reason and the build goes on:
 `not found` (no such piece), `re-analysis failed` or `unreadable analysis`.
@@ -1252,7 +1265,9 @@ Tags and Actions.
   for each dimension and category the most common labels as a bar of
   `count/total` with the fraction as text, then "and <n> more".
   The four motive categories read "Motive degrees", "Motive intervals", "Motive rhythms" and "Non-chord tones in
-  motives".
+  motives"; the rhythm categories `tempo` and `note-density` read "Tempo (quarter notes per minute)" and "Note
+  density (attacks per beat)". A style built from a brief reads "Brief" as its source (briefs are made in the Themes
+  view; the Collections view builds none).
 
 ### Score layers
 

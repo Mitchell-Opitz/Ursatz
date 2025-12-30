@@ -435,6 +435,124 @@ int main(void) {
     cJSON_Delete(answer);
   }
 
+  /* From a brief: the union of a collection, a filter and ids, and of a style's pieces. */
+  {
+    answer = json_exchange("POST", "/api/corpus", "{\"name\":\"Solo\"}", &status);
+    char solo_id[128];
+    snprintf(solo_id, sizeof(solo_id), "%s", string_of(answer, "id"));
+    cJSON_Delete(answer);
+    char path[256];
+    char body[1024];
+    snprintf(path, sizeof(path), "/api/corpus/%s/pieces", solo_id);
+    snprintf(body, sizeof(body), "{\"piece_ids\":[\"%s\"]}", clementi_id);
+    cJSON_Delete(json_exchange("POST", path, body, &status));
+
+    snprintf(body, sizeof(body),
+             "{\"brief\":{\"scopes\":[{\"kind\":\"collection\",\"collection_id\":\"%s\"},"
+             "{\"kind\":\"filter\",\"filter\":{\"composer\":\"Mozart\"}},"
+             "{\"kind\":\"filter\",\"filter\":{\"composer\":\"Nobody\"}}],\"piece_ids\":[\"%s\"]}}",
+             solo_id, clementi_id);
+    answer = build_style(body, &status);
+    style = style_of(answer);
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(style, "source");
+    const cJSON *brief = cJSON_GetObjectItemCaseSensitive(source, "brief");
+    check(status == 200 && ok_true(answer), "building a style from a brief answers 200");
+    check(number_of(style, "piece_count") == 2, "a brief of a collection, a filter and a piece holds the union once");
+    check(strcmp(string_of(style, "name"), "Brief") == 0, "its default name is \"Brief\"");
+    check(strcmp(string_of(source, "kind"), "brief") == 0, "its source kind is brief");
+    check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(brief, "scopes")) == 3 &&
+              cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(brief, "piece_ids")) == 1 &&
+              cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(brief, "style_ids")) == 0,
+          "the list entry carries the brief");
+    check(skipped_count(answer) == 0, "a scope that names no piece adds none and skips none");
+    char brief_style_id[128];
+    snprintf(brief_style_id, sizeof(brief_style_id), "%s", string_of(style, "id"));
+    cJSON_Delete(answer);
+    check(model_reads_with_pieces(brief_style_id, 2), "the Analyzer reads the brief's model back with 2 pieces");
+
+    /* The pieces are in id order. */
+    snprintf(path, sizeof(path), "/api/styles/%s", brief_style_id);
+    answer = json_exchange("GET", path, NULL, &status);
+    {
+      const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(style_of(answer), "pieces");
+      check(cJSON_GetArraySize(pieces) == 2 &&
+                strcmp(cJSON_GetArrayItem(pieces, 0)->valuestring, cJSON_GetArrayItem(pieces, 1)->valuestring) < 0,
+            "the brief's pieces run in id order");
+    }
+    cJSON_Delete(answer);
+
+    /* A style id adds its pieces. */
+    snprintf(body, sizeof(body), "{\"name\":\"Clementi only\",\"piece_ids\":[\"%s\"]}", clementi_id);
+    answer = build_style(body, &status);
+    char one_id[128];
+    snprintf(one_id, sizeof(one_id), "%s", string_of(style_of(answer), "id"));
+    cJSON_Delete(answer);
+    snprintf(body, sizeof(body),
+             "{\"name\":\"Mozart and a style\",\"brief\":{\"scopes\":[{\"kind\":\"filter\",\"filter\":{\"composer\":"
+             "\"Mozart\"}}],\"style_ids\":[\"%s\"]}}",
+             one_id);
+    answer = build_style(body, &status);
+    check(status == 200 && number_of(style_of(answer), "piece_count") == 2, "a style id adds the pieces of its last build");
+    check(strcmp(string_of(style_of(answer), "name"), "Mozart and a style") == 0, "a brief takes the name it is given");
+    char with_style_id[128];
+    snprintf(with_style_id, sizeof(with_style_id), "%s", string_of(style_of(answer), "id"));
+    cJSON_Delete(answer);
+
+    /* Unknown sources are 404, a bad brief is 400, a brief of nothing is 422. */
+    answer = build_style("{\"brief\":{\"scopes\":[{\"kind\":\"subject\",\"subject_id\":\"sub-0000000000000000\"}]}}",
+                         &status);
+    check(status == 404 && !ok_true(answer), "an unknown subject answers 404");
+    cJSON_Delete(answer);
+    answer = build_style("{\"brief\":{\"style_ids\":[\"sty-0000000000000000\"]}}", &status);
+    check(status == 404 && !ok_true(answer), "an unknown style answers 404");
+    cJSON_Delete(answer);
+    answer = build_style("{\"brief\":{\"scopes\":[{\"kind\":\"collection\",\"collection_id\":\"col-0000000000000000\"}]}}",
+                         &status);
+    check(status == 404 && !ok_true(answer), "an unknown collection in a brief answers 404");
+    cJSON_Delete(answer);
+    answer = build_style("{\"brief\":{}}", &status);
+    check(status == 400 && !ok_true(answer), "an empty brief answers 400");
+    cJSON_Delete(answer);
+    answer = build_style("{\"brief\":{\"scopes\":[{\"kind\":\"galaxy\"}]}}", &status);
+    check(status == 400 && !ok_true(answer), "a scope of an unknown kind answers 400");
+    cJSON_Delete(answer);
+    snprintf(body, sizeof(body), "{\"brief\":{\"piece_ids\":[\"%s\"]},\"filter\":{\"tag\":\"sonatina\"}}", clementi_id);
+    answer = build_style(body, &status);
+    check(status == 400 && !ok_true(answer), "a brief beside another source answers 400");
+    cJSON_Delete(answer);
+    answer = build_style("{\"brief\":{\"scopes\":[{\"kind\":\"filter\",\"filter\":{\"composer\":\"Nobody\"}}]}}",
+                         &status);
+    check(status == 422 && !ok_true(answer), "a brief that names no piece answers 422");
+    cJSON_Delete(answer);
+
+    /* Rebuild resolves the brief again: the style it names changed. */
+    snprintf(path, sizeof(path), "/api/styles/%s/rebuild", one_id);
+    answer = json_exchange("POST", path, NULL, &status);
+    check(status == 200, "rebuilding the style a brief names answers 200");
+    cJSON_Delete(answer);
+    snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
+    answer = json_exchange("POST", path, NULL, &status);
+    check(status == 200 && number_of(style_of(answer), "piece_count") == 2 &&
+              strcmp(string_of(cJSON_GetObjectItemCaseSensitive(style_of(answer), "source"), "kind"), "brief") == 0,
+          "rebuilding a brief resolves it again and keeps its kind");
+    cJSON_Delete(answer);
+    check(model_reads_with_pieces(with_style_id, 2), "the rebuilt brief's model holds 2 pieces");
+
+    /* A deleted style makes the brief's rebuild 422. */
+    snprintf(path, sizeof(path), "/api/styles/%s", one_id);
+    cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+    snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
+    answer = json_exchange("POST", path, NULL, &status);
+    check(status == 422 && !ok_true(answer), "rebuilding a brief whose style is gone answers 422");
+    cJSON_Delete(answer);
+    check(model_reads_with_pieces(with_style_id, 2), "a refused brief rebuild leaves the model as it was");
+
+    snprintf(path, sizeof(path), "/api/styles/%s", with_style_id);
+    cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+    snprintf(path, sizeof(path), "/api/styles/%s", brief_style_id);
+    cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+  }
+
   /* From ids, one unknown. */
   {
     char body[512];

@@ -292,6 +292,9 @@
       const name = collectionNames && collectionNames[s.collection_id];
       return name ? `Collection: ${name}` : "Collection (deleted)";
     }
+    if (s.kind === "brief") {
+      return "Brief";
+    }
     const count = Array.isArray(s.piece_ids) ? s.piece_ids.length : 0;
     return count ? `Selected pieces (${count})` : "Selected pieces";
   }

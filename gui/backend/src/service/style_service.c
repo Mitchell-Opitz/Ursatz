@@ -246,6 +246,107 @@ static bool id_list_add(IdList *list, const char *id) {
     return true;
 }
 
+/* --- briefs --------------------------------------------------------------- */
+
+static void free_strings(char **items, size_t count);
+
+static char *dup_or_null(const char *value) {
+    return value && value[0] != '\0' ? dup_string(value) : NULL;
+}
+
+void ursatz_gui_style_brief_free(UrsatzGuiStyleBrief *brief) {
+    if (!brief) {
+        return;
+    }
+    for (size_t i = 0; brief->scopes && i < brief->scope_count; i++) {
+        free((char *)brief->scopes[i].collection_id);
+        free((char *)brief->scopes[i].composer);
+        free((char *)brief->scopes[i].source);
+        free((char *)brief->scopes[i].tag);
+        free((char *)brief->scopes[i].subject_id);
+        free((char *)brief->scopes[i].project_id);
+    }
+    free(brief->scopes);
+    free_strings(brief->piece_ids, brief->piece_count);
+    free_strings(brief->style_ids, brief->style_count);
+    memset(brief, 0, sizeof(*brief));
+}
+
+static bool strings_copy(char *const *items, size_t count, char ***out) {
+    *out = NULL;
+    if (count == 0) {
+        return true;
+    }
+    char **copy = calloc(count, sizeof(*copy));
+    if (!copy) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        copy[i] = dup_string(items[i]);
+        if (!copy[i]) {
+            free_strings(copy, i);
+            return false;
+        }
+    }
+    *out = copy;
+    return true;
+}
+
+/* A deep copy of source into out (zeroed first); out is freed with ursatz_gui_style_brief_free. */
+static bool brief_copy(const UrsatzGuiStyleBrief *source, UrsatzGuiStyleBrief *out) {
+    memset(out, 0, sizeof(*out));
+    if (source->scope_count > 0) {
+        out->scopes = calloc(source->scope_count, sizeof(*out->scopes));
+        if (!out->scopes) {
+            return false;
+        }
+        out->scope_count = source->scope_count;
+        for (size_t i = 0; i < source->scope_count; i++) {
+            const UrsatzGuiLinkScope *from = &source->scopes[i];
+            UrsatzGuiLinkScope *to = &out->scopes[i];
+            to->kind = from->kind;
+            to->collection_id = dup_or_null(from->collection_id);
+            to->composer = dup_or_null(from->composer);
+            to->source = dup_or_null(from->source);
+            to->tag = dup_or_null(from->tag);
+            to->subject_id = dup_or_null(from->subject_id);
+            to->project_id = dup_or_null(from->project_id);
+            if ((from->collection_id && from->collection_id[0] && !to->collection_id) ||
+                (from->composer && from->composer[0] && !to->composer) ||
+                (from->source && from->source[0] && !to->source) || (from->tag && from->tag[0] && !to->tag) ||
+                (from->subject_id && from->subject_id[0] && !to->subject_id) ||
+                (from->project_id && from->project_id[0] && !to->project_id)) {
+                ursatz_gui_style_brief_free(out);
+                return false;
+            }
+        }
+    }
+    if (!strings_copy(source->piece_ids, source->piece_count, &out->piece_ids) ||
+        !strings_copy(source->style_ids, source->style_count, &out->style_ids)) {
+        ursatz_gui_style_brief_free(out);
+        return false;
+    }
+    out->piece_count = source->piece_count;
+    out->style_count = source->style_count;
+    return true;
+}
+
+static const char *const kScopeKinds[] = {"all", "collection", "filter", "subject", "project"};
+
+static const char *scope_kind_label(UrsatzGuiLinkScopeKind kind) {
+    return (int)kind >= 0 && (size_t)kind < sizeof(kScopeKinds) / sizeof(kScopeKinds[0]) ? kScopeKinds[kind] : "all";
+}
+
+static bool scope_kind_from_label(const char *label, UrsatzGuiLinkScopeKind *kind) {
+    for (size_t i = 0; label && i < sizeof(kScopeKinds) / sizeof(kScopeKinds[0]); i++) {
+        if (strcmp(label, kScopeKinds[i]) == 0) {
+            *kind = (UrsatzGuiLinkScopeKind)i;
+            return true;
+        }
+    }
+    return false;
+}
+
 /* --- names ---------------------------------------------------------------- */
 
 /* Cuts text to at most max_bytes, never inside a UTF-8 sequence. */
@@ -269,6 +370,8 @@ static const char *source_kind_label(UrsatzGuiStyleSourceKind kind) {
             return "filter";
         case URSATZ_GUI_STYLE_SOURCE_COLLECTION:
             return "collection";
+        case URSATZ_GUI_STYLE_SOURCE_BRIEF:
+            return "brief";
         case URSATZ_GUI_STYLE_SOURCE_PIECES:
         default:
             return "pieces";
@@ -283,6 +386,7 @@ typedef struct {
     char *tag;
     char *collection_id;
     IdList piece_ids;
+    UrsatzGuiStyleBrief brief;
 } NormalizedSource;
 
 static void normalized_source_free(NormalizedSource *source) {
@@ -291,6 +395,7 @@ static void normalized_source_free(NormalizedSource *source) {
     free(source->tag);
     free(source->collection_id);
     id_list_free(&source->piece_ids);
+    ursatz_gui_style_brief_free(&source->brief);
     memset(source, 0, sizeof(*source));
 }
 
@@ -334,6 +439,35 @@ static UrsatzGuiStyleResult normalized_source_make(const UrsatzGuiStyleSource *i
         return out->collection_id ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
     }
 
+    if (input->kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+        const UrsatzGuiStyleBrief *brief = input->brief;
+        if (!brief || brief->scope_count > URSATZ_GUI_STYLE_BRIEF_MAX_SCOPES ||
+            brief->piece_count > URSATZ_GUI_STYLE_BRIEF_MAX_PIECES ||
+            brief->style_count > URSATZ_GUI_STYLE_BRIEF_MAX_STYLES ||
+            brief->scope_count + brief->piece_count + brief->style_count == 0 ||
+            (brief->scope_count > 0 && !brief->scopes) || (brief->piece_count > 0 && !brief->piece_ids) ||
+            (brief->style_count > 0 && !brief->style_ids)) {
+            return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+        }
+        for (size_t i = 0; i < brief->scope_count; i++) {
+            if ((int)brief->scopes[i].kind < 0 ||
+                (size_t)brief->scopes[i].kind >= sizeof(kScopeKinds) / sizeof(kScopeKinds[0])) {
+                return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+            }
+        }
+        for (size_t i = 0; i < brief->piece_count; i++) {
+            if (!ursatz_gui_collection_is_valid_id(brief->piece_ids[i])) {
+                return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+            }
+        }
+        for (size_t i = 0; i < brief->style_count; i++) {
+            if (!ursatz_gui_collection_is_valid_id(brief->style_ids[i])) {
+                return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+            }
+        }
+        return brief_copy(brief, &out->brief) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+    }
+
     if (input->piece_count == 0 || !input->piece_ids) {
         return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
     }
@@ -362,6 +496,63 @@ static void free_summaries(UrsatzGuiPieceSummary *pieces, size_t count) {
         ursatz_gui_meta_tags_free(pieces[i].tags, pieces[i].tag_count);
     }
     free(pieces);
+}
+
+static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style);
+static void style_destroy_contents(UrsatzGuiStyle *style);
+
+static int compare_ids(const void *left, const void *right) {
+    return strcmp(*(char *const *)left, *(char *const *)right);
+}
+
+/* The pieces of a brief: scopes, ids and styles' last builds, in id order without repeats. */
+static UrsatzGuiStyleResult resolve_brief(const UrsatzGuiStyleBrief *brief, IdList *ids) {
+    IdList all = {0};
+    UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
+
+    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < brief->scope_count; i++) {
+        char **scope_ids = NULL;
+        size_t scope_count = 0;
+        UrsatzGuiLinkResult resolved = ursatz_gui_link_scope_resolve(&brief->scopes[i], &scope_ids, &scope_count);
+        if (resolved == URSATZ_GUI_LINK_ERR_EMPTY) {
+            continue;
+        }
+        if (resolved != URSATZ_GUI_LINK_OK) {
+            result = resolved == URSATZ_GUI_LINK_ERR_INVALID_SCOPE ? URSATZ_GUI_STYLE_ERR_INVALID_SOURCE
+                     : resolved == URSATZ_GUI_LINK_ERR_NOT_FOUND   ? URSATZ_GUI_STYLE_ERR_NOT_FOUND
+                     : resolved == URSATZ_GUI_LINK_ERR_ALLOC       ? URSATZ_GUI_STYLE_ERR_ALLOC
+                                                                   : URSATZ_GUI_STYLE_ERR_FAILED;
+            continue;
+        }
+        for (size_t j = 0; result == URSATZ_GUI_STYLE_OK && j < scope_count; j++) {
+            result = id_list_add(&all, scope_ids[j]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        }
+        ursatz_gui_link_ids_free(scope_ids, scope_count);
+    }
+    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < brief->piece_count; i++) {
+        result = id_list_add(&all, brief->piece_ids[i]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+    }
+    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < brief->style_count; i++) {
+        UrsatzGuiStyle style;
+        memset(&style, 0, sizeof(style));
+        result = load_style(brief->style_ids[i], &style);
+        for (size_t j = 0; result == URSATZ_GUI_STYLE_OK && j < style.piece_count; j++) {
+            result = id_list_add(&all, style.pieces[j]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        }
+        style_destroy_contents(&style);
+    }
+
+    if (result == URSATZ_GUI_STYLE_OK && all.count > 1) {
+        qsort(all.items, all.count, sizeof(*all.items), compare_ids);
+    }
+    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < all.count; i++) {
+        if (i > 0 && strcmp(all.items[i], all.items[i - 1]) == 0) {
+            continue;
+        }
+        result = id_list_add(ids, all.items[i]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+    }
+    id_list_free(&all);
+    return result;
 }
 
 /*
@@ -430,6 +621,11 @@ static UrsatzGuiStyleResult resolve_piece_ids(const NormalizedSource *source, Id
         snprintf(default_name, default_name_size, "%s", name);
         ursatz_gui_collection_destroy(collection);
         return ok ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+    }
+
+    if (source->kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+        snprintf(default_name, default_name_size, "Brief");
+        return resolve_brief(&source->brief, ids);
     }
 
     for (size_t i = 0; i < source->piece_ids.count; i++) {
@@ -553,6 +749,68 @@ static cJSON *string_or_null(const char *text) {
     return text && text[0] != '\0' ? cJSON_CreateString(text) : cJSON_CreateNull();
 }
 
+static cJSON *string_array_json(char *const *items, size_t count) {
+    cJSON *array = cJSON_CreateArray();
+    for (size_t i = 0; array && i < count; i++) {
+        cJSON *item = cJSON_CreateString(items[i]);
+        if (!item) {
+            cJSON_Delete(array);
+            return NULL;
+        }
+        cJSON_AddItemToArray(array, item);
+    }
+    return array;
+}
+
+static cJSON *scope_json(const UrsatzGuiLinkScope *scope) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *filter = cJSON_CreateObject();
+    bool ok = object && filter && cJSON_AddStringToObject(object, "kind", scope_kind_label(scope->kind)) &&
+              cJSON_AddItemToObject(filter, "composer", string_or_null(scope->composer)) &&
+              cJSON_AddItemToObject(filter, "source", string_or_null(scope->source)) &&
+              cJSON_AddItemToObject(filter, "tag", string_or_null(scope->tag));
+    if (ok) {
+        cJSON_AddItemToObject(object, "collection_id", string_or_null(scope->collection_id));
+        cJSON_AddItemToObject(object, "filter", filter);
+        filter = NULL;
+        cJSON_AddItemToObject(object, "subject_id", string_or_null(scope->subject_id));
+        cJSON_AddItemToObject(object, "project_id", string_or_null(scope->project_id));
+    }
+    cJSON_Delete(filter);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* {"scopes": [...], "piece_ids": [...], "style_ids": [...]} */
+static cJSON *brief_json(const UrsatzGuiStyleBrief *brief) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *scopes = cJSON_CreateArray();
+    cJSON *piece_ids = string_array_json(brief->piece_ids, brief->piece_count);
+    cJSON *style_ids = string_array_json(brief->style_ids, brief->style_count);
+    bool ok = object && scopes && piece_ids && style_ids;
+    for (size_t i = 0; ok && i < brief->scope_count; i++) {
+        cJSON *scope = scope_json(&brief->scopes[i]);
+        ok = scope != NULL;
+        if (ok) {
+            cJSON_AddItemToArray(scopes, scope);
+        }
+    }
+    if (ok) {
+        cJSON_AddItemToObject(object, "scopes", scopes);
+        cJSON_AddItemToObject(object, "piece_ids", piece_ids);
+        cJSON_AddItemToObject(object, "style_ids", style_ids);
+        return object;
+    }
+    cJSON_Delete(object);
+    cJSON_Delete(scopes);
+    cJSON_Delete(piece_ids);
+    cJSON_Delete(style_ids);
+    return NULL;
+}
+
 static cJSON *source_json(const NormalizedSource *source) {
     cJSON *object = cJSON_CreateObject();
     if (!object || !cJSON_AddStringToObject(object, "kind", source_kind_label(source->kind))) {
@@ -587,9 +845,10 @@ static cJSON *source_json(const NormalizedSource *source) {
     } else {
         piece_ids = cJSON_CreateNull();
     }
-    if (!filter || !piece_ids || !cJSON_AddItemToObject(object, "filter", filter) ||
+    cJSON *brief = source->kind == URSATZ_GUI_STYLE_SOURCE_BRIEF ? brief_json(&source->brief) : cJSON_CreateNull();
+    if (!filter || !piece_ids || !brief || !cJSON_AddItemToObject(object, "filter", filter) ||
         !cJSON_AddItemToObject(object, "collection_id", string_or_null(source->collection_id)) ||
-        !cJSON_AddItemToObject(object, "piece_ids", piece_ids)) {
+        !cJSON_AddItemToObject(object, "piece_ids", piece_ids) || !cJSON_AddItemToObject(object, "brief", brief)) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -697,54 +956,86 @@ static UrsatzGuiStyleResult style_name(const char *requested, const char *defaul
     return URSATZ_GUI_STYLE_OK;
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
-                                            UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
-    if (out_id) {
-        *out_id = NULL;
+/* Normalizes the source, adds its pieces and settles the name. The caller holds the lock; on OK it frees *normalized
+ * with normalized_source_free and *collected with collected_free. */
+static UrsatzGuiStyleResult prepare_build(const char *name, const UrsatzGuiStyleSource *source,
+                                          NormalizedSource *normalized, Collected *collected, char *final_name,
+                                          size_t final_name_size) {
+    memset(collected, 0, sizeof(*collected));
+    UrsatzGuiStyleResult result = normalized_source_make(source, normalized);
+    if (result != URSATZ_GUI_STYLE_OK) {
+        return result;
     }
+    result = collect_pieces(normalized, collected);
+    if (result == URSATZ_GUI_STYLE_OK) {
+        result = style_name(name, collected->default_name, final_name, final_name_size);
+        if (result != URSATZ_GUI_STYLE_OK) {
+            collected_free(collected);
+        }
+    }
+    if (result != URSATZ_GUI_STYLE_OK) {
+        normalized_source_free(normalized);
+    }
+    return result;
+}
+
+/* Hands the skipped pieces of a finished build to the caller. */
+static void give_skipped(Collected *collected, UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
+    if (out_skipped) {
+        *out_skipped = collected->skipped.items;
+        collected->skipped.items = NULL;
+        if (out_skipped_count) {
+            *out_skipped_count = collected->skipped.count;
+        }
+    }
+}
+
+static void reset_outputs(UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
     if (out_skipped) {
         *out_skipped = NULL;
     }
     if (out_skipped_count) {
         *out_skipped_count = 0;
     }
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
+                                            UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
+    if (out_id) {
+        *out_id = NULL;
+    }
+    reset_outputs(out_skipped, out_skipped_count);
     if (!source || !out_id) {
         return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
     }
 
+    LOCK();
     NormalizedSource normalized;
-    UrsatzGuiStyleResult result = normalized_source_make(source, &normalized);
+    Collected collected;
+    char final_name[NAME_MAX_BYTES + 1];
+    UrsatzGuiStyleResult result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
     if (result != URSATZ_GUI_STYLE_OK) {
+        UNLOCK();
         return result;
     }
 
-    LOCK();
-    Collected collected;
     char *id = NULL;
     char style_dir[PATH_BYTES];
     bool dir_made = false;
-
-    result = collect_pieces(&normalized, &collected);
-    char final_name[NAME_MAX_BYTES + 1];
-    if (result == URSATZ_GUI_STYLE_OK) {
-        result = style_name(name, collected.default_name, final_name, sizeof(final_name));
-    }
-    if (result == URSATZ_GUI_STYLE_OK) {
-        result = URSATZ_GUI_STYLE_ERR_FAILED;
-        if (ensure_dir(kStylesDir)) {
-            for (int attempt = 0; attempt < ID_MAX_TRIES && !dir_made; attempt++) {
-                id = ursatz_gui_new_id("sty");
-                if (!id) {
-                    result = URSATZ_GUI_STYLE_ERR_ALLOC;
-                    break;
-                }
-                if (snprintf(style_dir, sizeof(style_dir), "%s/%s", kStylesDir, id) < (int)sizeof(style_dir)) {
-                    dir_made = make_dir(style_dir);
-                }
-                if (!dir_made) {
-                    free(id);
-                    id = NULL;
-                }
+    result = URSATZ_GUI_STYLE_ERR_FAILED;
+    if (ensure_dir(kStylesDir)) {
+        for (int attempt = 0; attempt < ID_MAX_TRIES && !dir_made; attempt++) {
+            id = ursatz_gui_new_id("sty");
+            if (!id) {
+                result = URSATZ_GUI_STYLE_ERR_ALLOC;
+                break;
+            }
+            if (snprintf(style_dir, sizeof(style_dir), "%s/%s", kStylesDir, id) < (int)sizeof(style_dir)) {
+                dir_made = make_dir(style_dir);
+            }
+            if (!dir_made) {
+                free(id);
+                id = NULL;
             }
         }
     }
@@ -760,18 +1051,57 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
     if (result == URSATZ_GUI_STYLE_OK) {
         *out_id = id;
         id = NULL;
-        if (out_skipped) {
-            *out_skipped = collected.skipped.items;
-            collected.skipped.items = NULL;
-            if (out_skipped_count) {
-                *out_skipped_count = collected.skipped.count;
-            }
-        }
+        give_skipped(&collected, out_skipped, out_skipped_count);
     }
     free(id);
-    if (collected.profile || collected.used.items || collected.skipped.items) {
-        collected_free(&collected);
+    collected_free(&collected);
+    UNLOCK();
+    normalized_source_free(&normalized);
+    return result;
+}
+
+UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, const char *name, const char *path,
+                                                 char ***out_pieces, size_t *out_piece_count,
+                                                 UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
+    if (out_pieces) {
+        *out_pieces = NULL;
     }
+    if (out_piece_count) {
+        *out_piece_count = 0;
+    }
+    reset_outputs(out_skipped, out_skipped_count);
+    char tmp_path[PATH_BYTES + 8];
+    if (!source || !path || path[0] == '\0' || strlen(path) >= PATH_BYTES ||
+        snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
+        return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+    }
+
+    LOCK();
+    NormalizedSource normalized;
+    Collected collected;
+    char final_name[NAME_MAX_BYTES + 1];
+    UrsatzGuiStyleResult result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
+    if (result != URSATZ_GUI_STYLE_OK) {
+        UNLOCK();
+        return result;
+    }
+
+    if (style_model_file_write(collected.profile, final_name, tmp_path) != STYLE_MODEL_FILE_OK ||
+        !replace_file(tmp_path, path)) {
+        remove(tmp_path);
+        result = URSATZ_GUI_STYLE_ERR_FAILED;
+    } else {
+        if (out_pieces) {
+            *out_pieces = collected.used.items;
+            collected.used.items = NULL;
+            if (out_piece_count) {
+                *out_piece_count = collected.used.count;
+            }
+            collected.used.count = 0;
+        }
+        give_skipped(&collected, out_skipped, out_skipped_count);
+    }
+    collected_free(&collected);
     UNLOCK();
     normalized_source_free(&normalized);
     return result;
@@ -796,6 +1126,7 @@ static void style_destroy_contents(UrsatzGuiStyle *style) {
     free(style->filter_tag);
     free(style->collection_id);
     free_strings(style->source_piece_ids, style->source_piece_count);
+    ursatz_gui_style_brief_free(&style->brief);
     free_strings(style->pieces, style->piece_count);
     ursatz_gui_style_skipped_free(style->skipped, style->skipped_count);
     for (size_t i = 0; i < style->category_count; i++) {
@@ -876,7 +1207,63 @@ static UrsatzGuiStyleSourceKind source_kind_from_label(const char *label) {
     if (label && strcmp(label, "pieces") == 0) {
         return URSATZ_GUI_STYLE_SOURCE_PIECES;
     }
+    if (label && strcmp(label, "brief") == 0) {
+        return URSATZ_GUI_STYLE_SOURCE_BRIEF;
+    }
     return URSATZ_GUI_STYLE_SOURCE_FILTER;
+}
+
+/* Reads the stored brief into out (owned strings). false on allocation failure. */
+static bool load_brief(const cJSON *json, UrsatzGuiStyleBrief *out) {
+    memset(out, 0, sizeof(*out));
+    const cJSON *scopes = cJSON_GetObjectItemCaseSensitive(json, "scopes");
+    int length = cJSON_IsArray(scopes) ? cJSON_GetArraySize(scopes) : 0;
+    if (length > 0) {
+        out->scopes = calloc((size_t)length, sizeof(*out->scopes));
+        if (!out->scopes) {
+            return false;
+        }
+        const cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, scopes) {
+            const cJSON *kind = cJSON_GetObjectItemCaseSensitive(entry, "kind");
+            const cJSON *filter = cJSON_GetObjectItemCaseSensitive(entry, "filter");
+            UrsatzGuiLinkScope *scope = &out->scopes[out->scope_count];
+            if (!cJSON_IsString(kind) || !scope_kind_from_label(kind->valuestring, &scope->kind)) {
+                continue;
+            }
+            char *fields[6];
+            fields[0] = string_member(entry, "collection_id");
+            fields[1] = string_member(filter, "composer");
+            fields[2] = string_member(filter, "source");
+            fields[3] = string_member(filter, "tag");
+            fields[4] = string_member(entry, "subject_id");
+            fields[5] = string_member(entry, "project_id");
+            bool filled = true;
+            for (int i = 0; i < 6; i++) {
+                filled = filled && fields[i] != NULL;
+            }
+            if (!filled) {
+                for (int i = 0; i < 6; i++) {
+                    free(fields[i]);
+                }
+                ursatz_gui_style_brief_free(out);
+                return false;
+            }
+            scope->collection_id = fields[0];
+            scope->composer = fields[1];
+            scope->source = fields[2];
+            scope->tag = fields[3];
+            scope->subject_id = fields[4];
+            scope->project_id = fields[5];
+            out->scope_count++;
+        }
+    }
+    if (!string_array_copy(cJSON_GetObjectItemCaseSensitive(json, "piece_ids"), &out->piece_ids, &out->piece_count) ||
+        !string_array_copy(cJSON_GetObjectItemCaseSensitive(json, "style_ids"), &out->style_ids, &out->style_count)) {
+        ursatz_gui_style_brief_free(out);
+        return false;
+    }
+    return true;
 }
 
 /* Loads styles/<id>/meta.json into style (zeroed by the caller). */
@@ -912,6 +1299,10 @@ static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
                                 &style->source_piece_count) &&
               string_array_copy(cJSON_GetObjectItemCaseSensitive(meta, "pieces"), &style->pieces,
                                 &style->piece_count);
+
+    if (ok && style->source_kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+        ok = load_brief(cJSON_GetObjectItemCaseSensitive(source, "brief"), &style->brief);
+    }
 
     const cJSON *skipped = cJSON_GetObjectItemCaseSensitive(meta, "skipped");
     int skipped_length = cJSON_IsArray(skipped) ? cJSON_GetArraySize(skipped) : 0;
@@ -1190,6 +1581,7 @@ UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id) {
     input.collection_id = style.collection_id;
     input.piece_ids = (const char *const *)style.source_piece_ids;
     input.piece_count = style.source_piece_count;
+    input.brief = &style.brief;
 
     NormalizedSource source;
     result = normalized_source_make(&input, &source);

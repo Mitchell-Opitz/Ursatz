@@ -139,6 +139,7 @@ check(M.styleBuildText(3, 0, "Rebuilt") === "Rebuilt from 3 pieces", "rebuild te
 check(M.styleSourceText({ kind: "filter", filter: { tag: "whimsical" } }) === "Tag: whimsical", "source text for a filter");
 check(M.styleSourceText({ kind: "collection", collection_id: "c1" }, { c1: "Nocturnes" }) === "Collection: Nocturnes", "source text for a collection");
 check(M.styleSourceText({ kind: "collection", collection_id: "gone" }, {}) === "Collection (deleted)", "source text for a deleted collection");
+check(M.styleSourceText({ kind: "brief", brief: { scopes: [], piece_ids: ["a"], style_ids: [] } }) === "Brief", "source text for a brief");
 check(M.styleSourceText({ kind: "pieces", piece_ids: ["a", "b"] }) === "Selected pieces (2)", "source text for ids");
 
 process.exit(failures === 0 ? 0 : 1);
