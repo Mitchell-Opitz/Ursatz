@@ -1877,3 +1877,11 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | --- | --- | --- |
 | m. 20, beat 3 to m. 20, beat 4 | 77 | voices 1 and 2 |
 | m. 66, beat 3 to m. 66, beat 4 | 263 | voices 1 and 2 |
+
+## Markings
+
+The tempo and dynamics markings the score notates, read with the library's standard-markings rules. A tempo holds until the next one, a dynamic until the next in its part. Group and the loudness comparison are the library's; a text it does not recognise has none. Wedges are not read, and articulations are not imported.
+
+The score has no tempo marking.
+
+The score has no dynamics marking.

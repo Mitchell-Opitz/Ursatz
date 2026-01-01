@@ -7070,3 +7070,11 @@ The library's scale-harmonization adapter found a model of one or more chords re
 | mm. 91 to 94 | cycle-of-fifths | no | - | 4 (2) | -1 | m. 91 1/6, m. 91 4/b7, m. 92 b7/5, m. 92 3/6, m. 93 6/4, m. 93 2/5, m. 94 5/3, m. 94 4/4 | 0.02 |
 | mm. 136 to 139 | cycle-of-fifths | no | - | 4 (2) | -1 | m. 136 1/6, m. 136 4/b7, m. 137 b7/5, m. 137 3/6, m. 138 6/4, m. 138 2/5, m. 139 5/3, m. 139 4/4 | 0.02 |
 | m. 283 | parallel-chords | yes | descending | 3 (1) | -1 | m. 283 b2/b2, m. 283 1/1, m. 283 7/7 | 0.48 |
+
+## Markings
+
+The tempo and dynamics markings the score notates, read with the library's standard-markings rules. A tempo holds until the next one, a dynamic until the next in its part. Group and the loudness comparison are the library's; a text it does not recognise has none. Wedges are not read, and articulations are not imported.
+
+The score has no tempo marking.
+
+The score has no dynamics marking.

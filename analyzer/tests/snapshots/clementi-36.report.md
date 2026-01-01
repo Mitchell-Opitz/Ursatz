@@ -1132,3 +1132,7 @@ The library's scale-harmonization adapter found a model of one or more chords re
 | m. 31 | parallel-chords | yes | ascending | 4 (1) | +1 | m. 31 5/5, m. 31 6/6, m. 31 7/7, m. 31 1/1 | 0.41 |
 | m. 33 | parallel-chords | yes | ascending | 4 (1) | +1 | m. 33 7/7, m. 33 1/1, m. 33 2/2, m. 33 3/3 | 0.41 |
 | m. 35 | parallel-chords | yes | descending | 4 (1) | -1 | m. 35 4/4, m. 35 3/3, m. 35 2/2, m. 35 1/1 | 0.36 |
+
+## Markings
+
+A MIDI file carries no tempo or dynamics markings.

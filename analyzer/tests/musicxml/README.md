@@ -46,6 +46,10 @@ Written for this repository (same licence as the repository). Each is a few meas
   imperfect authentic cadence (mm. 1 to 8), the second on a perfect authentic one (mm. 9 to 16). The library hears
   both sentences and the compound period they make.
 
+- `markings.musicxml`: one part (Piano), four measures in C major, 4/4, one whole note each (C E G C). Measure 1 has
+  "Allegro" with a metronome mark of quarter = 120 and p, measure 2 the dynamic text "cresc.", measure 3 f, and
+  measure 4 "rit." (with a sound tempo) and mp.
+
 ## Error fixtures
 
 - `malformed.musicxml`: not well-formed XML (cut off).

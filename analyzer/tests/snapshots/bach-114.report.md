@@ -1006,3 +1006,7 @@ The library's scale-harmonization adapter found a model of one or more chords re
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | mm. 16 to 17 | parallel-chords | yes | descending | 3 (1) | -1 | m. 16 5/3, m. 16 4/2, m. 17 3/1 | 0.27 |
 | mm. 22 to 23 | parallel-chords | yes | descending | 3 (1) | -1 | m. 22 5/3, m. 22 4/2, m. 23 3/1 | 0.31 |
+
+## Markings
+
+A MIDI file carries no tempo or dynamics markings.

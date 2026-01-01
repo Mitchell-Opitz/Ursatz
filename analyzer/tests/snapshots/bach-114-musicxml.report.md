@@ -1006,3 +1006,11 @@ The library's scale-harmonization adapter found a model of one or more chords re
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | mm. 16 to 17 | parallel-chords | yes | descending | 3 (1) | -1 | m. 16 5/3, m. 16 4/2, m. 17 3/1 | 0.27 |
 | mm. 22 to 23 | parallel-chords | yes | descending | 3 (1) | -1 | m. 22 5/3, m. 22 4/2, m. 23 3/1 | 0.31 |
+
+## Markings
+
+The tempo and dynamics markings the score notates, read with the library's standard-markings rules. A tempo holds until the next one, a dynamic until the next in its part. Group and the loudness comparison are the library's; a text it does not recognise has none. Wedges are not read, and articulations are not imported.
+
+The score has no tempo marking.
+
+The score has no dynamics marking.
