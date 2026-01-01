@@ -198,9 +198,12 @@ read by Ursatz's MusicXMLImporter.
   and bass are the highest and lowest notes sounding in any part. Each note keeps its part, staff and
   voice (`ImportedSource` in `imported_notes.h`), and `metadata.input.parts` lists the parts with their
   note counts. Per-part and per-voice analysis is not done.
-- **Tempo, dynamics, articulation.** Tempo and dynamics markings are imported and counted
-  (`metadata.input.tempo`, `dynamics_count`) but not analyzed or reported beyond that. The importer
-  does not expose articulation.
+- **Tempo, dynamics, articulation.** Tempo and dynamics markings are imported, kept with their part
+  and position, and reported in `markings` and a `## Markings` section, read with the library's
+  standard-markings rules (tempo group and change, dynamic rank and change, louder or quieter than the
+  previous level marking in the part). Wedges are not read. The importer does not expose
+  articulation, so `markings.articulations` is `null` with `articulations_imported: false`; this is
+  deferred until the importer reads them.
 - **Errors.** Malformed XML, a root other than `score-partwise`, an unreadable value, a score with no
   notes, a compressed file and an unreadable file each stop with a message on stderr and exit 1, and
   no output file is written. Things the importer skips or rounds (a grace note, an unpitched note, a

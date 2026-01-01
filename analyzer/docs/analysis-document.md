@@ -38,12 +38,12 @@ newline. The same input and build always give the same bytes.
 | `schemas` | array of schema and sequence claims | Filled: the library's galant schemas and harmonic sequences, one flat list labelled by kind. See below. |
 | `progressions` | array of progression entries | Filled: the recurring progressions of two to six chords. See below. |
 | `harmonic_rhythm` | object or null | Filled: changes of harmony per measure and the approach to cadences. See below; `null` when the piece has no chords the meter can place. |
-| `markings` | object or null | Placeholder: `null`. |
+| `markings` | markings object | Filled: the notated tempo and dynamics markings, read with the library's standard-markings rules. See below. |
 | `counterpoint_check` | object or null | Placeholder: `null`. |
 | `notes` | array of notes | Filled: where the notated and detected keys disagree. Empty when they do not, or there is no notated key signature. |
 
 Every key is always present, so consumers can read any section without checking for it first.
-The singular sections `markings` and `counterpoint_check` are `null` until filled; the rest are empty arrays.
+The singular section `counterpoint_check` is `null` until filled; the rest are empty arrays.
 `harmonic_rhythm` is `null` only for a piece with no chords the meter can place, and `form` only for a piece with no
 phrases.
 
@@ -73,8 +73,8 @@ itself states.
 | `key` | `"notated"`, `"embedded"` or `"inferred"` | The same, for the key signature. `"inferred"` means the input has no key signature, so keys come from the notes alone. |
 | `spelling` | `"notated"` or `"rule"` | `"notated"`: pitch names in chord roots, chord basses and outer voices follow the score. `"rule"`: spelled by the pipeline's minimal-accidental rule (MIDI). |
 | `parts` | array | The score's parts, merged into one texture for the analysis; empty for MIDI. Each has `id`, `name`, `staff_count` and `note_count`. |
-| `tempo` | object | `declared`, `quarters_per_minute` (`null` when not declared) and `marking_count`. Carried, not analyzed. |
-| `dynamics_count` | integer | Dynamics markings the input carries. Carried, not analyzed. |
+| `tempo` | object | `declared`, `quarters_per_minute` (`null` when not declared) and `marking_count`. The markings themselves are in `markings`. |
+| `dynamics_count` | integer | Dynamics markings the input carries. The markings themselves are in `markings`. |
 | `warning_count` | integer | Importer warnings (skipped grace notes, rounded values, and so on). |
 
 ### Notated key signatures
@@ -998,6 +998,46 @@ before those:
 | `before` | rational or null | The same over the two measures before those. |
 | `accelerates` | boolean | `approach` is greater than `before`; `false` when either is `null`. |
 
+### Markings
+
+`markings` is an object: `{"source", "tempo", "dynamics", "articulations", "articulations_imported"}`. The MusicXML
+importer's tempo and dynamics markings are kept on `ImportedSource` (`tempo_markings`, `dynamics`, each with its part)
+and `src/pipeline/markings_pipeline.c` reads them with Ursatz's standard-markings rules. The words, the metronome marks,
+the positions and the spans are the score's; every group, rank, change and comparison is the library's (R-018). A claim's
+`framework` is `"standard-markings-v1"`, its `note_ids` are empty, and its `uncertainty` is 0 when the library reads the
+marking and 1 when it does not.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `source` | string | `"notated"` for MusicXML, `"none"` for MIDI (a MIDI file carries no markings; `tempo` and `dynamics` are then empty). |
+| `tempo` | array | Tempo claims (`label` `"tempo"`) in time order. |
+| `dynamics` | array | Dynamics claims (`label` `"dynamic"`) in time order. |
+| `articulations` | null | Always `null`: the importer reads no articulations (R-056). |
+| `articulations_imported` | boolean | Always `false`. |
+
+**Tempo claim.** `span` runs from the marking to the next tempo marking, or to the end of the piece.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `text` | string or null | The marking's words (`"Allegro"`, `"rit."`); `null` for a metronome mark alone. Words count only when the direction also holds a metronome mark or a sound tempo (the importer's rule). |
+| `metronome` | object or null | `{"beat_unit", "per_minute"}`, both rationals: the beat unit in whole notes and the beats per minute. |
+| `part` | integer | Index into `metadata.input.parts`. |
+| `rank` | integer or null | The library's rank of a tempo word, 0 (grave) to 9 (presto); `null` for text that is not a tempo word. |
+| `group` | string or null | `"slow"`, `"medium"` or `"fast"`, the library's group of the text's first word; `null` when `rank` is. |
+| `change` | string | `"none"`, `"gradually-slower"` (rit.), `"gradually-faster"` (accel.) or `"return"` (a tempo). |
+
+**Dynamic claim.** `span` is the importer's: from the marking to the next marking in its part, or to the part's end.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `marking` | string | The score's text: `"p"`, `"mf"`, or an other-dynamics text such as `"cresc."`. |
+| `part`, `staff` | integer | Index into `metadata.input.parts`, and the staff of its direction. |
+| `rank` | integer or null | The library's loudness rank of a level marking (quiet marks negative, loud marks positive); `null` for a text that is not a level. |
+| `change` | string | `"none"`, `"louder"` (crescendo) or `"quieter"` (decrescendo, diminuendo), as the library reads the text. |
+| `relation` | string or null | `"louder"`, `"quieter"` or `"same"` against the previous level marking in the same part; `null` for the first level marking and for a text that is not a level. |
+
+The importer reads no wedges (crescendo and diminuendo hairpins) and no articulations, so neither appears.
+
 ## Versioning
 
 - `schema_version` changes only for breaking changes: removing or renaming a field, changing a
@@ -1022,7 +1062,8 @@ before those:
   (its claims are new), which is additive. `rhythm` is filled (its claims are new, as one flat array labelled by kind),
   which is additive. `texture` is filled (its claims are new, as one flat array labelled by kind), which is additive.
   `voice_leading` is filled (its claims are new, as one flat array labelled by kind), which is additive. `schemas` is
-  filled (its claims are new, as one flat array labelled by kind), which is additive.
+  filled (its claims are new, as one flat array labelled by kind), which is additive. `markings` is filled (its object is
+  new), which is additive.
 - **8**: Adds the required `chord_vocabulary` section and the required `roman_numeral.base_numeral` field. A required
   section and a required field are breaking changes under the rule above.
 - **7**: Chord claims gain the required `roman_numeral` object (the library's Roman numeral in the local key,
