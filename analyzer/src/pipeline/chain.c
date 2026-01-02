@@ -11,6 +11,7 @@
 #include "pipeline/progression_pipeline.h"
 #include "pipeline/rhythm_pipeline.h"
 #include "pipeline/schema_pipeline.h"
+#include "pipeline/markings_pipeline.h"
 #include "pipeline/texture_pipeline.h"
 #include "pipeline/voice_leading_pipeline.h"
 #include "pipeline/roman_numeral_pipeline.h"
@@ -175,7 +176,7 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !motive_stage_collect(&chain->motives, report) ||
         !melody_stage_collect(chain->notes, &chain->voice_segmentation, &chain->lines, report) ||
         !rhythm_stage_collect(chain->notes, &chain->lines, &chain->form, report) ||
-        !texture_stage_collect(chain->notes, report) ||
+        !texture_stage_collect(chain->notes, report) || !markings_stage_collect(chain->notes, report) ||
         !voice_leading_stage_collect(chain->notes, &chain->harmony, report) ||
         !schema_stage_collect(chain->notes, segmentation, &chain->romans, report)) {
         return false;

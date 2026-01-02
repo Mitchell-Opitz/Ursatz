@@ -1805,3 +1805,7 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | --- | --- | --- |
 | m. 20, beat 3 to m. 20, beat 4 | 77 | voices 1 and 2 |
 | m. 66, beat 3 to m. 66, beat 4 | 263 | voices 1 and 2 |
+
+## Markings
+
+A MIDI file carries no tempo or dynamics markings.

@@ -15,6 +15,30 @@ typedef enum {
     INPUT_FORMAT_MUSICXML
 } InputFormat;
 
+/* A tempo marking of a notated score: its words and/or metronome mark, where it sits and the part it came from. */
+typedef struct {
+    char *text;                           /* owned; NULL when the marking has only a metronome mark */
+    bool has_metronome;
+    unsigned long beat_unit_numerator;    /* the metronome's beat unit in whole notes, and its beats per minute */
+    unsigned long beat_unit_denominator;
+    unsigned long bpm_numerator;
+    unsigned long bpm_denominator;
+    long position_numerator;              /* where it sits, in whole notes from the start */
+    unsigned long position_denominator;
+    size_t part;                          /* index into ImportedSource.parts */
+} ImportedTempoMarking;
+
+/* A dynamics marking of a notated score: it holds from its position to the next one in its part. */
+typedef struct {
+    char *marking;                        /* owned; the importer's text: "p", "mf", or an other-dynamics text */
+    long start_numerator;                 /* the span it holds over, in whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    size_t part;                          /* index into ImportedSource.parts */
+    int staff;
+} ImportedDynamic;
+
 /* One part of a notated score. */
 typedef struct {
     char *id;   /* owned; the score-part id */
@@ -41,8 +65,10 @@ typedef struct {
  *
  * tempo_declared is true when the score gives a tempo;
  * initial_quarters_per_minute is then the tempo at the start.
- * tempo_marking_count and dynamics_count count the markings the input
- * carries; they are carried through, not analyzed.
+ * tempo_markings (tempo_marking_count of them) and dynamics
+ * (dynamics_count) are the markings the input carries, in time order,
+ * owned; both are NULL for a MIDI file. Reading them is the markings
+ * stage's job (markings_pipeline.h).
  */
 typedef struct {
     InputFormat format;
@@ -58,6 +84,8 @@ typedef struct {
     size_t tempo_marking_count;
     size_t dynamics_count;
     size_t warning_count;
+    ImportedTempoMarking *tempo_markings;
+    ImportedDynamic *dynamics;
 } ImportedSource;
 
 /*

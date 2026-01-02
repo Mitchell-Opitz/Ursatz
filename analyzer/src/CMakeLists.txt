@@ -20,6 +20,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/harmonic_rhythm_pipeline.c
     pipeline/rhythm_pipeline.c
     pipeline/texture_pipeline.c
+    pipeline/markings_pipeline.c
     pipeline/voice_leading_pipeline.c
     pipeline/voicing_check.c
     pipeline/schema_pipeline.c
@@ -45,6 +46,11 @@ set_source_files_properties(pipeline/melody_pipeline.c pipeline/voice_leading_pi
 get_target_property(STANDARD_TEXTURE_SOURCE_DIR standard_texture SOURCE_DIR)
 set_source_files_properties(pipeline/texture_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
     "${STANDARD_TEXTURE_SOURCE_DIR};${STANDARD_TEXTURE_SOURCE_DIR}/analysis")
+# standard-markings' headers share names (framework.h, rule_pair.h) with other frameworks', so only the markings
+# pipeline sees its directory.
+get_target_property(STANDARD_MARKINGS_SOURCE_DIR standard_markings SOURCE_DIR)
+set_source_files_properties(pipeline/markings_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
+    "${STANDARD_MARKINGS_SOURCE_DIR}")
 # standard-voicing's headers share names (framework.h, rule_pair.h) with other frameworks', so only the voicing check
 # sees its directory.
 get_target_property(STANDARD_VOICING_SOURCE_DIR standard_voicing SOURCE_DIR)
@@ -62,6 +68,7 @@ target_include_directories(ursatz_analyzer
 target_link_libraries(ursatz_analyzer
     PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
     PRIVATE cjson $<LINK_ONLY:standard_counterpoint> $<LINK_ONLY:standard_texture> $<LINK_ONLY:standard_voicing>
+    $<LINK_ONLY:standard_markings>
     $<LINK_ONLY:galant_schemas> $<LINK_ONLY:scale_harmonization>
 )
 target_compile_definitions(ursatz_analyzer PRIVATE

@@ -97,6 +97,62 @@ static bool copy_parts(const MusicXmlImport *import, ImportedSource *source) {
     return true;
 }
 
+/* Copies the importer's tempo and dynamics markings; each count is set as its entry is filled, so a failure leaves
+   the source safe to destroy. false on allocation failure. */
+static bool copy_markings(const MusicXmlImport *import, ImportedSource *source) {
+    if (import->tempo_marking_count > 0) {
+        source->tempo_markings = calloc(import->tempo_marking_count, sizeof(ImportedTempoMarking));
+        if (!source->tempo_markings) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < import->tempo_marking_count; i++) {
+        const TempoMarking *marking = import->tempo_markings[i];
+        ImportedTempoMarking *copy = &source->tempo_markings[i];
+        const MusicalTime *position = temporal_anchor_position(tempo_marking_temporal_anchor(marking));
+        copy->position_numerator = musical_time_numerator(position);
+        copy->position_denominator = musical_time_denominator(position);
+        copy->part = import->tempo_marking_part[i];
+        const MetronomeMarking *metronome = tempo_marking_metronome_marking(marking);
+        if (metronome) {
+            copy->has_metronome = true;
+            copy->beat_unit_numerator = metronome_marking_beat_unit_numerator(metronome);
+            copy->beat_unit_denominator = metronome_marking_beat_unit_denominator(metronome);
+            copy->bpm_numerator = metronome_marking_bpm_numerator(metronome);
+            copy->bpm_denominator = metronome_marking_bpm_denominator(metronome);
+        }
+        if (tempo_marking_has_text(marking) && !(copy->text = strdup(tempo_marking_text(marking)))) {
+            return false;
+        }
+        source->tempo_marking_count = i + 1;
+    }
+    if (import->dynamics_count > 0) {
+        source->dynamics = calloc(import->dynamics_count, sizeof(ImportedDynamic));
+        if (!source->dynamics) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < import->dynamics_count; i++) {
+        const Dynamics *dynamics = import->dynamics[i];
+        ImportedDynamic *copy = &source->dynamics[i];
+        const TimeSpan *span = dynamics_target_time_span(dynamics);
+        source->dynamics_count = i + 1;
+        if (!span) {
+            continue; /* the importer gives every dynamic a span; an entry without a marking is skipped later */
+        }
+        copy->start_numerator = musical_time_numerator(time_span_start(span));
+        copy->start_denominator = musical_time_denominator(time_span_start(span));
+        copy->end_numerator = musical_time_numerator(time_span_end(span));
+        copy->end_denominator = musical_time_denominator(time_span_end(span));
+        copy->part = import->dynamics_part[i];
+        copy->staff = import->dynamics_staff[i];
+        if (!(copy->marking = strdup(dynamics_marking(dynamics)))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static const char *status_description(MusicXmlImportStatus status) {
     switch (status) {
         case MUSICXML_IMPORT_ERR_IO:
@@ -158,8 +214,6 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
     notes.source.meter_notated = true;
     notes.source.key_notated = true;
     notes.source.spelling_notated = true;
-    notes.source.tempo_marking_count = import.tempo_marking_count;
-    notes.source.dynamics_count = import.dynamics_count;
     notes.source.warning_count = import.warnings.count;
     if (import.tempo_map && !tempo_map_is_defaulted(import.tempo_map) && tempo_map_region_count(import.tempo_map) > 0) {
         unsigned long microseconds = tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0));
@@ -171,7 +225,8 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
 
     MusicalTime *end_time = last_note_end(import.events, import.count);
     bool ok = end_time && take_key_signatures(&import, &notes.key_signature_events, &notes.key_signature) &&
-              copy_parts(&import, &notes.source);
+              copy_parts(&import, &notes.source) &&
+              copy_markings(&import, &notes.source);
     if (!ok) {
         musical_time_destroy(end_time);
         midi_key_signature_events_destroy(&notes.key_signature_events);
