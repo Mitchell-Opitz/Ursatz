@@ -9,6 +9,8 @@
 #include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/report_writer.h>
 
+#include "pipeline/counterpoint_pipeline.h"
+
 static bool write_markdown_report(const char *path, const AnalysisDocument *document) {
     char *markdown = markdown_report_render(document);
     if (!markdown) {
@@ -58,7 +60,10 @@ static bool write_analysis_document(const char *path, const AnalysisDocument *an
 }
 
 static void print_usage(const char *program) {
-    fprintf(stderr, "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] <input-file-path>\n", program);
+    fprintf(stderr,
+            "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> "
+            "[--cantus upper|lower]] <input-file-path>\n",
+            program);
 }
 
 int main(int argc, char *argv[]) {
@@ -66,6 +71,9 @@ int main(int argc, char *argv[]) {
     bool want_json = false;
     bool want_markdown = false;
     InputFormat input_format = INPUT_FORMAT_AUTO;
+    int species = 0;
+    bool cantus_set = false;
+    bool cantus_upper = false;
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
@@ -77,6 +85,19 @@ int main(int argc, char *argv[]) {
                 print_usage(argv[0]);
                 return 1;
             }
+        } else if (strcmp(arg, "--check-counterpoint") == 0) {
+            if (i + 1 >= argc || strlen(argv[i + 1]) != 1 || argv[i + 1][0] < '1' || argv[i + 1][0] > '5') {
+                print_usage(argv[0]);
+                return 1;
+            }
+            species = argv[++i][0] - '0';
+        } else if (strcmp(arg, "--cantus") == 0) {
+            if (i + 1 >= argc || (strcmp(argv[i + 1], "upper") != 0 && strcmp(argv[i + 1], "lower") != 0)) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            cantus_upper = strcmp(argv[++i], "upper") == 0;
+            cantus_set = true;
         } else if (arg[0] == '-' || path) {
             print_usage(argv[0]);
             return 1;
@@ -84,7 +105,7 @@ int main(int argc, char *argv[]) {
             path = arg;
         }
     }
-    if (!path) {
+    if (!path || (cantus_set && species == 0)) {
         print_usage(argv[0]);
         return 1;
     }
@@ -105,6 +126,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    int exit_code = 0;
+    if (species != 0) {
+        CounterpointCheckResult checked = counterpoint_check_collect(&notes, species, cantus_upper, &report);
+        if (checked == COUNTERPOINT_CHECK_ERR_ALLOC) {
+            fprintf(stderr, "Error: out of memory while checking counterpoint in '%s'\n", path);
+            analysis_report_destroy(&report);
+            imported_notes_destroy(&notes);
+            return 1;
+        }
+        if (checked == COUNTERPOINT_CHECK_NOT_TWO_VOICES) {
+            fprintf(stderr, "Error: counterpoint check needs two voices\n");
+            exit_code = 2;
+        }
+    }
+
     AnalysisDocument *document = analysis_document_build(path, &notes, &report);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
@@ -117,5 +153,5 @@ int main(int argc, char *argv[]) {
               (!want_json || write_analysis_document(path, document));
 
     analysis_document_destroy(document);
-    return ok ? 0 : 1;
+    return ok ? exit_code : 1;
 }

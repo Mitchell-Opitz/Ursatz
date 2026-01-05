@@ -1002,6 +1002,15 @@ typedef struct {
     size_t note_id_count;
 } AnalysisTuplet;
 
+/* The counterpoint check of a two-voice input (--check-counterpoint). present is false unless the mode was on. */
+typedef struct {
+    bool present;      /* the mode was on and the input had two voices */
+    int species;       /* 1 to 5 */
+    bool cantus_upper; /* the cantus firmus is the upper voice (the default is the lower) */
+    double uncertainty; /* 1 less the least confidence of the voice separation, in [0, 1]; 0 when the input's own
+                           streams were the voices */
+} AnalysisCounterpointCheck;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -1067,6 +1076,7 @@ typedef struct {
     size_t tempo_marking_count;
     AnalysisDynamic *dynamics; /* owned; in time order; empty for MIDI input */
     size_t dynamic_count;
+    AnalysisCounterpointCheck counterpoint_check; /* present only when --check-counterpoint ran */
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;

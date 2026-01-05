@@ -23,6 +23,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/markings_pipeline.c
     pipeline/voice_leading_pipeline.c
     pipeline/voicing_check.c
+    pipeline/counterpoint_pipeline.c
     pipeline/schema_pipeline.c
     pipeline/analysis_report.c
     pipeline/chain.c
@@ -77,4 +78,5 @@ target_compile_definitions(ursatz_analyzer PRIVATE
 )
 
 add_executable(ursatz-analyzer main.c)
+target_include_directories(ursatz-analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer)
