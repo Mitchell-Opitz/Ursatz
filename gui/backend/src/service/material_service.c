@@ -919,11 +919,267 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
                : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error, error_size);
 }
 
+static const char *const kThemeSlots[] = {"basic", "contrasting", "continuation", "cadential", NULL};
+static const char *const kThemePools[] = {"approved-and-unflagged", "approved", "none", NULL};
+static const char *const kThemeMotiveCategories[] = {"motive-degrees", "motive-intervals", "motive-rhythm",
+                                                     "motive-nct-figure", NULL};
+/* The members a placeholder theme (form null or a string, slots of anything) does not have. */
+static const char *const kThemeNewMembers[] = {"pool",  "accompaniment", "brief", "style_weight", "without",
+                                               "tempo", "check",         "seed",  "result",       NULL};
+
+#define THEME_BRIEF_MAX_SCOPES 16
+#define THEME_BRIEF_MAX_PIECES 5000
+#define THEME_BRIEF_MAX_STYLES 16
+#define THEME_WITHOUT_MAX 4
+
+static bool is_string_or_null(const cJSON *object, const char *name) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(object, name);
+    return !value || cJSON_IsNull(value) || cJSON_IsString(value);
+}
+
+/* A member that is absent, null or one of set. */
+static bool is_in_set_or_null(const cJSON *object, const char *name, const char *const *set) {
+    return is_absent_or_null(object, name) || in_set(cJSON_GetObjectItemCaseSensitive(object, name), set);
+}
+
+static bool theme_key_ok(const char *text) {
+    if (strlen(text) > 16 || text[0] < 'A' || text[0] > 'G') {
+        return false;
+    }
+    const char *rest = text + 1;
+    if (*rest == '#' || *rest == 'b') {
+        rest++;
+    }
+    if (*rest == '\0') {
+        return true;
+    }
+    if (*rest != ' ') {
+        return false;
+    }
+    rest++;
+    return strcmp(rest, "major") == 0 || strcmp(rest, "minor") == 0;
+}
+
+/* "presentation", "antecedent" or "cbi", a plus, then "continuation", "consequent" or "cadential". */
+static bool theme_hybrid_ok(const char *text) {
+    static const char *const beginnings[] = {"presentation", "antecedent", "cbi", NULL};
+    static const char *const endings[] = {"continuation", "consequent", "cadential", NULL};
+    const char *plus = strchr(text, '+');
+    if (!plus || plus - text > 16 || strlen(plus + 1) > 16) {
+        return false;
+    }
+    char beginning[24];
+    memcpy(beginning, text, (size_t)(plus - text));
+    beginning[plus - text] = '\0';
+    for (const char *const *b = beginnings; *b; b++) {
+        if (strcmp(*b, beginning) == 0) {
+            for (const char *const *e = endings; *e; e++) {
+                if (strcmp(*e, plus + 1) == 0) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *error, size_t error_size) {
+    static const char *const intos[] = {"sentence", "period", "hybrid", NULL};
+    static const char *const modes[] = {"major", "minor", "style", NULL};
+    static const char *const meters[] = {"2/4", "3/4", "4/4", "6/8", NULL};
+    static const char *const cadences[] = {"PAC", "IAC", "HC", NULL};
+    static const char *const first_cadences[] = {"HC", "IAC", NULL};
+    const cJSON *into = cJSON_GetObjectItemCaseSensitive(form, "into");
+    const cJSON *hybrid = cJSON_GetObjectItemCaseSensitive(form, "hybrid");
+    const cJSON *key = cJSON_GetObjectItemCaseSensitive(form, "key");
+    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(form, "bars");
+    if (!is_in_set_or_null(form, "into", intos)) {
+        return invalid_body(error, error_size, "theme form into must be sentence, period or hybrid");
+    }
+    if (!is_absent_or_null(form, "hybrid") &&
+        (!cJSON_IsString(hybrid) || !theme_hybrid_ok(hybrid->valuestring))) {
+        return invalid_body(error, error_size, "theme form hybrid must look like presentation+continuation");
+    }
+    if (!is_absent_or_null(form, "key") && (!cJSON_IsString(key) || !theme_key_ok(key->valuestring))) {
+        return invalid_body(error, error_size, "theme form key must be a tonic such as D or Bb minor");
+    }
+    if (!is_in_set_or_null(form, "mode", modes)) {
+        return invalid_body(error, error_size, "theme form mode must be major, minor or style");
+    }
+    if (!is_in_set_or_null(form, "meter", meters)) {
+        return invalid_body(error, error_size, "theme form meter must be 2/4, 3/4, 4/4 or 6/8");
+    }
+    if (!is_absent_or_null(form, "bars") && (!is_whole_number(bars, 4) || bars->valuedouble > 8 ||
+                                              (bars->valuedouble != 4 && bars->valuedouble != 8))) {
+        return invalid_body(error, error_size, "theme form bars must be 4 or 8");
+    }
+    if (!is_in_set_or_null(form, "cadence", cadences) || !is_in_set_or_null(form, "first_cadence", first_cadences)) {
+        return invalid_body(error, error_size, "theme form cadence must be PAC, IAC or HC and first_cadence HC or IAC");
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/* {slot, item_id, version}: a reference to a version of another item. */
+static bool theme_reference_ok(const cJSON *reference) {
+    const cJSON *item_id = cJSON_GetObjectItemCaseSensitive(reference, "item_id");
+    return cJSON_IsObject(reference) && cJSON_IsString(item_id) && is_valid_id(item_id->valuestring) &&
+           is_whole_number(cJSON_GetObjectItemCaseSensitive(reference, "version"), 1);
+}
+
+static UrsatzGuiMaterialResult validate_theme_slots(const cJSON *slots, char *error, size_t error_size) {
+    bool seen[4] = {false, false, false, false};
+    const cJSON *slot = NULL;
+    cJSON_ArrayForEach(slot, slots) {
+        const cJSON *name = cJSON_GetObjectItemCaseSensitive(slot, "slot");
+        int index = -1;
+        for (int i = 0; cJSON_IsString(name) && kThemeSlots[i]; i++) {
+            if (strcmp(name->valuestring, kThemeSlots[i]) == 0) {
+                index = i;
+            }
+        }
+        if (index < 0 || !theme_reference_ok(slot)) {
+            return invalid_body(error, error_size, "each theme slot needs slot, item_id and version");
+        }
+        if (seen[index]) {
+            return invalid_body(error, error_size, "each theme slot may be named once");
+        }
+        seen[index] = true;
+    }
+    return seen[0] ? URSATZ_GUI_MATERIAL_OK : invalid_body(error, error_size, "a theme needs a basic slot");
+}
+
+static UrsatzGuiMaterialResult validate_theme_accompaniment(const cJSON *accompaniment, char *error,
+                                                            size_t error_size) {
+    static const char *const patterns[] = {"block", "arpeggiated", "alberti", "oom-pah", "any", NULL};
+    const cJSON *pattern = cJSON_GetObjectItemCaseSensitive(accompaniment, "pattern");
+    if (cJSON_IsObject(accompaniment) && cJSON_IsString(pattern) && strcmp(pattern->valuestring, "motive") == 0) {
+        return theme_reference_ok(accompaniment)
+                   ? URSATZ_GUI_MATERIAL_OK
+                   : invalid_body(error, error_size, "a motive accompaniment needs item_id and version");
+    }
+    return cJSON_IsObject(accompaniment) && in_set(pattern, patterns)
+               ? URSATZ_GUI_MATERIAL_OK
+               : invalid_body(error, error_size, "theme accompaniment pattern must be block, arpeggiated, alberti, oom-pah, any or motive");
+}
+
+static bool theme_id_list_ok(const cJSON *brief, const char *name, size_t max) {
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(brief, name);
+    if (!list) {
+        return true;
+    }
+    if (!cJSON_IsArray(list) || (size_t)cJSON_GetArraySize(list) > max) {
+        return false;
+    }
+    const cJSON *id = NULL;
+    cJSON_ArrayForEach(id, list) {
+        if (!cJSON_IsString(id) || !is_valid_id(id->valuestring)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* {scopes, piece_ids, style_ids} as the styles route takes a brief: at most 16 scopes, 5000 pieces and 16 styles. */
+static bool theme_brief_ok(const cJSON *brief) {
+    static const char *const kinds[] = {"all", "collection", "filter", "subject", "project", NULL};
+    const cJSON *scopes = cJSON_GetObjectItemCaseSensitive(brief, "scopes");
+    if (!cJSON_IsObject(brief) || (scopes && (!cJSON_IsArray(scopes) || cJSON_GetArraySize(scopes) > THEME_BRIEF_MAX_SCOPES)) ||
+        !theme_id_list_ok(brief, "piece_ids", THEME_BRIEF_MAX_PIECES) ||
+        !theme_id_list_ok(brief, "style_ids", THEME_BRIEF_MAX_STYLES)) {
+        return false;
+    }
+    const cJSON *scope = NULL;
+    cJSON_ArrayForEach(scope, scopes) {
+        const cJSON *filter = cJSON_GetObjectItemCaseSensitive(scope, "filter");
+        if (!cJSON_IsObject(scope) || !in_set(cJSON_GetObjectItemCaseSensitive(scope, "kind"), kinds) ||
+            !is_string_or_null(scope, "collection_id") || !is_string_or_null(scope, "subject_id") ||
+            !is_string_or_null(scope, "project_id") ||
+            (filter && !cJSON_IsNull(filter) &&
+             (!cJSON_IsObject(filter) || !is_string_or_null(filter, "composer") || !is_string_or_null(filter, "source") ||
+              !is_string_or_null(filter, "tag")))) {
+            return false;
+        }
+    }
+    int entries = (scopes ? cJSON_GetArraySize(scopes) : 0) +
+                  cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(brief, "piece_ids")) +
+                  cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(brief, "style_ids"));
+    return entries > 0;
+}
+
+/* True when the theme is a placeholder: form null, absent or a string, no new member, and no slot written as an object with a slot name. */
+static bool theme_is_placeholder(const cJSON *theme) {
+    const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
+    if (cJSON_IsObject(form)) {
+        return false;
+    }
+    for (const char *const *name = kThemeNewMembers; *name; name++) {
+        if (cJSON_GetObjectItemCaseSensitive(theme, *name)) {
+            return false;
+        }
+    }
+    const cJSON *slot = NULL;
+    cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
+        if (cJSON_IsObject(slot) && cJSON_GetObjectItemCaseSensitive(slot, "slot")) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, size_t error_size) {
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
+    const cJSON *slots = cJSON_GetObjectItemCaseSensitive(theme, "slots");
     if (!cJSON_IsObject(theme) || (form && !cJSON_IsNull(form) && !cJSON_IsString(form) && !cJSON_IsObject(form)) ||
-        !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(theme, "slots"))) {
+        !cJSON_IsArray(slots)) {
         return invalid_body(error, error_size, "a theme body needs a theme object with form and slots");
+    }
+    if (theme_is_placeholder(theme)) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    UrsatzGuiMaterialResult result = cJSON_IsObject(form) ? validate_theme_form(form, error, error_size)
+                                                          : URSATZ_GUI_MATERIAL_OK;
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = validate_theme_slots(slots, error, error_size);
+    }
+    if (result != URSATZ_GUI_MATERIAL_OK) {
+        return result;
+    }
+    if (!is_in_set_or_null(theme, "pool", kThemePools)) {
+        return invalid_body(error, error_size, "theme pool must be approved-and-unflagged, approved or none");
+    }
+    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
+    if (!is_absent_or_null(theme, "accompaniment") &&
+        validate_theme_accompaniment(accompaniment, error, error_size) != URSATZ_GUI_MATERIAL_OK) {
+        return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+    }
+    if (!is_absent_or_null(theme, "brief") && !theme_brief_ok(cJSON_GetObjectItemCaseSensitive(theme, "brief"))) {
+        return invalid_body(error, error_size, "theme brief needs scopes, piece_ids or style_ids within the limits");
+    }
+    const cJSON *weight = cJSON_GetObjectItemCaseSensitive(theme, "style_weight");
+    if (!is_absent_or_null(theme, "style_weight") &&
+        (!cJSON_IsString(weight) || !is_rational(weight->valuestring, false))) {
+        return invalid_body(error, error_size, "theme style_weight must be n or n/d");
+    }
+    const cJSON *without = cJSON_GetObjectItemCaseSensitive(theme, "without");
+    if (without && (!is_string_list_from(without, kThemeMotiveCategories) ||
+                    cJSON_GetArraySize(without) > THEME_WITHOUT_MAX)) {
+        return invalid_body(error, error_size, "theme without lists up to four motive categories");
+    }
+    const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(theme, "tempo");
+    if (!is_absent_or_null(theme, "tempo") && (!is_whole_number(tempo, 20) || tempo->valuedouble > 400)) {
+        return invalid_body(error, error_size, "theme tempo must be null or 20 to 400");
+    }
+    const cJSON *check = cJSON_GetObjectItemCaseSensitive(theme, "check");
+    if (check && !cJSON_IsBool(check)) {
+        return invalid_body(error, error_size, "theme check must be true or false");
+    }
+    const cJSON *seed = cJSON_GetObjectItemCaseSensitive(theme, "seed");
+    if (!is_absent_or_null(theme, "seed") && !is_whole_number(seed, 0)) {
+        return invalid_body(error, error_size, "theme seed must be null or a whole number");
+    }
+    const cJSON *result_member = cJSON_GetObjectItemCaseSensitive(theme, "result");
+    if (result_member && !cJSON_IsNull(result_member) && !cJSON_IsObject(result_member)) {
+        return invalid_body(error, error_size, "theme result must be null or an object");
     }
     return URSATZ_GUI_MATERIAL_OK;
 }
@@ -1109,6 +1365,172 @@ static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON
     return URSATZ_GUI_MATERIAL_OK;
 }
 
+/* The theme member of a body that is not a placeholder, else NULL. */
+static cJSON *theme_member(cJSON *body) {
+    cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
+    return cJSON_IsObject(theme) && !theme_is_placeholder(theme) ? theme : NULL;
+}
+
+/*
+ * The references a theme makes to motifs: its slots in order, then the accompaniment when its pattern is "motive".
+ * refs receives up to 5 pointers; the count is returned. *accompaniment_index is the index of the accompaniment
+ * reference, or -1.
+ */
+static size_t theme_references(const cJSON *theme, const cJSON *refs[5], int *accompaniment_index) {
+    size_t count = 0;
+    const cJSON *slot = NULL;
+    *accompaniment_index = -1;
+    cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
+        if (count < 4) {
+            refs[count++] = slot;
+        }
+    }
+    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
+    const cJSON *pattern = cJSON_GetObjectItemCaseSensitive(accompaniment, "pattern");
+    if (cJSON_IsObject(accompaniment) && cJSON_IsString(pattern) && strcmp(pattern->valuestring, "motive") == 0) {
+        *accompaniment_index = (int)count;
+        refs[count++] = accompaniment;
+    }
+    return count;
+}
+
+/* The motif a reference names must exist at that version, with form full, and have the role the use needs. */
+static UrsatzGuiMaterialResult theme_check_reference_locked(const cJSON *reference, bool accompaniment) {
+    const char *source_id = string_member(reference, "item_id");
+    int number = cJSON_GetObjectItemCaseSensitive(reference, "version")->valueint;
+    cJSON *source = NULL;
+    cJSON *version = NULL;
+    UrsatzGuiMaterialResult result = load_item_locked(source_id, &source);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = strcmp(string_member(source, "type"), "motif") == 0 && number <= current_version_of(source)
+                     ? read_version_locked(source_id, number, &version)
+                     : URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version, "motif");
+        const char *form = string_member(motif, "form");
+        const char *role = string_member(motif, "role");
+        if (!form || !role || strcmp(form, "full") != 0 || strcmp(role, accompaniment ? "accompaniment" : "melodic") != 0) {
+            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+        }
+    }
+    if (result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND || result == URSATZ_GUI_MATERIAL_ERR_INVALID_ID) {
+        result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+    }
+    cJSON_Delete(source);
+    cJSON_Delete(version);
+    return result;
+}
+
+/* Adds {item_id, version} to uses unless an entry with both is there. false on allocation failure. */
+static bool theme_add_use(cJSON *uses, const char *item_id, int version) {
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, uses) {
+        if (strcmp(string_member(use, "item_id"), item_id) == 0 &&
+            cJSON_GetObjectItemCaseSensitive(use, "version")->valueint == version) {
+            return true;
+        }
+    }
+    cJSON *entry = cJSON_CreateObject();
+    if (!entry || !cJSON_AddStringToObject(entry, "item_id", item_id) || !cJSON_AddNumberToObject(entry, "version", version)) {
+        cJSON_Delete(entry);
+        return false;
+    }
+    cJSON_AddItemToArray(uses, entry);
+    return true;
+}
+
+/*
+ * Returns in *out a copy of body. For a theme that is not a placeholder, the motifs its slots and accompaniment name
+ * are checked, and its uses of those items are replaced by one use for each version named (a client use of them is
+ * dropped; its other uses stay). Any other body is copied as it is.
+ */
+static UrsatzGuiMaterialResult prepare_uses_locked(const cJSON *body, cJSON **out) {
+    cJSON *prepared = cJSON_Duplicate(body, 1);
+    if (!prepared) {
+        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    }
+    cJSON *theme = theme_member(prepared);
+    if (!theme) {
+        *out = prepared;
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    const cJSON *refs[5];
+    int accompaniment_index = -1;
+    size_t count = theme_references(theme, refs, &accompaniment_index);
+    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+        result = theme_check_reference_locked(refs[i], (int)i == accompaniment_index);
+    }
+    cJSON *uses = cJSON_CreateArray();
+    if (result == URSATZ_GUI_MATERIAL_OK && !uses) {
+        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    }
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(prepared, "uses")) {
+        bool replaced = false;
+        for (size_t i = 0; i < count; i++) {
+            replaced = replaced || strcmp(string_member(refs[i], "item_id"), string_member(use, "item_id")) == 0;
+        }
+        if (result == URSATZ_GUI_MATERIAL_OK && !replaced) {
+            cJSON *kept = cJSON_Duplicate(use, 1);
+            if (kept) {
+                cJSON_AddItemToArray(uses, kept);
+            } else {
+                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            }
+        }
+    }
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+        if (!theme_add_use(uses, string_member(refs[i], "item_id"),
+                           cJSON_GetObjectItemCaseSensitive(refs[i], "version")->valueint)) {
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        }
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        cJSON_DeleteItemFromObjectCaseSensitive(prepared, "uses");
+        if (!cJSON_AddItemToObject(prepared, "uses", uses)) {
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        } else {
+            uses = NULL;
+        }
+    }
+    cJSON_Delete(uses);
+    if (result != URSATZ_GUI_MATERIAL_OK) {
+        cJSON_Delete(prepared);
+        return result;
+    }
+    *out = prepared;
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/* prepare_uses_locked, then fill_uses_locked: *out is body with the uses a theme's slots imply and a fresh copy in each. */
+static UrsatzGuiMaterialResult fill_body_uses_locked(const char *self_id, const cJSON *body, cJSON **out) {
+    cJSON *prepared = NULL;
+    UrsatzGuiMaterialResult result = prepare_uses_locked(body, &prepared);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = fill_uses_locked(self_id, prepared, out);
+    }
+    cJSON_Delete(prepared);
+    return result;
+}
+
+/* Points every slot and the accompaniment motif of a theme that names source_id at version latest. false on allocation failure. */
+static bool theme_bump_versions(cJSON *body, const char *source_id, int latest) {
+    cJSON *theme = theme_member(body);
+    const cJSON *refs[5];
+    int accompaniment_index = -1;
+    size_t count = theme ? theme_references(theme, refs, &accompaniment_index) : 0;
+    bool ok = true;
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(string_member(refs[i], "item_id"), source_id) == 0) {
+            cJSON_DeleteItemFromObjectCaseSensitive((cJSON *)refs[i], "version");
+            ok = ok && cJSON_AddNumberToObject((cJSON *)refs[i], "version", latest) != NULL;
+        }
+    }
+    return ok;
+}
+
 static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *name, const char *project_id,
                                                   const cJSON *body, const char *note, cJSON **out_item) {
     const char *prefix = prefix_for_type(type);
@@ -1136,7 +1558,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
         result = ursatz_gui_material_body_validate(type, body, NULL, 0);
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = fill_uses_locked(NULL, body, &stored);
+        result = fill_body_uses_locked(NULL, body, &stored);
     }
 
     char *id = NULL;
@@ -1601,7 +2023,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
     }
     cJSON *stored = NULL;
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = fill_uses_locked(id, body, &stored);
+        result = fill_body_uses_locked(id, body, &stored);
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
         result = commit_version_locked(id, item, stored, clean_note);
@@ -1652,13 +2074,13 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
                 ok = ok && cJSON_AddNumberToObject(use, "version", latest) != NULL;
             }
         }
-        if (!ok) {
+        if (!ok || !theme_bump_versions(body, source_id, latest)) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
         } else if (!found) {
             result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
         } else {
             snprintf(note, sizeof(note), "updated %s to v%d", string_member(source, "name"), latest);
-            result = fill_uses_locked(id, body, &stored);
+            result = fill_body_uses_locked(id, body, &stored);
         }
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {

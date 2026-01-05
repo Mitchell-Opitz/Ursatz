@@ -102,7 +102,18 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
  *     first, last with 0 <= first <= last}], analysis (null or an object),
  *     derived (null or {source_item, source_version, operations, seed, kind,
  *     kept, changed, harmony, functions, flag}).
- *   theme: form (null, a string or an object) and slots (an array).
+ *   theme: form (null, a string or an object) and slots (an array). A body with a form object, a slot written as
+ *     {slot, item_id, version} or any of pool, accompaniment, brief, style_weight, without, tempo, check, seed and
+ *     result is a composable theme (R-167):
+ *       form {into, hybrid, key, mode (major | minor | style), meter, bars (4 | 8), cadence, first_cadence}, each
+ *       member null or as the Composer routes take it; slots [{slot (basic | contrasting | continuation | cadential),
+ *       item_id, version}] with basic once and each slot at most once; pool (approved-and-unflagged | approved |
+ *       none); accompaniment (null, {pattern} or {pattern: "motive", item_id, version}); brief (null or {scopes,
+ *       piece_ids, style_ids}); style_weight ("n" or "n/d"); without (up to 4 motive categories); tempo (null or
+ *       20 to 400); check (bool); seed (null or a whole number); result (null or an object).
+ *     Any other theme is a placeholder and stays valid. Creating or adding a version checks that each slot names a
+ *     melodic motif of form full at an existing version and the accompaniment motive an accompaniment motif, and
+ *     replaces the body's uses of those items by one use for each version named.
  *   piece: structure (null, a string, an object or an array).
  */
 UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
