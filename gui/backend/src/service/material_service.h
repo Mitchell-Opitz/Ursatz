@@ -206,4 +206,25 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
  */
 UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force);
 
+/* --- version files ------------------------------------------------------- */
+
+/*
+ * A theme version keeps its Composer files beside its body, in items/<id>/v<n>/ (R-167): request.json,
+ * brief.style.json, plan.json, theme.mid and theme.musicxml. The folder is written before the version is, so a
+ * version that exists has its files whole; deleting the item removes them with its directory.
+ */
+
+/* The content type of one of the five names ("application/json", "audio/midi", "application/xml"), else NULL. */
+const char *ursatz_gui_material_version_file_type(const char *name);
+
+/* The folder of version number of item id, as a path under the store (it need not exist). false if it does not fit. */
+bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size_t out_size);
+
+/*
+ * The bytes of one of the five files of version number (1 to current_version). NOT_FOUND for any other name, an
+ * absent item, version or file. *out_data is caller-owned (free).
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int number, const char *name,
+                                                          unsigned char **out_data, size_t *out_size);
+
 #endif /* URSATZ_GUI_MATERIAL_SERVICE_H */

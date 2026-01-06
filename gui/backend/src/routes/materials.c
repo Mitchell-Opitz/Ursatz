@@ -1274,6 +1274,28 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
+/* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme version's five files. */
+static int handle_version_file(struct mg_connection *conn, const char *id, const char *number_text, const char *name) {
+  char *end = NULL;
+  long number = strtol(number_text, &end, 10);
+  const char *content_type = ursatz_gui_material_version_file_type(name);
+  if (end == number_text || *end != '\0' || number < 1 || number > 1000000 || !content_type) {
+    return send_failure(conn, 404, "file not found");
+  }
+  unsigned char *data = NULL;
+  size_t size = 0;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_version_file(id, (int)number, name, &data, &size);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND ? send_failure(conn, 404, "file not found")
+                                                        : send_material_failure(conn, result);
+  }
+  mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
+            content_type, size);
+  mg_write(conn, data, size);
+  free(data);
+  return 200;
+}
+
 /* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default:
    the motif's own key). Both render the version's motif.degrees with the Composer. */
 static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
@@ -2572,6 +2594,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
       (strcmp(segments[4], "score") == 0 || strcmp(segments[4], "playback") == 0)) {
     return get ? handle_version_render(conn, segments[1], segments[3], strcmp(segments[4], "playback") == 0)
                : send_method_not_allowed(conn);
+  }
+  if (count == 6 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "files") == 0) {
+    return get ? handle_version_file(conn, segments[1], segments[3], segments[5]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "variants") == 0) {
     return post ? handle_variants(conn, segments[1]) : send_method_not_allowed(conn);

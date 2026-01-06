@@ -1257,7 +1257,7 @@ static bool touch_item(cJSON *item) {
     return set_string_member(item, "updated_at", now);
 }
 
-/* Removes every file in the item directory, then the directory. */
+/* Removes every file in the item directory and in the folders under it (a theme version's files), then the directory. */
 static void remove_item_dir(const char *dir) {
     char **names = NULL;
     size_t count = 0;
@@ -1265,7 +1265,11 @@ static void remove_item_dir(const char *dir) {
         for (size_t i = 0; i < count; i++) {
             char path[PATH_BYTES];
             if (snprintf(path, sizeof(path), "%s/%s", dir, names[i]) < (int)sizeof(path)) {
-                remove(path);
+                if (path_is_dir(path)) {
+                    remove_item_dir(path);
+                } else {
+                    remove(path);
+                }
             }
         }
         free_names(names, count);
@@ -2128,5 +2132,91 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool for
     if (result == URSATZ_GUI_MATERIAL_OK) {
         ursatz_gui_subject_forget_item(id);
     }
+    return result;
+}
+
+/* --- version files ------------------------------------------------------- */
+
+const char *ursatz_gui_material_version_file_type(const char *name) {
+    static const struct {
+        const char *name;
+        const char *type;
+    } files[] = {{"request.json", "application/json"},
+                 {"brief.style.json", "application/json"},
+                 {"plan.json", "application/json"},
+                 {"theme.mid", "audio/midi"},
+                 {"theme.musicxml", "application/xml"}};
+    for (size_t i = 0; name && i < sizeof(files) / sizeof(files[0]); i++) {
+        if (strcmp(name, files[i].name) == 0) {
+            return files[i].type;
+        }
+    }
+    return NULL;
+}
+
+bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size_t out_size) {
+    LOCK();
+    bool ok = g_ready && is_valid_id(id) && number >= 1 &&
+              snprintf(out, out_size, "%s/items/%s/v%d", g_dir, id, number) < (int)out_size;
+    UNLOCK();
+    return ok;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int number, const char *name,
+                                                          unsigned char **out_data, size_t *out_size) {
+    *out_data = NULL;
+    *out_size = 0;
+    if (!ursatz_gui_material_version_file_type(name)) {
+        return URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+    }
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    }
+    cJSON *item = NULL;
+    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
+    char path[PATH_BYTES];
+    if (result == URSATZ_GUI_MATERIAL_OK &&
+        (number < 1 || number > current_version_of(item) ||
+         snprintf(path, sizeof(path), "%s/items/%s/v%d/%s", g_dir, id, number, name) >= (int)sizeof(path))) {
+        result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        FILE *file = fopen(path, "rb");
+        size_t capacity = 65536;
+        size_t length = 0;
+        unsigned char *data = file ? malloc(capacity) : NULL;
+        while (data) {
+            size_t n = fread(data + length, 1, capacity - length, file);
+            length += n;
+            if (n == 0) {
+                break;
+            }
+            if (length == capacity) {
+                unsigned char *grown = realloc(data, capacity * 2);
+                if (!grown) {
+                    free(data);
+                    data = NULL;
+                    break;
+                }
+                data = grown;
+                capacity *= 2;
+            }
+        }
+        if (file) {
+            fclose(file);
+        }
+        if (!file) {
+            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        } else if (!data) {
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        } else {
+            *out_data = data;
+            *out_size = length;
+        }
+    }
+    UNLOCK();
+    cJSON_Delete(item);
     return result;
 }
