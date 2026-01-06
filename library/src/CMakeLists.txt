@@ -188,6 +188,7 @@ add_library(ursatz
     query/similarity_model.c
     query/similarity_scoring.c
     query/search_result.c
+    query/corpus_search.c
     export/musicxml_export.c
 )
 target_include_directories(ursatz PUBLIC
