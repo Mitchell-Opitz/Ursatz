@@ -119,7 +119,7 @@ static void test_rhythm_dimension(void) {
     assert(similarity_rhythm_score(pattern, 4, other, 4, &score) == SIMILARITY_SCORE_OK);
     assert_score(score, 1, 3);
     /* Every ratio different: 0. */
-    const SimilarityDuration all_different[] = {{1, 4}, {1, 8}, {1, 4}, {1, 8}};
+    const SimilarityDuration all_different[] = {{1, 4}, {1, 2}, {1, 4}, {1, 2}}; /* ratios 2, 1/2, 2 */
     assert(similarity_rhythm_score(pattern, 4, all_different, 4, &score) == SIMILARITY_SCORE_OK);
     assert_score(score, 0, 1);
 
@@ -253,7 +253,7 @@ static void test_transposition_rhythm_and_extremes_under_a_model(void) {
     assert_score(breakdown.similarity, 1, 1);
 
     /* Another rhythm and other intervals and contour: rhythm differs, interval and contour as scored. */
-    const SimilarityDuration other_rhythm[] = {{1, 4}, {1, 4}, {1, 4}, {1, 4}};
+    const SimilarityDuration other_rhythm[] = {{1, 8}, {1, 4}, {1, 2}, {1, 4}}; /* ratios 2, 2, 1/2 against 1/2, 1, 4 */
     SimilarityInput same_notes_other_rhythm = {intervals, 4, NULL, 0, other_rhythm, 4};
     assert(similarity_score(model, &original, &same_notes_other_rhythm, &breakdown) == SIMILARITY_SCORE_OK);
     assert_score(breakdown.dimension_scores[0].score, 1, 1);
