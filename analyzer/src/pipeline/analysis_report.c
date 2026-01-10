@@ -135,6 +135,8 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->dynamics[i].marking);
     }
     free(report->dynamics);
+    free(report->counterpoint_check.violations);
+    free(report->counterpoint_check.note_ids);
     free(report->voice_leading.pairs);
     free(report->voice_leading.violations);
     free(report->voice_leading.resolutions);
