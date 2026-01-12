@@ -243,27 +243,6 @@ static void free_melody(AnalysisMelody *melody) {
 
 typedef enum { ANALYZE_OK, ANALYZE_DECLINED, ANALYZE_ALLOC } AnalyzeResult;
 
-/* The spelling of a note name such as "F#4", "Bb3" or "E5": a letter, accidentals (# b x) and an octave. 1 on success,
-   0 for a name that is not one, -1 on allocation failure. */
-static int spell_name(const char *name, PitchSpelling **out) {
-    *out = NULL;
-    if (name[0] < 'A' || name[0] > 'G') {
-        return 0;
-    }
-    int accidental = 0;
-    const char *rest = name + 1;
-    for (; *rest == '#' || *rest == 'b' || *rest == 'x'; rest++) {
-        accidental += *rest == '#' ? 1 : (*rest == 'b' ? -1 : 2);
-    }
-    char *end = NULL;
-    long octave = strtol(rest, &end, 10);
-    if (end == rest || *end != '\0') {
-        return 0;
-    }
-    PitchSpellingResult result = pitch_spelling_create((PitchLetter)(name[0] - 'A'), accidental, (int)octave, out);
-    return result == PITCH_SPELLING_OK ? 1 : (result == PITCH_SPELLING_ERR_ALLOC ? -1 : 0);
-}
-
 /* The seventh degree and the library's tendencies of a phrase's line, judged on spellings the way the outer voice lines
    spell the notes. Leaves the tendency fields empty when a note's name does not spell. */
 static AnalyzeResult read_tendencies(const PhraseLine *built, AnalysisMelody *out) {
@@ -281,7 +260,7 @@ static AnalyzeResult read_tendencies(const PhraseLine *built, AnalysisMelody *ou
         if (!built->line.notes[i].present) {
             continue;
         }
-        int spell = spell_name(built->name[i], &spelled[i]);
+        int spell = spelling_from_name(built->name[i], &spelled[i]);
         if (spell < 0) {
             goto done;
         }
@@ -305,7 +284,7 @@ static AnalyzeResult read_tendencies(const PhraseLine *built, AnalysisMelody *ou
         char tonic_name[16];
         snprintf(tonic_name, sizeof(tonic_name), "%s4", pitch_class_name(region->tonic_pitch_class, region->prefer_flats));
         PitchSpelling *tonic = NULL;
-        int spell = spell_name(tonic_name, &tonic);
+        int spell = spelling_from_name(tonic_name, &tonic);
         if (spell <= 0) {
             result = spell < 0 ? ANALYZE_ALLOC : ANALYZE_DECLINED;
             goto done;
