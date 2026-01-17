@@ -39,11 +39,11 @@ newline. The same input and build always give the same bytes.
 | `progressions` | array of progression entries | Filled: the recurring progressions of two to six chords. See below. |
 | `harmonic_rhythm` | object or null | Filled: changes of harmony per measure and the approach to cadences. See below; `null` when the piece has no chords the meter can place. |
 | `markings` | markings object | Filled: the notated tempo and dynamics markings, read with the library's standard-markings rules. See below. |
-| `counterpoint_check` | object or null | Placeholder: `null`. |
+| `counterpoint_check` | object or null | Filled by `--check-counterpoint`: two-voice input checked against a species. See below; `null` otherwise. |
 | `notes` | array of notes | Filled: where the notated and detected keys disagree. Empty when they do not, or there is no notated key signature. |
 
 Every key is always present, so consumers can read any section without checking for it first.
-The singular section `counterpoint_check` is `null` until filled; the rest are empty arrays.
+The singular section `counterpoint_check` is `null` unless `--check-counterpoint` ran; the rest are empty arrays.
 `harmonic_rhythm` is `null` only for a piece with no chords the meter can place, and `form` only for a piece with no
 phrases.
 
@@ -1037,6 +1037,32 @@ marking and 1 when it does not.
 | `relation` | string or null | `"louder"`, `"quieter"` or `"same"` against the previous level marking in the same part; `null` for the first level marking and for a text that is not a level. |
 
 The importer reads no wedges (crescendo and diminuendo hairpins) and no articulations, so neither appears.
+
+### Counterpoint check
+
+`counterpoint_check` is `null` unless the CLI ran with `--check-counterpoint <1-5>` on a two-voice input. It is then
+`{"species", "cantus", "framework", "shape_error", "valid", "violations"}`. `src/pipeline/counterpoint_pipeline.c` finds
+the two voices (the input's two streams, the higher-sounding one the upper voice, or the two voices the kernel's voice
+separation finds in one stream, with none of its notes joined to another), builds the lines of the species and runs the
+library's species check (`standard_counterpoint_first_species_check` to `_fifth_species_check`). Every verdict is the
+library's (R-018). The tonic is the tonic of the home key region.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `species` | integer | 1 to 5. |
+| `cantus` | string | `"lower"` (the default) or `"upper"`: the voice that is the cantus firmus. |
+| `framework` | string | `"standard-counterpoint-v1"`. |
+| `shape_error` | string or null | Why the voices are not an exercise of the species (for example the cantus firmus is not one note to a measure, or the counterpoint has notes off the species' slots); `null` when they are. |
+| `valid` | boolean or null | `true` when the library finds no hard rule broken; `null` when `shape_error` is set. |
+| `violations` | array | One claim per rule group the exercise breaks, the hard one before the soft one in a group; empty when `shape_error` is set or nothing is broken. |
+
+A violation is a claim (`label` is the group) with `group` (the library's group name: `cantus-firmus`, `melodic`,
+`harmonic`, `harmony`, `ends`, `strong-beats`, ...) and `severity` (`"hard"`, the exercise is invalid, or `"soft"`,
+advice). The library's check reports each group over the whole exercise and does not say where a rule broke, so a
+claim's `span` and `location` are the two voices', its `note_ids` are every note of both voices, and its
+`uncertainty` is 1 less the least confidence of the voice separation (0 when the input's own streams are the voices).
+Species 2 to 5 need one cantus firmus note to a measure, from a measure start, with the counterpoint's notes starting on
+the slots of its measures (2, 4, 2 and 8 slots to a measure for species 2 to 5).
 
 ## Versioning
 
