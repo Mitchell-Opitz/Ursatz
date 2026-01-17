@@ -30,6 +30,34 @@ bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_oct
     return true;
 }
 
+int spelling_from_name(const char *name, PitchSpelling **out) {
+    *out = NULL;
+    if (name[0] < 'A' || name[0] > 'G') {
+        return 0;
+    }
+    int accidental = 0;
+    const char *rest = name + 1;
+    for (; *rest == '#' || *rest == 'b' || *rest == 'x'; rest++) {
+        accidental += *rest == '#' ? 1 : (*rest == 'b' ? -1 : 2);
+    }
+    char *end = NULL;
+    long octave = strtol(rest, &end, 10);
+    if (end == rest || *end != '\0') {
+        return 0;
+    }
+    PitchSpellingResult result = pitch_spelling_create((PitchLetter)(name[0] - 'A'), accidental, (int)octave, out);
+    return result == PITCH_SPELLING_OK ? 1 : (result == PITCH_SPELLING_ERR_ALLOC ? -1 : 0);
+}
+
+int note_pitch_spelling(const ImportedNotes *notes, size_t note, bool prefer_flats, PitchSpelling **out) {
+    long pitch = pitch_numeric_value_position_numerator(notes->pitch_values[note]);
+    char name[16];
+    if (!(notes->source.spelling_notated && spelled_note_name(notes->events[note], pitch, true, name))) {
+        snprintf(name, sizeof(name), "%s%d", pitch_class_name(pitch_class_of(pitch), prefer_flats), (int)(pitch / 12) - 1);
+    }
+    return spelling_from_name(name, out);
+}
+
 static int pitch_class_of_name(const char *name) {
     for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
         if (strcmp(name, PITCH_CLASS_NAMES[pitch_class]) == 0 || strcmp(name, PITCH_CLASS_NAMES_FLAT[pitch_class]) == 0) {

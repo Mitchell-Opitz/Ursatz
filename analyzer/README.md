@@ -65,6 +65,9 @@ Tests:
 - `test_musicxml_input`: format choice, notated key and meter, a pickup, a multi-part score, notated
   spelling (Db vs C#) and every error case.
 - `test_cli_input_formats`: `--input-format`, format detection and the error exits of the CLI.
+- `test_counterpoint_check`: the first and second species Fux exercises (`tests/counterpoint`, one valid and one
+  with a parallel fifth each), the document and the Markdown of a check, a shape error, and input that is not two
+  voices. `test_cli_counterpoint_check` checks the flags and the exit codes.
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
@@ -72,7 +75,7 @@ Tests:
 ## Usage
 
 ```sh
-ursatz-analyzer [--json] [--markdown] [--input-format midi|musicxml] <input-file-path>
+ursatz-analyzer [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> [--cantus upper|lower]] <input-file-path>
 ```
 
 Writes two files next to the input file:
@@ -86,6 +89,14 @@ Writes two files next to the input file:
 writes both. `--input-format` forces the input format (see "Input formats"). Flags can come before or
 after the path. Exits 1 with a message on an unknown flag, a
 missing path, bad input, allocation failure, or write failure.
+
+`--check-counterpoint <1-5>` also checks two-voice input against that species of Ursatz's
+standard-counterpoint (see `counterpoint_check` in
+[docs/analysis-document.md](docs/analysis-document.md)). `--cantus upper|lower` says which voice is
+the cantus firmus (default lower) and needs `--check-counterpoint`. The two voices are the input's
+two streams (MIDI tracks or MusicXML parts), or the two voices the kernel finds in a single stream.
+For any other input the rest of the analysis is written and the CLI exits 2 with "counterpoint
+check needs two voices".
 
 ## Library
 

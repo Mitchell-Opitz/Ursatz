@@ -3289,6 +3289,54 @@ static cJSON *markings_json(const ImportedNotes *notes, const AnalysisReport *re
     return object;
 }
 
+/* ---- Counterpoint check ---- */
+
+/* One rule group of the species the exercise breaks, a claim over the whole exercise: the library's aggregate check
+   names the group and whether a hard or a soft rule broke in it, and does not say where. */
+static cJSON *counterpoint_violation_json(const ImportedNotes *notes, const AnalysisCounterpointCheck *check,
+                                          const AnalysisCounterpointViolation *violation) {
+    cJSON *claim = claim_json_with(check->framework, notes, check->note_ids, check->note_id_count,
+                                   rational_make(check->start_numerator, check->start_denominator),
+                                   rational_make(check->end_numerator, check->end_denominator), violation->group,
+                                   cJSON_CreateNumber(check->uncertainty));
+    if (!(claim && add(claim, "group", cJSON_CreateString(violation->group)) &&
+          add(claim, "severity", cJSON_CreateString(violation->hard ? "hard" : "soft")))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The counterpoint check: null unless --check-counterpoint ran on two voices. valid is null when the voices are not an
+   exercise of the species (shape_error says why), and the violations are then empty. */
+static cJSON *counterpoint_check_json(const ImportedNotes *notes, const AnalysisReport *report) {
+    const AnalysisCounterpointCheck *check = &report->counterpoint_check;
+    if (!check->present) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    cJSON *violations = cJSON_CreateArray();
+    bool ok = object && violations;
+    for (size_t i = 0; ok && i < check->violation_count; i++) {
+        ok = append(violations, counterpoint_violation_json(notes, check, &check->violations[i]));
+    }
+    ok = ok && add(object, "species", cJSON_CreateNumber(check->species)) &&
+         add(object, "cantus", cJSON_CreateString(check->cantus_upper ? "upper" : "lower")) &&
+         add(object, "framework", cJSON_CreateString(check->framework)) &&
+         add(object, "shape_error", optional_string_json(check->shape_error)) &&
+         add(object, "valid", check->shape_error ? cJSON_CreateNull() : cJSON_CreateBool(check->valid));
+    if (ok) {
+        ok = add(object, "violations", violations); /* add() frees the item itself when it fails */
+        violations = NULL;
+    }
+    if (!ok) {
+        cJSON_Delete(violations);
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* ---- Voice leading ---- */
 
 static const char *const MOTION_NAMES[ANALYSIS_MOTION_TYPES] = {"contrary", "similar", "parallel", "oblique", "static"};
@@ -3703,7 +3751,7 @@ static cJSON *document_json(const char *input_path, const ImportedNotes *notes, 
           add(document, "rhythm", rhythm_json(notes, report)) && add(document, "texture", texture_json(notes, report)) &&
           add(document, "voice_leading", voice_leading_json(notes, report)) && add(document, "schemas", schemas_json(notes, report)) &&
           add(document, "progressions", progressions_json(notes, report)) && add(document, "harmonic_rhythm", harmonic_rhythm_json(report)) &&
-          add(document, "markings", markings_json(notes, report)) && add(document, "counterpoint_check", cJSON_CreateNull()) &&
+          add(document, "markings", markings_json(notes, report)) && add(document, "counterpoint_check", counterpoint_check_json(notes, report)) &&
           add(document, "notes", notes_json(notes, report)))) {
         cJSON_Delete(document);
         return NULL;

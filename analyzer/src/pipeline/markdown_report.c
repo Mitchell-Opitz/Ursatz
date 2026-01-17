@@ -2388,6 +2388,45 @@ static bool render_markings(StringBuilder *sb, const cJSON *document, const cJSO
                                              : render_dynamics(sb, document, dynamics));
 }
 
+/* ---- Counterpoint check ---- */
+
+static const char *const SPECIES_NAMES[6] = {"", "first", "second", "third", "fourth", "fifth"};
+
+static bool render_counterpoint_check(StringBuilder *sb, const cJSON *document, const cJSON *check) {
+    (void)document;
+    const cJSON *violations = cJSON_GetObjectItemCaseSensitive(check, "violations");
+    const cJSON *valid = cJSON_GetObjectItemCaseSensitive(check, "valid");
+    const char *shape_error = string_member(check, "shape_error");
+    int species = (int)number_member(check, "species");
+    bool ok = sb_append(sb, "## Counterpoint check\n\n") &&
+              sb_appendf(sb,
+                         "The two voices checked as a %s-species exercise with the %s voice as the cantus firmus, "
+                         "against the library's standard-counterpoint rules. The library judges each rule group over "
+                         "the whole exercise and does not say where a rule broke, so every violation covers the "
+                         "exercise.\n\n",
+                         species >= 1 && species <= 5 ? SPECIES_NAMES[species] : "?", string_member(check, "cantus"));
+    if (!ok) {
+        return false;
+    }
+    if (shape_error) {
+        return sb_appendf(sb, "**Not checked:** %s.\n\n", shape_error);
+    }
+    ok = sb_appendf(sb, "**Verdict:** %s.\n\n", cJSON_IsTrue(valid) ? "valid, no hard rule is broken" : "not valid");
+    if (!ok || section_is_empty(violations)) {
+        return ok && (!section_is_empty(violations) || sb_append(sb, "No rule is broken.\n\n"));
+    }
+    ok = sb_append(sb, "| Group | Severity | Span |\n| --- | --- | --- |\n");
+    const cJSON *violation;
+    cJSON_ArrayForEach(violation, violations) {
+        if (!ok) {
+            break;
+        }
+        ok = sb_appendf(sb, "| %s | %s | ", string_member(violation, "group"), string_member(violation, "severity")) &&
+             append_location(sb, violation) && sb_append(sb, " |\n");
+    }
+    return ok && sb_append(sb, "\n");
+}
+
 /* Report sections in document section order. Adding a section means
    adding one row and one render function. */
 static const struct {
@@ -2421,6 +2460,7 @@ static const struct {
     {"voice_leading", render_voice_leading},
     {"schemas", render_schemas},
     {"markings", render_markings},
+    {"counterpoint_check", render_counterpoint_check},
 };
 
 static bool section_is_empty(const cJSON *section) {

@@ -1002,6 +1002,35 @@ typedef struct {
     size_t note_id_count;
 } AnalysisTuplet;
 
+/* One rule group of the species the exercise breaks. The library's aggregate check names the group (cantus-firmus,
+   harmony, strong-beats, ...) and whether a hard rule or a soft one broke in it; it does not say where. */
+typedef struct {
+    const char *group; /* borrowed; the library's group name */
+    bool hard;         /* a hard rule of the group broke (the exercise is invalid); false for a soft rule (advice) */
+} AnalysisCounterpointViolation;
+
+/* The counterpoint check of a two-voice input (--check-counterpoint). present is false unless the mode was on and the
+   input had two voices. The cantus firmus and the counterpoint are checked by the library's species check over the whole
+   exercise, so a violation is located at the exercise's span. */
+typedef struct {
+    bool present;
+    int species;       /* 1 to 5 */
+    bool cantus_upper; /* the cantus firmus is the upper voice (the default is the lower) */
+    double uncertainty; /* 1 less the least confidence of the voice separation, in [0, 1]; 0 when the input's own
+                           streams were the voices */
+    const char *framework;   /* the library's framework name for the claims */
+    const char *shape_error; /* borrowed; why the voices are not an exercise of the species, NULL when they are */
+    bool valid;              /* the library found no hard rule broken; false when shape_error is set */
+    AnalysisCounterpointViolation *violations; /* owned; by group, hard before soft; empty when shape_error is set */
+    size_t violation_count;
+    size_t *note_ids; /* owned; every note of both voices, ImportedNotes indices in order */
+    size_t note_id_count;
+    long start_numerator; /* the span of the two voices, whole notes */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+} AnalysisCounterpointCheck;
+
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
@@ -1067,6 +1096,7 @@ typedef struct {
     size_t tempo_marking_count;
     AnalysisDynamic *dynamics; /* owned; in time order; empty for MIDI input */
     size_t dynamic_count;
+    AnalysisCounterpointCheck counterpoint_check; /* present only when --check-counterpoint ran */
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
