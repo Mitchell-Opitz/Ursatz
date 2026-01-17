@@ -223,3 +223,21 @@ add_test(NAME test_cli_input_formats
                  -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
+
+add_executable(test_counterpoint_check test_counterpoint_check.c)
+target_link_libraries(test_counterpoint_check PRIVATE ursatz_analyzer cjson)
+target_include_directories(test_counterpoint_check PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_counterpoint_check PRIVATE
+    URSATZ_COUNTERPOINT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/counterpoint"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_counterpoint_check COMMAND test_counterpoint_check)
+
+# The CLI's exit code: 0 for a two-voice input, 2 (with the rest of the analysis written) for one that is not two voices,
+# and a usage error (1) for a bad species or --cantus without --check-counterpoint.
+add_test(NAME test_cli_counterpoint_check
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/counterpoint
+                 -DNOT_TWO_VOICES=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_counterpoint_check
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_counterpoint_check.cmake)
