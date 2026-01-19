@@ -112,3 +112,14 @@ target_compile_definitions(test_corpus_style_statistics PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
     URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
 add_test(NAME corpus_style_statistics COMMAND test_corpus_style_statistics)
+
+add_executable(test_corpus_similarity_search test_corpus_similarity_search.c)
+target_link_libraries(test_corpus_similarity_search PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_corpus_similarity_search PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis
+                           ${PROJECT_SOURCE_DIR}/tests/corpus_stats)
+target_compile_definitions(test_corpus_similarity_search PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
+    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
+add_test(NAME corpus_similarity_search COMMAND test_corpus_similarity_search)

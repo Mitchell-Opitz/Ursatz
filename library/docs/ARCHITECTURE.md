@@ -15,7 +15,7 @@ Ursatz is organized into layered modules, each living under `src/<module>/` with
 | L6 | `context`, `semantics`, `relationship`, `interpretation` (four mutually-restricted siblings) |
 | L7 | `theory`, `rules` (`rules` depends on `theory`; `theory` never depends back) |
 | L8 | `transform`, `analysis`, `generation` (three mutually-restricted siblings) |
-| L9 | `io` (MIDI import, MIDI key-signature scan), `export` (MusicXML), `persistence` (SQLite), `corpus`, `corpus_stats` |
+| L9 | `io` (MIDI import, MIDI key-signature scan), `export` (MusicXML), `persistence` (SQLite), `corpus`, `corpus_stats`, `query` |
 | Extensions | `frameworks/<name>/`: 17 Theory Frameworks built on L7 (see `frameworks/README.md`) |
 
 ## Dependency rule
@@ -64,6 +64,7 @@ Every module and every framework has an architecture test that allowlists the di
 | persistence | L9 | Implemented (partial, see doc) | `docs/modules/persistence.md` |
 | corpus | L9 | Implemented | `docs/modules/corpus.md` |
 | corpus_stats | L9 | Implemented (partial, see doc) | `docs/modules/corpus_stats.md` |
+| query | L9 | Implemented (partial, see doc) | `docs/modules/query.md` |
 
 "Partial" means some types from the module's Registry row are implemented and some are explicitly deferred; the module's own doc lists which.
 

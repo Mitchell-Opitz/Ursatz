@@ -44,6 +44,10 @@ Counts reach `theory/` as plain values: `theory/style_model_build.h` builds a `S
 - Piece order is the order `corpus_api_list_piece_refs` returns.
 - No float/double anywhere (Law 19) -- tallies are plain counts and frequencies are `count/total`.
 
+## See also
+
+`docs/modules/query.md`: similarity search over a Corpus's persisted interval claims (a sibling module; `corpus_stats` does not depend on it or the reverse).
+
 ## Deferred
 
 - Phrase forms, rhythm patterns and motive transformations (above).

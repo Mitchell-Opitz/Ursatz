@@ -184,6 +184,11 @@ add_library(ursatz
     corpus_stats/corpus_stats_api.c
     corpus_stats/corpus_stats_tally.c
     corpus_stats/corpus_stats_counts.c
+    query/query_fraction.c
+    query/similarity_model.c
+    query/similarity_scoring.c
+    query/search_result.c
+    query/corpus_search.c
     export/musicxml_export.c
 )
 target_include_directories(ursatz PUBLIC
