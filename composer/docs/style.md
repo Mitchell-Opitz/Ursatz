@@ -28,6 +28,13 @@ A candidate is counted the way the Analyzer counts a corpus, with the labels of 
 The Analyzer counts the soprano note at the start of each chord, the Composer counts every note of a candidate, so the two
 agree exactly where each note starts a chord (the test's hand-written progression) and only roughly in a running melody.
 
+## Motive categories
+
+A style model from the Analyzer may also hold the four motive categories (`motive-degrees`, `motive-intervals`, `motive-rhythm`,
+`motive-nct-figure`). `composer_style_load` reads them and ignores them: they are dropped before the model is built
+(`style_model_file_read_without`), so style distances and fills are the same as for a model without them. They wait for
+motive preferences (P16).
+
 ## Closeness
 
 The closeness of a candidate is in [0, 1], exact: the mean over its labels of the label's share in its category divided by
@@ -156,6 +163,8 @@ error; a directory that is not a corpus output is exit 2. Only one bar of melody
 file and give it to `plan --given-melody`.
 
 ## The test styles
+
+`chorales-motives.style.json` is `chorales.style.json` plus invented statistics in the four motive categories; `test_style motives` checks that the two give the same seeded fill and distance.
 
 `tests/fixtures/styles/chorales.style.json` (ten chorales) and `sonatinas.style.json` (Clementi 36, Mozart 545) were made by
 the Analyzer over its test corpora. From a folder holding `chorales/` (the ten `external/ursatz/tests/accuracy/corpus/*/score.musicxml`,
