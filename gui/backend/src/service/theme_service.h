@@ -29,7 +29,8 @@ typedef enum {
 /*
  * Composes the theme item id into a new version.
  *
- * The request is built from the current version: each slot's
+ * With update_uses, every use whose source has a newer version is first moved to it (ursatz_gui_material_update_use,
+ * a version each); that stays when the run then fails. The request is built from the current version: each slot's
  * motif from its use's copy, the pool of its saved forms (a motif item whose derived chain, followed at most 32 steps
  * through derived.source_item, leads to the slot's item; flag approved, and unflagged with the default pool; at most
  * 64 for each motive; rejected forms never), and the brief built into the version's folder as brief.style.json.
@@ -40,7 +41,7 @@ typedef enum {
  * "composed seed <n>". On any other result no version is written and no folder is left; message (when not NULL)
  * receives a one-line reason.
  */
-UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, cJSON **out_item,
-                                              char *message, size_t message_size);
+UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
+                                              cJSON **out_item, char *message, size_t message_size);
 
 #endif /* URSATZ_GUI_THEME_SERVICE_H */

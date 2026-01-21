@@ -1281,7 +1281,8 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
-/* POST /api/materials/items/<thm-id>/compose {seed?}: composes the theme into a new version with its files (R-167). */
+/* POST /api/materials/items/<thm-id>/compose {seed?, update_uses?}: composes the theme into a new version with its
+   files (R-167). With update_uses, every updated use moves to its source's current version first. */
 static int handle_compose(struct mg_connection *conn, const char *id) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -1289,16 +1290,18 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
     return status;
   }
   const cJSON *seed = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  const cJSON *update_uses = cJSON_GetObjectItemCaseSensitive(body, "update_uses");
   bool has_seed = seed && !cJSON_IsNull(seed);
-  if (has_seed && (!cJSON_IsNumber(seed) || seed->valuedouble < 0 || seed->valuedouble > 4294967295.0 ||
-                   seed->valuedouble != (double)(long long)seed->valuedouble)) {
+  if ((has_seed && (!cJSON_IsNumber(seed) || seed->valuedouble < 0 || seed->valuedouble > 4294967295.0 ||
+                    seed->valuedouble != (double)(long long)seed->valuedouble)) ||
+      (update_uses && !cJSON_IsBool(update_uses))) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "seed is a whole number from 0 to 4294967295");
+    return send_failure(conn, 400, "seed is a whole number from 0 to 4294967295; update_uses is a boolean");
   }
   cJSON *item = NULL;
   char message[512];
-  UrsatzGuiThemeResult result =
-      ursatz_gui_theme_compose(id, has_seed, has_seed ? (long long)seed->valuedouble : 0, &item, message, sizeof(message));
+  UrsatzGuiThemeResult result = ursatz_gui_theme_compose(id, has_seed, has_seed ? (long long)seed->valuedouble : 0,
+                                                         cJSON_IsTrue(update_uses), &item, message, sizeof(message));
   cJSON_Delete(body);
   switch (result) {
     case URSATZ_GUI_THEME_OK:

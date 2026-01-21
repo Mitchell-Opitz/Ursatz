@@ -86,6 +86,45 @@ static bool file_exists(const char *path) {
     return stat(path, &info) == 0 && S_ISREG(info.st_mode);
 }
 
+/* --- updating sources ---------------------------------------------------- */
+
+/* Moves every updated use of the theme to its source's current version, once for each source. */
+static UrsatzGuiThemeResult update_sources(const char *id, char *message, size_t message_size) {
+    cJSON *status = NULL;
+    UrsatzGuiMaterialResult result = ursatz_gui_material_uses_status(id, &status);
+    if (result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND) {
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    if (result != URSATZ_GUI_MATERIAL_OK) {
+        say(message, message_size, "the uses could not be read");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    UrsatzGuiThemeResult outcome = URSATZ_GUI_THEME_OK;
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, status) {
+        if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(use, "updated")) ||
+            cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(use, "missing"))) {
+            continue;
+        }
+        const char *source_id = text_of(use, "item_id");
+        bool done = false;
+        for (const cJSON *earlier = status; earlier && earlier != use; earlier = earlier->next) {
+            done = done || strcmp(text_of(earlier, "item_id"), source_id) == 0;
+        }
+        if (done) {
+            continue;
+        }
+        result = ursatz_gui_material_update_use(id, source_id, NULL);
+        if (result != URSATZ_GUI_MATERIAL_OK) {
+            say(message, message_size, "a source could not be updated");
+            outcome = URSATZ_GUI_THEME_ERR_FAILED;
+            break;
+        }
+    }
+    cJSON_Delete(status);
+    return outcome;
+}
+
 /* --- the request --------------------------------------------------------- */
 
 /* The copy of a used version, from the body's uses. NULL when the use is not there. */
@@ -583,9 +622,12 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
     return copy;
 }
 
-static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long long seed, cJSON **out_item,
-                                           char *message, size_t message_size) {
-    UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
+static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long long seed, bool update_uses,
+                                           cJSON **out_item, char *message, size_t message_size) {
+    UrsatzGuiThemeResult result = update_uses ? update_sources(id, message, message_size) : URSATZ_GUI_THEME_OK;
+    if (result != URSATZ_GUI_THEME_OK) {
+        return result;
+    }
     cJSON *meta = NULL;
     cJSON *body = NULL;
     UrsatzGuiMaterialResult read = ursatz_gui_material_item_get(id, &meta, &body);
@@ -700,15 +742,15 @@ static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long l
     return result;
 }
 
-UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, cJSON **out_item,
-                                              char *message, size_t message_size) {
+UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
+                                              cJSON **out_item, char *message, size_t message_size) {
     if (out_item) {
         *out_item = NULL;
     }
     say(message, message_size, "");
     cJSON *item = NULL;
     pthread_mutex_lock(&g_compose_lock);
-    UrsatzGuiThemeResult result = compose_locked(id, has_seed, seed, &item, message, message_size);
+    UrsatzGuiThemeResult result = compose_locked(id, has_seed, seed, update_uses, &item, message, message_size);
     pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
