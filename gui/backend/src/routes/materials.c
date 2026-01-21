@@ -21,6 +21,7 @@
 #include "../service/material_service.h"
 #include "../service/style_service.h"
 #include "../service/subject_service.h"
+#include "../service/theme_service.h"
 
 static const char *kMaterialsPrefix = "/api/materials";
 static const char *kSubjectsPrefix = "/api/subjects";
@@ -48,8 +49,14 @@ static const char *reason_for(int status) {
       return "Conflict";
     case 413:
       return "Payload Too Large";
+    case 422:
+      return "Unprocessable Entity";
     case 500:
       return "Internal Server Error";
+    case 503:
+      return "Service Unavailable";
+    case 504:
+      return "Gateway Timeout";
     default:
       return "Bad Request";
   }
@@ -1272,6 +1279,43 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   }
   cJSON_AddItemToObject(object, "body", version_body);
   return send_object(conn, object);
+}
+
+/* POST /api/materials/items/<thm-id>/compose {seed?}: composes the theme into a new version with its files (R-167). */
+static int handle_compose(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *seed = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  bool has_seed = seed && !cJSON_IsNull(seed);
+  if (has_seed && (!cJSON_IsNumber(seed) || seed->valuedouble < 0 || seed->valuedouble > 4294967295.0 ||
+                   seed->valuedouble != (double)(long long)seed->valuedouble)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "seed is a whole number from 0 to 4294967295");
+  }
+  cJSON *item = NULL;
+  char message[512];
+  UrsatzGuiThemeResult result =
+      ursatz_gui_theme_compose(id, has_seed, has_seed ? (long long)seed->valuedouble : 0, &item, message, sizeof(message));
+  cJSON_Delete(body);
+  switch (result) {
+    case URSATZ_GUI_THEME_OK:
+      return send_ok_with(conn, "item", item);
+    case URSATZ_GUI_THEME_ERR_NOT_FOUND:
+      return send_failure(conn, 404, "not found");
+    case URSATZ_GUI_THEME_ERR_INVALID:
+      return send_failure(conn, 400, message[0] ? message : "invalid theme");
+    case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
+      return send_failure(conn, 422, message[0] ? message : "stuck");
+    case URSATZ_GUI_THEME_ERR_NO_BINARY:
+      return send_failure(conn, 503, "composer not found");
+    case URSATZ_GUI_THEME_ERR_TIMEOUT:
+      return send_failure(conn, 504, "composer timed out");
+    default:
+      return send_failure(conn, 500, message[0] ? message : "the theme could not be composed");
+  }
 }
 
 /* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme version's five files. */
@@ -2597,6 +2641,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 6 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "files") == 0) {
     return get ? handle_version_file(conn, segments[1], segments[3], segments[5]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "compose") == 0) {
+    return post ? handle_compose(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "variants") == 0) {
     return post ? handle_variants(conn, segments[1]) : send_method_not_allowed(conn);
