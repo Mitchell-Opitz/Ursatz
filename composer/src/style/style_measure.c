@@ -1,5 +1,7 @@
 #include <ursatz_composer/style.h>
 
+#include "style_internal.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -54,7 +56,8 @@ ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const Compos
     if (analyzed != ANALYZER_FRAGMENT_OK) {
         result = analyzed == ANALYZER_FRAGMENT_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_ANALYSIS;
     } else {
-        AnalyzerFragmentResult compared = analyzer_fragment_style_distance(&analysis, composer_style_model(style), out);
+        AnalyzerFragmentResult compared = analyzer_fragment_style_distance_without(
+            &analysis, composer_style_model(style), composer_style_motive_categories, COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT, out);
         if (compared != ANALYZER_FRAGMENT_OK) {
             memset(out, 0, sizeof(*out));
             result = compared == ANALYZER_FRAGMENT_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_ANALYSIS;

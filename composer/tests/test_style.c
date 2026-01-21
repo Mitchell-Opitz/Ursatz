@@ -25,6 +25,9 @@
  *   labels    the labels of a hand-written harmony and melody equal the Analyzer's labels of the same material
  *             rendered and analyzed; closeness is exact; a file that is not a style model is refused
  *   same      with no style, or a style of weight 0, a sentence is byte for byte what main composed (recorded hashes)
+ *   motives   a model that holds the four motive categories gives the same seeded fill and distance as the same
+ *             model without them (R-157)
+ *   measure   a measured plan's distance to a model with motive categories lists none of them
  *   smoke     sentences, seeds 1 and 2, under each style: completed, measured, and not further from the style than
  *             unstyled in harmony and melody together
  *   distance  the sweep: sentences in C major 4/4, seeds 1 to 20, under chorales and under sonatinas: the mean distance
@@ -46,6 +49,7 @@
 
 #define CHORALES COMPOSER_STYLE_DIR "/chorales.style.json"
 #define SONATINAS COMPOSER_STYLE_DIR "/sonatinas.style.json"
+#define CHORALES_MOTIVES COMPOSER_STYLE_DIR "/chorales-motives.style.json"
 
 /* ----------------------------------------------------------------- helpers */
 
@@ -571,6 +575,51 @@ static int test_same(void) {
     return 0;
 }
 
+/* chorales-motives.style.json is chorales plus the four motive categories; the Composer reads them out (R-157). */
+static int test_motive_categories(void) {
+    ComposerStyle *plain = NULL;
+    ComposerStyle *with_motives = NULL;
+    assert(composer_style_load(CHORALES, &plain) == COMPOSER_STYLE_OK);
+    assert(composer_style_load(CHORALES_MOTIVES, &with_motives) == COMPOSER_STYLE_OK);
+    ComposerRatio weight = {1, 1};
+    for (unsigned long seed = 1; seed <= 3; seed++) {
+        Run a = compose_sentence(seed, plain, weight);
+        Run b = compose_sentence(seed, with_motives, weight);
+        assert(a.complete && b.complete && a.measured && b.measured);
+        assert(a.hash == b.hash && a.harmony == b.harmony && a.melody == b.melody);
+    }
+    composer_style_destroy(plain);
+    composer_style_destroy(with_motives);
+    printf("a model with motive categories gives the same fill and distance as one without\n");
+    return 0;
+}
+
+/* A measured plan's distance to a model with motive categories lists none of them, in the means or the categories. */
+static int test_measure_without_motives(void) {
+    ComposerStyle *style = NULL;
+    assert(composer_style_load(CHORALES_MOTIVES, &style) == COMPOSER_STYLE_OK);
+    Motive motive;
+    PiecePlan *plan = sentence_plan(&motive);
+    ComposeConfig config;
+    memset(&config, 0, sizeof(config));
+    config.seed = 1;
+    ComposeOutcome outcome;
+    assert(compose_run(plan, &config, &outcome) == PIECE_OK);
+    StyleComparison distance;
+    memset(&distance, 0, sizeof(distance));
+    assert(composer_style_measure(plan, style, &distance) == COMPOSER_MEASURE_OK);
+    assert(distance.category_count > 0);
+    for (size_t i = 0; i < distance.category_count; i++) {
+        assert(strncmp(distance.categories[i].category, "motive-", 7) != 0);
+    }
+    style_comparison_destroy(&distance);
+    compose_outcome_destroy(&outcome);
+    plan_destroy(plan);
+    composer_style_destroy(style);
+    printf("a measured distance lists no motive category\n");
+    return 0;
+}
+
 typedef struct {
     double harmony;
     double melody;
@@ -733,6 +782,12 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "same") == 0) {
         return test_same();
     }
+    if (strcmp(mode, "motives") == 0) {
+        return test_motive_categories();
+    }
+    if (strcmp(mode, "measure") == 0) {
+        return test_measure_without_motives();
+    }
     if (strcmp(mode, "cli") == 0) {
         return test_cli();
     }
@@ -742,6 +797,6 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "distance") == 0) {
         return test_sweep(SWEEP_SEEDS, true);
     }
-    fprintf(stderr, "usage: test_style labels|same|smoke|distance|cli\n");
+    fprintf(stderr, "usage: test_style labels|same|motives|measure|smoke|distance|cli\n");
     return 2;
 }

@@ -1,5 +1,7 @@
 #include <ursatz_composer/style.h>
 
+#include "style_internal.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,6 +17,10 @@ typedef struct {
     StyleLabel *labels; /* sorted by label, byte order */
     size_t label_count;
 } StyleCategory;
+
+/* The motive categories of the Analyzer's style model. The Composer reads them out until P16 makes them preferences. */
+const char *const composer_style_motive_categories[COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT] = {
+    "motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
 
 struct ComposerStyle {
     StyleModel *model;
@@ -145,7 +151,8 @@ ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out) {
     if (!style) {
         return COMPOSER_STYLE_ERR_ALLOC;
     }
-    StyleModelFileResult read = style_model_file_read(path, &style->model, &style->pieces);
+    StyleModelFileResult read = style_model_file_read_without(
+        path, composer_style_motive_categories, COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT, &style->model, &style->pieces);
     if (read != STYLE_MODEL_FILE_OK) {
         free(style);
         switch (read) {

@@ -7,6 +7,10 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
 
+/* The Analyzer's motive categories, left out of every style read and distance until P16 makes them preferences. */
+#define COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT 4
+extern const char *const composer_style_motive_categories[COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT];
+
 /*
  * The checker a compose stage uses when a style is set (R-080): the stage's own checker decides what is rejected and
  * what the rules score; a candidate it accepts then gains weight times how close the candidate is to the style. A

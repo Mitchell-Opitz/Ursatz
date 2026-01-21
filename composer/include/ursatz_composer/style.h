@@ -21,7 +21,7 @@ typedef enum {
     COMPOSER_STYLE_OK = 0,
     COMPOSER_STYLE_ERR_ARGUMENT,
     COMPOSER_STYLE_ERR_IO,     /* the file could not be read */
-    COMPOSER_STYLE_ERR_FORMAT, /* not a style model file (style_model_file_read said so) */
+    COMPOSER_STYLE_ERR_FORMAT, /* not a style model file (style_model_file_read_without said so) */
     COMPOSER_STYLE_ERR_ALLOC
 } ComposerStyleResult;
 
