@@ -139,11 +139,12 @@ static const cJSON *used_motif(const cJSON *body, const char *item_id, int versi
     return NULL;
 }
 
-/* A motive of the request from a motif's members. Adds item when it is not NULL (a pool form). */
+/* A motive of the request from a motif's members: with item (a pool form), else with id (a slot motive); the accompaniment
+   motive has neither. */
 static cJSON *motive_json(const char *id, const char *item, const cJSON *motif, const char *role) {
     cJSON *object = cJSON_CreateObject();
     bool ok = object && (item ? cJSON_AddStringToObject(object, "item", item) != NULL
-                              : cJSON_AddStringToObject(object, "id", id) != NULL);
+                              : !id || cJSON_AddStringToObject(object, "id", id) != NULL);
     ok = ok && cJSON_AddStringToObject(object, "form", "full") && add_copy_or_null(object, motif, "degrees") &&
          add_copy_or_null(object, motif, "pickup") && add_copy_or_null(object, motif, "harmony") &&
          add_copy_or_null(object, motif, "features") && cJSON_AddStringToObject(object, "role", role);
@@ -398,9 +399,6 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
         } else {
             cJSON *pattern = cJSON_CreateObject();
             cJSON *motive = motive_json(NULL, NULL, motif, "accompaniment");
-            if (motive) {
-                cJSON_DeleteItemFromObjectCaseSensitive(motive, "item");
-            }
             ok = pattern && motive && cJSON_AddStringToObject(pattern, "pattern", "motive") &&
                  cJSON_AddItemToObject(pattern, "motive", motive) && cJSON_AddItemToObject(request, "accompaniment", pattern);
             if (!ok) {
