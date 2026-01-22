@@ -458,3 +458,52 @@ target_compile_definitions(test_links_route PRIVATE
 )
 add_test(NAME links_route COMMAND test_links_route
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/links_route)
+
+add_executable(test_theme_route test_theme_route.c
+  ${CMAKE_SOURCE_DIR}/backend/src/server.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/persistence_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/analysis_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/piece_metadata.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/id_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/subject_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/service/link_service.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/health.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/analyzer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/corpus.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/composer.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/styles.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/materials.c
+  ${CMAKE_SOURCE_DIR}/backend/src/routes/links.c
+)
+
+target_include_directories(test_theme_route PRIVATE
+  ${CMAKE_SOURCE_DIR}/backend/include
+  ${CMAKE_SOURCE_DIR}/backend/src
+)
+
+target_link_libraries(test_theme_route PRIVATE
+  ursatz_analyzer
+  cjson
+  ursatz
+  civetweb-c-library
+)
+
+if(WIN32)
+  target_link_libraries(test_theme_route PRIVATE ws2_32)
+endif()
+
+# The test runs a fake Composer and, when it is built, the real one, in its own working directory (materials/,
+# subjects/, pieces/ and fake/ are created there) and uploads the link fixtures for the brief.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
+add_dependencies(test_theme_route ursatz_composer_cli)
+target_compile_definitions(test_theme_route PRIVATE
+  URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
+)
+add_test(NAME theme_route COMMAND test_theme_route
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
