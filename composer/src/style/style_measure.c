@@ -56,8 +56,16 @@ ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const Compos
     if (analyzed != ANALYZER_FRAGMENT_OK) {
         result = analyzed == ANALYZER_FRAGMENT_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_ANALYSIS;
     } else {
+        size_t without_count = composer_style_without_count(style);
+        const char *without[64];
+        if (without_count > sizeof without / sizeof *without) {
+            without_count = sizeof without / sizeof *without;
+        }
+        for (size_t i = 0; i < without_count; i++) {
+            without[i] = composer_style_without_at(style, i);
+        }
         AnalyzerFragmentResult compared = analyzer_fragment_style_distance_without(
-            &analysis, composer_style_model(style), composer_style_motive_categories, COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT, out);
+            &analysis, composer_style_model(style), without_count ? without : NULL, without_count, out);
         if (compared != ANALYZER_FRAGMENT_OK) {
             memset(out, 0, sizeof(*out));
             result = compared == ANALYZER_FRAGMENT_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_ANALYSIS;

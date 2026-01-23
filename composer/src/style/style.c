@@ -18,15 +18,13 @@ typedef struct {
     size_t label_count;
 } StyleCategory;
 
-/* The motive categories of the Analyzer's style model. The Composer reads them out until P16 makes them preferences. */
-const char *const composer_style_motive_categories[COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT] = {
-    "motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
-
 struct ComposerStyle {
     StyleModel *model;
     size_t pieces;
     StyleCategory *categories; /* sorted by name, byte order */
     size_t category_count;
+    char **without; /* the categories the style was read without, in the order given, no repeats */
+    size_t without_count;
 };
 
 const char *composer_style_result_name(ComposerStyleResult result) {
@@ -57,6 +55,10 @@ void composer_style_destroy(ComposerStyle *style) {
         free(style->categories[c].name);
     }
     free(style->categories);
+    for (size_t i = 0; i < style->without_count; i++) {
+        free(style->without[i]);
+    }
+    free(style->without);
     style_model_destroy(style->model);
     free(style);
 }
@@ -140,19 +142,23 @@ ComposerStyleResult composer_style_from_model(StyleModel *model, size_t pieces, 
 }
 
 ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out) {
+    return composer_style_load_without(path, NULL, 0, out);
+}
+
+ComposerStyleResult composer_style_load_without(const char *path, const char *const *categories, size_t count,
+                                                ComposerStyle **out) {
     if (!out) {
         return COMPOSER_STYLE_ERR_ARGUMENT;
     }
     *out = NULL;
-    if (!path) {
+    if (!path || (count > 0 && !categories)) {
         return COMPOSER_STYLE_ERR_ARGUMENT;
     }
     ComposerStyle *style = calloc(1, sizeof(*style));
     if (!style) {
         return COMPOSER_STYLE_ERR_ALLOC;
     }
-    StyleModelFileResult read = style_model_file_read_without(
-        path, composer_style_motive_categories, COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT, &style->model, &style->pieces);
+    StyleModelFileResult read = style_model_file_read_without(path, categories, count, &style->model, &style->pieces);
     if (read != STYLE_MODEL_FILE_OK) {
         free(style);
         switch (read) {
@@ -167,12 +173,60 @@ ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out) {
         }
     }
     ComposerStyleResult result = read_statistics(style);
+    if (result == COMPOSER_STYLE_OK) {
+        result = composer_style_add_without(style, categories, count);
+    }
     if (result != COMPOSER_STYLE_OK) {
         composer_style_destroy(style);
         return result;
     }
     *out = style;
     return COMPOSER_STYLE_OK;
+}
+
+ComposerStyleResult composer_style_add_without(ComposerStyle *style, const char *const *categories, size_t count) {
+    if (!style || (count > 0 && !categories)) {
+        return COMPOSER_STYLE_ERR_ARGUMENT;
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (!categories[i]) {
+            return COMPOSER_STYLE_ERR_ARGUMENT;
+        }
+        if (composer_style_without_has(style, categories[i])) {
+            continue;
+        }
+        char **grown = realloc(style->without, (style->without_count + 1) * sizeof(*grown));
+        if (!grown) {
+            return COMPOSER_STYLE_ERR_ALLOC;
+        }
+        style->without = grown;
+        grown[style->without_count] = strdup(categories[i]);
+        if (!grown[style->without_count]) {
+            return COMPOSER_STYLE_ERR_ALLOC;
+        }
+        style->without_count++;
+    }
+    return COMPOSER_STYLE_OK;
+}
+
+bool composer_style_without_has(const ComposerStyle *style, const char *category) {
+    if (!style || !category) {
+        return false;
+    }
+    for (size_t i = 0; i < style->without_count; i++) {
+        if (strcmp(style->without[i], category) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+size_t composer_style_without_count(const ComposerStyle *style) {
+    return style ? style->without_count : 0;
+}
+
+const char *composer_style_without_at(const ComposerStyle *style, size_t i) {
+    return style && i < style->without_count ? style->without[i] : NULL;
 }
 
 const StyleModel *composer_style_model(const ComposerStyle *style) {

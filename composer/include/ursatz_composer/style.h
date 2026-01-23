@@ -33,8 +33,21 @@ typedef struct {
 
 const char *composer_style_result_name(ComposerStyleResult result);
 
-/* Reads the model file at path into *out, which the caller destroys. *out is NULL on failure. */
+/* Reads the model file at path into *out, which the caller destroys. *out is NULL on failure. Every category is kept. */
 ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out);
+
+/*
+ * composer_style_load without the named categories (style_model_file_read_without): the style holds no statistics of
+ * them, and keeps the list. A category that is not one the Analyzer defines is COMPOSER_STYLE_ERR_ARGUMENT.
+ * composer_style_load is this with none.
+ */
+ComposerStyleResult composer_style_load_without(const char *path, const char *const *categories, size_t count,
+                                                ComposerStyle **out);
+
+/* The categories the style was read without, in the order given (a blend has both lists, repeats once). */
+size_t composer_style_without_count(const ComposerStyle *style);
+/* Entry i, or NULL when i is out of range. Valid until the style is destroyed. */
+const char *composer_style_without_at(const ComposerStyle *style, size_t i);
 
 /* NULL is a no-op. */
 void composer_style_destroy(ComposerStyle *style);
