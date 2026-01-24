@@ -234,6 +234,18 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && json_add(object, "path", cJSON_CreateString(style->path));
         snprintf(weight, sizeof(weight), "%lu/%lu", style->weight_numerator, style->weight_denominator);
         ok = ok && json_add(object, "weight", cJSON_CreateString(weight));
+        if (ok && style->without_count > 0) {
+            cJSON *without = cJSON_CreateArray();
+            ok = without != NULL;
+            for (size_t i = 0; ok && i < style->without_count; i++) {
+                ok = json_append(without, cJSON_CreateString(style->without[i]));
+            }
+            if (ok) {
+                ok = json_add(object, "without", without);
+            } else {
+                cJSON_Delete(without);
+            }
+        }
         if (ok && style->blend_path[0]) {
             static const char *const DIMENSIONS[4] = {"harmony", "rhythm", "melody", "form"};
             cJSON *blend = cJSON_CreateObject();
@@ -1043,6 +1055,23 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         snprintf(out->params.style.path, PLAN_STYLE_PATH_MAX, "%s", file->valuestring);
         out->params.style.weight_numerator = numerator;
         out->params.style.weight_denominator = denominator;
+        const cJSON *without = cJSON_GetObjectItemCaseSensitive(item, "without");
+        if (without) {
+            json_child_path(at, path, "without");
+            int listed = cJSON_IsArray(without) ? cJSON_GetArraySize(without) : -1;
+            if (listed < 0 || listed > PLAN_STYLE_WITHOUT_MAX) {
+                return json_bad_format(reader, at, "expected a list of at most 8 category names");
+            }
+            const cJSON *name;
+            cJSON_ArrayForEach(name, without) {
+                if (!cJSON_IsString(name) || name->valuestring[0] == '\0' ||
+                    strlen(name->valuestring) >= PLAN_STYLE_WITHOUT_NAME_MAX) {
+                    return json_bad_format(reader, at, "expected a list of at most 8 category names");
+                }
+                snprintf(out->params.style.without[out->params.style.without_count++], PLAN_STYLE_WITHOUT_NAME_MAX, "%s",
+                         name->valuestring);
+            }
+        }
         const cJSON *blend = cJSON_GetObjectItemCaseSensitive(item, "blend");
         if (!blend) {
             return true;

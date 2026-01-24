@@ -153,8 +153,8 @@ bool cli_parse_ratio(const char *text, ComposerRatio *out) {
     return true;
 }
 
-int cli_load_style(const char *path, ComposerStyle **out) {
-    ComposerStyleResult loaded = composer_style_load(path, out);
+int cli_load_style(const char *path, const char *const *without, size_t without_count, ComposerStyle **out) {
+    ComposerStyleResult loaded = composer_style_load_without(path, without, without_count, out);
     if (loaded != COMPOSER_STYLE_OK) {
         return cli_fail(loaded == COMPOSER_STYLE_ERR_ARGUMENT ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE,
                         "cannot read style '%s': %s", path, composer_style_result_name(loaded));
@@ -233,12 +233,12 @@ int cli_read_blend(bool has_style, const char *blend_path, const char *all_text,
 }
 
 int cli_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
-                   ComposerStyle **out) {
+                   const char *const *without, size_t without_count, ComposerStyle **out) {
     ComposerStyle *first = NULL;
     ComposerStyle *second = NULL;
-    int status = cli_load_style(style_path, &first);
+    int status = cli_load_style(style_path, without, without_count, &first);
     if (status == 0) {
-        status = cli_load_style(blend_path, &second);
+        status = cli_load_style(blend_path, without, without_count, &second);
     }
     if (status == 0) {
         ComposerStyleResult blended = composer_style_blend(first, second, weights, out);

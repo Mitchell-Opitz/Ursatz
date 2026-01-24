@@ -847,8 +847,8 @@ static int place_given(const Options *options, PiecePlan *plan) {
 static int check_style(const Options *options) {
     ComposerStyle *style = NULL;
     int status = options->blend_path
-                     ? cli_load_blend(options->style_path, options->blend_path, &options->blend_weights, &style)
-                     : cli_load_style(options->style_path, &style);
+                     ? cli_load_blend(options->style_path, options->blend_path, &options->blend_weights, NULL, 0, &style)
+                     : cli_load_style(options->style_path, NULL, 0, &style);
     composer_style_destroy(style);
     return status;
 }

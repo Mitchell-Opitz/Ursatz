@@ -215,7 +215,7 @@ int run_random_motive(int argc, char **argv) {
     }
     ComposerStyle *style = NULL;
     if (options.style_path) {
-        status = cli_load_style(options.style_path, &style);
+        status = cli_load_style(options.style_path, NULL, 0, &style);
         if (status != 0) {
             return status;
         }

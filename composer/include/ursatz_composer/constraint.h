@@ -251,6 +251,14 @@ typedef struct {
  */
 #define PLAN_STYLE_PATH_MAX 512
 
+/*
+ * The categories the style is read without (composer_style_load_without, the command line's --style-without), up to
+ * PLAN_STYLE_WITHOUT_MAX names of fewer than PLAN_STYLE_WITHOUT_NAME_MAX characters each. A plan keeps the list so a
+ * fill reads the style the way the plan was made.
+ */
+#define PLAN_STYLE_WITHOUT_MAX 8
+#define PLAN_STYLE_WITHOUT_NAME_MAX 32
+
 typedef struct {
     char path[PLAN_STYLE_PATH_MAX];
     unsigned long weight_numerator;
@@ -258,6 +266,8 @@ typedef struct {
     char blend_path[PLAN_STYLE_PATH_MAX];
     unsigned long blend_numerator[4];
     unsigned long blend_denominator[4];
+    char without[PLAN_STYLE_WITHOUT_MAX][PLAN_STYLE_WITHOUT_NAME_MAX];
+    size_t without_count;
 } PlanStyle;
 
 /*

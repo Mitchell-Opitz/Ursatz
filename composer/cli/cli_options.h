@@ -62,8 +62,11 @@ int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportO
 /* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
 bool cli_parse_ratio(const char *text, ComposerRatio *out);
 
-/* Reads the style model file at path into *out. Returns 0, or the status of the usage error it printed. */
-int cli_load_style(const char *path, ComposerStyle **out);
+/*
+ * Reads the style model file at path into *out, without the named categories (none when count is 0). Returns 0, or the
+ * status of the usage error it printed.
+ */
+int cli_load_style(const char *path, const char *const *without, size_t without_count, ComposerStyle **out);
 
 /*
  * The blend options of grow, plan and fill: --blend <file> (blend_path), --blend-weight <n/d> (all_text) and
@@ -76,6 +79,7 @@ int cli_read_blend(bool has_style, const char *blend_path, const char *all_text,
 
 /* Loads the two style model files and blends them, weights as cli_read_blend read them. Returns 0 or the status. */
 int cli_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
+                   const char *const *without, size_t without_count,
                    ComposerStyle **out);
 
 /* The Analyzer's distance from the style, per dimension and overall (0 is the same, 1 is nothing alike): text lines. */

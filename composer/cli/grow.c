@@ -1139,8 +1139,8 @@ int run_grow(int argc, char **argv) {
 
     if (options.style_path) {
         status = options.blend_path
-                     ? cli_load_blend(options.style_path, options.blend_path, &options.blend_weights, &options.style)
-                     : cli_load_style(options.style_path, &options.style);
+                     ? cli_load_blend(options.style_path, options.blend_path, &options.blend_weights, NULL, 0, &options.style)
+                     : cli_load_style(options.style_path, NULL, 0, &options.style);
         if (status != 0) {
             return status;
         }

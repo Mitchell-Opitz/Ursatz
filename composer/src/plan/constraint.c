@@ -96,6 +96,15 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                 return false;
             }
         }
+        if (style->without_count > PLAN_STYLE_WITHOUT_MAX) {
+            return false;
+        }
+        for (size_t i = 0; i < style->without_count; i++) {
+            size_t name_length = strnlen(style->without[i], PLAN_STYLE_WITHOUT_NAME_MAX);
+            if (name_length == 0 || name_length >= PLAN_STYLE_WITHOUT_NAME_MAX) {
+                return false;
+            }
+        }
         return true;
     }
     case PLAN_CONSTRAINT_SOURCE: {

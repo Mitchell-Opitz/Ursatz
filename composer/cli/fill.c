@@ -711,6 +711,14 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
         }
     }
     const char *path = options->style_path ? options->style_path : (planned ? planned->path : NULL);
+    /* The plan keeps the categories its style was read without; a --style of its own starts with none. */
+    const char *without[PLAN_STYLE_WITHOUT_MAX];
+    size_t without_count = 0;
+    if (planned && !options->style_path) {
+        for (; without_count < planned->without_count; without_count++) {
+            without[without_count] = planned->without[without_count];
+        }
+    }
     /* The plan's blend goes with the plan's style: a --style of its own is not blended unless --blend says so. */
     const char *blend_path = options->blend_path;
     if (!blend_path && !options->style_path && planned && planned->blend_path[0]) {
@@ -731,7 +739,7 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
     }
     if (!blend_path) {
         int checked = cli_read_blend(true, NULL, options->blend_weight_text, options->blend_weights_text, &blend_weights);
-        return checked != 0 ? checked : cli_load_style(path, style);
+        return checked != 0 ? checked : cli_load_style(path, without, without_count, style);
     }
     if (weights_given) {
         int read = cli_read_blend(true, blend_path, options->blend_weight_text, options->blend_weights_text,
@@ -745,7 +753,7 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
             blend_weights.denominator[d] = planned->blend_denominator[d];
         }
     }
-    return cli_load_blend(path, blend_path, &blend_weights, style);
+    return cli_load_blend(path, blend_path, &blend_weights, without, without_count, style);
 }
 
 /* --- the command ---------------------------------------------------------------- */
