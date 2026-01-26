@@ -14,10 +14,26 @@
 #include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/report_writer.h>
 
+#include "cJSON.h"
+#include "pipeline/analysis_document_internal.h"
 #include "pipeline/corpus_internal.h"
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
 #define REPORT_SUFFIX ".report.md"
+#define INDEX_NAME "corpus-index.json"
+#define HOME_KEY_CAPACITY 64
+#define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
+#define FNV_PRIME 0x100000001b3ULL
+
+/* What the corpus index records about one piece. */
+typedef struct {
+    CorpusPieceStatus status;
+    const char *error;               /* static text; NULL unless failed */
+    char *document;                  /* output path relative to the output directory; NULL unless analyzed */
+    unsigned long long content_hash; /* FNV-1a 64 of the input file's bytes */
+    long measures;                   /* -1 when unknown */
+    char home_key[HOME_KEY_CAPACITY]; /* empty when unknown */
+} PieceRecord;
 
 typedef struct {
     char **paths;
@@ -195,53 +211,202 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
     return ok;
 }
 
-/* Imports, analyzes and writes one piece. On failure of the piece itself sets *error and returns OK; only a failure
-   to write an output file is a run error. */
+static unsigned long long fnv1a_file(const char *path) {
+    unsigned long long hash = FNV_OFFSET_BASIS;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        return hash;
+    }
+    unsigned char chunk[8192];
+    size_t got;
+    while ((got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
+        for (size_t i = 0; i < got; i++) {
+            hash = (hash ^ chunk[i]) * FNV_PRIME;
+        }
+    }
+    fclose(file);
+    return hash;
+}
+
+/* The measure count and the home key's label, read from the document's meter and keys sections. */
+static void read_document_summary(const AnalysisDocument *document, PieceRecord *record) {
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(document->root, "meter");
+    const cJSON *measure_count = cJSON_GetObjectItemCaseSensitive(meter, "measure_count");
+    if (cJSON_IsNumber(measure_count)) {
+        record->measures = (long)measure_count->valuedouble;
+    }
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document->root, "keys");
+    const cJSON *home = cJSON_GetObjectItemCaseSensitive(keys, "home_key");
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(home, "label");
+    if (cJSON_IsString(label) && label->valuestring) {
+        snprintf(record->home_key, sizeof(record->home_key), "%s", label->valuestring);
+    }
+}
+
+/* Imports, analyzes and writes one piece into record. A piece that cannot be analyzed is a failed record and still
+   returns OK; only a failure to write an output file is a run error. */
 static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char *output_dir, const char *relative,
-                                     const char *input_path, CorpusPieceStatus *status, const char **error) {
-    *status = CORPUS_PIECE_FAILED;
-    *error = NULL;
+                                     const char *input_path, PieceRecord *record) {
+    record->status = CORPUS_PIECE_FAILED;
+    record->error = NULL;
+    record->document = NULL;
+    record->measures = -1;
+    record->home_key[0] = '\0';
+    record->content_hash = fnv1a_file(input_path);
 
     ImportedNotes notes;
     InputPipelineResult imported = input_pipeline_import_file(input_path, INPUT_FORMAT_AUTO, &notes);
     if (imported != INPUT_PIPELINE_OK) {
-        *error = import_error_text(imported);
+        record->error = import_error_text(imported);
         return CORPUS_RUN_OK;
     }
 
     AnalysisReport report;
     if (!run_analysis_pipeline(&notes, &report)) {
         imported_notes_destroy(&notes);
-        *error = "out of memory";
+        record->error = "out of memory";
         return CORPUS_RUN_OK;
     }
     AnalysisDocument *document = analysis_document_build(input_path, &notes, &report);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     if (!document) {
-        *error = "out of memory";
+        record->error = "out of memory";
         return CORPUS_RUN_OK;
     }
 
+    read_document_summary(document, record);
     char *json = analysis_document_to_json(document);
     char *markdown = options->markdown ? markdown_report_render(document) : NULL;
     analysis_document_destroy(document);
-    if (!json || (options->markdown && !markdown)) {
+    char *document_name = malloc(strlen(relative) + strlen(ANALYSIS_DOCUMENT_SUFFIX) + 1);
+    if (!json || (options->markdown && !markdown) || !document_name) {
         free(json);
         free(markdown);
-        *error = "out of memory";
+        free(document_name);
+        record->measures = -1;
+        record->home_key[0] = '\0';
+        record->error = "out of memory";
         return CORPUS_RUN_OK;
     }
+    strcpy(document_name, relative);
+    strcat(document_name, ANALYSIS_DOCUMENT_SUFFIX);
 
     bool wrote = write_output_file(output_dir, relative, ANALYSIS_DOCUMENT_SUFFIX, json) &&
                  (!markdown || write_output_file(output_dir, relative, REPORT_SUFFIX, markdown));
     free(json);
     free(markdown);
     if (!wrote) {
+        free(document_name);
         return CORPUS_RUN_ERR_WRITE;
     }
-    *status = CORPUS_PIECE_ANALYZED;
+    record->status = CORPUS_PIECE_ANALYZED;
+    record->document = document_name;
     return CORPUS_RUN_OK;
+}
+
+/* ---- Corpus index ---- */
+
+static bool append_text(char **buffer, size_t *length, size_t *capacity, const char *text) {
+    size_t add = strlen(text);
+    if (*length + add + 1 > *capacity) {
+        size_t grown = *capacity ? *capacity : 1024;
+        while (*length + add + 1 > grown) {
+            grown *= 2;
+        }
+        char *data = realloc(*buffer, grown);
+        if (!data) {
+            return false;
+        }
+        *buffer = data;
+        *capacity = grown;
+    }
+    memcpy(*buffer + *length, text, add + 1);
+    *length += add;
+    return true;
+}
+
+/* A JSON string literal for text (or the literal null for NULL), escaped by cJSON. */
+static bool append_json_string(char **buffer, size_t *length, size_t *capacity, const char *text) {
+    if (!text) {
+        return append_text(buffer, length, capacity, "null");
+    }
+    cJSON *item = cJSON_CreateString(text);
+    char *printed = item ? cJSON_PrintUnformatted(item) : NULL;
+    cJSON_Delete(item);
+    if (!printed) {
+        return false;
+    }
+    bool ok = append_text(buffer, length, capacity, printed);
+    cJSON_free(printed);
+    return ok;
+}
+
+/* The index for the first count pieces: 2-space indent, fixed key order, one piece member per line. */
+static char *render_index(const char *input_dir, const char *const *paths, const PieceRecord *records, size_t count) {
+    char *out = NULL;
+    size_t length = 0;
+    size_t capacity = 0;
+    char number[64];
+    bool ok = append_text(&out, &length, &capacity,
+                          "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 1,\n"
+                          "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n") &&
+              (snprintf(number, sizeof(number), "  \"document_schema_version\": %d,\n",
+                        URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION),
+               append_text(&out, &length, &capacity, number)) &&
+              append_text(&out, &length, &capacity, "  \"input_dir\": ") &&
+              append_json_string(&out, &length, &capacity, input_dir) &&
+              append_text(&out, &length, &capacity, count ? ",\n  \"pieces\": [\n" : ",\n  \"pieces\": []\n");
+    for (size_t i = 0; ok && i < count; i++) {
+        const PieceRecord *record = &records[i];
+        ok = append_text(&out, &length, &capacity, "    {\n      \"path\": ") &&
+             append_json_string(&out, &length, &capacity, paths[i]) &&
+             append_text(&out, &length, &capacity, ",\n      \"document\": ") &&
+             append_json_string(&out, &length, &capacity, record->document) &&
+             append_text(&out, &length, &capacity, ",\n      \"status\": ") &&
+             append_text(&out, &length, &capacity,
+                         record->status == CORPUS_PIECE_FAILED ? "\"failed\"" : "\"analyzed\"") &&
+             append_text(&out, &length, &capacity, ",\n      \"error\": ") &&
+             append_json_string(&out, &length, &capacity, record->error) &&
+             (snprintf(number, sizeof(number), ",\n      \"content_hash\": \"%016llx\",\n      \"measures\": ",
+                       record->content_hash),
+              append_text(&out, &length, &capacity, number));
+        if (ok && record->measures >= 0) {
+            snprintf(number, sizeof(number), "%ld", record->measures);
+            ok = append_text(&out, &length, &capacity, number);
+        } else if (ok) {
+            ok = append_text(&out, &length, &capacity, "null");
+        }
+        ok = ok && append_text(&out, &length, &capacity, ",\n      \"home_key\": ") &&
+             append_json_string(&out, &length, &capacity, record->home_key[0] ? record->home_key : NULL) &&
+             append_text(&out, &length, &capacity, i + 1 < count ? "\n    },\n" : "\n    }\n");
+    }
+    if (ok && count) {
+        ok = append_text(&out, &length, &capacity, "  ]\n");
+    }
+    ok = ok && append_text(&out, &length, &capacity, "}\n");
+    if (!ok) {
+        free(out);
+        return NULL;
+    }
+    return out;
+}
+
+/* Writes the index for the first count pieces to a temporary file, then renames it over corpus-index.json. */
+static bool write_index(const char *output_dir, const char *input_dir, const char *const *paths,
+                        const PieceRecord *records, size_t count) {
+    char *text = render_index(input_dir, paths, records, count);
+    char *final_path = corpus_join(output_dir, INDEX_NAME);
+    char *temp_path = corpus_join(output_dir, INDEX_NAME ".tmp");
+    bool ok = text && final_path && temp_path && write_report_file(temp_path, text) &&
+              rename(temp_path, final_path) == 0;
+    if (text && final_path && temp_path && !ok) {
+        remove(temp_path);
+    }
+    free(text);
+    free(final_path);
+    free(temp_path);
+    return ok;
 }
 
 CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out) {
@@ -280,38 +445,59 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
     bool have_output_info = stat(output_dir, &output_info) == 0;
 
     PieceList pieces = {0};
+    PieceRecord *records = NULL;
     CorpusRunResult result = CORPUS_RUN_OK;
     if (!walk_directory(options->input_dir, "", have_output_info ? &output_info : NULL, &pieces)) {
         fprintf(stderr, "Error: out of memory while listing '%s'\n", options->input_dir);
         result = CORPUS_RUN_ERR_INPUT_DIR;
     } else {
         qsort(pieces.paths, pieces.count, sizeof(char *), compare_paths);
+        records = calloc(pieces.count ? pieces.count : 1, sizeof(PieceRecord));
+        if (!records) {
+            fprintf(stderr, "Error: out of memory\n");
+            result = CORPUS_RUN_ERR_WRITE;
+        }
     }
 
-    for (size_t i = 0; result == CORPUS_RUN_OK && i < pieces.count; i++) {
-        const char *relative = pieces.paths[i];
+    size_t done = 0;
+    for (; result == CORPUS_RUN_OK && done < pieces.count; done++) {
+        const char *relative = pieces.paths[done];
         char *input_path = corpus_join(options->input_dir, relative);
         if (!input_path) {
             fprintf(stderr, "Error: out of memory\n");
             result = CORPUS_RUN_ERR_WRITE;
             break;
         }
-        CorpusPieceStatus status;
-        const char *error;
-        result = analyze_piece(options, output_dir, relative, input_path, &status, &error);
+        PieceRecord *record = &records[done];
+        result = analyze_piece(options, output_dir, relative, input_path, record);
         free(input_path);
         if (result != CORPUS_RUN_OK) {
             break;
         }
-        if (status == CORPUS_PIECE_ANALYZED) {
+        if (!write_index(output_dir, options->input_dir, (const char *const *)pieces.paths, records, done + 1)) {
+            fprintf(stderr, "Error: cannot write the corpus index in '%s'\n", output_dir);
+            result = CORPUS_RUN_ERR_WRITE;
+            done++;
+            break;
+        }
+        if (record->status == CORPUS_PIECE_ANALYZED) {
             summary.analyzed++;
         } else {
             summary.failed++;
         }
         if (options->on_piece) {
-            options->on_piece(relative, status, error, options->user);
+            options->on_piece(relative, record->status, record->error, options->user);
         }
     }
+    if (result == CORPUS_RUN_OK && pieces.count == 0 &&
+        !write_index(output_dir, options->input_dir, (const char *const *)pieces.paths, records, 0)) {
+        fprintf(stderr, "Error: cannot write the corpus index in '%s'\n", output_dir);
+        result = CORPUS_RUN_ERR_WRITE;
+    }
+    for (size_t i = 0; records && i < done && i < pieces.count; i++) {
+        free(records[i].document);
+    }
+    free(records);
 
     piece_list_destroy(&pieces);
     free(default_output);

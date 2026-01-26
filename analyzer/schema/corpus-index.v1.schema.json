@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/corpus-index.v1.schema.json",
+  "title": "Ursatz-Analyzer corpus index",
+  "description": "The pieces of one corpus run, in path order, with the analysis document written for each.",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "analyzer_version",
+    "document_schema_version",
+    "input_dir",
+    "pieces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "ursatz-corpus-index" },
+    "schema_version": { "const": 1 },
+    "analyzer_version": { "type": "string", "minLength": 1 },
+    "document_schema_version": { "type": "integer", "minimum": 1 },
+    "input_dir": { "type": "string" },
+    "pieces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "document", "status", "error", "content_hash", "measures", "home_key"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "description": "Input file path relative to input_dir." },
+          "document": {
+            "type": ["string", "null"],
+            "description": "Analysis document path relative to the output directory; null for a failed piece."
+          },
+          "status": { "enum": ["analyzed", "failed"] },
+          "error": { "type": ["string", "null"], "description": "Why the piece failed; null otherwise." },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{16}$",
+            "description": "FNV-1a 64 of the input file's bytes."
+          },
+          "measures": { "type": ["integer", "null"], "minimum": 0 },
+          "home_key": { "type": ["string", "null"], "description": "For example \"G major\"." }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "status": { "const": "analyzed" } } },
+            "then": { "properties": { "document": { "type": "string" }, "error": { "type": "null" } } },
+            "else": { "properties": { "document": { "type": "null" }, "error": { "type": "string" } } }
+          }
+        ]
+      }
+    }
+  }
+}
