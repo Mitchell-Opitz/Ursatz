@@ -200,6 +200,12 @@ unsigned melody_cadence_mask(const MelodyContext *context);
  * when it fails itself (allocation).
  */
 bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict);
+/*
+ * The non-chord tone each note of the melody is, as the MELODY_NCT_ bit of the figure the framework labels it (0 for a
+ * chord tone), types[0..count). False when the melody cannot be labeled. The same labeling melody_judge holds the
+ * notes to, for the style's non-chord tone figures.
+ */
+bool melody_nct_types(const MelodyCandidate *melody, unsigned *types);
 /* The checker's verdict on a melody candidate's payload. */
 bool melody_check(const void *payload, FillCheck *out);
 

@@ -20,7 +20,8 @@ bool composer_style_without_has(const ComposerStyle *style, const char *category
  * operator that has no labels (bass, texture, anything but the harmony and melody operators) are neutral, 1/1.
  */
 typedef struct {
-    FillCheckerFn inner;      /* the stage's checker, called with a NULL context as it is without a style */
+    FillCheckerFn inner;      /* the stage's checker */
+    void *inner_context;      /* ...and the context it is called with (NULL for the stages whose checker has none) */
     const ComposerStyle *style;
     ComposerRatio weight;     /* resolved: a denominator of 0 reads as 1/1 before it gets here */
 } StyleCheckContext;
