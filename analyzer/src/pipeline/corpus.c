@@ -392,6 +392,121 @@ static char *render_index(const char *input_dir, const char *const *paths, const
     return out;
 }
 
+/* ---- Resume ---- */
+
+/* Reads the index left by an earlier run. *out is NULL when there is no index, or when it was written by another
+   analyzer or document schema version (nothing in it can be reused). An index that exists but cannot be read is
+   CORPUS_RUN_ERR_INDEX. */
+static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) {
+    *out = NULL;
+    char *path = corpus_join(output_dir, INDEX_NAME);
+    if (!path) {
+        fprintf(stderr, "Error: out of memory\n");
+        return CORPUS_RUN_ERR_INDEX;
+    }
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        free(path);
+        return CORPUS_RUN_OK;
+    }
+    size_t length = 0;
+    char *text = NULL;
+    char chunk[8192];
+    size_t got;
+    bool ok = true;
+    while (ok && (got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
+        char *grown = realloc(text, length + got + 1);
+        ok = grown != NULL;
+        if (ok) {
+            text = grown;
+            memcpy(text + length, chunk, got);
+            length += got;
+            text[length] = '\0';
+        }
+    }
+    fclose(file);
+    cJSON *root = ok && text ? cJSON_Parse(text) : NULL;
+    free(text);
+    const cJSON *name = cJSON_GetObjectItemCaseSensitive(root, "schema");
+    const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(root, "pieces");
+    if (!cJSON_IsString(name) || strcmp(name->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
+        fprintf(stderr, "Error: cannot read the corpus index '%s'\n", path);
+        cJSON_Delete(root);
+        free(path);
+        return CORPUS_RUN_ERR_INDEX;
+    }
+    free(path);
+
+    const cJSON *analyzer_version = cJSON_GetObjectItemCaseSensitive(root, "analyzer_version");
+    const cJSON *document_schema = cJSON_GetObjectItemCaseSensitive(root, "document_schema_version");
+    if (!cJSON_IsString(analyzer_version) || strcmp(analyzer_version->valuestring, URSATZ_ANALYZER_VERSION) != 0 ||
+        !cJSON_IsNumber(document_schema) ||
+        (int)document_schema->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        cJSON_Delete(root);
+        return CORPUS_RUN_OK;
+    }
+    *out = root;
+    return CORPUS_RUN_OK;
+}
+
+static bool file_exists(const char *dir, const char *relative, const char *suffix) {
+    char *name = malloc(strlen(relative) + strlen(suffix) + 1);
+    if (!name) {
+        return false;
+    }
+    strcpy(name, relative);
+    strcat(name, suffix);
+    char *path = corpus_join(dir, name);
+    free(name);
+    struct stat info;
+    bool exists = path && stat(path, &info) == 0 && S_ISREG(info.st_mode);
+    free(path);
+    return exists;
+}
+
+/* Fills record from the earlier run's entry for relative when that entry can be reused: it is an analyzed entry
+   with the same content hash, its document file exists, and so does the report when one is wanted. */
+static bool reuse_previous(const cJSON *previous, const CorpusRunOptions *options, const char *output_dir,
+                           const char *relative, unsigned long long content_hash, PieceRecord *record) {
+    const cJSON *entry;
+    cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(previous, "pieces")) {
+        const cJSON *path = cJSON_GetObjectItemCaseSensitive(entry, "path");
+        if (cJSON_IsString(path) && strcmp(path->valuestring, relative) == 0) {
+            break;
+        }
+    }
+    if (!entry) {
+        return false;
+    }
+    const cJSON *status = cJSON_GetObjectItemCaseSensitive(entry, "status");
+    const cJSON *document = cJSON_GetObjectItemCaseSensitive(entry, "document");
+    const cJSON *hash = cJSON_GetObjectItemCaseSensitive(entry, "content_hash");
+    char expected_hash[17];
+    snprintf(expected_hash, sizeof(expected_hash), "%016llx", content_hash);
+    if (!cJSON_IsString(status) || strcmp(status->valuestring, "analyzed") != 0 || !cJSON_IsString(document) ||
+        !cJSON_IsString(hash) || strcmp(hash->valuestring, expected_hash) != 0 ||
+        !file_exists(output_dir, document->valuestring, "") ||
+        (options->markdown && !file_exists(output_dir, relative, REPORT_SUFFIX))) {
+        return false;
+    }
+    char *document_copy = strdup(document->valuestring);
+    if (!document_copy) {
+        return false;
+    }
+    const cJSON *measures = cJSON_GetObjectItemCaseSensitive(entry, "measures");
+    const cJSON *home_key = cJSON_GetObjectItemCaseSensitive(entry, "home_key");
+    record->status = CORPUS_PIECE_SKIPPED;
+    record->error = NULL;
+    record->document = document_copy;
+    record->content_hash = content_hash;
+    record->measures = cJSON_IsNumber(measures) ? (long)measures->valuedouble : -1;
+    record->home_key[0] = '\0';
+    if (cJSON_IsString(home_key)) {
+        snprintf(record->home_key, sizeof(record->home_key), "%s", home_key->valuestring);
+    }
+    return true;
+}
+
 /* Writes the index for the first count pieces to a temporary file, then renames it over corpus-index.json. */
 static bool write_index(const char *output_dir, const char *input_dir, const char *const *paths,
                         const PieceRecord *records, size_t count) {
@@ -459,6 +574,11 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
         }
     }
 
+    cJSON *previous = NULL;
+    if (result == CORPUS_RUN_OK && options->resume) {
+        result = load_previous_index(output_dir, &previous);
+    }
+
     size_t done = 0;
     for (; result == CORPUS_RUN_OK && done < pieces.count; done++) {
         const char *relative = pieces.paths[done];
@@ -469,7 +589,9 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
             break;
         }
         PieceRecord *record = &records[done];
-        result = analyze_piece(options, output_dir, relative, input_path, record);
+        if (!(previous && reuse_previous(previous, options, output_dir, relative, fnv1a_file(input_path), record))) {
+            result = analyze_piece(options, output_dir, relative, input_path, record);
+        }
         free(input_path);
         if (result != CORPUS_RUN_OK) {
             break;
@@ -482,6 +604,8 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
         }
         if (record->status == CORPUS_PIECE_ANALYZED) {
             summary.analyzed++;
+        } else if (record->status == CORPUS_PIECE_SKIPPED) {
+            summary.skipped++;
         } else {
             summary.failed++;
         }
@@ -498,6 +622,7 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
         free(records[i].document);
     }
     free(records);
+    cJSON_Delete(previous);
 
     piece_list_destroy(&pieces);
     free(default_output);
