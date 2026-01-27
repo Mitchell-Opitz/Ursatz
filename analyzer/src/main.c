@@ -5,6 +5,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/report_writer.h>
@@ -62,12 +63,37 @@ static bool write_analysis_document(const char *path, const AnalysisDocument *an
 static void print_usage(const char *program) {
     fprintf(stderr,
             "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> "
-            "[--cantus upper|lower]] <input-file-path>\n",
-            program);
+            "[--cantus upper|lower]] <input-file-path>\n"
+            "       %s --corpus <dir> [--out <dir>] [--resume] [--markdown]\n",
+            program, program);
+}
+
+static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
+    (void)user;
+    const char *word = status == CORPUS_PIECE_ANALYZED ? "analyzed" : (status == CORPUS_PIECE_SKIPPED ? "skipped" : "failed");
+    if (error) {
+        printf("%s %s: %s\n", word, path, error);
+    } else {
+        printf("%s %s\n", word, path);
+    }
+}
+
+static int run_corpus(const char *input_dir, const char *output_dir, bool resume, bool markdown) {
+    CorpusRunOptions options = {input_dir, output_dir, resume, markdown, print_corpus_piece, NULL};
+    CorpusRunSummary summary;
+    if (corpus_run(&options, &summary) != CORPUS_RUN_OK) {
+        return 2;
+    }
+    printf("%zu analyzed, %zu skipped, %zu failed\n", summary.analyzed, summary.skipped, summary.failed);
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
     const char *path = NULL;
+    const char *corpus_dir = NULL;
+    const char *corpus_out = NULL;
+    bool corpus_resume = false;
+    bool input_format_set = false;
     bool want_json = false;
     bool want_markdown = false;
     InputFormat input_format = INPUT_FORMAT_AUTO;
@@ -85,6 +111,19 @@ int main(int argc, char *argv[]) {
                 print_usage(argv[0]);
                 return 1;
             }
+            input_format_set = true;
+        } else if (strcmp(arg, "--corpus") == 0 || strcmp(arg, "--out") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            if (strcmp(arg, "--corpus") == 0) {
+                corpus_dir = argv[++i];
+            } else {
+                corpus_out = argv[++i];
+            }
+        } else if (strcmp(arg, "--resume") == 0) {
+            corpus_resume = true;
         } else if (strcmp(arg, "--check-counterpoint") == 0) {
             if (i + 1 >= argc || strlen(argv[i + 1]) != 1 || argv[i + 1][0] < '1' || argv[i + 1][0] > '5') {
                 print_usage(argv[0]);
@@ -104,6 +143,17 @@ int main(int argc, char *argv[]) {
         } else {
             path = arg;
         }
+    }
+    if (corpus_dir) {
+        if (path || want_json || species != 0 || cantus_set || input_format_set) {
+            print_usage(argv[0]);
+            return 1;
+        }
+        return run_corpus(corpus_dir, corpus_out, corpus_resume, want_markdown);
+    }
+    if (corpus_out || corpus_resume) {
+        print_usage(argv[0]);
+        return 1;
     }
     if (!path || (cantus_set && species == 0)) {
         print_usage(argv[0]);
