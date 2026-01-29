@@ -49,6 +49,7 @@ typedef struct {
     const char *style_path;
     const char *style_weight_text;
     const char *blend_path;
+    CliStyleWithout without;
     const char *blend_weight_text;
     const char *blend_weights_text;
     const char *seed_text;
@@ -116,6 +117,8 @@ static void print_help(FILE *out) {
     fprintf(out, "  --style <file>       prefer the harmony and melody closest to a style: a style model file from the Ursatz\n");
     fprintf(out, "                       Analyzer (--style-profile). The Analyzer's distance from the style is printed\n");
     fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; needs --style)\n");
+    fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; needs --style): the motive\n");
+    fprintf(out, "                       categories are preferences and this switches one off, for the scoring and the distance\n");
     fprintf(out, "  --blend <file>       a second style model file, blended with --style (needs --style)\n");
     fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; needs --blend)\n");
     fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
@@ -219,6 +222,14 @@ static int read_options(int argc, char **argv, Options *options) {
             options->check = true;
         } else if (strcmp(arg, "--style") == 0) {
             target = &options->style_path;
+        } else if (strcmp(arg, "--style-without") == 0) {
+            if (i + 1 >= argc) {
+                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
+            }
+            int added = cli_style_without_add(&options->without, argv[++i]);
+            if (added != 0) {
+                return added;
+            }
         } else if (strcmp(arg, "--style-weight") == 0) {
             target = &options->style_weight_text;
         } else if (strcmp(arg, "--blend") == 0) {
@@ -373,6 +384,9 @@ static int check_options(Options *options) {
     }
     if (options->style_weight_text && !options->style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight needs --style");
+    }
+    if (options->without.count > 0 && !options->style_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
     }
     if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
@@ -1139,8 +1153,8 @@ int run_grow(int argc, char **argv) {
 
     if (options.style_path) {
         status = options.blend_path
-                     ? cli_load_blend(options.style_path, options.blend_path, &options.blend_weights, NULL, 0, &options.style)
-                     : cli_load_style(options.style_path, NULL, 0, &options.style);
+                     ? cli_load_blend(options.style_path, options.blend_path, &options.blend_weights, options.without.names, options.without.count, &options.style)
+                     : cli_load_style(options.style_path, options.without.names, options.without.count, &options.style);
         if (status != 0) {
             return status;
         }

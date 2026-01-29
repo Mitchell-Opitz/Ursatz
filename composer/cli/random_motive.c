@@ -20,6 +20,7 @@ typedef struct {
     const char *key_text;
     const char *form_text;
     const char *style_path;
+    CliStyleWithout without;
     const char *count_text;
     const char *seed_text;
     MotiveExtras extras;
@@ -38,6 +39,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --form <form>        full (pitches and rhythm, the default), rhythm or contour\n");
     motive_extras_print_help(out, true);
     fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motive and keep the closest to it\n");
+    fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; needs --style)\n");
     fprintf(out, "  --count <n>          how many motives, 1 to %d (default %d)\n", MOTIVE_RANDOM_MAX_COUNT, RANDOM_MOTIVE_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
     fprintf(out, "  --json               print {\"seed\", \"motives\"}, each motive as the motive command's --json document\n");
@@ -60,6 +62,14 @@ static int read_options(int argc, char **argv, Options *options) {
             }
         } else if (strcmp(argument, "--json") == 0) {
             options->json = true;
+        } else if (strcmp(argument, "--style-without") == 0) {
+            if (i + 1 >= argc) {
+                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
+            }
+            int added = cli_style_without_add(&options->without, argv[++i]);
+            if (added != 0) {
+                return added;
+            }
         } else if (strcmp(argument, "--mode") == 0 || strcmp(argument, "--meter") == 0 ||
                    strcmp(argument, "--key") == 0 || strcmp(argument, "--form") == 0 ||
                    strcmp(argument, "--style") == 0 || strcmp(argument, "--count") == 0 ||
@@ -202,6 +212,9 @@ int run_random_motive(int argc, char **argv) {
         print_help(stdout);
         return 0;
     }
+    if (options.without.count > 0 && !options.style_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
+    }
     MotiveRandomOptions request;
     status = read_request(&options, &request);
     if (status != 0) {
@@ -215,7 +228,7 @@ int run_random_motive(int argc, char **argv) {
     }
     ComposerStyle *style = NULL;
     if (options.style_path) {
-        status = cli_load_style(options.style_path, NULL, 0, &style);
+        status = cli_load_style(options.style_path, options.without.names, options.without.count, &style);
         if (status != 0) {
             return status;
         }

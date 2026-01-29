@@ -62,6 +62,16 @@ int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportO
 /* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
 bool cli_parse_ratio(const char *text, ComposerRatio *out);
 
+/* --style-without values: at most CLI_STYLE_WITHOUT_MAX category names, each one the Analyzer defines. */
+#define CLI_STYLE_WITHOUT_MAX 8
+typedef struct {
+    const char *names[CLI_STYLE_WITHOUT_MAX];
+    size_t count;
+} CliStyleWithout;
+
+/* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than 8, or not a category). */
+int cli_style_without_add(CliStyleWithout *list, const char *name);
+
 /*
  * Reads the style model file at path into *out, without the named categories (none when count is 0). Returns 0, or the
  * status of the usage error it printed.
