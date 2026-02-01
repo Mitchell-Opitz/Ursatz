@@ -1,0 +1,54 @@
+{
+  "schema": "ursatz-corpus-index",
+  "schema_version": 1,
+  "analyzer_version": "0.1.0",
+  "document_schema_version": 9,
+  "input_dir": "<input_dir>",
+  "pieces": [
+    {
+      "path": "Bach 114.mid",
+      "document": "Bach 114.mid.analysis.json",
+      "status": "analyzed",
+      "error": null,
+      "content_hash": "<hash>",
+      "measures": 24,
+      "home_key": "G major"
+    },
+    {
+      "path": "Clementi 36.mid",
+      "document": "Clementi 36.mid.analysis.json",
+      "status": "analyzed",
+      "error": null,
+      "content_hash": "<hash>",
+      "measures": 38,
+      "home_key": "C major"
+    },
+    {
+      "path": "Field 1.mid",
+      "document": "Field 1.mid.analysis.json",
+      "status": "analyzed",
+      "error": null,
+      "content_hash": "<hash>",
+      "measures": 67,
+      "home_key": "Eb major"
+    },
+    {
+      "path": "Field 5.mid",
+      "document": "Field 5.mid.analysis.json",
+      "status": "analyzed",
+      "error": null,
+      "content_hash": "<hash>",
+      "measures": 43,
+      "home_key": "Bb major"
+    },
+    {
+      "path": "Mozart 545.mid",
+      "document": "Mozart 545.mid.analysis.json",
+      "status": "analyzed",
+      "error": null,
+      "content_hash": "<hash>",
+      "measures": 338,
+      "home_key": "G major"
+    }
+  ]
+}
