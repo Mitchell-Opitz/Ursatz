@@ -25,9 +25,12 @@
  *   labels    the labels of a hand-written harmony and melody equal the Analyzer's labels of the same material
  *             rendered and analyzed; closeness is exact; a file that is not a style model is refused
  *   same      with no style, or a style of weight 0, a sentence is byte for byte what main composed (recorded hashes)
- *   motives   a model that holds the four motive categories gives the same seeded fill and distance as the same
- *             model without them (R-157)
- *   measure   a measured plan's distance to a model with motive categories lists none of them
+ *   motives   a model with the four motive categories keeps them when loaded and loses them with the without list (R-162)
+ *   labels-motive  the motive and non-chord tone labels of a motive are the Analyzer's words
+ *   prefer    a style that counts one motive degrees label moves the repetition to it, and --style-without gives the
+ *             unstyled choice back
+ *   without   a plan keeps the without list of its style, and a plan without one reads back with none
+ *   measure   a measured plan's distance lists the motive categories, and none with the without list
  *   smoke     sentences, seeds 1 and 2, under each style: completed, measured, and not further from the style than
  *             unstyled in harmony and melody together
  *   distance  the sweep: sentences in C major 4/4, seeds 1 to 20, under chorales and under sonatinas: the mean distance
@@ -50,6 +53,9 @@
 #define CHORALES COMPOSER_STYLE_DIR "/chorales.style.json"
 #define SONATINAS COMPOSER_STYLE_DIR "/sonatinas.style.json"
 #define CHORALES_MOTIVES COMPOSER_STYLE_DIR "/chorales-motives.style.json"
+#define STEP_UP_MOTIVES COMPOSER_STYLE_DIR "/step-up-motives.style.json"
+
+static const char *const MOTIVE_CATEGORIES[4] = {"motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
 
 /* ----------------------------------------------------------------- helpers */
 
@@ -575,29 +581,224 @@ static int test_same(void) {
     return 0;
 }
 
-/* chorales-motives.style.json is chorales plus the four motive categories; the Composer reads them out (R-157). */
+/* chorales-motives.style.json is chorales plus the four motive categories: a plain load keeps them, a load without them
+   drops them, and the rest of the statistics are the same (R-162). */
 static int test_motive_categories(void) {
+    ComposerStyle *kept = NULL;
+    ComposerStyle *cut = NULL;
     ComposerStyle *plain = NULL;
-    ComposerStyle *with_motives = NULL;
+    assert(composer_style_load(CHORALES_MOTIVES, &kept) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES_MOTIVES, MOTIVE_CATEGORIES, 4, &cut) == COMPOSER_STYLE_OK);
     assert(composer_style_load(CHORALES, &plain) == COMPOSER_STYLE_OK);
-    assert(composer_style_load(CHORALES_MOTIVES, &with_motives) == COMPOSER_STYLE_OK);
-    ComposerRatio weight = {1, 1};
-    for (unsigned long seed = 1; seed <= 3; seed++) {
-        Run a = compose_sentence(seed, plain, weight);
-        Run b = compose_sentence(seed, with_motives, weight);
-        assert(a.complete && b.complete && a.measured && b.measured);
-        assert(a.hash == b.hash && a.harmony == b.harmony && a.melody == b.melody);
+    ComposerStyleShare share;
+    for (size_t i = 0; i < 4; i++) {
+        /* the category is there, with something counted, and gone when read without it */
+        const StyleModel *model = composer_style_model(kept);
+        StyleStatistic *statistics = NULL;
+        size_t count = 0;
+        assert(style_model_statistics(model, &statistics, &count) == STYLE_MODEL_FILE_OK);
+        const char *label = NULL;
+        for (size_t k = 0; k < count && !label; k++) {
+            if (strcmp(statistics[k].category, MOTIVE_CATEGORIES[i]) == 0) {
+                label = statistics[k].label;
+            }
+        }
+        assert(label);
+        assert(composer_style_share(kept, MOTIVE_CATEGORIES[i], label, &share) && share.total > 0);
+        assert(!composer_style_share(cut, MOTIVE_CATEGORIES[i], label, &share));
+        style_statistics_free(statistics, count);
     }
+    /* everything else is as the file without them: the same shares in the same categories */
+    StyleStatistic *all = NULL;
+    size_t all_count = 0;
+    assert(style_model_statistics(composer_style_model(cut), &all, &all_count) == STYLE_MODEL_FILE_OK && all_count > 0);
+    for (size_t k = 0; k < all_count; k++) {
+        ComposerStyleShare a;
+        ComposerStyleShare b;
+        assert(composer_style_share(cut, all[k].category, all[k].label, &a));
+        assert(composer_style_share(kept, all[k].category, all[k].label, &b));
+        assert(a.count == b.count && a.total == b.total && a.largest == b.largest);
+    }
+    style_statistics_free(all, all_count);
+    /* the list is kept, in the order given */
+    assert(composer_style_without_count(kept) == 0 && composer_style_without_at(kept, 0) == NULL);
+    assert(composer_style_without_count(cut) == 4 && strcmp(composer_style_without_at(cut, 0), "motive-degrees") == 0 &&
+           strcmp(composer_style_without_at(cut, 3), "motive-nct-figure") == 0);
+    /* an unknown category is refused */
+    const char *unknown[1] = {"no-such-category"};
+    ComposerStyle *refused = (ComposerStyle *)1;
+    assert(composer_style_load_without(CHORALES_MOTIVES, unknown, 1, &refused) == COMPOSER_STYLE_ERR_ARGUMENT && !refused);
+    /* a blend has both lists, once each, and counts no category either style was read without */
+    ComposerStyle *blend = NULL;
+    ComposerStyleWeights half = composer_style_weights_all((ComposerRatio){1, 2});
+    assert(composer_style_blend(cut, kept, &half, &blend) == COMPOSER_STYLE_OK);
+    assert(composer_style_without_count(blend) == 4);
+    assert(!composer_style_share(blend, "motive-degrees", "3 5 4 2 1", &share));
+    composer_style_destroy(blend);
+    composer_style_destroy(kept);
+    composer_style_destroy(cut);
     composer_style_destroy(plain);
-    composer_style_destroy(with_motives);
-    printf("a model with motive categories gives the same fill and distance as one without\n");
+    printf("a model keeps its motive categories unless it is read without them\n");
     return 0;
 }
 
-/* A measured plan's distance to a model with motive categories lists none of them, in the means or the categories. */
+/* The labels of E4:q G4:e F4:e D4:q C4:q in C are the Analyzer's words for it. */
+static int test_motive_labels(void) {
+    Motive motive;
+    MotiveOptions options;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter.beats_per_bar = 4;
+    options.meter.beat_unit = 4;
+    assert(motive_from_notes_text("E4:q G4:e F4:e D4:q C4:q", &options, &motive, NULL) == MOTIVE_OK);
+    ComposerStyleLabels *labels = composer_style_labels_create();
+    assert(labels && composer_style_labels_add_motive(labels, &motive, 0));
+    static const char *const EXPECTED[3][2] = {{"motive-degrees", "3 5 4 2 1"},
+                                               {"motive-intervals", "+3 -2 -3 -2"},
+                                               {"motive-rhythm", "1/4 1/8 1/8 1/4 1/4"}};
+    assert(composer_style_labels_count(labels) == 3);
+    for (size_t i = 0; i < 3; i++) {
+        const char *category;
+        const char *label;
+        assert(composer_style_labels_at(labels, i, &category, &label));
+        assert(strcmp(category, EXPECTED[i][0]) == 0 && strcmp(label, EXPECTED[i][1]) == 0);
+    }
+    composer_style_labels_destroy(labels);
+    /* a rhythm motive has no pitches: nothing is added */
+    labels = composer_style_labels_create();
+    Motive rhythm = motive;
+    rhythm.form = MOTIVE_FORM_RHYTHM;
+    assert(composer_style_labels_add_motive(labels, &rhythm, 0) && composer_style_labels_count(labels) == 0);
+    composer_style_labels_destroy(labels);
+    /* a non-chord tone: the degrees around it, the note's own and its type; the ends are written "-" */
+    labels = composer_style_labels_create();
+    const char *category;
+    const char *label;
+    assert(composer_style_labels_add_nct(labels, "1", "b6", "appoggiatura", "5"));
+    assert(composer_style_labels_add_nct(labels, NULL, "2", "passing", NULL));
+    assert(composer_style_labels_at(labels, 0, &category, &label) && strcmp(category, "motive-nct-figure") == 0 &&
+           strcmp(label, "1 b6:appoggiatura 5") == 0);
+    assert(composer_style_labels_at(labels, 1, &category, &label) && strcmp(label, "- 2:passing -") == 0);
+    composer_style_labels_destroy(labels);
+    printf("the labels of a motive and of a non-chord tone are the Analyzer's\n");
+    return 0;
+}
+
+/* The degrees of the motive node m1, the repetition of a grown sentence, in C major. */
+static void repetition_degrees(unsigned long seed, const ComposerStyle *style, char out[64]) {
+    static const char *const DEGREES[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
+    Motive motive;
+    PiecePlan *plan = sentence_plan(&motive);
+    GrowConfig config;
+    GrowOutcome outcome;
+    memset(&config, 0, sizeof(config));
+    config.seed = seed;
+    config.style = style;
+    assert(grow_run(plan, &config, &outcome) == GROW_OK);
+    PlanSpan everything = {{0, 1}, {1000, 1}};
+    LaneSpanId spans[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, everything, spans, 64);
+    out[0] = '\0';
+    for (size_t i = 0; i < found && !out[0]; i++) {
+        if (strcmp(plan_node_name(plan, plan_lane_span_owner(plan, spans[i])), "m1") != 0) {
+            continue;
+        }
+        const PlanLanePayload *payload = plan_lane_span_payload(plan, spans[i]);
+        for (size_t k = 0; k < payload->notes.note_count; k++) {
+            int pitch_class = ((payload->notes.notes[k].midi_pitch % 12) + 12) % 12;
+            strcat(out, k ? " " : "");
+            strcat(out, DEGREES[pitch_class]);
+        }
+    }
+    assert(out[0]);
+    grow_outcome_destroy(&outcome);
+    plan_destroy(plan);
+}
+
+/*
+ * Seed 2 offers the repetition a dominant form (degrees "7 2 1 5 5", score 11/6) and a transposition up a step ("4 6 5 3 2",
+ * 15/16): unstyled it takes the form. A style that counts only the transposition's degrees adds 1 to its score and it is
+ * taken; read without motive-degrees, the style gives the unstyled choice back.
+ */
+static int test_motive_preference(void) {
+    ComposerStyle *styled = NULL;
+    const char *without[1] = {"motive-degrees"};
+    ComposerStyle *switched_off = NULL;
+    assert(composer_style_load(STEP_UP_MOTIVES, &styled) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(STEP_UP_MOTIVES, without, 1, &switched_off) == COMPOSER_STYLE_OK);
+    char plain[64];
+    char preferred[64];
+    char restored[64];
+    repetition_degrees(2, NULL, plain);
+    repetition_degrees(2, styled, preferred);
+    repetition_degrees(2, switched_off, restored);
+    assert(strcmp(plain, "7 2 1 5 5") == 0);
+    assert(strcmp(preferred, "4 6 5 3 2") == 0);
+    assert(strcmp(restored, plain) == 0);
+    composer_style_destroy(styled);
+    composer_style_destroy(switched_off);
+    printf("a style that counts a motive's degrees moves the repetition to it; without them the unstyled choice returns\n");
+    return 0;
+}
+
+/* A plan keeps the without list of its style; a plan with none reads back with none (old plans load). */
+static const PlanStyle *style_of(const PiecePlan *plan) {
+    const PlanStyle *found = NULL;
+    for (size_t i = 0; i < plan_node_constraint_count(plan, plan_root(plan)); i++) {
+        const PlanConstraint *item = plan_node_constraint_at(plan, plan_root(plan), i);
+        if (item->kind == PLAN_CONSTRAINT_STYLE) {
+            found = &item->params.style;
+        }
+    }
+    return found;
+}
+
+static char *plan_json_with(size_t without_count) {
+    PiecePlan *plan = plan_create();
+    NodeId form = PLAN_NODE_NONE;
+    assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 3), "form", &form) == PLAN_OK);
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_STYLE;
+    snprintf(constraint.params.style.path, PLAN_STYLE_PATH_MAX, "%s", CHORALES_MOTIVES);
+    snprintf(constraint.params.style.without[0], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", "motive-degrees");
+    snprintf(constraint.params.style.without[1], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", "motive-rhythm");
+    constraint.params.style.without_count = without_count;
+    assert(plan_node_add_constraint(plan, form, &constraint) == PLAN_OK);
+    char *json = plan_to_json(plan, NULL);
+    assert(json);
+    plan_destroy(plan);
+    return json;
+}
+
+static int test_plan_without(void) {
+    char *json = plan_json_with(2);
+    assert(strstr(json, "\"without\": [") && strstr(json, "motive-rhythm"));
+    PiecePlan *again = NULL;
+    assert(plan_from_json(json, &again, NULL) == PLAN_OK);
+    const PlanStyle *read = style_of(again);
+    assert(read && read->without_count == 2 && strcmp(read->without[0], "motive-degrees") == 0 &&
+           strcmp(read->without[1], "motive-rhythm") == 0);
+    plan_destroy(again);
+    free(json);
+    /* a style constraint with no list: no member is written and it reads back with none */
+    json = plan_json_with(0);
+    assert(!strstr(json, "without"));
+    assert(plan_from_json(json, &again, NULL) == PLAN_OK);
+    read = style_of(again);
+    assert(read && read->without_count == 0);
+    plan_destroy(again);
+    free(json);
+    printf("a plan keeps the without list of its style\n");
+    return 0;
+}
+
+/* A measured plan's distance lists the motive categories of a model that has them, and none read without them. */
 static int test_measure_without_motives(void) {
-    ComposerStyle *style = NULL;
-    assert(composer_style_load(CHORALES_MOTIVES, &style) == COMPOSER_STYLE_OK);
+    ComposerStyle *kept = NULL;
+    ComposerStyle *cut = NULL;
+    assert(composer_style_load(CHORALES_MOTIVES, &kept) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES_MOTIVES, MOTIVE_CATEGORIES, 4, &cut) == COMPOSER_STYLE_OK);
     Motive motive;
     PiecePlan *plan = sentence_plan(&motive);
     ComposeConfig config;
@@ -607,16 +808,25 @@ static int test_measure_without_motives(void) {
     assert(compose_run(plan, &config, &outcome) == PIECE_OK);
     StyleComparison distance;
     memset(&distance, 0, sizeof(distance));
-    assert(composer_style_measure(plan, style, &distance) == COMPOSER_MEASURE_OK);
+    assert(composer_style_measure(plan, cut, &distance) == COMPOSER_MEASURE_OK);
     assert(distance.category_count > 0);
     for (size_t i = 0; i < distance.category_count; i++) {
         assert(strncmp(distance.categories[i].category, "motive-", 7) != 0);
     }
     style_comparison_destroy(&distance);
+    memset(&distance, 0, sizeof(distance));
+    assert(composer_style_measure(plan, kept, &distance) == COMPOSER_MEASURE_OK);
+    size_t motive_categories = 0;
+    for (size_t i = 0; i < distance.category_count; i++) {
+        motive_categories += strncmp(distance.categories[i].category, "motive-", 7) == 0;
+    }
+    assert(motive_categories > 0);
+    style_comparison_destroy(&distance);
     compose_outcome_destroy(&outcome);
     plan_destroy(plan);
-    composer_style_destroy(style);
-    printf("a measured distance lists no motive category\n");
+    composer_style_destroy(kept);
+    composer_style_destroy(cut);
+    printf("a measured distance lists the motive categories unless the style is read without them\n");
     return 0;
 }
 
@@ -766,6 +976,20 @@ static int test_cli(void) {
     assert(run("fill style_test_plain.json --style style_test_missing.json", "style_test_out.txt") == 2);
     assert(run("plan --form binary --key C --meter 4/4 --style style_test_missing.json --out style_test_x.json",
                "style_test_out.txt") == 2);
+    /* --style-without: kept in the plan, read by fill, overridden by fill's own; unknown names and a missing style are 1 */
+    snprintf(arguments, sizeof(arguments), "plan --form binary --key C --meter 4/4 --seed 1 --style %s "
+                                           "--style-without motive-degrees --style-without motive-rhythm "
+                                           "--out style_test_cut.json", CHORALES_MOTIVES);
+    assert(run(arguments, "style_test_out.txt") == 0);
+    assert(contains("style_test_cut.json", "\"without\": [") && contains("style_test_cut.json", "motive-rhythm"));
+    assert(run("fill style_test_cut.json --seed 1", "style_test_out.txt") == 0);
+    assert(run("fill style_test_cut.json --seed 1 --style-without tempo", "style_test_out.txt") == 0);
+    assert(run("fill style_test_cut.json --seed 1 --style-without no-such-category", "style_test_out.txt") == 1);
+    assert(contains("style_test_err.txt", "is not a style category") && contains("style_test_err.txt", "motive-degrees"));
+    assert(run("fill style_test_plain.json --seed 1 --style-without tempo", "style_test_out.txt") == 1);
+    snprintf(arguments, sizeof(arguments), "plan --form binary --key C --meter 4/4 --style-without tempo --out style_test_x.json");
+    assert(run(arguments, "style_test_out.txt") == 1);
+    remove("style_test_cut.json");
     remove("style_test_plan.json");
     remove("style_test_plain.json");
     remove("style_test_out.txt");
@@ -785,6 +1009,15 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "motives") == 0) {
         return test_motive_categories();
     }
+    if (strcmp(mode, "labels-motive") == 0) {
+        return test_motive_labels();
+    }
+    if (strcmp(mode, "prefer") == 0) {
+        return test_motive_preference();
+    }
+    if (strcmp(mode, "without") == 0) {
+        return test_plan_without();
+    }
     if (strcmp(mode, "measure") == 0) {
         return test_measure_without_motives();
     }
@@ -797,6 +1030,6 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "distance") == 0) {
         return test_sweep(SWEEP_SEEDS, true);
     }
-    fprintf(stderr, "usage: test_style labels|same|motives|measure|smoke|distance|cli\n");
+    fprintf(stderr, "usage: test_style labels|same|motives|labels-motive|prefer|without|measure|smoke|distance|cli\n");
     return 2;
 }
