@@ -880,9 +880,14 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
  * the result a little: under chorales the melody is closer and the harmony is not since the motive-forms (P14 B8) changed which
  * runs complete (known limit). Under sonatinas, which has two pieces, melody is a little closer and harmony is not (known
  * limit): the styled runs must not be further than the baseline.
+ *
+ * Re-measured at P16 B2 (R-162): the styles are now read with every category and the fixtures were made before the Analyzer
+ * counted the two rhythm categories (tempo, note-density) and the motive ones, so the fragment's categories that a fixture
+ * lacks count as distance 1 in the rhythm and melody dimensions: the melody means rise by the same amount styled and
+ * unstyled, and the order (styled closer in melody) holds.
  */
-static const int STYLED[2][2] = {{730, 442}, {657, 430}};
-static const int UNSTYLED[2][2] = {{708, 479}, {655, 456}};
+static const int STYLED[2][2] = {{730, 759}, {657, 756}};
+static const int UNSTYLED[2][2] = {{708, 773}, {655, 763}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};
