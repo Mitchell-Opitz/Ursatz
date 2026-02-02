@@ -241,3 +241,43 @@ add_test(NAME test_cli_counterpoint_check
                  -DNOT_TWO_VOICES=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_counterpoint_check
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_counterpoint_check.cmake)
+
+# Test corpora, built in the build tree at configure time (never committed twice). "reference" is the five framework-v1
+# pieces; "mixed" has one MIDI, one MusicXML in a subfolder, one .txt and one broken .mid.
+set(URSATZ_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
+set(URSATZ_REFERENCE_FIXTURES ${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus)
+file(REMOVE_RECURSE ${URSATZ_CORPORA_DIR})
+file(GLOB reference_pieces ${URSATZ_REFERENCE_FIXTURES}/*.mid)
+file(COPY ${reference_pieces} DESTINATION ${URSATZ_CORPORA_DIR}/reference)
+file(COPY "${URSATZ_REFERENCE_FIXTURES}/Bach 114.mid" DESTINATION ${URSATZ_CORPORA_DIR}/mixed)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/musicxml/field-1.musicxml DESTINATION ${URSATZ_CORPORA_DIR}/mixed/sub)
+file(WRITE ${URSATZ_CORPORA_DIR}/mixed/notes.txt "not a piece\n")
+file(WRITE ${URSATZ_CORPORA_DIR}/mixed/broken.mid "not a midi file\n")
+
+add_executable(test_corpus test_corpus.c)
+target_link_libraries(test_corpus PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_corpus PRIVATE
+    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+    URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_corpus COMMAND test_corpus)
+
+add_test(NAME test_cli_corpus
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                 -DFIXTURE=${URSATZ_REFERENCE_FIXTURES}/Field\ 1.mid
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_corpus
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_corpus.cmake)
+
+add_test(NAME test_corpus_index_schema
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DPYTHON=${Python3_EXECUTABLE}
+                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v1.schema.json
+                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/corpus_index_schema
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_corpus_index.cmake)
+set_tests_properties(test_corpus_index_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")

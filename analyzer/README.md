@@ -68,6 +68,10 @@ Tests:
 - `test_counterpoint_check`: the first and second species Fux exercises (`tests/counterpoint`, one valid and one
   with a parallel fifth each), the document and the Markdown of a check, a shape error, and input that is not two
   voices. `test_cli_counterpoint_check` checks the flags and the exit codes.
+- `test_corpus`: corpus mode on the `reference` and `mixed` corpora CMake builds in the build tree: the index
+  against `tests/snapshots/corpus-index.reference.json`, each document byte for byte equal to a single-file run, and
+  the resume rules. `test_cli_corpus` checks the flags and exit codes. `test_corpus_index_schema` validates the index
+  against the schema (see below).
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
@@ -98,6 +102,14 @@ two streams (MIDI tracks or MusicXML parts), or the two voices the kernel finds 
 For any other input the rest of the analysis is written and the CLI exits 2 with "counterpoint
 check needs two voices".
 
+```sh
+ursatz-analyzer --corpus <dir> [--out <dir>] [--resume] [--markdown]
+```
+
+Corpus mode analyzes every MIDI and MusicXML file under a folder and writes one analysis document each, plus a
+corpus index. See [docs/corpus.md](docs/corpus.md) and the [index schema](schema/corpus-index.v1.schema.json).
+It cannot be combined with an input file, `--json`, `--check-counterpoint`, `--cantus` or `--input-format`.
+
 ## Library
 
 The pipeline builds as the `ursatz_analyzer` static library. The CLI and the tests link it.
@@ -115,6 +127,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalysisReport`, serializes it as JSON, and derives `<stem>.analysis.json`. |
 | `markdown_report.h` | Renders an `AnalysisDocument` as the Markdown report, section by section. |
 | `report_writer.h` | Derives the `<stem>.report.md` path and writes the file. |
+| `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
 
 Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
