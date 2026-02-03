@@ -973,6 +973,32 @@ static void test_recognize(void) {
   free(inverted);
 }
 
+/* A placeholder theme still saves and reads, and a version without files has none to serve. */
+static void test_theme_placeholder(void) {
+  int status = 0;
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  char *theme = create_item("theme", "Placeholder", project, "{\"uses\":[],\"theme\":{\"form\":\"sentence\",\"slots\":[1]}}");
+  check(theme != NULL, "a placeholder theme with a string form and loose slots is saved");
+  if (!theme) {
+    return;
+  }
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/files/plan.json", theme);
+  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  check(status == 404 && !ok_true(answer), "a version without files has no plan to serve");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/files/item.json", theme);
+  answer = json_exchange("GET", path, NULL, &status);
+  check(status == 404, "only the five file names are served");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
+  answer = json_exchange("POST", path, "{}", &status);
+  check(status == 400 && !ok_true(answer), "a placeholder theme cannot be composed");
+  cJSON_Delete(answer);
+  free(theme);
+}
+
 /* POST /api/materials/items/<target>/link-form with the recognition of source -> target as the recognize route gave it. */
 static cJSON *link_form_post(const char *source, int source_version, const char *target, cJSON *recognition, int *status) {
   cJSON *request = cJSON_CreateObject();
@@ -1228,6 +1254,7 @@ int main(void) {
   test_variant_flags_and_tree();
   test_recognize();
   test_link_form();
+  test_theme_placeholder();
   test_random_motifs();
   test_body_limit();
 

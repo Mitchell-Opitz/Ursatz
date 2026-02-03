@@ -1,5 +1,1094 @@
-/* Theme bodies, composing and version files end to end (R-167). The test commit fills this in. */
+/* Theme bodies, composing and the files of a version end to end (R-167). A fake Composer (URSATZ_GUI_COMPOSER)
+ * records the request file of every run and writes the three output files, so the request the route builds can be
+ * read back; it also fails with the exit statuses of the real command. The motifs are saved with the real Composer,
+ * and one test composes a theme with the real one. Uses a plain TCP socket for the HTTP requests, same as
+ * test_composer_route.c. Runs in its own working directory (materials/, subjects/, pieces/ and fake/ are created
+ * there). */
+
+#include <civetweb.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <cJSON.h>
+
+#include "server.h"
+
+#ifndef URSATZ_GUI_TEST_LINK_FIXTURES
+#error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
+#endif
+
+static int failures = 0;
+
+static void check(bool cond, const char *what) {
+  if (!cond) {
+    fprintf(stderr, "FAIL: %s\n", what);
+    failures++;
+  } else {
+    printf("PASS: %s\n", what);
+  }
+}
+
+static void sleep_ms(int ms) {
+  struct timespec ts = {0, (long)ms * 1000 * 1000};
+  nanosleep(&ts, NULL);
+}
+
+/* One HTTP exchange; the whole response (status line, headers, body), newly allocated, or NULL. */
+static char *http_exchange(const char *method, const char *path, const char *extra_headers, const void *body,
+                           size_t body_len, size_t *out_size) {
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+    return NULL;
+  }
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(18773);
+  inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+    close(sock);
+    return NULL;
+  }
+  char header[1024];
+  int header_len = snprintf(header, sizeof(header),
+                            "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n%s"
+                            "Content-Length: %zu\r\nConnection: close\r\n\r\n",
+                            method, path, extra_headers ? extra_headers : "", body_len);
+  send(sock, header, (size_t)header_len, 0);
+  if (body_len > 0) {
+    send(sock, body, body_len, 0);
+  }
+  size_t capacity = 65536;
+  size_t total = 0;
+  char *response = malloc(capacity);
+  while (response) {
+    if (total + 1 >= capacity) {
+      capacity *= 2;
+      char *grown = realloc(response, capacity);
+      if (!grown) {
+        free(response);
+        response = NULL;
+        break;
+      }
+      response = grown;
+    }
+    ssize_t n = recv(sock, response + total, capacity - 1 - total, 0);
+    if (n <= 0) {
+      break;
+    }
+    total += (size_t)n;
+  }
+  close(sock);
+  if (response) {
+    response[total] = '\0';
+  }
+  if (out_size) {
+    *out_size = total;
+  }
+  return response;
+}
+
+static const char *response_body(const char *response) {
+  const char *split = response ? strstr(response, "\r\n\r\n") : NULL;
+  return split ? split + 4 : "";
+}
+
+static int response_status(const char *response) {
+  int status = 0;
+  return response && sscanf(response, "HTTP/1.1 %d", &status) == 1 ? status : 0;
+}
+
+/* The body parsed as JSON; the status goes to *status. Caller frees the JSON. */
+static cJSON *exchange(const char *method, const char *path, const char *body, int *status) {
+  char *response = http_exchange(method, path, NULL, body, body ? strlen(body) : 0, NULL);
+  *status = response_status(response);
+  cJSON *json = cJSON_Parse(response_body(response));
+  free(response);
+  return json;
+}
+
+/* The content type of a response, copied into out. */
+static void content_type_of(const char *response, char *out, size_t size) {
+  const char *line = response ? strstr(response, "Content-Type: ") : NULL;
+  out[0] = '\0';
+  if (line) {
+    line += strlen("Content-Type: ");
+    size_t length = strcspn(line, "\r\n");
+    snprintf(out, size, "%.*s", (int)(length < size - 1 ? length : size - 1), line);
+  }
+}
+
+/* The whole file; its size goes to *out_size when that is not NULL. */
+static char *read_file(const char *path, size_t *out_size) {
+  FILE *file = fopen(path, "rb");
+  if (!file) {
+    return NULL;
+  }
+  size_t capacity = 4096;
+  size_t length = 0;
+  char *buffer = malloc(capacity);
+  while (buffer) {
+    size_t n = fread(buffer + length, 1, capacity - length - 1, file);
+    length += n;
+    if (n == 0) {
+      break;
+    }
+    if (length + 1 >= capacity) {
+      capacity *= 2;
+      char *grown = realloc(buffer, capacity);
+      if (!grown) {
+        free(buffer);
+        buffer = NULL;
+      } else {
+        buffer = grown;
+      }
+    }
+  }
+  fclose(file);
+  if (buffer) {
+    buffer[length] = '\0';
+  }
+  if (out_size) {
+    *out_size = length;
+  }
+  return buffer;
+}
+
+static cJSON *read_json_file(const char *path) {
+  char *text = read_file(path, NULL);
+  cJSON *json = text ? cJSON_Parse(text) : NULL;
+  free(text);
+  return json;
+}
+
+static bool file_exists(const char *path) {
+  struct stat st;
+  return stat(path, &st) == 0 && S_ISREG(st.st_mode);
+}
+
+static bool dir_exists(const char *path) {
+  struct stat st;
+  return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+static bool write_script(const char *path, const char *text) {
+  FILE *file = fopen(path, "wb");
+  if (!file) {
+    return false;
+  }
+  bool ok = fwrite(text, 1, strlen(text), file) == strlen(text);
+  ok = (fclose(file) == 0) && ok;
+  return ok && chmod(path, 0755) == 0;
+}
+
+static const char *string_of(const cJSON *object, const char *key) {
+  const cJSON *item = object ? cJSON_GetObjectItemCaseSensitive(object, key) : NULL;
+  return cJSON_IsString(item) ? item->valuestring : "";
+}
+
+static double number_of(const cJSON *object, const char *key) {
+  const cJSON *item = object ? cJSON_GetObjectItemCaseSensitive(object, key) : NULL;
+  return cJSON_IsNumber(item) ? item->valuedouble : -1;
+}
+
+static bool ok_true(const cJSON *answer) {
+  return cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "ok"));
+}
+
+static const cJSON *member(const cJSON *object, const char *key) {
+  return object ? cJSON_GetObjectItemCaseSensitive(object, key) : NULL;
+}
+
+static char *copy_string(const char *text) {
+  size_t length = strlen(text) + 1;
+  char *copy = malloc(length);
+  if (copy) {
+    memcpy(copy, text, length);
+  }
+  return copy;
+}
+
+/* --- the store ----------------------------------------------------------- */
+
+static char g_project[64] = "";
+static const char *const kDegreesA = "1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e";
+
+/* POST /api/materials/items; the status goes to *status, and a new item's id is returned (caller frees) or NULL. */
+static char *create_item(const char *type, const char *name, const char *body, int *status) {
+  char *request = malloc(strlen(body) + 512);
+  char *id = NULL;
+  if (!request) {
+    return NULL;
+  }
+  sprintf(request, "{\"type\":\"%s\",\"name\":\"%s\",\"project_id\":\"%s\",\"body\":%s}", type, name, g_project, body);
+  cJSON *answer = exchange("POST", "/api/materials/items", request, status);
+  const cJSON *item = member(answer, "item");
+  if (*status == 200 && cJSON_IsString(member(item, "id"))) {
+    id = copy_string(string_of(item, "id"));
+  }
+  cJSON_Delete(answer);
+  free(request);
+  return id;
+}
+
+/* A motif of the given form and role; derived is a JSON text ("null" for none). */
+static char *create_motif(const char *name, const char *form, const char *role, const char *notes, const char *derived) {
+  char body[1500];
+  int status = 0;
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"motif\":{\"role\":\"%s\",\"form\":\"%s\",\"notes\":\"%s\",\"meter\":\"4/4\","
+           "\"key\":\"D minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":%s}}",
+           role, form, notes, derived);
+  return create_item("motif", name, body, &status);
+}
+
+/* A motif derived from source (version 1) with the given flag. */
+static char *create_derived(const char *name, const char *source, const char *flag, const char *notes) {
+  char derived[800];
+  snprintf(derived, sizeof(derived),
+           "{\"source_item\":\"%s\",\"source_version\":1,\"operations\":[{\"op\":\"transpose\",\"params\":"
+           "{\"tonal\":1,\"by\":1}}],\"seed\":0,\"kind\":\"motive-form\",\"kept\":[\"rhythm\"],\"changed\":"
+           "[\"intervals\"],\"harmony\":null,\"functions\":[\"beginning\"],\"flag\":\"%s\"}",
+           source, flag);
+  return create_motif(name, "full", "melodic", notes, derived);
+}
+
+/* The theme body text with the given slots (JSON array text) and the members after "slots" (JSON members, may be ""). */
+static void theme_body(const char *slots, const char *more, char *out, size_t size) {
+  snprintf(out, size,
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"key\":\"D\",\"mode\":\"minor\","
+           "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":%s%s}}",
+           slots, more);
+}
+
+static void slots_of(const char *basic, const char *cadential, char *out, size_t size) {
+  snprintf(out, size,
+           "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1},{\"slot\":\"cadential\",\"item_id\":\"%s\","
+           "\"version\":1}]",
+           basic, cadential);
+}
+
+static void basic_slot_of(const char *basic, char *out, size_t size) {
+  snprintf(out, size, "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]", basic);
+}
+
+static cJSON *get_item(const char *id, int *status) {
+  char path[160];
+  snprintf(path, sizeof(path), "/api/materials/items/%s", id);
+  return exchange("GET", path, NULL, status);
+}
+
+static int current_version(const char *id) {
+  int status = 0;
+  cJSON *answer = get_item(id, &status);
+  int version = (int)number_of(member(answer, "item"), "current_version");
+  cJSON_Delete(answer);
+  return version;
+}
+
+/* The theme member of a GET answer's body. */
+static const cJSON *theme_of(const cJSON *answer) {
+  return member(member(answer, "body"), "theme");
+}
+
+static cJSON *compose(const char *id, const char *body, int *status) {
+  char path[160];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", id);
+  return exchange("POST", path, body, status);
+}
+
+static void version_dir(const char *id, int version, char *out, size_t size) {
+  snprintf(out, size, "materials/items/%s/v%d", id, version);
+}
+
+/* The request file the fake Composer saw last. */
+static cJSON *last_request(void) {
+  return read_json_file("fake/last-request.json");
+}
+
+/* The forms of the motive with this id in a request, or NULL. */
+static const cJSON *forms_of(const cJSON *request, const char *motive_id) {
+  const cJSON *motive = NULL;
+  cJSON_ArrayForEach(motive, member(request, "motives")) {
+    if (strcmp(string_of(motive, "id"), motive_id) == 0) {
+      return member(motive, "forms");
+    }
+  }
+  return NULL;
+}
+
+/* True when forms holds the item (with this flag, when flag is not NULL). */
+static bool forms_have(const cJSON *forms, const char *item, const char *flag) {
+  const cJSON *form = NULL;
+  cJSON_ArrayForEach(form, forms) {
+    if (strcmp(string_of(form, "item"), item) == 0) {
+      return flag == NULL || strcmp(string_of(form, "flag"), flag) == 0;
+    }
+  }
+  return false;
+}
+
+/* Uploads a link fixture to the Library; the new piece's id (caller frees), or NULL. */
+static char *upload_piece(const char *name) {
+  char path[600];
+  char headers[256];
+  size_t size = 0;
+  snprintf(path, sizeof(path), "%s/%s", URSATZ_GUI_TEST_LINK_FIXTURES, name);
+  char *data = read_file(path, &size);
+  snprintf(headers, sizeof(headers), "X-Filename: %s\r\n", name);
+  char *response = data ? http_exchange("POST", "/api/analyzer/pieces", headers, data, size, NULL) : NULL;
+  free(data);
+  cJSON *json = cJSON_Parse(response_body(response));
+  char *id = cJSON_IsString(member(json, "id")) ? copy_string(string_of(json, "id")) : NULL;
+  cJSON_Delete(json);
+  free(response);
+  return id;
+}
+
+/* --- the tests ----------------------------------------------------------- */
+
+typedef struct {
+  char a[64];
+  char b[64];
+  char c[64];
+  char rhythm[64];
+  char accompaniment[64];
+  char approved[64];
+  char unflagged[64];
+  char rejected[64];
+  char grandchild[64];
+  char unrelated[64];
+} Motifs;
+
+static bool take(char *out, char *id) {
+  bool ok = id != NULL;
+  if (id) {
+    snprintf(out, 64, "%s", id);
+  }
+  free(id);
+  return ok;
+}
+
+/* The motifs and their saved forms: A and B are the slot motives, C is another, and A has four forms. */
+static bool make_motifs(Motifs *m) {
+  bool ok = true;
+  ok = take(m->a, create_motif("A", "full", "melodic", "D4:e F4:e A4:e F4:e D4:e F4:e A4:e D5:e", "null")) && ok;
+  ok = take(m->b, create_motif("B", "full", "melodic", "A4:e G4:e F4:e E4:e G4:e F4:e E4:e D4:e", "null")) && ok;
+  ok = take(m->c, create_motif("C", "full", "melodic", "D4:q F4:e A4:e D5:h", "null")) && ok;
+  ok = take(m->rhythm, create_motif("Rhythm", "rhythm", "melodic", "x:q x:e x:e x:h", "null")) && ok;
+  ok = take(m->accompaniment, create_motif("Acc", "full", "accompaniment", "D3:q A3:q F3:q A3:q", "null")) && ok;
+  ok = take(m->approved, create_derived("A up", m->a, "approved", "E4:e G4:e B4:e G4:e E4:e G4:e B4:e E5:e")) && ok;
+  ok = take(m->unflagged, create_derived("A up 2", m->a, "unflagged", "F4:e A4:e C5:e A4:e F4:e A4:e C5:e F5:e")) && ok;
+  ok = take(m->rejected, create_derived("A up 3", m->a, "rejected", "G4:e B4:e D5:e B4:e G4:e B4:e D5:e G5:e")) && ok;
+  ok = take(m->grandchild,
+            create_derived("A up up", m->approved, "unflagged", "F4:e A4:e D5:e A4:e F4:e A4:e D5:e F5:e")) && ok;
+  ok = take(m->unrelated, create_derived("C up", m->c, "approved", "E4:q G4:e B4:e E5:h")) && ok;
+  return ok;
+}
+
+/* The bodies the validator takes and refuses, through the create route. */
+static void test_bodies(const Motifs *m) {
+  int status = 0;
+  int read_status = 0;
+  char slots[600];
+  char basic[300];
+  char body[2400];
+  char more[1000];
+  char *id = NULL;
+
+  id = create_item("theme", "Placeholder", "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}", &status);
+  check(status == 200 && id, "the old placeholder theme is still valid");
+  free(id);
+  id = create_item("theme", "Placeholder 2",
+                   "{\"uses\":[],\"theme\":{\"form\":\"sentence\",\"slots\":[\"anything\",{\"x\":1}]}}", &status);
+  check(status == 200 && id, "an old theme with a string form and slots of anything is valid");
+  free(id);
+
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  basic_slot_of(m->a, basic, sizeof(basic));
+  theme_body(slots,
+             ",\"pool\":\"approved\",\"accompaniment\":{\"pattern\":\"alberti\"},\"brief\":{\"scopes\":[{\"kind\":\"all\"}],"
+             "\"piece_ids\":[],\"style_ids\":[]},\"style_weight\":\"1/2\",\"without\":[\"motive-rhythm\"],\"tempo\":120,"
+             "\"check\":true,\"seed\":5,\"result\":null",
+             body, sizeof(body));
+  id = create_item("theme", "Full", body, &status);
+  check(status == 200 && id, "a theme with every member is valid");
+  if (id) {
+    cJSON *answer = get_item(id, &read_status);
+    const cJSON *uses = member(member(answer, "body"), "uses");
+    check(cJSON_GetArraySize(uses) == 2 && strcmp(string_of(cJSON_GetArrayItem(uses, 0), "item_id"), m->a) == 0 &&
+              strcmp(string_of(cJSON_GetArrayItem(uses, 1), "item_id"), m->b) == 0,
+          "the uses are filled from the slots");
+    check(strcmp(string_of(member(member(cJSON_GetArrayItem(uses, 0), "copy"), "motif"), "degrees"), kDegreesA) == 0,
+          "each use carries a copy of its motif");
+    cJSON_Delete(answer);
+  }
+  free(id);
+
+  /* A client's uses of the slot items are replaced; its other uses stay. */
+  snprintf(body, sizeof(body),
+           "{\"uses\":[{\"item_id\":\"%s\",\"version\":1,\"copy\":{\"junk\":1}},{\"item_id\":\"%s\",\"version\":1}],"
+           "\"theme\":{\"form\":{\"into\":\"sentence\",\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\"},\"slots\":%s}}",
+           m->a, m->c, slots);
+  id = create_item("theme", "Replaced", body, &status);
+  check(status == 200 && id, "a theme with a client use of a slot item is valid");
+  if (id) {
+    cJSON *answer = get_item(id, &read_status);
+    const cJSON *uses = member(member(answer, "body"), "uses");
+    check(cJSON_GetArraySize(uses) == 3 && strcmp(string_of(cJSON_GetArrayItem(uses, 0), "item_id"), m->c) == 0,
+          "the client's other use stays and the slot uses follow it");
+    bool junk_gone = true;
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, uses) {
+      junk_gone = junk_gone && !member(member(use, "copy"), "junk");
+    }
+    check(junk_gone, "a client copy of a slot item is replaced");
+    cJSON_Delete(answer);
+  }
+  free(id);
+
+  /* Slots. */
+  theme_body("[{\"slot\":\"cadential\",\"item_id\":\"mot-0123456789abcdef\",\"version\":1}]", "", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a theme without a basic slot is refused");
+  snprintf(more, sizeof(more),
+           "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1},{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]",
+           m->a, m->b);
+  theme_body(more, "", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a slot named twice is refused");
+  snprintf(more, sizeof(more), "[{\"slot\":\"intro\",\"item_id\":\"%s\",\"version\":1}]", m->a);
+  theme_body(more, "", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "an unknown slot is refused");
+  theme_body("[{\"slot\":\"basic\",\"item_id\":\"mot-0123456789abcdef\",\"version\":1}]", "", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a slot naming an item that does not exist is refused");
+  snprintf(more, sizeof(more), "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":2}]", m->a);
+  theme_body(more, "", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a slot naming a version that does not exist is refused");
+  basic_slot_of(m->rhythm, more, sizeof(more));
+  theme_body(more, "", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a slot naming a rhythm motif is refused");
+  basic_slot_of(m->accompaniment, more, sizeof(more));
+  theme_body(more, "", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a slot naming an accompaniment motif is refused");
+
+  /* The accompaniment. */
+  snprintf(more, sizeof(more), ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"%s\",\"version\":1}",
+           m->accompaniment);
+  theme_body(basic, more, body, sizeof(body));
+  id = create_item("theme", "Acc", body, &status);
+  check(status == 200 && id, "an accompaniment motif is valid");
+  if (id) {
+    cJSON *answer = get_item(id, &read_status);
+    const cJSON *uses = member(member(answer, "body"), "uses");
+    check(cJSON_GetArraySize(uses) == 2 && strcmp(string_of(cJSON_GetArrayItem(uses, 1), "item_id"), m->accompaniment) == 0,
+          "the accompaniment motif is a use");
+    cJSON_Delete(answer);
+  }
+  free(id);
+  snprintf(more, sizeof(more), ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"%s\",\"version\":1}", m->b);
+  theme_body(basic, more, body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a melodic motif as the accompaniment is refused");
+  theme_body(basic, ",\"accompaniment\":{\"pattern\":\"waltz\"}", body, sizeof(body));
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "an unknown accompaniment pattern is refused");
+
+  /* The other members. */
+  static const char *const bad[] = {",\"pool\":\"everything\"",
+                                    ",\"brief\":{}",
+                                    ",\"brief\":{\"scopes\":[{\"kind\":\"galaxy\"}]}",
+                                    ",\"brief\":{\"piece_ids\":[\"../x\"]}",
+                                    ",\"style_weight\":\"half\"",
+                                    ",\"without\":[\"mode\"]",
+                                    ",\"without\":[\"motive-rhythm\",\"motive-degrees\",\"motive-intervals\","
+                                    "\"motive-nct-figure\",\"motive-rhythm\"]",
+                                    ",\"tempo\":19",
+                                    ",\"tempo\":401",
+                                    ",\"check\":\"yes\"",
+                                    ",\"seed\":-1",
+                                    ",\"seed\":1.5",
+                                    ",\"result\":\"done\""};
+  static const char *const names[] = {"a pool that is not one of the three",
+                                      "an empty brief",
+                                      "a brief scope of an unknown kind",
+                                      "a brief piece id that is not an id",
+                                      "a style weight that is not n/d",
+                                      "a without that is not a motive category",
+                                      "a without of five",
+                                      "a tempo under 20",
+                                      "a tempo over 400",
+                                      "a check that is not a boolean",
+                                      "a negative seed",
+                                      "a seed that is not whole",
+                                      "a result that is not an object"};
+  for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+    theme_body(basic, bad[i], body, sizeof(body));
+    free(create_item("theme", "x", body, &status));
+    char what[160];
+    snprintf(what, sizeof(what), "%s is refused", names[i]);
+    check(status == 400, what);
+  }
+  snprintf(body, sizeof(body), "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"meter\":\"5/4\"},\"slots\":%s}}",
+           basic);
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a form meter outside the four is refused");
+  snprintf(body, sizeof(body), "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"hybrid\",\"hybrid\":\"fugue\"},\"slots\":%s}}",
+           basic);
+  free(create_item("theme", "x", body, &status));
+  check(status == 400, "a hybrid pairing that is not one is refused");
+}
+
+/* The request the compose route writes, the version it makes and its files. */
+static void test_compose(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char basic[300];
+  char body[2400];
+  char more[1000];
+  char dir[200];
+  char path[400];
+
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  basic_slot_of(m->a, basic, sizeof(basic));
+  theme_body(slots, ",\"pool\":\"approved-and-unflagged\",\"without\":[\"motive-rhythm\"],\"check\":true", body, sizeof(body));
+  char *theme = create_item("theme", "Composed", body, &status);
+  check(status == 200 && theme, "the theme to compose is saved");
+  if (!theme) {
+    return;
+  }
+
+  cJSON *answer = compose(theme, "{\"seed\":97}", &status);
+  check(status == 200 && ok_true(answer), "compose answers 200");
+  check(number_of(member(answer, "item"), "current_version") == 2, "compose makes version 2");
+  cJSON_Delete(answer);
+
+  version_dir(theme, 2, dir, sizeof(dir));
+  static const char *const files[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
+  bool all = true;
+  for (size_t i = 0; i < 4; i++) {
+    snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
+    all = all && file_exists(path);
+  }
+  check(all, "the version folder holds the request, the plan, the MIDI and the MusicXML");
+  snprintf(path, sizeof(path), "%s/brief.style.json", dir);
+  check(!file_exists(path), "a theme without a brief has no style file");
+
+  answer = get_item(theme, &status);
+  const cJSON *result = member(theme_of(answer), "result");
+  check(number_of(result, "seed") == 97, "the result keeps the seed");
+  check(cJSON_IsObject(member(result, "summary")), "the result keeps the command's summary");
+  check(number_of(member(result, "brief"), "piece_count") == 0 && cJSON_IsArray(member(member(result, "brief"), "skipped")),
+        "the result's brief is empty without one");
+  check(cJSON_GetArraySize(member(result, "files")) == 4, "the result names the four files");
+  const cJSON *versions = member(member(answer, "item"), "versions");
+  check(strcmp(string_of(cJSON_GetArrayItem(versions, 1), "note"), "composed seed 97") == 0, "the note is the seed");
+  check(cJSON_GetArraySize(member(member(answer, "body"), "uses")) == 2, "the new version keeps its uses");
+  cJSON_Delete(answer);
+
+  /* Version 1 is untouched and has no result. */
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1", theme);
+  answer = exchange("GET", path, NULL, &status);
+  const cJSON *first_result = member(theme_of(answer), "result");
+  check(status == 200 && (!first_result || cJSON_IsNull(first_result)), "version 1 has no result");
+  cJSON_Delete(answer);
+
+  /* The request: slots, the pool without the rejected form, and the Composer's arguments. */
+  cJSON *request = last_request();
+  check(strcmp(string_of(request, "schema"), "ursatz-theme-request") == 0 && number_of(request, "schema_version") == 1,
+        "the request has the theme request schema");
+  check(strcmp(string_of(request, "into"), "sentence") == 0 && strcmp(string_of(request, "key"), "D") == 0 &&
+            strcmp(string_of(request, "mode"), "minor") == 0 && number_of(request, "bars") == 8,
+        "the request has the form");
+  const cJSON *slot_names = member(request, "slots");
+  check(strcmp(string_of(slot_names, "basic"), "A") == 0 && strcmp(string_of(slot_names, "cadential"), "B") == 0 &&
+            cJSON_IsNull(member(slot_names, "contrasting")),
+        "the request names the slot motives");
+  const cJSON *motive = cJSON_GetArrayItem(member(request, "motives"), 0);
+  check(strcmp(string_of(motive, "degrees"), kDegreesA) == 0 && strcmp(string_of(motive, "pickup"), "0") == 0 &&
+            strcmp(string_of(motive, "role"), "melodic") == 0,
+        "a motive is the copy's degrees, pickup and role");
+  const cJSON *forms = forms_of(request, "A");
+  check(forms_have(forms, m->approved, "approved") && forms_have(forms, m->unflagged, "unflagged"),
+        "the pool has the approved and the unflagged forms");
+  check(forms_have(forms, m->grandchild, "unflagged"), "the pool follows the derived chain");
+  check(!forms_have(forms, m->rejected, NULL), "the pool has no rejected form");
+  check(!forms_have(forms, m->unrelated, NULL), "the pool has no form of another motive");
+  const cJSON *form = cJSON_GetArrayItem(forms, 0);
+  check(strcmp(string_of(form, "chain"), "transpose tonal=1 by=1") == 0 && cJSON_GetArraySize(member(form, "functions")) == 1 &&
+            strlen(string_of(form, "degrees")) > 0,
+        "a form has its degrees, chain and functions");
+  check(cJSON_GetArraySize(forms_of(request, "B")) == 0, "a motive with no saved forms has an empty pool");
+  check(cJSON_IsNull(member(request, "accompaniment")) && !member(request, "style"),
+        "the request has no accompaniment and no style");
+  cJSON_Delete(request);
+  char *argv_log = read_file("fake/argv.log", NULL);
+  check(argv_log && strstr(argv_log, "theme ") && strstr(argv_log, "--check") && strstr(argv_log, "--seed 97") &&
+            strstr(argv_log, "--format json") && strstr(argv_log, "theme.mid") && strstr(argv_log, "theme.musicxml"),
+        "the Composer got theme, the output files, --check and the seed");
+  free(argv_log);
+
+  /* The pool setting. */
+  theme_body(slots, ",\"pool\":\"approved\"", body, sizeof(body));
+  char *approved_only = create_item("theme", "Approved only", body, &status);
+  free(compose(approved_only, "{}", &status));
+  request = last_request();
+  forms = forms_of(request, "A");
+  check(status == 200 && forms_have(forms, m->approved, NULL) && !forms_have(forms, m->unflagged, NULL) &&
+            !forms_have(forms, m->grandchild, NULL),
+        "the approved pool leaves out the unflagged forms");
+  cJSON_Delete(request);
+  theme_body(slots, ",\"pool\":\"none\"", body, sizeof(body));
+  char *no_pool = create_item("theme", "No pool", body, &status);
+  free(compose(no_pool, "{}", &status));
+  request = last_request();
+  check(status == 200 && cJSON_GetArraySize(forms_of(request, "A")) == 0, "the none pool is empty");
+  cJSON_Delete(request);
+  free(approved_only);
+  free(no_pool);
+
+  /* An accompaniment motive and a pattern. */
+  snprintf(more, sizeof(more), ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"%s\",\"version\":1}",
+           m->accompaniment);
+  theme_body(basic, more, body, sizeof(body));
+  char *with_motive = create_item("theme", "Acc motive", body, &status);
+  free(compose(with_motive, "{}", &status));
+  request = last_request();
+  const cJSON *accompaniment = member(request, "accompaniment");
+  const cJSON *accompaniment_motive = member(accompaniment, "motive");
+  check(status == 200 && strcmp(string_of(accompaniment, "pattern"), "motive") == 0 &&
+            strcmp(string_of(accompaniment_motive, "role"), "accompaniment") == 0 &&
+            strcmp(string_of(accompaniment_motive, "form"), "full") == 0 &&
+            strlen(string_of(accompaniment_motive, "degrees")) > 0,
+        "an accompaniment motive goes in as the pattern");
+  cJSON_Delete(request);
+  free(with_motive);
+  theme_body(basic, ",\"accompaniment\":{\"pattern\":\"oom-pah\"}", body, sizeof(body));
+  char *with_pattern = create_item("theme", "Acc pattern", body, &status);
+  free(compose(with_pattern, "{}", &status));
+  request = last_request();
+  check(status == 200 && strcmp(string_of(member(request, "accompaniment"), "pattern"), "oom-pah") == 0,
+        "an accompaniment pattern goes in");
+  cJSON_Delete(request);
+  free(with_pattern);
+
+  /* The seed in the body is used when the route gives none. */
+  theme_body(basic, ",\"seed\":33", body, sizeof(body));
+  char *seeded = create_item("theme", "Seeded", body, &status);
+  answer = compose(seeded, "{}", &status);
+  argv_log = read_file("fake/argv.log", NULL);
+  check(status == 200 && argv_log && strstr(argv_log, "--seed 33"), "the body's seed is used");
+  free(argv_log);
+  cJSON_Delete(answer);
+  free(seeded);
+
+  /* Bad compose requests. */
+  answer = compose(theme, "{\"seed\":-1}", &status);
+  check(status == 400, "a negative seed is refused");
+  cJSON_Delete(answer);
+  answer = compose(theme, "{\"seed\":\"x\"}", &status);
+  check(status == 400, "a seed that is not a number is refused");
+  cJSON_Delete(answer);
+  answer = compose(theme, "{\"update_uses\":3}", &status);
+  check(status == 400, "update_uses that is not a boolean is refused");
+  cJSON_Delete(answer);
+  answer = compose("thm-0123456789abcdef", "{}", &status);
+  check(status == 404, "composing an item that does not exist is 404");
+  cJSON_Delete(answer);
+  answer = compose(m->a, "{}", &status);
+  check(status == 400, "composing a motif is refused");
+  cJSON_Delete(answer);
+  char *placeholder = create_item("theme", "Empty", "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}", &status);
+  answer = compose(placeholder, "{}", &status);
+  check(status == 400 && current_version(placeholder) == 1, "composing a placeholder theme is refused and writes nothing");
+  cJSON_Delete(answer);
+  free(placeholder);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
+  answer = exchange("GET", path, NULL, &status);
+  check(status == 405, "compose takes POST only");
+  cJSON_Delete(answer);
+
+  free(theme);
+}
+
+/* A run that fails writes no version and leaves no folder. */
+static void test_failures(const Motifs *m, const char *stuck, const char *usage) {
+  int status = 0;
+  char slots[600];
+  char body[2400];
+  char dir[200];
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  theme_body(slots, "", body, sizeof(body));
+  char *theme = create_item("theme", "Fails", body, &status);
+  check(theme != NULL, "the theme for the failing runs is saved");
+  if (!theme) {
+    return;
+  }
+  version_dir(theme, 2, dir, sizeof(dir));
+
+  setenv("URSATZ_GUI_COMPOSER", stuck, 1);
+  cJSON *answer = compose(theme, "{\"seed\":1}", &status);
+  check(status == 422 && !ok_true(answer), "a stuck run is 422");
+  check(strstr(string_of(answer, "error"), "no seed works") != NULL, "the answer carries the Composer's message");
+  cJSON_Delete(answer);
+  check(current_version(theme) == 1 && !dir_exists(dir), "a stuck run writes no version and leaves no folder");
+
+  setenv("URSATZ_GUI_COMPOSER", usage, 1);
+  answer = compose(theme, "{\"seed\":1}", &status);
+  check(status == 400 && strstr(string_of(answer, "error"), "does not read") != NULL, "a usage error is 400");
+  cJSON_Delete(answer);
+  check(current_version(theme) == 1 && !dir_exists(dir), "a usage error writes no version and leaves no folder");
+
+  setenv("URSATZ_GUI_COMPOSER", "/nonexistent/ursatz-composer", 1);
+  answer = compose(theme, "{\"seed\":1}", &status);
+  check(status == 503, "a missing Composer is 503");
+  cJSON_Delete(answer);
+  check(current_version(theme) == 1 && !dir_exists(dir), "a missing Composer writes no version and leaves no folder");
+  free(theme);
+}
+
+/* The files route serves the five names and nothing else. */
+static void test_files(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char body[2400];
+  char path[400];
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  theme_body(slots, "", body, sizeof(body));
+  char *theme = create_item("theme", "Files", body, &status);
+  cJSON *answer = compose(theme, "{\"seed\":4}", &status);
+  cJSON_Delete(answer);
+  check(status == 200, "the theme for the files is composed");
+
+  static const char *const names[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
+  static const char *const types[] = {"application/json", "application/json", "audio/midi", "application/xml"};
+  for (size_t i = 0; i < 4; i++) {
+    snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/%s", theme, names[i]);
+    char *response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+    char type[128];
+    content_type_of(response, type, sizeof(type));
+    char what[160];
+    snprintf(what, sizeof(what), "%s is served as %s", names[i], types[i]);
+    check(response_status(response) == 200 && strcmp(type, types[i]) == 0 && strlen(response_body(response)) > 0, what);
+    free(response);
+  }
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/theme.mid", theme);
+  size_t size = 0;
+  char *response = http_exchange("GET", path, NULL, NULL, 0, &size);
+  check(size - (size_t)(response_body(response) - response) == 5, "the MIDI file is served whole (the fake writes five bytes)");
+  free(response);
+
+  static const char *const refused[] = {"item.json", "brief.style.json", "..%2Fitem.json", "v2.json", "theme.MID"};
+  for (size_t i = 0; i < sizeof(refused) / sizeof(refused[0]); i++) {
+    snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/%s", theme, refused[i]);
+    response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+    char what[160];
+    snprintf(what, sizeof(what), "%s is not served", refused[i]);
+    check(response_status(response) == 404, what);
+    free(response);
+  }
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/files/plan.json", theme);
+  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 404, "a version without files is 404");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/files/plan.json", theme);
+  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 404, "a version that does not exist is 404");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/x/files/plan.json", theme);
+  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 404, "a version that is not a number is 404");
+  free(response);
+  response = http_exchange("GET", "/api/materials/items/thm-0123456789abcdef/versions/1/files/plan.json", NULL, NULL, 0, NULL);
+  check(response_status(response) == 404, "an item that does not exist is 404");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/plan.json", theme);
+  response = http_exchange("POST", path, NULL, "{}", 2, NULL);
+  check(response_status(response) == 405, "the files route takes GET only");
+  free(response);
+
+  /* Deleting the item removes its version folders. */
+  char dir[200];
+  snprintf(dir, sizeof(dir), "materials/items/%s", theme);
+  check(dir_exists(dir), "the item directory exists before the delete");
+  snprintf(path, sizeof(path), "/api/materials/items/%s", theme);
+  answer = exchange("DELETE", path, NULL, &status);
+  cJSON_Delete(answer);
+  check(status == 200 && !dir_exists(dir), "deleting the item removes its directory and the version folders");
+  free(theme);
+}
+
+/* A brief of Library pieces is built into the version folder; the style, weight and without reach the request. */
+static void test_brief(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char body[2400];
+  char path[400];
+  char dir[200];
+  char more[800];
+  char *first = upload_piece("a.musicxml");
+  char *second = upload_piece("b.musicxml");
+  check(first && second, "two fixture pieces are uploaded");
+  if (!first || !second) {
+    free(first);
+    free(second);
+    return;
+  }
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  snprintf(more, sizeof(more),
+           ",\"brief\":{\"scopes\":[],\"piece_ids\":[\"%s\",\"%s\",\"piece-0000000000000000\"],\"style_ids\":[]},"
+           "\"style_weight\":\"1/4\",\"without\":[\"motive-rhythm\",\"motive-degrees\"],\"tempo\":132",
+           first, second);
+  theme_body(slots, more, body, sizeof(body));
+  char *theme = create_item("theme", "Briefed", body, &status);
+  check(status == 200 && theme, "a theme with a brief is saved");
+  cJSON *answer = compose(theme, "{\"seed\":2}", &status);
+  check(status == 200 && ok_true(answer), "a theme with a brief composes");
+  cJSON_Delete(answer);
+
+  version_dir(theme, 2, dir, sizeof(dir));
+  snprintf(path, sizeof(path), "%s/brief.style.json", dir);
+  check(file_exists(path), "the brief is built into the version folder");
+  answer = get_item(theme, &status);
+  const cJSON *result = member(theme_of(answer), "result");
+  const cJSON *brief = member(result, "brief");
+  check(number_of(brief, "piece_count") == 2, "the result counts the pieces used");
+  const cJSON *skipped = member(brief, "skipped");
+  check(cJSON_GetArraySize(skipped) == 1 && strcmp(string_of(cJSON_GetArrayItem(skipped, 0), "id"), "piece-0000000000000000") == 0,
+        "the result lists the piece that was left out");
+  check(cJSON_GetArraySize(member(result, "files")) == 5, "the result names the five files");
+  cJSON_Delete(answer);
+
+  cJSON *request = last_request();
+  const char *style = string_of(request, "style");
+  const char *suffix = "/v2/brief.style.json";
+  size_t style_length = strlen(style);
+  check(style[0] == '/' && style_length > strlen(suffix) && strcmp(style + style_length - strlen(suffix), suffix) == 0,
+        "the request names the style file by an absolute path in the version folder");
+  const cJSON *without = member(request, "without");
+  check(strcmp(string_of(request, "style_weight"), "1/4") == 0 && cJSON_GetArraySize(without) == 2 &&
+            strcmp(cJSON_GetArrayItem(without, 0)->valuestring, "motive-rhythm") == 0 && number_of(request, "tempo") == 132,
+        "the style weight, the without list and the tempo pass through");
+  cJSON_Delete(request);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/brief.style.json", theme);
+  char *response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  cJSON *style_json = cJSON_Parse(response_body(response));
+  check(response_status(response) == 200 && style_json, "the style file is served");
+  cJSON_Delete(style_json);
+  free(response);
+  free(theme);
+
+  /* A brief with nothing the Composer can use is 422 and leaves nothing. */
+  snprintf(more, sizeof(more), ",\"brief\":{\"scopes\":[],\"piece_ids\":[\"piece-0000000000000000\"],\"style_ids\":[]}");
+  theme_body(slots, more, body, sizeof(body));
+  theme = create_item("theme", "Empty brief", body, &status);
+  answer = compose(theme, "{}", &status);
+  check(status == 422, "a brief with no usable piece is 422");
+  cJSON_Delete(answer);
+  version_dir(theme, 2, dir, sizeof(dir));
+  check(current_version(theme) == 1 && !dir_exists(dir), "an unusable brief writes no version and leaves no folder");
+  free(theme);
+  free(first);
+  free(second);
+}
+
+/* update_uses moves an updated use to its source's current version before the compose. */
+static void test_update_uses(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char body[2400];
+  char path[400];
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  theme_body(slots, "", body, sizeof(body));
+  char *theme = create_item("theme", "Updating", body, &status);
+
+  /* A new version of motif A, analyzed by the real Composer. */
+  const char *fake = getenv("URSATZ_GUI_COMPOSER");
+  char fake_path[600];
+  snprintf(fake_path, sizeof(fake_path), "%s", fake ? fake : "");
+  unsetenv("URSATZ_GUI_COMPOSER");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", m->a);
+  cJSON *answer = exchange("POST", path,
+                           "{\"note\":\"changed\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
+                           "\"notes\":\"D4:e G4:e A4:e G4:e D4:e G4:e A4:e D5:e\",\"meter\":\"4/4\",\"key\":\"D minor\","
+                           "\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}}",
+                           &status);
+  check(status == 200 && number_of(member(answer, "item"), "current_version") == 2, "motif A has a second version");
+  cJSON_Delete(answer);
+  setenv("URSATZ_GUI_COMPOSER", fake_path, 1);
+
+  answer = get_item(theme, &status);
+  bool updated = false;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, member(answer, "uses_status")) {
+    updated = updated || (strcmp(string_of(entry, "item_id"), m->a) == 0 && cJSON_IsTrue(member(entry, "updated")));
+  }
+  check(updated, "the theme reports its use of A as updated");
+  cJSON_Delete(answer);
+
+  /* Without update_uses the compose reads the copy the theme has. */
+  answer = compose(theme, "{}", &status);
+  cJSON_Delete(answer);
+  cJSON *request = last_request();
+  const cJSON *motive = cJSON_GetArrayItem(member(request, "motives"), 0);
+  check(status == 200 && strcmp(string_of(motive, "degrees"), kDegreesA) == 0 && current_version(theme) == 2,
+        "a compose without update_uses reads the copy it has");
+  cJSON_Delete(request);
+
+  /* With it the use moves first (a version of its own), then the compose runs on the new copy. */
+  answer = compose(theme, "{\"update_uses\":true}", &status);
+  check(status == 200 && number_of(member(answer, "item"), "current_version") == 4,
+        "update_uses writes the update and the composed version");
+  cJSON_Delete(answer);
+  request = last_request();
+  motive = cJSON_GetArrayItem(member(request, "motives"), 0);
+  check(strcmp(string_of(motive, "degrees"), "1:e 4:e 5:e 4:e 1:e 4:e 5:e 1':e") == 0, "the request is built from the updated copy");
+  cJSON_Delete(request);
+  answer = get_item(theme, &status);
+  const cJSON *slots_json = member(theme_of(answer), "slots");
+  const cJSON *uses = member(member(answer, "body"), "uses");
+  check(number_of(cJSON_GetArrayItem(slots_json, 0), "version") == 2 && number_of(cJSON_GetArrayItem(uses, 0), "version") == 2,
+        "the slot and the use name version 2 of A");
+  const cJSON *versions = member(member(answer, "item"), "versions");
+  check(strncmp(string_of(cJSON_GetArrayItem(versions, 2), "note"), "updated A to v2", 15) == 0,
+        "the update has its own version and note");
+  cJSON_Delete(answer);
+
+  /* Nothing to update: the compose runs once. */
+  answer = compose(theme, "{\"update_uses\":true}", &status);
+  check(status == 200 && number_of(member(answer, "item"), "current_version") == 5,
+        "update_uses with nothing updated writes only the composed version");
+  cJSON_Delete(answer);
+  free(theme);
+}
+
+/* The real Composer: two eighth-note motives and a small brief of fixture pieces. */
+static void test_real_composer(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char body[2400];
+  char path[400];
+  char dir[200];
+  char more[600];
+  unsetenv("URSATZ_GUI_COMPOSER");
+  char *first = upload_piece("a.musicxml");
+  char *second = upload_piece("b.musicxml");
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  snprintf(more, sizeof(more),
+           ",\"brief\":{\"scopes\":[],\"piece_ids\":[\"%s\",\"%s\"],\"style_ids\":[]},\"style_weight\":\"1/2\"",
+           first ? first : "", second ? second : "");
+  theme_body(slots, more, body, sizeof(body));
+  char *theme = create_item("theme", "Real", body, &status);
+  cJSON *answer = compose(theme, "{\"seed\":97}", &status);
+  check(status == 200 && ok_true(answer), "the real Composer composes the theme (exit 0)");
+  cJSON_Delete(answer);
+  version_dir(theme, 2, dir, sizeof(dir));
+  static const char *const files[] = {"request.json", "brief.style.json", "plan.json", "theme.mid", "theme.musicxml"};
+  bool all = true;
+  for (size_t i = 0; i < 5; i++) {
+    snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
+    char *text = read_file(path, NULL);
+    all = all && text && strlen(text) > 0;
+    free(text);
+  }
+  check(all, "the real run wrote the five files");
+  answer = get_item(theme, &status);
+  const cJSON *result = member(theme_of(answer), "result");
+  check(number_of(result, "seed") == 97 && cJSON_GetArraySize(member(member(result, "summary"), "themes")) >= 1 &&
+            number_of(member(result, "brief"), "piece_count") == 2,
+        "the result has the Composer's themes and the brief's two pieces");
+  cJSON_Delete(answer);
+  free(theme);
+  free(first);
+  free(second);
+}
 
 int main(void) {
+  system("rm -rf materials subjects pieces collections styles fake");
+  mkdir("fake", 0755);
+
+  char cwd[512];
+  if (!getcwd(cwd, sizeof(cwd))) {
+    return 1;
+  }
+  char ok_script[600];
+  char stuck_script[600];
+  char usage_script[600];
+  snprintf(ok_script, sizeof(ok_script), "%s/fake/ok.sh", cwd);
+  snprintf(stuck_script, sizeof(stuck_script), "%s/fake/stuck.sh", cwd);
+  snprintf(usage_script, sizeof(usage_script), "%s/fake/usage.sh", cwd);
+  char script[2048];
+  snprintf(script, sizeof(script),
+           "#!/bin/sh\n"
+           "cp \"$2\" \"%s/fake/last-request.json\"\n"
+           "echo \"$@\" >> \"%s/fake/argv.log\"\n"
+           "seed=5\n"
+           "while [ $# -gt 0 ]; do\n"
+           "  case \"$1\" in\n"
+           "    --out) out=\"$2\"; shift ;;\n"
+           "    --midi) midi=\"$2\"; shift ;;\n"
+           "    --musicxml) xml=\"$2\"; shift ;;\n"
+           "    --seed) seed=\"$2\"; shift ;;\n"
+           "  esac\n"
+           "  shift\n"
+           "done\n"
+           "echo '{}' > \"$out\"\n"
+           "printf 'MThd\\n' > \"$midi\"\n"
+           "echo '<score-partwise/>' > \"$xml\"\n"
+           "echo \"{\\\"seed\\\": $seed, \\\"themes\\\": [{\\\"seed\\\": $seed}]}\"\n",
+           cwd, cwd);
+  check(write_script(ok_script, script), "the recording fake Composer is written");
+  check(write_script(stuck_script, "#!/bin/sh\necho 'no seed works' >&2\nexit 2\n"), "the stuck fake Composer is written");
+  check(write_script(usage_script, "#!/bin/sh\necho 'the request does not read' >&2\nexit 1\n"),
+        "the usage-error fake Composer is written");
+
+  struct mg_context *ctx = ursatz_gui_server_start("18773", ".");
+  check(ctx != NULL, "server starts");
+  if (!ctx) {
+    return 1;
+  }
+  sleep_ms(200);
+
+  int status = 0;
+  cJSON *projects = exchange("GET", "/api/materials/projects", NULL, &status);
+  snprintf(g_project, sizeof(g_project), "%s", string_of(cJSON_GetArrayItem(member(projects, "projects"), 0), "id"));
+  cJSON_Delete(projects);
+
+  /* The motifs are saved with the real Composer; the runs of the theme command use the fake. */
+  unsetenv("URSATZ_GUI_COMPOSER");
+  Motifs motifs;
+  memset(&motifs, 0, sizeof(motifs));
+  bool made = make_motifs(&motifs);
+  check(made, "the motifs and their forms are saved");
+  if (made) {
+    test_bodies(&motifs);
+    setenv("URSATZ_GUI_COMPOSER", ok_script, 1);
+    test_compose(&motifs);
+    test_files(&motifs);
+    test_brief(&motifs);
+    test_update_uses(&motifs);
+    test_failures(&motifs, stuck_script, usage_script);
+    test_real_composer(&motifs);
+  }
+
+  ursatz_gui_server_stop(ctx);
+  if (failures > 0) {
+    fprintf(stderr, "%d check(s) failed\n", failures);
+    return 1;
+  }
+  printf("all checks passed\n");
   return 0;
 }
