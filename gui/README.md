@@ -570,6 +570,7 @@ materials/
                             versions: [{number, created_at, note}],
                             created_at, updated_at}
   items/<id>/v<n>.json     the version body
+  items/<id>/v<n>/         a composed theme version's files (see "Theme bodies and version files")
 ```
 
 - Ids are `<prefix>-<16 lowercase hex>` from `ursatz_gui_new_id`: `prj` for
@@ -589,6 +590,33 @@ materials/
   `service/material_service.h`.
 - Projects and items are passed as cJSON objects; the caller frees what it
   receives.
+
+#### Theme bodies and version files
+
+A theme body (the rules are in `service/material_service.h`) is a placeholder or a composable theme (R-167). The
+placeholder, `form` null or a string and `slots` an array of anything, stays valid so earlier versions still read. A
+body with a `form` object, a slot written as `{slot, item_id, version}` or any of the members below is a composable theme:
+
+- `form`: `{into, hybrid, key, mode, meter, bars, cadence, first_cadence}`; `into` is `sentence`, `period` or
+  `hybrid`, `mode` `major`, `minor` or `style` (the style's most common mode), `meter` one of `2/4`, `3/4`, `4/4`,
+  `6/8`, `bars` 4 or 8; each member null or as the Composer routes take it. Compose needs `into`, `key`, `mode` and
+  `meter`.
+- `slots`: `[{slot: "basic" | "contrasting" | "continuation" | "cadential", item_id, version}]`, `basic` once and each
+  slot at most once. Each item is a melodic motif of form `full` at an existing version.
+- `pool`: `approved-and-unflagged` (default), `approved` or `none`. `accompaniment`: null, `{pattern}` (`block`,
+  `arpeggiated`, `alberti`, `oom-pah` or `any`) or `{pattern: "motive", item_id, version}`, a motif of role
+  `accompaniment`. `brief`: null or `{scopes, piece_ids, style_ids}` as the styles route takes it. `style_weight`
+  `n/d`. `without`: up to 4 of `motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`. `tempo`:
+  null or 20 to 400. `check`: boolean. `seed`: null or a whole number. `result`: null or an object, written by the
+  compose route.
+- The server fills `uses` from the slots and the accompaniment motif: a client use of those items is replaced by one
+  use for each version named, with a fresh `copy` (other client uses stay). Moving a use to a newer version moves the
+  slot or accompaniment version with it.
+
+A composed version keeps its files beside its body in `items/<id>/v<n>/`: `request.json` (what the Composer read),
+`brief.style.json` (when the theme has a brief), `plan.json`, `theme.mid` and `theme.musicxml`. The folder is written
+before the version exists, so a version that exists has its files whole. Deleting the item removes the folders with its
+directory.
 
 #### Item references
 
@@ -1075,6 +1103,22 @@ Items:
 - `POST /api/materials/items/<id>/uses/<source>/update`: writes a new version
   of the item with every use of `<source>` moved to the source's current
   version; answers `{"item"}`.
+- `GET /api/materials/items/<id>/versions/<n>/files/<name>`: one of the five files of a composed theme version
+  (`request.json`, `brief.style.json` and `plan.json` as `application/json`, `theme.mid` as `audio/midi`,
+  `theme.musicxml` as `application/xml`); any other name, a version without the file or an unknown item is `404`.
+- `POST /api/materials/items/<thm-id>/compose`: `{"seed"?,"update_uses"?}` composes the theme into a new version
+  (R-166, R-167) and answers `{"item"}`. With `update_uses`, every updated use first moves to its source's current
+  version (a version of its own each; they stay if the run then fails). The request is built from the current
+  version: each slot motif from its use's copy; the pool, every motif item whose `derived` chain (at most 32 steps
+  through `derived.source_item`) leads to a slot's item, flag `approved` (and `unflagged` with the default pool), at
+  most 64 for each motive, never `rejected`, with its current degrees, harmony, features, chain text and functions;
+  the brief built with the styles code into `brief.style.json`. It runs `ursatz-composer theme <request.json>
+  --format json --out plan.json --midi theme.mid --musicxml theme.musicxml [--check] [--seed]`. The new version is the
+  body as it was plus `result: {seed, summary (the command's JSON), brief: {piece_count, skipped}, files}` with the
+  note `composed seed <n>`. `seed` in the request wins over the body's. `400` for a bad body, an item that is not a
+  composable theme, or a Composer usage error; `404` for an unknown item; `422` when the Composer is stuck or the
+  brief has no piece it can use; `503` without the binary; `504` on a timeout. A failed run writes no version and
+  leaves no folder.
 - `GET /api/materials/variant-operations`: `{"operations"}` from
   `ursatz-composer variants --list-ops --json`, read once per server run.
 - `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?}`
@@ -1361,7 +1405,7 @@ it.
 
 ## Tests
 
-`ctest` runs the backend tests (health, analyzer, corpus, styles, composer, materials, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
+`ctest` runs the backend tests (health, analyzer, corpus, styles, composer, materials, theme, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be
@@ -1391,7 +1435,10 @@ names and request bodies. `test_composer_route` runs
 the real Composer: grow, regenerate, lock, variations, choose and plan make
 versions and leave the earlier ones alone; bad requests start nothing and a
 fake Composer (`URSATZ_GUI_COMPOSER`) that records its arguments or sleeps
-shows the argument lists and the 504.
+shows the argument lists and the 504. `test_theme_route` checks the theme body rules, the request a compose
+writes (slots, a pool of approved and unflagged forms without the rejected, the brief, `without`), the version it
+writes with its files, the files route, a stuck, a bad and a missing Composer writing nothing, `update_uses`, and one
+compose with the real Composer over a brief of fixture pieces.
 
 CI (`.github/workflows/ci.yml`) builds and runs `ctest` on every push and
 pull request. The private submodules are checked out through the

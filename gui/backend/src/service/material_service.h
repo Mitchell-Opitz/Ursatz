@@ -102,7 +102,18 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
  *     first, last with 0 <= first <= last}], analysis (null or an object),
  *     derived (null or {source_item, source_version, operations, seed, kind,
  *     kept, changed, harmony, functions, flag}).
- *   theme: form (null, a string or an object) and slots (an array).
+ *   theme: form (null, a string or an object) and slots (an array). A body with a form object, a slot written as
+ *     {slot, item_id, version} or any of pool, accompaniment, brief, style_weight, without, tempo, check, seed and
+ *     result is a composable theme (R-167):
+ *       form {into, hybrid, key, mode (major | minor | style), meter, bars (4 | 8), cadence, first_cadence}, each
+ *       member null or as the Composer routes take it; slots [{slot (basic | contrasting | continuation | cadential),
+ *       item_id, version}] with basic once and each slot at most once; pool (approved-and-unflagged | approved |
+ *       none); accompaniment (null, {pattern} or {pattern: "motive", item_id, version}); brief (null or {scopes,
+ *       piece_ids, style_ids}); style_weight ("n" or "n/d"); without (up to 4 motive categories); tempo (null or
+ *       20 to 400); check (bool); seed (null or a whole number); result (null or an object).
+ *     Any other theme is a placeholder and stays valid. Creating or adding a version checks that each slot names a
+ *     melodic motif of form full at an existing version and the accompaniment motive an accompaniment motif, and
+ *     replaces the body's uses of those items by one use for each version named.
  *   piece: structure (null, a string, an object or an array).
  */
 UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
@@ -194,5 +205,26 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
  * leaves the users' copies untouched; their uses then report missing.
  */
 UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force);
+
+/* --- version files ------------------------------------------------------- */
+
+/*
+ * A theme version keeps its Composer files beside its body, in items/<id>/v<n>/ (R-167): request.json,
+ * brief.style.json, plan.json, theme.mid and theme.musicxml. The folder is written before the version is, so a
+ * version that exists has its files whole; deleting the item removes them with its directory.
+ */
+
+/* The content type of one of the five names ("application/json", "audio/midi", "application/xml"), else NULL. */
+const char *ursatz_gui_material_version_file_type(const char *name);
+
+/* The folder of version number of item id, as a path under the store (it need not exist). false if it does not fit. */
+bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size_t out_size);
+
+/*
+ * The bytes of one of the five files of version number (1 to current_version). NOT_FOUND for any other name, an
+ * absent item, version or file. *out_data is caller-owned (free).
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int number, const char *name,
+                                                          unsigned char **out_data, size_t *out_size);
 
 #endif /* URSATZ_GUI_MATERIAL_SERVICE_H */

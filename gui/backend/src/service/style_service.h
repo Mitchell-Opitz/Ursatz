@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <cJSON.h>
+
 #include "link_service.h"
 
 /*
@@ -183,6 +185,13 @@ void ursatz_gui_style_free_list(UrsatzGuiStyle *styles, size_t count);
 UrsatzGuiStyleResult ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_style);
 
 void ursatz_gui_style_destroy(UrsatzGuiStyle *style);
+
+/*
+ * Reads a brief object {"scopes": [...], "piece_ids": [...], "style_ids": [...]} as the styles route takes it, with
+ * the limits above, into out, which owns its strings (free with ursatz_gui_style_brief_free). Returns NULL, or a failure
+ * message ("invalid brief", "invalid scope", "too many entries in the brief", "out of memory") with out left empty.
+ */
+const char *ursatz_gui_style_brief_parse(const cJSON *json, UrsatzGuiStyleBrief *out);
 
 /* Frees the scopes, ids and style ids of a brief (the strings are owned only for a brief a style holds). */
 void ursatz_gui_style_brief_free(UrsatzGuiStyleBrief *brief);

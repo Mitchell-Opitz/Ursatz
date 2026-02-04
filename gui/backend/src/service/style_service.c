@@ -1266,6 +1266,82 @@ static bool load_brief(const cJSON *json, UrsatzGuiStyleBrief *out) {
     return true;
 }
 
+static bool json_string_or_null(const cJSON *object, const char *key) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    return !item || cJSON_IsNull(item) || cJSON_IsString(item);
+}
+
+/* A scope as the links routes take it: a known kind and string or null members. */
+static bool scope_json_valid(const cJSON *json) {
+    UrsatzGuiLinkScopeKind kind;
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(json, "kind");
+    const cJSON *filter = cJSON_GetObjectItemCaseSensitive(json, "filter");
+    return cJSON_IsObject(json) && cJSON_IsString(label) && scope_kind_from_label(label->valuestring, &kind) &&
+           json_string_or_null(json, "collection_id") && json_string_or_null(json, "subject_id") &&
+           json_string_or_null(json, "project_id") &&
+           (!filter || cJSON_IsNull(filter) ||
+            (cJSON_IsObject(filter) && json_string_or_null(filter, "composer") && json_string_or_null(filter, "source") &&
+             json_string_or_null(filter, "tag")));
+}
+
+/* An optional array of at most max valid ids. NULL when it holds, else the failure message. */
+static const char *brief_ids_failure(const cJSON *json, const char *key, size_t max) {
+    const cJSON *array = cJSON_GetObjectItemCaseSensitive(json, key);
+    if (!array) {
+        return NULL;
+    }
+    if (!cJSON_IsArray(array)) {
+        return "invalid brief";
+    }
+    if ((size_t)cJSON_GetArraySize(array) > max) {
+        return "too many entries in the brief";
+    }
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, array) {
+        if (!cJSON_IsString(item) || !ursatz_gui_collection_is_valid_id(item->valuestring)) {
+            return "invalid brief";
+        }
+    }
+    return NULL;
+}
+
+const char *ursatz_gui_style_brief_parse(const cJSON *json, UrsatzGuiStyleBrief *out) {
+    memset(out, 0, sizeof(*out));
+    if (!cJSON_IsObject(json)) {
+        return "invalid brief";
+    }
+    const cJSON *scopes = cJSON_GetObjectItemCaseSensitive(json, "scopes");
+    if (scopes) {
+        if (!cJSON_IsArray(scopes)) {
+            return "invalid brief";
+        }
+        if ((size_t)cJSON_GetArraySize(scopes) > URSATZ_GUI_STYLE_BRIEF_MAX_SCOPES) {
+            return "too many entries in the brief";
+        }
+        const cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, scopes) {
+            if (!scope_json_valid(entry)) {
+                return "invalid scope";
+            }
+        }
+    }
+    const char *failure = brief_ids_failure(json, "piece_ids", URSATZ_GUI_STYLE_BRIEF_MAX_PIECES);
+    if (!failure) {
+        failure = brief_ids_failure(json, "style_ids", URSATZ_GUI_STYLE_BRIEF_MAX_STYLES);
+    }
+    if (failure) {
+        return failure;
+    }
+    if (!load_brief(json, out)) {
+        return "out of memory";
+    }
+    if (out->scope_count + out->piece_count + out->style_count == 0) {
+        ursatz_gui_style_brief_free(out);
+        return "invalid brief";
+    }
+    return NULL;
+}
+
 /* Loads styles/<id>/meta.json into style (zeroed by the caller). */
 static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
     char dir[PATH_BYTES];
