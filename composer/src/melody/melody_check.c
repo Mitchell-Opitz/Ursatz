@@ -122,7 +122,7 @@ static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) 
 }
 
 /* Labels the leftover tones of each chord's segment with the framework, and holds each to the types allowed. */
-static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, unsigned *tones) {
     const MelodyContext *context = &melody->context;
     size_t total = 0;
     size_t used = 0;
@@ -189,6 +189,11 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict) {
                 verdict->hard = "non-chord tone of no figure";
             } else if (!(nct_bit(labels[k].tone) & melody->params.nct_types)) {
                 verdict->hard = "non-chord tone of a figure not allowed";
+            } else if (tones && member->note_id[0] == 'm') {
+                size_t note = (size_t)strtoul(member->note_id + 1, NULL, 10);
+                if (note < melody->count && !tones[note]) {
+                    tones[note] = nct_bit(labels[k].tone);
+                }
             }
         }
         free(labels);
@@ -410,6 +415,16 @@ static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict
     }
 }
 
+bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
+    PhraseVerdict verdict;
+    if (!melody || !types || melody->count == 0 || melody->count > MELODY_MAX_NOTES) {
+        return false;
+    }
+    memset(&verdict, 0, sizeof(verdict));
+    memset(types, 0, melody->count * sizeof(*types));
+    return check_tones(melody, &verdict, types);
+}
+
 bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     bool ok = true;
     memset(verdict, 0, sizeof(*verdict));
@@ -419,7 +434,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     }
     check_basics(melody, verdict);
     if (!verdict->hard) {
-        ok = check_tones(melody, verdict);
+        ok = check_tones(melody, verdict, NULL);
     }
     if (ok && !verdict->hard) {
         ok = check_melodic(melody, verdict);

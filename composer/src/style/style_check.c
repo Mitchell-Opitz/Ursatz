@@ -13,7 +13,9 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/melody_fill.h>
+#include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
@@ -80,7 +82,64 @@ static bool harmony_labels(const PiecePlan *plan, const PhraseProgression *progr
     return composer_style_labels_add_harmony(labels, has_before ? before : NULL, numerals, progression->count);
 }
 
-static bool melody_labels(const MelodyCandidate *melody, ComposerStyleLabels *labels) {
+/* The degree label of a pitch in the key. */
+static const char *degree_of(const PlanKey *key, int pitch) {
+    return style_label_degree(((pitch % 12) + 12) % 12, key->tonic_pitch_class);
+}
+
+/* A `motive-nct-figure` label for every non-chord tone the melody writes: the degrees of the note and its neighbors. */
+static bool nct_labels(const MelodyCandidate *melody, ComposerStyleLabels *labels) {
+    static const struct {
+        unsigned bit;
+        const char *name;
+    } TYPES[] = {{MELODY_NCT_PASSING, "passing"},
+                 {MELODY_NCT_NEIGHBOR, "neighbor"},
+                 {MELODY_NCT_APPOGGIATURA, "appoggiatura"},
+                 {MELODY_NCT_SUSPENSION, "suspension"},
+                 {MELODY_NCT_ANTICIPATION, "anticipation"}};
+    unsigned tones[MELODY_MAX_NOTES];
+    if (!melody_nct_types(melody, tones)) {
+        return false;
+    }
+    const MelodyContext *context = &melody->context;
+    const PlanKey *key = &context->key;
+    for (size_t i = 0; i < melody->count; i++) {
+        const char *name = NULL;
+        for (size_t t = 0; t < sizeof TYPES / sizeof *TYPES; t++) {
+            if (tones[i] & TYPES[t].bit) {
+                name = TYPES[t].name;
+                break;
+            }
+        }
+        if (!name) {
+            continue;
+        }
+        const char *previous = NULL;
+        const char *next = NULL;
+        if (i > 0) {
+            previous = degree_of(key, melody->notes[i - 1].pitch);
+        } else if (context->lead_in_count > 0) {
+            previous = degree_of(key, context->lead_in[context->lead_in_count - 1]);
+        }
+        if (i + 1 < melody->count) {
+            next = degree_of(key, melody->notes[i + 1].pitch);
+        } else if (context->has_lead_out) {
+            next = degree_of(key, context->lead_out);
+        }
+        if (!composer_style_labels_add_nct(labels, previous, degree_of(key, melody->notes[i].pitch), name, next)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Whether the style counts a category (it was not read without it, and its corpus gave it something). */
+static bool style_has_category(const ComposerStyle *style, const char *category) {
+    ComposerStyleShare share;
+    return composer_style_share(style, category, "", &share);
+}
+
+static bool melody_labels(const ComposerStyle *style, const MelodyCandidate *melody, ComposerStyleLabels *labels) {
     ComposerStyleNote notes[MELODY_MAX_NOTES];
     if (!melody || melody->magic != MELODY_PAYLOAD_MAGIC || melody->count > MELODY_MAX_NOTES) {
         return false;
@@ -92,7 +151,33 @@ static bool melody_labels(const MelodyCandidate *melody, ComposerStyleLabels *la
     }
     const MelodyContext *context = &melody->context;
     int before = context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : 0;
-    return composer_style_labels_add_melody(labels, context->lead_in_count > 0 ? &before : NULL, notes, melody->count);
+    if (!composer_style_labels_add_melody(labels, context->lead_in_count > 0 ? &before : NULL, notes, melody->count)) {
+        return false;
+    }
+    return !style_has_category(style, STYLE_CATEGORY_MOTIVE_NCT_FIGURE) || nct_labels(melody, labels);
+}
+
+/* The key the plan starts in, for a motive that carries none. */
+static int plan_tonic(const PiecePlan *plan) {
+    PlanSpan everything = {{0, 1}, {1000000, 1}};
+    LaneSpanId first;
+    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1) == 0) {
+        return 0;
+    }
+    return plan_lane_span_payload(plan, first)->key.tonic_pitch_class;
+}
+
+/* The motive labels of a motive-form or development candidate the motives stage offers. */
+static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate, ComposerStyleLabels *labels) {
+    const Motive *motive = grow_form_candidate_motive(candidate);
+    if (!motive) {
+        motive = motive_develop_candidate_motive(candidate);
+    }
+    if (!motive) {
+        return true;
+    }
+    int tonic = motive->key_source != MOTIVE_KEY_UNSPECIFIED ? motive->key.tonic_pitch_class : plan_tonic(plan);
+    return composer_style_labels_add_motive(labels, motive, tonic);
 }
 
 /* Whether the plan fixes the form of the section: a theme pairing constraint says how it begins and ends. */
@@ -212,7 +297,7 @@ bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOpe
     if (!style || !style->inner || !style->style || !plan || !operator_ || !candidate || !out) {
         return false;
     }
-    if (!style->inner(plan, target, operator_, candidate, NULL, out)) {
+    if (!style->inner(plan, target, operator_, candidate, style->inner_context, out)) {
         return false;
     }
     out->style_numerator = 0;
@@ -227,6 +312,14 @@ bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOpe
     if (theme && form_fixed(plan, target)) {
         return true;
     }
+    bool motive_operator = strcmp(name, GROW_FORM_OPERATOR_NAME) == 0 || strcmp(name, MOTIVE_RESTATE_OPERATOR_NAME) == 0 ||
+                           strcmp(name, MOTIVE_FRAGMENT_OPERATOR_NAME) == 0 || strcmp(name, MOTIVE_RHYTHM_OPERATOR_NAME) == 0;
+    /* A style that counts no motive category leaves the motives stage scoring as it does without a style. */
+    if (motive_operator && !style_has_category(style->style, STYLE_CATEGORY_MOTIVE_DEGREES) &&
+        !style_has_category(style->style, STYLE_CATEGORY_MOTIVE_INTERVALS) &&
+        !style_has_category(style->style, STYLE_CATEGORY_MOTIVE_RHYTHM)) {
+        return true;
+    }
     ComposerStyleLabels *labels = composer_style_labels_create();
     if (!labels) {
         return false;
@@ -237,7 +330,9 @@ bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOpe
     } else if (strcmp(name, HARMONY_PHRASE_OPERATOR_NAME) == 0 || strcmp(name, HARMONY_PROLONG_OPERATOR_NAME) == 0) {
         ok = harmony_labels(plan, candidate->payload, labels);
     } else if (strcmp(name, MELODY_FILL_OPERATOR_NAME) == 0) {
-        ok = melody_labels(candidate->payload, labels);
+        ok = melody_labels(style->style, candidate->payload, labels);
+    } else if (motive_operator) {
+        ok = motive_labels(plan, candidate, labels);
     }
     ComposerRatio closeness;
     if (ok && composer_style_closeness(style->style, labels, &closeness)) {

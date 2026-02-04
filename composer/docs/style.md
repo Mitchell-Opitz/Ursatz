@@ -30,10 +30,28 @@ agree exactly where each note starts a chord (the test's hand-written progressio
 
 ## Motive categories
 
-A style model from the Analyzer may also hold the four motive categories (`motive-degrees`, `motive-intervals`, `motive-rhythm`,
-`motive-nct-figure`). `composer_style_load` reads them and ignores them: they are dropped before the model is built
-(`style_model_file_read_without`), so style distances and fills are the same as for a model without them. They wait for
-motive preferences (P16).
+A style model from the Analyzer may also hold the four motive categories (`motive-degrees`, `motive-intervals`,
+`motive-rhythm`, `motive-nct-figure`). `composer_style_load` keeps them, and they are preferences like the others:
+
+- The motives stage adds `style_weight * closeness` to the score of each motive-form and of each motive the development
+  operators offer, by the candidate's `motive-degrees` (each note's degree in the key, joined), `motive-intervals` (the
+  signed semitone steps) and `motive-rhythm` (the durations). A rhythm or contour motive has no labels and is neutral.
+- The melody stage adds the `motive-nct-figure` labels of every non-chord tone the candidate writes: the degrees of the
+  note before it, of the note itself with its type (`passing`, `neighbor`, `appoggiatura`, `suspension`, `anticipation`),
+  and of the note after it.
+- A style that counts none of them (a model read without them, or one made before the Analyzer counted them) leaves
+  both stages scoring as they do without a style.
+
+`composer_style_load_without(path, categories, count, &style)` reads a style without the named categories (any category
+the Analyzer defines; an unknown one is `COMPOSER_STYLE_ERR_ARGUMENT`). The style keeps the list
+(`composer_style_without_count`, `composer_style_without_at`), and the distance (`composer_style_measure`) drops the same
+categories from the fragment and from the model, so they appear nowhere in the result. On the command line it is
+`--style-without <category>`, repeatable up to 8 times, and a plan keeps the list in its `style` constraint. A blend keeps
+both styles' lists and counts none of those categories.
+
+A model made before the Analyzer counted a category (the test fixtures `chorales` and `sonatinas` have none of the motive
+categories, `tempo` or `note-density`) is distance 1 in that category, as a category the model lacks always is: read with
+`--style-without` for the categories it lacks to leave them out.
 
 ## Closeness
 
@@ -44,7 +62,7 @@ labels is neutral, 1/1. A fraction that does not fit in 64 bits is rounded to 30
 
 ## Weight
 
-The harmony and melody stage checkers add `style_weight * closeness` to the score of every candidate they accept
+The harmony, melody and motives stage checkers add `style_weight * closeness` to the score of every candidate they accept
 (`style_weight` is a fraction, 1/1 when not set). Rejection is unchanged, and with no style the checkers are the ones there were
 before: the sentence of the tests is byte for byte what `main` composed.
 
@@ -64,12 +82,15 @@ Sentences in C major 4/4 grown from `E4:q G4:e F4:e D4:q C4:q`, seeds 1 to 20, w
 
 | Style | Harmony styled | Harmony unstyled | Melody styled | Melody unstyled |
 | --- | --- | --- | --- | --- |
-| chorales | 0.6875 | 0.7245 | 0.4756 | 0.4944 |
-| sonatinas | 0.6733 | 0.6609 | 0.4519 | 0.4550 |
+| chorales | 0.7306 | 0.7087 | 0.7590 | 0.7734 |
+| sonatinas | 0.6575 | 0.6559 | 0.7561 | 0.7635 |
 
 A style is a preference among the one to ten candidates an operator proposes for a target, so it moves the result a little.
-Under `chorales` both dimensions are closer. Under `sonatinas` (two pieces) melody is a little closer and harmony is not: a
-known limit, the styled mean is held to its baseline (R-075). A larger weight did not help (1 to 64 measured). The Analyzer
+Under `chorales` melody is closer and harmony is not, and under `sonatinas` (two pieces) melody is a little closer and
+harmony is not: a known limit, the styled mean is held to its baseline (R-075). The melody means rose (they were 0.4756 and
+0.4944, 0.4519 and 0.4550) when styles began to be read with every category (R-162): the two fixtures have no motive
+categories and the sentences do, and a category the model lacks is distance 1, for the styled and the unstyled runs alike.
+The harmony figures are those of the P14 B8 table (the harmony of the first two columns was 0.6875 and 0.7245 before it). A larger weight did not help (1 to 64 measured). The Analyzer
 also hears the Composer's chords through the notes only (`ii7` where `ii` was written), which blurs the harmony labels.
 
 ## Blending
@@ -164,7 +185,7 @@ file and give it to `plan --given-melody`.
 
 ## The test styles
 
-`chorales-motives.style.json` is `chorales.style.json` plus invented statistics in the four motive categories; `test_style motives` checks that the two give the same seeded fill and distance.
+`chorales-motives.style.json` is `chorales.style.json` plus invented statistics in the four motive categories; `test_style motives` checks that reading it keeps them and that reading it without them drops them. `step-up-motives.style.json` counts one `motive-degrees` label (`4 6 5 3 2`, the basic idea `E4:q G4:e F4:e D4:q C4:q` a step higher); `test_style prefer` grows a sentence at seed 2, where the repetition is offered a dominant form (`7 2 1 5 5`) and that transposition, and checks that the style moves the repetition to the transposition and `motive-degrees` read without it gives the dominant form back.
 
 `tests/fixtures/styles/chorales.style.json` (ten chorales) and `sonatinas.style.json` (Clementi 36, Mozart 545) were made by
 the Analyzer over its test corpora. From a folder holding `chorales/` (the ten `external/ursatz/tests/accuracy/corpus/*/score.musicxml`,

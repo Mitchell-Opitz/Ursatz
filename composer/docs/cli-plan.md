@@ -1,7 +1,7 @@
 # plan command
 
 ```sh
-ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --like-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
+ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --like-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
 ```
 
 Plans a whole short piece from a form template and writes the plan as JSON. Nothing is composed yet: the
@@ -36,6 +36,7 @@ section open for [`fill`](cli-fill.md) to realize. It builds a request for `piec
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The seed chooses the keys and cadences of `--modulate`; the same options and seed give the same plan. The seed that fills the plan is given to `fill`. |
 | `--style <file>` | A style model file from the Ursatz Analyzer (`--style-profile`). It must read; its path is kept in the plan as given, as a `style` constraint on the form node, so `fill` finds the file from where it is run. See [style.md](style.md). |
 | `--style-weight <n/d>` | How strongly `fill` prefers the style (default `1/1`; needs `--style`). Kept in the plan. |
+| `--style-without <category>` | Read the style without this category (repeatable, at most 8; needs `--style`; an unknown name is exit 1). Kept in the plan as the `without` list of the `style` constraint, so `fill` reads the style the same way. See [style.md](style.md). |
 | `--blend <file>` | A second style model file, blended with the style (`--style`; needs `--style`). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |

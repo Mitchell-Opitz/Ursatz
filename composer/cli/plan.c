@@ -63,6 +63,7 @@ typedef struct {
     const char *style_path;
     const char *style_weight_text;
     const char *blend_path;
+    CliStyleWithout without;
     const char *blend_weight_text;
     const char *blend_weights_text;
     const char *out_path;
@@ -184,6 +185,14 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->seed_text;
         } else if (strcmp(arg, "--style") == 0) {
             target = &options->style_path;
+        } else if (strcmp(arg, "--style-without") == 0) {
+            if (i + 1 >= argc) {
+                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
+            }
+            int added = cli_style_without_add(&options->without, argv[++i]);
+            if (added != 0) {
+                return added;
+            }
         } else if (strcmp(arg, "--style-weight") == 0) {
             target = &options->style_weight_text;
         } else if (strcmp(arg, "--blend") == 0) {
@@ -405,6 +414,9 @@ static int check_options(Options *options) {
     }
     if (options->style_weight_text && !options->style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight needs --style");
+    }
+    if (options->without.count > 0 && !options->style_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
     }
     if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
@@ -847,8 +859,8 @@ static int place_given(const Options *options, PiecePlan *plan) {
 static int check_style(const Options *options) {
     ComposerStyle *style = NULL;
     int status = options->blend_path
-                     ? cli_load_blend(options->style_path, options->blend_path, &options->blend_weights, &style)
-                     : cli_load_style(options->style_path, &style);
+                     ? cli_load_blend(options->style_path, options->blend_path, &options->blend_weights, options->without.names, options->without.count, &style)
+                     : cli_load_style(options->style_path, options->without.names, options->without.count, &style);
     composer_style_destroy(style);
     return status;
 }
@@ -940,6 +952,10 @@ int run_plan(int argc, char **argv) {
         snprintf(request.style.path, PLAN_STYLE_PATH_MAX, "%s", options.style_path);
         request.style.weight_numerator = options.style_weight.numerator;
         request.style.weight_denominator = options.style_weight.denominator;
+        for (size_t i = 0; i < options.without.count; i++) {
+            snprintf(request.style.without[i], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", options.without.names[i]);
+        }
+        request.style.without_count = options.without.count;
         if (options.blend_path) {
             snprintf(request.style.blend_path, PLAN_STYLE_PATH_MAX, "%s", options.blend_path);
             for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {

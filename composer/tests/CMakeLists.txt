@@ -364,7 +364,7 @@ target_compile_definitions(test_style PRIVATE
     COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
 add_dependencies(test_style ursatz-composer)
 # Styles (docs/style.md): the sweep is slow and CI leaves it out (ctest -LE slow); its smoke test is the sweep on seeds 1 and 2.
-foreach(mode labels same motives measure smoke cli)
+foreach(mode labels same motives labels-motive prefer without measure smoke cli)
     add_test(NAME test_style_${mode} COMMAND test_style ${mode})
 endforeach()
 add_test(NAME test_style_distance COMMAND test_style distance)

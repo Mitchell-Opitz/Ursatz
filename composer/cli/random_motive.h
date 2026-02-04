@@ -12,6 +12,6 @@ int run_random_motive(int argc, char **argv);
 /* The line of the usage text that names the subcommand. */
 #define RANDOM_MOTIVE_USAGE_LINE                                                                                       \
     "       ursatz-composer random-motive --mode <major|minor> --meter <n/m> [--key <key>] "                         \
-    "[--form <full|rhythm|contour>] [--role <melodic|accompaniment>] [--style <file>] [--count <n>] [--seed <n>] [--json]"
+    "[--form <full|rhythm|contour>] [--role <melodic|accompaniment>] [--style <file>] [--style-without <category>]... [--count <n>] [--seed <n>] [--json]"
 
 #endif

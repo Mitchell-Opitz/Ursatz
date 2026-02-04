@@ -39,6 +39,7 @@ typedef struct {
     const char *format_text;
     const char *candidates_text;
     const char *style_path;
+    CliStyleWithout without;
     const char *style_weight_text;
     const char *blend_path;
     const char *blend_weight_text;
@@ -67,6 +68,7 @@ static void print_help(FILE *out) {
     fprintf(out, "                       Analyzer (--style-profile). Overrides the plan's own style. The Analyzer's distance from the\n");
     fprintf(out, "                       style is printed with the result\n");
     fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; overrides the plan's)\n");
+    fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; overrides the plan's list)\n");
     fprintf(out, "  --blend <file>       a second style model file, blended with the style (--style, or the plan's). Overrides the\n");
     fprintf(out, "                       plan's blend; --style without --blend drops the plan's blend\n");
     fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; overrides the plan's)\n");
@@ -108,6 +110,14 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->candidates_text;
         } else if (strcmp(arg, "--style") == 0) {
             target = &options->style_path;
+        } else if (strcmp(arg, "--style-without") == 0) {
+            if (i + 1 >= argc) {
+                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
+            }
+            int added = cli_style_without_add(&options->without, argv[++i]);
+            if (added != 0) {
+                return added;
+            }
         } else if (strcmp(arg, "--style-weight") == 0) {
             target = &options->style_weight_text;
         } else if (strcmp(arg, "--blend") == 0) {
@@ -711,6 +721,19 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
         }
     }
     const char *path = options->style_path ? options->style_path : (planned ? planned->path : NULL);
+    /* --style-without is the list when given; else the plan keeps the categories its style was read without, and a --style
+       of its own starts with none. */
+    const char *without[PLAN_STYLE_WITHOUT_MAX];
+    size_t without_count = 0;
+    if (options->without.count > 0) {
+        for (; without_count < options->without.count; without_count++) {
+            without[without_count] = options->without.names[without_count];
+        }
+    } else if (planned && !options->style_path) {
+        for (; without_count < planned->without_count; without_count++) {
+            without[without_count] = planned->without[without_count];
+        }
+    }
     /* The plan's blend goes with the plan's style: a --style of its own is not blended unless --blend says so. */
     const char *blend_path = options->blend_path;
     if (!blend_path && !options->style_path && planned && planned->blend_path[0]) {
@@ -722,6 +745,9 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
         if (options->style_weight_text) {
             return cli_fail(CLI_EXIT_USAGE, "--style-weight needs a style: give --style or a plan that has one");
         }
+        if (options->without.count > 0) {
+            return cli_fail(CLI_EXIT_USAGE, "--style-without needs a style: give --style or a plan that has one");
+        }
         return cli_read_blend(false, blend_path, options->blend_weight_text, options->blend_weights_text, &blend_weights);
     }
     weight->numerator = planned ? planned->weight_numerator : 0;
@@ -731,7 +757,7 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
     }
     if (!blend_path) {
         int checked = cli_read_blend(true, NULL, options->blend_weight_text, options->blend_weights_text, &blend_weights);
-        return checked != 0 ? checked : cli_load_style(path, style);
+        return checked != 0 ? checked : cli_load_style(path, without, without_count, style);
     }
     if (weights_given) {
         int read = cli_read_blend(true, blend_path, options->blend_weight_text, options->blend_weights_text,
@@ -745,7 +771,7 @@ static int resolve_style(const Options *options, const PiecePlan *plan, Composer
             blend_weights.denominator[d] = planned->blend_denominator[d];
         }
     }
-    return cli_load_blend(path, blend_path, &blend_weights, style);
+    return cli_load_blend(path, blend_path, &blend_weights, without, without_count, style);
 }
 
 /* --- the command ---------------------------------------------------------------- */

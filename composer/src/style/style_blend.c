@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "style/style_internal.h"
+
 #include "identity/entity_id.h"
 #include "theory/style_model_blend.h"
 #include "theory/style_model_build.h"
@@ -216,7 +218,10 @@ ComposerStyleResult composer_style_blend(const ComposerStyle *a, const ComposerS
             while (end < decoded_count[d] && strcmp(decoded[d][end].category, decoded[d][i].category) == 0) {
                 end++;
             }
-            normalize_category(decoded[d], i, end, merged, &merged_count);
+            const char *category = decoded[d][i].category;
+            if (!composer_style_without_has(a, category) && !composer_style_without_has(b, category)) {
+                normalize_category(decoded[d], i, end, merged, &merged_count);
+            }
             i = end;
         }
     }
@@ -257,7 +262,19 @@ ComposerStyleResult composer_style_blend(const ComposerStyle *a, const ComposerS
     }
     result = composer_style_from_model(final_model, composer_style_pieces(a) + composer_style_pieces(b), out);
     if (result != COMPOSER_STYLE_OK) {
-        style_model_destroy(final_model);
+        style_model_destroy(final_model); /* from_model keeps the model only on success */
+    } else {
+        for (int side = 0; result == COMPOSER_STYLE_OK && side < 2; side++) {
+            const ComposerStyle *from = side == 0 ? a : b;
+            for (size_t i = 0; result == COMPOSER_STYLE_OK && i < composer_style_without_count(from); i++) {
+                const char *category = composer_style_without_at(from, i);
+                result = composer_style_add_without(*out, &category, 1);
+            }
+        }
+        if (result != COMPOSER_STYLE_OK) {
+            composer_style_destroy(*out); /* owns the model */
+            *out = NULL;
+        }
     }
 
 done:

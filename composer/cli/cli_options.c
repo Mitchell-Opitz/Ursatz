@@ -153,8 +153,45 @@ bool cli_parse_ratio(const char *text, ComposerRatio *out) {
     return true;
 }
 
-int cli_load_style(const char *path, ComposerStyle **out) {
-    ComposerStyleResult loaded = composer_style_load(path, out);
+static const char *const STYLE_CATEGORIES[] = {
+    STYLE_CATEGORY_CHORD_NUMERAL,     STYLE_CATEGORY_CHORD_PROGRESSION_2, STYLE_CATEGORY_CHORD_PROGRESSION_3,
+    STYLE_CATEGORY_CADENCE_TYPE,      STYLE_CATEGORY_HARMONIC_RHYTHM,     STYLE_CATEGORY_DURATION,
+    STYLE_CATEGORY_METER,             STYLE_CATEGORY_SYNCOPATION,         STYLE_CATEGORY_MELODIC_INTERVAL,
+    STYLE_CATEGORY_CONTOUR,           STYLE_CATEGORY_PHRASE_RANGE,        STYLE_CATEGORY_MOTIVE_DEGREES,
+    STYLE_CATEGORY_MOTIVE_INTERVALS,  STYLE_CATEGORY_MOTIVE_RHYTHM,       STYLE_CATEGORY_MOTIVE_NCT_FIGURE,
+    STYLE_CATEGORY_THEME_FORM,        STYLE_CATEGORY_PHRASE_LENGTH,       STYLE_CATEGORY_SECTION_LETTERS,
+    STYLE_CATEGORY_MODE,              STYLE_CATEGORY_TEMPO,               STYLE_CATEGORY_NOTE_DENSITY};
+
+int cli_style_without_add(CliStyleWithout *list, const char *name) {
+    bool known = false;
+    for (size_t i = 0; i < sizeof STYLE_CATEGORIES / sizeof *STYLE_CATEGORIES; i++) {
+        known = known || strcmp(name, STYLE_CATEGORIES[i]) == 0;
+    }
+    if (!known) {
+        char names[640];
+        size_t used = 0;
+        names[0] = '\0';
+        for (size_t i = 0; i < sizeof STYLE_CATEGORIES / sizeof *STYLE_CATEGORIES && used < sizeof names; i++) {
+            int written = snprintf(names + used, sizeof names - used, "%s%s", i ? ", " : "", STYLE_CATEGORIES[i]);
+            used += written > 0 ? (size_t)written : 0;
+        }
+        return cli_fail(CLI_EXIT_USAGE, "--style-without: '%s' is not a style category (the categories are %s)", name,
+                        names);
+    }
+    for (size_t i = 0; i < list->count; i++) {
+        if (strcmp(list->names[i], name) == 0) {
+            return 0;
+        }
+    }
+    if (list->count >= CLI_STYLE_WITHOUT_MAX) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-without is given at most %d times", CLI_STYLE_WITHOUT_MAX);
+    }
+    list->names[list->count++] = name;
+    return 0;
+}
+
+int cli_load_style(const char *path, const char *const *without, size_t without_count, ComposerStyle **out) {
+    ComposerStyleResult loaded = composer_style_load_without(path, without, without_count, out);
     if (loaded != COMPOSER_STYLE_OK) {
         return cli_fail(loaded == COMPOSER_STYLE_ERR_ARGUMENT ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE,
                         "cannot read style '%s': %s", path, composer_style_result_name(loaded));
@@ -233,12 +270,12 @@ int cli_read_blend(bool has_style, const char *blend_path, const char *all_text,
 }
 
 int cli_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
-                   ComposerStyle **out) {
+                   const char *const *without, size_t without_count, ComposerStyle **out) {
     ComposerStyle *first = NULL;
     ComposerStyle *second = NULL;
-    int status = cli_load_style(style_path, &first);
+    int status = cli_load_style(style_path, without, without_count, &first);
     if (status == 0) {
-        status = cli_load_style(blend_path, &second);
+        status = cli_load_style(blend_path, without, without_count, &second);
     }
     if (status == 0) {
         ComposerStyleResult blended = composer_style_blend(first, second, weights, out);

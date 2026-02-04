@@ -7,6 +7,7 @@
 #include <ursatz_analyzer/style_labels.h>
 #include <ursatz_analyzer/style_profile.h>
 
+#include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>
 
 /*
@@ -33,8 +34,21 @@ typedef struct {
 
 const char *composer_style_result_name(ComposerStyleResult result);
 
-/* Reads the model file at path into *out, which the caller destroys. *out is NULL on failure. */
+/* Reads the model file at path into *out, which the caller destroys. *out is NULL on failure. Every category is kept. */
 ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out);
+
+/*
+ * composer_style_load without the named categories (style_model_file_read_without): the style holds no statistics of
+ * them, and keeps the list. A category that is not one the Analyzer defines is COMPOSER_STYLE_ERR_ARGUMENT.
+ * composer_style_load is this with none.
+ */
+ComposerStyleResult composer_style_load_without(const char *path, const char *const *categories, size_t count,
+                                                ComposerStyle **out);
+
+/* The categories the style was read without, in the order given (a blend has both lists, repeats once). */
+size_t composer_style_without_count(const ComposerStyle *style);
+/* Entry i, or NULL when i is out of range. Valid until the style is destroyed. */
+const char *composer_style_without_at(const ComposerStyle *style, size_t i);
 
 /* NULL is a no-op. */
 void composer_style_destroy(ComposerStyle *style);
@@ -138,6 +152,21 @@ typedef struct {
  */
 bool composer_style_labels_add_melody(ComposerStyleLabels *labels, const int *before, const ComposerStyleNote *notes,
                                       size_t count);
+
+/*
+ * The motive labels of a full motive (style_labels.h, the Analyzer's words): `motive-degrees` (each note's pitch class
+ * as a degree of the tonic, joined by spaces), `motive-intervals` (the signed semitone steps, none for a single note) and
+ * `motive-rhythm` (each note's duration, joined). A rhythm or contour motive has no pitches and adds nothing.
+ */
+bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive *motive, int tonic_pc);
+
+/*
+ * One `motive-nct-figure` label for a non-chord tone: the degree before it, its own degree and its type, and the degree
+ * after it (previous_degree and next_degree may be NULL for none, written "-"). type is the Analyzer document's name:
+ * "passing", "neighbor", "appoggiatura", "suspension" or "anticipation".
+ */
+bool composer_style_labels_add_nct(ComposerStyleLabels *labels, const char *previous_degree, const char *degree,
+                                   const char *type, const char *next_degree);
 
 /*
  * How close material is to the style, in [0, 1]: the mean over its labels of the label's share in its category divided

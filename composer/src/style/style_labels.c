@@ -200,6 +200,54 @@ bool composer_style_labels_add_form(ComposerStyleLabels *labels, const char *for
     return true;
 }
 
+/* ------------------------------------------------------------- motives */
+
+bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive *motive, int tonic_pc) {
+    if (!labels || !motive) {
+        return false;
+    }
+    if (motive->form != MOTIVE_FORM_FULL || motive->note_count == 0) {
+        return true;
+    }
+    size_t count = motive->note_count;
+    const char *degrees[MOTIVE_MAX_NOTES];
+    char durations[MOTIVE_MAX_NOTES][32];
+    const char *duration_parts[MOTIVE_MAX_NOTES];
+    int steps[MOTIVE_MAX_NOTES];
+    for (size_t i = 0; i < count; i++) {
+        int pitch_class = ((motive->notes[i].midi_pitch % 12) + 12) % 12;
+        degrees[i] = style_label_degree(pitch_class, tonic_pc);
+        PlanTime length = motive->notes[i].duration;
+        style_label_duration((unsigned long)(length.num < 0 ? 0 : length.num), length.den, durations[i],
+                             sizeof durations[i]);
+        duration_parts[i] = durations[i];
+        if (i > 0) {
+            steps[i - 1] = motive->notes[i].midi_pitch - motive->notes[i - 1].midi_pitch;
+        }
+    }
+    char *degree_text = style_label_join(degrees, count);
+    char *interval_text = count > 1 ? style_label_motive_intervals(steps, count - 1) : NULL;
+    char *rhythm_text = style_label_join(duration_parts, count);
+    bool ok = degree_text && rhythm_text && (count < 2 || interval_text) &&
+              composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_DEGREES, degree_text) &&
+              (count < 2 || composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_INTERVALS, interval_text)) &&
+              composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_RHYTHM, rhythm_text);
+    free(degree_text);
+    free(interval_text);
+    free(rhythm_text);
+    return ok;
+}
+
+bool composer_style_labels_add_nct(ComposerStyleLabels *labels, const char *previous_degree, const char *degree,
+                                   const char *type, const char *next_degree) {
+    if (!labels || !degree || !type) {
+        return false;
+    }
+    char text[96];
+    return style_label_nct_figure(previous_degree, degree, type, next_degree, text, sizeof text) &&
+           composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_NCT_FIGURE, text);
+}
+
 bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLabels *labels, ComposerRatio *out) {
     if (!style || !labels || !out) {
         return false;

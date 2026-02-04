@@ -7,9 +7,11 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
 
-/* The Analyzer's motive categories, left out of every style read and distance until P16 makes them preferences. */
-#define COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT 4
-extern const char *const composer_style_motive_categories[COMPOSER_STYLE_MOTIVE_CATEGORY_COUNT];
+/* Adds categories to a style's without list (copied, repeats skipped), for a blend that keeps both lists. */
+ComposerStyleResult composer_style_add_without(ComposerStyle *style, const char *const *categories, size_t count);
+
+/* True when category is in the style's without list. */
+bool composer_style_without_has(const ComposerStyle *style, const char *category);
 
 /*
  * The checker a compose stage uses when a style is set (R-080): the stage's own checker decides what is rejected and
@@ -18,7 +20,8 @@ extern const char *const composer_style_motive_categories[COMPOSER_STYLE_MOTIVE_
  * operator that has no labels (bass, texture, anything but the harmony and melody operators) are neutral, 1/1.
  */
 typedef struct {
-    FillCheckerFn inner;      /* the stage's checker, called with a NULL context as it is without a style */
+    FillCheckerFn inner;      /* the stage's checker */
+    void *inner_context;      /* ...and the context it is called with (NULL for the stages whose checker has none) */
     const ComposerStyle *style;
     ComposerRatio weight;     /* resolved: a denominator of 0 reads as 1/1 before it gets here */
 } StyleCheckContext;

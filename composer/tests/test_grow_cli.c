@@ -421,6 +421,18 @@ static void test_accompaniment(void) {
                    "needs a simple meter");
 }
 
+/* --style-without needs --style, and only names a style category can have. */
+static void test_style_without(void) {
+    expect_failure(BASE " --into sentence --style-without motive-degrees", 1, "--style-without needs --style");
+    expect_failure(BASE " --into sentence --style " FIXTURE("styles/chorales-motives.style.json")
+                       " --style-without no-such-category",
+                   1, "is not a style category");
+    char *out = output_of(BASE " --into sentence --seed 7 --style " FIXTURE("styles/chorales-motives.style.json")
+                               " --style-without motive-degrees --style-without motive-nct-figure");
+    assert(strstr(out, "style distance") != NULL);
+    free(out);
+}
+
 static void test_help(void) {
     assert(run("--help", "grow_cli_out.txt", "grow_cli_err.txt") == 0);
     char *out = read_file("grow_cli_out.txt");
@@ -441,6 +453,7 @@ int main(void) {
     test_bad_arguments();
     test_cannot_be_satisfied();
     test_unwritable_file();
+    test_style_without();
     test_help();
     puts("test_grow_cli: ok");
     return 0;
