@@ -1,7 +1,7 @@
 # grow command
 
 ```sh
-ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|any] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
@@ -39,6 +39,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--check` | Analyze the theme with the Ursatz Analyzer ([analyzer-check.md](analyzer-check.md)) and pass over a seed whose analysis contradicts the plan: a planned cadence or the key not heard as planned, or a hard voice-leading fault. The next seed is tried, as for a stuck run, and the seed kept is printed. |
 | `--style <file>` | Prefer the harmony and melody closest to a style, a style model file from the Ursatz Analyzer. The Analyzer's distance from the style is printed with the theme. See [style.md](style.md). |
 | `--style-weight <n/d>` | How strongly the style is preferred (default `1/1`; needs `--style`). |
+| `--style-without <category>` | Read the style without this category (repeatable, at most 8; needs `--style`). The motive categories (`motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`) are preferences, and this switches one off for the scoring and for the distance. An unknown name is exit 1 and lists the categories. See [style.md](style.md). |
 | `--blend <file>` | A second style model file, blended with the style (`--style`; needs `--style`). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |

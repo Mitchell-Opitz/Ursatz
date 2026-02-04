@@ -1,7 +1,7 @@
 # fill command
 
 ```sh
-ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--record <file.json>] [--explain <file>] [--format text|json]
+ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--record <file.json>] [--explain <file>] [--format text|json]
 ```
 
 Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](piece.md)) over the plan, which
@@ -28,6 +28,7 @@ plan for the library to use.
 | `--candidates <n>` | Compose `n` candidates (1 to 32) from the seeds `--seed`, `--seed + 1`, ... and write the best: the most cadences and keys heard as planned, then the best score, then the lower seed. Every candidate is listed with its seed, its agreement and its score. Not combined with the seed retries: if no candidate completes the command fails. |
 | `--style <file>` | Prefer the harmony and melody closest to a style: a style model file the Ursatz Analyzer wrote (`--style-profile`). Overrides the plan's own style. The Analyzer's distance from the style is printed with the result, per dimension. See [style.md](style.md). |
 | `--style-weight <n/d>` | How strongly the style is preferred (default `1/1`). Overrides the plan's weight; needs a style from here or the plan. |
+| `--style-without <category>` | Read the style without this category (repeatable, at most 8). Replaces the plan's own list when given; needs a style from here or the plan; an unknown name is exit 1. See [style.md](style.md). |
 | `--blend <file>` | A second style model file, blended with the style (`--style`, or the plan's style). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
