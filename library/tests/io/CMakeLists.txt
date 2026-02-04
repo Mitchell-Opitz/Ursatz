@@ -1,6 +1,7 @@
 add_ursatz_test(smf_reader)
 add_ursatz_test(midi_event_decoder)
 add_ursatz_test(midi_importer)
+add_ursatz_test(midi_renderer)
 add_ursatz_test(midi_key_signature)
 add_ursatz_test(midi_meter)
 add_ursatz_test(midi_tempo)
