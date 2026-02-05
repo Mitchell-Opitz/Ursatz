@@ -260,3 +260,106 @@ bool composer_style_share(const ComposerStyle *style, const char *category, cons
     out->largest = found->largest;
     return true;
 }
+
+static const StyleCategory *find_category(const ComposerStyle *style, const char *name) {
+    if (!style) {
+        return NULL;
+    }
+    return bsearch(name, style->categories, style->category_count, sizeof(StyleCategory), compare_category);
+}
+
+/* The label of a category with the largest count, the lowest value among ties; NULL when none reads. */
+static const StyleLabel *most_common_label(const StyleCategory *category, bool (*value)(const char *, unsigned long *),
+                                           unsigned long *best_value) {
+    const StyleLabel *best = NULL;
+    for (size_t i = 0; category && i < category->label_count; i++) {
+        const StyleLabel *label = &category->labels[i];
+        unsigned long v = 0;
+        if (label->count == 0 || !value(label->label, &v)) {
+            continue;
+        }
+        if (!best || label->count > best->count || (label->count == best->count && v < *best_value)) {
+            best = label;
+            *best_value = v;
+        }
+    }
+    return best;
+}
+
+/* The middle of a tempo band, in quarter notes per minute: "<40" is 30, "140-159" is 150, "220+" is 230. */
+static bool tempo_band_middle(const char *text, unsigned long *out) {
+    if (text[0] == '<') {
+        *out = 30;
+        return true;
+    }
+    char *end = NULL;
+    unsigned long low = strtoul(text, &end, 10);
+    if (end == text || (*end != '-' && *end != '+')) {
+        return false;
+    }
+    *out = low + 10;
+    return true;
+}
+
+bool composer_style_tempo(const ComposerStyle *style, ComposerRatio *out) {
+    unsigned long middle = 0;
+    if (!out || !most_common_label(find_category(style, STYLE_CATEGORY_TEMPO), tempo_band_middle, &middle)) {
+        return false;
+    }
+    out->numerator = middle;
+    out->denominator = 1;
+    return true;
+}
+
+static bool mode_value(const char *text, unsigned long *out) {
+    if (strcmp(text, "major") == 0) {
+        *out = 0;
+        return true;
+    }
+    if (strcmp(text, "minor") == 0) {
+        *out = 1;
+        return true;
+    }
+    return false;
+}
+
+bool composer_style_mode(const ComposerStyle *style, bool *minor) {
+    unsigned long value = 0;
+    if (!minor || !most_common_label(find_category(style, STYLE_CATEGORY_MODE), mode_value, &value)) {
+        return false;
+    }
+    *minor = value == 1;
+    return true;
+}
+
+/* Attacks per beat times 2 ("1/2" is 1, "1" is 2, "3/2" is 3, "4+" is 8), so that the order is a number's. */
+static bool density_halves(const char *text, unsigned long *out) {
+    if (strcmp(text, "4+") == 0) {
+        *out = 8;
+        return true;
+    }
+    char *end = NULL;
+    unsigned long top = strtoul(text, &end, 10);
+    if (end == text) {
+        return false;
+    }
+    if (*end == '\0') {
+        *out = top * 2;
+        return true;
+    }
+    if (strcmp(end, "/2") == 0) {
+        *out = top;
+        return true;
+    }
+    return false;
+}
+
+bool composer_style_density(const ComposerStyle *style, ComposerRatio *out) {
+    unsigned long halves = 0;
+    if (!out || !most_common_label(find_category(style, STYLE_CATEGORY_NOTE_DENSITY), density_halves, &halves)) {
+        return false;
+    }
+    out->numerator = halves;
+    out->denominator = 2;
+    return true;
+}

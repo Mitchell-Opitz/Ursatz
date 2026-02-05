@@ -74,6 +74,17 @@ typedef struct {
 bool composer_style_share(const ComposerStyle *style, const char *category, const char *label, ComposerStyleShare *out);
 
 /*
+ * What the style prefers for a brief (R-163). composer_style_tempo: the middle of the most common `tempo` band in
+ * quarter notes per minute (ties: the lower band; `140-159` gives 150, `<40` gives 30, `220+` gives 230), a whole
+ * number over 1. composer_style_mode: the most common `mode` (ties: major). composer_style_density: the most common
+ * `note-density` as attacks per beat (`4+` reads 4), halves over 2, not reduced (ties: the lower density). Each is
+ * false, leaving *out alone, when the style has no such category or no label it can read.
+ */
+bool composer_style_tempo(const ComposerStyle *style, ComposerRatio *out);
+bool composer_style_mode(const ComposerStyle *style, bool *minor);
+bool composer_style_density(const ComposerStyle *style, ComposerRatio *out);
+
+/*
  * A style built from a model in memory, for a blend (composer_style_blend). Takes ownership of model on success only,
  * and reads its statistics the way composer_style_load does; every category of the model must give each of its labels
  * the same total, as the Analyzer's files and composer_style_blend's results do. pieces is what composer_style_pieces
