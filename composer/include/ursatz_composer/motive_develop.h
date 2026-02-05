@@ -173,6 +173,11 @@ typedef struct {
      * operator reads them for the motive node m0 when the notes are the plan's; NULL for none. Must outlive the registry.
      */
     const Motive *basic;
+    /*
+     * For the motive-form operator (motive_connection_limited): the remoteness over which a form's connection is
+     * halved. A denominator of 0 means 3/4.
+     */
+    MotiveScore remoteness_limit;
 } MotiveDevelopContext;
 
 void motive_develop_context_default(MotiveDevelopContext *context);

@@ -13,6 +13,7 @@
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
+#include <ursatz_composer/motive_connect.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/regenerate.h>
@@ -714,6 +715,12 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     motive_develop_context_default(&run.motives);
     run.motives.min_length = 1;
     run.motives.basic = config->basic;
+    /* At a fast tempo the motive-forms stay closer to the basic idea (R-163). */
+    if (config->tempo.denominator > 0 &&
+        config->tempo.numerator >= (unsigned long)MOTIVE_FAST_TEMPO_QPM * config->tempo.denominator) {
+        run.motives.remoteness_limit.numerator = 1;
+        run.motives.remoteness_limit.denominator = 2;
+    }
     run.accompaniment = accompaniment_params_default();
     run.voicing = voicing_params_default();
     PieceResult result = PIECE_OK;

@@ -56,6 +56,7 @@ typedef struct {
     bool answers_in_dominant; /* the idea's chords start on the dominant: a response to the basic idea */
     bool has_cadence; /* the idea's melody ends in a cadence */
     PlanCadenceType cadence;
+    MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
 } Request;
 
 static const MotiveDevelopContext *context_or_default(const void *context) {
@@ -208,6 +209,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
     }
     request.room = plan_time_compare(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
     request.previous = request.basic;
+    request.limit = context->remoteness_limit;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         PlanMotiveRef ref;
         PlanSpan span;
@@ -294,7 +296,8 @@ static bool has_function(const char *const *functions, size_t count, const char 
 
 /*
  * The label of a candidate, as the record and --explain show it: the chain, the connection score as a percentage, and the
- * derivation in plain words, cut where the label ends. The record's score is 1 plus the connection (grow_motives_checker).
+ * derivation in plain words (after the remoteness limit when it is not 3/4), cut where the label ends. The record's score
+ * is 1 plus the connection (grow_motives_checker).
  */
 static void label_of(const Payload *payload, char *out, size_t size) {
     char chain[FILL_LABEL_MAX];
@@ -304,7 +307,15 @@ static void label_of(const Payload *payload, char *out, size_t size) {
         used += (size_t)snprintf(chain + used, sizeof(chain) - used, "%s%s", s > 0 ? " then " : "", payload->record.steps[s].op);
     }
     const MotiveScore *total = &payload->connection.total;
-    snprintf(out, size, "%s %lu%%: %s", chain, total->numerator * 100 / total->denominator, payload->record.derivation);
+    /* The limit is named when it is not the usual 3/4 (a fast tempo, R-163). */
+    char limit[24];
+    limit[0] = '\0';
+    if (payload->connection.limit.numerator * 4 != payload->connection.limit.denominator * 3) {
+        snprintf(limit, sizeof(limit), "limit %lu/%lu; ", payload->connection.limit.numerator,
+                 payload->connection.limit.denominator);
+    }
+    snprintf(out, size, "%s %lu%%: %s%s", chain, total->numerator * 100 / total->denominator, limit,
+             payload->record.derivation);
 }
 
 /*
@@ -387,7 +398,8 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     payload->result = result;
     payload->chain = *chain;
     payload->record = record;
-    if (!motive_connection(&request->basic, &request->previous, &result, &distance, &payload->connection)) {
+    if (!motive_connection_limited(&request->basic, &request->previous, &result, &distance, &request->limit,
+                                   &payload->connection)) {
         free(payload);
         return true;
     }

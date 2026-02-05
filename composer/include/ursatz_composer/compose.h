@@ -85,6 +85,7 @@ typedef struct {
     const ComposerStyle *style;     /* NULL for none; must outlive compose_run */
     ComposerRatio style_weight;     /* a denominator of 0 (all-zero) is 1/1; unused without a style */
     const Motive *basic;            /* GrowConfig.basic; NULL for none; must outlive compose_run */
+    ComposerRatio tempo;            /* GrowConfig.tempo; a denominator of 0 (all-zero) is none */
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */
