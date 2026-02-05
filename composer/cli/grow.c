@@ -60,6 +60,8 @@ typedef struct {
     const char *tempo_text;
     bool plain_midi;
     PlanExportOptions export_options;
+    ComposerRatio tempo;      /* quarter notes per minute from --tempo or the style; denominator 0 for none */
+    const char *tempo_from;   /* "option", "style" or "none" */
     const char *explain_path;
     const char *format_text;
     MotiveExtras extras;
@@ -572,6 +574,7 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     config.basic = motive;
     config.style = options->style;
     config.style_weight = options->style_weight;
+    config.tempo = options->tempo;
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
     NodeId theme_node = find_node(theme->plan, "theme");
     if (ran == GROW_ERR_STUCK && options->explain_path) {
@@ -931,6 +934,15 @@ static void print_theme_json(const Options *options, const Theme *theme, PlanTim
     printf("}");
 }
 
+static void print_tempo_number(const ComposerRatio *tempo) {
+    printf("tempo: ");
+    if (tempo->denominator == 1) {
+        printf("%lu", tempo->numerator);
+    } else {
+        printf("%g", (double)tempo->numerator / (double)tempo->denominator);
+    }
+}
+
 static void print_result(const Options *options, const Theme *themes, size_t count, const char *const *files,
                          size_t file_count) {
     char key[24];
@@ -960,6 +972,13 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
             printf(",\"source\":");
             cli_print_seed_json(&options->seed_found);
         }
+        printf(",\"tempo\":{\"qpm\":");
+        if (options->tempo.denominator > 0) {
+            printf("%g", (double)options->tempo.numerator / (double)options->tempo.denominator);
+        } else {
+            printf("null");
+        }
+        printf(",\"from\":\"%s\"}", options->tempo_from);
         printf(",\"themes\":[");
         for (size_t k = 0; k < count; k++) {
             printf("%s", k ? "," : "");
@@ -988,6 +1007,10 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
         printf(", %s", options->voicing.write_soprano ? "chorale (four parts)" : "voiced in four parts");
     }
     printf("\n");
+    if (options->tempo.denominator > 0) {
+        print_tempo_number(&options->tempo);
+        printf("%s\n", strcmp(options->tempo_from, "style") == 0 ? " (from the style)" : "");
+    }
     if (options->seeded) {
         cli_print_seed_line("motive", &options->seed_found);
     }
@@ -1158,6 +1181,18 @@ int run_grow(int argc, char **argv) {
         if (status != 0) {
             return status;
         }
+    }
+    options.tempo.numerator = 0;
+    options.tempo.denominator = 0;
+    options.tempo_from = "none";
+    if (options.tempo_text) {
+        options.tempo.numerator = options.export_options.tempo_numerator;
+        options.tempo.denominator = options.export_options.tempo_denominator;
+        options.tempo_from = "option";
+    } else if (composer_style_tempo(options.style, &options.tempo)) {
+        options.export_options.tempo_numerator = options.tempo.numerator;
+        options.export_options.tempo_denominator = options.tempo.denominator;
+        options.tempo_from = "style";
     }
 
     /* The seeds are tried one after another; a stuck run is passed over, and a theme that is the same as one already

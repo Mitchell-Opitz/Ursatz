@@ -150,6 +150,11 @@ typedef struct {
     const ComposerStyle *style;     /* NULL for none; must outlive grow_run (compose.h) */
     ComposerRatio style_weight;     /* a denominator of 0 is 1/1 */
     /*
+     * The tempo of the piece in quarter notes per minute, a denominator of 0 for none (R-163). The grow CLI takes it
+     * from --tempo, else from the style; the stages that follow the tempo read it from here.
+     */
+    ComposerRatio tempo;
+    /*
      * The basic motive the request was made from, for the harmony, features and role it carries, which the plan does
      * not keep: the motive-form operator reads them for m0. NULL for none; its notes must be m0's. Must outlive grow_run.
      */
