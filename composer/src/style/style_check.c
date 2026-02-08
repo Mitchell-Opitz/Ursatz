@@ -1,6 +1,7 @@
 #include "style/style_internal.h"
 
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <hybrid_rules.h>
@@ -21,6 +22,7 @@
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
+#include "texture/texture_internal.h"
 
 /* Chords of the harmony lane read back from before a target: no more than this many spans are looked at. */
 #define BEFORE_SPANS 64
@@ -289,6 +291,51 @@ static void style_term(ComposerRatio closeness, ComposerRatio weight, FillCheck 
     check->style_denominator = denominator ? (unsigned long)denominator : 1;
 }
 
+/*
+ * How many times an accompaniment pattern sounds in a beat of the meter, times 2: block and oom-pah once, the
+ * arpeggiated figure once an eighth and the Alberti figure twice a beat.
+ */
+static unsigned long pattern_halves(PlanAccompanimentPattern pattern, long beat) {
+    switch (pattern) {
+    case PLAN_ACCOMPANIMENT_ARPEGGIATED:
+        return 2UL * (unsigned long)(beat / ACCOMP_EIGHTH);
+    case PLAN_ACCOMPANIMENT_ALBERTI:
+        return 4;
+    case PLAN_ACCOMPANIMENT_ANY:
+    case PLAN_ACCOMPANIMENT_BLOCK:
+    case PLAN_ACCOMPANIMENT_OOM_PAH:
+        break;
+    }
+    return 2;
+}
+
+/*
+ * The accompaniment's closeness to the style's note density: min(rate, d) / max(rate, d), rate the pattern's attacks per
+ * beat and d the style's. False when the style has no density or the run did not leave the pattern to the operator.
+ */
+static bool accompaniment_closeness(const ComposerStyle *style, const PiecePlan *plan, FillTarget target,
+                                    const FillCandidate *candidate, ComposerRatio *out) {
+    ComposerRatio density;
+    const AccompCandidate *accompaniment = candidate->payload;
+    AccompContext *read = calloc(1, sizeof(*read));
+    if (!read) {
+        return false;
+    }
+    bool found = accompaniment && accompaniment->magic == ACCOMP_PAYLOAD_MAGIC &&
+                 composer_style_density(style, &density) && accomp_read(plan, (LaneSpanId)target.id, read) &&
+                 read->pattern == PLAN_ACCOMPANIMENT_ANY;
+    if (found) {
+        unsigned long rate = pattern_halves(accompaniment->pattern, read->beat);
+        unsigned long wanted = density.numerator;
+        unsigned long low = rate < wanted ? rate : wanted;
+        unsigned long high = rate < wanted ? wanted : rate;
+        out->numerator = low;
+        out->denominator = high ? high : 1;
+    }
+    free(read);
+    return found;
+}
+
 /* --------------------------------------------------------------- checker */
 
 bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
@@ -306,6 +353,15 @@ bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOpe
         return true;
     }
     const char *name = operator_->generator.name;
+    if (style->texture) {
+        ComposerRatio closeness;
+        if (strcmp(name, ACCOMPANIMENT_OPERATOR_NAME) == 0 &&
+            accompaniment_closeness(style->style, plan, target, candidate, &closeness)) {
+            style_term(closeness, style->weight, out);
+            style_add_to_score(out, closeness, style->weight);
+        }
+        return true;
+    }
     /* The structure stage prefers a form only where the plan has not fixed it: a form every candidate shares would
        add the same to each of them and only change the score the structure is reported with. */
     bool theme = strcmp(name, GROW_THEME_OPERATOR_NAME) == 0;

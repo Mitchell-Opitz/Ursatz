@@ -544,7 +544,8 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         StyleCheckContext style_context;
         if (config->style &&
             (stage == COMPOSE_STAGE_STRUCTURE || stage == COMPOSE_STAGE_HARMONY || stage == COMPOSE_STAGE_MELODY ||
-             stage == COMPOSE_STAGE_MOTIVES)) {
+             stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_TEXTURE)) {
+            style_context.texture = stage == COMPOSE_STAGE_TEXTURE;
             style_context.inner = fill.checker;
             style_context.inner_context = fill.checker_context;
             style_context.style = config->style;
@@ -562,6 +563,12 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             *record = NULL;
         }
         MelodyFillParams melody = config->melody ? *config->melody : melody_fill_params_default();
+        /* The style's note density, where the run set none: a cell is a beat, so that many notes to a cell. */
+        ComposerRatio density;
+        if (melody.density == 0 && config->style && composer_style_density(config->style, &density)) {
+            unsigned long notes = (density.numerator + density.denominator / 2) / density.denominator;
+            melody.density = notes < 1 ? 1 : notes > 4 ? 4 : (unsigned)notes;
+        }
         if (attempt > 0 && !run->sentences) {
             melody.climax_position = CLIMAX_RETRIES[attempt];
         }
