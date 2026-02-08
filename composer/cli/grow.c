@@ -38,6 +38,7 @@ typedef struct {
     const char *into_text;
     const char *hybrid_text;
     const char *key_text;
+    const char *mode_text;
     const char *meter_text;
     const char *bars_text;
     const char *cadence_text;
@@ -97,6 +98,8 @@ static void print_help(FILE *out) {
     fprintf(out, "  --into <form>        sentence (presentation + continuation), period (antecedent + consequent) or\n");
     fprintf(out, "                       hybrid (any other pairing, named with --hybrid)\n");
     fprintf(out, "  --key <key>          tonic and mode in one argument (\"D minor\", \"F# major\"); any case\n");
+    fprintf(out, "  --mode <mode>        major, minor or style: replaces the mode of --key (the key may then be a tonic alone). style\n");
+    fprintf(out, "                       takes the style's most common mode and needs --style with a mode category\n");
     fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8; the motive must fit in one bar of it\n\n");
     fprintf(out, "Options:\n");
     fprintf(out, "  --hybrid <b>+<e>     with --into hybrid only: the beginning (presentation, antecedent or cbi, a compound\n");
@@ -206,6 +209,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->hybrid_text;
         } else if (strcmp(arg, "--key") == 0) {
             target = &options->key_text;
+        } else if (strcmp(arg, "--mode") == 0) {
+            target = &options->mode_text;
         } else if (strcmp(arg, "--meter") == 0) {
             target = &options->meter_text;
         } else if (strcmp(arg, "--bars") == 0) {
@@ -330,11 +335,30 @@ static int check_options(Options *options) {
     } else if (options->hybrid_text) {
         return cli_fail(CLI_EXIT_USAGE, "--hybrid applies only to --into hybrid");
     }
-    if (!cli_parse_key(options->key_text, &options->key)) {
+    if (options->mode_text && !cli_equals_ignore_case(options->mode_text, "major") &&
+        !cli_equals_ignore_case(options->mode_text, "minor") && !cli_equals_ignore_case(options->mode_text, "style")) {
+        return cli_fail(CLI_EXIT_USAGE, "--mode must be major, minor or style, not '%s'", options->mode_text);
+    }
+    if (options->mode_text && cli_equals_ignore_case(options->mode_text, "style") && !options->style_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--mode style needs --style");
+    }
+    /* With --mode the key may be a tonic alone: the mode is the one --mode gives. */
+    char tonic_key[64];
+    const char *key_text = options->key_text;
+    if (options->mode_text && strlen(key_text) + 7 < sizeof(tonic_key) && !strpbrk(key_text, " \t")) {
+        snprintf(tonic_key, sizeof(tonic_key), "%s major", key_text);
+        key_text = tonic_key;
+    }
+    if (!cli_parse_key(key_text, &options->key)) {
         return cli_fail(CLI_EXIT_USAGE,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                         "for example \"D minor\"",
                         options->key_text);
+    }
+    if (options->mode_text && cli_equals_ignore_case(options->mode_text, "major")) {
+        options->key.mode = PLAN_MODE_MAJOR;
+    } else if (options->mode_text && cli_equals_ignore_case(options->mode_text, "minor")) {
+        options->key.mode = PLAN_MODE_MINOR;
     }
     if (!cli_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
@@ -1137,6 +1161,34 @@ int run_grow(int argc, char **argv) {
         return status;
     }
 
+    if (options.style_path) {
+        status = options.blend_path
+                     ? cli_load_blend(options.style_path, options.blend_path, &options.blend_weights, options.without.names, options.without.count, &options.style)
+                     : cli_load_style(options.style_path, options.without.names, options.without.count, &options.style);
+        if (status != 0) {
+            return status;
+        }
+    }
+    options.tempo.numerator = 0;
+    options.tempo.denominator = 0;
+    options.tempo_from = "none";
+    if (options.tempo_text) {
+        options.tempo.numerator = options.export_options.tempo_numerator;
+        options.tempo.denominator = options.export_options.tempo_denominator;
+        options.tempo_from = "option";
+    } else if (composer_style_tempo(options.style, &options.tempo)) {
+        options.export_options.tempo_numerator = options.tempo.numerator;
+        options.export_options.tempo_denominator = options.tempo.denominator;
+        options.tempo_from = "style";
+    }
+    if (options.mode_text && cli_equals_ignore_case(options.mode_text, "style")) {
+        bool minor = false;
+        if (!composer_style_mode(options.style, &minor)) {
+            return cli_fail(CLI_EXIT_USAGE, "--mode style needs a --style with a mode category");
+        }
+        options.key.mode = minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+    }
+
     MotiveOptions motive_options;
     memset(&motive_options, 0, sizeof(motive_options));
     motive_options.has_meter = true;
@@ -1172,27 +1224,6 @@ int run_grow(int argc, char **argv) {
                             motive_result_name(loaded), motive_error.location[0] ? " at " : "", motive_error.location,
                             motive_error.message);
         }
-    }
-
-    if (options.style_path) {
-        status = options.blend_path
-                     ? cli_load_blend(options.style_path, options.blend_path, &options.blend_weights, options.without.names, options.without.count, &options.style)
-                     : cli_load_style(options.style_path, options.without.names, options.without.count, &options.style);
-        if (status != 0) {
-            return status;
-        }
-    }
-    options.tempo.numerator = 0;
-    options.tempo.denominator = 0;
-    options.tempo_from = "none";
-    if (options.tempo_text) {
-        options.tempo.numerator = options.export_options.tempo_numerator;
-        options.tempo.denominator = options.export_options.tempo_denominator;
-        options.tempo_from = "option";
-    } else if (composer_style_tempo(options.style, &options.tempo)) {
-        options.export_options.tempo_numerator = options.tempo.numerator;
-        options.export_options.tempo_denominator = options.tempo.denominator;
-        options.tempo_from = "style";
     }
 
     /* The seeds are tried one after another; a stuck run is passed over, and a theme that is the same as one already
