@@ -563,9 +563,12 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             *record = NULL;
         }
         MelodyFillParams melody = config->melody ? *config->melody : melody_fill_params_default();
-        /* The style's note density, where the run set none: a cell is a beat, so that many notes to a cell. */
+        /* The style's note density, where the run set none: a cell is a beat, so that many notes to a cell. A melody
+           of even notes is found by chance and the rules of the melody can leave none, so the last attempt gives the
+           motive's own rhythm back rather than leave the stage open. */
         ComposerRatio density;
-        if (melody.density == 0 && config->style && composer_style_density(config->style, &density)) {
+        if (melody.density == 0 && attempt + 1 < attempts && config->style &&
+            composer_style_density(config->style, &density)) {
             unsigned long notes = (density.numerator + density.denominator / 2) / density.denominator;
             melody.density = notes < 1 ? 1 : notes > 4 ? 4 : (unsigned)notes;
         }
