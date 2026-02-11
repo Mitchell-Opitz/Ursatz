@@ -3,6 +3,7 @@ add_ursatz_test(midi_event_decoder)
 add_ursatz_test(midi_importer)
 add_ursatz_test(midi_renderer)
 add_ursatz_test(midi_renderer_notes)
+add_ursatz_test(midi_renderer_errors)
 add_ursatz_test(midi_renderer_roundtrip)
 target_compile_definitions(test_midi_renderer_roundtrip PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
