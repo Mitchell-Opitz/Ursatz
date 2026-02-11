@@ -85,8 +85,8 @@ static void test_track_order_follows_first_sounding(void) {
     TestSmf smf;
     test_smf_parse(data, size, &smf);
     int channel;
-    assert(test_track_note_ons(&smf.tracks[1], &channel) == 1 && channel == 0 && smf.tracks[1].data[3] == 0x3C);
-    assert(test_track_note_ons(&smf.tracks[2], &channel) == 1 && channel == 1 && smf.tracks[2].data[3] == 0x48);
+    assert(test_track_note_ons(&smf.tracks[1], &channel) == 1 && channel == 0 && smf.tracks[1].data[2 + 1] == 0x3C);
+    assert(test_track_note_ons(&smf.tracks[2], &channel) == 1 && channel == 1 && smf.tracks[2].data[3 + 1] == 0x48);
     free(smf.tracks);
     free(data);
     test_notes_free(&notes);
