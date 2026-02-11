@@ -132,11 +132,13 @@ static void test_map_and_key_limits(void) {
     unsigned char *data = SENTINEL_DATA;
     size_t size = SENTINEL_SIZE;
 
-    const TestMeterChange wide[] = {{256, 4, 0, 1}};
+    /* the widest signature a TimeSignature allows (64/16) is written */
+    const TestMeterChange wide[] = {{64, 16, 0, 1}};
     MeterMap *meter_map = test_meter_map(wide, 1);
-    assert(midi_renderer_render(NULL, NULL, 0, meter_map, NULL, NULL, 0, 480, &data, &size) ==
-           MIDI_RENDER_ERR_NOT_REPRESENTABLE);
-    assert(data == SENTINEL_DATA && size == SENTINEL_SIZE);
+    assert(midi_renderer_render(NULL, NULL, 0, meter_map, NULL, NULL, 0, 480, &data, &size) == MIDI_RENDER_OK);
+    free(data);
+    data = SENTINEL_DATA;
+    size = SENTINEL_SIZE;
     meter_map_destroy(meter_map);
 
     const TestMeterChange offgrid[] = {{4, 4, 0, 1}, {3, 4, 1, 7}};
