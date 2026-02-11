@@ -31,7 +31,7 @@ add_ursatz_architecture_test(io)
 # silently if valgrind isn't installed.
 find_program(URSATZ_IO_VALGRIND valgrind)
 if(URSATZ_IO_VALGRIND)
-  foreach(io_test_name smf_reader midi_event_decoder midi_importer midi_key_signature midi_meter midi_tempo midi_corpus_meter midi_corpus_tempo musicxml_importer)
+  foreach(io_test_name smf_reader midi_event_decoder midi_importer midi_key_signature midi_meter midi_tempo midi_corpus_meter midi_corpus_tempo musicxml_importer midi_renderer midi_renderer_notes midi_renderer_errors midi_renderer_roundtrip)
     add_test(NAME ${io_test_name}_valgrind
              COMMAND ${URSATZ_IO_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${io_test_name}>)
