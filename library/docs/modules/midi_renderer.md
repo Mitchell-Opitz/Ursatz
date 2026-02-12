@@ -18,7 +18,7 @@
 
 ## Round trip
 
-The tests render the five framework-v1 reference pieces at their own division and re-import them: note position, pitch and duration as a multiset, meter and tempo regions, and key signatures are equal. Note ids and order are not preserved. Voice grouping is checked as the partition of notes into tracks in the written file, not through the importer, which recomputes voices from channels. A map's `defaulted` flag is not preserved.
+The tests render four of the five framework-v1 reference pieces (Bach 114, Clementi 36, Field 5, Mozart 545) at their own division and re-import them. `Field 1` is two-channel, so its notes carry no voice and share one track where the same pitch sounds twice at once; the renderer refuses it with `MIDI_RENDER_ERR_NOT_REPRESENTABLE` (asserted) rather than guess a split. For the four: note position, pitch and duration as a multiset, meter and tempo regions, and key signatures are equal. Note ids and order are not preserved. Voice grouping is checked as the partition of notes into tracks in the written file, not through the importer, which recomputes voices from channels. A map's `defaulted` flag is not preserved.
 
 ## Out of scope
 
