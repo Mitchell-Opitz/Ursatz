@@ -304,6 +304,9 @@ static int overlaps_on_one_pitch(const TrackEvents *events) {
 }
 
 static void free_tracks(TrackEvents *tracks, size_t count) {
+    if (tracks == NULL) {
+        return;
+    }
     for (size_t i = 0; i < count; i++) {
         free(tracks[i].items);
     }
