@@ -1,7 +1,16 @@
 #ifndef MUSIC_EXPORT_MUSICXML_EXPORT_H
 #define MUSIC_EXPORT_MUSICXML_EXPORT_H
 
+#include <stddef.h>
+
+#include "events/dynamics.h"
+#include "events/note_event.h"
+#include "events/tempo_marking.h"
 #include "persistence/persistence.h"
+#include "pitch/pitch_numeric_value.h"
+#include "time/meter_map.h"
+#include "time/musical_time.h"
+#include "time/tempo_map.h"
 
 /*
  * MusicXmlExport (music-export): serializes a piece's persisted
@@ -44,8 +53,72 @@ typedef enum {
     MUSICXML_EXPORT_ERR_LOAD_FAILED,
     MUSICXML_EXPORT_ERR_MISSING_SPELLING,
     MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES,
-    MUSICXML_EXPORT_ERR_ALLOC
+    MUSICXML_EXPORT_ERR_ALLOC,
+    /* musicxml_export_write_score only (appended; the values above are unchanged) */
+    MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT, /* a count with no array, a NULL entry, or parts that do not add up */
+    MUSICXML_EXPORT_ERR_UNKNOWN_PART,       /* an event, marking, dynamic or key names a part that does not exist */
+    MUSICXML_EXPORT_ERR_BAD_STAFF,          /* a staff below 1 or above its part's staff_count */
+    MUSICXML_EXPORT_ERR_UNKNOWN_EVENT,      /* a Dynamics targets an event id that is not among the events */
+    MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE,  /* a negative position, a zero duration, an unwritable value, an overflow */
+    MUSICXML_EXPORT_ERR_DIVISIONS_OVERFLOW  /* no <divisions> up to INT32_MAX makes every time an integer */
 } MusicXmlExportResult;
+
+/* One <part>. id and name are borrowed (the document escapes them); staff_count is at least 1. */
+typedef struct {
+    const char *id;
+    const char *name;
+    int staff_count;
+} MusicXmlExportPart;
+
+typedef enum {
+    MUSICXML_EXPORT_MODE_MAJOR = 0,
+    MUSICXML_EXPORT_MODE_MINOR,
+    MUSICXML_EXPORT_MODE_UNKNOWN /* no <mode> is written */
+} MusicXmlExportMode;
+
+/* A key signature at a position, written in its own part. sharps_flats is the <fifths> value, -7 to 7. */
+typedef struct {
+    int sharps_flats;
+    MusicXmlExportMode mode;
+    const MusicalTime *position; /* borrowed; whole notes */
+    size_t part_index;
+} MusicXmlExportKeySignature;
+
+/*
+ * Everything musicxml_export_write_score writes. All pointers are borrowed and never mutated, and every optional
+ * member may be NULL (with its count 0 where it has one). The shape follows what musicxml_import_buffer returns, so
+ * an import can be written back; MusicXmlExport does not include io/, so the caller copies the members across.
+ *
+ *   - events / pitch_values / count: index-paired, as the importers return them. Pitch is written from each event's
+ *     PitchSpelling; pitch_values is checked to be present and paired, and is not otherwise read.
+ *   - part_index / staff: optional, parallel to events (a NULL array means part 0, or staff 1).
+ *   - parts / part_count: the parts; none means one part "P1" whose staff_count is the highest staff used.
+ *   - meter_map: the measure layout. NULL lays measures from a defaulted 4/4 map and flags the output meter-defaulted.
+ *   - tempo_map: written as <sound tempo> at each region that is not defaulted, in part 0.
+ *   - tempo_markings (+ tempo_marking_part): written as <direction> text and <metronome>; part arrays default to 0.
+ *   - dynamics (+ dynamics_part, dynamics_staff): written at the start of the Dynamics' span, or at its event.
+ *   - key_signatures: written in their own part.
+ */
+typedef struct {
+    NoteEvent *const *events;
+    PitchNumericValue *const *pitch_values;
+    size_t count;
+    const size_t *part_index;
+    const int *staff;
+    const MusicXmlExportPart *parts;
+    size_t part_count;
+    const MeterMap *meter_map;
+    const TempoMap *tempo_map;
+    TempoMarking *const *tempo_markings;
+    const size_t *tempo_marking_part;
+    size_t tempo_marking_count;
+    Dynamics *const *dynamics;
+    const size_t *dynamics_part;
+    const int *dynamics_staff;
+    size_t dynamics_count;
+    const MusicXmlExportKeySignature *key_signatures;
+    size_t key_signature_count;
+} MusicXmlExportScore;
 
 /*
  * Loads every NoteEvent persisted in handle (persistence_load_note_
@@ -73,5 +146,13 @@ typedef enum {
  * MusicXML document with one empty part.
  */
 MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out_xml);
+
+/*
+ * Writes score as a newly allocated, NUL-terminated MusicXML 3.1 document to *out_xml (the caller free()s it).
+ * Measures, their numbers (a pickup is 0), and every barline come from score->meter_map and nowhere else; a note
+ * that crosses a barline is split and tied; <divisions> is the smallest whole number that makes every position and
+ * duration an integer, and nothing is rounded. On any result other than OK *out_xml is not written.
+ */
+MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml);
 
 #endif
