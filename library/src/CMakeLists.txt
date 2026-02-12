@@ -169,6 +169,7 @@ add_library(ursatz
     io/midi_event_decoder.c
     io/midi_key_signature.c
     io/smf_reader.c
+    io/midi_renderer.c
     io/musicxml_importer.c
     persistence/persistence.c
     persistence/persistence_note_events.c
