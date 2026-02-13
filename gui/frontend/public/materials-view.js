@@ -1135,6 +1135,16 @@ async function renderMaterialsDetail(type, id, analysisError) {
       }),
     );
   }
+  if (type === "theme") {
+    const editor = buildThemeEditor({
+      id,
+      body: answer.data.body,
+      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      statusEl,
+      saved: () => renderMaterialsDetail(type, id),
+    });
+    content.appendChild(editor.el);
+  }
   content.appendChild(
     buildUsesSection({
       id,

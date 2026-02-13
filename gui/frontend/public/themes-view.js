@@ -1,0 +1,373 @@
+/* The Themes view's editor (P16, R-167): the form, slot motifs, pool and
+ * accompaniment of a theme, mounted in the theme detail of materials-view.js.
+ * Pure parts are in themes-model.js; materialsElement, sendMaterialsRequest,
+ * materialsState and renderMaterialsDetail come from materials-view.js. */
+
+function themeField(parent, labelText, control) {
+  const label = materialsElement("label", "filter-field", `${labelText} `);
+  label.appendChild(control);
+  parent.appendChild(label);
+  return control;
+}
+
+function themeSelect(options, value) {
+  const select = materialsElement("select");
+  for (const option of options) {
+    const entry = typeof option === "object" ? option : { value: option, label: String(option) };
+    const el = materialsElement("option", "", entry.label);
+    el.value = String(entry.value);
+    select.appendChild(el);
+  }
+  select.value = String(value);
+  return select;
+}
+
+function themeInput(placeholder, value) {
+  const el = materialsElement("input");
+  el.type = "text";
+  el.placeholder = placeholder;
+  el.value = value || "";
+  return el;
+}
+
+function themeButton(text, onClick) {
+  const button = materialsElement("button", "", text);
+  button.type = "button";
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+/* Plays one motif body through the render route in a score workspace below the picker. */
+async function themePlayMotif(host, title, body, statusEl) {
+  statusEl.classList.remove("error");
+  statusEl.textContent = "Rendering...";
+  const answer = await sendMaterialsRequest(MaterialsModel.renderRequest(body));
+  if (!answer.ok) {
+    statusEl.classList.add("error");
+    statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not render the motif");
+    return;
+  }
+  statusEl.textContent = "";
+  if (host.themeWorkspace) {
+    host.themeWorkspace.destroy();
+  }
+  for (const url of host.themeBlobUrls || []) {
+    URL.revokeObjectURL(url);
+  }
+  host.innerHTML = "";
+  const xml = URL.createObjectURL(new Blob([answer.data.musicxml], { type: "application/xml" }));
+  const playback = URL.createObjectURL(new Blob([JSON.stringify(answer.data.playback)], { type: "application/json" }));
+  host.themeBlobUrls = [xml, playback];
+  host.themeWorkspace = ScoreWorkspace.mount(host, { title, subtitle: "motif", musicxmlUrl: xml, playbackUrl: playback });
+}
+
+/*
+ * A picker of one full motif: project select, name search, the motif, its
+ * version (current by default), its degrees and a Play button. role is
+ * "melodic" or "accompaniment". value is {item_id, version} or null;
+ * onChange gets the same, or null when the pick is cleared or not usable.
+ * Returns {el, setValue(value)}.
+ */
+function buildThemeMotifPicker(options) {
+  const role = options.role;
+  const el = materialsElement("div", "theme-motif-picker");
+  const controls = materialsElement("div", "upload-controls");
+  const projectSelect = themeSelect(MaterialsModel.projectOptions(materialsState.projects), MaterialsModel.ALL_PROJECTS);
+  const query = themeInput("Search motifs by name");
+  const choice = materialsElement("select", "materials-use-choice");
+  const versionSelect = materialsElement("select");
+  const infoEl = materialsElement("div", "piece-list-status");
+  const playHost = materialsElement("div");
+  const playStatus = materialsElement("div", "upload-status");
+  playStatus.setAttribute("role", "status");
+  const play = themeButton("Play", () => themePlayMotif(playHost, infoEl.dataset.name || "Motif", current.body, playStatus));
+  const clear = themeButton("Clear", () => {
+    choice.value = "";
+    current = { item_id: "", version: 0, body: null };
+    versionSelect.innerHTML = "";
+    show("");
+    options.onChange(null);
+  });
+  play.disabled = true;
+  let current = { item_id: "", version: 0, body: null };
+  let loading = 0;
+
+  function fillChoices(keep) {
+    const found = MaterialsModel.pickerItems(options.items(), materialsState.projects, {
+      query: query.value,
+      type: "motif",
+      project: projectSelect.value,
+    });
+    choice.innerHTML = "";
+    const blank = materialsElement("option", "", found.length === 0 ? "No motifs" : "Choose a motif");
+    blank.value = "";
+    choice.appendChild(blank);
+    for (const item of found) {
+      const option = materialsElement("option", "", item.label);
+      option.value = item.id;
+      option.dataset.name = item.name;
+      choice.appendChild(option);
+    }
+    choice.value = keep && found.some((item) => item.id === keep) ? keep : "";
+  }
+
+  function show(text, isError) {
+    infoEl.textContent = text;
+    infoEl.classList.toggle("error", Boolean(isError));
+    play.disabled = !current.body;
+  }
+
+  /* Loads a version body and accepts it when it is a full motif of the role. */
+  async function loadVersion(itemId, version, announce) {
+    const ticket = ++loading;
+    const answer = await sendMaterialsRequest(MaterialsModel.buildVersionGetRequest(itemId, version));
+    if (ticket !== loading) {
+      return;
+    }
+    const motif = answer.ok && answer.data && answer.data.body ? answer.data.body.motif : null;
+    if (!motif || motif.form !== "full" || (motif.role || "melodic") !== role) {
+      current = { item_id: "", version: 0, body: null };
+      show(`Pick a full ${role} motif.`, true);
+      if (announce) {
+        options.onChange(null);
+      }
+      return;
+    }
+    current = { item_id: itemId, version: Number(version), body: answer.data.body };
+    infoEl.dataset.name = choice.selectedOptions[0] ? choice.selectedOptions[0].dataset.name : itemId;
+    show(`${motif.degrees} · ${motif.meter}`);
+    if (announce) {
+      options.onChange({ item_id: itemId, version: Number(version) });
+    }
+  }
+
+  async function chooseItem(itemId, version) {
+    versionSelect.innerHTML = "";
+    if (!itemId) {
+      current = { item_id: "", version: 0, body: null };
+      show("");
+      options.onChange(null);
+      return;
+    }
+    const answer = await sendMaterialsRequest(MaterialsModel.buildItemGetRequest(itemId));
+    if (!answer.ok) {
+      show(MaterialsModel.errorText(answer.data, "Could not load the motif"), true);
+      return;
+    }
+    const item = answer.data.item;
+    for (const row of MaterialsModel.versionRows(item)) {
+      const option = materialsElement("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
+      option.value = String(row.number);
+      versionSelect.appendChild(option);
+    }
+    versionSelect.value = String(version || item.current_version);
+    await loadVersion(itemId, Number(versionSelect.value), true);
+  }
+
+  projectSelect.addEventListener("change", () => fillChoices(choice.value));
+  query.addEventListener("input", () => fillChoices(choice.value));
+  choice.addEventListener("change", () => chooseItem(choice.value, 0));
+  versionSelect.addEventListener("change", () => loadVersion(choice.value, Number(versionSelect.value), true));
+  controls.append(projectSelect, query, choice, versionSelect, play, clear);
+  el.append(controls, infoEl, playStatus, playHost);
+  fillChoices("");
+
+  /* Shows a stored value without announcing it. */
+  async function setValue(value) {
+    if (!value || !value.item_id) {
+      return;
+    }
+    const known = options.items().some((item) => item.id === value.item_id);
+    if (!known) {
+      show(`Motif ${value.item_id} not found.`, true);
+      return;
+    }
+    projectSelect.value = MaterialsModel.ALL_PROJECTS;
+    query.value = "";
+    fillChoices(value.item_id);
+    const answer = await sendMaterialsRequest(MaterialsModel.buildItemGetRequest(value.item_id));
+    if (answer.ok) {
+      versionSelect.innerHTML = "";
+      for (const row of MaterialsModel.versionRows(answer.data.item)) {
+        const option = materialsElement("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
+        option.value = String(row.number);
+        versionSelect.appendChild(option);
+      }
+      versionSelect.value = String(value.version);
+    }
+    await loadVersion(value.item_id, value.version, false);
+  }
+  return { el, setValue };
+}
+
+/* The pool section: the saved forms each slot motif has, by flag. */
+function buildThemePoolSection(state, itemName, onPool) {
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h3", "section-title", "Pool"));
+  const poolSelect = themeSelect(ThemesModel.POOLS, state.pool);
+  poolSelect.addEventListener("change", () => onPool(poolSelect.value));
+  themeField(section, "Saved forms", poolSelect);
+  const list = materialsElement("ul", "materials-list");
+  section.appendChild(list);
+
+  /* Redraws the counts for the slots now chosen. */
+  async function refresh() {
+    list.innerHTML = "";
+    for (const entry of state.slots) {
+      const li = materialsElement("li", "", `${ThemesModel.SLOT_LABELS[entry.slot]}: ${itemName(entry.item_id)} · `);
+      list.appendChild(li);
+      const answer = await sendMaterialsRequest({ method: "GET", url: `/api/materials/items/${encodeURIComponent(entry.item_id)}/variant-tree` });
+      li.appendChild(
+        document.createTextNode(answer.ok ? ThemesModel.poolText(ThemesModel.poolCounts(answer.data.tree, entry.item_id)) : "forms unknown"),
+      );
+    }
+  }
+  return { el: section, refresh };
+}
+
+/*
+ * The theme editor. ctx: {id, body, items (all items), statusEl, saved(answer)}.
+ * Returns {el, state, problems(), save(note)}.
+ */
+function buildThemeEditor(ctx) {
+  const state = ThemesModel.formFromBody(ctx.body, ctx.id);
+  const el = materialsElement("section", "panel materials-editor theme-editor");
+  const problemsEl = materialsElement("div", "materials-field-error");
+  const nameOf = (id) => {
+    const found = ctx.items.find((item) => item.id === id);
+    return found ? found.name : id;
+  };
+  const itemsOf = () => ctx.items;
+
+  /* Form */
+  el.appendChild(materialsElement("h2", "section-title", "Form"));
+  const form = materialsElement("div", "upload-controls");
+  const into = themeField(form, "Into", themeSelect(ThemesModel.INTOS, state.into));
+  const [beginning, ending] = state.hybrid.split("+");
+  const beginningSelect = themeField(form, "Beginning", themeSelect(ThemesModel.BEGINNINGS, beginning));
+  const endingSelect = themeField(form, "Ending", themeSelect(ThemesModel.ENDINGS, ending));
+  const key = themeField(form, "Key", themeInput("D or Bb", state.key));
+  const mode = themeField(form, "Mode", themeSelect(ThemesModel.MODES, state.mode));
+  const meter = themeField(form, "Meter", themeSelect(ThemesModel.METERS, state.meter));
+  const bars = themeField(form, "Bars", themeSelect(ThemesModel.BARS, state.bars));
+  const cadence = themeField(form, "Cadence", themeSelect(ThemesModel.CADENCES, state.cadence));
+  const firstCadence = themeField(
+    form,
+    "First cadence",
+    themeSelect([{ value: "", label: "Default" }, ...ThemesModel.FIRST_CADENCES], state.firstCadence),
+  );
+  function syncForm() {
+    state.into = into.value;
+    state.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
+    state.key = key.value;
+    state.mode = mode.value;
+    state.meter = meter.value;
+    state.bars = Number(bars.value);
+    state.cadence = cadence.value;
+    state.firstCadence = firstCadence.value;
+    beginningSelect.parentElement.hidden = state.into !== "hybrid";
+    endingSelect.parentElement.hidden = state.into !== "hybrid";
+    firstCadence.parentElement.hidden = state.into === "sentence";
+  }
+  for (const control of [into, beginningSelect, endingSelect, key, mode, meter, bars, cadence, firstCadence]) {
+    control.addEventListener("input", syncForm);
+  }
+  syncForm();
+  el.appendChild(form);
+
+  /* Slots */
+  el.appendChild(materialsElement("h2", "section-title", "Slots"));
+  const pool = buildThemePoolSection(state, nameOf, (value) => {
+    state.pool = value;
+  });
+  for (const slot of ThemesModel.SLOT_NAMES) {
+    const row = materialsElement("div", "theme-slot");
+    row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
+    const picker = buildThemeMotifPicker({
+      role: "melodic",
+      items: itemsOf,
+      onChange: (value) => {
+        state.slots = state.slots.filter((entry) => entry.slot !== slot);
+        if (value) {
+          state.slots.push({ slot, item_id: value.item_id, version: value.version });
+        }
+        pool.refresh();
+      },
+    });
+    picker.setValue(state.slots.find((entry) => entry.slot === slot));
+    row.appendChild(picker.el);
+    el.appendChild(row);
+  }
+
+  el.appendChild(pool.el);
+  pool.refresh();
+
+  /* Accompaniment */
+  el.appendChild(materialsElement("h2", "section-title", "Accompaniment"));
+  const accompaniment = materialsElement("div", "upload-controls");
+  const accKind = themeField(
+    accompaniment,
+    "Accompaniment",
+    themeSelect(
+      [
+        { value: "none", label: "None" },
+        { value: "pattern", label: "A pattern" },
+        { value: "motive", label: "A motif" },
+      ],
+      state.accompaniment.kind,
+    ),
+  );
+  const accPattern = themeField(accompaniment, "Pattern", themeSelect(ThemesModel.PATTERNS, state.accompaniment.pattern || "any"));
+  const accPicker = buildThemeMotifPicker({
+    role: "accompaniment",
+    items: itemsOf,
+    onChange: (value) => {
+      state.accompaniment.item_id = value ? value.item_id : "";
+      state.accompaniment.version = value ? value.version : 0;
+    },
+  });
+  accPicker.setValue(state.accompaniment);
+  function syncAccompaniment() {
+    state.accompaniment.kind = accKind.value;
+    state.accompaniment.pattern = accPattern.value;
+    accPattern.parentElement.hidden = accKind.value !== "pattern";
+    accPicker.el.hidden = accKind.value !== "motive";
+  }
+  accKind.addEventListener("input", syncAccompaniment);
+  accPattern.addEventListener("input", syncAccompaniment);
+  syncAccompaniment();
+  el.append(accompaniment, accPicker.el);
+
+  el.appendChild(problemsEl);
+
+  function problems() {
+    const list = ThemesModel.formProblems(state);
+    problemsEl.textContent = list.join(" ");
+    return list;
+  }
+
+  /* Saves the form as a new version; the answer or null when the form has problems. */
+  async function save(note) {
+    if (problems().length > 0) {
+      return null;
+    }
+    const answer = await sendMaterialsRequest(ThemesModel.saveRequest(state, note));
+    if (!answer.ok) {
+      ctx.statusEl.classList.add("error");
+      ctx.statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not save the theme");
+    }
+    return answer;
+  }
+
+  const saveRow = materialsElement("div", "upload-controls");
+  const noteInput = themeInput("Version note (optional)", "");
+  const saveButton = themeButton("Save as new version", async () => {
+    const answer = await save(noteInput.value);
+    if (answer && answer.ok) {
+      ctx.saved(answer);
+    }
+  });
+  saveRow.append(noteInput, saveButton);
+  el.appendChild(saveRow);
+  return { el, state, problems, save };
+}
