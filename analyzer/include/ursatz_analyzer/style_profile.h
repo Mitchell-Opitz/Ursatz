@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "theory/style_features.h"
+#include "theory/style_model.h"
 
 #include <ursatz_analyzer/style_labels.h>
 
@@ -48,5 +49,32 @@ const char *style_profile_training_corpus(const StyleProfile *profile);
  * and stay valid until it is destroyed. *out is NULL when *count is 0.
  */
 StyleProfileResult style_profile_statistics(const StyleProfile *profile, StyleStatistic **out, size_t *count);
+
+/*
+ * The StyleModel file (schema/style-model.v1.schema.json): the profile's statistics with the style's name, the
+ * training corpus, the analyzer version and the piece count. The Composer reads it through
+ * style_model_file_read.
+ */
+
+typedef enum {
+    STYLE_MODEL_FILE_OK = 0,
+    STYLE_MODEL_FILE_ERR_ARGUMENT,
+    STYLE_MODEL_FILE_ERR_IO,
+    STYLE_MODEL_FILE_ERR_FORMAT, /* not a style model file, an unknown dimension or category, or inconsistent counts */
+    STYLE_MODEL_FILE_ERR_ALLOC
+} StyleModelFileResult;
+
+/* Writes the profile as a style model file named name. The same profile always gives the same bytes. */
+StyleModelFileResult style_model_file_write(const StyleProfile *profile, const char *name, const char *path);
+
+/*
+ * Reads a style model file into a StyleModel (style_model_from_statistics) the caller destroys with
+ * style_model_destroy. Its id is "style-model-" and the 16 hex digits of the FNV-1a 64 hash of the file's bytes, so
+ * the same file always gives the same id. pieces may be NULL.
+ */
+StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, size_t *pieces);
+
+/* The statistics a model holds (style_features_decode); free with style_statistics_free. */
+StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatistic **out, size_t *count);
 
 #endif
