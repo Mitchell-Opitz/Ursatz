@@ -225,6 +225,181 @@ function buildThemePoolSection(state, itemName, onPool) {
   return { el: section, refresh };
 }
 
+/* The lists the brief picker offers, as {collections, composers, sources, tags, subjects, projects, pieces, styles}. */
+async function loadThemeBriefChoices() {
+  const [choices, pieces, styles] = await Promise.all([
+    loadMotiveLinksChoices(),
+    fetchJsonResult("/api/analyzer/pieces"),
+    fetchJsonResult("/api/styles"),
+  ]);
+  choices.pieces = pieces.ok && pieces.data && Array.isArray(pieces.data.pieces) ? pieces.data.pieces : [];
+  choices.styles = styles.ok && styles.data && Array.isArray(styles.data.styles) ? styles.data.styles : [];
+  return choices;
+}
+
+/* The brief section: chips of what is picked, the picker, the motive switches, weight, tempo, check and seed. */
+function buildThemeBriefSection(state) {
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h2", "section-title", "Brief"));
+  const chipsEl = materialsElement("div", "theme-chips");
+  const emptyEl = materialsElement("div", "piece-list-status", "No brief: the theme is grown without a style.");
+  const picker = materialsElement("div", "upload-controls");
+  let names = {};
+  let choices = null;
+
+  function drawChips() {
+    chipsEl.innerHTML = "";
+    emptyEl.hidden = state.picks.length > 0;
+    state.picks.forEach((pick, index) => {
+      const chip = materialsElement("span", "theme-chip", ThemesModel.pickLabel(pick, names));
+      chip.appendChild(
+        themeButton("Remove", () => {
+          state.picks.splice(index, 1);
+          drawChips();
+        }),
+      );
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  const kindSelect = themeSelect(
+    [
+      { value: "collection", label: "Collection" },
+      { value: "filter", label: "Composer / source / tag" },
+      { value: "subject", label: "Subject" },
+      { value: "project", label: "Project" },
+      { value: "piece", label: "Piece" },
+      { value: "style", label: "Style" },
+    ],
+    "collection",
+  );
+  const valueSelect = materialsElement("select");
+  const filterSelects = {
+    composer: materialsElement("select"),
+    source: materialsElement("select"),
+    tag: materialsElement("select"),
+  };
+
+  function fillSelect(select, options, blank) {
+    select.innerHTML = "";
+    if (blank !== undefined) {
+      const o = materialsElement("option", "", blank);
+      o.value = "";
+      select.appendChild(o);
+    }
+    for (const option of options) {
+      const o = materialsElement("option", "", option.label);
+      o.value = option.value;
+      select.appendChild(o);
+    }
+  }
+
+  function fillPicker() {
+    const kind = kindSelect.value;
+    valueSelect.hidden = kind === "filter";
+    for (const select of Object.values(filterSelects)) {
+      select.hidden = kind !== "filter";
+    }
+    if (!choices) {
+      return;
+    }
+    const byId = (list, labelOf) => list.map((entry) => ({ value: entry.id, label: labelOf(entry) }));
+    if (kind === "collection") {
+      fillSelect(valueSelect, byId(choices.collections, (entry) => entry.name || entry.id));
+    } else if (kind === "subject") {
+      fillSelect(valueSelect, byId(choices.subjects, (entry) => entry.name || entry.id));
+    } else if (kind === "project") {
+      fillSelect(valueSelect, byId(choices.projects, (entry) => entry.name || entry.id));
+    } else if (kind === "piece") {
+      fillSelect(valueSelect, byId(choices.pieces, (entry) => entry.filename || entry.id));
+    } else if (kind === "style") {
+      fillSelect(valueSelect, byId(choices.styles, (entry) => entry.name || entry.id));
+    } else {
+      fillSelect(filterSelects.composer, choices.composers, "Any composer");
+      fillSelect(filterSelects.source, choices.sources, "Any source");
+      fillSelect(filterSelects.tag, choices.tags, "Any tag");
+    }
+  }
+
+  const add = themeButton("Add to brief", () => {
+    const kind = kindSelect.value;
+    let pick;
+    if (kind === "filter") {
+      pick = { kind, composer: filterSelects.composer.value, source: filterSelects.source.value, tag: filterSelects.tag.value };
+    } else if (kind === "piece" || kind === "style") {
+      pick = { kind, id: valueSelect.value };
+    } else {
+      pick = { kind, [`${kind}Id`]: valueSelect.value };
+    }
+    if ((kind !== "filter" && valueSelect.value === "") || !ThemesModel.briefFromPicks([pick])) {
+      return;
+    }
+    if (!state.picks.some((other) => ThemesModel.pickLabel(other, names) === ThemesModel.pickLabel(pick, names))) {
+      state.picks.push(pick);
+    }
+    drawChips();
+  });
+  kindSelect.addEventListener("change", fillPicker);
+  picker.append(kindSelect, valueSelect, filterSelects.composer, filterSelects.source, filterSelects.tag, add);
+  fillPicker();
+  drawChips();
+  loadThemeBriefChoices().then((loaded) => {
+    choices = loaded;
+    const table = (list, labelOf) => Object.fromEntries(list.map((entry) => [entry.id, labelOf(entry)]));
+    names = {
+      collections: table(loaded.collections, (entry) => entry.name || entry.id),
+      subjects: table(loaded.subjects, (entry) => entry.name || entry.id),
+      projects: table(loaded.projects, (entry) => entry.name || entry.id),
+      pieces: table(loaded.pieces, (entry) => entry.filename || entry.id),
+      styles: table(loaded.styles, (entry) => entry.name || entry.id),
+    };
+    fillPicker();
+    drawChips();
+  });
+  section.append(chipsEl, emptyEl, picker);
+
+  /* Motive switches */
+  const switches = materialsElement("div");
+  switches.appendChild(materialsElement("div", "", ThemesModel.SWITCH_TEXT));
+  for (const entry of ThemesModel.MOTIVE_CATEGORIES) {
+    const label = materialsElement("label", "filter-field", `${entry.label} `);
+    const box = materialsElement("input");
+    box.type = "checkbox";
+    box.checked = state.switches[entry.category] !== false;
+    box.addEventListener("change", () => {
+      state.switches[entry.category] = box.checked;
+    });
+    label.prepend(box);
+    switches.appendChild(label);
+  }
+  section.appendChild(switches);
+
+  const options = materialsElement("div", "upload-controls");
+  const weight = themeField(options, "Weight", themeSelect(ThemesModel.WEIGHTS, state.weight));
+  weight.addEventListener("input", () => {
+    state.weight = weight.value;
+  });
+  const tempo = themeField(options, "Tempo", themeInput("from the brief", state.tempo));
+  tempo.addEventListener("input", () => {
+    state.tempo = tempo.value;
+  });
+  const seed = themeField(options, "Seed", themeInput("random", state.seed));
+  seed.addEventListener("input", () => {
+    state.seed = seed.value;
+  });
+  const checkLabel = materialsElement("label", "filter-field", "Check with the Analyzer ");
+  const check = materialsElement("input");
+  check.type = "checkbox";
+  check.checked = state.check;
+  check.addEventListener("change", () => {
+    state.check = check.checked;
+  });
+  checkLabel.prepend(check);
+  options.appendChild(checkLabel);
+  section.appendChild(options);
+  return section;
+}
+
 /*
  * The theme editor. ctx: {id, body, items (all items), statusEl, saved(answer)}.
  * Returns {el, state, problems(), save(note)}.
@@ -337,6 +512,8 @@ function buildThemeEditor(ctx) {
   accPattern.addEventListener("input", syncAccompaniment);
   syncAccompaniment();
   el.append(accompaniment, accPicker.el);
+
+  el.appendChild(buildThemeBriefSection(state));
 
   el.appendChild(problemsEl);
 
