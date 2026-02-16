@@ -66,8 +66,9 @@ static void print_usage(const char *program) {
             "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> "
             "[--cantus upper|lower]] <input-file-path>\n"
             "       %s --corpus <dir> [--out <dir>] [--resume] [--markdown]\n"
-            "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n",
-            program, program, program);
+            "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
+            "       %s --compare-styles <a.json> <b.json> [--format text|json]\n",
+            program, program, program, program);
 }
 
 static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
@@ -87,6 +88,139 @@ static int run_corpus(const char *input_dir, const char *output_dir, bool resume
         return 2;
     }
     printf("%zu analyzed, %zu skipped, %zu failed\n", summary.analyzed, summary.skipped, summary.failed);
+    return 0;
+}
+
+static double rational_value(StyleRational r) {
+    return (double)r.numerator / (double)r.denominator;
+}
+
+static void print_json_string(const char *text) {
+    putchar('"');
+    for (; *text; text++) {
+        if (*text == '"' || *text == '\\') {
+            putchar('\\');
+        }
+        if ((unsigned char)*text < 0x20) {
+            printf("\\u%04x", (unsigned char)*text);
+        } else {
+            putchar(*text);
+        }
+    }
+    putchar('"');
+}
+
+static void print_json_rational(StyleRational r) {
+    printf("{\"numerator\": %llu, \"denominator\": %llu, \"value\": %.6f}", r.numerator, r.denominator,
+           rational_value(r));
+}
+
+static void print_json_labels(char *const labels[3]) {
+    printf("[");
+    for (int k = 0; k < 3 && labels[k]; k++) {
+        printf(k ? ", " : "");
+        print_json_string(labels[k]);
+    }
+    printf("]");
+}
+
+static void print_text_labels(const char *tag, char *const labels[3]) {
+    printf(" %s:", tag);
+    if (!labels[0]) {
+        printf(" -");
+    }
+    for (int k = 0; k < 3 && labels[k]; k++) {
+        printf("%s %s", k ? "," : "", labels[k]);
+    }
+}
+
+static void print_comparison_text(const StyleComparison *comparison) {
+    if (comparison->overall_present) {
+        printf("overall %.4f (%llu/%llu)\n", rational_value(comparison->overall), comparison->overall.numerator,
+               comparison->overall.denominator);
+    }
+    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+        if (!comparison->dimension_present[d]) {
+            continue;
+        }
+        StyleRational r = comparison->dimension[d];
+        printf("%s %.4f (%llu/%llu)\n", style_dimension_name((StyleDimension)d), rational_value(r), r.numerator,
+               r.denominator);
+        for (size_t i = 0; i < comparison->category_count; i++) {
+            const StyleCategoryDistance *c = &comparison->categories[i];
+            if (c->dimension != (StyleDimension)d) {
+                continue;
+            }
+            printf("  %s %.4f (%llu/%llu)", c->category, rational_value(c->distance), c->distance.numerator,
+                   c->distance.denominator);
+            print_text_labels("a", c->top_a);
+            printf(";");
+            print_text_labels("b", c->top_b);
+            printf("\n");
+        }
+    }
+}
+
+static void print_comparison_json(const StyleComparison *comparison) {
+    printf("{\n  \"overall\": ");
+    if (comparison->overall_present) {
+        print_json_rational(comparison->overall);
+    } else {
+        printf("null");
+    }
+    printf(",\n  \"dimensions\": [");
+    bool first = true;
+    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+        if (!comparison->dimension_present[d]) {
+            continue;
+        }
+        printf("%s\n    {\"dimension\": \"%s\", \"distance\": ", first ? "" : ",", style_dimension_name((StyleDimension)d));
+        print_json_rational(comparison->dimension[d]);
+        printf("}");
+        first = false;
+    }
+    printf("\n  ],\n  \"categories\": [");
+    for (size_t i = 0; i < comparison->category_count; i++) {
+        const StyleCategoryDistance *c = &comparison->categories[i];
+        printf("%s\n    {\"dimension\": \"%s\", \"category\": ", i ? "," : "", style_dimension_name(c->dimension));
+        print_json_string(c->category);
+        printf(", \"distance\": ");
+        print_json_rational(c->distance);
+        printf(", \"top_a\": ");
+        print_json_labels(c->top_a);
+        printf(", \"top_b\": ");
+        print_json_labels(c->top_b);
+        printf("}");
+    }
+    printf("\n  ]\n}\n");
+}
+
+static int run_compare_styles(const char *path_a, const char *path_b, bool json) {
+    StyleModel *a = NULL, *b = NULL;
+    if (style_model_file_read(path_a, &a, NULL) != STYLE_MODEL_FILE_OK) {
+        fprintf(stderr, "Error: cannot read style model '%s'\n", path_a);
+        return 2;
+    }
+    if (style_model_file_read(path_b, &b, NULL) != STYLE_MODEL_FILE_OK) {
+        fprintf(stderr, "Error: cannot read style model '%s'\n", path_b);
+        style_model_destroy(a);
+        return 2;
+    }
+    StyleComparison comparison;
+    StyleCompareResult compared = style_profile_compare(a, b, &comparison);
+    style_model_destroy(a);
+    style_model_destroy(b);
+    if (compared != STYLE_COMPARE_OK) {
+        fprintf(stderr, "Error: %s\n",
+                compared == STYLE_COMPARE_ERR_OVERFLOW ? "the distance does not fit in 64 bits" : "cannot compare the models");
+        return 2;
+    }
+    if (json) {
+        print_comparison_json(&comparison);
+    } else {
+        print_comparison_text(&comparison);
+    }
+    style_comparison_destroy(&comparison);
     return 0;
 }
 
@@ -127,6 +261,10 @@ static int run_style_profile(const char *corpus_output_dir, const char *name, co
 
 int main(int argc, char *argv[]) {
     const char *path = NULL;
+    const char *compare_a = NULL;
+    const char *compare_b = NULL;
+    bool format_json = false;
+    bool format_set = false;
     const char *style_dir = NULL;
     const char *style_name = NULL;
     const char *corpus_dir = NULL;
@@ -151,6 +289,20 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             input_format_set = true;
+        } else if (strcmp(arg, "--compare-styles") == 0) {
+            if (i + 2 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            compare_a = argv[++i];
+            compare_b = argv[++i];
+        } else if (strcmp(arg, "--format") == 0) {
+            if (i + 1 >= argc || (strcmp(argv[i + 1], "text") != 0 && strcmp(argv[i + 1], "json") != 0)) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            format_json = strcmp(argv[++i], "json") == 0;
+            format_set = true;
         } else if (strcmp(arg, "--style-profile") == 0 || strcmp(arg, "--name") == 0) {
             if (i + 1 >= argc) {
                 print_usage(argv[0]);
@@ -192,6 +344,18 @@ int main(int argc, char *argv[]) {
         } else {
             path = arg;
         }
+    }
+    if (compare_a) {
+        if (style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
+            species != 0 || cantus_set || input_format_set) {
+            print_usage(argv[0]);
+            return 1;
+        }
+        return run_compare_styles(compare_a, compare_b, format_json);
+    }
+    if (format_set) {
+        print_usage(argv[0]);
+        return 1;
     }
     if (style_dir || style_name) {
         if (!style_dir || !style_name || !style_name[0] || corpus_dir || path || want_json || want_markdown || corpus_resume ||

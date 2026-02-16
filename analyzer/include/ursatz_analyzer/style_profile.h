@@ -1,6 +1,7 @@
 #ifndef URSATZ_ANALYZER_STYLE_PROFILE_H
 #define URSATZ_ANALYZER_STYLE_PROFILE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "theory/style_features.h"
@@ -76,5 +77,46 @@ StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, s
 
 /* The statistics a model holds (style_features_decode); free with style_statistics_free. */
 StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatistic **out, size_t *count);
+
+/*
+ * Comparison of two models. Per category the distance is the total variation distance between the two models'
+ * label frequencies: half the sum over labels of |count_a/total_a - count_b/total_b|, an exact reduced rational in
+ * [0, 1]. A category only one model has is distance 1. A dimension's distance is the mean of its categories'; the
+ * overall distance is the mean of the dimensions that have a category in either model.
+ */
+
+typedef struct {
+    unsigned long long numerator;
+    unsigned long long denominator;
+} StyleRational;
+
+typedef struct {
+    char *category;
+    StyleDimension dimension;
+    StyleRational distance;
+    bool in_a, in_b;  /* which models have the category */
+    char *top_a[3];   /* each model's most frequent labels, most frequent first; NULL after the last */
+    char *top_b[3];
+} StyleCategoryDistance;
+
+typedef struct {
+    StyleCategoryDistance *categories; /* sorted by category */
+    size_t category_count;
+    bool dimension_present[STYLE_DIMENSION_COUNT];
+    StyleRational dimension[STYLE_DIMENSION_COUNT];
+    bool overall_present;
+    StyleRational overall;
+} StyleComparison;
+
+typedef enum {
+    STYLE_COMPARE_OK = 0,
+    STYLE_COMPARE_ERR_ARGUMENT,
+    STYLE_COMPARE_ERR_MODEL,    /* a model's statistics cannot be read or name a category this module does not define */
+    STYLE_COMPARE_ERR_OVERFLOW, /* an exact result does not fit; never wrapped */
+    STYLE_COMPARE_ERR_ALLOC
+} StyleCompareResult;
+
+StyleCompareResult style_profile_compare(const StyleModel *a, const StyleModel *b, StyleComparison *out);
+void style_comparison_destroy(StyleComparison *comparison);
 
 #endif
