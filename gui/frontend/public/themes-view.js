@@ -509,7 +509,7 @@ function themeVersionView(viewEl, id, number, body, nameOf, title) {
 }
 
 /*
- * The theme editor. ctx: {id, body, items (all items), statusEl, saved(answer)}.
+ * The theme editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer)}.
  * Returns {el, state, problems(), save(note), compose(options)}.
  */
 function buildThemeEditor(ctx) {
@@ -522,6 +522,17 @@ function buildThemeEditor(ctx) {
     return found ? found.name : id;
   };
   const itemsOf = () => ctx.items;
+
+  /* Sources with a newer version */
+  const notices = materialsElement("div");
+  for (const use of ThemesModel.updatedUses({ uses_status: ctx.usesStatus })) {
+    const notice = materialsElement("div", "piece-list-status");
+    notice.appendChild(materialsElement("span", "", `${use.label} `));
+    notice.appendChild(themeButton("Update and compose", () => compose({ update_uses: true })));
+    notice.appendChild(themeButton("Keep", () => notice.remove()));
+    notices.appendChild(notice);
+  }
+  el.appendChild(notices);
 
   /* Form */
   el.appendChild(materialsElement("h2", "section-title", "Form"));

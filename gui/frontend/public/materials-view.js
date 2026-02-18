@@ -1147,6 +1147,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     const editor = buildThemeEditor({
       id,
       body: answer.data.body,
+      usesStatus: answer.data.uses_status,
       items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
       statusEl,
       saved: () => renderMaterialsDetail(type, id),
