@@ -648,7 +648,7 @@ function buildUsedBySection(users) {
   return section;
 }
 
-function buildVersionsList(item, viewEl, statusEl) {
+function buildVersionsList(item, viewEl, statusEl, renderBody) {
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Versions"));
   const table = materialsElement("table", "library-table");
@@ -674,6 +674,10 @@ function buildVersionsList(item, viewEl, statusEl) {
       }
       statusEl.textContent = "";
       statusEl.classList.remove("error");
+      if (renderBody) {
+        renderBody(row.number, answer.data.body);
+        return;
+      }
       viewEl.innerHTML = "";
       viewEl.appendChild(materialsElement("h2", "section-title", `Version ${row.number} (read only)`));
       viewEl.appendChild(materialsElement("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
@@ -1096,6 +1100,10 @@ async function renderMaterialsDetail(type, id, analysisError) {
   subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
   content.appendChild(subjectsRow);
   const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
+  const itemNameOf = (itemId) => {
+    const found = (allItemsAnswer.ok ? allItemsAnswer.data.items : []).find((entry) => entry.id === itemId);
+    return found ? found.name : itemId;
+  };
   if (type === "motif") {
     const editor = buildMotifEditor(answer.data.body);
     content.appendChild(editor.el);
@@ -1144,6 +1152,16 @@ async function renderMaterialsDetail(type, id, analysisError) {
       saved: () => renderMaterialsDetail(type, id),
     });
     content.appendChild(editor.el);
+    const resultEl = buildThemeResult({
+      id,
+      version: item.current_version,
+      theme: answer.data.body.theme,
+      nameOf: itemNameOf,
+      title: item.name,
+    });
+    if (resultEl) {
+      content.appendChild(resultEl);
+    }
   }
   content.appendChild(
     buildUsesSection({
@@ -1156,6 +1174,10 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }),
   );
   content.appendChild(buildUsedBySection(answer.data.used_by));
-  content.appendChild(buildVersionsList(item, versionEl, statusEl));
+  const renderThemeVersion =
+    type === "theme"
+      ? (number, body) => themeVersionView(versionEl, id, number, body, itemNameOf, item.name)
+      : undefined;
+  content.appendChild(buildVersionsList(item, versionEl, statusEl, renderThemeVersion));
   content.appendChild(versionEl);
 }

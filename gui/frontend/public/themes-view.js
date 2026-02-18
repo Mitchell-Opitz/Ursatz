@@ -400,12 +400,121 @@ function buildThemeBriefSection(state) {
   return section;
 }
 
+/* A two-column table of label and text rows. */
+function themeFacts(rows) {
+  const list = materialsElement("dl", "materials-analysis-list");
+  for (const [label, text] of rows) {
+    if (text !== "" && text !== undefined) {
+      list.appendChild(materialsElement("dt", "", label));
+      list.appendChild(materialsElement("dd", "", text));
+    }
+  }
+  return list;
+}
+
+/* Mounts the version's theme.musicxml in the score workspace, with playback from its theme.mid. */
+async function themeMountScore(host, id, version, title) {
+  const files = (name) => ThemesModel.versionFileUrl(id, version, name);
+  let playbackUrl = null;
+  try {
+    const midi = await fetch(files("theme.mid"));
+    const playback = midi.ok ? ThemesModel.playbackFromMidi(await midi.arrayBuffer()) : null;
+    if (playback) {
+      playbackUrl = URL.createObjectURL(new Blob([JSON.stringify(playback)], { type: "application/json" }));
+    }
+  } catch (error) {
+    playbackUrl = null;
+  }
+  if (host.themeWorkspace) {
+    host.themeWorkspace.destroy();
+  }
+  host.innerHTML = "";
+  host.themeWorkspace = ScoreWorkspace.mount(host, {
+    title,
+    subtitle: `theme · v${version}`,
+    musicxmlUrl: files("theme.musicxml"),
+    playbackUrl,
+  });
+}
+
+/*
+ * The result of a theme version: the Composer's summary as rows, the score with playback and the MIDI download.
+ * ctx: {id, version, theme (the version body's theme), nameOf, title}. Returns null when the version has no result.
+ */
+function buildThemeResult(ctx) {
+  const result = ctx.theme && ctx.theme.result;
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+  const state = ThemesModel.formFromBody({ uses: [], theme: ctx.theme }, ctx.id);
+  const view = ThemesModel.resultView(result, {
+    motiveNames: ThemesModel.motiveNames(state, ctx.nameOf),
+    check: ctx.theme.check === true,
+  });
+  const section = materialsElement("section", "panel materials-analysis theme-result");
+  section.appendChild(materialsElement("h2", "section-title", "Result"));
+  section.appendChild(
+    themeFacts([
+      ["Seed", view.seed === null ? "" : String(view.seed)],
+      ["Form heard", view.heard],
+      ["Tempo", view.brief.tempo],
+      ["Mode", view.brief.mode],
+      ["Note density", view.brief.density],
+      ["Read without", view.brief.without],
+      ["Brief", view.pieces],
+      ["Analyzer check", view.check],
+      ...view.distance.map((entry) => [`Style distance, ${entry.label}`, entry.value]),
+    ]),
+  );
+  const table = materialsElement("table", "library-table");
+  const head = materialsElement("tr");
+  for (const label of ["Idea", "Slot", "Motif", "Source", "Chain", "Connection"]) {
+    head.appendChild(materialsElement("th", "", label));
+  }
+  table.appendChild(head);
+  for (const row of view.rows) {
+    const tr = materialsElement("tr");
+    const source = row.item ? `${row.source}: ${ctx.nameOf(row.item)}` : row.source;
+    for (const cell of [row.idea, row.slot, row.motive, source, row.chain, row.connection]) {
+      tr.appendChild(materialsElement("td", "", cell));
+    }
+    table.appendChild(tr);
+  }
+  section.appendChild(table);
+  const midi = materialsElement("a", "back-link clickable", "Download MIDI");
+  midi.href = ThemesModel.versionFileUrl(ctx.id, ctx.version, "theme.mid");
+  midi.download = "theme.mid";
+  const scoreHost = materialsElement("div", "materials-score-mount");
+  section.append(midi, scoreHost);
+  themeMountScore(scoreHost, ctx.id, ctx.version, ctx.title);
+  return section;
+}
+
+/* Shows an older version read only: its form and slots, then its result. */
+function themeVersionView(viewEl, id, number, body, nameOf, title) {
+  viewEl.innerHTML = "";
+  viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
+  const theme = body && body.theme ? body.theme : {};
+  const state = ThemesModel.formFromBody(body, id);
+  viewEl.appendChild(
+    themeFacts([
+      ["Form", `${state.into}${state.into === "hybrid" ? ` (${state.hybrid})` : ""}, ${state.key} ${state.mode}, ${state.meter}, ${state.bars} bars, ${state.cadence}`],
+      ...state.slots.map((entry) => [ThemesModel.SLOT_LABELS[entry.slot], `${nameOf(entry.item_id)} v${entry.version}`]),
+      ["Pool", state.pool],
+      ["Brief", ThemesModel.briefLabel(ThemesModel.briefFromPicks(state.picks))],
+    ]),
+  );
+  const result = buildThemeResult({ id, version: number, theme, nameOf, title });
+  viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
+}
+
 /*
  * The theme editor. ctx: {id, body, items (all items), statusEl, saved(answer)}.
- * Returns {el, state, problems(), save(note)}.
+ * Returns {el, state, problems(), save(note), compose(options)}.
  */
 function buildThemeEditor(ctx) {
   const state = ThemesModel.formFromBody(ctx.body, ctx.id);
+  const initialJson = JSON.stringify(ThemesModel.bodyFromForm(state));
   const el = materialsElement("section", "panel materials-editor theme-editor");
   const problemsEl = materialsElement("div", "materials-field-error");
   const nameOf = (id) => {
@@ -544,7 +653,47 @@ function buildThemeEditor(ctx) {
       ctx.saved(answer);
     }
   });
-  saveRow.append(noteInput, saveButton);
+  const composeButton = themeButton("Compose", () => compose({}));
+  const spinner = materialsElement("span", "theme-spinner");
+  spinner.hidden = true;
+  saveRow.append(noteInput, saveButton, composeButton, spinner);
   el.appendChild(saveRow);
-  return { el, state, problems, save };
+
+  function setBusy(busy) {
+    saveButton.disabled = busy;
+    composeButton.disabled = busy;
+    spinner.hidden = !busy;
+    if (busy) {
+      ctx.statusEl.textContent = "Composing...";
+      ctx.statusEl.classList.remove("error");
+    }
+  }
+
+  /* Saves the form first when it changed, then composes it into a new version. options: {update_uses}. */
+  async function compose(options) {
+    if (problems().length > 0) {
+      return;
+    }
+    setBusy(true);
+    const stored = ctx.body && ctx.body.theme ? ctx.body.theme.form : null;
+    const changed =
+      JSON.stringify(ThemesModel.bodyFromForm(state)) !== initialJson || !stored || typeof stored !== "object";
+    if (changed) {
+      const saved = await save("Edited before composing");
+      if (!saved || !saved.ok) {
+        setBusy(false);
+        return;
+      }
+    }
+    const answer = await sendMaterialsRequest(ThemesModel.composeRequest(state, options));
+    setBusy(false);
+    if (!answer.ok) {
+      ctx.statusEl.style.whiteSpace = "pre-wrap";
+      ctx.statusEl.classList.add("error");
+      ctx.statusEl.textContent = MaterialsModel.errorText(answer.data, "The theme could not be composed");
+      return;
+    }
+    ctx.saved(answer);
+  }
+  return { el, state, problems, save, compose };
 }
