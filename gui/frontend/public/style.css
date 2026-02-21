@@ -2233,3 +2233,46 @@ body {
 .compare-unrelated {
   font-style: italic;
 }
+
+.theme-slot {
+  margin: 0.75rem 0;
+}
+
+.theme-motif-picker {
+  margin-bottom: 0.5rem;
+}
+
+.theme-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.theme-chip {
+  border: 1px solid var(--border, #888);
+  border-radius: 1rem;
+  padding: 0.15rem 0.6rem;
+}
+
+.theme-chip button {
+  margin-left: 0.4rem;
+}
+
+.theme-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.4rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.15em;
+  animation: theme-spin 0.8s linear infinite;
+}
+
+@keyframes theme-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

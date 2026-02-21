@@ -65,9 +65,9 @@ message). The choice filters the Motifs, Themes and Pieces views and is
 remembered in the browser. Each view lists its items (name, project, current
 version, updated) with a New row (name and project). A row opens the detail:
 the name and project are editable, the uses are listed, and the versions list
-(number, date, note) lets any version be viewed read-only. Themes and pieces
-have no body editor yet. Subjects and item references come in later
-branches.
+(number, date, note) lets any version be viewed read-only. Pieces have no
+body editor yet (themes have one, below). Subjects and item references come
+in later branches.
 
 #### Motif editor
 
@@ -92,6 +92,46 @@ in `motif.analysis`; a motif without one reads "Not analyzed", with the
 reason when the save said why. The helpers (`motifFormValues`,
 `motifFormProblems`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
 in `materials-model.js`.
+
+#### Themes view
+
+A theme's detail holds the theme editor (`themes-view.js`; the helpers are in
+`themes-model.js`, global `ThemesModel`). It edits the theme body the backend
+composes (see Theme bodies and version files).
+
+- Form: into (sentence, period, hybrid with its pairing, and the first
+  cadence for a period or hybrid), key, mode (major, minor, From the brief),
+  meter, bars (4 or 8) and cadence.
+- Slots: Basic idea (required), Contrasting idea, Continuation and Cadential.
+  Each is a motif picker: a project select, a name search, the motif and its
+  version (current by default). Only a full melodic motif is accepted. The
+  picker shows the motif's degrees and a Play button (the render route).
+- Pool: Approved and unflagged (default), Approved only or None, with the
+  number of approved and unflagged saved forms each slot motif has (from its
+  variant tree).
+- Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
+  or a motif with the role accompaniment.
+- Brief: collections, composer / source / tag filters, subjects, projects,
+  single pieces and styles, listed as chips with Remove. An empty brief means
+  no style. Four checkboxes ("Use the brief's motive degrees, intervals,
+  rhythm, non-chord figures") are all on by default; an unchecked one goes to
+  `without`. Weight is Light (1/4), Normal (1/2) or Strong (1). Tempo (blank
+  takes the brief's), Check with the Analyzer and Seed (blank draws one).
+
+Save as new version writes a version without `result`. Compose saves first
+when the form changed, then calls the compose route with the buttons disabled
+and a spinner; a refusal shows the backend's message, which carries the
+Composer's message. A slot or accompaniment motif with a newer version shows
+"Source updated: <name> v<n>" with Update and compose (the compose route's
+`update_uses`) and Keep.
+
+The Result panel of the current version, and of any version opened from the
+versions list (read-only), has a row for each idea (idea, slot, motif, source,
+chain, connection), the brief's tempo, mode and note density, the motive
+categories read without, the style distance, the form heard and the Analyzer
+check. Below it are the score of `theme.musicxml` in the score workspace and a
+MIDI download. Playback is built in the browser from `theme.mid`
+(`playbackFromMidi`), since the backend has no playback route for theme files.
 
 ### Item references in the GUI
 
