@@ -13,6 +13,7 @@
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "time/time_signature.h"
 #include "time/time_span.h"
 
 /*
@@ -837,6 +838,43 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
     }
 }
 
+/* The measure's <attributes>: divisions and staves in the first, a <time> where a region of the MeterMap starts. */
+static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size_t part, size_t m) {
+    const MeterMapRegion *region = NULL;
+    MeterMapResult status = meter_map_region_of_measure(prep->meter, prep->first_measure_number + (int)m, &region);
+    if (status != METER_MAP_OK) {
+        return from_meter_status(status);
+    }
+    long long region_start = 0;
+    if (time_ticks(musical_time_numerator(meter_map_region_start(region)),
+                   musical_time_denominator(meter_map_region_start(region)), prep->divisions,
+                   &region_start) != TIME_OK) {
+        return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
+    bool has_time = region_start == prep->measure_start[m];
+    bool has_divisions = m == 0;
+    bool has_staves = m == 0 && prep->parts[part].staff_count > 1;
+    if (!has_time && !has_divisions && !has_staves) {
+        return MUSICXML_EXPORT_OK;
+    }
+    xmlbuf_append(buf, "      <attributes>\n");
+    if (has_divisions) {
+        xmlbuf_append(buf, "        <divisions>%lld</divisions>\n", prep->divisions);
+    }
+    if (has_time) {
+        const TimeSignature *signature = meter_map_region_time_signature(region);
+        xmlbuf_append(buf,
+                      "        <time>\n          <beats>%u</beats>\n          <beat-type>%u</beat-type>\n"
+                      "        </time>\n",
+                      time_signature_top_number(signature), time_signature_bottom_number(signature));
+    }
+    if (has_staves) {
+        xmlbuf_append(buf, "        <staves>%d</staves>\n", prep->parts[part].staff_count);
+    }
+    xmlbuf_append(buf, "      </attributes>\n");
+    return MUSICXML_EXPORT_OK;
+}
+
 static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
     SegmentList *lists = NULL;
     MusicXmlExportResult result = build_segments(prep, &lists);
@@ -853,8 +891,15 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
                   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                   "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 3.1 Partwise//EN\" "
                   "\"http://www.musicxml.org/dtds/partwise.dtd\">\n"
-                  "<score-partwise version=\"3.1\">\n"
-                  "  <part-list>\n");
+                  "<score-partwise version=\"3.1\">\n");
+    if (prep->meter_defaulted) {
+        /* The layout is a default 4/4, not a meter anyone wrote: say so, so a reader can tell. */
+        xmlbuf_append(buf,
+                      "  <identification>\n    <miscellaneous>\n"
+                      "      <miscellaneous-field name=\"ursatz:meter-defaulted\">true</miscellaneous-field>\n"
+                      "    </miscellaneous>\n  </identification>\n");
+    }
+    xmlbuf_append(buf, "  <part-list>\n");
     for (size_t p = 0; p < prep->part_count; p++) {
         xmlbuf_append(buf, "    <score-part id=\"");
         xmlbuf_append_escaped(buf, prep->parts[p].id);
@@ -863,16 +908,18 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
         xmlbuf_append(buf, "</part-name>\n    </score-part>\n");
     }
     xmlbuf_append(buf, "  </part-list>\n");
-    for (size_t p = 0; p < prep->part_count; p++) {
+    for (size_t p = 0; p < prep->part_count && result == MUSICXML_EXPORT_OK; p++) {
         memset(cursor, 0, (prep->group_count > 0 ? prep->group_count : 1) * sizeof(size_t));
         xmlbuf_append(buf, "  <part id=\"");
         xmlbuf_append_escaped(buf, prep->parts[p].id);
         xmlbuf_append(buf, "\">\n");
-        for (size_t m = 0; m < prep->measure_count; m++) {
-            xmlbuf_append(buf, "    <measure number=\"%d\">\n", prep->first_measure_number + (int)m);
-            if (m == 0) {
-                xmlbuf_append(buf, "      <attributes>\n        <divisions>%lld</divisions>\n      </attributes>\n",
-                              prep->divisions);
+        for (size_t m = 0; m < prep->measure_count && result == MUSICXML_EXPORT_OK; m++) {
+            bool pickup = m == 0 && meter_map_has_pickup(prep->meter);
+            xmlbuf_append(buf, "    <measure number=\"%d\"%s>\n", prep->first_measure_number + (int)m,
+                          pickup ? " implicit=\"yes\"" : "");
+            result = write_attributes(prep, buf, p, m);
+            if (result != MUSICXML_EXPORT_OK) {
+                break;
             }
             write_measure_body(prep, buf, p, m, lists, cursor);
             xmlbuf_append(buf, "    </measure>\n");
@@ -882,7 +929,7 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
     xmlbuf_append(buf, "</score-partwise>\n");
     free(cursor);
     segments_free(lists, prep->group_count);
-    return MUSICXML_EXPORT_OK;
+    return result;
 }
 
 MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml) {
