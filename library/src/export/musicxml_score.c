@@ -227,6 +227,9 @@ typedef struct {
     int first_measure_number;
     long long *measure_start; /* ticks, measure_count entries */
     long long *measure_end;
+
+    long long **cuts;   /* per part: every barline, ascending, where notes and rests are split */
+    size_t *cut_count;
 } Prep;
 
 static void prep_free(Prep *prep) {
@@ -235,6 +238,13 @@ static void prep_free(Prep *prep) {
     free(prep->groups);
     free(prep->measure_start);
     free(prep->measure_end);
+    if (prep->cuts != NULL) {
+        for (size_t p = 0; p < prep->part_count; p++) {
+            free(prep->cuts[p]);
+        }
+    }
+    free(prep->cuts);
+    free(prep->cut_count);
     if (prep->own_meter != NULL) {
         meter_map_destroy(prep->own_meter);
     }
@@ -510,6 +520,42 @@ static MusicXmlExportResult build_measures(Prep *prep) {
     return result;
 }
 
+static int compare_ticks(const void *left, const void *right) {
+    long long a = *(const long long *)left;
+    long long b = *(const long long *)right;
+    return a < b ? -1 : (a > b ? 1 : 0);
+}
+
+/* Per part, the ticks at which every note and rest is cut: each barline (and the end of the last measure). */
+static MusicXmlExportResult build_cuts(Prep *prep) {
+    prep->cuts = (long long **)calloc(prep->part_count, sizeof(long long *));
+    prep->cut_count = (size_t *)calloc(prep->part_count, sizeof(size_t));
+    if (prep->cuts == NULL || prep->cut_count == NULL) {
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    for (size_t p = 0; p < prep->part_count; p++) {
+        long long *cuts = (long long *)calloc(prep->measure_count + 1, sizeof(long long));
+        if (cuts == NULL) {
+            return MUSICXML_EXPORT_ERR_ALLOC;
+        }
+        size_t n = 0;
+        for (size_t m = 0; m < prep->measure_count; m++) {
+            cuts[n++] = prep->measure_start[m];
+        }
+        cuts[n++] = prep->measure_end[prep->measure_count - 1];
+        qsort(cuts, n, sizeof(long long), compare_ticks);
+        size_t unique = 0;
+        for (size_t i = 0; i < n; i++) {
+            if (unique == 0 || cuts[i] != cuts[unique - 1]) {
+                cuts[unique++] = cuts[i];
+            }
+        }
+        prep->cuts[p] = cuts;
+        prep->cut_count[p] = unique;
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
 static MusicXmlExportResult prepare(Prep *prep) {
     MusicXmlExportResult result = validate_arrays(prep->score);
     if (result == MUSICXML_EXPORT_OK) {
@@ -542,14 +588,267 @@ static MusicXmlExportResult prepare(Prep *prep) {
         result = build_measures(prep);
     }
     if (result == MUSICXML_EXPORT_OK) {
+        result = build_cuts(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
         qsort(prep->notes, prep->note_count, sizeof(NoteRec), compare_notes);
     }
     return result;
 }
 
+/* --- segments: the notes and rests of one voice, cut at the part's cuts --- */
+
+#define REST_SEGMENT SIZE_MAX
+
+typedef struct {
+    long long start;
+    long long end;
+    size_t note;      /* an index into prep->notes, or REST_SEGMENT */
+    int fragment;     /* 0 for the first piece of a note */
+    bool tie_start;
+    bool tie_stop;
+} Segment;
+
+typedef struct {
+    Segment *items;
+    size_t count;
+    size_t cap;
+} SegmentList;
+
+static bool segment_push(SegmentList *list, Segment segment) {
+    if (list->count == list->cap) {
+        size_t cap = list->cap == 0 ? 16 : list->cap * 2;
+        Segment *grown = (Segment *)realloc(list->items, cap * sizeof(Segment));
+        if (grown == NULL) {
+            return false;
+        }
+        list->items = grown;
+        list->cap = cap;
+    }
+    list->items[list->count++] = segment;
+    return true;
+}
+
+/* The first cut strictly after tick, or LLONG_MAX when there is none. */
+static long long next_cut(const long long *cuts, size_t count, long long tick) {
+    size_t low = 0;
+    size_t high = count;
+    while (low < high) {
+        size_t mid = low + (high - low) / 2;
+        if (cuts[mid] > tick) {
+            high = mid;
+        } else {
+            low = mid + 1;
+        }
+    }
+    return low < count ? cuts[low] : LLONG_MAX;
+}
+
+/* Splits [from, to) at the part's cuts: a note's pieces are tied, a rest's are not. */
+static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long from, long long to, size_t note) {
+    long long position = from;
+    int fragment = 0;
+    while (position < to) {
+        long long next = next_cut(prep->cuts[part], prep->cut_count[part], position);
+        if (next > to) {
+            next = to;
+        }
+        Segment segment;
+        segment.start = position;
+        segment.end = next;
+        segment.note = note;
+        segment.fragment = fragment++;
+        segment.tie_start = note != REST_SEGMENT && next < to;
+        segment.tie_stop = note != REST_SEGMENT && position > from;
+        if (!segment_push(list, segment)) {
+            return false;
+        }
+        position = next;
+    }
+    return true;
+}
+
+static void segments_free(SegmentList *lists, size_t count) {
+    if (lists == NULL) {
+        return;
+    }
+    for (size_t g = 0; g < count; g++) {
+        free(lists[g].items);
+    }
+    free(lists);
+}
+
+/* Each group's notes in order, the gaps between them as rests, all cut. An overlap in a voice fails. */
+static MusicXmlExportResult build_segments(const Prep *prep, SegmentList **out) {
+    SegmentList *lists = (SegmentList *)calloc(prep->group_count > 0 ? prep->group_count : 1, sizeof(SegmentList));
+    long long *cursor = (long long *)calloc(prep->group_count > 0 ? prep->group_count : 1, sizeof(long long));
+    if (lists == NULL || cursor == NULL) {
+        free(lists);
+        free(cursor);
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    MusicXmlExportResult result = MUSICXML_EXPORT_OK;
+    for (size_t i = 0; i < prep->note_count && result == MUSICXML_EXPORT_OK; i++) {
+        const NoteRec *note = &prep->notes[i];
+        size_t g = note->group;
+        if (note->start < cursor[g]) {
+            result = MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES;
+        } else if ((note->start > cursor[g] &&
+                    !add_run(prep, note->part, &lists[g], cursor[g], note->start, REST_SEGMENT)) ||
+                   !add_run(prep, note->part, &lists[g], note->start, note->end, i)) {
+            result = MUSICXML_EXPORT_ERR_ALLOC;
+        }
+        cursor[g] = note->end;
+    }
+    free(cursor);
+    if (result != MUSICXML_EXPORT_OK) {
+        segments_free(lists, prep->group_count);
+        return result;
+    }
+    *out = lists;
+    return MUSICXML_EXPORT_OK;
+}
+
 /* --- writing --- */
 
-static void write_document(const Prep *prep, XmlBuf *buf) {
+static const char *const PITCH_STEP_NAMES[7] = {"A", "B", "C", "D", "E", "F", "G"};
+
+/* A valid XML ID from an EntityID value: a leading 'n' if it does not start with a letter or underscore, and '_' for
+   anything outside [A-Za-z0-9_.-]. */
+static void xml_id_from_entity(const char *raw, char *out, size_t out_size) {
+    size_t pos = 0;
+    bool needs_prefix = !((raw[0] >= 'A' && raw[0] <= 'Z') || (raw[0] >= 'a' && raw[0] <= 'z') || raw[0] == '_');
+    if (needs_prefix && pos + 1 < out_size) {
+        out[pos++] = 'n';
+    }
+    for (size_t i = 0; raw[i] != '\0' && pos + 1 < out_size; i++) {
+        char c = raw[i];
+        bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' ||
+                  c == '.' || c == '-';
+        out[pos++] = ok ? c : '_';
+    }
+    out[pos] = '\0';
+}
+
+/* One <note> or rest for a segment, in the given voice and staff (staff written only when the part has several). */
+static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment, size_t part, int staff,
+                          int voice_number) {
+    bool is_rest = segment->note == REST_SEGMENT;
+    const NoteRec *note = is_rest ? NULL : &prep->notes[segment->note];
+    NoteEvent *event = is_rest ? NULL : prep->score->events[note->index];
+
+    if (is_rest) {
+        xmlbuf_append(buf, "      <note>\n        <rest/>\n");
+    } else {
+        char base[64];
+        xml_id_from_entity(entity_id_value(note_event_id(event)), base, sizeof(base));
+        if (segment->tie_start || segment->tie_stop) {
+            char id[96];
+            if (segment->fragment < 26) {
+                snprintf(id, sizeof(id), "%s_%c", base, 'a' + segment->fragment);
+            } else {
+                snprintf(id, sizeof(id), "%s_%d", base, segment->fragment);
+            }
+            xmlbuf_append(buf, "      <note xml:id=\"%s\">\n", id);
+        } else {
+            xmlbuf_append(buf, "      <note xml:id=\"%s\">\n", base);
+        }
+        const PitchSpelling *spelling = note_event_optional_pitch_spelling(event);
+        xmlbuf_append(buf, "        <pitch>\n          <step>%s</step>\n",
+                      PITCH_STEP_NAMES[pitch_spelling_letter(spelling)]);
+        if (pitch_spelling_accidental(spelling) != 0) {
+            xmlbuf_append(buf, "          <alter>%d</alter>\n", pitch_spelling_accidental(spelling));
+        }
+        xmlbuf_append(buf, "          <octave>%d</octave>\n        </pitch>\n", pitch_spelling_octave(spelling));
+    }
+    xmlbuf_append(buf, "        <duration>%lld</duration>\n", segment->end - segment->start);
+    if (segment->tie_stop) {
+        xmlbuf_append(buf, "        <tie type=\"stop\"/>\n");
+    }
+    if (segment->tie_start) {
+        xmlbuf_append(buf, "        <tie type=\"start\"/>\n");
+    }
+    xmlbuf_append(buf, "        <voice>%d</voice>\n", voice_number);
+    if (prep->parts[part].staff_count > 1) {
+        xmlbuf_append(buf, "        <staff>%d</staff>\n", staff);
+    }
+    xmlbuf_append(buf, "      </note>\n");
+}
+
+/* A rest from from to to, cut at the part's cuts. */
+static void write_rest_run(const Prep *prep, XmlBuf *buf, size_t part, long long from, long long to, int staff,
+                           int voice_number) {
+    long long position = from;
+    while (position < to) {
+        long long next = next_cut(prep->cuts[part], prep->cut_count[part], position);
+        if (next > to) {
+            next = to;
+        }
+        Segment rest = {position, next, REST_SEGMENT, 0, false, false};
+        write_segment(prep, buf, &rest, part, staff, voice_number);
+        position = next;
+    }
+}
+
+/* One part's measure m: every voice that sounds in it, then, for the first, a rest to the barline. */
+static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_t m, const SegmentList *lists,
+                               size_t *cursor) {
+    long long measure_start = prep->measure_start[m];
+    long long measure_end = prep->measure_end[m];
+    long long head = measure_start;
+    bool first = true;
+
+    for (size_t g = 0; g < prep->group_count; g++) {
+        const Group *group = &prep->groups[g];
+        if (group->part != part) {
+            continue;
+        }
+        const SegmentList *list = &lists[g];
+        while (cursor[g] < list->count && list->items[cursor[g]].end <= measure_start) {
+            cursor[g]++;
+        }
+        size_t last = cursor[g];
+        bool has_note = false;
+        while (last < list->count && list->items[last].start < measure_end) {
+            has_note = has_note || list->items[last].note != REST_SEGMENT;
+            last++;
+        }
+        if (!has_note) {
+            continue;
+        }
+        if (!first && head > measure_start) {
+            xmlbuf_append(buf, "      <backup>\n        <duration>%lld</duration>\n      </backup>\n",
+                          head - measure_start);
+        }
+        head = measure_start;
+        for (size_t i = cursor[g]; i < last; i++) {
+            write_segment(prep, buf, &list->items[i], part, group->staff, group->voice_number);
+            head = list->items[i].end;
+        }
+        if (first && head < measure_end) {
+            write_rest_run(prep, buf, part, head, measure_end, group->staff, group->voice_number);
+            head = measure_end;
+        }
+        first = false;
+        cursor[g] = last;
+    }
+    if (first && prep->note_count > 0) {
+        write_rest_run(prep, buf, part, measure_start, measure_end, 1, 1);
+    }
+}
+
+static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
+    SegmentList *lists = NULL;
+    MusicXmlExportResult result = build_segments(prep, &lists);
+    if (result != MUSICXML_EXPORT_OK) {
+        return result;
+    }
+    size_t *cursor = (size_t *)calloc(prep->group_count > 0 ? prep->group_count : 1, sizeof(size_t));
+    if (cursor == NULL) {
+        segments_free(lists, prep->group_count);
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+
     xmlbuf_append(buf,
                   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                   "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 3.1 Partwise//EN\" "
@@ -565,6 +864,7 @@ static void write_document(const Prep *prep, XmlBuf *buf) {
     }
     xmlbuf_append(buf, "  </part-list>\n");
     for (size_t p = 0; p < prep->part_count; p++) {
+        memset(cursor, 0, (prep->group_count > 0 ? prep->group_count : 1) * sizeof(size_t));
         xmlbuf_append(buf, "  <part id=\"");
         xmlbuf_append_escaped(buf, prep->parts[p].id);
         xmlbuf_append(buf, "\">\n");
@@ -574,11 +874,15 @@ static void write_document(const Prep *prep, XmlBuf *buf) {
                 xmlbuf_append(buf, "      <attributes>\n        <divisions>%lld</divisions>\n      </attributes>\n",
                               prep->divisions);
             }
+            write_measure_body(prep, buf, p, m, lists, cursor);
             xmlbuf_append(buf, "    </measure>\n");
         }
         xmlbuf_append(buf, "  </part>\n");
     }
     xmlbuf_append(buf, "</score-partwise>\n");
+    free(cursor);
+    segments_free(lists, prep->group_count);
+    return MUSICXML_EXPORT_OK;
 }
 
 MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml) {
@@ -599,8 +903,8 @@ MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *scor
         }
     }
     if (result == MUSICXML_EXPORT_OK) {
-        write_document(&prep, &buf);
-        if (buf.failed) {
+        result = write_document(&prep, &buf);
+        if (result == MUSICXML_EXPORT_OK && buf.failed) {
             result = MUSICXML_EXPORT_ERR_ALLOC;
         }
     }
