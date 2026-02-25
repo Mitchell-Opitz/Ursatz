@@ -199,6 +199,21 @@ typedef struct {
     unsigned long dur_d;
 } NoteRec;
 
+/* Something written between notes at a position: a key signature now, markings next. Sorted by part, tick, kind. */
+typedef enum {
+    DIR_KEY = 0
+} DirKind;
+
+typedef struct {
+    DirKind kind;
+    size_t part;
+    int staff;
+    long raw_n; /* the exact position, kept until divisions are final */
+    unsigned long raw_d;
+    long long tick;
+    size_t source; /* the index into the input array of its kind */
+} Dir;
+
 /* One voice of one staff of one part: the notes that share a VoiceReference (or have none). */
 typedef struct {
     size_t part;
@@ -229,6 +244,11 @@ typedef struct {
     long long *measure_start; /* ticks, measure_count entries */
     long long *measure_end;
 
+    Dir *dirs;
+    size_t dir_count;
+    size_t *dir_first;     /* part_count + 1 entries: part p's dirs are dirs[dir_first[p]] up to dirs[dir_first[p+1]] */
+    long long dir_max_tick; /* -1 when there are no dirs */
+
     long long **cuts;   /* per part: every barline, ascending, where notes and rests are split */
     size_t *cut_count;
 } Prep;
@@ -237,6 +257,8 @@ static void prep_free(Prep *prep) {
     free(prep->parts);
     free(prep->notes);
     free(prep->groups);
+    free(prep->dirs);
+    free(prep->dir_first);
     free(prep->measure_start);
     free(prep->measure_end);
     if (prep->cuts != NULL) {
@@ -380,7 +402,41 @@ static MusicXmlExportResult gather_notes(Prep *prep) {
     return MUSICXML_EXPORT_OK;
 }
 
-/* The smallest divisions for the notes; false (with the status) when one does not fit. */
+static MusicXmlExportResult gather_keys(Prep *prep) {
+    const MusicXmlExportScore *score = prep->score;
+    for (size_t i = 0; i < score->key_signature_count; i++) {
+        const MusicXmlExportKeySignature *key = &score->key_signatures[i];
+        if (key->position == NULL) {
+            return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
+        }
+        if (key->part_index >= prep->part_count) {
+            return MUSICXML_EXPORT_ERR_UNKNOWN_PART;
+        }
+        if (key->sharps_flats < -7 || key->sharps_flats > 7 || musical_time_numerator(key->position) < 0) {
+            return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+        Dir *dir = &prep->dirs[prep->dir_count++];
+        dir->kind = DIR_KEY;
+        dir->part = key->part_index;
+        dir->staff = 1;
+        dir->raw_n = musical_time_numerator(key->position);
+        dir->raw_d = musical_time_denominator(key->position);
+        dir->source = i;
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
+static MusicXmlExportResult gather_dirs(Prep *prep) {
+    const MusicXmlExportScore *score = prep->score;
+    size_t capacity = score->key_signature_count;
+    prep->dirs = (Dir *)calloc(capacity > 0 ? capacity : 1, sizeof(Dir));
+    if (prep->dirs == NULL) {
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    return gather_keys(prep);
+}
+
+/* The smallest divisions for the notes and the dirs; false (with the status) when one does not fit. */
 static MusicXmlExportResult choose_divisions(Prep *prep) {
     long long divisions = 1;
     for (size_t i = 0; i < prep->note_count; i++) {
@@ -393,6 +449,16 @@ static MusicXmlExportResult choose_divisions(Prep *prep) {
         if (status == TIME_OK) {
             status = time_denominator(note->dur_n, note->dur_d, &den);
         }
+        if (status == TIME_OK && !lcm_into(&divisions, den)) {
+            status = TIME_DIVISIONS_OVERFLOW;
+        }
+        if (status != TIME_OK) {
+            return from_time_status(status);
+        }
+    }
+    for (size_t i = 0; i < prep->dir_count; i++) {
+        long long den = 0;
+        TimeStatus status = time_denominator(prep->dirs[i].raw_n, prep->dirs[i].raw_d, &den);
         if (status == TIME_OK && !lcm_into(&divisions, den)) {
             status = TIME_DIVISIONS_OVERFLOW;
         }
@@ -422,6 +488,20 @@ static MusicXmlExportResult notes_to_ticks(Prep *prep) {
     return MUSICXML_EXPORT_OK;
 }
 
+static MusicXmlExportResult dirs_to_ticks(Prep *prep) {
+    prep->dir_max_tick = -1;
+    for (size_t i = 0; i < prep->dir_count; i++) {
+        Dir *dir = &prep->dirs[i];
+        if (time_ticks(dir->raw_n, dir->raw_d, prep->divisions, &dir->tick) != TIME_OK) {
+            return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+        if (dir->tick > prep->dir_max_tick) {
+            prep->dir_max_tick = dir->tick;
+        }
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
 /* Multiplies every tick by factor (the divisions grew by that much). */
 static MusicXmlExportResult rescale_ticks(Prep *prep, long long factor) {
     for (size_t i = 0; i < prep->note_count; i++) {
@@ -431,6 +511,14 @@ static MusicXmlExportResult rescale_ticks(Prep *prep, long long factor) {
         }
     }
     if (__builtin_mul_overflow(prep->extent, factor, &prep->extent)) {
+        return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
+    for (size_t i = 0; i < prep->dir_count; i++) {
+        if (__builtin_mul_overflow(prep->dirs[i].tick, factor, &prep->dirs[i].tick)) {
+            return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+    }
+    if (prep->dir_max_tick > 0 && __builtin_mul_overflow(prep->dir_max_tick, factor, &prep->dir_max_tick)) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     return MUSICXML_EXPORT_OK;
@@ -445,8 +533,13 @@ static MusicXmlExportResult from_meter_status(MeterMapResult status) {
  * denominators may need a finer divisions; if so every tick is rescaled.
  */
 static MusicXmlExportResult build_measures(Prep *prep) {
+    /* enough measures for the last note and for the measure that holds the last dir */
+    long long covered = prep->extent;
+    if (prep->dir_max_tick >= 0 && prep->dir_max_tick + 1 > covered) {
+        covered = prep->dir_max_tick + 1;
+    }
     MusicalTime *extent_time = NULL;
-    if (musical_time_create((long)prep->extent, (unsigned long)(4 * prep->divisions), &extent_time) != MUSICAL_TIME_OK) {
+    if (musical_time_create((long)covered, (unsigned long)(4 * prep->divisions), &extent_time) != MUSICAL_TIME_OK) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     size_t count = 0;
@@ -528,6 +621,39 @@ static int compare_ticks(const void *left, const void *right) {
 }
 
 /* Per part, the ticks at which every note and rest is cut: each barline (and the end of the last measure). */
+static int compare_dirs(const void *left, const void *right) {
+    const Dir *a = (const Dir *)left;
+    const Dir *b = (const Dir *)right;
+    if (a->part != b->part) {
+        return a->part < b->part ? -1 : 1;
+    }
+    if (a->tick != b->tick) {
+        return a->tick < b->tick ? -1 : 1;
+    }
+    if (a->kind != b->kind) {
+        return a->kind < b->kind ? -1 : 1;
+    }
+    return a->source < b->source ? -1 : (a->source > b->source ? 1 : 0);
+}
+
+/* Orders the dirs and finds where each part's start. */
+static MusicXmlExportResult order_dirs(Prep *prep) {
+    qsort(prep->dirs, prep->dir_count, sizeof(Dir), compare_dirs);
+    prep->dir_first = (size_t *)calloc(prep->part_count + 1, sizeof(size_t));
+    if (prep->dir_first == NULL) {
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    size_t at = 0;
+    for (size_t p = 0; p < prep->part_count; p++) {
+        prep->dir_first[p] = at;
+        while (at < prep->dir_count && prep->dirs[at].part == p) {
+            at++;
+        }
+    }
+    prep->dir_first[prep->part_count] = at;
+    return MUSICXML_EXPORT_OK;
+}
+
 static MusicXmlExportResult build_cuts(Prep *prep) {
     prep->cuts = (long long **)calloc(prep->part_count, sizeof(long long *));
     prep->cut_count = (size_t *)calloc(prep->part_count, sizeof(size_t));
@@ -535,7 +661,8 @@ static MusicXmlExportResult build_cuts(Prep *prep) {
         return MUSICXML_EXPORT_ERR_ALLOC;
     }
     for (size_t p = 0; p < prep->part_count; p++) {
-        long long *cuts = (long long *)calloc(prep->measure_count + 1, sizeof(long long));
+        size_t dirs_of_part = prep->dir_first[p + 1] - prep->dir_first[p];
+        long long *cuts = (long long *)calloc(prep->measure_count + 1 + dirs_of_part, sizeof(long long));
         if (cuts == NULL) {
             return MUSICXML_EXPORT_ERR_ALLOC;
         }
@@ -544,6 +671,9 @@ static MusicXmlExportResult build_cuts(Prep *prep) {
             cuts[n++] = prep->measure_start[m];
         }
         cuts[n++] = prep->measure_end[prep->measure_count - 1];
+        for (size_t d = prep->dir_first[p]; d < prep->dir_first[p + 1]; d++) {
+            cuts[n++] = prep->dirs[d].tick;
+        }
         qsort(cuts, n, sizeof(long long), compare_ticks);
         size_t unique = 0;
         for (size_t i = 0; i < n; i++) {
@@ -566,10 +696,16 @@ static MusicXmlExportResult prepare(Prep *prep) {
         result = gather_notes(prep);
     }
     if (result == MUSICXML_EXPORT_OK) {
+        result = gather_dirs(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
         result = choose_divisions(prep);
     }
     if (result == MUSICXML_EXPORT_OK) {
         result = notes_to_ticks(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        result = dirs_to_ticks(prep);
     }
     if (result == MUSICXML_EXPORT_OK) {
         if (prep->score->meter_map != NULL) {
@@ -587,6 +723,9 @@ static MusicXmlExportResult prepare(Prep *prep) {
         }
         prep->meter_defaulted = meter_map_is_defaulted(prep->meter);
         result = build_measures(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        result = order_dirs(prep);
     }
     if (result == MUSICXML_EXPORT_OK) {
         result = build_cuts(prep);
@@ -776,15 +915,67 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     xmlbuf_append(buf, "      </note>\n");
 }
 
-/* A rest from from to to, cut at the part's cuts. */
+/* The dirs of one part still to write, and where its current measure starts. */
+typedef struct {
+    const Prep *prep;
+    size_t part;
+    size_t *pos;
+    long long measure_start;
+} DirCtx;
+
+static void write_key(XmlBuf *buf, const MusicXmlExportKeySignature *key, const char *indent) {
+    xmlbuf_append(buf, "%s<key>\n%s  <fifths>%d</fifths>\n", indent, indent, key->sharps_flats);
+    if (key->mode == MUSICXML_EXPORT_MODE_MAJOR) {
+        xmlbuf_append(buf, "%s  <mode>major</mode>\n", indent);
+    } else if (key->mode == MUSICXML_EXPORT_MODE_MINOR) {
+        xmlbuf_append(buf, "%s  <mode>minor</mode>\n", indent);
+    }
+    xmlbuf_append(buf, "%s</key>\n", indent);
+}
+
+/* The dirs that share one tick, in kind order. A key at the start of a measure is already in its <attributes>. */
+static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, size_t count, long long measure_start) {
+    bool key_written = false;
+    for (size_t i = 0; i < count; i++) {
+        if (group[i].kind == DIR_KEY && !key_written) {
+            key_written = true;
+            if (group[i].tick != measure_start) {
+                xmlbuf_append(buf, "      <attributes>\n");
+                write_key(buf, &prep->score->key_signatures[group[i].source], "        ");
+                xmlbuf_append(buf, "      </attributes>\n");
+            }
+        }
+    }
+}
+
+/* Writes every dir of the part at or before tick that has not been written. */
+static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
+    if (ctx == NULL) {
+        return;
+    }
+    const Prep *prep = ctx->prep;
+    size_t end = prep->dir_first[ctx->part + 1];
+    while (*ctx->pos < end && prep->dirs[*ctx->pos].tick <= tick) {
+        size_t begin = *ctx->pos;
+        size_t stop = begin;
+        while (stop < end && prep->dirs[stop].tick == prep->dirs[begin].tick) {
+            stop++;
+        }
+        write_dir_group(prep, buf, &prep->dirs[begin], stop - begin, ctx->measure_start);
+        *ctx->pos = stop;
+    }
+}
+
+/* A rest from from to to, cut at the part's cuts; the part's dirs are written before each piece when dirs is given. */
 static void write_rest_run(const Prep *prep, XmlBuf *buf, size_t part, long long from, long long to, int staff,
-                           int voice_number) {
+                           int voice_number, DirCtx *dirs) {
     long long position = from;
     while (position < to) {
         long long next = next_cut(prep->cuts[part], prep->cut_count[part], position);
         if (next > to) {
             next = to;
         }
+        write_dirs_through(dirs, buf, position);
         Segment rest = {position, next, REST_SEGMENT, 0, false, false};
         write_segment(prep, buf, &rest, part, staff, voice_number);
         position = next;
@@ -793,11 +984,12 @@ static void write_rest_run(const Prep *prep, XmlBuf *buf, size_t part, long long
 
 /* One part's measure m: every voice that sounds in it, then, for the first, a rest to the barline. */
 static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_t m, const SegmentList *lists,
-                               size_t *cursor) {
+                               size_t *cursor, size_t *dir_pos) {
     long long measure_start = prep->measure_start[m];
     long long measure_end = prep->measure_end[m];
     long long head = measure_start;
     bool first = true;
+    DirCtx dir_ctx = {prep, part, dir_pos, measure_start};
 
     for (size_t g = 0; g < prep->group_count; g++) {
         const Group *group = &prep->groups[g];
@@ -823,23 +1015,38 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
         }
         head = measure_start;
         for (size_t i = cursor[g]; i < last; i++) {
+            if (first) {
+                write_dirs_through(&dir_ctx, buf, list->items[i].start);
+            }
             write_segment(prep, buf, &list->items[i], part, group->staff, group->voice_number);
             head = list->items[i].end;
         }
         if (first && head < measure_end) {
-            write_rest_run(prep, buf, part, head, measure_end, group->staff, group->voice_number);
+            write_rest_run(prep, buf, part, head, measure_end, group->staff, group->voice_number, &dir_ctx);
             head = measure_end;
         }
         first = false;
         cursor[g] = last;
     }
     if (first && prep->note_count > 0) {
-        write_rest_run(prep, buf, part, measure_start, measure_end, 1, 1);
+        write_rest_run(prep, buf, part, measure_start, measure_end, 1, 1, &dir_ctx);
+    } else if (first) {
+        /* No notes at all: the dirs alone, with <forward> between them. */
+        size_t end = prep->dir_first[part + 1];
+        while (*dir_pos < end && prep->dirs[*dir_pos].tick < measure_end) {
+            long long tick = prep->dirs[*dir_pos].tick;
+            if (tick > head) {
+                xmlbuf_append(buf, "      <forward>\n        <duration>%lld</duration>\n      </forward>\n",
+                              tick - head);
+                head = tick;
+            }
+            write_dirs_through(&dir_ctx, buf, tick);
+        }
     }
 }
 
 /* The measure's <attributes>: divisions and staves in the first, a <time> where a region of the MeterMap starts. */
-static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size_t part, size_t m) {
+static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size_t part, size_t m, size_t dir_pos) {
     const MeterMapRegion *region = NULL;
     MeterMapResult status = meter_map_region_of_measure(prep->meter, prep->first_measure_number + (int)m, &region);
     if (status != METER_MAP_OK) {
@@ -854,12 +1061,22 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
     bool has_time = region_start == prep->measure_start[m];
     bool has_divisions = m == 0;
     bool has_staves = m == 0 && prep->parts[part].staff_count > 1;
-    if (!has_time && !has_divisions && !has_staves) {
+    const MusicXmlExportKeySignature *key = NULL;
+    for (size_t d = dir_pos; d < prep->dir_first[part + 1] && prep->dirs[d].tick <= prep->measure_start[m]; d++) {
+        if (prep->dirs[d].kind == DIR_KEY && prep->dirs[d].tick == prep->measure_start[m]) {
+            key = &prep->score->key_signatures[prep->dirs[d].source];
+            break;
+        }
+    }
+    if (!has_time && !has_divisions && !has_staves && key == NULL) {
         return MUSICXML_EXPORT_OK;
     }
     xmlbuf_append(buf, "      <attributes>\n");
     if (has_divisions) {
         xmlbuf_append(buf, "        <divisions>%lld</divisions>\n", prep->divisions);
+    }
+    if (key != NULL) {
+        write_key(buf, key, "        ");
     }
     if (has_time) {
         const TimeSignature *signature = meter_map_region_time_signature(region);
@@ -908,7 +1125,14 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
         xmlbuf_append(buf, "</part-name>\n    </score-part>\n");
     }
     xmlbuf_append(buf, "  </part-list>\n");
+    size_t *dir_pos = (size_t *)calloc(1, sizeof(size_t));
+    if (dir_pos == NULL) {
+        free(cursor);
+        segments_free(lists, prep->group_count);
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
     for (size_t p = 0; p < prep->part_count && result == MUSICXML_EXPORT_OK; p++) {
+        *dir_pos = prep->dir_first[p];
         memset(cursor, 0, (prep->group_count > 0 ? prep->group_count : 1) * sizeof(size_t));
         xmlbuf_append(buf, "  <part id=\"");
         xmlbuf_append_escaped(buf, prep->parts[p].id);
@@ -917,16 +1141,17 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
             bool pickup = m == 0 && meter_map_has_pickup(prep->meter);
             xmlbuf_append(buf, "    <measure number=\"%d\"%s>\n", prep->first_measure_number + (int)m,
                           pickup ? " implicit=\"yes\"" : "");
-            result = write_attributes(prep, buf, p, m);
+            result = write_attributes(prep, buf, p, m, *dir_pos);
             if (result != MUSICXML_EXPORT_OK) {
                 break;
             }
-            write_measure_body(prep, buf, p, m, lists, cursor);
+            write_measure_body(prep, buf, p, m, lists, cursor, dir_pos);
             xmlbuf_append(buf, "    </measure>\n");
         }
         xmlbuf_append(buf, "  </part>\n");
     }
     xmlbuf_append(buf, "</score-partwise>\n");
+    free(dir_pos);
     free(cursor);
     segments_free(lists, prep->group_count);
     return result;
