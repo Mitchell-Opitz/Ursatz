@@ -11,6 +11,8 @@
 #include "identity/entity_id.h"
 #include "pitch/pitch_spelling.h"
 #include "time/duration.h"
+#include "time/metronome_marking.h"
+#include "time/tempo_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
@@ -201,7 +203,9 @@ typedef struct {
 
 /* Something written between notes at a position: a key signature now, markings next. Sorted by part, tick, kind. */
 typedef enum {
-    DIR_KEY = 0
+    DIR_KEY = 0,
+    DIR_TEMPO,   /* source: the TempoMap region index */
+    DIR_MARKING  /* source: the TempoMarking index */
 } DirKind;
 
 typedef struct {
@@ -426,14 +430,148 @@ static MusicXmlExportResult gather_keys(Prep *prep) {
     return MUSICXML_EXPORT_OK;
 }
 
+/* The beat units MusicXML names, as whole-note fractions. */
+static const struct {
+    const char *name;
+    unsigned long long numerator;
+    unsigned long long denominator;
+} BEAT_UNITS[] = {{"long", 4, 1},   {"breve", 2, 1},  {"whole", 1, 1},   {"half", 1, 2},    {"quarter", 1, 4},
+                  {"eighth", 1, 8}, {"16th", 1, 16},  {"32nd", 1, 32},   {"64th", 1, 64},  {"128th", 1, 128}};
+#define MAX_BEAT_UNIT_DOTS 4
+
+/* The name and dot count of a beat unit n/d, false when MusicXML has no such note. */
+static bool beat_unit_name(unsigned long n, unsigned long d, const char **name, int *dots) {
+    for (size_t u = 0; u < sizeof(BEAT_UNITS) / sizeof(BEAT_UNITS[0]); u++) {
+        for (int k = 0; k <= MAX_BEAT_UNIT_DOTS; k++) {
+            /* base * (2^(k+1) - 1) / 2^k */
+            unsigned long long want_n = BEAT_UNITS[u].numerator * ((1ull << (k + 1)) - 1);
+            unsigned long long want_d = BEAT_UNITS[u].denominator * (1ull << k);
+            if ((unsigned long long)n * want_d == want_n * (unsigned long long)d) {
+                *name = BEAT_UNITS[u].name;
+                *dots = k;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* num/den as a decimal with at most 12 places, trailing zeros dropped. *exact is false when it had to be rounded. */
+static bool ratio_to_decimal(unsigned long long num, unsigned long long den, char *out, size_t size, bool *exact) {
+    if (den == 0 || den > 100000000000000000ull) {
+        return false;
+    }
+    unsigned long long whole = num / den;
+    unsigned long long rem = num % den;
+    char digits[13];
+    int used = 0;
+    while (used < 12 && rem != 0) {
+        rem *= 10;
+        digits[used++] = (char)('0' + rem / den);
+        rem %= den;
+    }
+    *exact = rem == 0;
+    if (rem != 0 && rem * 2 >= den) {
+        int at = used - 1;
+        while (at >= 0 && digits[at] == '9') {
+            digits[at--] = '0';
+        }
+        if (at >= 0) {
+            digits[at]++;
+        } else {
+            whole++;
+        }
+    }
+    while (used > 0 && digits[used - 1] == '0') {
+        used--;
+    }
+    digits[used] = '\0';
+    int written = snprintf(out, size, used > 0 ? "%llu.%s" : "%llu", whole, digits);
+    return written > 0 && (size_t)written < size;
+}
+
+static MusicXmlExportResult gather_tempo(Prep *prep) {
+    const TempoMap *map = prep->score->tempo_map;
+    if (map == NULL || tempo_map_is_defaulted(map)) {
+        return MUSICXML_EXPORT_OK;
+    }
+    for (size_t i = 0; i < tempo_map_region_count(map); i++) {
+        const TempoMapRegion *region = tempo_map_region(map, i);
+        if (tempo_map_region_is_defaulted(region)) {
+            continue;
+        }
+        if (tempo_map_region_microseconds_per_quarter(region) == 0) {
+            return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+        Dir *dir = &prep->dirs[prep->dir_count++];
+        dir->kind = DIR_TEMPO;
+        dir->part = 0;
+        dir->staff = 1;
+        dir->raw_n = musical_time_numerator(tempo_map_region_start(region));
+        dir->raw_d = musical_time_denominator(tempo_map_region_start(region));
+        dir->source = i;
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
+static MusicXmlExportResult gather_markings(Prep *prep) {
+    const MusicXmlExportScore *score = prep->score;
+    for (size_t i = 0; i < score->tempo_marking_count; i++) {
+        const TempoMarking *marking = score->tempo_markings[i];
+        if (marking == NULL) {
+            return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
+        }
+        size_t part = score->tempo_marking_part != NULL ? score->tempo_marking_part[i] : 0;
+        if (part >= prep->part_count) {
+            return MUSICXML_EXPORT_ERR_UNKNOWN_PART;
+        }
+        if (tempo_marking_has_metronome_marking(marking)) {
+            const MetronomeMarking *metronome = tempo_marking_metronome_marking(marking);
+            const char *name = NULL;
+            int dots = 0;
+            char text[64];
+            bool exact = false;
+            if (!beat_unit_name(metronome_marking_beat_unit_numerator(metronome),
+                                metronome_marking_beat_unit_denominator(metronome), &name, &dots) ||
+                !ratio_to_decimal(metronome_marking_bpm_numerator(metronome),
+                                  metronome_marking_bpm_denominator(metronome), text, sizeof(text), &exact) ||
+                !exact) {
+                return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+            }
+        }
+        const MusicalTime *position = temporal_anchor_position(tempo_marking_temporal_anchor(marking));
+        if (musical_time_numerator(position) < 0) {
+            return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+        Dir *dir = &prep->dirs[prep->dir_count++];
+        dir->kind = DIR_MARKING;
+        dir->part = part;
+        dir->staff = 1;
+        dir->raw_n = musical_time_numerator(position);
+        dir->raw_d = musical_time_denominator(position);
+        dir->source = i;
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
 static MusicXmlExportResult gather_dirs(Prep *prep) {
     const MusicXmlExportScore *score = prep->score;
-    size_t capacity = score->key_signature_count;
+    size_t capacity = score->key_signature_count + score->tempo_marking_count;
+    if (score->tempo_map != NULL) {
+        capacity += tempo_map_region_count(score->tempo_map);
+    }
     prep->dirs = (Dir *)calloc(capacity > 0 ? capacity : 1, sizeof(Dir));
     if (prep->dirs == NULL) {
         return MUSICXML_EXPORT_ERR_ALLOC;
     }
-    return gather_keys(prep);
+    MusicXmlExportResult result = gather_keys(prep);
+    if (result == MUSICXML_EXPORT_OK) {
+        result = gather_tempo(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        result = gather_markings(prep);
+    }
+    return result;
 }
 
 /* The smallest divisions for the notes and the dirs; false (with the status) when one does not fit. */
@@ -933,9 +1071,51 @@ static void write_key(XmlBuf *buf, const MusicXmlExportKeySignature *key, const 
     xmlbuf_append(buf, "%s</key>\n", indent);
 }
 
+/* 60,000,000 / microseconds-per-quarter as a decimal: the quarter notes per minute of a <sound tempo>. */
+static void tempo_text(const Prep *prep, size_t region, char *out, size_t size) {
+    bool exact = false;
+    unsigned long micro = tempo_map_region_microseconds_per_quarter(tempo_map_region(prep->score->tempo_map, region));
+    if (!ratio_to_decimal(60000000ull, micro, out, size, &exact)) {
+        snprintf(out, size, "0");
+    }
+}
+
+static void write_marking(const Prep *prep, XmlBuf *buf, const TempoMarking *marking, const char *sound_tempo) {
+    xmlbuf_append(buf, "      <direction placement=\"above\">\n");
+    if (tempo_marking_has_text(marking)) {
+        xmlbuf_append(buf, "        <direction-type>\n          <words>");
+        xmlbuf_append_escaped(buf, tempo_marking_text(marking));
+        xmlbuf_append(buf, "</words>\n        </direction-type>\n");
+    }
+    if (tempo_marking_has_metronome_marking(marking)) {
+        const MetronomeMarking *metronome = tempo_marking_metronome_marking(marking);
+        const char *name = "quarter";
+        int dots = 0;
+        char per_minute[64];
+        bool exact = false;
+        beat_unit_name(metronome_marking_beat_unit_numerator(metronome),
+                       metronome_marking_beat_unit_denominator(metronome), &name, &dots);
+        ratio_to_decimal(metronome_marking_bpm_numerator(metronome), metronome_marking_bpm_denominator(metronome),
+                         per_minute, sizeof(per_minute), &exact);
+        xmlbuf_append(buf, "        <direction-type>\n          <metronome>\n            <beat-unit>%s</beat-unit>\n",
+                      name);
+        for (int k = 0; k < dots; k++) {
+            xmlbuf_append(buf, "            <beat-unit-dot/>\n");
+        }
+        xmlbuf_append(buf, "            <per-minute>%s</per-minute>\n          </metronome>\n        </direction-type>\n",
+                      per_minute);
+    }
+    if (sound_tempo != NULL) {
+        xmlbuf_append(buf, "        <sound tempo=\"%s\"/>\n", sound_tempo);
+    }
+    xmlbuf_append(buf, "      </direction>\n");
+    (void)prep;
+}
+
 /* The dirs that share one tick, in kind order. A key at the start of a measure is already in its <attributes>. */
 static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, size_t count, long long measure_start) {
     bool key_written = false;
+    const Dir *tempo = NULL;
     for (size_t i = 0; i < count; i++) {
         if (group[i].kind == DIR_KEY && !key_written) {
             key_written = true;
@@ -944,7 +1124,24 @@ static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, siz
                 write_key(buf, &prep->score->key_signatures[group[i].source], "        ");
                 xmlbuf_append(buf, "      </attributes>\n");
             }
+        } else if (group[i].kind == DIR_TEMPO && tempo == NULL) {
+            tempo = &group[i];
         }
+    }
+    /* The tempo goes in the first marking's <direction> when there is one, so a reader finds one tempo marking. */
+    char tempo_value[64];
+    bool tempo_pending = tempo != NULL;
+    if (tempo_pending) {
+        tempo_text(prep, tempo->source, tempo_value, sizeof(tempo_value));
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (group[i].kind == DIR_MARKING) {
+            write_marking(prep, buf, prep->score->tempo_markings[group[i].source], tempo_pending ? tempo_value : NULL);
+            tempo_pending = false;
+        }
+    }
+    if (tempo_pending) {
+        xmlbuf_append(buf, "      <sound tempo=\"%s\"/>\n", tempo_value);
     }
 }
 
