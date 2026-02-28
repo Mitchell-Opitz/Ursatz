@@ -1184,11 +1184,243 @@ static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, s
     return URSATZ_GUI_MATERIAL_OK;
 }
 
+/* --- piece bodies -------------------------------------------------------- */
+
+static const char *const kPieceParts[] = {"intro", "body", "turnaround", "ending", NULL};
+static const char *const kPieceCadences[] = {"PAC", "IAC", "HC", "DC", "PC", NULL};
+static const char *const kPieceIntos[] = {"sentence", "period", "hybrid", NULL};
+static const char *const kPieceModes[] = {"major", "minor", "style", NULL};
+static const char *const kPieceMeters[] = {"2/4", "3/4", "4/4", "6/8", NULL};
+/* The members a placeholder piece (structure null, a string, an array or an object without sections) does not have. */
+static const char *const kPieceNewMembers[] = {"motive", "pool",  "accompaniment", "brief", "style_weight", "without",
+                                               "tempo",  "check", "seed",          "result", NULL};
+
+#define PIECE_SECTIONS_MAX 32
+#define PIECE_BEATS_MAX 2048
+#define PIECE_ID_MAX 15
+#define PIECE_LETTER_MAX 8
+#define PIECE_NUMERALS_MAX 64
+#define PIECE_NUMERAL_CHARS 16
+#define PIECE_CELLS_MAX 8
+
+/* True when the piece is a placeholder: no new member and a structure that is not an object with sections. */
+static bool piece_is_placeholder(const cJSON *piece) {
+    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
+    if (cJSON_IsObject(structure) && cJSON_GetObjectItemCaseSensitive(structure, "sections")) {
+        return false;
+    }
+    for (const char *const *name = kPieceNewMembers; *name; name++) {
+        if (cJSON_GetObjectItemCaseSensitive(piece, *name)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* An id like s0, s12 or end. */
+static bool piece_section_id_ok(const char *id) {
+    if (strcmp(id, "end") == 0) {
+        return true;
+    }
+    if (id[0] != 's' || id[1] == '\0' || strlen(id) > PIECE_ID_MAX) {
+        return false;
+    }
+    for (const char *c = id + 1; *c; c++) {
+        if (!isdigit((unsigned char)*c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Roman numerals separated by single spaces: 1 to 64 words of letters, digits and the marks #, b, o, +, / and -. */
+static bool piece_numerals_ok(const char *text) {
+    size_t words = 0;
+    size_t length = 0;
+    for (const char *c = text;; c++) {
+        if (*c == ' ' || *c == '\0') {
+            if (length == 0) {
+                return false;
+            }
+            words++;
+            length = 0;
+            if (*c == '\0') {
+                break;
+            }
+            continue;
+        }
+        if (!(isalnum((unsigned char)*c) || strchr("#+/-o", *c)) || ++length > PIECE_NUMERAL_CHARS) {
+            return false;
+        }
+    }
+    return words <= PIECE_NUMERALS_MAX;
+}
+
+/* A pickup as beats (n or n/d) shorter than a bar; bar_beats is the meter's numerator. */
+static bool piece_pickup_ok(const cJSON *pickup, int bar_beats) {
+    if (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false)) {
+        return false;
+    }
+    char *end = NULL;
+    double top = strtod(pickup->valuestring, &end);
+    double bottom = end && *end == '/' ? strtod(end + 1, NULL) : 1;
+    return bottom > 0 && top / bottom < bar_beats;
+}
+
+/* {kind, ...}: null or empty, a motif, a theme version or a progression. */
+static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *error, size_t error_size) {
+    static const char *const kinds[] = {"empty", "motif", "theme", "progression", NULL};
+    if (!fill || cJSON_IsNull(fill)) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    const cJSON *kind = cJSON_GetObjectItemCaseSensitive(fill, "kind");
+    if (!cJSON_IsObject(fill) || !in_set(kind, kinds)) {
+        return invalid_body(error, error_size, "a section fill must be null or have a kind of empty, motif, theme or progression");
+    }
+    if (strcmp(kind->valuestring, "motif") == 0 || strcmp(kind->valuestring, "theme") == 0) {
+        if (!theme_reference_ok(fill)) {
+            return invalid_body(error, error_size, "a motif or theme fill needs item_id and version");
+        }
+    }
+    if (strcmp(kind->valuestring, "motif") == 0) {
+        const cJSON *hybrid = cJSON_GetObjectItemCaseSensitive(fill, "hybrid");
+        if (!is_in_set_or_null(fill, "into", kPieceIntos) ||
+            (!is_absent_or_null(fill, "hybrid") && (!cJSON_IsString(hybrid) || !theme_hybrid_ok(hybrid->valuestring)))) {
+            return invalid_body(error, error_size, "a motif fill into must be sentence, period or hybrid, and hybrid like presentation+continuation");
+        }
+    }
+    if (strcmp(kind->valuestring, "progression") == 0) {
+        const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");
+        const cJSON *cells = cJSON_GetObjectItemCaseSensitive(fill, "cells");
+        if (!cJSON_IsString(numerals) || !piece_numerals_ok(numerals->valuestring)) {
+            return invalid_body(error, error_size, "a progression fill needs numerals, 1 to 64 roman numerals separated by spaces");
+        }
+        if (!is_absent_or_null(fill, "cells") && (!is_whole_number(cells, 1) || cells->valuedouble > PIECE_CELLS_MAX)) {
+            return invalid_body(error, error_size, "a progression fill cells must be 1 to 8");
+        }
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, char *error, size_t error_size) {
+    const cJSON *key = cJSON_GetObjectItemCaseSensitive(structure, "key");
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(structure, "meter");
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    if (!cJSON_IsObject(structure) || !cJSON_IsArray(sections)) {
+        return invalid_body(error, error_size, "a piece structure needs key, mode, meter and sections");
+    }
+    if (!is_absent_or_null(structure, "key") && (!cJSON_IsString(key) || !theme_key_ok(key->valuestring))) {
+        return invalid_body(error, error_size, "piece key must be a tonic such as D or Bb minor");
+    }
+    if (!is_in_set_or_null(structure, "mode", kPieceModes)) {
+        return invalid_body(error, error_size, "piece mode must be major, minor or style");
+    }
+    if (!is_in_set_or_null(structure, "meter", kPieceMeters)) {
+        return invalid_body(error, error_size, "piece meter must be 2/4, 3/4, 4/4 or 6/8");
+    }
+    int bar_beats = cJSON_IsString(meter) ? atoi(meter->valuestring) : 4;
+    int count = cJSON_GetArraySize(sections);
+    if (count < 1 || count > PIECE_SECTIONS_MAX) {
+        return invalid_body(error, error_size, "a piece has 1 to 32 sections");
+    }
+    int last_part = -1;
+    bool has_body = false;
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, sections) {
+        const cJSON *id = cJSON_GetObjectItemCaseSensitive(section, "id");
+        const cJSON *part = cJSON_GetObjectItemCaseSensitive(section, "part");
+        const cJSON *letter = cJSON_GetObjectItemCaseSensitive(section, "letter");
+        const cJSON *beats = cJSON_GetObjectItemCaseSensitive(section, "beats");
+        if (!cJSON_IsObject(section) || !cJSON_IsString(id) || !piece_section_id_ok(id->valuestring) || !in_set(part, kPieceParts)) {
+            return invalid_body(error, error_size, "each section needs an id like s0 or end and a part of intro, body, turnaround or ending");
+        }
+        for (const cJSON *earlier = sections->child; earlier != section; earlier = earlier->next) {
+            if (strcmp(cJSON_GetObjectItemCaseSensitive(earlier, "id")->valuestring, id->valuestring) == 0) {
+                return invalid_body(error, error_size, "each section id may be used once");
+            }
+        }
+        int part_index = 0;
+        while (strcmp(kPieceParts[part_index], part->valuestring) != 0) {
+            part_index++;
+        }
+        if (part_index < last_part) {
+            return invalid_body(error, error_size, "sections must come in the order intro, body, turnaround, ending");
+        }
+        last_part = part_index;
+        has_body = has_body || part_index == 1;
+        if (!is_absent_or_null(section, "letter") &&
+            (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' || utf8_length(letter->valuestring) > PIECE_LETTER_MAX)) {
+            return invalid_body(error, error_size, "a section letter must be 1 to 8 characters");
+        }
+        if (!is_whole_number(beats, 1) || beats->valuedouble > PIECE_BEATS_MAX) {
+            return invalid_body(error, error_size, "a section has 1 to 2048 beats");
+        }
+        if (!is_absent_or_null(section, "pickup") &&
+            !piece_pickup_ok(cJSON_GetObjectItemCaseSensitive(section, "pickup"), bar_beats)) {
+            return invalid_body(error, error_size, "a section pickup must be beats as n or n/d, shorter than a bar");
+        }
+        if (!is_in_set_or_null(section, "cadence", kPieceCadences)) {
+            return invalid_body(error, error_size, "a section cadence must be null, PAC, IAC, HC, DC or PC");
+        }
+        UrsatzGuiMaterialResult filled = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(section, "fill"), error, error_size);
+        if (filled != URSATZ_GUI_MATERIAL_OK) {
+            return filled;
+        }
+    }
+    return has_body ? URSATZ_GUI_MATERIAL_OK : invalid_body(error, error_size, "a piece needs at least one body section");
+}
+
 static UrsatzGuiMaterialResult validate_piece(const cJSON *piece, char *error, size_t error_size) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
     if (!cJSON_IsObject(piece) || (structure && !cJSON_IsNull(structure) && !cJSON_IsString(structure) &&
                                    !cJSON_IsObject(structure) && !cJSON_IsArray(structure))) {
         return invalid_body(error, error_size, "a piece body needs a piece object with a structure");
+    }
+    if (piece_is_placeholder(piece)) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    UrsatzGuiMaterialResult result = validate_piece_structure(structure, error, error_size);
+    if (result != URSATZ_GUI_MATERIAL_OK) {
+        return result;
+    }
+    if (!is_absent_or_null(piece, "motive") && !theme_reference_ok(cJSON_GetObjectItemCaseSensitive(piece, "motive"))) {
+        return invalid_body(error, error_size, "a piece motive needs item_id and version");
+    }
+    if (!is_in_set_or_null(piece, "pool", kThemePools)) {
+        return invalid_body(error, error_size, "piece pool must be approved-and-unflagged, approved or none");
+    }
+    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(piece, "accompaniment");
+    const char *pattern = string_member(accompaniment, "pattern");
+    if (!is_absent_or_null(piece, "accompaniment") &&
+        ((pattern && strcmp(pattern, "motive") == 0) ||
+         validate_theme_accompaniment(accompaniment, error, error_size) != URSATZ_GUI_MATERIAL_OK)) {
+        return invalid_body(error, error_size, "piece accompaniment pattern must be block, arpeggiated, alberti, oom-pah or any");
+    }
+    if (!is_absent_or_null(piece, "brief") && !theme_brief_ok(cJSON_GetObjectItemCaseSensitive(piece, "brief"))) {
+        return invalid_body(error, error_size, "piece brief needs scopes, piece_ids or style_ids within the limits");
+    }
+    const cJSON *weight = cJSON_GetObjectItemCaseSensitive(piece, "style_weight");
+    if (!is_absent_or_null(piece, "style_weight") && (!cJSON_IsString(weight) || !is_rational(weight->valuestring, false))) {
+        return invalid_body(error, error_size, "piece style_weight must be n or n/d");
+    }
+    const cJSON *without = cJSON_GetObjectItemCaseSensitive(piece, "without");
+    if (without && (!is_string_list_from(without, kThemeMotiveCategories) || cJSON_GetArraySize(without) > THEME_WITHOUT_MAX)) {
+        return invalid_body(error, error_size, "piece without lists up to four motive categories");
+    }
+    const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(piece, "tempo");
+    if (!is_absent_or_null(piece, "tempo") && (!is_whole_number(tempo, 20) || tempo->valuedouble > 400)) {
+        return invalid_body(error, error_size, "piece tempo must be null or 20 to 400");
+    }
+    const cJSON *check = cJSON_GetObjectItemCaseSensitive(piece, "check");
+    if (check && !cJSON_IsBool(check)) {
+        return invalid_body(error, error_size, "piece check must be true or false");
+    }
+    if (!is_absent_or_null(piece, "seed") && !is_whole_number(cJSON_GetObjectItemCaseSensitive(piece, "seed"), 0)) {
+        return invalid_body(error, error_size, "piece seed must be null or a whole number");
+    }
+    const cJSON *result_member = cJSON_GetObjectItemCaseSensitive(piece, "result");
+    if (result_member && !cJSON_IsNull(result_member) && !cJSON_IsObject(result_member)) {
+        return invalid_body(error, error_size, "piece result must be null or an object");
     }
     return URSATZ_GUI_MATERIAL_OK;
 }
@@ -1369,52 +1601,84 @@ static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON
     return URSATZ_GUI_MATERIAL_OK;
 }
 
-/* The theme member of a body that is not a placeholder, else NULL. */
-static cJSON *theme_member(cJSON *body) {
-    cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
-    return cJSON_IsObject(theme) && !theme_is_placeholder(theme) ? theme : NULL;
-}
+#define BODY_REFERENCES_MAX 40
+
+typedef enum { REF_MELODIC_MOTIF, REF_ACCOMPANIMENT_MOTIF, REF_THEME } ReferenceKind;
 
 /*
- * The references a theme makes to motifs: its slots in order, then the accompaniment when its pattern is "motive".
- * refs receives up to 5 pointers; the count is returned. *accompaniment_index is the index of the accompaniment
- * reference, or -1.
+ * The references a body makes to versions of other items: a theme's slots in order, then its accompaniment when its
+ * pattern is "motive"; a piece's motive, then the motif and theme fills of its sections in order. Placeholders make
+ * none. refs receives up to BODY_REFERENCES_MAX pointers into body, kinds the kind of each; the count is returned.
  */
-static size_t theme_references(const cJSON *theme, const cJSON *refs[5], int *accompaniment_index) {
+static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENCES_MAX], ReferenceKind kinds[BODY_REFERENCES_MAX]) {
     size_t count = 0;
-    const cJSON *slot = NULL;
-    *accompaniment_index = -1;
-    cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
-        if (count < 4) {
-            refs[count++] = slot;
+    const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
+    if (cJSON_IsObject(theme) && !theme_is_placeholder(theme)) {
+        const cJSON *slot = NULL;
+        cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
+            if (count < 4) {
+                kinds[count] = REF_MELODIC_MOTIF;
+                refs[count++] = slot;
+            }
+        }
+        const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
+        const cJSON *pattern = cJSON_GetObjectItemCaseSensitive(accompaniment, "pattern");
+        if (cJSON_IsObject(accompaniment) && cJSON_IsString(pattern) && strcmp(pattern->valuestring, "motive") == 0) {
+            kinds[count] = REF_ACCOMPANIMENT_MOTIF;
+            refs[count++] = accompaniment;
         }
     }
-    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
-    const cJSON *pattern = cJSON_GetObjectItemCaseSensitive(accompaniment, "pattern");
-    if (cJSON_IsObject(accompaniment) && cJSON_IsString(pattern) && strcmp(pattern->valuestring, "motive") == 0) {
-        *accompaniment_index = (int)count;
-        refs[count++] = accompaniment;
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
+    if (cJSON_IsObject(piece) && !piece_is_placeholder(piece)) {
+        const cJSON *motive = cJSON_GetObjectItemCaseSensitive(piece, "motive");
+        if (cJSON_IsObject(motive)) {
+            kinds[count] = REF_MELODIC_MOTIF;
+            refs[count++] = motive;
+        }
+        const cJSON *section = NULL;
+        cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "structure"), "sections")) {
+            const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
+            const char *kind = string_member(fill, "kind");
+            bool theme_fill = strcmp(kind, "theme") == 0;
+            if (count < BODY_REFERENCES_MAX && (theme_fill || strcmp(kind, "motif") == 0)) {
+                kinds[count] = theme_fill ? REF_THEME : REF_MELODIC_MOTIF;
+                refs[count++] = fill;
+            }
+        }
     }
     return count;
 }
 
-/* The motif a reference names must exist at that version, with form full, and have the role the use needs. */
-static UrsatzGuiMaterialResult theme_check_reference_locked(const cJSON *reference, bool accompaniment) {
+/*
+ * What a reference names must exist at that version: a motif with form full and the role the use needs, or a theme
+ * version that was composed (a result and a plan.json beside the version).
+ */
+static UrsatzGuiMaterialResult check_reference_locked(const cJSON *reference, ReferenceKind kind) {
     const char *source_id = string_member(reference, "item_id");
     int number = cJSON_GetObjectItemCaseSensitive(reference, "version")->valueint;
+    bool theme = kind == REF_THEME;
     cJSON *source = NULL;
     cJSON *version = NULL;
     UrsatzGuiMaterialResult result = load_item_locked(source_id, &source);
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = strcmp(string_member(source, "type"), "motif") == 0 && number <= current_version_of(source)
+        result = strcmp(string_member(source, "type"), theme ? "theme" : "motif") == 0 && number <= current_version_of(source)
                      ? read_version_locked(source_id, number, &version)
                      : URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_GUI_MATERIAL_OK && theme) {
+        char plan[PATH_BYTES];
+        const cJSON *composed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version, "theme"), "result");
+        if (!cJSON_IsObject(composed) ||
+            snprintf(plan, sizeof(plan), "%s/items/%s/v%d/plan.json", g_dir, source_id, number) >= (int)sizeof(plan) ||
+            !path_exists(plan)) {
+            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+        }
+    } else if (result == URSATZ_GUI_MATERIAL_OK) {
         const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version, "motif");
         const char *form = string_member(motif, "form");
         const char *role = string_member(motif, "role");
-        if (!form || !role || strcmp(form, "full") != 0 || strcmp(role, accompaniment ? "accompaniment" : "melodic") != 0) {
+        if (!form || !role || strcmp(form, "full") != 0 ||
+            strcmp(role, kind == REF_ACCOMPANIMENT_MOTIF ? "accompaniment" : "melodic") != 0) {
             result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
         }
     }
@@ -1427,7 +1691,7 @@ static UrsatzGuiMaterialResult theme_check_reference_locked(const cJSON *referen
 }
 
 /* Adds {item_id, version} to uses unless an entry with both is there. false on allocation failure. */
-static bool theme_add_use(cJSON *uses, const char *item_id, int version) {
+static bool add_use(cJSON *uses, const char *item_id, int version) {
     const cJSON *use = NULL;
     cJSON_ArrayForEach(use, uses) {
         if (strcmp(string_member(use, "item_id"), item_id) == 0 &&
@@ -1445,7 +1709,7 @@ static bool theme_add_use(cJSON *uses, const char *item_id, int version) {
 }
 
 /*
- * Returns in *out a copy of body. For a theme that is not a placeholder, the motifs its slots and accompaniment name
+ * Returns in *out a copy of body. For a theme or piece that is not a placeholder, the motifs and themes it names
  * are checked, and its uses of those items are replaced by one use for each version named (a client use of them is
  * dropped; its other uses stay). Any other body is copied as it is.
  */
@@ -1454,17 +1718,16 @@ static UrsatzGuiMaterialResult prepare_uses_locked(const cJSON *body, cJSON **ou
     if (!prepared) {
         return URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
-    cJSON *theme = theme_member(prepared);
-    if (!theme) {
+    const cJSON *refs[BODY_REFERENCES_MAX];
+    ReferenceKind kinds[BODY_REFERENCES_MAX];
+    size_t count = body_references(prepared, refs, kinds);
+    if (count == 0) {
         *out = prepared;
         return URSATZ_GUI_MATERIAL_OK;
     }
-    const cJSON *refs[5];
-    int accompaniment_index = -1;
-    size_t count = theme_references(theme, refs, &accompaniment_index);
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
-        result = theme_check_reference_locked(refs[i], (int)i == accompaniment_index);
+        result = check_reference_locked(refs[i], kinds[i]);
     }
     cJSON *uses = cJSON_CreateArray();
     if (result == URSATZ_GUI_MATERIAL_OK && !uses) {
@@ -1486,7 +1749,7 @@ static UrsatzGuiMaterialResult prepare_uses_locked(const cJSON *body, cJSON **ou
         }
     }
     for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
-        if (!theme_add_use(uses, string_member(refs[i], "item_id"),
+        if (!add_use(uses, string_member(refs[i], "item_id"),
                            cJSON_GetObjectItemCaseSensitive(refs[i], "version")->valueint)) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
         }
@@ -1519,12 +1782,11 @@ static UrsatzGuiMaterialResult fill_body_uses_locked(const char *self_id, const 
     return result;
 }
 
-/* Points every slot and the accompaniment motif of a theme that names source_id at version latest. false on allocation failure. */
-static bool theme_bump_versions(cJSON *body, const char *source_id, int latest) {
-    cJSON *theme = theme_member(body);
-    const cJSON *refs[5];
-    int accompaniment_index = -1;
-    size_t count = theme ? theme_references(theme, refs, &accompaniment_index) : 0;
+/* Points every reference of a theme or piece body that names source_id at version latest. false on allocation failure. */
+static bool bump_versions(cJSON *body, const char *source_id, int latest) {
+    const cJSON *refs[BODY_REFERENCES_MAX];
+    ReferenceKind kinds[BODY_REFERENCES_MAX];
+    size_t count = body_references(body, refs, kinds);
     bool ok = true;
     for (size_t i = 0; i < count; i++) {
         if (strcmp(string_member(refs[i], "item_id"), source_id) == 0) {
@@ -2078,7 +2340,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
                 ok = ok && cJSON_AddNumberToObject(use, "version", latest) != NULL;
             }
         }
-        if (!ok || !theme_bump_versions(body, source_id, latest)) {
+        if (!ok || !bump_versions(body, source_id, latest)) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
         } else if (!found) {
             result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
