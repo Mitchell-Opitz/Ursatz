@@ -10,6 +10,7 @@
 #include "export/musicxml_export.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_spelling.h"
+#include "events/dynamics.h"
 #include "time/duration.h"
 #include "time/metronome_marking.h"
 #include "time/tempo_map.h"
@@ -205,7 +206,8 @@ typedef struct {
 typedef enum {
     DIR_KEY = 0,
     DIR_TEMPO,   /* source: the TempoMap region index */
-    DIR_MARKING  /* source: the TempoMarking index */
+    DIR_MARKING, /* source: the TempoMarking index */
+    DIR_DYNAMIC  /* source: the Dynamics index */
 } DirKind;
 
 typedef struct {
@@ -554,9 +556,62 @@ static MusicXmlExportResult gather_markings(Prep *prep) {
     return MUSICXML_EXPORT_OK;
 }
 
+/* Where a Dynamics sounds: the start of its span, or the start of the event it targets. */
+static MusicXmlExportResult dynamics_position(const Prep *prep, const Dynamics *dynamics, long *n, unsigned long *d) {
+    const MusicalTime *position = NULL;
+    if (dynamics_target_kind(dynamics) == DYNAMICS_TARGET_TIME_SPAN) {
+        position = time_span_start(dynamics_target_time_span(dynamics));
+    } else {
+        const char *id = entity_id_value(dynamics_target_event_id(dynamics));
+        for (size_t i = 0; i < prep->score->count && position == NULL; i++) {
+            if (strcmp(entity_id_value(note_event_id(prep->score->events[i])), id) == 0) {
+                position = temporal_anchor_position(note_event_temporal_anchor(prep->score->events[i]));
+            }
+        }
+        if (position == NULL) {
+            return MUSICXML_EXPORT_ERR_UNKNOWN_EVENT;
+        }
+    }
+    if (musical_time_numerator(position) < 0) {
+        return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
+    *n = musical_time_numerator(position);
+    *d = musical_time_denominator(position);
+    return MUSICXML_EXPORT_OK;
+}
+
+static MusicXmlExportResult gather_dynamics(Prep *prep) {
+    const MusicXmlExportScore *score = prep->score;
+    for (size_t i = 0; i < score->dynamics_count; i++) {
+        const Dynamics *dynamics = score->dynamics[i];
+        if (dynamics == NULL) {
+            return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
+        }
+        size_t part = score->dynamics_part != NULL ? score->dynamics_part[i] : 0;
+        int staff = score->dynamics_staff != NULL ? score->dynamics_staff[i] : 1;
+        if (part >= prep->part_count) {
+            return MUSICXML_EXPORT_ERR_UNKNOWN_PART;
+        }
+        if (staff < 1 || staff > prep->parts[part].staff_count) {
+            return MUSICXML_EXPORT_ERR_BAD_STAFF;
+        }
+        Dir *dir = &prep->dirs[prep->dir_count];
+        MusicXmlExportResult result = dynamics_position(prep, dynamics, &dir->raw_n, &dir->raw_d);
+        if (result != MUSICXML_EXPORT_OK) {
+            return result;
+        }
+        dir->kind = DIR_DYNAMIC;
+        dir->part = part;
+        dir->staff = staff;
+        dir->source = i;
+        prep->dir_count++;
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
 static MusicXmlExportResult gather_dirs(Prep *prep) {
     const MusicXmlExportScore *score = prep->score;
-    size_t capacity = score->key_signature_count + score->tempo_marking_count;
+    size_t capacity = score->key_signature_count + score->tempo_marking_count + score->dynamics_count;
     if (score->tempo_map != NULL) {
         capacity += tempo_map_region_count(score->tempo_map);
     }
@@ -570,6 +625,9 @@ static MusicXmlExportResult gather_dirs(Prep *prep) {
     }
     if (result == MUSICXML_EXPORT_OK) {
         result = gather_markings(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        result = gather_dynamics(prep);
     }
     return result;
 }
@@ -1112,6 +1170,32 @@ static void write_marking(const Prep *prep, XmlBuf *buf, const TempoMarking *mar
     (void)prep;
 }
 
+/* The MusicXML dynamics elements; any other marking is written as <other-dynamics>. */
+static const char *const DYNAMICS_ELEMENTS[] = {"p",  "pp", "ppp", "pppp", "ppppp", "pppppp", "f",  "ff", "fff", "ffff",
+                                                "fffff", "ffffff", "mp", "mf", "sf", "sfp", "sfpp", "fp", "rf", "rfz",
+                                                "sfz", "sffz", "fz", "n", "pf", "sfzp"};
+
+static void write_dynamic(const Prep *prep, XmlBuf *buf, const Dir *dir) {
+    const char *marking = dynamics_marking(prep->score->dynamics[dir->source]);
+    bool named = false;
+    for (size_t i = 0; i < sizeof(DYNAMICS_ELEMENTS) / sizeof(DYNAMICS_ELEMENTS[0]); i++) {
+        named = named || strcmp(marking, DYNAMICS_ELEMENTS[i]) == 0;
+    }
+    xmlbuf_append(buf, "      <direction placement=\"below\">\n        <direction-type>\n          <dynamics>");
+    if (named) {
+        xmlbuf_append(buf, "<%s/>", marking);
+    } else {
+        xmlbuf_append(buf, "<other-dynamics>");
+        xmlbuf_append_escaped(buf, marking);
+        xmlbuf_append(buf, "</other-dynamics>");
+    }
+    xmlbuf_append(buf, "</dynamics>\n        </direction-type>\n");
+    if (prep->parts[dir->part].staff_count > 1) {
+        xmlbuf_append(buf, "        <staff>%d</staff>\n", dir->staff);
+    }
+    xmlbuf_append(buf, "      </direction>\n");
+}
+
 /* The dirs that share one tick, in kind order. A key at the start of a measure is already in its <attributes>. */
 static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, size_t count, long long measure_start) {
     bool key_written = false;
@@ -1142,6 +1226,11 @@ static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, siz
     }
     if (tempo_pending) {
         xmlbuf_append(buf, "      <sound tempo=\"%s\"/>\n", tempo_value);
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (group[i].kind == DIR_DYNAMIC) {
+            write_dynamic(prep, buf, &group[i]);
+        }
     }
 }
 
