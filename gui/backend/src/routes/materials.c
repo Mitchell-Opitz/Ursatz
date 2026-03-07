@@ -21,6 +21,7 @@
 #include "../service/material_service.h"
 #include "../service/style_service.h"
 #include "../service/subject_service.h"
+#include "../service/piece_service.h"
 #include "../service/theme_service.h"
 
 static const char *kMaterialsPrefix = "/api/materials";
@@ -1281,8 +1282,8 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
-/* POST /api/materials/items/<thm-id>/compose {seed?, update_uses?}: composes the theme into a new version with its
-   files (R-167). With update_uses, every updated use moves to its source's current version first. */
+/* POST /api/materials/items/<thm-id or pce-id>/compose {seed?, update_uses?}: composes the theme or piece into a new
+   version with its files (R-167, R-174). With update_uses, every updated use moves to its source's current version first. */
 static int handle_compose(struct mg_connection *conn, const char *id) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -1298,10 +1299,23 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "seed is a whole number from 0 to 4294967295; update_uses is a boolean");
   }
+  cJSON *meta = NULL;
+  cJSON *stored = NULL;
+  UrsatzGuiMaterialResult found = ursatz_gui_material_item_get(id, &meta, &stored);
+  if (found != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, found);
+  }
+  const cJSON *type = cJSON_GetObjectItemCaseSensitive(meta, "type");
+  bool piece = cJSON_IsString(type) && strcmp(type->valuestring, "piece") == 0;
+  cJSON_Delete(meta);
+  cJSON_Delete(stored);
   cJSON *item = NULL;
   char message[512];
-  UrsatzGuiThemeResult result = ursatz_gui_theme_compose(id, has_seed, has_seed ? (long long)seed->valuedouble : 0,
-                                                         cJSON_IsTrue(update_uses), &item, message, sizeof(message));
+  long long chosen = has_seed ? (long long)seed->valuedouble : 0;
+  UrsatzGuiThemeResult result =
+      piece ? ursatz_gui_piece_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message))
+            : ursatz_gui_theme_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message));
   cJSON_Delete(body);
   switch (result) {
     case URSATZ_GUI_THEME_OK:
@@ -1309,7 +1323,7 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
     case URSATZ_GUI_THEME_ERR_NOT_FOUND:
       return send_failure(conn, 404, "not found");
     case URSATZ_GUI_THEME_ERR_INVALID:
-      return send_failure(conn, 400, message[0] ? message : "invalid theme");
+      return send_failure(conn, 400, message[0] ? message : piece ? "invalid piece" : "invalid theme");
     case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
       return send_failure(conn, 422, message[0] ? message : "stuck");
     case URSATZ_GUI_THEME_ERR_NO_BINARY:
@@ -1317,7 +1331,8 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
     case URSATZ_GUI_THEME_ERR_TIMEOUT:
       return send_failure(conn, 504, "composer timed out");
     default:
-      return send_failure(conn, 500, message[0] ? message : "the theme could not be composed");
+      return send_failure(conn, 500,
+                          message[0] ? message : piece ? "the piece could not be composed" : "the theme could not be composed");
   }
 }
 

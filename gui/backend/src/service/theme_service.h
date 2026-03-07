@@ -44,4 +44,31 @@ typedef enum {
 UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
                                               cJSON **out_item, char *message, size_t message_size);
 
+/*
+ * Shared with piece_service.c: the same steps for a piece (R-173, R-174).
+ */
+
+/* Moves every updated use of the item id to its source's current version, once for each source. */
+UrsatzGuiThemeResult ursatz_gui_theme_update_sources(const char *id, char *message, size_t message_size);
+
+/* A motive of the request from a motif's members: with item (a pool form), else with id (a slot motive), else neither. */
+cJSON *ursatz_gui_theme_motive_json(const char *id, const char *item, const cJSON *motif, const char *role);
+
+/* Adds to forms the saved forms of the motif item slot_item under the pool setting (at most 64 in all). */
+UrsatzGuiThemeResult ursatz_gui_theme_add_pool(const cJSON *list, const char *slot_item, const char *pool, cJSON *forms);
+
+/* Builds a brief into path. *out_summary is {piece_count, skipped: [{id, reason}]}, caller-owned. */
+UrsatzGuiThemeResult ursatz_gui_theme_build_brief(const cJSON *brief_json, const char *name, const char *path,
+                                                  cJSON **out_summary, char *message, size_t message_size);
+
+/* Runs the Composer with args. On exit 0, *out_summary is its JSON and every file of outputs (NULL-terminated) exists;
+   otherwise the result follows the exit status and message holds the Composer's reason. */
+UrsatzGuiThemeResult ursatz_gui_theme_run_composer(const char *const *args, const char *const *outputs, cJSON **out_summary,
+                                                   char *message, size_t message_size);
+
+/* Removes the files of a version folder, then the folder. */
+void ursatz_gui_theme_remove_folder(const char *path);
+
+bool ursatz_gui_theme_write_text(const char *path, const char *text);
+
 #endif /* URSATZ_GUI_THEME_SERVICE_H */
