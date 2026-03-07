@@ -1336,7 +1336,7 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
   }
 }
 
-/* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme version's five files. */
+/* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme or piece version's files. */
 static int handle_version_file(struct mg_connection *conn, const char *id, const char *number_text, const char *name) {
   char *end = NULL;
   long number = strtol(number_text, &end, 10);

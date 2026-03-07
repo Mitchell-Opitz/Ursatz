@@ -2399,6 +2399,24 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool for
 
 /* --- version files ------------------------------------------------------- */
 
+/* theme-<section id>.plan.json: the copy of a theme plan a piece version keeps. */
+static bool is_theme_copy_name(const char *name) {
+    static const char suffix[] = ".plan.json";
+    size_t length = strlen(name);
+    if (strncmp(name, "theme-", 6) != 0 || length <= 6 + sizeof(suffix) - 1 ||
+        strcmp(name + length - (sizeof(suffix) - 1), suffix) != 0) {
+        return false;
+    }
+    char id[PIECE_ID_MAX + 2];
+    size_t id_length = length - 6 - (sizeof(suffix) - 1);
+    if (id_length >= sizeof(id)) {
+        return false;
+    }
+    memcpy(id, name + 6, id_length);
+    id[id_length] = '\0';
+    return piece_section_id_ok(id);
+}
+
 const char *ursatz_gui_material_version_file_type(const char *name) {
     static const struct {
         const char *name;
@@ -2407,13 +2425,18 @@ const char *ursatz_gui_material_version_file_type(const char *name) {
                  {"brief.style.json", "application/json"},
                  {"plan.json", "application/json"},
                  {"theme.mid", "audio/midi"},
-                 {"theme.musicxml", "application/xml"}};
+                 {"theme.musicxml", "application/xml"},
+                 {"ending-plan.json", "application/json"},
+                 {"loop.mid", "audio/midi"},
+                 {"loop.musicxml", "application/xml"},
+                 {"ending.mid", "audio/midi"},
+                 {"ending.musicxml", "application/xml"}};
     for (size_t i = 0; name && i < sizeof(files) / sizeof(files[0]); i++) {
         if (strcmp(name, files[i].name) == 0) {
             return files[i].type;
         }
     }
-    return NULL;
+    return name && is_theme_copy_name(name) ? "application/json" : NULL;
 }
 
 bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size_t out_size) {
