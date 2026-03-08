@@ -1203,10 +1203,10 @@ static const char *const kPieceNewMembers[] = {"motive", "pool",  "accompaniment
 #define PIECE_NUMERAL_CHARS 16
 #define PIECE_CELLS_MAX 8
 
-/* True when the piece is a placeholder: no new member and a structure that is not an object with sections. */
+/* True when the piece is a placeholder: no new member and a structure that is not an object with a list of sections. */
 static bool piece_is_placeholder(const cJSON *piece) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (cJSON_IsObject(structure) && cJSON_GetObjectItemCaseSensitive(structure, "sections")) {
+    if (cJSON_IsObject(structure) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections"))) {
         return false;
     }
     for (const char *const *name = kPieceNewMembers; *name; name++) {
