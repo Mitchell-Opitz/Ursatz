@@ -15,7 +15,8 @@
 /*
  * MusicXmlExport (music-export): serializes a piece's persisted
  * NoteEvent sequence -- pitch (via PitchSpelling) and duration -- into
- * a single-part MusicXML 3.1 document. NoteEvents sharing the same
+ * a single-part MusicXML 3.1 document (musicxml_export_write), or an in-memory score into a multi-part one
+ * (musicxml_export_write_score). NoteEvents sharing the same
  * optional_voice (a VoiceReference is an opaque EntityID token here --
  * see core/voice_reference.h -- carrying no musical/analytical meaning
  * at this layer, only an export-grouping label) are emitted into the
@@ -33,18 +34,13 @@
  * therefore a caller concern (e.g. ursatz-gui's backend), not this
  * module's.
  *
- * SYNTHETIC METER (read before consuming this module's output):
- * Meter/MeterMap/Measure are not populated anywhere in this codebase
- * (containers/measure.h's meter_map_region_ref is a bare, unresolved
- * EntityID -- MeterMap does not exist yet). This module therefore lays
- * barlines on a fixed, synthetic 4/4 grid purely for display -- it is
- * NOT read from or written to any Measure/MeterMap data, and does not
- * represent an authored time signature. The output is explicitly
- * flagged as such via a <miscellaneous-field name="ursatz:synthetic-
- * meter"> entry under <identification><miscellaneous>, so downstream
- * consumers (e.g. feat/notation-rendering) can detect and surface the
- * distinction rather than presenting it as real. See
- * docs/modules/export.md.
+ * METER. Barlines and measure numbers come from a MeterMap (time/meter_map.h) and nowhere else. musicxml_export_write
+ * has no MeterMap to read -- a PersistenceHandle holds NoteEvents only -- so it lays measures from
+ * meter_map_create_defaulted (one 4/4 region marked defaulted) and flags the output with
+ * <miscellaneous-field name="ursatz:meter-defaulted"> under <identification><miscellaneous>, so a reader can tell a
+ * default from an authored meter. A caller with a real MeterMap (and parts, staves, key signatures, tempo and
+ * dynamics) uses musicxml_export_write_score below, whose output carries the flag only when the map it was given
+ * is entirely defaulted. See docs/modules/export.md.
  */
 
 typedef enum {
@@ -89,8 +85,9 @@ typedef struct {
  * member may be NULL (with its count 0 where it has one). The shape follows what musicxml_import_buffer returns, so
  * an import can be written back; MusicXmlExport does not include io/, so the caller copies the members across.
  *
- *   - events / pitch_values / count: index-paired, as the importers return them. Pitch is written from each event's
- *     PitchSpelling; pitch_values is checked to be present and paired, and is not otherwise read.
+ *   - events / count, and optionally pitch_values index-paired with them as the importers return them. Pitch is
+ *     written from each event's PitchSpelling; pitch_values (which may be NULL) is checked for NULL entries and not
+ *     otherwise read.
  *   - part_index / staff: optional, parallel to events (a NULL array means part 0, or staff 1).
  *   - parts / part_count: the parts; none means one part "P1" whose staff_count is the highest staff used.
  *   - meter_map: the measure layout. NULL lays measures from a defaulted 4/4 map and flags the output meter-defaulted.

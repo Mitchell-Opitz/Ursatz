@@ -281,11 +281,11 @@ static void prep_free(Prep *prep) {
 }
 
 static MusicXmlExportResult validate_arrays(const MusicXmlExportScore *score) {
-    if (score->count > 0 && (score->events == NULL || score->pitch_values == NULL)) {
+    if (score->count > 0 && score->events == NULL) {
         return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
     }
     for (size_t i = 0; i < score->count; i++) {
-        if (score->events[i] == NULL || score->pitch_values[i] == NULL) {
+        if (score->events[i] == NULL || (score->pitch_values != NULL && score->pitch_values[i] == NULL)) {
             return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
         }
     }
