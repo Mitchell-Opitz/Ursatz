@@ -75,7 +75,7 @@ static void destroy_events(NoteEvent **events, size_t count) {
 }
 
 /* PPQN 96: middle C (60) for a quarter, then D4 (62) for a quarter. */
-static void test_pitch_and_duration_and_cosmetic_flag(void) {
+static void test_pitch_duration_and_meter_defaulted_flag(void) {
     unsigned char track[] = {
         0x00, 0x90, 0x3C, 0x64, /* delta 0,  note-on  60 */
         0x60, 0x80, 0x3C, 0x40, /* delta 96, note-off 60 */
@@ -101,15 +101,16 @@ static void test_pitch_and_duration_and_cosmetic_flag(void) {
     assert(xml != NULL);
 
     assert(strstr(xml, "<score-partwise version=\"3.1\">") != NULL);
-    assert(strstr(xml, "miscellaneous-field name=\"ursatz:synthetic-meter\">true<") != NULL);
+    assert(strstr(xml, "miscellaneous-field name=\"ursatz:meter-defaulted\">true<") != NULL);
     assert(strstr(xml, "<beats>4</beats>") != NULL);
-    assert(strstr(xml, "<divisions>768</divisions>") != NULL);
+    /* Both notes start and last on whole quarters, so one division per quarter note is exact. */
+    assert(strstr(xml, "<divisions>1</divisions>") != NULL);
     assert(strstr(xml, "<step>C</step>") != NULL);
     assert(strstr(xml, "<step>D</step>") != NULL);
     assert(strstr(xml, "<octave>4</octave>") != NULL);
-    /* Each note is a quarter note: 768 ticks/quarter (3072/4). */
-    assert(strstr(xml, "<duration>768</duration>") != NULL);
-    /* No <tie> anywhere: neither note crosses the synthetic barline. */
+    /* Each note is a quarter note: 1 division. */
+    assert(strstr(xml, "<duration>1</duration>") != NULL);
+    /* No <tie> anywhere: neither note crosses the barline. */
     assert(strstr(xml, "<tie") == NULL);
     /* MIDIImporter assigns sequential ids "midi-note-<n>"; both pass
        through xml_id_from_entity unchanged since they're already valid
@@ -127,7 +128,7 @@ static void test_pitch_and_duration_and_cosmetic_flag(void) {
     remove(path);
 }
 
-static void test_synthetic_measure_tie_split(void) {
+static void test_default_measure_tie_split(void) {
     /* PPQN 96 (quarter=96 ticks, whole=384 ticks): a rest of 3 quarters
        (ticks 0-288) followed by a half note (192 ticks, 288-480) that
        straddles the whole-note barline at tick 384 -- must split into
@@ -168,7 +169,7 @@ static void test_synthetic_measure_tie_split(void) {
     assert(strstr(xml, "<note xml:id=\"midi-note-0_a\">") != NULL);
     assert(strstr(xml, "<note xml:id=\"midi-note-0_b\">") != NULL);
     assert(strstr(xml, "<note xml:id=\"midi-note-0\">") == NULL);
-    /* The leading rest (a synthetic gap-filler, not backed by a
+    /* The leading rest (a gap-filler, not backed by a
        NoteEvent) must carry no xml:id at all. */
     assert(strstr(xml, "<note>\n        <rest/>") != NULL);
 
@@ -354,7 +355,7 @@ static void test_empty_piece_is_valid(void) {
     assert(xml != NULL);
     assert(strstr(xml, "<measure number=\"1\">") != NULL);
     assert(strstr(xml, "<note>") == NULL);
-    assert(strstr(xml, "miscellaneous-field name=\"ursatz:synthetic-meter\">true<") != NULL);
+    assert(strstr(xml, "miscellaneous-field name=\"ursatz:meter-defaulted\">true<") != NULL);
 
     free(xml);
     persistence_close(handle);
@@ -373,8 +374,8 @@ static void test_null_args_rejected(void) {
 }
 
 int main(void) {
-    test_pitch_and_duration_and_cosmetic_flag();
-    test_synthetic_measure_tie_split();
+    test_pitch_duration_and_meter_defaulted_flag();
+    test_default_measure_tie_split();
     test_missing_spelling_fails_fast();
     test_id_sanitization_for_invalid_entity_ids();
     test_overlapping_notes_fail();

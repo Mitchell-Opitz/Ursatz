@@ -15,20 +15,15 @@
 /*
  * Round trip: each framework-v1 reference piece is imported from MIDI, written by MusicXmlExport, and read back by
  * the MusicXMLImporter; the note multisets (sounding pitch, onset, duration) are compared. Meter and key are NOT
- * compared: the export lays a SYNTHETIC 4/4 grid (it reads no MeterMap, and writes no key), so what comes back
+ * compared: musicxml_export_write has no MeterMap (a PersistenceHandle holds notes only) and lays a defaulted 4/4, so what comes back
  * is a 4/4 piece whatever the source was (docs/modules/export.md). Bach 114 is 3/4 in the score, for one.
  *
- * What the export can carry decides what is asserted. It writes every duration as a whole number of 1/3072
- * of a whole note by INTEGER DIVISION (musicxml_export.c, TICKS_PER_WHOLE_NOTE), so:
- *   - a MIDI file whose tick is a whole number of those units (384 ticks per quarter note: Bach 114, 2 units per
- *     tick; 256: Field 5, 3 units per tick) is written exactly, and must come back EXACTLY equal (asserted);
- *   - a file at 240 ticks per quarter note (Mozart 545; 3.2 units per tick) is rounded down note by note, so
- *     onsets and durations can only come back within the rounding: the test asserts the count, the pitch multiset
- *     and that every onset and duration is within 16 units (16/3072 of a whole note) and prints the largest shift
- *     and how many notes are exactly equal;
- *   - Clementi 36 and Field 1 are two-channel files, whose notes have no voice, so the two hands overlap in one
- *     implicit voice and MusicXmlExport refuses them (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES). They cannot be
- *     round-tripped without changing the export, which is out of scope: the test says so and reports it.
+ * The export is exact: <divisions> is chosen per piece so every onset and duration is a whole number of divisions,
+ * so a file that exports comes back EXACTLY equal (asserted) -- Bach 114, Field 5 and Mozart 545 (whose 240 ticks
+ * per quarter note the old fixed 1/3072 grid rounded). Clementi 36 and Field 1 are two-channel files, whose notes
+ * have no voice, so the two hands overlap in one implicit voice and MusicXmlExport refuses them
+ * (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES); the score round trip (tests/export/test_musicxml_score_roundtrip.c) writes
+ * them by giving each hand its own staff.
  * The importer's own exactness is proved by the hand-written fixtures (test_musicxml_importer.c), which a lossy
  * export cannot hide.
  */
@@ -118,7 +113,7 @@ static void roundtrip(const char *file, bool exact, bool cannot_export) {
         }
         assert(status == MUSICXML_IMPORT_OK);
         assert(back.count == count);
-        assert(!meter_map_is_defaulted(back.meter_map)); /* the export declares its synthetic 4/4 */
+        assert(!meter_map_is_defaulted(back.meter_map)); /* the export writes its defaulted 4/4 as a declared <time> */
 
         Item *before = collect(events, values, count);
         Item *after = collect(back.events, back.pitch_values, back.count);
@@ -162,9 +157,9 @@ static void roundtrip(const char *file, bool exact, bool cannot_export) {
 }
 
 int main(void) {
-    roundtrip("Bach 114.mid", true, false);   /* 384 ticks per quarter note: exactly representable */
-    roundtrip("Field 5.mid", true, false);    /* 256 ticks per quarter note: exactly representable */
-    roundtrip("Mozart 545.mid", false, false); /* 240: rounded down by the export */
+    roundtrip("Bach 114.mid", true, false);   /* 384 ticks per quarter note */
+    roundtrip("Field 5.mid", true, false);    /* 256 ticks per quarter note */
+    roundtrip("Mozart 545.mid", true, false);  /* 240 ticks per quarter note: exact too */
     roundtrip("Clementi 36.mid", false, true); /* two channels: the export refuses it */
     roundtrip("Field 1.mid", false, true);
     printf("test_musicxml_roundtrip: ok\n");
