@@ -610,7 +610,8 @@ materials/
                             versions: [{number, created_at, note}],
                             created_at, updated_at}
   items/<id>/v<n>.json     the version body
-  items/<id>/v<n>/         a composed theme version's files (see "Theme bodies and version files")
+  items/<id>/v<n>/         a composed theme or piece version's files (see "Theme bodies and version files",
+                           "Piece bodies and version files")
 ```
 
 - Ids are `<prefix>-<16 lowercase hex>` from `ursatz_gui_new_id`: `prj` for
@@ -657,6 +658,33 @@ A composed version keeps its files beside its body in `items/<id>/v<n>/`: `reque
 `brief.style.json` (when the theme has a brief), `plan.json`, `theme.mid` and `theme.musicxml`. The folder is written
 before the version exists, so a version that exists has its files whole. Deleting the item removes the folders with its
 directory.
+
+#### Piece bodies and version files
+
+A piece body (the rules are in `service/material_service.h`) is a placeholder or a composable piece (R-174). The
+placeholder, `structure` null, a string, an array or an object without a list of `sections`, stays valid so earlier
+versions still read. A body whose `structure` has a `sections` list, or that has any of the members below, is a
+composable piece. A structure alone is valid: every fill may be left out.
+
+- `structure`: `{key, mode, meter, sections}` with `mode` `major`, `minor` or `style`, `meter` one of `2/4`, `3/4`,
+  `4/4`, `6/8`. `sections` is 1 to 32 of `{id, part, letter, beats, pickup, cadence, fill}`: `id` is `s<n>` or `end`,
+  each once; `part` is `intro`, `body`, `turnaround` or `ending`, in that order, with at least one `body`; `letter` 1
+  to 8 characters; `beats` a whole number from 1 to 2048; `pickup` `n` or `n/d` beats, shorter than a bar; `cadence`
+  null or `PAC`, `IAC`, `HC`, `DC` or `PC`.
+- `fill`: null or `{kind: "empty"}`; `{kind: "motif", item_id, version, into?, hybrid?}`, a melodic motif of form
+  `full`; `{kind: "theme", item_id, version}`, a theme version that was composed (it has a `result` and a `plan.json`);
+  `{kind: "progression", numerals, cells?}`, 1 to 64 roman numerals separated by spaces and 1 to 8 cells for each chord.
+- `motive`: null or `{item_id, version}`, a melodic motif of form `full`: the piece's basic motive. `pool`,
+  `accompaniment` (null or `{pattern}`; the pattern `motive` is not available), `brief`, `style_weight`, `without`,
+  `tempo`, `check`, `seed` and `result` are the theme's.
+- The server fills `uses` from the motif and theme fills and the motive: a client use of those items is replaced by one
+  use for each version named, with a fresh `copy`. Moving a use to a newer version moves the fills and the motive
+  with it (a theme can only move to a version that was composed).
+
+A composed piece version keeps its files beside its body in `items/<id>/v<n>/`: `request.json`, `brief.style.json`
+(when the piece has a brief), `plan.json` (the loop version), `ending-plan.json`, `loop.mid`, `loop.musicxml`,
+`ending.mid`, `ending.musicxml`, and `theme-<section id>.plan.json`, a copy of the plan of each theme version a
+section uses, so the version keeps its own. The folder is written before the version exists.
 
 #### Item references
 
@@ -1143,9 +1171,12 @@ Items:
 - `POST /api/materials/items/<id>/uses/<source>/update`: writes a new version
   of the item with every use of `<source>` moved to the source's current
   version; answers `{"item"}`.
-- `GET /api/materials/items/<id>/versions/<n>/files/<name>`: one of the five files of a composed theme version
-  (`request.json`, `brief.style.json` and `plan.json` as `application/json`, `theme.mid` as `audio/midi`,
-  `theme.musicxml` as `application/xml`); any other name, a version without the file or an unknown item is `404`.
+- `GET /api/materials/items/<id>/versions/<n>/files/<name>`: one of the files of a composed theme or piece version.
+  A theme version's: `request.json`, `brief.style.json` and `plan.json` as `application/json`, `theme.mid` as
+  `audio/midi`, `theme.musicxml` as `application/xml`. A piece version's: `request.json`, `brief.style.json`,
+  `plan.json`, `ending-plan.json` and `theme-<section id>.plan.json` as `application/json`, `loop.mid` and `ending.mid`
+  as `audio/midi`, `loop.musicxml` and `ending.musicxml` as `application/xml`. Any other name, a version without the
+  file or an unknown item is `404`.
 - `POST /api/materials/items/<thm-id>/compose`: `{"seed"?,"update_uses"?}` composes the theme into a new version
   (R-166, R-167) and answers `{"item"}`. With `update_uses`, every updated use first moves to its source's current
   version (a version of its own each; they stay if the run then fails). The request is built from the current
@@ -1159,6 +1190,16 @@ Items:
   composable theme, or a Composer usage error; `404` for an unknown item; `422` when the Composer is stuck or the
   brief has no piece it can use; `503` without the binary; `504` on a timeout. A failed run writes no version and
   leaves no folder.
+- `POST /api/materials/items/<pce-id>/compose`: `{"seed"?,"update_uses"?}` composes the piece into a new version
+  (R-173, R-174) and answers `{"item"}`. `update_uses` is as for a theme. The request is built from the current
+  version: the motive and each motif fill from their uses' copies (degrees, pickup, harmony, features, role), each
+  motif fill with the pool of its saved forms as for a theme (the piece's `pool`), a theme fill as the absolute path
+  of that theme version's `plan.json` copied into the new version's folder as `theme-<section id>.plan.json`,
+  progressions as given, and the brief built into `brief.style.json`. It runs `ursatz-composer piece <request.json>
+  --format json --out plan.json --ending-out ending-plan.json --midi loop.mid --musicxml loop.musicxml --ending-midi
+  ending.mid --ending-musicxml ending.musicxml [--check] [--seed]`. The new version is the body as it was plus
+  `result: {seed, summary (the command's JSON), brief: {piece_count, skipped}, loop: {start, end}, files}` with the
+  note `composed seed <n>`. Errors are those of a theme compose.
 - `GET /api/materials/variant-operations`: `{"operations"}` from
   `ursatz-composer variants --list-ops --json`, read once per server run.
 - `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?}`

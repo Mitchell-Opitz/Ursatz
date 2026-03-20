@@ -55,7 +55,7 @@ static bool add_copy_if(cJSON *dst, const cJSON *src, const char *name) {
     return copy && cJSON_AddItemToObject(dst, name, copy);
 }
 
-static void remove_folder(const char *path) {
+void ursatz_gui_theme_remove_folder(const char *path) {
     DIR *dir = opendir(path);
     if (dir) {
         struct dirent *entry;
@@ -71,7 +71,7 @@ static void remove_folder(const char *path) {
     rmdir(path);
 }
 
-static bool write_text(const char *path, const char *text) {
+bool ursatz_gui_theme_write_text(const char *path, const char *text) {
     FILE *file = fopen(path, "wb");
     size_t length = strlen(text);
     bool ok = file && fwrite(text, 1, length, file) == length;
@@ -89,7 +89,7 @@ static bool file_exists(const char *path) {
 /* --- updating sources ---------------------------------------------------- */
 
 /* Moves every updated use of the theme to its source's current version, once for each source. */
-static UrsatzGuiThemeResult update_sources(const char *id, char *message, size_t message_size) {
+UrsatzGuiThemeResult ursatz_gui_theme_update_sources(const char *id, char *message, size_t message_size) {
     cJSON *status = NULL;
     UrsatzGuiMaterialResult result = ursatz_gui_material_uses_status(id, &status);
     if (result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND) {
@@ -141,7 +141,7 @@ static const cJSON *used_motif(const cJSON *body, const char *item_id, int versi
 
 /* A motive of the request from a motif's members: with item (a pool form), else with id (a slot motive); the accompaniment
    motive has neither. */
-static cJSON *motive_json(const char *id, const char *item, const cJSON *motif, const char *role) {
+cJSON *ursatz_gui_theme_motive_json(const char *id, const char *item, const cJSON *motif, const char *role) {
     cJSON *object = cJSON_CreateObject();
     bool ok = object && (item ? cJSON_AddStringToObject(object, "item", item) != NULL
                               : !id || cJSON_AddStringToObject(object, "id", id) != NULL);
@@ -218,7 +218,7 @@ static bool leads_to(const cJSON *list, const char *start_id, const char *target
  * Adds to forms the saved forms of the motif item slot_item: the motifs whose derived chain leads to it, approved
  * first, then unflagged when the pool takes them; never rejected, at most 64. pool is the theme's pool setting.
  */
-static UrsatzGuiThemeResult add_pool(const cJSON *list, const char *slot_item, const char *pool, cJSON *forms) {
+UrsatzGuiThemeResult ursatz_gui_theme_add_pool(const cJSON *list, const char *slot_item, const char *pool, cJSON *forms) {
     const char *const flags[2] = {"approved", "unflagged"};
     int passes = strcmp(pool, "none") == 0 ? 0 : strcmp(pool, "approved") == 0 ? 1 : 2;
     for (int pass = 0; pass < passes; pass++) {
@@ -244,7 +244,7 @@ static UrsatzGuiThemeResult add_pool(const cJSON *list, const char *slot_item, c
             UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
             if (strcmp(text_of(derived, "flag"), flags[pass]) == 0 && strcmp(text_of(motif, "form"), "full") == 0 &&
                 strcmp(text_of(motif, "role"), "melodic") == 0 && cJSON_IsString(degrees)) {
-                cJSON *form = motive_json(NULL, id, motif, "melodic");
+                cJSON *form = ursatz_gui_theme_motive_json(NULL, id, motif, "melodic");
                 char chain[CHAIN_TEXT_MAX];
                 chain_text(cJSON_GetObjectItemCaseSensitive(derived, "operations"), chain, sizeof(chain));
                 const cJSON *functions = cJSON_GetObjectItemCaseSensitive(derived, "functions");
@@ -336,7 +336,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
             break;
         }
         const char *motive_id = kMotiveIds[motive_count++];
-        cJSON *motive = motive_json(motive_id, NULL, motif, "melodic");
+        cJSON *motive = ursatz_gui_theme_motive_json(motive_id, NULL, motif, "melodic");
         cJSON *forms = cJSON_CreateArray();
         if (!motive || !forms || !cJSON_AddItemToObject(motive, "forms", forms)) {
             cJSON_Delete(forms);
@@ -347,7 +347,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
         const char *pool = cJSON_IsString(cJSON_GetObjectItemCaseSensitive(theme, "pool"))
                                ? text_of(theme, "pool")
                                : "approved-and-unflagged";
-        result = add_pool(derived_list, item_id, pool, forms);
+        result = ursatz_gui_theme_add_pool(derived_list, item_id, pool, forms);
         if (result != URSATZ_GUI_THEME_OK) {
             cJSON_Delete(motive);
             break;
@@ -398,7 +398,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
             ok = false;
         } else {
             cJSON *pattern = cJSON_CreateObject();
-            cJSON *motive = motive_json(NULL, NULL, motif, "accompaniment");
+            cJSON *motive = ursatz_gui_theme_motive_json(NULL, NULL, motif, "accompaniment");
             ok = pattern && motive && cJSON_AddStringToObject(pattern, "pattern", "motive") &&
                  cJSON_AddItemToObject(pattern, "motive", motive) && cJSON_AddItemToObject(request, "accompaniment", pattern);
             if (!ok) {
@@ -435,7 +435,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
 /*
  * Builds the theme's brief into path. *out_summary is {piece_count, skipped: [{id, reason}]}, caller-owned.
  */
-static UrsatzGuiThemeResult build_brief(const cJSON *brief_json, const char *name, const char *path, cJSON **out_summary,
+UrsatzGuiThemeResult ursatz_gui_theme_build_brief(const cJSON *brief_json, const char *name, const char *path, cJSON **out_summary,
                                         char *message, size_t message_size) {
     UrsatzGuiStyleBrief brief;
     const char *failure = ursatz_gui_style_brief_parse(brief_json, &brief);
@@ -499,6 +499,50 @@ static UrsatzGuiThemeResult build_brief(const cJSON *brief_json, const char *nam
 
 /* --- composing ----------------------------------------------------------- */
 
+UrsatzGuiThemeResult ursatz_gui_theme_run_composer(const char *const *args, const char *const *outputs, cJSON **out_summary,
+                                                   char *message, size_t message_size) {
+    UrsatzGuiComposerOutput output = {0, NULL, NULL};
+    UrsatzGuiComposerResult ran = ursatz_gui_composer_run(args, &output);
+    if (ran == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
+        say(message, message_size, "composer not found");
+        return URSATZ_GUI_THEME_ERR_NO_BINARY;
+    }
+    if (ran == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
+        say(message, message_size, "composer timed out");
+        return URSATZ_GUI_THEME_ERR_TIMEOUT;
+    }
+    if (ran != URSATZ_GUI_COMPOSER_OK) {
+        say(message, message_size, "composer could not be started");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
+    if (output.exit_status != 0) {
+        const char *reason = output.stderr_text && output.stderr_text[0] ? output.stderr_text : "composer failed";
+        snprintf(message, message_size, "%s", reason);
+        size_t end = strlen(message);
+        while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
+            message[--end] = '\0';
+        }
+        result = output.exit_status == 1   ? URSATZ_GUI_THEME_ERR_INVALID
+                 : output.exit_status == 2 ? URSATZ_GUI_THEME_ERR_UNPROCESSABLE
+                                           : URSATZ_GUI_THEME_ERR_FAILED;
+    } else {
+        *out_summary = cJSON_Parse(output.stdout_text);
+        bool written = *out_summary != NULL;
+        for (; written && *outputs; outputs++) {
+            written = file_exists(*outputs);
+        }
+        if (!written) {
+            cJSON_Delete(*out_summary);
+            *out_summary = NULL;
+            say(message, message_size, "composer output unreadable");
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+        }
+    }
+    ursatz_gui_composer_output_destroy(&output);
+    return result;
+}
+
 static UrsatzGuiThemeResult run_theme(const char *dir, bool check, bool has_seed, long long seed, cJSON **out_summary,
                                       char *message, size_t message_size) {
     char request[PATH_BYTES + 32];
@@ -531,43 +575,8 @@ static UrsatzGuiThemeResult run_theme(const char *dir, bool check, bool has_seed
         args[n++] = seed_text;
     }
     args[n] = NULL;
-
-    UrsatzGuiComposerOutput output = {0, NULL, NULL};
-    UrsatzGuiComposerResult ran = ursatz_gui_composer_run(args, &output);
-    if (ran == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
-        say(message, message_size, "composer not found");
-        return URSATZ_GUI_THEME_ERR_NO_BINARY;
-    }
-    if (ran == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
-        say(message, message_size, "composer timed out");
-        return URSATZ_GUI_THEME_ERR_TIMEOUT;
-    }
-    if (ran != URSATZ_GUI_COMPOSER_OK) {
-        say(message, message_size, "composer could not be started");
-        return URSATZ_GUI_THEME_ERR_FAILED;
-    }
-    UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
-    if (output.exit_status != 0) {
-        const char *reason = output.stderr_text && output.stderr_text[0] ? output.stderr_text : "composer failed";
-        snprintf(message, message_size, "%s", reason);
-        size_t end = strlen(message);
-        while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
-            message[--end] = '\0';
-        }
-        result = output.exit_status == 1   ? URSATZ_GUI_THEME_ERR_INVALID
-                 : output.exit_status == 2 ? URSATZ_GUI_THEME_ERR_UNPROCESSABLE
-                                           : URSATZ_GUI_THEME_ERR_FAILED;
-    } else {
-        *out_summary = cJSON_Parse(output.stdout_text);
-        if (!*out_summary || !file_exists(plan) || !file_exists(midi) || !file_exists(musicxml)) {
-            cJSON_Delete(*out_summary);
-            *out_summary = NULL;
-            say(message, message_size, "composer output unreadable");
-            result = URSATZ_GUI_THEME_ERR_FAILED;
-        }
-    }
-    ursatz_gui_composer_output_destroy(&output);
-    return result;
+    const char *outputs[] = {plan, midi, musicxml, NULL};
+    return ursatz_gui_theme_run_composer(args, outputs, out_summary, message, message_size);
 }
 
 /* The seed a run reports: "seed", or the first theme's. */
@@ -622,7 +631,7 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
 
 static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long long seed, bool update_uses,
                                            cJSON **out_item, char *message, size_t message_size) {
-    UrsatzGuiThemeResult result = update_uses ? update_sources(id, message, message_size) : URSATZ_GUI_THEME_OK;
+    UrsatzGuiThemeResult result = update_uses ? ursatz_gui_theme_update_sources(id, message, message_size) : URSATZ_GUI_THEME_OK;
     if (result != URSATZ_GUI_THEME_OK) {
         return result;
     }
@@ -656,7 +665,7 @@ static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long l
         say(message, message_size, "the version folder does not fit");
         result = URSATZ_GUI_THEME_ERR_FAILED;
     } else {
-        remove_folder(dir); /* a folder no version names is left over from a failed run */
+        ursatz_gui_theme_remove_folder(dir); /* a folder no version names is left over from a failed run */
         char resolved[PATH_MAX];
         if (mkdir(dir, 0755) != 0 || !realpath(dir, resolved) ||
             snprintf(absolute, sizeof(absolute), "%s", resolved) >= (int)sizeof(absolute)) {
@@ -671,7 +680,7 @@ static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long l
     if (result == URSATZ_GUI_THEME_OK && has_brief) {
         char name[256];
         snprintf(name, sizeof(name), "%s brief", text_of(meta, "name"));
-        result = build_brief(brief_json, name, style_path, &brief_summary, message, message_size);
+        result = ursatz_gui_theme_build_brief(brief_json, name, style_path, &brief_summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
         result = build_request(body, has_brief ? style_path : NULL, &request, message, message_size);
@@ -680,7 +689,7 @@ static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long l
         char request_path[PATH_BYTES + 32];
         char *text = cJSON_Print(request);
         snprintf(request_path, sizeof(request_path), "%s/request.json", absolute);
-        if (!text || !write_text(request_path, text)) {
+        if (!text || !ursatz_gui_theme_write_text(request_path, text)) {
             say(message, message_size, "the request could not be written");
             result = text ? URSATZ_GUI_THEME_ERR_FAILED : URSATZ_GUI_THEME_ERR_ALLOC;
         }
@@ -729,7 +738,7 @@ static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long l
         }
         *out_item = item;
     } else if (made) {
-        remove_folder(dir);
+        ursatz_gui_theme_remove_folder(dir);
     }
     cJSON_Delete(request);
     cJSON_Delete(summary);
