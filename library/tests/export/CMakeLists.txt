@@ -1,5 +1,8 @@
 add_ursatz_test(musicxml_export)
 add_ursatz_test(musicxml_score)
+add_ursatz_test(musicxml_score_fixtures)
+target_compile_definitions(test_musicxml_score_fixtures PRIVATE
+    URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
 
 add_executable(test_musicxml_export_mozart545 test_musicxml_export_mozart545.c)
 target_link_libraries(test_musicxml_export_mozart545 PRIVATE ursatz)
