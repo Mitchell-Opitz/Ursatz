@@ -38,4 +38,21 @@
 UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
                                               cJSON **out_item, char *message, size_t message_size);
 
+/*
+ * Writes section section_id of version number of piece item id again (R-173): `piece --from <version>/plan.json
+ * --request <request.json> --regenerate <section id> [--lane <lane>]`, the eight outputs into the next version's
+ * folder. lane is NULL for the whole section, else harmony, bass, melody, inner or all; a section filled with a theme
+ * takes harmony or bass only. Only a composed version (one with a result) and only a section of the loop (not the
+ * ending) can be regenerated: INVALID otherwise, and for an item that is not a piece. NOT_FOUND for an item or version
+ * that is not there. seed (when has_seed) is the first seed tried; without it the Composer picks one.
+ *
+ * The new version's folder holds its own copy of the request (its theme plan and style paths made to name the copies
+ * beside it), the theme plans and the brief's style file. On OK, *out_item is the new item.json (caller-owned); the
+ * version's body is the source's with result replaced, the note "regenerated <section id> <lane> seed <n>" (lane "all"
+ * without one). On any other result no version is written and no folder is left; message receives a one-line reason.
+ */
+UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, const char *section_id, const char *lane,
+                                                 bool has_seed, long long seed, cJSON **out_item, char *message,
+                                                 size_t message_size);
+
 #endif /* URSATZ_GUI_PIECE_SERVICE_H */
