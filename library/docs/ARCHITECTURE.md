@@ -60,7 +60,7 @@ Every module and every framework has an architecture test that allowlists the di
 | analysis | L8 | Implemented | `docs/modules/analysis.md` |
 | generation | L8 | Implemented (partial, see doc) | `docs/modules/generation.md` |
 | io | L9 | Implemented (partial, see doc) | `docs/modules/io.md` |
-| export | L9 | Implemented (partial: single-part MusicXML, synthetic 4/4 meter) | `src/export/musicxml_export.h` |
+| export | L9 | Implemented (MusicXML from a MeterMap: parts, staves, key, tempo, dynamics; no MXL, repeats or articulations) | `src/export/musicxml_export.h` |
 | persistence | L9 | Implemented (partial, see doc) | `docs/modules/persistence.md` |
 | corpus | L9 | Implemented | `docs/modules/corpus.md` |
 | corpus_stats | L9 | Implemented (partial, see doc) | `docs/modules/corpus_stats.md` |
