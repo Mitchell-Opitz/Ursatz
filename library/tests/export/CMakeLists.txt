@@ -19,3 +19,15 @@ add_test(NAME musicxml_export_bach_prelude COMMAND test_musicxml_export_bach_pre
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_ursatz_architecture_test(export)
+
+# Scoped memcheck coverage for this module's own test binaries only (not a repo-wide valgrind mechanism -- see
+# docs/modules/export.md). Skips silently if valgrind isn't installed.
+find_program(URSATZ_EXPORT_VALGRIND valgrind)
+if(URSATZ_EXPORT_VALGRIND)
+  foreach(export_test_name musicxml_export musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_reference)
+    add_test(NAME ${export_test_name}_valgrind
+             COMMAND ${URSATZ_EXPORT_VALGRIND} --leak-check=full --error-exitcode=1
+                     $<TARGET_FILE:test_${export_test_name}>
+             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  endforeach()
+endif()
