@@ -3,6 +3,7 @@ add_ursatz_test(musicxml_score)
 add_ursatz_test(musicxml_score_reference)
 target_compile_definitions(test_musicxml_score_reference PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
+add_ursatz_test(musicxml_score_errors)
 add_ursatz_test(musicxml_score_fixtures)
 target_compile_definitions(test_musicxml_score_fixtures PRIVATE
     URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
