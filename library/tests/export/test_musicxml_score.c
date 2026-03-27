@@ -115,18 +115,23 @@ static void test_short_measure_at_meter_change(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
     char id[16];
-    for (int k = 0; k < 6; k++) {
+    for (int k = 0; k < 9; k++) {
         snprintf(id, sizeof(id), "n%d", k);
         bag_add_note(&bag, id, k, 4, 1, 4, PITCH_LETTER_E, NULL);
     }
-    /* 4/4 until 3/4 of a whole note (a three-quarter measure 1), then 3/4: measure 2 starts there */
-    const TuMeter meters[] = {{4, 4, 0, 1}, {3, 4, 3, 4}};
-    MeterMap *meter = tu_meter_map(meters, 2);
+    /* 4/4, then 3/4 from the first barline, then 4/4 from one quarter into the second 3/4 measure: measure 3 is a
+       short measure of one quarter, measure 4 starts at the change */
+    const TuMeter meters[] = {{4, 4, 0, 1}, {3, 4, 1, 1}, {4, 4, 2, 1}};
+    MeterMap *meter = tu_meter_map(meters, 3);
+    assert(!meter_map_has_pickup(meter));
     char *xml = write_bag(&bag, meter, NULL, 0, false);
-    assert(TU_HAS(xml, "<measure number=\"1\">") && TU_HAS(xml, "<measure number=\"2\">"));
-    assert(!TU_HAS(xml, "<measure number=\"3\">"));
-    assert(TU_HAS(xml, "<beats>4</beats>") && TU_HAS(xml, "<beats>3</beats>"));
-    assert(!TU_HAS(xml, "<rest/>")); /* measure 1 is 3 quarters long and is filled by 3 quarter notes */
+    assert(!TU_HAS(xml, "<measure number=\"0\"") && !TU_HAS(xml, "<measure number=\"5\">"));
+    for (int m = 1; m <= 4; m++) {
+        char needle[32];
+        snprintf(needle, sizeof(needle), "<measure number=\"%d\">", m);
+        assert(TU_HAS(xml, needle));
+    }
+    assert(tu_count(xml, "<time>") == 3 && tu_count(xml, "<beats>4</beats>") == 2 && tu_count(xml, "<beats>3</beats>") == 1);
     free(xml);
     meter_map_destroy(meter);
     bag_free(&bag);
