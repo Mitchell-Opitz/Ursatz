@@ -29,6 +29,14 @@ static inline void rt_fill_score(const MusicXmlImport *import, MusicXmlExportSco
         holder->parts[i].name = import->parts[i].name;
         holder->parts[i].staff_count = import->parts[i].staff_count;
     }
+    /* A <direction> may name a staff its part never declared (<staves> absent); the export refuses that, so the
+       part is widened to hold it, and the re-import then declares the wider part. */
+    for (size_t i = 0; i < import->dynamics_count; i++) {
+        MusicXmlExportPart *part = &holder->parts[import->dynamics_part[i]];
+        if (import->dynamics_staff[i] > part->staff_count) {
+            part->staff_count = import->dynamics_staff[i];
+        }
+    }
     for (size_t i = 0; i < import->key_signature_count; i++) {
         const MusicXmlKeySignatureEvent *key = &import->key_signatures[i];
         holder->keys[i].sharps_flats = key->sharps_flats;
@@ -183,7 +191,7 @@ static inline void rt_assert_same(const MusicXmlImport *a, const MusicXmlImport 
     assert(a->part_count == b->part_count);
     for (size_t i = 0; i < a->part_count; i++) {
         assert(strcmp(a->parts[i].id, b->parts[i].id) == 0 && strcmp(a->parts[i].name, b->parts[i].name) == 0);
-        assert(a->parts[i].staff_count == b->parts[i].staff_count);
+        assert(b->parts[i].staff_count >= a->parts[i].staff_count); /* equal unless widened for a direction */
     }
 
     rt_assert_same_meter(a->meter_map, b->meter_map);
