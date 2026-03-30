@@ -55,4 +55,33 @@ UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, co
                                                  bool has_seed, long long seed, cJSON **out_item, char *message,
                                                  size_t message_size);
 
+/*
+ * Makes count (1 to 8) variations of a section of version number: `piece --from ... --variations <section id> --lane
+ * <lane> --count <n> --out-dir <version>/variations-<k>`, k the next set number of the item (the sets of every version
+ * count). The section and lane follow ursatz_gui_piece_regenerate (the lane is required); harmonize is lane harmony.
+ * The set's folder holds variation-<i>.json, .mid and .musicxml and the Composer's result.json. No version is written.
+ *
+ * On OK, *out_result is {set, variations: [{index, seed, score, seam, heard}]} (heard is the cadence heard at the end
+ * of the section), caller-owned.
+ */
+UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, const char *section_id, const char *lane,
+                                                 int count, bool has_seed, long long seed, cJSON **out_result,
+                                                 char *message, size_t message_size);
+
+/*
+ * Makes variation index of set `set` (made from version number) the next version: its loop plan is the new version's,
+ * and the ending version is built from it again (`--regenerate none`, the eight outputs into the new folder). The body
+ * is the source's with result replaced, the note "chose variation <index> seed <n>". NOT_FOUND when the set or the
+ * variation is not there; otherwise as ursatz_gui_piece_regenerate.
+ */
+UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, cJSON **out_item,
+                                             char *message, size_t message_size);
+
+/*
+ * One file of a variations set: result.json or variation-<i>.json, .mid, .musicxml. NOT_FOUND for any other name or a
+ * file that is not there. *out_data is caller-owned (free); *out_type is a static content type.
+ */
+UrsatzGuiThemeResult ursatz_gui_piece_variation_file(const char *id, int version, int set, const char *name,
+                                                     unsigned char **out_data, size_t *out_size, const char **out_type);
+
 #endif /* URSATZ_GUI_PIECE_SERVICE_H */
