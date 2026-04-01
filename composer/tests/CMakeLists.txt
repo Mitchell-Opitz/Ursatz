@@ -367,6 +367,9 @@ add_dependencies(test_style ursatz-composer)
 foreach(mode labels same motives labels-motive prefer without measure smoke cli)
     add_test(NAME test_style_${mode} COMMAND test_style ${mode})
 endforeach()
+# brief runs the command line in a directory of its own, as cli does in the build's, and the two can run together.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/style_brief)
+add_test(NAME test_style_brief COMMAND test_style brief WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/style_brief)
 add_test(NAME test_style_distance COMMAND test_style distance)
 set_tests_properties(test_style_distance PROPERTIES LABELS slow)
 

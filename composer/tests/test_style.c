@@ -5,6 +5,9 @@
 #include <string.h>
 #include <sys/wait.h>
 
+#include "io/midi_importer.h"
+#include "time/tempo_map.h"
+
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/style_profile.h>
 
@@ -13,6 +16,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_connect.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
@@ -36,6 +40,10 @@
  *   distance  the sweep: sentences in C major 4/4, seeds 1 to 20, under chorales and under sonatinas: the mean distance
  *             (the Analyzer's measure) in harmony and in melody is below the unstyled runs', and not above its baseline
  *             (R-075)
+ *   brief     a style of fast tempo, minor mode and two notes a beat gives tempo 170, minor and density 2; grow with it
+ *             and no --tempo writes 170 to the MIDI, names the 1/2 remoteness limit, and --tempo overrides it; the
+ *             limit halves a connection at a remoteness between 1/2 and 3/4 that the usual limit leaves whole (R-163);
+ *             --mode style makes the key minor
  *   cli       plan --style keeps the style in the plan, fill reads it and --style overrides it, grow --style prints the
  *             distance, and the usage errors
  */
@@ -53,6 +61,7 @@
 #define CHORALES COMPOSER_STYLE_DIR "/chorales.style.json"
 #define SONATINAS COMPOSER_STYLE_DIR "/sonatinas.style.json"
 #define CHORALES_MOTIVES COMPOSER_STYLE_DIR "/chorales-motives.style.json"
+#define FAST_MINOR COMPOSER_FIXTURE_DIR "/style-fast-minor.json"
 #define STEP_UP_MOTIVES COMPOSER_STYLE_DIR "/step-up-motives.style.json"
 
 static const char *const MOTIVE_CATEGORIES[4] = {"motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
@@ -1003,6 +1012,109 @@ static int test_cli(void) {
     return 0;
 }
 
+/* The tempo the MIDI file at path declares, in microseconds per quarter note. */
+static unsigned long midi_microseconds_per_quarter(const char *path) {
+    FILE *file = fopen(path, "rb");
+    assert(file);
+    fseek(file, 0, SEEK_END);
+    size_t size = (size_t)ftell(file);
+    fseek(file, 0, SEEK_SET);
+    unsigned char *bytes = malloc(size);
+    assert(bytes && fread(bytes, 1, size, file) == size);
+    fclose(file);
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitches = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo;
+    assert(midi_importer_import_with_tempo((const unsigned char *)bytes, size, &events, &pitches, &count, &tempo) ==
+           MIDI_IMPORT_OK);
+    assert(!tempo_map_is_defaulted(tempo.tempo_map) && tempo_map_region_count(tempo.tempo_map) == 1);
+    unsigned long micro = tempo_map_region_microseconds_per_quarter(tempo_map_region(tempo.tempo_map, 0));
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitches[i]);
+    }
+    free(events);
+    free(pitches);
+    midi_tempo_import_destroy(&tempo);
+    free(bytes);
+    return micro;
+}
+
+static int test_brief(void) {
+    /* The style reads as the fast, minor, two-notes-a-beat style it was written as. */
+    ComposerStyle *style = NULL;
+    assert(composer_style_load(FAST_MINOR, &style) == COMPOSER_STYLE_OK);
+    ComposerRatio tempo = {0, 0};
+    bool minor = false;
+    ComposerRatio density = {0, 0};
+    assert(composer_style_tempo(style, &tempo) && tempo.numerator == 170 && tempo.denominator == 1);
+    assert(composer_style_mode(style, &minor) && minor);
+    assert(composer_style_density(style, &density) && density.numerator == 4 && density.denominator == 2);
+    composer_style_destroy(style);
+    /* A style without the categories gives none of them. */
+    assert(composer_style_load(CHORALES, &style) == COMPOSER_STYLE_OK);
+    assert(!composer_style_tempo(style, &tempo) && !composer_style_density(style, &density));
+    assert(composer_style_mode(style, &minor));
+    composer_style_destroy(style);
+
+    /* The limit halves a connection that is remote, between 1/2 and 3/4, only at 1/2. */
+    MotiveOptions options;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = motive_parse_meter("4/4", &options.meter);
+    options.has_key = motive_parse_key("C major", &options.key);
+    Motive basic;
+    assert(motive_from_notes_text("E4:q G4:e F4:e D4:q C4:q", &options, &basic, NULL) == MOTIVE_OK);
+    MotiveScore remote = {5, 8};
+    MotiveScore half = {1, 2};
+    MotiveConnection usual;
+    MotiveConnection fast;
+    assert(motive_connection_limited(&basic, NULL, &basic, &remote, NULL, &usual));
+    assert(motive_connection_limited(&basic, NULL, &basic, &remote, &half, &fast));
+    assert(!usual.halved && usual.limit.numerator == 3 && usual.limit.denominator == 4);
+    assert(fast.halved && fast.limit.numerator == 1 && fast.limit.denominator == 2);
+    assert(fast.total.numerator * usual.total.denominator * 2 == usual.total.numerator * fast.total.denominator);
+    MotiveScore near = {3, 8};
+    assert(motive_connection_limited(&basic, NULL, &basic, &near, &half, &fast) && !fast.halved);
+
+    /* grow with the style and no --tempo declares the style's tempo and names the limit; --tempo wins and the limit goes. */
+    char arguments[2048];
+    snprintf(arguments, sizeof(arguments), "grow %s/motive_d_minor.txt --into sentence --key \"D minor\" --meter 4/4 --seed 1 "
+                                           "--style %s --midi style_test_fast.mid --explain style_test_fast.txt --format json",
+             COMPOSER_FIXTURE_DIR, FAST_MINOR);
+    assert(run(arguments, "style_test_out.txt") == 0);
+    assert(contains("style_test_out.txt", "\"tempo\":{\"qpm\":170,\"from\":\"style\"}"));
+    assert(midi_microseconds_per_quarter("style_test_fast.mid") == (60000000UL + 85) / 170);
+    assert(contains("style_test_fast.txt", "limit 1/2;"));
+    snprintf(arguments, sizeof(arguments), "grow %s/motive_d_minor.txt --into sentence --key \"D minor\" --meter 4/4 --seed 1 "
+                                           "--style %s --tempo 90 --midi style_test_slow.mid --explain style_test_slow.txt "
+                                           "--format json", COMPOSER_FIXTURE_DIR, FAST_MINOR);
+    assert(run(arguments, "style_test_out.txt") == 0);
+    assert(contains("style_test_out.txt", "\"tempo\":{\"qpm\":90,\"from\":\"option\"}"));
+    assert(midi_microseconds_per_quarter("style_test_slow.mid") == (60000000UL + 45) / 90);
+    assert(!contains("style_test_slow.txt", "limit 1/2;"));
+    snprintf(arguments, sizeof(arguments), "grow %s/motive_d_minor.txt --into sentence --key \"D minor\" --meter 4/4 --seed 1 "
+                                           "--format json", COMPOSER_FIXTURE_DIR);
+    assert(run(arguments, "style_test_out.txt") == 0);
+    assert(contains("style_test_out.txt", "\"tempo\":{\"qpm\":null,\"from\":\"none\"}"));
+
+    /* --mode style takes the key's mode from the style. */
+    snprintf(arguments, sizeof(arguments), "grow %s/motive_d_minor.txt --into sentence --key D --mode style --meter 4/4 "
+                                           "--seed 1 --style %s", COMPOSER_FIXTURE_DIR, FAST_MINOR);
+    assert(run(arguments, "style_test_out.txt") == 0 && contains("style_test_out.txt", "key D minor"));
+    snprintf(arguments, sizeof(arguments), "grow %s/motive_d_minor.txt --into sentence --key \"D major\" --mode style "
+                                           "--meter 4/4 --seed 1 --style %s", COMPOSER_FIXTURE_DIR, FAST_MINOR);
+    assert(run(arguments, "style_test_out.txt") == 0 && contains("style_test_out.txt", "key D minor"));
+    remove("style_test_fast.mid");
+    remove("style_test_fast.txt");
+    remove("style_test_slow.mid");
+    remove("style_test_slow.txt");
+    remove("style_test_out.txt");
+    remove("style_test_err.txt");
+    printf("a style gives the tempo, the mode and the note density\n");
+    return 0;
+}
+
 int main(int argc, char **argv) {
     const char *mode = argc > 1 ? argv[1] : "labels";
     if (strcmp(mode, "labels") == 0) {
@@ -1026,6 +1138,9 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "measure") == 0) {
         return test_measure_without_motives();
     }
+    if (strcmp(mode, "brief") == 0) {
+        return test_brief();
+    }
     if (strcmp(mode, "cli") == 0) {
         return test_cli();
     }
@@ -1035,6 +1150,6 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "distance") == 0) {
         return test_sweep(SWEEP_SEEDS, true);
     }
-    fprintf(stderr, "usage: test_style labels|same|motives|labels-motive|prefer|without|measure|smoke|distance|cli\n");
+    fprintf(stderr, "usage: test_style labels|same|motives|labels-motive|prefer|without|measure|brief|smoke|distance|cli\n");
     return 2;
 }
