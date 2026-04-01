@@ -179,6 +179,7 @@ add_library(ursatz
     persistence/persistence_key.c
     persistence/persistence_context_query.c
     persistence/persistence_support.c
+    persistence/persistence_relationship.c
     corpus/corpus.c
     corpus/persistence_corpus.c
     corpus/persistence_corpus_membership.c
