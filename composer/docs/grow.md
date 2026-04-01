@@ -186,9 +186,12 @@ two ideas and the consequent's restated idea are not offered anything else, and 
 operators below.
 
 The checker scores a form at 1 plus its connection score (R-145, `(2 x common + rhythm + harmony) / 4`, halved when the
-form is over 3/4 from the basic idea), so a form always outranks the P13 operators, whose recognizability is at most 1, and
+form is over 3/4 from the basic idea, or over 1/2 at a tempo of 140 quarter notes per minute or more, R-163), so a form always outranks the P13 operators, whose recognizability is at most 1, and
 the part after the 1 is the connection. The connection is measured against the idea before (its motive when written, else
 the basic idea); the form's distance from the basic idea is its chain's cost over the cost plus 4.
+
+`GrowConfig.tempo` sets the limit: at 140 or faster the connection is halved from a remoteness of 1/2 instead of 3/4, so the
+fast themes keep nearer to the basic idea. `--explain` names the limit in a choice's label (`limit 1/2;`) when it is not 3/4.
 
 `GrowConfig.basic` gives `m0` its own harmony, features and role (a plan keeps only the notes): `grow` passes the motive
 it was given, so `--feature`, `--harmony` and `--role` reach the liquidation and the harmony rows. Its notes must be `m0`'s.
