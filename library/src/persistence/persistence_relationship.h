@@ -23,6 +23,11 @@
  * Results. Storing an id that already exists is PERSISTENCE_RELATIONSHIP_ERR_DUPLICATE_ID: nothing is overwritten or
  * duplicated. (The older repositories report a duplicate key, and a missing id on load, as the generic ERR_DB; these
  * name them.) Loading an id that is not stored is PERSISTENCE_RELATIONSHIP_ERR_NOT_FOUND and *out is untouched.
+ *
+ * Lists. persistence_list_relationships_by_source and _by_target return every Relationship with that source or target
+ * id in insertion order (the order stored, stable across calls and reopens). *out is a newly allocated array of
+ * newly created Relationships, *out_count long; the caller relationship_destroy()s each and free()s the array. No
+ * match is OK with *out NULL and *out_count 0. On any other result the outputs are untouched.
  */
 
 typedef enum {
@@ -39,5 +44,15 @@ PersistenceRelationshipResult persistence_store_relationship(PersistenceHandle *
 
 PersistenceRelationshipResult persistence_load_relationship(PersistenceHandle *handle, const char *relationship_id,
                                                             Relationship **out_relationship);
+
+PersistenceRelationshipResult persistence_list_relationships_by_source(PersistenceHandle *handle,
+                                                                       const char *source_id,
+                                                                       Relationship ***out_relationships,
+                                                                       size_t *out_count);
+
+PersistenceRelationshipResult persistence_list_relationships_by_target(PersistenceHandle *handle,
+                                                                       const char *target_id,
+                                                                       Relationship ***out_relationships,
+                                                                       size_t *out_count);
 
 #endif

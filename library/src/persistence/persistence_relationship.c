@@ -1,5 +1,6 @@
 #include "persistence/persistence_relationship.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "core/provenance_reference.h"
@@ -152,4 +153,73 @@ PersistenceRelationshipResult persistence_load_relationship(PersistenceHandle *h
     }
     sqlite3_finalize(stmt);
     return result;
+}
+
+/* Every Relationship whose `column` equals value, in insertion (rowid) order. */
+static PersistenceRelationshipResult list_where(PersistenceHandle *handle, const char *column, const char *value,
+                                                Relationship ***out_relationships, size_t *out_count) {
+    if (handle == NULL || value == NULL || out_relationships == NULL || out_count == NULL) {
+        return PERSISTENCE_RELATIONSHIP_ERR_NULL_ARG;
+    }
+
+    char sql[256];
+    snprintf(sql, sizeof(sql), "SELECT " RELATIONSHIP_COLUMNS " FROM relationships WHERE %s = ? ORDER BY rowid",
+             column);
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(persistence_db(handle), sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return PERSISTENCE_RELATIONSHIP_ERR_DB;
+    }
+    sqlite3_bind_text(stmt, 1, value, -1, SQLITE_TRANSIENT);
+
+    Relationship **items = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
+    PersistenceRelationshipResult result = PERSISTENCE_RELATIONSHIP_OK;
+    int rc;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        if (count == capacity) {
+            size_t grown = capacity == 0 ? 8 : capacity * 2;
+            Relationship **bigger = (Relationship **)realloc(items, grown * sizeof(Relationship *));
+            if (bigger == NULL) {
+                result = PERSISTENCE_RELATIONSHIP_ERR_ALLOC;
+                break;
+            }
+            items = bigger;
+            capacity = grown;
+        }
+        result = relationship_from_row(stmt, &items[count]);
+        if (result != PERSISTENCE_RELATIONSHIP_OK) {
+            break;
+        }
+        count++;
+    }
+    if (result == PERSISTENCE_RELATIONSHIP_OK && rc != SQLITE_DONE) {
+        result = PERSISTENCE_RELATIONSHIP_ERR_DB;
+    }
+    sqlite3_finalize(stmt);
+
+    if (result != PERSISTENCE_RELATIONSHIP_OK) {
+        for (size_t i = 0; i < count; i++) {
+            relationship_destroy(items[i]);
+        }
+        free(items);
+        return result;
+    }
+    *out_relationships = items;
+    *out_count = count;
+    return PERSISTENCE_RELATIONSHIP_OK;
+}
+
+PersistenceRelationshipResult persistence_list_relationships_by_source(PersistenceHandle *handle,
+                                                                       const char *source_id,
+                                                                       Relationship ***out_relationships,
+                                                                       size_t *out_count) {
+    return list_where(handle, "source_id", source_id, out_relationships, out_count);
+}
+
+PersistenceRelationshipResult persistence_list_relationships_by_target(PersistenceHandle *handle,
+                                                                       const char *target_id,
+                                                                       Relationship ***out_relationships,
+                                                                       size_t *out_count) {
+    return list_where(handle, "target_id", target_id, out_relationships, out_count);
 }
