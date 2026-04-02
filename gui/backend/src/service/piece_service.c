@@ -2,6 +2,7 @@
 
 #include "piece_service.h"
 
+#include <dirent.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -285,18 +286,36 @@ static const char *const kFileNames[] = {"request.json",    "brief.style.json", 
                                          "loop.mid",        "loop.musicxml",    "ending.mid",        "ending.musicxml"};
 #define FILE_NAME_COUNT 8
 
-static UrsatzGuiThemeResult run_piece(const char *dir, bool check, bool has_seed, long long seed, cJSON **out_summary,
-                                      char *message, size_t message_size) {
+/*
+ * Runs the piece command into dir (absolute) on dir/request.json. With from (a loop plan), it writes section regenerate
+ * of that plan again ("none": only the ending version), in lane when that is not NULL.
+ */
+static UrsatzGuiThemeResult run_piece(const char *dir, bool check, bool has_seed, long long seed, const char *from,
+                                      const char *regenerate, const char *lane, cJSON **out_summary, char *message,
+                                      size_t message_size) {
     char paths[FILE_NAME_COUNT][PATH_BYTES + 32];
     for (int i = 0; i < FILE_NAME_COUNT; i++) {
         snprintf(paths[i], sizeof(paths[i]), "%s/%s", dir, kFileNames[i]);
     }
     char seed_text[32];
     snprintf(seed_text, sizeof(seed_text), "%lld", seed);
-    const char *args[24];
+    const char *args[32];
     int n = 0;
     args[n++] = "piece";
-    args[n++] = paths[0];
+    if (from) {
+        args[n++] = "--from";
+        args[n++] = from;
+        args[n++] = "--request";
+        args[n++] = paths[0];
+        args[n++] = "--regenerate";
+        args[n++] = regenerate;
+        if (lane) {
+            args[n++] = "--lane";
+            args[n++] = lane;
+        }
+    } else {
+        args[n++] = paths[0];
+    }
     args[n++] = "--format";
     args[n++] = "json";
     args[n++] = "--out";
@@ -454,7 +473,7 @@ static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long l
         bool use_seed = has_seed || cJSON_IsNumber(body_seed);
         long long chosen = has_seed ? seed : use_seed ? (long long)body_seed->valuedouble : 0;
         result = run_piece(absolute, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")), use_seed, chosen,
-                           &summary, message, message_size);
+                           NULL, NULL, NULL, &summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
         if (!has_brief) {
@@ -519,4 +538,657 @@ UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, lon
         cJSON_Delete(item);
     }
     return result;
+}
+
+/* --- reopening a composed version ---------------------------------------- */
+
+static char *read_text(const char *path) {
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        return NULL;
+    }
+    size_t capacity = 8192;
+    size_t length = 0;
+    char *text = malloc(capacity);
+    while (text) {
+        size_t n = fread(text + length, 1, capacity - length - 1, file);
+        length += n;
+        if (n == 0) {
+            break;
+        }
+        if (length + 1 >= capacity) {
+            char *grown = realloc(text, capacity * 2);
+            if (!grown) {
+                free(text);
+                text = NULL;
+                break;
+            }
+            text = grown;
+            capacity *= 2;
+        }
+    }
+    fclose(file);
+    if (text) {
+        text[length] = '\0';
+    }
+    return text;
+}
+
+static cJSON *read_json(const char *path) {
+    char *text = read_text(path);
+    cJSON *json = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    return json;
+}
+
+/* Replaces (or adds) the string member name of object. */
+static bool set_string(cJSON *object, const char *name, const char *text) {
+    cJSON_DeleteItemFromObjectCaseSensitive(object, name);
+    return cJSON_AddStringToObject(object, name, text) != NULL;
+}
+
+static bool lane_ok(const char *lane) {
+    static const char *const lanes[] = {"harmony", "bass", "melody", "inner", "all"};
+    for (size_t i = 0; lane && i < sizeof(lanes) / sizeof(lanes[0]); i++) {
+        if (strcmp(lane, lanes[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* A version of a piece to work from: its item.json, its body and its folder (absolute). */
+typedef struct {
+    cJSON *meta;
+    cJSON *body;
+    const cJSON *section; /* the section asked for, or NULL */
+    char dir[PATH_BYTES];
+    int current;
+} Source;
+
+static void source_clear(Source *source) {
+    cJSON_Delete(source->meta);
+    cJSON_Delete(source->body);
+    memset(source, 0, sizeof(*source));
+}
+
+/*
+ * Opens version of piece item id: it must be composed (a result, a plan and a request). section_id (not NULL) must name a
+ * section of the loop, and lane (not NULL) a lane that section can be written again in.
+ */
+static UrsatzGuiThemeResult open_source(const char *id, int version, const char *section_id, const char *lane, Source *source,
+                                        char *message, size_t message_size) {
+    memset(source, 0, sizeof(*source));
+    cJSON *current_body = NULL;
+    UrsatzGuiMaterialResult read = ursatz_gui_material_item_get(id, &source->meta, &current_body);
+    cJSON_Delete(current_body);
+    if (read != URSATZ_GUI_MATERIAL_OK) {
+        source_clear(source);
+        return read == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND || read == URSATZ_GUI_MATERIAL_ERR_INVALID_ID
+                   ? URSATZ_GUI_THEME_ERR_NOT_FOUND
+                   : URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    source->current = cJSON_GetObjectItemCaseSensitive(source->meta, "current_version")->valueint;
+    if (strcmp(text_of(source->meta, "type"), "piece") != 0) {
+        say(message, message_size, "the item is not a piece");
+        source_clear(source);
+        return URSATZ_GUI_THEME_ERR_INVALID;
+    }
+    read = ursatz_gui_material_item_get_version(id, version, &source->body);
+    if (read != URSATZ_GUI_MATERIAL_OK) {
+        source_clear(source);
+        say(message, message_size, "version not found");
+        return read == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND ? URSATZ_GUI_THEME_ERR_NOT_FOUND : URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source->body, "piece");
+    char relative[PATH_BYTES];
+    char path[PATH_BYTES + 32];
+    char resolved[PATH_MAX];
+    bool composed = cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(piece, "result")) &&
+                    ursatz_gui_material_version_dir(id, version, relative, sizeof(relative)) && realpath(relative, resolved) &&
+                    snprintf(source->dir, sizeof(source->dir), "%s", resolved) < (int)sizeof(source->dir);
+    if (composed) {
+        snprintf(path, sizeof(path), "%s/plan.json", source->dir);
+        composed = access(path, R_OK) == 0;
+        snprintf(path, sizeof(path), "%s/request.json", source->dir);
+        composed = composed && access(path, R_OK) == 0;
+    }
+    if (!composed) {
+        say(message, message_size, "this version was not composed; compose the piece first");
+        source_clear(source);
+        return URSATZ_GUI_THEME_ERR_INVALID;
+    }
+    if (!section_id) {
+        return URSATZ_GUI_THEME_OK;
+    }
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "structure"), "sections")) {
+        if (strcmp(text_of(section, "id"), section_id) == 0) {
+            source->section = section;
+            break;
+        }
+    }
+    const cJSON *fill = cJSON_GetObjectItemCaseSensitive(source->section, "fill");
+    if (!source->section) {
+        snprintf(message, message_size, "the piece has no section %s", section_id);
+    } else if (strcmp(text_of(source->section, "part"), "ending") == 0) {
+        snprintf(message, message_size, "section %s is in the ending, which is built from the loop; write a section of the loop again",
+                 section_id);
+    } else if (lane && !lane_ok(lane)) {
+        say(message, message_size, "lane is one of harmony, bass, melody, inner, all");
+    } else if (cJSON_IsObject(fill) && strcmp(text_of(fill, "kind"), "theme") == 0 &&
+               (!lane || (strcmp(lane, "harmony") != 0 && strcmp(lane, "bass") != 0))) {
+        snprintf(message, message_size, "section %s is filled with a theme: only its harmony or its bass can be written again", section_id);
+    } else {
+        return URSATZ_GUI_THEME_OK;
+    }
+    source_clear(source);
+    return URSATZ_GUI_THEME_ERR_INVALID;
+}
+
+/* Clears a leftover folder for version number of item id and makes it; dir is its path, absolute the same resolved. */
+static UrsatzGuiThemeResult make_folder(const char *id, int number, char *dir, size_t dir_size, char *absolute,
+                                        size_t absolute_size, char *message, size_t message_size) {
+    char resolved[PATH_MAX];
+    if (!ursatz_gui_material_version_dir(id, number, dir, dir_size)) {
+        say(message, message_size, "the version folder does not fit");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    ursatz_gui_theme_remove_folder(dir); /* a folder no version names is left over from a failed run */
+    if (mkdir(dir, 0755) != 0 || !realpath(dir, resolved) || snprintf(absolute, absolute_size, "%s", resolved) >= (int)absolute_size) {
+        say(message, message_size, "the version folder could not be made");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    return URSATZ_GUI_THEME_OK;
+}
+
+/*
+ * Copies the request of the version in from_dir into dir with the files it names: the plan of each theme fill and the
+ * brief's style file are copied beside it, and the request names the copies, so the new version keeps its own.
+ */
+static UrsatzGuiThemeResult carry_request(const char *from_dir, const char *dir, char *message, size_t message_size) {
+    char path[PATH_BYTES + 96];
+    char copy[PATH_BYTES + 96];
+    snprintf(path, sizeof(path), "%s/request.json", from_dir);
+    cJSON *request = read_json(path);
+    if (!request) {
+        say(message, message_size, "the request of the version could not be read");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(request, "sections")) {
+        cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
+        if (result == URSATZ_GUI_THEME_OK && cJSON_IsObject(fill) && strcmp(text_of(fill, "kind"), "theme") == 0) {
+            char name[96];
+            snprintf(name, sizeof(name), "theme-%s.plan.json", text_of(section, "id"));
+            snprintf(path, sizeof(path), "%s/%s", from_dir, name);
+            snprintf(copy, sizeof(copy), "%s/%s", dir, name);
+            if (!copy_file(path, copy) || !set_string(fill, "plan", copy)) {
+                snprintf(message, message_size, "the plan of the theme in section %s could not be copied", text_of(section, "id"));
+                result = URSATZ_GUI_THEME_ERR_FAILED;
+            }
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "style"))) {
+        snprintf(path, sizeof(path), "%s/brief.style.json", from_dir);
+        snprintf(copy, sizeof(copy), "%s/brief.style.json", dir);
+        if (!copy_file(path, copy) || !set_string(request, "style", copy)) {
+            say(message, message_size, "the style file of the version could not be copied");
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        char *text = cJSON_Print(request);
+        snprintf(copy, sizeof(copy), "%s/request.json", dir);
+        if (!text || !ursatz_gui_theme_write_text(copy, text)) {
+            say(message, message_size, "the request could not be written");
+            result = text ? URSATZ_GUI_THEME_ERR_FAILED : URSATZ_GUI_THEME_ERR_ALLOC;
+        }
+        free(text);
+    }
+    cJSON_Delete(request);
+    return result;
+}
+
+/* A copy of the brief summary the source version kept, else the empty one. NULL on allocation failure. */
+static cJSON *kept_brief_summary(const Source *source) {
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source->body, "piece");
+    const cJSON *brief = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "result"), "brief");
+    if (cJSON_IsObject(brief)) {
+        return cJSON_Duplicate(brief, 1);
+    }
+    cJSON *empty = cJSON_CreateObject();
+    if (!empty || !cJSON_AddNumberToObject(empty, "piece_count", 0) || !cJSON_AddArrayToObject(empty, "skipped")) {
+        cJSON_Delete(empty);
+        return NULL;
+    }
+    return empty;
+}
+
+/* Writes new_body as the next version, whose folder is dir. Another writer may have added a version meanwhile. */
+static UrsatzGuiThemeResult add_version(const char *id, int number, const char *dir, const cJSON *new_body, const char *note,
+                                        cJSON **out_item, char *message, size_t message_size) {
+    cJSON *item = NULL;
+    if (ursatz_gui_material_item_add_version(id, new_body, note, &item) != URSATZ_GUI_MATERIAL_OK) {
+        say(message, message_size, "the version could not be written");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    int actual = cJSON_GetObjectItemCaseSensitive(item, "current_version")->valueint;
+    char target[PATH_BYTES];
+    if (actual != number && ursatz_gui_material_version_dir(id, actual, target, sizeof(target))) {
+        rename(dir, target);
+    }
+    *out_item = item;
+    return URSATZ_GUI_THEME_OK;
+}
+
+static UrsatzGuiThemeResult regenerate_locked(const char *id, int version, const char *section_id, const char *lane,
+                                              bool has_seed, long long seed, cJSON **out_item, char *message,
+                                              size_t message_size) {
+    Source source;
+    UrsatzGuiThemeResult result = open_source(id, version, section_id, lane, &source, message, message_size);
+    if (result != URSATZ_GUI_THEME_OK) {
+        return result;
+    }
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
+    const cJSON *brief_json = cJSON_GetObjectItemCaseSensitive(piece, "brief");
+    bool has_brief = brief_json && !cJSON_IsNull(brief_json);
+    int number = source.current + 1;
+    char dir[PATH_BYTES];
+    char absolute[PATH_BYTES];
+    char from[PATH_BYTES + 32];
+    cJSON *summary = NULL;
+    cJSON *new_body = NULL;
+    cJSON *item = NULL;
+    result = make_folder(id, number, dir, sizeof(dir), absolute, sizeof(absolute), message, message_size);
+    bool made = result == URSATZ_GUI_THEME_OK;
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = carry_request(source.dir, absolute, message, message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        snprintf(from, sizeof(from), "%s/plan.json", source.dir);
+        result = run_piece(absolute, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")), has_seed, seed, from,
+                           section_id, lane, &summary, message, message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        cJSON *brief_summary = kept_brief_summary(&source);
+        const cJSON *reported = reported_seed(summary);
+        char note[96];
+        if (reported) {
+            snprintf(note, sizeof(note), "regenerated %s %s seed %.0f", section_id, lane ? lane : "all", reported->valuedouble);
+        } else {
+            snprintf(note, sizeof(note), "regenerated %s %s", section_id, lane ? lane : "all");
+        }
+        new_body = brief_summary ? body_with_result(source.body, summary, brief_summary, has_brief) : NULL;
+        summary = NULL;
+        if (!new_body) {
+            result = URSATZ_GUI_THEME_ERR_ALLOC;
+        } else {
+            result = add_version(id, number, dir, new_body, note, &item, message, message_size);
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        *out_item = item;
+    } else if (made) {
+        ursatz_gui_theme_remove_folder(dir);
+    }
+    cJSON_Delete(summary);
+    cJSON_Delete(new_body);
+    source_clear(&source);
+    return result;
+}
+
+UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, const char *section_id, const char *lane,
+                                                 bool has_seed, long long seed, cJSON **out_item, char *message,
+                                                 size_t message_size) {
+    if (out_item) {
+        *out_item = NULL;
+    }
+    say(message, message_size, "");
+    cJSON *item = NULL;
+    pthread_mutex_lock(&g_compose_lock);
+    UrsatzGuiThemeResult result = regenerate_locked(id, version, section_id, lane, has_seed, seed, &item, message, message_size);
+    pthread_mutex_unlock(&g_compose_lock);
+    if (result == URSATZ_GUI_THEME_OK && out_item) {
+        *out_item = item;
+    } else {
+        cJSON_Delete(item);
+    }
+    return result;
+}
+
+/* --- variations ---------------------------------------------------------- */
+
+/* The number of the next variations set of the item: one past the highest of any version's folder. */
+static int next_set(const char *id, int current) {
+    int highest = 0;
+    for (int number = 1; number <= current; number++) {
+        char dir[PATH_BYTES];
+        if (!ursatz_gui_material_version_dir(id, number, dir, sizeof(dir))) {
+            continue;
+        }
+        DIR *folder = opendir(dir);
+        struct dirent *entry;
+        while (folder && (entry = readdir(folder)) != NULL) {
+            char *end = NULL;
+            if (strncmp(entry->d_name, "variations-", 11) == 0) {
+                long set = strtol(entry->d_name + 11, &end, 10);
+                if (end != entry->d_name + 11 && *end == '\0' && set > highest && set < 1000000) {
+                    highest = (int)set;
+                }
+            }
+        }
+        if (folder) {
+            closedir(folder);
+        }
+    }
+    return highest + 1;
+}
+
+static const cJSON *loop_section(const cJSON *loop, const char *section_id) {
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(loop, "sections")) {
+        if (strcmp(text_of(section, "id"), section_id) == 0) {
+            return section;
+        }
+    }
+    return NULL;
+}
+
+/* A copy of member, or a null when there is none. */
+static cJSON *copy_or_null(const cJSON *member) {
+    return member ? cJSON_Duplicate(member, 1) : cJSON_CreateNull();
+}
+
+/* {set, variations: [{index, seed, score, seam, heard}]} from the Composer's result.json. NULL on allocation failure. */
+static cJSON *variations_answer(const cJSON *result, const char *section_id, int set) {
+    cJSON *answer = cJSON_CreateObject();
+    cJSON *list = cJSON_CreateArray();
+    bool ok = answer && list && cJSON_AddNumberToObject(answer, "set", set);
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(result, "variations")) {
+        const cJSON *loop = cJSON_GetObjectItemCaseSensitive(entry, "loop");
+        const cJSON *heard = cJSON_GetObjectItemCaseSensitive(loop_section(loop, section_id), "heard");
+        cJSON *object = ok ? cJSON_CreateObject() : NULL;
+        ok = object && add_copy_or_null(object, entry, "index") && add_copy_or_null(object, entry, "seed") &&
+             attach(object, "score", copy_or_null(cJSON_GetObjectItemCaseSensitive(loop, "score"))) &&
+             attach(object, "seam", copy_or_null(cJSON_GetObjectItemCaseSensitive(loop, "seam"))) &&
+             attach(object, "heard", copy_or_null(heard)) &&
+             cJSON_AddItemToArray(list, object);
+        if (!ok) {
+            cJSON_Delete(object);
+        }
+    }
+    if (ok) {
+        ok = attach(answer, "variations", list);
+        list = NULL;
+    }
+    cJSON_Delete(list);
+    if (!ok) {
+        cJSON_Delete(answer);
+        return NULL;
+    }
+    return answer;
+}
+
+static UrsatzGuiThemeResult variations_locked(const char *id, int version, const char *section_id, const char *lane, int count,
+                                              bool has_seed, long long seed, cJSON **out_result, char *message,
+                                              size_t message_size) {
+    if (!lane || count < 1 || count > 8) {
+        say(message, message_size, "variations need a lane and a count from 1 to 8");
+        return URSATZ_GUI_THEME_ERR_INVALID;
+    }
+    Source source;
+    UrsatzGuiThemeResult result = open_source(id, version, section_id, lane, &source, message, message_size);
+    if (result != URSATZ_GUI_THEME_OK) {
+        return result;
+    }
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
+    int set = next_set(id, source.current);
+    char out_dir[PATH_BYTES + 32];
+    char from[PATH_BYTES + 32];
+    char request[PATH_BYTES + 32];
+    char result_path[PATH_BYTES + 64];
+    char count_text[16];
+    char seed_text[32];
+    snprintf(out_dir, sizeof(out_dir), "%s/variations-%d", source.dir, set);
+    snprintf(from, sizeof(from), "%s/plan.json", source.dir);
+    snprintf(request, sizeof(request), "%s/request.json", source.dir);
+    snprintf(result_path, sizeof(result_path), "%s/result.json", out_dir);
+    snprintf(count_text, sizeof(count_text), "%d", count);
+    snprintf(seed_text, sizeof(seed_text), "%lld", seed);
+    const char *args[24];
+    int n = 0;
+    args[n++] = "piece";
+    args[n++] = "--from";
+    args[n++] = from;
+    args[n++] = "--request";
+    args[n++] = request;
+    args[n++] = "--variations";
+    args[n++] = section_id;
+    args[n++] = "--lane";
+    args[n++] = lane;
+    args[n++] = "--count";
+    args[n++] = count_text;
+    args[n++] = "--out-dir";
+    args[n++] = out_dir;
+    args[n++] = "--format";
+    args[n++] = "json";
+    if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check"))) {
+        args[n++] = "--check";
+    }
+    if (has_seed) {
+        args[n++] = "--seed";
+        args[n++] = seed_text;
+    }
+    args[n] = NULL;
+    const char *outputs[] = {result_path, NULL};
+    cJSON *summary = NULL;
+    result = ursatz_gui_theme_run_composer(args, outputs, &summary, message, message_size);
+    cJSON *written = result == URSATZ_GUI_THEME_OK ? read_json(result_path) : NULL;
+    if (result == URSATZ_GUI_THEME_OK) {
+        *out_result = written ? variations_answer(written, section_id, set) : NULL;
+        if (!*out_result) {
+            say(message, message_size, "the variations could not be read");
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+        }
+    }
+    if (result != URSATZ_GUI_THEME_OK) {
+        ursatz_gui_theme_remove_folder(out_dir);
+    }
+    cJSON_Delete(written);
+    cJSON_Delete(summary);
+    source_clear(&source);
+    return result;
+}
+
+UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, const char *section_id, const char *lane,
+                                                 int count, bool has_seed, long long seed, cJSON **out_result,
+                                                 char *message, size_t message_size) {
+    if (out_result) {
+        *out_result = NULL;
+    }
+    say(message, message_size, "");
+    cJSON *answer = NULL;
+    pthread_mutex_lock(&g_compose_lock);
+    UrsatzGuiThemeResult result =
+        variations_locked(id, version, section_id, lane, count, has_seed, seed, &answer, message, message_size);
+    pthread_mutex_unlock(&g_compose_lock);
+    if (result == URSATZ_GUI_THEME_OK && out_result) {
+        *out_result = answer;
+    } else {
+        cJSON_Delete(answer);
+    }
+    return result;
+}
+
+static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, int index, cJSON **out_item, char *message,
+                                          size_t message_size) {
+    Source source;
+    UrsatzGuiThemeResult result = open_source(id, version, NULL, NULL, &source, message, message_size);
+    if (result != URSATZ_GUI_THEME_OK) {
+        return result;
+    }
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
+    const cJSON *brief_json = cJSON_GetObjectItemCaseSensitive(piece, "brief");
+    bool has_brief = brief_json && !cJSON_IsNull(brief_json);
+    char path[PATH_BYTES + 96];
+    char from[PATH_BYTES + 96];
+    snprintf(path, sizeof(path), "%s/variations-%d/result.json", source.dir, set);
+    snprintf(from, sizeof(from), "%s/variations-%d/variation-%d.json", source.dir, set, index);
+    cJSON *written = read_json(path);
+    const cJSON *chosen = NULL;
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(written, "variations")) {
+        const cJSON *number = cJSON_GetObjectItemCaseSensitive(entry, "index");
+        if (cJSON_IsNumber(number) && number->valueint == index) {
+            chosen = entry;
+        }
+    }
+    if (!chosen || access(from, R_OK) != 0) {
+        snprintf(message, message_size, "variation %d is not in set %d of version %d", index, set, version);
+        cJSON_Delete(written);
+        source_clear(&source);
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    int number = source.current + 1;
+    char dir[PATH_BYTES];
+    char absolute[PATH_BYTES];
+    cJSON *summary = NULL;
+    cJSON *new_body = NULL;
+    cJSON *item = NULL;
+    result = make_folder(id, number, dir, sizeof(dir), absolute, sizeof(absolute), message, message_size);
+    bool made = result == URSATZ_GUI_THEME_OK;
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = carry_request(source.dir, absolute, message, message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = run_piece(absolute, false, false, 0, from, "none", NULL, &summary, message, message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        /* The Composer's run only built the ending version; the loop version is the variation's, with its seed. */
+        const cJSON *seed = cJSON_GetObjectItemCaseSensitive(chosen, "seed");
+        cJSON *versions = cJSON_GetObjectItemCaseSensitive(summary, "versions");
+        const cJSON *loop = cJSON_GetObjectItemCaseSensitive(chosen, "loop");
+        bool ok = cJSON_IsNumber(seed) && cJSON_IsObject(versions) && cJSON_IsObject(loop);
+        if (ok) {
+            cJSON_DeleteItemFromObjectCaseSensitive(versions, "loop");
+            cJSON_DeleteItemFromObjectCaseSensitive(summary, "seed");
+            ok = attach(versions, "loop", cJSON_Duplicate(loop, 1)) && attach(summary, "seed", cJSON_CreateNumber(seed->valuedouble));
+        }
+        cJSON *brief_summary = ok ? kept_brief_summary(&source) : NULL;
+        char note[96];
+        snprintf(note, sizeof(note), "chose variation %d seed %.0f", index, ok ? seed->valuedouble : 0.0);
+        new_body = brief_summary ? body_with_result(source.body, summary, brief_summary, has_brief) : NULL;
+        summary = NULL;
+        if (!new_body) {
+            say(message, message_size, "the version could not be made from the variation");
+            result = URSATZ_GUI_THEME_ERR_ALLOC;
+        } else {
+            result = add_version(id, number, dir, new_body, note, &item, message, message_size);
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        *out_item = item;
+    } else if (made) {
+        ursatz_gui_theme_remove_folder(dir);
+    }
+    cJSON_Delete(written);
+    cJSON_Delete(summary);
+    cJSON_Delete(new_body);
+    source_clear(&source);
+    return result;
+}
+
+UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, cJSON **out_item,
+                                             char *message, size_t message_size) {
+    if (out_item) {
+        *out_item = NULL;
+    }
+    say(message, message_size, "");
+    cJSON *item = NULL;
+    pthread_mutex_lock(&g_compose_lock);
+    UrsatzGuiThemeResult result = choose_locked(id, version, set, index, &item, message, message_size);
+    pthread_mutex_unlock(&g_compose_lock);
+    if (result == URSATZ_GUI_THEME_OK && out_item) {
+        *out_item = item;
+    } else {
+        cJSON_Delete(item);
+    }
+    return result;
+}
+
+/* The content type of a set file name: result.json, or variation-<i>.json, .mid, .musicxml (i a number of one or two digits). */
+static const char *variation_file_type(const char *name) {
+    if (strcmp(name, "result.json") == 0) {
+        return "application/json";
+    }
+    if (strncmp(name, "variation-", 10) != 0) {
+        return NULL;
+    }
+    size_t digits = strspn(name + 10, "0123456789");
+    const char *extension = name + 10 + digits;
+    if (digits < 1 || digits > 2) {
+        return NULL;
+    }
+    if (strcmp(extension, ".json") == 0) {
+        return "application/json";
+    }
+    if (strcmp(extension, ".mid") == 0) {
+        return "audio/midi";
+    }
+    return strcmp(extension, ".musicxml") == 0 ? "application/xml" : NULL;
+}
+
+UrsatzGuiThemeResult ursatz_gui_piece_variation_file(const char *id, int version, int set, const char *name,
+                                                     unsigned char **out_data, size_t *out_size, const char **out_type) {
+    *out_data = NULL;
+    *out_size = 0;
+    const char *type = name ? variation_file_type(name) : NULL;
+    cJSON *meta = NULL;
+    cJSON *body = NULL;
+    char dir[PATH_BYTES];
+    char path[PATH_BYTES + 96];
+    if (!type || set < 1 || !ursatz_gui_material_version_dir(id, version, dir, sizeof(dir)) ||
+        ursatz_gui_material_item_get(id, &meta, &body) != URSATZ_GUI_MATERIAL_OK) {
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    bool found = version <= cJSON_GetObjectItemCaseSensitive(meta, "current_version")->valueint &&
+                 strcmp(text_of(meta, "type"), "piece") == 0;
+    cJSON_Delete(meta);
+    cJSON_Delete(body);
+    snprintf(path, sizeof(path), "%s/variations-%d/%s", dir, set, name);
+    FILE *file = found ? fopen(path, "rb") : NULL;
+    if (!file) {
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    size_t capacity = 65536;
+    size_t length = 0;
+    unsigned char *data = malloc(capacity);
+    while (data) {
+        size_t n = fread(data + length, 1, capacity - length, file);
+        length += n;
+        if (n == 0) {
+            break;
+        }
+        if (length == capacity) {
+            unsigned char *grown = realloc(data, capacity * 2);
+            if (!grown) {
+                free(data);
+                data = NULL;
+                break;
+            }
+            data = grown;
+            capacity *= 2;
+        }
+    }
+    fclose(file);
+    if (!data) {
+        return URSATZ_GUI_THEME_ERR_ALLOC;
+    }
+    *out_data = data;
+    *out_size = length;
+    *out_type = type;
+    return URSATZ_GUI_THEME_OK;
 }

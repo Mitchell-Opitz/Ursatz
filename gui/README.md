@@ -684,7 +684,11 @@ composable piece. A structure alone is valid: every fill may be left out.
 A composed piece version keeps its files beside its body in `items/<id>/v<n>/`: `request.json`, `brief.style.json`
 (when the piece has a brief), `plan.json` (the loop version), `ending-plan.json`, `loop.mid`, `loop.musicxml`,
 `ending.mid`, `ending.musicxml`, and `theme-<section id>.plan.json`, a copy of the plan of each theme version a
-section uses, so the version keeps its own. The folder is written before the version exists.
+section uses, so the version keeps its own. The folder is written before the version exists. A regenerated or chosen
+version keeps the same files (its `request.json` names the copies of the theme plans and the style file beside it).
+A variations set is a folder `variations-<k>/` in the version it was made from, numbered over the whole item:
+`variation-<i>.json` (the loop plan), `variation-<i>.mid`, `variation-<i>.musicxml` and the Composer's `result.json`.
+It is not a version; deleting the item removes it.
 
 #### Item references
 
@@ -1200,6 +1204,29 @@ Items:
   ending.mid --ending-musicxml ending.musicxml [--check] [--seed]`. The new version is the body as it was plus
   `result: {seed, summary (the command's JSON), brief: {piece_count, skipped}, loop: {start, end}, files}` with the
   note `composed seed <n>`. Errors are those of a theme compose.
+- `POST /api/materials/items/<pce-id>/versions/<n>/regenerate`: `{"section_id","lane"?,"seed"?}` writes one section
+  of a composed version (one with a `result`) again as the next version and answers `{"item"}`. `lane` is `harmony`,
+  `bass`, `melody`, `inner` or `all` (default: the whole section); a section filled with a theme takes `harmony` or
+  `bass` only, and an ending section is refused. It runs `ursatz-composer piece --from <v<n>/plan.json> --request
+  <new>/request.json --regenerate <section id> [--lane] [--seed]` with the eight outputs; without `seed` the Composer
+  picks one. The new version is the source's body with `result` replaced and the note `regenerated <section id> <lane>
+  seed <n>`; its folder holds its own `request.json` and copies of the theme plans and the style file. Errors: `400`
+  for an item that is not a piece, a version that was never composed, an unknown section or lane, a lane a theme
+  section does not take, or a bad seed; `404` for an unknown item or version; `422`, `503`, `504` as for compose. A
+  failed run writes no version and leaves no folder.
+- `POST /api/materials/items/<pce-id>/versions/<n>/variations`: `{"section_id","lane","count","seed"?}` (`count` 1 to
+  8) makes variations of a section into the set folder `v<n>/variations-<k>/` and answers `{"ok","set":k,"variations":
+  [{"index","seed","score":{"numerator","denominator"},"seam","heard"}]}`, `heard` being the cadence heard at the end
+  of the section. Fewer than `count` may come back. Nothing becomes a version. Harmonize is `lane` `harmony` (also on a
+  section whose melody is not a theme's). Errors as for regenerate.
+- `GET /api/materials/items/<pce-id>/versions/<n>/variations/<k>/<file>`: `result.json` or `variation-<i>.json`,
+  `.mid`, `.musicxml` of a set (`application/json`, `audio/midi`, `application/xml`); any other name, or a set the
+  version does not hold, is `404`.
+- `POST /api/materials/items/<pce-id>/versions/<n>/variations/<k>/choose`: `{"index"}` makes variation `index` of set
+  `k` the next version and answers `{"item"}`: the variation's plan is the version's loop plan, and the ending version is
+  built from it (`piece --from variation-<i>.json --request <new>/request.json --regenerate none`, the eight outputs).
+  The result is the source's with the Composer's summary, the variation's loop version and its seed; the note is `chose
+  variation <i> seed <n>`. `404` for a set or variation that is not there, `400` for a bad index.
 - `GET /api/materials/variant-operations`: `{"operations"}` from
   `ursatz-composer variants --list-ops --json`, read once per server run.
 - `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?}`

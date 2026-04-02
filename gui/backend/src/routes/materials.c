@@ -27,7 +27,7 @@
 static const char *kMaterialsPrefix = "/api/materials";
 static const char *kSubjectsPrefix = "/api/subjects";
 static const size_t kMaxRequestBodySize = 256 * 1024;
-static const int kMaxSegments = 6;
+static const int kMaxSegments = 7;
 
 static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
   size_t len = strlen(body);
@@ -1282,6 +1282,51 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
+/* The answer for a Composer-backed call that did not succeed: the status follows the result (see theme_service.h). */
+static int send_composer_failure(struct mg_connection *conn, UrsatzGuiThemeResult result, const char *message,
+                                 const char *invalid_text, const char *failed_text) {
+  switch (result) {
+    case URSATZ_GUI_THEME_ERR_NOT_FOUND:
+      return send_failure(conn, 404, message[0] ? message : "not found");
+    case URSATZ_GUI_THEME_ERR_INVALID:
+      return send_failure(conn, 400, message[0] ? message : invalid_text);
+    case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
+      return send_failure(conn, 422, message[0] ? message : "stuck");
+    case URSATZ_GUI_THEME_ERR_NO_BINARY:
+      return send_failure(conn, 503, "composer not found");
+    case URSATZ_GUI_THEME_ERR_TIMEOUT:
+      return send_failure(conn, 504, "composer timed out");
+    default:
+      return send_failure(conn, 500, message[0] ? message : failed_text);
+  }
+}
+
+/* A version number from a path segment, 1 to 1000000. */
+static bool parse_version_number(const char *text, int *out) {
+  char *end = NULL;
+  long number = strtol(text, &end, 10);
+  if (end == text || *end != '\0' || number < 1 || number > 1000000) {
+    return false;
+  }
+  *out = (int)number;
+  return true;
+}
+
+/* The optional member seed of body: false when it is not a whole number from 0 to 4294967295. */
+static bool read_seed(const cJSON *body, long long *seed, bool *has_seed) {
+  const cJSON *member = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  *has_seed = member && !cJSON_IsNull(member);
+  if (!*has_seed) {
+    return true;
+  }
+  if (!cJSON_IsNumber(member) || member->valuedouble < 0 || member->valuedouble > 4294967295.0 ||
+      member->valuedouble != (double)(long long)member->valuedouble) {
+    return false;
+  }
+  *seed = (long long)member->valuedouble;
+  return true;
+}
+
 /* POST /api/materials/items/<thm-id or pce-id>/compose {seed?, update_uses?}: composes the theme or piece into a new
    version with its files (R-167, R-174). With update_uses, every updated use moves to its source's current version first. */
 static int handle_compose(struct mg_connection *conn, const char *id) {
@@ -1317,23 +1362,129 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
       piece ? ursatz_gui_piece_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message))
             : ursatz_gui_theme_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message));
   cJSON_Delete(body);
-  switch (result) {
-    case URSATZ_GUI_THEME_OK:
-      return send_ok_with(conn, "item", item);
-    case URSATZ_GUI_THEME_ERR_NOT_FOUND:
-      return send_failure(conn, 404, "not found");
-    case URSATZ_GUI_THEME_ERR_INVALID:
-      return send_failure(conn, 400, message[0] ? message : piece ? "invalid piece" : "invalid theme");
-    case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
-      return send_failure(conn, 422, message[0] ? message : "stuck");
-    case URSATZ_GUI_THEME_ERR_NO_BINARY:
-      return send_failure(conn, 503, "composer not found");
-    case URSATZ_GUI_THEME_ERR_TIMEOUT:
-      return send_failure(conn, 504, "composer timed out");
-    default:
-      return send_failure(conn, 500,
-                          message[0] ? message : piece ? "the piece could not be composed" : "the theme could not be composed");
+  if (result == URSATZ_GUI_THEME_OK) {
+    return send_ok_with(conn, "item", item);
   }
+  return send_composer_failure(conn, result, message, piece ? "invalid piece" : "invalid theme",
+                               piece ? "the piece could not be composed" : "the theme could not be composed");
+}
+
+/* POST /api/materials/items/<pce-id>/versions/<n>/regenerate {section_id, lane?, seed?}: writes one section of a composed
+   piece version again, as the next version (R-173, R-174). */
+static int handle_piece_regenerate(struct mg_connection *conn, const char *id, const char *number_text) {
+  int version = 0;
+  int status = 0;
+  if (!parse_version_number(number_text, &version)) {
+    return send_failure(conn, 404, "version not found");
+  }
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *section = cJSON_GetObjectItemCaseSensitive(body, "section_id");
+  const cJSON *lane = cJSON_GetObjectItemCaseSensitive(body, "lane");
+  long long seed = 0;
+  bool has_seed = false;
+  if (!cJSON_IsString(section) || !section->valuestring[0] || (lane && !cJSON_IsNull(lane) && !cJSON_IsString(lane)) ||
+      !read_seed(body, &seed, &has_seed)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "section_id is a string; lane is a string; seed is a whole number from 0 to 4294967295");
+  }
+  cJSON *item = NULL;
+  char message[512];
+  UrsatzGuiThemeResult result =
+      ursatz_gui_piece_regenerate(id, version, section->valuestring, cJSON_IsString(lane) ? lane->valuestring : NULL, has_seed,
+                                  seed, &item, message, sizeof(message));
+  cJSON_Delete(body);
+  if (result == URSATZ_GUI_THEME_OK) {
+    return send_ok_with(conn, "item", item);
+  }
+  return send_composer_failure(conn, result, message, "invalid piece", "the section could not be written again");
+}
+
+/* POST /api/materials/items/<pce-id>/versions/<n>/variations {section_id, lane, count, seed?}: makes variations of a
+   section of a composed piece version into a new set; the answer lists them. */
+static int handle_piece_variations(struct mg_connection *conn, const char *id, const char *number_text) {
+  int version = 0;
+  int status = 0;
+  if (!parse_version_number(number_text, &version)) {
+    return send_failure(conn, 404, "version not found");
+  }
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *section = cJSON_GetObjectItemCaseSensitive(body, "section_id");
+  const cJSON *lane = cJSON_GetObjectItemCaseSensitive(body, "lane");
+  const cJSON *count = cJSON_GetObjectItemCaseSensitive(body, "count");
+  long long seed = 0;
+  bool has_seed = false;
+  if (!cJSON_IsString(section) || !section->valuestring[0] || !cJSON_IsString(lane) || !cJSON_IsNumber(count) ||
+      count->valuedouble < 1 || count->valuedouble > 8 || count->valuedouble != (double)(int)count->valuedouble ||
+      !read_seed(body, &seed, &has_seed)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "section_id and lane are strings; count is a whole number from 1 to 8; seed is a whole number from 0 to 4294967295");
+  }
+  cJSON *made = NULL;
+  char message[512];
+  UrsatzGuiThemeResult result = ursatz_gui_piece_variations(id, version, section->valuestring, lane->valuestring,
+                                                            (int)count->valuedouble, has_seed, seed, &made, message, sizeof(message));
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_THEME_OK) {
+    return send_composer_failure(conn, result, message, "invalid piece", "the variations could not be made");
+  }
+  if (!cJSON_AddBoolToObject(made, "ok", 1)) {
+    cJSON_Delete(made);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, made);
+}
+
+/* GET /api/materials/items/<pce-id>/versions/<n>/variations/<set>/<file>: a file of a variations set. */
+static int handle_piece_variation_file(struct mg_connection *conn, const char *id, const char *number_text, const char *set_text,
+                                       const char *name) {
+  int version = 0;
+  int set = 0;
+  unsigned char *data = NULL;
+  size_t size = 0;
+  const char *type = NULL;
+  if (!parse_version_number(number_text, &version) || !parse_version_number(set_text, &set) ||
+      ursatz_gui_piece_variation_file(id, version, set, name, &data, &size, &type) != URSATZ_GUI_THEME_OK) {
+    return send_failure(conn, 404, "file not found");
+  }
+  mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n", type, size);
+  mg_write(conn, data, size);
+  free(data);
+  return 200;
+}
+
+/* POST /api/materials/items/<pce-id>/versions/<n>/variations/<set>/choose {index}: makes a variation the next version. */
+static int handle_piece_choose(struct mg_connection *conn, const char *id, const char *number_text, const char *set_text) {
+  int version = 0;
+  int set = 0;
+  int status = 0;
+  if (!parse_version_number(number_text, &version) || !parse_version_number(set_text, &set)) {
+    return send_failure(conn, 404, "variations not found");
+  }
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *index = cJSON_GetObjectItemCaseSensitive(body, "index");
+  if (!cJSON_IsNumber(index) || index->valuedouble < 1 || index->valuedouble > 99 ||
+      index->valuedouble != (double)(int)index->valuedouble) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "index is a whole number from 1");
+  }
+  cJSON *item = NULL;
+  char message[512];
+  UrsatzGuiThemeResult result =
+      ursatz_gui_piece_choose(id, version, set, (int)index->valuedouble, &item, message, sizeof(message));
+  cJSON_Delete(body);
+  if (result == URSATZ_GUI_THEME_OK) {
+    return send_ok_with(conn, "item", item);
+  }
+  return send_composer_failure(conn, result, message, "invalid piece", "the variation could not be chosen");
 }
 
 /* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme or piece version's files. */
@@ -2657,6 +2808,19 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
     return get ? handle_version_render(conn, segments[1], segments[3], strcmp(segments[4], "playback") == 0)
                : send_method_not_allowed(conn);
   }
+  if (count == 5 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "regenerate") == 0) {
+    return post ? handle_piece_regenerate(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
+  }
+  if (count == 5 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0) {
+    return post ? handle_piece_variations(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
+  }
+  if (count == 7 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0) {
+    if (strcmp(segments[6], "choose") == 0) {
+      return post ? handle_piece_choose(conn, segments[1], segments[3], segments[5]) : send_method_not_allowed(conn);
+    }
+    return get ? handle_piece_variation_file(conn, segments[1], segments[3], segments[5], segments[6])
+               : send_method_not_allowed(conn);
+  }
   if (count == 6 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "files") == 0) {
     return get ? handle_version_file(conn, segments[1], segments[3], segments[5]) : send_method_not_allowed(conn);
   }
@@ -2994,7 +3158,7 @@ static int route_subjects(struct mg_connection *conn, const char *method, char s
 static int subjects_handler(struct mg_connection *conn, void *cbdata) {
   (void)cbdata;
   const struct mg_request_info *info = mg_get_request_info(conn);
-  char segments[6][256];
+  char segments[7][256];
   int count = split_path(info->local_uri + strlen(kSubjectsPrefix), segments);
   if (count < 0) {
     return send_not_found(conn);
@@ -3011,7 +3175,7 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   (void)cbdata;
   const struct mg_request_info *info = mg_get_request_info(conn);
   const char *method = info->request_method;
-  char segments[6][256];
+  char segments[7][256];
   int count = split_path(info->local_uri + strlen(kMaterialsPrefix), segments);
   if (count < 1) {
     return send_not_found(conn);
