@@ -24,6 +24,7 @@ typedef struct {
     void *inner_context;      /* ...and the context it is called with (NULL for the stages whose checker has none) */
     const ComposerStyle *style;
     ComposerRatio weight;     /* resolved: a denominator of 0 reads as 1/1 before it gets here */
+    bool texture;             /* the texture stage: only the accompaniment's candidates gain a style term (R-163) */
 } StyleCheckContext;
 
 bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,

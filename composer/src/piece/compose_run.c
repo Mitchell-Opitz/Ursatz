@@ -13,6 +13,7 @@
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
+#include <ursatz_composer/motive_connect.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/regenerate.h>
@@ -543,7 +544,8 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         StyleCheckContext style_context;
         if (config->style &&
             (stage == COMPOSE_STAGE_STRUCTURE || stage == COMPOSE_STAGE_HARMONY || stage == COMPOSE_STAGE_MELODY ||
-             stage == COMPOSE_STAGE_MOTIVES)) {
+             stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_TEXTURE)) {
+            style_context.texture = stage == COMPOSE_STAGE_TEXTURE;
             style_context.inner = fill.checker;
             style_context.inner_context = fill.checker_context;
             style_context.style = config->style;
@@ -561,6 +563,15 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             *record = NULL;
         }
         MelodyFillParams melody = config->melody ? *config->melody : melody_fill_params_default();
+        /* The style's note density, where the run set none: a cell is a beat, so that many notes to a cell. A melody
+           of even notes is found by chance and the rules of the melody can leave none, so the last attempt gives the
+           motive's own rhythm back rather than leave the stage open. */
+        ComposerRatio density;
+        if (melody.density == 0 && attempt + 1 < attempts && config->style &&
+            composer_style_density(config->style, &density)) {
+            unsigned long notes = (density.numerator + density.denominator / 2) / density.denominator;
+            melody.density = notes < 1 ? 1 : notes > 4 ? 4 : (unsigned)notes;
+        }
         if (attempt > 0 && !run->sentences) {
             melody.climax_position = CLIMAX_RETRIES[attempt];
         }
@@ -714,6 +725,12 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     motive_develop_context_default(&run.motives);
     run.motives.min_length = 1;
     run.motives.basic = config->basic;
+    /* At a fast tempo the motive-forms stay closer to the basic idea (R-163). */
+    if (config->tempo.denominator > 0 &&
+        config->tempo.numerator >= (unsigned long)MOTIVE_FAST_TEMPO_QPM * config->tempo.denominator) {
+        run.motives.remoteness_limit.numerator = 1;
+        run.motives.remoteness_limit.denominator = 2;
+    }
     run.accompaniment = accompaniment_params_default();
     run.voicing = voicing_params_default();
     PieceResult result = PIECE_OK;

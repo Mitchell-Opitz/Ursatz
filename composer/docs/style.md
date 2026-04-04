@@ -60,6 +60,32 @@ the category's largest share. That is the label's count over the largest count o
 label scores 1 and a label it never saw 0. A label whose category the style does not have is left out; a candidate with no
 labels is neutral, 1/1. A fraction that does not fit in 64 bits is rounded to 30 bits.
 
+## Tempo, mode and density
+
+A style with the `tempo`, `mode` and `note-density` categories gives a brief (R-163). The Composer reads them with three
+functions of `style.h`:
+
+| Function | Reads | Gives |
+| --- | --- | --- |
+| `composer_style_tempo` | The most common `tempo` label; a tie goes to the lower band. | The middle of its band in quarter notes per minute: `140-159` is 150, `<40` is 30, `220+` is 230. |
+| `composer_style_mode` | The most common `mode` label; a tie goes to major. | Whether it is minor. |
+| `composer_style_density` | The most common `note-density` label; a tie goes to the lower density. | Attacks per beat, `4+` reading 4. |
+
+Each is false when the style has no such category (a style read `--style-without` it has none).
+
+- **Tempo.** `grow` takes the tempo of a run from `--tempo`, else from the style, and writes it to the MIDI and MusicXML
+  files. From 140 quarter notes per minute the motive-forms of a theme stay closer to the basic idea ([grow.md](grow.md)).
+- **Mode.** `grow --mode style` replaces the mode of `--key` with the style's.
+- **Density.** The melody stage writes the style's density as the notes to a cell after the motive (a cell is a beat, so the
+  density rounded to a whole number from 1 to 4), unless the run set one. The melody rules can leave no melody of even
+  notes, so the last attempt of the stage gives the motive's own rhythm back. With `--accompaniment any` the texture stage
+  adds `weight * closeness` to each accompaniment, closeness being `min(rate, d) / max(rate, d)`, where `rate` is the
+  pattern's attacks per beat (block and oom-pah 1, arpeggiated one an eighth, 2 in a quarter-note beat and 3 in the
+  dotted beat of 6/8, Alberti 2) and `d` the style's density. A pattern named by the request is not scored.
+
+`tests/fixtures/style-fast-minor.json` is `chorales.style.json` with `tempo` mostly `160-179`, `mode` mostly minor and
+`note-density` mostly 2; `test_style brief` reads it.
+
 ## Weight
 
 The harmony, melody and motives stage checkers add `style_weight * closeness` to the score of every candidate they accept

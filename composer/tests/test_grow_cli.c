@@ -433,6 +433,15 @@ static void test_style_without(void) {
     free(out);
 }
 
+/* --mode style needs a style (and a mode in it); the other modes replace the key's. */
+static void test_mode(void) {
+    expect_failure(BASE " --into sentence --mode style", 1, "--mode style needs --style");
+    expect_failure(BASE " --into sentence --mode dorian", 1, "--mode must be major, minor or style");
+    char *out = output_of(FIXTURE("motive_d_minor.txt") " --key D --mode major --meter 4/4 --into sentence --seed 1");
+    assert(strstr(out, "key D major") != NULL);
+    free(out);
+}
+
 static void test_help(void) {
     assert(run("--help", "grow_cli_out.txt", "grow_cli_err.txt") == 0);
     char *out = read_file("grow_cli_out.txt");
@@ -454,6 +463,7 @@ int main(void) {
     test_cannot_be_satisfied();
     test_unwritable_file();
     test_style_without();
+    test_mode();
     test_help();
     puts("test_grow_cli: ok");
     return 0;

@@ -97,6 +97,11 @@ static MotiveScore coherence(const Motive *previous, const Motive *candidate) {
 
 bool motive_connection(const Motive *basic, const Motive *previous, const Motive *candidate, const MotiveScore *distance,
                        MotiveConnection *out) {
+    return motive_connection_limited(basic, previous, candidate, distance, NULL, out);
+}
+
+bool motive_connection_limited(const Motive *basic, const Motive *previous, const Motive *candidate,
+                               const MotiveScore *distance, const MotiveScore *limit, MotiveConnection *out) {
     if (!basic || !candidate || !out || basic->note_count == 0 || candidate->note_count == 0) {
         return false;
     }
@@ -121,6 +126,7 @@ bool motive_connection(const Motive *basic, const Motive *previous, const Motive
     MotiveConnection connection;
     memset(&connection, 0, sizeof(connection));
     connection.remoteness = remote;
+    connection.limit = limit && limit->denominator > 0 ? fraction(limit->numerator, limit->denominator) : fraction(3, 4);
     connection.common = fraction(remote.denominator - remote.numerator, remote.denominator);
     connection.rhythm = recognizability.rhythm;
     connection.harmony = coherence(previous, candidate);
@@ -133,8 +139,9 @@ bool motive_connection(const Motive *basic, const Motive *previous, const Motive
                              (unsigned long long)connection.rhythm.numerator * (den / connection.rhythm.denominator) +
                              (unsigned long long)connection.harmony.numerator * (den / connection.harmony.denominator);
     den *= 4;
-    /* Remoteness over 3/4 halves the score. */
-    connection.halved = (unsigned long long)remote.numerator * 4 > (unsigned long long)remote.denominator * 3;
+    /* Remoteness over the limit halves the score. */
+    connection.halved = (unsigned long long)remote.numerator * connection.limit.denominator >
+                        (unsigned long long)remote.denominator * connection.limit.numerator;
     if (connection.halved) {
         den *= 2;
     }

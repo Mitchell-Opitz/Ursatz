@@ -10,7 +10,8 @@
 /*
  * How well a motive-form connects to the idea before it in a theme (R-145), used when grow builds its ideas:
  *
- *   score = (2 x common + 1 x rhythm + 1 x harmony) / 4, times 1/2 when the candidate's remoteness is over 3/4
+ *   score = (2 x common + 1 x rhythm + 1 x harmony) / 4, times 1/2 when the candidate's remoteness is over the limit,
+ *   3/4 (1/2 at a fast tempo: motive_connection_limited)
  *
  *   common   1 minus the candidate's distance from the basic motive (the tree root, not the idea before it)
  *   rhythm   the rhythm part of motive_recognizability of the candidate against the idea before it
@@ -28,7 +29,9 @@ typedef struct {
     MotiveScore harmony;
     /* The remoteness of the candidate: its distance from the basic motive (1 - common). */
     MotiveScore remoteness;
-    /* Remoteness was over 3/4, so the total is halved. */
+    /* The remoteness limit used: 3/4, or the limit given to motive_connection_limited. */
+    MotiveScore limit;
+    /* Remoteness was over the limit, so the total is halved. */
     bool halved;
     MotiveScore total;
 } MotiveConnection;
@@ -48,6 +51,16 @@ bool motive_chain_distance(const VariantChain *chain, MotiveScore *out);
  */
 bool motive_connection(const Motive *basic, const Motive *previous, const Motive *candidate, const MotiveScore *distance,
                        MotiveConnection *out);
+
+/* The remoteness limit at a tempo of this many quarter notes per minute or more (R-163): 1/2 instead of 3/4. */
+#define MOTIVE_FAST_TEMPO_QPM 140
+
+/*
+ * motive_connection with the remoteness limit given: limit NULL, or a denominator of 0, is 3/4 (motive_connection is
+ * this with NULL).
+ */
+bool motive_connection_limited(const Motive *basic, const Motive *previous, const Motive *candidate,
+                               const MotiveScore *distance, const MotiveScore *limit, MotiveConnection *out);
 
 /* motive_connection, the total only, with the distance searched. */
 bool motive_connection_score(const Motive *basic, const Motive *previous, const Motive *candidate, MotiveScore *out);
