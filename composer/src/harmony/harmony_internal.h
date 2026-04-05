@@ -279,6 +279,7 @@ typedef struct {
     unsigned soft_held;
     unsigned soft_total;
     CadenceType heard;
+    unsigned shaping_broken; /* SHAPING_ bits of the shaping rules that did not hold (see check/shaping.h) */
 } PhraseVerdict;
 
 /*

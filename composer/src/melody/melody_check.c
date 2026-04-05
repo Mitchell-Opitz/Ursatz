@@ -17,6 +17,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "check/shaping.h"
 #include "melody/melody_internal.h"
 
 /*
@@ -415,6 +416,41 @@ static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict
     }
 }
 
+/*
+ * Schoenberg's shaping preferences (R-164), one soft rule each: they add to the share the checker scores, and a rule
+ * that does not hold sets its bit in the verdict. They read the notes of the candidate; an idea reads its own.
+ */
+
+/* Phrase ending (ch. II): the idea that ends in a cadence is no busier than the phrase before it, and ends on its longest note. */
+static bool ending_reduction_holds(const MelodyCandidate *melody) {
+    const MelodyContext *context = &melody->context;
+    if (!context->idea || !context->has_cadence || melody->count == 0) {
+        return true;
+    }
+    for (size_t i = 0; i + 1 < melody->count; i++) {
+        if (melody->notes[i].duration > melody->notes[melody->count - 1].duration) {
+            return false;
+        }
+    }
+    if (context->phrase_start >= 0 || context->phrase_before_notes == 0 || context->length <= 0) {
+        return true;
+    }
+    /* Attacks per beat of the idea against the mean of the phrase before it, both over ticks: cross-multiplied. */
+    return (long)melody->count * -context->phrase_start <= (long)context->phrase_before_notes * context->length;
+}
+
+static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+    if (melody->params.plain_shaping) {
+        return;
+    }
+    verdict->soft_total += 1;
+    if (ending_reduction_holds(melody)) {
+        verdict->soft_held += 1;
+    } else {
+        verdict->shaping_broken |= SHAPING_ENDING_REDUCTION;
+    }
+}
+
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
     PhraseVerdict verdict;
     if (!melody || !types || melody->count == 0 || melody->count > MELODY_MAX_NOTES) {
@@ -467,6 +503,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         melody_contour_score(melody, &held, &total);
         verdict->soft_held += held;
         verdict->soft_total += total;
+        check_shaping(melody, verdict);
     }
     return ok;
 }

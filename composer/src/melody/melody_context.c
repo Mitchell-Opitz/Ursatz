@@ -320,6 +320,7 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
                 return false;
             }
             const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
+            context->phrase_before_notes += notes->note_count;
             for (size_t n = 0; n < notes->note_count; n++) {
                 int pitch = notes->notes[n].midi_pitch;
                 context->phrase_top = !context->phrase_has_top || pitch > context->phrase_top ? pitch : context->phrase_top;
