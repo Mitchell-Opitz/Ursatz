@@ -479,6 +479,48 @@ static bool central_range_holds(const MelodyCandidate *melody) {
     return near * 4 >= melody->count * 3;
 }
 
+/* Whether the notes starting in bar a and bar b (windows of `bar` ticks from the start) have one rhythm and one set of intervals. */
+static bool bars_alike(const MelodyCandidate *melody, long bar, size_t a, size_t b) {
+    size_t from_a = melody->count;
+    size_t from_b = melody->count;
+    size_t count_a = 0;
+    size_t count_b = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        long bar_of = melody->notes[i].onset / bar;
+        if (bar_of == (long)a) {
+            from_a = count_a++ == 0 ? i : from_a;
+        } else if (bar_of == (long)b) {
+            from_b = count_b++ == 0 ? i : from_b;
+        }
+    }
+    if (count_a != count_b || count_a < 2) {
+        return false;
+    }
+    for (size_t k = 0; k < count_a; k++) {
+        const MelodyNote *x = &melody->notes[from_a + k];
+        const MelodyNote *y = &melody->notes[from_b + k];
+        if (x->onset - (long)a * bar != y->onset - (long)b * bar || x->duration != y->duration ||
+            (k > 0 && x->pitch - x[-1].pitch != y->pitch - y[-1].pitch)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Monotony (ch. XII): no three consecutive bars of two or more notes with the same rhythm and the same intervals. */
+static bool monotony_holds(const MelodyCandidate *melody) {
+    long bar;
+    if (!melody_ticks(melody->context.metre.bar_length, &bar) || bar <= 0) {
+        return true;
+    }
+    for (size_t first = 0; (long)(first + 3) * bar <= melody->context.length; first++) {
+        if (bars_alike(melody, bar, first, first + 1) && bars_alike(melody, bar, first + 1, first + 2)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void shaping_rule(PhraseVerdict *verdict, unsigned bit, bool holds) {
     verdict->soft_total += 1;
     if (holds) {
@@ -495,6 +537,7 @@ static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict)
     shaping_rule(verdict, SHAPING_ENDING_REDUCTION, ending_reduction_holds(melody));
     shaping_rule(verdict, SHAPING_WAVES, waves_hold(melody));
     shaping_rule(verdict, SHAPING_CENTRAL_RANGE, central_range_holds(melody));
+    shaping_rule(verdict, SHAPING_MONOTONY, monotony_holds(melody));
 }
 
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
