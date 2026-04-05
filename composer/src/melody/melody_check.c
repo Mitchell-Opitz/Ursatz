@@ -439,16 +439,62 @@ static bool ending_reduction_holds(const MelodyCandidate *melody) {
     return (long)melody->count * -context->phrase_start <= (long)context->phrase_before_notes * context->length;
 }
 
+/* Waves (ch. XI): a phrase of 8 or more notes has at least 2 local high points (repeated notes read as one) at or before its climax. */
+static bool waves_hold(const MelodyCandidate *melody) {
+    if (melody->count < 8) {
+        return true;
+    }
+    int line[MELODY_MAX_NOTES];
+    size_t count = 0;
+    size_t top = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        if (count == 0 || line[count - 1] != melody->notes[i].pitch) {
+            line[count++] = melody->notes[i].pitch;
+            top = line[count - 1] > line[top] ? count - 1 : top;
+        }
+    }
+    unsigned peaks = 0;
+    for (size_t i = 1; i < count && i <= top; i++) {
+        peaks += i + 1 < count && line[i] > line[i - 1] && line[i] > line[i + 1];
+    }
+    return peaks >= 2;
+}
+
+static int compare_pitch(const void *a, const void *b) {
+    return *(const int *)a - *(const int *)b;
+}
+
+/* Central range (ch. XI): at least 3/4 of the notes lie within 6 semitones of the median pitch. */
+static bool central_range_holds(const MelodyCandidate *melody) {
+    int pitches[MELODY_MAX_NOTES];
+    for (size_t i = 0; i < melody->count; i++) {
+        pitches[i] = melody->notes[i].pitch;
+    }
+    qsort(pitches, melody->count, sizeof(*pitches), compare_pitch);
+    int median = pitches[melody->count / 2];
+    size_t near = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        near += pitches[i] >= median - 6 && pitches[i] <= median + 6;
+    }
+    return near * 4 >= melody->count * 3;
+}
+
+static void shaping_rule(PhraseVerdict *verdict, unsigned bit, bool holds) {
+    verdict->soft_total += 1;
+    if (holds) {
+        verdict->soft_held += 1;
+    } else {
+        verdict->shaping_broken |= bit;
+    }
+}
+
 static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     if (melody->params.plain_shaping) {
         return;
     }
-    verdict->soft_total += 1;
-    if (ending_reduction_holds(melody)) {
-        verdict->soft_held += 1;
-    } else {
-        verdict->shaping_broken |= SHAPING_ENDING_REDUCTION;
-    }
+    shaping_rule(verdict, SHAPING_ENDING_REDUCTION, ending_reduction_holds(melody));
+    shaping_rule(verdict, SHAPING_WAVES, waves_hold(melody));
+    shaping_rule(verdict, SHAPING_CENTRAL_RANGE, central_range_holds(melody));
 }
 
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
