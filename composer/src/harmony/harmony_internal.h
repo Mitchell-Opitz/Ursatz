@@ -138,6 +138,8 @@ typedef struct {
      */
     const PlanKeyMode *chord_modes;
     const unsigned *chord_keys;
+    /* Leaves out the root progression rule (R-164), for tests and comparisons. */
+    bool plain_shaping;
 } HeardPhrase;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);

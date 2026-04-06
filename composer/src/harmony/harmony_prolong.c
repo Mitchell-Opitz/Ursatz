@@ -364,7 +364,7 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
        heard from the harmony and the beats alone. */
     HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, PLAN_CADENCE_HC,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
-                          true, NULL, NULL};
+                          true, NULL, NULL, false};
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;

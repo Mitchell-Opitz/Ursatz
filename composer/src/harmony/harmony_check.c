@@ -18,6 +18,7 @@
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
 
+#include "check/shaping.h"
 #include "harmony/harmony_internal.h"
 
 static unsigned bits_set(unsigned bits) {
@@ -97,6 +98,26 @@ static bool read_segments(const HarmonySegment *segments, size_t count, Reading 
     harmony_prolongations_destroy(&prolongations);
     harmony_six_four_results_destroy(six_fours, count);
     return true;
+}
+
+/*
+ * Root progressions (ch. XII): of the root changes (consecutive chords of different roots), at least 2/3 are strong,
+ * the root rising a fourth or a step, or falling a third or a step; the root falling a fourth (rising a fifth) and
+ * rising a third are weak. Read in the degrees of the chords. Fewer than two changes hold.
+ */
+static bool root_progression_holds(const HarmonySegment *segments, size_t count) {
+    unsigned changes = 0;
+    unsigned strong = 0;
+    for (size_t i = 1; i < count; i++) {
+        int step = ((segments[i].chord.degree - segments[i - 1].chord.degree) % 7 + 7) % 7;
+        if (step == 0) {
+            continue;
+        }
+        changes++;
+        /* up a step, up a fourth, down a third (up a sixth), down a step */
+        strong += step == 1 || step == 3 || step == 5 || step == 6;
+    }
+    return changes < 2 || strong * 3 >= changes * 2;
 }
 
 bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
@@ -222,6 +243,13 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
         }
         harmony_cadences_destroy(&found);
     }
+    if (!hard && !phrase->plain_shaping) {
+        soft_rules++;
+        if (!root_progression_holds(segments, count)) {
+            soft_broken++;
+            verdict->shaping_broken |= SHAPING_ROOT_PROGRESSION;
+        }
+    }
     harmony_segments_destroy(set);
     verdict->hard = hard;
     verdict->heard = heard;
@@ -283,7 +311,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         }
         HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode,
                               progression->request.cadence, progression->request.cells_per_bar,
-                              progression->request.cell_length, false, NULL, false, false, NULL, NULL};
+                              progression->request.cell_length, false, NULL, false, false, NULL, NULL, false};
         phrase.no_opening_tonic = progression->request.has_shape &&
                                   progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL;
         if (progression->request.pivot) {
@@ -317,7 +345,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
             return false;
         }
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
-                              edit->cell_length, false, NULL, false, false, NULL, NULL};
+                              edit->cell_length, false, NULL, false, false, NULL, NULL, false};
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {
@@ -344,7 +372,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL};
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -372,7 +400,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, 
         return false;
     }
     mark_schema_chords(plan, span, count, exempt);
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL, false};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
