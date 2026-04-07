@@ -295,7 +295,7 @@ static bool verdict_to_check(const HeardPhrase *phrase, FillCheck *out) {
     }
     out->score_numerator = verdict.soft_held;
     out->score_denominator = verdict.soft_total ? verdict.soft_total : 1;
-    snprintf(out->reason, sizeof(out->reason), "%s", cadence_type_name(verdict.heard));
+    shaping_reason(out->reason, sizeof(out->reason), cadence_type_name(verdict.heard), verdict.shaping_broken);
     return true;
 }
 

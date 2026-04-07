@@ -615,7 +615,7 @@ bool melody_check(const void *payload, FillCheck *out) {
     }
     out->score_numerator = verdict.soft_held;
     out->score_denominator = verdict.soft_total ? verdict.soft_total : 1;
-    snprintf(out->reason, sizeof(out->reason), "melody rules");
+    shaping_reason(out->reason, sizeof(out->reason), "melody rules", verdict.shaping_broken);
     return true;
 }
 

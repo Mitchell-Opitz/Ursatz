@@ -11,6 +11,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/regenerate.h>
 
+#include "check/shaping.h"
 #include "plan/plan_json_internal.h"
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner-voice"};
@@ -495,11 +496,20 @@ static void put(Buffer *buffer, const char *format, ...) {
     buffer->length += (size_t)needed;
 }
 
+/* The shaping rules a scored candidate did not hold, as its reason lists them; NULL when all held. */
+static const char *not_held_of(const ExplainCandidate *candidate) {
+    const char *at = candidate->rejected ? NULL : strstr(candidate->reason, SHAPING_NOT_HELD);
+    return at ? at + strlen(SHAPING_NOT_HELD) : NULL;
+}
+
 static void put_candidate(Buffer *buffer, const char *role, const ExplainCandidate *candidate) {
     put(buffer, "    %s: %s \"%s\" score %lu/%lu", role, candidate->operator_name, candidate->label,
         candidate->score_numerator, candidate->score_denominator);
     if (candidate->styled) {
         put(buffer, " (style %lu/%lu)", candidate->style_numerator, candidate->style_denominator);
+    }
+    if (not_held_of(candidate)) {
+        put(buffer, " (not held: %s)", not_held_of(candidate));
     }
 }
 
@@ -637,6 +647,7 @@ static cJSON *candidate_json(const ExplainCandidate *candidate, bool runner_up) 
                 json_add(object, "style", ratio_json(candidate->style_numerator, candidate->style_denominator)));
     ok = ok && (!runner_up || json_add(object, "behind", ratio_json(candidate->behind_numerator, candidate->behind_denominator)));
     ok = ok && (!candidate->rejected || json_add(object, "reason", cJSON_CreateString(candidate->reason)));
+    ok = ok && (!not_held_of(candidate) || json_add(object, "not_held", cJSON_CreateString(not_held_of(candidate))));
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
