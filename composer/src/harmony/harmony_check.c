@@ -103,13 +103,13 @@ static bool read_segments(const HarmonySegment *segments, size_t count, Reading 
 /*
  * Root progressions (ch. XII): of the root changes (consecutive chords of different roots), at least 2/3 are strong,
  * the root rising a fourth or a step, or falling a third or a step; the root falling a fourth (rising a fifth) and
- * rising a third are weak. Read in the degrees of the chords. Fewer than two changes hold.
+ * rising a third are weak. Read in the degrees of the chords. Fewer than two changes hold (see harmony_internal.h).
  */
-static bool root_progression_holds(const HarmonySegment *segments, size_t count) {
+bool harmony_root_progression_holds(const HarmonyChord *chords, size_t count) {
     unsigned changes = 0;
     unsigned strong = 0;
     for (size_t i = 1; i < count; i++) {
-        int step = ((segments[i].chord.degree - segments[i - 1].chord.degree) % 7 + 7) % 7;
+        int step = ((chords[i].degree - chords[i - 1].degree) % 7 + 7) % 7;
         if (step == 0) {
             continue;
         }
@@ -245,7 +245,11 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
     }
     if (!hard && !phrase->plain_shaping) {
         soft_rules++;
-        if (!root_progression_holds(segments, count)) {
+        HarmonyChord roots[HARMONY_MAX_CHORDS];
+        for (size_t i = 0; i < count && i < HARMONY_MAX_CHORDS; i++) {
+            roots[i] = segments[i].chord;
+        }
+        if (!harmony_root_progression_holds(roots, count < HARMONY_MAX_CHORDS ? count : HARMONY_MAX_CHORDS)) {
             soft_broken++;
             verdict->shaping_broken |= SHAPING_ROOT_PROGRESSION;
         }

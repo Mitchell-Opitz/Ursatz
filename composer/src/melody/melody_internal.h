@@ -207,6 +207,8 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict);
  * notes to, for the style's non-chord tone figures.
  */
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types);
+/* The SHAPING_ bits (check/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
+unsigned melody_shaping_broken(const MelodyCandidate *melody);
 /* The checker's verdict on a melody candidate's payload. */
 bool melody_check(const void *payload, FillCheck *out);
 

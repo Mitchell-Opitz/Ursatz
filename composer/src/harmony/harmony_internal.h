@@ -275,6 +275,9 @@ SegmentSet *harmony_segments_create(const HeardPhrase *phrase);
 const HarmonySegment *harmony_segments_get(const SegmentSet *set, size_t *count);
 void harmony_segments_destroy(SegmentSet *set);
 
+/* Whether the chords' root changes are mostly strong (R-164): at least 2/3, or fewer than two changes. */
+bool harmony_root_progression_holds(const HarmonyChord *chords, size_t count);
+
 /* The verdict of standard-harmony on a phrase. hard is NULL when no hard rule is broken, else says which. */
 typedef struct {
     const char *hard;

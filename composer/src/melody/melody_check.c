@@ -521,23 +521,20 @@ static bool monotony_holds(const MelodyCandidate *melody) {
     return true;
 }
 
-static void shaping_rule(PhraseVerdict *verdict, unsigned bit, bool holds) {
-    verdict->soft_total += 1;
-    if (holds) {
-        verdict->soft_held += 1;
-    } else {
-        verdict->shaping_broken |= bit;
-    }
+unsigned melody_shaping_broken(const MelodyCandidate *melody) {
+    return (ending_reduction_holds(melody) ? 0 : SHAPING_ENDING_REDUCTION) | (waves_hold(melody) ? 0 : SHAPING_WAVES) |
+           (central_range_holds(melody) ? 0 : SHAPING_CENTRAL_RANGE) |
+           (monotony_holds(melody) ? 0 : SHAPING_MONOTONY);
 }
 
 static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     if (melody->params.plain_shaping) {
         return;
     }
-    shaping_rule(verdict, SHAPING_ENDING_REDUCTION, ending_reduction_holds(melody));
-    shaping_rule(verdict, SHAPING_WAVES, waves_hold(melody));
-    shaping_rule(verdict, SHAPING_CENTRAL_RANGE, central_range_holds(melody));
-    shaping_rule(verdict, SHAPING_MONOTONY, monotony_holds(melody));
+    unsigned broken = melody_shaping_broken(melody);
+    verdict->soft_total += 4;
+    verdict->soft_held += 4 - bits_set(broken);
+    verdict->shaping_broken |= broken;
 }
 
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
