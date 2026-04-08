@@ -182,6 +182,7 @@ add_library(ursatz
     persistence/persistence_relationship.c
     persistence/persistence_motif.c
     persistence/persistence_motif_occurrence.c
+    persistence/persistence_cadence.c
     corpus/corpus.c
     corpus/persistence_corpus.c
     corpus/persistence_corpus_membership.c
