@@ -66,6 +66,7 @@ typedef struct {
     long phrase_length;
     bool phrase_has_top; /* a melody note of the phrase is written before the target */
     int phrase_top;      /* the highest pitch of those */
+    size_t phrase_before_notes; /* how many melody notes of the phrase are written before the target */
     int lead_in[2];      /* the last notes of the written melody right before the target, oldest first */
     size_t lead_in_count;
     int lead_out;        /* the first note of the melody, Given or written, that starts where the target ends */
@@ -206,6 +207,8 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict);
  * notes to, for the style's non-chord tone figures.
  */
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types);
+/* The SHAPING_ bits (check/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
+unsigned melody_shaping_broken(const MelodyCandidate *melody);
 /* The checker's verdict on a melody candidate's payload. */
 bool melody_check(const void *payload, FillCheck *out);
 

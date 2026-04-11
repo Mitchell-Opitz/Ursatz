@@ -117,7 +117,8 @@ static char *json_of(const PiecePlan *plan) {
 
 /*
  * The lane spans of a lane (any voice) over a section as text: where they are from the section's start, their state and
- * what they hold. Only the spans that start before limit (a time from the start of the plan) when limit is given.
+ * what they hold. Only the spans that end no later than limit (a time from the start of the plan) when limit is given: a
+ * span that crosses it holds a regenerated chord, so its melody is written again.
  */
 static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKind lane, const PlanTime *limit) {
     size_t capacity = 1 << 16;
@@ -132,7 +133,9 @@ static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKin
             PlanSpan at = plan_lane_span_span(plan, ids[i]);
             const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
             PlanTime from;
-            if (limit && plan_time_compare(at.start, *limit) >= 0) {
+            PlanTime end;
+            assert(plan_span_end(at, &end) == PLAN_OK);
+            if (limit && plan_time_compare(end, *limit) > 0) {
                 continue;
             }
             assert(plan_time_make(at.start.num * (long)span.start.den - span.start.num * (long)at.start.den,
@@ -211,6 +214,25 @@ static FillTarget pick(const Piece *piece, TargetKind kind, PlanTime *from) {
         return span_target(id);
     }
     }
+}
+
+/*
+ * The time the regeneration of a target writes again from: the target's own start, or an earlier one when the closure
+ * the target is written again with reaches back (the chords of a phrase model are written together, and the melody
+ * over them with them).
+ */
+static PlanTime rewritten_from(const PiecePlan *plan, FillTarget target, PlanTime from) {
+    FillTarget *scope = NULL;
+    size_t count = 0;
+    assert(plan_regenerate_scope(plan, target, &scope, &count) == REGENERATE_OK);
+    for (size_t i = 0; i < count; i++) {
+        if (scope[i].kind == FILL_TARGET_LANE_SPAN) {
+            PlanTime at = plan_lane_span_span(plan, (LaneSpanId)scope[i].id).start;
+            from = plan_time_compare(at, from) < 0 ? at : from;
+        }
+    }
+    free(scope);
+    return from;
 }
 
 /*
@@ -681,7 +703,7 @@ static int test_lanes(void) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Piece piece = fill(seed);
             PlanTime from;
-            pick(&piece, CASES[c].kind, &from);
+            from = rewritten_from(piece.plan, pick(&piece, CASES[c].kind, &from), from);
             char *a_before = section_text(piece.plan, piece.a);
             char *return_before = section_text(piece.plan, piece.a_return);
             char *harmony_early = lane_text_before(piece.plan, piece.b, PLAN_LANE_HARMONY, &from);

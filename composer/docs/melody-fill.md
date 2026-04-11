@@ -83,6 +83,7 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 | `nct_types` | passing, neighbor | `MELODY_NCT_` bits: `PASSING`, `NEIGHBOR`, `APPOGGIATURA`, `SUSPENSION`, `ANTICIPATION`. 0 writes chord tones only. |
 | `density` | 0 | Notes to a cell after the motive; 0 repeats the motive's rhythm. |
 | `climax_position` | 667 | Where the climax falls, in thousandths of the phrase. |
+| `plain_shaping` | false | True leaves out the four shaping rules below, for tests and comparisons; there is no CLI option. |
 
 Appoggiaturas, suspensions and anticipations are off unless asked for. Appoggiaturas and anticipations
 are written on weak beats; a suspension is a chord tone held into a chord it is not a tone of.
@@ -102,6 +103,19 @@ rules again. Hard rules reject a candidate; soft rules give the score, the share
 The strict-species rules for the first interval, the last interval, the largest gap and the last note
 approached by step are not asked of a tonal melody. The one climax, its place, recovered leaps and few
 repeated notes also score.
+
+### The shaping rules
+
+Four more soft rules, from Schoenberg's *Fundamentals of Musical Composition* (R-164). Each is one rule that holds or
+not, never a rejection, and is on for every caller of the checker (grow, fill, regenerate, variations) unless
+`plain_shaping` is set. They read the candidate's own notes, so an idea reads its own and not its phrase.
+
+| Rule (chapter) | Holds when |
+| --- | --- |
+| `ending-reduction` (II) | An idea that ends the phrase in a cadence has no more attacks per beat than the mean of the phrase before it, and ends on its longest note. Any other target holds. |
+| `waves` (XI) | A candidate of 8 or more notes has at least 2 local high points (a note higher than the notes either side, repeated notes read as one) at or before its climax. |
+| `central-range` (XI) | At least 3/4 of the notes lie within 6 semitones of the median pitch. |
+| `monotony` (XII) | No three consecutive bars of two or more notes have the same rhythm and the same intervals. |
 
 `melody_check_lane(plan, span, key, params, &violation)` runs the same rules on a melody lane read from
 the plan, for tests and tools.

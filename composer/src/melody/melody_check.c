@@ -17,6 +17,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "check/shaping.h"
 #include "melody/melody_internal.h"
 
 /*
@@ -415,6 +416,127 @@ static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict
     }
 }
 
+/*
+ * Schoenberg's shaping preferences (R-164), one soft rule each: they add to the share the checker scores, and a rule
+ * that does not hold sets its bit in the verdict. They read the notes of the candidate; an idea reads its own.
+ */
+
+/* Phrase ending (ch. II): the idea that ends in a cadence is no busier than the phrase before it, and ends on its longest note. */
+static bool ending_reduction_holds(const MelodyCandidate *melody) {
+    const MelodyContext *context = &melody->context;
+    if (!context->idea || !context->has_cadence || melody->count == 0) {
+        return true;
+    }
+    for (size_t i = 0; i + 1 < melody->count; i++) {
+        if (melody->notes[i].duration > melody->notes[melody->count - 1].duration) {
+            return false;
+        }
+    }
+    if (context->phrase_start >= 0 || context->phrase_before_notes == 0 || context->length <= 0) {
+        return true;
+    }
+    /* Attacks per beat of the idea against the mean of the phrase before it, both over ticks: cross-multiplied. */
+    return (long)melody->count * -context->phrase_start <= (long)context->phrase_before_notes * context->length;
+}
+
+/* Waves (ch. XI): a phrase of 8 or more notes has at least 2 local high points (repeated notes read as one) at or before its climax. */
+static bool waves_hold(const MelodyCandidate *melody) {
+    if (melody->count < 8) {
+        return true;
+    }
+    int line[MELODY_MAX_NOTES];
+    size_t count = 0;
+    size_t top = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        if (count == 0 || line[count - 1] != melody->notes[i].pitch) {
+            line[count++] = melody->notes[i].pitch;
+            top = line[count - 1] > line[top] ? count - 1 : top;
+        }
+    }
+    unsigned peaks = 0;
+    for (size_t i = 1; i < count && i <= top; i++) {
+        peaks += i + 1 < count && line[i] > line[i - 1] && line[i] > line[i + 1];
+    }
+    return peaks >= 2;
+}
+
+static int compare_pitch(const void *a, const void *b) {
+    return *(const int *)a - *(const int *)b;
+}
+
+/* Central range (ch. XI): at least 3/4 of the notes lie within 6 semitones of the median pitch. */
+static bool central_range_holds(const MelodyCandidate *melody) {
+    int pitches[MELODY_MAX_NOTES];
+    for (size_t i = 0; i < melody->count; i++) {
+        pitches[i] = melody->notes[i].pitch;
+    }
+    qsort(pitches, melody->count, sizeof(*pitches), compare_pitch);
+    int median = pitches[melody->count / 2];
+    size_t near = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        near += pitches[i] >= median - 6 && pitches[i] <= median + 6;
+    }
+    return near * 4 >= melody->count * 3;
+}
+
+/* Whether the notes starting in bar a and bar b (windows of `bar` ticks from the start) have one rhythm and one set of intervals. */
+static bool bars_alike(const MelodyCandidate *melody, long bar, size_t a, size_t b) {
+    size_t from_a = melody->count;
+    size_t from_b = melody->count;
+    size_t count_a = 0;
+    size_t count_b = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        long bar_of = melody->notes[i].onset / bar;
+        if (bar_of == (long)a) {
+            from_a = count_a++ == 0 ? i : from_a;
+        } else if (bar_of == (long)b) {
+            from_b = count_b++ == 0 ? i : from_b;
+        }
+    }
+    if (count_a != count_b || count_a < 2) {
+        return false;
+    }
+    for (size_t k = 0; k < count_a; k++) {
+        const MelodyNote *x = &melody->notes[from_a + k];
+        const MelodyNote *y = &melody->notes[from_b + k];
+        if (x->onset - (long)a * bar != y->onset - (long)b * bar || x->duration != y->duration ||
+            (k > 0 && x->pitch - x[-1].pitch != y->pitch - y[-1].pitch)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Monotony (ch. XII): no three consecutive bars of two or more notes with the same rhythm and the same intervals. */
+static bool monotony_holds(const MelodyCandidate *melody) {
+    long bar;
+    if (!melody_ticks(melody->context.metre.bar_length, &bar) || bar <= 0) {
+        return true;
+    }
+    for (size_t first = 0; (long)(first + 3) * bar <= melody->context.length; first++) {
+        if (bars_alike(melody, bar, first, first + 1) && bars_alike(melody, bar, first + 1, first + 2)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+unsigned melody_shaping_broken(const MelodyCandidate *melody) {
+    return (ending_reduction_holds(melody) ? 0 : SHAPING_ENDING_REDUCTION) | (waves_hold(melody) ? 0 : SHAPING_WAVES) |
+           (central_range_holds(melody) ? 0 : SHAPING_CENTRAL_RANGE) |
+           (monotony_holds(melody) ? 0 : SHAPING_MONOTONY);
+}
+
+static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+    if (melody->params.plain_shaping) {
+        return;
+    }
+    unsigned broken = melody_shaping_broken(melody);
+    verdict->soft_total += 4;
+    verdict->soft_held += 4 - bits_set(broken);
+    verdict->shaping_broken |= broken;
+}
+
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
     PhraseVerdict verdict;
     if (!melody || !types || melody->count == 0 || melody->count > MELODY_MAX_NOTES) {
@@ -467,6 +589,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         melody_contour_score(melody, &held, &total);
         verdict->soft_held += held;
         verdict->soft_total += total;
+        check_shaping(melody, verdict);
     }
     return ok;
 }
@@ -489,7 +612,7 @@ bool melody_check(const void *payload, FillCheck *out) {
     }
     out->score_numerator = verdict.soft_held;
     out->score_denominator = verdict.soft_total ? verdict.soft_total : 1;
-    snprintf(out->reason, sizeof(out->reason), "melody rules");
+    shaping_reason(out->reason, sizeof(out->reason), "melody rules", verdict.shaping_broken);
     return true;
 }
 

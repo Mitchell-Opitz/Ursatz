@@ -50,7 +50,9 @@
  * the phrase the motive starts on (0 is the first), the time before it a rest. nct_types is the set of
  * MELODY_NCT_ bits that may be written; none means every note is a chord tone. density is how many notes make
  * up a cell after the motive, or 0 for the motive's own rhythm over again. climax_position is how far through the
- * phrase the climax falls, in thousandths of its length (values above 1000 count as 1000).
+ * phrase the climax falls, in thousandths of its length (values above 1000 count as 1000). plain_shaping, false by
+ * default, leaves out the shaping rules (phrase-ending reduction, waves, central range, monotony), which score
+ * with the others; true gives the scores the checker gave before them.
  */
 typedef struct {
     int tolerance;
@@ -60,6 +62,7 @@ typedef struct {
     unsigned nct_types;
     unsigned density;
     unsigned climax_position;
+    bool plain_shaping;
 } MelodyFillParams;
 
 /*

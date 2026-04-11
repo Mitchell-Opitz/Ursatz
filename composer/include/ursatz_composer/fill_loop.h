@@ -30,7 +30,7 @@
 
 /* --- the checker -------------------------------------------------------- */
 
-#define FILL_REASON_MAX 64
+#define FILL_REASON_MAX 96
 
 /*
  * The checker's verdict on one candidate. The score is a non-negative rational,

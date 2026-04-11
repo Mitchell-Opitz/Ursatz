@@ -560,10 +560,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
 
 /*
  * The hashes of what main composed for this sentence, seeds 1 to 5 (FNV-1a 64 of the plan's JSON), taken with the same
- * request after the motive-forms (P14 B8) changed the ideas' motives. A run without a style is byte for byte the same.
+ * request after the motive-forms (P14 B8) changed the ideas' motives, then again after the shaping preferences (P16 B4)
+ * changed the candidates chosen (seeds 1, 3, 4 and 5). A run without a style is byte for byte the same.
  */
-static const unsigned long long MAIN_HASH[5] = {0x399070d4220c71afULL, 0xd13650af257cf1b6ULL, 0x473bd7e627a23f80ULL,
-                                                0xb34aa2b434a72d25ULL, 0x5cb3f2aedf095111ULL};
+static const unsigned long long MAIN_HASH[5] = {0xf6fb5576ac8ebeffULL, 0xd13650af257cf1b6ULL, 0x895437b3ea64963bULL,
+                                                0xcf79f6897a39ea5dULL, 0x56dbb6b92e091a11ULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
@@ -894,9 +895,12 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
  * counted the two rhythm categories (tempo, note-density) and the motive ones, so the fragment's categories that a fixture
  * lacks count as distance 1 in the rhythm and melody dimensions: the melody means rise by the same amount styled and
  * unstyled, and the order (styled closer in melody) holds.
+ *
+ * Re-measured at P16 B4: the shaping preferences changed the candidates chosen, so every mean moved a little and the
+ * order holds (styled closer in melody under both styles).
  */
-static const int STYLED[2][2] = {{730, 759}, {657, 756}};
-static const int UNSTYLED[2][2] = {{708, 773}, {655, 763}};
+static const int STYLED[2][2] = {{727, 763}, {655, 754}};
+static const int UNSTYLED[2][2] = {{715, 770}, {669, 756}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};

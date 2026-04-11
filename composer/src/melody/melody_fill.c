@@ -22,13 +22,13 @@
 
 MelodyFillParams melody_fill_params_default(void) {
     MelodyFillParams params = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                               DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX};
+                               DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX, false};
     return params;
 }
 
 static const MelodyFillParams *params_of(void *context) {
     static const MelodyFillParams defaults = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                                              DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX};
+                                              DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX, false};
     return context ? context : &defaults;
 }
 

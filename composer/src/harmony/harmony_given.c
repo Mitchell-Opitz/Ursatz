@@ -237,7 +237,7 @@ bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords,
     memcpy(sequence + request->before_count, chords, count * sizeof(PhraseChord));
     memcpy(sequence + request->before_count + count, request->after, request->after_count * sizeof(PhraseChord));
     HeardPhrase phrase = {sequence, total, request->mode, PLAN_CADENCE_HC, request->cells_per_bar, request->cell_length,
-                          true, NULL, true, false, NULL, NULL};
+                          true, NULL, true, false, NULL, NULL, false};
     SegmentSet *set = harmony_segments_create(&phrase);
     bool ok = set != NULL;
     HarmonyCadences found = {NULL, 0};
