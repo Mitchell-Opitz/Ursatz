@@ -225,6 +225,12 @@ unless the cadence is a half cadence, and no chord may then be longer than a bar
 ending in a half cadence have three chords for four cells, so they are not split; the chords may then cross a barline.
 A compound basic idea has one `prolongation` span over its four bars, a cadential ending one `cadential` span.
 
+The checker also scores root progressions (`root-progression`, Schoenberg ch. XII, R-164) as one soft rule: of the root
+changes among the chords the phrase rules read (applied chords and the inside of a prolongation are left out), at least
+2/3 are strong, the root rising a fourth or a step or falling a third or a step. Falling a fourth (rising a fifth) and
+rising a third are weak. Fewer than two root changes hold. The melody's four shaping rules are in
+[melody-fill.md](melody-fill.md#the-shaping-rules). All five are on by default and never reject.
+
 ## The melody
 
 The melody stage writes the ideas in time order with the idea-target rules of [melody-fill.md](melody-fill.md):
