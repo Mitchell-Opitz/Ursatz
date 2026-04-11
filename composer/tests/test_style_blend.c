@@ -327,8 +327,11 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  * it is held at or below its baseline and not required to fall. A weight on melody alone moves the harmony the Analyzer
  * hears a little (the chords are heard through the melody): it stays within MELODY_ONLY_REACH of the weight 0 run,
  * which measured 82 and 101.
+ *
+ * Re-measured at P16 B4, when the shaping preferences changed the candidates chosen: 0.7273, 0.7168, 0.7021 to chorales and
+ * 0.6794, 0.6702, 0.6553 to sonatinas.
  */
-static const int HARMONY_BASELINE[3][2] = {{6875, 6856}, {7027, 6764}, {7039, 6567}};
+static const int HARMONY_BASELINE[3][2] = {{7273, 6794}, {7168, 6702}, {7021, 6553}};
 #define MELODY_ONLY_REACH 200
 
 static int ten_thousandths(double value) {

@@ -203,8 +203,9 @@ target_compile_options(test_voicing_heard PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_voicing_heard_chorale COMMAND test_voicing_heard chorale)
 add_test(NAME test_voicing_heard_voicing COMMAND test_voicing_heard voicing)
 # The voice leading of grown themes is not heard as clean in every run (measured, with the causes, in docs/voicing.md):
-# each test asserts that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
-set_tests_properties(test_voicing_heard_chorale test_voicing_heard_voicing PROPERTIES WILL_FAIL TRUE)
+# the voicing test asserts that it is, so it fails, and the failure is expected. Not tuned away, not skipped. The chorale
+# test heard all 30 themes clean once the shaping preferences (P16 B4) changed the chords chosen, so it passes.
+set_tests_properties(test_voicing_heard_voicing PROPERTIES WILL_FAIL TRUE)
 
 add_executable(test_counterpoint test_counterpoint.c)
 target_link_libraries(test_counterpoint PRIVATE ursatz_composer)
