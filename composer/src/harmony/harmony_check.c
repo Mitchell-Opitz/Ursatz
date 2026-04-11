@@ -243,13 +243,10 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
         }
         harmony_cadences_destroy(&found);
     }
+    /* Read as the phrase rules read it: applied chords and the inside of a prolongation embellish and do not progress. */
     if (!hard && !phrase->plain_shaping) {
         soft_rules++;
-        HarmonyChord roots[HARMONY_MAX_CHORDS];
-        for (size_t i = 0; i < count && i < HARMONY_MAX_CHORDS; i++) {
-            roots[i] = segments[i].chord;
-        }
-        if (!harmony_root_progression_holds(roots, count < HARMONY_MAX_CHORDS ? count : HARMONY_MAX_CHORDS)) {
+        if (!harmony_root_progression_holds(model, model_count)) {
             soft_broken++;
             verdict->shaping_broken |= SHAPING_ROOT_PROGRESSION;
         }
