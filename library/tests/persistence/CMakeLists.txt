@@ -3,6 +3,7 @@ add_ursatz_test(persistence_note_events)
 add_ursatz_test(persistence_uncertainty)
 add_ursatz_test(persistence_context_query)
 add_ursatz_test(persistence_relationship)
+add_ursatz_test(persistence_motif)
 
 find_package(Threads REQUIRED)
 add_ursatz_test(persistence_concurrency)
