@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/regenerate.h>
 
 #include "texture/texture_internal.h"
 
@@ -113,6 +114,52 @@ bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpan
     return true;
 }
 
+/* The Given melody span of the node named `name`, read as the accompaniment motive; false when there is none. */
+static bool read_motive(const PiecePlan *plan, const char *name, AccompContext *out) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *found = plan_node_name(plan, id);
+        LaneSpanId ids[4];
+        if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_MOTIVE || !found || strcmp(found, name) != 0) {
+            continue;
+        }
+        size_t spans = plan_node_lane_spans(plan, id, ids, 4);
+        for (size_t i = 0; i < spans && i < 4; i++) {
+            if (plan_lane_span_lane(plan, ids[i]) != PLAN_LANE_MELODY || plan_lane_span_voice(plan, ids[i]) != 0 ||
+                plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN) {
+                continue;
+            }
+            const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
+            if (notes->note_count == 0 || notes->note_count > ACCOMP_MAX_MOTIVE) {
+                return false;
+            }
+            for (size_t n = 0; n < notes->note_count; n++) {
+                AccompMotiveNote *note = &out->motive[n];
+                if (!melody_ticks(notes->notes[n].offset, &note->onset) ||
+                    !melody_ticks(notes->notes[n].duration, &note->duration) || note->duration <= 0) {
+                    return false;
+                }
+                note->pitch = notes->notes[n].midi_pitch;
+                out->motive_length = note->onset + note->duration;
+            }
+            out->motive_count = notes->note_count;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Where the last bar of the section the target is in begins, in ticks from the target's start. */
+static long liquidation_start(const PiecePlan *plan, const AccompContext *context, long origin) {
+    NodeId section = plan_section_of(plan, context->owner);
+    PlanSpan whole = plan_node_span(plan, section != PLAN_NODE_NONE ? section : context->owner);
+    PlanTime end;
+    long end_ticks;
+    if (plan_time_add(whole.start, whole.length, &end) != PLAN_OK || !melody_ticks(end, &end_ticks)) {
+        return context->length;
+    }
+    return end_ticks - origin - context->bar;
+}
+
 bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
@@ -182,6 +229,12 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     if (!accomp_read_line(plan, PLAN_LANE_BASS, 0, out->span, origin, out->length, out->bass, &out->bass_count) ||
         !accomp_read_line(plan, PLAN_LANE_MELODY, 0, out->span, origin, out->length, out->melody, &out->melody_count)) {
         return false;
+    }
+    if (out->pattern == PLAN_ACCOMPANIMENT_MOTIVE) {
+        if (!read_motive(plan, constraint.params.accompaniment.motive_node, out)) {
+            return false;
+        }
+        out->liquidate_from = liquidation_start(plan, out, origin);
     }
     return accomp_read_voice(plan, 2, out->span, &out->voice_span[1]) && accomp_read_voice(plan, 3, out->span, &out->voice_span[2]);
 }
@@ -260,7 +313,7 @@ static bool operator_applies(const PiecePlan *plan, FillTarget target, void *con
     read = malloc(sizeof(*read));
     if (read && accomp_read(plan, (LaneSpanId)target.id, read)) {
         /* A pattern the meter does not allow, or the texture does not, is one the operator cannot write. */
-        for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; !applies && p <= PLAN_ACCOMPANIMENT_OOM_PAH; p++) {
+        for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; !applies && p <= PLAN_ACCOMPANIMENT_MOTIVE; p++) {
             applies = accomp_pattern_allowed(read, p);
         }
     }
@@ -304,7 +357,7 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
     AccompCandidate *scratch = malloc(sizeof(*scratch));
     AccompCandidate *kept[16];
     size_t kept_count = 0;
-    PlanAccompanimentPattern allowed[4];
+    PlanAccompanimentPattern allowed[5];
     size_t allowed_count = 0;
     bool ok = read && scratch;
     if (wanted > 16) {
@@ -313,7 +366,7 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
     if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !accomp_read(plan, (LaneSpanId)target.id, read))) {
         ok = false;
     }
-    for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; ok && p <= PLAN_ACCOMPANIMENT_OOM_PAH; p++) {
+    for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; ok && p <= PLAN_ACCOMPANIMENT_MOTIVE; p++) {
         if (accomp_pattern_allowed(read, p)) {
             allowed[allowed_count++] = p;
         }

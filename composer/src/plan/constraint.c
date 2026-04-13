@@ -59,7 +59,9 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
         int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
         int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
-        return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_OOM_PAH &&
+        return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_MOTIVE &&
+               (accompaniment->pattern == PLAN_ACCOMPANIMENT_MOTIVE) == (accompaniment->motive_node[0] != '\0') &&
+               memchr(accompaniment->motive_node, '\0', sizeof(accompaniment->motive_node)) &&
                accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
                accompaniment->low >= 0 && accompaniment->low <= 127 && accompaniment->high >= 0 &&
                accompaniment->high <= 127 && low < high;

@@ -304,6 +304,7 @@ static unsigned long pattern_halves(PlanAccompanimentPattern pattern, long beat)
     case PLAN_ACCOMPANIMENT_ANY:
     case PLAN_ACCOMPANIMENT_BLOCK:
     case PLAN_ACCOMPANIMENT_OOM_PAH:
+    case PLAN_ACCOMPANIMENT_MOTIVE:
         break;
     }
     return 2;

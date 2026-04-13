@@ -170,24 +170,29 @@ typedef struct {
  * An accompaniment under a written melody and bass, in the inner voice lanes (R-065). The pattern is Composer
  * vocabulary; ANY leaves it to the operator, which a texture target narrows. texture is a StandardTexture value
  * (standard-texture's texture_rules.h) the written parts are to be heard as, or -1 for none. low and high are the
- * MIDI pitches the accompaniment keeps to, 0 for the defaults 48 and 67.
+ * MIDI pitches the accompaniment keeps to, 0 for the defaults 48 and 67. The pattern MOTIVE restates the motive named
+ * by motive_node (the pattern needs the name, and no other pattern takes one).
  */
 typedef enum {
     PLAN_ACCOMPANIMENT_ANY,
     PLAN_ACCOMPANIMENT_BLOCK,
     PLAN_ACCOMPANIMENT_ARPEGGIATED,
     PLAN_ACCOMPANIMENT_ALBERTI,
-    PLAN_ACCOMPANIMENT_OOM_PAH
+    PLAN_ACCOMPANIMENT_OOM_PAH,
+    PLAN_ACCOMPANIMENT_MOTIVE /* a saved accompaniment motive, restated on each chord; ANY never picks it */
 } PlanAccompanimentPattern;
 
 #define PLAN_ACCOMPANIMENT_DEFAULT_LOW 48
 #define PLAN_ACCOMPANIMENT_DEFAULT_HIGH 67
+#define PLAN_ACCOMPANIMENT_NODE_MAX 32
 
 typedef struct {
     PlanAccompanimentPattern pattern;
     int texture;
     int low;
     int high;
+    /* The name of the material node holding the accompaniment motive (a Given melody span), "" for none. */
+    char motive_node[PLAN_ACCOMPANIMENT_NODE_MAX];
 } PlanAccompaniment;
 
 /*
