@@ -1,5 +1,6 @@
 #include <ursatz_composer/grow.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include <harmony_cadence_rules.h>
@@ -83,7 +84,8 @@ bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *a
     bool compound = meter->beat_unit == 8 && meter->beats_per_bar % 3 == 0;
     int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
     int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
-    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_OOM_PAH &&
+    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_MOTIVE &&
+           (accompaniment->pattern == PLAN_ACCOMPANIMENT_MOTIVE) == (accompaniment->motive_node[0] != '\0') &&
            accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
            (accompaniment->texture < 0 || standard_texture_is_homophonic((StandardTexture)accompaniment->texture)) &&
            low >= 0 && high <= 127 && low < high &&
@@ -110,15 +112,32 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
     PlanCadenceType first = request->first_cadence == PLAN_CADENCE_PAC ? PLAN_CADENCE_HC : request->first_cadence;
     int archetype = grow_pairing_archetype(&request->pairing);
+    /* An accompaniment motive makes the accompaniment: pattern MOTIVE, naming the node "acc". */
+    const Motive *accompaniment_motive = request->accompaniment_motive;
+    PlanAccompaniment accompaniment = request->accompaniment;
+    bool has_accompaniment = request->has_accompaniment || accompaniment_motive;
+    if (accompaniment_motive) {
+        if (!request->has_accompaniment) {
+            memset(&accompaniment, 0, sizeof(accompaniment));
+            accompaniment.texture = -1;
+        }
+        accompaniment.pattern = PLAN_ACCOMPANIMENT_MOTIVE;
+        snprintf(accompaniment.motive_node, sizeof(accompaniment.motive_node), "%s", GROW_ACCOMPANIMENT_NAME);
+    }
     if (!grow_theme_buildable(&request->meter, request->bars, &request->pairing, request->cadence, first) ||
         request->motive->note_count < 2 || request->key.tonic_pitch_class < 0 || request->key.tonic_pitch_class > 11 ||
-        (request->has_accompaniment && !grow_accompaniment_valid(&request->meter, &request->accompaniment)) ||
-        (request->has_accompaniment && request->has_voicing)) {
+        (has_accompaniment && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
+        (has_accompaniment && request->has_voicing) ||
+        (accompaniment_motive && (accompaniment_motive->role != MOTIVE_ROLE_ACCOMPANIMENT ||
+                                  accompaniment_motive->note_count < 1))) {
         return GROW_ERR_BAD_REQUEST;
     }
     PlanTime bar = grow_bar_length(&request->meter);
     if (plan_time_compare(request->motive->length, bar) > 0) {
         return GROW_ERR_MOTIVE_TOO_LONG;
+    }
+    if (accompaniment_motive && plan_time_compare(accompaniment_motive->length, bar) > 0) {
+        return GROW_ERR_BAD_REQUEST;
     }
 
     PiecePlan *plan = plan_create();
@@ -196,10 +215,10 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 
-    if (result == GROW_OK && request->has_accompaniment) {
+    if (result == GROW_OK && has_accompaniment) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
-        constraint.params.accompaniment = request->accompaniment;
+        constraint.params.accompaniment = accompaniment;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 
@@ -228,6 +247,13 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     if (result == GROW_OK) {
         result = from_plan(motive_attach_sourced(plan, idea, material.start, request->motive, GROW_SOURCE_NAME,
                                                  request->source, NULL, NULL));
+    }
+    if (result == GROW_OK && accompaniment_motive) {
+        PlanTime start;
+        result = from_plan(plan_time_add(material.start, times(bar, GROW_MATERIAL_BARS - 1), &start));
+        result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, accompaniment_motive,
+                                                             GROW_ACCOMPANIMENT_NAME, NULL, NULL))
+                                   : result;
     }
     if (result == GROW_OK) {
         result = from_plan(plan_node_set_state(plan, section, PLAN_STATE_REALIZED));
