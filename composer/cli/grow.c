@@ -13,6 +13,7 @@
 
 #include "cli_options.h"
 #include "motive_extras.h"
+#include "motive_input.h"
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/export.h>
@@ -44,6 +45,9 @@ typedef struct {
     const char *cadence_text;
     const char *first_cadence_text;
     const char *accompaniment_text;
+    const char *accompaniment_motive_path;
+    const char *accompaniment_format_text;
+    const char *accompaniment_pickup_text;
     const char *texture_text;
     bool voicing_flag;
     bool check;
@@ -78,6 +82,8 @@ typedef struct {
     PlanAccompaniment accompaniment;
     bool has_voicing;
     PlanVoicing voicing;
+    bool has_accompaniment_motive;
+    Motive accompaniment_motive; /* loaded from accompaniment_motive_path, role accompaniment */
     unsigned long seed;
     unsigned long suggest;
     ComposerRatio style_weight;
@@ -111,6 +117,11 @@ static void print_help(FILE *out) {
     fprintf(out, "                       that begins with an antecedent only)\n");
     fprintf(out, "  --accompaniment <p>  write an accompaniment in the inner voices: block, arpeggiated, alberti (not in 6/8),\n");
     fprintf(out, "                       oom-pah or any (the pattern is chosen from the seed)\n");
+    fprintf(out, "  --accompaniment-motive <file>  a saved accompaniment motive as the accompaniment: restated on each chord in\n");
+    fprintf(out, "                       chord tones, liquidated in the last bar; implies --accompaniment motive. Read as a motive\n");
+    fprintf(out, "                       input of the accompaniment role, in --meter, at most one bar long\n");
+    fprintf(out, "  --accompaniment-format <f>, --accompaniment-pickup <b>   as --format and --pickup of the motive command,\n");
+    fprintf(out, "                       for the accompaniment motive's file\n");
     fprintf(out, "  --texture <name>     the texture the accompaniment is to be heard as: \"homophony\", \"homorhythm\" (block\n");
     fprintf(out, "                       chords only) or \"melody and accompaniment\"; implies --accompaniment any. Or\n");
     fprintf(out, "                       \"chorale\": four parts in a note a chord, the melody written with the other three\n");
@@ -221,6 +232,12 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->first_cadence_text;
         } else if (strcmp(arg, "--accompaniment") == 0) {
             target = &options->accompaniment_text;
+        } else if (strcmp(arg, "--accompaniment-motive") == 0) {
+            target = &options->accompaniment_motive_path;
+        } else if (strcmp(arg, "--accompaniment-format") == 0) {
+            target = &options->accompaniment_format_text;
+        } else if (strcmp(arg, "--accompaniment-pickup") == 0) {
+            target = &options->accompaniment_pickup_text;
         } else if (strcmp(arg, "--texture") == 0) {
             target = &options->texture_text;
         } else if (strcmp(arg, "--voicing") == 0) {
@@ -400,13 +417,31 @@ static int check_options(Options *options) {
         }
         options->has_voicing = true;
         options->voicing.write_soprano = chorale;
-    } else if (options->accompaniment_text || options->texture_text) {
+    } else if (options->accompaniment_text || options->texture_text || options->accompaniment_motive_path) {
+        /* The word "motive" names the accompaniment motive's pattern, which cli_read_accompaniment does not read. */
+        bool motive_word = options->accompaniment_text && cli_equals_ignore_case(options->accompaniment_text, "motive");
+        if (motive_word && !options->accompaniment_motive_path) {
+            return cli_fail(CLI_EXIT_USAGE, "--accompaniment motive needs --accompaniment-motive <file>");
+        }
+        if (options->accompaniment_motive_path && options->accompaniment_text && !motive_word) {
+            return cli_fail(CLI_EXIT_USAGE, "--accompaniment-motive is the accompaniment pattern; it cannot be combined with "
+                                            "--accompaniment %s", options->accompaniment_text);
+        }
         options->has_accompaniment = true;
-        int read = cli_read_accompaniment(options->accompaniment_text, options->texture_text, options->meter_text,
-                                          &options->meter, &options->accompaniment);
+        int read = cli_read_accompaniment(motive_word ? NULL : options->accompaniment_text, options->texture_text,
+                                          options->meter_text, &options->meter, &options->accompaniment);
         if (read != 0) {
             return read;
         }
+        if (options->accompaniment_motive_path) {
+            options->accompaniment.pattern = PLAN_ACCOMPANIMENT_MOTIVE;
+        }
+    }
+    if ((options->accompaniment_format_text || options->accompaniment_pickup_text) && !options->accompaniment_motive_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--accompaniment-format and --accompaniment-pickup need --accompaniment-motive <file>");
+    }
+    if (options->accompaniment_motive_path && (chorale || options->voicing_flag)) {
+        return cli_fail(CLI_EXIT_USAGE, "--accompaniment-motive cannot be combined with --voicing or --texture chorale");
     }
     if (options->style_weight_text && !options->style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight needs --style");
@@ -584,6 +619,7 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     request.first_cadence = options->first_cadence;
     request.has_accompaniment = options->has_accompaniment;
     request.accompaniment = options->accompaniment;
+    request.accompaniment_motive = options->has_accompaniment_motive ? &options->accompaniment_motive : NULL;
     request.has_voicing = options->has_voicing;
     request.voicing = options->voicing;
     memset(theme, 0, sizeof(*theme));
@@ -1224,6 +1260,21 @@ int run_grow(int argc, char **argv) {
                             motive_result_name(loaded), motive_error.location[0] ? " at " : "", motive_error.location,
                             motive_error.message);
         }
+    }
+
+    if (options.accompaniment_motive_path) {
+        MotiveInput input;
+        memset(&input, 0, sizeof(input));
+        input.path = options.accompaniment_motive_path;
+        input.meter_text = options.meter_text;
+        input.format_text = options.accompaniment_format_text;
+        input.pickup_text = options.accompaniment_pickup_text;
+        input.extras.role_text = "accompaniment";
+        status = motive_input_load(&input, &options.accompaniment_motive);
+        if (status != 0) {
+            return status;
+        }
+        options.has_accompaniment_motive = true;
     }
 
     /* The seeds are tried one after another; a stuck run is passed over, and a theme that is the same as one already
