@@ -148,10 +148,16 @@ static bool read_motive(const PiecePlan *plan, const char *name, AccompContext *
     return false;
 }
 
-/* Where the last bar of the section the target is in begins, in ticks from the target's start. */
+/*
+ * Where the last bar of the section the target is in begins, in ticks from the target's start; of the target itself
+ * when it is in no section.
+ */
 static long liquidation_start(const PiecePlan *plan, const AccompContext *context, long origin) {
     NodeId section = plan_section_of(plan, context->owner);
-    PlanSpan whole = plan_node_span(plan, section != PLAN_NODE_NONE ? section : context->owner);
+    if (section == PLAN_NODE_NONE) {
+        return context->length - context->bar;
+    }
+    PlanSpan whole = plan_node_span(plan, section);
     PlanTime end;
     long end_ticks;
     if (plan_time_add(whole.start, whole.length, &end) != PLAN_OK || !melody_ticks(end, &end_ticks)) {
