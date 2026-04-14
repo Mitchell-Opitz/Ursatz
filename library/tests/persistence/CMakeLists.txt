@@ -5,6 +5,7 @@ add_ursatz_test(persistence_context_query)
 add_ursatz_test(persistence_relationship)
 add_ursatz_test(persistence_motif)
 add_ursatz_test(persistence_cadence_phrase)
+add_ursatz_test(persistence_old_schema)
 
 find_package(Threads REQUIRED)
 add_ursatz_test(persistence_concurrency)
