@@ -2276,3 +2276,42 @@ body {
     transform: rotate(360deg);
   }
 }
+
+.piece-strip {
+  margin: 0.5rem 0;
+}
+
+.piece-lane {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+}
+
+.piece-lane-label {
+  flex: 0 0 6.5rem;
+}
+
+.piece-lane-track {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 2rem;
+  overflow: hidden;
+}
+
+.piece-lane-spacer {
+  min-width: 0;
+}
+
+.piece-block {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border: 1px solid var(--border, #888);
+}
+
+.piece-block.selected {
+  font-weight: bold;
+  outline: 2px solid currentColor;
+}

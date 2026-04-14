@@ -1164,6 +1164,17 @@ async function renderMaterialsDetail(type, id, analysisError) {
       content.appendChild(resultEl);
     }
   }
+  if (type === "piece") {
+    const editor = buildPieceEditor({
+      id,
+      body: answer.data.body,
+      usesStatus: answer.data.uses_status,
+      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      statusEl,
+      saved: () => renderMaterialsDetail(type, id),
+    });
+    content.appendChild(editor.el);
+  }
   content.appendChild(
     buildUsesSection({
       id,
