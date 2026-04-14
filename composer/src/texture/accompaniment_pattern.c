@@ -230,17 +230,26 @@ static bool add_note(AccompCandidate *candidate, size_t voice, long onset, long 
 /* ------------------------------------------------------------- motive */
 
 /*
- * The notes of the motive pattern over [from, to) of a chord: the motive's rhythm from `from`, restated every motive
- * length and cut at `to`. Each statement starts on the chord tone nearest the motive's first pitch; each next note
- * moves the way the motive does, by the number of chord-tone steps whose distance is nearest the motive's interval (a
- * tie takes the fewer steps; an interval of 0 repeats the tone). Under `liquidate` only the first beat group of the
- * motive sounds, and its last tone is held to `to`. False when a direction has no chord tone left in the range.
+ * The chord tones a statement of the motive over [start, end) can use, low to high: the chord's tones inside the range,
+ * above the bass and below the melody sounding in that time. Returns how many.
  */
-static bool motive_notes(const AccompContext *context, size_t chord, long from, long to, bool liquidate,
-                         AccompCandidate *out) {
-    int ladder[128];
+static size_t statement_ladder(const AccompContext *context, size_t chord, long start, long end, int ladder[128]) {
+    int low = context->low;
+    int high = context->high;
     size_t rungs = 0;
-    for (int pitch = context->low; pitch <= context->high; pitch++) {
+    for (size_t i = 0; i < context->bass_count; i++) {
+        const AccompLine *line = &context->bass[i];
+        if (line->onset < end && line->end > start && line->pitch + 1 > low) {
+            low = line->pitch + 1;
+        }
+    }
+    for (size_t i = 0; i < context->melody_count; i++) {
+        const AccompLine *line = &context->melody[i];
+        if (line->onset < end && line->end > start && line->pitch - 1 < high) {
+            high = line->pitch - 1;
+        }
+    }
+    for (int pitch = low; pitch <= high; pitch++) {
         for (size_t k = 0; k < context->chord_pc_count[chord]; k++) {
             if (pitch % 12 == context->chord_pcs[chord][k]) {
                 ladder[rungs++] = pitch;
@@ -248,12 +257,29 @@ static bool motive_notes(const AccompContext *context, size_t chord, long from, 
             }
         }
     }
-    if (rungs == 0) {
-        return false;
-    }
+    return rungs;
+}
+
+/*
+ * The notes of the motive pattern over [from, to) of a chord: the motive's rhythm from `from`, restated every motive
+ * length and cut at `to`. Each statement starts on the chord tone nearest the motive's first pitch, among the tones in
+ * the range above the bass and below the melody it sounds with (a tie takes the lower); each next note moves the way
+ * the motive does, by the number of chord-tone steps whose distance is nearest the motive's interval (a tie takes the
+ * fewer steps; an interval of 0 repeats the tone, and so does a move with no tone left in its direction). Under
+ * `liquidate` only the first beat group of the motive sounds, and its last tone is held to `to`. False when a
+ * statement has no chord tone to sound on.
+ */
+static bool motive_notes(const AccompContext *context, size_t chord, long from, long to, bool liquidate,
+                         AccompCandidate *out) {
+    int ladder[128];
     for (long start = from; start < to; start += context->motive_length) {
+        long end = start + context->motive_length < to ? start + context->motive_length : to;
+        size_t rungs = statement_ladder(context, chord, start, end, ladder);
         size_t at = 0;
-        long held_from = -1;
+        bool sounded = false;
+        if (rungs == 0) {
+            return false;
+        }
         for (size_t n = 0; n < context->motive_count; n++) {
             const AccompMotiveNote *note = &context->motive[n];
             if (liquidate && note->onset >= context->beat) {
@@ -272,31 +298,25 @@ static bool motive_notes(const AccompContext *context, size_t chord, long from, 
                 size_t best = at;
                 long best_gap = -1;
                 for (size_t step = 1; interval != 0; step++) {
-                    size_t r = interval > 0 ? at + step : at - step;
-                    if (interval > 0 ? r >= rungs : step > at) {
+                    if (interval > 0 ? at + step >= rungs : step > at) {
                         break;
                     }
+                    size_t r = interval > 0 ? at + step : at - step;
                     long gap = labs(labs((long)ladder[r] - ladder[at]) - labs(interval));
                     if (best_gap < 0 || gap < best_gap) {
                         best = r;
                         best_gap = gap;
                     }
                 }
-                if (interval != 0 && best_gap < 0) {
-                    return false;
-                }
                 at = best;
             }
-            long end = onset + note->duration;
-            if (end > to) {
-                end = to;
-            }
-            held_from = onset;
-            if (!add_note(out, 0, onset, end - onset, ladder[at])) {
+            long note_end = onset + note->duration < to ? onset + note->duration : to;
+            sounded = true;
+            if (!add_note(out, 0, onset, note_end - onset, ladder[at])) {
                 return false;
             }
         }
-        if (liquidate && held_from >= 0) {
+        if (liquidate && sounded) {
             AccompNote *last = &out->notes[0][out->note_count[0] - 1];
             last->duration = to - last->onset;
             break;
