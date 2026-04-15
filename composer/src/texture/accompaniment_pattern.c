@@ -266,8 +266,9 @@ static size_t statement_ladder(const AccompContext *context, size_t chord, long 
  * the range above the bass and below the melody it sounds with (a tie takes the lower); each next note moves the way
  * the motive does, by the number of chord-tone steps whose distance is nearest the motive's interval (a tie takes the
  * fewer steps; an interval of 0 repeats the tone, and so does a move with no tone left in its direction). Under
- * `liquidate` only the first beat group of the motive sounds, and its last tone is held to `to`. False when a
- * statement has no chord tone to sound on.
+ * `liquidate` only the first beat group of the motive sounds, and its last tone is held to `to`. A statement with no
+ * chord tone between the bass and the melody is silent, as a beat of the other patterns is. False when the notes do
+ * not fit.
  */
 static bool motive_notes(const AccompContext *context, size_t chord, long from, long to, bool liquidate,
                          AccompCandidate *out) {
@@ -278,7 +279,10 @@ static bool motive_notes(const AccompContext *context, size_t chord, long from, 
         size_t at = 0;
         bool sounded = false;
         if (rungs == 0) {
-            return false;
+            if (liquidate) {
+                break;
+            }
+            continue;
         }
         for (size_t n = 0; n < context->motive_count; n++) {
             const AccompMotiveNote *note = &context->motive[n];
