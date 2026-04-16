@@ -237,12 +237,14 @@ async function loadThemeBriefChoices() {
   return choices;
 }
 
-/* The brief section: chips of what is picked, the picker, the motive switches, weight, tempo, check and seed. */
-function buildThemeBriefSection(state) {
+/* The brief section: chips of what is picked, the picker, the motive switches, weight, tempo, check and seed.
+ * options: {emptyText (shown without a brief), tempo (false when the tempo is set elsewhere)}. */
+function buildThemeBriefSection(state, options) {
+  const o = options || {};
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Brief"));
   const chipsEl = materialsElement("div", "theme-chips");
-  const emptyEl = materialsElement("div", "piece-list-status", "No brief: the theme is grown without a style.");
+  const emptyEl = materialsElement("div", "piece-list-status", o.emptyText || "No brief: the theme is grown without a style.");
   const picker = materialsElement("div", "upload-controls");
   let names = {};
   let choices = null;
@@ -374,16 +376,18 @@ function buildThemeBriefSection(state) {
   }
   section.appendChild(switches);
 
-  const options = materialsElement("div", "upload-controls");
-  const weight = themeField(options, "Weight", themeSelect(ThemesModel.WEIGHTS, state.weight));
+  const controls = materialsElement("div", "upload-controls");
+  const weight = themeField(controls, "Weight", themeSelect(ThemesModel.WEIGHTS, state.weight));
   weight.addEventListener("input", () => {
     state.weight = weight.value;
   });
-  const tempo = themeField(options, "Tempo", themeInput("from the brief", state.tempo));
-  tempo.addEventListener("input", () => {
-    state.tempo = tempo.value;
-  });
-  const seed = themeField(options, "Seed", themeInput("random", state.seed));
+  if (o.tempo !== false) {
+    const tempo = themeField(controls, "Tempo", themeInput("from the brief", state.tempo));
+    tempo.addEventListener("input", () => {
+      state.tempo = tempo.value;
+    });
+  }
+  const seed = themeField(controls, "Seed", themeInput("random", state.seed));
   seed.addEventListener("input", () => {
     state.seed = seed.value;
   });
@@ -395,8 +399,8 @@ function buildThemeBriefSection(state) {
     state.check = check.checked;
   });
   checkLabel.prepend(check);
-  options.appendChild(checkLabel);
-  section.appendChild(options);
+  controls.appendChild(checkLabel);
+  section.appendChild(controls);
   return section;
 }
 

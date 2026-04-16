@@ -31,6 +31,133 @@ function pieceLane(part, entries, total, state, selected, onSelect, onAdd) {
 }
 
 /*
+ * A picker of one composed theme version: a name search, the theme, its composed versions and a line with its form.
+ * options: {items(), onChange({item_id, version, beats} | null) for a pick the user made, onInfo({item_id, version,
+ * beats}) for every theme version now shown}. Returns {el, setValue({item_id, version})}.
+ */
+function buildPieceThemePicker(options) {
+  const el = materialsElement("div", "theme-motif-picker");
+  const controls = materialsElement("div", "upload-controls");
+  const query = themeInput("Search themes by name");
+  const choice = materialsElement("select", "materials-use-choice");
+  const versionSelect = materialsElement("select");
+  const infoEl = materialsElement("div", "piece-list-status");
+  let bodies = {};
+  let loading = 0;
+
+  function fillChoices(keep) {
+    const found = MaterialsModel.pickerItems(options.items(), materialsState.projects, { query: query.value, type: "theme" });
+    choice.innerHTML = "";
+    const blank = materialsElement("option", "", found.length === 0 ? "No themes" : "Choose a theme");
+    blank.value = "";
+    choice.appendChild(blank);
+    for (const item of found) {
+      const option = materialsElement("option", "", item.label);
+      option.value = item.id;
+      choice.appendChild(option);
+    }
+    choice.value = keep && found.some((item) => item.id === keep) ? keep : "";
+  }
+
+  function show(text, isError) {
+    infoEl.textContent = text;
+    infoEl.classList.toggle("error", Boolean(isError));
+  }
+
+  /* Shows the picked version: its form and length. announce: the pick came from the user. */
+  function showVersion(itemId, number, announce) {
+    const body = bodies[number];
+    const beats = PiecesModel.themeLengthBeats(body);
+    const value = { item_id: itemId, version: Number(number), beats };
+    show(PiecesModel.themeFormText(body));
+    options.onInfo(value);
+    if (announce) {
+      options.onChange(value);
+    }
+  }
+
+  /* Loads the composed versions of a theme and picks `wanted` (else the newest). */
+  async function loadVersions(itemId, wanted, announce) {
+    const ticket = ++loading;
+    versionSelect.innerHTML = "";
+    bodies = {};
+    const answer = await sendMaterialsRequest(MaterialsModel.buildItemGetRequest(itemId));
+    if (ticket !== loading) {
+      return;
+    }
+    if (!answer.ok) {
+      show(MaterialsModel.errorText(answer.data, "Could not load the theme"), true);
+      return;
+    }
+    for (const row of MaterialsModel.versionRows(answer.data.item)) {
+      const got = await sendMaterialsRequest(MaterialsModel.buildVersionGetRequest(itemId, row.number));
+      if (ticket !== loading) {
+        return;
+      }
+      if (got.ok && PiecesModel.themeComposed(got.data.body)) {
+        bodies[row.number] = got.data.body;
+        const option = materialsElement("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
+        option.value = String(row.number);
+        versionSelect.appendChild(option);
+      }
+    }
+    if (versionSelect.options.length === 0) {
+      show("This theme has no composed version. Compose it first.", true);
+      if (announce) {
+        options.onChange(null);
+      }
+      return;
+    }
+    versionSelect.value = bodies[wanted] ? String(wanted) : versionSelect.options[0].value;
+    showVersion(itemId, versionSelect.value, announce);
+  }
+
+  query.addEventListener("input", () => fillChoices(choice.value));
+  choice.addEventListener("change", () => {
+    if (!choice.value) {
+      versionSelect.innerHTML = "";
+      show("");
+      options.onChange(null);
+      return;
+    }
+    loadVersions(choice.value, 0, true);
+  });
+  versionSelect.addEventListener("change", () => showVersion(choice.value, versionSelect.value, true));
+  controls.append(query, choice, versionSelect);
+  el.append(controls, infoEl);
+  fillChoices("");
+
+  /* Shows a stored value without announcing it. */
+  async function setValue(value) {
+    if (!value || !value.item_id) {
+      return;
+    }
+    if (!options.items().some((item) => item.id === value.item_id)) {
+      show(`Theme ${value.item_id} not found.`, true);
+      return;
+    }
+    query.value = "";
+    fillChoices(value.item_id);
+    await loadVersions(value.item_id, value.version, false);
+  }
+  return { el, setValue };
+}
+
+/* The fill a new kind starts with. */
+function pieceNewFill(kind) {
+  switch (kind) {
+    case "motif":
+      return { kind, item_id: "", version: 0, into: "sentence", hybrid: "presentation+continuation" };
+    case "theme":
+      return { kind, item_id: "", version: 0 };
+    case "progression":
+      return { kind, numerals: "", cells: "" };
+    default:
+      return PiecesModel.emptyFill();
+  }
+}
+
+/*
  * The piece editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer)}.
  * Returns {el, state, problems(), save(note)}.
  */
@@ -42,6 +169,10 @@ function buildPieceEditor(ctx) {
   const el = materialsElement("section", "panel materials-editor piece-editor");
   const problemsEl = materialsElement("div", "materials-field-error");
   let selected = state.sections[0].id;
+  const themeLengths = {};
+  const structureOptions = {
+    themeBeats: (fill) => (Number.isFinite(themeLengths[PiecesModel.fillKey(fill)]) ? themeLengths[PiecesModel.fillKey(fill)] : null),
+  };
 
   /* Header */
   el.appendChild(materialsElement("h2", "section-title", "Piece"));
@@ -137,6 +268,7 @@ function buildPieceEditor(ctx) {
         section.cadence || "",
       ),
     );
+    let drawInto = () => {};
     function syncSection() {
       section.letter = letter.value;
       const barCount = Number(bars.value);
@@ -146,7 +278,14 @@ function buildPieceEditor(ctx) {
       section.pickup = pickup.value.trim() === "" ? "0" : pickup.value;
       section.cadence = cadence.value || null;
       drawStrip();
+      drawInto();
       problems();
+    }
+    /* Sets the length from outside the length inputs (a theme fill takes its theme's). */
+    function applyBeats(beats) {
+      bars.value = String(Math.floor(beats / per));
+      extra.value = String(beats % per);
+      syncSection();
     }
     for (const control of [letter, bars, extra, pickup, cadence]) {
       control.addEventListener("input", syncSection);
@@ -170,12 +309,124 @@ function buildPieceEditor(ctx) {
     right.disabled = index === state.sections.length - 1 || state.sections[index + 1].part !== section.part;
     actions.append(left, right, remove);
     editorEl.append(controls, actions);
+
+    /* The fill */
+    const fillBox = materialsElement("div", "piece-fill");
+    fillBox.appendChild(materialsElement("h3", "section-title", "Fill"));
+    const kind = themeField(fillBox, "Fill with", themeSelect(PiecesModel.FILL_KINDS, section.fill.kind));
+    const fillBody = materialsElement("div");
+    fillBox.appendChild(fillBody);
+
+    function drawFill() {
+      fillBody.innerHTML = "";
+      drawInto = () => {};
+      const fill = section.fill;
+      if (fill.kind === "motif") {
+        const picker = buildThemeMotifPicker({
+          role: "melodic",
+          items: () => ctx.items,
+          onChange: (value) => {
+            fill.item_id = value ? value.item_id : "";
+            fill.version = value ? value.version : 0;
+            problems();
+          },
+        });
+        picker.setValue(fill);
+        const intoEl = materialsElement("div", "upload-controls");
+        drawInto = () => {
+          intoEl.innerHTML = "";
+          if (PiecesModel.motifIsFree(section, state.meter)) {
+            intoEl.appendChild(
+              materialsElement("span", "piece-list-status", "Free phrase: a theme form needs 4 or 8 bars and no pickup."),
+            );
+            return;
+          }
+          const into = themeField(intoEl, "Into", themeSelect(PiecesModel.INTOS, fill.into || "sentence"));
+          const [beginning, ending] = (fill.hybrid || "presentation+continuation").split("+");
+          const beginningSelect = themeField(intoEl, "Beginning", themeSelect(ThemesModel.BEGINNINGS, beginning));
+          const endingSelect = themeField(intoEl, "Ending", themeSelect(ThemesModel.ENDINGS, ending));
+          function syncInto() {
+            fill.into = into.value;
+            fill.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
+            beginningSelect.parentElement.hidden = fill.into !== "hybrid";
+            endingSelect.parentElement.hidden = fill.into !== "hybrid";
+          }
+          for (const control of [into, beginningSelect, endingSelect]) {
+            control.addEventListener("input", syncInto);
+          }
+          syncInto();
+        };
+        drawInto();
+        fillBody.append(picker.el, intoEl);
+      } else if (fill.kind === "theme") {
+        const picker = buildPieceThemePicker({
+          items: () => ctx.items,
+          onInfo: (value) => {
+            themeLengths[PiecesModel.fillKey(value)] = value.beats;
+            problems();
+          },
+          onChange: (value) => {
+            fill.item_id = value ? value.item_id : "";
+            fill.version = value ? value.version : 0;
+            if (value && Number.isFinite(value.beats)) {
+              applyBeats(value.beats);
+            }
+            problems();
+          },
+        });
+        picker.setValue(fill);
+        fillBody.appendChild(picker.el);
+      } else if (fill.kind === "progression") {
+        const row = materialsElement("div", "upload-controls");
+        const numerals = themeField(row, "Numerals", themeInput("I vi IV V", fill.numerals));
+        const cells = themeField(row, "Cells per chord", themeInput("default", fill.cells));
+        for (const control of [numerals, cells]) {
+          control.addEventListener("input", () => {
+            fill.numerals = numerals.value;
+            fill.cells = cells.value;
+            problems();
+          });
+        }
+        fillBody.append(
+          row,
+          materialsElement("div", "piece-list-status", "A progression does not change the cadence: end it on the chord the cadence needs."),
+        );
+      } else {
+        fillBody.appendChild(materialsElement("div", "piece-list-status", "Empty: the Composer invents this section."));
+      }
+    }
+    kind.addEventListener("input", () => {
+      section.fill = pieceNewFill(kind.value);
+      drawFill();
+      problems();
+    });
+    drawFill();
+    editorEl.appendChild(fillBox);
   }
+
+  /* The basic motive */
+  el.appendChild(materialsElement("h2", "section-title", "Basic motive (optional)"));
+  const motivePicker = buildThemeMotifPicker({
+    role: "melodic",
+    items: () => ctx.items,
+    onChange: (value) => {
+      state.motive = value ? { item_id: value.item_id, version: value.version } : null;
+    },
+  });
+  motivePicker.setValue(state.motive);
+  el.appendChild(motivePicker.el);
+
+  el.appendChild(
+    buildThemeBriefSection(state, {
+      tempo: false,
+      emptyText: "No brief: the piece is composed without a style.",
+    }),
+  );
 
   el.appendChild(problemsEl);
 
   function problems() {
-    const list = PiecesModel.formProblems(state);
+    const list = PiecesModel.formProblems(state, structureOptions);
     problemsEl.textContent = list.join(" ");
     return list;
   }

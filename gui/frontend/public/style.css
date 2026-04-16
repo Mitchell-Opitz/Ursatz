@@ -2315,3 +2315,11 @@ body {
   font-weight: bold;
   outline: 2px solid currentColor;
 }
+
+.piece-editor .upload-controls {
+  flex-wrap: wrap;
+}
+
+.piece-editor .upload-controls input[type="text"] {
+  width: 12rem;
+}

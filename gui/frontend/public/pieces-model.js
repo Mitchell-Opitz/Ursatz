@@ -186,21 +186,35 @@
 
   /* --- body and form --------------------------------------------------- */
 
-  function fillFromState(fill) {
+  /* The numerals of a progression fill: words of the marks the Composer reads, 1 to 64 of them. */
+  function numeralsOk(value) {
+    const words = text(value).split(/\s+/);
+    return text(value) !== "" && words.length <= 64 && words.every((word) => /^[A-Za-z0-9#+/-]{1,16}$/.test(word));
+  }
+
+  /* A fill as the body keeps it. A fill that names nothing yet is empty, so every fill may be saved unfinished.
+   * A motif fill keeps `into` only for a theme length (4 or 8 whole bars, no pickup); any other is a free phrase. */
+  function fillFromState(fill, free) {
     const f = fill && typeof fill === "object" ? fill : emptyFill();
     switch (f.kind) {
       case "motif": {
+        if (!text(f.item_id)) {
+          return emptyFill();
+        }
         const out = { kind: "motif", item_id: f.item_id, version: Number(f.version) };
-        if (f.into === "sentence" || f.into === "period" || f.into === "hybrid") {
+        if (!free && (f.into === "sentence" || f.into === "period" || f.into === "hybrid")) {
           out.into = f.into;
           out.hybrid = f.into === "hybrid" ? text(f.hybrid) : null;
         }
         return out;
       }
       case "theme":
-        return { kind: "theme", item_id: f.item_id, version: Number(f.version) };
+        return text(f.item_id) ? { kind: "theme", item_id: f.item_id, version: Number(f.version) } : emptyFill();
       case "progression": {
-        const out = { kind: "progression", numerals: text(f.numerals) };
+        if (text(f.numerals) === "") {
+          return emptyFill();
+        }
+        const out = { kind: "progression", numerals: text(f.numerals).split(/\s+/).join(" ") };
         const cells = wholeNumber(f.cells, 1, MAX_CELLS);
         if (cells !== null) {
           out.cells = cells;
@@ -238,7 +252,7 @@
     }
   }
 
-  function sectionFromState(section) {
+  function sectionFromState(section, meter) {
     return {
       id: section.id,
       part: section.part,
@@ -246,7 +260,7 @@
       beats: Number(section.beats),
       pickup: text(section.pickup) || "0",
       cadence: CADENCES.includes(section.cadence) ? section.cadence : null,
-      fill: fillFromState(section.fill),
+      fill: fillFromState(section.fill, motifIsFree(section, meter)),
     };
   }
 
@@ -260,7 +274,7 @@
         key: text(s.key),
         mode: s.mode,
         meter: s.meter,
-        sections: (Array.isArray(s.sections) ? s.sections : []).map(sectionFromState),
+        sections: (Array.isArray(s.sections) ? s.sections : []).map((section) => sectionFromState(section, s.meter)),
       },
       motive: s.motive && text(s.motive.item_id) ? { item_id: s.motive.item_id, version: Number(s.motive.version) } : null,
       pool: s.pool,
@@ -386,6 +400,37 @@
     return section && section.cadence ? section.cadence : defaultCadence(state, index);
   }
 
+  /* --- themes ---------------------------------------------------------- */
+
+  /* The length in beats of a composed theme version body, or null when it has no form. */
+  function themeLengthBeats(body) {
+    const form = body && body.theme && body.theme.form;
+    if (!form || !Number.isInteger(form.bars)) {
+      return null;
+    }
+    return form.bars * barBeats(form.meter);
+  }
+
+  /* One line for a theme version body: "sentence in D minor, 4/4, 8 bars". */
+  function themeFormText(body) {
+    const form = body && body.theme && body.theme.form;
+    if (!form) {
+      return "";
+    }
+    const into = form.into === "hybrid" && form.hybrid ? `hybrid (${form.hybrid})` : form.into;
+    return `${into} in ${form.key} ${form.mode}, ${form.meter}, ${form.bars} bars`;
+  }
+
+  /* True when the theme version body was composed (it has a result). */
+  function themeComposed(body) {
+    return Boolean(body && body.theme && body.theme.result && typeof body.theme.result === "object");
+  }
+
+  /* The key of a theme fill in a themeBeats table. */
+  function fillKey(fill) {
+    return `${fill.item_id}@${fill.version}`;
+  }
+
   /* --- problems -------------------------------------------------------- */
 
   /* A motif fill takes its theme form (sentence, period, hybrid) at 4 or 8 whole bars without a pickup; any other length
@@ -468,11 +513,8 @@
     for (const section of Array.isArray(s.sections) ? s.sections : []) {
       const fill = section.fill || {};
       const name = section.letter ? `Section ${section.letter}` : `Section ${section.id}`;
-      if ((fill.kind === "motif" || fill.kind === "theme") && !text(fill.item_id)) {
-        problems.push(`${name} names no ${fill.kind === "motif" ? "motif" : "theme"}.`);
-      }
       if (fill.kind === "progression") {
-        if (!/^\S+( \S+)*$/.test(text(fill.numerals)) || text(fill.numerals).split(" ").length > 64) {
+        if (text(fill.numerals) !== "" && !numeralsOk(fill.numerals)) {
           problems.push(`${name} needs numerals such as I vi IV V.`);
         }
         if (text(fill.cells) !== "" && wholeNumber(fill.cells, 1, MAX_CELLS) === null) {
@@ -682,6 +724,11 @@
     defaultCadence,
     cadenceOf,
     motifIsFree,
+    themeLengthBeats,
+    themeFormText,
+    themeComposed,
+    fillKey,
+    numeralsOk,
     structureProblems,
     formProblems,
     saveRequest,
