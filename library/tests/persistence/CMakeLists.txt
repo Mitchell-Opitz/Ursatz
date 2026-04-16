@@ -28,7 +28,7 @@ add_ursatz_architecture_test(persistence)
 # installed.
 find_program(URSATZ_PERSISTENCE_VALGRIND valgrind)
 if(URSATZ_PERSISTENCE_VALGRIND)
-  foreach(persistence_test_name persistence_lifecycle persistence_note_events persistence_uncertainty persistence_chord_key)
+  foreach(persistence_test_name persistence_lifecycle persistence_note_events persistence_uncertainty persistence_chord_key persistence_relationship persistence_motif persistence_cadence_phrase persistence_old_schema)
     add_test(NAME ${persistence_test_name}_valgrind
              COMMAND ${URSATZ_PERSISTENCE_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${persistence_test_name}>)

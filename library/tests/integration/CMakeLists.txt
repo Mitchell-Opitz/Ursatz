@@ -133,3 +133,11 @@ target_compile_definitions(test_persistence_full_analysis PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
     URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
 add_test(NAME persistence_full_analysis COMMAND test_persistence_full_analysis)
+
+# Scoped memcheck for the full-analysis persistence round trip. Skips silently if valgrind isn't installed.
+find_program(URSATZ_INTEGRATION_VALGRIND valgrind)
+if(URSATZ_INTEGRATION_VALGRIND)
+  add_test(NAME persistence_full_analysis_valgrind
+           COMMAND ${URSATZ_INTEGRATION_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_persistence_full_analysis>)
+endif()
