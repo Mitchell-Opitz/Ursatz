@@ -134,7 +134,9 @@ static inline void su_assert_same_relationship(const Relationship *a, const Rela
 
 static inline Motif *su_motif(const char *id, const char *const *events, size_t n) {
     Motif *motif = NULL;
-    assert(motif_create(su_id(id), su_ids(events, n), n, &motif) == MOTIF_OK);
+    EntityID **ids = su_ids(events, n);
+    assert(motif_create(su_id(id), ids, n, &motif) == MOTIF_OK);
+    free(ids); /* the constructor copies the array and adopts the ids */
     return motif;
 }
 
@@ -151,7 +153,9 @@ static inline MotifOccurrence *su_motif_occurrence(const char *id, const char *m
     Occurrence *occurrence = NULL;
     assert(occurrence_create(su_id(id), su_id(motif), &occurrence) == OCCURRENCE_OK);
     MotifOccurrence *result = NULL;
-    assert(motif_occurrence_create(occurrence, su_ids(events, n), n, &result) == MOTIF_OCCURRENCE_OK);
+    EntityID **ids = su_ids(events, n);
+    assert(motif_occurrence_create(occurrence, ids, n, &result) == MOTIF_OCCURRENCE_OK);
+    free(ids);
     return result;
 }
 
@@ -166,9 +170,10 @@ static inline void su_assert_same_motif_occurrence(const MotifOccurrence *a, con
 
 static inline Cadence *su_cadence(const char *id, const char *const *events, size_t n, bool with_context) {
     Cadence *cadence = NULL;
-    assert(cadence_create(su_id(id), su_ids(events, n), n,
-                          with_context ? su_value("harmonic-context", SU_BLOB, sizeof(SU_BLOB)) : NULL,
+    EntityID **ids = su_ids(events, n);
+    assert(cadence_create(su_id(id), ids, n, with_context ? su_value("harmonic-context", SU_BLOB, sizeof(SU_BLOB)) : NULL,
                           &cadence) == CADENCE_OK);
+    free(ids);
     return cadence;
 }
 
@@ -186,7 +191,9 @@ static inline PhraseOccurrence *su_phrase_occurrence(const char *id, const char 
     Occurrence *occurrence = NULL;
     assert(occurrence_create(su_id(id), su_id(phrase), &occurrence) == OCCURRENCE_OK);
     PhraseOccurrence *result = NULL;
-    assert(phrase_occurrence_create(occurrence, su_ids(events, n), n, &result) == PHRASE_OCCURRENCE_OK);
+    EntityID **ids = su_ids(events, n);
+    assert(phrase_occurrence_create(occurrence, ids, n, &result) == PHRASE_OCCURRENCE_OK);
+    free(ids);
     return result;
 }
 
