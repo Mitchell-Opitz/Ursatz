@@ -98,6 +98,7 @@ PersistenceCadenceResult persistence_load_cadence(PersistenceHandle *handle, con
         free(event_ids);
         return result;
     }
+    free(event_ids); /* cadence_create copied the array and adopted the ids */
     *out_cadence = cadence;
     return PERSISTENCE_CADENCE_OK;
 }

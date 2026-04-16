@@ -102,6 +102,7 @@ PersistenceMotifOccurrenceResult persistence_load_motif_occurrence(PersistenceHa
         free(region_ids);
         return PERSISTENCE_MOTIF_OCCURRENCE_ERR_ALLOC;
     }
+    free(region_ids); /* the constructor copied the array and adopted the ids */
     *out_motif_occurrence = motif_occurrence;
     return PERSISTENCE_MOTIF_OCCURRENCE_OK;
 }

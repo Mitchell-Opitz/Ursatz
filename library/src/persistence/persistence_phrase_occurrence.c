@@ -102,6 +102,7 @@ PersistencePhraseOccurrenceResult persistence_load_phrase_occurrence(Persistence
         free(region_ids);
         return PERSISTENCE_PHRASE_OCCURRENCE_ERR_ALLOC;
     }
+    free(region_ids); /* the constructor copied the array and adopted the ids */
     *out_phrase_occurrence = phrase_occurrence;
     return PERSISTENCE_PHRASE_OCCURRENCE_OK;
 }

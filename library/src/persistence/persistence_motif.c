@@ -72,6 +72,7 @@ PersistenceMotifResult persistence_load_motif(PersistenceHandle *handle, const c
         free(event_ids);
         return result;
     }
+    free(event_ids); /* motif_create copied the array and adopted the ids */
     *out_motif = motif;
     return PERSISTENCE_MOTIF_OK;
 }
