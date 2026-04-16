@@ -162,7 +162,7 @@ static PersistenceRelationshipResult list_where(PersistenceHandle *handle, const
         return PERSISTENCE_RELATIONSHIP_ERR_NULL_ARG;
     }
 
-    char sql[256];
+    char sql[1024];
     snprintf(sql, sizeof(sql), "SELECT " RELATIONSHIP_COLUMNS " FROM relationships WHERE %s = ? ORDER BY rowid",
              column);
     sqlite3_stmt *stmt = NULL;
