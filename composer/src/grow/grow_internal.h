@@ -9,6 +9,7 @@
 #define GROW_THEME_NAME "theme"
 #define GROW_MATERIAL_NAME "material"
 #define GROW_SOURCE_NAME "m0"
+#define GROW_ACCOMPANIMENT_NAME "acc"
 
 /* The pitch of the note an open bass, melody or inner voice span holds until an operator writes it. */
 #define BASS_PLACEHOLDER 40

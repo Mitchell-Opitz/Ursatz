@@ -701,7 +701,8 @@ PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *r
 static PlanResult add_accompaniment_targets(GrowBuild *build, NodeId owner, PlanSpan span) {
     const PlanAccompaniment *accompaniment = &build->request->accompaniment;
     int voices = accompaniment->pattern == PLAN_ACCOMPANIMENT_ARPEGGIATED ||
-                         accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI
+                         accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI ||
+                         accompaniment->pattern == PLAN_ACCOMPANIMENT_MOTIVE
                      ? 1
                      : 3;
     PlanResult result = PLAN_OK;

@@ -28,7 +28,8 @@
  *     period for an antecedent and a consequent, hybrid for the other seven), a THEME_PAIRING, the CADENCE and the
  *     KEY; a theme with an antecedent has a second CADENCE, the weak one the antecedent ends in;
  *   - a Section "material" after it, marked MATERIAL, so it is not part of the piece, holding the motive node "m0":
- *     the motive as a Given melody lane span. The motives made from it go beside it.
+ *     the motive as a Given melody lane span. The motives made from it go beside it. An accompaniment motive is the
+ *     node "acc", in the last bar of the material.
  *
  * The stages, in order (grow_run), each one fill_run with only its operators registered and its own checker:
  *   structure  grow-theme, which gives the Section its nodes, one motive node in the material for each idea after
@@ -75,6 +76,13 @@ typedef struct {
      */
     PlanAccompaniment accompaniment;
     bool has_accompaniment;
+    /*
+     * A saved accompaniment-role motive as the accompaniment pattern (R-165), NULL for none. It is added to the
+     * material as the node "acc" (a Given melody span) and the ACCOMPANIMENT constraint names it, pattern MOTIVE; the
+     * texture, low and high of `accompaniment` are kept when has_accompaniment is set, the pattern is replaced. Refused
+     * (GROW_ERR_BAD_REQUEST) with a motive of the melodic role, one longer than a bar, or together with a voicing.
+     */
+    const Motive *accompaniment_motive;
     /*
      * A four-part voicing of the harmony and bass (voicing.h), in the alto and the tenor. Read only with has_voicing,
      * and refused together with an accompaniment. With write_soprano the voicing writes the melody too, in one note a

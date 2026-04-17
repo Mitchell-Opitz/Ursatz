@@ -18,8 +18,8 @@ static const int ARPEGGIO[4] = {0, 1, 2, 1};
 static const int ALBERTI[4] = {0, 2, 1, 2};
 
 const char *accomp_pattern_name(PlanAccompanimentPattern pattern) {
-    static const char *const NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
-    return pattern >= PLAN_ACCOMPANIMENT_ANY && pattern <= PLAN_ACCOMPANIMENT_OOM_PAH ? NAMES[pattern] : "?";
+    static const char *const NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
+    return pattern >= PLAN_ACCOMPANIMENT_ANY && pattern <= PLAN_ACCOMPANIMENT_MOTIVE ? NAMES[pattern] : "?";
 }
 
 size_t accomp_pattern_voices(PlanAccompanimentPattern pattern) {
@@ -29,6 +29,9 @@ size_t accomp_pattern_voices(PlanAccompanimentPattern pattern) {
 bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPattern pattern) {
     if (pattern == PLAN_ACCOMPANIMENT_ALBERTI && context->compound) {
         return false;
+    }
+    if (pattern == PLAN_ACCOMPANIMENT_MOTIVE) {
+        return context->pattern == PLAN_ACCOMPANIMENT_MOTIVE && context->motive_count > 0;
     }
     if (context->pattern != PLAN_ACCOMPANIMENT_ANY) {
         return pattern == context->pattern;
@@ -224,6 +227,122 @@ static bool add_note(AccompCandidate *candidate, size_t voice, long onset, long 
     return true;
 }
 
+/* ------------------------------------------------------------- motive */
+
+/*
+ * The chord tones a statement of the motive over [start, end) can use, low to high: the chord's tones inside the range,
+ * above the bass and below the melody sounding in that time. Returns how many.
+ */
+static size_t statement_ladder(const AccompContext *context, size_t chord, long start, long end, int ladder[128]) {
+    int low = context->low;
+    int high = context->high;
+    size_t rungs = 0;
+    for (size_t i = 0; i < context->bass_count; i++) {
+        const AccompLine *line = &context->bass[i];
+        if (line->onset < end && line->end > start && line->pitch + 1 > low) {
+            low = line->pitch + 1;
+        }
+    }
+    for (size_t i = 0; i < context->melody_count; i++) {
+        const AccompLine *line = &context->melody[i];
+        if (line->onset < end && line->end > start && line->pitch - 1 < high) {
+            high = line->pitch - 1;
+        }
+    }
+    for (int pitch = low; pitch <= high; pitch++) {
+        for (size_t k = 0; k < context->chord_pc_count[chord]; k++) {
+            if (pitch % 12 == context->chord_pcs[chord][k]) {
+                ladder[rungs++] = pitch;
+                break;
+            }
+        }
+    }
+    return rungs;
+}
+
+/*
+ * The notes of the motive pattern over [from, to) of a chord: the motive's rhythm from `from`, restated every motive
+ * length and cut at `to`. Each statement starts on the chord tone nearest the motive's first pitch, among the tones in
+ * the range above the bass and below the melody it sounds with (a tie takes the lower); each next note moves the way
+ * the motive does, by the number of chord-tone steps whose distance is nearest the motive's interval (a tie takes the
+ * fewer steps; an interval of 0 repeats the tone, and so does a move with no tone left in its direction). Under
+ * `liquidate` only the first beat group of the motive sounds, and its last tone is held to `to`. A statement with no
+ * chord tone between the bass and the melody is silent, as a beat of the other patterns is. False when the notes do
+ * not fit.
+ */
+static bool motive_notes(const AccompContext *context, size_t chord, long from, long to, bool liquidate,
+                         AccompCandidate *out) {
+    int ladder[128];
+    for (long start = from; start < to; start += context->motive_length) {
+        long end = start + context->motive_length < to ? start + context->motive_length : to;
+        size_t rungs = statement_ladder(context, chord, start, end, ladder);
+        size_t at = 0;
+        bool sounded = false;
+        if (rungs == 0) {
+            if (liquidate) {
+                break;
+            }
+            continue;
+        }
+        for (size_t n = 0; n < context->motive_count; n++) {
+            const AccompMotiveNote *note = &context->motive[n];
+            if (liquidate && note->onset >= context->beat) {
+                break;
+            }
+            long onset = start + note->onset;
+            if (onset >= to) {
+                break;
+            }
+            if (n == 0) {
+                for (size_t r = 1; r < rungs; r++) {
+                    at = labs((long)ladder[r] - note->pitch) < labs((long)ladder[at] - note->pitch) ? r : at;
+                }
+            } else {
+                int interval = note->pitch - context->motive[n - 1].pitch;
+                size_t best = at;
+                long best_gap = -1;
+                for (size_t step = 1; interval != 0; step++) {
+                    if (interval > 0 ? at + step >= rungs : step > at) {
+                        break;
+                    }
+                    size_t r = interval > 0 ? at + step : at - step;
+                    long gap = labs(labs((long)ladder[r] - ladder[at]) - labs(interval));
+                    if (best_gap < 0 || gap < best_gap) {
+                        best = r;
+                        best_gap = gap;
+                    }
+                }
+                at = best;
+            }
+            long note_end = onset + note->duration < to ? onset + note->duration : to;
+            sounded = true;
+            if (!add_note(out, 0, onset, note_end - onset, ladder[at])) {
+                return false;
+            }
+        }
+        if (liquidate && sounded) {
+            AccompNote *last = &out->notes[0][out->note_count[0] - 1];
+            last->duration = to - last->onset;
+            break;
+        }
+    }
+    return true;
+}
+
+/* The motive on every chord; the last bar of the section liquidated (only its first beat group, its last tone held). */
+static bool build_motive(const AccompContext *context, AccompCandidate *out) {
+    for (size_t chord = 0; chord < context->chord_count; chord++) {
+        long start = context->chord_start[chord];
+        long end = context->chord_start[chord + 1];
+        long cut = context->liquidate_from < start ? start : (context->liquidate_from > end ? end : context->liquidate_from);
+        if ((cut > start && !motive_notes(context, chord, start, cut, false, out)) ||
+            (end > cut && !motive_notes(context, chord, cut, end, true, out))) {
+            return false;
+        }
+    }
+    return out->note_count[0] > 0;
+}
+
 bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern, FillRng *rng, AccompCandidate *out) {
     memset(out, 0, sizeof(*out));
     out->magic = ACCOMP_PAYLOAD_MAGIC;
@@ -234,6 +353,9 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         return false;
     }
     out->beat_count = (size_t)(context->length / context->beat);
+    if (pattern == PLAN_ACCOMPANIMENT_MOTIVE) {
+        return build_motive(context, out);
+    }
 
     /* The chord on each beat, in the position nearest the one before. */
     const int *previous = NULL;
@@ -291,6 +413,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         }
         return true;
     }
+    case PLAN_ACCOMPANIMENT_MOTIVE:
     case PLAN_ACCOMPANIMENT_ANY:
         break;
     }

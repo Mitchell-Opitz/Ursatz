@@ -38,7 +38,7 @@ static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "
 static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant", "pivot"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound_basic_idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
-static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
+static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
 static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
@@ -195,6 +195,9 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         }
         if (accompaniment->high != 0) {
             ok = ok && json_add(object, "high", json_number(accompaniment->high));
+        }
+        if (accompaniment->motive_node[0] != '\0') {
+            ok = ok && json_add(object, "motive_node", cJSON_CreateString(accompaniment->motive_node));
         }
         break;
     }
@@ -970,6 +973,16 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
                 return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown texture '%.40s'", texture->valuestring);
             }
             accompaniment->texture = (int)named;
+        }
+        const cJSON *node = cJSON_GetObjectItemCaseSensitive(item, "motive_node");
+        if (node) {
+            char at[PLAN_JSON_PATH_MAX];
+            json_child_path(at, path, "motive_node");
+            if (!cJSON_IsString(node) || node->valuestring[0] == '\0' ||
+                strlen(node->valuestring) >= sizeof(accompaniment->motive_node)) {
+                return json_bad_format(reader, at, "expected a node name");
+            }
+            memcpy(accompaniment->motive_node, node->valuestring, strlen(node->valuestring) + 1);
         }
         return read_optional_int(reader, item, path, "low", 0, 127, &accompaniment->low) &&
                read_optional_int(reader, item, path, "high", 0, 127, &accompaniment->high);

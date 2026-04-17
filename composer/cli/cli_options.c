@@ -14,7 +14,7 @@
 
 #include <ursatz_composer/harmony_phrase.h>
 
-static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah"};
+static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 
 const char *cli_accompaniment_name(PlanAccompanimentPattern pattern) {
     return ACCOMPANIMENT_WORDS[pattern];

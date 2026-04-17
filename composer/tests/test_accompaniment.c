@@ -8,6 +8,7 @@
 #include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/fill_loop.h>
+#include <ursatz_composer/motive.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -72,7 +73,37 @@ static const int BASS[8] = {48, 41, 43, 48, 48, 50, 43, 48};
  * Eight bars in the meter, a chord a bar, a bass note a bar, and a melody: of one note a beat that wanders over
  * 72 to 76, or, steady, of one held note a bar, so the room between the bass and the melody never changes.
  */
-static Piece built_piece(int beats, int unit, bool steady) {
+/* The accompaniment motive of the tests, C4:e G4:e E4:e G4:e, as the node "acc" in a bar after the eight. */
+static void add_motive_node(PiecePlan *plan, NodeId form) {
+    Motive motive;
+    NodeId section;
+    NodeId phrase;
+    NodeId idea;
+    PlanSpan material = {fraction(8, 1), fraction(1, 1)};
+    memset(&motive, 0, sizeof(motive));
+    motive.meter.beats_per_bar = 4;
+    motive.meter.beat_unit = 4;
+    motive.key = c_major();
+    motive.key_source = MOTIVE_KEY_GIVEN;
+    motive.role = MOTIVE_ROLE_ACCOMPANIMENT;
+    static const int PITCHES[4] = {60, 67, 64, 67};
+    for (size_t n = 0; n < 4; n++) {
+        motive.notes[n].midi_pitch = PITCHES[n];
+        motive.notes[n].offset = fraction((long)n, 8);
+        motive.notes[n].duration = fraction(1, 8);
+    }
+    motive.note_count = 4;
+    motive.length = fraction(1, 2);
+    assert(plan_add_node(plan, form, PLAN_NODE_SECTION, material, "material", &section) == PLAN_OK);
+    assert(plan_add_node(plan, section, PLAN_NODE_PHRASE, material, "material", &phrase) == PLAN_OK);
+    assert(plan_add_node(plan, phrase, PLAN_NODE_IDEA, material, "material", &idea) == PLAN_OK);
+    assert(motive_attach(plan, idea, material.start, &motive, "acc", NULL, NULL) == PLAN_OK);
+    assert(plan_node_set_state(plan, section, PLAN_STATE_REALIZED) == PLAN_OK);
+    assert(plan_node_set_state(plan, phrase, PLAN_STATE_REALIZED) == PLAN_OK);
+    assert(plan_node_set_state(plan, idea, PLAN_STATE_REALIZED) == PLAN_OK);
+}
+
+static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars) {
     Piece piece;
     PlanTime bar;
     PlanLanePayload payload;
@@ -81,7 +112,7 @@ static Piece built_piece(int beats, int unit, bool steady) {
     memset(&piece, 0, sizeof(piece));
     piece.plan = plan_create();
     assert(plan_time_make(beats, (unsigned long)unit, &bar) == PLAN_OK);
-    PlanSpan all = {fraction(0, 1), fraction(bar.num * 8, bar.den)};
+    PlanSpan all = {fraction(0, 1), fraction(bar.num * (8 + extra_bars), bar.den)};
     assert(plan_add_node(piece.plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, "form", &form) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
     payload.meter.beats_per_bar = beats;
@@ -126,9 +157,16 @@ static Piece built_piece(int beats, int unit, bool steady) {
         assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_MELODY, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
     }
+    if (extra_bars > 0) {
+        add_motive_node(piece.plan, form);
+    }
     assert(plan_node_set_state(piece.plan, form, PLAN_STATE_GIVEN) == PLAN_OK);
     measure(&piece);
     return piece;
+}
+
+static Piece built_piece(int beats, int unit, bool steady) {
+    return built_piece_with(beats, unit, steady, 0);
 }
 
 /* The open inner voice spans of an accompaniment over the whole piece: voice 1 with the constraint, then more. */
@@ -248,6 +286,7 @@ static void check_shape(const Piece *piece, PlanAccompanimentPattern pattern, bo
             }
         }
         break;
+    case PLAN_ACCOMPANIMENT_MOTIVE:
     case PLAN_ACCOMPANIMENT_ANY:
         break;
     }
@@ -475,7 +514,86 @@ static void test_constraint(void) {
     plan_destroy(piece.plan);
 }
 
+/*
+ * The motive pattern: C4:e G4:e E4:e G4:e (half a bar) in C major 4/4 over I IV V I I ii V I, a bass note a bar
+ * (48 41 43 48 48 50 43 48) and a held melody note of 72 a bar, with the motive in a ninth bar after the piece.
+ */
+static Piece motive_piece(void) {
+    Piece piece = built_piece_with(4, 4, true, 1);
+    piece.span.length = fraction(8, 1);
+    return piece;
+}
+
+static PlanAccompaniment ask_motive(const char *name) {
+    PlanAccompaniment accompaniment = ask(PLAN_ACCOMPANIMENT_MOTIVE, -1);
+    strcpy(accompaniment.motive_node, name);
+    return accompaniment;
+}
+
+static void test_motive_pattern(void) {
+    /* Per bar: the pitches of the eighths, the chord tones nearest the motive's contour between bass and melody. */
+    static const int BAR[4][8] = {{60, 67, 64, 67, 60, 67, 64, 67},
+                                  {60, 65, 60, 65, 60, 65, 60, 65},
+                                  {59, 67, 62, 67, 59, 67, 62, 67},
+                                  {60, 67, 64, 67, 60, 67, 64, 67}};
+    const long eighth = CHECK_TICKS / 8;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Piece piece = motive_piece();
+        CheckNote top[CHECK_MAX_NOTES];
+        CheckNote others[CHECK_MAX_NOTES];
+        open_voices(&piece, ask_motive("acc"), 3);
+        FillOutcome outcome = accompany(piece.plan, seed);
+        assert(outcome.status == FILL_STATUS_COMPLETE && outcome.steps == 1);
+        assert(check_accompaniment(piece.plan, piece.span, c_major(), PLAN_ACCOMPANIMENT_DEFAULT_LOW,
+                                   PLAN_ACCOMPANIMENT_DEFAULT_HIGH) > 0);
+        size_t count = voice_notes(&piece, 1, top);
+        /* Seven bars of eight eighths, then the liquidated bar: two eighths, the second held to the bar's end. */
+        assert(count == 7 * 8 + 2);
+        for (size_t bar = 0; bar < 4; bar++) {
+            for (size_t n = 0; n < 8; n++) {
+                const CheckNote *note = &top[bar * 8 + n];
+                assert(note->onset == (long)(bar * 8 + n) * eighth && note->end == note->onset + eighth);
+                assert(note->pitch == BAR[bar][n]);
+            }
+        }
+        assert(top[56].onset == 7 * piece.bar && top[56].pitch == 60 && top[56].end == top[56].onset + eighth);
+        assert(top[57].onset == 7 * piece.bar + eighth && top[57].pitch == 67 && top[57].end == 8 * piece.bar);
+        /* The motive is voice 1 alone; the others are written empty. */
+        assert(voice_notes(&piece, 2, others) == 0 && voice_notes(&piece, 3, others) == 0);
+        fill_outcome_destroy(&outcome);
+        plan_destroy(piece.plan);
+    }
+}
+
+/* The pattern needs a motive: a missing node, or a node with no Given melody, leaves the target open; ANY never picks it. */
+static void test_motive_pattern_needs_its_motive(void) {
+    Piece piece = motive_piece();
+    LaneSpanId target = open_voices(&piece, ask_motive("other"), 1);
+    FillOutcome outcome = accompany(piece.plan, 1);
+    assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck[0].reason == FILL_STUCK_NO_OPERATOR);
+    assert(plan_lane_span_state(piece.plan, target) == PLAN_STATE_CONSTRAINED);
+    fill_outcome_destroy(&outcome);
+    plan_destroy(piece.plan);
+
+    /* ANY with the motive in the plan chooses a pattern of the four and not the motive. */
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        piece = motive_piece();
+        CheckNote top[CHECK_MAX_NOTES];
+        open_voices(&piece, ask(PLAN_ACCOMPANIMENT_ANY, -1), 3);
+        outcome = accompany(piece.plan, seed);
+        assert(outcome.status == FILL_STATUS_COMPLETE);
+        size_t count = voice_notes(&piece, 1, top);
+        for (size_t n = 0; n < count; n++) {
+            assert(top[n].end - top[n].onset == piece.beat || top[n].end - top[n].onset == CHECK_TICKS / 8);
+        }
+        fill_outcome_destroy(&outcome);
+        plan_destroy(piece.plan);
+    }
+}
+
 int main(void) {
+    test_motive_pattern();
+    test_motive_pattern_needs_its_motive();
     test_constraint();
     test_patterns();
     test_alberti_refused_in_compound_meter();

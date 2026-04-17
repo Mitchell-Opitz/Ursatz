@@ -24,6 +24,16 @@ typedef struct {
     int pitch;
 } AccompLine;
 
+/* The most notes of an accompaniment motive. */
+#define ACCOMP_MAX_MOTIVE 64
+
+/* One note of an accompaniment motive: ticks from the start of the motive. */
+typedef struct {
+    long onset;
+    long duration;
+    int pitch;
+} AccompMotiveNote;
+
 /* What the operator reads from the plan: the target, the chords, the bass and the melody it is written under. */
 typedef struct {
     LaneSpanId target;
@@ -50,6 +60,12 @@ typedef struct {
     AccompLine melody[ACCOMP_MAX_LINE];
     size_t melody_count;
     LaneSpanId voice_span[ACCOMP_VOICES]; /* the span of each voice that is there to be written, else none */
+    /* The motive of the pattern MOTIVE; empty (motive_count 0) for the other patterns. */
+    AccompMotiveNote motive[ACCOMP_MAX_MOTIVE];
+    size_t motive_count;
+    long motive_length;  /* where the motive's last note ends */
+    long liquidate_from; /* ticks from the target's start: the motive is liquidated from here (the last bar of the
+                            section); at or past length when the target does not end the section */
 } AccompContext;
 
 typedef struct {
@@ -88,7 +104,7 @@ size_t accomp_chord_at(const AccompContext *context, long tick);
 
 /* Whether the pattern can be written in the meter, and under the texture asked for when the pattern is ANY. */
 bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPattern pattern);
-/* How many voices the pattern writes: three for a block and an oom-pah, one for the lines. */
+/* How many voices the pattern writes: three for a block and an oom-pah, one for the lines and the motive. */
 size_t accomp_pattern_voices(PlanAccompanimentPattern pattern);
 const char *accomp_pattern_name(PlanAccompanimentPattern pattern);
 

@@ -21,7 +21,8 @@ not apply to.
 
 | Member | Meaning |
 | --- | --- |
-| `pattern` | `block`, `arpeggiated`, `alberti`, `oom-pah` or `any`. |
+| `pattern` | `block`, `arpeggiated`, `alberti`, `oom-pah`, `motive` or `any`. |
+| `motive_node` | With `motive` only, and required for it: the name of the material node holding the accompaniment motive. |
 | `texture` | A `standard-texture` name the written parts are to be heard as (`homophony`, `homorhythm`, `melody and accompaniment`), or none. |
 | `low`, `high` | The MIDI pitches the accompaniment keeps to; 48 and 67 when absent. |
 
@@ -36,9 +37,27 @@ eighth for the figures. A chord is written on every beat from the harmony lane's
 | `arpeggiated` | 1 | The chord's tones, low, middle, high, middle, one for each eighth, the figure restarting on every bar. |
 | `alberti` | 1 | Low, high, middle, high, one for each eighth, restarting on every bar. A simple meter only: it is refused in 6/8, and `any` leaves it out. |
 | `oom-pah` | 1 to 3 | A rest on the strong beats (the first of a bar, and the third of four) where the bass sounds, and the chord, as the block writes it, on the others. |
+| `motive` | 1 | A saved accompaniment motive, restated on each chord (below). |
 
 The figures run on the eighths of the bar, not of the chord, so a bar of 3/4 ends in the middle of a figure
 (`low high middle high low high`).
+
+### The motive pattern
+
+The pattern `motive` reads the Given melody span of the node named by `motive_node` (a motive of the accompaniment
+role) and restates it on each chord span, in voice 1; voices 2 and 3 are written empty.
+
+- The motive's rhythm starts at the chord's start and repeats every motive length, cut at the chord's end.
+- Each statement starts on the chord tone nearest the motive's first pitch (a tie takes the lower). Each next note moves
+  the way the motive does, by the number of chord-tone steps whose distance is nearest the motive's interval (a tie takes
+  the fewer steps; an interval of 0 repeats the tone, and so does a move with no tone left in its direction).
+- The tones are the chord's tones inside `low` to `high`, above the bass and below the melody sounding with the
+  statement. A statement with no such tone is silent, as a beat of the other patterns is.
+- In the last bar of the section the target is in (of the target, when it is in no section) the motive is liquidated:
+  only the notes that start in its first beat sound, and the last of them is held to the chord's end.
+
+`any` never chooses `motive`; it is written only when named, with a motive in the plan. The motive is not varied by the
+registry operations yet.
 
 `any` chooses among the patterns the meter allows and the texture asked for allows: a homophonic texture (`homophony`,
 `melody and accompaniment`) every pattern, `homorhythm` the block only. A texture that is not homophonic has no
@@ -90,7 +109,11 @@ The library at this pin has no Ursatz-Analyzer texture stage, so the input is bu
 
 `GrowRequest.has_accompaniment` and `GrowRequest.accompaniment` ask for one ([grow.md](grow.md)); `grow --accompaniment`
 and `--texture` ([cli-grow.md](cli-grow.md)) set them. `grow-theme` opens, for every harmony target, a Constrained inner
-voice span over the same time: voice 1 with the constraint, and voices 2 and 3 for a block, an oom-pah and `any`. The
+voice span over the same time: voice 1 with the constraint, and voices 2 and 3 for a block, an oom-pah and `any`. With
+`GrowRequest.accompaniment_motive` (an accompaniment-role motive of at most a bar, not with a voicing) the request makes
+the accompaniment: the motive is the material node `acc`, in the last bar of the material, the constraint is pattern
+`motive` naming it, and only voice 1 is opened; `texture`, `low` and `high` come from `accompaniment` when
+`has_accompaniment` is set. The
 texture stage runs after the melody and writes them. An accompaniment is written for each harmony target and not for
 the whole theme, so the first chord of a target is voiced from the middle of the window and not from the last chord of
 the one before.

@@ -42,7 +42,7 @@ bool cli_parse_meter(const char *text, PlanMeter *meter);
 bool cli_parse_cadence(const char *text, PlanCadenceType *cadence);
 const char *cli_cadence_name(PlanCadenceType cadence);
 
-/* "any", "block", "arpeggiated", "alberti", "oom-pah", by PlanAccompanimentPattern. */
+/* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive", by PlanAccompanimentPattern. */
 const char *cli_accompaniment_name(PlanAccompanimentPattern pattern);
 
 /*
