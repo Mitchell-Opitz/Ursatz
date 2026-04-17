@@ -416,12 +416,14 @@ function themeFacts(rows) {
   return list;
 }
 
-/* Mounts the version's theme.musicxml in the score workspace, with playback from its theme.mid. */
-async function themeMountScore(host, id, version, title) {
+/* Mounts a version's score in the score workspace, with playback from its MIDI file. options: {midi, musicxml,
+ * subtitle} name the files and the subtitle (a theme's by default). */
+async function themeMountScore(host, id, version, title, options) {
+  const o = options || {};
   const files = (name) => ThemesModel.versionFileUrl(id, version, name);
   let playbackUrl = null;
   try {
-    const midi = await fetch(files("theme.mid"));
+    const midi = await fetch(files(o.midi || "theme.mid"));
     const playback = midi.ok ? ThemesModel.playbackFromMidi(await midi.arrayBuffer()) : null;
     if (playback) {
       playbackUrl = URL.createObjectURL(new Blob([JSON.stringify(playback)], { type: "application/json" }));
@@ -435,8 +437,8 @@ async function themeMountScore(host, id, version, title) {
   host.innerHTML = "";
   host.themeWorkspace = ScoreWorkspace.mount(host, {
     title,
-    subtitle: `theme · v${version}`,
-    musicxmlUrl: files("theme.musicxml"),
+    subtitle: o.subtitle || `theme · v${version}`,
+    musicxmlUrl: files(o.musicxml || "theme.musicxml"),
     playbackUrl,
   });
 }

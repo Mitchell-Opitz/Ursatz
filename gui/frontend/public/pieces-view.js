@@ -157,6 +157,122 @@ function pieceNewFill(kind) {
   }
 }
 
+/* A table of header cells and rows of text. */
+function pieceTable(headers, rows) {
+  const table = materialsElement("table", "library-table");
+  const head = materialsElement("tr");
+  for (const label of headers) {
+    head.appendChild(materialsElement("th", "", label));
+  }
+  table.appendChild(head);
+  for (const row of rows) {
+    const tr = materialsElement("tr");
+    for (const cell of row) {
+      tr.appendChild(materialsElement("td", "", cell === null || cell === undefined ? "" : String(cell)));
+    }
+    table.appendChild(tr);
+  }
+  return table;
+}
+
+/* One version of a piece result: its section rows, seam rules, score, Analyzer check and style distance. */
+function pieceVersionTables(view, heading, check) {
+  const box = materialsElement("div", "piece-version");
+  box.appendChild(materialsElement("h3", "section-title", heading));
+  box.appendChild(
+    pieceTable(
+      ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source"],
+      view.rows.map((row) => [row.id, row.part, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source]),
+    ),
+  );
+  box.appendChild(
+    themeFacts([
+      ["Score", view.score ? view.score.label : ""],
+      ["Seam", view.seam ? view.seam.label : ""],
+      ...(view.seam ? view.seam.rules.map((rule) => [rule.label, rule.held ? "held" : "not held"]) : []),
+      ["Analyzer check", view.check ? view.check.label : check ? "" : "not run"],
+      ...view.distance.map((entry) => [`Style distance, ${entry.label}`, entry.value]),
+    ]),
+  );
+  return box;
+}
+
+/*
+ * The result of a piece version: the Composer's summary as tables for the loop and the ending version, the scores
+ * with playback and the MIDI downloads. ctx: {id, version, piece (the version body's piece), nameOf, title}.
+ * Returns null when the version has no result.
+ */
+function buildPieceResult(ctx) {
+  const result = ctx.piece && ctx.piece.result;
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+  const state = PiecesModel.stateFromBody({ uses: [], piece: ctx.piece }, ctx.id);
+  const sourceNames = {};
+  for (const section of state.sections) {
+    if (section.fill.kind === "theme") {
+      sourceNames[section.id] = `${ctx.nameOf(section.fill.item_id)} v${section.fill.version}`;
+    }
+  }
+  const view = PiecesModel.resultView(result, { sourceNames });
+  const section = materialsElement("section", "panel materials-analysis piece-result");
+  section.appendChild(materialsElement("h2", "section-title", "Result"));
+  section.appendChild(
+    themeFacts([
+      ["Seed", view.seed === null ? "" : String(view.seed)],
+      ["Key", view.key],
+      ["Loop", view.loop ? `${view.loop} (${view.loopLength})` : ""],
+      ["Tempo", view.brief.tempo],
+      ["Mode", view.brief.mode],
+      ["Note density", view.brief.density],
+      ["Read without", view.brief.without],
+      ["Brief", view.pieces],
+    ]),
+  );
+  if (view.versions.loop) {
+    section.appendChild(pieceVersionTables(view.versions.loop, "Loop version", ctx.piece.check === true));
+  }
+  if (view.versions.ending) {
+    section.appendChild(pieceVersionTables(view.versions.ending, "Ending version", ctx.piece.check === true));
+  }
+  const downloads = materialsElement("div", "upload-controls");
+  for (const [label, name] of [
+    ["Download loop MIDI", "loop.mid"],
+    ["Download ending MIDI", "ending.mid"],
+  ]) {
+    const link = materialsElement("a", "back-link clickable", label);
+    link.href = PiecesModel.versionFileUrl(ctx.id, ctx.version, name);
+    link.download = name;
+    downloads.appendChild(link);
+  }
+  section.appendChild(downloads);
+
+  /* The scores: the loop version, a tab for the ending version */
+  const tabs = materialsElement("div", "upload-controls");
+  const scoreHost = materialsElement("div", "materials-score-mount");
+  function showScore(which) {
+    themeMountScore(scoreHost, ctx.id, ctx.version, ctx.title, {
+      midi: `${which}.mid`,
+      musicxml: `${which}.musicxml`,
+      subtitle: `piece · v${ctx.version} · ${which} version`,
+    });
+    for (const button of tabs.children) {
+      button.classList.toggle("selected", button.dataset.which === which);
+    }
+  }
+  for (const [which, label] of [
+    ["loop", "Loop score"],
+    ["ending", "Ending score"],
+  ]) {
+    const button = themeButton(label, () => showScore(which));
+    button.dataset.which = which;
+    tabs.appendChild(button);
+  }
+  section.append(tabs, scoreHost);
+  showScore("loop");
+  return section;
+}
+
 /*
  * The piece editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer)}.
  * Returns {el, state, problems(), save(note)}.
@@ -169,6 +285,7 @@ function buildPieceEditor(ctx) {
   const el = materialsElement("section", "panel materials-editor piece-editor");
   const problemsEl = materialsElement("div", "materials-field-error");
   let selected = state.sections[0].id;
+  let savedJson = JSON.stringify(PiecesModel.bodyFromState(state));
   const themeLengths = {};
   const structureOptions = {
     themeBeats: (fill) => (Number.isFinite(themeLengths[PiecesModel.fillKey(fill)]) ? themeLengths[PiecesModel.fillKey(fill)] : null),
@@ -452,9 +569,53 @@ function buildPieceEditor(ctx) {
       ctx.saved(answer);
     }
   });
-  saveRow.append(noteInput, saveButton);
+  const composeButton = themeButton("Compose", () => compose({}));
+  const spinner = materialsElement("span", "theme-spinner");
+  spinner.hidden = true;
+  saveRow.append(noteInput, saveButton, composeButton, spinner);
   el.appendChild(saveRow);
 
+  function setBusy(busy) {
+    saveButton.disabled = busy;
+    composeButton.disabled = busy;
+    spinner.hidden = !busy;
+    if (busy) {
+      ctx.statusEl.textContent = "Composing...";
+      ctx.statusEl.classList.remove("error");
+    }
+  }
+
+  /* Saves the form first when it changed, then composes it into a new version. options: {update_uses}. */
+  async function compose(options) {
+    if (problems().length > 0) {
+      return;
+    }
+    setBusy(true);
+    const structure = ctx.body && ctx.body.piece ? ctx.body.piece.structure : null;
+    const changed =
+      JSON.stringify(PiecesModel.bodyFromState(state)) !== savedJson ||
+      !structure ||
+      typeof structure !== "object" ||
+      !Array.isArray(structure.sections);
+    if (changed) {
+      const saved = await save("Edited before composing");
+      if (!saved || !saved.ok) {
+        setBusy(false);
+        return;
+      }
+      savedJson = JSON.stringify(PiecesModel.bodyFromState(state));
+    }
+    const answer = await sendMaterialsRequest(PiecesModel.composeRequest(state, options));
+    setBusy(false);
+    if (!answer.ok) {
+      ctx.statusEl.style.whiteSpace = "pre-wrap";
+      ctx.statusEl.classList.add("error");
+      ctx.statusEl.textContent = MaterialsModel.errorText(answer.data, "The piece could not be composed");
+      return;
+    }
+    ctx.saved(answer);
+  }
+
   redraw();
-  return { el, state, problems, save };
+  return { el, state, problems, save, compose };
 }

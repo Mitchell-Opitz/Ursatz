@@ -2323,3 +2323,11 @@ body {
 .piece-editor .upload-controls input[type="text"] {
   width: 12rem;
 }
+
+.piece-result .piece-version {
+  margin: 1rem 0;
+}
+
+.piece-result .upload-controls button.selected {
+  outline: 2px solid currentColor;
+}

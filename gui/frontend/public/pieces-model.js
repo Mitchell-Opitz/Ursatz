@@ -592,14 +592,17 @@
     return beat === 0 ? `bar ${bar}` : `bar ${bar} beat ${shown}`;
   }
 
+  /* Where a section's material came from: the Composer's words, or for a theme fill (its plan's path) the name the
+   * caller gives that section in names ({<section id>: "Theme One v2"}). */
   function sourceText(source, names) {
     if (typeof source !== "string") {
       return "";
     }
-    if (names && names[source]) {
-      return names[source];
+    const theme = /(?:^|\/)theme-(.+)\.plan\.json$/.exec(source);
+    if (theme) {
+      return (names && names[theme[1]]) || "theme";
     }
-    return source.includes("/") ? source.split("/").pop() : source;
+    return source;
   }
 
   function versionView(version, meter, options) {
@@ -653,7 +656,7 @@
   }
 
   /* The Composer's summary of a piece version's result as rows to show. result is piece.result ({seed, summary, brief,
-   * loop, files}); options carries sourceNames ({<theme plan path or name>: "Name"}). */
+   * loop, files}); options carries sourceNames ({<section id>: "Theme One v2"}) for the sections filled with a theme. */
   function resultView(result, options) {
     const r = result && typeof result === "object" ? result : {};
     const summary = r.summary && typeof r.summary === "object" ? r.summary : {};

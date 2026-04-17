@@ -1174,6 +1174,16 @@ async function renderMaterialsDetail(type, id, analysisError) {
       saved: () => renderMaterialsDetail(type, id),
     });
     content.appendChild(editor.el);
+    const resultEl = buildPieceResult({
+      id,
+      version: item.current_version,
+      piece: answer.data.body.piece,
+      nameOf: itemNameOf,
+      title: item.name,
+    });
+    if (resultEl) {
+      content.appendChild(resultEl);
+    }
   }
   content.appendChild(
     buildUsesSection({
