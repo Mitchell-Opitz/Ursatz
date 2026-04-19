@@ -32,7 +32,8 @@ typedef enum {
     SLOT_CONTRAST,
     SLOT_FRAGMENT_1,
     SLOT_FRAGMENT_2,
-    SLOT_CADENTIAL
+    SLOT_CADENTIAL,
+    SLOT_CADENTIAL_ENDING /* cadential 1 and 2: made by the P13 operators, but a slot's own motive is restated exactly */
 } Slot;
 
 typedef struct {
@@ -82,7 +83,9 @@ static Slot slot_of(const char *name) {
                  {"consequent contrasting idea", SLOT_CONTRAST},
                  {"fragment 1", SLOT_FRAGMENT_1},
                  {"fragment 2", SLOT_FRAGMENT_2},
-                 {"cadential", SLOT_CADENTIAL}                 };
+                 {"cadential", SLOT_CADENTIAL},
+                 {"cadential 1", SLOT_CADENTIAL_ENDING},
+                 {"cadential 2", SLOT_CADENTIAL_ENDING}};
     for (size_t i = 0; name && i < sizeof(SLOTS) / sizeof(SLOTS[0]); i++) {
         if (strcmp(name, SLOTS[i].name) == 0) {
             return SLOTS[i].slot;
@@ -325,7 +328,8 @@ static void label_of(const Payload *payload, char *out, size_t size) {
  */
 static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long seed, const char *function, bool contrast) {
     const Request *request = proposal->request;
-    bool fragment = request->slot == SLOT_FRAGMENT_1 || request->slot == SLOT_FRAGMENT_2 || request->slot == SLOT_CADENTIAL;
+    bool fragment = request->slot == SLOT_FRAGMENT_1 || request->slot == SLOT_FRAGMENT_2 ||
+                    request->slot == SLOT_CADENTIAL || request->slot == SLOT_CADENTIAL_ENDING;
     Motive result;
     VariantRecord record;
     if (proposal->out->count >= FORM_MAX ||
@@ -366,7 +370,8 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
         }
     }
     /* A cadential idea is a liquidation: fewer notes than the basic idea, as the P13 operators make it. */
-    if (request->slot == SLOT_CADENTIAL && result.note_count >= request->basic.note_count) {
+    if (request->slot == SLOT_CADENTIAL && request->ref.transform != PLAN_TRANSFORM_RESTATED &&
+        result.note_count >= request->basic.note_count) {
         return true;
     }
     /* A contrasting idea is not another idea's again. */
@@ -517,13 +522,18 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         }
         return out->count > 0 ? true : offer_transpositions(&proposal);
     case SLOT_CONTRAST:
-        return offer_operations(&proposal, "contrast", true);
+        /* The first idea of a slot with its own motive restates it (grow_idea_dev). */
+        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal)
+                                                                : offer_operations(&proposal, "contrast", true);
     case SLOT_CADENTIAL:
-        return offer_operations(&proposal, "cadential", false);
+        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal)
+                                                                : offer_operations(&proposal, "cadential", false);
     case SLOT_FRAGMENT_1:
-        return offer_liquidation(&proposal, 1);
+        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal) : offer_liquidation(&proposal, 1);
     case SLOT_FRAGMENT_2:
         return offer_liquidation(&proposal, 2);
+    case SLOT_CADENTIAL_ENDING:
+        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal) : true;
     case SLOT_NONE:
         break;
     }

@@ -28,8 +28,9 @@
  *     period for an antecedent and a consequent, hybrid for the other seven), a THEME_PAIRING, the CADENCE and the
  *     KEY; a theme with an antecedent has a second CADENCE, the weak one the antecedent ends in;
  *   - a Section "material" after it, marked MATERIAL, so it is not part of the piece, holding the motive node "m0":
- *     the motive as a Given melody lane span. The motives made from it go beside it. An accompaniment motive is the
- *     node "acc", in the last bar of the material.
+ *     the motive as a Given melody lane span. The motives made from it go beside it. The slot motives of the request
+ *     are the nodes "s1" to "s3" after m0, a Given melody span each (the material is a bar longer for each). An
+ *     accompaniment motive is the node "acc", in the last bar of the material.
  *
  * The stages, in order (grow_run), each one fill_run with only its operators registered and its own checker:
  *   structure  grow-theme, which gives the Section its nodes, one motive node in the material for each idea after
@@ -57,6 +58,30 @@
 
 #define GROW_THEME_OPERATOR_NAME "grow-theme"
 
+/*
+ * The motives a theme is built from, by the function of the ideas they give (R-143, R-166): the basic motive begins
+ * the theme; the others are optional and give the ideas that contrast, continue and end it. A slot with no motive of
+ * its own is made from the basic motive, as every idea is without slots.
+ *
+ *   slot          ideas
+ *   basic         basic idea, repetition, consequent basic idea
+ *   contrasting   contrasting idea, consequent contrasting idea
+ *   continuation  fragment 1, fragment 2
+ *   cadential     cadential (after a continuation), cadential 1, cadential 2
+ */
+typedef enum {
+    GROW_SLOT_BASIC,
+    GROW_SLOT_CONTRASTING,
+    GROW_SLOT_CONTINUATION,
+    GROW_SLOT_CADENTIAL,
+    GROW_SLOT_COUNT
+} GrowSlot;
+
+/* "basic", "contrasting", "continuation" or "cadential". */
+const char *grow_slot_name(GrowSlot slot);
+/* The function of the slot's ideas (R-143): "beginning", "contrast", "continuation" or "cadential". */
+const char *grow_slot_function(GrowSlot slot);
+
 typedef struct {
     const Motive *motive;
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
@@ -83,6 +108,18 @@ typedef struct {
      * (GROW_ERR_BAD_REQUEST) with a motive of the melodic role, one longer than a bar, or together with a voicing.
      */
     const Motive *accompaniment_motive;
+    /*
+     * The motives of the other slots (R-166), NULL for none; the entry for GROW_SLOT_BASIC is not read (`motive` is the
+     * basic motive). Each is added to the material as a node (s1 contrasting, s2 continuation, s3 cadential), a Given
+     * melody span. The first idea of the slot is the motive itself (exact) or a form of it; the slot's later ideas
+     * (the consequent contrasting idea, fragment 2, cadential 2) are made from it as the basic motive's are, and the
+     * remoteness of their forms is measured from it. Refused (GROW_ERR_BAD_REQUEST) with a motive that is not a full
+     * motive of two notes or more in the theme's key and meter, longer than the idea it begins (two bars of eight for
+     * the contrasting idea and the cadential idea or cadential 1, one for fragment 1), or for a slot the pairing has no
+     * idea for (a contrasting slot in a sentence, a continuation slot without a continuation). Must outlive
+     * grow_build_plan only.
+     */
+    const Motive *slot_motives[GROW_SLOT_COUNT];
     /*
      * A four-part voicing of the harmony and bass (voicing.h), in the alto and the tenor. Read only with has_voicing,
      * and refused together with an accompaniment. With write_soprano the voicing writes the melody too, in one note a

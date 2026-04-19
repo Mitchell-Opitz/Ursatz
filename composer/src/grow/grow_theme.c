@@ -145,6 +145,9 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     request.bar = grow_bar_length(&request.meter);
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
+        request.slot_node[slot] = grow_find_slot_node(plan, slot);
+    }
     request.source = request.has_motive_ref ? request.motive_ref.motive : grow_find_source(plan);
     if (request.source == PLAN_NODE_NONE || !grow_cells_per_bar(&request.meter, &request.cells_per_bar) ||
         request.bar.num == 0) {
@@ -254,6 +257,13 @@ int grow_pairing_archetype(const PlanThemePairing *pairing) {
 
 bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev) {
     memset(dev, 0, sizeof(*dev));
+    bool first;
+    GrowSlot slot = grow_idea_slot(&spec->pairing, idea, &first);
+    if (idea != GROW_IDEA_BASIC && first && spec->has_slot_source[slot]) {
+        /* The slot's own motive begins the slot as it is. */
+        dev->kind = MOTIVE_DEV_EXACT;
+        return true;
+    }
     switch (idea) {
     case GROW_IDEA_REPETITION: /* also the contrasting idea of the other beginnings */
         if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
@@ -346,9 +356,21 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, Plan
     }
 }
 
+const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowIdea idea) {
+    GrowSlot slot = grow_idea_slot(&spec->pairing, idea, NULL);
+    return slot != GROW_SLOT_BASIC && spec->has_slot_source[slot] ? &spec->slot_source[slot] : &spec->source;
+}
+
+NodeId grow_idea_node(const GrowBuild *build, GrowIdea idea) {
+    GrowSlot slot = grow_idea_slot(&build->spec->pairing, idea, NULL);
+    return slot != GROW_SLOT_BASIC && build->spec->has_slot_source[slot] ? build->request->slot_node[slot]
+                                                                         : build->source;
+}
+
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowIdea idea, Motive *out) {
     MotiveDevSpec dev;
-    return grow_idea_dev(spec, idea, &dev) && motive_develop(&spec->source, &dev, out) == MOTIVE_DEV_OK;
+    return grow_idea_dev(spec, idea, &dev) &&
+           motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
 }
 
 bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, PlanCadenceType cadence) {
@@ -377,10 +399,10 @@ static bool lands_on(const Motive *result, int want) {
     return want < 0 || ((result->notes[result->note_count - 1].midi_pitch % 12) + 12) % 12 == want;
 }
 
-bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec, int want_pc,
-                        const MotiveDevSpec *avoid, MotiveDevSpec *out) {
+bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
+                        const Motive *source, int want_pc, const MotiveDevSpec *avoid, MotiveDevSpec *out) {
+    (void)spec;
     PlanTime room = grow_scaled(grow_unit(request), 2);
-    const Motive *source = &spec->source;
     size_t intervals = source->note_count - 1;
     MotiveDevSpec fits[CONTRAST_MAX];
     MotiveDevSpec exact[CONTRAST_MAX];
@@ -579,6 +601,18 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
         if (!draw_section_motive(request, rng, &m0, spec)) {
             return false;
         }
+    }
+    /* The slots with a motive of their own. */
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
+        if (request->slot_node[slot] == PLAN_NODE_NONE) {
+            continue;
+        }
+        if (!grow_read_motive(plan, request->slot_node[slot], &request->meter, &request->key,
+                              &spec->slot_source[slot]) ||
+            spec->slot_source[slot].note_count < 2) {
+            return false;
+        }
+        spec->has_slot_source[slot] = true;
     }
     /* The basic idea is two bars of eight, one of four. */
     spec->basic_cells = request->bars == 4 ? request->cells_per_bar : 2 * request->cells_per_bar;
