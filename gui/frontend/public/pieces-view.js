@@ -395,6 +395,17 @@ function buildPieceEditor(ctx) {
     themeBeats: (fill) => (Number.isFinite(themeLengths[PiecesModel.fillKey(fill)]) ? themeLengths[PiecesModel.fillKey(fill)] : null),
   };
 
+  /* Sources (motifs and themes) with a newer version */
+  const notices = materialsElement("div");
+  for (const use of PiecesModel.updatedUses({ uses_status: ctx.usesStatus })) {
+    const notice = materialsElement("div", "piece-list-status");
+    notice.appendChild(materialsElement("span", "", `${use.label} `));
+    notice.appendChild(themeButton("Update and compose", () => compose({ update_uses: true })));
+    notice.appendChild(themeButton("Keep", () => notice.remove()));
+    notices.appendChild(notice);
+  }
+  el.appendChild(notices);
+
   /* Header */
   el.appendChild(materialsElement("h2", "section-title", "Piece"));
   const header = materialsElement("div", "upload-controls");
