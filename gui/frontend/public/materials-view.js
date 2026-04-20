@@ -1180,6 +1180,8 @@ async function renderMaterialsDetail(type, id, analysisError) {
       piece: answer.data.body.piece,
       nameOf: itemNameOf,
       title: item.name,
+      statusEl,
+      saved: () => renderMaterialsDetail(type, id),
     });
     if (resultEl) {
       content.appendChild(resultEl);

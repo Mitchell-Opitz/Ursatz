@@ -2331,3 +2331,8 @@ body {
 .piece-result .upload-controls button.selected {
   outline: 2px solid currentColor;
 }
+
+.piece-action-row select,
+.piece-action-row input[type="text"] {
+  width: 7rem;
+}

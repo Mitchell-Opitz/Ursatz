@@ -559,6 +559,106 @@
     return Themes.versionFileUrl(id, number, name);
   }
 
+  /* --- regenerate and variations ---------------------------------------- */
+
+  const LANES = ["harmony", "bass", "melody", "inner"];
+  const MAX_VARIATIONS = 8;
+
+  /* The lanes of a section that can be written again (R-173): a section filled with a theme takes harmony and bass
+   * only, an ending section none (the backend refuses both others). */
+  function lanesFor(section) {
+    if (!section || section.part === "ending") {
+      return [];
+    }
+    return section.fill && section.fill.kind === "theme" ? ["harmony", "bass"] : LANES.slice();
+  }
+
+  /* The seed typed, blank for none: {value} (undefined for none) or {error}. */
+  function optionalSeed(value) {
+    if (text(String(value === undefined || value === null ? "" : value)) === "") {
+      return { value: undefined };
+    }
+    const seed = wholeNumber(value, 0, MAX_SEED);
+    return seed === null ? { error: "The seed is a whole number, or blank." } : { value: seed };
+  }
+
+  /* POST regenerate of a section of a composed version. options: {section_id, lane ("" or "all" for every lane), seed}.
+   * Returns {request} or {error}. */
+  function regenerateRequest(id, number, options) {
+    const o = options || {};
+    const seed = optionalSeed(o.seed);
+    if (seed.error) {
+      return { error: seed.error };
+    }
+    if (!text(o.section_id)) {
+      return { error: "Choose a section." };
+    }
+    const body = { section_id: o.section_id };
+    if (text(o.lane) !== "") {
+      body.lane = o.lane;
+    }
+    if (seed.value !== undefined) {
+      body.seed = seed.value;
+    }
+    return {
+      request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/regenerate`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+    };
+  }
+
+  /* POST variations of a section. options: {section_id, lane, count, seed}; the lane is needed. */
+  function variationsRequest(id, number, options) {
+    const o = options || {};
+    const seed = optionalSeed(o.seed);
+    if (seed.error) {
+      return { error: seed.error };
+    }
+    const count = wholeNumber(o.count, 1, MAX_VARIATIONS);
+    if (count === null) {
+      return { error: `The count is 1 to ${MAX_VARIATIONS}.` };
+    }
+    if (!text(o.section_id) || text(o.lane) === "") {
+      return { error: "Choose a section and a lane." };
+    }
+    const body = { section_id: o.section_id, lane: o.lane, count };
+    if (seed.value !== undefined) {
+      body.seed = seed.value;
+    }
+    return {
+      request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/variations`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+    };
+  }
+
+  /* POST choose: variation index of set becomes the next version. */
+  function chooseRequest(id, number, set, index) {
+    return {
+      method: "POST",
+      url: itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/choose`),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ index: Number(index) }),
+    };
+  }
+
+  /* A file of a variations set: variation-<i>.musicxml, .mid, .json or result.json. */
+  function variationFileUrl(id, number, set, name) {
+    return itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/${encodeURIComponent(name)}`);
+  }
+
+  /* The cards of a variations answer {set, variations: [{index, seed, score, seam, heard}]}. */
+  function variationCards(answer) {
+    const list = answer && Array.isArray(answer.variations) ? answer.variations : [];
+    return list.map((entry) => {
+      const score = entry.score && Number.isFinite(entry.score.numerator) ? `${entry.score.numerator} of ${entry.score.denominator}` : "";
+      const seam = entry.seam && typeof entry.seam === "object" ? entry.seam.held : entry.seam;
+      return {
+        index: entry.index,
+        title: `#${entry.index} · seed ${entry.seed}`,
+        score,
+        seam: Number.isFinite(seam) ? `${seam} of ${SEAM_RULES.length} seam rules` : "",
+        heard: typeof entry.heard === "string" ? entry.heard : "",
+      };
+    });
+  }
+
   /* --- the result ------------------------------------------------------ */
 
   const FROM_TEXT = { request: "set here", option: "set here", style: "from the brief", none: "not set" };
@@ -737,6 +837,15 @@
     saveRequest,
     composeRequest,
     versionFileUrl,
+    LANES,
+    MAX_VARIATIONS,
+    lanesFor,
+    optionalSeed,
+    regenerateRequest,
+    variationsRequest,
+    chooseRequest,
+    variationFileUrl,
+    variationCards,
     resultView,
     positionLabel,
     updatedUses,

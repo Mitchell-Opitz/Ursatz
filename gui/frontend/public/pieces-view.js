@@ -198,9 +198,110 @@ function pieceVersionTables(view, heading, check) {
 }
 
 /*
+ * Regenerate and variations of the sections of a composed version. ctx: {id, version, statusEl, saved(answer)}; state
+ * is the form state of the version's body. A regenerate or a chosen variation becomes the next version (ctx.saved).
+ */
+function buildPieceActions(ctx, state) {
+  const box = materialsElement("div", "piece-actions");
+  box.appendChild(materialsElement("h3", "section-title", "Regenerate and variations"));
+  const results = materialsElement("div", "composer-variation-grid");
+  const buttons = [];
+
+  function setBusy(busy, text) {
+    for (const button of buttons) {
+      button.disabled = busy;
+    }
+    ctx.statusEl.style.whiteSpace = "pre-wrap";
+    ctx.statusEl.classList.remove("error");
+    ctx.statusEl.textContent = busy ? text : "";
+  }
+
+  function fail(answer, fallback) {
+    ctx.statusEl.classList.add("error");
+    ctx.statusEl.textContent = MaterialsModel.errorText(answer.data, fallback);
+  }
+
+  async function run(built, busyText, fallback, onOk) {
+    if (built.error) {
+      ctx.statusEl.classList.add("error");
+      ctx.statusEl.textContent = built.error;
+      return;
+    }
+    setBusy(true, busyText);
+    const answer = await sendMaterialsRequest(built.request);
+    setBusy(false);
+    if (!answer.ok) {
+      fail(answer, fallback);
+      return;
+    }
+    onOk(answer);
+  }
+
+  function showVariations(section, data) {
+    results.innerHTML = "";
+    const cards = PiecesModel.variationCards(data);
+    if (cards.length === 0) {
+      results.appendChild(materialsElement("div", "piece-list-status", "No different version was found."));
+      return;
+    }
+    for (const card of cards) {
+      const el = materialsElement("div", "composer-variation");
+      el.appendChild(materialsElement("div", "", `Section ${section.letter || section.id} ${card.title}`));
+      el.appendChild(materialsElement("div", "claim-row-where", [card.score && `score ${card.score}`, card.seam, card.heard && `heard ${card.heard}`].filter(Boolean).join(", ")));
+      const scoreStatus = materialsElement("div", "piece-list-status");
+      const score = materialsElement("div", "analysis-score-container");
+      const choose = themeButton("Choose", () =>
+        run({ request: PiecesModel.chooseRequest(ctx.id, ctx.version, data.set, card.index) }, "Choosing...", "Could not choose the variation", ctx.saved),
+      );
+      buttons.push(choose);
+      el.append(scoreStatus, score, choose);
+      results.appendChild(el);
+      drawMusicXmlScore(PiecesModel.variationFileUrl(ctx.id, ctx.version, data.set, `variation-${card.index}.musicxml`), score, scoreStatus, 0.5);
+    }
+  }
+
+  for (const section of state.sections) {
+    const lanes = PiecesModel.lanesFor(section);
+    if (lanes.length === 0) {
+      continue;
+    }
+    const whole = lanes.length === PiecesModel.LANES.length;
+    const row = materialsElement("div", "upload-controls piece-action-row");
+    row.appendChild(materialsElement("strong", "", `${section.letter || section.id} (${PiecesModel.beatsLabel(section.beats, state.meter)})`));
+    const regenLane = themeSelect([...(whole ? [{ value: "", label: "All lanes" }] : []), ...lanes], whole ? "" : lanes[0]);
+    const regenSeed = themeInput("seed", "");
+    const regenerate = themeButton("Regenerate", () =>
+      run(
+        PiecesModel.regenerateRequest(ctx.id, ctx.version, { section_id: section.id, lane: regenLane.value, seed: regenSeed.value }),
+        "Regenerating, this can take a while...",
+        "The section could not be regenerated",
+        ctx.saved,
+      ),
+    );
+    const varLane = themeSelect(whole ? [...lanes, "all"] : lanes, lanes[0]);
+    const varCount = themeInput("count", "3");
+    const varSeed = themeInput("seed", "");
+    const variations = themeButton("Variations", () =>
+      run(
+        PiecesModel.variationsRequest(ctx.id, ctx.version, { section_id: section.id, lane: varLane.value, count: varCount.value, seed: varSeed.value }),
+        "Making variations, this can take a while...",
+        "The variations could not be made",
+        (answer) => showVariations(section, answer.data),
+      ),
+    );
+    buttons.push(regenerate, variations);
+    row.append(regenLane, regenSeed, regenerate, varLane, varCount, varSeed, variations);
+    box.appendChild(row);
+  }
+  box.appendChild(results);
+  return box;
+}
+
+/*
  * The result of a piece version: the Composer's summary as tables for the loop and the ending version, the scores
- * with playback and the MIDI downloads. ctx: {id, version, piece (the version body's piece), nameOf, title}.
- * Returns null when the version has no result.
+ * with playback and the MIDI downloads. ctx: {id, version, piece (the version body's piece), nameOf, title}, and
+ * statusEl and saved(answer) on the current version, which adds regenerate and variations. Returns null when the
+ * version has no result.
  */
 function buildPieceResult(ctx) {
   const result = ctx.piece && ctx.piece.result;
@@ -270,6 +371,9 @@ function buildPieceResult(ctx) {
   }
   section.append(tabs, scoreHost);
   showScore("loop");
+  if (ctx.statusEl && ctx.saved) {
+    section.appendChild(buildPieceActions(ctx, state));
+  }
   return section;
 }
 
