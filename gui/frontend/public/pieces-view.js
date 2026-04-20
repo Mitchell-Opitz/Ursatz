@@ -377,6 +377,28 @@ function buildPieceResult(ctx) {
   return section;
 }
 
+/* Shows an older version read only: its structure, then its result. */
+function pieceVersionView(viewEl, id, number, body, nameOf, title) {
+  viewEl.innerHTML = "";
+  viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
+  const piece = body && body.piece ? body.piece : {};
+  const state = PiecesModel.stateFromBody(body, id);
+  viewEl.appendChild(
+    themeFacts([
+      ["Key", `${state.key} ${state.mode}, ${state.meter}`],
+      ...state.sections.map((section, index) => [
+        `${PiecesModel.PARTS.find((entry) => entry.value === section.part).label} ${section.letter || section.id}`,
+        `${PiecesModel.beatsLabel(section.beats, state.meter)}, cadence ${PiecesModel.cadenceOf(state, index)}, ${section.fill.kind}${
+          section.fill.item_id ? ` ${nameOf(section.fill.item_id)} v${section.fill.version}` : ""
+        }`,
+      ]),
+      ["Brief", ThemesModel.briefLabel(ThemesModel.briefFromPicks(state.picks))],
+    ]),
+  );
+  const result = buildPieceResult({ id, version: number, piece, nameOf, title });
+  viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
+}
+
 /*
  * The piece editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer)}.
  * Returns {el, state, problems(), save(note)}.

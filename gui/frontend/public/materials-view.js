@@ -1198,10 +1198,12 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }),
   );
   content.appendChild(buildUsedBySection(answer.data.used_by));
-  const renderThemeVersion =
-    type === "theme"
-      ? (number, body) => themeVersionView(versionEl, id, number, body, itemNameOf, item.name)
-      : undefined;
+  let renderThemeVersion;
+  if (type === "theme") {
+    renderThemeVersion = (number, body) => themeVersionView(versionEl, id, number, body, itemNameOf, item.name);
+  } else if (type === "piece") {
+    renderThemeVersion = (number, body) => pieceVersionView(versionEl, id, number, body, itemNameOf, item.name);
+  }
   content.appendChild(buildVersionsList(item, versionEl, statusEl, renderThemeVersion));
   content.appendChild(versionEl);
 }
