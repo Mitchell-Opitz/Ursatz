@@ -89,6 +89,25 @@ static void same_interpretation(const Interpretation *a, const Interpretation *b
 
 /* --- storing --- */
 
+/*
+ * The analysis names a Key or Chord after its label ("common-practice-minimal-key-G major"), so a key that recurs in
+ * two regions has one id twice. A repository holds one row per id, so each distinct id is stored once (and compared
+ * once); `seen` is the ids stored so far.
+ */
+static char seen[8192][160];
+static size_t seen_count;
+
+static bool first_time(const char *id) {
+    for (size_t i = 0; i < seen_count; i++) {
+        if (strcmp(seen[i], id) == 0) {
+            return false;
+        }
+    }
+    assert(seen_count < 8192 && strlen(id) < sizeof(seen[0]));
+    snprintf(seen[seen_count++], sizeof(seen[0]), "%s", id);
+    return true;
+}
+
 static void store_interpretation(PersistenceHandle *handle, const Interpretation *interpretation) {
     if (interpretation == NULL) {
         return;
@@ -117,11 +136,20 @@ static void store_all(PersistenceHandle *handle, const Chain *c, const StandardF
     assert(persistence_store_note_events(handle, c->p.events, c->p.note_count) == PERSISTENCE_NOTE_EVENTS_OK);
 
     for (size_t i = 0; i < c->regions.region_count; i++) {
-        assert(persistence_store_key(handle, c->regions.regions[i].key) == PERSISTENCE_KEY_OK);
+        if (!first_time(entity_id_value(interpretation_id(key_interpretation(c->regions.regions[i].key))))) {
+            continue;
+        }
+        PersistenceKeyResult stored = persistence_store_key(handle, c->regions.regions[i].key);
+        if (stored != PERSISTENCE_KEY_OK) {
+            printf("key region %zu (%s): store failed (%d)\n", i,
+                   entity_id_value(interpretation_id(key_interpretation(c->regions.regions[i].key))), (int)stored);
+        }
+        assert(stored == PERSISTENCE_KEY_OK);
         stored_keys++;
     }
     for (size_t s = 0; s < c->count; s++) {
-        if (c->chords[s].matched) {
+        if (c->chords[s].matched &&
+            first_time(entity_id_value(interpretation_id(chord_interpretation(c->chords[s].best_chord))))) {
             assert(persistence_store_chord(handle, c->chords[s].best_chord) == PERSISTENCE_CHORD_OK);
             stored_chords++;
         }
@@ -200,6 +228,7 @@ static void check_interpretation(PersistenceHandle *handle, const Interpretation
 }
 
 static void check_all(PersistenceHandle *handle, const Chain *c, const StandardFormMotives *motives) {
+    seen_count = 0;
     /* the note events: same count, ids and order */
     NoteEvent **events = NULL;
     size_t event_count = 0;
@@ -213,6 +242,9 @@ static void check_all(PersistenceHandle *handle, const Chain *c, const StandardF
 
     for (size_t i = 0; i < c->regions.region_count; i++) {
         const Key *original = c->regions.regions[i].key;
+        if (!first_time(entity_id_value(interpretation_id(key_interpretation(original))))) {
+            continue;
+        }
         Key *loaded = NULL;
         assert(persistence_load_key(handle, entity_id_value(interpretation_id(key_interpretation(original))), &loaded) ==
                PERSISTENCE_KEY_OK);
@@ -221,7 +253,8 @@ static void check_all(PersistenceHandle *handle, const Chain *c, const StandardF
         key_destroy(loaded);
     }
     for (size_t s = 0; s < c->count; s++) {
-        if (!c->chords[s].matched) {
+        if (!c->chords[s].matched ||
+            !first_time(entity_id_value(interpretation_id(chord_interpretation(c->chords[s].best_chord))))) {
             continue;
         }
         const Chord *original = c->chords[s].best_chord;
