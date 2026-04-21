@@ -253,6 +253,17 @@ file(COPY "${URSATZ_REFERENCE_FIXTURES}/Bach 114.mid" DESTINATION ${URSATZ_CORPO
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/musicxml/field-1.musicxml DESTINATION ${URSATZ_CORPORA_DIR}/mixed/sub)
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/notes.txt "not a piece\n")
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/broken.mid "not a midi file\n")
+# "chorales" is the ten accuracy-corpus chorales (private use, R-016), one MusicXML file each, named after its folder;
+# "sonatinas" is the two sonatina movements.
+file(GLOB chorale_scores ${PROJECT_SOURCE_DIR}/external/ursatz/tests/accuracy/corpus/*/score.musicxml)
+foreach(score ${chorale_scores})
+    get_filename_component(score_dir ${score} DIRECTORY)
+    get_filename_component(chorale_name ${score_dir} NAME)
+    file(COPY ${score} DESTINATION ${URSATZ_CORPORA_DIR}/chorales)
+    file(RENAME ${URSATZ_CORPORA_DIR}/chorales/score.musicxml ${URSATZ_CORPORA_DIR}/chorales/${chorale_name}.musicxml)
+endforeach()
+file(COPY "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid" "${URSATZ_REFERENCE_FIXTURES}/Mozart 545.mid"
+     DESTINATION ${URSATZ_CORPORA_DIR}/sonatinas)
 
 add_executable(test_corpus test_corpus.c)
 target_link_libraries(test_corpus PRIVATE ursatz_analyzer cjson)
@@ -281,3 +292,31 @@ add_test(NAME test_corpus_index_schema
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/corpus_index_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_corpus_index.cmake)
 set_tests_properties(test_corpus_index_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
+
+add_executable(test_style_profile test_style_profile.c)
+target_link_libraries(test_style_profile PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_style_profile PRIVATE
+    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+    URSATZ_STYLE_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/style_work"
+    PROJECT_VERSION_FOR_TESTS="${PROJECT_VERSION}"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_style_profile COMMAND test_style_profile)
+
+add_test(NAME test_cli_style_profile
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_style_profile
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake)
+
+add_test(NAME test_style_model_schema
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DPYTHON=${Python3_EXECUTABLE}
+                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
+                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/style_model_schema
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_style_model.cmake)
+set_tests_properties(test_style_model_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
