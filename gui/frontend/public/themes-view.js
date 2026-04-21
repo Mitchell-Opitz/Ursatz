@@ -200,8 +200,10 @@ function buildThemeMotifPicker(options) {
   return { el, setValue };
 }
 
-/* The pool section: the saved forms each slot motif has, by flag. */
-function buildThemePoolSection(state, itemName, onPool) {
+/* The pool section: the saved forms each motif has, by flag. entries() lists {label, item_id} of the motifs; it
+ * defaults to the slots of the theme. */
+function buildThemePoolSection(state, itemName, onPool, entries) {
+  const motifs = entries || (() => state.slots.map((entry) => ({ label: ThemesModel.SLOT_LABELS[entry.slot], item_id: entry.item_id })));
   const section = materialsElement("div");
   section.appendChild(materialsElement("h3", "section-title", "Pool"));
   const poolSelect = themeSelect(ThemesModel.POOLS, state.pool);
@@ -213,8 +215,8 @@ function buildThemePoolSection(state, itemName, onPool) {
   /* Redraws the counts for the slots now chosen. */
   async function refresh() {
     list.innerHTML = "";
-    for (const entry of state.slots) {
-      const li = materialsElement("li", "", `${ThemesModel.SLOT_LABELS[entry.slot]}: ${itemName(entry.item_id)} · `);
+    for (const entry of motifs()) {
+      const li = materialsElement("li", "", `${entry.label}: ${itemName(entry.item_id)} · `);
       list.appendChild(li);
       const answer = await sendMaterialsRequest({ method: "GET", url: `/api/materials/items/${encodeURIComponent(entry.item_id)}/variant-tree` });
       li.appendChild(
@@ -514,6 +516,48 @@ function themeVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
 }
 
+/* The accompaniment section: none, a pattern or (when options.motif is not false) a motif. state.accompaniment is
+ * {kind, pattern, item_id, version}; itemsOf() lists the items for the motif picker. */
+function buildThemeAccompanimentSection(state, itemsOf, options) {
+  const withMotif = !options || options.motif !== false;
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h2", "section-title", "Accompaniment"));
+  const accompaniment = materialsElement("div", "upload-controls");
+  const accKind = themeField(
+    accompaniment,
+    "Accompaniment",
+    themeSelect(
+      [
+        { value: "none", label: "None" },
+        { value: "pattern", label: "A pattern" },
+        ...(withMotif ? [{ value: "motive", label: "A motif" }] : []),
+      ],
+      state.accompaniment.kind,
+    ),
+  );
+  const accPattern = themeField(accompaniment, "Pattern", themeSelect(ThemesModel.PATTERNS, state.accompaniment.pattern || "any"));
+  const accPicker = buildThemeMotifPicker({
+    role: "accompaniment",
+    items: itemsOf,
+    onChange: (value) => {
+      state.accompaniment.item_id = value ? value.item_id : "";
+      state.accompaniment.version = value ? value.version : 0;
+    },
+  });
+  accPicker.setValue(state.accompaniment);
+  function syncAccompaniment() {
+    state.accompaniment.kind = accKind.value;
+    state.accompaniment.pattern = accPattern.value;
+    accPattern.parentElement.hidden = accKind.value !== "pattern";
+    accPicker.el.hidden = accKind.value !== "motive";
+  }
+  accKind.addEventListener("input", syncAccompaniment);
+  accPattern.addEventListener("input", syncAccompaniment);
+  syncAccompaniment();
+  section.append(accompaniment, accPicker.el);
+  return section;
+}
+
 /*
  * The theme editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer)}.
  * Returns {el, state, problems(), save(note), compose(options)}.
@@ -603,41 +647,7 @@ function buildThemeEditor(ctx) {
   el.appendChild(pool.el);
   pool.refresh();
 
-  /* Accompaniment */
-  el.appendChild(materialsElement("h2", "section-title", "Accompaniment"));
-  const accompaniment = materialsElement("div", "upload-controls");
-  const accKind = themeField(
-    accompaniment,
-    "Accompaniment",
-    themeSelect(
-      [
-        { value: "none", label: "None" },
-        { value: "pattern", label: "A pattern" },
-        { value: "motive", label: "A motif" },
-      ],
-      state.accompaniment.kind,
-    ),
-  );
-  const accPattern = themeField(accompaniment, "Pattern", themeSelect(ThemesModel.PATTERNS, state.accompaniment.pattern || "any"));
-  const accPicker = buildThemeMotifPicker({
-    role: "accompaniment",
-    items: itemsOf,
-    onChange: (value) => {
-      state.accompaniment.item_id = value ? value.item_id : "";
-      state.accompaniment.version = value ? value.version : 0;
-    },
-  });
-  accPicker.setValue(state.accompaniment);
-  function syncAccompaniment() {
-    state.accompaniment.kind = accKind.value;
-    state.accompaniment.pattern = accPattern.value;
-    accPattern.parentElement.hidden = accKind.value !== "pattern";
-    accPicker.el.hidden = accKind.value !== "motive";
-  }
-  accKind.addEventListener("input", syncAccompaniment);
-  accPattern.addEventListener("input", syncAccompaniment);
-  syncAccompaniment();
-  el.append(accompaniment, accPicker.el);
+  el.appendChild(buildThemeAccompanimentSection(state, itemsOf));
 
   el.appendChild(buildThemeBriefSection(state));
 

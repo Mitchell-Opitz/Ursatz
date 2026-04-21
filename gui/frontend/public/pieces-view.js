@@ -409,8 +409,13 @@ function buildPieceEditor(ctx) {
     state.sections = [PiecesModel.newSection(state, "body")];
   }
   const el = materialsElement("section", "panel materials-editor piece-editor");
+  const nameOf = (itemId) => {
+    const found = ctx.items.find((item) => item.id === itemId);
+    return found ? found.name : itemId;
+  };
   const problemsEl = materialsElement("div", "materials-field-error");
   let selected = state.sections[0].id;
+  let poolRefresh = () => {};
   let savedJson = JSON.stringify(PiecesModel.bodyFromState(state));
   const themeLengths = {};
   const structureOptions = {
@@ -583,6 +588,7 @@ function buildPieceEditor(ctx) {
             fill.item_id = value ? value.item_id : "";
             fill.version = value ? value.version : 0;
             problems();
+            poolRefresh();
           },
         });
         picker.setValue(fill);
@@ -669,6 +675,24 @@ function buildPieceEditor(ctx) {
   });
   motivePicker.setValue(state.motive);
   el.appendChild(motivePicker.el);
+
+  /* The pool: the saved forms each motif fill has */
+  const pool = buildThemePoolSection(
+    state,
+    nameOf,
+    (value) => {
+      state.pool = value;
+    },
+    () =>
+      state.sections
+        .filter((section) => section.fill.kind === "motif" && section.fill.item_id)
+        .map((section) => ({ label: `Section ${section.letter || section.id}`, item_id: section.fill.item_id })),
+  );
+  el.appendChild(pool.el);
+  poolRefresh = pool.refresh;
+  pool.refresh();
+
+  el.appendChild(buildThemeAccompanimentSection(state, () => ctx.items, { motif: false }));
 
   el.appendChild(
     buildThemeBriefSection(state, {
