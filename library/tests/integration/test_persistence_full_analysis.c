@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "framework_v1_chain.h"
 
 #include "analysis_motive.h"
@@ -408,7 +410,9 @@ int main(void) {
     assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, form_kernel_match_windows, NULL,
                                       &motives) == STANDARD_FORM_ANALYSIS_OK);
 
-    const char *path = "test_persistence_full_analysis.sqlite";
+    /* one file per process: the plain and the valgrind runs may be scheduled together */
+    char path[96];
+    snprintf(path, sizeof(path), "test_persistence_full_analysis_%ld.sqlite", (long)getpid());
     remove(path);
     PersistenceHandle *handle = NULL;
     assert(persistence_open(path, &handle) == PERSISTENCE_OK);
@@ -429,6 +433,7 @@ int main(void) {
     standard_form_themes_destroy(&themes);
     standard_form_segmentation_destroy(&segmentation);
     standard_form_phrases_destroy(&phrases);
+    form_build_destroy(&build);
     fv1_chain_destroy(&c);
     printf("test_persistence_full_analysis: all tests passed\n");
     return 0;
