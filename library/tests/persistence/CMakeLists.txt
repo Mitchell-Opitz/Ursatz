@@ -2,6 +2,10 @@ add_ursatz_test(persistence_lifecycle)
 add_ursatz_test(persistence_note_events)
 add_ursatz_test(persistence_uncertainty)
 add_ursatz_test(persistence_context_query)
+add_ursatz_test(persistence_relationship)
+add_ursatz_test(persistence_motif)
+add_ursatz_test(persistence_cadence_phrase)
+add_ursatz_test(persistence_old_schema)
 
 find_package(Threads REQUIRED)
 add_ursatz_test(persistence_concurrency)
@@ -24,7 +28,7 @@ add_ursatz_architecture_test(persistence)
 # installed.
 find_program(URSATZ_PERSISTENCE_VALGRIND valgrind)
 if(URSATZ_PERSISTENCE_VALGRIND)
-  foreach(persistence_test_name persistence_lifecycle persistence_note_events persistence_uncertainty persistence_chord_key)
+  foreach(persistence_test_name persistence_lifecycle persistence_note_events persistence_uncertainty persistence_chord_key persistence_relationship persistence_motif persistence_cadence_phrase persistence_old_schema)
     add_test(NAME ${persistence_test_name}_valgrind
              COMMAND ${URSATZ_PERSISTENCE_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${persistence_test_name}>)

@@ -6,15 +6,18 @@
 /*
  * Architecture test: music-persistence (L9) may depend on
  * music-identity (L0), music-core (L1), music-time and music-pitch
- * (L2), music-events (L3), and music-interpretation (L6, needed for
- * Chord/Key's own struct shapes) only. It MUST NOT depend on
- * music-containers, music-structure, music-context, music-semantics,
- * music-relationship, music-theory, music-rules, music-transform,
- * music-analysis, music-generation, music-io, or frameworks/.
+ * (L2), music-events (L3), music-interpretation (L6, needed for
+ * Chord/Key's own struct shapes), music-relationship and music-structure
+ * (the RelationshipRepository and the Motif, MotifOccurrence, Cadence and
+ * PhraseOccurrence repositories persist those types) only. It MUST NOT
+ * depend on music-containers, music-context, music-semantics, music-theory,
+ * music-rules, music-transform, music-analysis, music-generation, music-io,
+ * or frameworks/.
  *
  * Scans every .h/.c file under src/persistence/ and flags any local
  * include ("...") that does not point into identity/, core/, time/,
- * pitch/, events/, interpretation/, or persistence/ itself.
+ * pitch/, events/, interpretation/, relationship/, structure/, or
+ * persistence/ itself.
  */
 
 static int check_file(const char *path) {
@@ -44,10 +47,11 @@ static int check_file(const char *path) {
         if (strncmp(start, "identity/", 9) != 0 && strncmp(start, "core/", 5) != 0 &&
             strncmp(start, "time/", 5) != 0 && strncmp(start, "pitch/", 6) != 0 &&
             strncmp(start, "events/", 7) != 0 && strncmp(start, "interpretation/", 15) != 0 &&
+            strncmp(start, "relationship/", 13) != 0 && strncmp(start, "structure/", 10) != 0 &&
             strncmp(start, "persistence/", 12) != 0) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
-                    "interpretation/, or persistence/)\n",
+                    "interpretation/, relationship/, structure/, or persistence/)\n",
                     path, start);
             violations++;
         }

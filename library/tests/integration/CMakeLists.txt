@@ -123,3 +123,17 @@ target_compile_definitions(test_corpus_similarity_search PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
     URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
 add_test(NAME corpus_similarity_search COMMAND test_corpus_similarity_search)
+
+add_executable(test_persistence_full_analysis test_persistence_full_analysis.c)
+target_link_libraries(test_persistence_full_analysis PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+                      standard_meter)
+target_include_directories(test_persistence_full_analysis PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_persistence_full_analysis PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
+    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
+add_test(NAME persistence_full_analysis COMMAND test_persistence_full_analysis)
+
+# Not run under valgrind: standard_form_find_motives (frameworks/standard-form/analysis/analysis_motive.c, make_kernel_window)
+# leaks 66 KB on this piece, which is the analysis' own and not the persistence code's -- valgrind reports no frame in
+# persistence/. The persistence repositories are leak-checked by their own tests in tests/persistence.

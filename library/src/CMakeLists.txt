@@ -178,6 +178,12 @@ add_library(ursatz
     persistence/persistence_chord.c
     persistence/persistence_key.c
     persistence/persistence_context_query.c
+    persistence/persistence_support.c
+    persistence/persistence_relationship.c
+    persistence/persistence_motif.c
+    persistence/persistence_motif_occurrence.c
+    persistence/persistence_cadence.c
+    persistence/persistence_phrase_occurrence.c
     corpus/corpus.c
     corpus/persistence_corpus.c
     corpus/persistence_corpus_membership.c
