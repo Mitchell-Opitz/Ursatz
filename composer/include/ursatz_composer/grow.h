@@ -15,6 +15,8 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
 
+struct GrowPoolForm;
+
 /*
  * Growing a theme from a motive (R-047): the plan of a theme, built from one motive, and the fill stages that write
  * it. A request names the motive, the key, the meter, how many bars (8, with a two-bar basic idea, or 4, with a
@@ -204,6 +206,12 @@ typedef struct {
      * not keep: the motive-form operator reads them for m0. NULL for none; its notes must be m0's. Must outlive grow_run.
      */
     const Motive *basic;
+    /*
+     * Saved motive-forms the motives stage prefers over the registry's (grow_form.h GrowPoolForm), NULL for none. Must
+     * outlive grow_run, as must the motives they point to.
+     */
+    const struct GrowPoolForm *pool;
+    size_t pool_count;
 } GrowConfig;
 
 typedef struct {

@@ -5,6 +5,7 @@
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
 
@@ -27,7 +28,37 @@
  * Applies to a Constrained motive node of the material whose melody is asked for by an idea of that name and whose
  * motive_ref names a motive node with a melody; it writes the Realized melody lane span of the node like the P13
  * operators do. The motive operators' MotiveDevelopContext.basic gives m0 its harmony, features and role.
+ *
+ * The first idea of a slot with a motive of its own (GrowRequest.slot_motives) restates that motive, and the slot's later
+ * ideas are made from it as the basic motive's are (grow.h).
+ *
+ * A pool of saved motive-forms (R-166) is offered first for every idea this operator makes, before the registry's forms:
+ * a pool form is offered for an idea when it derives from the motive the idea is made from (slot_motive_of: the slot
+ * whose motive the form was made from, basic for m0, and the section's own motive), its functions include the function of
+ * the idea's slot (GrowSlot, grow_slot_function) and it fits as a registry form does (a full motive in range, no wider a
+ * leap, no longer than the idea's room, the cadence tone of an idea that ends in a cadence). It scores 1 plus the
+ * connection plus 1/2 when approved, 1/4 when unflagged, so it outranks a registry form of the same connection and an
+ * approved one an unflagged one. The candidate's label names it as "pool <item> <connection>%: <chain>".
  */
+
+/* The functions a form suits (R-143, variant_functions), as bits. */
+#define GROW_FUNCTION_BEGINNING 1u
+#define GROW_FUNCTION_CONTINUATION 2u
+#define GROW_FUNCTION_CONTRAST 4u
+#define GROW_FUNCTION_CADENTIAL 8u
+
+/* The bit of the function a slot's ideas have (grow_slot_function). */
+unsigned grow_slot_function_bit(GrowSlot slot);
+
+/* A saved motive-form the motives stage may use (R-166). The strings are copies; the motive must outlive the run. */
+typedef struct GrowPoolForm {
+    const Motive *motive;
+    GrowSlot slot_motive_of; /* the slot whose motive the form derives from; basic for m0 */
+    unsigned functions;      /* GROW_FUNCTION_* bits */
+    bool approved;           /* approved forms are preferred over unflagged ones */
+    char item[64];           /* the saved item's id, named in the record */
+    char chain[256];         /* how it derives, as the item saved it (shown in the record and by --explain) */
+} GrowPoolForm;
 
 #define GROW_FORM_OPERATOR_NAME "motive-form"
 

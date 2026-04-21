@@ -725,6 +725,8 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     motive_develop_context_default(&run.motives);
     run.motives.min_length = 1;
     run.motives.basic = config->basic;
+    run.motives.pool = config->pool;
+    run.motives.pool_count = config->pool_count;
     /* At a fast tempo the motive-forms stay closer to the basic idea (R-163). */
     if (config->tempo.denominator > 0 &&
         config->tempo.numerator >= (unsigned long)MOTIVE_FAST_TEMPO_QPM * config->tempo.denominator) {

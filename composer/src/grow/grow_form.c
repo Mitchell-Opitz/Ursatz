@@ -42,11 +42,18 @@ typedef struct {
     VariantChain chain;
     VariantRecord record;
     MotiveConnection connection;
+    /* A pool form (grow_form.h) has no chain of registry steps: its item, its chain as saved, and the bonus in 1/4s
+       (2 approved, 1 unflagged); 0 for a registry form. */
+    unsigned pool_bonus;
+    char item[64];
+    char pool_chain[256];
 } Payload;
 
 /* What a target asks for, read from the plan. */
 typedef struct {
     Slot slot;
+    GrowSlot function_slot; /* the slot whose function the idea has (grow.h) */
+    GrowSlot origin;        /* the slot whose motive the idea is made from: basic for m0 and the section's own */
     PlanMotiveRef ref;
     Motive basic;    /* the motive the idea is made from, with m0's harmony, features and role */
     Motive previous; /* the idea before this one, else basic */
@@ -73,25 +80,43 @@ static const MotiveDevelopContext *context_or_default(const void *context) {
     return &defaults;
 }
 
-static Slot slot_of(const char *name) {
+static Slot slot_of(const char *name, GrowSlot *function_slot) {
     static const struct {
         const char *name;
         Slot slot;
-    } SLOTS[] = {{"repetition", SLOT_REPETITION},
-                 {"consequent basic idea", SLOT_RESTATED},
-                 {"contrasting idea", SLOT_CONTRAST},
-                 {"consequent contrasting idea", SLOT_CONTRAST},
-                 {"fragment 1", SLOT_FRAGMENT_1},
-                 {"fragment 2", SLOT_FRAGMENT_2},
-                 {"cadential", SLOT_CADENTIAL},
-                 {"cadential 1", SLOT_CADENTIAL_ENDING},
-                 {"cadential 2", SLOT_CADENTIAL_ENDING}};
+        GrowSlot function_slot;
+    } SLOTS[] = {{"repetition", SLOT_REPETITION, GROW_SLOT_BASIC},
+                 {"consequent basic idea", SLOT_RESTATED, GROW_SLOT_BASIC},
+                 {"contrasting idea", SLOT_CONTRAST, GROW_SLOT_CONTRASTING},
+                 {"consequent contrasting idea", SLOT_CONTRAST, GROW_SLOT_CONTRASTING},
+                 {"fragment 1", SLOT_FRAGMENT_1, GROW_SLOT_CONTINUATION},
+                 {"fragment 2", SLOT_FRAGMENT_2, GROW_SLOT_CONTINUATION},
+                 {"cadential", SLOT_CADENTIAL, GROW_SLOT_CADENTIAL},
+                 {"cadential 1", SLOT_CADENTIAL_ENDING, GROW_SLOT_CADENTIAL},
+                 {"cadential 2", SLOT_CADENTIAL_ENDING, GROW_SLOT_CADENTIAL}};
     for (size_t i = 0; name && i < sizeof(SLOTS) / sizeof(SLOTS[0]); i++) {
         if (strcmp(name, SLOTS[i].name) == 0) {
+            *function_slot = SLOTS[i].function_slot;
             return SLOTS[i].slot;
         }
     }
     return SLOT_NONE;
+}
+
+unsigned grow_slot_function_bit(GrowSlot slot) {
+    switch (slot) {
+    case GROW_SLOT_BASIC:
+        return GROW_FUNCTION_BEGINNING;
+    case GROW_SLOT_CONTRASTING:
+        return GROW_FUNCTION_CONTRAST;
+    case GROW_SLOT_CONTINUATION:
+        return GROW_FUNCTION_CONTINUATION;
+    case GROW_SLOT_CADENTIAL:
+        return GROW_FUNCTION_CADENTIAL;
+    case GROW_SLOT_COUNT:
+        break;
+    }
+    return 0;
 }
 
 /* The motive_ref of the idea's melody span (voice 0), and that span's. False when the idea has none. */
@@ -192,9 +217,15 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
     if (idea == PLAN_NODE_NONE) {
         return false;
     }
-    request.slot = slot_of(plan_node_name(plan, idea));
+    request.slot = slot_of(plan_node_name(plan, idea), &request.function_slot);
     if (request.slot == SLOT_NONE) {
         return false;
+    }
+    /* The motive the idea is made from is a slot's own when the ref names its node. */
+    for (GrowSlot own = GROW_SLOT_CONTRASTING; own < GROW_SLOT_COUNT; own++) {
+        if (grow_find_slot_node(plan, own) == request.ref.motive) {
+            request.origin = own;
+        }
     }
     request.idea = plan_node_span(plan, idea);
     LaneSpanId lanes[FORM_IDEAS];
@@ -303,6 +334,11 @@ static bool has_function(const char *const *functions, size_t count, const char 
  * is 1 plus the connection (grow_motives_checker).
  */
 static void label_of(const Payload *payload, char *out, size_t size) {
+    if (payload->pool_bonus > 0) {
+        snprintf(out, size, "pool %s %lu%%: %s", payload->item,
+                 payload->connection.total.numerator * 100 / payload->connection.total.denominator, payload->pool_chain);
+        return;
+    }
     char chain[FILL_LABEL_MAX];
     size_t used = 0;
     chain[0] = '\0';
@@ -319,6 +355,25 @@ static void label_of(const Payload *payload, char *out, size_t size) {
     }
     snprintf(out, size, "%s %lu%%: %s%s", chain, total->numerator * 100 / total->denominator, limit,
              payload->record.derivation);
+}
+
+/* Whether a motive fits the idea: a full motive in range, no wider a leap than the basic idea's (a fifth at least) and no
+   longer than the idea's room. */
+static bool form_fits(const Request *request, const Motive *motive) {
+    int allowed = widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP;
+    return motive->form == MOTIVE_FORM_FULL && within_range(motive) && widest_leap(motive) <= allowed &&
+           plan_time_compare(motive->length, request->room) <= 0;
+}
+
+/* An idea that ends in a cadence ends on its tone: the tonic for a PAC, the third for an IAC. */
+static bool cadence_tone_holds(const Request *request, const Motive *motive) {
+    if (!request->has_cadence || motive->key_source == MOTIVE_KEY_UNSPECIFIED) {
+        return true;
+    }
+    int tonic = motive->key.tonic_pitch_class;
+    int last = ((motive->notes[motive->note_count - 1].midi_pitch - tonic) % 12 + 12) % 12;
+    int third = motive->key.mode == PLAN_MODE_MINOR ? 3 : 4;
+    return !((request->cadence == PLAN_CADENCE_PAC && last != 0) || (request->cadence == PLAN_CADENCE_IAC && last != third));
 }
 
 /*
@@ -348,9 +403,7 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
             result.notes[i].midi_pitch += 12;
         }
     }
-    if (result.form != MOTIVE_FORM_FULL || (!fragment && result.note_count != request->basic.note_count) ||
-        !within_range(&result) || widest_leap(&result) > (widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP) ||
-        plan_time_compare(result.length, request->room) > 0 ||
+    if (!form_fits(request, &result) || (!fragment && result.note_count != request->basic.note_count) ||
         (contrast && grow_same_contour(&request->basic, &result))) {
         return true;
     }
@@ -360,14 +413,8 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
             return true;
         }
     }
-    /* An idea that ends in a cadence ends on its tone: the tonic for a PAC, the third for an IAC. */
-    if (request->has_cadence && result.key_source != MOTIVE_KEY_UNSPECIFIED) {
-        int tonic = result.key.tonic_pitch_class;
-        int last = ((result.notes[result.note_count - 1].midi_pitch - tonic) % 12 + 12) % 12;
-        int third = result.key.mode == PLAN_MODE_MINOR ? 3 : 4;
-        if ((request->cadence == PLAN_CADENCE_PAC && last != 0) || (request->cadence == PLAN_CADENCE_IAC && last != third)) {
-            return true;
-        }
+    if (!cadence_tone_holds(request, &result)) {
+        return true;
     }
     /* A cadential idea is a liquidation: fewer notes than the basic idea, as the P13 operators make it. */
     if (request->slot == SLOT_CADENTIAL && request->ref.transform != PLAN_TRANSFORM_RESTATED &&
@@ -411,6 +458,52 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     char label[FILL_LABEL_MAX];
     label_of(payload, label, sizeof(label));
     return fill_candidates_add(proposal->out, label, payload, payload_destroy);
+}
+
+/*
+ * Offers the pool's forms that suit the idea (grow_form.h): approved ones before unflagged ones, so that when two are
+ * the same motive the approved one is the candidate. False only when out of memory.
+ */
+static bool offer_pool(Proposal *proposal, const GrowPoolForm *pool, size_t pool_count) {
+    const Request *request = proposal->request;
+    unsigned wanted = grow_slot_function_bit(request->function_slot);
+    for (int approved = 1; approved >= 0; approved--) {
+        for (size_t i = 0; i < pool_count; i++) {
+            const GrowPoolForm *form = &pool[i];
+            if ((form->approved ? 1 : 0) != approved || !form->motive || form->slot_motive_of != request->origin ||
+                (form->functions & wanted) == 0 || proposal->out->count >= FORM_MAX ||
+                !form_fits(request, form->motive) || !cadence_tone_holds(request, form->motive)) {
+                continue;
+            }
+            bool held = false;
+            for (size_t k = 0; k < proposal->out->count; k++) {
+                held = held || motive_equal(&((const Payload *)proposal->out->items[k].payload)->result, form->motive);
+            }
+            if (held) {
+                continue;
+            }
+            Payload *payload = calloc(1, sizeof(*payload));
+            if (!payload) {
+                return false;
+            }
+            payload->magic = FORM_MAGIC;
+            payload->result = *form->motive;
+            payload->pool_bonus = approved ? 2 : 1;
+            snprintf(payload->item, sizeof(payload->item), "%s", form->item);
+            snprintf(payload->pool_chain, sizeof(payload->pool_chain), "%s", form->chain);
+            if (!motive_connection_limited(&request->basic, &request->previous, form->motive, NULL, &request->limit,
+                                           &payload->connection)) {
+                free(payload);
+                continue;
+            }
+            char label[FILL_LABEL_MAX];
+            label_of(payload, label, sizeof(label));
+            if (!fill_candidates_add(proposal->out, label, payload, payload_destroy)) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 /* One-step chains of every operation the basic idea takes (never exact), open parameters drawn from fixed seeds. */
@@ -508,6 +601,10 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         return true;
     }
     Proposal proposal = {&request, out};
+    const MotiveDevelopContext *shared = context_or_default(context);
+    if (shared->pool_count > 0 && !offer_pool(&proposal, shared->pool, shared->pool_count)) {
+        return false;
+    }
     switch (request.slot) {
     case SLOT_RESTATED:
         return offer_exact(&proposal);
@@ -583,8 +680,14 @@ bool grow_motives_checker(const PiecePlan *plan, FillTarget target, const FillOp
         return motive_develop_checker(plan, target, operator_, candidate, context, out);
     }
     memset(out, 0, sizeof(*out));
-    out->score_numerator = payload->connection.total.numerator + payload->connection.total.denominator;
-    out->score_denominator = payload->connection.total.denominator;
+    unsigned long total = payload->connection.total.denominator;
+    out->score_numerator = payload->connection.total.numerator + total;
+    out->score_denominator = total;
+    if (payload->pool_bonus > 0) {
+        /* A pool form: plus 1/2 when approved, 1/4 when unflagged. */
+        out->score_numerator = 4 * out->score_numerator + payload->pool_bonus * total;
+        out->score_denominator = 4 * total;
+    }
     return true;
 }
 
