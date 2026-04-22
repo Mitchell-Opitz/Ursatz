@@ -85,10 +85,20 @@ StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatis
  * overall distance is the mean of the dimensions that have a category in either model.
  */
 
+/* An exact fraction in lowest terms. The fields are 128 bits wide: the mean of a dimension's categories has a
+   denominator that is the least common multiple of theirs, which does not fit in 64 bits for real corpora. */
+__extension__ typedef unsigned __int128 StyleRationalInt;
+
 typedef struct {
-    unsigned long long numerator;
-    unsigned long long denominator;
+    StyleRationalInt numerator;
+    StyleRationalInt denominator;
 } StyleRational;
+
+/* The fraction as a double. */
+double style_rational_value(StyleRational value);
+
+/* "n/d" in decimal digits, written to at most size bytes, always terminated. */
+void style_rational_format(StyleRational value, char *buffer, size_t size);
 
 typedef struct {
     char *category;

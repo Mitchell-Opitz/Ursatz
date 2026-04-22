@@ -91,10 +91,6 @@ static int run_corpus(const char *input_dir, const char *output_dir, bool resume
     return 0;
 }
 
-static double rational_value(StyleRational r) {
-    return (double)r.numerator / (double)r.denominator;
-}
-
 static void print_json_string(const char *text) {
     putchar('"');
     for (; *text; text++) {
@@ -111,8 +107,16 @@ static void print_json_string(const char *text) {
 }
 
 static void print_json_rational(StyleRational r) {
-    printf("{\"numerator\": %llu, \"denominator\": %llu, \"value\": %.6f}", r.numerator, r.denominator,
-           rational_value(r));
+    char fraction[100];
+    style_rational_format(r, fraction, sizeof fraction);
+    printf("{\"fraction\": \"%s\", \"value\": %.6f}", fraction, style_rational_value(r));
+}
+
+/* "0.1234 (n/d)" */
+static void print_text_rational(StyleRational r) {
+    char fraction[100];
+    style_rational_format(r, fraction, sizeof fraction);
+    printf("%.4f (%s)", style_rational_value(r), fraction);
 }
 
 static void print_json_labels(char *const labels[3]) {
@@ -136,23 +140,24 @@ static void print_text_labels(const char *tag, char *const labels[3]) {
 
 static void print_comparison_text(const StyleComparison *comparison) {
     if (comparison->overall_present) {
-        printf("overall %.4f (%llu/%llu)\n", rational_value(comparison->overall), comparison->overall.numerator,
-               comparison->overall.denominator);
+        printf("overall ");
+        print_text_rational(comparison->overall);
+        printf("\n");
     }
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
         if (!comparison->dimension_present[d]) {
             continue;
         }
-        StyleRational r = comparison->dimension[d];
-        printf("%s %.4f (%llu/%llu)\n", style_dimension_name((StyleDimension)d), rational_value(r), r.numerator,
-               r.denominator);
+        printf("%s ", style_dimension_name((StyleDimension)d));
+        print_text_rational(comparison->dimension[d]);
+        printf("\n");
         for (size_t i = 0; i < comparison->category_count; i++) {
             const StyleCategoryDistance *c = &comparison->categories[i];
             if (c->dimension != (StyleDimension)d) {
                 continue;
             }
-            printf("  %s %.4f (%llu/%llu)", c->category, rational_value(c->distance), c->distance.numerator,
-                   c->distance.denominator);
+            printf("  %s ", c->category);
+            print_text_rational(c->distance);
             print_text_labels("a", c->top_a);
             printf(";");
             print_text_labels("b", c->top_b);

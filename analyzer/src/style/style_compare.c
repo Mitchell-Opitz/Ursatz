@@ -1,21 +1,50 @@
 #include <ursatz_analyzer/style_profile.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef unsigned long long u64;
+typedef StyleRationalInt u128;
 
-static u64 gcd64(u64 a, u64 b) {
+static u128 gcd64(u128 a, u128 b) {
     while (b) {
-        u64 t = a % b;
+        u128 t = a % b;
         a = b;
         b = t;
     }
     return a;
 }
 
-static StyleRational reduce(u64 numerator, u64 denominator) {
-    u64 divisor = gcd64(numerator, denominator);
+double style_rational_value(StyleRational value) {
+    return value.denominator == 0 ? 0.0 : (double)value.numerator / (double)value.denominator;
+}
+
+static size_t format_u128(u128 value, char *digits) {
+    char reversed[48];
+    size_t n = 0;
+    do {
+        reversed[n++] = (char)('0' + (int)(value % 10));
+        value /= 10;
+    } while (value);
+    for (size_t i = 0; i < n; i++) {
+        digits[i] = reversed[n - 1 - i];
+    }
+    digits[n] = '\0';
+    return n;
+}
+
+void style_rational_format(StyleRational value, char *buffer, size_t size) {
+    if (!buffer || size == 0) {
+        return;
+    }
+    char numerator[48], denominator[48];
+    format_u128(value.numerator, numerator);
+    format_u128(value.denominator, denominator);
+    snprintf(buffer, size, "%s/%s", numerator, denominator);
+}
+
+static StyleRational reduce(u128 numerator, u128 denominator) {
+    u128 divisor = gcd64(numerator, denominator);
     if (divisor > 1) {
         numerator /= divisor;
         denominator /= divisor;
@@ -25,10 +54,10 @@ static StyleRational reduce(u64 numerator, u64 denominator) {
 
 /* x + y, exact and reduced; false on overflow. */
 static bool rational_add(StyleRational x, StyleRational y, StyleRational *out) {
-    u64 divisor = gcd64(x.denominator, y.denominator);
-    u64 left_scale = y.denominator / divisor;
-    u64 right_scale = x.denominator / divisor;
-    u64 denominator, left, right, numerator;
+    u128 divisor = gcd64(x.denominator, y.denominator);
+    u128 left_scale = y.denominator / divisor;
+    u128 right_scale = x.denominator / divisor;
+    u128 denominator, left, right, numerator;
     if (__builtin_mul_overflow(x.denominator, left_scale, &denominator) ||
         __builtin_mul_overflow(x.numerator, left_scale, &left) ||
         __builtin_mul_overflow(y.numerator, right_scale, &right) || __builtin_add_overflow(left, right, &numerator)) {
@@ -39,8 +68,8 @@ static bool rational_add(StyleRational x, StyleRational y, StyleRational *out) {
 }
 
 /* x / count, exact and reduced; false on overflow. */
-static bool rational_divide(StyleRational x, u64 count, StyleRational *out) {
-    u64 denominator;
+static bool rational_divide(StyleRational x, u128 count, StyleRational *out) {
+    u128 denominator;
     if (__builtin_mul_overflow(x.denominator, count, &denominator)) {
         return false;
     }
@@ -56,18 +85,18 @@ typedef struct {
 
 /* Total variation distance between two slices (either may be empty only if both categories exist). */
 static bool slice_distance(Slice a, Slice b, StyleRational *out) {
-    u64 total_a = a.items[0].total, total_b = b.items[0].total;
-    u64 common;
+    u128 total_a = a.items[0].total, total_b = b.items[0].total;
+    u128 common;
     if (__builtin_mul_overflow(total_a, total_b, &common)) {
         return false;
     }
-    u64 sum = 0;
+    u128 sum = 0;
     size_t i = 0, j = 0;
     while (i < a.count || j < b.count) {
         int order = i == a.count ? 1 : (j == b.count ? -1 : strcmp(a.items[i].label, b.items[j].label));
-        u64 count_a = order <= 0 ? a.items[i].count : 0;
-        u64 count_b = order >= 0 ? b.items[j].count : 0;
-        u64 left, right, difference;
+        u128 count_a = order <= 0 ? a.items[i].count : 0;
+        u128 count_b = order >= 0 ? b.items[j].count : 0;
+        u128 left, right, difference;
         if (__builtin_mul_overflow(count_a, total_b, &left) || __builtin_mul_overflow(count_b, total_a, &right)) {
             return false;
         }
@@ -82,7 +111,7 @@ static bool slice_distance(Slice a, Slice b, StyleRational *out) {
             j++;
         }
     }
-    u64 denominator;
+    u128 denominator;
     if (__builtin_mul_overflow(common, 2, &denominator)) {
         return false;
     }
@@ -157,7 +186,7 @@ StyleCompareResult style_profile_compare(const StyleModel *model_a, const StyleM
         goto done;
     }
     StyleRational dimension_sum[STYLE_DIMENSION_COUNT] = {{0, 1}, {0, 1}, {0, 1}, {0, 1}};
-    u64 dimension_categories[STYLE_DIMENSION_COUNT] = {0};
+    u128 dimension_categories[STYLE_DIMENSION_COUNT] = {0};
     size_t i = 0, j = 0;
     while (i < count_a || j < count_b) {
         size_t end_a = i < count_a ? category_end(a, i, count_a) : i;
@@ -203,7 +232,7 @@ StyleCompareResult style_profile_compare(const StyleModel *model_a, const StyleM
         }
     }
     StyleRational overall_sum = {0, 1};
-    u64 dimensions = 0;
+    u128 dimensions = 0;
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
         if (dimension_categories[d] == 0) {
             continue;
