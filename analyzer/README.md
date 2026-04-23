@@ -72,6 +72,10 @@ Tests:
   against `tests/snapshots/corpus-index.reference.json`, each document byte for byte equal to a single-file run, and
   the resume rules. `test_cli_corpus` checks the flags and exit codes. `test_corpus_index_schema` validates the index
   against the schema (see below).
+- `test_style_profile`: the style labels on hand cases, the profile of the `reference` corpus against
+  `tests/snapshots/style-model.reference.json`, the model file round trip, the distances between the `chorales` and
+  `sonatinas` corpora CMake builds in the build tree, and the refusals. `test_cli_style_profile` checks the flags and exit
+  codes. `test_style_model_schema` validates the model file against the schema (see below).
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
@@ -110,6 +114,15 @@ Corpus mode analyzes every MIDI and MusicXML file under a folder and writes one 
 corpus index. See [docs/corpus.md](docs/corpus.md) and the [index schema](schema/corpus-index.v1.schema.json).
 It cannot be combined with an input file, `--json`, `--check-counterpoint`, `--cantus` or `--input-format`.
 
+```sh
+ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]
+ursatz-analyzer --compare-styles <a.json> <b.json> [--format text|json]
+```
+
+`--style-profile` counts the harmony, rhythm, melody and form labels of a corpus run's documents and writes them as a
+style model file; `--compare-styles` gives the exact distance between two such files. See
+[docs/style-profile.md](docs/style-profile.md) and the [model schema](schema/style-model.v1.schema.json).
+
 ## Library
 
 The pipeline builds as the `ursatz_analyzer` static library. The CLI and the tests link it.
@@ -128,6 +141,8 @@ Its public include directory is `include/`, and consumers include headers as
 | `markdown_report.h` | Renders an `AnalysisDocument` as the Markdown report, section by section. |
 | `report_writer.h` | Derives the `<stem>.report.md` path and writes the file. |
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
+| `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
+| `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
 
 Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
