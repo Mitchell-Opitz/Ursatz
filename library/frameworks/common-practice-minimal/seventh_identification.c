@@ -9,7 +9,7 @@
 /* Root-relative semitone intervals (0-11) for each diatonic seventh-chord
    quality, compared as an unordered set -- see header for the tie-break
    rule. */
-static const int SEVENTH_INTERVALS[COMMON_PRACTICE_SEVENTH_COUNT][SEVENTH_INTERVAL_COUNT] = {
+static const int SEVENTH_INTERVALS[COMMON_PRACTICE_SEVENTH_MAJOR_KEY_COUNT][SEVENTH_INTERVAL_COUNT] = {
     {0, 4, 7, 10}, /* dominant7 */
     {0, 4, 7, 11}, /* major7 */
     {0, 3, 7, 10}, /* minor7 */
@@ -54,7 +54,7 @@ bool common_practice_identify_seventh(const int *root_relative_intervals, size_t
 
     bool found = false;
     CommonPracticeSeventh picked = (CommonPracticeSeventh)0;
-    for (int seventh = 0; seventh < COMMON_PRACTICE_SEVENTH_COUNT; seventh++) {
+    for (int seventh = 0; seventh < COMMON_PRACTICE_SEVENTH_MAJOR_KEY_COUNT; seventh++) {
         bool matches = true;
         for (int i = 0; i < SEVENTH_INTERVAL_COUNT; i++) {
             if (!contains_interval(distinct, distinct_count, SEVENTH_INTERVALS[seventh][i])) {

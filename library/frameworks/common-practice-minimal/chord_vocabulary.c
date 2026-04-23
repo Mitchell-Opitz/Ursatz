@@ -35,6 +35,12 @@ static const TriadDescriptor DESCRIPTORS[COMMON_PRACTICE_TRIAD_COUNT] = {
      "common-practice-minimal-chord-vi"},
     {"vii\xC2\xB0", "common-practice-minimal-rule-vii-dim", "common-practice-minimal-constraint-vii-dim",
      "common-practice-minimal-chord-vii-dim"},
+    {"augmented", "common-practice-minimal-rule-augmented", "common-practice-minimal-constraint-augmented",
+     "common-practice-minimal-chord-augmented"},
+};
+
+static const int TRIAD_INTERVALS[COMMON_PRACTICE_TRIAD_COUNT][3] = {
+    {0, 4, 7}, {0, 3, 7}, {0, 3, 7}, {0, 4, 7}, {0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8},
 };
 
 static Rule *g_rules[COMMON_PRACTICE_TRIAD_COUNT];
@@ -43,6 +49,16 @@ static bool g_init_attempted[COMMON_PRACTICE_TRIAD_COUNT];
 
 static bool valid_triad(CommonPracticeTriad triad) {
     return triad >= 0 && triad < COMMON_PRACTICE_TRIAD_COUNT;
+}
+
+bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]) {
+    if (!valid_triad(triad) || out == NULL) {
+        return false;
+    }
+    for (int i = 0; i < 3; i++) {
+        out[i] = TRIAD_INTERVALS[triad][i];
+    }
+    return true;
 }
 
 static void ensure_built(CommonPracticeTriad triad) {

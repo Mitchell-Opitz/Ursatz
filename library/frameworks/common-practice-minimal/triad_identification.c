@@ -8,7 +8,7 @@
 
 /* Root, third, fifth scale degrees (1-7) for each diatonic triad,
    compared as an unordered set -- see header for the tie-break rule. */
-static const int TRIAD_DEGREES[COMMON_PRACTICE_TRIAD_COUNT][TRIAD_DEGREE_COUNT] = {
+static const int TRIAD_DEGREES[COMMON_PRACTICE_TRIAD_MAJOR_KEY_COUNT][TRIAD_DEGREE_COUNT] = {
     {1, 3, 5}, /* I   */
     {2, 4, 6}, /* ii  */
     {3, 5, 7}, /* iii */
@@ -55,7 +55,7 @@ bool common_practice_identify_triad(const int *scale_degrees, size_t scale_degre
 
     bool found = false;
     CommonPracticeTriad picked = (CommonPracticeTriad)0;
-    for (int triad = 0; triad < COMMON_PRACTICE_TRIAD_COUNT; triad++) {
+    for (int triad = 0; triad < COMMON_PRACTICE_TRIAD_MAJOR_KEY_COUNT; triad++) {
         bool matches = true;
         for (int i = 0; i < TRIAD_DEGREE_COUNT; i++) {
             if (!contains_degree(distinct, distinct_count, TRIAD_DEGREES[triad][i])) {

@@ -1,6 +1,8 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_CHORD_VOCABULARY_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_CHORD_VOCABULARY_H
 
+#include <stdbool.h>
+
 #include "identity/entity_id.h"
 #include "interpretation/chord.h"
 #include "rules/constraint.h"
@@ -30,10 +32,23 @@ typedef enum {
     COMMON_PRACTICE_TRIAD_V,
     COMMON_PRACTICE_TRIAD_VI,
     COMMON_PRACTICE_TRIAD_VII_DIM,
+    COMMON_PRACTICE_TRIAD_AUGMENTED,
     COMMON_PRACTICE_TRIAD_COUNT
 } CommonPracticeTriad;
 
-/* Roman-numeral label this framework assigns, e.g. "I", "ii", "vii\xC2\xB0". */
+/* The first seven triads are the degree-indexed diatonic set of a major key: the subset matcher
+   (triad_identification.h) scans only these. Later entries are qualities that no major key gives. */
+#define COMMON_PRACTICE_TRIAD_MAJOR_KEY_COUNT 7
+
+/*
+ * The triad's quality as root-relative semitones, ascending, written to out[3]: I IV V major {0,4,7},
+ * ii iii vi minor {0,3,7}, vii-dim diminished {0,3,6}, augmented {0,4,8}. False (out untouched) for an
+ * invalid triad.
+ */
+bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]);
+
+/* Roman-numeral label this framework assigns, e.g. "I", "ii", "vii\xC2\xB0"; the augmented triad, which no
+   major key gives, is labeled by its quality, "augmented". */
 const char *common_practice_triad_label(CommonPracticeTriad triad);
 
 /*
