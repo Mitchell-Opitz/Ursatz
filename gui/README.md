@@ -65,9 +65,9 @@ message). The choice filters the Motifs, Themes and Pieces views and is
 remembered in the browser. Each view lists its items (name, project, current
 version, updated) with a New row (name and project). A row opens the detail:
 the name and project are editable, the uses are listed, and the versions list
-(number, date, note) lets any version be viewed read-only. Pieces have no
-body editor yet (themes have one, below). Subjects and item references come
-in later branches.
+(number, date, note) lets any version be viewed read-only. Themes and pieces
+have body editors (below). Subjects and item references come in later
+branches.
 
 #### Motif editor
 
@@ -132,6 +132,59 @@ categories read without, the style distance, the form heard and the Analyzer
 check. Below it are the score of `theme.musicxml` in the score workspace and a
 MIDI download. Playback is built in the browser from `theme.mid`
 (`playbackFromMidi`), since the backend has no playback route for theme files.
+
+#### Pieces view
+
+A piece's detail holds the piece editor (`pieces-view.js`; the helpers are in
+`pieces-model.js`, global `PiecesModel`). It edits the piece body the backend
+composes (see Piece bodies and version files) and reuses the Themes view's
+builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
+
+- Header: key, mode (major, minor, From the brief), meter and tempo (blank
+  takes the brief's).
+- Structure strip: four lanes, Intro, Loop body, Turnaround and Ending, each a
+  row of section blocks as wide as their beats. Add section puts a section at
+  the end of its lane. Selecting a block opens its editor: letter, length (a
+  bars and a beats input, giving beats), pickup (beats of anacrusis, `0` for
+  none, or `n` or `n/d` such as `1` and `1/2`; shorter than a bar), cadence
+  (Default shows the default, R-169: HC at the end of the intro and of the
+  loop, PAC at the end of the ending, IAC elsewhere), Move left and Move right
+  within the part, and Remove section. A piece has 1 to 32 sections and at
+  least one in the loop body.
+- Fill: Empty, Motif, Theme or Progression. Any fill may be left empty and
+  saved; one that names nothing is saved as empty. A motif fill has a motif
+  picker and, at 4 or 8 whole bars without a pickup, into sentence, period or
+  hybrid (with its pairing); any other length shows "Free phrase". A theme
+  fill picks a composed theme version (a theme with no composed version asks
+  to be composed first), shows its form and key and sets the section's length
+  from the theme; a section whose length differs from the theme's is a
+  problem. A progression fill is numerals (such as `I vi IV V`) and cells per
+  chord; it does not change the section's cadence.
+- Basic motive (optional), Pool, Accompaniment (none or a pattern; a piece has
+  no accompaniment motif) and Brief (chips, the four motive switches, weight,
+  seed, Check with the Analyzer) are the Themes view's.
+
+Save as new version writes a version without `result`. Compose saves first
+when the form changed, then calls the compose route with the buttons disabled
+and a spinner; a refusal shows the backend's message and the Composer's. A
+motif or theme with a newer version shows "Source updated: <name> v<n>" with
+Update and compose and Keep.
+
+The Result panel of the current version, and of any version opened from the
+versions list (read-only), shows the seed, key, loop region, brief and, for
+the loop version and the ending version, a row for each section (section,
+part, letter, start, length, cadence planned and heard, fill, source), the
+score, the seam rules that held (loop only), the Analyzer check and the style
+distance. Below are the MIDI downloads and the scores in the score workspace,
+`loop.musicxml` with a tab for `ending.musicxml`, with playback built in the
+browser from `loop.mid` or `ending.mid` (`playbackFromMidi`).
+
+On the current version each section of the loop has Regenerate (lane: all
+lanes, harmony, bass, melody or inner; seed) and Variations (lane, count 1 to
+8, seed). A regenerate becomes the next version. Variations show side by side
+as small scores with Choose, which makes one the next version. A section
+filled with a theme offers harmony and bass only; an ending section offers
+neither. Harmonize is Variations on harmony.
 
 ### Item references in the GUI
 

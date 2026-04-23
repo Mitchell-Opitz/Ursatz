@@ -1164,6 +1164,29 @@ async function renderMaterialsDetail(type, id, analysisError) {
       content.appendChild(resultEl);
     }
   }
+  if (type === "piece") {
+    const editor = buildPieceEditor({
+      id,
+      body: answer.data.body,
+      usesStatus: answer.data.uses_status,
+      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      statusEl,
+      saved: () => renderMaterialsDetail(type, id),
+    });
+    content.appendChild(editor.el);
+    const resultEl = buildPieceResult({
+      id,
+      version: item.current_version,
+      piece: answer.data.body.piece,
+      nameOf: itemNameOf,
+      title: item.name,
+      statusEl,
+      saved: () => renderMaterialsDetail(type, id),
+    });
+    if (resultEl) {
+      content.appendChild(resultEl);
+    }
+  }
   content.appendChild(
     buildUsesSection({
       id,
@@ -1175,10 +1198,12 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }),
   );
   content.appendChild(buildUsedBySection(answer.data.used_by));
-  const renderThemeVersion =
-    type === "theme"
-      ? (number, body) => themeVersionView(versionEl, id, number, body, itemNameOf, item.name)
-      : undefined;
+  let renderThemeVersion;
+  if (type === "theme") {
+    renderThemeVersion = (number, body) => themeVersionView(versionEl, id, number, body, itemNameOf, item.name);
+  } else if (type === "piece") {
+    renderThemeVersion = (number, body) => pieceVersionView(versionEl, id, number, body, itemNameOf, item.name);
+  }
   content.appendChild(buildVersionsList(item, versionEl, statusEl, renderThemeVersion));
   content.appendChild(versionEl);
 }

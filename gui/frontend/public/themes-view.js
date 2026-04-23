@@ -200,8 +200,10 @@ function buildThemeMotifPicker(options) {
   return { el, setValue };
 }
 
-/* The pool section: the saved forms each slot motif has, by flag. */
-function buildThemePoolSection(state, itemName, onPool) {
+/* The pool section: the saved forms each motif has, by flag. entries() lists {label, item_id} of the motifs; it
+ * defaults to the slots of the theme. */
+function buildThemePoolSection(state, itemName, onPool, entries) {
+  const motifs = entries || (() => state.slots.map((entry) => ({ label: ThemesModel.SLOT_LABELS[entry.slot], item_id: entry.item_id })));
   const section = materialsElement("div");
   section.appendChild(materialsElement("h3", "section-title", "Pool"));
   const poolSelect = themeSelect(ThemesModel.POOLS, state.pool);
@@ -213,8 +215,8 @@ function buildThemePoolSection(state, itemName, onPool) {
   /* Redraws the counts for the slots now chosen. */
   async function refresh() {
     list.innerHTML = "";
-    for (const entry of state.slots) {
-      const li = materialsElement("li", "", `${ThemesModel.SLOT_LABELS[entry.slot]}: ${itemName(entry.item_id)} · `);
+    for (const entry of motifs()) {
+      const li = materialsElement("li", "", `${entry.label}: ${itemName(entry.item_id)} · `);
       list.appendChild(li);
       const answer = await sendMaterialsRequest({ method: "GET", url: `/api/materials/items/${encodeURIComponent(entry.item_id)}/variant-tree` });
       li.appendChild(
@@ -237,12 +239,14 @@ async function loadThemeBriefChoices() {
   return choices;
 }
 
-/* The brief section: chips of what is picked, the picker, the motive switches, weight, tempo, check and seed. */
-function buildThemeBriefSection(state) {
+/* The brief section: chips of what is picked, the picker, the motive switches, weight, tempo, check and seed.
+ * options: {emptyText (shown without a brief), tempo (false when the tempo is set elsewhere)}. */
+function buildThemeBriefSection(state, options) {
+  const o = options || {};
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Brief"));
   const chipsEl = materialsElement("div", "theme-chips");
-  const emptyEl = materialsElement("div", "piece-list-status", "No brief: the theme is grown without a style.");
+  const emptyEl = materialsElement("div", "piece-list-status", o.emptyText || "No brief: the theme is grown without a style.");
   const picker = materialsElement("div", "upload-controls");
   let names = {};
   let choices = null;
@@ -374,16 +378,18 @@ function buildThemeBriefSection(state) {
   }
   section.appendChild(switches);
 
-  const options = materialsElement("div", "upload-controls");
-  const weight = themeField(options, "Weight", themeSelect(ThemesModel.WEIGHTS, state.weight));
+  const controls = materialsElement("div", "upload-controls");
+  const weight = themeField(controls, "Weight", themeSelect(ThemesModel.WEIGHTS, state.weight));
   weight.addEventListener("input", () => {
     state.weight = weight.value;
   });
-  const tempo = themeField(options, "Tempo", themeInput("from the brief", state.tempo));
-  tempo.addEventListener("input", () => {
-    state.tempo = tempo.value;
-  });
-  const seed = themeField(options, "Seed", themeInput("random", state.seed));
+  if (o.tempo !== false) {
+    const tempo = themeField(controls, "Tempo", themeInput("from the brief", state.tempo));
+    tempo.addEventListener("input", () => {
+      state.tempo = tempo.value;
+    });
+  }
+  const seed = themeField(controls, "Seed", themeInput("random", state.seed));
   seed.addEventListener("input", () => {
     state.seed = seed.value;
   });
@@ -395,8 +401,8 @@ function buildThemeBriefSection(state) {
     state.check = check.checked;
   });
   checkLabel.prepend(check);
-  options.appendChild(checkLabel);
-  section.appendChild(options);
+  controls.appendChild(checkLabel);
+  section.appendChild(controls);
   return section;
 }
 
@@ -412,12 +418,14 @@ function themeFacts(rows) {
   return list;
 }
 
-/* Mounts the version's theme.musicxml in the score workspace, with playback from its theme.mid. */
-async function themeMountScore(host, id, version, title) {
+/* Mounts a version's score in the score workspace, with playback from its MIDI file. options: {midi, musicxml,
+ * subtitle} name the files and the subtitle (a theme's by default). */
+async function themeMountScore(host, id, version, title, options) {
+  const o = options || {};
   const files = (name) => ThemesModel.versionFileUrl(id, version, name);
   let playbackUrl = null;
   try {
-    const midi = await fetch(files("theme.mid"));
+    const midi = await fetch(files(o.midi || "theme.mid"));
     const playback = midi.ok ? ThemesModel.playbackFromMidi(await midi.arrayBuffer()) : null;
     if (playback) {
       playbackUrl = URL.createObjectURL(new Blob([JSON.stringify(playback)], { type: "application/json" }));
@@ -431,8 +439,8 @@ async function themeMountScore(host, id, version, title) {
   host.innerHTML = "";
   host.themeWorkspace = ScoreWorkspace.mount(host, {
     title,
-    subtitle: `theme · v${version}`,
-    musicxmlUrl: files("theme.musicxml"),
+    subtitle: o.subtitle || `theme · v${version}`,
+    musicxmlUrl: files(o.musicxml || "theme.musicxml"),
     playbackUrl,
   });
 }
@@ -506,6 +514,48 @@ function themeVersionView(viewEl, id, number, body, nameOf, title) {
   );
   const result = buildThemeResult({ id, version: number, theme, nameOf, title });
   viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
+}
+
+/* The accompaniment section: none, a pattern or (when options.motif is not false) a motif. state.accompaniment is
+ * {kind, pattern, item_id, version}; itemsOf() lists the items for the motif picker. */
+function buildThemeAccompanimentSection(state, itemsOf, options) {
+  const withMotif = !options || options.motif !== false;
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h2", "section-title", "Accompaniment"));
+  const accompaniment = materialsElement("div", "upload-controls");
+  const accKind = themeField(
+    accompaniment,
+    "Accompaniment",
+    themeSelect(
+      [
+        { value: "none", label: "None" },
+        { value: "pattern", label: "A pattern" },
+        ...(withMotif ? [{ value: "motive", label: "A motif" }] : []),
+      ],
+      state.accompaniment.kind,
+    ),
+  );
+  const accPattern = themeField(accompaniment, "Pattern", themeSelect(ThemesModel.PATTERNS, state.accompaniment.pattern || "any"));
+  const accPicker = buildThemeMotifPicker({
+    role: "accompaniment",
+    items: itemsOf,
+    onChange: (value) => {
+      state.accompaniment.item_id = value ? value.item_id : "";
+      state.accompaniment.version = value ? value.version : 0;
+    },
+  });
+  accPicker.setValue(state.accompaniment);
+  function syncAccompaniment() {
+    state.accompaniment.kind = accKind.value;
+    state.accompaniment.pattern = accPattern.value;
+    accPattern.parentElement.hidden = accKind.value !== "pattern";
+    accPicker.el.hidden = accKind.value !== "motive";
+  }
+  accKind.addEventListener("input", syncAccompaniment);
+  accPattern.addEventListener("input", syncAccompaniment);
+  syncAccompaniment();
+  section.append(accompaniment, accPicker.el);
+  return section;
 }
 
 /*
@@ -597,41 +647,7 @@ function buildThemeEditor(ctx) {
   el.appendChild(pool.el);
   pool.refresh();
 
-  /* Accompaniment */
-  el.appendChild(materialsElement("h2", "section-title", "Accompaniment"));
-  const accompaniment = materialsElement("div", "upload-controls");
-  const accKind = themeField(
-    accompaniment,
-    "Accompaniment",
-    themeSelect(
-      [
-        { value: "none", label: "None" },
-        { value: "pattern", label: "A pattern" },
-        { value: "motive", label: "A motif" },
-      ],
-      state.accompaniment.kind,
-    ),
-  );
-  const accPattern = themeField(accompaniment, "Pattern", themeSelect(ThemesModel.PATTERNS, state.accompaniment.pattern || "any"));
-  const accPicker = buildThemeMotifPicker({
-    role: "accompaniment",
-    items: itemsOf,
-    onChange: (value) => {
-      state.accompaniment.item_id = value ? value.item_id : "";
-      state.accompaniment.version = value ? value.version : 0;
-    },
-  });
-  accPicker.setValue(state.accompaniment);
-  function syncAccompaniment() {
-    state.accompaniment.kind = accKind.value;
-    state.accompaniment.pattern = accPattern.value;
-    accPattern.parentElement.hidden = accKind.value !== "pattern";
-    accPicker.el.hidden = accKind.value !== "motive";
-  }
-  accKind.addEventListener("input", syncAccompaniment);
-  accPattern.addEventListener("input", syncAccompaniment);
-  syncAccompaniment();
-  el.append(accompaniment, accPicker.el);
+  el.appendChild(buildThemeAccompanimentSection(state, itemsOf));
 
   el.appendChild(buildThemeBriefSection(state));
 
