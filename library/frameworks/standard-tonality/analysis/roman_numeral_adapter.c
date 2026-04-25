@@ -136,11 +136,17 @@ bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *inpu
         return false;
     }
     StandardTonalityRomanNumeral numeral;
-    if (!numeral_from_intervals(input->intervals, input->interval_count, degree, &numeral) ||
-        !standard_tonality_roman_numeral_is_unambiguous(&numeral)) {
+    if (!numeral_from_intervals(input->intervals, input->interval_count, degree, &numeral)) {
         return false;
     }
     bool minor = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
+    /* "IV7" is a major seventh in a major key; in minor no natural or harmonic IV is major, so IV7 is melodic
+       minor's dominant seventh on the 4th, the one uppercase seventh off the dominant that is not ambiguous. */
+    bool melodic_dominant_seventh = minor && degree == 4 && numeral.seventh &&
+                                    numeral.seventh_quality == STANDARD_TONALITY_SEVENTH_MAJOR_MINOR;
+    if (!standard_tonality_roman_numeral_is_unambiguous(&numeral) && !melodic_dominant_seventh) {
+        return false;
+    }
     bool fits = !raised_sixth && standard_tonality_roman_numeral_fits_key(input->mode, degree, raised, &numeral);
     if (!fits && !(minor && melodic_minor_fits(degree, raised, raised_sixth, &numeral))) {
         return false;
