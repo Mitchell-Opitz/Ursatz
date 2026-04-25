@@ -33,6 +33,9 @@ typedef enum {
     COMMON_PRACTICE_TRIAD_VI,
     COMMON_PRACTICE_TRIAD_VII_DIM,
     COMMON_PRACTICE_TRIAD_AUGMENTED,
+    COMMON_PRACTICE_TRIAD_MAJOR,
+    COMMON_PRACTICE_TRIAD_MINOR,
+    COMMON_PRACTICE_TRIAD_DIMINISHED,
     COMMON_PRACTICE_TRIAD_COUNT
 } CommonPracticeTriad;
 
@@ -48,7 +51,8 @@ typedef enum {
 bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]);
 
 /* Roman-numeral label this framework assigns, e.g. "I", "ii", "vii\xC2\xB0"; the augmented triad, which no
-   major key gives, is labeled by its quality, "augmented". */
+   major key gives, is labeled by its quality, "augmented". The key-independent qualities the minor vocabulary
+   uses (a triad that is major, minor or diminished on any degree) are labeled "major", "minor", "diminished". */
 const char *common_practice_triad_label(CommonPracticeTriad triad);
 
 /*

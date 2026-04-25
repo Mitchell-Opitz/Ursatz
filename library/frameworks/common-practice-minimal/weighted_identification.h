@@ -63,7 +63,7 @@ typedef enum {
     COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT,
     COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG,
     COMMON_PRACTICE_WEIGHTED_ERR_BAD_MEMBER,
-    COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE,
+    COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE, /* a mode that is neither major nor minor */
     COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC,
     COMMON_PRACTICE_WEIGHTED_ERR_ALLOC
 } CommonPracticeWeightedStatus;
@@ -86,13 +86,31 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
                                                              CommonPracticeWeights *out);
 
 /*
- * SCORING (step 2). The candidates are the 14 diatonic chords of a MAJOR key: the seven diatonic triads
- * (I ii iii IV V vi vii-dim, chord_vocabulary.h) and the seven diatonic sevenths, each root taking the
- * seventh quality its scale gives (I and IV major7, ii iii vi minor7, V dominant7, vii half-diminished7;
- * chord_vocabulary_seventh.h). Fully-diminished sevenths, chromatic and applied chords are not
- * candidates. The key comes from the caller (a whole-piece key until local key regions exist). A minor
- * key is COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE: this vocabulary is the major-key set, and
- * labelling a minor key is Roman numeral work for standard-tonality.
+ * SCORING (step 2). The candidates are the diatonic chords of the key's own mode.
+ *
+ * MAJOR. The 14 chords of a major key: the seven diatonic triads (I ii iii IV V vi vii-dim, chord_vocabulary.h)
+ * and the seven diatonic sevenths, each root taking the seventh quality its scale gives (I and IV major7, ii iii
+ * vi minor7, V dominant7, vii half-diminished7; chord_vocabulary_seventh.h).
+ *
+ * MINOR. The union of the diatonic triads and sevenths of natural, harmonic and melodic minor, 26 chords, by
+ * semitones above the tonic (triads; sevenths):
+ *
+ *     0   minor                      minor7
+ *     2   diminished, minor          half-diminished7, minor7
+ *     3   major, augmented           major7
+ *     5   minor, major               minor7, dominant7
+ *     7   major, minor               dominant7, minor7
+ *     8   major                      major7
+ *     9   diminished                 half-diminished7
+ *     10  major                      dominant7
+ *     11  diminished                 diminished7, half-diminished7
+ *
+ * It includes the augmented III and the fully-diminished vii-dim-7 and leaves out the minor-major and
+ * augmented-major sevenths. Minor triads are quality-labeled ("minor", "major", "diminished", "augmented"):
+ * a degree numeral depends on the form of the scale, which is standard-tonality's work.
+ *
+ * Fully-diminished sevenths outside minor, chromatic and applied chords are not candidates. The key comes from
+ * the caller (a whole-piece key until local key regions exist).
  *
  *     score = (weight of the chord's pitch classes / total weight)
  *             - missing_third_penalty   if the chord's third has no weight at all
@@ -101,33 +119,45 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
  * A score can therefore run from below 0 to 1.05 with the defaults. A candidate is only eligible if its ROOT
  * sounds (has weight): a chord whose root is absent is not a reading the notes support. Without this, a plain
  * C-E-G is fully covered by A minor seventh (A C E G) and every bare triad would tie with the seventh above
- * it. So fewer than 14 candidates may be ranked (none when nothing diatonic sounds as a root). The ranking is
+ * it. So fewer candidates may be ranked (none when nothing diatonic sounds as a root). The ranking is
  * best first. Two scores within TOLERANCE (1e-9) are tied, and a tie goes: to the chord whose root is the
- * bass (root position), then to the triad over the seventh, then to the lower scale degree, so the ranking is
- * total and deterministic.
+ * bass (root position), then to the triad over the seventh, then to the lower scale degree, then to the lower
+ * root, then (the same root in two forms of minor) to the FORM: the raised form wins for V, V7, vii-dim and
+ * vii-dim-7, the natural form everywhere else (minor v over V is not preferred; V over v is; iv over IV;
+ * III over III+; ii-dim over ii). The ranking is total and deterministic.
  */
 
-#define COMMON_PRACTICE_CANDIDATE_COUNT 14
+#define COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT 14
+#define COMMON_PRACTICE_MINOR_CANDIDATE_COUNT 26
+#define COMMON_PRACTICE_CANDIDATE_COUNT COMMON_PRACTICE_MINOR_CANDIDATE_COUNT /* the most any mode ranks */
 
 typedef struct {
-    int degree;                 /* 1..7: the chord's root as a scale degree */
+    int degree;                 /* 1..7: the chord's root as a scale degree (minor: 6 and 7 also for the raised forms) */
     bool is_seventh;
-    CommonPracticeTriad triad;  /* the triad on this degree (for a seventh, the triad it is built on) */
+    CommonPracticeTriad triad;  /* major: the triad on this degree (for a seventh, the triad it is built on).
+                                   minor: the triad's quality (COMMON_PRACTICE_TRIAD_MAJOR, _MINOR, _DIMINISHED,
+                                   _AUGMENTED), on a seventh the quality of the triad it is built on */
     CommonPracticeSeventh seventh; /* the seventh quality; meaningful only when is_seventh */
     int root_pitch_class;       /* 0..11 */
     double score;
+    int tonic_offset;           /* the root's semitones above the tonic, 0..11 */
+    int form_rank;              /* 0: preferred form on a tie; 1: the other form of the same root (minor only) */
 } CommonPracticeRankedChord;
 
-/* Ranks the eligible candidates (root sounding) for weights in a major key on tonic_pitch_class (0..11),
-   best first: *out_count of them, at most COMMON_PRACTICE_CANDIDATE_COUNT, may be 0. */
+/* Ranks the eligible candidates (root sounding) for weights in a key on tonic_pitch_class (0..11) in the
+   given mode, best first: *out_count of them, at most COMMON_PRACTICE_CANDIDATE_COUNT, may be 0. */
 CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPracticeWeights *weights,
                                                               int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                               const CommonPracticeWeightedConfig *config,
                                                               CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT],
                                                               size_t *out_count);
 
-/* The chord's pitch classes as a 12-bit mask (bit pc set), for a key on tonic_pitch_class: its root, third
-   and fifth, and its seventh when is_seventh. 0 for an invalid chord or tonic. */
+/* The chord's quality as root-relative semitones, ascending, in out[4]: 3 of them for a triad, 4 for a seventh.
+   Returns the count, 0 for an invalid chord. */
+size_t common_practice_ranked_chord_intervals(const CommonPracticeRankedChord *chord, int out[4]);
+
+/* The chord's pitch classes as a 12-bit mask (bit pc set): its root, third and fifth, and its seventh when
+   is_seventh. 0 for an invalid chord. tonic_pitch_class (0..11) is only validated: the chord carries its root. */
 unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chord, int tonic_pitch_class);
 
 #endif

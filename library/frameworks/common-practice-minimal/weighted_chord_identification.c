@@ -58,46 +58,13 @@ static unsigned long millionths(double confidence) {
     return (unsigned long)(confidence * (double)CONFIDENCE_DENOMINATOR + 0.5);
 }
 
-/* The candidate's quality as root-relative semitones. In a major key the triads on degrees 1 4 5 are major,
-   2 3 6 minor, 7 diminished; the four seventh qualities are fixed by their name. */
-static size_t candidate_intervals(const CommonPracticeRankedChord *candidate, int intervals[4]) {
-    static const int MAJOR_TRIAD[3] = {0, 4, 7};
-    static const int MINOR_TRIAD[3] = {0, 3, 7};
-    static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
-    static const int SEVENTHS[COMMON_PRACTICE_SEVENTH_COUNT][4] = {
-        {0, 4, 7, 10}, {0, 4, 7, 11}, {0, 3, 7, 10}, {0, 3, 6, 10}};
-    if (candidate->is_seventh) {
-        for (int i = 0; i < 4; i++) {
-            intervals[i] = SEVENTHS[candidate->seventh][i];
-        }
-        return 4;
-    }
-    const int *triad = MAJOR_TRIAD;
-    switch (candidate->triad) {
-    case COMMON_PRACTICE_TRIAD_II:
-    case COMMON_PRACTICE_TRIAD_III:
-    case COMMON_PRACTICE_TRIAD_VI:
-        triad = MINOR_TRIAD;
-        break;
-    case COMMON_PRACTICE_TRIAD_VII_DIM:
-        triad = DIMINISHED_TRIAD;
-        break;
-    default:
-        break;
-    }
-    for (int i = 0; i < 3; i++) {
-        intervals[i] = triad[i];
-    }
-    return 3;
-}
-
 /* Re-wraps a built Chord with the structure the kernel carries: root, quality intervals, bass. */
 static bool attach_structure(const CommonPracticeRankedChord *candidate, int bass_pitch_class, Chord **chord) {
     ChordStructure structure;
     structure.root_pitch_class = candidate->root_pitch_class;
     structure.bass_pitch_class = bass_pitch_class;
     int intervals[4];
-    structure.interval_count = candidate_intervals(candidate, intervals);
+    structure.interval_count = common_practice_ranked_chord_intervals(candidate, intervals);
     for (size_t i = 0; i < structure.interval_count; i++) {
         structure.root_relative_intervals[i] = intervals[i];
     }

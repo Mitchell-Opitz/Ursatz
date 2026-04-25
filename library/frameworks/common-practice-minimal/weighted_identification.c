@@ -78,14 +78,85 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
 
 #define TOLERANCE 1e-9
 
-static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
+/* One chord of a vocabulary: where its root sits above the tonic, and its quality. */
+typedef struct {
+    int offset;
+    int degree;
+    bool is_seventh;
+    CommonPracticeTriad triad;
+    CommonPracticeSeventh seventh;
+    int form_rank;
+} VocabularyEntry;
 
-/* The seventh quality each scale degree of a major key takes. */
-static const CommonPracticeSeventh SEVENTH_OF_DEGREE[7] = {
-    COMMON_PRACTICE_SEVENTH_MAJOR7,  COMMON_PRACTICE_SEVENTH_MINOR7,
-    COMMON_PRACTICE_SEVENTH_MINOR7,  COMMON_PRACTICE_SEVENTH_MAJOR7,
-    COMMON_PRACTICE_SEVENTH_DOMINANT7, COMMON_PRACTICE_SEVENTH_MINOR7,
-    COMMON_PRACTICE_SEVENTH_HALF_DIMINISHED7};
+#define TRI(offset, degree, triad, rank) {offset, degree, false, triad, COMMON_PRACTICE_SEVENTH_DOMINANT7, rank}
+#define SEV(offset, degree, triad, seventh, rank) {offset, degree, true, triad, seventh, rank}
+
+/* The 14 diatonic chords of a major key, a triad then its seventh on each degree. */
+static const VocabularyEntry MAJOR_VOCABULARY[COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT] = {
+    TRI(0, 1, COMMON_PRACTICE_TRIAD_I, 0),       SEV(0, 1, COMMON_PRACTICE_TRIAD_I, COMMON_PRACTICE_SEVENTH_MAJOR7, 0),
+    TRI(2, 2, COMMON_PRACTICE_TRIAD_II, 0),      SEV(2, 2, COMMON_PRACTICE_TRIAD_II, COMMON_PRACTICE_SEVENTH_MINOR7, 0),
+    TRI(4, 3, COMMON_PRACTICE_TRIAD_III, 0),     SEV(4, 3, COMMON_PRACTICE_TRIAD_III, COMMON_PRACTICE_SEVENTH_MINOR7, 0),
+    TRI(5, 4, COMMON_PRACTICE_TRIAD_IV, 0),      SEV(5, 4, COMMON_PRACTICE_TRIAD_IV, COMMON_PRACTICE_SEVENTH_MAJOR7, 0),
+    TRI(7, 5, COMMON_PRACTICE_TRIAD_V, 0),       SEV(7, 5, COMMON_PRACTICE_TRIAD_V, COMMON_PRACTICE_SEVENTH_DOMINANT7, 0),
+    TRI(9, 6, COMMON_PRACTICE_TRIAD_VI, 0),      SEV(9, 6, COMMON_PRACTICE_TRIAD_VI, COMMON_PRACTICE_SEVENTH_MINOR7, 0),
+    TRI(11, 7, COMMON_PRACTICE_TRIAD_VII_DIM, 0),
+    SEV(11, 7, COMMON_PRACTICE_TRIAD_VII_DIM, COMMON_PRACTICE_SEVENTH_HALF_DIMINISHED7, 0),
+};
+
+#define MAJ COMMON_PRACTICE_TRIAD_MAJOR
+#define MIN COMMON_PRACTICE_TRIAD_MINOR
+#define DIM COMMON_PRACTICE_TRIAD_DIMINISHED
+#define AUG COMMON_PRACTICE_TRIAD_AUGMENTED
+#define DOM7 COMMON_PRACTICE_SEVENTH_DOMINANT7
+#define MAJ7 COMMON_PRACTICE_SEVENTH_MAJOR7
+#define MIN7 COMMON_PRACTICE_SEVENTH_MINOR7
+#define HDIM7 COMMON_PRACTICE_SEVENTH_HALF_DIMINISHED7
+#define DIM7 COMMON_PRACTICE_SEVENTH_DIMINISHED7
+
+/*
+ * The 26 chords of minor: the diatonic triads and sevenths of natural (0 2 3 5 7 8 10), harmonic (7th raised to
+ * 11) and melodic (6th and 7th raised to 9 and 11) minor, less the minor-major and augmented-major sevenths. A
+ * form_rank of 0 is the form that wins a tie against the other form of the same root and quality family:
+ * the raised V, V7, vii-dim and vii-dim-7, and the natural form of everything else.
+ */
+static const VocabularyEntry MINOR_VOCABULARY[COMMON_PRACTICE_MINOR_CANDIDATE_COUNT] = {
+    TRI(0, 1, MIN, 0),  SEV(0, 1, MIN, MIN7, 0),
+    TRI(2, 2, DIM, 0),  SEV(2, 2, DIM, HDIM7, 0),
+    TRI(2, 2, MIN, 1),  SEV(2, 2, MIN, MIN7, 1),
+    TRI(3, 3, MAJ, 0),  SEV(3, 3, MAJ, MAJ7, 0),
+    TRI(3, 3, AUG, 1),
+    TRI(5, 4, MIN, 0),  SEV(5, 4, MIN, MIN7, 0),
+    TRI(5, 4, MAJ, 1),  SEV(5, 4, MAJ, DOM7, 1),
+    TRI(7, 5, MAJ, 0),  SEV(7, 5, MAJ, DOM7, 0),
+    TRI(7, 5, MIN, 1),  SEV(7, 5, MIN, MIN7, 1),
+    TRI(8, 6, MAJ, 0),  SEV(8, 6, MAJ, MAJ7, 0),
+    TRI(9, 6, DIM, 0),  SEV(9, 6, DIM, HDIM7, 0),
+    TRI(10, 7, MAJ, 0), SEV(10, 7, MAJ, DOM7, 0),
+    TRI(11, 7, DIM, 0), SEV(11, 7, DIM, DIM7, 0),
+    SEV(11, 7, DIM, HDIM7, 1),
+};
+
+#undef TRI
+#undef SEV
+#undef MAJ
+#undef MIN
+#undef DIM
+#undef AUG
+#undef DOM7
+#undef MAJ7
+#undef MIN7
+#undef HDIM7
+#undef DIM7
+
+size_t common_practice_ranked_chord_intervals(const CommonPracticeRankedChord *chord, int out[4]) {
+    if (chord == NULL || out == NULL) {
+        return 0;
+    }
+    if (chord->is_seventh) {
+        return common_practice_seventh_intervals(chord->seventh, out) ? 4 : 0;
+    }
+    return common_practice_triad_intervals(chord->triad, out) ? 3 : 0;
+}
 
 /* True when `a` ranks ahead of `b` for a segment whose bass has pitch class bass_pitch_class. */
 static bool ranks_ahead(const CommonPracticeRankedChord *a, const CommonPracticeRankedChord *b,
@@ -101,7 +172,13 @@ static bool ranks_ahead(const CommonPracticeRankedChord *a, const CommonPractice
     if (a->is_seventh != b->is_seventh) {
         return !a->is_seventh;
     }
-    return a->degree < b->degree;
+    if (a->degree != b->degree) {
+        return a->degree < b->degree;
+    }
+    if (a->tonic_offset != b->tonic_offset) {
+        return a->tonic_offset < b->tonic_offset;
+    }
+    return a->form_rank < b->form_rank;
 }
 
 CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPracticeWeights *weights,
@@ -115,54 +192,59 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     if (!config_valid(config)) {
         return COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG;
     }
-    if (mode != COMMON_PRACTICE_KEY_MAJOR) {
+    if (mode != COMMON_PRACTICE_KEY_MAJOR && mode != COMMON_PRACTICE_KEY_MINOR) {
         return COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE;
     }
     if (tonic_pitch_class < 0 || tonic_pitch_class > 11) {
         return COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC;
     }
 
+    const VocabularyEntry *vocabulary = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_VOCABULARY : MINOR_VOCABULARY;
+    size_t vocabulary_size = mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT
+                                                                : COMMON_PRACTICE_MINOR_CANDIDATE_COUNT;
+
     CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     size_t count = 0;
-    for (int degree = 0; degree < 7; degree++) {
-        int root = (tonic_pitch_class + MAJOR_SCALE[degree]) % 12;
-        int third = (tonic_pitch_class + MAJOR_SCALE[(degree + 2) % 7]) % 12;
-        int fifth = (tonic_pitch_class + MAJOR_SCALE[(degree + 4) % 7]) % 12;
-        int seventh = (tonic_pitch_class + MAJOR_SCALE[(degree + 6) % 7]) % 12;
-
+    for (size_t k = 0; k < vocabulary_size; k++) {
+        const VocabularyEntry *entry = &vocabulary[k];
+        int root = (tonic_pitch_class + entry->offset) % 12;
         if (weights->pitch_class[root] <= 0.0) {
             continue; /* the root does not sound: not a reading the notes support */
         }
 
-        for (int with_seventh = 0; with_seventh < 2; with_seventh++) {
-            double in_chord = weights->pitch_class[root] + weights->pitch_class[third] + weights->pitch_class[fifth];
-            bool bass_is_chord_tone = weights->bass_pitch_class == root || weights->bass_pitch_class == third ||
-                                      weights->bass_pitch_class == fifth;
-            if (with_seventh) {
-                in_chord += weights->pitch_class[seventh];
-                bass_is_chord_tone = bass_is_chord_tone || weights->bass_pitch_class == seventh;
-            }
+        CommonPracticeRankedChord chord;
+        chord.degree = entry->degree;
+        chord.is_seventh = entry->is_seventh;
+        chord.triad = entry->triad;
+        chord.seventh = entry->seventh;
+        chord.root_pitch_class = root;
+        chord.score = 0.0;
+        chord.tonic_offset = entry->offset;
+        chord.form_rank = entry->form_rank;
 
-            double score = weights->total > 0.0 ? in_chord / weights->total : 0.0;
-            if (weights->pitch_class[third] <= 0.0) {
-                score -= config->missing_third_penalty;
-            }
-            if (bass_is_chord_tone) {
-                score += config->bass_chord_tone_bonus;
-            }
-
-            CommonPracticeRankedChord chord;
-            chord.degree = degree + 1;
-            chord.is_seventh = with_seventh != 0;
-            chord.triad = (CommonPracticeTriad)degree;
-            chord.seventh = SEVENTH_OF_DEGREE[degree];
-            chord.root_pitch_class = root;
-            chord.score = score;
-            ranked[count++] = chord;
+        int intervals[4];
+        size_t interval_count = common_practice_ranked_chord_intervals(&chord, intervals);
+        int third = (root + intervals[1]) % 12;
+        double in_chord = 0.0;
+        bool bass_is_chord_tone = false;
+        for (size_t i = 0; i < interval_count; i++) {
+            int pitch_class = (root + intervals[i]) % 12;
+            in_chord += weights->pitch_class[pitch_class];
+            bass_is_chord_tone = bass_is_chord_tone || weights->bass_pitch_class == pitch_class;
         }
+
+        double score = weights->total > 0.0 ? in_chord / weights->total : 0.0;
+        if (weights->pitch_class[third] <= 0.0) {
+            score -= config->missing_third_penalty;
+        }
+        if (bass_is_chord_tone) {
+            score += config->bass_chord_tone_bonus;
+        }
+        chord.score = score;
+        ranked[count++] = chord;
     }
 
-    /* Insertion sort, best first: 14 candidates, and it keeps the order stable and total. */
+    /* Insertion sort, best first: at most 26 candidates, and it keeps the order stable and total. */
     for (size_t i = 1; i < count; i++) {
         CommonPracticeRankedChord moving = ranked[i];
         size_t j = i;
@@ -180,16 +262,15 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
 }
 
 unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chord, int tonic_pitch_class) {
-    if (chord == NULL || chord->degree < 1 || chord->degree > 7 || tonic_pitch_class < 0 || tonic_pitch_class > 11) {
+    if (chord == NULL || chord->degree < 1 || chord->degree > 7 || chord->root_pitch_class < 0 || chord->root_pitch_class > 11 || tonic_pitch_class < 0 ||
+        tonic_pitch_class > 11) {
         return 0;
     }
-    int degree = chord->degree - 1;
+    int intervals[4];
+    size_t count = common_practice_ranked_chord_intervals(chord, intervals);
     unsigned mask = 0;
-    mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[degree]) % 12);
-    mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[(degree + 2) % 7]) % 12);
-    mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[(degree + 4) % 7]) % 12);
-    if (chord->is_seventh) {
-        mask |= 1u << ((tonic_pitch_class + MAJOR_SCALE[(degree + 6) % 7]) % 12);
+    for (size_t i = 0; i < count; i++) {
+        mask |= 1u << ((chord->root_pitch_class + intervals[i]) % 12);
     }
     return mask;
 }

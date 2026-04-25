@@ -37,10 +37,17 @@ static const TriadDescriptor DESCRIPTORS[COMMON_PRACTICE_TRIAD_COUNT] = {
      "common-practice-minimal-chord-vii-dim"},
     {"augmented", "common-practice-minimal-rule-augmented", "common-practice-minimal-constraint-augmented",
      "common-practice-minimal-chord-augmented"},
+    {"major", "common-practice-minimal-rule-major", "common-practice-minimal-constraint-major",
+     "common-practice-minimal-chord-major"},
+    {"minor", "common-practice-minimal-rule-minor", "common-practice-minimal-constraint-minor",
+     "common-practice-minimal-chord-minor"},
+    {"diminished", "common-practice-minimal-rule-diminished", "common-practice-minimal-constraint-diminished",
+     "common-practice-minimal-chord-diminished"},
 };
 
 static const int TRIAD_INTERVALS[COMMON_PRACTICE_TRIAD_COUNT][3] = {
     {0, 4, 7}, {0, 3, 7}, {0, 3, 7}, {0, 4, 7}, {0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8},
+    {0, 4, 7}, {0, 3, 7}, {0, 3, 6},
 };
 
 static Rule *g_rules[COMMON_PRACTICE_TRIAD_COUNT];
