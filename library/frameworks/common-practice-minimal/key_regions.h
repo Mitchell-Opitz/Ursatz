@@ -176,7 +176,8 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * back from the boundary (the start of the new region's first measure), whose chord is diatonic in both the old
  * key and the new. The search takes the segments that start at or before the boundary and no more than
  * pivot_search_measures measures before the new region's first measure. A segment's chord is its best chord from
- * weighted identification (common_practice_identify_weighted, default weights) read in the OLD key; a segment
+ * weighted identification (common_practice_identify_weighted, default weights) read in the OLD key and its own mode (a
+ * minor old key is read in the minor vocabulary, with its raised sixth and seventh); a segment
  * with no members or no matching chord is skipped. "Diatonic in a key" is the natural collection: a major
  * key's seven notes, and for a minor key those of its relative major, so a chord that needs the raised sixth or
  * seventh of a minor key (the major V, the diminished vii) is not diatonic there in this version. If no segment
