@@ -6,7 +6,7 @@
  *
  * THE CHAIN. Import, the piece's MeterMap (Bach 114's file declares 4/4 and the piece is 3/4, so a 3/4 map replaces it, as in the other
  * reference-piece tests), adaptive segments, weights, local key regions (with the file's key signature events), weighted chord
- * identification in each key region's key (the identifier's vocabulary is major-key only, so a minor region is read in its relative major),
+ * identification in each key region's key and mode (a minor region is read in the minor vocabulary),
  * the Roman numeral adapter, outer voices, the cadence adapter, and the L3.6 standard-form adapter (phrases, ideas, themes, expansions) on
  * the cadences the chain found. No stage is given an answer: the key is not the annotation's home key, and the cadences are not the hand
  * cadences. Every default is the library's.
@@ -329,7 +329,7 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     assert(key_regions_estimate(c->key_segments, count, c->map, c->events, c->scanned.count, NULL, &c->regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
 
-    /* chords in each region's key (a minor region in its relative major's vocabulary) */
+    /* chords in each region's own key and mode */
     c->chords = (CommonPracticeWeightedResult *)calloc(count, sizeof(CommonPracticeWeightedResult));
     assert(c->chords != NULL);
     size_t s = 0;
@@ -341,12 +341,10 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
         }
         int key_index = c->regions.regions[region].key_index;
         int tonic = common_practice_key_index_tonic(key_index);
-        if (common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR) {
-            tonic = (tonic + 3) % 12;
-        }
+        CommonPracticeKeyMode mode = common_practice_key_index_mode(key_index);
         CommonPracticeWeightedResults group = {0};
-        assert(common_practice_identify_weighted_sequence(&c->p.segments[s], end - s, tonic, COMMON_PRACTICE_KEY_MAJOR, NULL,
-                                                          &group) == COMMON_PRACTICE_WEIGHTED_OK);
+        assert(common_practice_identify_weighted_sequence(&c->p.segments[s], end - s, tonic, mode, NULL, &group) ==
+               COMMON_PRACTICE_WEIGHTED_OK);
         for (size_t i = 0; i < group.count; i++) {
             c->chords[s + i] = group.items[i];
         }
