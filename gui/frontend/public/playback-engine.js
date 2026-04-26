@@ -143,13 +143,17 @@
   }
 
   function createTransport(options) {
-    const timeline = options.timeline;
     const clock = options.clock;
     const setTimer = options.setTimer;
     const clearTimer = options.clearTimer;
     const onNote = options.onNote || (() => {});
     const onState = options.onState || (() => {});
     const onEnd = options.onEnd || (() => {});
+    const onEnding = options.onEnding || (() => {});
+    const mainTimeline = options.timeline;
+    let timeline = mainTimeline; /* the ending's timeline once the switch is made */
+    let ending = null; /* {timeline, bodyEnd, at, next} while a switch is pending */
+    let scheduledTo = 0; /* piece seconds the scheduler has looked ahead to */
 
     let state = "stopped";
     let rate = 1;
@@ -197,6 +201,10 @@
     }
 
     function position() {
+      if (state === "playing" && ending !== null && currentSeconds() >= ending.at - EPSILON) {
+        const seconds = secondsAt(ending.timeline, ending.bodyEnd) + currentSeconds() - ending.at;
+        return positionAt(ending.timeline, seconds);
+      }
       return state === "playing" ? positionAt(timeline, wrapSeconds(currentSeconds())) : heldPosition;
     }
 
@@ -210,6 +218,51 @@
       shift = 0;
       loopActive = loop !== null && playTo === null && w < loop.end - EPSILON;
       next = firstIndexAtOrAfter(timeline.notes, w);
+      scheduledTo = anchorSeconds;
+      if (ending !== null) {
+        armEnding();
+      }
+    }
+
+    /* Finds the moment the pending ending takes over: the next time the
+     * body's end comes up that the scheduler has not already passed. Drops
+     * the ending when no pass is left (no loop and the body's end behind). */
+    function armEnding() {
+      const bodyAt = secondsAt(timeline, ending.bodyEnd);
+      let at = bodyAt;
+      if (loopActive && ending.bodyEnd >= loop.start - EPSILON) {
+        const passes = Math.max(0, Math.ceil((scheduledTo - bodyAt) / loopSeconds() - EPSILON));
+        at = bodyAt + passes * loopSeconds();
+      }
+      if (at < scheduledTo - EPSILON) {
+        ending = null;
+        return false;
+      }
+      ending.at = at;
+      ending.next = firstIndexAtOrAfter(ending.timeline.notes, ending.bodyEnd);
+      return true;
+    }
+
+    /* The ending's notes start on the clock where the body's end is. */
+    function endingNoteSeconds(note) {
+      return ending.at + secondsAt(ending.timeline, note.on) - secondsAt(ending.timeline, ending.bodyEnd);
+    }
+
+    function swapToEnding() {
+      const taken = ending;
+      anchorClock += (taken.at - anchorSeconds) / rate;
+      anchorSeconds = secondsAt(taken.timeline, taken.bodyEnd);
+      timeline = taken.timeline;
+      next = taken.next;
+      shift = 0;
+      loopActive = false;
+      ending = null;
+      onEnding();
+    }
+
+    function resetEnding() {
+      timeline = mainTimeline;
+      ending = null;
     }
 
     function startTimer() {
@@ -229,8 +282,13 @@
       if (state !== "playing") {
         return;
       }
+      if (ending !== null && currentSeconds() >= ending.at - EPSILON) {
+        swapToEnding();
+      }
       const horizon = clock() + LOOKAHEAD_SECONDS;
+      scheduledTo = anchorSeconds + (horizon - anchorClock) * rate;
       const stopAt = endPosition();
+      const limit = ending !== null ? ending.at : Infinity;
       for (;;) {
         if (loopActive && (next >= timeline.notes.length || timeline.notes[next].on >= loop.end - EPSILON)) {
           const first = firstIndexAtOrAfter(timeline.notes, loop.start);
@@ -249,6 +307,9 @@
           break;
         }
         const noteStart = secondsAt(timeline, note.on);
+        if (noteStart + shift >= limit - EPSILON) {
+          break;
+        }
         const when = anchorClock + (noteStart + shift - anchorSeconds) / rate;
         if (when > horizon) {
           break;
@@ -256,10 +317,21 @@
         const noteEnd = loopActive ? Math.min(note.on + note.len, loop.end) : note.on + note.len;
         const duration = (secondsAt(timeline, noteEnd) - noteStart) / rate;
         next++;
-        onNote({ i: note.i, pitch: note.pitch, part: note.part, when, duration });
+        onNote({ i: note.i, pitch: note.pitch, part: note.part, when, duration, ending: timeline !== mainTimeline });
       }
-      if (!loopActive && currentSeconds() >= secondsAt(timeline, stopAt) - EPSILON) {
+      while (ending !== null && ending.next < ending.timeline.notes.length) {
+        const note = ending.timeline.notes[ending.next];
+        const when = anchorClock + (endingNoteSeconds(note) - anchorSeconds) / rate;
+        if (when > horizon) {
+          break;
+        }
+        const duration = (secondsAt(ending.timeline, note.on + note.len) - secondsAt(ending.timeline, note.on)) / rate;
+        ending.next++;
+        onNote({ i: note.i, pitch: note.pitch, part: note.part, when, duration, ending: true });
+      }
+      if (ending === null && !loopActive && currentSeconds() >= secondsAt(timeline, stopAt) - EPSILON) {
         stopTimer();
+        resetEnding();
         heldPosition = playFrom;
         setState("stopped");
         onEnd();
@@ -300,6 +372,7 @@
 
     function stop() {
       stopTimer();
+      resetEnding();
       heldPosition = playFrom;
       setState("stopped");
     }
@@ -340,6 +413,24 @@
       }
     }
 
+    /* Makes the current play finish with `endingTimeline`: the pass goes on to
+     * `bodyEnd` (a position in whole notes, the same in both timelines), then
+     * the ending's notes from there play to its end and playback stops. Before
+     * `bodyEnd` of this pass the switch waits for it; past it, the next pass's.
+     * Returns false when nothing is playing, a range is playing, the ending has
+     * begun, or no pass is left to switch in. */
+    function playEnding(endingTimeline, bodyEnd) {
+      if ((state !== "playing" && state !== "paused") || playTo !== null || timeline !== mainTimeline) {
+        return false;
+      }
+      ending = { timeline: endingTimeline, bodyEnd, at: 0, next: 0 };
+      if (state === "playing") {
+        armEnding();
+        tick();
+      }
+      return ending !== null;
+    }
+
     return {
       play,
       pause,
@@ -347,7 +438,10 @@
       seek,
       setRate,
       setLoop,
+      playEnding,
       loop: () => loop,
+      endingPending: () => ending !== null,
+      endingPlaying: () => timeline !== mainTimeline,
       position,
       state: () => state,
       rate: () => rate,
