@@ -160,6 +160,9 @@
     let anchorClock = 0; /* clock time at the anchor */
     let anchorSeconds = 0; /* piece seconds (rate 1) at the anchor */
     let next = 0; /* index of the next note not yet scheduled */
+    let loop = validLoop(options.loop); /* {start, end} in whole notes, or null */
+    let loopActive = false; /* the loop wraps the current play */
+    let shift = 0; /* seconds added to the notes of the pass being scheduled */
 
     function setState(value) {
       if (state !== value) {
@@ -176,13 +179,36 @@
       return anchorSeconds + Math.max(0, clock() - anchorClock) * rate;
     }
 
+    function loopSeconds() {
+      return secondsAt(timeline, loop.end) - secondsAt(timeline, loop.start);
+    }
+
+    /* Piece seconds with the loop's wraps taken out. */
+    function wrapSeconds(s) {
+      if (!loopActive) {
+        return s;
+      }
+      const endSeconds = secondsAt(timeline, loop.end);
+      if (s < endSeconds - EPSILON) {
+        return s;
+      }
+      const startSeconds = secondsAt(timeline, loop.start);
+      return startSeconds + ((s - startSeconds) % (endSeconds - startSeconds));
+    }
+
     function position() {
-      return state === "playing" ? positionAt(timeline, currentSeconds()) : heldPosition;
+      return state === "playing" ? positionAt(timeline, wrapSeconds(currentSeconds())) : heldPosition;
+    }
+
+    function validLoop(value) {
+      return value && value.end > value.start + EPSILON ? { start: value.start, end: value.end } : null;
     }
 
     function anchorAt(w) {
       anchorClock = clock() + START_LEAD_SECONDS;
       anchorSeconds = secondsAt(timeline, w);
+      shift = 0;
+      loopActive = loop !== null && playTo === null && w < loop.end - EPSILON;
       next = firstIndexAtOrAfter(timeline.notes, w);
     }
 
@@ -205,21 +231,34 @@
       }
       const horizon = clock() + LOOKAHEAD_SECONDS;
       const stopAt = endPosition();
-      while (next < timeline.notes.length) {
+      for (;;) {
+        if (loopActive && (next >= timeline.notes.length || timeline.notes[next].on >= loop.end - EPSILON)) {
+          const first = firstIndexAtOrAfter(timeline.notes, loop.start);
+          if (first >= timeline.notes.length || timeline.notes[first].on >= loop.end - EPSILON) {
+            break;
+          }
+          shift += loopSeconds();
+          next = first;
+          continue;
+        }
+        if (next >= timeline.notes.length) {
+          break;
+        }
         const note = timeline.notes[next];
-        if (note.on >= stopAt - EPSILON) {
+        if (!loopActive && note.on >= stopAt - EPSILON) {
           break;
         }
         const noteStart = secondsAt(timeline, note.on);
-        const when = anchorClock + (noteStart - anchorSeconds) / rate;
+        const when = anchorClock + (noteStart + shift - anchorSeconds) / rate;
         if (when > horizon) {
           break;
         }
-        const duration = (secondsAt(timeline, note.on + note.len) - noteStart) / rate;
+        const noteEnd = loopActive ? Math.min(note.on + note.len, loop.end) : note.on + note.len;
+        const duration = (secondsAt(timeline, noteEnd) - noteStart) / rate;
         next++;
         onNote({ i: note.i, pitch: note.pitch, part: note.part, when, duration });
       }
-      if (currentSeconds() >= secondsAt(timeline, stopAt) - EPSILON) {
+      if (!loopActive && currentSeconds() >= secondsAt(timeline, stopAt) - EPSILON) {
         stopTimer();
         heldPosition = playFrom;
         setState("stopped");
@@ -283,13 +322,22 @@
     function setRate(value) {
       const clamped = Math.min(MAX_RATE, Math.max(MIN_RATE, value));
       if (state === "playing") {
-        const here = position();
-        const keep = next;
+        anchorSeconds = currentSeconds();
         anchorClock = clock();
-        anchorSeconds = secondsAt(timeline, here);
-        next = keep;
       }
       rate = clamped;
+    }
+
+    /* Turns the loop on (a {start, end} in whole notes) or off (null); a
+     * playing transport carries on from where it is. */
+    function setLoop(value) {
+      loop = validLoop(value);
+      if (state === "playing") {
+        const here = position();
+        anchorAt(here);
+        heldPosition = here;
+        tick();
+      }
     }
 
     return {
@@ -298,6 +346,8 @@
       stop,
       seek,
       setRate,
+      setLoop,
+      loop: () => loop,
       position,
       state: () => state,
       rate: () => rate,
