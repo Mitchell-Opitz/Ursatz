@@ -149,6 +149,7 @@ bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *inpu
     out->numeral = numeral;
     out->raised_leading_tone = raised;
     out->raised_sixth = raised_sixth;
+    out->romantext_spelling = minor;
     out->inversion = inversion_of(input);
     return true;
 }
@@ -160,6 +161,27 @@ static const char *figure_of(bool seventh, int inversion) {
         return inversion >= 0 && inversion < 4 ? SEVENTH_FIGURES[inversion] : NULL;
     }
     return inversion >= 0 && inversion < 3 ? TRIAD_FIGURES[inversion] : NULL;
+}
+
+/* RomanText spelling (R-031): the circle of a diminished chord is "o" and the slashed circle of a half-diminished
+   one "/o" -- "viio7", "ii/o7" -- not the degree sign and the empty set sign the standard-tonality numeral uses. */
+static void respell_romantext(char *label, size_t size) {
+    char spelled[STANDARD_TONALITY_ROMAN_LABEL_MAX];
+    size_t out = 0;
+    for (const char *in = label; *in != '\0' && out + 3 < sizeof(spelled); in++) {
+        if ((unsigned char)in[0] == 0xC2 && (unsigned char)in[1] == 0xB0) {
+            spelled[out++] = 'o';
+            in++;
+        } else if ((unsigned char)in[0] == 0xE2 && (unsigned char)in[1] == 0x88 && (unsigned char)in[2] == 0x85) {
+            spelled[out++] = '/';
+            spelled[out++] = 'o';
+            in += 2;
+        } else {
+            spelled[out++] = *in;
+        }
+    }
+    spelled[out] = '\0';
+    snprintf(label, size, "%s", spelled);
 }
 
 bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *reading, char *buffer, size_t size) {
@@ -188,28 +210,10 @@ bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *
         buffer[length++] = '/';
         strcpy(buffer + length, target);
     }
-    return true;
-}
-
-/* RomanText spelling (R-031): the circle of a diminished chord is "o" and the slashed circle of a half-diminished
-   one "/o" -- "viio7", "ii/o7" -- not the degree sign and the empty set sign the standard-tonality numeral uses. */
-static void respell_romantext(char *label, size_t size) {
-    char spelled[STANDARD_TONALITY_ROMAN_LABEL_MAX];
-    size_t out = 0;
-    for (const char *in = label; *in != '\0' && out + 3 < sizeof(spelled); in++) {
-        if ((unsigned char)in[0] == 0xC2 && (unsigned char)in[1] == 0xB0) {
-            spelled[out++] = 'o';
-            in++;
-        } else if ((unsigned char)in[0] == 0xE2 && (unsigned char)in[1] == 0x88 && (unsigned char)in[2] == 0x85) {
-            spelled[out++] = '/';
-            spelled[out++] = 'o';
-            in += 2;
-        } else {
-            spelled[out++] = *in;
-        }
+    if (reading->romantext_spelling) {
+        respell_romantext(buffer, size);
     }
-    spelled[out] = '\0';
-    snprintf(label, size, "%s", spelled);
+    return true;
 }
 
 static double clamp01(double value) {
@@ -354,9 +358,6 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
         if (!fill_claim(&result->reading, &result->claim)) {
             result->has_numeral = false;
             continue;
-        }
-        if (inputs[i].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR) {
-            respell_romantext(result->claim.label, sizeof(result->claim.label));
         }
         result->uncertainty =
             clamp01(1.0 - (1.0 - clamp01(inputs[i].chord_uncertainty)) * (1.0 - clamp01(inputs[i].key_uncertainty)));
