@@ -7,6 +7,10 @@
  *     musicxmlUrl, metaUrl,      the score and its meter caption
  *     document, noteXmlIds,      the analysis, for the layers and the inspector
  *     playbackUrl,               the piece's playback data (offset, sound)
+ *     loop: {start, end},        a region (whole notes) that repeats without a gap
+ *     ending: {musicxmlUrl, playback, bodyEnd},  the ending version: its score, its
+ *                                playback data and where the body ends (whole notes);
+ *                                adds the Play ending button
  *     actions: [{label, onClick}],  extra toolbar buttons
  *     headerExtra,               an element shown under the toolbar
  *     onBack,                    the Library link
@@ -342,6 +346,9 @@
     }
 
     function graphicalNotesFor(xmlId) {
+      if (endingShown) {
+        return [];
+      }
       const lookup = getNoteLookup();
       if (!lookup) {
         return [];
@@ -1110,6 +1117,8 @@
         });
         await osmd.load(text);
         xmlText = text;
+        loopXmlText = text;
+        prefetchEndingScore();
         /* let "Rendering score..." paint before the blocking render */
         await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
         if (destroyed) {
@@ -1151,6 +1160,12 @@
     const registry = SoundSources.createDefaultRegistry(Instruments);
     registry.mapProgram(0, "gm-piano");
     let timeline = null;
+    let endingTimeline = null;
+    let loopOn = Boolean(opts.loop);
+    /* the score on show is the ending version's while it plays */
+    let endingShown = false;
+    let loopXmlText = "";
+    let endingXmlText = null;
     /* note index -> onset in whole notes, for seeking from a colored note */
     let onsetByNote = new Map();
     let player = null;
@@ -1169,6 +1184,16 @@
     playButton.addEventListener("click", togglePlay);
     const stopButton = iconButton("Stop", "Stop and go back to the start", "Home", rewind);
     stopButton.disabled = true;
+    const loopButton = el("button", "ws-btn ws-loop", "Loop");
+    loopButton.type = "button";
+    loopButton.title = "Repeat the loop without a gap";
+    loopButton.setAttribute("aria-pressed", String(loopOn));
+    loopButton.addEventListener("click", toggleLoop);
+    const endingButton = el("button", "ws-btn ws-ending", "Play ending");
+    endingButton.type = "button";
+    endingButton.title = "Finish at the end of the loop body with the ending";
+    endingButton.disabled = true;
+    endingButton.addEventListener("click", playEnding);
     const readout = el("span", "ws-readout", "m1 0:00 / 0:00");
     readout.setAttribute("aria-label", "Position");
     const tempoDown = iconButton("−", "Slower", "5% steps", () => nudgeTempo(-5));
@@ -1208,7 +1233,14 @@
         closeSoundMenu();
       }
     });
-    transport.append(playButton, stopButton, readout, tempoGroup, volume, soundButton, soundMenu);
+    transport.append(playButton, stopButton);
+    if (opts.loop) {
+      transport.appendChild(loopButton);
+    }
+    if (opts.ending) {
+      transport.appendChild(endingButton);
+    }
+    transport.append(readout, tempoGroup, volume, soundButton, soundMenu);
 
     function closeSoundMenu() {
       if (soundMenu.hidden) {
@@ -1349,8 +1381,15 @@
           partInfo.set(note.part, { index: note.part, name: "", program: 0 });
         }
       }
+      endingTimeline =
+        opts.ending && opts.ending.playback ? PlaybackEngine.buildTimeline(opts.ending.playback) : null;
       player = PlaybackEngine.createTransport({
         timeline,
+        loop: loopOn ? opts.loop : null,
+        onEnding: () => {
+          showScoreVersion(true);
+          syncTransport();
+        },
         clock: () => (audio ? audio.ctx.currentTime : 0),
         setTimer: (fn, ms) => setInterval(fn, ms),
         clearTimer: (handle) => clearInterval(handle),
@@ -1371,6 +1410,14 @@
       playButton.textContent = preparing ? "Loading piano..." : current === "playing" ? "Pause" : "Play";
       playButton.setAttribute("aria-pressed", String(current === "playing"));
       stopButton.disabled = !player;
+      loopButton.disabled = !player;
+      loopButton.setAttribute("aria-pressed", String(loopOn));
+      const endingBusy = Boolean(player) && (player.endingPending() || player.endingPlaying());
+      endingButton.disabled = !player || !endingTimeline || preparing || endingBusy;
+      endingButton.textContent = endingBusy ? "Ending next" : "Play ending";
+      if (current === "stopped" && endingShown) {
+        showScoreVersion(false);
+      }
       const percent = Math.round((player ? player.rate() : 1) * 100);
       tempoLabel.textContent = `${percent}%`;
       tempoDown.disabled = !player || percent <= PlaybackEngine.MIN_RATE * 100;
@@ -1634,6 +1681,67 @@
       }
       const end = item.end > item.start ? item.end : item.start + 0.25;
       startPlayback(item.start, end);
+    }
+
+    function toggleLoop() {
+      if (!player) {
+        return;
+      }
+      loopOn = !loopOn;
+      player.setLoop(loopOn ? opts.loop : null);
+      syncTransport();
+    }
+
+    /* Plays on (from the start when stopped) and makes the end of the loop
+     * body the last pass: the ending takes over there and playback stops. */
+    async function playEnding() {
+      if (!player || !endingTimeline || preparing) {
+        return;
+      }
+      prefetchEndingScore();
+      if (player.state() !== "playing") {
+        await startPlayback(player.state() === "stopped" ? 0 : undefined);
+      }
+      if (player.state() === "playing") {
+        player.playEnding(endingTimeline, opts.ending.bodyEnd);
+      }
+      syncTransport();
+    }
+
+    function prefetchEndingScore() {
+      if (endingXmlText !== null || !opts.ending || !opts.ending.musicxmlUrl) {
+        return;
+      }
+      endingXmlText = "";
+      fetch(opts.ending.musicxmlUrl)
+        .then((res) => (res.ok ? res.text() : ""))
+        .then((text) => {
+          endingXmlText = text;
+        })
+        .catch(() => {
+          endingXmlText = null;
+        });
+    }
+
+    /* Swaps the score on show between the loop version and the ending
+     * version. The highlights belong to the loop version, so they are off
+     * while the ending shows. */
+    async function showScoreVersion(useEnding) {
+      const text = useEnding ? endingXmlText : loopXmlText;
+      if (!osmd || destroyed || endingShown === useEnding || !text) {
+        return;
+      }
+      endingShown = useEnding;
+      try {
+        await osmd.load(text);
+      } catch (err) {
+        endingShown = !useEnding;
+        return;
+      }
+      xmlText = text;
+      xmlEntries = null;
+      noteLookup = null;
+      render();
     }
 
     function rewind() {

@@ -352,10 +352,13 @@ function buildPieceResult(ctx) {
   const tabs = materialsElement("div", "upload-controls");
   const scoreHost = materialsElement("div", "materials-score-mount");
   function showScore(which) {
+    const looping = which === "loop" && view.playLoop;
     themeMountScore(scoreHost, ctx.id, ctx.version, ctx.title, {
       midi: `${which}.mid`,
       musicxml: `${which}.musicxml`,
       subtitle: `piece · v${ctx.version} · ${which} version`,
+      loop: looping ? { start: view.playLoop.start, end: view.playLoop.end } : null,
+      ending: looping ? { midi: "ending.mid", musicxml: "ending.musicxml", bodyEnd: view.playLoop.bodyEnd } : null,
     });
     for (const button of tabs.children) {
       button.classList.toggle("selected", button.dataset.which === which);
