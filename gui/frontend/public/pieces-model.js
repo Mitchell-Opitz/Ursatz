@@ -755,6 +755,34 @@
     };
   }
 
+  /* A time "n/d" as a number of whole notes, or null. */
+  function wholeNotes(time) {
+    const m = /^(\d+)\/(\d+)$/.exec(String(time || ""));
+    return m && Number(m[2]) !== 0 ? Number(m[1]) / Number(m[2]) : null;
+  }
+
+  /* What loop playback needs, in whole notes: the loop region and where the last body section ends (the ending takes
+   * over there), or null when the summary has no loop or no body section. */
+  function playbackLoop(summary) {
+    const s = summary && typeof summary === "object" ? summary : {};
+    const loop = s.loop && typeof s.loop === "object" ? s.loop : null;
+    const start = loop ? wholeNotes(loop.start) : null;
+    const end = loop ? wholeNotes(loop.end) : null;
+    const version = s.versions && s.versions.loop && Array.isArray(s.versions.loop.sections) ? s.versions.loop : null;
+    if (start === null || end === null || !(end > start) || !version) {
+      return null;
+    }
+    const unit = beatUnit(s.meter);
+    let bodyEnd = null;
+    for (const section of version.sections) {
+      const at = wholeNotes(section.start);
+      if (section.part === "body" && at !== null && Number.isFinite(section.beats)) {
+        bodyEnd = Math.max(bodyEnd === null ? 0 : bodyEnd, at + section.beats / unit);
+      }
+    }
+    return bodyEnd === null ? null : { start, end, bodyEnd };
+  }
+
   /* The Composer's summary of a piece version's result as rows to show. result is piece.result ({seed, summary, brief,
    * loop, files}); options carries sourceNames ({<section id>: "Theme One v2"}) for the sections filled with a theme. */
   function resultView(result, options) {
@@ -775,6 +803,7 @@
       key: typeof summary.key === "string" ? summary.key : "",
       meter,
       loop: loop && startBeats !== null && endBeats !== null ? `${positionLabel(startBeats, meter)} to ${positionLabel(endBeats, meter)}` : "",
+      playLoop: playbackLoop(summary),
       loopLength: startBeats !== null && endBeats !== null ? beatsLabel(endBeats - startBeats, meter) : "",
       versions: { loop: versionView(versions.loop, meter, options), ending: versionView(versions.ending, meter, options) },
       brief: {

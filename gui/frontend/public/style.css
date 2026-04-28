@@ -932,6 +932,7 @@ body {
   background: none;
 }
 
+.ws-loop[aria-pressed="true"],
 .ws-icon-btn[aria-pressed="true"] {
   color: var(--accent);
   border-color: var(--accent);
