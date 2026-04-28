@@ -404,10 +404,13 @@
     /* Turns the loop on (a {start, end} in whole notes) or off (null); a
      * playing transport carries on from where it is. */
     function setLoop(value) {
+      const here = position();
+      const lookedTo = positionAt(timeline, wrapSeconds(scheduledTo));
       loop = validLoop(value);
       if (state === "playing") {
-        const here = position();
         anchorAt(here);
+        /* notes already scheduled for the lookahead window are not played again */
+        next = firstIndexAtOrAfter(timeline.notes, Math.max(here, lookedTo + 2 * EPSILON));
         heldPosition = here;
         tick();
       }
