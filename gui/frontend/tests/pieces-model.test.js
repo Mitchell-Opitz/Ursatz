@@ -199,6 +199,10 @@ const withTheme = JSON.parse(JSON.stringify(summary));
 withTheme.versions.loop.sections[1].fill = "theme";
 withTheme.versions.loop.sections[1].source = "/data/materials/items/pce-1/v2/theme-a.plan.json";
 check(P.resultView({ summary: withTheme }, { sourceNames: { a: "Theme One v2" } }).versions.loop.rows[1].source === "Theme One v2", "a theme source is named by its section");
+check(
+  JSON.stringify(view.playLoop) === JSON.stringify({ start: 2, end: 16, bodyEnd: 14 }) && P.resultView({ summary: { versions: {} } }).playLoop === null,
+  "the playback loop is the loop region and the end of the last body section, in whole notes",
+);
 const empty = P.resultView(null);
 check(empty.seed === null && empty.versions.loop === null && empty.loop === "" && empty.files.length === 0, "no result gives no rows");
 
