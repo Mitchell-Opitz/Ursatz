@@ -206,8 +206,9 @@ static void test_minor_key_applied(void) {
     set_weights(&inputs[0], b_ds_fs, 3);
     inputs[1] = make_input("s2", 4, 4, ADAPTER_MAJOR_TRIAD, 3, 9, A_MINOR);
     results = run(inputs, 2, NULL);
-    /* B minor is not a chord of A minor, so the segment has no diatonic reading to re-check. */
-    assert(!results[0].has_numeral);
+    /* B D F# is a diatonic chord of A melodic minor (its ii, on the raised sixth), so the segment has a reading to
+       re-check; with the D# sounding and E following, it is the V of V. */
+    assert(results[0].has_numeral && results[0].reading.applied && strcmp(results[0].claim.label, "V/V") == 0);
     standard_tonality_roman_results_destroy(results, 2);
 }
 

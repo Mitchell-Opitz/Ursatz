@@ -9,6 +9,8 @@
 #include "interpretation/chord.h"
 #include "interpretation/key.h"
 #include "interpretation/uncertainty.h"
+#include "chord_vocabulary.h"
+#include "chord_vocabulary_seventh.h"
 #include "key_identification.h"
 #include "persistence/persistence.h"
 #include "persistence/persistence_chord.h"
@@ -76,6 +78,39 @@ static void test_round_trip_chord(void) {
     remove(path);
 }
 
+/* The minor vocabulary's qualities (augmented triad, fully-diminished seventh) store and load like any other. */
+static void test_round_trip_minor_qualities(void) {
+    const char *path = "test_persistence_chord_minor_qualities.sqlite";
+    remove(path);
+    PersistenceHandle *handle = NULL;
+    assert(persistence_open(path, &handle) == PERSISTENCE_OK);
+
+    EntityID *augmented_target = NULL;
+    assert(entity_id_create("sonority-persistence-augmented", &augmented_target) == ENTITY_ID_OK);
+    Chord *augmented = NULL;
+    assert(common_practice_build_triad_chord(COMMON_PRACTICE_TRIAD_AUGMENTED, augmented_target, &augmented) == CHORD_OK);
+    EntityID *diminished_target = NULL;
+    assert(entity_id_create("sonority-persistence-diminished7", &diminished_target) == ENTITY_ID_OK);
+    Chord *diminished7 = NULL;
+    assert(common_practice_build_seventh_chord(COMMON_PRACTICE_SEVENTH_DIMINISHED7, diminished_target, &diminished7) ==
+           CHORD_OK);
+
+    Chord *originals[2] = {augmented, diminished7};
+    const char *labels[2] = {"augmented", "diminished7"};
+    for (int i = 0; i < 2; i++) {
+        assert(persistence_store_chord(handle, originals[i]) == PERSISTENCE_CHORD_OK);
+        const char *chord_id = entity_id_value(interpretation_id(chord_interpretation(originals[i])));
+        Chord *reloaded = NULL;
+        assert(persistence_load_chord(handle, chord_id, &reloaded) == PERSISTENCE_CHORD_OK);
+        assert(strcmp(chord_label(reloaded), labels[i]) == 0);
+        assert_interpretations_equal(chord_interpretation(originals[i]), chord_interpretation(reloaded));
+        chord_destroy(reloaded);
+        chord_destroy(originals[i]);
+    }
+    persistence_close(handle);
+    remove(path);
+}
+
 static void test_round_trip_key(void) {
     EntityID *context_target_id = NULL;
     assert(entity_id_create("context-persistence-test", &context_target_id) == ENTITY_ID_OK);
@@ -107,6 +142,7 @@ static void test_round_trip_key(void) {
 
 int main(void) {
     test_round_trip_chord();
+    test_round_trip_minor_qualities();
     test_round_trip_key();
     printf("persistence chord/key: all tests passed\n");
     return 0;

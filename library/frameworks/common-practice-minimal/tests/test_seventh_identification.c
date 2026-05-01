@@ -80,7 +80,8 @@ int main(void) {
     CommonPracticeSeventh unused_seventh;
     assert(!common_practice_identify_seventh(incomplete, 3, &unused_seventh));
 
-    /* No match: fully-diminished7 is not a diatonic quality this framework knows. */
+    /* No match: the subset matcher scans the major-key qualities only; fully-diminished7 is the minor vocabulary's
+       (weighted identification) and is not read from a bare interval set here. */
     int fully_diminished7[] = {0, 3, 6, 9};
     assert(!common_practice_identify_seventh(fully_diminished7, 4, &unused_seventh));
 
