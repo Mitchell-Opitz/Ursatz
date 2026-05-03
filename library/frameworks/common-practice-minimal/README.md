@@ -35,9 +35,24 @@ covers exactly:
   its quality name (e.g. "dominant7"), with its own backing
   `Rule`/`Constraint` pair (`chord_vocabulary_seventh.h`), mirroring the
   triads' construction shape but as a separate table/code path.
-  Fully-diminished7 is deliberately excluded -- it requires the raised
-  leading tone of harmonic minor, which this pass does not cover (see
-  below).
+  The subset matcher scans these four only (and the seven degree-keyed
+  triads); the diminished7 and the augmented triad below belong to the
+  weighted minor vocabulary.
+- **Minor-key chord vocabulary for weighted identification** (R-030). The
+  weighted identifier (`weighted_identification.h`) scores the region's
+  own mode: the 14 diatonic chords in a major key, and in a minor key the
+  26 diatonic triads and sevenths of natural, harmonic and melodic minor
+  together, including the augmented III (`COMMON_PRACTICE_TRIAD_AUGMENTED`)
+  and the fully-diminished vii-dim-7
+  (`COMMON_PRACTICE_SEVENTH_DIMINISHED7`, root-relative {0,3,6,9}). The
+  minor-major and augmented-major sevenths are excluded. A minor triad is
+  labeled by its quality ("major", "minor", "diminished", "augmented"),
+  since a degree numeral depends on which form of the scale it comes from;
+  the Roman numeral is standard-tonality's work (RomanText spelling, R-031).
+  When a segment fits the raised and the natural form equally, the raised
+  form wins for V, V7, vii-dim and vii-dim-7 and the natural form wins
+  everywhere else. Pivot chords whose old key is minor are read in this
+  vocabulary too (`key_regions.h`).
 - **Major and natural minor keys only.** Each resolves to a real `Key`
   (`interpretation/key.h`) labeled with its name (e.g. "C major", "A
   minor").
@@ -52,12 +67,11 @@ covers exactly:
 ## Deliberately out of scope (not omitted by oversight)
 
 - Ninths and other extensions beyond sevenths, and altered chords
-- Fully-diminished7 specifically (needs harmonic minor's raised leading
-  tone -- planned alongside harmonic minor support, not before)
 - Modal interchange / borrowed chords
 - Secondary dominants and other tonicization (including chromatic
   seventh chords such as secondary-dominant sevenths)
-- Harmonic minor and melodic minor (natural minor only, this pass)
+- Harmonic and melodic minor in the subset matcher and in `Key` (natural
+  minor only there); weighted identification reads all three forms
 - Chord inversion identification (a triad or seventh chord in any
   inversion is matched to its root-position label; which tone is in the
   bass is not reported)

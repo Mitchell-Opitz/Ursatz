@@ -65,9 +65,9 @@ The fixtures are drafts: hand readings, not yet checked against printed scores (
    one before it. The pickup (measure 0) and the signature become the `MeterMap` the chain uses.
 2. Adaptive segments are built on that meter, weighted, and the key regions are estimated (the score's key signature
    events are passed in, as the importer reads them).
-3. Chords are identified per key region, in that region's key. The weighted identifier has a major-key vocabulary only,
-   so a **minor region is read in its relative major's vocabulary**, the nearest the chain offers; a minor dominant is
-   then not a candidate, and the metrics show it.
+3. Chords are identified per key region, in that region's own key and mode: the major set in a major region and the
+   minor vocabulary (natural, harmonic and melodic minor triads and sevenths, with the raised V and vii-dim winning an
+   exact tie) in a minor one.
 4. The standard-tonality adapter reads the Roman numerals twice: in the annotation's key regions and in the chain's.
 
 ## RomanText subset
