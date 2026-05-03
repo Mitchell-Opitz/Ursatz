@@ -313,12 +313,10 @@ static bool identify_chords(Run *r) {
         }
         int key_index = r->regions.regions[region].key_index;
         int tonic = common_practice_key_index_tonic(key_index);
-        if (common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR) {
-            tonic = (tonic + 3) % 12; /* the relative major's vocabulary */
-        }
+        CommonPracticeKeyMode mode = common_practice_key_index_mode(key_index);
         CommonPracticeWeightedResults group = {0};
-        if (common_practice_identify_weighted_sequence(&r->segments[s], end - s, tonic, COMMON_PRACTICE_KEY_MAJOR, NULL,
-                                                       &group) != COMMON_PRACTICE_WEIGHTED_OK) {
+        if (common_practice_identify_weighted_sequence(&r->segments[s], end - s, tonic, mode, NULL, &group) !=
+            COMMON_PRACTICE_WEIGHTED_OK) {
             return false;
         }
         for (size_t i = 0; i < group.count; i++) {

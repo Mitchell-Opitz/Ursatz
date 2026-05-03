@@ -14,7 +14,7 @@ of convention, not a method limit, among their causes. The reasons are listed at
 The chain is the full chain as `framework_v1_chain.h` runs it: import, the piece's meter, adaptive segments, local key regions (with the file's key
 signature events), chords identified in each region's key, Roman numerals, outer voices, the cadence adapter, and the L3.6 adapter (phrases, ideas, themes,
 expansions). No stage is given an answer, and every default is the library's. (Bach 114's file declares 4/4 and the piece is 3/4, so a 3/4 meter replaces it, as in
-every other reference-piece test. Chord identification has a major-key vocabulary only, so a minor region is read in its relative major.)
+every other reference-piece test. Chord identification reads each key region in its own mode: the major set in a major region, the diatonic triads and sevenths of natural, harmonic and melodic minor in a minor one.)
 
 The expected values are `tests/fixtures/annotations/<piece>_v1_expected.txt`, one per piece, each citing its edition and marked unverified. Where the older
 annotation files (key regions, cadences, phrase form) cover the same ground their values are copied, and `framework_v1_verification` fails if the two disagree,

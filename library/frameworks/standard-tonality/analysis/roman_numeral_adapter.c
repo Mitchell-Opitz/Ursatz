@@ -22,6 +22,7 @@
 static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
 static const int NATURAL_MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
 static const int RAISED_LEADING_TONE_OFFSET = 11;
+static const int RAISED_SIXTH_OFFSET = 9;
 
 typedef struct {
     int intervals[3];
@@ -43,10 +44,12 @@ static const SeventhShape SEVENTHS[] = {{{0, 4, 7, 11}, STANDARD_TONALITY_SEVENT
                                         {{0, 3, 6, 10}, STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED},
                                         {{0, 3, 6, 9}, STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED}};
 
-/* The degree 1..7 of the root `offset` semitones above the tonic, or 0; *raised set for minor's raised 7th. */
-static int degree_of_offset(StandardTonalityRomanKeyMode mode, int offset, bool *raised) {
+/* The degree 1..7 of the root `offset` semitones above the tonic, or 0; *raised set for minor's raised 7th,
+   *raised_sixth for its raised 6th (melodic minor). */
+static int degree_of_offset(StandardTonalityRomanKeyMode mode, int offset, bool *raised, bool *raised_sixth) {
     const int *scale = mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_SCALE : NATURAL_MINOR_SCALE;
     *raised = false;
+    *raised_sixth = false;
     for (int i = 0; i < 7; i++) {
         if (scale[i] == offset) {
             return i + 1;
@@ -56,7 +59,36 @@ static int degree_of_offset(StandardTonalityRomanKeyMode mode, int offset, bool 
         *raised = true;
         return 7;
     }
+    if (mode == STANDARD_TONALITY_ROMAN_KEY_MINOR && offset == RAISED_SIXTH_OFFSET) {
+        *raised_sixth = true;
+        return 6;
+    }
     return 0;
+}
+
+/*
+ * The chords only melodic minor gives, which the natural and harmonic tables (standard_tonality_roman_numeral_fits_key)
+ * do not hold: on the 2nd degree ii and ii7 (minor, minor-minor), on the 4th IV and IV7 (major, major-minor), on the
+ * raised 6th vi-diminished and the half-diminished vi-7, and on the raised 7th the half-diminished vii-7. The raised
+ * 6th is only ever read here: its natural-form tables are the lowered 6th's.
+ */
+static bool melodic_minor_fits(int degree, bool raised, bool raised_sixth, const StandardTonalityRomanNumeral *numeral) {
+    if (raised_sixth) {
+        return degree == 6 && (numeral->seventh ? numeral->seventh_quality == STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED
+                                                : numeral->triad == STANDARD_TONALITY_TRIAD_DIMINISHED);
+    }
+    if (raised) {
+        return degree == 7 && numeral->seventh && numeral->seventh_quality == STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED;
+    }
+    if (degree == 2) {
+        return numeral->seventh ? numeral->seventh_quality == STANDARD_TONALITY_SEVENTH_MINOR_MINOR
+                                : numeral->triad == STANDARD_TONALITY_TRIAD_MINOR;
+    }
+    if (degree == 4) {
+        return numeral->seventh ? numeral->seventh_quality == STANDARD_TONALITY_SEVENTH_MAJOR_MINOR
+                                : numeral->triad == STANDARD_TONALITY_TRIAD_MAJOR;
+    }
+    return false;
 }
 
 static bool numeral_from_intervals(const int *intervals, size_t count, int degree, StandardTonalityRomanNumeral *out) {
@@ -98,19 +130,32 @@ bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *inpu
     }
     int offset = ((input->root_pitch_class - input->tonic_pitch_class) % 12 + 12) % 12;
     bool raised = false;
-    int degree = degree_of_offset(input->mode, offset, &raised);
+    bool raised_sixth = false;
+    int degree = degree_of_offset(input->mode, offset, &raised, &raised_sixth);
     if (degree == 0) {
         return false;
     }
     StandardTonalityRomanNumeral numeral;
-    if (!numeral_from_intervals(input->intervals, input->interval_count, degree, &numeral) ||
-        !standard_tonality_roman_numeral_is_unambiguous(&numeral) ||
-        !standard_tonality_roman_numeral_fits_key(input->mode, degree, raised, &numeral)) {
+    if (!numeral_from_intervals(input->intervals, input->interval_count, degree, &numeral)) {
+        return false;
+    }
+    bool minor = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
+    /* "IV7" is a major seventh in a major key; in minor no natural or harmonic IV is major, so IV7 is melodic
+       minor's dominant seventh on the 4th, the one uppercase seventh off the dominant that is not ambiguous. */
+    bool melodic_dominant_seventh = minor && degree == 4 && numeral.seventh &&
+                                    numeral.seventh_quality == STANDARD_TONALITY_SEVENTH_MAJOR_MINOR;
+    if (!standard_tonality_roman_numeral_is_unambiguous(&numeral) && !melodic_dominant_seventh) {
+        return false;
+    }
+    bool fits = !raised_sixth && standard_tonality_roman_numeral_fits_key(input->mode, degree, raised, &numeral);
+    if (!fits && !(minor && melodic_minor_fits(degree, raised, raised_sixth, &numeral))) {
         return false;
     }
     memset(out, 0, sizeof(*out));
     out->numeral = numeral;
     out->raised_leading_tone = raised;
+    out->raised_sixth = raised_sixth;
+    out->romantext_spelling = minor;
     out->inversion = inversion_of(input);
     return true;
 }
@@ -122,6 +167,27 @@ static const char *figure_of(bool seventh, int inversion) {
         return inversion >= 0 && inversion < 4 ? SEVENTH_FIGURES[inversion] : NULL;
     }
     return inversion >= 0 && inversion < 3 ? TRIAD_FIGURES[inversion] : NULL;
+}
+
+/* RomanText spelling (R-031): the circle of a diminished chord is "o" and the slashed circle of a half-diminished
+   one "/o" -- "viio7", "ii/o7" -- not the degree sign and the empty set sign the standard-tonality numeral uses. */
+static void respell_romantext(char *label, size_t size) {
+    char spelled[STANDARD_TONALITY_ROMAN_LABEL_MAX];
+    size_t out = 0;
+    for (const char *in = label; *in != '\0' && out + 3 < sizeof(spelled); in++) {
+        if ((unsigned char)in[0] == 0xC2 && (unsigned char)in[1] == 0xB0) {
+            spelled[out++] = 'o';
+            in++;
+        } else if ((unsigned char)in[0] == 0xE2 && (unsigned char)in[1] == 0x88 && (unsigned char)in[2] == 0x85) {
+            spelled[out++] = '/';
+            spelled[out++] = 'o';
+            in += 2;
+        } else {
+            spelled[out++] = *in;
+        }
+    }
+    spelled[out] = '\0';
+    snprintf(label, size, "%s", spelled);
 }
 
 bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *reading, char *buffer, size_t size) {
@@ -149,6 +215,9 @@ bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *
         }
         buffer[length++] = '/';
         strcpy(buffer + length, target);
+    }
+    if (reading->romantext_spelling) {
+        respell_romantext(buffer, size);
     }
     return true;
 }

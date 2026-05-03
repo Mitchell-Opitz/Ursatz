@@ -27,6 +27,12 @@ static const SeventhDescriptor DESCRIPTORS[COMMON_PRACTICE_SEVENTH_COUNT] = {
      "common-practice-minimal-chord-minor7"},
     {"half-diminished7", "common-practice-minimal-rule-half-diminished7",
      "common-practice-minimal-constraint-half-diminished7", "common-practice-minimal-chord-half-diminished7"},
+    {"diminished7", "common-practice-minimal-rule-diminished7", "common-practice-minimal-constraint-diminished7",
+     "common-practice-minimal-chord-diminished7"},
+};
+
+static const int SEVENTH_INTERVALS[COMMON_PRACTICE_SEVENTH_COUNT][4] = {
+    {0, 4, 7, 10}, {0, 4, 7, 11}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9},
 };
 
 static Rule *g_rules[COMMON_PRACTICE_SEVENTH_COUNT];
@@ -35,6 +41,16 @@ static bool g_init_attempted[COMMON_PRACTICE_SEVENTH_COUNT];
 
 static bool valid_seventh(CommonPracticeSeventh seventh) {
     return seventh >= 0 && seventh < COMMON_PRACTICE_SEVENTH_COUNT;
+}
+
+bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]) {
+    if (!valid_seventh(seventh) || out == NULL) {
+        return false;
+    }
+    for (int i = 0; i < 4; i++) {
+        out[i] = SEVENTH_INTERVALS[seventh][i];
+    }
+    return true;
 }
 
 static void ensure_built(CommonPracticeSeventh seventh) {

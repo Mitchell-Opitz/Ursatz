@@ -63,10 +63,47 @@ static void test_minor_key(void) {
     expect_label(chord_in(9, 9, ADAPTER_MINOR_TRIAD, 3, 9, A_MINOR), "i");
     expect_label(chord_in(2, 2, ADAPTER_MINOR_TRIAD, 3, 9, A_MINOR), "iv");
     expect_label(chord_in(4, 4, ADAPTER_MAJOR_TRIAD, 3, 9, A_MINOR), "V");           /* the raised 7th, G# */
-    expect_label(chord_in(8, 8, ADAPTER_DIM_TRIAD, 3, 9, A_MINOR), "vii\xC2\xB0");   /* G# diminished */
+    expect_label(chord_in(8, 8, ADAPTER_DIM_TRIAD, 3, 9, A_MINOR), "viio");          /* G# diminished, RomanText spelling */
     expect_label(chord_in(4, 8, ADAPTER_DOMINANT_SEVENTH, 4, 9, A_MINOR), "V6/5");
     expect_label(chord_in(7, 7, ADAPTER_MAJOR_TRIAD, 3, 9, A_MINOR), "VII");          /* the subtonic */
     expect_label(chord_in(4, 4, ADAPTER_MINOR_TRIAD, 3, 9, A_MINOR), "v");            /* natural minor v */
+}
+
+/* R-030 / R-031: the diatonic triads and sevenths of natural, harmonic and melodic minor, spelled as RomanText spells them. */
+static void test_minor_key_vocabulary_in_romantext_spelling(void) {
+    static const int AUGMENTED[3] = {0, 4, 8};
+    static const int MINOR_SEVENTH[4] = {0, 3, 7, 10};
+    static const int HALF_DIMINISHED[4] = {0, 3, 6, 10};
+    static const int DIMINISHED_SEVENTH[4] = {0, 3, 6, 9};
+    static const int MINOR_MAJOR_SEVENTH[4] = {0, 3, 7, 11};
+    static const int AUGMENTED_MAJOR_SEVENTH[4] = {0, 4, 8, 11};
+    static const int MAJOR_SEVENTH[4] = {0, 4, 7, 11};
+
+    /* harmonic minor: V7, viio7, III+ */
+    expect_label(chord_in(4, 4, ADAPTER_DOMINANT_SEVENTH, 4, 9, A_MINOR), "V7");
+    expect_label(chord_in(8, 8, DIMINISHED_SEVENTH, 4, 9, A_MINOR), "viio7");
+    expect_label(chord_in(8, 2, DIMINISHED_SEVENTH, 4, 9, A_MINOR), "viio4/3");
+    expect_label(chord_in(0, 0, AUGMENTED, 3, 9, A_MINOR), "III+");
+    /* natural minor: III, v, VII, iv, ii/o7, VI */
+    expect_label(chord_in(0, 0, ADAPTER_MAJOR_TRIAD, 3, 9, A_MINOR), "III");
+    expect_label(chord_in(4, 4, ADAPTER_MINOR_TRIAD, 3, 9, A_MINOR), "v");
+    expect_label(chord_in(7, 7, ADAPTER_DOMINANT_SEVENTH, 4, 9, A_MINOR), "VII7");
+    expect_label(chord_in(11, 11, HALF_DIMINISHED, 4, 9, A_MINOR), "ii/o7");
+    expect_label(chord_in(5, 5, MAJOR_SEVENTH, 4, 9, A_MINOR), "VI7");
+    /* melodic minor: IV, IV7, ii, ii7, the raised sixth's vio, the raised seventh's half-diminished vii/o7 */
+    expect_label(chord_in(2, 2, ADAPTER_MAJOR_TRIAD, 3, 9, A_MINOR), "IV");
+    expect_label(chord_in(2, 2, ADAPTER_DOMINANT_SEVENTH, 4, 9, A_MINOR), "IV7");
+    expect_label(chord_in(11, 11, ADAPTER_MINOR_TRIAD, 3, 9, A_MINOR), "ii");
+    expect_label(chord_in(11, 11, MINOR_SEVENTH, 4, 9, A_MINOR), "ii7");
+    expect_label(chord_in(6, 6, ADAPTER_DIM_TRIAD, 3, 9, A_MINOR), "vio");
+    expect_label(chord_in(6, 6, HALF_DIMINISHED, 4, 9, A_MINOR), "vi/o7");
+    expect_label(chord_in(8, 8, HALF_DIMINISHED, 4, 9, A_MINOR), "vii/o7");
+    /* the minor-major and augmented-major sevenths are not in the vocabulary, nor is a major triad on the raised sixth */
+    expect_none(chord_in(9, 9, MINOR_MAJOR_SEVENTH, 4, 9, A_MINOR));
+    expect_none(chord_in(0, 0, AUGMENTED_MAJOR_SEVENTH, 4, 9, A_MINOR));
+    expect_none(chord_in(6, 6, ADAPTER_MAJOR_TRIAD, 3, 9, A_MINOR));
+    /* the circle and the slashed circle keep the degree sign and the empty set sign in a major key */
+    expect_label(chord_in(11, 11, HALF_DIMINISHED, 4, 0, C_MAJOR), "vii\xE2\x88\x85" "7");
 }
 
 static void test_chords_the_key_does_not_give(void) {
@@ -176,6 +213,7 @@ static void test_interpretation_and_uncertainty(void) {
 int main(void) {
     test_triads_and_sevenths_in_c();
     test_minor_key();
+    test_minor_key_vocabulary_in_romantext_spelling();
     test_chords_the_key_does_not_give();
     test_key_boundary_switches_the_numeral_key();
     test_no_match_segment_gives_no_numeral();

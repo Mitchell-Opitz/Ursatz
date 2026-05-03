@@ -32,7 +32,7 @@
  * chord_vocabulary_seventh.h) has all 4 of its intervals present among
  * the input's distinct intervals, even when extra (non-chord-tone)
  * intervals are also present. Fully-diminished7 is not one of the four
- * (see that header). This mirrors triad_identification.c's subset-match
+ * (it belongs to the weighted minor vocabulary, weighted_identification.h). This mirrors triad_identification.c's subset-match
  * stopgap for arpeggiated/multi-voice textures (see Known_Gaps.md); it
  * does not tolerate more than one simultaneous non-chord interval in
  * practice, since a second extra interval can complete an unrelated

@@ -209,6 +209,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
     reading.inversion = member_in_bass(input->bass_pitch_class, root, best_shape->intervals,
                                        best_shape->interval_count);
     reading.applied = true;
+    reading.romantext_spelling = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
     reading.applied_kind = best_shape->kind;
 
     out->reading = reading;

@@ -494,6 +494,49 @@ static void test_a_chord_in_both_keys_is_the_pivot(void) {
     meter_map_destroy(map);
 }
 
+/* A minor, minor weights: tonic, third and fifth heavier; the raised seventh G# sounds, not G. */
+static void minor_weights(int tonic, double out[12]) {
+    static const int SCALE[7] = {0, 2, 3, 5, 7, 8, 11};
+    static const double WEIGHT[7] = {3.0, 1.0, 2.0, 1.2, 2.5, 1.0, 0.8};
+    memset(out, 0, 12 * sizeof(double));
+    for (int i = 0; i < 7; i++) {
+        out[(tonic + SCALE[i]) % 12] = WEIGHT[i];
+    }
+}
+
+/* A minor x8 (the last measure's segment is the chord), then a run in E major x8. */
+static void build_minor_modulation(Piece *piece, const CommonPracticeSegment *chord) {
+    long measure = 0;
+    double weights[12];
+    minor_weights(9, weights);
+    for (int i = 0; i < 8; i++) {
+        add_measure(piece, measure++, weights);
+    }
+    piece->items[7].source = chord;
+    add_run(piece, &measure, 4, 8);
+}
+
+static void test_a_pivot_chord_in_a_minor_old_key_is_read_in_minor(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    CommonPracticeMember members[4];
+    CommonPracticeSegment chord;
+    /* E G# B E: the V of A minor, which is also the I of E major. Read in A minor's own vocabulary it is the
+       raised-leading-tone dominant; read in the relative major C (the old stand-in) it was an iii with no third
+       that C major does not contain, and no pivot. */
+    const int e_major[4] = {40, 56, 59, 64};
+    make_chord(members, &chord, e_major, "chord-e");
+    build_minor_modulation(&piece, &chord);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2);
+    assert(regions.regions[0].key_index == 21 && regions.regions[1].key_index == 4);
+    assert(regions.changes[0].has_pivot && regions.changes[0].pivot_segment == 7);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
 static void test_a_direct_modulation_has_no_pivot(void) {
     MeterMap *map = four_four();
     Piece piece = {{{0}}, {0}, 0, 0};
@@ -687,6 +730,7 @@ int main(void) {
     test_the_same_input_gives_the_same_regions();
     test_region_input_errors();
     test_a_chord_in_both_keys_is_the_pivot();
+    test_a_pivot_chord_in_a_minor_old_key_is_read_in_minor();
     test_a_direct_modulation_has_no_pivot();
     test_a_tonicization_has_no_pivot_but_a_weak_modulation_does();
     test_a_signature_change_forces_a_boundary_against_the_profile();

@@ -16,7 +16,8 @@
  *
  * READING. A chord is read from pitch classes alone: the root's distance above the key's tonic gives the
  * scale degree (the major scale; for minor, the natural minor scale, with the raised leading tone, a root
- * one semitone below the tonic, as degree 7); the root-relative interval set gives the quality (triads:
+ * one semitone below the tonic, as degree 7, and melodic minor's raised sixth, a root nine semitones above it,
+ * as degree 6); the root-relative interval set gives the quality (triads:
  * major {0,4,7} minor {0,3,7} diminished {0,3,6} augmented {0,4,8}; sevenths: major-major {0,4,7,11}
  * major-minor {0,4,7,10} minor-minor {0,3,7,10} half-diminished {0,3,6,10} fully diminished {0,3,6,9}).
  * The degree and quality must be ones the key gives (standard_tonality_roman_numeral_fits_key): in minor
@@ -30,7 +31,8 @@
  * chord member, reads as root position.
  *
  * LABEL. The standard-tonality numeral (roman_numeral_rules.h: "V", "ii", "vii\xC2\xB0", "V7", "ii\xE2\x88\x85" "7")
- * and the figure; an inverted seventh chord replaces its "7" by the figure: V6/5, V4/3, V4/2, "vii\xC2\xB0" "6".
+ * and the figure; in a minor key the label (the claim's too) is spelled as RomanText spells it (R-031): V, v, VII, III, III+, iv,
+ * IV, "viio7", "ii/o7" -- the circle is "o" and the slashed circle "/o"; an inverted seventh chord replaces its "7" by the figure: V6/5, V4/3, V4/2, "vii\xC2\xB0" "6".
  *
  * CLAIM. One Interpretation per matched segment: target = the segment's Sonority id (the Chord's target),
  * FrameworkReference standard-tonality, a claim Value of type STANDARD_TONALITY_ROMAN_CLAIM_TYPE holding a
@@ -61,6 +63,8 @@ typedef struct {
 typedef struct {
     StandardTonalityRomanNumeral numeral;
     bool raised_leading_tone;   /* minor: the root is the raised leading tone (a vii-diminished) */
+    bool raised_sixth;          /* minor: the root is the raised 6th of melodic minor (a vi-diminished) */
+    bool romantext_spelling;    /* minor key: the label spells the circle "o" and the slashed circle "/o" (R-031) */
     int inversion;
     /* An applied chord (applied_chords.h): `numeral` is then the chord as it reads in the tonicized key (V, V7,
        vii-diminished, vii-diminished-7) and applied_target the numeral of the chord tonicized (ii, IV, V ...). */

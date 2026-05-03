@@ -225,18 +225,18 @@ static void test_the_sequence_skips_unmatched_segments_when_labeling(void) {
     assert(none.count == 0 && none.items == NULL);
 }
 
-static void test_rejects_bad_input_and_a_minor_key(void) {
+static void test_rejects_bad_input_and_an_unknown_mode(void) {
     CommonPracticeMember members[1] = {note("c", 60, false, 1.0, S, NULL, 0.0)};
     CommonPracticeSegment seg = segment(members, 1, "s0");
     CommonPracticeWeightedResult result;
     CommonPracticeWeightedResults results = {NULL, 7};
     assert(common_practice_identify_weighted(NULL, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &result) ==
            COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
-    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MINOR, NULL, &result) ==
+    assert(common_practice_identify_weighted(&seg, 0, (CommonPracticeKeyMode)99, NULL, &result) ==
            COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE);
     assert(common_practice_identify_weighted(&seg, 12, COMMON_PRACTICE_KEY_MAJOR, NULL, &result) ==
            COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC);
-    assert(common_practice_identify_weighted_sequence(&seg, 1, 0, COMMON_PRACTICE_KEY_MINOR, NULL, &results) ==
+    assert(common_practice_identify_weighted_sequence(&seg, 1, 0, (CommonPracticeKeyMode)99, NULL, &results) ==
            COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE);
     assert(results.items == NULL && results.count == 7); /* untouched */
 
@@ -264,7 +264,7 @@ int main(void) {
     test_two_passing_tones_on_a_weak_beat_still_pick_the_triad();
     test_a_suspension_4_3_is_labeled_across_the_sequence();
     test_the_sequence_skips_unmatched_segments_when_labeling();
-    test_rejects_bad_input_and_a_minor_key();
+    test_rejects_bad_input_and_an_unknown_mode();
     test_the_existing_subset_match_functions_are_unchanged();
     printf("test_weighted_chord_identification: ok\n");
     return 0;

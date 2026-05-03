@@ -596,9 +596,7 @@ static CommonPracticeKeyRegionsStatus find_pivot(const CommonPracticeKeySegment 
                                                   size_t search_measures, bool *found, size_t *pivot) {
     *found = false;
     int old_tonic = common_practice_key_index_tonic(old_key);
-    if (common_practice_key_index_mode(old_key) == COMMON_PRACTICE_KEY_MINOR) {
-        old_tonic = (old_tonic + 3) % 12;
-    }
+    CommonPracticeKeyMode old_mode = common_practice_key_index_mode(old_key);
     unsigned new_collection = natural_collection(new_key);
     for (size_t i = segment_count; i-- > 0;) {
         int measure = measures->segment_measure[i];
@@ -613,7 +611,7 @@ static CommonPracticeKeyRegionsStatus find_pivot(const CommonPracticeKeySegment 
         }
         CommonPracticeWeightedResult result;
         CommonPracticeWeightedStatus identified =
-            common_practice_identify_weighted(segments[i].source, old_tonic, COMMON_PRACTICE_KEY_MAJOR, NULL, &result);
+            common_practice_identify_weighted(segments[i].source, old_tonic, old_mode, NULL, &result);
         if (identified == COMMON_PRACTICE_WEIGHTED_ERR_ALLOC) {
             return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
         }

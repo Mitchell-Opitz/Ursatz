@@ -169,7 +169,7 @@ static CommonPracticeWeights weigh(const CommonPracticeMember *members, size_t c
 /* How many candidates the last rank() call returned (those whose root sounds). */
 static size_t g_ranked_count;
 
-static void rank(const CommonPracticeWeights *weights, int tonic, CommonPracticeRankedChord out[14]) {
+static void rank(const CommonPracticeWeights *weights, int tonic, CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]) {
     CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
     assert(common_practice_rank_candidates(weights, tonic, COMMON_PRACTICE_KEY_MAJOR, &config, out,
                                            &g_ranked_count) == COMMON_PRACTICE_WEIGHTED_OK);
@@ -184,7 +184,7 @@ static void test_a_pure_triad_is_covered_completely(void) {
                                        member(52, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 3);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
     assert_best(ranked, 1, false); /* I, and the triad beats the tied I major seventh */
     assert(ranked[0].triad == COMMON_PRACTICE_TRIAD_I);
@@ -202,7 +202,7 @@ static void test_the_candidates_are_the_fourteen_diatonic_chords_best_first(void
                                        member(69, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(71, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 7);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
     assert(g_ranked_count == 14);
 
@@ -240,7 +240,7 @@ static void test_a_candidate_whose_root_does_not_sound_is_not_ranked(void) {
                                        member(52, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 3);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
     assert(g_ranked_count == 6); /* I, iii, V, and the sevenths on them */
     for (size_t i = 0; i < g_ranked_count; i++) {
@@ -255,7 +255,7 @@ static void test_a_dominant_seventh_beats_the_dominant_triad(void) {
                                        member(62, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(65, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 4);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
     assert_best(ranked, 5, true); /* V7: G B D F */
     assert(ranked[0].seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7);
@@ -267,7 +267,7 @@ static void test_the_key_is_transposed(void) {
                                        member(55, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(58, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 3);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 3, ranked);
     assert_best(ranked, 1, false);
     assert(ranked[0].root_pitch_class == 3);
@@ -284,8 +284,8 @@ static void test_a_missing_third_is_penalized(void) {
                                              member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights a = weigh(with_third, 3);
     CommonPracticeWeights b = weigh(without_third, 2);
-    CommonPracticeRankedChord full[14];
-    CommonPracticeRankedChord bare[14];
+    CommonPracticeRankedChord full[COMMON_PRACTICE_CANDIDATE_COUNT];
+    CommonPracticeRankedChord bare[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&a, 0, full);
     rank(&b, 0, bare);
     assert_best(bare, 1, false); /* C and G alone are still best read as I... */
@@ -312,7 +312,7 @@ static void test_the_bass_bonus_decides_between_i_and_iii(void) {
                                        member(67, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(71, false, 1.5, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 4);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
 
     int i_at = position_of_triad(ranked, 1);
@@ -330,7 +330,7 @@ static void test_a_tie_goes_to_root_position(void) {
                                        member(67, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(71, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 4);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
 
     int i_at = position_of_triad(ranked, 1);
@@ -346,7 +346,7 @@ static void test_a_tie_goes_to_the_triad_over_the_seventh(void) {
                                        member(52, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 3);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
     assert(!ranked[0].is_seventh && ranked[0].degree == 1);
     assert(ranked[1].is_seventh && ranked[1].degree == 1);
@@ -359,14 +359,14 @@ static void test_a_second_inversion_does_not_hide_the_chord(void) {
                                        member(60, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(64, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights = weigh(members, 3);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
     assert_best(ranked, 1, false);
 }
 
 static void test_an_empty_segment_ranks_without_a_bass(void) {
     CommonPracticeWeights weights = weigh(NULL, 0);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     rank(&weights, 0, ranked);
     assert(g_ranked_count == 0); /* nothing sounds, so no root sounds: nothing to rank */
 }
@@ -374,13 +374,15 @@ static void test_an_empty_segment_ranks_without_a_bass(void) {
 static void test_scoring_rejects_bad_input(void) {
     CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
     CommonPracticeWeights weights = weigh(NULL, 0);
-    CommonPracticeRankedChord ranked[14];
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     size_t count = 0;
     assert(common_practice_rank_candidates(NULL, 0, COMMON_PRACTICE_KEY_MAJOR, &config, ranked, &count) ==
            COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
     assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, &config, ranked, NULL) ==
            COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
     assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MINOR, &config, ranked, &count) ==
+           COMMON_PRACTICE_WEIGHTED_OK); /* minor has its own vocabulary */
+    assert(common_practice_rank_candidates(&weights, 0, (CommonPracticeKeyMode)99, &config, ranked, &count) ==
            COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE);
     assert(common_practice_rank_candidates(&weights, 12, COMMON_PRACTICE_KEY_MAJOR, &config, ranked, &count) ==
            COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC);
