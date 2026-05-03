@@ -414,7 +414,7 @@ static void test_bach_114(void) {
     MeterMap *map = three_four_map();
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, "Bach 114.mid", map);
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, map,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,
                                standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
     CommonPracticeWeightedResults results = {NULL, 0};
     assert(common_practice_identify_weighted_sequence(p.segments, p.segment_count, 7, COMMON_PRACTICE_KEY_MAJOR, NULL,

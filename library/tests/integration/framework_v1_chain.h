@@ -372,7 +372,7 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     assert(standard_tonality_build_roman_numerals(c->tonal_inputs, c->tonal_count, &c->romans) == STANDARD_TONALITY_ROMAN_OK);
 
     /* outer voices and the cadences */
-    assert(outer_voice_extract(&c->p.sonorities, c->p.events, c->p.pitch_values, c->p.note_count, c->map,
+    assert(outer_voice_extract(&c->p.voice_sonorities, c->p.events, c->p.pitch_values, c->p.note_count, c->map,
                                standard_meter_segmentation_beat_grid, NULL, NULL, &c->lines) == OUTER_VOICE_OK);
     c->in = make_inputs(&c->p, c->map, &c->shim, count);
     for (size_t i = 0; i < count; i++) {

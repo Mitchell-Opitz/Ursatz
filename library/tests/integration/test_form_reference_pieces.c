@@ -387,7 +387,7 @@ static void run_piece(const FormPiece *fp, FormScore *alone_total, FormScore *ch
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, fp->piece.midi, own);
     const MeterMap *map = own != NULL ? own : p.meter.meter_map;
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, map,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,
                                standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
     printf("%s, measures %d-%d (draft hand analysis):\n", fp->piece.name, annotation.range_first, annotation.range_last);
 

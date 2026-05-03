@@ -304,7 +304,7 @@ static void run_fixture_alone(const PlantedList *planted) {
     WeightedPipeline p = pipeline_run(URSATZ_TEST_OUTPUT_DIR, "galant_fixture.mid", NULL);
     const MeterMap *chain_map = p.meter.meter_map;
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, chain_map, standard_meter_segmentation_beat_grid, NULL, NULL,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, chain_map, standard_meter_segmentation_beat_grid, NULL, NULL,
                                &lines) == OUTER_VOICE_OK);
     SchemaBuild chain_build;
     schema_build_init(&chain_build);
@@ -333,7 +333,7 @@ static void run_real_piece(const RealPiece *piece) {
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, piece->midi, NULL);
     const MeterMap *map = p.meter.meter_map;
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, map, standard_meter_segmentation_beat_grid, NULL, NULL,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map, standard_meter_segmentation_beat_grid, NULL, NULL,
                                &lines) == OUTER_VOICE_OK);
     SchemaBuild build;
     schema_build_init(&build);

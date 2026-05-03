@@ -110,7 +110,7 @@ static Agreement compare(const char *label, const char *midi_file, const char *a
     const MeterMap *map = own != NULL ? own : p.meter.meter_map;
 
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, map,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,
                                standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
     assert(lines.count == p.segment_count);
 

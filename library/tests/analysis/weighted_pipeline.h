@@ -34,6 +34,8 @@ typedef struct {
     size_t note_count;
     MidiMeterImport meter;
     AdaptiveSonorities sonorities;
+    AdaptiveSonorities voice_sonorities; /* without the merge over unchanged harmony: one segment per melody note,
+                                            for outer-voice extraction */
     CommonPracticeMember *members; /* every segment's members, one after another */
     CommonPracticeSegment *segments;
     size_t segment_count;
@@ -116,6 +118,10 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
 
     assert(sonority_builder_build_adaptive(p.events, p.note_count, map, standard_meter_segmentation_beat_grid, NULL,
                                            NULL, &p.sonorities) == AD_SEGMENTATION_OK);
+    AdaptiveSegmentationConfig voice_config = adaptive_segmentation_config_default();
+    voice_config.merge_unchanged_harmony = false;
+    assert(sonority_builder_build_adaptive(p.events, p.note_count, map, standard_meter_segmentation_beat_grid, NULL,
+                                           &voice_config, &p.voice_sonorities) == AD_SEGMENTATION_OK);
 
     PipelineNoteKey *keys = (PipelineNoteKey *)malloc(p.note_count * sizeof(PipelineNoteKey));
     for (size_t i = 0; i < p.note_count; i++) {
@@ -187,6 +193,7 @@ static inline void pipeline_destroy(WeightedPipeline *p) {
     free(p->starts);
     free(p->ends);
     adaptive_sonorities_destroy(&p->sonorities);
+    adaptive_sonorities_destroy(&p->voice_sonorities);
     for (size_t i = 0; i < p->note_count; i++) {
         note_event_destroy(p->events[i]);
         pitch_numeric_value_destroy(p->pitch_values[i]);

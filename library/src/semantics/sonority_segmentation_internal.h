@@ -89,6 +89,18 @@ AdaptiveSegmentationResult segmentation_split_bass(const NoteSpan *spans, const 
 AdaptiveSegmentationResult segmentation_merge(const NoteSpan *spans, const AdaptiveSegmentationConfig *config,
                                                SegmentList *segments);
 
+/*
+ * Step 4, the merge over unchanged harmony (when config->merge_unchanged_harmony): joins a segment into
+ * the previous one when every note attacked in it lies above its bass and every pitch class of the
+ * previous chord is held into it. The previous chord is the first segment of a merged run, less its
+ * highest note's pitch class unless another member doubles it (the melody note may move on), and must
+ * hold at least two pitch classes. The same
+ * barline rule as step 3 applies, and an empty segment is never merged. `segments` is edited in place.
+ */
+AdaptiveSegmentationResult segmentation_merge_unchanged_harmony(const NoteSpan *spans,
+                                                                const AdaptiveSegmentationConfig *config,
+                                                                SegmentList *segments);
+
 /* The lowest sounding pitch of a segment, and the pitch-class set of its members as a 12-bit mask
    (bit pc set). A segment with no members has bass pitch -1 and an empty set. */
 int segment_bass_pitch(const NoteSpan *spans, const Segment *segment);

@@ -423,7 +423,7 @@ static Score run_adapter_alone(const Piece *piece) {
     size_t count = scope_count(&p, &a);
 
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, map,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,
                                standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
     Inputs in = make_inputs(&p, map, &a, count);
     for (size_t s = 0; s < count; s++) {
@@ -517,7 +517,7 @@ static Score run_whole_chain(const Piece *piece) {
     StandardTonalityRomanResult *romans = NULL;
     assert(standard_tonality_build_roman_numerals(tonal_inputs, tonal_count, &romans) == STANDARD_TONALITY_ROMAN_OK);
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, map,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,
                                standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
 
     Inputs in = make_inputs(&p, map, &a, count);
