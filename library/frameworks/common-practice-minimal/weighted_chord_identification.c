@@ -20,6 +20,7 @@ static void clear_result(CommonPracticeWeightedResult *result) {
     result->leftover_count = 0;
     result->best.degree = 0;
     result->runner_up.degree = 0;
+    result->context = COMMON_PRACTICE_CONTEXT_NONE;
 }
 
 void common_practice_weighted_result_destroy(CommonPracticeWeightedResult *result) {
@@ -185,6 +186,118 @@ CommonPracticeWeightedStatus common_practice_identify_weighted(const CommonPract
     return identify_one(segment, tonic_pitch_class, mode, config != NULL ? config : &defaults, out);
 }
 
+/* --- context --- */
+
+static int pitch_class_of(int pitch) {
+    return ((pitch % 12) + 12) % 12;
+}
+
+/* The pitch classes a segment sounds, as a 12-bit mask, and its bass pitch class (-1 when empty). */
+static unsigned segment_mask(const CommonPracticeSegment *segment, int *bass_pitch_class) {
+    unsigned mask = 0;
+    int bass = 0;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        mask |= 1u << pitch_class_of(segment->members[i].pitch);
+        if (i == 0 || segment->members[i].pitch < bass) {
+            bass = segment->members[i].pitch;
+        }
+    }
+    *bass_pitch_class = segment->member_count > 0 ? pitch_class_of(bass) : -1;
+    return mask;
+}
+
+static int bit_count(unsigned mask) {
+    int count = 0;
+    for (; mask != 0; mask &= mask - 1) {
+        count++;
+    }
+    return count;
+}
+
+/* No match, or fewer than three of the best chord's pitch classes sound and its root is not the bass (a root
+   in the bass is its own evidence, as for a triad with the fifth left out). */
+static bool incomplete(const CommonPracticeWeightedResult *result, unsigned chord_mask, unsigned sounding,
+                       int bass_pitch_class) {
+    return !result->matched ||
+           (bit_count(chord_mask & sounding) < 3 && result->best.root_pitch_class != bass_pitch_class);
+}
+
+/* Replaces `into` with the reading of `from`, built over `segment`. */
+static CommonPracticeWeightedStatus take_reading(const CommonPracticeWeightedResult *from,
+                                                 const CommonPracticeSegment *segment, int bass_pitch_class,
+                                                 CommonPracticeContextReading context,
+                                                 CommonPracticeWeightedResult *into) {
+    if (segment->id == NULL) {
+        return COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT;
+    }
+    CommonPracticeWeightedResult result;
+    clear_result(&result);
+    result.matched = true;
+    result.best = from->best;
+    result.runner_up = from->runner_up;
+    result.best_score = from->best_score;
+    result.runner_up_score = from->runner_up_score;
+    result.uncertainty = from->uncertainty;
+    result.context = context;
+    CommonPracticeWeightedStatus status = build_chord(&result.best, segment->id, bass_pitch_class,
+                                                      1.0 - result.uncertainty, NULL, &result.best_chord);
+    if (status == COMMON_PRACTICE_WEIGHTED_OK && from->runner_up_chord != NULL) {
+        status = build_chord(&result.runner_up, segment->id, bass_pitch_class, result.uncertainty, "-runner-up",
+                             &result.runner_up_chord);
+    }
+    if (status != COMMON_PRACTICE_WEIGHTED_OK) {
+        common_practice_weighted_result_destroy(&result);
+        return status;
+    }
+    common_practice_weighted_result_destroy(into);
+    *into = result;
+    return COMMON_PRACTICE_WEIGHTED_OK;
+}
+
+/* Gives each incomplete segment the chord of a neighbour that holds all its pitch classes, the previous first.
+   masks[] (the chosen chords' pitch classes) is kept in step. */
+static CommonPracticeWeightedStatus resolve_from_neighbours(const CommonPracticeSegment *segments, size_t count,
+                                                            int tonic_pitch_class,
+                                                            CommonPracticeWeightedResults *results,
+                                                            unsigned *masks) {
+    for (size_t i = 0; i < count; i++) {
+        int bass_pitch_class = -1;
+        unsigned sounding = segment_mask(&segments[i], &bass_pitch_class);
+        if (sounding == 0 || !incomplete(&results->items[i], masks[i], sounding, bass_pitch_class)) {
+            continue;
+        }
+        const CommonPracticeWeightedResult *from = NULL;
+        CommonPracticeContextReading context = COMMON_PRACTICE_CONTEXT_NONE;
+        if (i > 0 && results->items[i - 1].matched && (sounding & ~masks[i - 1]) == 0) {
+            int previous_bass = -1;
+            unsigned previous = segment_mask(&segments[i - 1], &previous_bass);
+            if (results->items[i - 1].context != COMMON_PRACTICE_CONTEXT_NONE ||
+                !incomplete(&results->items[i - 1], masks[i - 1], previous, previous_bass)) {
+                from = &results->items[i - 1];
+                context = COMMON_PRACTICE_CONTEXT_PREVIOUS;
+            }
+        }
+        if (from == NULL && i + 1 < count && results->items[i + 1].matched && (sounding & ~masks[i + 1]) == 0) {
+            int next_bass = -1;
+            unsigned next = segment_mask(&segments[i + 1], &next_bass);
+            if (!incomplete(&results->items[i + 1], masks[i + 1], next, next_bass)) {
+                from = &results->items[i + 1];
+                context = COMMON_PRACTICE_CONTEXT_NEXT;
+            }
+        }
+        if (from == NULL) {
+            continue;
+        }
+        CommonPracticeWeightedStatus status =
+            take_reading(from, &segments[i], bass_pitch_class, context, &results->items[i]);
+        if (status != COMMON_PRACTICE_WEIGHTED_OK) {
+            return status;
+        }
+        masks[i] = common_practice_ranked_chord_mask(&results->items[i].best, tonic_pitch_class);
+    }
+    return COMMON_PRACTICE_WEIGHTED_OK;
+}
+
 CommonPracticeWeightedStatus common_practice_identify_weighted_sequence(const CommonPracticeSegment *segments,
                                                                          size_t segment_count,
                                                                          int tonic_pitch_class,
@@ -219,6 +332,11 @@ CommonPracticeWeightedStatus common_practice_identify_weighted_sequence(const Co
                 masks[i] = common_practice_ranked_chord_mask(&results.items[i].best, tonic_pitch_class);
             }
         }
+    }
+
+    /* Context: incomplete segments take a neighbouring chord. */
+    if (status == COMMON_PRACTICE_WEIGHTED_OK) {
+        status = resolve_from_neighbours(segments, segment_count, tonic_pitch_class, &results, masks);
     }
 
     /* Pass 2: label each matched segment's leftover tones with the neighbors and the next chord in view. */

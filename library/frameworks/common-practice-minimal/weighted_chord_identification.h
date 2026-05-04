@@ -37,6 +37,20 @@
  * identifies one segment alone and leaves the tone list empty.
  */
 
+/*
+ * CONTEXT (the sequence function only). After pass 1, a segment whose own reading is INCOMPLETE (no match, or
+ * fewer than three of the best chord's pitch classes sounding) takes the chord of a neighbouring segment when
+ * every pitch class it sounds is a tone of that chord: the previous segment's chord first (as resolved, so a run of
+ * sparse segments carries one chord on), else the next segment's own complete reading. The neighbour's best and
+ * runner-up, their scores and the uncertainty are copied, and the Chords are built over this segment's id.
+ * `context` records where the reading came from; COMMON_PRACTICE_CONTEXT_NONE is the segment's own.
+ */
+typedef enum {
+    COMMON_PRACTICE_CONTEXT_NONE = 0,
+    COMMON_PRACTICE_CONTEXT_PREVIOUS,
+    COMMON_PRACTICE_CONTEXT_NEXT
+} CommonPracticeContextReading;
+
 typedef struct {
     const char *note_id; /* the leftover note's id, borrowed from the caller's member */
     bool classified;
@@ -54,6 +68,7 @@ typedef struct {
     Chord *runner_up_chord;              /* owned; NULL unless matched */
     CommonPracticeLeftoverTone *leftover; /* owned; NULL when there are none */
     size_t leftover_count;
+    CommonPracticeContextReading context; /* the evidence for a reading taken from context */
 } CommonPracticeWeightedResult;
 
 typedef struct {
