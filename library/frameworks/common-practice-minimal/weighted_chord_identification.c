@@ -334,8 +334,9 @@ static CommonPracticeWeightedStatus resolve_from_neighbours(const CommonPractice
     for (size_t i = 0; i < count; i++) {
         int bass_pitch_class = -1;
         unsigned sounding = segment_mask(&segments[i], &bass_pitch_class);
-        if (sounding == 0 || !incomplete(&results->items[i], masks[i], sounding, bass_pitch_class)) {
-            continue;
+        if (sounding == 0 || results->items[i].context != COMMON_PRACTICE_CONTEXT_NONE ||
+            !incomplete(&results->items[i], masks[i], sounding, bass_pitch_class)) {
+            continue; /* empty, already read from context (an arpeggio), or complete */
         }
         const CommonPracticeWeightedResult *from = NULL;
         CommonPracticeContextReading context = COMMON_PRACTICE_CONTEXT_NONE;
