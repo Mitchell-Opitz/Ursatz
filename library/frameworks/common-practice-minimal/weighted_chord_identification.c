@@ -214,12 +214,12 @@ static int bit_count(unsigned mask) {
     return count;
 }
 
-/* No match, or fewer than three of the best chord's pitch classes sound and its root is not the bass (a root
-   in the bass is its own evidence, as for a triad with the fifth left out). */
+/* No match, or fewer than three of the best chord's pitch classes sound, unless two do with the root in the bass
+   (a root in the bass is its own evidence, as for a triad with the fifth left out). A single note is incomplete. */
 static bool incomplete(const CommonPracticeWeightedResult *result, unsigned chord_mask, unsigned sounding,
                        int bass_pitch_class) {
-    return !result->matched ||
-           (bit_count(chord_mask & sounding) < 3 && result->best.root_pitch_class != bass_pitch_class);
+    int tones = bit_count(chord_mask & sounding);
+    return !result->matched || tones < 2 || (tones < 3 && result->best.root_pitch_class != bass_pitch_class);
 }
 
 /* Replaces `into` with the reading of `from`, built over `segment`. */
