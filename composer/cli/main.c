@@ -11,6 +11,7 @@
 #include "random_motive.h"
 #include "recognize.h"
 #include "regenerate.h"
+#include "theme.h"
 #include "variations.h"
 #include "variants_cmd.h"
 #include "cli_options.h"
@@ -27,6 +28,7 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", MOTIVE_USAGE_LINE);
     fprintf(out, "%s\n", DEVELOP_USAGE_LINE);
     fprintf(out, "%s\n", GROW_USAGE_LINE);
+    fprintf(out, "%s\n", THEME_USAGE_LINE);
     fprintf(out, "%s\n", COUNTERPOINT_USAGE_LINE);
     fprintf(out, "%s\n", PLAN_USAGE_LINE);
     fprintf(out, "%s\n", FILL_USAGE_LINE);
@@ -137,6 +139,9 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "grow") == 0) {
         return run_grow(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "theme") == 0) {
+        return run_theme(argc, argv);
     }
     if (argc >= 2 && strcmp(argv[1], "counterpoint") == 0) {
         return run_counterpoint(argc, argv);
