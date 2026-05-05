@@ -164,6 +164,41 @@ static void fail(char *message, size_t size, const char *text) {
     snprintf(message, size, "%s", text);
 }
 
+/* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or
+   the grid cannot be read. */
+static long beat_index(const MeterMap *map, ExactRational start, ExactRational end) {
+    MusicalTime *at = er_to_time(start);
+    int measure = 0;
+    bool found = at != NULL && meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
+    musical_time_destroy(at);
+    MusicalTime **starts = NULL;
+    size_t count = 0;
+    if (!found || !standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count)) {
+        return 0;
+    }
+    TimeSpan *span = NULL;
+    long index = 0;
+    if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
+        ExactRational measure_end = er_of_time(time_span_end(span));
+        for (size_t b = 0; b < count; b++) {
+            ExactRational beat_start = er_of_time(starts[b]);
+            ExactRational beat_end = b + 1 < count ? er_of_time(starts[b + 1]) : measure_end;
+            if (er_cmp(beat_start, start) <= 0 && er_cmp(start, beat_end) < 0) {
+                if (er_cmp(end, beat_end) <= 0) {
+                    index = ((long)measure + 1) * 1000 + (long)b + 1;
+                }
+                break;
+            }
+        }
+        time_span_destroy(span);
+    }
+    for (size_t b = 0; b < count; b++) {
+        musical_time_destroy(starts[b]);
+    }
+    free(starts);
+    return index;
+}
+
 /* Segments, members and weights from the imported notes. */
 static bool build_segments(Run *r, char *message, size_t message_size) {
     MusicXmlImport *imp = &r->imported;
@@ -210,6 +245,7 @@ static bool build_segments(Run *r, char *message, size_t message_size) {
         r->segments[s].members = &r->members[next];
         r->segments[s].member_count = count;
         r->segments[s].id = r->segment_ids[s];
+        r->segments[s].beat = beat_index(r->map, start, end);
         for (size_t j = 0; j < count; j++) {
             NoteKey probe = {entity_id_value(sonority_event_id_at(segment->sonority, j)), 0};
             const NoteKey *found = (const NoteKey *)bsearch(&probe, keys, imp->count, sizeof(NoteKey), compare_keys);

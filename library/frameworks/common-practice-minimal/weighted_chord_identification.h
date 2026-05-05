@@ -44,11 +44,16 @@
  * sparse segments carries one chord on), else the next segment's own complete reading. The neighbour's best and
  * runner-up, their scores and the uncertainty are copied, and the Chords are built over this segment's id.
  * `context` records where the reading came from; COMMON_PRACTICE_CONTEXT_NONE is the segment's own.
+ *
+ * Before that, a run of two or more consecutive segments with the same non-zero `beat` (inside one beat), none of
+ * them complete on its own, is read as ONE arpeggiated chord when the union of their members is complete: every
+ * segment of the run takes the union's reading (COMMON_PRACTICE_CONTEXT_ARPEGGIO).
  */
 typedef enum {
     COMMON_PRACTICE_CONTEXT_NONE = 0,
     COMMON_PRACTICE_CONTEXT_PREVIOUS,
-    COMMON_PRACTICE_CONTEXT_NEXT
+    COMMON_PRACTICE_CONTEXT_NEXT,
+    COMMON_PRACTICE_CONTEXT_ARPEGGIO
 } CommonPracticeContextReading;
 
 typedef struct {

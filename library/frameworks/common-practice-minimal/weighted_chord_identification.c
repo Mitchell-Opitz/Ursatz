@@ -254,6 +254,77 @@ static CommonPracticeWeightedStatus take_reading(const CommonPracticeWeightedRes
     return COMMON_PRACTICE_WEIGHTED_OK;
 }
 
+/* Reads each run of two or more segments inside one beat, none complete alone, as one arpeggiated chord when the
+   union of their members is complete. masks[] is kept in step. */
+static CommonPracticeWeightedStatus read_arpeggios(const CommonPracticeSegment *segments, size_t count,
+                                                   int tonic_pitch_class, CommonPracticeKeyMode mode,
+                                                   const CommonPracticeWeightedConfig *config,
+                                                   CommonPracticeWeightedResults *results, unsigned *masks) {
+    size_t run_start = 0;
+    while (run_start < count) {
+        size_t run_end = run_start + 1;
+        while (run_end < count && segments[run_start].beat != 0 && segments[run_end].beat == segments[run_start].beat) {
+            run_end++;
+        }
+        size_t first = run_start;
+        run_start = run_end;
+        if (run_end - first < 2) {
+            continue;
+        }
+
+        size_t member_total = 0;
+        bool any_complete = false;
+        for (size_t i = first; i < run_end; i++) {
+            int bass_pitch_class = -1;
+            unsigned sounding = segment_mask(&segments[i], &bass_pitch_class);
+            any_complete = any_complete || !incomplete(&results->items[i], masks[i], sounding, bass_pitch_class);
+            member_total += segments[i].member_count;
+        }
+        if (any_complete || member_total == 0) {
+            continue;
+        }
+
+        CommonPracticeMember *members = (CommonPracticeMember *)malloc(member_total * sizeof(CommonPracticeMember));
+        if (members == NULL) {
+            return COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
+        }
+        size_t next = 0;
+        for (size_t i = first; i < run_end; i++) {
+            for (size_t k = 0; k < segments[i].member_count; k++) {
+                members[next++] = segments[i].members[k];
+            }
+        }
+        CommonPracticeSegment joined = {members, member_total, segments[first].id, segments[first].beat};
+        CommonPracticeWeightedResult arpeggio;
+        CommonPracticeWeightedStatus status = identify_one(&joined, tonic_pitch_class, mode, config, &arpeggio);
+        if (status != COMMON_PRACTICE_WEIGHTED_OK) {
+            free(members);
+            return status;
+        }
+        int joined_bass = -1;
+        unsigned joined_sounding = segment_mask(&joined, &joined_bass);
+        unsigned joined_mask = arpeggio.matched ? common_practice_ranked_chord_mask(&arpeggio.best, tonic_pitch_class) : 0;
+        free(members);
+        if (incomplete(&arpeggio, joined_mask, joined_sounding, joined_bass) ||
+            bit_count(joined_mask & joined_sounding) < 3) {
+            common_practice_weighted_result_destroy(&arpeggio);
+            continue;
+        }
+        for (size_t i = first; i < run_end && status == COMMON_PRACTICE_WEIGHTED_OK; i++) {
+            int bass_pitch_class = -1;
+            (void)segment_mask(&segments[i], &bass_pitch_class);
+            status = take_reading(&arpeggio, &segments[i], bass_pitch_class, COMMON_PRACTICE_CONTEXT_ARPEGGIO,
+                                  &results->items[i]);
+            masks[i] = joined_mask;
+        }
+        common_practice_weighted_result_destroy(&arpeggio);
+        if (status != COMMON_PRACTICE_WEIGHTED_OK) {
+            return status;
+        }
+    }
+    return COMMON_PRACTICE_WEIGHTED_OK;
+}
+
 /* Gives each incomplete segment the chord of a neighbour that holds all its pitch classes, the previous first.
    masks[] (the chosen chords' pitch classes) is kept in step. */
 static CommonPracticeWeightedStatus resolve_from_neighbours(const CommonPracticeSegment *segments, size_t count,
@@ -334,7 +405,10 @@ CommonPracticeWeightedStatus common_practice_identify_weighted_sequence(const Co
         }
     }
 
-    /* Context: incomplete segments take a neighbouring chord. */
+    /* Context: arpeggiated chords across a beat, then incomplete segments take a neighbouring chord. */
+    if (status == COMMON_PRACTICE_WEIGHTED_OK) {
+        status = read_arpeggios(segments, segment_count, tonic_pitch_class, mode, effective, &results, masks);
+    }
     if (status == COMMON_PRACTICE_WEIGHTED_OK) {
         status = resolve_from_neighbours(segments, segment_count, tonic_pitch_class, &results, masks);
     }

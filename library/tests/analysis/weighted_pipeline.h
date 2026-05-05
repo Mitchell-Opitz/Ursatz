@@ -99,6 +99,41 @@ static inline BeatStrength pipeline_attack_strength(const MeterMap *map, const M
     return strength;
 }
 
+/* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or
+   the grid cannot be read. Shared by the context chord reading (CommonPracticeSegment.beat). */
+static inline long pipeline_beat_index(const MeterMap *map, ExactRational start, ExactRational end) {
+    MusicalTime *at = er_to_time(start);
+    int measure = 0;
+    bool found = at != NULL && meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
+    musical_time_destroy(at);
+    MusicalTime **starts = NULL;
+    size_t count = 0;
+    if (!found || !standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count)) {
+        return 0;
+    }
+    TimeSpan *span = NULL;
+    long index = 0;
+    if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
+        ExactRational measure_end = er_of_time(time_span_end(span));
+        for (size_t b = 0; b < count; b++) {
+            ExactRational beat_start = er_of_time(starts[b]);
+            ExactRational beat_end = b + 1 < count ? er_of_time(starts[b + 1]) : measure_end;
+            if (er_cmp(beat_start, start) <= 0 && er_cmp(start, beat_end) < 0) {
+                if (er_cmp(end, beat_end) <= 0) {
+                    index = ((long)measure + 1) * 1000 + (long)b + 1;
+                }
+                break;
+            }
+        }
+        time_span_destroy(span);
+    }
+    for (size_t b = 0; b < count; b++) {
+        musical_time_destroy(starts[b]);
+    }
+    free(starts);
+    return index;
+}
+
 /* Runs the pipeline over a corpus file. `map` is the MeterMap to segment and read strengths with, or NULL for
    the file's own. */
 static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *file_name, const MeterMap *map) {
@@ -155,6 +190,7 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
         p.segments[s].members = &p.members[next];
         p.segments[s].member_count = count;
         p.segments[s].id = p.segment_ids[s];
+        p.segments[s].beat = pipeline_beat_index(map, start, end);
         for (size_t j = 0; j < count; j++) {
             PipelineNoteKey probe = {entity_id_value(sonority_event_id_at(segment->sonority, j)), 0};
             const PipelineNoteKey *found = (const PipelineNoteKey *)bsearch(&probe, keys, p.note_count,
