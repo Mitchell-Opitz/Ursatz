@@ -94,7 +94,8 @@ static void test_the_interpretation_carries_the_confidence(void) {
 }
 
 static void test_a_near_tie_reports_the_runner_up_and_a_high_uncertainty(void) {
-    /* C3 bass, E, G and a little A: vi7 (A C E G) covers everything; I (C E G) all but the A. The scores
+    /* C3 bass, E, G and a little A (the default bass weight is 1.0): vi7 (A C E G) covers everything; I (C E G)
+       all but the A. The scores
        are close, so the uncertainty is high, and the runner-up is I (a different root from vi7's A). */
     CommonPracticeMember members[4] = {note("c", 48, false, 1.0, S, NULL, 0.0), note("e", 52, false, 1.0, S, NULL, 0.0),
                                        note("g", 55, false, 1.0, S, NULL, 0.0),
@@ -107,8 +108,8 @@ static void test_a_near_tie_reports_the_runner_up_and_a_high_uncertainty(void) {
     assert(result.best.degree == 6 && result.best.is_seventh); /* vi7: A C E G */
     assert(result.runner_up.degree == 1);                      /* I */
     assert(close_to(result.best_score, 1.05));
-    assert(close_to(result.runner_up_score, 3.5 / 3.6 + 0.05));
-    assert(close_to(result.uncertainty, (3.5 / 3.6 + 0.05) / 1.05));
+    assert(close_to(result.runner_up_score, 3.0 / 3.1 + 0.05));
+    assert(close_to(result.uncertainty, (3.0 / 3.1 + 0.05) / 1.05));
     assert(result.uncertainty > 0.9 && result.uncertainty < 1.0);
     common_practice_weighted_result_destroy(&result);
 }
@@ -248,6 +249,84 @@ static void test_rejects_bad_input_and_an_unknown_mode(void) {
     common_practice_weighted_results_destroy(NULL);
 }
 
+static CommonPracticeSegment in_beat(CommonPracticeSegment s, long beat) {
+    s.beat = beat;
+    return s;
+}
+
+static void test_an_incomplete_segment_takes_the_previous_chord(void) {
+    /* I (C E G), then G3 under E4 alone: on its own iii (E G B) with two tones and its root above the bass.
+       Both its pitch classes are in I, so it takes I, as context from the previous segment. */
+    CommonPracticeMember m0[3] = {note("c", 48, false, 1.0, S, NULL, 0.0), note("e", 52, false, 1.0, S, NULL, 0.0),
+                                  note("g", 55, false, 1.0, S, NULL, 0.0)};
+    CommonPracticeMember m1[2] = {note("g1", 55, false, 0.5, W, NULL, 1.0), note("e1", 64, false, 0.5, W, NULL, 1.0)};
+    CommonPracticeSegment segments[2] = {segment(m0, 3, "s0"), segment(m1, 2, "s1")};
+    CommonPracticeWeightedResults results = {0};
+    assert(common_practice_identify_weighted_sequence(segments, 2, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(results.items[0].context == COMMON_PRACTICE_CONTEXT_NONE && results.items[0].best.degree == 1);
+    assert(results.items[1].matched && results.items[1].best.degree == 1 && !results.items[1].best.is_seventh);
+    assert(results.items[1].context == COMMON_PRACTICE_CONTEXT_PREVIOUS);
+    assert(results.items[1].best_chord != NULL);
+    common_practice_weighted_results_destroy(&results);
+
+    /* Alone, the same segment is iii. */
+    CommonPracticeWeightedResult alone;
+    assert(common_practice_identify_weighted(&segments[1], 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &alone) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(alone.best.degree == 3 && alone.context == COMMON_PRACTICE_CONTEXT_NONE);
+    common_practice_weighted_result_destroy(&alone);
+}
+
+static void test_an_incomplete_first_segment_takes_the_next_chord(void) {
+    CommonPracticeMember m0[2] = {note("g0", 55, false, 0.5, S, NULL, 0.0), note("e0", 64, false, 0.5, S, NULL, 0.0)};
+    CommonPracticeMember m1[3] = {note("c", 48, false, 1.0, S, NULL, 0.5), note("e", 52, false, 1.0, S, NULL, 0.5),
+                                  note("g", 55, false, 1.0, S, NULL, 0.5)};
+    CommonPracticeSegment segments[2] = {segment(m0, 2, "s0"), segment(m1, 3, "s1")};
+    CommonPracticeWeightedResults results = {0};
+    assert(common_practice_identify_weighted_sequence(segments, 2, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(results.items[0].best.degree == 1 && results.items[0].context == COMMON_PRACTICE_CONTEXT_NEXT);
+    common_practice_weighted_results_destroy(&results);
+}
+
+static void test_a_root_in_the_bass_keeps_its_own_reading(void) {
+    /* vi (A C E), then C3 under E4: two tones of I with its root in the bass, a triad without its fifth. It is
+       not incomplete, so it stays I rather than taking vi. */
+    CommonPracticeMember m0[3] = {note("a", 57, false, 1.0, S, NULL, 0.0), note("c", 60, false, 1.0, S, NULL, 0.0),
+                                  note("e", 64, false, 1.0, S, NULL, 0.0)};
+    CommonPracticeMember m1[2] = {note("c1", 48, false, 1.0, S, NULL, 1.0), note("e1", 64, false, 1.0, S, NULL, 1.0)};
+    CommonPracticeSegment segments[2] = {segment(m0, 3, "s0"), segment(m1, 2, "s1")};
+    CommonPracticeWeightedResults results = {0};
+    assert(common_practice_identify_weighted_sequence(segments, 2, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(results.items[0].best.degree == 6);
+    assert(results.items[1].best.degree == 1 && results.items[1].context == COMMON_PRACTICE_CONTEXT_NONE);
+    common_practice_weighted_results_destroy(&results);
+}
+
+static void test_an_arpeggio_inside_one_beat_is_one_chord(void) {
+    /* E4 alone, then G4 and C5, both inside beat 5: neither is complete, their union is I (C E G). */
+    CommonPracticeMember m0[1] = {note("e", 64, false, 0.125, S, NULL, 0.0)};
+    CommonPracticeMember m1[2] = {note("g", 67, false, 0.125, W, NULL, 0.125), note("c", 72, false, 0.125, W, NULL, 0.125)};
+    CommonPracticeSegment segments[2] = {in_beat(segment(m0, 1, "s0"), 5), in_beat(segment(m1, 2, "s1"), 5)};
+    CommonPracticeWeightedResults results = {0};
+    assert(common_practice_identify_weighted_sequence(segments, 2, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    for (size_t i = 0; i < 2; i++) {
+        assert(results.items[i].matched && results.items[i].best.degree == 1 && !results.items[i].best.is_seventh);
+        assert(results.items[i].context == COMMON_PRACTICE_CONTEXT_ARPEGGIO);
+    }
+    common_practice_weighted_results_destroy(&results);
+
+    /* In different beats there is no arpeggio: the E stays its own reading. */
+    segments[1].beat = 6;
+    assert(common_practice_identify_weighted_sequence(segments, 2, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(results.items[0].context != COMMON_PRACTICE_CONTEXT_ARPEGGIO);
+    common_practice_weighted_results_destroy(&results);
+}
+
 static void test_the_existing_subset_match_functions_are_unchanged(void) {
     /* The weighted path sits beside them: the degrees {1, 3, 5, 6} still resolve to the first match, I. */
     int degrees[4] = {1, 3, 5, 6};
@@ -266,6 +345,10 @@ int main(void) {
     test_a_suspension_4_3_is_labeled_across_the_sequence();
     test_the_sequence_skips_unmatched_segments_when_labeling();
     test_rejects_bad_input_and_an_unknown_mode();
+    test_an_incomplete_segment_takes_the_previous_chord();
+    test_an_incomplete_first_segment_takes_the_next_chord();
+    test_a_root_in_the_bass_keeps_its_own_reading();
+    test_an_arpeggio_inside_one_beat_is_one_chord();
     test_the_existing_subset_match_functions_are_unchanged();
     printf("test_weighted_chord_identification: ok\n");
     return 0;

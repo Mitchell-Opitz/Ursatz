@@ -25,20 +25,27 @@ static CommonPracticeMember member(int pitch, bool held, double duration, BeatSt
     return m;
 }
 
+/* The defaults with the bass weighted 1.5, so the bass factor shows in the sums (the default is 1.0). */
+static CommonPracticeWeightedConfig bass_heavy(void) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    config.bass_weight = 1.5;
+    return config;
+}
+
 static void test_default_config(void) {
     CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
     assert(close_to(config.strength_factor[BEAT_STRENGTH_STRONG], 1.0));
     assert(close_to(config.strength_factor[BEAT_STRENGTH_MEDIUM], 0.7));
     assert(close_to(config.strength_factor[BEAT_STRENGTH_WEAK], 0.4));
     assert(close_to(config.held_factor, 0.6));
-    assert(close_to(config.bass_weight, 1.5));
+    assert(close_to(config.bass_weight, 1.0));
     assert(close_to(config.missing_third_penalty, 0.15));
     assert(close_to(config.bass_chord_tone_bonus, 0.05));
     assert(close_to(config.min_coverage, 0.5));
 }
 
 static void test_a_pure_triad_weighs_its_three_pitch_classes(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeMember members[3] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(52, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
@@ -53,19 +60,19 @@ static void test_a_pure_triad_weighs_its_three_pitch_classes(void) {
 }
 
 static void test_duration_and_beat_strength_scale_a_member(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeMember members[3] = {member(60, false, 0.5, BEAT_STRENGTH_MEDIUM),
                                        member(64, false, 0.25, BEAT_STRENGTH_WEAK),
                                        member(48, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
     assert(common_practice_weight_segment(members, 3, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
-    assert(close_to(weights.pitch_class[0], 0.5 * 0.7 + 1.0 * 1.0 * 1.5)); /* C4 medium, plus the C3 bass */
+    assert(close_to(weights.pitch_class[0], (0.5 * 0.7 + 1.0 * 1.0) * 1.5)); /* C4 medium and the C3 bass, both on the bass pitch class */
     assert(close_to(weights.pitch_class[4], 0.25 * 0.4));
     assert(weights.bass_pitch == 48);
 }
 
 static void test_a_held_member_uses_the_held_factor_not_its_attack_strength(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     /* The strength of a held member is not read: an invalid one is fine. */
     CommonPracticeMember held = member(55, true, 1.0, BEAT_STRENGTH_COUNT);
     CommonPracticeMember attacked = member(64, false, 1.0, BEAT_STRENGTH_WEAK);
@@ -76,19 +83,19 @@ static void test_a_held_member_uses_the_held_factor_not_its_attack_strength(void
     assert(close_to(weights.pitch_class[4], 0.4));
 }
 
-static void test_every_member_at_the_bass_pitch_gets_the_bass_weight(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+static void test_every_member_on_the_bass_pitch_class_gets_the_bass_weight(void) {
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeMember members[3] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(48, true, 1.0, BEAT_STRENGTH_STRONG),
                                        member(60, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
     assert(common_practice_weight_segment(members, 3, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
-    /* Two C3s (one attacked, one held) at the bass, and a C4 above: pitch class C sums all three. */
-    assert(close_to(weights.pitch_class[0], 1.0 * 1.5 + 0.6 * 1.5 + 1.0));
+    /* Two C3s (one attacked, one held) at the bass, and a C4 above on the bass pitch class: all three take it. */
+    assert(close_to(weights.pitch_class[0], 1.0 * 1.5 + 0.6 * 1.5 + 1.0 * 1.5));
 }
 
 static void test_the_bass_is_the_lowest_pitch_not_the_lowest_pitch_class(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeMember members[2] = {member(71, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(60, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
@@ -97,7 +104,7 @@ static void test_the_bass_is_the_lowest_pitch_not_the_lowest_pitch_class(void) {
 }
 
 static void test_a_configured_factor_changes_the_weights(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     config.bass_weight = 2.0;
     config.held_factor = 1.0;
     CommonPracticeMember members[2] = {member(48, true, 1.0, BEAT_STRENGTH_WEAK),
@@ -109,7 +116,7 @@ static void test_a_configured_factor_changes_the_weights(void) {
 }
 
 static void test_the_result_is_deterministic(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeMember members[4] = {member(48, false, 0.3, BEAT_STRENGTH_STRONG),
                                        member(64, true, 0.7, BEAT_STRENGTH_WEAK),
                                        member(67, false, 0.1, BEAT_STRENGTH_MEDIUM),
@@ -122,14 +129,14 @@ static void test_the_result_is_deterministic(void) {
 }
 
 static void test_no_members_weigh_nothing(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeWeights weights;
     assert(common_practice_weight_segment(NULL, 0, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(weights.total == 0.0 && weights.bass_pitch == -1 && weights.bass_pitch_class == -1);
 }
 
 static void test_rejects_bad_input_and_leaves_the_output_untouched(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeMember good = member(60, false, 1.0, BEAT_STRENGTH_STRONG);
     CommonPracticeWeights weights;
     memset(&weights, 0x7f, sizeof(weights));
@@ -160,7 +167,7 @@ static void test_rejects_bad_input_and_leaves_the_output_untouched(void) {
 /* --- step 2, scoring --- (key of C major unless stated: tonic pitch class 0) */
 
 static CommonPracticeWeights weigh(const CommonPracticeMember *members, size_t count) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeWeights weights;
     assert(common_practice_weight_segment(members, count, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
     return weights;
@@ -170,7 +177,7 @@ static CommonPracticeWeights weigh(const CommonPracticeMember *members, size_t c
 static size_t g_ranked_count;
 
 static void rank(const CommonPracticeWeights *weights, int tonic, CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     assert(common_practice_rank_candidates(weights, tonic, COMMON_PRACTICE_KEY_MAJOR, &config, out,
                                            &g_ranked_count) == COMMON_PRACTICE_WEIGHTED_OK);
 }
@@ -372,7 +379,7 @@ static void test_an_empty_segment_ranks_without_a_bass(void) {
 }
 
 static void test_scoring_rejects_bad_input(void) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeWeights weights = weigh(NULL, 0);
     CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     size_t count = 0;
@@ -398,7 +405,7 @@ int main(void) {
     test_a_pure_triad_weighs_its_three_pitch_classes();
     test_duration_and_beat_strength_scale_a_member();
     test_a_held_member_uses_the_held_factor_not_its_attack_strength();
-    test_every_member_at_the_bass_pitch_gets_the_bass_weight();
+    test_every_member_on_the_bass_pitch_class_gets_the_bass_weight();
     test_the_bass_is_the_lowest_pitch_not_the_lowest_pitch_class();
     test_a_configured_factor_changes_the_weights();
     test_the_result_is_deterministic();

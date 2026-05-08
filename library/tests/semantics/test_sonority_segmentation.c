@@ -330,6 +330,7 @@ static void test_config_defaults(void) {
     AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
     assert(config.min_split_numerator == 1 && config.min_split_denominator == 2);
     assert(!config.merge_across_barlines);
+    assert(config.merge_unchanged_harmony);
 }
 
 static void test_pitch_and_pitch_class_from_the_spelling(void) {
@@ -526,6 +527,120 @@ static void test_merge_edits_the_segment_list_in_place(void) {
     destroy_notes(notes, 1);
 }
 
+/* --- step 4, the merge over unchanged harmony --- */
+
+static AdaptiveSegmentationConfig without_harmony_merge(void) {
+    AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
+    config.merge_unchanged_harmony = false;
+    return config;
+}
+
+static void test_a_melody_note_over_unchanged_harmony_merges(void) {
+    /* C3 and G3 held for two beats, E4 then F4 above them: the F4 is a new attack above the bass, and C and G
+       still sound, so the two beats are one segment. Without the step they are two. */
+    NoteEvent *notes[4] = {make_note("c", 0, 1, 1, 2, 48), make_note("g", 0, 1, 1, 2, 55),
+                           make_note("e", 0, 1, 1, 4, 64), make_note("f", 1, 4, 1, 4, 65)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 4, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 2);
+    assert(sonority_event_id_count(out.items[0].sonority) == 4);
+    adaptive_sonorities_destroy(&out);
+
+    AdaptiveSegmentationConfig off = without_harmony_merge();
+    out = build(notes, 4, map, &quarter, &off);
+    assert(out.count == 2);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 4);
+}
+
+static void test_a_run_of_melody_notes_merges_against_the_first_chord(void) {
+    /* C3, E3 and G3 held for a bar under E4 F4 G4 A4: every beat holds the chord, so one segment. */
+    NoteEvent *notes[7] = {make_note("c", 0, 1, 1, 1, 48), make_note("e3", 0, 1, 1, 1, 52),
+                           make_note("g", 0, 1, 1, 1, 55), make_note("m0", 0, 1, 1, 4, 64),
+                           make_note("m1", 1, 4, 1, 4, 65), make_note("m2", 1, 2, 1, 4, 67),
+                           make_note("m3", 3, 4, 1, 4, 69)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 7, map, &quarter, NULL);
+    assert(out.count == 1);
+    assert_window(&out.items[0], 0, 1, 1, 1);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 7);
+}
+
+static void test_a_new_bass_attack_does_not_merge_over_harmony(void) {
+    /* C3 and G3 held for two beats with E4 over them, then a new A1 attacked in beat 2: a bass attack. */
+    NoteEvent *notes[4] = {make_note("c", 0, 1, 1, 2, 48), make_note("g", 0, 1, 1, 2, 55),
+                           make_note("e", 0, 1, 1, 2, 64), make_note("low", 1, 4, 1, 4, 33)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 4, map, &quarter, NULL);
+    assert(out.count == 2);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 4);
+}
+
+static void test_a_released_chord_tone_does_not_merge(void) {
+    /* C3 for two beats, G3 for one, E4 then F4 above: in beat 2 only C is held, so the chord has changed. */
+    NoteEvent *notes[4] = {make_note("c", 0, 1, 1, 2, 48), make_note("g", 0, 1, 1, 4, 55),
+                           make_note("e", 0, 1, 1, 4, 64), make_note("f", 1, 4, 1, 4, 65)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 4, map, &quarter, NULL);
+    assert(out.count == 2);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 4);
+}
+
+static void test_the_harmony_merge_does_not_cross_a_barline_by_default(void) {
+    /* C3 and G3 held over the barline, E4 in bar 1 and F4 in bar 2. */
+    NoteEvent *notes[4] = {make_note("c", 0, 1, 2, 1, 48), make_note("g", 0, 1, 2, 1, 55),
+                           make_note("e", 0, 1, 1, 1, 64), make_note("f", 1, 1, 1, 1, 65)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    AdaptiveSonorities out = build(notes, 4, map, &quarter, NULL);
+    assert(out.count == 2);
+    adaptive_sonorities_destroy(&out);
+    AdaptiveSegmentationConfig across = adaptive_segmentation_config_default();
+    across.merge_across_barlines = true;
+    out = build(notes, 4, map, &quarter, &across);
+    assert(out.count == 1);
+    adaptive_sonorities_destroy(&out);
+    meter_map_destroy(map);
+    destroy_notes(notes, 4);
+}
+
+static void test_the_harmony_merge_edits_the_segment_list_in_place(void) {
+    NoteEvent *notes[4] = {make_note("c", 0, 1, 1, 2, 48), make_note("g", 0, 1, 1, 2, 55),
+                           make_note("e", 0, 1, 1, 4, 64), make_note("f", 1, 4, 1, 4, 65)};
+    MeterMap *map = four_four();
+    StubBeat quarter = {1, 4};
+    NoteSpan *spans = NULL;
+    SegmentList list = {0};
+    assert(segmentation_prepare_notes(notes, 4, &spans) == AD_SEGMENTATION_OK);
+    assert(segmentation_cut(spans, 4, map, stub_provider, &quarter, &list) == AD_SEGMENTATION_OK);
+    AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
+    assert(segmentation_merge(spans, &config, &list) == AD_SEGMENTATION_OK);
+    size_t before = list.count;
+    AdaptiveSegmentationConfig off = without_harmony_merge();
+    assert(segmentation_merge_unchanged_harmony(spans, &off, &list) == AD_SEGMENTATION_OK);
+    assert(list.count == before); /* off: untouched */
+    assert(segmentation_merge_unchanged_harmony(spans, &config, &list) == AD_SEGMENTATION_OK);
+    assert(list.count == before - 1);
+    assert(list.items[0].member_count == 4);
+    assert(segmentation_merge_unchanged_harmony(NULL, &config, &list) == AD_SEGMENTATION_ERR_NULL_ARGUMENT);
+    segment_list_destroy(&list);
+    free(spans);
+    meter_map_destroy(map);
+    destroy_notes(notes, 4);
+}
+
 /* --- step 2, the bass split --- (beats are quarter notes; the default minimum is half a beat, 1/8) */
 
 static void test_a_bass_change_mid_beat_splits(void) {
@@ -677,6 +792,12 @@ int main(void) {
     test_a_merged_segment_holds_each_note_once_and_keeps_attacks();
     test_arpeggiation_within_a_beat_merges_only_when_content_matches();
     test_merge_edits_the_segment_list_in_place();
+    test_a_melody_note_over_unchanged_harmony_merges();
+    test_a_run_of_melody_notes_merges_against_the_first_chord();
+    test_a_new_bass_attack_does_not_merge_over_harmony();
+    test_a_released_chord_tone_does_not_merge();
+    test_the_harmony_merge_does_not_cross_a_barline_by_default();
+    test_the_harmony_merge_edits_the_segment_list_in_place();
     test_a_bass_change_mid_beat_splits();
     test_a_bass_change_shorter_than_the_minimum_does_not_split();
     test_the_new_bass_is_measured_to_the_next_bass_change();
