@@ -29,8 +29,9 @@
  *
  *     strong 1.0, medium 0.7, weak 0.4   (BeatStrength has three values; they are evenly spaced from the
  *                                         downbeat's 1.0 to the weakest 0.4)
- *     held 0.6      bass weight 1.0   (chosen on the accuracy harness: every value above 1.0 lowered chorale
- *                                       root agreement; see the README)
+ *     held 0.6      bass weight 1.1   (chosen on the accuracy harness and the Framework v1 verification: higher
+ *                                       values lower chorale root agreement, 1.0 loses Field 5's home key; see
+ *                                       the README)
  *
  * All arithmetic is IEEE double, summed in member order, so the result is deterministic for a given
  * input in the same build. Callers pass the segment duration in whole notes.
@@ -55,7 +56,7 @@ typedef struct {
     double min_coverage;           /* used by scoring: a best score below it is "no match" */
 } CommonPracticeWeightedConfig;
 
-/* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.0, missing-third penalty
+/* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty
    0.15, bass chord-tone bonus 0.05, min coverage 0.5. */
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void);
 

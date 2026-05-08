@@ -25,7 +25,7 @@ static CommonPracticeMember member(int pitch, bool held, double duration, BeatSt
     return m;
 }
 
-/* The defaults with the bass weighted 1.5, so the bass factor shows in the sums (the default is 1.0). */
+/* The defaults with the bass weighted 1.5, so the bass factor shows in the sums (the default is 1.1). */
 static CommonPracticeWeightedConfig bass_heavy(void) {
     CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
     config.bass_weight = 1.5;
@@ -38,7 +38,7 @@ static void test_default_config(void) {
     assert(close_to(config.strength_factor[BEAT_STRENGTH_MEDIUM], 0.7));
     assert(close_to(config.strength_factor[BEAT_STRENGTH_WEAK], 0.4));
     assert(close_to(config.held_factor, 0.6));
-    assert(close_to(config.bass_weight, 1.0));
+    assert(close_to(config.bass_weight, 1.1));
     assert(close_to(config.missing_third_penalty, 0.15));
     assert(close_to(config.bass_chord_tone_bonus, 0.05));
     assert(close_to(config.min_coverage, 0.5));

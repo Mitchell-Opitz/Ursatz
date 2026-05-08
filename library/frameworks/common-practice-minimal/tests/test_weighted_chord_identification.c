@@ -94,7 +94,7 @@ static void test_the_interpretation_carries_the_confidence(void) {
 }
 
 static void test_a_near_tie_reports_the_runner_up_and_a_high_uncertainty(void) {
-    /* C3 bass, E, G and a little A (the default bass weight is 1.0): vi7 (A C E G) covers everything; I (C E G)
+    /* C3 bass, E, G and a little A (the default bass weight is 1.1): vi7 (A C E G) covers everything; I (C E G)
        all but the A. The scores
        are close, so the uncertainty is high, and the runner-up is I (a different root from vi7's A). */
     CommonPracticeMember members[4] = {note("c", 48, false, 1.0, S, NULL, 0.0), note("e", 52, false, 1.0, S, NULL, 0.0),
@@ -108,8 +108,8 @@ static void test_a_near_tie_reports_the_runner_up_and_a_high_uncertainty(void) {
     assert(result.best.degree == 6 && result.best.is_seventh); /* vi7: A C E G */
     assert(result.runner_up.degree == 1);                      /* I */
     assert(close_to(result.best_score, 1.05));
-    assert(close_to(result.runner_up_score, 3.0 / 3.1 + 0.05));
-    assert(close_to(result.uncertainty, (3.0 / 3.1 + 0.05) / 1.05));
+    assert(close_to(result.runner_up_score, 3.1 / 3.2 + 0.05));
+    assert(close_to(result.uncertainty, (3.1 / 3.2 + 0.05) / 1.05));
     assert(result.uncertainty > 0.9 && result.uncertainty < 1.0);
     common_practice_weighted_result_destroy(&result);
 }

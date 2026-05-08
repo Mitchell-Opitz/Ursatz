@@ -8,7 +8,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.strength_factor[BEAT_STRENGTH_MEDIUM] = 0.7;
     config.strength_factor[BEAT_STRENGTH_WEAK] = 0.4;
     config.held_factor = 0.6;
-    config.bass_weight = 1.0;
+    config.bass_weight = 1.1;
     config.missing_third_penalty = 0.15;
     config.bass_chord_tone_bonus = 0.05;
     config.min_coverage = 0.5;
