@@ -52,15 +52,15 @@ textbook; each README names the chapters it covers.
   "prefer" are soft.
 - **Dependency ceiling.** L0 to L6 plus `theory/framework.h`, `rules/rule.h` and
   `rules/constraint.h`, plus any framework listed in its row above. Each framework's
-  `tests/test_architecture_<name>.c` enforces this.
+  `tests/test_architecture_<name>.c` enforces this from the root build; a new include edge
+  updates that allowlist in the same commit. Input from L8 analysis is passed in by the
+  caller as plain data, never included.
 - **Vocabulary enums.** Names a framework needs (for example `CadenceType`, `VoicePart`) live
   as plain enums in `src/semantics/` and carry no framework claim. What each name means is the
   framework's convention. See `docs/modules/semantics.md`.
 
 ## Building and testing
 
-The root build compiles every framework library. **Framework tests do not run from the root
-build yet**: each `CMakeLists.txt` adds its `tests/` directory only when that framework is
-the top-level project, so root `ctest` and CI skip them. Until that is fixed, run them by
-configuring a wrapper project that adds the root and each `frameworks/<name>/tests` directory.
-Tracked as a known gap in the project docs.
+The root build compiles every framework library and adds each framework's `tests/` directory, so
+root `ctest` and CI run every framework test, its architecture test included (since PR #99). A
+framework built as the top-level project still runs its own tests.
