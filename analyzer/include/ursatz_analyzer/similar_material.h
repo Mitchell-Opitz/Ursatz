@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "query/similarity_scoring.h"
+
 /*
  * Similar material: passages of an analyzed corpus that look like a motive or a progression. A motive is a short
  * run of soprano notes and a progression a run of root-position Roman numerals. Like the style profile, it reads
@@ -55,5 +57,55 @@ SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query)
 
 /* Frees what the query holds; safe on a query that was never filled. */
 void similar_query_destroy(SimilarQuery *query);
+
+/*
+ * How a passage is scored. A motive is scored on its intervals (the semitone steps between soprano notes, so a
+ * transposed motive scores the same), its contour and its rhythm (the durations as ratios, so an augmented rhythm
+ * scores the same). A progression is scored on the semitone steps between chord roots and on rhythm; it has no
+ * contour. A progression query carries no durations, so its chords are taken to be of equal length. A dimension
+ * with weight 0 is not scored.
+ */
+typedef struct {
+    unsigned long interval, contour, rhythm;
+} SimilarWeights;
+
+typedef struct {
+    unsigned long minimum_numerator, minimum_denominator; /* a passage scoring less than this is not reported */
+    size_t max_results;
+    SimilarWeights weights;
+} SimilarOptions;
+
+/* Minimum 1/2, 10 results, weights interval 2, contour 1, rhythm 1. */
+SimilarOptions similar_options_default(void);
+
+typedef struct {
+    char *piece;    /* the piece's path in the corpus, as the corpus index lists it */
+    char *document; /* its analysis document, relative to the corpus output directory */
+    int start_measure;
+    double start_beat; /* the beat plus the fraction of it: 2.5 is half way through beat 2 */
+    int end_measure;
+    double end_beat;   /* where the last note or chord ends */
+    SimilarityBreakdown score;
+    size_t numeral_matches; /* progression: how many chords carry the numeral the query has at that place; else 0 */
+    SimilarNote *notes;     /* the soprano notes of the passage, onsets from its start; NULL when it has none */
+    size_t note_count;
+} SimilarMatch;
+
+typedef struct {
+    SimilarMatch *matches; /* sorted by score, highest first, then piece path, then start; NULL when there are none */
+    size_t count;
+    size_t pieces_searched;
+} SimilarResults;
+
+/*
+ * Searches the pieces "<corpus_output_dir>/corpus-index.json" lists as analyzed. Every window of the query's length
+ * is scored; in each piece the best window of any run of overlapping ones is kept, and the highest-scoring
+ * max_results over all pieces are returned. options may be NULL for the defaults. No match is not an error.
+ */
+SimilarResult similar_material_find(const char *corpus_output_dir, const SimilarQuery *query, const SimilarOptions *options,
+                                    SimilarResults *results);
+
+/* Frees the matches; safe on a result that was never filled. */
+void similar_results_destroy(SimilarResults *results);
 
 #endif

@@ -12,6 +12,9 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/style_labels.h>
 
+#include "query/similarity_model.h"
+#include "style_internal.h"
+
 #define DOCUMENT_SCHEMA_VERSION 9
 
 /* ---- reading the document ---- */
@@ -282,5 +285,639 @@ SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query)
         return result;
     }
     *query = (SimilarQuery){SIMILAR_QUERY_PROGRESSION, NULL, 0, numerals, count};
+    return SIMILAR_OK;
+}
+
+/* ---- chords ---- */
+
+/* A chord of a document with a root-position numeral, at its absolute position. Entries of the document that are one
+   chord across several segments (the same numeral, key region and root, one after the other) are joined. */
+typedef struct {
+    char *numeral;
+    int root;   /* pitch class */
+    bool minor; /* the mode of its key region */
+    long run;   /* chords of one run follow each other within one key region */
+    unsigned long start_n, start_d, end_n, end_d;
+    int start_measure, end_measure;
+    double start_beat, end_beat;
+} DocChord;
+
+static void chords_free(DocChord *chords, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        free(chords[i].numeral);
+    }
+    free(chords);
+}
+
+static bool root_pitch_class(const char *name, int *out) {
+    static const int letters[7] = {9, 11, 0, 2, 4, 5, 7}; /* A to G */
+    if (!name || name[0] < 'A' || name[0] > 'G') {
+        return false;
+    }
+    int pc = letters[name[0] - 'A'];
+    for (const char *c = name + 1; *c; c++) {
+        if (*c != '#' && *c != 'b') {
+            return false;
+        }
+        pc += *c == '#' ? 1 : -1;
+    }
+    *out = ((pc % 12) + 12) % 12;
+    return true;
+}
+
+/* The chords in time order. A chord the document has no numeral or root for ends the run. *out is NULL when *count
+   is 0. false on allocation failure or an entry that cannot be read. */
+static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
+    const cJSON *entries = member(document, "chords");
+    size_t capacity = cJSON_IsArray(entries) ? (size_t)cJSON_GetArraySize(entries) : 0;
+    *out = NULL;
+    *count = 0;
+    if (capacity == 0) {
+        return true;
+    }
+    DocChord *chords = malloc(capacity * sizeof *chords);
+    if (!chords) {
+        return false;
+    }
+    size_t n = 0;
+    long run = 0, previous_region = -1;
+    bool joined = false; /* the last chord can take the next entry */
+    const cJSON *entry;
+    cJSON_ArrayForEach(entry, entries) {
+        const cJSON *roman = member(entry, "roman_numeral");
+        const cJSON *base = member(roman, "base_numeral");
+        const cJSON *root_name = member(entry, "root");
+        const cJSON *key = member(entry, "key_label");
+        long region;
+        int root;
+        if (!cJSON_IsString(base) || !cJSON_IsString(root_name) || !root_pitch_class(root_name->valuestring, &root) ||
+            !number_member(roman, "key_region", &region)) {
+            run++;
+            joined = false;
+            continue;
+        }
+        char *numeral = style_label_numeral(base->valuestring);
+        if (!numeral) {
+            run++;
+            joined = false;
+            continue;
+        }
+        unsigned long start_n, start_d, end_n, end_d;
+        int start_measure, end_measure;
+        double start_beat, end_beat;
+        if (!fraction_member(member(entry, "span"), "start", &start_n, &start_d) ||
+            !fraction_member(member(entry, "span"), "end", &end_n, &end_d) ||
+            !location_member(entry, "start", &start_measure, &start_beat) ||
+            !location_member(entry, "end", &end_measure, &end_beat)) {
+            free(numeral);
+            chords_free(chords, n);
+            return false;
+        }
+        if (region != previous_region) {
+            run++;
+            joined = false;
+        }
+        previous_region = region;
+        if (joined && strcmp(chords[n - 1].numeral, numeral) == 0 && chords[n - 1].root == root) {
+            chords[n - 1].end_n = end_n;
+            chords[n - 1].end_d = end_d;
+            chords[n - 1].end_measure = end_measure;
+            chords[n - 1].end_beat = end_beat;
+            free(numeral);
+            continue;
+        }
+        size_t key_length = cJSON_IsString(key) ? strlen(key->valuestring) : 0;
+        chords[n++] = (DocChord){numeral, root, key_length >= 5 && strcmp(key->valuestring + key_length - 5, "minor") == 0,
+                                 run, start_n, start_d, end_n, end_d, start_measure, end_measure, start_beat, end_beat};
+        joined = true;
+    }
+    if (n == 0) {
+        free(chords);
+        return true;
+    }
+    *out = chords;
+    *count = n;
+    return true;
+}
+
+/* ---- numerals as root steps ---- */
+
+static const int major_scale[7] = {0, 2, 4, 5, 7, 9, 11};
+static const int minor_scale[7] = {0, 2, 3, 5, 7, 8, 10};
+
+/* The pitch class above the tonic of one numeral segment (accidentals, then Roman letters), by the scale given.
+   false when the letters are not a degree from I to VII. */
+static bool segment_offset(const char *segment, size_t length, const int *scale, int *out) {
+    size_t i = 0;
+    int accidental = 0;
+    while (i < length && (segment[i] == '#' || segment[i] == 'b')) {
+        accidental += segment[i] == '#' ? 1 : -1;
+        i++;
+    }
+    char letters[8];
+    size_t n = 0;
+    while (i < length && strchr("IViv", segment[i]) && n < sizeof letters - 1) {
+        letters[n++] = (char)(segment[i] | 0x20);
+        i++;
+    }
+    letters[n] = '\0';
+    static const char *const degrees[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
+    for (int d = 0; d < 7; d++) {
+        if (strcmp(letters, degrees[d]) == 0) {
+            *out = scale[d] + accidental;
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * The pitch class of a numeral's root above its tonic, in a major or a minor key. An applied chord ("V7/V") is
+ * the first segment's degree of the major scale on the target's root.
+ */
+static bool numeral_root_offset(const char *numeral, bool minor, int *out) {
+    const char *segments[4];
+    size_t lengths[4];
+    size_t count = 0;
+    const char *cursor = numeral;
+    while (count < 4) {
+        size_t end = 0;
+        while (cursor[end] && !(cursor[end] == '/' && (cursor[end + 1] < '0' || cursor[end + 1] > '9'))) {
+            end++;
+        }
+        segments[count] = cursor;
+        lengths[count++] = end;
+        if (!cursor[end]) {
+            break;
+        }
+        cursor += end + 1;
+    }
+    int offset;
+    if (!segment_offset(segments[count - 1], lengths[count - 1], minor ? minor_scale : major_scale, &offset)) {
+        return false;
+    }
+    for (size_t k = count - 1; k > 0; k--) {
+        int step;
+        if (!segment_offset(segments[k - 1], lengths[k - 1], major_scale, &step)) {
+            return false;
+        }
+        offset += step;
+    }
+    *out = ((offset % 12) + 12) % 12;
+    return true;
+}
+
+/* The directed semitone step from one pitch class to another, -6 to +5. */
+static long root_step(int from, int to) {
+    int step = ((to - from) % 12 + 12) % 12;
+    return step > 5 ? step - 12 : step;
+}
+
+/* ---- options and scoring ---- */
+
+SimilarOptions similar_options_default(void) {
+    return (SimilarOptions){1, 2, 10, {2, 1, 1}};
+}
+
+void similar_results_destroy(SimilarResults *results) {
+    if (!results) {
+        return;
+    }
+    for (size_t i = 0; i < results->count; i++) {
+        free(results->matches[i].piece);
+        free(results->matches[i].document);
+        free(results->matches[i].notes);
+    }
+    free(results->matches);
+    *results = (SimilarResults){0};
+}
+
+typedef struct {
+    size_t first;
+    SimilarityBreakdown score;
+    size_t numeral_matches;
+} Candidate;
+
+/* -1, 0 or 1 as a/b is less than, equal to or more than c/d. */
+static int compare_fractions(unsigned long a, unsigned long b, unsigned long c, unsigned long d) {
+    WideInt left = (WideInt)a * d, right = (WideInt)c * b;
+    return left < right ? -1 : (left > right ? 1 : 0);
+}
+
+static int compare_candidates(const void *x, const void *y) {
+    const Candidate *a = x, *b = y;
+    int order = compare_fractions(b->score.similarity.numerator, b->score.similarity.denominator, a->score.similarity.numerator,
+                                  a->score.similarity.denominator);
+    if (order != 0) {
+        return order;
+    }
+    return a->first < b->first ? -1 : (a->first > b->first ? 1 : 0);
+}
+
+typedef struct {
+    const SimilarQuery *query;
+    const SimilarOptions *options;
+    SimilarityModel *model;
+    size_t size;                 /* the query's notes or numerals */
+    long *intervals[2];          /* a motive: its steps, in [0]; a progression: its root steps in a major, then a minor key */
+    ContourDirection *directions; /* a motive only */
+    SimilarityDuration *durations;
+} Search;
+
+static void search_free(Search *search) {
+    similarity_model_destroy(search->model);
+    free(search->intervals[0]);
+    free(search->intervals[1]);
+    free(search->directions);
+    free(search->durations);
+}
+
+static SimilarResult search_prepare(Search *search, const SimilarQuery *query, const SimilarOptions *options) {
+    *search = (Search){.query = query, .options = options};
+    SimilarityDimensionWeight weights[3];
+    size_t weight_count = 0;
+    bool motive = query->kind == SIMILAR_QUERY_MOTIVE;
+    if (options->weights.interval) {
+        weights[weight_count++] = (SimilarityDimensionWeight){SIMILARITY_DIMENSION_INTERVAL, (long)options->weights.interval, 1};
+    }
+    if (motive && options->weights.contour) {
+        weights[weight_count++] = (SimilarityDimensionWeight){SIMILARITY_DIMENSION_CONTOUR, (long)options->weights.contour, 1};
+    }
+    if (options->weights.rhythm) {
+        weights[weight_count++] = (SimilarityDimensionWeight){SIMILARITY_DIMENSION_RHYTHM, (long)options->weights.rhythm, 1};
+    }
+    if (similarity_model_create(weights, weight_count, &search->model) != SIMILARITY_MODEL_OK) {
+        return SIMILAR_ERR_ARGUMENT;
+    }
+    search->size = motive ? query->note_count : query->numeral_count;
+    search->durations = malloc(search->size * sizeof *search->durations);
+    search->intervals[0] = malloc(search->size * sizeof(long));
+    search->intervals[1] = malloc(search->size * sizeof(long));
+    if (motive) {
+        search->directions = malloc(search->size * sizeof *search->directions);
+    }
+    if (!search->durations || !search->intervals[0] || !search->intervals[1] || (motive && !search->directions)) {
+        return SIMILAR_ERR_ALLOC;
+    }
+    if (motive) {
+        for (size_t i = 0; i < search->size; i++) {
+            const SimilarNote *note = &query->notes[i];
+            if (note->duration_numerator == 0 || note->duration_denominator == 0) {
+                return SIMILAR_ERR_QUERY;
+            }
+            search->durations[i] = (SimilarityDuration){note->duration_numerator, note->duration_denominator};
+            if (i > 0) {
+                search->intervals[0][i - 1] = (long)note->pitch - (long)query->notes[i - 1].pitch;
+            }
+        }
+        similarity_directions_from_intervals(search->intervals[0], search->size - 1, search->directions);
+        return SIMILAR_OK;
+    }
+    for (int mode = 0; mode < 2; mode++) {
+        int previous = 0;
+        for (size_t i = 0; i < search->size; i++) {
+            int offset;
+            if (!numeral_root_offset(query->numerals[i], mode == 1, &offset)) {
+                return SIMILAR_ERR_QUERY;
+            }
+            if (i > 0) {
+                search->intervals[mode][i - 1] = root_step(previous, offset);
+            }
+            previous = offset;
+        }
+    }
+    for (size_t i = 0; i < search->size; i++) {
+        search->durations[i] = (SimilarityDuration){1, 1};
+    }
+    return SIMILAR_OK;
+}
+
+typedef struct {
+    Candidate *items;
+    size_t count, capacity;
+} Candidates;
+
+/* Scores one window against the query, using the query's steps given, and keeps it when it reaches the minimum. false
+   on allocation failure or a score that cannot be computed. */
+static bool consider_window(const Search *search, const long *query_intervals, size_t first, const long *intervals,
+                            const SimilarityDuration *durations, size_t numeral_matches, Candidates *candidates) {
+    size_t n = search->size;
+    bool motive = search->query->kind == SIMILAR_QUERY_MOTIVE;
+    ContourDirection *window_directions = NULL;
+    if (motive) {
+        window_directions = malloc((n - 1) * sizeof *window_directions);
+        if (!window_directions) {
+            return false;
+        }
+        similarity_directions_from_intervals(intervals, n - 1, window_directions);
+    }
+    SimilarityInput query = {query_intervals, n - 1, search->directions, motive ? n - 1 : 0, search->durations, n};
+    SimilarityInput window = {intervals, n - 1, window_directions, motive ? n - 1 : 0, durations, n};
+    SimilarityBreakdown breakdown;
+    SimilarityScoreResult scored = similarity_score(search->model, &query, &window, &breakdown);
+    free(window_directions);
+    if (scored != SIMILARITY_SCORE_OK) {
+        return false;
+    }
+    if (compare_fractions(breakdown.similarity.numerator, breakdown.similarity.denominator,
+                          search->options->minimum_numerator, search->options->minimum_denominator) < 0) {
+        return true;
+    }
+    if (candidates->count == candidates->capacity) {
+        size_t capacity = candidates->capacity ? candidates->capacity * 2 : 64;
+        Candidate *grown = realloc(candidates->items, capacity * sizeof *grown);
+        if (!grown) {
+            return false;
+        }
+        candidates->items = grown;
+        candidates->capacity = capacity;
+    }
+    candidates->items[candidates->count++] = (Candidate){first, breakdown, numeral_matches};
+    return true;
+}
+
+static bool motive_windows(const Search *search, const DocNote *notes, size_t count, Candidates *candidates) {
+    size_t n = search->size;
+    long *intervals = malloc((n - 1) * sizeof *intervals);
+    SimilarityDuration *durations = malloc(n * sizeof *durations);
+    bool ok = intervals && durations;
+    for (size_t first = 0; ok && first + n <= count; first++) {
+        for (size_t i = 0; i < n; i++) {
+            durations[i] = (SimilarityDuration){notes[first + i].duration_n, notes[first + i].duration_d};
+            if (i > 0) {
+                intervals[i - 1] = (long)notes[first + i].pitch - (long)notes[first + i - 1].pitch;
+            }
+        }
+        ok = consider_window(search, search->intervals[0], first, intervals, durations, 0, candidates);
+    }
+    free(intervals);
+    free(durations);
+    return ok;
+}
+
+static bool progression_windows(const Search *search, const DocChord *chords, size_t count, Candidates *candidates) {
+    size_t n = search->size;
+    long *intervals = malloc((n - 1) * sizeof *intervals);
+    SimilarityDuration *durations = malloc(n * sizeof *durations);
+    bool ok = intervals && durations;
+    for (size_t first = 0; ok && first + n <= count; first++) {
+        if (chords[first].run != chords[first + n - 1].run) {
+            continue;
+        }
+        bool measured = true;
+        size_t matches = 0;
+        for (size_t i = 0; i < n && measured; i++) {
+            const DocChord *chord = &chords[first + i];
+            unsigned long length_n, length_d;
+            measured = rational_difference(chord->end_n, chord->end_d, chord->start_n, chord->start_d, &length_n, &length_d) &&
+                       length_n > 0;
+            durations[i] = (SimilarityDuration){length_n, length_d};
+            if (i > 0) {
+                intervals[i - 1] = root_step(chords[first + i - 1].root, chord->root);
+            }
+            matches += strcmp(chord->numeral, search->query->numerals[i]) == 0;
+        }
+        if (measured) {
+            ok = consider_window(search, search->intervals[chords[first].minor ? 1 : 0], first, intervals, durations, matches,
+                                 candidates);
+        }
+    }
+    free(intervals);
+    free(durations);
+    return ok;
+}
+
+/* Soprano notes that start in [start, end), as a passage. *out is NULL when there are none. false on allocation failure. */
+static bool notes_between(const DocNote *notes, size_t count, unsigned long start_n, unsigned long start_d,
+                          unsigned long end_n, unsigned long end_d, SimilarNote **out, size_t *found) {
+    size_t first = 0;
+    while (first < count && compare_fractions(notes[first].onset_n, notes[first].onset_d, start_n, start_d) < 0) {
+        first++;
+    }
+    size_t last = first;
+    while (last < count && compare_fractions(notes[last].onset_n, notes[last].onset_d, end_n, end_d) < 0) {
+        last++;
+    }
+    *out = NULL;
+    *found = last - first;
+    if (last == first) {
+        return true;
+    }
+    *out = passage_notes(notes, first, last - first);
+    return *out != NULL;
+}
+
+typedef struct {
+    SimilarMatch *items;
+    size_t count, capacity;
+} Matches;
+
+static bool matches_add(Matches *matches, SimilarMatch match) {
+    if (matches->count == matches->capacity) {
+        size_t capacity = matches->capacity ? matches->capacity * 2 : 16;
+        SimilarMatch *grown = realloc(matches->items, capacity * sizeof *grown);
+        if (!grown) {
+            return false;
+        }
+        matches->items = grown;
+        matches->capacity = capacity;
+    }
+    matches->items[matches->count++] = match;
+    return true;
+}
+
+static int compare_matches(const void *x, const void *y) {
+    const SimilarMatch *a = x, *b = y;
+    int order = compare_fractions(b->score.similarity.numerator, b->score.similarity.denominator, a->score.similarity.numerator,
+                                  a->score.similarity.denominator);
+    if (order == 0) {
+        order = strcmp(a->piece, b->piece);
+    }
+    if (order == 0) {
+        order = a->start_measure - b->start_measure;
+    }
+    if (order == 0) {
+        order = a->start_beat < b->start_beat ? -1 : (a->start_beat > b->start_beat ? 1 : 0);
+    }
+    return order;
+}
+
+static void match_destroy(SimilarMatch *match) {
+    free(match->piece);
+    free(match->document);
+    free(match->notes);
+}
+
+/* Searches one analysis document and adds its best non-overlapping windows (at most max_results) to matches. */
+static SimilarResult search_document(const Search *search, const char *piece, const char *document_path, const cJSON *document,
+                                     Matches *matches) {
+    bool motive = search->query->kind == SIMILAR_QUERY_MOTIVE;
+    DocNote *notes = NULL;
+    DocChord *chords = NULL;
+    size_t note_count = 0, chord_count = 0;
+    Candidates candidates = {0};
+    SimilarResult result = SIMILAR_OK;
+    if (!read_notes(document, &notes, &note_count) || (!motive && !read_chords(document, &chords, &chord_count))) {
+        result = SIMILAR_ERR_FORMAT;
+    } else if (!(motive ? motive_windows(search, notes, note_count, &candidates)
+                        : progression_windows(search, chords, chord_count, &candidates))) {
+        result = SIMILAR_ERR_ALLOC;
+    }
+    if (result == SIMILAR_OK && candidates.count > 1) {
+        qsort(candidates.items, candidates.count, sizeof *candidates.items, compare_candidates);
+    }
+    size_t n = search->size;
+    size_t kept = 0;
+    for (size_t c = 0; result == SIMILAR_OK && c < candidates.count && kept < search->options->max_results; c++) {
+        size_t first = candidates.items[c].first;
+        bool overlaps = false;
+        for (size_t k = 0; k < kept && !overlaps; k++) {
+            size_t other = candidates.items[k].first; /* the kept candidates are moved to the front */
+            overlaps = first < other + n && other < first + n;
+        }
+        if (overlaps) {
+            continue;
+        }
+        candidates.items[kept++] = candidates.items[c];
+        SimilarMatch match = {0};
+        match.score = candidates.items[c].score;
+        match.numeral_matches = candidates.items[c].numeral_matches;
+        if (motive) {
+            match.start_measure = notes[first].start_measure;
+            match.start_beat = notes[first].start_beat;
+            match.end_measure = notes[first + n - 1].end_measure;
+            match.end_beat = notes[first + n - 1].end_beat;
+            match.notes = passage_notes(notes, first, n);
+            match.note_count = n;
+            if (!match.notes) {
+                result = SIMILAR_ERR_ALLOC;
+            }
+        } else {
+            const DocChord *begin = &chords[first], *end = &chords[first + n - 1];
+            match.start_measure = begin->start_measure;
+            match.start_beat = begin->start_beat;
+            match.end_measure = end->end_measure;
+            match.end_beat = end->end_beat;
+            if (!notes_between(notes, note_count, begin->start_n, begin->start_d, end->end_n, end->end_d, &match.notes,
+                               &match.note_count)) {
+                result = SIMILAR_ERR_ALLOC;
+            }
+        }
+        match.piece = strdup(piece);
+        match.document = strdup(document_path);
+        if (result == SIMILAR_OK && (!match.piece || !match.document || !matches_add(matches, match))) {
+            result = SIMILAR_ERR_ALLOC;
+        }
+        if (result != SIMILAR_OK) {
+            match_destroy(&match);
+        }
+    }
+    free(candidates.items);
+    free(notes);
+    chords_free(chords, chord_count);
+    return result;
+}
+
+SimilarResult similar_material_find(const char *corpus_output_dir, const SimilarQuery *query, const SimilarOptions *options,
+                                    SimilarResults *results) {
+    if (!corpus_output_dir || !query || !results) {
+        return SIMILAR_ERR_ARGUMENT;
+    }
+    SimilarOptions defaults = similar_options_default();
+    if (!options) {
+        options = &defaults;
+    }
+    size_t size = query->kind == SIMILAR_QUERY_MOTIVE ? query->note_count : query->numeral_count;
+    if (size < 2 || (query->kind == SIMILAR_QUERY_MOTIVE ? query->notes == NULL : query->numerals == NULL)) {
+        return SIMILAR_ERR_QUERY;
+    }
+    if (options->minimum_denominator == 0 || options->minimum_numerator > options->minimum_denominator ||
+        options->max_results == 0) {
+        return SIMILAR_ERR_ARGUMENT;
+    }
+    Search search;
+    SimilarResult result = search_prepare(&search, query, options);
+    if (result != SIMILAR_OK) {
+        search_free(&search);
+        return result;
+    }
+    char *index_path = malloc(strlen(corpus_output_dir) + 24);
+    if (!index_path) {
+        search_free(&search);
+        return SIMILAR_ERR_ALLOC;
+    }
+    sprintf(index_path, "%s/corpus-index.json", corpus_output_dir);
+    char *index_text = style_read_file(index_path);
+    free(index_path);
+    if (!index_text) {
+        search_free(&search);
+        return SIMILAR_ERR_IO;
+    }
+    cJSON *index = cJSON_Parse(index_text);
+    free(index_text);
+    const cJSON *schema = member(index, "schema");
+    const cJSON *pieces = member(index, "pieces");
+    if (!cJSON_IsString(schema) || strcmp(schema->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
+        cJSON_Delete(index);
+        search_free(&search);
+        return SIMILAR_ERR_FORMAT;
+    }
+    Matches matches = {0};
+    size_t searched = 0;
+    const cJSON *piece;
+    cJSON_ArrayForEach(piece, pieces) {
+        const cJSON *status = member(piece, "status");
+        const cJSON *document = member(piece, "document");
+        const cJSON *path = member(piece, "path");
+        if (!cJSON_IsString(status) || strcmp(status->valuestring, "analyzed") != 0 || !cJSON_IsString(document) ||
+            !cJSON_IsString(path)) {
+            continue;
+        }
+        char *file = malloc(strlen(corpus_output_dir) + strlen(document->valuestring) + 2);
+        if (!file) {
+            result = SIMILAR_ERR_ALLOC;
+            break;
+        }
+        sprintf(file, "%s/%s", corpus_output_dir, document->valuestring);
+        char *json = style_read_file(file);
+        free(file);
+        if (!json) {
+            result = SIMILAR_ERR_IO;
+            break;
+        }
+        cJSON *parsed = cJSON_Parse(json);
+        free(json);
+        long version;
+        if (!parsed || !number_member(parsed, "schema_version", &version) || version != DOCUMENT_SCHEMA_VERSION) {
+            cJSON_Delete(parsed);
+            result = SIMILAR_ERR_FORMAT;
+            break;
+        }
+        result = search_document(&search, path->valuestring, document->valuestring, parsed, &matches);
+        cJSON_Delete(parsed);
+        if (result != SIMILAR_OK) {
+            break;
+        }
+        searched++;
+    }
+    cJSON_Delete(index);
+    search_free(&search);
+    if (result != SIMILAR_OK) {
+        for (size_t i = 0; i < matches.count; i++) {
+            match_destroy(&matches.items[i]);
+        }
+        free(matches.items);
+        return result;
+    }
+    if (matches.count > 1) {
+        qsort(matches.items, matches.count, sizeof *matches.items, compare_matches);
+    }
+    for (size_t i = options->max_results; i < matches.count; i++) {
+        match_destroy(&matches.items[i]);
+    }
+    if (matches.count > options->max_results) {
+        matches.count = options->max_results;
+    }
+    *results = (SimilarResults){matches.items, matches.count, searched};
     return SIMILAR_OK;
 }
