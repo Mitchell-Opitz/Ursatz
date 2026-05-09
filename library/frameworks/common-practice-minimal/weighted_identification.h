@@ -23,13 +23,15 @@
  *
  * WEIGHTS (this file, step 1). The weight of a member is its duration sounding in the segment times a
  * factor: the beat-strength factor of its attack, or the fixed held factor if it was held over from an
- * earlier segment. The bass member (the lowest sounding pitch; every member at that pitch) is then
- * multiplied by the bass weight. A pitch class's weight is the sum over the members on it, and the
+ * earlier segment. The bass members (every member on the pitch class of the lowest sounding pitch, octave
+ * doublings included) are then multiplied by the bass weight. A pitch class's weight is the sum over the members on it, and the
  * weights and their total are what scoring reads. Defaults (CommonPracticeWeightedConfig):
  *
  *     strong 1.0, medium 0.7, weak 0.4   (BeatStrength has three values; they are evenly spaced from the
  *                                         downbeat's 1.0 to the weakest 0.4)
- *     held 0.6      bass weight 1.5
+ *     held 0.6      bass weight 1.1   (chosen on the accuracy harness and the Framework v1 verification: higher
+ *                                       values lower chorale root agreement, 1.0 loses Field 5's home key; see
+ *                                       the README)
  *
  * All arithmetic is IEEE double, summed in member order, so the result is deterministic for a given
  * input in the same build. Callers pass the segment duration in whole notes.
@@ -54,7 +56,7 @@ typedef struct {
     double min_coverage;           /* used by scoring: a best score below it is "no match" */
 } CommonPracticeWeightedConfig;
 
-/* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.5, missing-third penalty
+/* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty
    0.15, bass chord-tone bonus 0.05, min coverage 0.5. */
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void);
 

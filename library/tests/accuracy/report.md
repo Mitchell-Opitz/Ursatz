@@ -8,17 +8,17 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 
 | Piece | Chord root | Chord quality | Roman numeral | Numeral, chain key | Local key | Unsupported chord time |
 |---|---:|---:|---:|---:|---:|---:|
-| chorale-001-bwv269 | 87.3% | 74.6% | 74.6% | 61.9% | 77.8% | 0.0% |
+| chorale-001-bwv269 | 90.5% | 76.2% | 75.4% | 62.7% | 77.8% | 0.0% |
 | chorale-002-bwv347 | 79.6% | 65.5% | 63.6% | 41.3% | 57.7% | 1.0% |
-| chorale-003-bwv153-1 | 71.2% | 53.8% | 51.2% | 32.5% | 46.2% | 0.0% |
-| chorale-005-bwv267 | 81.2% | 62.4% | 56.4% | 41.4% | 58.1% | 2.2% |
+| chorale-003-bwv153-1 | 72.5% | 55.0% | 53.8% | 35.0% | 46.2% | 0.0% |
+| chorale-005-bwv267 | 82.7% | 63.9% | 56.4% | 41.4% | 58.1% | 2.2% |
 | chorale-006-bwv281 | 87.1% | 74.2% | 76.6% | 62.1% | 71.9% | 3.1% |
-| chorale-007-bwv17-7 | 84.8% | 74.8% | 71.9% | 44.3% | 53.2% | 5.4% |
-| chorale-010-bwv38-6 | 87.5% | 69.2% | 68.3% | 53.8% | 65.4% | 0.0% |
+| chorale-007-bwv17-7 | 85.7% | 73.8% | 71.0% | 46.2% | 60.4% | 5.4% |
+| chorale-010-bwv38-6 | 89.4% | 69.2% | 68.3% | 53.8% | 65.4% | 0.0% |
 | chorale-012-bwv65-2 | 95.8% | 70.8% | 81.2% | 62.5% | 72.9% | 0.0% |
-| chorale-013-bwv33-6 | 77.0% | 65.5% | 61.5% | 41.7% | 70.3% | 1.6% |
-| chorale-016-bwv311 | 77.0% | 50.4% | 51.1% | 33.3% | 44.1% | 0.7% |
-| **Overall** | 82.8% | 66.5% | 65.5% | 46.5% | 60.7% | 1.8% |
+| chorale-013-bwv33-6 | 77.8% | 65.5% | 61.5% | 41.7% | 70.3% | 1.6% |
+| chorale-016-bwv311 | 77.0% | 45.9% | 46.7% | 30.4% | 44.1% | 0.7% |
+| **Overall** | 83.8% | 66.2% | 65.1% | 46.8% | 62.0% | 1.8% |
 
 ## Reference fixtures (hand-annotated, draft)
 
@@ -35,11 +35,11 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 | Clementi 36 | Cadence precision | 0.0% | 1 reported cadences |
 | Field 1 | Cadence recall | 25.0% | 4 annotated cadences |
 | Field 1 | Cadence type | 100.0% | 1 found cadences |
-| Field 1 | Cadence precision | 25.0% | 4 reported cadences |
+| Field 1 | Cadence precision | 33.3% | 3 reported cadences |
 | Field 1 | Texture, measures | 90.8% | 65 annotated measures |
 | Field 1 | Texture, change points | 100.0% | 1 annotated change points |
 | Field 5 | Syncopations | 100.0% | 1 annotated syncopations |
-| Field 5 | Hyperdownbeats | 50.0% | 8 annotated hyperdownbeats |
+| Field 5 | Hyperdownbeats | 62.5% | 8 annotated hyperdownbeats |
 | Five reference pieces, pooled | Phrase boundaries | 57.9% | 19 annotated phrase ends |
 | Five reference pieces, pooled | Theme types | 0.0% | 6 annotated themes |
 | Five reference pieces, pooled | Expansions (2+ measures) | 0.0% | 1 annotated expansions |
@@ -51,7 +51,7 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 |---|---:|---:|
 | Cadence recall | 10.0% | 10 annotated cadences |
 | Cadence type | 100.0% | 1 found cadences |
-| Cadence precision | 20.0% | 5 reported cadences |
+| Cadence precision | 25.0% | 4 reported cadences |
 | Phrase boundaries | 57.9% | 19 annotated phrase ends |
 | Theme types | 0.0% | 6 annotated themes |
 | Expansions (2+ measures) | 0.0% | 1 annotated expansions |
@@ -61,7 +61,7 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 | Melody leaps | 36.4% | 11 annotated leaps |
 | Motive occurrences | 95.2% | 21 annotated occurrences |
 | Syncopations | 100.0% | 1 annotated syncopations |
-| Hyperdownbeats | 50.0% | 8 annotated hyperdownbeats |
+| Hyperdownbeats | 62.5% | 8 annotated hyperdownbeats |
 | Texture, measures | 90.8% | 65 annotated measures |
 | Texture, change points | 100.0% | 1 annotated change points |
 | Schemas and sequences | 55.6% | 9 planted items |

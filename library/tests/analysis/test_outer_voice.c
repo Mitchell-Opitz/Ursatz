@@ -118,10 +118,18 @@ static OuterVoiceConfig raw_config(void) {
     return config;
 }
 
+/* One segment per melody note: the merge over unchanged harmony is off, as for every outer-voice caller. */
+static AdaptiveSegmentationConfig voice_segmentation(void) {
+    AdaptiveSegmentationConfig config = adaptive_segmentation_config_default();
+    config.merge_unchanged_harmony = false;
+    return config;
+}
+
 /* Segments the notes on the quarter-note grid and extracts both lines. */
 static void extract(Notes *set, const MeterMap *map, const OuterVoiceConfig *config, AdaptiveSonorities *segments,
                     OuterVoiceLines *lines) {
-    assert(sonority_builder_build_adaptive(set->notes, set->count, map, quarter_grid, NULL, NULL, segments) ==
+    AdaptiveSegmentationConfig segmentation = voice_segmentation();
+    assert(sonority_builder_build_adaptive(set->notes, set->count, map, quarter_grid, NULL, &segmentation, segments) ==
            AD_SEGMENTATION_OK);
     assert(outer_voice_extract(segments, set->notes, set->values, set->count, map, quarter_grid, NULL, config,
                                lines) == OUTER_VOICE_OK);
@@ -332,7 +340,8 @@ static void test_rejects_bad_input(void) {
     add_note_in(&set, tuning, "b", 1, 4, 1, 4, 62);
     MeterMap *map = four_four();
     AdaptiveSonorities segments = {0};
-    assert(sonority_builder_build_adaptive(set.notes, set.count, map, quarter_grid, NULL, NULL, &segments) ==
+    AdaptiveSegmentationConfig segmentation = voice_segmentation();
+    assert(sonority_builder_build_adaptive(set.notes, set.count, map, quarter_grid, NULL, &segmentation, &segments) ==
            AD_SEGMENTATION_OK);
     OuterVoiceLines lines = {NULL, NULL, 7};
 

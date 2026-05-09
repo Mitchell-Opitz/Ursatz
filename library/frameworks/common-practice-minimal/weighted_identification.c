@@ -8,7 +8,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.strength_factor[BEAT_STRENGTH_MEDIUM] = 0.7;
     config.strength_factor[BEAT_STRENGTH_WEAK] = 0.4;
     config.held_factor = 0.6;
-    config.bass_weight = 1.5;
+    config.bass_weight = 1.1;
     config.missing_third_penalty = 0.15;
     config.bass_chord_tone_bonus = 0.05;
     config.min_coverage = 0.5;
@@ -60,7 +60,7 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
     for (size_t i = 0; i < count; i++) {
         double factor = members[i].held ? config->held_factor : config->strength_factor[members[i].strength];
         double weight = members[i].duration * factor;
-        if (members[i].pitch == bass_pitch) {
+        if (pitch_class_of(members[i].pitch) == pitch_class_of(bass_pitch)) {
             weight *= config->bass_weight;
         }
         weights.pitch_class[pitch_class_of(members[i].pitch)] += weight;

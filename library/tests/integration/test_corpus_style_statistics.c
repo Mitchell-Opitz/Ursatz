@@ -192,7 +192,7 @@ static void check_corpus(CorpusStoreHandle *corpus, PersistenceHandle *persisten
  * KNOWN COUNTS. What the chain finds on each piece, pinned: the cadence types it classifies, one chord progression of length 2 and the top one
  * of length 3, each with its count and the n-gram total of the piece. These are the chain's own results (cross-checked above against a tally
  * taken straight from the chain), not the hand annotations: the chain finds more cadences than the annotated ones in places (Mozart K. 545:
- * 29 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). Field 5's minor
+ * 22 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). Field 5's minor
  * region, read in the minor vocabulary, gives two cadences the draft does not mark.
  */
 typedef struct {
@@ -208,10 +208,10 @@ typedef struct {
 } Known;
 
 static const Known KNOWN[5] = {
-    /* Bach 114 */ {{"subverted"}, {2}, 1, "I > I", 17, 148, "I > I > I", 6, 147},
-    /* Mozart 545 */ {{"pac", "subverted", "hc", "other"}, {13, 6, 8, 2}, 4, "I > I", 73, 578, "I > I > I", 37, 577},
-    /* Clementi 36 */ {{"hc", "pac", "iac", "subverted"}, {7, 3, 3, 3}, 4, "I > V", 13, 199, "I > iii > I", 6, 198},
-    /* Field 1 */ {{"pac", "hc"}, {2, 2}, 2, "I > I", 23, 59, "I > I > I", 18, 58},
+    /* Bach 114 */ {{"subverted"}, {2}, 1, "I > I", 16, 146, "I > I > I", 7, 145},
+    /* Mozart 545 */ {{"pac", "subverted", "hc", "other"}, {13, 2, 5, 2}, 4, "I > I", 95, 574, "I > I > I", 55, 573},
+    /* Clementi 36 */ {{"hc", "pac", "iac", "subverted"}, {6, 3, 2, 1}, 4, "I > V", 7, 198, "I > I > I", 15, 197},
+    /* Field 1 */ {{"pac", "hc"}, {1, 2}, 2, "I > I", 24, 59, "I > I > I", 19, 58},
     /* Field 5 */ {{"hc", "other"}, {1, 1}, 2, "I > I", 7, 29, "I > I > I", 5, 28},
 };
 

@@ -40,6 +40,7 @@ typedef struct {
     const CommonPracticeMember *members;
     size_t member_count;
     const char *id; /* the segment's Sonority EntityID value, for the Chords built over it */
+    long beat;      /* segments sharing a non-zero beat lie inside that one beat; 0 when unknown or spanning beats */
 } CommonPracticeSegment;
 
 typedef struct {

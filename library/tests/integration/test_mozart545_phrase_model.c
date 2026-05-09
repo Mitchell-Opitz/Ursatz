@@ -465,7 +465,7 @@ static void test_whole_chain(void) {
     assert(standard_tonality_build_roman_numerals(tonal_inputs, tonal_count, &romans) == STANDARD_TONALITY_ROMAN_OK);
 
     OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.sonorities, p.events, p.pitch_values, p.note_count, map,
+    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,
                                standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
 
     /* Fill the neutral input from standard-tonality's output: the caller's job, done here. */

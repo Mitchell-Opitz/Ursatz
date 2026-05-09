@@ -26,6 +26,9 @@
  *      lasts less than the minimum split duration.
  *   3. Merge adjacent segments whose sounding pitch-class set AND bass pitch class are identical.
  *      Merging may cross beats, but not a barline unless configured.
+ *   4. Merge a segment into the previous one when its new attacks are only non-bass notes and every
+ *      pitch class of the previous chord is still held (a melody or passing note over unchanged
+ *      harmony). On by default (merge_unchanged_harmony); the same barline rule applies.
  *
  * The beat grid is INJECTED. The kernel cannot include a framework, and what a beat is (a dotted
  * quarter in 6/8, a quarter in 3/4) is frameworks/standard-meter's reading of a TimeSignature, which
@@ -53,16 +56,17 @@ typedef bool (*BeatGridProvider)(const MeterMap *map, int measure, void *context
 
 /*
  * min_split_numerator / min_split_denominator: the minimum split duration as a fraction of a beat
- * (default 1/2). merge_across_barlines: whether the merge step may join segments across a barline
- * (default false).
+ * (default 1/2). merge_across_barlines: whether the merge steps may join segments across a barline
+ * (default false). merge_unchanged_harmony: whether step 4 runs (default true).
  */
 typedef struct {
     unsigned long min_split_numerator;
     unsigned long min_split_denominator;
     bool merge_across_barlines;
+    bool merge_unchanged_harmony;
 } AdaptiveSegmentationConfig;
 
-/* 1/2 of a beat, and not across barlines. */
+/* 1/2 of a beat, not across barlines, merging over unchanged harmony. */
 AdaptiveSegmentationConfig adaptive_segmentation_config_default(void);
 
 typedef enum {

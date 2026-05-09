@@ -39,6 +39,7 @@ static CommonPracticeSegment segment_of(const Members *m) {
     s.members = m->members;
     s.member_count = m->count;
     s.id = "segment";
+    s.beat = 0;
     return s;
 }
 

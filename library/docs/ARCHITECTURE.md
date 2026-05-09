@@ -24,7 +24,7 @@ A module in layer N may depend only on modules in layers 0 through N. It must ne
 
 A framework may depend on L0 to L6, on `theory/framework.h`, `rules/rule.h` and `rules/constraint.h`, and on another framework only where that edge is recorded in `frameworks/README.md`.
 
-Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests do not yet run from the root build; see `docs/BUILDING.md`.
+Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests run from the root build like the module ones (since PR #99); see `docs/BUILDING.md`.
 
 ## Vocabulary enums
 

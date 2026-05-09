@@ -14,6 +14,7 @@ AdaptiveSegmentationConfig adaptive_segmentation_config_default(void) {
     config.min_split_numerator = 1;
     config.min_split_denominator = 2;
     config.merge_across_barlines = false;
+    config.merge_unchanged_harmony = true;
     return config;
 }
 
@@ -493,6 +494,108 @@ AdaptiveSegmentationResult segmentation_merge(const NoteSpan *spans, const Adapt
     return AD_SEGMENTATION_OK;
 }
 
+/* --- step 4, the merge over unchanged harmony --- */
+
+/* The pitch classes of a segment's chord: every member's, less the highest note's when no other member
+   carries its pitch class (a melody note that may move on). */
+static unsigned chord_pitch_class_set(const NoteSpan *spans, const Segment *segment) {
+    if (segment->member_count == 0) {
+        return 0;
+    }
+    size_t top = 0;
+    for (size_t i = 1; i < segment->member_count; i++) {
+        if (spans[segment->members[i].note].pitch > spans[segment->members[top].note].pitch) {
+            top = i;
+        }
+    }
+    unsigned set = 0;
+    bool top_doubled = false;
+    int top_pc = spans[segment->members[top].note].pitch_class;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        if (i == top) {
+            continue;
+        }
+        int pc = spans[segment->members[i].note].pitch_class;
+        set |= 1u << pc;
+        top_doubled = top_doubled || pc == top_pc;
+    }
+    if (top_doubled || segment->member_count == 1) {
+        set |= 1u << top_pc;
+    }
+    return set;
+}
+
+static int pitch_class_count(unsigned set) {
+    int count = 0;
+    for (; set != 0; set &= set - 1) {
+        count++;
+    }
+    return count;
+}
+
+/* True when `segment` only adds non-bass attacks over the chord `chord_set` still held from before it. A
+   chord needs two pitch classes: a lone bass under a moving line is not unchanged harmony. */
+static bool holds_unchanged_harmony(const NoteSpan *spans, const Segment *segment, unsigned chord_set) {
+    if (segment->member_count == 0 || pitch_class_count(chord_set) < 2) {
+        return false;
+    }
+    int bass = segment_bass_pitch(spans, segment);
+    unsigned held = 0;
+    bool any_attack = false;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        const NoteSpan *note = &spans[segment->members[i].note];
+        if (segment->members[i].attacked) {
+            if (note->pitch <= bass) {
+                return false; /* a new bass */
+            }
+            any_attack = true;
+        } else {
+            held |= 1u << note->pitch_class;
+        }
+    }
+    return any_attack && (chord_set & ~held) == 0;
+}
+
+AdaptiveSegmentationResult segmentation_merge_unchanged_harmony(const NoteSpan *spans,
+                                                                const AdaptiveSegmentationConfig *config,
+                                                                SegmentList *segments) {
+    if (spans == NULL || config == NULL || segments == NULL) {
+        return AD_SEGMENTATION_ERR_NULL_ARGUMENT;
+    }
+    if (!config->merge_unchanged_harmony) {
+        return AD_SEGMENTATION_OK;
+    }
+
+    size_t kept = 0;      /* segments[0..kept) is the merged result so far */
+    unsigned chord_set = 0; /* the chord of segments[kept - 1], as its first segment had it */
+    for (size_t i = 0; i < segments->count; i++) {
+        Segment *segment = &segments->items[i];
+        if (kept > 0) {
+            Segment *last = &segments->items[kept - 1];
+            bool crosses_barline = segment->starts_measure && !config->merge_across_barlines;
+            if (!crosses_barline && last->member_count > 0 && er_cmp(last->end, segment->start) == 0 &&
+                holds_unchanged_harmony(spans, segment, chord_set)) {
+                AdaptiveSegmentationResult merged = union_members(last, segment);
+                if (merged != AD_SEGMENTATION_OK) {
+                    return merged;
+                }
+                last->end = segment->end;
+                free(segment->members);
+                segment->members = NULL;
+                segment->member_count = 0;
+                continue;
+            }
+        }
+        if (kept != i) {
+            segments->items[kept] = *segment;
+        }
+        chord_set = chord_pitch_class_set(spans, &segments->items[kept]);
+        kept++;
+    }
+    segments->count = kept;
+    return AD_SEGMENTATION_OK;
+}
+
 void adaptive_sonorities_destroy(AdaptiveSonorities *sonorities) {
     if (sonorities == NULL) {
         return;
@@ -599,6 +702,9 @@ AdaptiveSegmentationResult sonority_builder_build_adaptive(NoteEvent *const *not
     }
     if (result == AD_SEGMENTATION_OK) {
         result = segmentation_merge(spans, &effective, &segments);
+    }
+    if (result == AD_SEGMENTATION_OK) {
+        result = segmentation_merge_unchanged_harmony(spans, &effective, &segments);
     }
 
     AdaptiveSonorities assembled = {NULL, 0};
