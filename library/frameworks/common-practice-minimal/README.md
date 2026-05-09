@@ -103,7 +103,8 @@ per beat; with two or more, nothing matches (Field Nocturne No. 1 resolved
 `weighted_chord_identification.h` are the weighted replacement, a new
 function beside them. A segment's members (plain structs: pitch, held or
 attacked, duration, the caller-computed `BeatStrength`, voice) are weighted by
-duration times a beat-strength or held factor, with the bass boosted. The 14
+duration times a beat-strength or held factor, with the bass pitch class
+boosted. The 14
 diatonic candidates of a major key (seven triads, seven sevenths) are scored
 by chord-tone share, minus a penalty for an absent third and plus a bonus for
 a chord-tone bass; ties go to root position, then the triad, then the lower
@@ -114,11 +115,40 @@ with the shared `NonChordTone` enum (passing, neighbor, appoggiatura, escape
 tone, suspension, anticipation, pedal) by approach and departure, using the
 same voice or else the nearest pitch in adjacent segments; anything unclear
 is left unclassified. The defaults are strong 1.0, medium 0.7, weak 0.4, held
-0.6, bass x1.5, missing third 0.15, chord-tone bass 0.05, minimum coverage
+0.6, bass x1.1, missing third 0.15, chord-tone bass 0.05, minimum coverage
 0.5, all configurable. This framework includes no other framework: the caller
-supplies each member's `BeatStrength`. Limits: a major key only, diatonic
-candidates only, a whole-piece key, and no voice separation yet. See
-docs/modules/analysis.md.
+supplies each member's `BeatStrength`. Limits: diatonic candidates only and no
+voice separation yet. See docs/modules/analysis.md.
+
+### Chords in context
+
+The sequence function reads a segment against its neighbours after pass 1.
+A segment is incomplete when it has no match, or fewer than three of its best
+chord's pitch classes sound (two with the root in the bass count as complete:
+a triad without its fifth; a single note never does).
+
+- **Arpeggios.** A run of two or more consecutive segments inside one beat
+  (`CommonPracticeSegment.beat`, set by the caller; 0 is unknown), none
+  complete, is read as one chord when the union of their members is complete.
+- **Neighbours.** Any other incomplete segment whose pitch classes all lie in
+  a neighbouring chord takes that chord: the previous one (as resolved, so a
+  run of sparse segments carries one chord on), else the next one's own
+  complete reading.
+
+The result's `context` records the evidence (`PREVIOUS`, `NEXT`, `ARPEGGIO`,
+or `NONE` for the segment's own reading). Upstream, adaptive segmentation's
+`merge_unchanged_harmony` (default on) joins a melody or passing note over
+held harmony into the chord it sounds over; outer-voice extraction turns it
+off to keep one segment per melody note.
+
+The bass weight applies to every member on the bass pitch class. Its default,
+1.1, was chosen on the accuracy harness and the Framework v1 verification:
+1.0 gave the best chorale root agreement (84.1%) but lost Field 5's home key
+(B-flat read as D minor); 1.5 and above lowered chorale root agreement (82.5%
+at 1.5, 80.3% at 3.0). At 1.1 the chorales give 83.8% root agreement (82.8%
+before). Field Nocturne No. 1 stays at 78.7% (48 of 61), below the 90%
+target: its misses are a vii or iii read where V7 or I is marked, on beats
+whose bass sounded in an earlier beat and is not held into them.
 
 `outer_scale_degrees.h` labels the soprano and bass of each segment from
 `analysis/outer_voice.h` as `ScaleDegree` Interpretations relative to the
