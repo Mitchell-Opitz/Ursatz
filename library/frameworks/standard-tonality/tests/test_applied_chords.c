@@ -18,6 +18,7 @@ static StandardTonalityChordInput make_input(const char *id, int root, int bass,
     input.has_numeral = true;
     input.root_pitch_class = root;
     input.bass_pitch_class = bass;
+    input.sounding_bass_pitch_class = input.bass_pitch_class;
     input.interval_count = count;
     for (size_t i = 0; i < count; i++) {
         input.intervals[i] = intervals[i];
@@ -100,6 +101,7 @@ static void test_seventh_and_inversion(void) {
     standard_tonality_roman_results_destroy(results, 2);
 
     inputs[0].bass_pitch_class = 2;
+    inputs[0].sounding_bass_pitch_class = inputs[0].bass_pitch_class;
     results = run(inputs, 2, NULL);
     assert(strcmp(results[0].claim.label, "V7/V") == 0);
     standard_tonality_roman_results_destroy(results, 2);
@@ -117,6 +119,7 @@ static void test_leading_tone_chord_of_v(void) {
     standard_tonality_roman_results_destroy(results, 2);
 
     inputs[0].bass_pitch_class = 9; /* A in the bass: first inversion */
+    inputs[0].sounding_bass_pitch_class = inputs[0].bass_pitch_class;
     results = run(inputs, 2, NULL);
     assert(strcmp(results[0].claim.label, "vii\xC2\xB0" "6/V") == 0);
     standard_tonality_roman_results_destroy(results, 2);

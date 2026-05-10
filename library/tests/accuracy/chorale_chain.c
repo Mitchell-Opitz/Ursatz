@@ -85,6 +85,7 @@ typedef struct {
     StandardTonalityKeyRegionInput *chain_region_inputs;
     StandardTonalityKeyRegionInput *annotation_region_inputs;
     StandardTonalitySegmentInput *segment_inputs;
+    int *segment_pitches; /* the members' pitches, segment after segment, for the chord bass */
     StandardTonalityChordInput *chain_inputs;
     StandardTonalityRomanResult *chain_romans;
     StandardTonalityChordInput *annotation_inputs;
@@ -103,6 +104,7 @@ static void run_destroy(Run *r) {
     standard_tonality_chord_inputs_destroy(r->annotation_inputs);
     standard_tonality_chord_inputs_destroy(r->chain_inputs);
     free(r->segment_inputs);
+    free(r->segment_pitches);
     free(r->annotation_region_inputs);
     free(r->chain_region_inputs);
     for (size_t i = 0; i < r->annotation_key_count; i++) {
@@ -371,15 +373,26 @@ static bool read_numerals(Run *r) {
     r->annotation_region_inputs =
         (StandardTonalityKeyRegionInput *)calloc(r->annotation.key_count + 1, sizeof(*r->annotation_region_inputs));
     r->annotation_keys = (Key **)calloc(r->annotation.key_count + 1, sizeof(Key *));
-    if (r->segment_inputs == NULL || r->chain_region_inputs == NULL || r->annotation_region_inputs == NULL ||
-        r->annotation_keys == NULL) {
+    size_t pitch_total = 0;
+    for (size_t i = 0; i < n; i++) {
+        pitch_total += r->segments[i].member_count;
+    }
+    r->segment_pitches = (int *)calloc(pitch_total > 0 ? pitch_total : 1, sizeof(int));
+    if (r->segment_pitches == NULL || r->segment_inputs == NULL || r->chain_region_inputs == NULL ||
+        r->annotation_region_inputs == NULL || r->annotation_keys == NULL) {
         return false;
     }
+    pitch_total = 0;
     for (size_t i = 0; i < n; i++) {
         r->segment_inputs[i].segment_id = r->segment_ids[i];
         r->segment_inputs[i].start = r->key_segments[i].start;
         r->segment_inputs[i].chord = r->results[i].matched ? r->results[i].best_chord : NULL;
         r->segment_inputs[i].weights = r->key_segments[i].weights.pitch_class;
+        r->segment_inputs[i].pitches = &r->segment_pitches[pitch_total];
+        r->segment_inputs[i].pitch_count = r->segments[i].member_count;
+        for (size_t j = 0; j < r->segments[i].member_count; j++) {
+            r->segment_pitches[pitch_total++] = r->segments[i].members[j].pitch;
+        }
     }
     for (size_t i = 0; i < r->regions.region_count; i++) {
         r->chain_region_inputs[i].key = r->regions.regions[i].key;

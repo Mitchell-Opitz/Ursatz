@@ -25,7 +25,9 @@
  * natural scale. A chord the key does not give has no numeral here (chromatic chords other than the applied
  * chords of a later step are out of scope).
  *
- * INVERSION comes from the bass: the interval from the root to the bass pitch class picks the chord member
+ * INVERSION comes from the bass, the lowest sounding chord tone (chord_input.h): a lower non-chord tone
+ * does not make the chord root position. When no chord tone sounds, the previous segment's bass is kept
+ * while it is a chord member, else the bass is unknown. The interval from the root to the bass pitch class picks the chord member
  * in the bass. A triad: root 0, third 1 (figure "6"), fifth 2 ("6/4"). A seventh chord: root 0 ("7" in the
  * numeral), third 1 ("6/5"), fifth 2 ("4/3"), seventh 3 ("4/2"). An unknown bass, or a bass that is not a
  * chord member, reads as root position.
