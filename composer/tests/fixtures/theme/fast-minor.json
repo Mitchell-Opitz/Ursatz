@@ -13,7 +13,7 @@
   {
    "id": "A",
    "form": "full",
-   "degrees": "1:q 3:e 5:e 1':h",
+   "degrees": "1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
    "pickup": "0",
    "harmony": null,
    "features": [],
@@ -23,7 +23,7 @@
   {
    "id": "B",
    "form": "full",
-   "degrees": "5:e 4:e 3:e 2:e 1:h",
+   "degrees": "5:e 4:e 3:e 2:e 4:e 3:e 2:e 1:e",
    "pickup": "0",
    "harmony": null,
    "features": [],
@@ -34,8 +34,8 @@
  "slots": {
   "basic": "A",
   "contrasting": null,
-  "continuation": "B",
-  "cadential": null
+  "continuation": null,
+  "cadential": "B"
  },
  "accompaniment": null,
  "voicing": null,
