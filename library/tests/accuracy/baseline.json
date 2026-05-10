@@ -3,8 +3,8 @@
   "overall": {
     "chord_root": 0.838298,
     "chord_quality": 0.662128,
-    "roman_numeral": 0.650638,
-    "roman_numeral_chain_key": 0.467660,
+    "roman_numeral": 0.657447,
+    "roman_numeral_chain_key": 0.471064,
     "key": 0.620401,
     "cadence_recall": 0.100000,
     "cadence_type": 1.000000,
@@ -27,29 +27,29 @@
     "chorale-001-bwv269": {
       "chord_root": 0.904762,
       "chord_quality": 0.761905,
-      "roman_numeral": 0.753968,
-      "roman_numeral_chain_key": 0.626984,
+      "roman_numeral": 0.761905,
+      "roman_numeral_chain_key": 0.634921,
       "key": 0.777778
     },
     "chorale-002-bwv347": {
       "chord_root": 0.796117,
       "chord_quality": 0.655340,
-      "roman_numeral": 0.635922,
+      "roman_numeral": 0.645631,
       "roman_numeral_chain_key": 0.412621,
       "key": 0.576923
     },
     "chorale-003-bwv153-1": {
       "chord_root": 0.725000,
       "chord_quality": 0.550000,
-      "roman_numeral": 0.537500,
-      "roman_numeral_chain_key": 0.350000,
+      "roman_numeral": 0.575000,
+      "roman_numeral_chain_key": 0.362500,
       "key": 0.462500
     },
     "chorale-005-bwv267": {
       "chord_root": 0.827068,
       "chord_quality": 0.639098,
-      "roman_numeral": 0.563910,
-      "roman_numeral_chain_key": 0.413534,
+      "roman_numeral": 0.571429,
+      "roman_numeral_chain_key": 0.421053,
       "key": 0.580882
     },
     "chorale-006-bwv281": {
@@ -83,15 +83,15 @@
     "chorale-013-bwv33-6": {
       "chord_root": 0.777778,
       "chord_quality": 0.654762,
-      "roman_numeral": 0.615079,
+      "roman_numeral": 0.623016,
       "roman_numeral_chain_key": 0.416667,
       "key": 0.703125
     },
     "chorale-016-bwv311": {
       "chord_root": 0.770370,
       "chord_quality": 0.459259,
-      "roman_numeral": 0.466667,
-      "roman_numeral_chain_key": 0.303704,
+      "roman_numeral": 0.474074,
+      "roman_numeral_chain_key": 0.311111,
       "key": 0.441176
     },
     "Bach 114": {
