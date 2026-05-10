@@ -35,6 +35,47 @@ static double chord_uncertainty_of(const Chord *chord) {
     return value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
 }
 
+static bool is_chord_member(const StandardTonalityChordInput *input, int pitch_class) {
+    int interval = ((pitch_class - input->root_pitch_class) % 12 + 12) % 12;
+    for (size_t i = 0; i < input->interval_count; i++) {
+        if (input->intervals[i] == interval) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The bass register: a chord tone counts as the bass only within an octave of the lowest sounding pitch. */
+#define STANDARD_TONALITY_BASS_REGISTER 12
+
+/* The bass from the lowest sounding chord tone; else the previous segment's bass if still a member; else -1. */
+static int chord_bass_of(const StandardTonalityChordInput *input, const StandardTonalitySegmentInput *segment,
+                         int previous_bass) {
+    int floor = segment->pitches[0];
+    for (size_t i = 1; i < segment->pitch_count; i++) {
+        if (segment->pitches[i] < floor) {
+            floor = segment->pitches[i];
+        }
+    }
+    bool found = false;
+    int lowest = 0;
+    for (size_t i = 0; i < segment->pitch_count; i++) {
+        int pitch = segment->pitches[i];
+        if (pitch - floor < STANDARD_TONALITY_BASS_REGISTER && is_chord_member(input, ((pitch % 12) + 12) % 12) &&
+            (!found || pitch < lowest)) {
+            lowest = pitch;
+            found = true;
+        }
+    }
+    if (found) {
+        return ((lowest % 12) + 12) % 12;
+    }
+    if (previous_bass >= 0 && is_chord_member(input, previous_bass)) {
+        return previous_bass;
+    }
+    return -1;
+}
+
 /* Reads the chord's and key's structure into `input`; false (has_numeral stays false) if either is missing. */
 static void read_structures(StandardTonalityChordInput *input, const Chord *chord, const Key *key) {
     ChordStructure chord_structure_value;
@@ -48,6 +89,7 @@ static void read_structures(StandardTonalityChordInput *input, const Chord *chor
     input->chord = chord;
     input->root_pitch_class = chord_structure_value.root_pitch_class;
     input->bass_pitch_class = chord_structure_value.bass_pitch_class;
+    input->sounding_bass_pitch_class = chord_structure_value.bass_pitch_class;
     input->interval_count = chord_structure_value.interval_count;
     for (size_t i = 0; i < chord_structure_value.interval_count; i++) {
         input->intervals[i] = chord_structure_value.root_relative_intervals[i];
@@ -84,11 +126,13 @@ StandardTonalityChordInputStatus standard_tonality_build_chord_inputs(
         return STANDARD_TONALITY_CHORD_INPUT_ERR_ALLOC;
     }
 
+    int previous_bass = -1;
     for (size_t i = 0; i < segment_count; i++) {
         StandardTonalityChordInput *input = &inputs[i];
         input->segment_id = segments[i].segment_id;
         input->start = segments[i].start;
         input->bass_pitch_class = -1;
+        input->sounding_bass_pitch_class = -1;
         input->region_index = 0;
         if (segments[i].weights != NULL) {
             input->has_weights = true;
@@ -102,6 +146,10 @@ StandardTonalityChordInputStatus standard_tonality_build_chord_inputs(
             input->key_uncertainty = regions[region].uncertainty;
             read_structures(input, segments[i].chord, regions[region].key);
         }
+        if (input->has_numeral && segments[i].pitches != NULL && segments[i].pitch_count > 0) {
+            input->bass_pitch_class = chord_bass_of(input, &segments[i], previous_bass);
+        }
+        previous_bass = input->has_numeral ? input->bass_pitch_class : -1;
     }
 
     *out = inputs;

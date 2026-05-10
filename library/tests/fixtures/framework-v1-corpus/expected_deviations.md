@@ -65,9 +65,6 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
 | DEV-033 | mozart545 | cadences | m11 b1 | hc | none | C5 |
 | DEV-034 | mozart545 | cadences | m26 b1 | pac | none | C5 |
-| DEV-036 | mozart545 | cadences | extra m15 b1 | none | hc | C6 |
-| DEV-037 | mozart545 | cadences | extra m17 b1 | none | hc | C6 |
-| DEV-038 | mozart545 | phrase-form | end m12 | hc at m12 | none | C8 |
 | DEV-039 | clementi36 | keys | region 1-5 | C major 1-5 | C major 1-7 | C1 |
 | DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-15 | C1 |
 | DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 16-19, G major 20-23 | C1,C2 |
@@ -100,14 +97,15 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | none | C8 |
 | DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
 | DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-4, D minor 5-8 | C1,C2 |
-| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
-| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
-| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
-| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
-| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m1-15, m18-27, m29-43, m46-55) | C8,C10 |
+| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m22-27, m50-55) | C8,C10 |
+| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m22-27, m50-55) | C8,C10 |
+| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55) | C8,C10 |
+| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55) | C8,C10 |
+| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55) | C8,C10 |
 | DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m15-24, m28-33) | C8,C10 |
 | DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m15-24, m28-33) | C8,C10 |
 | DEV-083 | clementi36 | cadences | extra m19 b1 | none | hc | C5 |
 | DEV-084 | field5 | cadences | none in scope | no cadence | 2 cadence(s) | C5 |
 | DEV-085 | field5 | cadences | extra m5 b3 | none | hc | C5 |
 | DEV-086 | field5 | cadences | extra m6 b1 | none | other | C5 |
+| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55) | C8,C10 |

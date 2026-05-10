@@ -158,7 +158,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
     }
 
     double diatonic_score = score_chord(input->weights, total, input->root_pitch_class, input->intervals,
-                                        input->interval_count, input->bass_pitch_class, config);
+                                        input->interval_count, input->sounding_bass_pitch_class, config);
 
     const int *targets = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_TARGETS : MINOR_TARGETS;
     const int *scale = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_SCALE : NATURAL_MINOR_SCALE;
@@ -181,7 +181,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
                 continue; /* the root does not sound */
             }
             double score = score_chord(input->weights, total, root, shape->intervals, shape->interval_count,
-                                       input->bass_pitch_class, config);
+                                       input->sounding_bass_pitch_class, config);
             if (score > diatonic_score && (!found || score > best_score)) {
                 found = true;
                 best_score = score;
@@ -206,7 +206,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
     if (!built || !target_numeral(input->mode, best_target, &reading.applied_target)) {
         return false;
     }
-    reading.inversion = member_in_bass(input->bass_pitch_class, root, best_shape->intervals,
+    reading.inversion = member_in_bass(input->sounding_bass_pitch_class, root, best_shape->intervals,
                                        best_shape->interval_count);
     reading.applied = true;
     reading.romantext_spelling = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;

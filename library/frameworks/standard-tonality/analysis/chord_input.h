@@ -20,6 +20,12 @@
  *     tonic pitch class and the mode;
  *   - the segment's 12 pitch-class weights, as a plain array (index 0 = C ... 11 = B).
  *
+ * BASS. When the segment passes its sounding pitches, bass_pitch_class is the pitch class of the lowest
+ * sounding pitch that is a member of the identified chord: lower non-chord tones are ignored. When no
+ * sounding pitch is a chord member, the previous segment's bass is kept if it is a member of this chord;
+ * otherwise the bass is -1 (read as root position). A segment passing no pitches keeps the Chord's own
+ * bass pitch class. sounding_bass_pitch_class always keeps the Chord's own bass pitch class.
+ *
  * Whoever produced the Chords and Keys (common-practice-minimal does) owns them; the adapter only borrows.
  *
  * LOCAL KEY. Each segment is read in the key region that contains the segment's START time. Regions are
@@ -46,6 +52,8 @@ typedef struct {
     const MusicalTime *start;  /* borrowed */
     const Chord *chord;        /* borrowed; NULL when no chord was identified */
     const double *weights;     /* borrowed; the 12 pitch-class weights, or NULL when not available */
+    const int *pitches;        /* borrowed; the sounding pitches (semitone numbers, any order), or NULL */
+    size_t pitch_count;
 } StandardTonalitySegmentInput;
 
 #define STANDARD_TONALITY_CHORD_INPUT_MAX_INTERVALS CHORD_STRUCTURE_MAX_INTERVALS
@@ -56,7 +64,9 @@ typedef struct {
     bool has_numeral;          /* false: pass through as no-numeral; nothing below is meaningful */
     const Chord *chord;        /* borrowed */
     int root_pitch_class;      /* 0..11 */
-    int bass_pitch_class;      /* 0..11, or -1 when unknown (read as root position) */
+    int bass_pitch_class;      /* the lowest sounding chord tone, 0..11, or -1 when unknown (read as root position) */
+    int sounding_bass_pitch_class; /* the Chord's own bass pitch class (the lowest sounding note, chord tone or not),
+                                      0..11, or -1; the applied-chord reading scores candidates against it */
     int intervals[STANDARD_TONALITY_CHORD_INPUT_MAX_INTERVALS]; /* root-relative semitones, ascending */
     size_t interval_count;
     int tonic_pitch_class;     /* the local key's tonic, 0..11 */

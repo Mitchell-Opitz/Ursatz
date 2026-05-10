@@ -252,6 +252,7 @@ typedef struct {
     CommonPracticeWeightedResult *chords; /* one per segment */
     StandardTonalityKeyRegionInput *region_inputs;
     StandardTonalitySegmentInput *segment_inputs;
+    int *segment_pitches; /* the members' pitches, segment after segment, for the chord bass */
     StandardTonalityChordInput *tonal_inputs;
     size_t tonal_count;
     StandardTonalityRomanResult *romans;
@@ -355,7 +356,13 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     /* Roman numerals in the chain's keys */
     c->region_inputs = (StandardTonalityKeyRegionInput *)calloc(c->regions.region_count, sizeof(StandardTonalityKeyRegionInput));
     c->segment_inputs = (StandardTonalitySegmentInput *)calloc(count, sizeof(StandardTonalitySegmentInput));
-    assert(c->region_inputs != NULL && c->segment_inputs != NULL);
+    size_t pitch_total = 0;
+    for (size_t i = 0; i < count; i++) {
+        pitch_total += c->p.segments[i].member_count;
+    }
+    c->segment_pitches = (int *)calloc(pitch_total > 0 ? pitch_total : 1, sizeof(int));
+    assert(c->region_inputs != NULL && c->segment_inputs != NULL && c->segment_pitches != NULL);
+    pitch_total = 0;
     for (size_t i = 0; i < c->regions.region_count; i++) {
         c->region_inputs[i].key = c->regions.regions[i].key;
         c->region_inputs[i].start = time_span_start(c->regions.regions[i].span);
@@ -366,6 +373,11 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
         c->segment_inputs[i].start = c->key_segments[i].start;
         c->segment_inputs[i].chord = c->chords[i].matched ? c->chords[i].best_chord : NULL;
         c->segment_inputs[i].weights = c->key_segments[i].weights.pitch_class;
+        c->segment_inputs[i].pitches = &c->segment_pitches[pitch_total];
+        c->segment_inputs[i].pitch_count = c->p.segments[i].member_count;
+        for (size_t j = 0; j < c->p.segments[i].member_count; j++) {
+            c->segment_pitches[pitch_total++] = c->p.segments[i].members[j].pitch;
+        }
     }
     assert(standard_tonality_build_chord_inputs(c->segment_inputs, count, c->region_inputs, c->regions.region_count,
                                                 &c->tonal_inputs, &c->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
@@ -416,6 +428,7 @@ static void fv1_chain_destroy(Chain *c) {
     standard_tonality_roman_results_destroy(c->romans, c->tonal_count);
     standard_tonality_chord_inputs_destroy(c->tonal_inputs);
     free(c->segment_inputs);
+    free(c->segment_pitches);
     free(c->region_inputs);
     for (size_t i = 0; i < c->count; i++) {
         common_practice_weighted_result_destroy(&c->chords[i]);
