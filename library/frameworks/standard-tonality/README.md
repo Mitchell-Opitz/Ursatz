@@ -182,6 +182,12 @@ Rules about how pitches relate within a key:
 - **Analysis adapter** (`analysis/`): Roman numeral Interpretations per
   chord segment in its local key, with applied chords, read from kernel
   Chord and Key data only. See `docs/modules/standard-tonality-analysis.md`.
+  Inversion comes from the lowest sounding chord tone: a lower non-chord
+  tone in the bass does not make the chord root position. When no chord
+  tone sounds in the bass register (within an octave of the lowest
+  pitch), the previous segment's bass holds while it is a member of the
+  chord, else the chord reads as root position. A caller that passes no
+  segment pitches keeps the Chord's own bass.
 
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
