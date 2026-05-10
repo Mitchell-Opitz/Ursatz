@@ -125,6 +125,15 @@ With it the Composer reaches milestone M1: a motive, a key and a meter in, harmo
 harmony in four parts.
 
 ```sh
+ursatz-composer theme request.json --seed 7 --out theme.json --midi theme.mid
+```
+
+`theme` grows a theme from the motives of a request: up to four motives, one for each slot of the theme (basic, contrasting,
+continuation, cadential), saved forms of them to prefer, and a brief (key, mode, meter, cadences, an accompaniment or a
+voicing, a style that gives the tempo, the mode and the note density). See [docs/cli-theme.md](docs/cli-theme.md) and
+[docs/theme-request.md](docs/theme-request.md).
+
+```sh
 ursatz-composer plan --form ternary --key A --mode minor --meter 3/4 --seed 4 --out piece.json
 ursatz-composer fill piece.json --seed 7 --midi piece.mid --musicxml piece.xml
 ```
