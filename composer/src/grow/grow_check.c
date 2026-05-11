@@ -55,8 +55,13 @@ static const char *judge_continuation(const GrowThemeSpec *spec) {
         return "continuation does not fragment";
     }
     for (GrowIdea idea = GROW_IDEA_FRAGMENT_1; idea <= GROW_IDEA_FRAGMENT_2; idea++) {
+        /* A slot's own motive begins its slot as it is: only a fragment of it is shorter than its source. */
+        bool first;
+        GrowSlot slot = grow_idea_slot(&spec->pairing, idea, &first);
+        bool own = first && spec->has_slot_source[slot];
         if (!spec->has_developed[idea] ||
-            !standard_form_is_fragmentation(ticks_of(spec->source.length), ticks_of(spec->developed[idea].length))) {
+            (!own && !standard_form_is_fragmentation(ticks_of(grow_idea_source(spec, idea)->length),
+                                                     ticks_of(spec->developed[idea].length)))) {
             return "fragment not shorter than the basic idea";
         }
     }
@@ -175,7 +180,8 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     }
     /* A contrasting idea that keeps m0's contour would read as its repetition. */
     if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION &&
-        (!spec->has_developed[GROW_IDEA_CONTRAST] || reads_as_repetition(spec, GROW_IDEA_CONTRAST))) {
+        (!spec->has_developed[GROW_IDEA_CONTRAST] ||
+         (!spec->has_slot_source[GROW_SLOT_CONTRASTING] && reads_as_repetition(spec, GROW_IDEA_CONTRAST)))) {
         return "contrasting idea reads as a repetition";
     }
     /* A theme with an antecedent ends in a cadence stronger than the antecedent's. */

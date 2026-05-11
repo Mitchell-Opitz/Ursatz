@@ -1,0 +1,46 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 1,
+ "into": "sentence",
+ "hybrid": null,
+ "key": "D",
+ "mode": "style",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "first_cadence": null,
+ "motives": [
+  {
+   "id": "A",
+   "form": "full",
+   "degrees": "1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+   "pickup": "0",
+   "harmony": null,
+   "features": [],
+   "role": "melodic",
+   "forms": []
+  },
+  {
+   "id": "B",
+   "form": "full",
+   "degrees": "5:e 4:e 3:e 2:e 4:e 3:e 2:e 1:e",
+   "pickup": "0",
+   "harmony": null,
+   "features": [],
+   "role": "melodic",
+   "forms": []
+  }
+ ],
+ "slots": {
+  "basic": "A",
+  "contrasting": null,
+  "continuation": null,
+  "cadential": "B"
+ },
+ "accompaniment": null,
+ "voicing": null,
+ "style": "@STYLE@",
+ "style_weight": "1/2",
+ "without": [],
+ "tempo": null
+}

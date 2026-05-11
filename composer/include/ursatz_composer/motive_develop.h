@@ -152,6 +152,8 @@ typedef struct {
 bool motive_recognizability(const Motive *source, const Motive *development, const MotiveScoreWeights *weights,
                             MotiveRecognizability *out);
 
+struct GrowPoolForm;
+
 /*
  * What the operators know that the plan does not say. The key and meter of the source come from the plan's key and
  * meter lanes over its span when it has them, and from here otherwise. All-zero, set by
@@ -178,6 +180,12 @@ typedef struct {
      * halved. A denominator of 0 means 3/4.
      */
     MotiveScore remoteness_limit;
+    /*
+     * For the motive-form operator: the saved motive-forms it prefers (grow_form.h, R-166); NULL for none. Must outlive
+     * the registry.
+     */
+    const struct GrowPoolForm *pool;
+    size_t pool_count;
 } MotiveDevelopContext;
 
 void motive_develop_context_default(MotiveDevelopContext *context);

@@ -67,6 +67,8 @@ typedef struct {
     PlanExportOptions export_options;
     ComposerRatio tempo;      /* quarter notes per minute from --tempo or the style; denominator 0 for none */
     const char *tempo_from;   /* "option", "style" or "none" */
+    const char *mode_from;    /* "request" or "style" */
+    GrowExt *ext;             /* the theme command's motives and output; NULL for grow itself */
     const char *explain_path;
     const char *format_text;
     MotiveExtras extras;
@@ -311,7 +313,7 @@ static int check_options(Options *options) {
     if (options->from_corpus && options->input) {
         return cli_fail(CLI_EXIT_USAGE, "give a motive input or --from-corpus, not both");
     }
-    if (!options->input && !options->from_corpus) {
+    if (!options->input && !options->from_corpus && !options->ext) {
         return cli_fail(CLI_EXIT_USAGE, "grow needs a motive input\n%s", GROW_USAGE_LINE);
     }
     if (!options->into_text || !options->key_text || !options->meter_text) {
@@ -405,6 +407,8 @@ static int check_options(Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence must be HC or IAC, not '%s'", options->first_cadence_text);
         }
     }
+    /* The theme command's accompaniment motive is not a file. */
+    bool accompaniment_motive = options->accompaniment_motive_path || (options->ext && options->ext->accompaniment_motive_given);
     /* A chorale is four parts with the melody written too: a voicing, not an accompaniment. */
     bool chorale = options->texture_text && cli_equals_ignore_case(options->texture_text, "chorale");
     if (chorale || options->voicing_flag) {
@@ -417,13 +421,13 @@ static int check_options(Options *options) {
         }
         options->has_voicing = true;
         options->voicing.write_soprano = chorale;
-    } else if (options->accompaniment_text || options->texture_text || options->accompaniment_motive_path) {
+    } else if (options->accompaniment_text || options->texture_text || accompaniment_motive) {
         /* The word "motive" names the accompaniment motive's pattern, which cli_read_accompaniment does not read. */
         bool motive_word = options->accompaniment_text && cli_equals_ignore_case(options->accompaniment_text, "motive");
-        if (motive_word && !options->accompaniment_motive_path) {
+        if (motive_word && !accompaniment_motive) {
             return cli_fail(CLI_EXIT_USAGE, "--accompaniment motive needs --accompaniment-motive <file>");
         }
-        if (options->accompaniment_motive_path && options->accompaniment_text && !motive_word) {
+        if (accompaniment_motive && options->accompaniment_text && !motive_word) {
             return cli_fail(CLI_EXIT_USAGE, "--accompaniment-motive is the accompaniment pattern; it cannot be combined with "
                                             "--accompaniment %s", options->accompaniment_text);
         }
@@ -433,14 +437,14 @@ static int check_options(Options *options) {
         if (read != 0) {
             return read;
         }
-        if (options->accompaniment_motive_path) {
+        if (accompaniment_motive) {
             options->accompaniment.pattern = PLAN_ACCOMPANIMENT_MOTIVE;
         }
     }
     if ((options->accompaniment_format_text || options->accompaniment_pickup_text) && !options->accompaniment_motive_path) {
         return cli_fail(CLI_EXIT_USAGE, "--accompaniment-format and --accompaniment-pickup need --accompaniment-motive <file>");
     }
-    if (options->accompaniment_motive_path && (chorale || options->voicing_flag)) {
+    if (accompaniment_motive && (chorale || options->voicing_flag)) {
         return cli_fail(CLI_EXIT_USAGE, "--accompaniment-motive cannot be combined with --voicing or --texture chorale");
     }
     if (options->style_weight_text && !options->style_path) {
@@ -622,6 +626,9 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     request.accompaniment_motive = options->has_accompaniment_motive ? &options->accompaniment_motive : NULL;
     request.has_voicing = options->has_voicing;
     request.voicing = options->voicing;
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; options->ext && slot < GROW_SLOT_COUNT; slot++) {
+        request.slot_motives[slot] = options->ext->has_slot[slot] ? &options->ext->slot_motives[slot] : NULL;
+    }
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
     GrowResult built = grow_build_plan(&request, &theme->plan);
@@ -635,6 +642,10 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     config.style = options->style;
     config.style_weight = options->style_weight;
     config.tempo = options->tempo;
+    if (options->ext) {
+        config.pool = options->ext->pool;
+        config.pool_count = options->ext->pool_count;
+    }
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
     NodeId theme_node = find_node(theme->plan, "theme");
     if (ran == GROW_ERR_STUCK && options->explain_path) {
@@ -936,6 +947,9 @@ static void print_theme_text(const Options *options, const Theme *theme, PlanTim
         printf("  %s for %s: %s\n", developments[i].motive, developments[i].idea[0] ? developments[i].idea : "(unused)",
                developments[i].how);
     }
+    if (options->ext) {
+        options->ext->print_theme(options->ext, plan, &theme->outcome, false);
+    }
 
     char heard_form[96];
     char requested[96];
@@ -972,11 +986,16 @@ static void print_theme_json(const Options *options, const Theme *theme, PlanTim
         cli_print_json_string(developments[i].how);
         printf("}");
     }
+    printf("]");
+    if (options->ext) {
+        printf(",");
+        options->ext->print_theme(options->ext, plan, &theme->outcome, true);
+    }
     char heard_form[96];
     char requested[96];
     char heard[256];
     heard_text(&theme->outcome, heard_form, sizeof(heard_form), requested, sizeof(requested), heard, sizeof(heard));
-    printf("],\"score\":{\"numerator\":%lu,\"denominator\":%lu},\"requested\":", theme->outcome.score.numerator,
+    printf(",\"score\":{\"numerator\":%lu,\"denominator\":%lu},\"requested\":", theme->outcome.score.numerator,
            theme->outcome.score.denominator);
     cli_print_json_string(requested);
     printf(",\"heard\":");
@@ -1001,6 +1020,19 @@ static void print_tempo_number(const ComposerRatio *tempo) {
     } else {
         printf("%g", (double)tempo->numerator / (double)tempo->denominator);
     }
+}
+
+static void print_brief(const Options *options, bool json) {
+    GrowBrief brief;
+    memset(&brief, 0, sizeof(brief));
+    brief.tempo = options->tempo;
+    brief.tempo_from = options->tempo_from;
+    brief.minor = options->key.mode == PLAN_MODE_MINOR;
+    brief.mode_from = options->mode_from;
+    brief.has_density = composer_style_density(options->style, &brief.density);
+    brief.without = options->without.names;
+    brief.without_count = options->without.count;
+    options->ext->print_brief(options->ext, &brief, json);
 }
 
 static void print_result(const Options *options, const Theme *themes, size_t count, const char *const *files,
@@ -1039,6 +1071,10 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
             printf("null");
         }
         printf(",\"from\":\"%s\"}", options->tempo_from);
+        if (options->ext) {
+            printf(",");
+            print_brief(options, true);
+        }
         printf(",\"themes\":[");
         for (size_t k = 0; k < count; k++) {
             printf("%s", k ? "," : "");
@@ -1070,6 +1106,9 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
     if (options->tempo.denominator > 0) {
         print_tempo_number(&options->tempo);
         printf("%s\n", strcmp(options->tempo_from, "style") == 0 ? " (from the style)" : "");
+    }
+    if (options->ext) {
+        print_brief(options, false);
     }
     if (options->seeded) {
         cli_print_seed_line("motive", &options->seed_found);
@@ -1183,11 +1222,16 @@ static int write_files(const Options *options, const Theme *themes, size_t count
 /* --- the command ---------------------------------------------------------------- */
 
 int run_grow(int argc, char **argv) {
+    return run_grow_ext(argc, argv, NULL);
+}
+
+int run_grow_ext(int argc, char **argv, GrowExt *ext) {
     Options options;
     int status = read_options(argc, argv, &options);
     if (status != 0) {
         return status;
     }
+    options.ext = ext;
     if (options.help) {
         print_help(stdout);
         return 0;
@@ -1224,6 +1268,7 @@ int run_grow(int argc, char **argv) {
         }
         options.key.mode = minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
     }
+    options.mode_from = options.mode_text && cli_equals_ignore_case(options.mode_text, "style") ? "style" : "request";
 
     MotiveOptions motive_options;
     memset(&motive_options, 0, sizeof(motive_options));
@@ -1239,7 +1284,14 @@ int run_grow(int argc, char **argv) {
         return status;
     }
     Motive motive;
-    if (options.from_corpus) {
+    if (options.ext) {
+        status = options.ext->load(options.ext, &options.meter, &options.key);
+        if (status != 0) {
+            composer_style_destroy(options.style);
+            return status;
+        }
+        motive = options.ext->basic;
+    } else if (options.from_corpus) {
         /* The passage is chosen once, by the first seed; the seeds tried after it grow from the same motive. */
         status = cli_seed_motive(options.from_corpus, options.like_path, &options.meter, &options.key, options.seed,
                                  &options.seed_found);
@@ -1262,7 +1314,10 @@ int run_grow(int argc, char **argv) {
         }
     }
 
-    if (options.accompaniment_motive_path) {
+    if (options.ext && options.ext->has_accompaniment_motive) {
+        options.accompaniment_motive = options.ext->accompaniment_motive;
+        options.has_accompaniment_motive = true;
+    } else if (options.accompaniment_motive_path) {
         MotiveInput input;
         memset(&input, 0, sizeof(input));
         input.path = options.accompaniment_motive_path;

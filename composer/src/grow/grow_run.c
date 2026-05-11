@@ -79,6 +79,8 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     compose.style_weight = config->style_weight;
     compose.basic = config->basic;
     compose.tempo = config->tempo;
+    compose.pool = config->pool;
+    compose.pool_count = config->pool_count;
     GrowResult result = from_piece(compose_run(plan, &compose, &composed));
 
     for (int stage = 0; stage < GROW_STAGE_COUNT; stage++) {

@@ -10,6 +10,7 @@
 #define GROW_MATERIAL_NAME "material"
 #define GROW_SOURCE_NAME "m0"
 #define GROW_ACCOMPANIMENT_NAME "acc"
+/* The material nodes of the slot motives: "s1" contrasting, "s2" continuation, "s3" cadential (grow.h GrowSlot). */
 
 /* The pitch of the note an open bass, melody or inner voice span holds until an operator writes it. */
 #define BASS_PLACEHOLDER 40
@@ -70,6 +71,9 @@ typedef struct {
      */
     bool has_section_motive;
     PlanMotiveRef section_ref;
+    /* The motives of the slots that have their own (GROW_SLOT_BASIC is source); the ideas of the slot are made from it. */
+    Motive slot_source[GROW_SLOT_COUNT];
+    bool has_slot_source[GROW_SLOT_COUNT];
     /* The motives the ideas after the basic idea are made from m0 as, planned here to be checked. */
     Motive developed[GROW_IDEA_COUNT];
     bool has_developed[GROW_IDEA_COUNT];
@@ -99,6 +103,7 @@ typedef struct {
     PlanVoicing voicing;
     bool has_motive_ref;     /* the section names the motive its basic idea is made from */
     PlanMotiveRef motive_ref; /* to m0, with a transform; parameters left open are drawn by grow-theme */
+    NodeId slot_node[GROW_SLOT_COUNT]; /* the material node of each slot with a motive of its own, else PLAN_NODE_NONE */
 } GrowThemeRequest;
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
@@ -146,10 +151,27 @@ bool grow_same_contour(const Motive *a, const Motive *b);
 /* The development of m0 the contrasting idea is, drawn from rng so that its contour differs from m0's and the result
    fits two units. want_pc is the pitch class its last note should land on (negative for any); avoid, if given, is a
    development it may not repeat. False when there is none. */
-bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec, int want_pc,
-                        const MotiveDevSpec *avoid, MotiveDevSpec *out);
-/* The development of m0 an idea is made as, and whether the idea is made from m0 at all. */
+bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
+                        const Motive *source, int want_pc, const MotiveDevSpec *avoid, MotiveDevSpec *out);
+/* The development of m0 an idea is made as, and whether the idea is made from m0 at all. The first idea of a slot with
+   a motive of its own is that motive exact. */
 bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *out);
+
+/*
+ * The slot an idea belongs to under the pairing, and whether it is the slot's first idea (the one that takes the slot's
+ * motive itself): the repetition of a presentation, the consequent basic idea and the basic idea are the basic slot's.
+ */
+GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowIdea idea, bool *first);
+/* Whether the pairing has an idea of the slot, and the eighths of the theme its first idea has. */
+bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *units);
+/* The motive an idea is made from: its slot's own, else the spec's source. */
+const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowIdea idea);
+/* The motive node an idea's motive ref names: its slot's own node, else the build's source. */
+NodeId grow_idea_node(const GrowBuild *build, GrowIdea idea);
+/* The material node of the slot's motive ("s1" to "s3"), else PLAN_NODE_NONE. */
+NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot);
+/* The name of the slot's material node; NULL for the basic slot. */
+const char *grow_slot_node_name(GrowSlot slot);
 
 /* The beginning of the theme: the choices it draws, and its nodes, motives and open lanes. */
 bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec);

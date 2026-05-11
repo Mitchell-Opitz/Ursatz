@@ -16,7 +16,7 @@ static const size_t IDEA_UNITS[GROW_IDEA_COUNT] = {2, 2, 1, 1, 2};
 /* The longest leading fragment of at most `wanted` notes that fits an idea of `room`; 0 when none does. */
 static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, PlanTime room) {
     GrowIdea idea = slot == 0 ? GROW_IDEA_FRAGMENT_1 : GROW_IDEA_FRAGMENT_2;
-    size_t most = spec->source.note_count - 1;
+    size_t most = grow_idea_source(spec, idea)->note_count - 1;
     for (size_t length = wanted < most ? wanted : most; length >= 1; length--) {
         Motive result;
         spec->fragment_notes[slot] = length;
@@ -40,7 +40,7 @@ static bool keep_idea(GrowThemeSpec *spec, GrowIdea idea, PlanTime unit, size_t 
 static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
     size_t first = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
     size_t second = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
-    size_t count = spec->source.note_count;
+    size_t count = grow_idea_source(spec, GROW_IDEA_CADENTIAL)->note_count;
     size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     spec->liquidate_drop = 1 + (size_t)fill_rng_below(rng, drop_most);
     if (spec->liquidate_drop >= count) {
@@ -82,7 +82,8 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
                : request->cadence == PLAN_CADENCE_IAC ? (tonic + (ends_in.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
                                                       : -1;
     if (!keep_idea(spec, GROW_IDEA_RESTATED, unit, 2) ||
-        !grow_draw_contrast(request, rng, spec, want, avoid, &spec->consequent_contrast) ||
+        !grow_draw_contrast(request, rng, spec, grow_idea_source(spec, GROW_IDEA_CONSEQUENT_CONTRAST), want, avoid,
+                            &spec->consequent_contrast) ||
         !keep_idea(spec, GROW_IDEA_CONSEQUENT_CONTRAST, unit, 2)) {
         return false;
     }
@@ -96,7 +97,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
 
 /* A cadential ending is two ideas liquidated from m0, the second at least as much as the first. */
 static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
-    size_t count = spec->source.note_count;
+    size_t count = grow_idea_source(spec, GROW_IDEA_CADENTIAL_2)->note_count;
     size_t most = count - 1;
     size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     size_t first = 1 + (size_t)fill_rng_below(rng, drop_most);
@@ -166,7 +167,7 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     }
     /* A motive in the material for each idea, each made from m0. */
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
-        grow_idea_ref(spec, (GrowIdea)slot, build->source, &refs[slot]);
+        grow_idea_ref(spec, (GrowIdea)slot, grow_idea_node(build, (GrowIdea)slot), &refs[slot]);
         result = grow_add_motive(build, slot, &refs[slot], &motives[slot]);
     }
     if (result == PLAN_OK) {

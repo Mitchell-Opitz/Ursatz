@@ -8,6 +8,9 @@
 #include "io/musicxml_importer.h"
 #include "pitch/pitch_numeric_value.h"
 
+#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_form.h>
+#include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -451,7 +454,199 @@ static void test_help(void) {
     free(out);
 }
 
+/* --- slot motives and pool forms through grow_run (grow.h, grow_form.h) ----------------------------- */
+
+static Motive notes_motive(const char *text) {
+    MotiveOptions options;
+    Motive motive;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter.beats_per_bar = 4;
+    options.meter.beat_unit = 4;
+    options.has_key = true;
+    options.key.tonic_pitch_class = 2;
+    options.key.mode = PLAN_MODE_MINOR;
+    assert(motive_from_notes_text(text, &options, &motive, NULL) == MOTIVE_OK);
+    return motive;
+}
+
+static GrowRequest library_request(const Motive *basic, PlanThemeBeginning beginning, PlanThemeEnding ending) {
+    GrowRequest request;
+    memset(&request, 0, sizeof(request));
+    request.motive = basic;
+    request.key.tonic_pitch_class = 2;
+    request.key.mode = PLAN_MODE_MINOR;
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    request.bars = 8;
+    request.pairing.beginning = beginning;
+    request.pairing.ending = ending;
+    request.cadence = PLAN_CADENCE_PAC;
+    request.first_cadence = PLAN_CADENCE_HC;
+    return request;
+}
+
+static NodeId library_find(const PiecePlan *plan, const char *name) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *found = plan_node_name(plan, id);
+        if (found && strcmp(found, name) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* Whether the melody lane span of a motive node holds exactly these notes. */
+static bool node_holds(const PiecePlan *plan, NodeId node, const Motive *motive) {
+    LaneSpanId spans[8];
+    size_t found = plan_node_lane_spans(plan, node, spans, 8);
+    for (size_t i = 0; i < found; i++) {
+        if (plan_lane_span_lane(plan, spans[i]) != PLAN_LANE_MELODY) {
+            continue;
+        }
+        const PlanNotes *notes = &plan_lane_span_payload(plan, spans[i])->notes;
+        if (notes->note_count != motive->note_count) {
+            return false;
+        }
+        for (size_t k = 0; k < notes->note_count; k++) {
+            if (notes->notes[k].midi_pitch != motive->notes[k].midi_pitch) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+static void test_library_slots_and_pool(void) {
+    Motive basic = notes_motive("D4:q F4:e A4:e D5:h");
+    Motive contrast = notes_motive("A4:e G4:e F4:e E4:e D4:h");
+    Motive continuation = notes_motive("F4:e G4:e A4:e Bb4:e A4:h");
+    Motive cadential = notes_motive("A4:e F4:e E4:e F4:e D4:h");
+    PiecePlan *plan = NULL;
+
+    /* A period with a contrasting motive: the node s1 holds it, the antecedent's contrasting idea m1 restates it and the
+       consequent's contrasting idea m3 is made from it, not from the basic motive. */
+    GrowRequest request = library_request(&basic, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &contrast;
+    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    NodeId s1 = library_find(plan, "s1");
+    assert(s1 != PLAN_NODE_NONE && node_holds(plan, s1, &contrast) && library_find(plan, "s2") == PLAN_NODE_NONE);
+    GrowConfig config;
+    GrowOutcome outcome;
+    memset(&config, 0, sizeof(config));
+    config.seed = 1;
+    config.basic = &basic;
+    assert(grow_run(plan, &config, &outcome) == GROW_OK);
+    assert(node_holds(plan, library_find(plan, "m1"), &contrast));
+    assert(node_holds(plan, library_find(plan, "m2"), &basic));
+    assert(!node_holds(plan, library_find(plan, "m3"), &basic) && !node_holds(plan, library_find(plan, "m3"), &contrast));
+    grow_outcome_destroy(&outcome);
+    plan_destroy(plan);
+
+    /* A sentence with a continuation motive and a cadential one: fragment 1 and the cadential idea restate them. */
+    request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
+    request.slot_motives[GROW_SLOT_CONTINUATION] = &continuation;
+    request.slot_motives[GROW_SLOT_CADENTIAL] = &cadential;
+    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(library_find(plan, "s2") != PLAN_NODE_NONE && library_find(plan, "s3") != PLAN_NODE_NONE);
+    config.seed = 2;
+    GrowResult ran = grow_run(plan, &config, &outcome);
+    assert(ran == GROW_OK);
+    assert(node_holds(plan, library_find(plan, "m1"), &basic));
+    assert(node_holds(plan, library_find(plan, "m2"), &continuation));
+    assert(node_holds(plan, library_find(plan, "m4"), &cadential));
+    grow_outcome_destroy(&outcome);
+    plan_destroy(plan);
+
+    /* A pool: an approved form of the basic motive that suits a beginning is the repetition; with the functions of
+       another slot it is not offered. */
+    Motive form = notes_motive("E4:q G4:e Bb4:e E5:h");
+    GrowPoolForm pool;
+    memset(&pool, 0, sizeof(pool));
+    pool.motive = &form;
+    pool.slot_motive_of = GROW_SLOT_BASIC;
+    pool.functions = GROW_FUNCTION_BEGINNING;
+    pool.approved = true;
+    snprintf(pool.item, sizeof(pool.item), "mot-form");
+    snprintf(pool.chain, sizeof(pool.chain), "transpose tonal=1 by=1");
+    request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
+    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    memset(&config, 0, sizeof(config));
+    config.seed = 1;
+    config.basic = &basic;
+    config.pool = &pool;
+    config.pool_count = 1;
+    assert(grow_run(plan, &config, &outcome) == GROW_OK);
+    assert(node_holds(plan, library_find(plan, "m1"), &form));
+    const FillRecord *record = outcome.records[GROW_STAGE_MOTIVES];
+    bool named = false;
+    for (size_t i = 0; record && i < record->step_count; i++) {
+        const FillStep *step = &record->steps[i];
+        named = named || (step->chosen >= 0 && strncmp(step->considered[step->chosen].label, "pool mot-form ", 14) == 0);
+    }
+    assert(named);
+    grow_outcome_destroy(&outcome);
+    plan_destroy(plan);
+
+    pool.functions = GROW_FUNCTION_CADENTIAL;
+    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_run(plan, &config, &outcome) == GROW_OK);
+    assert(!node_holds(plan, library_find(plan, "m1"), &form));
+    grow_outcome_destroy(&outcome);
+    plan_destroy(plan);
+
+    /* A form of a slot's motive is not offered for the basic motive's ideas. */
+    pool.functions = GROW_FUNCTION_BEGINNING;
+    pool.slot_motive_of = GROW_SLOT_CONTINUATION;
+    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_run(plan, &config, &outcome) == GROW_OK);
+    assert(!node_holds(plan, library_find(plan, "m1"), &form));
+    grow_outcome_destroy(&outcome);
+    plan_destroy(plan);
+}
+
+static void test_library_bad_slots(void) {
+    Motive basic = notes_motive("D4:q F4:e A4:e D5:h");
+    Motive fits = notes_motive("A4:e G4:e F4:e E4:e D4:h");
+    PiecePlan *plan = NULL;
+    GrowRequest request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
+    /* A slot the pairing has no idea for: no contrasting idea in a sentence, no continuation in a period. */
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &fits;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+    request = library_request(&basic, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
+    request.slot_motives[GROW_SLOT_CONTINUATION] = &fits;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    request.slot_motives[GROW_SLOT_CONTINUATION] = NULL;
+    request.slot_motives[GROW_SLOT_CADENTIAL] = &fits;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    /* A motive of another meter, of another key, of one note, and one that is not a full motive. */
+    request.slot_motives[GROW_SLOT_CADENTIAL] = NULL;
+    Motive other = fits;
+    other.meter.beats_per_bar = 3;
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    other = fits;
+    other.key.tonic_pitch_class = 7;
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    other = fits;
+    other.note_count = 1;
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    other = fits;
+    other.form = MOTIVE_FORM_RHYTHM;
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    /* Its own is fine, and the material is a bar longer for it. */
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &fits;
+    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    plan_destroy(plan);
+}
+
 int main(void) {
+    test_library_slots_and_pool();
+    test_library_bad_slots();
     test_each_form();
     test_every_hybrid();
     test_four_bars_and_cadences();

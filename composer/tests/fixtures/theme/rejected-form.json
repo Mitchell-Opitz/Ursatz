@@ -1,0 +1,49 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 1,
+ "into": "sentence",
+ "hybrid": null,
+ "key": "D",
+ "mode": "minor",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "first_cadence": null,
+ "motives": [
+  {
+   "id": "A",
+   "form": "full",
+   "degrees": "1:q 3:e 5:e 1':h",
+   "pickup": "0",
+   "harmony": null,
+   "features": [],
+   "role": "melodic",
+   "forms": [
+    {
+     "item": "mot-up1",
+     "degrees": "2:q 4:e 6:e 2':h",
+     "pickup": "0",
+     "harmony": null,
+     "features": [],
+     "chain": "transpose tonal=1 by=1",
+     "functions": [
+      "beginning"
+     ],
+     "flag": "rejected"
+    }
+   ]
+  }
+ ],
+ "slots": {
+  "basic": "A",
+  "contrasting": null,
+  "continuation": null,
+  "cadential": null
+ },
+ "accompaniment": null,
+ "voicing": null,
+ "style": null,
+ "style_weight": "1/2",
+ "without": [],
+ "tempo": null
+}

@@ -35,6 +35,96 @@ const char *grow_stage_name(GrowStage stage) {
     return stage >= 0 && stage < GROW_STAGE_COUNT ? NAMES[stage] : "unknown";
 }
 
+const char *grow_slot_name(GrowSlot slot) {
+    static const char *const NAMES[GROW_SLOT_COUNT] = {"basic", "contrasting", "continuation", "cadential"};
+    return slot >= 0 && slot < GROW_SLOT_COUNT ? NAMES[slot] : "unknown";
+}
+
+const char *grow_slot_function(GrowSlot slot) {
+    static const char *const FUNCTIONS[GROW_SLOT_COUNT] = {"beginning", "contrast", "continuation", "cadential"};
+    return slot >= 0 && slot < GROW_SLOT_COUNT ? FUNCTIONS[slot] : "unknown";
+}
+
+const char *grow_slot_node_name(GrowSlot slot) {
+    static const char *const NAMES[GROW_SLOT_COUNT] = {NULL, "s1", "s2", "s3"};
+    return slot >= 0 && slot < GROW_SLOT_COUNT ? NAMES[slot] : NULL;
+}
+
+NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot) {
+    const char *wanted = grow_slot_node_name(slot);
+    for (NodeId id = 1; wanted && id <= plan_node_count(plan); id++) {
+        const char *name = plan_node_name(plan, id);
+        if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && name && strcmp(name, wanted) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowIdea idea, bool *first) {
+    bool presentation = pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION;
+    GrowSlot slot = GROW_SLOT_BASIC;
+    bool is_first = false;
+    switch (idea) {
+    case GROW_IDEA_BASIC:
+        is_first = true;
+        break;
+    case GROW_IDEA_REPETITION: /* also the contrasting idea of the other beginnings */
+        slot = presentation ? GROW_SLOT_BASIC : GROW_SLOT_CONTRASTING;
+        is_first = !presentation;
+        break;
+    case GROW_IDEA_FRAGMENT_1: /* also the consequent basic idea and cadential 1 */
+        slot = pairing->ending == PLAN_THEME_ENDING_CONTINUATION ? GROW_SLOT_CONTINUATION
+               : pairing->ending == PLAN_THEME_ENDING_CADENTIAL  ? GROW_SLOT_CADENTIAL
+                                                                 : GROW_SLOT_BASIC;
+        is_first = slot != GROW_SLOT_BASIC;
+        break;
+    case GROW_IDEA_FRAGMENT_2: /* also the consequent contrasting idea and cadential 2 */
+        slot = pairing->ending == PLAN_THEME_ENDING_CONTINUATION ? GROW_SLOT_CONTINUATION
+               : pairing->ending == PLAN_THEME_ENDING_CADENTIAL  ? GROW_SLOT_CADENTIAL
+                                                                 : GROW_SLOT_CONTRASTING;
+        break;
+    case GROW_IDEA_CADENTIAL:
+        slot = GROW_SLOT_CADENTIAL;
+        is_first = true;
+        break;
+    default:
+        break;
+    }
+    if (first) {
+        *first = is_first;
+    }
+    return slot;
+}
+
+bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *units) {
+    size_t room = 2;
+    bool used = false;
+    switch (slot) {
+    case GROW_SLOT_BASIC:
+        used = true;
+        break;
+    case GROW_SLOT_CONTRASTING:
+        used = pairing->beginning != PLAN_THEME_BEGINNING_PRESENTATION ||
+               pairing->ending == PLAN_THEME_ENDING_CONSEQUENT;
+        room = pairing->beginning != PLAN_THEME_BEGINNING_PRESENTATION ? 2 : 0;
+        break;
+    case GROW_SLOT_CONTINUATION:
+        used = pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
+        room = 1;
+        break;
+    case GROW_SLOT_CADENTIAL:
+        used = pairing->ending != PLAN_THEME_ENDING_CONSEQUENT;
+        break;
+    default:
+        break;
+    }
+    if (units) {
+        *units = room;
+    }
+    return used;
+}
+
 void grow_context_default(GrowContext *context) {
     memset(context, 0, sizeof(*context));
     context->candidates = GROW_DEFAULT_CANDIDATES;
@@ -103,6 +193,27 @@ bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePa
            (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars, cells_per_bar, first)));
 }
 
+/* Whether a slot's motive is one the theme can be built from: see GrowRequest.slot_motives. */
+static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, PlanTime bar) {
+    const Motive *motive = request->slot_motives[slot];
+    size_t units;
+    PlanTime room;
+    bool used = grow_slot_used(&request->pairing, slot, &units);
+    if (!used || motive->form != MOTIVE_FORM_FULL || motive->note_count < 2 ||
+        motive->meter.beats_per_bar != request->meter.beats_per_bar ||
+        motive->meter.beat_unit != request->meter.beat_unit ||
+        (motive->key_source != MOTIVE_KEY_UNSPECIFIED &&
+         (motive->key.tonic_pitch_class != request->key.tonic_pitch_class || motive->key.mode != request->key.mode))) {
+        return false;
+    }
+    /* The first idea of the slot has units eighths of the theme; the longest is a bar. */
+    if (units > 0 && plan_time_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == PLAN_OK &&
+        plan_time_compare(motive->length, room) > 0) {
+        return false;
+    }
+    return plan_time_compare(motive->length, bar) <= 0;
+}
+
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     if (!request || !request->motive || !out) {
         return GROW_ERR_NULL;
@@ -136,6 +247,17 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     if (plan_time_compare(request->motive->length, bar) > 0) {
         return GROW_ERR_MOTIVE_TOO_LONG;
     }
+    /* The slot motives, each a node of the material after m0. */
+    size_t slot_count = 0;
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
+        if (request->slot_motives[slot]) {
+            if (!slot_motive_valid(request, slot, bar)) {
+                return GROW_ERR_BAD_REQUEST;
+            }
+            slot_count++;
+        }
+    }
+    size_t material_bars = GROW_MATERIAL_BARS + slot_count;
     if (accompaniment_motive && plan_time_compare(accompaniment_motive->length, bar) > 0) {
         return GROW_ERR_BAD_REQUEST;
     }
@@ -145,7 +267,7 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         return GROW_ERR_ALLOC;
     }
     PlanSpan theme = {{0, 1}, times(bar, request->bars)};
-    PlanSpan material = {theme.length, times(bar, GROW_MATERIAL_BARS)};
+    PlanSpan material = {theme.length, times(bar, material_bars)};
     PlanSpan form = {{0, 1}, {0, 1}};
     PlanTime total;
     GrowResult result = from_plan(plan_time_add(theme.length, material.length, &total));
@@ -248,9 +370,21 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         result = from_plan(motive_attach_sourced(plan, idea, material.start, request->motive, GROW_SOURCE_NAME,
                                                  request->source, NULL, NULL));
     }
+    /* The slot motives follow m0, a bar each. */
+    size_t slot_bar = 1;
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; result == GROW_OK && slot < GROW_SLOT_COUNT; slot++) {
+        PlanTime start;
+        if (!request->slot_motives[slot]) {
+            continue;
+        }
+        result = from_plan(plan_time_add(material.start, times(bar, slot_bar++), &start));
+        result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->slot_motives[slot],
+                                                             grow_slot_node_name(slot), NULL, NULL))
+                                   : result;
+    }
     if (result == GROW_OK && accompaniment_motive) {
         PlanTime start;
-        result = from_plan(plan_time_add(material.start, times(bar, GROW_MATERIAL_BARS - 1), &start));
+        result = from_plan(plan_time_add(material.start, times(bar, material_bars - 1), &start));
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, accompaniment_motive,
                                                              GROW_ACCOMPANIMENT_NAME, NULL, NULL))
                                    : result;

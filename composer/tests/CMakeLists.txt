@@ -479,3 +479,14 @@ target_link_libraries(test_shaping PRIVATE ursatz_composer)
 target_include_directories(test_shaping PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_shaping PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_shaping COMMAND test_shaping)
+
+# The theme command (docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
+# in a directory of its own, so it can run beside the other command tests.
+add_executable(test_theme_cli test_theme_cli.c)
+target_link_libraries(test_theme_cli PRIVATE ursatz_composer)
+target_compile_options(test_theme_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_theme_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_theme_cli ursatz-composer)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
+add_test(NAME test_theme_cli COMMAND test_theme_cli WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)

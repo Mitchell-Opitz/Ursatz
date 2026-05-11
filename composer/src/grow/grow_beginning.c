@@ -19,7 +19,11 @@ static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, PlanCaden
 
 /* The contrasting idea is made from m0 and has to fit its room. */
 static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
-    return grow_draw_contrast(request, rng, spec, -1, NULL, &spec->contrast) &&
+    /* A contrasting slot with a motive of its own gives the idea as it is (grow_idea_dev). */
+    bool drawn = spec->has_slot_source[GROW_SLOT_CONTRASTING]
+                     ? (spec->contrast.kind = MOTIVE_DEV_EXACT, true)
+                     : grow_draw_contrast(request, rng, spec, &spec->source, -1, NULL, &spec->contrast);
+    return drawn &&
            grow_idea_develop(spec, GROW_IDEA_CONTRAST, &spec->developed[GROW_IDEA_CONTRAST]) &&
            (spec->has_developed[GROW_IDEA_CONTRAST] = true);
 }
@@ -88,7 +92,7 @@ static PlanResult build_presentation(GrowBuild *build) {
                                &ideas[1]);
     }
     for (GrowIdea idea = GROW_IDEA_BASIC; idea <= GROW_IDEA_REPETITION; idea++) {
-        grow_idea_ref(spec, idea, build->source, &refs[idea]);
+        grow_idea_ref(spec, idea, grow_idea_node(build, idea), &refs[idea]);
     }
     if (result == PLAN_OK) {
         result = grow_add_motive(build, GROW_IDEA_REPETITION, &refs[GROW_IDEA_REPETITION], &motive);
@@ -136,7 +140,7 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
                                &ideas[1]);
     }
     for (GrowIdea idea = GROW_IDEA_BASIC; idea <= GROW_IDEA_CONTRAST; idea++) {
-        grow_idea_ref(spec, idea, build->source, &refs[idea]);
+        grow_idea_ref(spec, idea, grow_idea_node(build, idea), &refs[idea]);
     }
     if (result == PLAN_OK) {
         result = grow_add_motive(build, GROW_IDEA_CONTRAST, &refs[GROW_IDEA_CONTRAST], &motive);

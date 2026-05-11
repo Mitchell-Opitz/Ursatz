@@ -30,6 +30,7 @@ seed + 5; the compose run's invention stage takes seed + 6), so a grown theme is
 | `pairing` | Any of the nine pairings of a beginning (presentation, antecedent, compound basic idea) and an ending (continuation, consequent, cadential). Presentation and continuation make a sentence, antecedent and consequent a period, the other seven a hybrid (`standard_form_pairing_form`). |
 | `cadence` | PAC, IAC or HC: the cadence the theme ends in. |
 | `first_cadence` | The weak cadence an antecedent ends in, HC or IAC and weaker than `cadence` by `harmony_cadence_strength`. Zero (PAC) means the default, HC. Read only for an antecedent. |
+| `slot_motives` | The motives of the contrasting, continuation and cadential slots ([Slots](#slots)); NULL for none. |
 | `has_accompaniment`, `accompaniment` | An accompaniment under the melody and bass ([accompaniment.md](accompaniment.md)): a `PlanAccompaniment` with a pattern (`ANY` for any), a texture (`-1` for none) and a range (0 for the defaults 48 and 67). Without `has_accompaniment` the theme has no inner voice. The theme section carries it as an `accompaniment` constraint. |
 | `has_voicing`, `voicing` | A four-part voicing of the harmony and bass ([voicing.md](voicing.md)): a `PlanVoicing`, whose `write_soprano` has the voicing write the melody too, a note a chord (a chorale), instead of the melody stage. The alto and the tenor are the inner voices 1 and 2. The theme section carries it as a `voicing` constraint. Refused together with an accompaniment. |
 
@@ -38,6 +39,22 @@ cadence other than those three, a motive of one note, a half of the theme too sh
 whose cadences cannot be ordered: a theme that ends in HC has nothing weaker for the antecedent, `first_cadence` DC or
 PC is not a weak cadence, and equal cadences are not a period. An accompaniment is refused when its pattern is not one,
 its texture is not homophonic, its range has no room (`low` not below `high`), or it is Alberti in a compound meter, and a request for both an accompaniment and a voicing.
+
+## Slots
+
+A theme can be built from more than the basic motive (R-166). `GrowSlot` names the four functions of the ideas (R-143): `basic`
+(the basic idea, the repetition of a presentation, the consequent's basic idea), `contrasting` (the contrasting idea, the
+consequent's contrasting idea), `continuation` (fragment 1 and 2) and `cadential` (the cadential idea, cadential 1 and 2).
+`GrowRequest.slot_motives` gives a motive to each slot but the basic one. A slot motive is added to the material as the node
+`s1` (contrasting), `s2` (continuation) or `s3` (cadential), a Given melody span, after `m0`; the material is a bar longer for
+each. The first idea of the slot is the motive itself (exact, or a saved form of it, see below); the later ideas of the slot
+(the consequent's contrasting idea, fragment 2, cadential 2) are made from it as the basic motive's are, and the remoteness of
+their forms is measured from it. The basic idea's ideas are unchanged.
+
+`GROW_ERR_BAD_REQUEST` for a slot motive that is not a full motive of two notes or more in the theme's key and meter, that is
+longer than the first idea of its slot (two bars of eight for the contrasting idea and the cadential idea, one for fragment 1),
+or for a slot the pairing has no idea for (a contrasting slot in a sentence, a continuation slot without a continuation, a
+cadential slot in a period). A slot motive keeps no harmony, features or role (a plan keeps only the notes).
 
 ## The plan
 
@@ -196,9 +213,20 @@ fast themes keep nearer to the basic idea. `--explain` names the limit in a choi
 `GrowConfig.basic` gives `m0` its own harmony, features and role (a plan keeps only the notes): `grow` passes the motive
 it was given, so `--feature`, `--harmony` and `--role` reach the liquidation and the harmony rows. Its notes must be `m0`'s.
 
+### The pool
+
+`GrowConfig.pool` is a list of saved forms (`GrowPoolForm`, `grow_form.h`): the motive, the slot whose motive it derives from
+(`slot_motive_of`, basic for `m0`), its functions as bits (`GROW_FUNCTION_*`, R-143), whether it is approved, and the item and
+chain it was saved with. The motives stage offers a pool form for an idea when it derives from the motive the idea is made
+from, its functions include the function of the idea's slot, and it fits as a registry form does (a full motive in range, no
+wider a leap, no longer than the idea's room, the cadence tone of an idea that ends in a cadence). It scores 1 plus its
+connection plus 1/2 when approved and 1/4 when unflagged, so it outranks a registry form of the same connection and an
+approved form an unflagged one; when no pool form fits, the registry's forms are invented as before. A connection that is
+much higher can still outweigh the flag. A pool form equal to another candidate replaces it, the approved ones first.
+
 The record and `grow --explain` name each form: the label is the chain, the connection in percent and the derivation in
 plain words ("transpose 90%: Transposed +2 steps of the key's scale. Kept the"), cut at 63 characters; the score shown is 1
-plus the connection.
+plus the connection. A pool form is labelled `pool <item> <connection>%: <chain>`.
 
 ## The harmony
 

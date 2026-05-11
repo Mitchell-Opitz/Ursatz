@@ -19,7 +19,8 @@ harmony ([grow.md](grow.md#the-harmony)). A candidate that held them all says no
 
 Reasons are the checkers' own strings; nothing is put into words beyond them. A motive-form candidate of the motives stage
 ([grow.md](grow.md#motive-forms)) is labelled with its chain, its connection score in percent and its derivation (`transpose 90%:
-Transposed +2 steps of the key's scale. Kept the`, cut at 63 characters), and scores 1 plus the connection.
+Transposed +2 steps of the key's scale. Kept the`, cut at 63 characters), and scores 1 plus the connection. A saved form from a pool ([grow.md](grow.md#the-pool)) is labelled `pool <item> <connection>%:
+<chain>`, with the item and the chain it was saved with, and scores 1 plus the connection plus 1/2 (approved) or 1/4 (unflagged).
 
 ## The style term
 
