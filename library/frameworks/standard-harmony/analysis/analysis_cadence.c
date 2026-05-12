@@ -13,6 +13,7 @@
 #include "harmony_functions.h"
 #include "harmony_plagal.h"
 #include "identity/entity_id.h"
+#include "time/metrical_position.h"
 #include "time/musical_time.h"
 
 HarmonyCadenceConfig harmony_cadence_config_default(void) {
@@ -76,6 +77,28 @@ static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t 
     return config->soprano_rest_counts && last + 1 < count && segments[last + 1].input->soprano_degree == 0;
 }
 
+/* Whether the segment starts on the beat grid (its offset in the measure is a whole number of beats). */
+static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
+    const HarmonySegmentInput *input = segment->input;
+    double beat = config->beat_length;
+    if (input->beat_length != NULL) {
+        beat = (double)duration_numerator(input->beat_length) / (double)duration_denominator(input->beat_length);
+    }
+    const Duration *offset = metrical_position_offset(input->position);
+    double beats = ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / beat;
+    return fabs(beats - floor(beats + 0.5)) < 1e-9;
+}
+
+/* Whether the dominant starts on a stronger beat than the tonic: a stronger BeatStrength, or, at equal strength, on
+   the beat while the tonic starts off it (a weak beat against the weak half beat after it). */
+static bool dominant_on_stronger_beat(const HarmonySegment *dominant, const HarmonySegment *tonic,
+                                      const HarmonyCadenceConfig *config) {
+    BeatStrength d = dominant->input->beat_strength;
+    BeatStrength t = tonic->input->beat_strength;
+    return beat_strength_is_stronger(d, t) ||
+           (d == t && starts_on_beat(dominant, config) && !starts_on_beat(tonic, config));
+}
+
 /* Whether the run [first, last] is an arrival: on a strong enough beat, long enough or before a soprano rest. A
    tonic below the minimum beat strength is still one when the dominant before it (starting at before_first) falls on
    a stronger beat and the tonic is long, followed by a soprano rest, or the end of the piece. */
@@ -87,7 +110,7 @@ static bool arrival_ok(const HarmonySegment *segments, size_t count, size_t befo
     }
     return config->allow_weak_arrival && is_dominant_root(&segments[before_first]) &&
            is_tonic_root(&segments[first]) &&
-           beat_strength_is_stronger(segments[before_first].input->beat_strength, start->beat_strength) &&
+           dominant_on_stronger_beat(&segments[before_first], &segments[first], config) &&
            (last + 1 == count || arrival_closes(segments, count, first, last, config));
 }
 

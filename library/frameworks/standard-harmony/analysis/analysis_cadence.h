@@ -29,7 +29,8 @@
  *
  * WEAK-BEAT ARRIVAL. With config.allow_weak_arrival (default true), a run below min_arrival_strength is still an
  * arrival when it is a root-position tonic directly after a root-position V that starts on a stronger beat than the
- * tonic, and the tonic lasts arrival_min_beats, or the soprano rests right after it, or it ends the piece.
+ * tonic (a stronger BeatStrength, or at equal strength a V on the beat against a tonic off it: a weak beat and the weak
+ * half beat after it), and the tonic lasts arrival_min_beats, or the soprano rests right after it, or it ends the piece.
  *
  * THE DOMINANT. For an authentic, deceptive or subverted cadence the dominant is the V (or V7) run just before the
  * arrival, in root position; a cadential 6/4 (analysis_six_four.h) directly before that V is part of the dominant
