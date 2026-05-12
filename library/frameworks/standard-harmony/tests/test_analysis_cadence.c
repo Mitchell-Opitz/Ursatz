@@ -100,8 +100,98 @@ static void test_a_weak_beat_arrival_is_not_a_cadence(void) {
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 1 */
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 2: weak */
     HarmonySegment *segments = NULL;
-    HarmonyCadences found = find(&f, &segments, NULL);
+    HarmonyCadenceConfig config = harmony_cadence_config_default();
+    config.allow_weak_arrival = false;
+    HarmonyCadences found = find(&f, &segments, &config);
     assert(found.count == 0 && found.items == NULL);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static void test_a_weak_beat_arrival_after_a_stronger_dominant(void) {
+    /* V on beat 1, I on beat 2 (weak) as the last chord of the piece: an arrival by default. */
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 1 */
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 2 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 3 (medium) */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 4: weak, ends the piece */
+    HarmonySegment *segments = NULL;
+    HarmonyCadences found = find(&f, &segments, NULL);
+    assert(found.count == 1);
+    const HarmonyCadenceResult *c = &found.items[0];
+    assert(c->type == CADENCE_TYPE_PERFECT_AUTHENTIC && c->arrival_first == 3);
+    assert(c->arrival_beat_strength == BEAT_STRENGTH_WEAK);
+    HarmonyCadenceClaim claim;
+    assert(harmony_cadence_claim_read(c->interpretation, &claim));
+    assert(claim.arrival_beat_strength == (int)BEAT_STRENGTH_WEAK);
+    harmony_cadences_destroy(&found);
+
+    /* Switched off, it is not one. */
+    HarmonyCadenceConfig config = harmony_cadence_config_default();
+    config.allow_weak_arrival = false;
+    assert(harmony_analysis_find_cadences(segments, f.count, &config, &found) == HARMONY_CADENCE_ANALYSIS_OK);
+    assert(found.count == 1 && found.items[0].type == CADENCE_TYPE_HALF); /* the IV to V, not the weak I */
+    harmony_cadences_destroy(&found);
+
+    /* A tonic that is neither long (here: two beats), before a soprano rest, nor last is not an arrival. */
+    HarmonyCadenceConfig strict = harmony_cadence_config_default();
+    strict.arrival_min_beats = 2.0;
+    harmony_analysis_destroy(segments);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 1 of the next bar */
+    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
+    assert(harmony_analysis_find_cadences(segments, f.count, &strict, &found) == HARMONY_CADENCE_ANALYSIS_OK);
+    assert(found.count == 0);
+    harmony_cadences_destroy(&found);
+
+    /* ... but a soprano rest right after it makes it one. */
+    f.inputs[4].soprano_degree = 0;
+    harmony_analysis_destroy(segments);
+    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
+    assert(harmony_analysis_find_cadences(segments, f.count, &strict, &found) == HARMONY_CADENCE_ANALYSIS_OK);
+    assert(found.count == 1 && found.items[0].arrival_first == 3);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static void test_a_weak_arrival_needs_a_stronger_dominant(void) {
+    /* The V run starts on beat 2 (weak) and the I on beat 4 (weak): equal strength, so not an arrival. */
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 1 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 2: weak */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 3 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 4: weak, ends the piece */
+    HarmonySegment *segments = NULL;
+    HarmonyCadences found = find(&f, &segments, NULL);
+    assert(found.count == 0);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static void test_a_weak_arrival_on_the_half_beat_after_a_weak_dominant(void) {
+    /* 3/4 style: V on the weak beat 2, I on the weak half beat after it. The fixture is quarter-note based, so the
+       half beat is made by moving the I's start to an eighth after the V's. */
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 1 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 2: weak, on the beat */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 3 */
+    Duration *eighth = NULL;
+    assert(duration_create(1, 8, &eighth) == DURATION_OK);
+    metrical_position_destroy(f.positions[2]);
+    assert(metrical_position_create(1, eighth, &f.positions[2]) == METRICAL_POSITION_OK);
+    duration_destroy(eighth);
+    f.inputs[2].position = f.positions[2];
+    f.inputs[2].beat_strength = BEAT_STRENGTH_WEAK; /* off the beat: weak, like the beat before it */
+    f.inputs[1].beat_strength = BEAT_STRENGTH_WEAK;
+    HarmonySegment *segments = NULL;
+    HarmonyCadences found = find(&f, &segments, NULL);
+    assert(found.count == 1 && found.items[0].arrival_first == 2 &&
+           found.items[0].arrival_beat_strength == BEAT_STRENGTH_WEAK);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -226,7 +316,7 @@ static void test_half_cadence(void) {
 
     /* Not after a dominant, and not on a weak beat. */
     fixture_init(&f);
-    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 2);   /* beat 3, after the tonic: a half cadence */
     fixture_add(&f, 2, TRIAD_MINOR, 3, 0, 2, 4);
@@ -323,13 +413,20 @@ static void test_cadence_points_and_config(void) {
     assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
     HarmonyCadencePoint *points = NULL;
     size_t n = 0;
-    assert(harmony_analysis_cadence_points(segments, f.count, NULL, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
+    HarmonyCadenceConfig config = harmony_cadence_config_default();
+    config.allow_weak_arrival = false;
+    assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
     assert(n == 1 && points[0].arrival_first == 2 && points[0].before_first == 1);
     free(points);
 
+    /* With weak arrivals allowed, the final I on beat 4 (after the V on the stronger beat 3) is a second point. */
+    assert(harmony_analysis_cadence_points(segments, f.count, NULL, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
+    assert(n == 2 && points[1].arrival_first == 3);
+    free(points);
+
     /* A longer minimum arrival drops it unless the soprano rests right after: here the next segment has a soprano. */
-    HarmonyCadenceConfig config = harmony_cadence_config_default();
     config.arrival_min_beats = 2.0;
+    config.allow_weak_arrival = false;
     assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
     assert(n == 0 && points == NULL);
     f.inputs[3].soprano_degree = 0; /* the soprano rests after the V */
@@ -349,6 +446,7 @@ static void test_cadence_points_and_config(void) {
         f.inputs[i].beat_length = half;
     }
     config = harmony_cadence_config_default();
+    config.allow_weak_arrival = false;
     config.soprano_rest_counts = false;
     assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
     assert(n == 0); /* one quarter is shorter than one half-note beat */
@@ -367,6 +465,9 @@ int main(void) {
     test_pac_iac_by_the_soprano();
     test_soprano_absent_is_authentic_unclassified_with_a_penalty();
     test_a_weak_beat_arrival_is_not_a_cadence();
+    test_a_weak_beat_arrival_after_a_stronger_dominant();
+    test_a_weak_arrival_needs_a_stronger_dominant();
+    test_a_weak_arrival_on_the_half_beat_after_a_weak_dominant();
     test_an_inverted_v_to_i_is_not_a_cadence();
     test_half_cadence();
     test_deceptive();
