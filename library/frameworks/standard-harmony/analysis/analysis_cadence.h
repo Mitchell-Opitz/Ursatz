@@ -27,6 +27,10 @@
  *   or, with none, config.beat_length; or the soprano rests right after it (the next segment has no soprano) and
  *   config.soprano_rest_counts (default true).
  *
+ * WEAK-BEAT ARRIVAL. With config.allow_weak_arrival (default true), a run below min_arrival_strength is still an
+ * arrival when it is a root-position tonic directly after a root-position V that starts on a stronger beat than the
+ * tonic, and the tonic lasts arrival_min_beats, or the soprano rests right after it, or it ends the piece.
+ *
  * THE DOMINANT. For an authentic, deceptive or subverted cadence the dominant is the V (or V7) run just before the
  * arrival, in root position; a cadential 6/4 (analysis_six_four.h) directly before that V is part of the dominant
  * and recorded with it. An inverted V, or an arrival on an inverted tonic, is not a cadence here: it prolongs, as
@@ -75,6 +79,7 @@ typedef struct {
     bool soprano_rest_counts;          /* default true */
     double beat_length;                /* whole notes, when a segment has none: default 1/4 */
     double soprano_absent_penalty;     /* default 0.3 */
+    bool allow_weak_arrival;           /* default true */
 } HarmonyCadenceConfig;
 
 HarmonyCadenceConfig harmony_cadence_config_default(void);
