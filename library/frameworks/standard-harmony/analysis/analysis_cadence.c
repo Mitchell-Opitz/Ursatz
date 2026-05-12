@@ -335,6 +335,7 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     result->arrival_last = point->arrival_last;
     result->soprano_degree = c->soprano_degree;
     result->post_cadential = c->post_cadential;
+    result->arrival_beat_strength = arrival->beat_strength;
     result->key_ref = arrival->key_ref;
 
     double u = max_uncertainty(segments, c->dominant_first, c->dominant_last, 0.0);
@@ -376,6 +377,7 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     claim.soprano_degree = c->soprano_degree;
     claim.post_cadential = c->post_cadential;
     claim.has_six_four = c->has_six_four;
+    claim.arrival_beat_strength = (int)arrival->beat_strength;
     snprintf(claim.arrival_segment, sizeof(claim.arrival_segment), "%s", arrival->segment_id);
     snprintf(claim.dominant_segment, sizeof(claim.dominant_segment), "%s",
              segments[c->dominant_first].input->segment_id);

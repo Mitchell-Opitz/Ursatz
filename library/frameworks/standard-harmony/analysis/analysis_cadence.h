@@ -110,6 +110,7 @@ typedef struct {
     int soprano_degree;     /* at the arrival's first segment; 0 when absent */
     bool post_cadential;    /* a plagal cadence that directly follows a PAC */
     bool has_six_four;      /* the dominant includes a cadential 6/4 */
+    int arrival_beat_strength; /* BeatStrength at the arrival's first segment */
     char arrival_segment[96];   /* the arrival's first segment id */
     char dominant_segment[96];  /* the dominant's first segment id (the cadential 6/4's when it has one) */
     char key_ref[64];
@@ -126,6 +127,7 @@ typedef struct {
     size_t arrival_last;
     int soprano_degree;           /* at the arrival's first segment; 0 when absent */
     bool post_cadential;
+    BeatStrength arrival_beat_strength; /* at the arrival's first segment */
     const char *key_ref;          /* borrowed from the arrival's input */
     double uncertainty;           /* [0, 1] */
     TimeSpan *span;               /* owned: the dominant's start to the arrival's end */
