@@ -31,6 +31,12 @@ which function, and which progressions make which cadence, is this framework's.
 The **analysis adapter** (`analysis/`) turns chord segments into this framework's inputs and returns function,
 phrase model, six-four, prolongation and cadence Interpretations (PAC and IAC told apart by the soprano). See `docs/modules/standard-harmony-analysis.md`.
 
+Cadence arrivals below `min_arrival_strength` (MEDIUM) are found when `allow_weak_arrival` is on (default true): a
+root-position tonic directly after a root-position V that starts on a stronger beat than the tonic (at equal strength,
+on the beat against a tonic off it, the weak beat and the weak half beat after it), and the tonic is long
+(`arrival_min_beats`), followed by a soprano rest, or ends the piece. The claim records the arrival's beat strength
+(`arrival_beat_strength`). Half cadences arriving on a weak beat are not found.
+
 ## Scope
 
 Every rule group has Rule/Constraint pairs referencing this Framework plus pure
