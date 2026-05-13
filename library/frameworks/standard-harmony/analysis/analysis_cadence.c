@@ -13,6 +13,7 @@
 #include "harmony_functions.h"
 #include "harmony_plagal.h"
 #include "identity/entity_id.h"
+#include "time/metrical_position.h"
 #include "time/musical_time.h"
 
 HarmonyCadenceConfig harmony_cadence_config_default(void) {
@@ -22,6 +23,7 @@ HarmonyCadenceConfig harmony_cadence_config_default(void) {
     config.soprano_rest_counts = true;
     config.beat_length = 0.25;
     config.soprano_absent_penalty = 0.3;
+    config.allow_weak_arrival = true;
     return config;
 }
 
@@ -59,13 +61,10 @@ static bool is_cadential_six_four(const HarmonySegment *segment) {
 
 /* --- cadence points --- */
 
-/* Whether the run [first, last] is an arrival: on a strong enough beat, long enough or before a soprano rest. */
-static bool arrival_ok(const HarmonySegment *segments, size_t count, size_t first, size_t last,
-                       const HarmonyCadenceConfig *config) {
+/* Whether the run [first, last] is long enough, or the soprano rests right after it, or it ends the piece. */
+static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t first, size_t last,
+                           const HarmonyCadenceConfig *config) {
     const HarmonySegmentInput *start = segments[first].input;
-    if (beat_strength_is_stronger(config->min_arrival_strength, start->beat_strength)) {
-        return false; /* weaker than the minimum */
-    }
     double beat = config->beat_length;
     if (start->beat_length != NULL) {
         beat = (double)duration_numerator(start->beat_length) / (double)duration_denominator(start->beat_length);
@@ -76,6 +75,43 @@ static bool arrival_ok(const HarmonySegment *segments, size_t count, size_t firs
         return true;
     }
     return config->soprano_rest_counts && last + 1 < count && segments[last + 1].input->soprano_degree == 0;
+}
+
+/* Whether the segment starts on the beat grid (its offset in the measure is a whole number of beats). */
+static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
+    const HarmonySegmentInput *input = segment->input;
+    double beat = config->beat_length;
+    if (input->beat_length != NULL) {
+        beat = (double)duration_numerator(input->beat_length) / (double)duration_denominator(input->beat_length);
+    }
+    const Duration *offset = metrical_position_offset(input->position);
+    double beats = ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / beat;
+    return fabs(beats - floor(beats + 0.5)) < 1e-9;
+}
+
+/* Whether the dominant starts on a stronger beat than the tonic: a stronger BeatStrength, or, at equal strength, on
+   the beat while the tonic starts off it (a weak beat against the weak half beat after it). */
+static bool dominant_on_stronger_beat(const HarmonySegment *dominant, const HarmonySegment *tonic,
+                                      const HarmonyCadenceConfig *config) {
+    BeatStrength d = dominant->input->beat_strength;
+    BeatStrength t = tonic->input->beat_strength;
+    return beat_strength_is_stronger(d, t) ||
+           (d == t && starts_on_beat(dominant, config) && !starts_on_beat(tonic, config));
+}
+
+/* Whether the run [first, last] is an arrival: on a strong enough beat, long enough or before a soprano rest. A
+   tonic below the minimum beat strength is still one when the dominant before it (starting at before_first) falls on
+   a stronger beat and the tonic is long, followed by a soprano rest, or the end of the piece. */
+static bool arrival_ok(const HarmonySegment *segments, size_t count, size_t before_first, size_t first, size_t last,
+                       const HarmonyCadenceConfig *config) {
+    const HarmonySegmentInput *start = segments[first].input;
+    if (!beat_strength_is_stronger(config->min_arrival_strength, start->beat_strength)) {
+        return arrival_closes(segments, count, first, last, config);
+    }
+    return config->allow_weak_arrival && is_dominant_root(&segments[before_first]) &&
+           is_tonic_root(&segments[first]) &&
+           dominant_on_stronger_beat(&segments[before_first], &segments[first], config) &&
+           (last + 1 == count || arrival_closes(segments, count, first, last, config));
 }
 
 /* A candidate with the index of its arrival run, so the classifier can look at the runs around it. */
@@ -104,7 +140,7 @@ static HarmonyCadenceAnalysisStatus collect(const HarmonySegment *segments, size
         const HarmonyRun *arrival = &runs[r];
         const HarmonyRun *before = &runs[r - 1];
         if (!diatonic(&segments[arrival->first]) || !diatonic(&segments[before->first]) ||
-            !arrival_ok(segments, count, arrival->first, arrival->last, config)) {
+            !arrival_ok(segments, count, before->first, arrival->first, arrival->last, config)) {
             continue;
         }
         points[n].point.arrival_first = arrival->first;
@@ -322,6 +358,7 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     result->arrival_last = point->arrival_last;
     result->soprano_degree = c->soprano_degree;
     result->post_cadential = c->post_cadential;
+    result->arrival_beat_strength = arrival->beat_strength;
     result->key_ref = arrival->key_ref;
 
     double u = max_uncertainty(segments, c->dominant_first, c->dominant_last, 0.0);
@@ -363,6 +400,7 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     claim.soprano_degree = c->soprano_degree;
     claim.post_cadential = c->post_cadential;
     claim.has_six_four = c->has_six_four;
+    claim.arrival_beat_strength = (int)arrival->beat_strength;
     snprintf(claim.arrival_segment, sizeof(claim.arrival_segment), "%s", arrival->segment_id);
     snprintf(claim.dominant_segment, sizeof(claim.dominant_segment), "%s",
              segments[c->dominant_first].input->segment_id);

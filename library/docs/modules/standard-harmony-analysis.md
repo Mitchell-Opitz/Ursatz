@@ -51,7 +51,7 @@ For each interior segment: a `Relationship`, predicate `prolongs`, source = the 
 
 `analysis_cadence.h`. Cadences are found from harmony and meter alone, since no phrases exist yet (L3.6). The classification is the existing rules' (`harmony_cadence_classify`, `harmony_deceptive_of`, `harmony_plagal_progression_is`, `harmony_function_of`); the adapter chooses candidates and supplies what they need. `harmony_analysis_cadence_points` returns the candidates; `harmony_analysis_find_cadences` classifies them.
 
-**Cadence points.** Chords are runs of consecutive segments making the same chord. A candidate is a diatonic chord, the arrival, directly after another diatonic chord, where the arrival starts on a beat at least as strong as `min_arrival_strength` (default MEDIUM) and lasts at least `arrival_min_beats` beats (default 1; a beat is the segment's optional `beat_length`, or `beat_length` in the config, default a quarter note), or the soprano rests right after it (`soprano_rest_counts`, default true).
+**Cadence points.** Chords are runs of consecutive segments making the same chord. A candidate is a diatonic chord, the arrival, directly after another diatonic chord, where the arrival starts on a beat at least as strong as `min_arrival_strength` (default MEDIUM) and lasts at least `arrival_min_beats` beats (default 1; a beat is the segment's optional `beat_length`, or `beat_length` in the config, default a quarter note), or the soprano rests right after it (`soprano_rest_counts`, default true). With `allow_weak_arrival` (default true), a root-position tonic below the minimum beat strength is still an arrival when the root-position V before it starts on a stronger beat (at equal strength, on the beat against a tonic off it) and the tonic is long, is followed by a soprano rest, or ends the piece.
 
 **Types.**
 - **PAC**: root-position V or V7 to root-position I with the soprano on 1 at the arrival.
@@ -64,7 +64,7 @@ For each interior segment: a `Relationship`, predicate `prolongs`, source = the 
 
 An inverted V or an arrival on an inverted tonic is not a cadence (it prolongs, as L3.2 reads it), and viio to I is not an authentic cadence in the framework's rule. A candidate matching none of these gives no cadence.
 
-**Output.** One `Cadence` (the L5 shell: an id and the segment ids from the dominant's first segment to the arrival's last) and one `Interpretation` targeting the Cadence's id per cadence: FrameworkReference standard-harmony, claim = a `HarmonyCadenceClaim` (type, soprano degree, post-cadential, six-four, the arrival and dominant segment ids, key ref), and a `TimeSpan` from the dominant's start to the arrival's end on the result. The soprano degree is the one of the arrival's first segment.
+**Output.** One `Cadence` (the L5 shell: an id and the segment ids from the dominant's first segment to the arrival's last) and one `Interpretation` targeting the Cadence's id per cadence: FrameworkReference standard-harmony, claim = a `HarmonyCadenceClaim` (type, soprano degree, post-cadential, six-four, the arrival and dominant segment ids, the arrival's beat strength, key ref), and a `TimeSpan` from the dominant's start to the arrival's end on the result. The soprano degree is the one of the arrival's first segment.
 
 **Uncertainty** = 1 - (1 - u)(1 - penalty), u the largest input uncertainty of the chords involved (the dominant, a cadential 6/4 in it, the arrival), and penalty `soprano_absent_penalty` when the type is AUTHENTIC_UNSPECIFIED for want of a soprano, 0 otherwise.
 
@@ -75,7 +75,7 @@ An inverted V or an arrival on an inverted tonic is not a cadence (it prolongs, 
 ## Limits
 
 - Phrases are supplied by the caller until L3.6. Cadences are now found from harmony and meter alone, with no phrase context: a cadence is a candidate at a cadence point, not the end of a known phrase.
-- The arrival thresholds (MEDIUM beat, one beat long, soprano rest) are stated defaults, not learned values. An arrival on a weak offbeat, an applied chord before a half cadence, and a dominant that is inverted are not found by design.
+- The arrival thresholds (MEDIUM beat, one beat long, soprano rest) are stated defaults, not learned values. A half cadence arriving on a weak beat, an applied chord before a half cadence, and a dominant that is inverted are not found by design.
 - No modulation classification (`ModulationKind` is not used on real music; cadence-confirmed modulation is later work), and no strong/weak predominant reporting.
 - A cadential 6/4 is recognised by its beat (not weaker than the V), its bass on 5 and the V after it; a 6/4 on a weaker beat than its V is read as another type or left unclassified.
 - The alto and tenor are not in the input, so a 6/4 whose inner voices move is read from the soprano alone.
