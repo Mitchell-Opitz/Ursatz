@@ -19,7 +19,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | C1 | [method] Key regions come from 4-measure windows scored against pitch-class profiles with a change penalty (`key_regions.h`, REGION PATH); a window labels the measure at its centre, so a region's edge lands up to two measures from the barline where the music changes, and a one- or two-measure excursion is stretched to a window or absorbed | Key regions placed on harmonic evidence (cadence- and pivot-informed boundaries) | unassigned |
 | C2 | [method] The key of a window is the best correlation of its pooled pitch-class weights with the 24 profiles; closely related keys (the dominant, the subdominant, the relative minor) and passages of scales or a dominant pedal are read as the neighbouring key | Harmony-aware key estimation (the key from chord functions, not pitch-class weights alone) | unassigned |
 | C3 | [method] The extent of a key change is read from the lengths of the regions and their return only; no cadence is looked for (`cadence_confirmed` is always false, `key_regions.h`), so a change that a cadence confirms reads as a weak modulation or a tonicization | KeyChangeExtent confirmed by cadences (named as later work in `key_regions.h`) | unassigned |
-| C4 | [method] The cadence adapter looks only for arrivals on at least a medium beat (`min_arrival_strength`, `analysis_cadence.h`); an arrival on a weak beat or a weak half beat is not found. Bach 114's arrivals are on beat 3 and on the half beat before it, both weak in 3/4 | Cadence arrival on weak beats (arrival found independently of the metric strength) | unassigned |
+| C4 | [method] A cadence arriving on a weak beat is found only as a tonic after a root-position dominant on a stronger beat (or on the beat against a tonic off it) with a phrase end signal (`allow_weak_arrival`, `analysis_cadence.h`); a half cadence arriving on a weak beat is not found, and a closing V-I tag after the cadence of the draft is read as a second cadence | Half cadences on weak beats; the draft cadence list covering closing tags | unassigned |
 | C5 | [method] Chords are read from the pitch classes sounding in each adaptive segment, ranked among the diatonic triads and sevenths of the region's key: a segment holding only a melody note (a sparse left hand), an alternating or ornamented texture, or a chord outside the vocabulary is read as another chord or none, so the V-I that the music has is hidden and a V-I the music does not have can appear | Chord identification with context (non-chord-tone filtering, harmonic continuity across melody-only segments, non-diatonic chords) | unassigned |
 | C6 | [method] A bass that is not a member of the chord reads as root position (`roman_numeral_adapter.h`); the segment's bass is its lowest sounding pitch, so a neighbour or passing bass tone turns a dominant seventh that is prolonged in an inversion into a root-position V7 (and a tonic with an ornamental bass into I6) | Inversion read from the chord's bass tone when the lowest pitch is ornamental | unassigned |
 | C7 | [convention] The cadence adapter defines SUBVERTED as a cadential dominant that resolves to I6 or another non-tonic (`analysis_cadence.h`); the older cadence drafts do not mark such places (a V-I6 prolongs there) | Fixture check against the editions, then one cadence convention across the drafts and the adapter | unassigned |
@@ -38,21 +38,18 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-005 | bach114 | keys | change 21 | weak-modulation return at 21 | none | C1 |
 | DEV-006 | bach114 | keys | change 29 | weak-modulation return at 29 | none | C1 |
 | DEV-007 | bach114 | cadences | m4 b3 | hc | none | C4 |
-| DEV-008 | bach114 | cadences | m8 b2.5 | pac | none | C4 |
+| DEV-008 | bach114 | cadences | m8 b2.5 | pac | none | C5 |
 | DEV-009 | bach114 | cadences | m12 b3 | hc | none | C4 |
-| DEV-010 | bach114 | cadences | m16 b2.5 | pac | none | C4 |
-| DEV-011 | bach114 | cadences | m20 b2.5 | pac | none | C4 |
-| DEV-012 | bach114 | cadences | m24 b2.5 | pac | none | C4 |
-| DEV-013 | bach114 | cadences | m28 b2.5 | pac | none | C4 |
-| DEV-014 | bach114 | cadences | m32 b2.5 | pac | none | C4 |
+| DEV-010 | bach114 | cadences | m16 b2.5 | pac | none | C5 |
+| DEV-012 | bach114 | cadences | m24 b2.5 | pac | none | C5 |
+| DEV-014 | bach114 | cadences | m32 b2.5 | pac | none | C5 |
 | DEV-015 | bach114 | cadences | extra m23 b1 | none | subverted | C5 |
 | DEV-016 | bach114 | cadences | extra m31 b1 | none | subverted | C5 |
 | DEV-017 | bach114 | phrase-form | end m4 | hc at m4 | none | C8 |
 | DEV-018 | bach114 | phrase-form | end m12 | hc at m12 | none | C8 |
-| DEV-019 | bach114 | phrase-form | end m20 | pac at m20 | none | C8 |
 | DEV-020 | bach114 | phrase-form | end m24 | pac at m24 | none | C8 |
 | DEV-021 | bach114 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | none | C8 |
-| DEV-022 | bach114 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
+| DEV-022 | bach114 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | hybrid 9-20 parts 9-12 13-20 | C8 |
 | DEV-023 | mozart545 | keys | region 1-12 | C major 1-12 | C major 1-8, F major 9-11, G major 12-20 | C1,C2 |
 | DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 12-20, A minor 21-24, G major 25-29 | C1,C2 |
 | DEV-025 | mozart545 | keys | region 29-40 | C major 29-40 | G major 25-29, C major 30-36, F major 37-39, G major 40-48 | C1,C2 |
@@ -84,10 +81,9 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-058 | clementi36 | cadences | extra m33 b1 | none | iac | C5 |
 | DEV-060 | clementi36 | cadences | extra m37 b3 | none | subverted | C5,C7 |
 | DEV-061 | clementi36 | phrase-form | end m8 | pac at m8 | none | C8 |
-| DEV-062 | clementi36 | phrase-form | end m38 | pac at m38 | none | C8 |
 | DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | hybrid 5-10 parts 5-8 9-10 | C8 |
 | DEV-064 | clementi36 | phrase-form | theme period 24-38 | period 24-38 parts 24-27 28-38 | period 15-24 parts 15-19 20-24, hybrid 28-33 parts 28-31 32-33 | C8 |
-| DEV-065 | clementi36 | phrase-form | expansion internal 28-38 | internal 28-38 7 measures | contraction 32-33 2 measures, external 34-38 5 measures | C8 |
+| DEV-065 | clementi36 | phrase-form | expansion internal 28-38 | internal 28-38 7 measures | contraction 32-33 2 measures | C8 |
 | DEV-066 | field1 | cadences | m8 b1 | pac | none | C5,C6 |
 | DEV-067 | field1 | cadences | m12 b1 | iac | none | C5,C6 |
 | DEV-068 | field1 | cadences | m16 b1 | pac | none | C5,C6 |
@@ -109,3 +105,6 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-085 | field5 | cadences | extra m5 b3 | none | hc | C5 |
 | DEV-086 | field5 | cadences | extra m6 b1 | none | other | C5 |
 | DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55) | C8,C10 |
+| DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C8 |
+| DEV-089 | bach114 | phrase-form | end m32 | pac at m32 | none | C8 |
+| DEV-090 | clementi36 | cadences | extra m38 b2.5 | none | pac | C4 |
