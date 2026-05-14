@@ -320,3 +320,27 @@ add_test(NAME test_style_model_schema
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/style_model_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_style_model.cmake)
 set_tests_properties(test_style_model_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
+
+add_executable(test_similar_material test_similar_material.c)
+target_link_libraries(test_similar_material PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_similar_material PRIVATE
+    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+    URSATZ_SIMILAR_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/similar_work"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_similar_material COMMAND test_similar_material)
+
+# The --similar flag: the motive file comes from the test program, which writes it.
+add_test(NAME test_cli_similar_motive_file COMMAND test_similar_material --write-motive ${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid)
+set_tests_properties(test_cli_similar_motive_file PROPERTIES FIXTURES_SETUP similar_motive_file)
+add_test(NAME test_cli_similar
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                 -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
+                 -DPYTHON=${Python3_EXECUTABLE}
+                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake)
+set_tests_properties(test_cli_similar PROPERTIES FIXTURES_REQUIRED similar_motive_file)
