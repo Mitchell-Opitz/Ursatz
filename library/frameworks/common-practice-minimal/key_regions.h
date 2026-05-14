@@ -43,6 +43,21 @@
  * SCORE. For a window, the Pearson correlation between its summed pitch-class weights and the key's profile
  * rotated to the key's tonic, in [-1, 1]; a window with no weight, or a flat distribution, scores 0 for every
  * key.
+ *
+ * FUNCTIONAL EVIDENCE. A pitch-class profile cannot tell a key from its dominant or subdominant when a passage
+ * is built on V, IV or ii. A segment may therefore carry its identified chord as plain data (`chord`, below; the
+ * caller reads it from weighted chord identification, this framework does not run it here), and a window then
+ * adds evidence_weight times the key's evidence per chord to the key's score. For a chord sequence in a window and
+ * the key on tonic t:
+ *
+ *   - a dominant to tonic motion (a chord rooted on t+7 with a major third, then a chord rooted on t) counts 1;
+ *   - a leading tone resolving up (a chord holding t+11 followed by a chord holding t, without the first
+ *     already counted as a dominant to tonic motion) counts 0.5;
+ *   - in a minor key, a chord holding the raised seventh (t+11) and not the natural seventh (t+10) counts 0.5.
+ *
+ * A motion is credited to the measure of the chord it arrives on. The window's evidence is the sum over its
+ * measures divided by the number of chords it holds, so it is in [0, 1] whatever the window's length or chord
+ * rate. A window with no chords, or a caller that passes none, adds nothing and the score is the correlation.
  */
 
 #define COMMON_PRACTICE_KEY_COUNT 24
@@ -64,11 +79,19 @@ int common_practice_key_index_of(int tonic_pitch_class, CommonPracticeKeyMode mo
 /* "C", "Db" ... the tonic name used for key labels (C Db D Eb E F F# G Ab A Bb B); NULL if invalid. */
 const char *common_practice_key_index_tonic_name(int key_index);
 
+/* A segment's identified chord as plain data, for functional evidence. Zero-initialised means no chord. */
+typedef struct {
+    bool present;
+    int root_pitch_class;                      /* 0..11 */
+    unsigned pitch_classes;                    /* the chord's tones as a 12-bit mask (bit pc set) */
+} CommonPracticeKeyChord;
+
 typedef struct {
     const MusicalTime *start;                  /* the segment's window, in whole notes; borrowed */
     const MusicalTime *end;
     CommonPracticeWeights weights;
     const CommonPracticeSegment *source;       /* the segment's members, or NULL */
+    CommonPracticeKeyChord chord;              /* optional: the segment's chord; .present false when not given */
 } CommonPracticeKeySegment;
 
 typedef struct {
@@ -78,10 +101,11 @@ typedef struct {
     size_t tonicization_max_measures;          /* default 4 */
     const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
     size_t pivot_search_measures;              /* default 2: how far back a pivot chord is looked for */
+    double evidence_weight;                    /* default 0.3: the weight of functional chord evidence in a window's score */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
-   "key-region", pivot_search_measures 2. */
+   "key-region", pivot_search_measures 2, evidence_weight 0.3. */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
 
 typedef enum {
@@ -100,6 +124,7 @@ typedef struct {
     int first_measure;                         /* the measures the window covers (MeterMap measure numbers) */
     int last_measure;
     double correlation[COMMON_PRACTICE_KEY_COUNT];
+    double evidence[COMMON_PRACTICE_KEY_COUNT]; /* evidence_weight times the window's functional evidence; 0 without chords */
 } CommonPracticeKeyWindow;
 
 typedef struct {
@@ -112,9 +137,10 @@ typedef struct {
 /*
  * Scores every window: from the first measure that holds a segment start to the last, window i covers
  * measures [first + i, first + i + window_measures - 1], and a piece with fewer measures than the window gets
- * one window over what it has. BAD_CONFIG for a zero window or a non-finite profile value; BAD_SEGMENT for a
- * segment with a missing or negative time, an end not after its start, a segment out of order, or a negative
- * or non-finite weight. config may be NULL for the defaults. On OK, *out owns its windows
+ * one window over what it has. BAD_CONFIG for a zero window, a non-finite profile value, or a negative or
+ * non-finite evidence_weight; BAD_SEGMENT for a
+ * segment with a missing or negative time, an end not after its start, a segment out of order, a negative
+ * or non-finite weight, or a chord with a root outside 0..11. config may be NULL for the defaults. On OK, *out owns its windows
  * (common_practice_key_windows_destroy); otherwise *out is untouched.
  */
 CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment *segments, size_t segment_count,
@@ -127,7 +153,7 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * REGION PATH (step 2). key_regions_estimate chooses one key per window by dynamic programming, then reads
  * the windows as measures and merges equal neighbours into regions.
  *
- *   cost of a path = the sum over windows of -correlation(window, key)
+ *   cost of a path = the sum over windows of -(correlation(window, key) + evidence(window, key))
  *                    + change_penalty for every window whose key differs from the one before it.
  *
  * The path with the least cost wins. It is deterministic: an exactly tied cost (within 1e-12) keeps the
